@@ -360,7 +360,7 @@ export default function HomePage() {
       <p className="hero-sub">"여권만 챙기세요. 나머지 우리가 다 준비했어요."</p>
       <p className="hero-desc">숙소, 수업, 식사, 활동까지<br/>가족을 위한 완전한 올인원 케어 시스템</p>
       <div className="hero-btns">
-        <a href="/apply" className="btn-blue">프로그램 신청 →</a>
+        <a href="http://pf.kakao.com/_Yuhxhn/chat" className="btn-blue" target="_blank" rel="noopener noreferrer">프로그램 신청 →</a>
         <a href="#about" className="btn-outline">자세히 알아보기</a>
       </div>
     </div>
