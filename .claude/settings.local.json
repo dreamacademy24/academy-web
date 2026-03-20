@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(node convert.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/apply)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/shuttle)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/after-school-fieldtrip)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/junior)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(node -e \":*)",
+      "Bash(curl:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}
