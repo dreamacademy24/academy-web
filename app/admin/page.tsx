@@ -4,6 +4,11 @@ import { supabase } from "@/lib/supabase";
 
 const ADMIN_PASSWORD = "dream2026!";
 
+function getToday() {
+  const d = new Date();
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface Notice {
   id: number;
   category: string;
@@ -18,7 +23,7 @@ export default function AdminPage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ category: "general", title: "", date: "", content: "" });
+  const [form, setForm] = useState({ category: "general", title: "", date: getToday(), content: "" });
   const [submitting, setSubmitting] = useState(false);
 
   async function fetchNotices() {
@@ -44,7 +49,7 @@ export default function AdminPage() {
   }
 
   function resetForm() {
-    setForm({ category: "general", title: "", date: "", content: "" });
+    setForm({ category: "general", title: "", date: getToday(), content: "" });
     setEditingId(null);
   }
 
