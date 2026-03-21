@@ -236,6 +236,7 @@ export default function CommunityDetailPage() {
           </div>
         </div>
         <div className="fcopy">© 2026 Dream Academy by Dream Company. All rights reserved. · Cebu, Philippines</div>
+        <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0"}}><a href="/admin" style={{fontSize:"9px",color:"rgba(255,255,255,0.08)",textDecoration:"none"}}>관리자</a></div>
       </footer>
     </>
   );
