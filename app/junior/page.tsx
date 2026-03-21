@@ -237,7 +237,7 @@ export default function JuniorPage() {
             </a>
             <div className="nav-dd-menu">
               <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-              <a href="#">제이파크</a>
+              <a href="/accommodation/jpark">제이파크</a>
               <a href="#">큐브나인</a>
             </div>
           </div>
@@ -264,7 +264,7 @@ export default function JuniorPage() {
         <a href="/kinder">킨더 커리큘럼</a>
         <a href="/package">올인원패키지</a>
         <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-        <a href="#">제이파크</a>
+        <a href="/accommodation/jpark">제이파크</a>
         <a href="#">큐브나인</a>
         <a href="/playdream">플레이드림</a>
           <a href="/apply">패키지서비스신청</a>

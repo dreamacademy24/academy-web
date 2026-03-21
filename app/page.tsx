@@ -319,7 +319,7 @@ export default function HomePage() {
       <a href="#">숙소 <span className="nav-dd-arrow">▾</span></a>
       <div className="nav-dd-menu">
         <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-        <a href="#">제이파크</a>
+        <a href="/accommodation/jpark">제이파크</a>
         <a href="#">큐브나인</a>
       </div>
     </div>
@@ -339,7 +339,7 @@ export default function HomePage() {
   <a href="/kinder">킨더 커리큘럼</a>
   <a href="/package">올인원패키지</a>
   <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-  <a href="#">제이파크</a>
+  <a href="/accommodation/jpark">제이파크</a>
   <a href="#">큐브나인</a>
   <a href="/apply">패키지서비스신청</a>
   <a href="/playdream">플레이드림</a>
@@ -644,7 +644,7 @@ export default function HomePage() {
       <p className="fdesc">필리핀 세부의 프리미엄 영어 교육 프로그램.<br/>여권만 챙기세요. 나머지 우리가 다 준비했어요.<br/>숙소, 수업, 식사, 활동까지 올인원 케어.</p>
     </div>
     <div><div className="ftitle">커리큘럼</div><div className="flinks"><a href="/junior">주니어 커리큘럼</a><a href="/kinder">킨더 커리큘럼</a><a href="/after-school-fieldtrip">애프터스쿨</a></div></div>
-    <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="#">제이파크</a><a href="#">큐브나인</a><a href="#">패키지 안내</a></div></div>
+    <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="/accommodation/jpark">제이파크</a><a href="#">큐브나인</a><a href="#">패키지 안내</a></div></div>
     <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/apply">프로그램 신청</a><a href="#">커뮤니티</a></div></div>
   </div>
   <div className="fbottom">
