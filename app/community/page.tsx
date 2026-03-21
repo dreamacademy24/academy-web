@@ -10,6 +10,8 @@ export default function CommunityPage() {
   const [showWrite, setShowWrite] = useState(false);
   const [form, setForm] = useState({ title: "", author_name: "", content: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,6 +54,18 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetchPosts();
+    async function getUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setLoggedIn(true);
+        const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).single();
+        if (profile) {
+          setUserName(profile.name);
+          setForm((f) => ({ ...f, author_name: profile.name }));
+        }
+      }
+    }
+    getUser();
   }, []);
 
   async function handleSubmit() {
@@ -69,7 +83,7 @@ export default function CommunityPage() {
     if (error) {
       alert("등록에 실패했습니다. 다시 시도해주세요.");
     } else {
-      setForm({ title: "", author_name: "", content: "" });
+      setForm({ title: "", author_name: userName || "", content: "" });
       setShowWrite(false);
       await fetchPosts();
     }
@@ -222,7 +236,7 @@ export default function CommunityPage() {
           <a href="/community" className="nav-active">커뮤니티</a>
         </div>
         <div className="nav-right">
-          <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
+          <a href="/login" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px"}}>로그인</a><a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
         </div>
         <button className="hamburger" onClick={() => setMobileNavOpen((v) => !v)}>
           <span></span><span></span><span></span>
@@ -256,6 +270,8 @@ export default function CommunityPage() {
                 placeholder="이름을 입력하세요"
                 value={form.author_name}
                 onChange={(e) => setForm({ ...form, author_name: e.target.value })}
+                readOnly={!!userName}
+                style={userName ? { background: "#f1f5f9", color: "#6b7c93" } : {}}
               />
             </div>
             <div className="form-group">
@@ -303,7 +319,10 @@ export default function CommunityPage() {
           <>
             <div className="board-top">
               <div className="board-count">전체 <strong>{posts.length}건</strong></div>
-              <button className="write-btn" onClick={() => setShowWrite(true)}>
+              <button className="write-btn" onClick={() => {
+                if (!loggedIn) { window.location.href = "/login"; return; }
+                setShowWrite(true);
+              }}>
                 ✏️ 글쓰기
               </button>
             </div>

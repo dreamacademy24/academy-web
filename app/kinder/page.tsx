@@ -220,7 +220,7 @@ export default function KinderPage() {
           <a href="/community">커뮤니티</a>
         </div>
         <div className="nav-right">
-          <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
+          <a href="/login" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px"}}>로그인</a><a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
         </div>
         <button
           className="hamburger"
