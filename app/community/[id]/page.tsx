@@ -2,13 +2,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Post, categoryMap } from "../data";
+import { Post } from "../data";
 
 export default function CommunityDetailPage() {
   const params = useParams();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liked, setLiked] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,6 +41,25 @@ export default function CommunityDetailPage() {
     fetchPost();
   }, [params.id]);
 
+  async function handleLike() {
+    if (!post || liked) return;
+    const newLikes = post.likes + 1;
+    const { error } = await supabase
+      .from("posts")
+      .update({ likes: newLikes })
+      .eq("id", post.id);
+
+    if (!error) {
+      setPost({ ...post, likes: newLikes });
+      setLiked(true);
+    }
+  }
+
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   if (loading) {
     return (
       <div style={{ padding: "160px 40px 80px", textAlign: "center", fontFamily: "'Noto Sans KR',sans-serif", color: "#6b7c93" }}>
@@ -56,8 +76,6 @@ export default function CommunityDetailPage() {
       </div>
     );
   }
-
-  const cat = categoryMap[post.category];
 
   return (
     <>
@@ -103,11 +121,14 @@ export default function CommunityDetailPage() {
         .detail-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:24px;transition:color 140ms;}
         .detail-back:hover{color:var(--blue);}
         .detail-header{border-bottom:2px solid var(--text);padding-bottom:20px;margin-bottom:0;}
-        .detail-cat{display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;margin-bottom:12px;}
         .detail-title{font-size:24px;font-weight:800;line-height:1.35;margin-bottom:14px;word-break:keep-all;}
         .detail-meta{display:flex;gap:20px;font-size:12.5px;color:var(--muted);}
         .detail-meta span{display:flex;align-items:center;gap:4px;}
         .detail-body{padding:32px 0;border-bottom:1px solid var(--stroke);font-size:14.5px;color:#374151;line-height:2;white-space:pre-wrap;word-break:keep-all;min-height:200px;}
+        .detail-actions{padding:24px 0;display:flex;align-items:center;justify-content:center;gap:16px;border-bottom:1px solid var(--stroke);}
+        .like-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:#fef2f2;color:#dc2626;font-size:14px;font-weight:700;border-radius:24px;border:1px solid #fecaca;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 160ms;}
+        .like-btn:hover{background:#fee2e2;border-color:#fca5a5;}
+        .like-btn.liked{background:#dc2626;color:var(--white);border-color:#dc2626;cursor:default;}
         .detail-footer{padding:24px 0;display:flex;justify-content:center;}
         .list-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 28px;background:#f1f5f9;color:var(--text);font-size:13px;font-weight:600;border-radius:6px;border:1px solid var(--stroke);transition:background 140ms;}
         .list-btn:hover{background:#e2e8f0;}
@@ -182,18 +203,19 @@ export default function CommunityDetailPage() {
       <div className="detail-sec">
         <a href="/community" className="detail-back">← 목록으로</a>
         <div className="detail-header">
-          <span className="detail-cat" style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}>
-            {cat.label}
-          </span>
           <h1 className="detail-title">{post.title}</h1>
           <div className="detail-meta">
-            <span>✍️ {post.author}</span>
-            <span>📅 {post.date}</span>
-            <span>👁️ {post.views}</span>
-            <span>💬 {post.comments}</span>
+            <span>✍️ {post.author_name}</span>
+            <span>📅 {formatDate(post.created_at)}</span>
+            <span>♥ {post.likes}</span>
           </div>
         </div>
         <div className="detail-body">{post.content}</div>
+        <div className="detail-actions">
+          <button className={`like-btn${liked ? " liked" : ""}`} onClick={handleLike}>
+            {liked ? "♥ 좋아요 완료" : `♡ 좋아요 ${post.likes}`}
+          </button>
+        </div>
         <div className="detail-footer">
           <a href="/community" className="list-btn">📋 목록으로 돌아가기</a>
         </div>

@@ -1,15 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Post, categoryMap } from "./data";
-
-type CategoryFilter = "all" | "free" | "review" | "question";
+import { Post } from "./data";
 
 export default function CommunityPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [filter, setFilter] = useState<CategoryFilter>("all");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showWrite, setShowWrite] = useState(false);
+  const [form, setForm] = useState({ title: "", author_name: "", content: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -38,29 +38,55 @@ export default function CommunityPage() {
     };
   }, []);
 
-  useEffect(() => {
-    async function fetchPosts() {
-      const { data, error } = await supabase
-        .from("posts")
-        .select("*")
-        .order("date", { ascending: false });
+  async function fetchPosts() {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-      if (!error && data) {
-        setPosts(data);
-      }
-      setLoading(false);
+    if (!error && data) {
+      setPosts(data);
     }
+    setLoading(false);
+  }
+
+  useEffect(() => {
     fetchPosts();
   }, []);
 
-  const filtered = filter === "all" ? posts : posts.filter((p) => p.category === filter);
+  async function handleSubmit() {
+    if (!form.title.trim() || !form.author_name.trim() || !form.content.trim()) {
+      alert("모든 항목을 입력해주세요.");
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.from("posts").insert({
+      title: form.title.trim(),
+      author_name: form.author_name.trim(),
+      content: form.content.trim(),
+      likes: 0,
+    });
+    if (error) {
+      alert("등록에 실패했습니다. 다시 시도해주세요.");
+    } else {
+      setForm({ title: "", author_name: "", content: "" });
+      setShowWrite(false);
+      await fetchPosts();
+    }
+    setSubmitting(false);
+  }
+
+  function formatDate(iso: string) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  }
 
   return (
     <>
       <style>{`
         :root {
           --blue:#1a6fc4; --blue-dark:#0d3d7a; --blue-light:#eaf3fb;
-          --sky:#29a9e0; --yellow:#f5a623; --orange:#FF6B35; --orange-dark:#D4520A; --orange-light:#FFF4ED;
+          --sky:#29a9e0; --yellow:#f5a623; --orange:#FF6B35;
           --white:#fff; --off:#f8fafc; --text:#1a1a2e; --muted:#6b7c93;
           --stroke:#e2e8f0; --shadow:0 8px 40px rgba(0,0,0,0.09);
         }
@@ -112,12 +138,24 @@ export default function CommunityPage() {
         .board-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
         .board-count{font-size:13px;color:var(--muted);}
         .board-count strong{color:var(--text);}
-        .board-filters{display:flex;gap:6px;}
-        .board-filter{padding:7px 16px;border-radius:20px;font-size:12.5px;font-weight:600;border:1px solid var(--stroke);background:var(--white);color:var(--muted);cursor:pointer;transition:all 160ms;}
-        .board-filter:hover{border-color:var(--blue);color:var(--blue);}
-        .board-filter.active{background:var(--blue);color:var(--white);border-color:var(--blue);}
         .write-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:var(--blue);color:var(--white);font-size:13px;font-weight:600;border-radius:6px;border:none;cursor:pointer;transition:background 160ms;font-family:'Noto Sans KR',sans-serif;}
         .write-btn:hover{background:var(--blue-dark);}
+
+        /* WRITE FORM */
+        .write-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;}
+        .write-modal{background:var(--white);border-radius:16px;width:100%;max-width:600px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+        .write-modal h2{font-size:20px;font-weight:800;margin-bottom:24px;}
+        .form-group{margin-bottom:16px;}
+        .form-label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;}
+        .form-input{width:100%;padding:10px 14px;border:1px solid var(--stroke);border-radius:8px;font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color 160ms;}
+        .form-input:focus{border-color:var(--blue);}
+        .form-textarea{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:8px;font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;resize:vertical;min-height:160px;transition:border-color 160ms;}
+        .form-textarea:focus{border-color:var(--blue);}
+        .form-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+        .btn-cancel{padding:10px 22px;background:#f1f5f9;color:var(--text);font-size:13px;font-weight:600;border-radius:6px;border:1px solid var(--stroke);cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+        .btn-submit{padding:10px 22px;background:var(--blue);color:var(--white);font-size:13px;font-weight:600;border-radius:6px;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 160ms;}
+        .btn-submit:hover{background:var(--blue-dark);}
+        .btn-submit:disabled{background:#94a3b8;cursor:not-allowed;}
 
         /* TABLE */
         .board-table{width:100%;border-collapse:collapse;border-top:2px solid var(--text);}
@@ -127,13 +165,11 @@ export default function CommunityPage() {
         .board-table td.center{text-align:center;}
         .board-table tr:hover td{background:#fafbfc;}
         .board-table .post-link{display:flex;align-items:center;gap:10px;cursor:pointer;}
-        .post-cat{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;}
         .post-title-text{font-size:14px;font-weight:600;color:var(--text);transition:color 140ms;}
         .post-link:hover .post-title-text{color:var(--blue);}
-        .post-comments{font-size:12px;color:var(--blue);font-weight:700;flex-shrink:0;}
+        .post-likes{font-size:12px;color:#dc2626;font-weight:600;flex-shrink:0;}
         .post-author{font-size:12.5px;}
         .post-date{font-size:12px;font-family:'Montserrat',sans-serif;color:#94a3b8;}
-        .post-views{font-size:12px;}
 
         .loading-msg,.empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
 
@@ -208,6 +244,48 @@ export default function CommunityPage() {
         <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
       </div>
 
+      {/* WRITE MODAL */}
+      {showWrite && (
+        <div className="write-overlay" onClick={() => setShowWrite(false)}>
+          <div className="write-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>글쓰기</h2>
+            <div className="form-group">
+              <label className="form-label">작성자</label>
+              <input
+                className="form-input"
+                placeholder="이름을 입력하세요"
+                value={form.author_name}
+                onChange={(e) => setForm({ ...form, author_name: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">제목</label>
+              <input
+                className="form-input"
+                placeholder="제목을 입력하세요"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">내용</label>
+              <textarea
+                className="form-textarea"
+                placeholder="내용을 입력하세요"
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+              />
+            </div>
+            <div className="form-btns">
+              <button className="btn-cancel" onClick={() => setShowWrite(false)}>취소</button>
+              <button className="btn-submit" disabled={submitting} onClick={handleSubmit}>
+                {submitting ? "등록 중..." : "등록"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HERO */}
       <div className="page-hero">
         <div className="page-hero-inner">
@@ -224,21 +302,8 @@ export default function CommunityPage() {
         ) : (
           <>
             <div className="board-top">
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-                <div className="board-count">전체 <strong>{filtered.length}건</strong></div>
-                <div className="board-filters">
-                  {(["all", "free", "review", "question"] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      className={`board-filter${filter === cat ? " active" : ""}`}
-                      onClick={() => setFilter(cat)}
-                    >
-                      {cat === "all" ? "전체" : categoryMap[cat].label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button className="write-btn" onClick={() => alert("로그인 후 이용 가능합니다.")}>
+              <div className="board-count">전체 <strong>{posts.length}건</strong></div>
+              <button className="write-btn" onClick={() => setShowWrite(true)}>
                 ✏️ 글쓰기
               </button>
             </div>
@@ -246,38 +311,28 @@ export default function CommunityPage() {
             <table className="board-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60%" }}>제목</th>
-                  <th className="center hide-m" style={{ width: "12%" }}>작성자</th>
-                  <th className="center hide-m" style={{ width: "14%" }}>날짜</th>
-                  <th className="center hide-m" style={{ width: "10%" }}>조회</th>
+                  <th style={{ width: "55%" }}>제목</th>
+                  <th className="center hide-m" style={{ width: "15%" }}>작성자</th>
+                  <th className="center hide-m" style={{ width: "15%" }}>날짜</th>
+                  <th className="center hide-m" style={{ width: "10%" }}>좋아요</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={4} className="empty-msg">게시글이 없습니다.</td></tr>
+                {posts.length === 0 && (
+                  <tr><td colSpan={4} className="empty-msg">게시글이 없습니다. 첫 글을 작성해보세요!</td></tr>
                 )}
-                {filtered.map((post) => {
-                  const cat = categoryMap[post.category];
-                  return (
-                    <tr key={post.id}>
-                      <td>
-                        <a href={`/community/${post.id}`} className="post-link">
-                          <span
-                            className="post-cat"
-                            style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}
-                          >
-                            {cat.label}
-                          </span>
-                          <span className="post-title-text">{post.title}</span>
-                          {post.comments > 0 && <span className="post-comments">[{post.comments}]</span>}
-                        </a>
-                      </td>
-                      <td className="center hide-m post-author">{post.author}</td>
-                      <td className="center hide-m post-date">{post.date}</td>
-                      <td className="center hide-m post-views">{post.views}</td>
-                    </tr>
-                  );
-                })}
+                {posts.map((post) => (
+                  <tr key={post.id}>
+                    <td>
+                      <a href={`/community/${post.id}`} className="post-link">
+                        <span className="post-title-text">{post.title}</span>
+                      </a>
+                    </td>
+                    <td className="center hide-m post-author">{post.author_name}</td>
+                    <td className="center hide-m post-date">{formatDate(post.created_at)}</td>
+                    <td className="center hide-m post-likes">{post.likes > 0 && `♥ ${post.likes}`}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </>
