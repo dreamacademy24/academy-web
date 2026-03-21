@@ -228,7 +228,7 @@ export default function JparkPage() {
             <div className="nav-dd-menu">
               <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
               <a href="/accommodation/jpark" className="nav-active">제이파크</a>
-              <a href="#">큐브나인</a>
+              <a href="/accommodation/cubenine">큐브나인</a>
             </div>
           </div>
           <a href="/playdream">플레이드림</a>
@@ -250,7 +250,7 @@ export default function JparkPage() {
         <a href="/package">올인원패키지</a>
         <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
         <a href="/accommodation/jpark" style={{ color: "var(--resort)", fontWeight: 700 }}>▶ 제이파크</a>
-        <a href="#">큐브나인</a>
+        <a href="/accommodation/cubenine">큐브나인</a>
         <a href="/playdream">플레이드림</a>
         <a href="/apply">패키지서비스신청</a>
         <a href="#">커뮤니티</a>

@@ -214,7 +214,7 @@ export default function DreamHousePage() {
             <div className="nav-dd-menu">
               <a href="/accommodation/dreamhouse" className="nav-active">드림하우스 (독채)</a>
               <a href="/accommodation/jpark">제이파크</a>
-              <a href="#">큐브나인</a>
+              <a href="/accommodation/cubenine">큐브나인</a>
             </div>
           </div>
           <a href="/playdream">플레이드림</a>
@@ -236,7 +236,7 @@ export default function DreamHousePage() {
         <a href="/package">올인원패키지</a>
         <a href="/accommodation/dreamhouse" style={{ color: "var(--orange)", fontWeight: 700 }}>▶ 드림하우스 (독채)</a>
         <a href="/accommodation/jpark">제이파크</a>
-        <a href="#">큐브나인</a>
+        <a href="/accommodation/cubenine">큐브나인</a>
         <a href="/playdream">플레이드림</a>
         <a href="/apply">패키지서비스신청</a>
         <a href="#">커뮤니티</a>
