@@ -12,7 +12,10 @@
       "Bash(node -e \":*)",
       "Bash(curl:*)",
       "Bash(cd:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(npm ls:*)",
+      "Bash(mkdir -p lib)",
+      "Bash(echo \"import { createClient } from ''@supabase/supabase-js'':*)"
     ]
   }
 }

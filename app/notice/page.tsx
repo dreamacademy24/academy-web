@@ -1,52 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-const notices = [
-  {
-    id: 1,
-    category: "important",
-    title: "2026년 여름방학 시즌 패키지 조기 마감 안내",
-    date: "2026.03.18",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 여름방학 시즌(7월~8월) 올인원 패키지가 높은 관심 속에 조기 마감될 예정입니다.\n\n■ 마감 예정 숙소\n- 드림하우스: 7월 잔여 1자리\n- 제이파크: 7~8월 전 기간 마감 임박\n- 큐브나인: 8월 잔여 2자리\n\n■ 예약 방법\n카카오톡 채널을 통해 문의해 주시면 빠르게 안내 도와드리겠습니다.\n\n감사합니다.",
-  },
-  {
-    id: 2,
-    category: "important",
-    title: "드림아카데미 정규수업 시간표 변경 안내",
-    date: "2026.03.10",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 4월 1일부터 정규수업 시간표가 아래와 같이 변경됩니다.\n\n■ 변경 전\n- 오전 수업: 09:00 ~ 12:00\n- 오후 수업: 13:00 ~ 16:00\n\n■ 변경 후\n- 오전 수업: 08:30 ~ 11:30\n- 오후 수업: 13:00 ~ 16:00\n\n■ 적용일: 2026년 4월 1일 (화)\n\n오전 등원 시간이 30분 앞당겨지오니 참고 부탁드립니다.\n셔틀 운행 시간도 함께 변경됩니다.\n\n감사합니다.",
-  },
-  {
-    id: 3,
-    category: "general",
-    title: "플레이드림 신규 프로그램 오픈 안내",
-    date: "2026.03.05",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n플레이드림에 새로운 프로그램이 추가되었습니다!\n\n■ 신규 프로그램\n1. ART & CRAFT 심화반 - 주 3회, 1:1 맞춤 수업\n2. CODING LINE - 스크래치 기반 코딩 영어 수업\n\n■ 운영 시작일: 2026년 3월 17일 (월)\n■ 대상: 초등 1~6학년\n■ 비용: 별도 문의\n\n자세한 내용은 카카오톡으로 문의해 주세요.\n\n감사합니다.",
-  },
-  {
-    id: 4,
-    category: "general",
-    title: "제이파크 리조트 수영장 정기 점검 안내",
-    date: "2026.02.25",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n제이파크 리조트 측에서 수영장 정기 점검이 진행될 예정입니다.\n\n■ 점검 일정: 2026년 3월 3일 (월) ~ 3월 5일 (수)\n■ 점검 대상: Wave Pool, Amazon River\n■ 이용 가능: Island Pool, Beach Pool 등 나머지 수영장은 정상 운영\n\n점검 기간 동안 일부 수영장 이용이 제한되오니 양해 부탁드립니다.\n\n감사합니다.",
-  },
-  {
-    id: 5,
-    category: "general",
-    title: "2026년 세부 공휴일 휴원 안내",
-    date: "2026.02.15",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 필리핀 공휴일에 따른 드림아카데미 휴원 일정을 안내드립니다.\n\n■ 휴원일\n- 4월 2일 (목) ~ 4월 5일 (일): 성주간 (Holy Week)\n- 5월 1일 (금): 노동절\n- 6월 12일 (금): 독립기념일\n\n■ 참고사항\n- 휴원일에는 셔틀, 도시락 서비스가 운영되지 않습니다.\n- 숙소(드림하우스 헬퍼 서비스)도 휴무입니다.\n\n감사합니다.",
-  },
-];
+interface Notice {
+  id: number;
+  category: string;
+  title: string;
+  date: string;
+  content: string;
+}
 
 export default function NoticePage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,6 +41,21 @@ export default function NoticePage() {
       window.removeEventListener("scroll", handleScroll);
       obs.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    async function fetchNotices() {
+      const { data, error } = await supabase
+        .from("notices")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (!error && data) {
+        setNotices(data);
+      }
+      setLoading(false);
+    }
+    fetchNotices();
   }, []);
 
   return (
@@ -147,6 +130,9 @@ export default function NoticePage() {
         .notice-body{max-height:0;overflow:hidden;transition:max-height 400ms ease;}
         .notice-body.open{max-height:800px;}
         .notice-content{padding:20px 24px 28px;margin:0 20px 20px;background:#f8fafc;border-radius:12px;font-size:13.5px;color:var(--muted);line-height:2;white-space:pre-wrap;word-break:keep-all;}
+
+        /* LOADING & EMPTY */
+        .loading-msg,.empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
 
         /* FOOTER */
         footer{background:#1e293b;padding:40px 60px 24px;border-top:1px solid rgba(255,255,255,0.07);}
@@ -232,27 +218,35 @@ export default function NoticePage() {
 
       {/* NOTICE LIST */}
       <div className="notice-sec fade">
-        <div className="notice-count">전체 <strong>{notices.length}건</strong></div>
-        <div className="notice-list">
-          {notices.map((n) => (
-            <div className="notice-item" key={n.id}>
-              <button
-                className={`notice-header${openId === n.id ? " open" : ""}`}
-                onClick={() => setOpenId(openId === n.id ? null : n.id)}
-              >
-                <span className={`notice-badge ${n.category}`}>
-                  {n.category === "important" ? "중요" : "일반"}
-                </span>
-                <span className="notice-title">{n.title}</span>
-                <span className="notice-date">{n.date}</span>
-                <span className={`notice-arrow${openId === n.id ? " open" : ""}`}>▼</span>
-              </button>
-              <div className={`notice-body${openId === n.id ? " open" : ""}`}>
-                <div className="notice-content">{n.content}</div>
-              </div>
+        {loading ? (
+          <div className="loading-msg">불러오는 중...</div>
+        ) : notices.length === 0 ? (
+          <div className="empty-msg">등록된 공지사항이 없습니다.</div>
+        ) : (
+          <>
+            <div className="notice-count">전체 <strong>{notices.length}건</strong></div>
+            <div className="notice-list">
+              {notices.map((n) => (
+                <div className="notice-item" key={n.id}>
+                  <button
+                    className={`notice-header${openId === n.id ? " open" : ""}`}
+                    onClick={() => setOpenId(openId === n.id ? null : n.id)}
+                  >
+                    <span className={`notice-badge ${n.category}`}>
+                      {n.category === "important" ? "중요" : "일반"}
+                    </span>
+                    <span className="notice-title">{n.title}</span>
+                    <span className="notice-date">{n.date}</span>
+                    <span className={`notice-arrow${openId === n.id ? " open" : ""}`}>▼</span>
+                  </button>
+                  <div className={`notice-body${openId === n.id ? " open" : ""}`}>
+                    <div className="notice-content">{n.content}</div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
 
       {/* FOOTER */}
