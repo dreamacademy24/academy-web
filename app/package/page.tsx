@@ -761,7 +761,7 @@ export default function PackagePage() {
           </div>
         </div>
         <div className="fcopy">© 2026 Dream Academy by Dream Company. All rights reserved. · Cebu, Philippines</div>
-        <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0"}}><a href="/admin" style={{fontSize:"11px",color:"#fff",fontWeight:700,textDecoration:"none"}}>관리자</a></div>
+        <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0"}}><a href="/admin" style={{fontSize:"20px",color:"#fff",fontWeight:900,textDecoration:"none"}}>관리자</a></div>
       </footer>
     </>
   );
