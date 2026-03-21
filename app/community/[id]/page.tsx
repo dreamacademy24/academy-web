@@ -4,12 +4,23 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Post } from "../data";
 
+interface Comment {
+  id: number;
+  post_id: number;
+  author_name: string;
+  content: string;
+  created_at: string;
+}
+
 export default function CommunityDetailPage() {
   const params = useParams();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentForm, setCommentForm] = useState({ author_name: "", content: "" });
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -39,7 +50,18 @@ export default function CommunityDetailPage() {
       setLoading(false);
     }
     fetchPost();
+    fetchComments();
   }, [params.id]);
+
+  async function fetchComments() {
+    const { data } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("post_id", Number(params.id))
+      .order("created_at", { ascending: true });
+
+    if (data) setComments(data);
+  }
 
   async function handleLike() {
     if (!post || liked) return;
@@ -55,9 +77,34 @@ export default function CommunityDetailPage() {
     }
   }
 
+  async function handleCommentSubmit() {
+    if (!commentForm.author_name.trim() || !commentForm.content.trim()) {
+      alert("작성자와 내용을 모두 입력해주세요.");
+      return;
+    }
+    setCommentSubmitting(true);
+    const { error } = await supabase.from("comments").insert({
+      post_id: Number(params.id),
+      author_name: commentForm.author_name.trim(),
+      content: commentForm.content.trim(),
+    });
+    if (error) {
+      alert("댓글 등록에 실패했습니다.");
+    } else {
+      setCommentForm({ author_name: "", content: "" });
+      await fetchComments();
+    }
+    setCommentSubmitting(false);
+  }
+
   function formatDate(iso: string) {
     const d = new Date(iso);
     return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function formatDateTime(iso: string) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 
   if (loading) {
@@ -129,6 +176,29 @@ export default function CommunityDetailPage() {
         .like-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:#fef2f2;color:#dc2626;font-size:14px;font-weight:700;border-radius:24px;border:1px solid #fecaca;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 160ms;}
         .like-btn:hover{background:#fee2e2;border-color:#fca5a5;}
         .like-btn.liked{background:#dc2626;color:var(--white);border-color:#dc2626;cursor:default;}
+
+        /* COMMENTS */
+        .comments-sec{padding:32px 0;}
+        .comments-title{font-size:16px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+        .comments-title .cnt{font-size:14px;color:var(--blue);font-weight:700;}
+        .comment-write{background:#f8fafc;border:1px solid var(--stroke);border-radius:12px;padding:20px;margin-bottom:24px;}
+        .comment-write-row{display:flex;gap:10px;margin-bottom:10px;align-items:center;}
+        .comment-author-input{width:140px;padding:8px 12px;border:1px solid var(--stroke);border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;}
+        .comment-author-input:focus{border-color:var(--blue);}
+        .comment-content-input{flex:1;padding:8px 12px;border:1px solid var(--stroke);border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;resize:none;min-height:60px;}
+        .comment-content-input:focus{border-color:var(--blue);}
+        .comment-submit{padding:8px 20px;background:var(--blue);color:var(--white);font-size:13px;font-weight:600;border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background 160ms;align-self:flex-end;}
+        .comment-submit:hover{background:var(--blue-dark);}
+        .comment-submit:disabled{background:#94a3b8;cursor:not-allowed;}
+        .comment-list{display:flex;flex-direction:column;gap:0;}
+        .comment-item{padding:16px 0;border-bottom:1px solid var(--stroke);}
+        .comment-item:last-child{border-bottom:none;}
+        .comment-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+        .comment-name{font-size:13px;font-weight:700;color:var(--text);}
+        .comment-time{font-size:11px;color:#94a3b8;font-family:'Montserrat',sans-serif;}
+        .comment-text{font-size:13.5px;color:#374151;line-height:1.7;white-space:pre-wrap;word-break:keep-all;}
+        .no-comments{text-align:center;padding:32px;color:#94a3b8;font-size:13px;}
+
         .detail-footer{padding:24px 0;display:flex;justify-content:center;}
         .list-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 28px;background:#f1f5f9;color:var(--text);font-size:13px;font-weight:600;border-radius:6px;border:1px solid var(--stroke);transition:background 140ms;}
         .list-btn:hover{background:#e2e8f0;}
@@ -147,6 +217,8 @@ export default function CommunityDetailPage() {
           nav{padding:0 24px;} .nav-center{display:none;} .nav-right{display:none;} .hamburger{display:flex;}
           .detail-sec{padding:90px 24px 60px;}
           .detail-title{font-size:20px;}
+          .comment-write-row{flex-direction:column;}
+          .comment-author-input{width:100%;}
           .footer-inner{flex-direction:column;align-items:flex-start;}
         }
       `}</style>
@@ -216,6 +288,54 @@ export default function CommunityDetailPage() {
             {liked ? "♥ 좋아요 완료" : `♡ 좋아요 ${post.likes}`}
           </button>
         </div>
+
+        {/* COMMENTS */}
+        <div className="comments-sec">
+          <div className="comments-title">💬 댓글 <span className="cnt">{comments.length}</span></div>
+
+          <div className="comment-write">
+            <div className="comment-write-row">
+              <input
+                className="comment-author-input"
+                placeholder="작성자"
+                value={commentForm.author_name}
+                onChange={(e) => setCommentForm({ ...commentForm, author_name: e.target.value })}
+              />
+            </div>
+            <textarea
+              className="comment-content-input"
+              placeholder="댓글을 입력하세요"
+              value={commentForm.content}
+              onChange={(e) => setCommentForm({ ...commentForm, content: e.target.value })}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "10px" }}>
+              <button
+                className="comment-submit"
+                disabled={commentSubmitting}
+                onClick={handleCommentSubmit}
+              >
+                {commentSubmitting ? "등록 중..." : "댓글 등록"}
+              </button>
+            </div>
+          </div>
+
+          <div className="comment-list">
+            {comments.length === 0 ? (
+              <div className="no-comments">아직 댓글이 없습니다. 첫 댓글을 남겨보세요!</div>
+            ) : (
+              comments.map((c) => (
+                <div className="comment-item" key={c.id}>
+                  <div className="comment-head">
+                    <span className="comment-name">{c.author_name}</span>
+                    <span className="comment-time">{formatDateTime(c.created_at)}</span>
+                  </div>
+                  <div className="comment-text">{c.content}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="detail-footer">
           <a href="/community" className="list-btn">📋 목록으로 돌아가기</a>
         </div>
