@@ -51,8 +51,8 @@ export default function ApplyPage() {
         }
         .apply-skip:hover { color: #8d8d8d; background: rgba(17,24,39,0.04); }
         .apply-skip:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--focus); }
-        @media (max-width: 720px) {
-          .apply-cards { grid-template-columns: 1fr; max-width: 420px; margin-inline: auto; }
+        @media (max-width: 900px) {
+          .apply-cards { grid-template-columns: 1fr !important; max-width: 420px; margin-inline: auto; }
           .apply-card { min-height: 190px; }
         }
       `}</style>
@@ -64,7 +64,22 @@ export default function ApplyPage() {
             <p>원하시는 서비스를 선택해 주세요.</p>
           </header>
 
-          <div className="apply-cards" role="list">
+          <div className="apply-cards" role="list" style={{gridTemplateColumns:"repeat(3,minmax(0,1fr))"}}>
+            <Link className="apply-card" href="/apply/package" role="listitem" aria-label="패키지 신청으로 이동">
+              <div className="apply-icon" aria-hidden="true">
+                <svg width="74" height="74" viewBox="0 0 74 74" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="12" y="20" width="50" height="34" rx="8" fill="#DBEAFE"/>
+                  <rect x="18" y="26" width="38" height="6" rx="3" fill="#93C5FD"/>
+                  <rect x="18" y="36" width="24" height="4" rx="2" fill="#BFDBFE"/>
+                  <rect x="18" y="44" width="30" height="4" rx="2" fill="#BFDBFE"/>
+                  <circle cx="52" cy="42" r="8" fill="#1A6FC4"/>
+                  <path d="M49 42h6M52 39v6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <h2>패키지 신청</h2>
+              <p>올인원 패키지 상담 신청</p>
+            </Link>
+
             <Link className="apply-card" href="/shuttle" role="listitem" aria-label="투어셔틀신청으로 이동">
               <div className="apply-icon" aria-hidden="true">
                 <svg width="74" height="74" viewBox="0 0 74 74" fill="none" xmlns="http://www.w3.org/2000/svg">

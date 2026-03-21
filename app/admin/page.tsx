@@ -30,10 +30,21 @@ interface Profile {
   email?: string;
 }
 
+interface Application {
+  id: number;
+  created_at: string;
+  name: string;
+  email: string;
+  phone: string;
+  package_type: string;
+  message: string;
+  status: string;
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
-  const [tab, setTab] = useState<"notices" | "members">("notices");
+  const [tab, setTab] = useState<"notices" | "members" | "applications">("notices");
 
   // notices
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -46,6 +57,10 @@ export default function AdminPage() {
   const [members, setMembers] = useState<Profile[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
 
+  // applications
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [appLoading, setAppLoading] = useState(false);
+
   async function fetchNotices() {
     setNoticeLoading(true);
     const { data } = await supabase
@@ -54,6 +69,22 @@ export default function AdminPage() {
       .order("date", { ascending: false });
     if (data) setNotices(data);
     setNoticeLoading(false);
+  }
+
+  async function fetchApplications() {
+    setAppLoading(true);
+    const { data } = await supabase
+      .from("applications")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setApplications(data);
+    setAppLoading(false);
+  }
+
+  async function updateAppStatus(id: number, status: string) {
+    const { error } = await supabase.from("applications").update({ status }).eq("id", id);
+    if (error) alert("상태 변경 실패: " + error.message);
+    else await fetchApplications();
   }
 
   async function fetchMembers() {
@@ -70,6 +101,7 @@ export default function AdminPage() {
     if (authed) {
       fetchNotices();
       fetchMembers();
+      fetchApplications();
     }
   }, [authed]);
 
@@ -261,6 +293,9 @@ export default function AdminPage() {
           <button className={`tab-btn${tab === "notices" ? " active" : ""}`} onClick={() => setTab("notices")}>
             📋 공지사항 관리
           </button>
+          <button className={`tab-btn${tab === "applications" ? " active" : ""}`} onClick={() => setTab("applications")}>
+            📬 신청 관리
+          </button>
           <button className={`tab-btn${tab === "members" ? " active" : ""}`} onClick={() => setTab("members")}>
             👥 회원 관리
           </button>
@@ -326,6 +361,80 @@ export default function AdminPage() {
                           <div className="action-btns">
                             <button className="btn-edit" onClick={() => startEdit(n)}>수정</button>
                             <button className="btn-del" onClick={() => handleDeleteNotice(n.id)}>삭제</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* APPLICATIONS TAB */}
+        {tab === "applications" && (
+          <>
+            <div className="m-stat">
+              <div className="m-stat-card">
+                <div className="m-stat-num">{applications.length}</div>
+                <div className="m-stat-label">전체 신청</div>
+              </div>
+              <div className="m-stat-card">
+                <div className="m-stat-num" style={{color:"#d97706"}}>{applications.filter((a) => a.status === "pending").length}</div>
+                <div className="m-stat-label">대기중</div>
+              </div>
+              <div className="m-stat-card">
+                <div className="m-stat-num" style={{color:"#059669"}}>{applications.filter((a) => a.status === "confirmed").length}</div>
+                <div className="m-stat-label">확정</div>
+              </div>
+            </div>
+
+            <div className="list-card">
+              <h2>📬 패키지 신청 목록 ({applications.length}건)</h2>
+              {appLoading ? (
+                <div className="loading-msg">불러오는 중...</div>
+              ) : applications.length === 0 ? (
+                <div className="empty-msg">신청 내역이 없습니다.</div>
+              ) : (
+                <table className="ntable">
+                  <thead>
+                    <tr>
+                      <th style={{width:"12%"}}>상태</th>
+                      <th style={{width:"13%"}}>이름</th>
+                      <th className="hide-m" style={{width:"18%"}}>패키지</th>
+                      <th className="hide-m" style={{width:"14%"}}>연락처</th>
+                      <th className="hide-m" style={{width:"13%"}}>신청일</th>
+                      <th style={{width:"22%"}}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {applications.map((a) => (
+                      <tr key={a.id}>
+                        <td>
+                          <span className="badge" style={
+                            a.status === "confirmed" ? {background:"#ecfdf5",color:"#059669",border:"1px solid #a7f3d0"} :
+                            a.status === "cancelled" ? {background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca"} :
+                            {background:"#fffbeb",color:"#d97706",border:"1px solid #fde68a"}
+                          }>
+                            {a.status === "confirmed" ? "확정" : a.status === "cancelled" ? "취소" : "대기"}
+                          </span>
+                        </td>
+                        <td className="m-name">{a.name}</td>
+                        <td className="hide-m" style={{fontSize:"12px"}}>{a.package_type}</td>
+                        <td className="hide-m" style={{fontSize:"12px"}}>{a.phone}</td>
+                        <td className="hide-m">{formatDate(a.created_at)}</td>
+                        <td>
+                          <div className="action-btns" style={{flexWrap:"wrap"}}>
+                            {a.status !== "confirmed" && (
+                              <button className="btn-edit" onClick={() => updateAppStatus(a.id, "confirmed")}>확정</button>
+                            )}
+                            {a.status !== "cancelled" && (
+                              <button className="btn-del" onClick={() => updateAppStatus(a.id, "cancelled")}>취소</button>
+                            )}
+                            {a.status !== "pending" && (
+                              <button className="btn-edit" style={{background:"#fffbeb",color:"#d97706",borderColor:"#fde68a"}} onClick={() => updateAppStatus(a.id, "pending")}>대기</button>
+                            )}
                           </div>
                         </td>
                       </tr>
