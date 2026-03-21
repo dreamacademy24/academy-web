@@ -9,6 +9,11 @@ function getToday() {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface Notice {
   id: number;
   category: string;
@@ -17,27 +22,55 @@ interface Notice {
   content: string;
 }
 
+interface Profile {
+  id: string;
+  name: string;
+  phone: string;
+  created_at: string;
+  email?: string;
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
+  const [tab, setTab] = useState<"notices" | "members">("notices");
+
+  // notices
   const [notices, setNotices] = useState<Notice[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [noticeLoading, setNoticeLoading] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ category: "general", title: "", date: getToday(), content: "" });
   const [submitting, setSubmitting] = useState(false);
 
+  // members
+  const [members, setMembers] = useState<Profile[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
+
   async function fetchNotices() {
-    setLoading(true);
+    setNoticeLoading(true);
     const { data } = await supabase
       .from("notices")
       .select("*")
       .order("date", { ascending: false });
     if (data) setNotices(data);
-    setLoading(false);
+    setNoticeLoading(false);
+  }
+
+  async function fetchMembers() {
+    setMemberLoading(true);
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setMembers(data);
+    setMemberLoading(false);
   }
 
   useEffect(() => {
-    if (authed) fetchNotices();
+    if (authed) {
+      fetchNotices();
+      fetchMembers();
+    }
   }, [authed]);
 
   function handleLogin() {
@@ -56,6 +89,7 @@ export default function AdminPage() {
   function startEdit(n: Notice) {
     setEditingId(n.id);
     setForm({ category: n.category, title: n.title, date: n.date, content: n.content });
+    setTab("notices");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -84,14 +118,18 @@ export default function AdminPage() {
     setSubmitting(false);
   }
 
-  async function handleDelete(id: number) {
+  async function handleDeleteNotice(id: number) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from("notices").delete().eq("id", id);
-    if (error) {
-      alert("삭제 실패: " + error.message);
-    } else {
-      await fetchNotices();
-    }
+    if (error) alert("삭제 실패: " + error.message);
+    else await fetchNotices();
+  }
+
+  async function handleDeleteMember(id: string, name: string) {
+    if (!confirm(`"${name}" 회원을 정말 삭제하시겠습니까?\n프로필 정보가 삭제됩니다.`)) return;
+    const { error } = await supabase.from("profiles").delete().eq("id", id);
+    if (error) alert("삭제 실패: " + error.message);
+    else await fetchMembers();
   }
 
   if (!authed) {
@@ -145,7 +183,13 @@ export default function AdminPage() {
         .logout-btn{background:rgba(255,255,255,0.15);color:#fff;border:none;padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
         .logout-btn:hover{background:rgba(255,255,255,0.25);}
 
-        .admin-body{max-width:900px;margin:0 auto;padding:32px 24px 60px;}
+        .admin-body{max-width:960px;margin:0 auto;padding:32px 24px 60px;}
+
+        /* TABS */
+        .tabs{display:flex;gap:4px;margin-bottom:28px;background:#fff;border-radius:10px;padding:4px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+        .tab-btn{flex:1;padding:12px;font-size:14px;font-weight:700;text-align:center;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:transparent;color:#6b7c93;transition:all 160ms;}
+        .tab-btn:hover{color:#1a1a2e;}
+        .tab-btn.active{background:#1a6fc4;color:#fff;box-shadow:0 2px 8px rgba(26,111,196,0.3);}
 
         /* FORM */
         .form-card{background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:32px;}
@@ -184,12 +228,21 @@ export default function AdminPage() {
         .empty-msg{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
         .loading-msg{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
 
+        /* MEMBER */
+        .m-name{font-weight:600;color:#1a1a2e;}
+        .m-email{font-size:12px;color:#94a3b8;}
+        .m-stat{display:flex;gap:24px;margin-bottom:24px;}
+        .m-stat-card{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;text-align:center;}
+        .m-stat-num{font-size:28px;font-weight:800;color:#1a6fc4;}
+        .m-stat-label{font-size:12px;color:#6b7c93;margin-top:4px;}
+
         @media(max-width:768px){
           .admin-header{padding:14px 20px;}
           .admin-body{padding:20px 16px 40px;}
           .form-row{flex-direction:column;gap:14px;}
           .form-card,.list-card{padding:20px;}
           .ntable th.hide-m,.ntable td.hide-m{display:none;}
+          .m-stat{flex-direction:column;gap:12px;}
         }
       `}</style>
 
@@ -203,98 +256,142 @@ export default function AdminPage() {
       </div>
 
       <div className="admin-body">
-        {/* FORM */}
-        <div className="form-card">
-          <h2>{editingId ? "📝 공지사항 수정" : "📝 공지사항 작성"}</h2>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">카테고리</label>
-              <select
-                className="form-select"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              >
-                <option value="general">일반</option>
-                <option value="important">중요</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">날짜</label>
-              <input
-                className="form-input"
-                placeholder="2026.03.21"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-          </div>
-          <div style={{ marginBottom: "14px" }}>
-            <label className="form-label">제목</label>
-            <input
-              className="form-input"
-              placeholder="공지사항 제목을 입력하세요"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="form-label">내용</label>
-            <textarea
-              className="form-textarea"
-              placeholder="공지사항 내용을 입력하세요"
-              value={form.content}
-              onChange={(e) => setForm({ ...form, content: e.target.value })}
-            />
-          </div>
-          <div className="form-btns">
-            <button className="btn-primary" disabled={submitting} onClick={handleSubmit}>
-              {submitting ? "저장 중..." : editingId ? "수정 완료" : "등록"}
-            </button>
-            {editingId && (
-              <button className="btn-secondary" onClick={resetForm}>취소</button>
-            )}
-          </div>
+        {/* TABS */}
+        <div className="tabs">
+          <button className={`tab-btn${tab === "notices" ? " active" : ""}`} onClick={() => setTab("notices")}>
+            📋 공지사항 관리
+          </button>
+          <button className={`tab-btn${tab === "members" ? " active" : ""}`} onClick={() => setTab("members")}>
+            👥 회원 관리
+          </button>
         </div>
 
-        {/* LIST */}
-        <div className="list-card">
-          <h2>📋 공지사항 목록 ({notices.length}건)</h2>
-          {loading ? (
-            <div className="loading-msg">불러오는 중...</div>
-          ) : notices.length === 0 ? (
-            <div className="empty-msg">등록된 공지사항이 없습니다.</div>
-          ) : (
-            <table className="ntable">
-              <thead>
-                <tr>
-                  <th style={{ width: "8%" }}>구분</th>
-                  <th style={{ width: "42%" }}>제목</th>
-                  <th className="hide-m" style={{ width: "15%" }}>날짜</th>
-                  <th style={{ width: "15%" }}>관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {notices.map((n) => (
-                  <tr key={n.id}>
-                    <td>
-                      <span className={`badge ${n.category}`}>
-                        {n.category === "important" ? "중요" : "일반"}
-                      </span>
-                    </td>
-                    <td className="n-title">{n.title}</td>
-                    <td className="hide-m">{n.date}</td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-edit" onClick={() => startEdit(n)}>수정</button>
-                        <button className="btn-del" onClick={() => handleDelete(n.id)}>삭제</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        {/* NOTICES TAB */}
+        {tab === "notices" && (
+          <>
+            <div className="form-card">
+              <h2>{editingId ? "📝 공지사항 수정" : "📝 공지사항 작성"}</h2>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">카테고리</label>
+                  <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                    <option value="general">일반</option>
+                    <option value="important">중요</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">날짜</label>
+                  <input className="form-input" placeholder="2026.03.21" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                </div>
+              </div>
+              <div style={{ marginBottom: "14px" }}>
+                <label className="form-label">제목</label>
+                <input className="form-input" placeholder="공지사항 제목을 입력하세요" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div>
+                <label className="form-label">내용</label>
+                <textarea className="form-textarea" placeholder="공지사항 내용을 입력하세요" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+              </div>
+              <div className="form-btns">
+                <button className="btn-primary" disabled={submitting} onClick={handleSubmit}>
+                  {submitting ? "저장 중..." : editingId ? "수정 완료" : "등록"}
+                </button>
+                {editingId && <button className="btn-secondary" onClick={resetForm}>취소</button>}
+              </div>
+            </div>
+
+            <div className="list-card">
+              <h2>📋 공지사항 목록 ({notices.length}건)</h2>
+              {noticeLoading ? (
+                <div className="loading-msg">불러오는 중...</div>
+              ) : notices.length === 0 ? (
+                <div className="empty-msg">등록된 공지사항이 없습니다.</div>
+              ) : (
+                <table className="ntable">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "8%" }}>구분</th>
+                      <th style={{ width: "42%" }}>제목</th>
+                      <th className="hide-m" style={{ width: "15%" }}>날짜</th>
+                      <th style={{ width: "15%" }}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notices.map((n) => (
+                      <tr key={n.id}>
+                        <td><span className={`badge ${n.category}`}>{n.category === "important" ? "중요" : "일반"}</span></td>
+                        <td className="n-title">{n.title}</td>
+                        <td className="hide-m">{n.date}</td>
+                        <td>
+                          <div className="action-btns">
+                            <button className="btn-edit" onClick={() => startEdit(n)}>수정</button>
+                            <button className="btn-del" onClick={() => handleDeleteNotice(n.id)}>삭제</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* MEMBERS TAB */}
+        {tab === "members" && (
+          <>
+            <div className="m-stat">
+              <div className="m-stat-card">
+                <div className="m-stat-num">{members.length}</div>
+                <div className="m-stat-label">전체 회원수</div>
+              </div>
+              <div className="m-stat-card">
+                <div className="m-stat-num">
+                  {members.filter((m) => {
+                    const d = new Date(m.created_at);
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                  }).length}
+                </div>
+                <div className="m-stat-label">이번 달 가입</div>
+              </div>
+            </div>
+
+            <div className="list-card">
+              <h2>👥 회원 목록 ({members.length}명)</h2>
+              {memberLoading ? (
+                <div className="loading-msg">불러오는 중...</div>
+              ) : members.length === 0 ? (
+                <div className="empty-msg">가입된 회원이 없습니다.</div>
+              ) : (
+                <table className="ntable">
+                  <thead>
+                    <tr>
+                      <th style={{ width: "20%" }}>이름</th>
+                      <th className="hide-m" style={{ width: "25%" }}>이메일</th>
+                      <th className="hide-m" style={{ width: "20%" }}>전화번호</th>
+                      <th className="hide-m" style={{ width: "15%" }}>가입일</th>
+                      <th style={{ width: "10%" }}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.id}>
+                        <td className="m-name">{m.name}</td>
+                        <td className="hide-m m-email">{m.id.slice(0, 8)}...</td>
+                        <td className="hide-m">{m.phone}</td>
+                        <td className="hide-m">{formatDate(m.created_at)}</td>
+                        <td>
+                          <button className="btn-del" onClick={() => handleDeleteMember(m.id, m.name)}>삭제</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </>
   );
