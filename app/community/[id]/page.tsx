@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { posts, categoryMap } from "../data";
+import { supabase } from "@/lib/supabase";
+import { Post, categoryMap } from "../data";
 
 export default function CommunityDetailPage() {
   const params = useParams();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const post = posts.find((p) => p.id === Number(params.id));
+  const [post, setPost] = useState<Post | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,6 +23,30 @@ export default function CommunityDetailPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    async function fetchPost() {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .eq("id", Number(params.id))
+        .single();
+
+      if (!error && data) {
+        setPost(data);
+      }
+      setLoading(false);
+    }
+    fetchPost();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: "160px 40px 80px", textAlign: "center", fontFamily: "'Noto Sans KR',sans-serif", color: "#6b7c93" }}>
+        불러오는 중...
+      </div>
+    );
+  }
 
   if (!post) {
     return (

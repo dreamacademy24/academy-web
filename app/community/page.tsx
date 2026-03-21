@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
-import { posts, categoryMap } from "./data";
+import { supabase } from "@/lib/supabase";
+import { Post, categoryMap } from "./data";
 
 type CategoryFilter = "all" | "free" | "review" | "question";
 
 export default function CommunityPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [filter, setFilter] = useState<CategoryFilter>("all");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,6 +36,21 @@ export default function CommunityPage() {
       window.removeEventListener("scroll", handleScroll);
       obs.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    async function fetchPosts() {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (!error && data) {
+        setPosts(data);
+      }
+      setLoading(false);
+    }
+    fetchPosts();
   }, []);
 
   const filtered = filter === "all" ? posts : posts.filter((p) => p.category === filter);
@@ -117,7 +135,7 @@ export default function CommunityPage() {
         .post-date{font-size:12px;font-family:'Montserrat',sans-serif;color:#94a3b8;}
         .post-views{font-size:12px;}
 
-        .empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
+        .loading-msg,.empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
 
         /* FOOTER */
         footer{background:#1e293b;padding:40px 60px 24px;border-top:1px solid rgba(255,255,255,0.07);}
@@ -201,63 +219,69 @@ export default function CommunityPage() {
 
       {/* BOARD */}
       <div className="board-sec fade">
-        <div className="board-top">
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-            <div className="board-count">전체 <strong>{filtered.length}건</strong></div>
-            <div className="board-filters">
-              {(["all", "free", "review", "question"] as const).map((cat) => (
-                <button
-                  key={cat}
-                  className={`board-filter${filter === cat ? " active" : ""}`}
-                  onClick={() => setFilter(cat)}
-                >
-                  {cat === "all" ? "전체" : categoryMap[cat].label}
-                </button>
-              ))}
+        {loading ? (
+          <div className="loading-msg">불러오는 중...</div>
+        ) : (
+          <>
+            <div className="board-top">
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                <div className="board-count">전체 <strong>{filtered.length}건</strong></div>
+                <div className="board-filters">
+                  {(["all", "free", "review", "question"] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      className={`board-filter${filter === cat ? " active" : ""}`}
+                      onClick={() => setFilter(cat)}
+                    >
+                      {cat === "all" ? "전체" : categoryMap[cat].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="write-btn" onClick={() => alert("로그인 후 이용 가능합니다.")}>
+                ✏️ 글쓰기
+              </button>
             </div>
-          </div>
-          <button className="write-btn" onClick={() => alert("로그인 후 이용 가능합니다.")}>
-            ✏️ 글쓰기
-          </button>
-        </div>
 
-        <table className="board-table">
-          <thead>
-            <tr>
-              <th style={{ width: "60%" }}>제목</th>
-              <th className="center hide-m" style={{ width: "12%" }}>작성자</th>
-              <th className="center hide-m" style={{ width: "14%" }}>날짜</th>
-              <th className="center hide-m" style={{ width: "10%" }}>조회</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr><td colSpan={4} className="empty-msg">게시글이 없습니다.</td></tr>
-            )}
-            {filtered.map((post) => {
-              const cat = categoryMap[post.category];
-              return (
-                <tr key={post.id}>
-                  <td>
-                    <a href={`/community/${post.id}`} className="post-link">
-                      <span
-                        className="post-cat"
-                        style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}
-                      >
-                        {cat.label}
-                      </span>
-                      <span className="post-title-text">{post.title}</span>
-                      {post.comments > 0 && <span className="post-comments">[{post.comments}]</span>}
-                    </a>
-                  </td>
-                  <td className="center hide-m post-author">{post.author}</td>
-                  <td className="center hide-m post-date">{post.date}</td>
-                  <td className="center hide-m post-views">{post.views}</td>
+            <table className="board-table">
+              <thead>
+                <tr>
+                  <th style={{ width: "60%" }}>제목</th>
+                  <th className="center hide-m" style={{ width: "12%" }}>작성자</th>
+                  <th className="center hide-m" style={{ width: "14%" }}>날짜</th>
+                  <th className="center hide-m" style={{ width: "10%" }}>조회</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={4} className="empty-msg">게시글이 없습니다.</td></tr>
+                )}
+                {filtered.map((post) => {
+                  const cat = categoryMap[post.category];
+                  return (
+                    <tr key={post.id}>
+                      <td>
+                        <a href={`/community/${post.id}`} className="post-link">
+                          <span
+                            className="post-cat"
+                            style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}
+                          >
+                            {cat.label}
+                          </span>
+                          <span className="post-title-text">{post.title}</span>
+                          {post.comments > 0 && <span className="post-comments">[{post.comments}]</span>}
+                        </a>
+                      </td>
+                      <td className="center hide-m post-author">{post.author}</td>
+                      <td className="center hide-m post-date">{post.date}</td>
+                      <td className="center hide-m post-views">{post.views}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
       {/* FOOTER */}
