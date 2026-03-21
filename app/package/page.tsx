@@ -275,7 +275,7 @@ export default function PackagePage() {
           <div className="nav-dd">
             <a href="#">숙소 <span className="nav-dd-arrow">▾</span></a>
             <div className="nav-dd-menu">
-              <a href="#">드림하우스 (독채)</a>
+              <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
               <a href="#">제이파크</a>
               <a href="#">큐브나인</a>
             </div>
@@ -297,7 +297,7 @@ export default function PackagePage() {
         <a href="/junior">주니어 커리큘럼</a>
         <a href="/kinder">킨더 커리큘럼</a>
         <a href="/package" style={{ color: "var(--blue)", fontWeight: 700 }}>▶ 올인원패키지</a>
-        <a href="#">드림하우스 (독채)</a>
+        <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
         <a href="#">제이파크</a>
         <a href="#">큐브나인</a>
         <a href="/playdream">플레이드림</a>
