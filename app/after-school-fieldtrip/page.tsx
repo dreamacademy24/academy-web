@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function AfterSchoolFieldtripPage() {
   const [activeMonth, setActiveMonth] = useState("3");
@@ -115,6 +116,14 @@ export default function AfterSchoolFieldtripPage() {
       formData.append("schedule", scheduleValues);
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
+
+      // Supabase 동시 저장
+      await supabase.from("fieldtrip_applications").insert({
+        name: formData.get("childName") as string,
+        date: formData.get("schedule") as string,
+        message: formData.get("memo") as string,
+      }).then(() => {});
+
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
       form.reset();
     } catch (err) {

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function ShuttlePage() {
   const [modalHidden, setModalHidden] = useState(false);
@@ -113,6 +114,15 @@ export default function ShuttlePage() {
       formData.append("schedule", Array.from(checked).map((cb) => (cb as HTMLInputElement).value).join(", "));
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
+
+      // Supabase 동시 저장
+      await supabase.from("shuttle_applications").insert({
+        name: formData.get("guestName") as string,
+        date: formData.get("schedule") as string,
+        people_count: Number(formData.get("people")) || 1,
+        message: formData.get("memo") as string,
+      }).then(() => {});
+
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
       form.reset();
     } catch (err) {

@@ -41,10 +41,29 @@ interface Application {
   status: string;
 }
 
+interface ShuttleApp {
+  id: number;
+  created_at: string;
+  name: string;
+  date: string;
+  people_count: number;
+  message: string;
+  status: string;
+}
+
+interface FieldtripApp {
+  id: number;
+  created_at: string;
+  name: string;
+  date: string;
+  message: string;
+  status: string;
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
-  const [tab, setTab] = useState<"notices" | "members" | "applications">("notices");
+  const [tab, setTab] = useState<"notices" | "applications" | "shuttle" | "fieldtrip" | "members">("notices");
 
   // notices
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -60,6 +79,14 @@ export default function AdminPage() {
   // applications
   const [applications, setApplications] = useState<Application[]>([]);
   const [appLoading, setAppLoading] = useState(false);
+
+  // shuttle
+  const [shuttleApps, setShuttleApps] = useState<ShuttleApp[]>([]);
+  const [shuttleLoading, setShuttleLoading] = useState(false);
+
+  // fieldtrip
+  const [fieldtripApps, setFieldtripApps] = useState<FieldtripApp[]>([]);
+  const [fieldtripLoading, setFieldtripLoading] = useState(false);
 
   async function fetchNotices() {
     setNoticeLoading(true);
@@ -87,6 +114,32 @@ export default function AdminPage() {
     else await fetchApplications();
   }
 
+  async function fetchShuttleApps() {
+    setShuttleLoading(true);
+    const { data } = await supabase.from("shuttle_applications").select("*").order("created_at", { ascending: false });
+    if (data) setShuttleApps(data);
+    setShuttleLoading(false);
+  }
+
+  async function updateShuttleStatus(id: number, status: string) {
+    const { error } = await supabase.from("shuttle_applications").update({ status }).eq("id", id);
+    if (error) alert("상태 변경 실패: " + error.message);
+    else await fetchShuttleApps();
+  }
+
+  async function fetchFieldtripApps() {
+    setFieldtripLoading(true);
+    const { data } = await supabase.from("fieldtrip_applications").select("*").order("created_at", { ascending: false });
+    if (data) setFieldtripApps(data);
+    setFieldtripLoading(false);
+  }
+
+  async function updateFieldtripStatus(id: number, status: string) {
+    const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", id);
+    if (error) alert("상태 변경 실패: " + error.message);
+    else await fetchFieldtripApps();
+  }
+
   async function fetchMembers() {
     setMemberLoading(true);
     const { data } = await supabase
@@ -102,6 +155,8 @@ export default function AdminPage() {
       fetchNotices();
       fetchMembers();
       fetchApplications();
+      fetchShuttleApps();
+      fetchFieldtripApps();
     }
   }, [authed]);
 
@@ -294,10 +349,16 @@ export default function AdminPage() {
             📋 공지사항 관리
           </button>
           <button className={`tab-btn${tab === "applications" ? " active" : ""}`} onClick={() => setTab("applications")}>
-            📬 신청 관리
+            📬 패키지
+          </button>
+          <button className={`tab-btn${tab === "shuttle" ? " active" : ""}`} onClick={() => setTab("shuttle")}>
+            🚐 셔틀
+          </button>
+          <button className={`tab-btn${tab === "fieldtrip" ? " active" : ""}`} onClick={() => setTab("fieldtrip")}>
+            🌿 필드트립
           </button>
           <button className={`tab-btn${tab === "members" ? " active" : ""}`} onClick={() => setTab("members")}>
-            👥 회원 관리
+            👥 회원
           </button>
         </div>
 
@@ -444,6 +505,106 @@ export default function AdminPage() {
               )}
             </div>
           </>
+        )}
+
+        {/* SHUTTLE TAB */}
+        {tab === "shuttle" && (
+          <div className="list-card">
+            <h2>🚐 셔틀 신청 목록 ({shuttleApps.length}건)</h2>
+            {shuttleLoading ? (
+              <div className="loading-msg">불러오는 중...</div>
+            ) : shuttleApps.length === 0 ? (
+              <div className="empty-msg">셔틀 신청 내역이 없습니다.</div>
+            ) : (
+              <table className="ntable">
+                <thead>
+                  <tr>
+                    <th style={{width:"10%"}}>상태</th>
+                    <th style={{width:"14%"}}>이름</th>
+                    <th className="hide-m" style={{width:"30%"}}>일정</th>
+                    <th className="hide-m" style={{width:"8%"}}>인원</th>
+                    <th className="hide-m" style={{width:"12%"}}>신청일</th>
+                    <th style={{width:"20%"}}>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shuttleApps.map((a) => (
+                    <tr key={a.id}>
+                      <td>
+                        <span className="badge" style={
+                          a.status === "confirmed" ? {background:"#ecfdf5",color:"#059669",border:"1px solid #a7f3d0"} :
+                          a.status === "cancelled" ? {background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca"} :
+                          {background:"#fffbeb",color:"#d97706",border:"1px solid #fde68a"}
+                        }>
+                          {a.status === "confirmed" ? "확정" : a.status === "cancelled" ? "취소" : "대기"}
+                        </span>
+                      </td>
+                      <td className="m-name">{a.name}</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"200px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
+                      <td className="hide-m">{a.people_count}명</td>
+                      <td className="hide-m">{formatDate(a.created_at)}</td>
+                      <td>
+                        <div className="action-btns" style={{flexWrap:"wrap"}}>
+                          {a.status !== "confirmed" && <button className="btn-edit" onClick={() => updateShuttleStatus(a.id, "confirmed")}>확정</button>}
+                          {a.status !== "cancelled" && <button className="btn-del" onClick={() => updateShuttleStatus(a.id, "cancelled")}>취소</button>}
+                          {a.status !== "pending" && <button className="btn-edit" style={{background:"#fffbeb",color:"#d97706",borderColor:"#fde68a"}} onClick={() => updateShuttleStatus(a.id, "pending")}>대기</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* FIELDTRIP TAB */}
+        {tab === "fieldtrip" && (
+          <div className="list-card">
+            <h2>🌿 필드트립 신청 목록 ({fieldtripApps.length}건)</h2>
+            {fieldtripLoading ? (
+              <div className="loading-msg">불러오는 중...</div>
+            ) : fieldtripApps.length === 0 ? (
+              <div className="empty-msg">필드트립 신청 내역이 없습니다.</div>
+            ) : (
+              <table className="ntable">
+                <thead>
+                  <tr>
+                    <th style={{width:"10%"}}>상태</th>
+                    <th style={{width:"14%"}}>이름</th>
+                    <th className="hide-m" style={{width:"34%"}}>일정</th>
+                    <th className="hide-m" style={{width:"12%"}}>신청일</th>
+                    <th style={{width:"20%"}}>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fieldtripApps.map((a) => (
+                    <tr key={a.id}>
+                      <td>
+                        <span className="badge" style={
+                          a.status === "confirmed" ? {background:"#ecfdf5",color:"#059669",border:"1px solid #a7f3d0"} :
+                          a.status === "cancelled" ? {background:"#fef2f2",color:"#dc2626",border:"1px solid #fecaca"} :
+                          {background:"#fffbeb",color:"#d97706",border:"1px solid #fde68a"}
+                        }>
+                          {a.status === "confirmed" ? "확정" : a.status === "cancelled" ? "취소" : "대기"}
+                        </span>
+                      </td>
+                      <td className="m-name">{a.name}</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"240px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
+                      <td className="hide-m">{formatDate(a.created_at)}</td>
+                      <td>
+                        <div className="action-btns" style={{flexWrap:"wrap"}}>
+                          {a.status !== "confirmed" && <button className="btn-edit" onClick={() => updateFieldtripStatus(a.id, "confirmed")}>확정</button>}
+                          {a.status !== "cancelled" && <button className="btn-del" onClick={() => updateFieldtripStatus(a.id, "cancelled")}>취소</button>}
+                          {a.status !== "pending" && <button className="btn-edit" style={{background:"#fffbeb",color:"#d97706",borderColor:"#fde68a"}} onClick={() => updateFieldtripStatus(a.id, "pending")}>대기</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         )}
 
         {/* MEMBERS TAB */}
