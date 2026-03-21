@@ -1,52 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { posts, categoryMap } from "./data";
 
-const notices = [
-  {
-    id: 1,
-    category: "important",
-    title: "2026년 여름방학 시즌 패키지 조기 마감 안내",
-    date: "2026.03.18",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 여름방학 시즌(7월~8월) 올인원 패키지가 높은 관심 속에 조기 마감될 예정입니다.\n\n■ 마감 예정 숙소\n- 드림하우스: 7월 잔여 1자리\n- 제이파크: 7~8월 전 기간 마감 임박\n- 큐브나인: 8월 잔여 2자리\n\n■ 예약 방법\n카카오톡 채널을 통해 문의해 주시면 빠르게 안내 도와드리겠습니다.\n\n감사합니다.",
-  },
-  {
-    id: 2,
-    category: "important",
-    title: "드림아카데미 정규수업 시간표 변경 안내",
-    date: "2026.03.10",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 4월 1일부터 정규수업 시간표가 아래와 같이 변경됩니다.\n\n■ 변경 전\n- 오전 수업: 09:00 ~ 12:00\n- 오후 수업: 13:00 ~ 16:00\n\n■ 변경 후\n- 오전 수업: 08:30 ~ 11:30\n- 오후 수업: 13:00 ~ 16:00\n\n■ 적용일: 2026년 4월 1일 (화)\n\n오전 등원 시간이 30분 앞당겨지오니 참고 부탁드립니다.\n셔틀 운행 시간도 함께 변경됩니다.\n\n감사합니다.",
-  },
-  {
-    id: 3,
-    category: "general",
-    title: "플레이드림 신규 프로그램 오픈 안내",
-    date: "2026.03.05",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n플레이드림에 새로운 프로그램이 추가되었습니다!\n\n■ 신규 프로그램\n1. ART & CRAFT 심화반 - 주 3회, 1:1 맞춤 수업\n2. CODING LINE - 스크래치 기반 코딩 영어 수업\n\n■ 운영 시작일: 2026년 3월 17일 (월)\n■ 대상: 초등 1~6학년\n■ 비용: 별도 문의\n\n자세한 내용은 카카오톡으로 문의해 주세요.\n\n감사합니다.",
-  },
-  {
-    id: 4,
-    category: "general",
-    title: "제이파크 리조트 수영장 정기 점검 안내",
-    date: "2026.02.25",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n제이파크 리조트 측에서 수영장 정기 점검이 진행될 예정입니다.\n\n■ 점검 일정: 2026년 3월 3일 (월) ~ 3월 5일 (수)\n■ 점검 대상: Wave Pool, Amazon River\n■ 이용 가능: Island Pool, Beach Pool 등 나머지 수영장은 정상 운영\n\n점검 기간 동안 일부 수영장 이용이 제한되오니 양해 부탁드립니다.\n\n감사합니다.",
-  },
-  {
-    id: 5,
-    category: "general",
-    title: "2026년 세부 공휴일 휴원 안내",
-    date: "2026.02.15",
-    content:
-      "안녕하세요, 드림아카데미입니다.\n\n2026년 필리핀 공휴일에 따른 드림아카데미 휴원 일정을 안내드립니다.\n\n■ 휴원일\n- 4월 2일 (목) ~ 4월 5일 (일): 성주간 (Holy Week)\n- 5월 1일 (금): 노동절\n- 6월 12일 (금): 독립기념일\n\n■ 참고사항\n- 휴원일에는 셔틀, 도시락 서비스가 운영되지 않습니다.\n- 숙소(드림하우스 헬퍼 서비스)도 휴무입니다.\n\n감사합니다.",
-  },
-];
+type CategoryFilter = "all" | "free" | "review" | "question";
 
-export default function NoticePage() {
+export default function CommunityPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<CategoryFilter>("all");
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,6 +35,8 @@ export default function NoticePage() {
     };
   }, []);
 
+  const filtered = filter === "all" ? posts : posts.filter((p) => p.category === filter);
+
   return (
     <>
       <style>{`
@@ -83,7 +45,6 @@ export default function NoticePage() {
           --sky:#29a9e0; --yellow:#f5a623; --orange:#FF6B35; --orange-dark:#D4520A; --orange-light:#FFF4ED;
           --white:#fff; --off:#f8fafc; --text:#1a1a2e; --muted:#6b7c93;
           --stroke:#e2e8f0; --shadow:0 8px 40px rgba(0,0,0,0.09);
-          --shadow-lg:0 20px 60px rgba(26,111,196,0.13);
         }
         *{box-sizing:border-box;margin:0;padding:0;}
         html{scroll-behavior:smooth;}
@@ -118,7 +79,7 @@ export default function NoticePage() {
         /* HERO */
         .page-hero{
           padding:120px 60px 56px;
-          background:linear-gradient(135deg,var(--blue-light) 0%,#dbeafe 40%,#eaf3fb 100%);
+          background:linear-gradient(135deg,#f0f4f8 0%,#e2e8f0 40%,#f8fafc 100%);
           border-bottom:1px solid var(--stroke);
           text-align:center;
         }
@@ -128,25 +89,35 @@ export default function NoticePage() {
         .page-hero h1 .hl{color:var(--blue);}
         .page-hero p{font-size:16px;color:var(--muted);line-height:1.7;}
 
-        /* NOTICE LIST */
-        .notice-sec{padding:60px 60px 80px;max-width:900px;margin:0 auto;}
-        .notice-count{font-size:13px;color:var(--muted);margin-bottom:20px;}
-        .notice-count strong{color:var(--text);}
-        .notice-list{display:flex;flex-direction:column;gap:0;border-top:2px solid var(--text);}
-        .notice-item{border-bottom:1px solid var(--stroke);}
-        .notice-header{display:flex;align-items:center;gap:14px;padding:18px 20px;cursor:pointer;background:none;border:none;width:100%;font-family:'Noto Sans KR',sans-serif;text-align:left;transition:background 140ms;}
-        .notice-header:hover{background:#f8fafc;}
-        .notice-header.open{background:#f0f7ff;}
-        .notice-badge{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:0.03em;}
-        .notice-badge.important{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
-        .notice-badge.general{background:var(--blue-light);color:var(--blue);border:1px solid #bfdbfe;}
-        .notice-title{flex:1;font-size:14.5px;font-weight:600;color:var(--text);line-height:1.4;}
-        .notice-date{flex-shrink:0;font-size:12.5px;color:var(--muted);font-family:'Montserrat',sans-serif;}
-        .notice-arrow{flex-shrink:0;font-size:12px;color:var(--muted);transition:transform 300ms;}
-        .notice-arrow.open{transform:rotate(180deg);}
-        .notice-body{max-height:0;overflow:hidden;transition:max-height 400ms ease;}
-        .notice-body.open{max-height:800px;}
-        .notice-content{padding:20px 24px 28px;margin:0 20px 20px;background:#f8fafc;border-radius:12px;font-size:13.5px;color:var(--muted);line-height:2;white-space:pre-wrap;word-break:keep-all;}
+        /* BOARD */
+        .board-sec{padding:48px 60px 80px;max-width:960px;margin:0 auto;}
+        .board-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+        .board-count{font-size:13px;color:var(--muted);}
+        .board-count strong{color:var(--text);}
+        .board-filters{display:flex;gap:6px;}
+        .board-filter{padding:7px 16px;border-radius:20px;font-size:12.5px;font-weight:600;border:1px solid var(--stroke);background:var(--white);color:var(--muted);cursor:pointer;transition:all 160ms;}
+        .board-filter:hover{border-color:var(--blue);color:var(--blue);}
+        .board-filter.active{background:var(--blue);color:var(--white);border-color:var(--blue);}
+        .write-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;background:var(--blue);color:var(--white);font-size:13px;font-weight:600;border-radius:6px;border:none;cursor:pointer;transition:background 160ms;font-family:'Noto Sans KR',sans-serif;}
+        .write-btn:hover{background:var(--blue-dark);}
+
+        /* TABLE */
+        .board-table{width:100%;border-collapse:collapse;border-top:2px solid var(--text);}
+        .board-table th{font-size:12px;font-weight:700;color:var(--muted);padding:12px 14px;text-align:left;border-bottom:1px solid var(--stroke);background:#f8fafc;letter-spacing:0.03em;}
+        .board-table th.center{text-align:center;}
+        .board-table td{font-size:13.5px;padding:16px 14px;border-bottom:1px solid var(--stroke);color:var(--muted);vertical-align:middle;}
+        .board-table td.center{text-align:center;}
+        .board-table tr:hover td{background:#fafbfc;}
+        .board-table .post-link{display:flex;align-items:center;gap:10px;cursor:pointer;}
+        .post-cat{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;}
+        .post-title-text{font-size:14px;font-weight:600;color:var(--text);transition:color 140ms;}
+        .post-link:hover .post-title-text{color:var(--blue);}
+        .post-comments{font-size:12px;color:var(--blue);font-weight:700;flex-shrink:0;}
+        .post-author{font-size:12.5px;}
+        .post-date{font-size:12px;font-family:'Montserrat',sans-serif;color:#94a3b8;}
+        .post-views{font-size:12px;}
+
+        .empty-msg{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
 
         /* FOOTER */
         footer{background:#1e293b;padding:40px 60px 24px;border-top:1px solid rgba(255,255,255,0.07);}
@@ -165,10 +136,8 @@ export default function NoticePage() {
         @media(max-width:1024px){
           nav{padding:0 24px;} .nav-center{display:none;} .nav-right{display:none;} .hamburger{display:flex;}
           .page-hero{padding:90px 24px 40px;}
-          .notice-sec{padding:40px 24px 60px;}
-          .notice-header{padding:16px 12px;gap:10px;flex-wrap:wrap;}
-          .notice-date{width:100%;order:3;padding-left:0;margin-top:2px;}
-          .notice-content{margin:0 8px 16px;padding:16px 18px;}
+          .board-sec{padding:32px 16px 60px;}
+          .board-table th.hide-m,.board-table td.hide-m{display:none;}
           .footer-inner{flex-direction:column;align-items:flex-start;}
         }
       `}</style>
@@ -195,8 +164,8 @@ export default function NoticePage() {
           </div>
           <a href="/playdream">플레이드림</a>
           <a href="/apply">패키지서비스신청</a>
-          <a href="/notice" className="nav-active">공지사항</a>
-          <a href="/community">커뮤니티</a>
+          <a href="/notice">공지사항</a>
+          <a href="/community" className="nav-active">커뮤니티</a>
         </div>
         <div className="nav-right">
           <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
@@ -216,43 +185,79 @@ export default function NoticePage() {
         <a href="/accommodation/cubenine">큐브나인</a>
         <a href="/playdream">플레이드림</a>
         <a href="/apply">패키지서비스신청</a>
-        <a href="/notice" style={{ color: "var(--blue)", fontWeight: 700 }}>▶ 공지사항</a>
-        <a href="/community">커뮤니티</a>
+        <a href="/notice">공지사항</a>
+        <a href="/community" style={{ color: "var(--blue)", fontWeight: 700 }}>▶ 커뮤니티</a>
         <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
       </div>
 
       {/* HERO */}
       <div className="page-hero">
         <div className="page-hero-inner">
-          <div className="page-tag fade">Notice</div>
-          <h1 className="fade"><span className="hl">공지사항</span></h1>
-          <p className="fade">드림아카데미의 소식과 안내사항을 확인하세요.</p>
+          <div className="page-tag fade">Community</div>
+          <h1 className="fade"><span className="hl">커뮤니티</span></h1>
+          <p className="fade">드림아카데미 가족들의 이야기를 나눠보세요.</p>
         </div>
       </div>
 
-      {/* NOTICE LIST */}
-      <div className="notice-sec fade">
-        <div className="notice-count">전체 <strong>{notices.length}건</strong></div>
-        <div className="notice-list">
-          {notices.map((n) => (
-            <div className="notice-item" key={n.id}>
-              <button
-                className={`notice-header${openId === n.id ? " open" : ""}`}
-                onClick={() => setOpenId(openId === n.id ? null : n.id)}
-              >
-                <span className={`notice-badge ${n.category}`}>
-                  {n.category === "important" ? "중요" : "일반"}
-                </span>
-                <span className="notice-title">{n.title}</span>
-                <span className="notice-date">{n.date}</span>
-                <span className={`notice-arrow${openId === n.id ? " open" : ""}`}>▼</span>
-              </button>
-              <div className={`notice-body${openId === n.id ? " open" : ""}`}>
-                <div className="notice-content">{n.content}</div>
-              </div>
+      {/* BOARD */}
+      <div className="board-sec fade">
+        <div className="board-top">
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <div className="board-count">전체 <strong>{filtered.length}건</strong></div>
+            <div className="board-filters">
+              {(["all", "free", "review", "question"] as const).map((cat) => (
+                <button
+                  key={cat}
+                  className={`board-filter${filter === cat ? " active" : ""}`}
+                  onClick={() => setFilter(cat)}
+                >
+                  {cat === "all" ? "전체" : categoryMap[cat].label}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+          <button className="write-btn" onClick={() => alert("로그인 후 이용 가능합니다.")}>
+            ✏️ 글쓰기
+          </button>
         </div>
+
+        <table className="board-table">
+          <thead>
+            <tr>
+              <th style={{ width: "60%" }}>제목</th>
+              <th className="center hide-m" style={{ width: "12%" }}>작성자</th>
+              <th className="center hide-m" style={{ width: "14%" }}>날짜</th>
+              <th className="center hide-m" style={{ width: "10%" }}>조회</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 && (
+              <tr><td colSpan={4} className="empty-msg">게시글이 없습니다.</td></tr>
+            )}
+            {filtered.map((post) => {
+              const cat = categoryMap[post.category];
+              return (
+                <tr key={post.id}>
+                  <td>
+                    <a href={`/community/${post.id}`} className="post-link">
+                      <span
+                        className="post-cat"
+                        style={{ background: cat.bg, color: cat.color, border: `1px solid ${cat.border}` }}
+                      >
+                        {cat.label}
+                      </span>
+                      <span className="post-title-text">{post.title}</span>
+                      {post.comments > 0 && <span className="post-comments">[{post.comments}]</span>}
+                    </a>
+                  </td>
+                  <td className="center hide-m post-author">{post.author}</td>
+                  <td className="center hide-m post-date">{post.date}</td>
+                  <td className="center hide-m post-views">{post.views}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* FOOTER */}
@@ -264,11 +269,8 @@ export default function NoticePage() {
             <a href="/junior">주니어 커리큘럼</a>
             <a href="/kinder">킨더 커리큘럼</a>
             <a href="/package">올인원패키지</a>
-            <a href="/accommodation/dreamhouse">드림하우스</a>
-            <a href="/accommodation/jpark">제이파크</a>
-            <a href="/accommodation/cubenine">큐브나인</a>
-            <a href="/playdream">플레이드림</a>
             <a href="/notice">공지사항</a>
+            <a href="/community">커뮤니티</a>
             <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기</a>
           </div>
         </div>

@@ -326,6 +326,7 @@ export default function HomePage() {
     <a href="/apply">패키지서비스신청</a>
     <a href="/playdream">플레이드림</a>
     <a href="/notice">공지사항</a>
+    <a href="/community">커뮤니티</a>
   </div>
   <div className="nav-right">
     <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
@@ -344,6 +345,7 @@ export default function HomePage() {
   <a href="/apply">패키지서비스신청</a>
   <a href="/playdream">플레이드림</a>
   <a href="/notice">공지사항</a>
+  <a href="/community">커뮤니티</a>
   <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
 </div>
 
@@ -645,7 +647,7 @@ export default function HomePage() {
     </div>
     <div><div className="ftitle">커리큘럼</div><div className="flinks"><a href="/junior">주니어 커리큘럼</a><a href="/kinder">킨더 커리큘럼</a><a href="/after-school-fieldtrip">애프터스쿨</a></div></div>
     <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="/accommodation/jpark">제이파크</a><a href="/accommodation/cubenine">큐브나인</a><a href="#">패키지 안내</a></div></div>
-    <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/apply">프로그램 신청</a><a href="/notice">공지사항</a></div></div>
+    <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/apply">프로그램 신청</a><a href="/notice">공지사항</a><a href="/community">커뮤니티</a></div></div>
   </div>
   <div className="fbottom">
     <span>© 2026 Dream Academy by Dream Company. All rights reserved.</span>

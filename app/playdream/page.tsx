@@ -204,6 +204,7 @@ export default function PlayDreamPage() {
           <a href="/playdream" className="nav-active">플레이드림</a>
           <a href="/apply">패키지서비스신청</a>
           <a href="/notice">공지사항</a>
+          <a href="/community">커뮤니티</a>
         </div>
         <div className="nav-right">
           <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
@@ -224,6 +225,7 @@ export default function PlayDreamPage() {
         <a href="/playdream" style={{ color: "var(--orange)", fontWeight: 700 }}>▶ 플레이드림</a>
         <a href="/apply">패키지서비스신청</a>
         <a href="/notice">공지사항</a>
+        <a href="/community">커뮤니티</a>
         <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
       </div>
 
