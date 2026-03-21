@@ -122,6 +122,8 @@ export default function AfterSchoolFieldtripPage() {
         name: formData.get("childName") as string,
         date: formData.get("schedule") as string,
         message: formData.get("memo") as string,
+        room_number: formData.get("room") as string,
+        request: formData.get("memo") as string,
       }).then(() => {});
 
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");

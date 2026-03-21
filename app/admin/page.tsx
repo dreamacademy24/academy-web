@@ -37,6 +37,8 @@ interface ShuttleApp {
   date: string;
   people_count: number;
   message: string;
+  room_number: string;
+  request: string;
   status: string;
 }
 
@@ -46,6 +48,8 @@ interface FieldtripApp {
   name: string;
   date: string;
   message: string;
+  room_number: string;
+  request: string;
   status: string;
 }
 
@@ -410,12 +414,14 @@ export default function AdminPage() {
               <table className="ntable">
                 <thead>
                   <tr>
-                    <th style={{width:"10%"}}>상태</th>
-                    <th style={{width:"14%"}}>이름</th>
-                    <th className="hide-m" style={{width:"30%"}}>일정</th>
-                    <th className="hide-m" style={{width:"8%"}}>인원</th>
-                    <th className="hide-m" style={{width:"12%"}}>신청일</th>
-                    <th style={{width:"20%"}}>관리</th>
+                    <th style={{width:"8%"}}>상태</th>
+                    <th style={{width:"12%"}}>이름</th>
+                    <th className="hide-m" style={{width:"10%"}}>방번호</th>
+                    <th className="hide-m" style={{width:"22%"}}>일정</th>
+                    <th className="hide-m" style={{width:"6%"}}>인원</th>
+                    <th className="hide-m" style={{width:"16%"}}>요청사항</th>
+                    <th className="hide-m" style={{width:"10%"}}>신청일</th>
+                    <th style={{width:"16%"}}>관리</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -431,8 +437,10 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="m-name">{a.name}</td>
-                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"200px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
+                      <td className="hide-m" style={{fontSize:"12px"}}>{a.room_number}</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"160px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
                       <td className="hide-m">{a.people_count}명</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"120px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.request}</td>
                       <td className="hide-m">{formatDate(a.created_at)}</td>
                       <td>
                         <div className="action-btns" style={{flexWrap:"wrap"}}>
@@ -461,11 +469,13 @@ export default function AdminPage() {
               <table className="ntable">
                 <thead>
                   <tr>
-                    <th style={{width:"10%"}}>상태</th>
-                    <th style={{width:"14%"}}>이름</th>
-                    <th className="hide-m" style={{width:"34%"}}>일정</th>
-                    <th className="hide-m" style={{width:"12%"}}>신청일</th>
-                    <th style={{width:"20%"}}>관리</th>
+                    <th style={{width:"8%"}}>상태</th>
+                    <th style={{width:"12%"}}>이름</th>
+                    <th className="hide-m" style={{width:"10%"}}>방번호</th>
+                    <th className="hide-m" style={{width:"24%"}}>일정</th>
+                    <th className="hide-m" style={{width:"16%"}}>요청사항</th>
+                    <th className="hide-m" style={{width:"10%"}}>신청일</th>
+                    <th style={{width:"16%"}}>관리</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -481,7 +491,9 @@ export default function AdminPage() {
                         </span>
                       </td>
                       <td className="m-name">{a.name}</td>
-                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"240px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
+                      <td className="hide-m" style={{fontSize:"12px"}}>{a.room_number}</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"180px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.date}</td>
+                      <td className="hide-m" style={{fontSize:"12px",maxWidth:"120px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.request}</td>
                       <td className="hide-m">{formatDate(a.created_at)}</td>
                       <td>
                         <div className="action-btns" style={{flexWrap:"wrap"}}>
