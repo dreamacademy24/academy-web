@@ -46,9 +46,7 @@ export default function InvoicePage(){
   const [cP,setCP]=useState(1);
   const [cK,setCK]=useState(2);
   const [ex1Cnt,setEx1Cnt]=useState(0);
-  const [ex1Wk,setEx1Wk]=useState(2);
   const [ex2Cnt,setEx2Cnt]=useState(0);
-  const [ex2Wk,setEx2Wk]=useState(2);
 
   const a1CO=a1CI?addDays(a1CI,a1W*7):"";
   const a2CI=cm==="combo"?a1CO:"";
@@ -68,7 +66,7 @@ export default function InvoicePage(){
     if(cm==="single"){
       const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
       const pk=isPeak(a1CI);const price=sp(e,pk);
-      if(ex1Cnt>0)extras.push({label:`추가 인원 ${ex1Cnt}명 × ${ex1Wk}주`,price:extraRate(a1T)*ex1Cnt*ex1Wk});
+      if(ex1Cnt>0)extras.push({label:`추가 인원 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
       const extTotal=extras.reduce((s,x)=>s+x.price,0);
       return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:pk?"성수기":"비수기"}]};
     }
@@ -77,14 +75,14 @@ export default function InvoicePage(){
     const pk1=isPeak(a1CI),pk2=isPeak(a2CI);
     const f1=sp(e1,pk1),f2=sp(e2,pk2);
     const p1=Math.round(f1*(a1W/tw)),p2=Math.round(f2*(a2W/tw));
-    if(ex1Cnt>0)extras.push({label:`${al(a1T,a1R)} 추가 ${ex1Cnt}명 × ${ex1Wk}주`,price:extraRate(a1T)*ex1Cnt*ex1Wk});
-    if(ex2Cnt>0)extras.push({label:`${al(a2T,a2R)} 추가 ${ex2Cnt}명 × ${ex2Wk}주`,price:extraRate(a2T)*ex2Cnt*ex2Wk});
+    if(ex1Cnt>0)extras.push({label:`${al(a1T,a1R)} 추가 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
+    if(ex2Cnt>0)extras.push({label:`${al(a2T,a2R)} 추가 ${ex2Cnt}명 × 1주`,price:extraRate(a2T)*ex2Cnt});
     const extTotal=extras.reduce((s,x)=>s+x.price,0);
     return{total:p1+p2+extTotal,extras,items:[
       {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기"},
       {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기"},
     ]};
-  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex1Wk,ex2Cnt,ex2Wk]);
+  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt]);
 
   function applyInv(){
     if(!est)return;
@@ -127,7 +125,7 @@ export default function InvoicePage(){
 .ert{margin-top:12px;padding-top:12px;border-top:2px solid #1a6fc4;display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:800;}.ert .pr{color:#1a6fc4;}
 .sb{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;}.sb.pk{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.sb.of{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
 .ba{width:100%;padding:12px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:12px;transition:background 160ms;}.ba:hover{background:#0d3d7a;}
-.ex-box{padding:14px 16px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:12px;}.ex-title{font-size:11px;font-weight:600;color:#6b7c93;margin-bottom:8px;}.ex-row{display:flex;gap:12px;align-items:flex-end;}.ex-stepper{display:flex;align-items:center;gap:0;}.ex-stepper button{width:32px;height:32px;border:1px solid #e2e8f0;background:#fff;font-size:16px;font-weight:700;cursor:pointer;color:#1a6fc4;font-family:'Noto Sans KR',sans-serif;}.ex-stepper button:first-child{border-radius:6px 0 0 6px;}.ex-stepper button:last-child{border-radius:0 6px 6px 0;}.ex-stepper span{width:36px;height:32px;display:flex;align-items:center;justify-content:center;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700;background:#fff;}
+.ex-box{padding:14px 16px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:12px;}.ex-title{font-size:11px;font-weight:600;color:#6b7c93;margin-bottom:8px;}.ex-row{display:flex;gap:12px;align-items:flex-end;}
 .ne{padding:20px;text-align:center;color:#94a3b8;font-size:13px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;margin-top:16px;}
 .dr{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;}.dr .f-group{flex:2;}.dr .f-group:last-of-type{flex:1;}.bs{padding:6px 14px;font-size:12px;font-weight:700;border-radius:6px;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.bd{background:#eaf3fb;color:#1a6fc4;border:1px solid #bfdbfe;}.bd:hover{background:#dbeafe;}.br{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 10px;}.br:hover{background:#fee2e2;}
 .bg{width:100%;padding:14px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}.bg:hover{background:#0d3d7a;}.bl{display:block;text-align:center;margin-top:16px;font-size:13px;color:#6b7c93;}.bl:hover{color:#1a6fc4;}
@@ -149,14 +147,14 @@ export default function InvoicePage(){
     {cm==="single"?(<>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 선택")}
       <div className="f-row"><div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,mp(a1T)-p));}}>{[1,2,3].filter(p=>p<mp(a1T)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:mp(a1T)-cP},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
-      <div className="ex-box"><div className="ex-title">추가 인원 (1인 1주 단위 · {fmt(extraRate(a1T))}원/인/주)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 auto"}}><label className="f-label">인원</label><div className="ex-stepper"><button onClick={()=>setEx1Cnt(Math.max(0,ex1Cnt-1))}>-</button><span>{ex1Cnt}</span><button onClick={()=>setEx1Cnt(ex1Cnt+1)}>+</button></div></div><div className="f-group" style={{flex:"0 0 100px"}}><label className="f-label">기간</label><select className="f-select" value={ex1Wk} onChange={e=>setEx1Wk(Number(e.target.value))}>{Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}</select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt*ex1Wk)}원</div>}</div></div>
+      <div className="ex-box"><div className="ex-title">추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
     </>):(<>
       <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.min(mp(a1T),mp(a2T))-p));}}>{[1,2,3].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.min(mp(a1T),mp(a2T))-cP},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 A")}
-      <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 ({fmt(extraRate(a1T))}원/인/주)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 auto"}}><label className="f-label">인원</label><div className="ex-stepper"><button onClick={()=>setEx1Cnt(Math.max(0,ex1Cnt-1))}>-</button><span>{ex1Cnt}</span><button onClick={()=>setEx1Cnt(ex1Cnt+1)}>+</button></div></div><div className="f-group" style={{flex:"0 0 100px"}}><label className="f-label">기간</label><select className="f-select" value={ex1Wk} onChange={e=>setEx1Wk(Number(e.target.value))}>{Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}</select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt*ex1Wk)}원</div>}</div></div>
+      <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
       <div className="cp">+</div>
       {rSel(a2T,setA2T,a2R,setA2R,a2W,setA2W,a2CI,null,a2CO,"숙소 B")}
-      <div className="ex-box"><div className="ex-title">숙소 B 추가 인원 ({fmt(extraRate(a2T))}원/인/주)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 auto"}}><label className="f-label">인원</label><div className="ex-stepper"><button onClick={()=>setEx2Cnt(Math.max(0,ex2Cnt-1))}>-</button><span>{ex2Cnt}</span><button onClick={()=>setEx2Cnt(ex2Cnt+1)}>+</button></div></div><div className="f-group" style={{flex:"0 0 100px"}}><label className="f-label">기간</label><select className="f-select" value={ex2Wk} onChange={e=>setEx2Wk(Number(e.target.value))}>{Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}</select></div>{ex2Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a2T)*ex2Cnt*ex2Wk)}원</div>}</div></div>
+      <div className="ex-box"><div className="ex-title">숙소 B 추가 인원 (1주일 고정 · {fmt(extraRate(a2T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex2Cnt} onChange={e=>setEx2Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex2Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a2T)*ex2Cnt)}원</div>}</div></div>
     </>)}
 
     {est?(<div className="er">
