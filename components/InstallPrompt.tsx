@@ -40,6 +40,16 @@ export default function InstallPrompt() {
     setShow(false);
   }
 
+  function handleKakaoOpen() {
+    const site = "www.dreamacademyph.com";
+    if (env === "kakao-android") {
+      window.location.href = `intent://${site}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https://${site};end`;
+    } else if (env === "kakao-ios") {
+      window.location.href = `https://${site}`;
+      setTimeout(() => window.open(`https://${site}`, "_blank"), 300);
+    }
+  }
+
   if (!show) return null;
 
   const isKakao = env === "kakao-android" || env === "kakao-ios";
@@ -69,7 +79,11 @@ export default function InstallPrompt() {
       <div className="ip-bar">
         <span className="ip-text">📲 홈화면에 추가하고 앱처럼 사용하세요!</span>
         <div className="ip-right">
-          {showInstallBtn ? (
+          {env === "kakao-android" ? (
+            <button className="ip-btn" onClick={handleKakaoOpen}>📲 크롬으로 열어서 설치하기</button>
+          ) : env === "kakao-ios" ? (
+            <button className="ip-btn" onClick={handleKakaoOpen}>📲 Safari로 열어서 설치하기</button>
+          ) : showInstallBtn ? (
             <button className="ip-btn" onClick={handleInstall}>설치하기</button>
           ) : (
             <button className="ip-btn" onClick={() => setShowModal(true)}>설치방법 보기</button>
