@@ -5,6 +5,10 @@ import SWRegister from "./sw-register";
 export const metadata: Metadata = {
   title: "드림아카데미 | 필리핀 세부 프리미엄 영어캠프",
   description: "필리핀 세부 프리미엄 영어캠프 드림아카데미 | UCLA 출신 원장·올인원 케어·주니어·킨더 커리큘럼 | 여권만 챙기세요!",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/icons/icon-192x192.png",
+  },
   openGraph: {
     title: "드림아카데미 | 필리핀 세부 프리미엄 영어캠프",
     description: "필리핀 세부 프리미엄 영어캠프 드림아카데미 | UCLA 출신 원장·올인원 케어·주니어·킨더 커리큘럼 | 여권만 챙기세요!",

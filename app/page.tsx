@@ -102,9 +102,8 @@ export default function HomePage() {
       box-shadow: var(--shadow-sm);
       gap: 0;
     }
-    .logo { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 0.01em; color: var(--text); flex-shrink: 0; margin-right: 32px; }
-    .logo .D { color: var(--sky); }
-    .logo .A { color: var(--yellow); }
+    .logo { flex-shrink: 0; margin-right: 32px; display: flex; align-items: center; }
+    .logo img { height: 40px; width: auto; display: block; }
     /* 가운데 메뉴 */
     .nav-center { display: flex; align-items: center; flex: 1; }
     .nav-center > a { color: #374151; font-family: 'Noto Sans KR', sans-serif; font-size: 14px; font-weight: 500; padding: 0 14px; height: 66px; display: flex; align-items: center; transition: color 160ms; white-space: nowrap; }
@@ -339,7 +338,7 @@ export default function HomePage() {
     /* RESPONSIVE */
     @media(max-width:1024px){
       nav { padding: 0 24px; height: 56px; } .nav-center { display: none; } .nav-right { display: none; } .hamburger { display: flex; }
-      .logo { font-size: 17px; }
+      .logo img { height: 32px; }
       .mob-nav { top: 56px; }
       .hero-inner { grid-template-columns: 1fr; gap: 24px; padding: 60px 24px 80px; }
       .hero-right { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -376,7 +375,7 @@ export default function HomePage() {
   `}</style>
       {/* NAV */}
 <nav id="mainNav">
-  <a href="/" className="logo"><span className="D">D</span>ream<span className="A">A</span>cademy</a>
+  <a href="/" className="logo"><img src="/logo.png" alt="드림아카데미" /></a>
   <div className="nav-center">
     <div className="nav-dd">
       <a href="#">커리큘럼 <span className="nav-dd-arrow">▾</span></a>
