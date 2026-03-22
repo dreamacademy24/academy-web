@@ -111,7 +111,23 @@ export default function InvoicePage(){
   function addL(){setLocals([...locals,{id:Date.now(),name:"",amount:""}]);}
   function rmL(id:number){setLocals(locals.filter(c=>c.id!==id));}
   function upL(id:number,f:string,v:string){setLocals(locals.map(c=>c.id===id?{...c,[f]:v}:c));}
-  function gen(){if(!cust.name){alert("예약자명을 입력해주세요.");return;}setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);}
+  async function gen(){
+    if(!cust.name){alert("예약자명을 입력해주세요.");return;}
+    // Google Sheets 기록
+    try{
+      const pd=a1T==="dreamhouse"?"드림하우스":a1T==="jpark"?"제이파크":a1T==="cubenine"?"큐브나인":"";
+      await fetch("/api/receipt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        name:cust.name,englishName:cust.englishName,checkInDate:cust.checkInDate,checkOutDate:cust.checkOutDate,
+        flightIn:ci.flightIn,flightOut:ci.flightOut,accom:pd||(cust.packageType||""),packageType:cust.packageType,
+        people:cust.people,pickup:ci.pickup,drop:ci.drop,
+        studentName:cust.name,studentEnglish:cust.englishName,studentAge:"",studentType:"",amOrFull:"",
+        academyWeeks:cm==="single"?`${a1W}주`:`${a1W}주+${a2W}주`,peopleCount:cust.people,houseNo:ci.houseNo,
+        agency:"",balanceDate:"",note:ci.specialRequest,ssp:"",photoPermit:"",
+        registrationDate:new Date().toISOString().slice(0,10),
+      })});
+    }catch(e){console.error("시트 기록 실패:",e);}
+    setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
+  }
 
   return(<><style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}a{text-decoration:none;color:inherit;}
