@@ -83,6 +83,7 @@ export default function AdminBookingsPage(){
   `}</style>
 
   <div className="aw">
+    <div style={{marginBottom:"12px"}}><a href="/admin" style={{color:"#6b7c93",fontSize:"13px",fontWeight:600,textDecoration:"none"}}>← 관리자 홈</a></div>
     <div className="ah">
       <h1>예약 관리</h1>
       <div className="ah-btns">
