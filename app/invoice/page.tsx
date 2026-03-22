@@ -1,21 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 
 // ── 시즌 판별 ──
-function isPeakSeason(dateStr: string): boolean {
+function isPeak(dateStr: string): boolean {
   if (!dateStr) return false;
   const d = new Date(dateStr);
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  if (m === 7 && day >= 15) return true;
-  if (m === 8) return true;
-  if (m === 12 && day >= 15) return true;
-  if (m === 1 || m === 2) return true;
+  const m = d.getMonth() + 1, day = d.getDate();
+  if ((m === 7 && day >= 15) || m === 8) return true;
+  if ((m === 12 && day >= 15) || m === 1 || m === 2) return true;
   return false;
 }
 
-// ── 드림하우스 [weeks-parents-kids] = [정가, 비수기, 성수기] ──
-const DH: Record<string, [number, number, number]> = {
+// [정가, 비수기, 성수기]
+type P3 = [number, number, number];
+// ── 드림하우스 [weeks-parents-kids] ──
+const DH: Record<string, P3> = {
 "2-1-2":[4970000,3970000,4470000],"2-2-2":[5550000,4440000,4990000],"2-3-2":[6140000,4910000,5520000],
 "3-1-2":[7190000,5750000,6470000],"3-2-2":[8010000,6400000,7200000],"3-3-2":[8840000,7070000,7950000],
 "4-1-2":[8950000,7160000,8050000],"4-2-2":[10010000,8000000,9000000],"4-3-2":[11080000,8860000,9970000],
@@ -28,9 +27,8 @@ const DH: Record<string, [number, number, number]> = {
 "11-1-2":[24440000,19550000,21990000],"11-2-2":[27190000,21750000,24470000],"11-3-2":[29940000,23950000,26940000],
 "12-1-2":[26650000,21320000,23980000],"12-2-2":[29640000,23710000,26670000],"12-3-2":[32640000,26110000,29370000],
 };
-
-// ── 제이파크 [룸-weeks-parents-kids] = [정가, 비수기, 성수기] ──
-const JP: Record<string, [number, number, number]> = {
+// ── 제이파크 [룸-weeks-parents-kids] ──
+const JP: Record<string, P3> = {
 "디럭스-2-1-1":[5560000,4440000,5000000],"디럭스-2-1-2":[7040000,5630000,6330000],"디럭스-2-2-1":[6140000,4910000,5520000],"디럭스-2-1-3":[8530000,6820000,7670000],"디럭스-2-2-2":[7630000,6100000,6860000],
 "프리미어-2-1-1":[5700000,4560000,5130000],"프리미어-2-1-2":[7180000,5740000,6460000],"프리미어-2-2-1":[6280000,5020000,5650000],"프리미어-2-1-3":[8670000,6930000,7800000],"프리미어-2-2-2":[7770000,6210000,6990000],
 "막탄스윗-2-1-1":[6260000,5000000,5630000],"막탄스윗-2-1-2":[7740000,6190000,6960000],"막탄스윗-2-2-1":[6840000,5470000,6150000],"막탄스윗-2-1-3":[9230000,7380000,8300000],"막탄스윗-2-2-2":[8330000,6660000,7490000],
@@ -65,9 +63,8 @@ const JP: Record<string, [number, number, number]> = {
 "프리미어-12-1-1":[32800000,26240000,29520000],"프리미어-12-1-2":[40760000,32600000,36680000],"프리미어-12-2-1":[35790000,28630000,32210000],"프리미어-12-1-3":[48730000,38980000,43850000],"프리미어-12-2-2":[43760000,35000000,39380000],
 "막탄스윗-12-1-1":[36160000,28920000,32540000],"막탄스윗-12-1-2":[44120000,35290000,39700000],"막탄스윗-12-2-1":[39150000,31320000,35230000],"막탄스윗-12-1-3":[52090000,41670000,46880000],"막탄스윗-12-2-2":[47120000,37690000,42400000],
 };
-
-// ── 큐브나인 [룸-weeks-parents-kids] = [정가, 비수기, 성수기] ──
-const C9: Record<string, [number, number, number]> = {
+// ── 큐브나인 ──
+const C9: Record<string, P3> = {
 "디럭스-2-1-1":[4630000,3700000,4160000],"디럭스-2-1-2":[5730000,4580000,5150000],"디럭스-2-2-1":[4830000,3860000,4340000],"디럭스-2-1-3":[6830000,5460000,6140000],"디럭스-2-2-2":[5930000,4740000,5330000],
 "풀억세스룸-2-1-1":[5020000,4010000,4510000],"풀억세스룸-2-1-2":[6120000,4890000,5500000],"풀억세스룸-2-2-1":[5220000,4170000,4690000],"풀억세스룸-2-1-3":[7220000,5770000,6490000],"풀억세스룸-2-2-2":[6320000,5050000,5680000],
 "디럭스-3-1-1":[6790000,5430000,6110000],"디럭스-3-1-2":[8330000,6660000,7490000],"디럭스-3-2-1":[7040000,5630000,6330000],"디럭스-3-1-3":[9870000,7890000,8880000],"디럭스-3-2-2":[8580000,6860000,7720000],
@@ -92,289 +89,242 @@ const C9: Record<string, [number, number, number]> = {
 "풀억세스룸-12-1-1":[28730000,22980000,25850000],"풀억세스룸-12-1-2":[34400000,27520000,30960000],"풀억세스룸-12-2-1":[29430000,23540000,26480000],"풀억세스룸-12-1-3":[40070000,32050000,36060000],"풀억세스룸-12-2-2":[35100000,28080000,31590000],
 };
 
-type AccomType = "" | "dreamhouse" | "jpark" | "cubenine";
-const accomLabels: Record<string, string> = { dreamhouse: "드림하우스", jpark: "제이파크", cubenine: "큐브나인" };
+type AT = "" | "dreamhouse" | "jpark" | "cubenine";
+const AL: Record<string, string> = { dreamhouse: "드림하우스", jpark: "제이파크", cubenine: "큐브나인" };
 
-interface Discount { id: number; name: string; amount: number; }
-interface LocalCharge { id: number; name: string; amount: string; }
-
+function lookup(type: AT, room: string, w: number, p: number, k: number): P3 | null {
+  if (type === "dreamhouse") return DH[`${w}-${p}-${k}`] ?? null;
+  if (type === "jpark") return JP[`${room}-${w}-${p}-${k}`] ?? null;
+  if (type === "cubenine") return C9[`${room}-${w}-${p}-${k}`] ?? null;
+  return null;
+}
+function seasonPrice(entry: P3, peak: boolean) { return peak ? entry[2] : entry[1]; }
+function accomLabel(type: AT, room: string) { return type === "dreamhouse" ? "드림하우스" : `${AL[type]} ${room}`; }
 function fmt(n: number) { return n.toLocaleString("ko-KR"); }
+function maxP(type: AT) { return type === "dreamhouse" ? 6 : 4; }
+
+interface Discount { id: number; name: string; amount: number }
+interface LocalCharge { id: number; name: string; amount: string }
 
 export default function InvoicePage() {
-  // 견적 계산기
-  const [accom, setAccom] = useState<AccomType>("");
-  const [roomType, setRoomType] = useState("");
-  const [weeks, setWeeks] = useState(2);
-  const [parents, setParents] = useState(1);
-  const [kids, setKids] = useState(2);
+  // calc
+  const [calcMode, setCalcMode] = useState<"single"|"combo">("single");
+  const [a1Type, setA1Type] = useState<AT>("dreamhouse");
+  const [a1Room, setA1Room] = useState("디럭스");
+  const [a1Weeks, setA1Weeks] = useState(2);
+  const [a2Type, setA2Type] = useState<AT>("jpark");
+  const [a2Room, setA2Room] = useState("디럭스");
+  const [a2Weeks, setA2Weeks] = useState(2);
+  const [cParents, setCParents] = useState(1);
+  const [cKids, setCKids] = useState(2);
 
-  // 고객
+  // customer
   const [customer, setCustomer] = useState({
-    name: "", reservationNo: "", reservationDate: "", checkInDate: "", checkInTime: "15:00",
-    checkOutDate: "", checkOutTime: "12:00", packageType: "", people: "", englishName: "",
+    name:"",reservationNo:"",reservationDate:"",checkInDate:"",checkInTime:"15:00",
+    checkOutDate:"",checkOutTime:"12:00",packageType:"",people:"",englishName:"",
   });
-  // 결제
-  const [billing, setBilling] = useState({ basePrice: 0 });
+  const [billing, setBilling] = useState({ basePrice: 0, items: [] as {label:string;price:number}[] });
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [localCharges, setLocalCharges] = useState<LocalCharge[]>([]);
-  // 체크인
   const [checkIn, setCheckIn] = useState({
-    pickup: "O", drop: "O", flightIn: "", flightOut: "", bedSetting: "", usim: "", houseNo: "", specialRequest: "",
+    pickup:"O",drop:"O",flightIn:"",flightOut:"",bedSetting:"",usim:"",houseNo:"",specialRequest:"",
   });
   const [showPreview, setShowPreview] = useState(false);
 
-  // 견적 자동 계산
-  useEffect(() => {
-    if (!accom) return;
-    const peak = isPeakSeason(customer.checkInDate);
-    let key = "";
-    let label = "";
-    if (accom === "dreamhouse") {
-      key = `${weeks}-${parents}-${kids}`;
-      label = `드림하우스 ${weeks}주`;
-      const entry = DH[key];
-      if (entry) {
-        setBilling({ basePrice: peak ? entry[2] : entry[1] });
-      }
-    } else if (accom === "jpark") {
-      key = `${roomType}-${weeks}-${parents}-${kids}`;
-      label = `제이파크 ${roomType} ${weeks}주`;
-      const entry = JP[key];
-      if (entry) {
-        setBilling({ basePrice: peak ? entry[2] : entry[1] });
-      }
-    } else if (accom === "cubenine") {
-      key = `${roomType}-${weeks}-${parents}-${kids}`;
-      label = `큐브나인 ${roomType} ${weeks}주`;
-      const entry = C9[key];
-      if (entry) {
-        setBilling({ basePrice: peak ? entry[2] : entry[1] });
-      }
-    }
-    setCustomer((c) => ({
-      ...c,
-      packageType: label,
-      people: `보호자 ${parents}명 + 아이 ${kids}명`,
-    }));
-  }, [accom, roomType, weeks, parents, kids, customer.checkInDate]);
+  const peak = isPeak(customer.checkInDate);
+  const seasonLabel = peak ? "성수기" : "비수기";
 
-  function maxWeeks() { return accom === "dreamhouse" ? 12 : accom === "jpark" ? 12 : 12; }
-  function maxPeople() { return accom === "dreamhouse" ? 6 : 4; }
+  // estimate result
+  const estimate = useMemo(() => {
+    if (calcMode === "single") {
+      const entry = lookup(a1Type, a1Room, a1Weeks, cParents, cKids);
+      if (!entry) return null;
+      const price = seasonPrice(entry, peak);
+      const label = `${accomLabel(a1Type, a1Room)} ${a1Weeks}주`;
+      return { total: price, items: [{ label, price, fullPrice: price, ratio: 1, totalW: a1Weeks }] };
+    } else {
+      const totalW = a1Weeks + a2Weeks;
+      const e1 = lookup(a1Type, a1Room, totalW, cParents, cKids);
+      const e2 = lookup(a2Type, a2Room, totalW, cParents, cKids);
+      if (!e1 || !e2) return null;
+      const full1 = seasonPrice(e1, peak);
+      const full2 = seasonPrice(e2, peak);
+      const p1 = Math.round(full1 * (a1Weeks / totalW));
+      const p2 = Math.round(full2 * (a2Weeks / totalW));
+      return {
+        total: p1 + p2,
+        items: [
+          { label: `${accomLabel(a1Type, a1Room)} ${a1Weeks}주`, price: p1, fullPrice: full1, ratio: a1Weeks / totalW, totalW },
+          { label: `${accomLabel(a2Type, a2Room)} ${a2Weeks}주`, price: p2, fullPrice: full2, ratio: a2Weeks / totalW, totalW },
+        ],
+      };
+    }
+  }, [calcMode, a1Type, a1Room, a1Weeks, a2Type, a2Room, a2Weeks, cParents, cKids, peak]);
+
+  function applyToInvoice() {
+    if (!estimate) return;
+    const pkgLabel = estimate.items.map((i) => i.label).join(" + ");
+    setCustomer((c) => ({ ...c, packageType: pkgLabel, people: `보호자 ${cParents}명 + 아이 ${cKids}명` }));
+    setBilling({ basePrice: estimate.total, items: estimate.items.map((i) => ({ label: i.label, price: i.price })) });
+  }
+
+  function renderAccomSelect(type: AT, setType: (v: AT) => void, room: string, setRoom: (v: string) => void, w: number, setW: (v: number) => void) {
+    return (
+      <div className="f-row">
+        <div className="f-group">
+          <label className="f-label">숙소</label>
+          <select className="f-select" value={type} onChange={(e) => { const t = e.target.value as AT; setType(t); setRoom(t === "jpark" ? "디럭스" : t === "cubenine" ? "디럭스" : ""); setW(2); }}>
+            <option value="dreamhouse">드림하우스</option>
+            <option value="jpark">제이파크</option>
+            <option value="cubenine">큐브나인</option>
+          </select>
+        </div>
+        {(type === "jpark" || type === "cubenine") && (
+          <div className="f-group">
+            <label className="f-label">룸타입</label>
+            <select className="f-select" value={room} onChange={(e) => setRoom(e.target.value)}>
+              {type === "jpark" ? <><option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option></> : <><option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option></>}
+            </select>
+          </div>
+        )}
+        <div className="f-group">
+          <label className="f-label">기간</label>
+          <select className="f-select" value={w} onChange={(e) => setW(Number(e.target.value))}>
+            {Array.from({ length: 11 }, (_, i) => i + 2).map((v) => <option key={v} value={v}>{v}주</option>)}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  const totalDiscount = discounts.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+  const finalPrice = billing.basePrice - totalDiscount;
 
   function addDiscount() { setDiscounts([...discounts, { id: Date.now(), name: "", amount: 0 }]); }
   function removeDiscount(id: number) { setDiscounts(discounts.filter((d) => d.id !== id)); }
   function updateDiscount(id: number, f: string, v: string | number) { setDiscounts(discounts.map((d) => d.id === id ? { ...d, [f]: v } : d)); }
-  function addLocalCharge() { setLocalCharges([...localCharges, { id: Date.now(), name: "", amount: "" }]); }
-  function removeLocalCharge(id: number) { setLocalCharges(localCharges.filter((c) => c.id !== id)); }
-  function updateLocalCharge(id: number, f: string, v: string) { setLocalCharges(localCharges.map((c) => c.id === id ? { ...c, [f]: v } : c)); }
+  function addLocal() { setLocalCharges([...localCharges, { id: Date.now(), name: "", amount: "" }]); }
+  function removeLocal(id: number) { setLocalCharges(localCharges.filter((c) => c.id !== id)); }
+  function updateLocal(id: number, f: string, v: string) { setLocalCharges(localCharges.map((c) => c.id === id ? { ...c, [f]: v } : c)); }
 
-  const totalDiscount = discounts.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-  const finalPrice = billing.basePrice - totalDiscount;
-  const season = isPeakSeason(customer.checkInDate) ? "성수기" : "비수기";
-
-  function handleGenerate() {
-    if (!customer.name) { alert("예약자명을 입력해주세요."); return; }
-    setShowPreview(true);
-    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
-  }
+  function handleGenerate() { if (!customer.name) { alert("예약자명을 입력해주세요."); return; } setShowPreview(true); setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100); }
 
   return (
     <>
       <style>{`
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
-        a{text-decoration:none;color:inherit;}
-        .form-wrap{max-width:800px;margin:0 auto;padding:40px 24px 60px;}
-        .form-header{text-align:center;margin-bottom:32px;}
-        .form-header h1{font-size:28px;font-weight:800;margin-bottom:6px;}
-        .form-header p{font-size:14px;color:#6b7c93;}
-        .form-section{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:20px;}
-        .form-section h2{font-size:16px;font-weight:800;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #1a1a2e;display:flex;align-items:center;gap:8px;}
-        .f-row{display:flex;gap:12px;margin-bottom:12px;}
-        .f-group{flex:1;}
-        .f-label{display:block;font-size:11px;font-weight:600;color:#6b7c93;margin-bottom:4px;}
-        .f-input,.f-select,.f-textarea{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;}
-        .f-input:focus,.f-select:focus,.f-textarea:focus{border-color:#1a6fc4;}
-        .f-textarea{resize:vertical;min-height:60px;}
-        .f-select{background:#fff;}
-        .f-input.auto{background:#f0f7ff;border-color:#bfdbfe;color:#1a6fc4;font-weight:600;}
-        .season-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px;}
-        .season-badge.peak{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
-        .season-badge.off{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
-        .disc-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;}
-        .disc-row .f-group{flex:2;}
-        .disc-row .f-group:last-of-type{flex:1;}
-        .btn-sm{padding:6px 14px;font-size:12px;font-weight:700;border-radius:6px;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-        .btn-add{background:#eaf3fb;color:#1a6fc4;border:1px solid #bfdbfe;}
-        .btn-add:hover{background:#dbeafe;}
-        .btn-rm{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 10px;}
-        .btn-rm:hover{background:#fee2e2;}
-        .btn-generate{width:100%;padding:14px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}
-        .btn-generate:hover{background:#0d3d7a;}
-        .back-link{display:block;text-align:center;margin-top:16px;font-size:13px;color:#6b7c93;}
-        .back-link:hover{color:#1a6fc4;}
-        .invoice-wrap{max-width:800px;margin:0 auto;padding:40px 24px 60px;}
-        .invoice{background:#fff;padding:48px 40px;box-shadow:0 2px 20px rgba(0,0,0,0.08);}
-        .inv-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1a1a2e;}
-        .inv-logo{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:#1a1a2e;}
-        .inv-logo-sub{font-size:11px;color:#6b7c93;font-weight:400;letter-spacing:0.05em;}
-        .inv-title{text-align:right;}
-        .inv-title h1{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;letter-spacing:0.08em;color:#1a6fc4;}
-        .inv-title p{font-size:11px;color:#6b7c93;margin-top:2px;}
-        .inv-section{margin-bottom:28px;}
-        .inv-section-title{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
-        .inv-table{width:100%;border-collapse:collapse;}
-        .inv-table th{font-size:11px;font-weight:700;color:#6b7c93;padding:8px 12px;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;}
-        .inv-table td{font-size:13px;padding:10px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}
-        .inv-table .label{font-weight:600;background:#fafbfc;width:30%;color:#374151;font-size:12px;}
-        .inv-table .discount{color:#dc2626;font-weight:600;}
-        .inv-table .total-row td{font-weight:800;font-size:14px;background:#f0f7ff;}
-        .inv-table .final-row td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
-        .inv-footer{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#6b7c93;line-height:1.8;word-break:keep-all;}
-        .print-btns{display:flex;gap:10px;justify-content:center;margin-top:24px;}
-        .btn-print{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-        .btn-print:hover{background:#0d3d7a;}
-        .btn-back{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-        .btn-back:hover{background:#e2e8f0;}
-        @media print{body{background:#fff!important;}.no-print{display:none!important;}.invoice-wrap{padding:0!important;}.invoice{box-shadow:none!important;padding:24px!important;}}
-        @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.inv-top{flex-direction:column;gap:12px;}.invoice{padding:24px 16px;}.disc-row{flex-direction:column;gap:8px;}}
+*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}a{text-decoration:none;color:inherit;}
+.form-wrap{max-width:800px;margin:0 auto;padding:40px 24px 60px;}.form-header{text-align:center;margin-bottom:32px;}.form-header h1{font-size:28px;font-weight:800;margin-bottom:6px;}.form-header p{font-size:14px;color:#6b7c93;}
+.form-section{background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-bottom:20px;}.form-section h2{font-size:16px;font-weight:800;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #1a1a2e;display:flex;align-items:center;gap:8px;}
+.f-row{display:flex;gap:12px;margin-bottom:12px;}.f-group{flex:1;}.f-label{display:block;font-size:11px;font-weight:600;color:#6b7c93;margin-bottom:4px;}
+.f-input,.f-select,.f-textarea{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;}.f-input:focus,.f-select:focus,.f-textarea:focus{border-color:#1a6fc4;}.f-textarea{resize:vertical;min-height:60px;}.f-select{background:#fff;}
+.f-input.auto{background:#f0f7ff;border-color:#bfdbfe;color:#1a6fc4;font-weight:600;}
+.mode-toggle{display:flex;gap:4px;background:#f1f5f9;border-radius:8px;padding:3px;margin-bottom:16px;}.mode-btn{flex:1;padding:10px;font-size:13px;font-weight:700;text-align:center;border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:transparent;color:#6b7c93;transition:all 160ms;}.mode-btn:hover{color:#1a1a2e;}.mode-btn.active{background:#1a6fc4;color:#fff;box-shadow:0 2px 6px rgba(26,111,196,0.3);}
+.accom-box{padding:16px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:12px;}.accom-box-label{font-size:12px;font-weight:700;color:#1a6fc4;margin-bottom:10px;}
+.combo-plus{text-align:center;padding:4px 0;font-size:20px;font-weight:800;color:#1a6fc4;}
+.est-result{padding:20px;background:#f0f7ff;border:1px solid #bfdbfe;border-radius:10px;margin-top:16px;}.est-result-line{font-size:13px;color:#374151;margin-bottom:6px;line-height:1.6;}.est-result-line strong{color:#1a1a2e;}.est-result-line .dim{color:#94a3b8;font-size:12px;}
+.est-result-total{margin-top:12px;padding-top:12px;border-top:2px solid #1a6fc4;display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:800;}.est-result-total .price{color:#1a6fc4;}
+.season-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-left:6px;}.season-badge.peak{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.season-badge.off{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
+.btn-apply{width:100%;padding:12px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:12px;transition:background 160ms;}.btn-apply:hover{background:#0d3d7a;}
+.no-est{padding:20px;text-align:center;color:#94a3b8;font-size:13px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;margin-top:16px;}
+.disc-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;}.disc-row .f-group{flex:2;}.disc-row .f-group:last-of-type{flex:1;}.btn-sm{padding:6px 14px;font-size:12px;font-weight:700;border-radius:6px;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.btn-add{background:#eaf3fb;color:#1a6fc4;border:1px solid #bfdbfe;}.btn-add:hover{background:#dbeafe;}.btn-rm{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 10px;}.btn-rm:hover{background:#fee2e2;}
+.btn-generate{width:100%;padding:14px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}.btn-generate:hover{background:#0d3d7a;}
+.back-link{display:block;text-align:center;margin-top:16px;font-size:13px;color:#6b7c93;}.back-link:hover{color:#1a6fc4;}
+.invoice-wrap{max-width:800px;margin:0 auto;padding:40px 24px 60px;}.invoice{background:#fff;padding:48px 40px;box-shadow:0 2px 20px rgba(0,0,0,0.08);}
+.inv-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #1a1a2e;}.inv-logo{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:#1a1a2e;}.inv-logo-sub{font-size:11px;color:#6b7c93;font-weight:400;letter-spacing:0.05em;}.inv-title{text-align:right;}.inv-title h1{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;letter-spacing:0.08em;color:#1a6fc4;}.inv-title p{font-size:11px;color:#6b7c93;margin-top:2px;}
+.inv-section{margin-bottom:28px;}.inv-section-title{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
+.inv-table{width:100%;border-collapse:collapse;}.inv-table th{font-size:11px;font-weight:700;color:#6b7c93;padding:8px 12px;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;}.inv-table td{font-size:13px;padding:10px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}.inv-table .label{font-weight:600;background:#fafbfc;width:30%;color:#374151;font-size:12px;}.inv-table .discount{color:#dc2626;font-weight:600;}.inv-table .total-row td{font-weight:800;font-size:14px;background:#f0f7ff;}.inv-table .final-row td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
+.inv-footer{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#6b7c93;line-height:1.8;word-break:keep-all;}
+.print-btns{display:flex;gap:10px;justify-content:center;margin-top:24px;}.btn-print{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.btn-print:hover{background:#0d3d7a;}.btn-back{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.btn-back:hover{background:#e2e8f0;}
+@media print{body{background:#fff!important;}.no-print{display:none!important;}.invoice-wrap{padding:0!important;}.invoice{box-shadow:none!important;padding:24px!important;}}
+@media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.inv-top{flex-direction:column;gap:12px;}.invoice{padding:24px 16px;}.disc-row{flex-direction:column;gap:8px;}}
       `}</style>
 
       {!showPreview ? (
         <div className="form-wrap">
-          <div className="form-header">
-            <h1>인보이스 생성</h1>
-            <p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p>
-          </div>
+          <div className="form-header"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
-          {/* 견적 계산기 */}
+          {/* ESTIMATE */}
           <div className="form-section">
-            <h2>패키지 견적 계산</h2>
-            <div className="f-row">
-              <div className="f-group">
-                <label className="f-label">숙소</label>
-                <select className="f-select" value={accom} onChange={(e) => { setAccom(e.target.value as AccomType); setRoomType(e.target.value === "jpark" ? "디럭스" : e.target.value === "cubenine" ? "디럭스" : ""); setWeeks(2); setParents(1); setKids(2); }}>
-                  <option value="">선택안함 (직접 입력)</option>
-                  <option value="dreamhouse">드림하우스</option>
-                  <option value="jpark">제이파크</option>
-                  <option value="cubenine">큐브나인</option>
-                </select>
-              </div>
-              {(accom === "jpark" || accom === "cubenine") && (
-                <div className="f-group">
-                  <label className="f-label">룸타입</label>
-                  <select className="f-select" value={roomType} onChange={(e) => setRoomType(e.target.value)}>
-                    {accom === "jpark" ? <><option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option></> : <><option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option></>}
-                  </select>
-                </div>
-              )}
+            <h2>패키지 견적 계산 <span className={`season-badge ${peak ? "peak" : "off"}`}>{seasonLabel}</span></h2>
+            <div className="mode-toggle">
+              <button className={`mode-btn${calcMode==="single"?" active":""}`} onClick={()=>setCalcMode("single")}>숙소 1개</button>
+              <button className={`mode-btn${calcMode==="combo"?" active":""}`} onClick={()=>setCalcMode("combo")}>숙소 2개 조합</button>
             </div>
-            {accom && (
-              <div className="f-row">
-                <div className="f-group">
-                  <label className="f-label">기간</label>
-                  <select className="f-select" value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
-                    {Array.from({ length: maxWeeks() - 1 }, (_, i) => i + 2).map((w) => <option key={w} value={w}>{w}주</option>)}
-                  </select>
-                </div>
-                <div className="f-group">
-                  <label className="f-label">보호자</label>
-                  <select className="f-select" value={parents} onChange={(e) => { const p = Number(e.target.value); setParents(p); setKids(Math.min(kids, maxPeople() - p)); }}>
-                    {[1, 2, 3].filter((p) => p < maxPeople()).map((p) => <option key={p} value={p}>{p}명</option>)}
-                  </select>
-                </div>
-                <div className="f-group">
-                  <label className="f-label">아이</label>
-                  <select className="f-select" value={kids} onChange={(e) => setKids(Number(e.target.value))}>
-                    {Array.from({ length: maxPeople() - parents }, (_, i) => i + 1).map((k) => <option key={k} value={k}>{k}명</option>)}
-                  </select>
+
+            {calcMode === "single" ? (
+              <div className="accom-box">
+                {renderAccomSelect(a1Type, setA1Type, a1Room, setA1Room, a1Weeks, setA1Weeks)}
+                <div className="f-row">
+                  <div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cParents} onChange={(e)=>{const p=Number(e.target.value);setCParents(p);setCKids(Math.min(cKids,maxP(a1Type)-p));}}>{[1,2,3].filter(p=>p<maxP(a1Type)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div>
+                  <div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cKids} onChange={(e)=>setCKids(Number(e.target.value))}>{Array.from({length:maxP(a1Type)-cParents},(_, i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div>
                 </div>
               </div>
+            ) : (
+              <>
+                <div className="accom-box"><div className="accom-box-label">숙소 A</div>{renderAccomSelect(a1Type,setA1Type,a1Room,setA1Room,a1Weeks,setA1Weeks)}</div>
+                <div className="combo-plus">+</div>
+                <div className="accom-box"><div className="accom-box-label">숙소 B</div>{renderAccomSelect(a2Type,setA2Type,a2Room,setA2Room,a2Weeks,setA2Weeks)}</div>
+                <div className="f-row" style={{marginTop:"12px"}}>
+                  <div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cParents} onChange={(e)=>{const p=Number(e.target.value);setCParents(p);setCKids(Math.min(cKids,Math.min(maxP(a1Type),maxP(a2Type))-p));}}>{[1,2,3].filter(p=>p<Math.min(maxP(a1Type),maxP(a2Type))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div>
+                  <div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cKids} onChange={(e)=>setCKids(Number(e.target.value))}>{Array.from({length:Math.min(maxP(a1Type),maxP(a2Type))-cParents},(_, i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div>
+                </div>
+              </>
             )}
-            {accom && customer.checkInDate && (
-              <div style={{ fontSize: "13px", color: "#6b7c93", marginTop: "4px" }}>
-                적용 시즌: <span className={`season-badge ${isPeakSeason(customer.checkInDate) ? "peak" : "off"}`}>{season}</span>
-                {billing.basePrice > 0 && <span style={{ marginLeft: "12px", fontWeight: 700, color: "#1a6fc4" }}>{fmt(billing.basePrice)}원</span>}
+
+            {estimate ? (
+              <div className="est-result">
+                {estimate.items.map((item, i) => (
+                  <div className="est-result-line" key={i}>
+                    <strong>{item.label}</strong> / 보호자 {cParents}명 + 아이 {cKids}명
+                    {calcMode === "combo" && <><br/><span className="dim">합산 {item.totalW}주 요금 ({fmt(item.fullPrice)}) × {Math.round(item.ratio * 100)}% = </span><strong>{fmt(item.price)}원</strong></>}
+                    {calcMode === "single" && <><br/><strong>{fmt(item.price)}원</strong> <span className="dim">({seasonLabel})</span></>}
+                  </div>
+                ))}
+                <div className="est-result-total"><span>총 합계</span><span className="price">{fmt(estimate.total)}원</span></div>
+                <button className="btn-apply" onClick={applyToInvoice}>인보이스에 적용</button>
               </div>
+            ) : (
+              <div className="no-est">선택하신 조건의 가격 정보가 없습니다.</div>
             )}
           </div>
 
-          {/* 고객 정보 */}
+          {/* CUSTOMER */}
           <div className="form-section">
             <h2>고객 정보</h2>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">예약자명</label><input className="f-input" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={customer.englishName} onChange={(e) => setCustomer({ ...customer, englishName: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">예약번호</label><input className="f-input" value={customer.reservationNo} onChange={(e) => setCustomer({ ...customer, reservationNo: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={customer.reservationDate} onChange={(e) => setCustomer({ ...customer, reservationDate: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">체크인 날짜</label><input className="f-input" type="date" value={customer.checkInDate} onChange={(e) => setCustomer({ ...customer, checkInDate: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">체크인 시간</label><input className="f-input" type="time" value={customer.checkInTime} onChange={(e) => setCustomer({ ...customer, checkInTime: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">체크아웃 날짜</label><input className="f-input" type="date" value={customer.checkOutDate} onChange={(e) => setCustomer({ ...customer, checkOutDate: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">체크아웃 시간</label><input className="f-input" type="time" value={customer.checkOutTime} onChange={(e) => setCustomer({ ...customer, checkOutTime: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">패키지 종류{accom && " (자동)"}</label><input className={`f-input${accom ? " auto" : ""}`} value={customer.packageType} onChange={(e) => setCustomer({ ...customer, packageType: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">인원 구성{accom && " (자동)"}</label><input className={`f-input${accom ? " auto" : ""}`} value={customer.people} onChange={(e) => setCustomer({ ...customer, people: e.target.value })} /></div>
-            </div>
+            <div className="f-row"><div className="f-group"><label className="f-label">예약자명</label><input className="f-input" value={customer.name} onChange={(e)=>setCustomer({...customer,name:e.target.value})}/></div><div className="f-group"><label className="f-label">영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={customer.englishName} onChange={(e)=>setCustomer({...customer,englishName:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input" value={customer.reservationNo} onChange={(e)=>setCustomer({...customer,reservationNo:e.target.value})}/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={customer.reservationDate} onChange={(e)=>setCustomer({...customer,reservationDate:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">체크인 날짜</label><input className="f-input" type="date" value={customer.checkInDate} onChange={(e)=>setCustomer({...customer,checkInDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크인 시간</label><input className="f-input" type="time" value={customer.checkInTime} onChange={(e)=>setCustomer({...customer,checkInTime:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">체크아웃 날짜</label><input className="f-input" type="date" value={customer.checkOutDate} onChange={(e)=>setCustomer({...customer,checkOutDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 시간</label><input className="f-input" type="time" value={customer.checkOutTime} onChange={(e)=>setCustomer({...customer,checkOutTime:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">패키지 종류</label><input className={`f-input${billing.items.length?" auto":""}`} value={customer.packageType} onChange={(e)=>setCustomer({...customer,packageType:e.target.value})}/></div><div className="f-group"><label className="f-label">인원 구성</label><input className={`f-input${billing.items.length?" auto":""}`} value={customer.people} onChange={(e)=>setCustomer({...customer,people:e.target.value})}/></div></div>
           </div>
 
-          {/* 결제 정보 */}
+          {/* BILLING */}
           <div className="form-section">
             <h2>결제 정보</h2>
-            <div className="f-row">
-              <div className="f-group">
-                <label className="f-label">패키지 금액 (원){accom && " — 자동 계산됨"}</label>
-                <input className={`f-input${accom ? " auto" : ""}`} type="number" value={billing.basePrice || ""} onChange={(e) => setBilling({ basePrice: Number(e.target.value) })} />
+            {billing.items.length > 0 ? (
+              <div style={{marginBottom:"14px"}}>
+                {billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label}: <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}
+                <div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div>
               </div>
-            </div>
-            <label className="f-label" style={{ marginTop: "12px", marginBottom: "8px" }}>할인 항목</label>
-            {discounts.map((d) => (
-              <div className="disc-row" key={d.id}>
-                <div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={(e) => updateDiscount(d.id, "name", e.target.value)} /></div>
-                <div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount || ""} onChange={(e) => updateDiscount(d.id, "amount", Number(e.target.value))} /></div>
-                <button className="btn-sm btn-rm" onClick={() => removeDiscount(d.id)}>삭제</button>
-              </div>
-            ))}
+            ) : (
+              <div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={(e)=>setBilling({basePrice:Number(e.target.value),items:[]})}/></div></div>
+            )}
+            <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
+            {discounts.map((d)=><div className="disc-row" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={(e)=>updateDiscount(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={(e)=>updateDiscount(d.id,"amount",Number(e.target.value))}/></div><button className="btn-sm btn-rm" onClick={()=>removeDiscount(d.id)}>삭제</button></div>)}
             <button className="btn-sm btn-add" onClick={addDiscount}>+ 할인 추가</button>
-            <label className="f-label" style={{ marginTop: "16px", marginBottom: "8px" }}>현지 지불 항목</label>
-            {localCharges.map((c) => (
-              <div className="disc-row" key={c.id}>
-                <div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={(e) => updateLocalCharge(c.id, "name", e.target.value)} /></div>
-                <div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={(e) => updateLocalCharge(c.id, "amount", e.target.value)} /></div>
-                <button className="btn-sm btn-rm" onClick={() => removeLocalCharge(c.id)}>삭제</button>
-              </div>
-            ))}
-            <button className="btn-sm btn-add" onClick={addLocalCharge}>+ 현지 지불 항목 추가</button>
+            <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목</label>
+            {localCharges.map((c)=><div className="disc-row" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={(e)=>updateLocal(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={(e)=>updateLocal(c.id,"amount",e.target.value)}/></div><button className="btn-sm btn-rm" onClick={()=>removeLocal(c.id)}>삭제</button></div>)}
+            <button className="btn-sm btn-add" onClick={addLocal}>+ 현지 지불 항목 추가</button>
           </div>
 
-          {/* 체크인 정보 */}
+          {/* CHECK IN */}
           <div className="form-section">
             <h2>체크인 정보</h2>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">픽업 여부</label><select className="f-select" value={checkIn.pickup} onChange={(e) => setCheckIn({ ...checkIn, pickup: e.target.value })}><option value="O">O</option><option value="X">X</option></select></div>
-              <div className="f-group"><label className="f-label">드롭 여부</label><select className="f-select" value={checkIn.drop} onChange={(e) => setCheckIn({ ...checkIn, drop: e.target.value })}><option value="O">O</option><option value="X">X</option></select></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">항공편 (IN)</label><input className="f-input" placeholder="예) 5J 123" value={checkIn.flightIn} onChange={(e) => setCheckIn({ ...checkIn, flightIn: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">항공편 (OUT)</label><input className="f-input" placeholder="예) 5J 456" value={checkIn.flightOut} onChange={(e) => setCheckIn({ ...checkIn, flightOut: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">베드 세팅</label><input className="f-input" placeholder="예) 킹1 + 싱글1" value={checkIn.bedSetting} onChange={(e) => setCheckIn({ ...checkIn, bedSetting: e.target.value })} /></div>
-              <div className="f-group"><label className="f-label">USIM</label><input className="f-input" placeholder="예) 30일 요금제" value={checkIn.usim} onChange={(e) => setCheckIn({ ...checkIn, usim: e.target.value })} /></div>
-            </div>
-            <div className="f-row">
-              <div className="f-group"><label className="f-label">하우스 번호</label><input className="f-input" placeholder="예) 드림하우스 5호" value={checkIn.houseNo} onChange={(e) => setCheckIn({ ...checkIn, houseNo: e.target.value })} /></div>
-            </div>
-            <div className="f-group" style={{ marginTop: "4px" }}>
-              <label className="f-label">특별 요청사항</label>
-              <textarea className="f-textarea" value={checkIn.specialRequest} onChange={(e) => setCheckIn({ ...checkIn, specialRequest: e.target.value })} />
-            </div>
+            <div className="f-row"><div className="f-group"><label className="f-label">픽업</label><select className="f-select" value={checkIn.pickup} onChange={(e)=>setCheckIn({...checkIn,pickup:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div><div className="f-group"><label className="f-label">드롭</label><select className="f-select" value={checkIn.drop} onChange={(e)=>setCheckIn({...checkIn,drop:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">항공편 (IN)</label><input className="f-input" value={checkIn.flightIn} onChange={(e)=>setCheckIn({...checkIn,flightIn:e.target.value})}/></div><div className="f-group"><label className="f-label">항공편 (OUT)</label><input className="f-input" value={checkIn.flightOut} onChange={(e)=>setCheckIn({...checkIn,flightOut:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">베드 세팅</label><input className="f-input" value={checkIn.bedSetting} onChange={(e)=>setCheckIn({...checkIn,bedSetting:e.target.value})}/></div><div className="f-group"><label className="f-label">USIM</label><input className="f-input" value={checkIn.usim} onChange={(e)=>setCheckIn({...checkIn,usim:e.target.value})}/></div></div>
+            <div className="f-row"><div className="f-group"><label className="f-label">하우스 번호</label><input className="f-input" value={checkIn.houseNo} onChange={(e)=>setCheckIn({...checkIn,houseNo:e.target.value})}/></div></div>
+            <div className="f-group" style={{marginTop:"4px"}}><label className="f-label">특별 요청사항</label><textarea className="f-textarea" value={checkIn.specialRequest} onChange={(e)=>setCheckIn({...checkIn,specialRequest:e.target.value})}/></div>
           </div>
 
           <button className="btn-generate" onClick={handleGenerate}>인보이스 생성</button>
@@ -383,55 +333,30 @@ export default function InvoicePage() {
       ) : (
         <div className="invoice-wrap">
           <div className="invoice">
-            <div className="inv-top">
-              <div><div className="inv-logo">DREAM COMPANY</div><div className="inv-logo-sub">Philippines</div></div>
-              <div className="inv-title"><h1>INVOICE</h1>{customer.reservationNo && <p>No. {customer.reservationNo}</p>}</div>
-            </div>
-            <div className="inv-section">
-              <div className="inv-section-title">Customer Information</div>
-              <table className="inv-table"><tbody>
-                <tr><td className="label">예약자명</td><td>{customer.name}</td><td className="label">영문이름</td><td>{customer.englishName}</td></tr>
-                <tr><td className="label">예약번호</td><td>{customer.reservationNo}</td><td className="label">예약일</td><td>{customer.reservationDate}</td></tr>
-                <tr><td className="label">체크인</td><td>{customer.checkInDate} {customer.checkInTime}</td><td className="label">체크아웃</td><td>{customer.checkOutDate} {customer.checkOutTime}</td></tr>
-                <tr><td className="label">패키지</td><td>{customer.packageType}</td><td className="label">인원 구성</td><td>{customer.people}</td></tr>
-              </tbody></table>
-            </div>
-            <div className="inv-section">
-              <div className="inv-section-title">Billing Details</div>
-              <table className="inv-table"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
-                <tr><td>패키지 금액 ({season})</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>
-                {discounts.filter((d) => d.name).map((d, i) => <tr key={i}><td className="discount">↓ {d.name}</td><td className="discount" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
-                {totalDiscount > 0 && <tr className="total-row"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(totalDiscount)}원</td></tr>}
-                <tr className="final-row"><td>청구 금액</td><td style={{textAlign:"right"}}>{fmt(finalPrice)}원</td></tr>
-              </tbody></table>
-              {localCharges.filter((c) => c.name).length > 0 && (
-                <table className="inv-table" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
-                  {localCharges.filter((c) => c.name).map((c, i) => <tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}</td></tr>)}
-                </tbody></table>
-              )}
-            </div>
-            <div className="inv-section">
-              <div className="inv-section-title">Check In Details</div>
-              <table className="inv-table"><tbody>
-                <tr><td className="label">픽업</td><td>{checkIn.pickup}</td><td className="label">드롭</td><td>{checkIn.drop}</td></tr>
-                <tr><td className="label">항공편 (IN)</td><td>{checkIn.flightIn}</td><td className="label">항공편 (OUT)</td><td>{checkIn.flightOut}</td></tr>
-                <tr><td className="label">베드 세팅</td><td>{checkIn.bedSetting}</td><td className="label">USIM</td><td>{checkIn.usim}</td></tr>
-                <tr><td className="label">하우스 번호</td><td colSpan={3}>{checkIn.houseNo}</td></tr>
-                {checkIn.specialRequest && <tr><td className="label">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkIn.specialRequest}</td></tr>}
-              </tbody></table>
-            </div>
-            <div className="inv-footer">
-              안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>
-              미확인으로 인한 문제는 책임지지 않습니다.<br/>
-              추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>
-              해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>
-              감사합니다.
-            </div>
+            <div className="inv-top"><div><div className="inv-logo">DREAM COMPANY</div><div className="inv-logo-sub">Philippines</div></div><div className="inv-title"><h1>INVOICE</h1>{customer.reservationNo&&<p>No. {customer.reservationNo}</p>}</div></div>
+            <div className="inv-section"><div className="inv-section-title">Customer Information</div><table className="inv-table"><tbody>
+              <tr><td className="label">예약자명</td><td>{customer.name}</td><td className="label">영문이름</td><td>{customer.englishName}</td></tr>
+              <tr><td className="label">예약번호</td><td>{customer.reservationNo}</td><td className="label">예약일</td><td>{customer.reservationDate}</td></tr>
+              <tr><td className="label">체크인</td><td>{customer.checkInDate} {customer.checkInTime}</td><td className="label">체크아웃</td><td>{customer.checkOutDate} {customer.checkOutTime}</td></tr>
+              <tr><td className="label">패키지</td><td>{customer.packageType}</td><td className="label">인원 구성</td><td>{customer.people}</td></tr>
+            </tbody></table></div>
+            <div className="inv-section"><div className="inv-section-title">Billing Details</div><table className="inv-table"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+              {billing.items.length > 0 ? billing.items.map((item,i)=><tr key={i}><td>{item.label} ({seasonLabel})</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>) : <tr><td>패키지 금액 ({seasonLabel})</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
+              {discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="discount">↓ {d.name}</td><td className="discount" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
+              {totalDiscount>0&&<tr className="total-row"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(totalDiscount)}원</td></tr>}
+              <tr className="final-row"><td>청구 금액</td><td style={{textAlign:"right"}}>{fmt(finalPrice)}원</td></tr>
+            </tbody></table>
+            {localCharges.filter(c=>c.name).length>0&&<table className="inv-table" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{localCharges.filter(c=>c.name).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}</td></tr>)}</tbody></table>}</div>
+            <div className="inv-section"><div className="inv-section-title">Check In Details</div><table className="inv-table"><tbody>
+              <tr><td className="label">픽업</td><td>{checkIn.pickup}</td><td className="label">드롭</td><td>{checkIn.drop}</td></tr>
+              <tr><td className="label">항공편 (IN)</td><td>{checkIn.flightIn}</td><td className="label">항공편 (OUT)</td><td>{checkIn.flightOut}</td></tr>
+              <tr><td className="label">베드 세팅</td><td>{checkIn.bedSetting}</td><td className="label">USIM</td><td>{checkIn.usim}</td></tr>
+              <tr><td className="label">하우스 번호</td><td colSpan={3}>{checkIn.houseNo}</td></tr>
+              {checkIn.specialRequest&&<tr><td className="label">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkIn.specialRequest}</td></tr>}
+            </tbody></table></div>
+            <div className="inv-footer">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
           </div>
-          <div className="print-btns no-print">
-            <button className="btn-print" onClick={() => window.print()}>PDF 저장 / 인쇄</button>
-            <button className="btn-back" onClick={() => setShowPreview(false)}>수정하기</button>
-          </div>
+          <div className="print-btns no-print"><button className="btn-print" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="btn-back" onClick={()=>setShowPreview(false)}>수정하기</button></div>
         </div>
       )}
     </>
