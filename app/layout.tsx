@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "필리핀 세부 프리미엄 영어캠프 드림아카데미 | UCLA 출신 원장·올인원 케어·주니어·킨더 커리큘럼 | 여권만 챙기세요!",
   icons: {
     icon: "/favicon.png",
-    apple: "/icons/icon-192x192.png",
+    apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
     title: "드림아카데미 | 필리핀 세부 프리미엄 영어캠프",
@@ -29,7 +29,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#1a6fc4" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
