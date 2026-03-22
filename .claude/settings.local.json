@@ -21,7 +21,8 @@
       "Bash(npm install:*)",
       "Bash(npx next:*)",
       "Bash(node scripts/fixSheetHeader.js)",
-      "Bash(node -e \"require\\(''dotenv''\\).config\\({path:''.env.local''}\\); console.log\\(JSON.stringify\\(process.env.GOOGLE_PRIVATE_KEY\\)\\)\")"
+      "Bash(node -e \"require\\(''dotenv''\\).config\\({path:''.env.local''}\\); console.log\\(JSON.stringify\\(process.env.GOOGLE_PRIVATE_KEY\\)\\)\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

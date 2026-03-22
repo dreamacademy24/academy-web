@@ -8,12 +8,14 @@ export default function GuidePage() {
   const [pw, setPw] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("adminAuthed");
-    if (saved === "true") setAuthed(true);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("adminAuthed");
+      if (saved === "true") setAuthed(true);
+    }
   }, []);
 
   function checkPw() {
-    if (pw === ADMIN_PW) { localStorage.setItem("adminAuthed", "true"); setAuthed(true); }
+    if (pw === ADMIN_PW) { if (typeof window !== "undefined") localStorage.setItem("adminAuthed", "true"); setAuthed(true); }
     else alert("비밀번호가 올바르지 않습니다.");
   }
 

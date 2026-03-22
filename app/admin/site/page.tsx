@@ -61,8 +61,10 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"notices" | "shuttle" | "fieldtrip" | "members">("notices");
 
   useEffect(() => {
-    const saved = localStorage.getItem("adminAuthed");
-    if (saved === "true") setAuthed(true);
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("adminAuthed");
+      if (saved === "true") setAuthed(true);
+    }
   }, []);
 
   // notices
@@ -141,7 +143,7 @@ export default function AdminPage() {
 
   function handleLogin() {
     if (pw === ADMIN_PASSWORD) {
-      localStorage.setItem("adminAuthed", "true");
+      if (typeof window !== "undefined") localStorage.setItem("adminAuthed", "true");
       setAuthed(true);
     } else {
       alert("비밀번호가 틀렸습니다.");
@@ -319,7 +321,7 @@ export default function AdminPage() {
           <a href="/admin">← 관리자 홈</a>
           <a href="/">홈</a>
           <a href="/notice">공지사항</a>
-          <button className="logout-btn" onClick={() => { localStorage.removeItem("adminAuthed"); setAuthed(false); }}>로그아웃</button>
+          <button className="logout-btn" onClick={() => { if (typeof window !== "undefined") localStorage.removeItem("adminAuthed"); setAuthed(false); }}>로그아웃</button>
         </div>
       </div>
 

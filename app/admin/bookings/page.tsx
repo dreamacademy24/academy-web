@@ -36,8 +36,10 @@ export default function AdminBookingsPage(){
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
 
   useEffect(()=>{
-    const saved=localStorage.getItem("adminAuthed");
-    if(saved==="true")setAuthed(true);
+    if(typeof window!=="undefined"){
+      const saved=localStorage.getItem("adminAuthed");
+      if(saved==="true")setAuthed(true);
+    }
   },[]);
 
   const load=useCallback(async()=>{
@@ -50,7 +52,7 @@ export default function AdminBookingsPage(){
   useEffect(()=>{if(authed)load();},[authed,load]);
 
   function checkPw(){
-    if(pw===ADMIN_PW){localStorage.setItem("adminAuthed","true");setAuthed(true);}
+    if(pw===ADMIN_PW){if(typeof window!=="undefined")localStorage.setItem("adminAuthed","true");setAuthed(true);}
     else alert("비밀번호가 올바르지 않습니다.");
   }
 
@@ -97,6 +99,7 @@ export default function AdminBookingsPage(){
 .act{padding:4px 10px;font-size:11px;font-weight:700;border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-right:4px;}
 .act-b{background:#1a6fc4;color:#fff;}.act-b:hover{background:#0d3d7a;}
 .act-g{background:#16a34a;color:#fff;}.act-g:hover{background:#15803d;}
+.act-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.act-r:hover{background:#fee2e2;}
 @media(max-width:700px){.main-tab{font-size:12px;padding:10px 4px;}.aw{padding:16px 12px;}}
   `}</style>
 
@@ -139,6 +142,7 @@ export default function AdminBookingsPage(){
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act act-r" onClick={async()=>{if(confirm("이 예약을 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){await supabase.from("bookings").delete().eq("id",b.id);load();}}}>삭제</button>
             </td>
           </tr>);
         })}
@@ -148,9 +152,9 @@ export default function AdminBookingsPage(){
     {/* ── 탭2: 인보이스 ── */}
     {mainTab==="invoice"&&(
       <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>패키지금액</th><th>잔금일자</th>
+        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>패키지금액</th><th>잔금일자</th><th></th>
       </tr></thead><tbody>
-        {invList.length===0?<tr><td colSpan={8} className="empty">인보이스 발행 내역이 없습니다.</td></tr>:
+        {invList.length===0?<tr><td colSpan={9} className="empty">인보이스 발행 내역이 없습니다.</td></tr>:
         invList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
@@ -162,6 +166,7 @@ export default function AdminBookingsPage(){
             <td>{b.checkin_date||"미정"}</td>
             <td style={{fontWeight:600}}>{fmt(b.base_price)}</td>
             <td>{b.balance_date||"-"}</td>
+            <td onClick={e=>e.stopPropagation()}><button className="act act-r" onClick={async()=>{if(confirm("이 예약을 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){await supabase.from("bookings").delete().eq("id",b.id);load();}}}>삭제</button></td>
           </tr>);
         })}
       </tbody></table></div>
