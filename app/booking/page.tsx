@@ -10,8 +10,8 @@ const todayCompact = todayStr.replace(/-/g,"");
 export default function BookingPage(){
   const [booker,setBooker]=useState({name:"",english:""});
   const [students,setStudents]=useState<Student[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",photo:"O"}]);
-  const [schedule,setSchedule]=useState({checkIn:"",weeks:"4",accomType:"드림하우스"});
-  const [service,setService]=useState({pickup:"O",drop:"O"});
+  const [schedule,setSchedule]=useState({checkIn:"",comboMode:false,weeks:"4",accomType:"드림하우스",weeks2:"2",accomType2:"제이파크"});
+  const [service,setService]=useState({pickup:"미정",drop:"미정"});
   const [specialRequest,setSpecialRequest]=useState("");
   const [loading,setLoading]=useState(false);
   const [done,setDone]=useState(false);
@@ -31,8 +31,8 @@ export default function BookingPage(){
       booker_name:booker.name,
       booker_english:booker.english,
       students:JSON.stringify(students),
-      accom_type:schedule.accomType,
-      accom_weeks:Number(schedule.weeks),
+      accom_type:schedule.comboMode?schedule.accomType+"+"+schedule.accomType2:schedule.accomType,
+      accom_weeks:schedule.comboMode?Number(schedule.weeks)+Number(schedule.weeks2):Number(schedule.weeks),
       checkin_date:schedule.checkIn||null,
       pickup:service.pickup,
       drop_off:service.drop,
@@ -75,6 +75,8 @@ export default function BookingPage(){
 .sc-num{font-size:11px;font-weight:700;color:#1a6fc4;margin-bottom:10px;}
 .fh{font-size:10px;color:#94a3b8;margin-top:3px;}
 .ab{padding:8px 16px;font-size:12px;font-weight:700;background:#eaf3fb;color:#1a6fc4;border:1px solid #bfdbfe;border-radius:6px;cursor:pointer;border:none;}.ab:hover{background:#dbeafe;}
+.tg{display:flex;gap:4px;background:#f1f5f9;border-radius:8px;padding:3px;margin-bottom:14px;}.tgb{flex:1;padding:9px;font-size:13px;font-weight:700;text-align:center;border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;background:transparent;color:#6b7c93;transition:all 150ms;}.tgb:hover{color:#1a1a2e;}.tgb.ac{background:#1a6fc4;color:#fff;box-shadow:0 2px 6px rgba(26,111,196,0.3);}
+.warn-box{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;color:#374151;line-height:1.7;}.warn-title{color:#dc2626;font-weight:800;font-size:14px;margin-bottom:4px;}
 .sb{width:100%;padding:14px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:20px;}.sb:hover{background:#0d3d7a;}.sb:disabled{background:#94a3b8;cursor:not-allowed;}
 @media(max-width:600px){.fr{flex-direction:column;gap:10px;}}
   `}</style>
@@ -102,16 +104,27 @@ export default function BookingPage(){
     </div>
 
     <div className="bs"><h2>일정 / 숙소</h2>
+      <div className="tg"><button className={`tgb${!schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:false})}>숙소 1개</button><button className={`tgb${schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:true})}>숙소 2개 조합</button></div>
       <div className="fr"><div className="fg"><label className="fl">희망 체크인 날짜</label><input className="fi" type="date" value={schedule.checkIn} onChange={e=>setSchedule({...schedule,checkIn:e.target.value})}/></div></div>
-      <div className="fr"><div className="fg"><label className="fl">희망 기간</label><select className="fsl" value={schedule.weeks} onChange={e=>setSchedule({...schedule,weeks:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="fg"><label className="fl">숙소 선택</label><select className="fsl" value={schedule.accomType} onChange={e=>setSchedule({...schedule,accomType:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div></div>
+      {!schedule.comboMode?(
+        <div className="fr"><div className="fg"><label className="fl">희망 기간</label><select className="fsl" value={schedule.weeks} onChange={e=>setSchedule({...schedule,weeks:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="fg"><label className="fl">숙소 선택</label><select className="fsl" value={schedule.accomType} onChange={e=>setSchedule({...schedule,accomType:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div></div>
+      ):(<>
+        <div style={{padding:"12px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:"10px",marginBottom:"10px"}}><div style={{fontSize:"11px",fontWeight:700,color:"#1a6fc4",marginBottom:"8px"}}>숙소 A</div>
+          <div className="fr"><div className="fg"><label className="fl">숙소</label><select className="fsl" value={schedule.accomType} onChange={e=>setSchedule({...schedule,accomType:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div><div className="fg"><label className="fl">기간</label><select className="fsl" value={schedule.weeks} onChange={e=>setSchedule({...schedule,weeks:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div></div>
+        </div>
+        <div style={{padding:"12px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:"10px",marginBottom:"10px"}}><div style={{fontSize:"11px",fontWeight:700,color:"#1a6fc4",marginBottom:"8px"}}>숙소 B</div>
+          <div className="fr"><div className="fg"><label className="fl">숙소</label><select className="fsl" value={schedule.accomType2} onChange={e=>setSchedule({...schedule,accomType2:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div><div className="fg"><label className="fl">기간</label><select className="fsl" value={schedule.weeks2} onChange={e=>setSchedule({...schedule,weeks2:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div></div>
+        </div>
+      </>)}
     </div>
 
-    <div className="bs"><h2>픽업 서비스</h2>
-      <div className="fr"><div className="fg"><label className="fl">픽업 필요</label><select className="fsl" value={service.pickup} onChange={e=>setService({...service,pickup:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div><div className="fg"><label className="fl">드롭 필요</label><select className="fsl" value={service.drop} onChange={e=>setService({...service,drop:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div></div>
+    <div className="bs"><h2>공항 픽업·드롭 서비스</h2>
+      <div className="fr"><div className="fg"><label className="fl">픽업 서비스</label><select className="fsl" value={service.pickup} onChange={e=>setService({...service,pickup:e.target.value})}><option value="미정">미정</option><option value="필요함">필요함</option><option value="불필요함">불필요함</option></select></div><div className="fg"><label className="fl">드롭 서비스</label><select className="fsl" value={service.drop} onChange={e=>setService({...service,drop:e.target.value})}><option value="미정">미정</option><option value="필요함">필요함</option><option value="불필요함">불필요함</option></select></div></div>
     </div>
 
     <div className="bs"><h2>기타</h2>
-      <div className="fg"><label className="fl">특이사항 / 요청사항</label><textarea className="fta" placeholder="알레르기, 특별 요청 등" value={specialRequest} onChange={e=>setSpecialRequest(e.target.value)}/></div>
+      <div className="warn-box"><div className="warn-title">⚠️ 주의 !</div>아이의 특이사항에 대해서는 꼭 기재해주세요.<br/>ADHD 약 복용 등 건강 관련 정보는 반드시 알려주셔야 하며,<br/>미 안내 시 발생하는 문제에 대해서는 보호자가 모두 책임지게 됩니다.</div>
+      <div className="fg"><label className="fl">특이사항 / 요청사항</label><textarea className="fta" placeholder="예) ADHD 약 복용 중 (○○약, 하루 1회), 특정 음식 알레르기, 기타 요청사항 등" value={specialRequest} onChange={e=>setSpecialRequest(e.target.value)}/></div>
     </div>
 
     <button className="sb" onClick={submit} disabled={loading}>{loading?"접수 중...":"예약 접수하기"}</button>
