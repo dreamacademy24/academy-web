@@ -46,6 +46,20 @@ export default function HomePage() {
       });
     }
 
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const a = btn.nextElementSibling;
+        const arrow = btn.querySelector('.faq-arrow');
+        if (a && arrow) {
+          const isOpen = a.classList.contains('open');
+          document.querySelectorAll('.faq-a').forEach(el => el.classList.remove('open'));
+          document.querySelectorAll('.faq-arrow').forEach(el => el.classList.remove('open'));
+          if (!isOpen) { a.classList.add('open'); arrow.classList.add('open'); }
+        }
+      });
+    });
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       obs.disconnect();
@@ -74,7 +88,7 @@ export default function HomePage() {
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Noto Sans KR', sans-serif; color: var(--text); background: var(--white); overflow-x: hidden; }
+    body { font-family: 'Noto Sans KR', sans-serif; color: var(--text); background: var(--white); overflow-x: hidden; line-height: 1.7; }
     a { text-decoration: none; color: inherit; }
 
     /* ── NAV: 흰 배경, benuity 스타일 ── */
@@ -154,7 +168,7 @@ export default function HomePage() {
     .hcard:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
     .hcard-icon { font-size: 28px; margin-bottom: 10px; }
     .hcard-t { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
-    .hcard-d { font-size: 12px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+    .hcard-d { font-size: 13px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
     .hero-scroll { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--light-muted); font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: sb 2.2s infinite; }
     .hero-scroll::after { content: '↓'; font-size: 12px; }
     @keyframes sb { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(7px)} }
@@ -167,7 +181,7 @@ export default function HomePage() {
     .sec-dark-i { max-width: 1200px; margin: 0 auto; padding: 88px 60px; }
     .stag { font-family: 'Montserrat', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.28em; text-transform: uppercase; color: var(--blue); margin-bottom: 11px; display: flex; align-items: center; gap: 9px; }
     .stag::before { content: ''; width: 22px; height: 2px; background: var(--blue); border-radius: 2px; }
-    .stag.lt { color: rgba(255,255,255,0.5); } .stag.lt::before { background: rgba(255,255,255,0.4); }
+    .stag.lt { color: rgba(255,255,255,0.7); } .stag.lt::before { background: rgba(255,255,255,0.4); }
     .sh { font-size: clamp(26px,3vw,40px); font-weight: 800; line-height: 1.22; letter-spacing: -0.022em; margin-bottom: 12px; word-break: keep-all; }
     .sh .bl { color: var(--blue); } .sh .yl { color: var(--yellow); } .sh.wh { color: var(--white); }
     .sp { font-size: 14.5px; color: var(--muted); line-height: 1.9; max-width: 540px; word-break: keep-all; }
@@ -182,7 +196,7 @@ export default function HomePage() {
     .af:hover { box-shadow: var(--shadow); }
     .af-icon { font-size: 22px; margin-bottom: 8px; }
     .af-t { font-size: 13.5px; font-weight: 700; margin-bottom: 5px; color: var(--text); }
-    .af-d { font-size: 12.5px; color: var(--muted); line-height: 1.75; word-break: keep-all; }
+    .af-d { font-size: 13px; color: var(--muted); line-height: 1.75; word-break: keep-all; }
     .about-visual { background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%); border-radius: 16px; aspect-ratio: 4/5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; position: relative; overflow: hidden; }
     .about-visual::before { content: ''; position: absolute; top: -60px; right: -60px; width: 300px; height: 300px; border-radius: 50%; background: rgba(255,255,255,0.05); }
     .about-visual-big { font-size: 72px; opacity: 0.2; }
@@ -221,13 +235,13 @@ export default function HomePage() {
     .pkg-item:hover { background: rgba(255,255,255,0.06); }
     .pkg-item-icon { font-size: 22px; flex-shrink: 0; }
     .pkg-item-t { font-size: 13.5px; font-weight: 700; color: var(--white); margin-bottom: 3px; }
-    .pkg-item-d { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; word-break: keep-all; }
+    .pkg-item-d { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; word-break: keep-all; }
     .pkg-right { display: flex; flex-direction: column; gap: 14px; }
     .pkgc { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; display: flex; align-items: flex-start; gap: 16px; transition: background 160ms; }
     .pkgc:hover { background: rgba(255,255,255,0.1); }
     .pkgc-num { font-family: 'Montserrat', sans-serif; font-size: 24px; font-weight: 800; color: rgba(255,255,255,0.1); width: 36px; flex-shrink: 0; line-height: 1; }
     .pkgc-t { font-size: 13.5px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
-    .pkgc-d { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.65; word-break: keep-all; }
+    .pkgc-d { font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.65; word-break: keep-all; }
     .pkg-highlight { background: rgba(245,166,35,0.12); border: 1.5px solid rgba(245,166,35,0.3); border-radius: 10px; padding: 22px; margin-top: 4px; }
     .pkg-hl-t { font-size: 15px; font-weight: 800; color: #ffd97a; margin-bottom: 8px; }
     .pkg-hl-d { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.85; word-break: keep-all; }
@@ -249,7 +263,7 @@ export default function HomePage() {
     .accard-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
     .accard-tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid rgba(26,111,196,0.2); color: var(--blue); background: var(--blue-light); }
     .accard-feats { display: flex; flex-direction: column; gap: 5px; }
-    .accard-feat { font-size: 12.5px; color: var(--muted); display: flex; align-items: flex-start; gap: 6px; }
+    .accard-feat { font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 6px; }
     .accard-feat::before { content: '·'; color: var(--blue); font-weight: 700; flex-shrink: 0; }
 
     /* GALLERY */
@@ -263,7 +277,8 @@ export default function HomePage() {
     /* REVIEWS */
     .review-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 44px; }
     .rcard { background: var(--white); padding: 28px; border-radius: 14px; border: 1px solid var(--stroke); border-top: 3px solid var(--blue); box-shadow: var(--shadow); }
-    .rq { font-size: 52px; color: var(--blue); line-height: 0.5; margin-bottom: 16px; display: block; font-family: 'Montserrat', sans-serif; opacity: 0.35; }
+    .rq { font-size: 36px; color: var(--blue); line-height: 0.5; margin-bottom: 16px; display: block; font-family: 'Montserrat', sans-serif; opacity: 0.25; }
+    .rstars { color: #f5a623; font-size: 14px; letter-spacing: 2px; margin-bottom: 12px; }
     .rtext { font-size: 13.5px; color: #444; line-height: 1.85; margin-bottom: 20px; word-break: keep-all; }
     .rauthor { display: flex; align-items: center; gap: 10px; }
     .rav { width: 36px; height: 36px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; font-size: 15px; }
@@ -287,20 +302,72 @@ export default function HomePage() {
     .fade.vis { opacity: 1; transform: translateY(0); }
     .fade.d1 { transition-delay: 80ms; } .fade.d2 { transition-delay: 160ms; } .fade.d3 { transition-delay: 240ms; }
 
+    /* TRUST */
+    .trust-sec { background: var(--blue); padding: 48px 60px; }
+    .trust-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
+    .trust-card { text-align: center; }
+    .trust-num { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 900; color: var(--white); }
+    .trust-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
+
+    /* ACCARD BUTTON */
+    .accard-btn { display: block; text-align: center; padding: 10px; margin: 14px 20px 20px; border: 1.5px solid var(--blue); color: var(--blue); font-size: 13px; font-weight: 600; border-radius: 6px; transition: background 160ms, color 160ms; }
+    .accard-btn:hover { background: var(--blue); color: var(--white); }
+
+    /* FAQ */
+    .faq-list { max-width: 800px; margin: 32px auto 0; }
+    .faq-item { border-bottom: 1px solid var(--stroke); }
+    .faq-q { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--text); background: none; border: none; width: 100%; text-align: left; font-family: 'Noto Sans KR', sans-serif; }
+    .faq-q:hover { color: var(--blue); }
+    .faq-arrow { font-size: 12px; color: var(--muted); transition: transform 300ms; flex-shrink: 0; }
+    .faq-arrow.open { transform: rotate(180deg); }
+    .faq-a { max-height: 0; overflow: hidden; transition: max-height 400ms ease; }
+    .faq-a.open { max-height: 300px; }
+    .faq-a-inner { padding: 0 0 18px; font-size: 14px; color: var(--muted); line-height: 1.8; word-break: keep-all; }
+
+    /* SNS */
+    .fsns { display: flex; gap: 14px; margin-top: 14px; }
+    .fsns a { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; transition: background 160ms; }
+    .fsns a:hover { background: rgba(255,255,255,0.2); }
+
+    /* MOBILE FIXED CTA */
+    .mob-cta { display: none; }
+
     /* RESPONSIVE */
     @media(max-width:1024px){
-      nav { padding: 0 24px; } .nav-center { display: none; } .nav-right { display: none; } .hamburger { display: flex; }
-      .hero-inner { grid-template-columns: 1fr; gap: 0; padding: 60px 24px 80px; }
-      .hero-right { display: none; }
-      .sec { padding: 64px 24px; }
-      .sec-bg-i, .sec-dark-i { padding: 64px 24px; }
+      nav { padding: 0 24px; height: 56px; } .nav-center { display: none; } .nav-right { display: none; } .hamburger { display: flex; }
+      .logo { font-size: 17px; }
+      .mob-nav { top: 56px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 24px; padding: 60px 24px 80px; }
+      .hero-right { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .hcard { padding: 14px 12px; } .hcard-icon { font-size: 22px; margin-bottom: 6px; } .hcard-t { font-size: 12px; } .hcard-d { display: none; }
+      .hero { padding-top: 56px; }
+      .sec { padding: 48px 24px; }
+      .sec-bg-i, .sec-dark-i { padding: 48px 24px; }
+      .sh { font-size: clamp(22px,3vw,40px); }
+      .sp { max-width: 100%; }
       .about-grid { grid-template-columns: 1fr; } .about-visual { display: none; }
+      .curr-tabs { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
       .curr-grid, .accom-grid, .review-grid { grid-template-columns: 1fr; }
       .pkg-wrap { grid-template-columns: 1fr; }
       .gallery-grid { grid-template-columns: 1fr 1fr; }
       .gitem:first-child { grid-row: span 1; }
+      .sday { flex: 1 1 80px; }
+      .trust-inner { grid-template-columns: repeat(2,1fr); gap: 16px; }
+      .trust-sec { padding: 36px 24px; }
       .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
       .fbottom { flex-direction: column; gap: 6px; }
+    }
+    @media(max-width:768px){
+      .sp { max-width: 100%; }
+      .mob-cta { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 400; height: 54px; background: var(--blue); align-items: center; justify-content: center; gap: 8px; color: var(--white); font-size: 15px; font-weight: 700; box-shadow: 0 -2px 12px rgba(0,0,0,0.15); }
+      body { padding-bottom: 54px; }
+    }
+    @media(max-width:480px){
+      .hero-h1 { letter-spacing: -0.015em; }
+      .hero-btns { flex-direction: column; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .gitem { height: 160px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 24px; }
     }
   `}</style>
       {/* NAV */}
@@ -351,7 +418,7 @@ export default function HomePage() {
 
 {/* HERO: 밝은 흰색 배경 */}
 <section className="hero">
-  <div className="hero-photo"></div>
+  <div className="hero-photo" role="img" aria-label="드림아카데미 캠퍼스"></div>
   <div className="hero-circle1"></div>
   <div className="hero-circle2"></div>
   <div className="hero-inner">
@@ -360,7 +427,7 @@ export default function HomePage() {
       <h1 className="hero-h1">영어가 일상이 되는<br/><span className="blue">특별한 경험</span></h1>
       <p className="hero-slogan">Where English Becomes Everyday</p>
       <p className="hero-sub">"여권만 챙기세요. 나머지 우리가 다 준비했어요."</p>
-      <p className="hero-desc">숙소, 수업, 식사, 활동까지<br/>가족을 위한 완전한 올인원 케어 시스템</p>
+      <p className="hero-desc">숙소부터 수업, 식사, 액티비티까지 모든 것을 책임지는 프리미엄 올인원 영어캠프</p>
       <div className="hero-btns">
         <a href="http://pf.kakao.com/_Yuhxhn/chat" className="btn-blue" target="_blank" rel="noopener noreferrer">프로그램 신청 →</a>
         <a href="#about" className="btn-outline">자세히 알아보기</a>
@@ -375,6 +442,16 @@ export default function HomePage() {
   </div>
   <div className="hero-scroll">Scroll</div>
 </section>
+
+{/* TRUST */}
+<div className="trust-sec">
+  <div className="trust-inner">
+    <div className="trust-card"><div className="trust-num">500+</div><div className="trust-label">수강생</div></div>
+    <div className="trust-card"><div className="trust-num">90%</div><div className="trust-label">교사 자격증 보유</div></div>
+    <div className="trust-card"><div className="trust-num">5년+</div><div className="trust-label">운영 경력</div></div>
+    <div className="trust-card"><div className="trust-num">98%</div><div className="trust-label">만족도</div></div>
+  </div>
+</div>
 
 {/* ABOUT */}
 <section id="about">
@@ -393,9 +470,11 @@ export default function HomePage() {
         </div>
         <div className="about-quote">"아이 한 명, 한 명의 가능성을 소중히 키우는 공간,<br/>드림아카데미에서 믿을 수 있는 배움을 시작하세요."</div>
       </div>
-      <div className="about-visual">
-        <div className="about-visual-big">🏫</div>
-        <div className="about-visual-label">Dream Academy · Cebu Philippines</div>
+      <div className="about-features" style={{gridColumn:"1/-1"}}>
+        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>500+</div><div className="af-t" style={{marginTop:"4px"}}>수강생</div></div>
+        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>90%</div><div className="af-t" style={{marginTop:"4px"}}>교사 자격증 보유</div></div>
+        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>5년+</div><div className="af-t" style={{marginTop:"4px"}}>운영 경력</div></div>
+        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>98%</div><div className="af-t" style={{marginTop:"4px"}}>만족도</div></div>
       </div>
     </div>
   </div>
@@ -500,7 +579,7 @@ export default function HomePage() {
         <div className="stag lt">All-in-One Package</div>
         <h2 className="sh wh">올인원 패키지<br/><span className="yl">포함 사항</span></h2>
         <div className="divy"></div>
-        <p className="sp wh">여권만 챙기세요. 나머지는 드림아카데미가 다 준비했어요.</p>
+        <p className="sp wh">수업부터 식사, 숙소, 셔틀까지 패키지 하나로 모두 해결됩니다.</p>
         <div className="pkg-list">
           <div className="pkg-item"><div className="pkg-item-icon">🏠</div><div><div className="pkg-item-t">프라이빗 숙소</div><div className="pkg-item-d">드림하우스 독채 / 제이파크 5성급 / 큐브나인 리조트</div></div></div>
           <div className="pkg-item"><div className="pkg-item-icon">🍱</div><div><div className="pkg-item-t">평일 3식 프리미엄 도시락</div><div className="pkg-item-d">한국인 조리사님 · 아침 7:50 / 점심 11:50 / 저녁 17:40</div></div></div>
@@ -562,6 +641,7 @@ export default function HomePage() {
             <div className="accard-feat">한국산 가전·정수기·방충망 완비</div>
             <div className="accard-feat">그랜드몰·상스몰 5분 / 공항 20분</div>
           </div>
+          <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="accard-btn">상담 문의</a>
         </div>
       </div>
       <div className="accard">
@@ -575,6 +655,7 @@ export default function HomePage() {
             <div className="accard-feat">5곳의 수영장 / 2개의 비치 / 워터파크</div>
             <div className="accard-feat">디럭스룸 / 프리미어룸 / 막탄스윗</div>
           </div>
+          <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="accard-btn">상담 문의</a>
         </div>
       </div>
       <div className="accard">
@@ -588,6 +669,7 @@ export default function HomePage() {
             <div className="accard-feat">바다 액티비티 무료 (카약/패들)</div>
             <div className="accard-feat">마사지&스파 20% · 레스토랑 10% 할인</div>
           </div>
+          <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="accard-btn">상담 문의</a>
         </div>
       </div>
     </div>
@@ -631,19 +713,42 @@ export default function HomePage() {
       <div className="divb"></div>
     </div>
     <div className="review-grid fade">
-      <div className="rcard"><span className="rq">"</span><p className="rtext">아이가 처음엔 영어를 한마디도 못 했는데, 한 달 만에 선생님과 자연스럽게 대화를 나누는 걸 보고 깜짝 놀랐어요. 드림아카데미 덕분에 아이의 자신감이 정말 많이 올랐습니다.</p><div className="rauthor"><div className="rav">👩</div><div><div className="rname">김○○ 어머님</div><div className="rinfo">7세 · 드림하우스</div></div></div></div>
-      <div className="rcard"><span className="rq">"</span><p className="rtext">셔틀 서비스가 정말 편리해서 이동 걱정 없이 편하게 지낼 수 있었어요. 현장학습 프로그램도 너무 알차고, 아이가 매일 즐겁게 참여했습니다. 내년에 또 오고 싶어요!</p><div className="rauthor"><div className="rav">👩</div><div><div className="rname">이○○ 어머님</div><div className="rinfo">9세 · 제이파크</div></div></div></div>
-      <div className="rcard"><span className="rq">"</span><p className="rtext">필리핀에서의 한 달이 아이 인생에 큰 전환점이 됐어요. 영어뿐만 아니라 다양한 문화 체험을 통해 아이의 세계관이 넓어진 것을 느낄 수 있었습니다. 여권만 챙겨가면 된다는 말이 딱 맞아요!</p><div className="rauthor"><div className="rav">👨</div><div><div className="rname">박○○ 아버님</div><div className="rinfo">11세 · 큐브나인</div></div></div></div>
+      <div className="rcard"><span className="rq">"</span><div className="rstars">★★★★★</div><p className="rtext">아이가 처음엔 영어를 한마디도 못 했는데, 한 달 만에 선생님과 자연스럽게 대화를 나누는 걸 보고 깜짝 놀랐어요. 드림아카데미 덕분에 아이의 자신감이 정말 많이 올랐습니다.</p><div className="rauthor"><div className="rav">👩</div><div><div className="rname">김○○ 어머님</div><div className="rinfo">7세 · 드림하우스</div></div></div></div>
+      <div className="rcard"><span className="rq">"</span><div className="rstars">★★★★★</div><p className="rtext">셔틀 서비스가 정말 편리해서 이동 걱정 없이 편하게 지낼 수 있었어요. 현장학습 프로그램도 너무 알차고, 아이가 매일 즐겁게 참여했습니다. 내년에 또 오고 싶어요!</p><div className="rauthor"><div className="rav">👩</div><div><div className="rname">이○○ 어머님</div><div className="rinfo">9세 · 제이파크</div></div></div></div>
+      <div className="rcard"><span className="rq">"</span><div className="rstars">★★★★★</div><p className="rtext">필리핀에서의 한 달이 아이 인생에 큰 전환점이 됐어요. 영어뿐만 아니라 다양한 문화 체험을 통해 아이의 세계관이 넓어진 것을 느낄 수 있었습니다. 여권만 챙겨가면 된다는 말이 딱 맞아요!</p><div className="rauthor"><div className="rav">👨</div><div><div className="rname">박○○ 아버님</div><div className="rinfo">11세 · 큐브나인</div></div></div></div>
     </div>
   </div>
 </div>
+
+{/* FAQ */}
+<div className="sec-bg">
+  <div className="sec-bg-i">
+    <div className="fade" style={{textAlign:"center"}}>
+      <div className="stag" style={{justifyContent:"center"}}>FAQ</div>
+      <h2 className="sh" style={{textAlign:"center"}}>자주 묻는 <span className="bl">질문</span></h2>
+      <div className="divb" style={{margin:"14px auto 24px"}}></div>
+    </div>
+    <div className="faq-list fade" id="faqList">
+      <div className="faq-item"><button className="faq-q" data-faq="0">몇 세부터 참가 가능한가요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">킨더 라인은 만 3세부터, 주니어 라인은 초등학교 1학년부터 중학교 2학년까지 참가 가능합니다. 만 7세 예비 초1은 킨더/주니어 중 선택 가능합니다.</div></div></div>
+      <div className="faq-item"><button className="faq-q" data-faq="1">비용은 얼마인가요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">숙소 종류, 기간, 인원에 따라 다릅니다. 드림하우스 기준 2주 약 400만원대부터 시작하며, 카카오톡으로 문의하시면 맞춤 견적을 안내해드립니다.</div></div></div>
+      <div className="faq-item"><button className="faq-q" data-faq="2">영어를 못해도 괜찮나요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">네, 전혀 문제없습니다! 레벨 테스트를 통해 아이의 수준에 맞는 반에 배정되며, 1:1 수업 위주로 진행되어 영어를 처음 접하는 아이도 빠르게 적응합니다.</div></div></div>
+      <div className="faq-item"><button className="faq-q" data-faq="3">부모님도 함께 참가할 수 있나요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">네, 보호자가 함께 체류하시며 아이의 등하교를 관리합니다. 숙소에서 편안하게 지내시면서 아이 수업 중 자유롭게 시간을 보내실 수 있습니다.</div></div></div>
+      <div className="faq-item"><button className="faq-q" data-faq="4">숙소는 어떻게 구성되나요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">드림하우스(독채), 제이파크(5성급 리조트), 큐브나인(오션뷰 리조트) 중 선택 가능합니다. 모든 숙소에 한국산 가전, 정수기 등이 구비되어 있습니다.</div></div></div>
+      <div className="faq-item"><button className="faq-q" data-faq="5">식사는 어떻게 되나요? <span className="faq-arrow">▼</span></button><div className="faq-a"><div className="faq-a-inner">평일 3식 프리미엄 도시락이 숙소로 배달됩니다. 아침 7:50, 점심 11:50, 저녁 17:40에 한국인 조리사님이 준비한 식사가 제공됩니다.</div></div></div>
+    </div>
+  </div>
+</div>
+
+{/* MOBILE FIXED CTA */}
+<a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="mob-cta">💬 카카오톡 상담하기</a>
 
 {/* FOOTER */}
 <footer>
   <div className="footer-grid">
     <div>
       <span className="flogo"><span className="D">D</span>ream<span className="A">A</span>cademy</span>
-      <p className="fdesc">필리핀 세부의 프리미엄 영어 교육 프로그램.<br/>여권만 챙기세요. 나머지 우리가 다 준비했어요.<br/>숙소, 수업, 식사, 활동까지 올인원 케어.</p>
+      <p className="fdesc">필리핀 세부의 프리미엄 영어 교육 프로그램.<br/>숙소, 수업, 식사, 활동까지 올인원 케어.</p>
+      <div className="fsns"><a href="#" aria-label="Instagram">📷</a><a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" aria-label="KakaoTalk">💬</a><a href="#" aria-label="YouTube">▶️</a></div>
     </div>
     <div><div className="ftitle">커리큘럼</div><div className="flinks"><a href="/junior">주니어 커리큘럼</a><a href="/kinder">킨더 커리큘럼</a><a href="/after-school-fieldtrip">애프터스쿨</a></div></div>
     <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="/accommodation/jpark">제이파크</a><a href="/accommodation/cubenine">큐브나인</a><a href="#">패키지 안내</a></div></div>
