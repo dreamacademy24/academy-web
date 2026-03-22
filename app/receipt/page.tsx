@@ -195,6 +195,7 @@ function ReceiptPageInner(){
         <button className="rbn sh" onClick={saveToSheet} disabled={sheetSaved}>{sheetSaved?"✅ 시트 기록 완료":"📊 구글 시트 기록"}</button>
         <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
         <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF 저장 / 인쇄</button>
+        <button className="rbn bk" onClick={()=>router.push("/admin")} style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}}>관리자 홈</button>
         <button className="rbn cl" onClick={()=>window.close()}>닫기</button>
       </div>
     </div>
