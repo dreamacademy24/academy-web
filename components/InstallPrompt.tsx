@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type Env = "kakao-android" | "kakao-ios" | "android" | "ios" | "other";
 
@@ -8,6 +9,7 @@ export default function InstallPrompt() {
   const [env, setEnv] = useState<Env>("other");
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const pathname = usePathname();
 
   function clearInstallParam() {
     const url = new URL(window.location.href);
@@ -77,6 +79,10 @@ export default function InstallPrompt() {
       setTimeout(() => window.open(`https://${site}${param}`, "_blank"), 300);
     }
   }
+
+  // 메인 페이지("/")에서만 표시
+  const hideOnPaths = ["/booking", "/invoice", "/receipt", "/admin", "/guide", "/estimate", "/apply", "/login", "/signup", "/qr"];
+  if (hideOnPaths.some(p => pathname.startsWith(p))) return null;
 
   if (!show) return null;
 
