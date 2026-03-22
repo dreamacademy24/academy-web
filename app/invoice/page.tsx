@@ -288,7 +288,7 @@ function InvoicePageInner(){
 @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 16px;}.dr{flex-direction:column;gap:8px;}}
   `}</style>
 
-  {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
+  {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>window.location.href="/admin"}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
   <div className="fs"><h2>패키지 견적 계산</h2>
@@ -407,7 +407,7 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>window.location.href="/admin"}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>);
 }

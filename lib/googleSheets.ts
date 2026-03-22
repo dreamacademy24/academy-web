@@ -9,7 +9,6 @@ function getAuth() {
     email,
     key,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    keyAlgorithm: "RS256",
   });
 }
 function getSheets() { return google.sheets({ version: "v4", auth: getAuth() }); }
