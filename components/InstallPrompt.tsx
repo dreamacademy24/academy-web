@@ -9,6 +9,12 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
 
+  function clearInstallParam() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("install");
+    history.replaceState(null, "", url.pathname + url.search);
+  }
+
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) return;
     if ((navigator as any).standalone) return;
@@ -17,17 +23,37 @@ export default function InstallPrompt() {
     const isKakao = /KAKAOTALK/i.test(ua);
     const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     const isAndroid = /Android/i.test(ua);
+    const shouldInstall = new URLSearchParams(window.location.search).get("install") === "1";
 
-    if (isKakao && isIOS) setEnv("kakao-ios");
-    else if (isKakao && isAndroid) setEnv("kakao-android");
-    else if (isKakao) setEnv("kakao-android");
-    else if (isIOS) setEnv("ios");
-    else if (isAndroid) setEnv("android");
-    else setEnv("android");
+    let detectedEnv: Env;
+    if (isKakao && isIOS) detectedEnv = "kakao-ios";
+    else if (isKakao && isAndroid) detectedEnv = "kakao-android";
+    else if (isKakao) detectedEnv = "kakao-android";
+    else if (isIOS) detectedEnv = "ios";
+    else if (isAndroid) detectedEnv = "android";
+    else detectedEnv = "android";
 
+    setEnv(detectedEnv);
     setShow(true);
 
-    const handler = (e: Event) => { e.preventDefault(); setDeferredPrompt(e); };
+    // iOS: auto-show modal if came from kakao
+    if (shouldInstall && isIOS && !isKakao) {
+      setShowModal(true);
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      // Android: auto-prompt if came from kakao
+      if (shouldInstall && !isIOS && !isKakao) {
+        (e as any).prompt();
+        (e as any).userChoice.then(() => {
+          setDeferredPrompt(null);
+          setShow(false);
+          clearInstallParam();
+        });
+      }
+    };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
@@ -38,15 +64,17 @@ export default function InstallPrompt() {
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setShow(false);
+    clearInstallParam();
   }
 
   function handleKakaoOpen() {
     const site = "www.dreamacademyph.com";
+    const param = "?install=1";
     if (env === "kakao-android") {
-      window.location.href = `intent://${site}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https://${site};end`;
+      window.location.href = `intent://${site}${param}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https://${site}${param};end`;
     } else if (env === "kakao-ios") {
-      window.location.href = `https://${site}`;
-      setTimeout(() => window.open(`https://${site}`, "_blank"), 300);
+      window.location.href = `https://${site}${param}`;
+      setTimeout(() => window.open(`https://${site}${param}`, "_blank"), 300);
     }
   }
 
@@ -88,7 +116,7 @@ export default function InstallPrompt() {
           ) : (
             <button className="ip-btn" onClick={() => setShowModal(true)}>설치방법 보기</button>
           )}
-          <button className="ip-x" onClick={() => setShow(false)}>✕</button>
+          <button className="ip-x" onClick={() => { setShow(false); clearInstallParam(); }}>✕</button>
         </div>
       </div>
 
@@ -124,7 +152,7 @@ export default function InstallPrompt() {
               <div className="ip-step"><span className="ip-num">3</span><span><strong>설치</strong> 또는 <strong>추가</strong> 버튼을 클릭하세요.</span></div>
             </>)}
 
-            <button className="ip-close" onClick={() => setShowModal(false)}>닫기</button>
+            <button className="ip-close" onClick={() => { setShowModal(false); clearInstallParam(); }}>닫기</button>
           </div>
         </div>
       )}
