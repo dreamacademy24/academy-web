@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-const ADMIN_PASSWORD = "dream2026!";
+// Vercel 배포 시 환경변수에 NEXT_PUBLIC_ADMIN_PASSWORD 추가 필요
+// Vercel Dashboard → Settings → Environment Variables → NEXT_PUBLIC_ADMIN_PASSWORD = (비밀번호)
+const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
 function getToday() {
   const d = new Date();
