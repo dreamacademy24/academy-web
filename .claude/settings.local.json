@@ -18,7 +18,8 @@
       "Bash(echo \"import { createClient } from ''@supabase/supabase-js'':*)",
       "Bash(node scripts/generate-icons.js)",
       "Bash(ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

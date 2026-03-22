@@ -4,19 +4,55 @@ function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const rawKey = process.env.GOOGLE_PRIVATE_KEY || "";
   const key = rawKey.replace(/\\n/g, "\n");
+  return new google.auth.JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
+}
+function getSheets() { return google.sheets({ version: "v4", auth: getAuth() }); }
 
-  return new google.auth.JWT({
-    email,
-    key,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+export interface StudentData {
+  korName: string;
+  engName: string;
+  age: string;
+  grade: string;       // 킨더 | 주니어
+  classType: string;   // 오전 | 종일
+  academyStart: string;
+  academyEnd: string;
+  academyWeeks: string;
+  photo: string;       // O | X
 }
 
-function getSheets() {
-  return google.sheets({ version: "v4", auth: getAuth() });
+export interface InvoiceSheetData {
+  // 예약자
+  name: string;
+  englishName: string;
+  reservationNo: string;
+  reservationDate: string;
+  balanceDate: string;
+  // 숙소/일정
+  accom: string;
+  checkInDate: string;
+  checkOutDate: string;
+  people: string;
+  houseNo: string;
+  // 픽업
+  pickup: string;
+  drop: string;
+  pickupPlace: string;
+  flightIn: string;
+  flightOut: string;
+  // 결제
+  packageType: string;
+  basePrice: number;
+  totalDiscount: number;
+  finalPrice: number;
+  // 학생 목록
+  students: StudentData[];
+  // 특이사항
+  note: string;
+  // 관리자 전용 (출력물 미표시)
+  agency: string;
+  ssp: string;
 }
 
-// 숙소 → 픽드롭 매핑
 function pickdrop(accom: string): string {
   if (/드림하우스/i.test(accom)) return "드림하우스";
   if (/제이파크/i.test(accom)) return "제이파크";
@@ -24,59 +60,29 @@ function pickdrop(accom: string): string {
   return accom;
 }
 
-export interface ReceiptData {
-  // 고객 정보
-  name: string;            // 예약자명
-  englishName: string;     // 영문이름
-  checkInDate: string;     // 체크인
-  checkOutDate: string;    // 체크아웃
-  flightIn: string;        // 항공편 IN
-  flightOut: string;       // 항공편 OUT
-  accom: string;           // 숙소
-  packageType: string;     // 패키지 종류
-  people: string;          // 인원 구성
-  pickup: string;          // 픽업 여부
-  drop: string;            // 드롭 여부
-
-  // 학생 정보
-  studentName: string;     // 학생 한글이름
-  studentEnglish: string;  // 학생 영어이름
-  studentAge: string;      // 나이/생년월일
-  studentType: string;     // 킨더/주니어
-  amOrFull: string;        // 오전/종일
-  academyWeeks: string;    // 아카데미 기간
-  peopleCount: string;     // 투숙 인원
-  houseNo: string;         // 상세주소 (하우스번호)
-
-  // 기타
-  agency: string;          // 유학원
-  balanceDate: string;     // 잔금일자
-  note: string;            // 특이사항
-  ssp: string;             // SSP
-  photoPermit: string;     // 사진 허용
-  registrationDate: string;// 등록일자
-}
-
-// 시트1: 패키지디테일 탭
-export async function appendSheet1(data: ReceiptData) {
+// 시트1: 패키지디테일 (예약 1건 = 1행)
+export async function appendSheet1(data: InvoiceSheetData) {
   const sheets = getSheets();
+  const studentNames = data.students.map(s => s.korName).join(", ");
   const pd = pickdrop(data.accom);
+  const flightStr = (data.flightIn || data.flightOut)
+    ? `IN:${data.flightIn || "미정"} / OUT:${data.flightOut || "미정"}`
+    : "미정";
   const row = [
-    "신규",                // 상태
-    data.name,            // 예약자명
-    data.checkInDate,     // 체크인
-    `IN: ${data.flightIn} / OUT: ${data.flightOut}`, // 항공편
-    pd,                   // 픽업장소
-    data.checkOutDate,    // 체크아웃
-    data.accom,           // 숙소
-    data.studentName,     // 학생이름
-    data.peopleCount,     // 투숙인원
-    data.academyWeeks,    // 아카데미기간
-    data.agency,          // 유학원
-    data.balanceDate,     // 잔금일자
-    data.note,            // 특이사항
+    "신규",           // 상태
+    data.name,        // 예약자명
+    data.checkInDate, // 체크인
+    flightStr,        // 항공편
+    data.pickupPlace || pd, // 픽업장소
+    data.checkOutDate,// 체크아웃
+    data.accom,       // 숙소
+    studentNames,     // 학생이름
+    data.people,      // 투숙인원
+    data.students.map(s=>`${s.korName}(${s.academyWeeks})`).join(", "), // 아카데미기간
+    data.agency,      // 유학원
+    data.balanceDate, // 잔금일자
+    data.note,        // 특이사항
   ];
-
   await sheets.spreadsheets.values.append({
     spreadsheetId: process.env.SHEET1_ID,
     range: "패키지디테일!A:M",
@@ -85,34 +91,34 @@ export async function appendSheet1(data: ReceiptData) {
   });
 }
 
-// 시트2: 디테일 탭
-export async function appendSheet2(data: ReceiptData) {
+// 시트2: 디테일 (학생 수만큼 행 추가)
+export async function appendSheet2(data: InvoiceSheetData) {
   const sheets = getSheets();
   const pd = pickdrop(data.accom);
-  const row = [
-    data.checkInDate,     // 시작
-    data.checkOutDate,    // 종료
-    data.academyWeeks,    // 기간
-    data.amOrFull,        // 오전/종일
-    data.studentType,     // 킨더/주니어
-    data.studentName,     // 한글이름
-    data.studentEnglish,  // 영어이름
-    data.studentAge,      // 나이/생년월일
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = data.students.map(s => [
+    s.academyStart,   // 시작
+    s.academyEnd,     // 종료
+    s.academyWeeks,   // 기간
+    s.classType,      // 오전/종일
+    s.grade,          // 킨더/주니어
+    s.korName,        // 한글이름
+    s.engName,        // 영어이름
+    s.age,            // 나이
     data.packageType ? "O" : "X", // 패키지여부
-    pd,                   // 픽드롭
-    data.houseNo,         // 상세주소
-    data.registrationDate || new Date().toISOString().slice(0, 10), // 등록일자
-    data.note,            // 특이사항
-    data.ssp,             // SSP
-    data.photoPermit,     // 사진허용
-    data.agency,          // 유학원
-    data.name,            // 예약자명
-  ];
-
+    `픽업:${data.pickup} / 드롭:${data.drop}`, // 픽드롭
+    "",               // 상세주소 (미사용)
+    today,            // 등록일자
+    data.note,        // 특이사항
+    data.ssp,         // SSP
+    s.photo,          // 사진허용
+    data.agency,      // 유학원
+    data.name,        // 예약자명
+  ]);
   await sheets.spreadsheets.values.append({
     spreadsheetId: process.env.SHEET2_ID,
     range: "디테일!A:Q",
     valueInputOption: "USER_ENTERED",
-    requestBody: { values: [row] },
+    requestBody: { values: rows },
   });
 }
