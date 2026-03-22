@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SWRegister from "./sw-register";
 
 export const metadata: Metadata = {
   title: "드림아카데미 | 필리핀 세부 프리미엄 영어캠프",
@@ -19,6 +20,11 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1a6fc4" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -30,7 +36,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body><SWRegister />{children}</body>
     </html>
   );
 }
