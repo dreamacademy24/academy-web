@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import html2canvas from "html2canvas";
 
 interface StudentData { korName:string; engName:string; age:string; grade:string; classType:string; academyStart:string; academyEnd:string; academyWeeks:string; photo:string }
 interface BillItem { label:string; price:number; season:string }
@@ -25,7 +26,7 @@ function ReceiptPageInner(){
   const searchParams=useSearchParams();
   const bookingId=searchParams.get("id");
   const [data,setData]=useState<InvoicePayload|null>(null);
-  const [sent,setSent]=useState(false);
+  const [sheetSaved,setSheetSaved]=useState(false);
   const today=new Date().toISOString().slice(0,10);
 
   useEffect(()=>{
@@ -59,11 +60,24 @@ function ReceiptPageInner(){
     load();
   },[bookingId]);
 
-  useEffect(()=>{
-    if(!data||sent)return;
-    fetch("/api/receipt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).catch(e=>console.error("시트 기록 실패:",e));
-    setSent(true);
-  },[data,sent]);
+  async function saveToSheet(){
+    if(!data) return;
+    try{
+      const res=await fetch("/api/receipt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+      if(!res.ok) throw new Error();
+      setSheetSaved(true);
+    }catch{alert("시트 기록 실패");}
+  }
+
+  async function saveAsImage(){
+    const el=document.getElementById("receipt-content");
+    if(!el) return;
+    const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    const link=document.createElement("a");
+    link.download=`영수증_${data?.reservationNo||"receipt"}.png`;
+    link.href=canvas.toDataURL("image/png");
+    link.click();
+  }
 
   if(!data) return(
     <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",fontFamily:"'Noto Sans KR',sans-serif",color:"#6b7c93",fontSize:"16px"}}>
@@ -102,13 +116,15 @@ function ReceiptPageInner(){
 .rb{display:flex;gap:10px;justify-content:center;margin-top:24px;}
 .rbn{padding:12px 32px;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 .rbn.pr{background:#1a6fc4;color:#fff;}.rbn.pr:hover{background:#0d3d7a;}
+.rbn.sh{background:#16a34a;color:#fff;}.rbn.sh:hover{background:#15803d;}.rbn.sh:disabled{background:#86efac;cursor:not-allowed;}
+.rbn.img{background:#7c3aed;color:#fff;}.rbn.img:hover{background:#6d28d9;}
 .rbn.cl{background:#f1f5f9;color:#1a1a2e;border:1px solid #e2e8f0;}.rbn.cl:hover{background:#e2e8f0;}
 @media print{body{background:#fff!important;}.no-print{display:none!important;}.rw{padding:0!important;}.rv{box-shadow:none!important;padding:24px!important;}}
 @media(max-width:600px){.rv{padding:24px 16px;}.rh{flex-direction:column;gap:12px;}.rm{flex-direction:column;gap:4px;}}
     `}</style>
 
     <div className="rw">
-      <div className="rv">
+      <div className="rv" id="receipt-content">
         <div className="rh">
           <div><div className="logo">DREAM ACADEMY</div><div className="sub">Philippines</div></div>
           <div className="rt-title"><h1><span>영 수 증</span>  RECEIPT</h1></div>
@@ -174,7 +190,9 @@ function ReceiptPageInner(){
       </div>
 
       <div className="rb no-print">
-        <button className="rbn pr" onClick={()=>window.print()}>PDF 저장 / 인쇄</button>
+        <button className="rbn sh" onClick={saveToSheet} disabled={sheetSaved}>{sheetSaved?"✅ 시트 기록 완료":"📊 구글 시트 기록"}</button>
+        <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
+        <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF 저장 / 인쇄</button>
         <button className="rbn cl" onClick={()=>window.close()}>닫기</button>
       </div>
     </div>

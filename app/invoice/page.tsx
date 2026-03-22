@@ -49,6 +49,7 @@ export default function InvoicePageWrapper(){ return <Suspense><InvoicePageInner
 function InvoicePageInner(){
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("id");
+  const assigneeParam = searchParams.get("assignee") || "";
   const [dbLoaded, setDbLoaded] = useState(false);
 
   /* ── 견적 상태 (기존 유지) ── */
@@ -110,6 +111,27 @@ function InvoicePageInner(){
       setDbLoaded(true);
     });
   },[bookingId]);
+
+  /* ── 담당자 DB 저장 ── */
+  useEffect(()=>{
+    if(assigneeParam&&bookingId) supabase.from("bookings").update({assignee:assigneeParam}).eq("id",bookingId);
+  },[assigneeParam,bookingId]);
+
+  /* ── 잔금납부일 자동계산 (체크인+2개월) ── */
+  useEffect(()=>{
+    if(!a1CI) return;
+    const d=new Date(a1CI);
+    d.setMonth(d.getMonth()+2);
+    const bd=d.toISOString().slice(0,10);
+    setBooker(b=>({...b,balanceDate:bd}));
+  },[a1CI]);
+
+  /* ── 드림하우스 보증금 자동계산 ── */
+  useEffect(()=>{
+    const totalWeeks=cm==="combo"?a1W+a2W:a1W;
+    const deposit=totalWeeks*2000;
+    setBilling(b=>({...b,locals:b.locals.map(l=>l.name==="드림하우스 보증금"?{...l,amount:String(deposit)}:l)}));
+  },[a1W,a2W,cm]);
 
   /* ── 견적 useMemo (100% 기존 유지) ── */
   const est=useMemo(()=>{
@@ -261,7 +283,7 @@ function InvoicePageInner(){
 .is{margin-bottom:28px;}.ist{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
 .tb{width:100%;border-collapse:collapse;}.tb th{font-size:11px;font-weight:700;color:#6b7c93;padding:8px 12px;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;}.tb td{font-size:13px;padding:10px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}.tb .lb{font-weight:600;background:#fafbfc;width:28%;color:#374151;font-size:12px;}.tb .dc{color:#dc2626;font-weight:600;}.tb .tr td{font-weight:800;font-size:14px;background:#f0f7ff;}.tb .fr td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
 .ift{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#6b7c93;line-height:1.8;word-break:keep-all;}
-.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{background:#15803d;}.psv{padding:12px 32px;background:#64748b;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.psv:hover{background:#475569;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
+.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{background:#15803d;}.psv{padding:12px 32px;background:#64748b;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.psv:hover{background:#475569;}.pci{padding:8px 20px;background:#fff;color:#6b7c93;font-size:12px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}.pci:hover{background:#f1f5f9;color:#1a1a2e;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
 @media print{body{background:#fff!important;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;}}
 @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 16px;}.dr{flex-direction:column;gap:8px;}}
   `}</style>
@@ -326,13 +348,13 @@ function InvoicePageInner(){
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
-    <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목</label>
-    {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/></div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
+    <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목 <span style={{fontSize:"10px",color:"#94a3b8",fontWeight:400}}>단위: 페소(PHP)</span></label>
+    {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
   </div>
 
   {/* ── 섹션5: 체크인 정보 ── */}
-  <div className="fs"><h2>체크인 정보</h2>
+  <div className="fs" id="checkin-section"><h2>체크인 정보</h2>
     <div className="f-row"><div className="f-group"><label className="f-label">픽업</label><select className="f-select" value={checkin.pickup} onChange={e=>setCheckin({...checkin,pickup:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div><div className="f-group"><label className="f-label">드롭</label><select className="f-select" value={checkin.drop} onChange={e=>setCheckin({...checkin,drop:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">픽업 장소</label><input className="f-input" placeholder="막탄공항 도착 게이트" value={checkin.pickupPlace} onChange={e=>setCheckin({...checkin,pickupPlace:e.target.value})}/></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">항공편 (IN)</label><input className="f-input" placeholder="예: 5J502  ※ 미정 시 공백" value={checkin.flightIn} onChange={e=>setCheckin({...checkin,flightIn:e.target.value})}/></div><div className="f-group"><label className="f-label">항공편 (OUT)</label><input className="f-input" placeholder="나중에 입력 가능" value={checkin.flightOut} onChange={e=>setCheckin({...checkin,flightOut:e.target.value})}/></div></div>
@@ -380,7 +402,8 @@ function InvoicePageInner(){
         <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
         <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
         {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
-      </tbody></table></div>
+      </tbody></table>
+      <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>

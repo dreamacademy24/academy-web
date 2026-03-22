@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { appendSheet1, appendSheet2, InvoiceSheetData } from "@/lib/googleSheets";
+import { appendNewSheet, InvoiceSheetData } from "@/lib/googleSheets";
 
 export async function POST(req: NextRequest) {
   try {
     const data: InvoiceSheetData = await req.json();
     if (!data.name) return NextResponse.json({ error: "예약자명 필요" }, { status: 400 });
-    await Promise.all([appendSheet1(data), appendSheet2(data)]);
+    await appendNewSheet(data);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("Receipt API error:", err);

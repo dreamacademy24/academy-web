@@ -51,6 +51,7 @@ export interface InvoiceSheetData {
   // 관리자 전용 (출력물 미표시)
   agency: string;
   ssp: string;
+  assignee?: string;
 }
 
 function pickdrop(accom: string): string {
@@ -88,6 +89,55 @@ export async function appendSheet1(data: InvoiceSheetData) {
     range: "패키지디테일!A:M",
     valueInputOption: "USER_ENTERED",
     requestBody: { values: [row] },
+  });
+}
+
+// 새 통합시트: 영수증 발행 데이터 (학생 수만큼 행 추가)
+export async function appendNewSheet(data: InvoiceSheetData) {
+  const sheets = getSheets();
+  const today = new Date().toISOString().slice(0, 10);
+  const students = data.students && data.students.length > 0
+    ? data.students
+    : [{ korName: "", engName: "", age: "", grade: "", classType: "종일", academyStart: "", academyEnd: "", academyWeeks: "", photo: "O" }];
+  const rows = students.map((s: any) => [
+    "영수증발행",
+    data.reservationNo || "",
+    data.assignee || "",
+    data.name || "",
+    data.englishName || "",
+    data.checkInDate || "",
+    data.checkOutDate || "",
+    data.accom || "",
+    data.houseNo || "",
+    data.people || "",
+    s.korName || "",
+    s.engName || "",
+    s.age || "",
+    s.grade || "",
+    s.academyStart || "",
+    s.academyEnd || "",
+    s.academyWeeks || "",
+    s.classType || "종일",
+    data.flightIn || "",
+    data.flightOut || "",
+    data.pickupPlace || "",
+    data.pickup || "",
+    data.drop || "",
+    data.agency || "",
+    data.balanceDate || "",
+    data.ssp || "",
+    s.photo || "",
+    data.basePrice || 0,
+    data.totalDiscount || 0,
+    data.finalPrice || 0,
+    data.note || "",
+    today,
+  ]);
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.SHEET3_ID,
+    range: "시트1!A:AF",
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: rows },
   });
 }
 

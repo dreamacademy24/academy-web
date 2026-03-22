@@ -7,7 +7,7 @@ const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
-  checkin_date:string; accom_type:string; created_at:string;
+  checkin_date:string; accom_type:string; created_at:string; assignee?:string;
 }
 
 const STATUS_COLORS:Record<string,{bg:string;color:string}>={
@@ -32,6 +32,9 @@ export default function AdminBookingsPage(){
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
   const [loading,setLoading]=useState(false);
+  const [selectedBooking,setSelectedBooking]=useState<string|null>(null);
+  const [assignee,setAssignee]=useState("");
+  const ASSIGNEES=["May","Jamin","Yuna","Jena"];
 
   const load=useCallback(async()=>{
     setLoading(true);
@@ -77,6 +80,14 @@ export default function AdminBookingsPage(){
 .tbl tr:hover td{background:#f8fafc;cursor:pointer;}
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
+.md-ov{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;}
+.md-c{background:#fff;border-radius:14px;padding:28px;max-width:360px;width:90%;text-align:center;font-family:'Noto Sans KR',sans-serif;}
+.md-c h3{font-size:18px;font-weight:800;margin-bottom:6px;}.md-c p{font-size:13px;color:#6b7c93;margin-bottom:18px;}
+.md-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;}
+.md-ab{padding:12px;font-size:14px;font-weight:700;border-radius:8px;cursor:pointer;border:2px solid #1a6fc4;background:#fff;color:#1a6fc4;font-family:'Noto Sans KR',sans-serif;transition:all 150ms;}.md-ab:hover{background:#f0f7ff;}.md-ab.sel{background:#1a6fc4;color:#fff;}
+.md-btns{display:flex;gap:8px;justify-content:center;}.md-btn{padding:10px 24px;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+.md-btn.cancel{background:#f1f5f9;color:#1a1a2e;border:1px solid #e2e8f0;}.md-btn.cancel:hover{background:#e2e8f0;}
+.md-btn.go{background:#1a6fc4;color:#fff;}.md-btn.go:hover{background:#0d3d7a;}.md-btn.go:disabled{background:#94a3b8;cursor:not-allowed;}
 @media(max-width:700px){.tbl{font-size:12px;}.tbl th,.tbl td{padding:8px 10px;}}
   `}</style>
 
@@ -94,14 +105,15 @@ export default function AdminBookingsPage(){
     </div>
 
     <table className="tbl"><thead><tr>
-      <th>예약번호</th><th>상태</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th>
+      <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th>
     </tr></thead><tbody>
-      {filtered.length===0?<tr><td colSpan={7} className="empty">예약이 없습니다.</td></tr>:
+      {filtered.length===0?<tr><td colSpan={8} className="empty">예약이 없습니다.</td></tr>:
       filtered.map(b=>{
         const sc=STATUS_COLORS[b.status]||STATUS_COLORS["접수"];
-        return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
+        return(<tr key={b.id} onClick={()=>{setSelectedBooking(b.id);setAssignee(b.assignee||"");}}>
           <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
           <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
+          <td>{b.assignee||"-"}</td>
           <td>{b.booker_name}</td>
           <td>{parseStudentNames(b.students)}</td>
           <td>{b.checkin_date||"미정"}</td>
@@ -110,6 +122,22 @@ export default function AdminBookingsPage(){
         </tr>);
       })}
     </tbody></table>
+
+    {selectedBooking!==null&&(
+      <div className="md-ov" onClick={()=>setSelectedBooking(null)}>
+        <div className="md-c" onClick={e=>e.stopPropagation()}>
+          <h3>담당자 지정</h3>
+          <p>인보이스 작성 전 담당자를 선택해주세요</p>
+          <div className="md-grid">
+            {ASSIGNEES.map(a=><button key={a} className={`md-ab${assignee===a?" sel":""}`} onClick={()=>setAssignee(a)}>{a}</button>)}
+          </div>
+          <div className="md-btns">
+            <button className="md-btn cancel" onClick={()=>setSelectedBooking(null)}>취소</button>
+            <button className="md-btn go" disabled={!assignee} onClick={()=>{router.push("/invoice?id="+selectedBooking+"&assignee="+assignee);setSelectedBooking(null);}}>인보이스 작성</button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   </>);
 }
