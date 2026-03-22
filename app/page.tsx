@@ -169,7 +169,7 @@ export default function HomePage() {
     .hcard-icon { font-size: 28px; margin-bottom: 10px; }
     .hcard-t { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
     .hcard-d { font-size: 13px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
-    .hero-scroll { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--light-muted); font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: sb 2.2s infinite; }
+    .hero-scroll { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--text); font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; gap: 5px; animation: sb 2.2s infinite; text-shadow: 0 1px 4px rgba(255,255,255,0.8); opacity: 0.5; }
     .hero-scroll::after { content: '↓'; font-size: 12px; }
     @keyframes sb { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(7px)} }
 
@@ -192,8 +192,11 @@ export default function HomePage() {
     /* ABOUT */
     .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
     .about-features { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 32px; }
-    .af { padding: 18px; border: 1px solid var(--stroke); border-radius: 10px; transition: box-shadow 200ms; }
+    .af { padding: 18px; border: 1px solid var(--stroke); border-radius: 10px; transition: box-shadow 200ms; border-left: 4px solid var(--blue); }
     .af:hover { box-shadow: var(--shadow); }
+    .af.af-green { border-left-color: #2da84e; }
+    .af.af-yellow { border-left-color: #f5a623; }
+    .af.af-red { border-left-color: #e53e3e; }
     .af-icon { font-size: 22px; margin-bottom: 8px; }
     .af-t { font-size: 13.5px; font-weight: 700; margin-bottom: 5px; color: var(--text); }
     .af-d { font-size: 13px; color: var(--muted); line-height: 1.75; word-break: keep-all; }
@@ -210,7 +213,7 @@ export default function HomePage() {
     .curr-panel { display: none; }
     .curr-panel.active { display: block; }
     .curr-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
-    .ccard { background: var(--white); border: 1px solid var(--stroke); border-radius: 12px; padding: 28px 22px; position: relative; overflow: hidden; transition: box-shadow 200ms, transform 200ms; }
+    .ccard { background: var(--white); border: 1px solid var(--stroke); border-radius: 12px; padding: 28px 24px; position: relative; overflow: hidden; transition: box-shadow 200ms, transform 200ms; }
     .ccard:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
     .ccard::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 12px 12px 0 0; }
     .ccard.c1::before { background: var(--sky); }
@@ -260,7 +263,7 @@ export default function HomePage() {
     .accard-body { padding: 22px 20px 20px; }
     .accard-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.01em; }
     .accard-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-    .accard-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+    .accard-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
     .accard-tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid rgba(26,111,196,0.2); color: var(--blue); background: var(--blue-light); }
     .accard-feats { display: flex; flex-direction: column; gap: 5px; }
     .accard-feat { font-size: 13px; color: var(--muted); display: flex; align-items: flex-start; gap: 6px; }
@@ -279,7 +282,7 @@ export default function HomePage() {
     .rcard { background: var(--white); padding: 28px; border-radius: 14px; border: 1px solid var(--stroke); border-top: 3px solid var(--blue); box-shadow: var(--shadow); }
     .rq { font-size: 36px; color: var(--blue); line-height: 0.5; margin-bottom: 16px; display: block; font-family: 'Montserrat', sans-serif; opacity: 0.25; }
     .rstars { color: #f5a623; font-size: 14px; letter-spacing: 2px; margin-bottom: 12px; }
-    .rtext { font-size: 13.5px; color: #444; line-height: 1.85; margin-bottom: 20px; word-break: keep-all; }
+    .rtext { font-size: 13.5px; color: #444; line-height: 1.95; margin-bottom: 20px; word-break: keep-all; }
     .rauthor { display: flex; align-items: center; gap: 10px; }
     .rav { width: 36px; height: 36px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; font-size: 15px; }
     .rname { font-size: 13px; font-weight: 700; }
@@ -303,22 +306,23 @@ export default function HomePage() {
     .fade.d1 { transition-delay: 80ms; } .fade.d2 { transition-delay: 160ms; } .fade.d3 { transition-delay: 240ms; }
 
     /* TRUST */
-    .trust-sec { background: var(--blue); padding: 48px 60px; }
+    .trust-sec { background: linear-gradient(135deg, #0d3d7a, #1a6fc4, #1e88e5); padding: 48px 60px; position: relative; overflow: hidden; }
+    .trust-sec::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E"); pointer-events: none; }
     .trust-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
     .trust-card { text-align: center; }
     .trust-num { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 900; color: var(--white); }
     .trust-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-top: 4px; }
 
     /* ACCARD BUTTON */
-    .accard-btn { display: block; text-align: center; padding: 10px; margin: 14px 20px 20px; border: 1.5px solid var(--blue); color: var(--blue); font-size: 13px; font-weight: 600; border-radius: 6px; transition: background 160ms, color 160ms; }
+    .accard-btn { display: block; text-align: center; padding: 10px 20px; margin: 16px 20px 20px; border: 2px solid var(--blue); color: var(--blue); font-size: 13px; font-weight: 600; border-radius: 8px; transition: background 160ms, color 160ms; background: transparent; }
     .accard-btn:hover { background: var(--blue); color: var(--white); }
 
     /* FAQ */
     .faq-list { max-width: 800px; margin: 32px auto 0; }
     .faq-item { border-bottom: 1px solid var(--stroke); }
-    .faq-q { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--text); background: none; border: none; width: 100%; text-align: left; font-family: 'Noto Sans KR', sans-serif; }
+    .faq-q { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--text); background: none; border: none; width: 100%; text-align: left; font-family: 'Noto Sans KR', sans-serif; }
     .faq-q:hover { color: var(--blue); }
-    .faq-arrow { font-size: 12px; color: var(--muted); transition: transform 300ms; flex-shrink: 0; }
+    .faq-arrow { font-size: 12px; color: var(--blue); transition: transform 300ms; flex-shrink: 0; }
     .faq-arrow.open { transform: rotate(180deg); }
     .faq-a { max-height: 0; overflow: hidden; transition: max-height 400ms ease; }
     .faq-a.open { max-height: 300px; }
@@ -461,12 +465,12 @@ export default function HomePage() {
         <div className="stag">About Dream Academy</div>
         <h2 className="sh">전문성과 체계적인 운영이<br/>만들어낸 <span className="bl">최적의 교육 환경</span></h2>
         <div className="divb"></div>
-        <p className="sp">드림아카데미는 UCLA 출신 원장이 직접 설계한 커리큘럼과 90% 이상 자격증 보유 현지 교사진이 함께하는 필리핀 세부의 프리미엄 영어 교육 프로그램입니다.</p>
+        <p className="sp">드림아카데미는 UCLA 출신 원장이 직접 설계한 커리큘럼으로 운영됩니다.<br/>90% 이상 자격증을 보유한 현지 교사진이 함께하는 필리핀 세부의 프리미엄 영어 교육 프로그램입니다.</p>
         <div className="about-features">
           <div className="af"><div className="af-icon">🤝</div><div className="af-t">세심한 케어</div><div className="af-d">상주 한국인 3명 이상<br/>학습 리포트 · 수업사진 공유</div></div>
-          <div className="af"><div className="af-icon">⭐</div><div className="af-t">검증된 교육진</div><div className="af-d">90% 이상 자격증 보유<br/>정기적인 교사 트레이닝</div></div>
-          <div className="af"><div className="af-icon">💡</div><div className="af-t">전문 커리큘럼</div><div className="af-d">UCLA 출신 원장 직접 설계<br/>자체 제작 교재로 수업 진행</div></div>
-          <div className="af"><div className="af-icon">⚙️</div><div className="af-t">체계적인 시스템</div><div className="af-d">담임 선생님 배정<br/>담당 매니저 빠른 피드백</div></div>
+          <div className="af af-green"><div className="af-icon">⭐</div><div className="af-t">검증된 교육진</div><div className="af-d">90% 이상 자격증 보유<br/>정기적인 교사 트레이닝</div></div>
+          <div className="af af-yellow"><div className="af-icon">💡</div><div className="af-t">전문 커리큘럼</div><div className="af-d">UCLA 출신 원장 직접 설계<br/>자체 제작 교재로 수업 진행</div></div>
+          <div className="af af-red"><div className="af-icon">⚙️</div><div className="af-t">체계적인 시스템</div><div className="af-d">담임 선생님 배정<br/>담당 매니저 빠른 피드백</div></div>
         </div>
         <div className="about-quote">"아이 한 명, 한 명의 가능성을 소중히 키우는 공간,<br/>드림아카데미에서 믿을 수 있는 배움을 시작하세요."</div>
       </div>
