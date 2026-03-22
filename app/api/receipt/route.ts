@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     await appendNewSheet(data);
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("Receipt API error:", err);
-    return NextResponse.json({ error: err.message || "시트 기록 실패" }, { status: 500 });
+    console.error("appendNewSheet 에러:", JSON.stringify(err));
+    return NextResponse.json({ error: err.message || "시트 기록 실패", detail: JSON.stringify(err) }, { status: 500 });
   }
 }

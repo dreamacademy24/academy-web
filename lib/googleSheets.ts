@@ -94,6 +94,8 @@ export async function appendSheet1(data: InvoiceSheetData) {
 
 // 새 통합시트: 영수증 발행 데이터 (학생 수만큼 행 추가)
 export async function appendNewSheet(data: InvoiceSheetData) {
+  console.log("SHEET3_ID:", process.env.SHEET3_ID);
+  console.log("students:", JSON.stringify(data.students));
   const sheets = getSheets();
   const today = new Date().toISOString().slice(0, 10);
   const students = data.students && data.students.length > 0
