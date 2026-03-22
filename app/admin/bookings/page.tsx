@@ -105,9 +105,9 @@ export default function AdminBookingsPage(){
     </div>
 
     <table className="tbl"><thead><tr>
-      <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th>
+      <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th><th></th>
     </tr></thead><tbody>
-      {filtered.length===0?<tr><td colSpan={8} className="empty">예약이 없습니다.</td></tr>:
+      {filtered.length===0?<tr><td colSpan={9} className="empty">예약이 없습니다.</td></tr>:
       filtered.map(b=>{
         const sc=STATUS_COLORS[b.status]||STATUS_COLORS["접수"];
         return(<tr key={b.id} onClick={()=>{setSelectedBooking(b.id);setAssignee(b.assignee||"");}}>
@@ -119,6 +119,7 @@ export default function AdminBookingsPage(){
           <td>{b.checkin_date||"미정"}</td>
           <td>{b.accom_type||"미정"}</td>
           <td>{b.created_at?new Date(b.created_at).toLocaleDateString("ko-KR"):""}</td>
+          <td><button style={{padding:"4px 10px",fontSize:"11px",fontWeight:700,background:"#16a34a",color:"#fff",border:"none",borderRadius:"6px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={e=>{e.stopPropagation();window.open("/receipt?id="+b.id,"_blank");}}>영수증 보기</button></td>
         </tr>);
       })}
     </tbody></table>

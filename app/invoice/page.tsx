@@ -407,7 +407,7 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>);
 }

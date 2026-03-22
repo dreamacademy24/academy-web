@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import html2canvas from "html2canvas";
 
@@ -24,6 +24,7 @@ export default function ReceiptPageWrapper(){ return <Suspense><ReceiptPageInner
 
 function ReceiptPageInner(){
   const searchParams=useSearchParams();
+  const router=useRouter();
   const bookingId=searchParams.get("id");
   const [data,setData]=useState<InvoicePayload|null>(null);
   const [sheetSaved,setSheetSaved]=useState(false);
@@ -190,6 +191,7 @@ function ReceiptPageInner(){
       </div>
 
       <div className="rb no-print">
+        <button className="rbn bk" onClick={()=>{bookingId?router.push("/invoice?id="+bookingId):window.history.back();}} style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}}>← 인보이스로</button>
         <button className="rbn sh" onClick={saveToSheet} disabled={sheetSaved}>{sheetSaved?"✅ 시트 기록 완료":"📊 구글 시트 기록"}</button>
         <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
         <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF 저장 / 인쇄</button>
