@@ -16,7 +16,8 @@
       "Bash(npm ls:*)",
       "Bash(mkdir -p lib)",
       "Bash(echo \"import { createClient } from ''@supabase/supabase-js'':*)",
-      "Bash(node scripts/generate-icons.js)"
+      "Bash(node scripts/generate-icons.js)",
+      "Bash(ls:*)"
     ]
   }
 }

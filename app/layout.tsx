@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SWRegister from "./sw-register";
+import InstallPrompt from "@/components/InstallPrompt";
 
 export const metadata: Metadata = {
   title: "드림아카데미 | 필리핀 세부 프리미엄 영어캠프",
@@ -40,7 +41,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body><SWRegister />{children}</body>
+      <body><SWRegister /><InstallPrompt />{children}</body>
     </html>
   );
 }
