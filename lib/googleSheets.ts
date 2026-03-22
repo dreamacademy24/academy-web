@@ -5,9 +5,11 @@ function getAuth() {
   const rawKey = process.env.GOOGLE_PRIVATE_KEY || "";
   const key = rawKey.replace(/\\n/g, "\n");
 
-  return new google.auth.JWT(email, undefined, key, [
-    "https://www.googleapis.com/auth/spreadsheets",
-  ]);
+  return new google.auth.JWT({
+    email,
+    key,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
 }
 
 function getSheets() {
