@@ -288,7 +288,7 @@ function InvoicePageInner(){
 @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 16px;}.dr{flex-direction:column;gap:8px;}}
   `}</style>
 
-  {!preview?(<div className="fw"><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
+  {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
   <div className="fs"><h2>패키지 견적 계산</h2>
