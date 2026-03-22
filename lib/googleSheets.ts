@@ -1,19 +1,15 @@
 import { google } from "googleapis";
 
 function getAuth() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL!;
   const rawKey = process.env.GOOGLE_PRIVATE_KEY || "";
-
-  // \\n 과 \n 모두 처리, 따옴표 제거
-  const key = rawKey
-    .replace(/\\\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/^["']|["']$/g, '');
+  const key = rawKey.replace(/\\n/g, "\n").replace(/^["']|["']$/g, "");
 
   return new google.auth.JWT({
     email,
     key,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    keyAlgorithm: "RS256",
   });
 }
 function getSheets() { return google.sheets({ version: "v4", auth: getAuth() }); }
