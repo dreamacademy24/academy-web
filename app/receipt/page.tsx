@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 interface StudentData { korName:string; engName:string; age:string; grade:string; classType:string; academyStart:string; academyEnd:string; academyWeeks:string; photo:string }
 interface BillItem { label:string; price:number; season:string }
@@ -10,21 +12,52 @@ interface InvoicePayload {
   accom:string; checkInDate:string; checkOutDate:string; people:string; houseNo:string;
   pickup:string; drop:string; pickupPlace:string; flightIn:string; flightOut:string;
   packageType:string; basePrice:number; totalDiscount:number; finalPrice:number;
-  students:StudentData[]; note:string; agency:string; ssp:string;
+  students:StudentData[]; note:string; agency?:string; ssp?:string;
   billingItems:BillItem[]; discounts:Disc[]; locals:LC[];
 }
 
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function fmtDate(d:string){if(!d)return "";const dt=new Date(d);return `${dt.getMonth()+1}/${dt.getDate()}`;}
 
-export default function ReceiptPage(){
+export default function ReceiptPageWrapper(){ return <Suspense><ReceiptPageInner/></Suspense>; }
+
+function ReceiptPageInner(){
+  const searchParams=useSearchParams();
+  const bookingId=searchParams.get("id");
   const [data,setData]=useState<InvoicePayload|null>(null);
   const [sent,setSent]=useState(false);
   const today=new Date().toISOString().slice(0,10);
 
   useEffect(()=>{
-    try{const raw=sessionStorage.getItem("invoiceData");if(raw)setData(JSON.parse(raw));}catch{/* ignore */}
-  },[]);
+    async function load(){
+      if(bookingId){
+        const {data:row}=await supabase.from("bookings").select("*").eq("id",bookingId).single();
+        if(row){
+          const sts=typeof row.students==="string"?JSON.parse(row.students):(row.students||[]);
+          const items=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
+          const discs=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
+          const locs=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
+          setData({
+            name:row.booker_name,englishName:row.booker_english||"",
+            reservationNo:row.reservation_no,reservationDate:row.reservation_date,
+            balanceDate:row.balance_date||"",accom:row.accom_type||"",
+            checkInDate:row.checkin_date||"",checkOutDate:row.checkout_date||"",
+            people:"",houseNo:row.house_no||"",
+            pickup:row.pickup||"O",drop:row.drop_off||"O",pickupPlace:row.pickup_place||"",
+            flightIn:row.flight_in||"",flightOut:row.flight_out||"",
+            packageType:items.map((i:any)=>i.label).join(" + "),
+            basePrice:row.base_price,totalDiscount:row.total_discount,finalPrice:row.final_price,
+            students:sts,note:row.special_request||"",
+            billingItems:items,discounts:discs,locals:locs,
+          });
+          await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+          return;
+        }
+      }
+      try{const raw=sessionStorage.getItem("invoiceData");if(raw)setData(JSON.parse(raw));}catch{/* ignore */}
+    }
+    load();
+  },[bookingId]);
 
   useEffect(()=>{
     if(!data||sent)return;

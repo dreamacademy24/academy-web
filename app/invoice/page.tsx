@@ -1,5 +1,7 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 /* ── 유틸 함수 (100% 기존 유지) ── */
 function isPeak(d: string): boolean {
@@ -42,7 +44,13 @@ interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:s
 const todayStr = new Date().toISOString().slice(0,10);
 const todayCompact = todayStr.replace(/-/g,"");
 
-export default function InvoicePage(){
+export default function InvoicePageWrapper(){ return <Suspense><InvoicePageInner/></Suspense>; }
+
+function InvoicePageInner(){
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get("id");
+  const [dbLoaded, setDbLoaded] = useState(false);
+
   /* ── 견적 상태 (기존 유지) ── */
   const [cm,setCm]=useState<"single"|"combo">("single");
   const [a1T,setA1T]=useState<AT>("dreamhouse");
@@ -65,7 +73,7 @@ export default function InvoicePage(){
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
-  const [reservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900+100));
+  const [reservationNo,setReservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900+100));
   const [reservationDate,setReservationDate]=useState(todayStr);
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
@@ -75,9 +83,33 @@ export default function InvoicePage(){
 
   /* ── 학생 academyStart 자동동기화 ── */
   useEffect(()=>{
-    if(!a1CI) return;
+    if(!a1CI||dbLoaded) return;
     setStudents(prev=>prev.map(s=>({...s,academyStart:a1CI,academyEnd:s.academyWeeks?addDays(a1CI,Number(s.academyWeeks)*7):""})));
-  },[a1CI]);
+  },[a1CI,dbLoaded]);
+
+  /* ── DB에서 예약 로드 ── */
+  useEffect(()=>{
+    if(!bookingId) return;
+    supabase.from("bookings").select("*").eq("id",bookingId).single().then(({data})=>{
+      if(!data) return;
+      setBooker({name:data.booker_name,englishName:data.booker_english||"",balanceDate:data.balance_date||""});
+      const sts=typeof data.students==="string"?JSON.parse(data.students):data.students;
+      if(sts&&sts.length>0) setStudents(sts.map((s:any,i:number)=>({...s,id:i+1,academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"2",photo:s.photo||"O"})));
+      setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:data.house_no||"",specialRequest:data.special_request||""}));
+      setAdminOnly({agency:data.agency||"개인",ssp:data.ssp||"O"});
+      if(data.checkin_date) setA1CI(data.checkin_date);
+      if(data.accom_weeks) setA1W(data.accom_weeks);
+      if(data.base_price>0){
+        const items=typeof data.billing_items==="string"?JSON.parse(data.billing_items):(data.billing_items||[]);
+        const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
+        const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
+        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
+      }
+      if(data.reservation_no) setReservationNo(data.reservation_no);
+      if(data.reservation_date) setReservationDate(data.reservation_date);
+      setDbLoaded(true);
+    });
+  },[bookingId]);
 
   /* ── 견적 useMemo (100% 기존 유지) ── */
   const est=useMemo(()=>{
@@ -150,6 +182,36 @@ export default function InvoicePage(){
     setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
   }
 
+  /* ── DB 저장 ── */
+  async function saveToDb(){
+    if(!bookingId){alert("예약 ID가 없습니다. 관리자 페이지에서 접근해주세요.");return;}
+    const totalDiscount=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
+    await supabase.from("bookings").update({
+      status:"인보이스발행",
+      booker_name:booker.name,
+      booker_english:booker.englishName,
+      students:JSON.stringify(students),
+      base_price:billing.basePrice,
+      billing_items:billing.items,
+      discounts:billing.discounts,
+      locals:billing.locals,
+      total_discount:totalDiscount,
+      final_price:billing.basePrice-totalDiscount,
+      flight_in:checkin.flightIn,
+      flight_out:checkin.flightOut,
+      house_no:checkin.houseNo,
+      pickup:checkin.pickup,
+      drop_off:checkin.drop,
+      pickup_place:checkin.pickupPlace,
+      special_request:checkin.specialRequest,
+      balance_date:booker.balanceDate||null,
+      agency:adminOnly.agency,
+      ssp:adminOnly.ssp,
+      updated_at:new Date().toISOString(),
+    }).eq("id",bookingId);
+    alert("저장 완료!");
+  }
+
   /* ── 영수증 발행 ── */
   function openReceipt(){
     const totalDiscount=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
@@ -171,7 +233,7 @@ export default function InvoicePage(){
       locals:billing.locals.filter(l=>l.name&&l.amount),
     };
     sessionStorage.setItem("invoiceData",JSON.stringify(payload));
-    window.open("/receipt","_blank");
+    window.open("/receipt"+(bookingId?"?id="+bookingId:""),"_blank");
   }
 
   return(<><style>{`
@@ -199,7 +261,7 @@ export default function InvoicePage(){
 .is{margin-bottom:28px;}.ist{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
 .tb{width:100%;border-collapse:collapse;}.tb th{font-size:11px;font-weight:700;color:#6b7c93;padding:8px 12px;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;}.tb td{font-size:13px;padding:10px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}.tb .lb{font-weight:600;background:#fafbfc;width:28%;color:#374151;font-size:12px;}.tb .dc{color:#dc2626;font-weight:600;}.tb .tr td{font-weight:800;font-size:14px;background:#f0f7ff;}.tb .fr td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
 .ift{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#6b7c93;line-height:1.8;word-break:keep-all;}
-.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{background:#15803d;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
+.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{background:#15803d;}.psv{padding:12px 32px;background:#64748b;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.psv:hover{background:#475569;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
 @media print{body{background:#fff!important;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;}}
 @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 16px;}.dr{flex-direction:column;gap:8px;}}
   `}</style>
@@ -322,7 +384,7 @@ export default function InvoicePage(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button><button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>);
 }
