@@ -111,22 +111,16 @@ export default function InvoicePage(){
   function addL(){setLocals([...locals,{id:Date.now(),name:"",amount:""}]);}
   function rmL(id:number){setLocals(locals.filter(c=>c.id!==id));}
   function upL(id:number,f:string,v:string){setLocals(locals.map(c=>c.id===id?{...c,[f]:v}:c));}
-  async function gen(){
+  function gen(){
     if(!cust.name){alert("예약자명을 입력해주세요.");return;}
-    // Google Sheets 기록
-    try{
-      const pd=a1T==="dreamhouse"?"드림하우스":a1T==="jpark"?"제이파크":a1T==="cubenine"?"큐브나인":"";
-      await fetch("/api/receipt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-        name:cust.name,englishName:cust.englishName,checkInDate:cust.checkInDate,checkOutDate:cust.checkOutDate,
-        flightIn:ci.flightIn,flightOut:ci.flightOut,accom:pd||(cust.packageType||""),packageType:cust.packageType,
-        people:cust.people,pickup:ci.pickup,drop:ci.drop,
-        studentName:cust.name,studentEnglish:cust.englishName,studentAge:"",studentType:"",amOrFull:"",
-        academyWeeks:cm==="single"?`${a1W}주`:`${a1W}주+${a2W}주`,peopleCount:cust.people,houseNo:ci.houseNo,
-        agency:"",balanceDate:"",note:ci.specialRequest,ssp:"",photoPermit:"",
-        registrationDate:new Date().toISOString().slice(0,10),
-      })});
-    }catch(e){console.error("시트 기록 실패:",e);}
     setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
+  }
+  function openReceipt(){
+    const td2=discs.reduce((s,d)=>s+(Number(d.amount)||0),0);
+    const fp2=bill.basePrice-td2;
+    const data={cust,bill,discs,locals,ci,totalDiscount:td2,finalPrice:fp2};
+    sessionStorage.setItem("receiptData",JSON.stringify(data));
+    window.open("/receipt","_blank");
   }
 
   return(<><style>{`
@@ -150,7 +144,7 @@ export default function InvoicePage(){
 .is{margin-bottom:28px;}.ist{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0;}
 .tb{width:100%;border-collapse:collapse;}.tb th{font-size:11px;font-weight:700;color:#6b7c93;padding:8px 12px;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;}.tb td{font-size:13px;padding:10px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}.tb .lb{font-weight:600;background:#fafbfc;width:30%;color:#374151;font-size:12px;}.tb .dc{color:#dc2626;font-weight:600;}.tb .tr td{font-weight:800;font-size:14px;background:#f0f7ff;}.tb .fr td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
 .ift{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#6b7c93;line-height:1.8;word-break:keep-all;}
-.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
+.pb{display:flex;gap:10px;justify-content:center;margin-top:24px;}.pp{padding:12px 32px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{background:#0d3d7a;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{background:#15803d;}.pbk{padding:12px 32px;background:#f1f5f9;color:#1a1a2e;font-size:14px;font-weight:600;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e2e8f0;}
 @media print{body{background:#fff!important;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;}}
 @media(max-width:600px){.f-row{flex-direction:column;gap:12px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 16px;}.dr{flex-direction:column;gap:8px;}}
   `}</style>
@@ -240,7 +234,7 @@ export default function InvoicePage(){
       </tbody></table></div>
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button><button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>);
 }
