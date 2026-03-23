@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import html2canvas from "html2canvas";
 
 /* ── 유틸 함수 (100% 기존 유지) ── */
 function isPeak(d: string): boolean {
@@ -79,6 +80,7 @@ function InvoicePageInner(){
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
+  const [depositAmount]=useState(1000000);
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
 
@@ -125,6 +127,28 @@ function InvoicePageInner(){
     const bd=d.toISOString().slice(0,10);
     setBooker(b=>({...b,balanceDate:bd}));
   },[a1CI]);
+
+  /* ── 숙소 기간 → 학생 기간 자동동기화 ── */
+  useEffect(()=>{
+    const totalWeeks=cm==="combo"?a1W+a2W:a1W;
+    setStudents(prev=>prev.map(s=>({
+      ...s,
+      academyWeeks:String(totalWeeks),
+      academyEnd:s.academyStart?addDays(s.academyStart,totalWeeks*7):""
+    })));
+  },[a1W,a2W,cm]);
+
+  /* ── 첫 번째 학생 시작일/기간 → 나머지 학생 자동복사 ── */
+  useEffect(()=>{
+    if(students.length<2) return;
+    const first=students[0];
+    setStudents(prev=>prev.map((s,i)=>i===0?s:{
+      ...s,
+      academyStart:first.academyStart,
+      academyWeeks:first.academyWeeks,
+      academyEnd:first.academyEnd,
+    }));
+  },[students[0]?.academyStart,students[0]?.academyWeeks,students[0]?.academyEnd]);
 
   /* ── 드림하우스 보증금 자동계산 ── */
   useEffect(()=>{
@@ -178,6 +202,8 @@ function InvoicePageInner(){
   /* ── 할인/현지비용 헬퍼 ── */
   const td=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
   const fp=billing.basePrice-td;
+  const daysUntilCheckin=a1CI?Math.floor((new Date(a1CI).getTime()-Date.now())/86400000):999;
+  const isFullPayment=daysUntilCheckin<60;
   function addD(){setBilling(b=>({...b,discounts:[...b.discounts,{id:Date.now(),name:"",amount:0}]}));}
   function rmD(id:number){setBilling(b=>({...b,discounts:b.discounts.filter(d=>d.id!==id)}));}
   function upD(id:number,f:string,v:string|number){setBilling(b=>({...b,discounts:b.discounts.map(d=>d.id===id?{...d,[f]:v}:d)}));}
@@ -232,6 +258,17 @@ function InvoicePageInner(){
       updated_at:new Date().toISOString(),
     }).eq("id",bookingId);
     alert("저장 완료!");
+  }
+
+  /* ── 이미지 저장 ── */
+  async function saveAsImage(){
+    const el=document.getElementById("invoice-content");
+    if(!el) return;
+    const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    const link=document.createElement("a");
+    link.download="인보이스_"+(booker.name||"draft")+".png";
+    link.href=canvas.toDataURL("image/png");
+    link.click();
   }
 
   /* ── 영수증 발행 ── */
@@ -296,10 +333,10 @@ function InvoicePageInner(){
 
     {cm==="single"?(<>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 선택")}
-      <div className="f-row"><div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,mp(a1T)-p));}}>{[1,2,3].filter(p=>p<mp(a1T)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:mp(a1T)-cP},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
+      <div className="f-row"><div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,mp(a1T)-p)));}}>{[1,2,3].filter(p=>p<mp(a1T)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,mp(a1T)-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       <div className="ex-box"><div className="ex-title">추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
     </>):(<>
-      <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.min(mp(a1T),mp(a2T))-p));}}>{[1,2,3].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.min(mp(a1T),mp(a2T))-cP},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
+      <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,Math.min(mp(a1T),mp(a2T))-p)));}}>{[1,2,3].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,Math.min(mp(a1T),mp(a2T))-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 A")}
       <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
       <div className="cp">+</div>
@@ -345,6 +382,7 @@ function InvoicePageInner(){
   {/* ── 섹션4: 결제 정보 ── */}
   <div className="fs"><h2>결제 정보</h2>
     {billing.items.length>0?(<div style={{marginBottom:"14px"}}>{billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label} ({item.season}): <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}<div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div></div>):(<div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>)}
+    {fp>0&&(isFullPayment?<div style={{color:"#dc2626",fontWeight:700,fontSize:"13px",marginBottom:"12px"}}>⚠️ 전액 입금 (체크인 2달 미만)</div>:<div style={{fontSize:"13px",color:"#374151",marginBottom:"12px"}}>예약금: {fmt(depositAmount)}원 / 잔금: {fmt(fp-depositAmount)}원</div>)}
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
@@ -374,7 +412,7 @@ function InvoicePageInner(){
 
   /* ── 인보이스 미리보기 ── */
   <div className="iw">
-    <div className="iv">
+    <div className="iv" id="invoice-content">
       <div className="it"><div><div className="il">DREAM COMPANY</div><div className="ils">Philippines</div></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
       <div className="is"><div className="ist">Customer Information</div><table className="tb"><tbody>
@@ -394,6 +432,7 @@ function InvoicePageInner(){
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
         <tr className="fr"><td>청구 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
+        {fp>0&&(isFullPayment?<tr><td style={{fontSize:"12px",color:"#dc2626",fontWeight:600}}>납부방법: 전액 입금 (체크인 2달 미만)</td><td style={{textAlign:"right",fontSize:"12px",color:"#dc2626",fontWeight:600}}>{fmt(fp)}원</td></tr>:<><tr><td style={{fontSize:"12px"}}>예약금</td><td style={{textAlign:"right",fontSize:"12px"}}>{fmt(depositAmount)}원</td></tr><tr><td style={{fontSize:"12px"}}>잔금 {booker.balanceDate?`(${booker.balanceDate} 까지)`:""}</td><td style={{textAlign:"right",fontSize:"12px"}}>{fmt(fp-depositAmount)}원</td></tr></>)}
       </tbody></table>
       {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}</td></tr>)}</tbody></table>}</div>
 
@@ -407,7 +446,7 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>window.location.href="/admin"}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>window.location.href="/admin"}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={saveAsImage}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>);
 }
