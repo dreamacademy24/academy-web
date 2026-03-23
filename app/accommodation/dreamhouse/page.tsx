@@ -357,7 +357,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater008.png" alt="농구 코트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img src="/images/bayswater006.jpg" alt="농구 코트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🏀 농구 코트</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -382,7 +382,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater004.jpg" alt="놀이터" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img src="/images/bayswater003.jpg" alt="놀이터" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛝 놀이터</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -393,7 +393,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater006.jpg" alt="미니마트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img src="/images/bayswater005.jpg" alt="미니마트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛒 미니마트</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -405,7 +405,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater003.jpg" alt="카페" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img src="/images/bayswater008.png" alt="카페" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>☕ 카페 (Lin's Coffee Shop)</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
