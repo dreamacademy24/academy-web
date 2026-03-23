@@ -387,11 +387,16 @@ export default function PackagePage() {
                 <div className="acc-card-sub">바다를 품은 프라이빗 리조트</div>
               </div>
               <div className="acc-card-body">
-                <div className="acc-feat">바다 액티비티 무료 (카약 / 패들)</div>
                 <div className="acc-feat">디럭스 오션룸: 오션뷰, 테라스, 선셋 베드</div>
                 <div className="acc-feat">풀 억세스룸: 메인 풀장과 직접 연결</div>
                 <div className="acc-feat">오션뷰와 함께 즐기는 레스토랑</div>
                 <div className="acc-feat">마사지 샵</div>
+                <div className="acc-special">
+                  <strong>드림아카데미 X 큐브나인 패키지 특별혜택</strong><br/>
+                  · 도시락 대신 조식 및 식사 바우처 제공 (식사 바우처 : 팀당 1주 기준 10만원)<br/>
+                  · 마사지&스파 20%, 레스토랑 10% 할인<br/>
+                  · 바디 액티비티 무료 (카약/패들)
+                </div>
               </div>
             </div>
           </div>
