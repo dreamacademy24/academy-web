@@ -317,9 +317,9 @@ export default function DreamHousePage() {
           <div className="stag">Location</div>
           <h2 className="sh">위치 <span className="hl">안내</span></h2>
           <div className="divider"></div>
-          <p className="sp">베이스워터 빌리지에 위치한 드림하우스는 주요 시설과 가까워 편리한 생활이 가능합니다.</p>
+          <p className="sp">베이스워터 빌리지에 위치한 드림하우스는 막탄의 중심부에 있어 주요 시설과 가까워 편리한 생활이 가능합니다.</p>
 
-          <div className="loc-grid">
+          <div className="loc-grid" style={{marginBottom:24}}>
             <div className="loc-card">
               <div className="loc-icon">🏫</div>
               <div className="loc-title">드림아카데미</div>
@@ -335,6 +335,17 @@ export default function DreamHousePage() {
               <div className="loc-title">가이사노몰</div>
               <div className="loc-desc">차량 약 5분</div>
             </div>
+          </div>
+          <div style={{borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.1)"}}>
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3924.4!2d123.9838!3d10.3113!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a999b10e54c3ab%3A0x3b3e3e3e3e3e3e3e!2sBayswater%20Village%2C%20Mactan%2C%20Lapu-Lapu%20City%2C%20Cebu!5e0!3m2!1sko!2skr!4v1"
+              width="100%"
+              height="400"
+              style={{border:0,display:"block"}}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
           </div>
         </div>
       </div>
