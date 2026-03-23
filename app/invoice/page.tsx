@@ -80,7 +80,6 @@ function InvoicePageInner(){
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
-  const [depositAmount]=useState(1000000);
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
 
@@ -382,13 +381,13 @@ function InvoicePageInner(){
   {/* ── 섹션4: 결제 정보 ── */}
   <div className="fs"><h2>결제 정보</h2>
     {billing.items.length>0?(<div style={{marginBottom:"14px"}}>{billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label} ({item.season}): <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}<div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div></div>):(<div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>)}
-    {fp>0&&(isFullPayment?<div style={{color:"#dc2626",fontWeight:700,fontSize:"13px",marginBottom:"12px"}}>⚠️ 전액 입금 (체크인 2달 미만)</div>:<div style={{fontSize:"13px",color:"#374151",marginBottom:"12px"}}>예약금: {fmt(depositAmount)}원 / 잔금: {fmt(fp-depositAmount)}원</div>)}
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
     <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목 <span style={{fontSize:"10px",color:"#94a3b8",fontWeight:400}}>단위: 페소(PHP)</span></label>
     {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
+    {a1CI&&(<div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"8px",background:isFullPayment?"#fef2f2":"#f0f7ff",border:isFullPayment?"1px solid #fecaca":"1px solid #bfdbfe",fontSize:"13px"}}>{isFullPayment?(<span style={{color:"#dc2626",fontWeight:700}}>⚠️ 전액 입금 — 체크인이 2달 미만입니다. 전체 금액({fmt(fp)}원)을 납부해 주세요.</span>):(<><div style={{marginBottom:"4px"}}><strong>예약금:</strong> 1,000,000원</div><div style={{marginBottom:"4px"}}><strong>잔금:</strong> {fmt(fp>1000000?fp-1000000:0)}원{booker.balanceDate?` (납부일: ${booker.balanceDate})`:""}</div><div style={{color:"#6b7c93",fontSize:"11px",marginTop:"6px"}}>※ 예약금 입금 후 예약 확정, 잔금은 입실 2달 전까지 납부</div></>)}</div>)}
   </div>
 
   {/* ── 섹션5: 체크인 정보 ── */}
@@ -432,9 +431,9 @@ function InvoicePageInner(){
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
         <tr className="fr"><td>청구 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
-        {fp>0&&(isFullPayment?<tr><td style={{fontSize:"12px",color:"#dc2626",fontWeight:600}}>납부방법: 전액 입금 (체크인 2달 미만)</td><td style={{textAlign:"right",fontSize:"12px",color:"#dc2626",fontWeight:600}}>{fmt(fp)}원</td></tr>:<><tr><td style={{fontSize:"12px"}}>예약금</td><td style={{textAlign:"right",fontSize:"12px"}}>{fmt(depositAmount)}원</td></tr><tr><td style={{fontSize:"12px"}}>잔금 {booker.balanceDate?`(${booker.balanceDate} 까지)`:""}</td><td style={{textAlign:"right",fontSize:"12px"}}>{fmt(fp-depositAmount)}원</td></tr></>)}
+        {fp>0&&(isFullPayment?<tr><td colSpan={2} style={{padding:"12px",background:"#fef2f2",color:"#dc2626",fontWeight:700,fontSize:"13px",textAlign:"center"}}>⚠️ 전액 입금 (체크인 2달 미만) — 납부 금액: {fmt(fp)}원</td></tr>:<><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>예약금</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 {booker.balanceDate?`(납부일: ${booker.balanceDate})`:""}</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp-1000000)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
-      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}</td></tr>)}</tbody></table>}</div>
+      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{(c.name.includes("SSP")||c.name.includes("보증금"))?" 페소":""}</td></tr>)}</tbody></table>}</div>
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
