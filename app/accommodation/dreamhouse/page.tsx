@@ -293,7 +293,7 @@ export default function DreamHousePage() {
             </div>
 
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛋️</span> 거실 · 주방</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛋️</span> 거실</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                 <img src="/images/dh-living1.jpg" alt="거실+주방 전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
                 <img src="/images/dh-living2.jpg" alt="거실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
@@ -302,15 +302,7 @@ export default function DreamHousePage() {
             </div>
 
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>📺</span> TV · 계단</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                <img src="/images/dh-tv.jpg" alt="TV+계단" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse_Room-3.jpg" alt="거실+계단" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-              </div>
-            </div>
-
-            <div>
-              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛏️</span> 침실</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛏️</span> 방 3개</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                 <img src="/images/dh-room1.jpg" alt="침실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
                 <img src="/images/dreamhouse_Room-1.jpg" alt="침실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
@@ -319,7 +311,7 @@ export default function DreamHousePage() {
             </div>
 
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🍳</span> 주방 · 시설</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🍳</span> 주방</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
                 <img src="/images/Dreamhouse_room-12_.png" alt="주방전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
                 <img src="/images/dreamhouse_Room-4.jpg" alt="주방싱크" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
@@ -328,10 +320,11 @@ export default function DreamHousePage() {
             </div>
 
             <div>
-              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🚿</span> 화장실</div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-                <img src="/images/dreamhouseroom-10.jpg" alt="화장실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse_Room-6.jpg" alt="화장실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+              <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🚿</span> 욕실 2개</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                <img src="/images/dreamhouseroom-10.jpg" alt="욕실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img src="/images/dreamhouseroom22.png" alt="샤워기" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img src="/images/dreamhouse25.png" alt="욕실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
               </div>
             </div>
 
