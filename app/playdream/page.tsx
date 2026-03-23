@@ -8,7 +8,7 @@ export default function PlayDreamPage() {
   return (
     <>
       <style>{`
-        :root { --blue:#1a6fc4; --blue-dark:#0d3d7a; --blue-light:#eaf3fb; --sky:#29a9e0; --yellow:#f5a623; --orange:#FF6B35; --orange-dark:#D4520A; --orange-light:#FFF4ED; --white:#fff; --off:#FFF9F5; --text:#1a1a2e; --muted:#6b7c93; --stroke:#e2e8f0; --shadow:0 8px 40px rgba(0,0,0,0.09); --shadow-lg:0 20px 60px rgba(255,107,53,0.13); --green:#2da84e; }
+        :root { --blue:#1a6fc4; --blue-dark:#0d3d7a; --blue-light:#eaf3fb; --sky:#29a9e0; --yellow:#f5a623; --orange:#FF6B35; --orange-dark:#D4520A; --orange-light:#FFF4ED; --white:#fff; --off:#FFF9F5; --text:#1a1a2e; --muted:#6b7c93; --stroke:#e2e8f0; --shadow:0 8px 40px rgba(0,0,0,0.09); --shadow-lg:0 20px 60px rgba(255,107,53,0.13); }
         *{box-sizing:border-box;margin:0;padding:0;} html{scroll-behavior:smooth;} body{font-family:'Noto Sans KR',sans-serif;color:var(--text);background:var(--white);overflow-x:hidden;} a{text-decoration:none;color:inherit;}
         nav{position:fixed;top:0;left:0;right:0;z-index:300;height:66px;display:flex;align-items:center;padding:0 40px;background:rgba(255,255,255,0.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--stroke);box-shadow:0 1px 3px rgba(0,0,0,0.08);gap:0;}
         .logo{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;color:var(--text);flex-shrink:0;margin-right:32px;} .logo .D{color:var(--sky);} .logo .A{color:var(--yellow);}
@@ -30,19 +30,20 @@ export default function PlayDreamPage() {
         .stag{font-family:'Montserrat',sans-serif;font-size:10.5px;font-weight:600;letter-spacing:0.28em;text-transform:uppercase;color:var(--orange);margin-bottom:10px;display:flex;align-items:center;gap:9px;} .stag::before{content:'';width:20px;height:2px;background:var(--orange);border-radius:2px;}
         .sh{font-size:clamp(24px,3vw,38px);font-weight:800;line-height:1.22;letter-spacing:-0.022em;margin-bottom:12px;word-break:keep-all;} .sh .hl{color:var(--orange);}
         .divider{width:40px;height:3px;background:var(--orange);margin:12px 0 22px;border-radius:2px;}
-        .prog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px;}
-        .prog-card{background:var(--white);border:1px solid var(--stroke);border-radius:18px;overflow:hidden;transition:transform 200ms,box-shadow 200ms;} .prog-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
-        .prog-card-img{width:100%;height:240px;object-fit:cover;object-position:center top;display:block;}
+        .prog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px;margin-top:28px;}
+        .prog-card{background:var(--white);border:1px solid var(--stroke);border-radius:18px;overflow:hidden;transition:transform 200ms,box-shadow 200ms;display:flex;flex-direction:column;} .prog-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+        .prog-card-img-wrap{width:100%;aspect-ratio:16/9;overflow:hidden;}
+        .prog-card-img{width:100%;height:100%;object-fit:cover;object-position:center center;display:block;transition:transform 400ms;} .prog-card:hover .prog-card-img{transform:scale(1.04);}
         .prog-card-top{padding:16px 20px 12px;}
         .prog-card-top.making{background:linear-gradient(135deg,#FFF4ED,#FFE0CC);}
         .prog-card-top.subject{background:linear-gradient(135deg,#eaf3fb,#dbeafe);}
         .prog-card-top.science{background:linear-gradient(135deg,#f0fdf4,#dcfce7);}
         .prog-card-top.allday{background:linear-gradient(135deg,#FFF8E1,#FFF3CD);}
-        .prog-card-title{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.02em;display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+        .prog-card-title{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.02em;display:flex;align-items:center;gap:8px;margin-bottom:4px;}
         .prog-card-sub{font-size:12.5px;color:var(--muted);}
-        .prog-card-body{padding:14px 20px 20px;}
-        .prog-meta{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:#f8fafc;border-radius:10px;}
-        .prog-meta-row{font-size:12.5px;color:var(--muted);display:flex;align-items:flex-start;gap:8px;line-height:1.6;} .prog-meta-row strong{color:var(--text);flex-shrink:0;}
+        .prog-card-body{padding:16px 20px 22px;flex:1;}
+        .prog-meta{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:#f8fafc;border-radius:10px;}
+        .prog-meta-row{font-size:12.5px;color:var(--muted);display:flex;align-items:flex-start;gap:8px;line-height:1.65;} .prog-meta-row strong{color:var(--text);flex-shrink:0;}
         .prog-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:6px;} .prog-badge.hot{background:#fef2f2;color:#dc2626;}
         .cta-wrap{background:linear-gradient(135deg,var(--orange-dark),var(--orange));border-radius:16px;padding:48px;text-align:center;}
         .cta-wrap h3{font-size:28px;font-weight:800;color:var(--white);margin-bottom:10px;word-break:keep-all;}
@@ -111,7 +112,9 @@ export default function PlayDreamPage() {
         <div className="prog-grid">
 
           <div className="prog-card">
-            <img src="/images/playdream_1.jpg" alt="Making Line" className="prog-card-img"/>
+            <div className="prog-card-img-wrap">
+              <img src="/images/playdream_1.jpg" alt="Making Line" className="prog-card-img"/>
+            </div>
             <div className="prog-card-top making">
               <div className="prog-card-title">🎨 MAKING LINE (110분)</div>
               <div className="prog-card-sub">쿠킹 또는 아트 중 선택 · 만들기 중심 체험 수업</div>
@@ -119,13 +122,15 @@ export default function PlayDreamPage() {
             <div className="prog-card-body">
               <div className="prog-meta">
                 <div className="prog-meta-row">📋 <strong>수업방식:</strong> <span>1:1 / 1:2 / 1:3 / 2:5 선택 가능<br/>4세 미만 → 1:1만 가능<br/>일행이 없는 경우 1:1 수업으로 신청</span></div>
-                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>1:1 → 1,200페소<br/>1:2 → 950페소<br/>1:3 → 800페소<br/>2:5 → 860페소</span></div>
+                <div className="prog-meta-row" style={{marginTop:4}}>💰 <strong>수업금액:</strong> <span>1:1 → 1,200페소 / 1:2 → 950페소<br/>1:3 → 800페소 / 2:5 → 860페소</span></div>
               </div>
             </div>
           </div>
 
           <div className="prog-card">
-            <img src="/images/playdream_2.jpg" alt="Subject Line" className="prog-card-img"/>
+            <div className="prog-card-img-wrap">
+              <img src="/images/playdream_2.jpg" alt="Subject Line" className="prog-card-img"/>
+            </div>
             <div className="prog-card-top subject">
               <div className="prog-card-title">📚 SUBJECT LINE (110분)</div>
               <div className="prog-card-sub">영어 통합 테마 수업 · 영어 + 사고력 + 표현력 중심</div>
@@ -133,13 +138,15 @@ export default function PlayDreamPage() {
             <div className="prog-card-body">
               <div className="prog-meta">
                 <div className="prog-meta-row">📋 <strong>수업방식:</strong> <span>1:1 only / 레벨별 수업 진행</span></div>
-                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>950페소</span></div>
+                <div className="prog-meta-row" style={{marginTop:4}}>💰 <strong>수업금액:</strong> <span>950페소</span></div>
               </div>
             </div>
           </div>
 
           <div className="prog-card">
-            <img src="/images/playdream_3.jpg" alt="Science Line" className="prog-card-img"/>
+            <div className="prog-card-img-wrap">
+              <img src="/images/playdream_3.jpg" alt="Science Line" className="prog-card-img"/>
+            </div>
             <div className="prog-card-top science">
               <div className="prog-card-title">🔬 SCIENCE LINE (110분)</div>
               <div className="prog-card-sub">영어 + 과학 + 만들기 · 과학 원리 + 실험 + 제작 활동</div>
@@ -147,13 +154,15 @@ export default function PlayDreamPage() {
             <div className="prog-card-body">
               <div className="prog-meta">
                 <div className="prog-meta-row">📋 <strong>수업방식:</strong> <span>1:1 only / 만들기 종류별 추가비용 있음</span></div>
-                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>1,200페소</span></div>
+                <div className="prog-meta-row" style={{marginTop:4}}>💰 <strong>수업금액:</strong> <span>1,200페소</span></div>
               </div>
             </div>
           </div>
 
           <div className="prog-card">
-            <img src="/images/playdream_4.jpg" alt="All Day Program" className="prog-card-img"/>
+            <div className="prog-card-img-wrap">
+              <img src="/images/playdream_4.jpg" alt="All Day Program" className="prog-card-img"/>
+            </div>
             <div className="prog-card-top allday">
               <div className="prog-badge hot">🔥 BEST</div>
               <div className="prog-card-title">⭐ ALL DAY PROGRAM</div>
@@ -162,7 +171,7 @@ export default function PlayDreamPage() {
             <div className="prog-card-body">
               <div className="prog-meta">
                 <div className="prog-meta-row">📋 <strong>수업방식:</strong> <span>1:1 + 그룹 혼합 / 테마별 프로그램 진행</span></div>
-                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>2,800페소</span></div>
+                <div className="prog-meta-row" style={{marginTop:4}}>💰 <strong>수업금액:</strong> <span>2,800페소</span></div>
               </div>
             </div>
           </div>
@@ -190,10 +199,10 @@ export default function PlayDreamPage() {
           <div className="divider"></div>
           <div className="facility-resp" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24,marginTop:28}}>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
-              <div style={{display:"flex",gap:2}}>
-                <img src="/images/playdream_5.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_6.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_7.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+              <div style={{display:"flex",gap:2,height:180}}>
+                <img src="/images/playdream_5.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_6.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_7.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
               </div>
               <div style={{padding:"20px 22px 24px"}}>
                 <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Cooking / <span style={{color:"#FF6B35"}}>Activity Zone</span></div>
@@ -205,10 +214,10 @@ export default function PlayDreamPage() {
               </div>
             </div>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
-              <div style={{display:"flex",gap:2}}>
-                <img src="/images/playdream_8.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_9.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_10.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+              <div style={{display:"flex",gap:2,height:180}}>
+                <img src="/images/playdream_8.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_9.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_10.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
               </div>
               <div style={{padding:"20px 22px 24px"}}>
                 <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Making / <span style={{color:"#FF6B35"}}>Activity Zone</span></div>
@@ -219,10 +228,10 @@ export default function PlayDreamPage() {
               </div>
             </div>
             <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
-              <div style={{display:"flex",gap:2}}>
-                <img src="/images/playdream_11.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_12.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
-                <img src="/images/playdream_13.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+              <div style={{display:"flex",gap:2,height:180}}>
+                <img src="/images/playdream_11.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_12.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
+                <img src="/images/playdream_13.png" alt="" style={{width:"33.33%",height:"100%",objectFit:"cover"}}/>
               </div>
               <div style={{padding:"20px 22px 24px"}}>
                 <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Science / <span style={{color:"#FF6B35"}}>Study Zone</span></div>
