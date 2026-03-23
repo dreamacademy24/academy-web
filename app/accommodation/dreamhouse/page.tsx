@@ -283,6 +283,13 @@ export default function DreamHousePage() {
           <div className="stag">Gallery</div>
           <h2 className="sh">객실 <span className="hl">사진</span></h2>
           <div className="divider"></div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:24}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#FFF4ED",border:"1px solid rgba(255,107,53,0.2)",color:"#FF6B35",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🏡 독채 하우스</span>
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0f7ff",border:"1px solid #bfdbfe",color:"#1a6fc4",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🛏️ 방 3개</span>
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0f7ff",border:"1px solid #bfdbfe",color:"#1a6fc4",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🚿 욕실 2개</span>
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #a7f3d0",color:"#059669",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🛋️ 거실</span>
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #a7f3d0",color:"#059669",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🌿 뒷마당</span>
+          </div>
           <div style={{display:"flex",flexDirection:"column",gap:32}}>
 
             <div>
