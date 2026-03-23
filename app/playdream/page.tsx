@@ -121,7 +121,7 @@ export default function PlayDreamPage() {
             <div className="prog-card-body">
               <div className="prog-meta">
                 <div className="prog-meta-row">📋 <strong>수업방식:</strong> <span>1:1 / 1:2 / 1:3 / 2:5 선택 가능<br/>4세 미만 → 1:1만 가능<br/>일행이 없는 경우 1:1 수업으로 신청</span></div>
-                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>1:1 → 1,200페소 / 1:2 → 950페소<br/>1:3 → 800페소 / 2:5 → 860페소</span></div>
+                <div className="prog-meta-row" style={{marginTop:6}}>💰 <strong>수업금액:</strong> <span>1:1 → 1,200페소<br/>1:2 → 950페소<br/>1:3 → 800페소<br/>2:5 → 860페소</span></div>
               </div>
             </div>
           </div>
