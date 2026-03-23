@@ -6,13 +6,18 @@ export default function PackagePage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [incTab, setIncTab] = useState(0);
   const incItems = [
-    { icon:"🏠", label:"프라이빗 숙소", desc:"드림하우스 독채 / 제이파크 5성급 / 큐브나인 리조트 중 선택 가능한 프리미엄 숙소를 제공합니다." },
-    { icon:"🍱", label:"평일 3식 도시락", desc:"한국인 조리사님이 준비하는 프리미엄 도시락 / 아침 7:50 / 점심 11:50 / 저녁 17:40 배달" },
-    { icon:"📚", label:"드림아카데미 수업", desc:"주니어 / 킨더 커리큘럼으로 체계적인 영어 수업 / 애프터스쿨 & 주말 현장학습 포함" },
-    { icon:"🚌", label:"무료 투어 셔틀", desc:"H마트 · SM씨사이드 · 쉬라인 · 파롤라 · 사파리 · 안조월드 등 주요 관광지 및 쇼핑몰 무료 셔틀" },
-    { icon:"✈️", label:"공항 픽드랍 & 유심", desc:"현지 직원이 공항 픽업 동행 / Smart 5G 유심 무료 제공, 별도 등록 없이 바로 사용 가능" },
-    { icon:"🧹", label:"헬퍼 서비스", desc:"드림하우스 한정 / 주 6일(월~토) 08:00~17:00 / 청소 · 빨래 · 장보기 · 식사준비" },
-    { icon:"💻", label:"화상영어", desc:"연수 전·후 등록기간 만큼의 무료 화상영어 제공" },
+    { icon:"🏠", label:"다양한 숙소", desc:"드림하우스 독채 / 제이파크 5성급 / 큐브나인 리조트 중 선택 가능한 프리미엄 숙소를 제공합니다.", paid:false },
+    { icon:"🍱", label:"평일 3식 식사", desc:"한국인 조리사님이 준비하는 프리미엄 도시락 / 아침 7:50 / 점심 11:50 / 저녁 17:40 배달", paid:false },
+    { icon:"📚", label:"드림아카데미 수업", desc:"주니어 / 킨더 커리큘럼으로 체계적인 영어 수업 / 애프터스쿨 & 주말 현장학습 포함", paid:false },
+    { icon:"🏃", label:"애프터스쿨", desc:"정규 수업 이후 진행되는 다양한 액티비티 프로그램. 아이들이 즐겁게 참여하며 영어 환경에 자연스럽게 노출됩니다.", paid:false },
+    { icon:"🌿", label:"필드트립", desc:"주말 현장학습으로 세부 현지의 다양한 장소를 방문합니다. 실제 생활 영어를 경험하는 특별한 시간입니다.", paid:false },
+    { icon:"🚌", label:"무료 투어 셔틀", desc:"H마트 · SM씨사이드 · 쉬라인 · 파롤라 · 사파리 · 안조월드 등 주요 관광지 및 쇼핑몰 무료 셔틀", paid:false },
+    { icon:"✈️", label:"공항 픽드랍", desc:"현지 직원이 공항 픽업부터 숙소까지 동행합니다. 출국 시 드랍도 포함됩니다.", paid:false },
+    { icon:"📱", label:"유심 대여", desc:"Smart 5G 유심 무료 제공. 별도 등록 없이 도착 즉시 바로 사용 가능합니다.", paid:false },
+    { icon:"🧹", label:"헬퍼 서비스", desc:"드림하우스 한정 / 주 6일(월~토) 08:00~17:00 / 청소 · 빨래 · 장보기 · 식사준비", paid:false },
+    { icon:"💻", label:"화상영어", desc:"연수 전·후 등록기간 만큼 화상영어 수업 이용 가능. 별도 유료로 신청 가능합니다.", paid:true },
+    { icon:"👩‍🏫", label:"튜터 서비스", desc:"드림하우스 방문 또는 아카데미 내 1:1·1:2 튜터 수업. 별도 유료로 신청 가능합니다. (₱300~350/타임)", paid:true },
+    { icon:"🚗", label:"드림카", desc:"전용 차량 렌트 서비스. 가족 단위 이동이나 개인 일정에 맞게 별도 유료로 이용 가능합니다.", paid:true },
   ];
 
   useEffect(() => {
@@ -360,13 +365,13 @@ export default function PackagePage() {
                   transition:"all 200ms",
                 }}
               >
-                <span>{item.icon}</span>{item.label}
+                <span>{item.icon}</span>{item.label}{item.paid&&<span style={{fontSize:10,opacity:0.7}}>(유료)</span>}
               </button>
             ))}
           </div>
           <div style={{marginTop:20,padding:"24px 28px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14}}>
             <div style={{fontSize:18,fontWeight:700,color:"#fff",marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:24}}>{incItems[incTab].icon}</span>{incItems[incTab].label}
+              <span style={{fontSize:24}}>{incItems[incTab].icon}</span>{incItems[incTab].label}{incItems[incTab].paid&&<span style={{fontSize:12,opacity:0.6,marginLeft:4}}>(유료)</span>}
             </div>
             <div style={{fontSize:14,color:"rgba(255,255,255,0.75)",lineHeight:1.8}}>
               {incItems[incTab].desc}
