@@ -118,11 +118,11 @@ function InvoicePageInner(){
     if(assigneeParam&&bookingId) supabase.from("bookings").update({assignee:assigneeParam}).eq("id",bookingId);
   },[assigneeParam,bookingId]);
 
-  /* ── 잔금납부일 자동계산 (체크인+2개월) ── */
+  /* ── 잔금납부일 자동계산 (체크인-2개월) ── */
   useEffect(()=>{
     if(!a1CI) return;
     const d=new Date(a1CI);
-    d.setMonth(d.getMonth()+2);
+    d.setMonth(d.getMonth()-2);
     const bd=d.toISOString().slice(0,10);
     setBooker(b=>({...b,balanceDate:bd}));
   },[a1CI]);
@@ -430,8 +430,8 @@ function InvoicePageInner(){
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
-        <tr className="fr"><td>청구 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
-        {fp>0&&(isFullPayment?<tr><td colSpan={2} style={{padding:"12px",background:"#fef2f2",color:"#dc2626",fontWeight:700,fontSize:"13px",textAlign:"center"}}>⚠️ 전액 입금 (체크인 2달 미만) — 납부 금액: {fmt(fp)}원</td></tr>:<><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>예약금</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 {booker.balanceDate?`(납부일: ${booker.balanceDate})`:""}</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp-1000000)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
+        <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
+        {fp>0&&(isFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>⚠️ 입실 2달 미만 — 전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
       {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{(c.name.includes("SSP")||c.name.includes("보증금"))?" 페소":""}</td></tr>)}</tbody></table>}</div>
 
