@@ -277,6 +277,29 @@ export default function DreamHousePage() {
         </div>
       </div>
 
+      {/* 객실 갤러리 */}
+      <div className="sec-bg">
+        <div className="sec-bg-i fade">
+          <div className="stag">Gallery</div>
+          <h2 className="sh">객실 <span className="hl">사진</span></h2>
+          <div className="divider"></div>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,borderRadius:16,overflow:"hidden",marginBottom:8}}>
+            <img src="/images/dreamhouse.jpg" alt="드림하우스 외관" style={{width:"100%",height:360,objectFit:"cover",display:"block"}}/>
+            <div style={{display:"grid",gridTemplateRows:"1fr 1fr",gap:8}}>
+              <img src="/images/dreamhouse_Room-3.jpg" alt="거실" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              <img src="/images/dreamhouse_Room-5.jpg" alt="거실2" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+            <img src="/images/dreamhouse_Room-1.jpg" alt="객실1" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dreamhouse_Room-2.jpg" alt="주방가전" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dreamhouse_Room-4.jpg" alt="주방" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dreamhouse_Room-6.jpg" alt="싱크대" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dreamhouse_Room-7.jpg" alt="객실2" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:10}}/>
+          </div>
+        </div>
+      </div>
+
       {/* Room Details */}
       <div className="sec-bg">
         <div className="sec-bg-i fade">
