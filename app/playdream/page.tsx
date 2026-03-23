@@ -32,19 +32,18 @@ export default function PlayDreamPage() {
         .divider{width:40px;height:3px;background:var(--orange);margin:12px 0 22px;border-radius:2px;}
         .prog-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin-top:28px;}
         .prog-card{background:var(--white);border:1px solid var(--stroke);border-radius:18px;overflow:hidden;transition:transform 200ms,box-shadow 200ms;} .prog-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
-        .prog-card-img{width:100%;height:200px;object-fit:cover;display:block;}
-        .prog-card-top{padding:20px 24px 14px;position:relative;}
+        .prog-card-img{width:100%;height:240px;object-fit:cover;object-position:center top;display:block;}
+        .prog-card-top{padding:16px 20px 12px;}
         .prog-card-top.making{background:linear-gradient(135deg,#FFF4ED,#FFE0CC);}
         .prog-card-top.subject{background:linear-gradient(135deg,#eaf3fb,#dbeafe);}
         .prog-card-top.science{background:linear-gradient(135deg,#f0fdf4,#dcfce7);}
         .prog-card-top.allday{background:linear-gradient(135deg,#FFF8E1,#FFF3CD);}
-        .prog-card-icon{font-size:32px;margin-bottom:8px;}
-        .prog-card-title{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.02em;margin-bottom:3px;}
+        .prog-card-title{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;letter-spacing:0.02em;display:flex;align-items:center;gap:8px;margin-bottom:3px;}
         .prog-card-sub{font-size:12.5px;color:var(--muted);}
-        .prog-card-body{padding:16px 24px 22px;}
+        .prog-card-body{padding:14px 20px 20px;}
         .prog-meta{display:flex;flex-direction:column;gap:5px;padding:12px 14px;background:#f8fafc;border-radius:10px;}
         .prog-meta-row{font-size:12.5px;color:var(--muted);display:flex;align-items:flex-start;gap:8px;line-height:1.6;} .prog-meta-row strong{color:var(--text);flex-shrink:0;}
-        .prog-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:8px;} .prog-badge.hot{background:#fef2f2;color:#dc2626;}
+        .prog-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:6px;} .prog-badge.hot{background:#fef2f2;color:#dc2626;}
         .cta-wrap{background:linear-gradient(135deg,var(--orange-dark),var(--orange));border-radius:16px;padding:48px;text-align:center;}
         .cta-wrap h3{font-size:28px;font-weight:800;color:var(--white);margin-bottom:10px;word-break:keep-all;}
         .cta-wrap p{font-size:14.5px;color:rgba(255,255,255,0.7);margin-bottom:28px;word-break:keep-all;}
@@ -114,8 +113,7 @@ export default function PlayDreamPage() {
           <div className="prog-card">
             <img src="/images/playdream_1.jpg" alt="Making Line" className="prog-card-img"/>
             <div className="prog-card-top making">
-              <div className="prog-card-icon">🎨</div>
-              <div className="prog-card-title">MAKING LINE (110분)</div>
+              <div className="prog-card-title">🎨 MAKING LINE (110분)</div>
               <div className="prog-card-sub">쿠킹 또는 아트 중 선택 · 만들기 중심 체험 수업</div>
             </div>
             <div className="prog-card-body">
@@ -129,8 +127,7 @@ export default function PlayDreamPage() {
           <div className="prog-card">
             <img src="/images/playdream_2.jpg" alt="Subject Line" className="prog-card-img"/>
             <div className="prog-card-top subject">
-              <div className="prog-card-icon">📚</div>
-              <div className="prog-card-title">SUBJECT LINE (110분)</div>
+              <div className="prog-card-title">📚 SUBJECT LINE (110분)</div>
               <div className="prog-card-sub">영어 통합 테마 수업 · 영어 + 사고력 + 표현력 중심</div>
             </div>
             <div className="prog-card-body">
@@ -144,8 +141,7 @@ export default function PlayDreamPage() {
           <div className="prog-card">
             <img src="/images/playdream_3.jpg" alt="Science Line" className="prog-card-img"/>
             <div className="prog-card-top science">
-              <div className="prog-card-icon">🔬</div>
-              <div className="prog-card-title">SCIENCE LINE (110분)</div>
+              <div className="prog-card-title">🔬 SCIENCE LINE (110분)</div>
               <div className="prog-card-sub">영어 + 과학 + 만들기 · 과학 원리 + 실험 + 제작 활동</div>
             </div>
             <div className="prog-card-body">
@@ -160,8 +156,7 @@ export default function PlayDreamPage() {
             <img src="/images/playdream_4.jpg" alt="All Day Program" className="prog-card-img"/>
             <div className="prog-card-top allday">
               <div className="prog-badge hot">🔥 BEST</div>
-              <div className="prog-card-icon">⭐</div>
-              <div className="prog-card-title">ALL DAY PROGRAM</div>
+              <div className="prog-card-title">⭐ ALL DAY PROGRAM</div>
               <div className="prog-card-sub">9:30am – 3:00pm · 수업 + 만들기 + 활동 + 놀이</div>
             </div>
             <div className="prog-card-body">
