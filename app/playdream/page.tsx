@@ -271,14 +271,14 @@ export default function PlayDreamPage() {
           <div className="prog-card">
             <div className="prog-card-top subject">
               <div className="prog-card-icon">📚</div>
-              <div className="prog-card-title">SUBJECT LINE</div>
-              <div className="prog-card-sub">영어 / 수학 등 교과 학습</div>
+              <div className="prog-card-title">SUBJECT LINE (110분)</div>
+              <div className="prog-card-sub">영어 통합 테마 수업</div>
             </div>
             <div className="prog-card-body">
-              <p className="prog-card-desc">영어, 수학 등 교과 중심 학습으로 기초 실력을 탄탄하게 다집니다.</p>
+              <p className="prog-card-desc">영어 + 사고력 + 표현력 중심</p>
               <div className="prog-meta">
-                <div className="prog-meta-row">📅 <strong>운영:</strong> 주 1회 1타임</div>
-                <div className="prog-meta-row">🕐 <strong>시간:</strong> 월~토 / 50분</div>
+                <div className="prog-meta-row">📋 <strong>수업방식:</strong> 1:1 only / 레벨별 수업 진행</div>
+                <div className="prog-meta-row">💰 <strong>수업금액:</strong> 1:1 950 페소</div>
               </div>
             </div>
           </div>
@@ -287,14 +287,14 @@ export default function PlayDreamPage() {
           <div className="prog-card">
             <div className="prog-card-top science">
               <div className="prog-card-icon">🔬</div>
-              <div className="prog-card-title">SCIENCE LINE</div>
-              <div className="prog-card-sub">과학 실험 탐구</div>
+              <div className="prog-card-title">SCIENCE LINE (110분)</div>
+              <div className="prog-card-sub">영어 + 과학 + 만들기</div>
             </div>
             <div className="prog-card-body">
-              <p className="prog-card-desc">직접 실험하고 탐구하며 과학적 사고력과 영어 표현력을 함께 키웁니다.</p>
+              <p className="prog-card-desc">과학 원리 + 실험 + 제작 활동</p>
               <div className="prog-meta">
-                <div className="prog-meta-row">💰 <strong>비용:</strong> 1:1 ₱200</div>
-                <div className="prog-meta-row">🕐 <strong>운영:</strong> 월~토 / 50분</div>
+                <div className="prog-meta-row">📋 <strong>수업방식:</strong> 1:1 only / 만들기 종류별 추가비용 있음</div>
+                <div className="prog-meta-row">💰 <strong>수업금액:</strong> 1:1 1200 페소</div>
               </div>
             </div>
           </div>
@@ -305,13 +305,13 @@ export default function PlayDreamPage() {
               <div className="prog-badge hot">🔥 BEST</div>
               <div className="prog-card-icon">⭐</div>
               <div className="prog-card-title">ALL DAY PROGRAM</div>
-              <div className="prog-card-sub">풀패키지 식사 포함</div>
+              <div className="prog-card-sub">9:30am - 3:00pm 올데이 수업</div>
             </div>
             <div className="prog-card-body">
-              <p className="prog-card-desc">오전부터 오후까지 하루 종일! 수업, 활동, 식사가 모두 포함된 올데이 프로그램입니다.</p>
+              <p className="prog-card-desc">수업 + 만들기 + 활동 + 놀이</p>
               <div className="prog-meta">
-                <div className="prog-meta-row">💰 <strong>비용:</strong> ₱2,830</div>
-                <div className="prog-meta-row">🕐 <strong>운영:</strong> 월~토 / 오전 9시 ~ 오후 6시</div>
+                <div className="prog-meta-row">📋 <strong>수업방식:</strong> 1:1 + 그룹 혼합 / 테마별 프로그램 진행</div>
+                <div className="prog-meta-row">💰 <strong>수업금액:</strong> 1:1 2800 페소</div>
               </div>
             </div>
           </div>
