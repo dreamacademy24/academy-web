@@ -4,43 +4,15 @@ import Image from "next/image";
 
 export default function PackagePage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [openIdx, setOpenIdx] = useState<number|null>(null);
-  const items = [
-    {
-      icon:"🏠", title:"프라이빗 숙소",
-      sub:"드림하우스 독채 / 제이파크 5성급 / 큐브나인 리조트",
-      detail:"세 가지 프리미엄 숙소 중 선택 가능합니다. 모든 숙소는 쾌적하고 안전한 환경을 제공합니다."
-    },
-    {
-      icon:"🍱", title:"평일 3식 프리미엄 도시락",
-      sub:"한국인 조리사님 · 아침 7:50 / 점심 11:50 / 저녁 17:40",
-      detail:"한국인 조리사님이 직접 준비하는 프리미엄 도시락. 매일 아침·점심·저녁 세 끼가 숙소로 배달됩니다."
-    },
-    {
-      icon:"📚", title:"드림아카데미 정규 수업",
-      sub:"주니어 / 킨더 커리큘럼 · 애프터스쿨 & 주말 현장학습",
-      detail:"주니어·킨더 커리큘럼으로 체계적인 영어 수업이 진행됩니다. 방과 후 애프터스쿨과 주말 현장학습도 포함됩니다."
-    },
-    {
-      icon:"🚌", title:"무료 투어 셔틀",
-      sub:"H마트 · SM씨사이드 · 쉬라인 · 파롤라 · 사파리 · 안조월드",
-      detail:"주요 쇼핑몰 및 관광지로의 투어 셔틀이 무료로 제공됩니다. 매주 정해진 일정에 따라 운행됩니다."
-    },
-    {
-      icon:"✈️", title:"공항 픽드랍 & 무료 유심",
-      sub:"현지 직원 공항 픽업 · 별도 등록 없이 바로 사용 가능",
-      detail:"현지 직원이 공항에서 직접 픽업합니다. Smart 5G 유심이 무료로 제공되어 도착 즉시 사용 가능합니다."
-    },
-    {
-      icon:"🧹", title:"주 6일 헬퍼 서비스 (드림하우스)",
-      sub:"청소 · 빨래 · 장보기 · 식사준비 (월~토, 08:00~17:00)",
-      detail:"드림하우스 입주 고객 한정. 전담 헬퍼가 매일 방문하여 청소·빨래·장보기·식사 준비를 도와드립니다."
-    },
-    {
-      icon:"💻", title:"화상영어",
-      sub:"연수 전·후 등록기간 만큼의 무료 화상영어",
-      detail:"연수 시작 전후로 등록 기간만큼 무료 화상영어가 제공됩니다. 출국 전 예습, 귀국 후 복습에 활용하세요."
-    },
+  const [incTab, setIncTab] = useState(0);
+  const incItems = [
+    { icon:"🏠", label:"프라이빗 숙소", desc:"드림하우스 독채 / 제이파크 5성급 / 큐브나인 리조트 중 선택 가능한 프리미엄 숙소를 제공합니다." },
+    { icon:"🍱", label:"평일 3식 도시락", desc:"한국인 조리사님이 준비하는 프리미엄 도시락 / 아침 7:50 / 점심 11:50 / 저녁 17:40 배달" },
+    { icon:"📚", label:"드림아카데미 수업", desc:"주니어 / 킨더 커리큘럼으로 체계적인 영어 수업 / 애프터스쿨 & 주말 현장학습 포함" },
+    { icon:"🚌", label:"무료 투어 셔틀", desc:"H마트 · SM씨사이드 · 쉬라인 · 파롤라 · 사파리 · 안조월드 등 주요 관광지 및 쇼핑몰 무료 셔틀" },
+    { icon:"✈️", label:"공항 픽드랍 & 유심", desc:"현지 직원이 공항 픽업 동행 / Smart 5G 유심 무료 제공, 별도 등록 없이 바로 사용 가능" },
+    { icon:"🧹", label:"헬퍼 서비스", desc:"드림하우스 한정 / 주 6일(월~토) 08:00~17:00 / 청소 · 빨래 · 장보기 · 식사준비" },
+    { icon:"💻", label:"화상영어", desc:"연수 전·후 등록기간 만큼의 무료 화상영어 제공" },
   ];
 
   useEffect(() => {
@@ -368,27 +340,37 @@ export default function PackagePage() {
           <div className="stag">What&apos;s Included</div>
           <h2 className="sh">패키지 <span className="hl">포함사항</span></h2>
           <div className="divider"></div>
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:24}}>
-            {items.map((item,i)=>(
-              <div key={i} style={{border:"1px solid rgba(255,255,255,0.15)",borderRadius:12,overflow:"hidden",background:"rgba(255,255,255,0.05)"}}>
-                <button
-                  onClick={()=>setOpenIdx(openIdx===i?null:i)}
-                  style={{width:"100%",display:"flex",alignItems:"center",gap:16,padding:"18px 20px",background:"transparent",border:"none",cursor:"pointer",textAlign:"left"}}
-                >
-                  <span style={{fontSize:28,flexShrink:0}}>{item.icon}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:3}}>{item.title}</div>
-                    <div style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{item.sub}</div>
-                  </div>
-                  <span style={{color:"rgba(255,255,255,0.5)",fontSize:18,transform:openIdx===i?"rotate(180deg)":"rotate(0deg)",transition:"transform 200ms",flexShrink:0}}>▾</span>
-                </button>
-                {openIdx===i&&(
-                  <div style={{padding:"0 20px 18px 64px",fontSize:13,color:"rgba(255,255,255,0.75)",lineHeight:1.8,borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-                    {item.detail}
-                  </div>
-                )}
-              </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:24}}>
+            {incItems.map((item,i)=>(
+              <button
+                key={i}
+                onClick={()=>setIncTab(i)}
+                style={{
+                  padding:"10px 18px",
+                  borderRadius:24,
+                  border:incTab===i?"none":"1px solid rgba(255,255,255,0.2)",
+                  background:incTab===i?"#1a6fc4":"#fff",
+                  color:incTab===i?"#fff":"#6b7c93",
+                  fontSize:13,
+                  fontWeight:600,
+                  cursor:"pointer",
+                  display:"inline-flex",
+                  alignItems:"center",
+                  gap:6,
+                  transition:"all 200ms",
+                }}
+              >
+                <span>{item.icon}</span>{item.label}
+              </button>
             ))}
+          </div>
+          <div style={{marginTop:20,padding:"24px 28px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14}}>
+            <div style={{fontSize:18,fontWeight:700,color:"#fff",marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:24}}>{incItems[incTab].icon}</span>{incItems[incTab].label}
+            </div>
+            <div style={{fontSize:14,color:"rgba(255,255,255,0.75)",lineHeight:1.8}}>
+              {incItems[incTab].desc}
+            </div>
           </div>
         </div>
       </div>
