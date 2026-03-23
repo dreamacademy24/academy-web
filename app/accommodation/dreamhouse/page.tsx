@@ -277,39 +277,23 @@ export default function DreamHousePage() {
         </div>
       </div>
 
-      {/* Room Details */}
+      {/* 객실 갤러리 */}
       <div className="sec-bg">
         <div className="sec-bg-i fade">
-          <div className="stag">Room Details</div>
-          <h2 className="sh">객실 <span className="hl">상세</span></h2>
+          <div className="stag">Gallery</div>
+          <h2 className="sh">객실 <span className="hl">사진</span></h2>
           <div className="divider"></div>
-
-          <div className="room-card">
-            <div className="room-title">🏡 2층 독채 주택</div>
-            <div className="room-grid">
-              <div className="room-item">🛏️ <strong>구성:</strong> 방 3개 / 화장실 2개</div>
-              <div className="room-item">👥 <strong>수용:</strong> 최대 6인</div>
-              <div className="room-item">🍳 <strong>주방:</strong> 냉장고, 밥솥, 전자렌지 등 완비</div>
-              <div className="room-item">🇰🇷 <strong>가전:</strong> 한국 제품으로 구성</div>
-              <div className="room-item">💧 <strong>정수기:</strong> 한국산 정수기 설치</div>
-              <div className="room-item">🔒 <strong>보안:</strong> 디지털 도어락</div>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:8}}>
+            <img src="/images/dh-living1.jpg" alt="거실 전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:"12px 0 0 12px"}}/>
+            <div style={{display:"grid",gridTemplateRows:"1fr 1fr",gap:8}}>
+              <img src="/images/dh-exterior.jpg" alt="외관" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"0 12px 0 0"}}/>
+              <img src="/images/dh-living3.jpg" alt="거실+소파" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"0 0 12px 0"}}/>
             </div>
           </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:28,marginBottom:8}}>
-            <img src="/images/dreamhouse.jpg" alt="드림하우스 외관" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-3.jpg" alt="거실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-5.jpg" alt="거실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-            <img src="/images/dreamhouse_Room-1.jpg" alt="객실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-2.jpg" alt="주방가전" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-4.jpg" alt="주방" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-6.jpg" alt="싱크대" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouse_Room-7.jpg" alt="객실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouseroom-10.jpg" alt="화장실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/dreamhouseroom-11.jpg" alt="침실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-            <img src="/images/Dreamhouse_room-12_.png" alt="주방전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+            <img src="/images/dh-living2.jpg" alt="거실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dh-tv.jpg" alt="TV+계단" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:10}}/>
+            <img src="/images/dh-room.jpg" alt="침실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:10}}/>
           </div>
         </div>
       </div>
