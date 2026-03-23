@@ -307,6 +307,9 @@ export default function DreamHousePage() {
             <img src="/images/dreamhouse_Room-4.jpg" alt="주방" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
             <img src="/images/dreamhouse_Room-6.jpg" alt="싱크대" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
             <img src="/images/dreamhouse_Room-7.jpg" alt="객실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+            <img src="/images/dreamhouseroom-10.jpg" alt="화장실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+            <img src="/images/dreamhouseroom-11.jpg" alt="침실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+            <img src="/images/Dreamhouse_room-12_.png" alt="주방전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
           </div>
         </div>
       </div>
