@@ -147,34 +147,6 @@ export default function PlayDreamPage() {
         .tutor-warn-item::before{content:'·';color:#c2410c;font-weight:700;flex-shrink:0;}
         .tutor-warn-danger{margin-top:12px;padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12.5px;color:#991b1b;font-weight:600;line-height:1.6;}
 
-        /* FIRST-IN-CEBU */
-        .first-cebu{text-align:center;padding:80px 60px;background:linear-gradient(135deg,#FFF8E1 0%,#FFF4ED 50%,#eaf3fb 100%);}
-        .first-cebu-inner{max-width:900px;margin:0 auto;}
-        .first-cebu h2{font-size:clamp(26px,3.5vw,42px);font-weight:800;line-height:1.3;margin-bottom:16px;word-break:keep-all;}
-        .first-cebu h2 .hl{color:var(--orange);}
-        .first-cebu .desc{font-size:15px;color:var(--muted);line-height:1.85;margin-bottom:32px;word-break:keep-all;}
-        .first-features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:28px;}
-        .first-feat{background:var(--white);border:1px solid var(--stroke);border-radius:16px;padding:28px 20px;text-align:center;transition:transform 200ms,box-shadow 200ms;}
-        .first-feat:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
-        .first-feat-icon{font-size:36px;margin-bottom:12px;}
-        .first-feat-title{font-size:15px;font-weight:800;margin-bottom:6px;}
-        .first-feat-desc{font-size:13px;color:var(--muted);line-height:1.7;}
-
-        /* FACILITY CARDS */
-        .facility-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:28px;}
-        .facility-card{background:var(--white);border:1px solid var(--stroke);border-radius:16px;overflow:hidden;transition:transform 200ms,box-shadow 200ms;}
-        .facility-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
-        .facility-card img{width:100%;height:200px;object-fit:cover;}
-        .facility-card-body{padding:18px 20px;}
-        .facility-card-title{font-size:15px;font-weight:800;margin-bottom:4px;}
-        .facility-card-desc{font-size:13px;color:var(--muted);line-height:1.7;}
-
-        @media(max-width:1024px){
-          .first-cebu{padding:56px 24px;}
-          .first-features{grid-template-columns:1fr;}
-          .facility-grid{grid-template-columns:1fr;}
-        }
-
         /* CTA */
         .cta-wrap{background:linear-gradient(135deg,var(--orange-dark),var(--orange));border-radius:16px;padding:48px;text-align:center;}
         .cta-wrap h3{font-size:28px;font-weight:800;color:var(--white);margin-bottom:10px;word-break:keep-all;}
@@ -206,6 +178,7 @@ export default function PlayDreamPage() {
           .prog-grid{grid-template-columns:1fr;}
           .tutor-grid{grid-template-columns:1fr;}
           .footer-inner{flex-direction:column;align-items:flex-start;}
+          .facility-resp{grid-template-columns:1fr!important;}
         }
       `}</style>
 
@@ -347,113 +320,68 @@ export default function PlayDreamPage() {
       </div>
 
       {/* 세부 최초 영어놀이센터 */}
-      <div className="first-cebu fade">
-        <div className="first-cebu-inner">
-          <div className="stag" style={{justifyContent:"center"}}>First in Cebu</div>
-          <h2>세부 최초 <span className="hl">영어놀이센터</span></h2>
-          <p className="desc">
-            플레이드림은 세부 최초의 영어놀이센터로,<br/>
-            아이들이 놀이를 통해 자연스럽게 영어를 습득할 수 있는 공간입니다.<br/>
-            Cooking · Making · Science 수업을 통해 창의력과 영어를 동시에 키워갑니다.
-          </p>
-          <div className="first-features">
-            <div className="first-feat">
-              <div className="first-feat-icon">🍳</div>
-              <div className="first-feat-title">Cooking Class</div>
-              <div className="first-feat-desc">직접 요리하며 영어로 재료, 과정, 맛을 표현하는 오감 수업</div>
-            </div>
-            <div className="first-feat">
-              <div className="first-feat-icon">✂️</div>
-              <div className="first-feat-title">Making Class</div>
-              <div className="first-feat-desc">만들기·공예 활동으로 창의력과 영어 표현력을 함께 성장</div>
-            </div>
-            <div className="first-feat">
-              <div className="first-feat-icon">🔬</div>
-              <div className="first-feat-title">Science Class</div>
-              <div className="first-feat-desc">과학 실험과 탐구 활동을 영어로 진행하며 사고력 UP</div>
-            </div>
+      <div className="sec-bg">
+        <div className="sec-bg-i fade">
+          <div className="stag">Play Dream</div>
+          <h2 className="sh">세부 최초 <span className="hl">영어놀이센터</span></h2>
+          <div className="divider"></div>
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,padding:"32px 36px"}}>
+            <div style={{display:"inline-block",background:"#FFF4ED",color:"#FF6B35",fontSize:11,fontWeight:700,padding:"4px 12px",borderRadius:20,border:"1px solid rgba(255,107,53,0.2)",marginBottom:16}}>수업 전 과정 영어 진행</div>
+            <div style={{fontSize:22,fontWeight:800,marginBottom:12}}>PlayDream의 수업은 전 과정 영어로 진행됩니다.</div>
+            <p style={{fontSize:14,color:"#6b7c93",lineHeight:1.9}}>단순한 영어 노출이 아닌, 아이들의 이해도와 참여도를 고려해 활동 중심으로 구성되어 있습니다.<br/>쿠킹·아트·과학·스토리 활동을 통해 아이들이 자연스럽게 영어를 듣고 말하는 환경을 만듭니다.</p>
           </div>
         </div>
       </div>
 
       {/* 수업 및 시설안내 */}
-      <div className="sec-bg">
-        <div className="sec-bg-i fade">
-          <div className="stag">Class &amp; Facility</div>
+      <div className="sec-white">
+        <div className="sec-white-i fade">
+          <div className="stag">Facilities</div>
           <h2 className="sh">수업 및 <span className="hl">시설안내</span></h2>
           <div className="divider"></div>
-
-          <h3 style={{fontSize:"18px",fontWeight:800,marginBottom:"18px"}}>🍳 Cooking Class</h3>
-          <div className="facility-grid">
-            <div className="facility-card">
-              <img src="/images/playdream_5.png" alt="Cooking 수업 1" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">요리 수업 공간</div>
-                <div className="facility-card-desc">아이들이 직접 요리하며 영어를 배우는 쿠킹 클래스</div>
+          <div className="facility-resp" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:24,marginTop:28}}>
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
+              <div style={{display:"flex",gap:2}}>
+                <img src="/images/playdream_5.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_6.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_7.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+              </div>
+              <div style={{padding:"20px 22px 24px"}}>
+                <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Cooking / <span style={{color:"#FF6B35"}}>Activity Zone</span></div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>실제 베이킹 도구로 반죽부터 완성까지, 아이들이 직접 참여하는 수업입니다.</div>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>재료부터 과정까지 영어로 표현하며, 자연스럽게 영어 표현력을 배웁니다.</div>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>메인 수업 후 연결된 활동(메모리게임, 페이퍼아트, 보드게임 등)으로 배운 내용을 놀이처럼 확장합니다.</div>
+                </div>
               </div>
             </div>
-            <div className="facility-card">
-              <img src="/images/playdream_6.png" alt="Cooking 수업 2" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">요리 활동</div>
-                <div className="facility-card-desc">재료 준비부터 완성까지 영어로 진행하는 오감 체험</div>
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
+              <div style={{display:"flex",gap:2}}>
+                <img src="/images/playdream_8.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_9.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_10.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+              </div>
+              <div style={{padding:"20px 22px 24px"}}>
+                <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Making / <span style={{color:"#FF6B35"}}>Activity Zone</span></div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>다양한 재료로 표현하고 만드는 아트 활동을 통해 창의력과 표현력을 키워줍니다.</div>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>메인 수업 후 연결된 활동(메모리게임, 페이퍼아트, 보드게임 등)으로 배운 내용을 놀이처럼 확장합니다.</div>
+                </div>
               </div>
             </div>
-            <div className="facility-card">
-              <img src="/images/playdream_7.png" alt="Cooking 수업 3" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">쿠킹 결과물</div>
-                <div className="facility-card-desc">아이들이 직접 만든 요리를 영어로 발표하고 나눠 먹기</div>
+            <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:18,overflow:"hidden"}}>
+              <div style={{display:"flex",gap:2}}>
+                <img src="/images/playdream_11.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_12.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
+                <img src="/images/playdream_13.png" alt="" style={{width:"33.33%",aspectRatio:"1",objectFit:"cover"}}/>
               </div>
-            </div>
-          </div>
-
-          <h3 style={{fontSize:"18px",fontWeight:800,margin:"40px 0 18px"}}>✂️ Making Class</h3>
-          <div className="facility-grid">
-            <div className="facility-card">
-              <img src="/images/playdream_8.png" alt="Making 수업 1" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">만들기 수업</div>
-                <div className="facility-card-desc">다양한 재료로 창작 활동을 하며 영어 표현력 향상</div>
-              </div>
-            </div>
-            <div className="facility-card">
-              <img src="/images/playdream_9.png" alt="Making 수업 2" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">공예 활동</div>
-                <div className="facility-card-desc">손으로 만들며 영어로 설명하는 핸즈온 수업</div>
-              </div>
-            </div>
-            <div className="facility-card">
-              <img src="/images/playdream_10.png" alt="Making 수업 3" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">메이킹 결과물</div>
-                <div className="facility-card-desc">완성된 작품을 영어로 소개하며 자신감 UP</div>
-              </div>
-            </div>
-          </div>
-
-          <h3 style={{fontSize:"18px",fontWeight:800,margin:"40px 0 18px"}}>🔬 Science Class</h3>
-          <div className="facility-grid">
-            <div className="facility-card">
-              <img src="/images/playdream_11.png" alt="Science 수업 1" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">과학 실험</div>
-                <div className="facility-card-desc">직접 실험하며 과학 원리를 영어로 탐구</div>
-              </div>
-            </div>
-            <div className="facility-card">
-              <img src="/images/playdream_12.png" alt="Science 수업 2" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">탐구 활동</div>
-                <div className="facility-card-desc">관찰·가설·실험 과정을 영어로 진행하는 STEM 수업</div>
-              </div>
-            </div>
-            <div className="facility-card">
-              <img src="/images/playdream_13.png" alt="Science 수업 3" />
-              <div className="facility-card-body">
-                <div className="facility-card-title">사이언스 프로젝트</div>
-                <div className="facility-card-desc">실험 결과를 영어로 정리하고 발표하며 사고력 성장</div>
+              <div style={{padding:"20px 22px 24px"}}>
+                <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:15,fontWeight:800,marginBottom:10}}>Science / <span style={{color:"#FF6B35"}}>Study Zone</span></div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>아이의 관심과 수준에 맞춘 수업으로 몰입도 높은 영어 학습</div>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>만들기 활동과 함께, 과학 원리를 영어로 배워보는 수업</div>
+                  <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",gap:7}}><span style={{color:"#FF6B35",fontWeight:700,flexShrink:0}}>·</span>연결된 활동으로 배운 내용을 페이퍼 아트, 컬러링, 3D 만들기 등으로 놀이처럼 확장하는 미니 프로젝트 수업</div>
+                </div>
               </div>
             </div>
           </div>
