@@ -283,6 +283,7 @@ export default function DreamHousePage() {
           <div className="stag">Gallery</div>
           <h2 className="sh">객실 <span className="hl">사진</span></h2>
           <div className="divider"></div>
+          <p className="sp" style={{marginBottom:20}}>방 3개 · 욕실 2개 · 거실 · 뒷마당이 있는 독채 하우스.<br/>기숙사가 아닌 진짜 세부살이를 경험할 수 있는 프라이빗 공간입니다.</p>
           <div style={{display:"flex",flexDirection:"column",gap:32}}>
 
             <div>
@@ -338,13 +339,6 @@ export default function DreamHousePage() {
         <h2 className="sh">베이스워터 <span className="hl">부대시설</span></h2>
         <div className="divider"></div>
         <p className="sp">드림하우스가 위치한 베이스워터 빌리지에서는 다양한 부대시설을 자유롭게 이용하실 수 있습니다.</p>
-        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginTop:16,marginBottom:8}}>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#FFF4ED",border:"1px solid rgba(255,107,53,0.2)",color:"#FF6B35",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🏡 독채 하우스</span>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0f7ff",border:"1px solid #bfdbfe",color:"#1a6fc4",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🛏️ 방 3개</span>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0f7ff",border:"1px solid #bfdbfe",color:"#1a6fc4",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🚿 욕실 2개</span>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #a7f3d0",color:"#059669",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🛋️ 거실</span>
-          <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"#f0fdf4",border:"1px solid #a7f3d0",color:"#059669",fontSize:13,fontWeight:600,padding:"6px 14px",borderRadius:20}}>🌿 뒷마당</span>
-        </div>
 
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,marginTop:28}}>
 
