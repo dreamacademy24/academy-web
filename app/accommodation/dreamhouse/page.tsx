@@ -318,7 +318,7 @@ export default function DreamHousePage() {
       <div className="sec-bg">
         <div className="sec-bg-i fade">
           <div className="stag">Location</div>
-          <h2 className="sh">위치 <span className="hl">안내</span></h2>
+          <h2 className="sh">위치 <span className="hl">안내</span> <span style={{fontSize:"0.5em",fontWeight:500,color:"#6b7c93"}}>(베이스워터 빌리지)</span></h2>
           <div className="divider"></div>
           <p className="sp">베이스워터 빌리지에 위치한 드림하우스는 막탄의 중심부에 있어 주요 시설과 가까워 편리한 생활이 가능합니다.</p>
 
