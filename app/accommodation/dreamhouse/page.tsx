@@ -338,7 +338,7 @@ export default function DreamHousePage() {
           </div>
           <div style={{borderRadius:16,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,0.1)"}}>
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3925.0!2d123.9635!3d10.2945!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a999e4a1a9c5e7%3A0x6d6e4f7b8c9d0e1f!2sBayswater%20Subdivision!5e0!3m2!1sko!2sph!4v1"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3925.5!2d123.9768965!3d10.2814273!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33a9914ae28abc99%3A0xf2ab256eefb4c6b4!2sBayswater%20Subdivision%20Lapu-Lapu%20City!5e0!3m2!1sko!2sph!4v1"
               width="100%"
               height="400"
               style={{border:0,display:"block"}}
