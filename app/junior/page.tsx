@@ -413,7 +413,7 @@ export default function JuniorPage() {
                 <div className="ccard-feats">
                   <div className="ccard-feat"><span className="ck">✓</span>Speaking / Listening drill</div>
                   <div className="ccard-feat"><span className="ck">✓</span>Reading / Writing drill</div>
-                  <div className="ccard-feat"><span className="ck">✓</span>Vocabulary drill</div>
+                  <div className="ccard-feat"><span className="ck">✓</span>Vocabulary building</div>
                   <div className="ccard-feat"><span className="ck">✓</span>약점 보완 + 강점 강화 맞춤 구성</div>
                   <div className="ccard-feat"><span className="ck">✓</span>자체 제작 교재 · 훈련된 교사진</div>
                 </div>

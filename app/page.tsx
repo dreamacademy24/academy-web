@@ -438,7 +438,7 @@ export default function HomePage() {
     </div>
     <div className="hero-right">
       <div className="hcard"><div className="hcard-icon">📚</div><div className="hcard-t">주니어 커리큘럼</div><div className="hcard-d">1-on-1 · S-on-S · Funtivity</div></div>
-      <div className="hcard"><div className="hcard-icon">🌱</div><div className="hcard-t">킨더 커리큘럼</div><div className="hcard-d">1-on-1 · Group · One theme</div></div>
+      <div className="hcard"><div className="hcard-icon">🌱</div><div className="hcard-t">킨더 커리큘럼</div><div className="hcard-d">1-on-1 · Group · Theme project</div></div>
       <div className="hcard"><div className="hcard-icon">🏡</div><div className="hcard-t">프라이빗 숙소</div><div className="hcard-d">드림하우스 · J-Park · CubeNine</div></div>
       <div className="hcard"><div className="hcard-icon">🍱</div><div className="hcard-t">올인원 케어</div><div className="hcard-d">식사 · 셔틀 · 헬퍼 · 액티비티</div></div>
     </div>
@@ -503,7 +503,7 @@ export default function HomePage() {
           <div className="ccard-ko">개인 맞춤 1:1 수업</div>
           <div className="ccard-desc">학생 개개인의 레벨을 고려한 맞춤형 수업. 말하기, 듣기, 읽기, 쓰기, 어휘 등 영어 전 영역을 균형 있게 향상시킵니다.</div>
           <div className="ccard-feats">
-            <div className="ccard-feat">Speaking / Listening / Reading / Writing / Voca drill</div>
+            <div className="ccard-feat">Speaking / Listening / Reading / Writing / Voca</div>
             <div className="ccard-feat">약점 보완 + 강점 강화 맞춤 구성</div>
             <div className="ccard-feat">자체 제작 교재 · 훈련된 교사진</div>
           </div>
@@ -523,10 +523,10 @@ export default function HomePage() {
           <div className="ccard-badge">F-class</div>
           <div className="ccard-t">FUNTIVITY</div>
           <div className="ccard-ko">즐겁게 배우는 창의 영어</div>
-          <div className="ccard-desc">매일 마지막 그룹 수업으로 롤플레잉, 아웃도어 액티비티, 노래 부르기 등 다양한 활동 중심의 수업입니다.</div>
+          <div className="ccard-desc">매일 마지막 그룹 수업으로 롤플레잉, 아웃도어 액티비티, 노래부르기, 대본 수업 등 다양한 활동 중심의 수업입니다.</div>
           <div className="ccard-feats">
             <div className="ccard-feat">Vocab + Lyrics / Script + Play</div>
-            <div className="ccard-feat">Cooking & Recipe / Physical Class</div>
+            <div className="ccard-feat">Outdoor activity / Physical Class</div>
             <div className="ccard-feat">Talent Show / Graduation Party</div>
           </div>
         </div>
@@ -541,7 +541,7 @@ export default function HomePage() {
           <div className="ccard-ko">눈높이 맞춤형 1:1 교육</div>
           <div className="ccard-desc">Social English와 Topic English를 병행하며 아이 개개인의 레벨과 흥미에 맞춘 맞춤형 수업이 진행됩니다.</div>
           <div className="ccard-feats">
-            <div className="ccard-feat">Social English · Phonics · Math</div>
+            <div className="ccard-feat">Social English · Phonics · Math · Science</div>
             <div className="ccard-feat">Reading / Writing · Theme project</div>
             <div className="ccard-feat">파닉스부터 읽기·쓰기·수학까지</div>
           </div>
@@ -554,7 +554,7 @@ export default function HomePage() {
           <div className="ccard-feats">
             <div className="ccard-feat">Music/Movement · Physical Education</div>
             <div className="ccard-feat">Special Activity · Interactive Learning</div>
-            <div className="ccard-feat">Story Reading · 야외 활동 병행</div>
+            <div className="ccard-feat">Story Reading · Gross Motor</div>
           </div>
         </div>
         <div className="ccard c3">
@@ -565,11 +565,11 @@ export default function HomePage() {
           <div className="ccard-feats">
             <div className="ccard-feat">Cooking · Art · P.E. · Science 통합</div>
             <div className="ccard-feat">Sea · Money · Jungle · Job 등 다양한 테마</div>
-            <div className="ccard-feat">오전반(9:00~13:30) / 종일반(9:00~16:00)</div>
+            <div className="ccard-feat">종일반(9:00~16:00)</div>
           </div>
         </div>
       </div>
-      <div className="curr-note fade">📅 <strong>킨더 타임테이블</strong> — 오전반 9:00~13:30 · 종일반 9:00~16:00 · 대상: 만 3세 ~ 취학 전 (7세 예비초1도 선택 가능)</div>
+      <div className="curr-note fade">📅 <strong>킨더 타임테이블</strong> — 종일반 9:00~16:00 · 대상: 만 3세 ~ 취학 전 (7세 예비초1도 선택 가능)</div>
     </div>
   </div>
 </div>
@@ -590,6 +590,7 @@ export default function HomePage() {
           <div className="pkg-item"><div className="pkg-item-icon">🚌</div><div><div className="pkg-item-t">무료 투어 셔틀</div><div className="pkg-item-d">H마트 · SM씨사이드 · 쉬라인 · 파롤라 · 사파리 · 안조월드</div></div></div>
           <div className="pkg-item"><div className="pkg-item-icon">✈️</div><div><div className="pkg-item-t">공항 픽드랍 & 무료 유심</div><div className="pkg-item-d">현지 직원 공항 픽업 · 별도 등록 없이 바로 사용 가능</div></div></div>
           <div className="pkg-item"><div className="pkg-item-icon">🧹</div><div><div className="pkg-item-t">주 6일 헬퍼 서비스 (드림하우스)</div><div className="pkg-item-d">청소 · 빨래 · 장보기 · 식사준비 (월~토, 08:00~17:00)</div></div></div>
+          <div className="pkg-item"><div className="pkg-item-icon">💻</div><div><div className="pkg-item-t">화상영어</div><div className="pkg-item-d">연수 전·후 등록기간 만큼의 무료 화상영어</div></div></div>
         </div>
       </div>
       <div className="fade d1">
