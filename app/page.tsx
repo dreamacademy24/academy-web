@@ -451,7 +451,7 @@ export default function HomePage() {
   <div className="trust-inner">
     <div className="trust-card"><div className="trust-num">500+</div><div className="trust-label">수강생</div></div>
     <div className="trust-card"><div className="trust-num">90%</div><div className="trust-label">교사 자격증 보유</div></div>
-    <div className="trust-card"><div className="trust-num">5년+</div><div className="trust-label">운영 경력</div></div>
+    <div className="trust-card"><div className="trust-num">10년</div><div className="trust-label">운영 경력</div></div>
     <div className="trust-card"><div className="trust-num">98%</div><div className="trust-label">만족도</div></div>
   </div>
 </div>
@@ -476,7 +476,7 @@ export default function HomePage() {
       <div className="about-features" style={{gridColumn:"1/-1"}}>
         <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>500+</div><div className="af-t" style={{marginTop:"4px"}}>수강생</div></div>
         <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>90%</div><div className="af-t" style={{marginTop:"4px"}}>교사 자격증 보유</div></div>
-        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>5년+</div><div className="af-t" style={{marginTop:"4px"}}>운영 경력</div></div>
+        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>10년</div><div className="af-t" style={{marginTop:"4px"}}>운영 경력</div></div>
         <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>98%</div><div className="af-t" style={{marginTop:"4px"}}>만족도</div></div>
       </div>
     </div>
