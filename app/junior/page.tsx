@@ -435,7 +435,7 @@ export default function JuniorPage() {
                   <div className="ccard-feat"><span className="ck">✓</span>BTS · Solomon · Trump · Dream</div>
                   <div className="ccard-feat"><span className="ck">✓</span>레벨에 맞는 역할 배정 맞춤형 활동</div>
                   <div className="ccard-feat"><span className="ck">✓</span>하루 4타임, 다양한 주제</div>
-                  <div className="ccard-feat"><span className="ck">✓</span>답만 쓰는 수동적 수업 NO</div>
+                  <div className="ccard-feat"><span className="ck">✓</span>직접 참여하는 참여형 수업</div>
                 </div>
               </div>
             </div>
@@ -449,12 +449,12 @@ export default function JuniorPage() {
               </div>
               <div className="ccard-body">
                 <p className="ccard-desc">
-                  매일 마지막 그룹 수업. 롤플레잉, 야외 활동, 노래, 요리 등 다양한 활동 중심의 수업으로 영어를 즐겁게 익힙니다.
+                  매일 마지막 그룹 수업. 롤플레잉, 야외 활동, 노래, 대본 수업 등 다양한 활동 중심의 수업으로 영어를 즐겁게 익힙니다.
                 </p>
                 <div className="ccard-feats">
                   <div className="ccard-feat"><span className="ck">✓</span>Fun 1: Vocab + Lyrics (노래)</div>
                   <div className="ccard-feat"><span className="ck">✓</span>Fun 2: Script + Play (연극)</div>
-                  <div className="ccard-feat"><span className="ck">✓</span>Fun 3: Recipe + Chef (요리)</div>
+                  <div className="ccard-feat"><span className="ck">✓</span>Fun 3: Outdoor Activity (야외활동)</div>
                   <div className="ccard-feat"><span className="ck">✓</span>Fun 4: Talent Show / Party</div>
                 </div>
               </div>
