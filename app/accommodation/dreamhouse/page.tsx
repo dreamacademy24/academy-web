@@ -314,6 +314,93 @@ export default function DreamHousePage() {
         </div>
       </div>
 
+      {/* 부대시설 */}
+      <div className="sec fade">
+        <div className="stag">Facilities</div>
+        <h2 className="sh">베이스워터 <span className="hl">부대시설</span></h2>
+        <div className="divider"></div>
+        <p className="sp">드림하우스가 위치한 베이스워터 빌리지에서는 다양한 부대시설을 자유롭게 이용하실 수 있습니다.</p>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,marginTop:28}}>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater002.jpg" alt="수영장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🏊 수영장</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 이용시간 8:00am – 6:00pm</span>
+                <span>· 수영복·수영모 착용 필수</span>
+                <span>· 입수 전 샤워 필수</span>
+                <span>· 어린이는 반드시 보호자 동반</span>
+                <span>· 음식물 반입 및 음주 금지</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater008.png" alt="농구 코트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🏀 농구 코트</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 이용시간 8:00am – 10:00pm</span>
+                <span>· 예약된 시간대 외 자유롭게 이용</span>
+                <span>· 6pm 이후 전기세·단독사용 추가비용 800페소</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater007.jpg" alt="테니스장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🎾 테니스장</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 이용시간 7am – 8pm</span>
+                <span>· 베이스워터 오피스에서 직접 신청</span>
+                <span>· 한 시간 단위로 예약 가능</span>
+                <span>· 우천시 사용 불가</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater004.jpg" alt="놀이터" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛝 놀이터</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 이용시간 8:00am – 6:00pm</span>
+                <span>· 수영장 옆 위치</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater006.jpg" alt="미니마트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛒 미니마트</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 이용시간 6:00am – 10:00pm</span>
+                <span>· 카드 결제 가능</span>
+                <span>· 쌀·계란·유제품·생필품·육류·생선 등 판매</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
+            <img src="/images/bayswater003.jpg" alt="카페" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <div style={{padding:"16px 18px 20px"}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>☕ 카페 (Lin's Coffee Shop)</div>
+              <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
+                <span>· 수~월 7am–7pm / 화 7am–10am</span>
+                <span>· 미니마트 바로 뒷편</span>
+                <span>· 크로아상·와플·쿠키·쉐이크</span>
+                <span>· 커피·밀크티·아이스크림 등</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       {/* 위치 */}
       <div className="sec-bg">
         <div className="sec-bg-i fade">
