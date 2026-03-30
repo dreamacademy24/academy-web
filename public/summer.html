@@ -234,9 +234,49 @@ footer strong{color:var(--yellow);}
   .t-overview{grid-template-columns:1fr;}
   section{padding:60px 18px;}
 }
+
+<style>
+#lang-switcher {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  gap: 6px;
+  background: rgba(255,255,255,0.95);
+  border: 1.5px solid var(--card-border);
+  border-radius: 30px;
+  padding: 6px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  backdrop-filter: blur(8px);
+}
+.lang-btn {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text-mid);
+  font-family: 'Noto Sans KR', sans-serif;
+  transition: background .2s, color .2s;
+}
+.lang-btn.active {
+  background: var(--text);
+  color: var(--white);
+}
+</style>
 </style>
 </head>
 <body>
+
+<div id="lang-switcher">
+  <button class="lang-btn active" onclick="setLang('ko')">🇰🇷 KO</button>
+  <button class="lang-btn" onclick="setLang('en')">🇺🇸 EN</button>
+  <button class="lang-btn" onclick="setLang('ja')">🇯🇵 JP</button>
+</div>
+
 
 <!-- HERO -->
 <section class="hero">
@@ -268,9 +308,9 @@ footer strong{color:var(--yellow);}
 <!-- ABOUT -->
 <section class="about" id="about">
   <div class="inner">
-    <span class="s-label">Dream Academy 소개</span>
-    <h2 class="s-title">방학, 믿고 맡길 수 있어야죠</h2>
-    <p class="s-desc">UCLA 원장님이 선생님들을 직접 교육하고, 아이마다 수준과 상태를 파악해 맞는 방식으로 이끕니다. 자격증 보유 선생님 90%가 학습 공백을 채워드립니다.</p>
+    <span class="s-label" data-i18n="about-label">Dream Academy 소개</span>
+    <h2 class="s-title" data-i18n="about-title">방학, 믿고 맡길 수 있어야죠</h2>
+    <p class="s-desc" data-i18n="about-desc">UCLA 원장님이 선생님들을 직접 교육하고, 아이마다 수준과 상태를 파악해 맞는 방식으로 이끕니다. 자격증 보유 선생님 90%가 학습 공백을 채워드립니다.</p>
     <div class="about-grid">
       <ul class="flist">
         <li class="fitem">
@@ -315,9 +355,9 @@ footer strong{color:var(--yellow);}
 <!-- TEACHERS -->
 <section class="teachers" id="teachers">
   <div class="inner">
-    <span class="s-label">선생님 소개</span>
-    <h2 class="s-title">검증된 선생님들이 함께합니다</h2>
-    <p class="s-desc">자격증을 갖춘 현지 선생님 90%가 원장님의 교육 방침 아래 아이들을 지도합니다.</p>
+    <span class="s-label" data-i18n="teacher-label">선생님 소개</span>
+    <h2 class="s-title" data-i18n="teacher-title">검증된 선생님들이 함께합니다</h2>
+    <p class="s-desc" data-i18n="teacher-desc">자격증을 갖춘 현지 선생님 90%가 원장님의 교육 방침 아래 아이들을 지도합니다.</p>
 
     <div class="t-grid">
       <div class="tcard">
@@ -418,9 +458,9 @@ footer strong{color:var(--yellow);}
 <!-- SCHEDULE -->
 <section class="schedule" id="schedule">
   <div class="inner">
-    <span class="s-label">수업 일정</span>
-    <h2 class="s-title">하루 일과표</h2>
-    <p class="s-desc">매일 9:00 ~ 16:00 수업이 진행됩니다. 1-on-1 수업과 그룹 수업이 균형 있게 구성됩니다.</p>
+    <span class="s-label" data-i18n="sched-label">수업 일정</span>
+    <h2 class="s-title" data-i18n="sched-title">하루 일과표</h2>
+    <p class="s-desc" data-i18n="sched-desc">매일 9:00 ~ 16:00 수업이 진행됩니다. 1-on-1 수업과 그룹 수업이 균형 있게 구성됩니다.</p>
 
     <!-- Tab buttons -->
     <div style="display:flex;gap:12px;margin-top:36px;margin-bottom:0;">
@@ -708,9 +748,9 @@ footer strong{color:var(--yellow);}
 <!-- CURRICULUM -->
 <section class="curriculum" id="curriculum">
   <div class="inner">
-    <span class="s-label">교육 커리큘럼</span>
-    <h2 class="s-title">학교 수업, 같이 따라잡아요</h2>
-    <p class="s-desc">이번 학기 힘들었던 과목, 다음 학기 앞서가고 싶은 과목. 선생님이 아이 수준에 맞게 직접 봐줍니다.</p>
+    <span class="s-label" data-i18n="curr-label">교육 커리큘럼</span>
+    <h2 class="s-title" data-i18n="curr-title">학교 수업, 같이 따라잡아요</h2>
+    <p class="s-desc" data-i18n="curr-desc">이번 학기 힘들었던 과목, 다음 학기 앞서가고 싶은 과목. 선생님이 아이 수준에 맞게 직접 봐줍니다.</p>
     <div class="curr-intro">
       <div class="ci">💡</div>
       <p><strong>학습이 먼저입니다.</strong> Dream Academy 썸머스쿨의 핵심은 학교 수업 백업과 실력 향상입니다. 짜임새 있는 시간표 안에서 아이가 부족한 부분을 채우고 앞으로 나아갈 수 있도록 집중합니다.</p>
@@ -764,7 +804,7 @@ footer strong{color:var(--yellow);}
 <!-- PRICING -->
 <section class="pricing" id="pricing">
   <div class="inner">
-    <span class="s-label">요금 안내</span>
+    <span class="s-label" data-i18n="price-label">요금 안내</span>
     <h2 class="s-title">명확한 가격, 숨겨진 비용 없음</h2>
     <p class="s-desc">썸머스쿨이 끝난 후에도 방과후 수업으로 이어서 함께할 수 있습니다.</p>
 
@@ -777,9 +817,9 @@ footer strong{color:var(--yellow);}
       <div class="pgrid">
         <div class="pcard feat" style="grid-column:1/2;">
           <span class="p-top">🌟 BEST VALUE</span>
-          <div class="pname">종일반</div>
+          <div class="pname" data-i18n="fullday-name">종일반</div>
           <div class="pamount">33,000</div>
-          <div class="punit">페소 / 1개월 · 9:00 AM – 4:00 PM</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">📅 4월 6일 – 7월 18일 · 🚌 픽업·드롭오프 포함</div>
+          <div class="punit" data-i18n="fullday-unit">페소 / 1개월 · 9:00 AM – 4:00 PM</div><div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px;">📅 4월 6일 – 7월 18일 · 🚌 픽업·드롭오프 포함</div>
           <ul class="pfeats">
             <li>✅ 전 과목 수업</li>
             <li>✅ 점심 & 간식 포함</li>
@@ -790,9 +830,9 @@ footer strong{color:var(--yellow);}
           <a href="#contact"><button class="pbtn">문의하기</button></a>
         </div>
         <div class="pcard">
-          <div class="pname">방과후 수업</div>
+          <div class="pname" data-i18n="after-name">방과후 수업</div>
           <div class="pamount">23,000</div>
-          <div class="punit">페소 / 1개월 · 3시간</div>
+          <div class="punit" data-i18n="after-unit">페소 / 1개월 · 3시간</div>
           <ul class="pfeats">
             <li>✅ 학교 수업 복습·보충</li>
             <li>✅ 1:1 수업 포함</li>
@@ -815,8 +855,8 @@ footer strong{color:var(--yellow);}
     </div>
 
     <div class="disc">
-      <strong>🎉 형제·자매 함께 등록 시 10% 할인!</strong>
-      <span>형제나 자매가 함께 등록하면 두 분 모두 10% 할인 혜택을 드립니다.</span>
+      <strong data-i18n="discount-strong">🎉 형제·자매 함께 등록 시 10% 할인!</strong>
+      <span data-i18n="discount-span">형제나 자매가 함께 등록하면 두 분 모두 10% 할인 혜택을 드립니다.</span>
     </div>
 
     <!-- 추가 수업 옵션 -->
@@ -846,8 +886,8 @@ footer strong{color:var(--yellow);}
 <section class="contact" id="contact">
   <div class="inner">
     <span class="s-label">문의 & 등록</span>
-    <h2 class="s-title">지금 바로 연락주세요</h2>
-    <p class="s-desc">궁금한 점이 있거나 등록을 원하신다면 편하게 연락해 주세요.</p>
+    <h2 class="s-title" data-i18n="contact-title">지금 바로 연락주세요</h2>
+    <p class="s-desc" data-i18n="contact-desc">궁금한 점이 있거나 등록을 원하신다면 편하게 연락해 주세요.</p>
     <div class="cgrid2" style="grid-template-columns:1fr;max-width:560px;">
       <div class="cilist">
         <div class="ciitem"><div class="cibox">📞</div><div><div class="cilbl">전화 문의</div><div class="cival">09629254006</div></div></div>
@@ -888,5 +928,210 @@ function switchTab(tab) {
 }
 
 </script>
+
+<script>
+const LANG = {
+  ko: {
+    // hero
+    badge: "🌞 2026 Summer School · 4월 6일 – 7월 18일",
+    heroSchool: "Dream Academy",
+    heroTitle: "SUMMER",
+    heroSubtitle: "SCHOOL",
+    heroTagline: `<strong>학교 수업이 걱정되셨죠?</strong><br>UCLA 원장님이 선생님을 직접 교육하고 아이 한 명 한 명을 파악합니다.<br><strong>2026년 4월 6일 ~ 7월 18일</strong> · 매일 9AM – 4PM · 자격증 보유 선생님 90%<br>1:1 맞춤 수업 + 점심·간식 포함 · Math · Science · English · Tagalog`,
+    // about
+    aboutLabel: "Dream Academy 소개",
+    aboutTitle: "방학, 믿고 맡길 수 있어야죠",
+    aboutDesc: "UCLA 원장님이 선생님들을 직접 교육하고, 아이마다 수준과 상태를 파악해 맞는 방식으로 이끕니다. 자격증 보유 선생님 90%가 학습 공백을 채워드립니다.",
+    // teachers
+    teacherLabel: "선생님 소개",
+    teacherTitle: "검증된 선생님들이 함께합니다",
+    teacherDesc: "자격증을 갖춘 현지 선생님 90%가 원장님의 교육 방침 아래 아이들을 지도합니다.",
+    // schedule
+    schedLabel: "수업 일정",
+    schedTitle: "하루 일과표",
+    schedDesc: "매일 9:00 ~ 16:00 수업이 진행됩니다. 1-on-1 수업과 그룹 수업이 균형 있게 구성됩니다.",
+    tabJunior: "🎒 주니어 (초등)",
+    tabKinder: "🌟 킨더 (유치)",
+    // curriculum
+    currLabel: "교육 커리큘럼",
+    currTitle: "학교 수업, 같이 따라잡아요",
+    currDesc: "이번 학기 힘들었던 과목, 다음 학기 앞서가고 싶은 과목. 선생님이 아이 수준에 맞게 직접 봐줍니다.",
+    // pricing
+    priceLabel: "요금 안내",
+    priceTitle: "투명한 가격 정책",
+    priceDesc: "숨겨진 비용 없이, 모든 것이 포함된 합리적인 요금입니다.",
+    fullDayName: "종일반",
+    fullDayUnit: "페소 / 1개월 · 9:00 AM – 4:00 PM",
+    afterName: "방과후 수업",
+    afterUnit: "페소 / 1개월 · 3시간",
+    enquireBtn: "문의하기",
+    enrollBtn: "지금 등록하기",
+    consultBtn: "상담 신청",
+    discountBanner: "🎉 형제·자매 함께 등록 시 10% 할인!",
+    discountSub: "형제나 자매가 함께 등록하면 두 분 모두 10% 할인 혜택을 드립니다.",
+    // contact
+    contactLabel: "문의 & 등록",
+    contactTitle: "지금 바로 연락주세요",
+    contactDesc: "궁금한 점이 있거나 등록을 원하신다면 편하게 연락해 주세요.",
+    // footer
+    footerText: `<strong>Dream Academy</strong> — Summer School, Cebu<br>Dream Academy Building, Saekyung Village 1 Phase 4, Marigondon · 📞 09629254006 · 💬 세부드림아카데미`,
+  },
+  en: {
+    badge: "🌞 2026 Summer School · Apr 6 – Jul 18",
+    heroSchool: "Dream Academy",
+    heroTitle: "SUMMER",
+    heroSubtitle: "SCHOOL",
+    heroTagline: `<strong>Worried about school catch-up?</strong><br>Our UCLA-graduate director personally trains teachers and tracks every child's progress.<br><strong>April 6 – July 18, 2026</strong> · Daily 9AM – 4PM · 90% certified teachers<br>1-on-1 sessions + Lunch & snacks included · Math · Science · English · Tagalog`,
+    aboutLabel: "About Dream Academy",
+    aboutTitle: "A Summer School You Can Trust",
+    aboutDesc: "Our UCLA-graduate director personally trains teachers and monitors each child's level and progress. 90% certified local teachers fill every learning gap.",
+    teacherLabel: "Our Teachers",
+    teacherTitle: "Qualified Teachers by Your Side",
+    teacherDesc: "90% of our local teachers hold official teaching certifications, guided by the director's educational philosophy.",
+    schedLabel: "Schedule",
+    schedTitle: "Daily Timetable",
+    schedDesc: "Classes run daily from 9:00 AM to 4:00 PM, with a balanced mix of 1-on-1 and group lessons.",
+    tabJunior: "🎒 Junior (Elementary)",
+    tabKinder: "🌟 Kinder (Pre-school)",
+    currLabel: "Curriculum",
+    currTitle: "Catch Up & Get Ahead",
+    currDesc: "Struggling subjects this semester, or want to get ahead next term? Teachers tailor every session to your child.",
+    priceLabel: "Pricing",
+    priceTitle: "Transparent Pricing",
+    priceDesc: "No hidden fees — everything is included at a fair price.",
+    fullDayName: "Full Day",
+    fullDayUnit: "pesos / month · 9:00 AM – 4:00 PM",
+    afterName: "After School",
+    afterUnit: "pesos / month · 3 hours",
+    enquireBtn: "Enquire",
+    enrollBtn: "Enrol Now",
+    consultBtn: "Book Consultation",
+    discountBanner: "🎉 10% Sibling Discount!",
+    discountSub: "Enrol siblings together and both receive a 10% discount.",
+    contactLabel: "Contact & Enrolment",
+    contactTitle: "Get in Touch",
+    contactDesc: "Feel free to contact us for any questions or to enrol your child.",
+    footerText: `<strong>Dream Academy</strong> — Summer School, Cebu<br>Dream Academy Building, Saekyung Village 1 Phase 4, Marigondon · 📞 09629254006 · 💬 세부드림아카데미`,
+  },
+  ja: {
+    badge: "🌞 2026 サマースクール · 4月6日 – 7月18日",
+    heroSchool: "Dream Academy",
+    heroTitle: "SUMMER",
+    heroSubtitle: "SCHOOL",
+    heroTagline: `<strong>学校の授業が心配ですか？</strong><br>UCLA卒の校長が直接先生を指導し、お子様一人ひとりを把握します。<br><strong>2026年4月6日 ～ 7月18日</strong> · 毎日 9AM – 4PM · 資格取得率90%の先生<br>1対1レッスン + 昼食・おやつ付き · Math · Science · English · Tagalog`,
+    aboutLabel: "Dream Academy について",
+    aboutTitle: "安心して預けられる夏のスクール",
+    aboutDesc: "UCLA卒の校長が先生を直接指導し、お子様の学習レベルと状況を把握して最適な方法で導きます。資格を持つ先生90%が学習のギャップを埋めます。",
+    teacherLabel: "先生紹介",
+    teacherTitle: "資格を持つ先生たちが一緒に",
+    teacherDesc: "現地の先生の90%が正式な教員資格を持ち、校長の教育方針のもと指導します。",
+    schedLabel: "授業スケジュール",
+    schedTitle: "1日のタイムテーブル",
+    schedDesc: "毎日9:00〜16:00まで授業があります。1対1とグループレッスンをバランスよく組み合わせています。",
+    tabJunior: "🎒 ジュニア（小学生）",
+    tabKinder: "🌟 キンダー（幼稚園）",
+    currLabel: "カリキュラム",
+    currTitle: "授業の遅れを一緒に取り戻そう",
+    currDesc: "苦手科目の補習も、先取り学習も。先生がお子様のレベルに合わせて丁寧にサポートします。",
+    priceLabel: "料金案内",
+    priceTitle: "明確な料金体系",
+    priceDesc: "隠れた費用なし。すべてが含まれたリーズナブルな料金です。",
+    fullDayName: "終日コース",
+    fullDayUnit: "ペソ / 1ヶ月 · 9:00 AM – 4:00 PM",
+    afterName: "放課後コース",
+    afterUnit: "ペソ / 1ヶ月 · 3時間",
+    enquireBtn: "お問い合わせ",
+    enrollBtn: "今すぐ申し込む",
+    consultBtn: "相談を予約",
+    discountBanner: "🎉 兄弟・姉妹同時入学で10%割引！",
+    discountSub: "兄弟・姉妹が一緒に入学すると、お二人とも10%割引になります。",
+    contactLabel: "お問い合わせ・入学申込",
+    contactTitle: "お気軽にご連絡ください",
+    contactDesc: "ご質問やお申し込みはお気軽にご連絡ください。",
+    footerText: `<strong>Dream Academy</strong> — Summer School, Cebu<br>Dream Academy Building, Saekyung Village 1 Phase 4, Marigondon · 📞 09629254006 · 💬 세부드림아카데미`,
+  }
+};
+
+function setLang(lang) {
+  const t = LANG[lang];
+  if (!t) return;
+
+  // Update active button
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+
+  // Hero
+  const badge = document.querySelector('.hero-badge');
+  if (badge) badge.textContent = t.badge;
+  const heroSchool = document.querySelector('.hero-school');
+  if (heroSchool) heroSchool.textContent = t.heroSchool;
+  const heroTagline = document.querySelector('.hero-tagline');
+  if (heroTagline) heroTagline.innerHTML = t.heroTagline;
+
+  // Section labels & titles (by data-i18n)
+  setByKey('about-label', t.aboutLabel);
+  setByKey('about-title', t.aboutTitle);
+  setByKey('about-desc', t.aboutDesc);
+  setByKey('teacher-label', t.teacherLabel);
+  setByKey('teacher-title', t.teacherTitle);
+  setByKey('teacher-desc', t.teacherDesc);
+  setByKey('sched-label', t.schedLabel);
+  setByKey('sched-title', t.schedTitle);
+  setByKey('sched-desc', t.schedDesc);
+  setByKey('curr-label', t.currLabel);
+  setByKey('curr-title', t.currTitle);
+  setByKey('curr-desc', t.currDesc);
+  setByKey('price-label', t.priceLabel);
+  setByKey('price-title', t.priceTitle);
+  setByKey('price-desc', t.priceDesc);
+  setByKey('contact-label', t.contactLabel);
+  setByKey('contact-title', t.contactTitle);
+  setByKey('contact-desc', t.contactDesc);
+
+  // Timetable tabs
+  const tabJ = document.getElementById('tab-junior');
+  const tabK = document.getElementById('tab-kinder');
+  if (tabJ) tabJ.textContent = t.tabJunior;
+  if (tabK) tabK.textContent = t.tabKinder;
+
+  // Pricing names & units
+  setByKey('fullday-name', t.fullDayName);
+  setByKey('fullday-unit', t.fullDayUnit);
+  setByKey('after-name', t.afterName);
+  setByKey('after-unit', t.afterUnit);
+
+  // Pricing buttons
+  document.querySelectorAll('[data-i18n="enquire-btn"]').forEach(el => el.textContent = t.enquireBtn);
+  document.querySelectorAll('[data-i18n="enrol-btn"]').forEach(el => el.textContent = t.enrollBtn);
+  document.querySelectorAll('[data-i18n="consult-btn"]').forEach(el => el.textContent = t.consultBtn);
+
+  // Discount banner
+  setByKey('discount-strong', t.discountBanner);
+  setByKey('discount-span', t.discountSub);
+
+  // Footer
+  const footer = document.querySelector('footer');
+  if (footer) {
+    const small = footer.querySelector('span');
+    const smallHTML = small ? small.outerHTML : '';
+    footer.innerHTML = t.footerText + '<br><br>' + smallHTML;
+  }
+
+  // Save preference
+  localStorage.setItem('lang', lang);
+}
+
+function setByKey(key, val) {
+  const el = document.querySelector(`[data-i18n="${key}"]`);
+  if (el) el.innerHTML = val;
+}
+
+// Auto-restore language
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('lang');
+  if (saved && saved !== 'ko') setLang(saved);
+});
+</script>
+
 </body>
 </html>
