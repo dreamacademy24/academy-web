@@ -361,8 +361,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
             </div>
           </div>
           <div class="view-toggle">
-            <button class="vt-btn active" id="vt-month" onclick="setCalView('month',this)">월간</button>
-            <button class="vt-btn" id="vt-week" onclick="setCalView('week',this)">주간</button>
+            <button class="vt-btn" id="vt-month" onclick="setCalView('month',this)">월간</button>
+            <button class="vt-btn active" id="vt-week" onclick="setCalView('week',this)">주간</button>
           </div>
         </div>
         <div id="calBody"></div>
@@ -500,7 +500,7 @@ function getEmp(id){ return ALL_PEOPLE.find(e=>e.id===id); }
 //  STATE
 // ────────────────────────────────────────
 let CU=null, curEmpId=null;
-let calDate=new Date(), calView='month';
+let calDate=new Date(), calView='week';
 let boardFilter='all', empFilter='active';
 let editingId=null, mFiles=[], qaFiles=[];
 
