@@ -3,11 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ROOMS = [
-  "b16L19", "b17L12", "b17L11", "b17L10", "b17L9",
-  "b17L8", "b17L7", "b17L13", "b17L18", "빅하우스",
-  "b21L1", "b13L10", "b15L5", "b15L6", "b15L7",
-];
+const ROOMS = ["b13L10", "b16L19", "b17L4", "b17L7", "b17L8", "b17L9", "b17L10", "b17L11", "b17L12", "b17L13", "b17L14", "b17L15", "b17L16", "b17L17", "b17L18"];
 
 interface Booking {
   id: string;
