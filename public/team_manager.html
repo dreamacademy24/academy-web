@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f9;--white:#fff;--border:#e5e7eb;--border2:#d1d5db;
+  --text:#111827;--text2:#4b5563;--text3:#9ca3af;
+  --primary:#2563eb;--pl:#eff6ff;--pb:#bfdbfe;
+  --danger:#ef4444;--success:#10b981;--warn:#f59e0b;
+  --shadow:0 1px 3px rgba(0,0,0,.07);--shadow-md:0 4px 16px rgba(0,0,0,.09);--shadow-lg:0 12px 40px rgba(0,0,0,.13);
+  --r:10px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;}
+.sidebar{width:224px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow-y:auto;}
+.sb-logo{padding:18px 20px 14px;border-bottom:1px solid var(--border);}
+.brand{font-size:16px;font-weight:700;color:var(--primary);}
+.brand-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.sb-sec{padding:13px 20px 4px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;font-weight:500;font-size:13.5px;color:var(--text2);border-left:3px solid transparent;transition:all .12s;}
+.nav-item:hover{background:var(--bg);color:var(--text);}
+.nav-item.active{background:var(--pl);color:var(--primary);border-left-color:var(--primary);}
+.nav-item .ico{font-size:15px;width:20px;text-align:center;}
+.emp-nav{display:flex;align-items:center;gap:9px;padding:8px 20px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border-left:3px solid transparent;transition:all .12s;}
+.emp-nav:hover{background:var(--bg);}
+.emp-nav.active{background:var(--pl);border-left-color:var(--ec,#2563eb);color:var(--text);}
+.e-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
+.sb-bottom{margin-top:auto;border-top:1px solid var(--border);padding:13px 15px;}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:var(--rs);cursor:pointer;}
+.user-chip:hover{background:#eef0f3;}
+.u-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+.divider{height:1px;background:var(--border);margin:5px 0;}
+
+/* MAIN */
+.main{margin-left:224px;flex:1;display:flex;flex-direction:column;}
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40;}
+.pg-title{font-size:17px;font-weight:700;}
+.pg-sub{font-size:11.5px;color:var(--text3);margin-top:2px;}
+.top-r{display:flex;gap:8px;align-items:center;}
+.content{padding:22px 28px;flex:1;}
+
+/* BUTTONS */
+.btn{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;padding:7px 14px;border-radius:var(--rs);border:none;cursor:pointer;transition:all .13s;display:inline-flex;align-items:center;gap:5px;}
+.btn-p{background:var(--primary);color:#fff;}.btn-p:hover{background:#1d4ed8;}
+.btn-o{background:#fff;color:var(--text2);border:1px solid var(--border2);}.btn-o:hover{background:var(--bg);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-gh{background:transparent;border:1px dashed var(--border2);color:var(--text3);width:100%;justify-content:center;margin:0 10px 10px;width:calc(100% - 20px);}
+.btn-gh:hover{border-color:var(--primary);color:var(--primary);background:var(--pl);}
+.btn-del{background:#fff;color:var(--danger);border:1px solid #fca5a5;}.btn-del:hover{background:#fef2f2;}
+
+/* CARDS */
+.section-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);margin-bottom:18px;overflow:hidden;}
+.s-head{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;}
+.notice-head{background:#eff6ff;border-bottom:1px solid var(--pb);color:var(--primary);}
+.notice-row{display:flex;align-items:flex-start;gap:10px;padding:11px 18px;border-bottom:1px solid var(--border);transition:background .1s;}
+.notice-row:last-child{border-bottom:none;}
+.notice-row:hover{background:#fafbfc;}
+.notice-row.done .n-text{text-decoration:line-through;color:var(--text3);}
+.n-text{flex:1;font-size:13px;line-height:1.55;}
+.n-date{font-size:10px;color:var(--text3);margin-top:3px;}
+.n-btns{display:flex;gap:3px;opacity:0;transition:opacity .12s;}
+.notice-row:hover .n-btns{opacity:1;}
+.ico-btn{background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;color:var(--text3);transition:all .12s;}
+.ico-btn:hover{background:var(--border);color:var(--text2);}
+
+/* SUMMARY GRID */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:14px;}
+.sum-block{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;}
+.sum-head{padding:10px 13px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;border-bottom:1px solid var(--border);}
+.sum-row{display:flex;align-items:center;gap:8px;padding:7px 13px;font-size:12.5px;transition:background .1s;cursor:pointer;}
+.sum-row:hover{background:var(--bg);}
+.sum-row.done .sum-title{text-decoration:line-through;color:var(--text3);}
+.sum-title{flex:1;line-height:1.4;}
+.mini-ck{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;}
+.done .mini-ck{background:var(--text3);border-color:var(--text3);}
+.mini-dot{display:none;width:6px;height:6px;background:#fff;border-radius:50%;}
+.done .mini-dot{display:block;}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:4px;margin-bottom:18px;width:fit-content;}
+.tab{padding:7px 17px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all .13s;}
+.tab:hover{background:var(--bg);}
+.tab.active{background:var(--primary);color:#fff;}
+
+/* BOARD */
+.board-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:15px;}
+.board-col{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.bc-head{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.bc-title{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;}
+.e-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.badge{background:var(--bg);color:var(--text3);font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;}
+.bc-tasks{padding:10px;display:flex;flex-direction:column;gap:7px;min-height:60px;}
+
+/* TASK CARD */
+.tc{background:var(--white);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;transition:all .13s;}
+.tc:hover{border-color:var(--pb);box-shadow:var(--shadow-md);}
+.tc.done{opacity:.42;background:var(--bg);}
+.tc.done .tc-title{text-decoration:line-through;color:var(--text3);}
+.tc-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;}
+.tc-ck{width:17px;height:17px;border:1.5px solid var(--border2);border-radius:50%;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:#fff;}
+.tc-ck:hover{border-color:var(--primary);background:var(--pl);}
+.tc.done .tc-ck{background:var(--text3);border-color:var(--text3);}
+.tc-ck-m{display:none;color:#fff;font-size:9px;}
+.tc.done .tc-ck-m{display:block;}
+.tc-title{font-size:13px;font-weight:500;flex:1;line-height:1.45;}
+.tc-acts{display:flex;gap:1px;opacity:0;transition:opacity .13s;flex-shrink:0;}
+.tc:hover .tc-acts{opacity:1;}
+.tc-foot{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.tag{font-size:11px;font-weight:500;padding:2px 7px;border-radius:20px;background:var(--bg);color:var(--text3);display:inline-flex;align-items:center;gap:3px;}
+.t-ov{background:#fef2f2;color:var(--danger);}
+.t-so{background:#fffbeb;color:var(--warn);}
+.t-ok{background:#f0fdf4;color:var(--success);}
+
+/* ── CALENDAR ── */
+.cal-toolbar{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:13px 18px;margin-bottom:14px;}
+.cal-toolbar-l{display:flex;align-items:center;gap:12px;}
+.cal-title-txt{font-size:16px;font-weight:700;}
+.cal-nav-grp{display:flex;gap:4px;}
+.cal-nb{background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:5px 12px;cursor:pointer;font-size:14px;color:var(--text2);transition:all .13s;font-family:inherit;}
+.cal-nb:hover{background:var(--pl);color:var(--primary);border-color:var(--pb);}
+.view-toggle{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:3px;}
+.vt-btn{padding:5px 14px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text3);transition:all .13s;border:none;background:none;font-family:inherit;}
+.vt-btn.active{background:var(--primary);color:#fff;}
+
+/* Monthly */
+.cal-wrap{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-lbl{text-align:center;padding:9px 4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+.cal-cell{min-height:100px;padding:7px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top;}
+.cal-cell:nth-child(7n){border-right:none;}
+.cal-cell.other{background:#fafafa;}
+.cal-dn{font-size:12px;font-weight:600;color:var(--text3);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:3px;}
+.cal-cell.today .cal-dn{background:var(--primary);color:#fff;}
+.cal-cell.other .cal-dn{color:#d1d5db;}
+.cal-chip{font-size:10px;font-weight:600;padding:2px 5px;border-radius:4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .12s;display:block;}
+.cal-chip:hover{opacity:.75;}
+.cal-chip.done-chip{opacity:.4;text-decoration:line-through;}
+.cal-more{font-size:10px;color:var(--text3);padding:1px 4px;}
+
+/* Weekly */
+.week-wrap{background:var(--white);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}
+.week-day-head{padding:10px 8px;border-right:1px solid var(--border);text-align:center;}
+.week-day-head:last-child{border-right:none;}
+.wdh-name{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.wdh-num{font-size:18px;font-weight:700;color:var(--text2);margin-top:2px;}
+.week-day-head.today-col .wdh-num{background:var(--primary);color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:2px auto 0;}
+.week-cols{display:grid;grid-template-columns:repeat(7,1fr);}
+.week-col{border-right:1px solid var(--border);padding:8px;min-height:200px;}
+.week-col:last-child{border-right:none;}
+.week-chip{font-size:11px;font-weight:600;padding:4px 7px;border-radius:5px;margin-bottom:5px;cursor:pointer;transition:all .13s;display:block;line-height:1.4;}
+.week-chip:hover{opacity:.8;transform:translateX(2px);}
+.week-chip.done-chip{opacity:.4;text-decoration:line-through;}
+
+/* Weekly sidebar: per-emp task list */
+.week-sidebar{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-top:14px;}
+.ws-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.ws-emp-block{margin-bottom:12px;}
+.ws-emp-name{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.ws-task-item{font-size:12px;color:var(--text2);padding:3px 0 3px 16px;border-left:2px solid;line-height:1.5;margin-bottom:3px;}
+.ws-no-task{font-size:12px;color:var(--text3);padding:3px 0 3px 16px;}
+
+/* EMP PAGE */
+.emp-hero{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+.eh-left{display:flex;align-items:center;gap:14px;}
+.eh-av{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;}
+.eh-name{font-size:18px;font-weight:700;}
+.eh-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.stats-row{display:flex;gap:12px;margin-bottom:18px;}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:15px 18px;flex:1;}
+.stat-val{font-size:26px;font-weight:700;line-height:1;}
+.stat-lbl{font-size:12px;color:var(--text3);margin-top:4px;}
+
+/* EMP TASK CARD */
+.etc{background:var(--white);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-bottom:8px;transition:all .13s;}
+.etc:hover{border-color:var(--pb);box-shadow:var(--shadow-md);}
+.etc.done{opacity:.42;background:var(--bg);}
+.etc.done .etc-title{text-decoration:line-through;color:var(--text3);}
+.etc.private{border-left:3px solid var(--warn);}
+.etc.shared{border-left:3px solid var(--success);}
+.etc-top{display:flex;align-items:flex-start;gap:9px;}
+.etc-body{flex:1;}
+.etc-title{font-size:13.5px;font-weight:600;line-height:1.4;margin-bottom:3px;}
+.etc-note{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px;}
+.etc-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.etc-files{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
+.etc-file-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);padding:3px 0;}
+
+/* STATUS BADGE */
+.status-badge{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.sb-private{background:#fffbeb;color:#92400e;}
+.sb-shared{background:#f0fdf4;color:#065f46;}
+
+/* QUICK ADD */
+.quick-add-box{background:var(--white);border:2px dashed var(--border2);border-radius:var(--r);padding:16px 18px;margin-bottom:18px;transition:all .15s;}
+.quick-add-box:focus-within{border-color:var(--primary);border-style:solid;}
+.qa-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.qa-input{flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;padding:8px 11px;outline:none;transition:border-color .13s;}
+.qa-input:focus{border-color:var(--primary);background:#fff;}
+.qa-input::placeholder{color:var(--text3);}
+.qa-row{display:flex;gap:8px;margin-bottom:8px;}
+.qa-fzone{border:1.5px dashed var(--border2);border-radius:var(--rs);padding:10px;text-align:center;cursor:pointer;transition:all .13s;color:var(--text3);font-size:12px;margin-bottom:8px;}
+.qa-fzone:hover{border-color:var(--primary);color:var(--primary);background:var(--pl);}
+.qa-flist{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
+.qa-frow{display:flex;align-items:center;gap:6px;font-size:11.5px;background:var(--bg);border-radius:4px;padding:5px 9px;}
+.qa-fname{flex:1;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qa-rm{background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;}
+.qa-rm:hover{color:var(--danger);}
+.share-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;cursor:pointer;margin-bottom:8px;font-size:13px;font-weight:600;color:#065f46;}
+
+/* CEO PANEL */
+.ceo-panel{background:linear-gradient(135deg,#1e3a5f,#162d4a);border-radius:var(--r);padding:20px;color:#fff;margin-top:20px;}
+.cp-head{display:flex;align-items:center;margin-bottom:14px;}
+.cp-title{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.cp-badge{background:rgba(255,255,255,.15);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.5px;}
+.cmt-list{display:flex;flex-direction:column;gap:9px;margin-bottom:13px;}
+.cmt-item{background:rgba(255,255,255,.08);border-radius:var(--rs);padding:10px 12px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,.9);position:relative;}
+.cmt-task{font-size:10.5px;color:rgba(255,255,255,.5);margin-bottom:4px;}
+.cmt-date{font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+.cmt-del{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.3);font-size:12px;opacity:0;transition:opacity .13s;}
+.cmt-item:hover .cmt-del{opacity:1;}
+.cmt-del:hover{color:#f87171;}
+.cmt-row{display:flex;gap:7px;}
+.cmt-inp{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:var(--rs);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;padding:8px 11px;outline:none;}
+.cmt-inp::placeholder{color:rgba(255,255,255,.35);}
+.cmt-inp:focus{border-color:rgba(255,255,255,.5);}
+.cmt-sub{background:rgba(255,255,255,.2);border:none;border-radius:var(--rs);color:#fff;cursor:pointer;padding:8px 14px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;transition:background .13s;white-space:nowrap;}
+.cmt-sub:hover{background:rgba(255,255,255,.3);}
+
+/* MODAL */
+.m-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center;}
+.m-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:12px;padding:26px;width:480px;max-width:92vw;box-shadow:var(--shadow-lg);animation:popIn .18s ease;}
+@keyframes popIn{from{transform:scale(.96) translateY(8px);opacity:0;}to{transform:scale(1) translateY(0);opacity:1;}}
+.m-title{font-size:16px;font-weight:700;margin-bottom:18px;}
+.fg{margin-bottom:13px;}
+.fg label{display:block;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.fi,.fs,.ft{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;padding:9px 12px;outline:none;transition:border-color .13s;}
+.fi:focus,.fs:focus,.ft:focus{border-color:var(--primary);background:#fff;}
+.ft{resize:vertical;min-height:65px;}
+.m-foot{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;}
+.m-foot-l{margin-right:auto;}
+.up-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:16px;text-align:center;cursor:pointer;transition:all .13s;color:var(--text3);font-size:12.5px;}
+.up-zone:hover{border-color:var(--primary);color:var(--primary);background:var(--pl);}
+.fchip-list{display:flex;flex-direction:column;gap:5px;margin-top:8px;}
+.fchip{display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--bg);border-radius:var(--rs);font-size:12px;}
+.fchip-name{flex:1;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;}
+.login-card{background:#fff;border-radius:14px;padding:38px 34px;width:380px;box-shadow:var(--shadow-lg);text-align:center;}
+.login-logo{font-size:26px;font-weight:700;color:var(--primary);margin-bottom:6px;}
+.login-desc{font-size:13px;color:var(--text3);margin-bottom:26px;}
+.login-opts{display:flex;flex-direction:column;gap:9px;}
+.login-btn{display:flex;align-items:center;gap:12px;padding:12px 17px;border-radius:var(--r);border:2px solid var(--border);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;transition:all .13s;background:#fff;}
+.login-btn:hover{border-color:var(--pb);background:var(--pl);color:var(--primary);}
+.login-btn.adm{border-color:#1e3a5f;color:#1e3a5f;}
+.login-btn.adm:hover{background:#1e3a5f;color:#fff;}
+.l-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+
+.empty{text-align:center;padding:24px;color:var(--text3);font-size:13px;}
+.empty-ico{font-size:26px;margin-bottom:8px;}
+.hidden{display:none!important;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px;}
+@keyframes fadeInUp{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🏢 Team Manager</div>
+    <div class="login-desc">직원을 선택하거나 관리자로 로그인하세요</div>
+    <div class="login-opts" id="loginOpts"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="layout hidden" id="app">
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="brand">🏢 Team Manager</div>
+      <div class="brand-sub" id="sbRoleLbl"></div>
+      <div id="adminBadge" style="display:none;margin-top:6px"></div>
+    </div>
+    <div class="sb-sec">메뉴</div>
+    <div class="nav-item active" data-page="home" onclick="showPage('home')"><span class="ico">🏠</span> 홈</div>
+    <div class="nav-item" data-page="board" onclick="showPage('board')"><span class="ico">📋</span> 전체 업무</div>
+    <div class="nav-item" data-page="calendar" onclick="showPage('calendar')"><span class="ico">📅</span> 달력</div>
+    <div class="divider"></div>
+    <div class="sb-sec">직원 공간</div>
+    <div id="empNavList"></div>
+    <div class="sb-bottom">
+      <div class="user-chip" onclick="logout()">
+        <div class="u-av" id="sbAv"></div>
+        <div><div style="font-size:13px;font-weight:600" id="sbName"></div><div style="font-size:11px;color:var(--text3)">로그아웃 →</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="pg-title" id="topTitle">홈</div>
+        <div class="pg-sub" id="topSub"></div>
+      </div>
+      <div class="top-r">
+        <button class="btn btn-o" id="btnNotice" onclick="openModal('noticeModal')" style="display:none">📌 공지 추가</button>
+        <button class="btn btn-p" id="btnTask" onclick="openTaskModal('')">+ 업무 추가</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- HOME -->
+      <div id="page-home">
+        <div class="section-card">
+          <div class="s-head notice-head">
+            <div>📌 공통 공지사항</div>
+            <span id="noticeBadge" style="font-size:11px;font-weight:400;color:var(--primary)"></span>
+          </div>
+          <div id="noticeList"></div>
+        </div>
+        <div class="section-card">
+          <div class="s-head">
+            <div>📋 전체 업무 현황</div>
+            <button class="btn btn-sm btn-o" onclick="showPage('board')">전체 보기 →</button>
+          </div>
+          <div class="sum-grid" id="homeSummary"></div>
+        </div>
+      </div>
+
+      <!-- BOARD -->
+      <div id="page-board" class="hidden">
+        <div class="tabs" id="boardTabs">
+          <div class="tab active" onclick="setBoardFilter('all',this)">전체</div>
+          <div class="tab" onclick="setBoardFilter('unassigned',this)">미배정</div>
+          <div class="tab" onclick="setBoardFilter('active',this)">진행 중</div>
+          <div class="tab" onclick="setBoardFilter('done',this)">완료</div>
+        </div>
+        <div class="board-grid" id="boardGrid"></div>
+      </div>
+
+      <!-- CALENDAR -->
+      <div id="page-calendar" class="hidden">
+        <div class="cal-toolbar">
+          <div class="cal-toolbar-l">
+            <div class="cal-title-txt" id="calTitle"></div>
+            <div class="cal-nav-grp">
+              <button class="cal-nb" onclick="calNav(-1)">‹</button>
+              <button class="cal-nb" onclick="calNav(0)">오늘</button>
+              <button class="cal-nb" onclick="calNav(1)">›</button>
+            </div>
+          </div>
+          <div class="view-toggle">
+            <button class="vt-btn active" id="vt-month" onclick="setCalView('month',this)">월간</button>
+            <button class="vt-btn" id="vt-week" onclick="setCalView('week',this)">주간</button>
+          </div>
+        </div>
+        <div id="calBody"></div>
+      </div>
+
+      <!-- EMP PAGE -->
+      <div id="page-emp" class="hidden">
+        <div class="emp-hero">
+          <div class="eh-left">
+            <div class="eh-av" id="ehAv"></div>
+            <div>
+              <div class="eh-name" id="ehName"></div>
+              <div class="eh-sub" id="ehSub"></div>
+            </div>
+          </div>
+          <button class="btn btn-p btn-sm" id="empAddBtn" onclick="toggleQA()">✏️ 내 업무 추가</button>
+        </div>
+        <div class="stats-row" id="empStats"></div>
+
+        <!-- QUICK ADD -->
+        <div class="quick-add-box hidden" id="qaBox">
+          <div class="qa-title">
+            <span>✏️ 새 업무 작성</span>
+            <span id="qaCreatedLbl" style="font-size:11px;font-weight:400;color:var(--text3)"></span>
+          </div>
+          <div class="qa-row">
+            <input class="qa-input" id="qaTitleInp" placeholder="업무 내용을 입력하세요" />
+          </div>
+          <!-- 기한 -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:600;color:var(--text2)">기한</span>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--text2)">
+              <input type="radio" name="qaDueM" value="none" checked onchange="toggleQADue(this)" style="accent-color:var(--primary)"> 없음
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--text2)">
+              <input type="radio" name="qaDueM" value="date" onchange="toggleQADue(this)" style="accent-color:var(--primary)"> 날짜 설정
+            </label>
+            <input class="qa-input" type="date" id="qaDueInp" style="max-width:150px;display:none" />
+          </div>
+          <textarea class="qa-input" id="qaNoteInp" placeholder="메모 (선택)" rows="2" style="width:100%;margin-bottom:8px;resize:none"></textarea>
+          <div class="qa-fzone" onclick="document.getElementById('qaFileInp').click()">📎 파일 첨부</div>
+          <input type="file" id="qaFileInp" multiple style="display:none" onchange="handleQAFiles(event)" />
+          <div class="qa-flist" id="qaFileList"></div>
+          <!-- 공유 토글 (관리자는 숨김) -->
+          <label id="shareRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;cursor:pointer;margin-bottom:8px;font-size:13px;font-weight:600;color:#065f46;">
+            <input type="checkbox" id="qaShareChk" style="width:16px;height:16px;accent-color:var(--success);cursor:pointer" />
+            📋 달력 · 전체 보드에 공유하기
+            <span style="font-weight:400;font-size:11px;color:#6ee7b7">— 모든 직원에게 보여요</span>
+          </label>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-o btn-sm" onclick="toggleQA()">취소</button>
+            <button class="btn btn-p btn-sm" onclick="saveQATask()">업무 등록 →</button>
+          </div>
+        </div>
+
+        <div class="tabs" id="empTabs">
+          <div class="tab active" onclick="setEmpFilter('active',this)">진행 중</div>
+          <div class="tab" onclick="setEmpFilter('done',this)">완료</div>
+          <div class="tab" onclick="setEmpFilter('all',this)">전체</div>
+        </div>
+        <div id="empTaskList"></div>
+        <div id="ceoPanelWrap"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="m-overlay" id="taskModal">
+  <div class="modal">
+    <div class="m-title" id="mTitle">업무 추가</div>
+    <div id="mCreatedRow" style="font-size:11.5px;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:5px">
+      📅 작성일: <span id="mCreatedVal" style="font-weight:600;color:var(--text2)"></span>
+    </div>
+    <div class="fg"><label>업무 내용</label><input class="fi" id="mTaskTitle" placeholder="업무 내용" /></div>
+    <div class="fg"><label>담당자</label><select class="fs" id="mAssignee"></select></div>
+    <div class="fg">
+      <label>기한</label>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2)">
+          <input type="radio" name="mDueM" value="none" checked onchange="toggleMDue(this)" style="accent-color:var(--primary)"> 없음
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2)">
+          <input type="radio" name="mDueM" value="date" onchange="toggleMDue(this)" style="accent-color:var(--primary)"> 날짜 설정
+        </label>
+        <input class="fi" type="date" id="mDue" style="max-width:170px;display:none;margin:0" />
+      </div>
+    </div>
+    <div class="fg"><label>메모</label><textarea class="ft" id="mNote" placeholder="추가 메모..."></textarea></div>
+    <div class="fg">
+      <label>첨부파일</label>
+      <div class="up-zone" onclick="document.getElementById('mFileInp').click()">📎 클릭하여 업로드</div>
+      <input type="file" id="mFileInp" multiple style="display:none" onchange="handleMFiles(event)" />
+      <div class="fchip-list" id="mFileList"></div>
+    </div>
+    <div class="m-foot">
+      <div class="m-foot-l"><button class="btn btn-del" id="mDelBtn" onclick="deleteTask()" style="display:none">삭제</button></div>
+      <button class="btn btn-o" onclick="closeModal('taskModal')">취소</button>
+      <button class="btn btn-p" onclick="saveTask()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTICE MODAL -->
+<div class="m-overlay" id="noticeModal">
+  <div class="modal">
+    <div class="m-title">공지 추가</div>
+    <div class="fg"><label>공지 내용</label><textarea class="ft" id="mNoticeText" placeholder="공지 내용 입력..." rows="3"></textarea></div>
+    <div class="m-foot">
+      <button class="btn btn-o" onclick="closeModal('noticeModal')">취소</button>
+      <button class="btn btn-p" onclick="saveNotice()">등록</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────
+//  CONSTANTS
+// ────────────────────────────────────────
+const EMPS = [
+  { id:'jenna', name:'Jenna',  color:'#6366f1', initial:'J',  role:'부원장' },
+  { id:'jamie', name:'Jamie',  color:'#0ea5e9', initial:'JA' },
+  { id:'yuna',  name:'Yuna',   color:'#ec4899', initial:'Y'  },
+  { id:'hanny', name:'Hanny',  color:'#f59e0b', initial:'H'  },
+  { id:'sage',  name:'Sage',   color:'#10b981', initial:'S'  },
+];
+const CEO = { id:'ceo', name:'CEO', color:'#1e3a5f', initial:'C', role:'대표' };
+const ALL_PEOPLE = [...EMPS, CEO];
+
+function isAdmin(){ return CU && (CU.id==='ceo' || CU.id==='jenna'); }
+function getEmp(id){ return ALL_PEOPLE.find(e=>e.id===id); }
+
+// ────────────────────────────────────────
+//  STATE
+// ────────────────────────────────────────
+let CU=null, curEmpId=null;
+let calDate=new Date(), calView='month';
+let boardFilter='all', empFilter='active';
+let editingId=null, mFiles=[], qaFiles=[];
+
+let tasks    = ld('tasks4',[]);
+let notices  = ld('notices4',[]);
+let comments = ld('comments4',{});
+
+// ── task shape ──
+// { id, title, assignee, due, createdAt, note, done, files, shared, idx }
+// shared=false → 본인만 / shared=true → 달력+보드에 공개
+
+if(!tasks.length){
+  const d=n=>{const dt=new Date();dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];};
+  const today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  tasks=[
+    {id:uid(),title:'클라이언트 미팅 자료 준비',assignee:'jenna',due:d(2),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'SNS 4월 콘텐츠 기획',assignee:'jamie',due:d(7),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'3월 정산 마감',assignee:'yuna',due:d(1),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'디자인 시안 2차 수정',assignee:'hanny',due:d(3),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'계약서 검토',assignee:'sage',due:d(4),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'Q2 전략 기획서 작성',assignee:'',due:d(5),createdAt:today,note:'전체 공유',done:false,files:[],shared:true},
+  ];
+  rebuildIdx(); sv('tasks4',tasks);
+}
+if(!notices.length){
+  notices=[
+    {id:uid(),text:'4월부터 새 업무 프로세스 적용. 각자 확인 부탁드립니다.',done:false,date:nowStr()},
+    {id:uid(),text:'이번 주 금요일 오후 3시 전체 미팅 있습니다.',done:false,date:nowStr()},
+  ]; sv('notices4',notices);
+}
+
+function ld(k,d){try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;}}
+function sv(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function nowStr(){return new Date().toLocaleDateString('ko-KR');}
+function todayStr(){return new Date().toISOString().split('T')[0];}
+
+// 공개 업무에 순번(idx) 자동 부여
+function rebuildIdx(){
+  let n=1;
+  [...tasks].sort((a,b)=>a.createdAt<b.createdAt?-1:1).forEach(t=>{
+    if(t.shared) t.idx=n++;
+    else t.idx=null;
+  });
+}
+
+function sortT(arr){return [...arr].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(!a.due)return 1;if(!b.due)return -1;return a.due<b.due?-1:1;});}
+function dueLabel(due){
+  if(!due)return null;
+  const now=new Date();now.setHours(0,0,0,0);
+  const d=new Date(due),diff=Math.round((d-now)/86400000);
+  if(diff<0)return{text:`D+${Math.abs(diff)}`,cls:'t-ov'};
+  if(diff===0)return{text:'TODAY',cls:'t-so'};
+  if(diff<=3)return{text:`D-${diff}`,cls:'t-so'};
+  return{text:`D-${diff}`,cls:'t-ok'};
+}
+
+// ────────────────────────────────────────
+//  LOGIN
+// ────────────────────────────────────────
+function buildLogin(){
+  const opts=document.getElementById('loginOpts');opts.innerHTML='';
+  ALL_PEOPLE.forEach(u=>{
+    const isAdm=u.id==='ceo'||u.id==='jenna';
+    const btn=document.createElement('button');
+    btn.className='login-btn'+(isAdm?' adm':'');
+    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?`👑 ${u.name} (부원장)`:u.name;
+    btn.innerHTML=`<div class="l-av" style="background:${u.color}">${u.initial}</div><span>${lbl}</span>`;
+    btn.onclick=()=>doLogin(u);
+    opts.appendChild(btn);
+  });
+}
+function doLogin(u){
+  CU=u;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('sbName').textContent=u.name;
+  document.getElementById('sbRoleLbl').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
+  const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
+  // admin badge
+  const badge=document.getElementById('adminBadge');
+  if(isAdmin()){
+    badge.style.display='inline-flex';
+    badge.style.cssText=`display:inline-flex;align-items:center;gap:4px;background:${u.color};color:white;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;margin-top:6px`;
+    badge.textContent=u.id==='ceo'?'👑 대표':'👑 부원장';
+  } else badge.style.display='none';
+  if(isAdmin()) document.getElementById('btnNotice').style.display='inline-flex';
+  buildEmpNav(); showPage('home');
+}
+function logout(){
+  CU=null;
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('btnNotice').style.display='none';
+}
+
+// ────────────────────────────────────────
+//  NAV
+// ────────────────────────────────────────
+function buildEmpNav(){
+  const list=document.getElementById('empNavList');list.innerHTML='';
+  const vis=isAdmin()?ALL_PEOPLE:EMPS.filter(e=>e.id===CU.id);
+  vis.forEach(emp=>{
+    const el=document.createElement('div');
+    el.className='emp-nav';el.style.setProperty('--ec',emp.color);el.dataset.eid=emp.id;
+    const isSelf=emp.id===CU.id;
+    const roleTag=emp.role?` <span style="font-size:10px;color:var(--text3);font-weight:400">${emp.role}</span>`:'';
+    const selfTag=isSelf?' <span style="font-size:10px;color:var(--text3)">(나)</span>':'';
+    el.innerHTML=`<div class="e-av" style="background:${emp.color}">${emp.initial}</div><span>${emp.name}${roleTag}${selfTag}</span>`;
+    el.onclick=()=>showEmpPage(emp.id);
+    list.appendChild(el);
+  });
+}
+
+const PAGES=['home','board','calendar','emp'];
+function setActiveNav(pg,eid){
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===pg));
+  document.querySelectorAll('.emp-nav').forEach(el=>el.classList.toggle('active',el.dataset.eid===eid));
+}
+function showPage(p){
+  PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
+  document.getElementById('page-'+p).classList.remove('hidden');
+  curEmpId=null;setActiveNav(p,null);
+  const titles={home:'홈',board:'전체 업무',calendar:'달력'};
+  document.getElementById('topTitle').textContent=titles[p]||'';
+  document.getElementById('topSub').textContent='';
+  document.getElementById('btnTask').textContent='+ 업무 추가';
+  document.getElementById('btnTask').onclick=()=>openTaskModal('');
+  if(p==='home')   renderHome();
+  if(p==='board')  renderBoard();
+  if(p==='calendar')renderCal();
+}
+function showEmpPage(empId){
+  PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
+  document.getElementById('page-emp').classList.remove('hidden');
+  curEmpId=empId;setActiveNav(null,empId);
+  const emp=getEmp(empId);
+  document.getElementById('topTitle').textContent=`${emp.name}의 업무 공간`;
+  document.getElementById('topSub').textContent='개인 업무 보드';
+  document.getElementById('btnTask').textContent=`+ ${emp.name} 업무 추가`;
+  document.getElementById('btnTask').onclick=()=>openTaskModal(empId);
+  renderEmpPage(empId);
+}
+
+// ────────────────────────────────────────
+//  HOME
+// ────────────────────────────────────────
+function renderHome(){renderNotices();renderHomeSummary();}
+function renderNotices(){
+  const list=document.getElementById('noticeList');
+  document.getElementById('noticeBadge').textContent=`활성 ${notices.filter(n=>!n.done).length}개`;
+  if(!notices.length){list.innerHTML='<div class="empty"><div class="empty-ico">📋</div>공지가 없습니다</div>';return;}
+  list.innerHTML='';
+  notices.forEach(n=>{
+    const row=document.createElement('div');
+    row.className='notice-row'+(n.done?' done':'');
+    row.innerHTML=`
+      <span style="color:var(--primary);flex-shrink:0;margin-top:1px">📌</span>
+      <div class="n-text">${n.text}<div class="n-date">${n.date||''}</div></div>
+      <div class="n-btns">
+        <button class="ico-btn" onclick="toggleNotice('${n.id}')">${n.done?'↩':'✓'}</button>
+        ${isAdmin()?`<button class="ico-btn" onclick="delNotice('${n.id}')">✕</button>`:''}
+      </div>`;
+    list.appendChild(row);
+  });
+}
+function renderHomeSummary(){
+  const grid=document.getElementById('homeSummary');grid.innerHTML='';
+  // shared tasks only for public view
+  const sharedTasks=tasks.filter(t=>t.shared);
+  const groups=[
+    {id:'_u',name:'미배정',color:'#9ca3af',items:sharedTasks.filter(t=>!t.assignee)},
+    ...EMPS.map(e=>({id:e.id,name:e.name,color:e.color,items:sharedTasks.filter(t=>t.assignee===e.id)})),
+    {id:'ceo',name:'CEO',color:CEO.color,items:sharedTasks.filter(t=>t.assignee==='ceo')},
+  ];
+  groups.filter(g=>g.items.length>0||isAdmin()).forEach(g=>{
+    const div=document.createElement('div');div.className='sum-block';
+    const active=g.items.filter(t=>!t.done).length;
+    div.innerHTML=`<div class="sum-head"><div class="e-dot" style="background:${g.color}"></div>${g.name}<span class="badge" style="margin-left:auto">${active}</span></div><div id="sb-${g.id}"></div>`;
+    const body=div.querySelector(`#sb-${g.id}`);
+    const sorted=sortT(g.items);
+    if(!sorted.length) body.innerHTML='<div class="empty" style="padding:10px;font-size:12px">업무 없음</div>';
+    sorted.slice(0,5).forEach(t=>{
+      const dl=dueLabel(t.due);
+      const row=document.createElement('div');
+      row.className='sum-row'+(t.done?' done':'');
+      row.innerHTML=`
+        <div class="mini-ck" onclick="qToggle('${t.id}',event)"><div class="mini-dot"></div></div>
+        <div class="sum-title">${t.idx?`(${t.idx}) `:''}${t.title}</div>
+        ${dl?`<span class="tag ${dl.cls}" style="font-size:10px;padding:1px 5px">${dl.text}</span>`:''}`;
+      row.onclick=e=>{if(!e.target.classList.contains('mini-ck')&&!e.target.classList.contains('mini-dot'))openTaskEdit(t.id);};
+      body.appendChild(row);
+    });
+    if(sorted.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 13px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent=`+${sorted.length-5}개 더`;m.onclick=()=>g.id==='_u'?showPage('board'):showEmpPage(g.id);body.appendChild(m);}
+    grid.appendChild(div);
+  });
+}
+function qToggle(id,e){e&&e.stopPropagation();const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;sv('tasks4',tasks);refreshAll();}}
+
+// ────────────────────────────────────────
+//  BOARD (shared tasks only)
+// ────────────────────────────────────────
+function setBoardFilter(f,el){
+  boardFilter=f;
+  document.querySelectorAll('#boardTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');renderBoard();
+}
+function renderBoard(){
+  const grid=document.getElementById('boardGrid');grid.innerHTML='';
+  // 보드에는 shared 업무만
+  let f=tasks.filter(t=>t.shared);
+  if(boardFilter==='unassigned') f=f.filter(t=>!t.assignee);
+  else if(boardFilter==='active') f=f.filter(t=>!t.done&&t.assignee);
+  else if(boardFilter==='done')  f=f.filter(t=>t.done);
+
+  const groups=[
+    {id:'_u',name:'미배정',color:'#9ca3af',items:f.filter(t=>!t.assignee)},
+    ...EMPS.map(e=>({id:e.id,name:e.name,color:e.color,items:f.filter(t=>t.assignee===e.id)})),
+    {id:'ceo',name:'CEO',color:CEO.color,items:f.filter(t=>t.assignee==='ceo')},
+  ];
+  groups.forEach(g=>{
+    const col=document.createElement('div');col.className='board-col';
+    const active=g.items.filter(t=>!t.done).length;
+    col.innerHTML=`<div class="bc-head"><div class="bc-title"><div class="e-dot" style="background:${g.color}"></div>${g.name}</div><span class="badge">${active}</span></div><div class="bc-tasks" id="bc-${g.id}"></div>`;
+    grid.appendChild(col);
+    sortT(g.items).forEach(t=>appendTC(`bc-${g.id}`,t,g.id==='_u'));
+    if(!g.items.length) document.getElementById(`bc-${g.id}`).innerHTML='<div class="empty" style="padding:14px;font-size:12px">업무 없음</div>';
+    if(isAdmin()||CU.id===g.id||g.id==='_u'){
+      const btn=document.createElement('button');
+      btn.className='btn btn-gh btn-sm';btn.textContent='+ 추가';
+      btn.onclick=()=>openTaskModal(g.id==='_u'?'':g.id);
+      col.appendChild(btn);
+    }
+  });
+}
+function appendTC(colId,t,showAss){
+  const col=document.getElementById(colId);if(!col)return;
+  const emp=getEmp(t.assignee),dl=dueLabel(t.due);
+  const ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'';
+  const card=document.createElement('div');card.className='tc'+(t.done?' done':'');
+  card.innerHTML=`
+    <div class="tc-top">
+      <div class="tc-ck" onclick="qToggle('${t.id}',event)"><span class="tc-ck-m">✓</span></div>
+      <div class="tc-title">${t.idx?`<span style="color:var(--text3);font-size:11px;margin-right:3px">(${t.idx})</span>`:''}${t.title}</div>
+      <div class="tc-acts"><button class="ico-btn" onclick="openTaskEdit('${t.id}')">✎</button></div>
+    </div>
+    <div class="tc-foot">
+      ${showAss&&en?`<span class="tag" style="background:${ec}18;color:${ec}">${en}</span>`:''}
+      ${t.createdAt?`<span class="tag">📝 ${t.createdAt}</span>`:''}
+      <span class="tag ${dl?dl.cls:''}">⏱ 기한: ${dl?`${t.due} (${dl.text})`:'없음'}</span>
+      ${t.files&&t.files.length?`<span class="tag">📎 ${t.files.length}</span>`:''}
+    </div>`;
+  col.appendChild(card);
+}
+
+// ────────────────────────────────────────
+//  CALENDAR
+// ────────────────────────────────────────
+function setCalView(v,el){
+  calView=v;
+  document.querySelectorAll('.vt-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');renderCal();
+}
+function calNav(dir){
+  if(calView==='month'){
+    if(dir===0) calDate=new Date();
+    else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+dir,1);
+  } else {
+    if(dir===0){calDate=new Date();}
+    else{calDate=new Date(calDate);calDate.setDate(calDate.getDate()+(dir*7));}
+  }
+  renderCal();
+}
+function renderCal(){
+  if(calView==='month') renderMonthCal();
+  else renderWeekCal();
+}
+
+// only shared tasks visible on calendar
+function calVisibleTasks(){
+  return tasks.filter(t=>t.shared);
+}
+
+function renderMonthCal(){
+  const y=calDate.getFullYear(),m=calDate.getMonth();
+  document.getElementById('calTitle').textContent=`${y}년 ${m+1}월`;
+  const body=document.getElementById('calBody');
+  body.innerHTML='';
+  const wrap=document.createElement('div');wrap.className='cal-wrap';
+  const gridEl=document.createElement('div');gridEl.className='cal-grid';
+  ['일','월','화','수','목','금','토'].forEach(d=>{const el=document.createElement('div');el.className='cal-lbl';el.textContent=d;gridEl.appendChild(el);});
+
+  const first=new Date(y,m,1),last=new Date(y,m+1,0);
+  const today=new Date();today.setHours(0,0,0,0);
+  const vis=calVisibleTasks();
+
+  const mkCell=(date,isCur)=>{
+    const ds=date.toISOString().split('T')[0];
+    const cell=document.createElement('div');
+    cell.className='cal-cell'+(!isCur?' other':'');
+    if(date.getTime()===today.getTime())cell.classList.add('today');
+    const dn=document.createElement('div');dn.className='cal-dn';dn.textContent=date.getDate();cell.appendChild(dn);
+    const dayT=vis.filter(t=>t.due===ds);
+    dayT.slice(0,4).forEach(t=>{
+      const emp=getEmp(t.assignee),color=emp?emp.color:'#9ca3af';
+      const chip=document.createElement('div');chip.className='cal-chip'+(t.done?' done-chip':'');
+      chip.style.cssText=`background:${color}20;color:${color}`;
+      // (번호) 업무명
+      chip.textContent=(t.idx?`(${t.idx}) `:'')+t.title;
+      chip.title=t.title;chip.onclick=()=>openTaskEdit(t.id);
+      cell.appendChild(chip);
+    });
+    if(dayT.length>4){const m2=document.createElement('div');m2.className='cal-more';m2.textContent=`+${dayT.length-4}개`;cell.appendChild(m2);}
+    gridEl.appendChild(cell);
+  };
+  for(let i=0;i<first.getDay();i++) mkCell(new Date(y,m,i-first.getDay()+1),false);
+  for(let d=1;d<=last.getDate();d++) mkCell(new Date(y,m,d),true);
+  const rem=(7-(first.getDay()+last.getDate())%7)%7;
+  for(let d=1;d<=rem;d++) mkCell(new Date(y,m+1,d),false);
+  wrap.appendChild(gridEl);body.appendChild(wrap);
+}
+
+function renderWeekCal(){
+  // Find Monday of current week
+  const base=new Date(calDate);
+  const dow=base.getDay(); // 0=Sun
+  const diffToSun=dow;
+  const weekStart=new Date(base);weekStart.setDate(base.getDate()-diffToSun);
+
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);days.push(d);}
+
+  const y=days[0].getFullYear(),m1=days[0].getMonth()+1,m2=days[6].getMonth()+1;
+  document.getElementById('calTitle').textContent=
+    m1===m2?`${y}년 ${m1}월 ${days[0].getDate()}일 ~ ${days[6].getDate()}일`
+           :`${y}년 ${m1}월 ${days[0].getDate()}일 ~ ${m2}월 ${days[6].getDate()}일`;
+
+  const body=document.getElementById('calBody');body.innerHTML='';
+  const today=new Date();today.setHours(0,0,0,0);
+  const vis=calVisibleTasks();
+
+  // Week header + columns
+  const wrap=document.createElement('div');wrap.className='week-wrap';
+
+  // Day headers
+  const hGrid=document.createElement('div');hGrid.className='week-grid';
+  const dayNames=['일','월','화','수','목','금','토'];
+  days.forEach((d,i)=>{
+    const isToday=d.getTime()===today.getTime();
+    const hd=document.createElement('div');hd.className='week-day-head'+(isToday?' today-col':'');
+    hd.innerHTML=`<div class="wdh-name">${dayNames[d.getDay()]}</div><div class="wdh-num">${d.getDate()}</div>`;
+    hGrid.appendChild(hd);
+  });
+  wrap.appendChild(hGrid);
+
+  // Task columns
+  const cGrid=document.createElement('div');cGrid.className='week-cols';
+  days.forEach(d=>{
+    const ds=d.toISOString().split('T')[0];
+    const col=document.createElement('div');col.className='week-col';
+    const dayT=vis.filter(t=>t.due===ds);
+    if(!dayT.length){col.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 2px">—</div>';}
+    dayT.forEach(t=>{
+      const emp=getEmp(t.assignee),color=emp?emp.color:'#9ca3af',name=emp?emp.name:'미배정';
+      const chip=document.createElement('div');chip.className='week-chip'+(t.done?' done-chip':'');
+      chip.style.cssText=`background:${color}18;color:${color};border-left:3px solid ${color}`;
+      // * 이름: 업무명 (번호)
+      chip.textContent=`* ${name}: ${t.title}${t.idx?` (${t.idx})`:''}`;
+      chip.onclick=()=>openTaskEdit(t.id);
+      col.appendChild(chip);
+    });
+    cGrid.appendChild(col);
+  });
+  wrap.appendChild(cGrid);
+  body.appendChild(wrap);
+
+  // ── Weekly sidebar: 이번 주 직원별 업무 요약 ──
+  const sidebar=document.createElement('div');sidebar.className='week-sidebar';
+  sidebar.innerHTML=`<div class="ws-title">📋 이번 주 직원별 업무 <span style="font-size:11px;color:var(--text3);font-weight:400">${days[0].getMonth()+1}/${days[0].getDate()} ~ ${days[6].getMonth()+1}/${days[6].getDate()}</span></div>`;
+
+  // Collect week tasks per person
+  const weekDs=new Set(days.map(d=>d.toISOString().split('T')[0]));
+  const weekTasks=vis.filter(t=>t.due&&weekDs.has(t.due));
+
+  const empGroups=[
+    {emp:{id:'_u',name:'미배정',color:'#9ca3af'},tasks:weekTasks.filter(t=>!t.assignee)},
+    ...ALL_PEOPLE.map(e=>({emp:e,tasks:weekTasks.filter(t=>t.assignee===e.id)})),
+  ].filter(g=>g.tasks.length>0);
+
+  if(!empGroups.length){
+    sidebar.innerHTML+='<div class="empty" style="padding:12px">이번 주 마감 업무가 없습니다</div>';
+  } else {
+    empGroups.forEach(({emp,tasks:et})=>{
+      const block=document.createElement('div');block.className='ws-emp-block';
+      block.innerHTML=`<div class="ws-emp-name"><div class="e-dot" style="background:${emp.color};width:8px;height:8px;flex-shrink:0"></div>* ${emp.name}</div>`;
+      et.forEach(t=>{
+        const item=document.createElement('div');
+        item.className='ws-task-item';
+        item.style.borderColor=emp.color;
+        const dl=dueLabel(t.due);
+        item.textContent=`${t.idx?`(${t.idx}) `:''}${t.title}${t.due?` — ${t.due.slice(5).replace('-','/')}${dl?' ('+dl.text+')':''}` :''}`;
+        block.appendChild(item);
+      });
+      sidebar.appendChild(block);
+    });
+  }
+  body.appendChild(sidebar);
+}
+
+// ────────────────────────────────────────
+//  EMP PAGE
+// ────────────────────────────────────────
+function renderEmpPage(empId){
+  const emp=getEmp(empId);if(!emp)return;
+  const av=document.getElementById('ehAv');av.textContent=emp.initial;av.style.background=emp.color;
+  document.getElementById('ehName').textContent=empId===CU.id?`${emp.name} (나의 공간)`:emp.name;
+  // All tasks of this emp (private + shared)
+  const et=tasks.filter(t=>t.assignee===empId);
+  const done=et.filter(t=>t.done).length,active=et.filter(t=>!t.done).length;
+  const overdue=et.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length;
+  document.getElementById('ehSub').textContent=`총 ${et.length}개 업무 (개인 ${et.filter(t=>!t.shared).length}개 + 공유 ${et.filter(t=>t.shared).length}개)`;
+  document.getElementById('empStats').innerHTML=`
+    <div class="stat-card"><div class="stat-val" style="color:var(--primary)">${active}</div><div class="stat-lbl">진행 중</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--success)">${done}</div><div class="stat-lbl">완료</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--danger)">${overdue}</div><div class="stat-lbl">기한 초과</div></div>`;
+  const canEdit=isAdmin()||CU.id===empId;
+  document.getElementById('empAddBtn').style.display=canEdit?'inline-flex':'none';
+  renderEmpList(empId);renderCeoPanel(empId);
+}
+function setEmpFilter(f,el){
+  empFilter=f;
+  document.querySelectorAll('#empTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');renderEmpList(curEmpId);
+}
+function renderEmpList(empId){
+  const wrap=document.getElementById('empTaskList');wrap.innerHTML='';
+  // Show ALL tasks (private+shared) to owner and admins; only shared to others
+  const canSeePrivate=isAdmin()||CU.id===empId;
+  let et=tasks.filter(t=>t.assignee===empId&&(canSeePrivate||t.shared));
+  if(empFilter==='active') et=et.filter(t=>!t.done);
+  else if(empFilter==='done') et=et.filter(t=>t.done);
+  et=sortT(et);
+  if(!et.length){wrap.innerHTML='<div class="empty"><div class="empty-ico">✅</div>업무가 없습니다</div>';return;}
+  et.forEach(t=>{
+    const dl=dueLabel(t.due);
+    const card=document.createElement('div');
+    card.className='etc'+(t.done?' done':'')+(t.shared?' shared':' private');
+    card.innerHTML=`
+      <div class="etc-top">
+        <div class="tc-ck" onclick="qToggle('${t.id}',event)" style="margin-top:2px;flex-shrink:0"><span class="tc-ck-m">✓</span></div>
+        <div class="etc-body">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+            <div class="etc-title" style="margin:0">${t.idx?`<span style="color:var(--text3);font-size:11px">(${t.idx})</span> `:''}${t.title}</div>
+            <span class="status-badge ${t.shared?'sb-shared':'sb-private'}">${t.shared?'📋 공유':'🔒 개인'}</span>
+          </div>
+          ${t.note?`<div class="etc-note">${t.note}</div>`:''}
+          <div class="etc-foot">
+            ${t.createdAt?`<span class="tag">📝 ${t.createdAt}</span>`:''}
+            <span class="tag ${dl?dl.cls:''}">⏱ 기한: ${dl?`${t.due} (${dl.text})`:'없음'}</span>
+            ${t.files&&t.files.length?`<span class="tag">📎 ${t.files.length}개 파일</span>`:''}
+          </div>
+          ${t.files&&t.files.length?`<div class="etc-files">${t.files.map(f=>`<div class="etc-file-row">📄 <span style="font-family:'JetBrains Mono',monospace">${f.name}</span></div>`).join('')}</div>`:''}
+        </div>
+        <div class="tc-acts" style="opacity:1">
+          ${canSeePrivate||CU.id===empId?`<button class="ico-btn" onclick="openTaskEdit('${t.id}')">✎</button>`:''}
+          ${!t.shared&&(CU.id===empId||isAdmin())?`<button class="ico-btn" onclick="shareTask('${t.id}')" title="달력·보드에 공유" style="color:var(--success)">↑공유</button>`:''}
+        </div>
+      </div>`;
+    wrap.appendChild(card);
+  });
+}
+
+// ── Share a private task to board/calendar ──
+function shareTask(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  t.shared=true;rebuildIdx();sv('tasks4',tasks);
+  refreshAll();
+  const flash=document.createElement('div');
+  flash.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 16px rgba(16,185,129,.35);animation:fadeInUp .2s ease';
+  flash.textContent=`✓ (${t.idx}) 달력·전체 보드에 공유됐어요!`;
+  document.body.appendChild(flash);setTimeout(()=>flash.remove(),2500);
+}
+
+// ────────────────────────────────────────
+//  QUICK ADD
+// ────────────────────────────────────────
+function toggleQADue(r){document.getElementById('qaDueInp').style.display=r.value==='date'?'block':'none';if(r.value==='none')document.getElementById('qaDueInp').value='';}
+function toggleMDue(r){document.getElementById('mDue').style.display=r.value==='date'?'inline-block':'none';if(r.value==='none')document.getElementById('mDue').value='';}
+
+function toggleQA(){
+  const box=document.getElementById('qaBox');box.classList.toggle('hidden');
+  if(!box.classList.contains('hidden')){
+    qaFiles=[];renderQAFiles();
+    document.getElementById('qaTitleInp').value='';
+    document.getElementById('qaDueInp').value='';
+    document.getElementById('qaDueInp').style.display='none';
+    document.getElementById('qaNoteInp').value='';
+    document.getElementById('qaShareChk').checked=false;
+    document.querySelectorAll('input[name="qaDueM"]').forEach(r=>r.checked=r.value==='none');
+    document.getElementById('qaCreatedLbl').textContent='작성일: '+new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('shareRow').style.display=isAdmin()?'none':'flex';
+    document.getElementById('qaTitleInp').focus();
+  }
+}
+function handleQAFiles(e){Array.from(e.target.files).forEach(f=>qaFiles.push({name:f.name,size:f.size}));renderQAFiles();}
+function renderQAFiles(){
+  document.getElementById('qaFileList').innerHTML=qaFiles.map((f,i)=>`
+    <div class="qa-frow"><span>📄</span><span class="qa-fname">${f.name}</span>
+    <span style="color:var(--text3)">${f.size?(f.size/1024).toFixed(1)+'KB':''}</span>
+    <button class="qa-rm" onclick="rmQA(${i})">✕</button></div>`).join('');
+}
+function rmQA(i){qaFiles.splice(i,1);renderQAFiles();}
+
+function saveQATask(){
+  const title=document.getElementById('qaTitleInp').value.trim();
+  if(!title){document.getElementById('qaTitleInp').focus();return;}
+  const shared=isAdmin()||document.getElementById('qaShareChk').checked;
+  const dueM=document.querySelector('input[name="qaDueM"]:checked').value;
+  const due=dueM==='date'?document.getElementById('qaDueInp').value:'';
+  const createdAt=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  tasks.unshift({id:uid(),title,assignee:curEmpId,due,createdAt,note:document.getElementById('qaNoteInp').value.trim(),done:false,files:[...qaFiles],shared});
+  rebuildIdx();sv('tasks4',tasks);toggleQA();refreshAll();
+  if(shared){
+    const flash=document.createElement('div');
+    flash.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;box-shadow:0 4px 16px rgba(16,185,129,.35);animation:fadeInUp .2s ease';
+    flash.textContent='✓ 달력·전체 보드에 공유됐어요!';
+    document.body.appendChild(flash);setTimeout(()=>flash.remove(),2500);
+  }
+  renderEmpPage(curEmpId);
+}
+
+// ────────────────────────────────────────
+//  NOTICE
+// ────────────────────────────────────────
+function saveNotice(){
+  const text=document.getElementById('mNoticeText').value.trim();if(!text)return;
+  notices.unshift({id:uid(),text,done:false,date:nowStr()});
+  sv('notices4',notices);document.getElementById('mNoticeText').value='';
+  closeModal('noticeModal');renderNotices();
+}
+function toggleNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('notices4',notices);renderNotices();}}
+function delNotice(id){notices=notices.filter(n=>n.id!==id);sv('notices4',notices);renderNotices();}
+
+// ────────────────────────────────────────
+//  TASK MODAL
+// ────────────────────────────────────────
+function openTaskModal(pre){
+  editingId=null;mFiles=[];
+  document.getElementById('mTitle').textContent='업무 추가';
+  document.getElementById('mTaskTitle').value='';
+  document.getElementById('mDue').value='';document.getElementById('mDue').style.display='none';
+  document.getElementById('mNote').value='';
+  document.getElementById('mDelBtn').style.display='none';
+  document.getElementById('mCreatedVal').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  document.querySelectorAll('input[name="mDueM"]').forEach(r=>r.checked=r.value==='none');
+  buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
+  renderMFiles();openModal('taskModal');
+}
+function openTaskEdit(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  editingId=id;mFiles=[...(t.files||[])];
+  document.getElementById('mTitle').textContent='업무 편집';
+  document.getElementById('mTaskTitle').value=t.title;
+  document.getElementById('mNote').value=t.note||'';
+  document.getElementById('mDelBtn').style.display='inline-flex';
+  document.getElementById('mCreatedVal').textContent=t.createdAt||new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  const hasDue=!!t.due;
+  document.querySelectorAll('input[name="mDueM"]').forEach(r=>r.checked=r.value===(hasDue?'date':'none'));
+  const di=document.getElementById('mDue');di.style.display=hasDue?'inline-block':'none';di.value=t.due||'';
+  buildAssignSel(t.assignee);renderMFiles();openModal('taskModal');
+}
+function buildAssignSel(sel){
+  const s=document.getElementById('mAssignee');
+  s.innerHTML='<option value="">— 미배정 —</option>';
+  EMPS.forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name+(e.role?` (${e.role})`:'');o.selected=e.id===sel;s.appendChild(o);});
+  const co=document.createElement('option');co.value='ceo';co.textContent='CEO (대표)';co.selected=sel==='ceo';s.appendChild(co);
+}
+function handleMFiles(e){Array.from(e.target.files).forEach(f=>mFiles.push({name:f.name,size:f.size}));renderMFiles();}
+function renderMFiles(){
+  document.getElementById('mFileList').innerHTML=mFiles.map((f,i)=>`
+    <div class="fchip"><span>📄</span><span class="fchip-name">${f.name}</span>
+    <span style="color:var(--text3);font-size:11px">${f.size?(f.size/1024).toFixed(1)+'KB':''}</span>
+    <button class="qa-rm" onclick="rmMF(${i})">✕</button></div>`).join('');
+}
+function rmMF(i){mFiles.splice(i,1);renderMFiles();}
+function saveTask(){
+  const title=document.getElementById('mTaskTitle').value.trim();if(!title)return;
+  const assignee=document.getElementById('mAssignee').value;
+  const dueM=document.querySelector('input[name="mDueM"]:checked').value;
+  const due=dueM==='date'?document.getElementById('mDue').value:'';
+  const note=document.getElementById('mNote').value;
+  const createdAt=document.getElementById('mCreatedVal').textContent;
+  if(editingId){
+    const t=tasks.find(t=>t.id===editingId);
+    if(t){t.title=title;t.assignee=assignee;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;}
+  } else {
+    // 모달로 추가하는 업무는 기본 shared=true (관리자 또는 전체 추가)
+    tasks.unshift({id:uid(),title,assignee,due,note,createdAt,done:false,files:mFiles,shared:true});
+  }
+  rebuildIdx();sv('tasks4',tasks);closeModal('taskModal');refreshAll();
+}
+function deleteTask(){
+  if(!editingId)return;
+  tasks=tasks.filter(t=>t.id!==editingId);rebuildIdx();sv('tasks4',tasks);closeModal('taskModal');refreshAll();
+}
+
+// ────────────────────────────────────────
+//  CEO COMMENT
+// ────────────────────────────────────────
+function renderCeoPanel(empId){
+  const wrap=document.getElementById('ceoPanelWrap');wrap.innerHTML='';
+  if(!isAdmin()||empId===CU.id)return;
+  const et=tasks.filter(t=>t.assignee===empId);
+  const allC=[];et.forEach(t=>(comments[t.id]||[]).forEach(c=>allC.push({...c,tt:t.title,tid:t.id})));
+  allC.sort((a,b)=>b.date.localeCompare(a.date));
+  const panel=document.createElement('div');panel.className='ceo-panel';
+  panel.innerHTML=`
+    <div class="cp-head"><div class="cp-title">🔒 관리자 전용 코멘트 <span class="cp-badge">ADMIN ONLY</span></div></div>
+    <div class="cmt-list">
+      ${allC.length?allC.map(c=>`<div class="cmt-item"><div class="cmt-task">📋 ${c.tt}</div>${c.text}<div class="cmt-date">${c.date}</div><button class="cmt-del" onclick="delCmt('${c.tid}','${c.id}')">✕</button></div>`).join('')
+        :'<div style="text-align:center;color:rgba(255,255,255,.35);font-size:12px;padding:8px">코멘트가 없습니다</div>'}
+    </div>
+    <div class="cmt-row">
+      <select class="cmt-inp" id="cmtTask" style="max-width:170px">
+        <option value="">업무 선택</option>
+        ${et.map(t=>`<option value="${t.id}">${t.title.slice(0,22)}${t.title.length>22?'...':''}</option>`).join('')}
+      </select>
+      <input class="cmt-inp" id="cmtTxt" placeholder="코멘트 입력..." style="flex:1"/>
+      <button class="cmt-sub" onclick="addCmt('${empId}')">저장</button>
+    </div>`;
+  wrap.appendChild(panel);
+}
+function addCmt(empId){
+  const tid=document.getElementById('cmtTask').value,txt=document.getElementById('cmtTxt').value.trim();
+  if(!tid||!txt)return;
+  if(!comments[tid])comments[tid]=[];
+  comments[tid].push({id:uid(),text:txt,date:new Date().toLocaleString('ko-KR')});
+  sv('comments4',comments);document.getElementById('cmtTxt').value='';renderCeoPanel(empId);
+}
+function delCmt(tid,cid){
+  if(!comments[tid])return;
+  comments[tid]=comments[tid].filter(c=>c.id!==cid);sv('comments4',comments);renderCeoPanel(curEmpId);
+}
+
+// ────────────────────────────────────────
+//  REFRESH
+// ────────────────────────────────────────
+function refreshAll(){
+  if(!document.getElementById('page-home').classList.contains('hidden'))    renderHome();
+  if(!document.getElementById('page-board').classList.contains('hidden'))   renderBoard();
+  if(!document.getElementById('page-calendar').classList.contains('hidden'))renderCal();
+  if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId) renderEmpPage(curEmpId);
+}
+
+// ────────────────────────────────────────
+//  MODAL UTILS
+// ────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');setTimeout(()=>document.querySelector(`#${id} input,#${id} textarea`)?.focus(),80);}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.m-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.m-overlay.open').forEach(o=>o.classList.remove('open'));});
+
+// ────────────────────────────────────────
+//  INIT
+// ────────────────────────────────────────
+buildLogin();
+</script>
+</body>
+</html>
