@@ -370,6 +370,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 
       <!-- EMP PAGE -->
       <div id="page-emp" class="hidden">
+        <div style="margin-bottom:10px">
+          <button class="btn btn-o btn-sm" onclick="showPage('home')" style="font-size:13px">← 전체 보기</button>
+        </div>
         <div class="emp-hero">
           <div class="eh-left">
             <div class="eh-av" id="ehAv"></div>
@@ -459,6 +462,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
       <input type="file" id="mFileInp" multiple style="display:none" onchange="handleMFiles(event)" />
       <div class="fchip-list" id="mFileList"></div>
     </div>
+    <label id="mShareRow" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;cursor:pointer;margin-bottom:8px;font-size:13px;font-weight:600;color:#065f46;">
+      <input type="checkbox" id="mShareChk" style="width:16px;height:16px;accent-color:var(--success);cursor:pointer" />
+      📅 달력에 공유
+      <span style="font-weight:400;font-size:11px;color:#6ee7b7">— 체크하면 전체 달력·보드에 표시</span>
+    </label>
     <div class="m-foot">
       <div class="m-foot-l"><button class="btn btn-del" id="mDelBtn" onclick="deleteTask()" style="display:none">삭제</button></div>
       <button class="btn btn-o" onclick="closeModal('taskModal')">취소</button>
@@ -965,6 +973,7 @@ function renderEmpList(empId){
           ${t.files&&t.files.length?`<div class="etc-files">${t.files.map(f=>`<div class="etc-file-row">📄 <span style="font-family:'JetBrains Mono',monospace">${f.name}</span></div>`).join('')}</div>`:''}
         </div>
         <div class="tc-acts" style="opacity:1">
+          ${t.done&&(canSeePrivate||CU.id===empId)?`<button class="ico-btn" onclick="qToggle('${t.id}',event)" title="진행 중으로 되돌리기" style="color:var(--warn);font-size:11px;font-weight:600;opacity:1">↩ 되돌리기</button>`:''}
           ${canSeePrivate||CU.id===empId?`<button class="ico-btn" onclick="openTaskEdit('${t.id}')">✎</button>`:''}
           ${!t.shared&&(CU.id===empId||isAdmin())?`<button class="ico-btn" onclick="shareTask('${t.id}')" title="달력·보드에 공유" style="color:var(--success)">↑공유</button>`:''}
         </div>
@@ -1056,6 +1065,8 @@ function openTaskModal(pre){
   document.getElementById('mDelBtn').style.display='none';
   document.getElementById('mCreatedVal').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   document.querySelectorAll('input[name="mDueM"]').forEach(r=>r.checked=r.value==='none');
+  document.getElementById('mShareChk').checked=false;
+  document.getElementById('mShareRow').style.display='flex';
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
   renderMFiles();openModal('taskModal');
 }
@@ -1070,6 +1081,8 @@ function openTaskEdit(id){
   const hasDue=!!t.due;
   document.querySelectorAll('input[name="mDueM"]').forEach(r=>r.checked=r.value===(hasDue?'date':'none'));
   const di=document.getElementById('mDue');di.style.display=hasDue?'inline-block':'none';di.value=t.due||'';
+  document.getElementById('mShareChk').checked=!!t.shared;
+  document.getElementById('mShareRow').style.display='flex';
   buildAssignSel(t.assignee);renderMFiles();openModal('taskModal');
 }
 function buildAssignSel(sel){
@@ -1093,12 +1106,12 @@ function saveTask(){
   const due=dueM==='date'?document.getElementById('mDue').value:'';
   const note=document.getElementById('mNote').value;
   const createdAt=document.getElementById('mCreatedVal').textContent;
+  const shared=document.getElementById('mShareChk').checked;
   if(editingId){
     const t=tasks.find(t=>t.id===editingId);
-    if(t){t.title=title;t.assignee=assignee;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;}
+    if(t){t.title=title;t.assignee=assignee;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.shared=shared;}
   } else {
-    // 모달로 추가하는 업무는 기본 shared=true (관리자 또는 전체 추가)
-    tasks.unshift({id:uid(),title,assignee,due,note,createdAt,done:false,files:mFiles,shared:true});
+    tasks.unshift({id:uid(),title,assignee,due,note,createdAt,done:false,files:mFiles,shared});
   }
   rebuildIdx();sv('tasks4',tasks);closeModal('taskModal');refreshAll();
 }
