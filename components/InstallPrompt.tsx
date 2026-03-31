@@ -20,6 +20,7 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (window.matchMedia("(display-mode: standalone)").matches) return;
     if ((navigator as any).standalone) return;
+    if (localStorage.getItem("hideInstallBanner")) return;
 
     const ua = navigator.userAgent;
     const isKakao = /KAKAOTALK/i.test(ua);
@@ -122,7 +123,7 @@ export default function InstallPrompt() {
           ) : (
             <button className="ip-btn" onClick={() => setShowModal(true)}>설치방법 보기</button>
           )}
-          <button className="ip-x" onClick={() => { setShow(false); clearInstallParam(); }}>✕</button>
+          <button className="ip-x" onClick={() => { localStorage.setItem("hideInstallBanner", "1"); setShow(false); clearInstallParam(); }} title="다시 보지 않기">✕</button>
         </div>
       </div>
 
