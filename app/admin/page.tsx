@@ -85,6 +85,11 @@ export default function AdminHubPage() {
           <h2>사이트 관리</h2>
           <p>공지사항 · 셔틀 · 필드트립 · 회원</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push("/staff")}>
+          <div className="ic">👥</div>
+          <h2>직원업무</h2>
+          <p>직원 업무 관리</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
