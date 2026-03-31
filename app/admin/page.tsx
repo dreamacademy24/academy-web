@@ -8,6 +8,7 @@ export default function AdminHubPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -30,14 +31,19 @@ export default function AdminHubPage() {
 .pw-c{background:#fff;padding:48px 40px;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.1);text-align:center;max-width:400px;width:100%;}
 .pw-c h1{font-size:24px;font-weight:800;margin-bottom:8px;}
 .pw-c p{font-size:14px;color:#6b7c93;margin-bottom:28px;}
-.pw-i{width:100%;padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;font-family:'Noto Sans KR',sans-serif;margin-bottom:16px;}.pw-i:focus{border-color:#1a6fc4;}
+.pw-wrap{position:relative;width:100%;margin-bottom:16px;}
+.pw-i{width:100%;padding:12px 16px;padding-right:44px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;font-family:'Noto Sans KR',sans-serif;}.pw-i:focus{border-color:#1a6fc4;}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8;padding:4px;}.pw-eye:hover{color:#1a6fc4;}
 .pw-b{width:100%;padding:13px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pw-b:hover{background:#0d3d7a;}
 .bk-link{display:inline-block;margin-top:20px;font-size:13px;color:#6b7c93;text-decoration:none;}.bk-link:hover{color:#1a6fc4;}
     `}</style>
     <div className="pw-w"><div className="pw-c">
       <h1>Admin</h1>
       <p>관리자 비밀번호를 입력하세요.</p>
-      <input className="pw-i" type="password" placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === "Enter") checkPw(); }} />
+      <div className="pw-wrap">
+        <input className="pw-i" type={showPw ? "text" : "password"} placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === "Enter") checkPw(); }} />
+        <button type="button" className="pw-eye" onClick={() => setShowPw(!showPw)}>{showPw ? "🙈" : "👁"}</button>
+      </div>
       <button className="pw-b" onClick={checkPw}>로그인</button>
       <a href="/" className="bk-link">← 홈으로 돌아가기</a>
     </div></div>
