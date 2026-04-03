@@ -725,6 +725,19 @@ export default function HomePage() {
   </div>
 </div>
 
+{/* ESTIMATE CTA */}
+<div style={{background:"linear-gradient(135deg, #0d3d7a 0%, #1a6fc4 100%)",padding:"64px 0"}}>
+  <div style={{maxWidth:720,margin:"0 auto",padding:"0 24px",textAlign:"center"}}>
+    <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.6)",letterSpacing:"0.06em",marginBottom:8}}>예상 비용이 궁금하신가요?</div>
+    <h2 style={{fontSize:"clamp(24px,3.5vw,36px)",fontWeight:800,color:"#fff",marginBottom:16,lineHeight:1.3}}>지금 바로 견적을 확인해보세요</h2>
+    <p style={{fontSize:15,color:"rgba(255,255,255,0.8)",lineHeight:1.8,marginBottom:32,wordBreak:"keep-all"}}>숙소와 인원을 선택하면 예상 금액을 바로 알 수 있어요.<br/>실제 할인가는 상담을 통해 더 저렴하게 안내드립니다 😊</p>
+    <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+      <a href="/estimate" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"14px 32px",background:"#fff",color:"#1a6fc4",fontSize:15,fontWeight:700,borderRadius:10,fontFamily:"'Noto Sans KR',sans-serif",transition:"transform 140ms,box-shadow 160ms",boxShadow:"0 4px 16px rgba(0,0,0,0.15)"}}>💰 견적 내보기</a>
+      <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:6,padding:"14px 32px",background:"#FEE500",color:"#3C1E1E",fontSize:15,fontWeight:700,borderRadius:10,fontFamily:"'Noto Sans KR',sans-serif",transition:"transform 140ms,box-shadow 160ms",boxShadow:"0 4px 16px rgba(254,229,0,0.35)"}}>💬 카카오톡 상담</a>
+    </div>
+  </div>
+</div>
+
 {/* FAQ */}
 <div className="sec-bg">
   <div className="sec-bg-i">
