@@ -433,6 +433,7 @@ export default function HomePage() {
       <p className="hero-desc">숙소부터 수업, 식사, 액티비티까지 모든 것을 책임지는 프리미엄 올인원 영어캠프</p>
       <div className="hero-btns">
         <a href="http://pf.kakao.com/_Yuhxhn/chat" className="btn-blue" target="_blank" rel="noopener noreferrer">프로그램 신청 →</a>
+        <a href="/estimate" className="btn-outline">💰 견적 내보기</a>
         <a href="#about" className="btn-outline">자세히 알아보기</a>
       </div>
     </div>
