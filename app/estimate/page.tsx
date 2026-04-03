@@ -239,8 +239,8 @@ export default function EstimatePage() {
 
         .no-result{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.06);margin-top:24px;}
 
-        .cta-btn{display:block;width:100%;padding:16px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;text-align:center;margin-top:16px;transition:background 160ms;}
-        .cta-btn:hover{background:#0d3d7a;}
+        .cta-kakao{display:block;width:100%;padding:18px;background:#FEE500;color:#3C1E1E;font-size:17px;font-weight:800;border:none;border-radius:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;text-align:center;margin-top:16px;transition:background 160ms,transform 140ms;box-shadow:0 4px 16px rgba(254,229,0,0.4);}
+        .cta-kakao:hover{background:#F5D800;transform:translateY(-1px);box-shadow:0 6px 24px rgba(254,229,0,0.5);}
 
         .back-link{display:block;text-align:center;margin-top:16px;font-size:13px;color:#6b7c93;}
         .back-link:hover{color:#1a6fc4;}
@@ -289,12 +289,12 @@ export default function EstimatePage() {
             </div>
 
             <div className="result-notice">
-              <strong>정가 기준 견적입니다.</strong><br/>
-              실제 할인가는 상담을 통해 안내드립니다.
+              <strong>💡 실제 할인가는 정가보다 훨씬 저렴합니다!</strong><br/>
+              지금 바로 상담하시면 맞춤 할인가를 안내해 드려요 😊
             </div>
 
-            <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="cta-btn">
-              카카오톡 상담하기
+            <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="cta-kakao">
+              💬 할인가 확인하러 가기
             </a>
           </div>
         ) : (
