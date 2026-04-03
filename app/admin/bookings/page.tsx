@@ -31,7 +31,7 @@ export default function AdminBookingsPage(){
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
   const [loading,setLoading]=useState(false);
-  const [mainTab,setMainTab]=useState<"list"|"invoice"|"receipt">("list");
+  const [mainTab,setMainTab]=useState<"list"|"invoice"|"receipt"|"estimate">("list");
   const ASSIGNEES=["May","Jamin","Yuna","Jena"];
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
 
@@ -117,6 +117,7 @@ export default function AdminBookingsPage(){
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📋 부킹 리스트</button>
       <button className={`main-tab${mainTab==="invoice"?" ac":""}`} onClick={()=>setMainTab("invoice")}>📄 인보이스</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
+      <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적계산기</button>
     </div>
 
     {/* ── 탭1: 부킹 리스트 ── */}
@@ -188,6 +189,11 @@ export default function AdminBookingsPage(){
           </tr>
         ))}
       </tbody></table></div>
+    )}
+
+    {/* ── 탭4: 견적계산기 ── */}
+    {mainTab==="estimate"&&(
+      <iframe src="/estimate" style={{width:'100%',height:'85vh',border:'none',borderRadius:'12px',background:'#fff'}} />
     )}
   </div>
   </>);
