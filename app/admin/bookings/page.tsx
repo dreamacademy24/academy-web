@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import EstimateCalc from "./EstimateCalc";
 
 const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
@@ -192,9 +193,7 @@ export default function AdminBookingsPage(){
     )}
 
     {/* ── 탭4: 견적계산기 ── */}
-    {mainTab==="estimate"&&(
-      <iframe src="/estimate" style={{width:'100%',height:'85vh',border:'none',borderRadius:'12px',background:'#fff'}} />
-    )}
+    {mainTab==="estimate"&&<EstimateCalc/>}
   </div>
   </>);
 }
