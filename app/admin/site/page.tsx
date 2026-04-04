@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { isAdminAuthed } from "@/lib/adminAuth";
 
 // Vercel 배포 시 환경변수에 NEXT_PUBLIC_ADMIN_PASSWORD 추가 필요
 // Vercel Dashboard → Settings → Environment Variables → NEXT_PUBLIC_ADMIN_PASSWORD = (비밀번호)
@@ -61,10 +62,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"notices" | "shuttle" | "fieldtrip" | "members">("notices");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("adminAuthed");
-      if (saved === "true") setAuthed(true);
-    }
+    if (isAdminAuthed()) setAuthed(true);
   }, []);
 
   // notices

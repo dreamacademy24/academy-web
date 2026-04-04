@@ -1,7 +1,23 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { isAdminAuthed, getAdminInfo, clearAdminAuth } from "@/lib/adminAuth";
 
 export default function HomePage() {
+  const [adminName, setAdminName] = useState("");
+
+  useEffect(() => {
+    if (isAdminAuthed()) {
+      const info = getAdminInfo();
+      if (info) setAdminName(info.name);
+    }
+  }, []);
+
+  function handleLogout() {
+    clearAdminAuth();
+    setAdminName("");
+    window.location.href = "/";
+  }
+
   useEffect(() => {
     // Scroll shadow effect
     const handleScroll = () => {
@@ -399,7 +415,13 @@ export default function HomePage() {
     <a href="/community">커뮤니티</a>
   </div>
   <div className="nav-right">
-    <a href="/admin" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px",textDecoration:"none"}}>관리자</a><a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
+    {adminName ? (<>
+      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요 {adminName}님</span>
+      <button onClick={handleLogout} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
+    </>) : (
+      <a href="/admin" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px",textDecoration:"none"}}>관리자</a>
+    )}
+    <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
   </div>
   <div className="hamburger" id="hamburgerBtn">
     <span></span><span></span><span></span>

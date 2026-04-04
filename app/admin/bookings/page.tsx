@@ -2,9 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
-
-const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -37,10 +36,7 @@ export default function AdminBookingsPage(){
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
 
   useEffect(()=>{
-    if(typeof window!=="undefined"){
-      const saved=localStorage.getItem("adminAuthed");
-      if(saved==="true")setAuthed(true);
-    }
+    if(isAdminAuthed())setAuthed(true);
   },[]);
 
   const load=useCallback(async()=>{
@@ -53,8 +49,7 @@ export default function AdminBookingsPage(){
   useEffect(()=>{if(authed)load();},[authed,load]);
 
   function checkPw(){
-    if(pw===ADMIN_PW){if(typeof window!=="undefined")localStorage.setItem("adminAuthed","true");setAuthed(true);}
-    else alert("비밀번호가 올바르지 않습니다.");
+    router.push("/admin");
   }
 
   if(!authed) return(<>
