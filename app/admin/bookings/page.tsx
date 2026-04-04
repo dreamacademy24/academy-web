@@ -15,6 +15,7 @@ const SC:Record<string,{bg:string;color:string}>={
   "접수":{bg:"#fef3c7",color:"#92400e"},
   "인보이스발행":{bg:"#dbeafe",color:"#1e40af"},
   "영수증발행":{bg:"#dcfce7",color:"#166534"},
+  "결제완료":{bg:"#d1fae5",color:"#065f46"},
   "완료":{bg:"#f1f5f9",color:"#64748b"},
 };
 
@@ -139,6 +140,7 @@ export default function AdminBookingsPage(){
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);alert("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
               <button className="act act-r" onClick={async()=>{if(confirm("이 예약을 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){await supabase.from("bookings").delete().eq("id",b.id);load();}}}>삭제</button>
             </td>
           </tr>);
@@ -162,6 +164,7 @@ export default function AdminBookingsPage(){
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act" style={{flex:1,minHeight:40,background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);alert("결제 링크가 복사되었습니다!");}}>💳 결제</button>
               <button className="act act-r" style={{flex:1,minHeight:40}} onClick={async()=>{if(confirm("삭제하시겠습니까?\n"+b.booker_name)){await supabase.from("bookings").delete().eq("id",b.id);load();}}}>삭제</button>
             </div>
           </div>);
