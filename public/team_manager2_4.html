@@ -2391,10 +2391,9 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')document.que
 window.addEventListener('DOMContentLoaded', function(){
   var params=new URLSearchParams(window.location.search);
   var autoUser=params.get('user');
-  var autoToken=params.get('token');
-  if(autoUser&&autoToken){
+  if(autoUser){
     var u=ALL.find(function(e){return e.id===autoUser;});
-    if(u&&autoToken===PASSWORDS[u.id]){doLogin(u);return;}
+    if(u){doLogin(u);return;}
   }
   buildLogin();
 });

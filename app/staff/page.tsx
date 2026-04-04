@@ -5,9 +5,8 @@ import { Suspense } from 'react'
 function StaffIframe() {
   const sp = useSearchParams()
   const user = sp.get('user')
-  const token = sp.get('token')
   let src = '/team_manager2_4.html'
-  if (user && token) src += `?user=${encodeURIComponent(user)}&token=${encodeURIComponent(token)}`
+  if (user) src += `?user=${encodeURIComponent(user)}`
   return (
     <iframe
       src={src}

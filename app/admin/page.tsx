@@ -2,37 +2,57 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
-
-const STAFF = [
-  { id: 'jenna', name: 'Jenna', role: '부원장', color: '#6366f1', pw: 'jenna1234' },
-  { id: 'jamie', name: 'Jamie', role: '직원', color: '#0ea5e9', pw: 'jamie1234' },
-  { id: 'yuna',  name: 'Yuna',  role: '직원', color: '#ec4899', pw: 'yuna1234' },
-  { id: 'hanny', name: 'Hanny', role: '직원', color: '#f59e0b', pw: 'hanny1234' },
-  { id: 'sage',  name: 'Sage',  role: '직원', color: '#10b981', pw: 'sage1234' },
-  { id: 'eric',  name: 'Eric',  role: '직원', color: '#f97316', pw: 'eric1234' },
-  { id: 'ceo',   name: 'CEO',   role: '대표', color: '#1e3a5f', pw: 'ceo1234' },
+const ADMIN_ACCOUNTS = [
+  { id: 'admin-may',   pw: 'may1234',   role: 'admin', name: 'May',   redirect: '/admin/bookings' },
+  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO',   redirect: '/admin/bookings' },
+  { id: 'admin-jenna', pw: 'jenna1234', role: 'staff', name: 'Jenna', staffId: 'jenna' },
+  { id: 'admin-jamie', pw: 'jamie1234', role: 'staff', name: 'Jamie', staffId: 'jamie' },
+  { id: 'admin-yuna',  pw: 'yuna1234',  role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
+  { id: 'admin-hanny', pw: 'hanny1234', role: 'staff', name: 'Hanny', staffId: 'hanny' },
+  { id: 'admin-sage',  pw: 'sage1234',  role: 'staff', name: 'Sage',  staffId: 'sage'  },
+  { id: 'admin-eric',  pw: 'eric1234',  role: 'staff', name: 'Eric',  staffId: 'eric'  },
 ];
 
-export default function AdminHubPage() {
+export default function AdminPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
+  const [id, setId] = useState("");
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("adminAuthed");
-      if (saved === "true") setAuthed(true);
+      if (localStorage.getItem("adminAuthed") === "true") setAuthed(true);
     }
   }, []);
 
-  function checkPw() {
-    if (pw === ADMIN_PW || pw === "jiajiu") { if (typeof window !== "undefined") localStorage.setItem("adminAuthed", "true"); setAuthed(true); }
-    else alert("비밀번호가 올바르지 않습니다.");
+  function handleLogin() {
+    const account = ADMIN_ACCOUNTS.find(a => a.id === id.trim() && a.pw === pw);
+    if (!account) {
+      setErr("아이디 또는 비밀번호가 올바르지 않습니다.");
+      return;
+    }
+    setErr("");
+    localStorage.setItem("adminAuthed", "true");
+    localStorage.setItem("adminRole", account.role);
+    localStorage.setItem("adminName", account.name);
+    localStorage.setItem("adminStaffId", account.staffId || "");
+
+    if (account.role === "admin") {
+      router.push(account.redirect || "/admin/bookings");
+    } else {
+      router.push("/staff?user=" + account.staffId);
+    }
   }
 
-  function logout() { if (typeof window !== "undefined") localStorage.removeItem("adminAuthed"); setAuthed(false); }
+  function logout() {
+    localStorage.removeItem("adminAuthed");
+    localStorage.removeItem("adminRole");
+    localStorage.removeItem("adminName");
+    localStorage.removeItem("adminStaffId");
+    setAuthed(false);
+  }
 
   if (!authed) return (<>
     <style>{`
@@ -41,20 +61,28 @@ export default function AdminHubPage() {
 .pw-c{background:#fff;padding:48px 40px;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.1);text-align:center;max-width:400px;width:100%;}
 .pw-c h1{font-size:24px;font-weight:800;margin-bottom:8px;}
 .pw-c p{font-size:14px;color:#6b7c93;margin-bottom:28px;}
-.pw-wrap{position:relative;width:100%;margin-bottom:16px;}
-.pw-i{width:100%;padding:12px 16px;padding-right:44px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;font-family:'Noto Sans KR',sans-serif;}.pw-i:focus{border-color:#1a6fc4;}
+.pw-group{width:100%;margin-bottom:14px;}
+.pw-i{width:100%;padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;font-size:15px;outline:none;font-family:'Noto Sans KR',sans-serif;}.pw-i:focus{border-color:#1a6fc4;}
+.pw-wrap{position:relative;width:100%;}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8;padding:4px;}.pw-eye:hover{color:#1a6fc4;}
-.pw-b{width:100%;padding:13px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pw-b:hover{background:#0d3d7a;}
+.pw-b{width:100%;padding:13px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:4px;}.pw-b:hover{background:#0d3d7a;}
+.pw-err{color:#dc2626;font-size:13px;margin-top:12px;}
 .bk-link{display:inline-block;margin-top:20px;font-size:13px;color:#6b7c93;text-decoration:none;}.bk-link:hover{color:#1a6fc4;}
     `}</style>
     <div className="pw-w"><div className="pw-c">
       <h1>Admin</h1>
-      <p>관리자 비밀번호를 입력하세요.</p>
-      <div className="pw-wrap">
-        <input className="pw-i" type={showPw ? "text" : "password"} placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === "Enter") checkPw(); }} />
-        <button type="button" className="pw-eye" onClick={() => setShowPw(!showPw)}>{showPw ? "🙈" : "👁"}</button>
+      <p>관리자 계정으로 로그인하세요.</p>
+      <div className="pw-group">
+        <input className="pw-i" type="text" placeholder="아이디" value={id} onChange={e => { setId(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") handleLogin(); }} autoComplete="username" />
       </div>
-      <button className="pw-b" onClick={checkPw}>로그인</button>
+      <div className="pw-group">
+        <div className="pw-wrap">
+          <input className="pw-i" style={{ paddingRight: 44 }} type={showPw ? "text" : "password"} placeholder="비밀번호" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }} onKeyDown={e => { if (e.key === "Enter") handleLogin(); }} autoComplete="current-password" />
+          <button type="button" className="pw-eye" onClick={() => setShowPw(!showPw)}>{showPw ? "🙈" : "👁"}</button>
+        </div>
+      </div>
+      <button className="pw-b" onClick={handleLogin}>로그인</button>
+      {err && <div className="pw-err">{err}</div>}
       <a href="/" className="bk-link">← 홈으로 돌아가기</a>
     </div></div>
   </>);
@@ -77,15 +105,7 @@ export default function AdminHubPage() {
 .hub-footer{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
 .hub-link{color:#6b7c93;font-size:13px;font-weight:600;text-decoration:none;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;}.hub-link:hover{color:#1a6fc4;border-color:#1a6fc4;}
 .logout{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;margin-top:24px;display:block;text-align:center;width:100%;font-family:'Noto Sans KR',sans-serif;}.logout:hover{color:#dc2626;}
-.staff-section{margin-bottom:36px;}
-.staff-section h3{font-size:16px;font-weight:700;margin-bottom:14px;text-align:center;color:#475569;}
-.staff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-.staff-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;transition:all 150ms;text-decoration:none;color:#1a1a2e;}
-.staff-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1);border-color:#1a6fc4;}
-.staff-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;}
-.staff-name{font-size:12px;font-weight:700;}
-.staff-role{font-size:10px;color:#94a3b8;}
-@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:40px 16px;}.staff-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:40px 16px;}}
     `}</style>
     <div className="hub-w">
       <div className="hub-h">
@@ -107,18 +127,6 @@ export default function AdminHubPage() {
           <div className="ic">👥</div>
           <h2>직원업무</h2>
           <p>직원 업무 관리</p>
-        </div>
-      </div>
-      <div className="staff-section">
-        <h3>👤 직원 바로가기</h3>
-        <div className="staff-grid">
-          {STAFF.map(s => (
-            <a key={s.id} className="staff-btn" href={`/staff?user=${s.id}&token=${s.pw}`}>
-              <div className="staff-av" style={{ background: s.color }}>{s.name[0]}</div>
-              <div className="staff-name">{s.name}</div>
-              <div className="staff-role">{s.role}</div>
-            </a>
-          ))}
         </div>
       </div>
       <div className="hub-footer">
