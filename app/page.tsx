@@ -423,7 +423,11 @@ export default function HomePage() {
     </>) : (
       <button onClick={() => router.push('/admin')} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"7px 14px",fontSize:"13px",color:"#374151",fontWeight:600,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그인</button>
     )}
-    <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
+    {adminInfo ? (
+      <a href="/admin/bookings" className="nav-cta">관리페이지</a>
+    ) : (
+      <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
+    )}
   </div>
   <div className="hamburger" id="hamburgerBtn">
     <span></span><span></span><span></span>
@@ -440,7 +444,11 @@ export default function HomePage() {
   <a href="/playdream">플레이드림</a>
   <a href="/notice">공지사항</a>
   <a href="/community">커뮤니티</a>
-  <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
+  {adminInfo ? (
+    <a href="/admin/bookings">관리페이지 →</a>
+  ) : (
+    <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
+  )}
   <div style={{borderTop:"1px solid #e2e8f0",marginTop:8,paddingTop:8}}>
     {adminInfo ? (<>
       <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요, {adminInfo.name}님</span>
@@ -811,7 +819,7 @@ export default function HomePage() {
     <span>© 2026 Dream Academy by Dream Company. All rights reserved.</span>
     <span>Bayswater, Mactan · Cebu, Philippines</span>
   </div>
-  <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0",paddingRight:"60px"}}><a href="/admin" style={{fontSize:"20px",color:"#fff",fontWeight:900,textDecoration:"none"}}>.</a></div>
+  <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0",paddingRight:"60px"}}><a href="/admin" style={{fontSize:"14px",color:"rgba(255,255,255,0.5)",fontWeight:600,textDecoration:"none"}}>관리자</a></div>
 </footer>
     </>
   );

@@ -173,7 +173,7 @@ export default function AdminBookingsPage(){
     </>)}
 
     {/* ── 탭2: 인보이스 ── */}
-    {mainTab==="invoice"&&(
+    {mainTab==="invoice"&&(<>
       <div className="tbl-w"><table className="tbl"><thead><tr>
         <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>패키지금액</th><th>잔금일자</th><th></th>
       </tr></thead><tbody>
@@ -210,10 +210,10 @@ export default function AdminBookingsPage(){
           </div>);
         })}
       </div>
-    )}
+    </>)}
 
     {/* ── 탭3: 영수증 ── */}
-    {mainTab==="receipt"&&(
+    {mainTab==="receipt"&&(<>
       <div className="tbl-w"><table className="tbl"><thead><tr>
         <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>최종금액</th>
       </tr></thead><tbody>
@@ -241,7 +241,7 @@ export default function AdminBookingsPage(){
           </div>
         ))}
       </div>
-    )}
+    </>)}
 
     {/* ── 탭4: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
