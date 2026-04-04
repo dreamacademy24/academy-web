@@ -240,7 +240,120 @@ export default function GuidePage() {
         </ul>
       </div>
 
-      {/* ── 섹션5: FAQ ── */}
+      {/* ── 섹션5: 회사 이메일 Gmail 연동 ── */}
+      <div className="sec">
+        <h2>📧 회사 이메일 Gmail 연동 방법</h2>
+        <p style={{fontSize:"14px",color:"#4a5568",lineHeight:1.8,marginBottom:20}}>
+          회사 이메일(@dreamacademyph.com)을 Gmail에서 바로 받아볼 수 있어요.<br/>
+          아래 순서대로 설정하면 됩니다.
+        </p>
+        <div className="steps">
+          <div className="step">
+            <div className="step-dot" style={{background:"#1a6fc4"}}>1</div>
+            <div className="step-line"/>
+            <div className="step-body">
+              <h3>Gmail 설정 열기</h3>
+              <ul>
+                <li>Gmail 접속 (<code>mail.google.com</code>)</li>
+                <li>우측 상단 톱니바퀴 ⚙️ 클릭</li>
+                <li><strong>&quot;모든 설정 보기&quot;</strong> 클릭</li>
+                <li><strong>&quot;계정 및 가져오기&quot;</strong> 탭 클릭</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="step">
+            <div className="step-dot" style={{background:"#16a34a"}}>2</div>
+            <div className="step-line"/>
+            <div className="step-body">
+              <h3>메일 계정 추가</h3>
+              <ul>
+                <li><strong>&quot;다른 계정의 메일 확인&quot;</strong> 항목 찾기</li>
+                <li><strong>&quot;메일 계정 추가&quot;</strong> 클릭</li>
+                <li>본인 회사 이메일 입력:</li>
+              </ul>
+              <div style={{display:"flex",flexDirection:"column",gap:4,margin:"8px 0 8px 18px"}}>
+                <code style={{display:"inline-block",background:"#f1f5f9",padding:"4px 10px",borderRadius:4,fontSize:13,color:"#1a6fc4"}}>info@dreamacademyph.com</code>
+                <code style={{display:"inline-block",background:"#f1f5f9",padding:"4px 10px",borderRadius:4,fontSize:13,color:"#1a6fc4"}}>admin@dreamacademyph.com</code>
+                <code style={{display:"inline-block",background:"#f1f5f9",padding:"4px 10px",borderRadius:4,fontSize:13,color:"#1a6fc4"}}>may@dreamacademyph.com</code>
+              </div>
+              <ul>
+                <li><strong>&quot;POP3로 다른 계정의 이메일 가져오기&quot;</strong> 선택 후 다음</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="step">
+            <div className="step-dot" style={{background:"#d97706"}}>3</div>
+            <div className="step-line"/>
+            <div className="step-body">
+              <h3>POP3 서버 설정</h3>
+              <div style={{background:"#f8fafc",borderRadius:10,padding:16,margin:"8px 0",display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>사용자 이름</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>본인 회사 이메일 전체</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>비밀번호</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>메일박스 생성시 설정한 비번</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>POP 서버</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>mail.privateemail.com</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>포트</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>995</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>SSL 사용</span>
+                  <span style={{fontWeight:700,color:"#16a34a"}}>✅ 체크</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="step">
+            <div className="step-dot" style={{background:"#7c3aed"}}>4</div>
+            <div className="step-line"/>
+            <div className="step-body">
+              <h3>보내기 설정 <span style={{fontSize:11,color:"#94a3b8",fontWeight:400}}>(선택)</span></h3>
+              <p style={{fontSize:13,color:"#4a5568",marginBottom:8}}>Gmail에서 회사 이메일로 직접 보내고 싶을 때:</p>
+              <ul>
+                <li><strong>&quot;이름으로 메일 보내기&quot;</strong> → <strong>&quot;다른 이메일 주소 추가&quot;</strong></li>
+              </ul>
+              <div style={{background:"#f8fafc",borderRadius:10,padding:16,margin:"8px 0",display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>SMTP 서버</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>mail.privateemail.com</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>포트</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>465</code>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>SSL 사용</span>
+                  <span style={{fontWeight:700,color:"#16a34a"}}>✅ 체크</span>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                  <span style={{color:"#6b7c93",fontWeight:600}}>사용자 이름 + 비밀번호</span>
+                  <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>회사 이메일 계정 정보</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="step">
+            <div className="step-dot" style={{background:"#16a34a"}}>✓</div>
+            <div className="step-body">
+              <h3>완료!</h3>
+              <p style={{fontSize:14,color:"#4a5568",lineHeight:1.8}}>설정 완료 후 Gmail에서 회사 이메일이 자동으로 수신됩니다 😊</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 섹션6: FAQ ── */}
       <div className="sec">
         <h2>❓ 자주 묻는 것들</h2>
         {faqs.map((f, i) => (
