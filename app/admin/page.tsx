@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed, getAdminInfo, clearAdminAuth } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 
 const ADMIN_ACCOUNTS = [
-  { id: 'admin-may',   pw: 'may1234',   role: 'admin', name: 'May',   redirect: '/admin/bookings' },
-  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO',   redirect: '/admin/bookings' },
+  { id: 'admin-may',   pw: 'may1234',   role: 'admin', name: 'May' },
+  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO' },
   { id: 'admin-jenna', pw: 'jenna1234', role: 'staff', name: 'Jenna', staffId: 'jenna' },
   { id: 'admin-jamie', pw: 'jamie1234', role: 'staff', name: 'Jamie', staffId: 'jamie' },
   { id: 'admin-yuna',  pw: 'yuna1234',  role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
@@ -28,7 +28,7 @@ export default function AdminPage() {
       if (info?.role === 'staff' && info.staffId) {
         router.replace('/staff?user=' + info.staffId);
       } else {
-        router.replace('/admin/bookings');
+        router.replace('/admin/hub');
       }
     } else {
       setReady(true);
@@ -49,7 +49,7 @@ export default function AdminPage() {
     localStorage.setItem("adminExpiry", String(Date.now() + 24 * 60 * 60 * 1000));
 
     if (account.role === "admin") {
-      router.push(account.redirect || "/admin/bookings");
+      router.push("/admin/hub");
     } else {
       router.push("/staff?user=" + account.staffId);
     }
