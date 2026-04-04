@@ -293,6 +293,10 @@ export default function GuidePage() {
                   <span style={{color:"#6b7c93",fontWeight:600}}>사용자 이름</span>
                   <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>본인 회사 이메일 전체</code>
                 </div>
+                <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#dc2626",lineHeight:1.7}}>
+                  ⚠️ <strong>주의:</strong> <code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>info</code> 처럼 앞부분만 입력하면 오류납니다.<br/>
+                  반드시 <code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>info@dreamacademyph.com</code> 처럼 <strong>전체 이메일 주소</strong>를 입력하세요.
+                </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
                   <span style={{color:"#6b7c93",fontWeight:600}}>비밀번호</span>
                   <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>메일박스 생성시 설정한 비번</code>
@@ -338,6 +342,9 @@ export default function GuidePage() {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
                   <span style={{color:"#6b7c93",fontWeight:600}}>사용자 이름 + 비밀번호</span>
                   <code style={{background:"#e0e7ff",padding:"3px 10px",borderRadius:4,color:"#1a6fc4",fontWeight:700}}>회사 이메일 계정 정보</code>
+                </div>
+                <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#dc2626",lineHeight:1.7}}>
+                  ⚠️ <strong>주의:</strong> 사용자 이름은 <code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>info</code> 가 아닌 <code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>info@dreamacademyph.com</code> 처럼 <strong>전체 이메일 주소</strong>를 입력하세요.
                 </div>
               </div>
             </div>
