@@ -4,6 +4,16 @@ import { useRouter } from "next/navigation";
 
 const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
+const STAFF = [
+  { id: 'jenna', name: 'Jenna', role: '부원장', color: '#6366f1', pw: 'jenna1234' },
+  { id: 'jamie', name: 'Jamie', role: '직원', color: '#0ea5e9', pw: 'jamie1234' },
+  { id: 'yuna',  name: 'Yuna',  role: '직원', color: '#ec4899', pw: 'yuna1234' },
+  { id: 'hanny', name: 'Hanny', role: '직원', color: '#f59e0b', pw: 'hanny1234' },
+  { id: 'sage',  name: 'Sage',  role: '직원', color: '#10b981', pw: 'sage1234' },
+  { id: 'eric',  name: 'Eric',  role: '직원', color: '#f97316', pw: 'eric1234' },
+  { id: 'ceo',   name: 'CEO',   role: '대표', color: '#1e3a5f', pw: 'ceo1234' },
+];
+
 export default function AdminHubPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -67,7 +77,15 @@ export default function AdminHubPage() {
 .hub-footer{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
 .hub-link{color:#6b7c93;font-size:13px;font-weight:600;text-decoration:none;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;}.hub-link:hover{color:#1a6fc4;border-color:#1a6fc4;}
 .logout{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;margin-top:24px;display:block;text-align:center;width:100%;font-family:'Noto Sans KR',sans-serif;}.logout:hover{color:#dc2626;}
-@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:40px 16px;}}
+.staff-section{margin-bottom:36px;}
+.staff-section h3{font-size:16px;font-weight:700;margin-bottom:14px;text-align:center;color:#475569;}
+.staff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.staff-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;transition:all 150ms;text-decoration:none;color:#1a1a2e;}
+.staff-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1);border-color:#1a6fc4;}
+.staff-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;}
+.staff-name{font-size:12px;font-weight:700;}
+.staff-role{font-size:10px;color:#94a3b8;}
+@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:40px 16px;}.staff-grid{grid-template-columns:repeat(3,1fr);}}
     `}</style>
     <div className="hub-w">
       <div className="hub-h">
@@ -89,6 +107,18 @@ export default function AdminHubPage() {
           <div className="ic">👥</div>
           <h2>직원업무</h2>
           <p>직원 업무 관리</p>
+        </div>
+      </div>
+      <div className="staff-section">
+        <h3>👤 직원 바로가기</h3>
+        <div className="staff-grid">
+          {STAFF.map(s => (
+            <a key={s.id} className="staff-btn" href={`/staff?user=${s.id}&token=${s.pw}`}>
+              <div className="staff-av" style={{ background: s.color }}>{s.name[0]}</div>
+              <div className="staff-name">{s.name}</div>
+              <div className="staff-role">{s.role}</div>
+            </a>
+          ))}
         </div>
       </div>
       <div className="hub-footer">
