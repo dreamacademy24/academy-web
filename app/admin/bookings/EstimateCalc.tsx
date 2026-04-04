@@ -292,8 +292,7 @@ export default function EstimateCalc(){
         </div>
 
         <div style={{padding:"14px 20px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
-          ※ 위 금액은 할인이 적용된 실제 안내 금액입니다.<br/>
-          카카오톡 @드림아카데미필리핀 으로 문의해 주세요 😊
+          ※ 할인 금액은 언제든 변경될 수 있습니다.
         </div>
       </div>
 
