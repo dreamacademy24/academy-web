@@ -1,22 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo, clearAdminAuth } from "@/lib/adminAuth";
+import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
-  const [adminName, setAdminName] = useState("");
+  const router = useRouter();
+  const [adminInfo, setAdminInfo] = useState<{name:string; role:string; staffId:string} | null>(null);
+  const [supaUser, setSupaUser] = useState<any>(null);
 
   useEffect(() => {
-    if (isAdminAuthed()) {
-      const info = getAdminInfo();
-      if (info) setAdminName(info.name);
-    }
+    const info = getAdminInfo();
+    if (info) { setAdminInfo(info); return; }
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setSupaUser(data.user);
+    });
   }, []);
-
-  function handleLogout() {
-    clearAdminAuth();
-    setAdminName("");
-    window.location.href = "/";
-  }
 
   useEffect(() => {
     // Scroll shadow effect
@@ -415,11 +414,14 @@ export default function HomePage() {
     <a href="/community">커뮤니티</a>
   </div>
   <div className="nav-right">
-    {adminName ? (<>
-      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요 {adminName}님</span>
-      <button onClick={handleLogout} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
+    {adminInfo ? (<>
+      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요, {adminInfo.name}님</span>
+      <button onClick={() => { clearAdminAuth(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
+    </>) : supaUser ? (<>
+      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요님</span>
+      <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
     </>) : (
-      <a href="/admin" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px",textDecoration:"none"}}>관리자</a>
+      <button onClick={() => router.push('/admin')} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"7px 14px",fontSize:"13px",color:"#374151",fontWeight:600,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그인</button>
     )}
     <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
   </div>
@@ -798,7 +800,7 @@ export default function HomePage() {
     <span>© 2026 Dream Academy by Dream Company. All rights reserved.</span>
     <span>Bayswater, Mactan · Cebu, Philippines</span>
   </div>
-  <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0",paddingRight:"60px"}}><a href="/admin" style={{fontSize:"20px",color:"#fff",fontWeight:900,textDecoration:"none"}}>관리자</a></div>
+  <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0",paddingRight:"60px"}}><a href="/admin" style={{fontSize:"20px",color:"#fff",fontWeight:900,textDecoration:"none"}}>.</a></div>
 </footer>
     </>
   );
