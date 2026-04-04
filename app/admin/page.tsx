@@ -24,7 +24,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAdminAuthed()) {
-      router.replace('/admin/hub');
+      window.location.href = '/admin/hub';
+      return;
     } else {
       setReady(true);
     }
@@ -43,7 +44,7 @@ export default function AdminPage() {
     localStorage.setItem("adminStaffId", account.staffId || "");
     localStorage.setItem("adminExpiry", String(Date.now() + 24 * 60 * 60 * 1000));
 
-    router.push("/admin/hub");
+    window.location.href = "/admin/hub";
   }
 
   if (!ready) return null;
