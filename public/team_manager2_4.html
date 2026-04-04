@@ -373,6 +373,13 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .task-list-row.done{opacity:.45;}
 .task-list-row.done .tl-title{text-decoration:line-through;}
 
+/* BATCH DELETE TOOLBAR */
+.batch-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;flex-wrap:wrap;}
+.batch-bar .btn{font-size:12px;padding:6px 14px;}
+.batch-bar .batch-info{font-size:12px;color:var(--text3);font-weight:600;margin-left:auto;}
+.batch-cb{width:16px;height:16px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+.task-card.batch-selected,.task-list-row.batch-selected,.emp-task.batch-selected{border-color:var(--primary);background:var(--primary-l);opacity:1;}
+
 /* ══════════════════════════════════
    CALENDAR
 ══════════════════════════════════ */
@@ -1504,6 +1511,44 @@ function renderHomeSG(){
 }
 function qTog(id,e){e&&e.stopPropagation();const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;sv('tm_t',tasks);refreshAll();}}
 
+// ── BATCH DELETE ──
+let batchSelected=new Set();
+function batchToggle(id){if(batchSelected.has(id))batchSelected.delete(id);else batchSelected.add(id);updateBatchUI();}
+function batchSelectAll(ids){if(batchSelected.size===ids.length){batchSelected.clear();}else{batchSelected=new Set(ids);}updateBatchUI();}
+function updateBatchUI(){
+  document.querySelectorAll('.batch-cb').forEach(function(cb){cb.checked=batchSelected.has(cb.dataset.tid);});
+  document.querySelectorAll('.task-card,.task-list-row,.emp-task').forEach(function(el){
+    if(el.dataset.tid)el.classList.toggle('batch-selected',batchSelected.has(el.dataset.tid));
+  });
+  const info=document.querySelector('.batch-info');if(info)info.textContent=batchSelected.size?batchSelected.size+'개 선택됨':'';
+  const selBtn=document.getElementById('batchDelSelBtn');if(selBtn)selBtn.disabled=!batchSelected.size;
+}
+function batchDeleteSelected(){
+  if(!batchSelected.size)return;
+  if(!confirm('선택한 '+batchSelected.size+'개를 삭제할까요?'))return;
+  tasks=tasks.filter(function(t){return !batchSelected.has(t.id);});
+  batchSelected.clear();sv('tm_t',tasks);refreshAll();
+}
+function batchDeleteAllDone(scope){
+  let target;
+  if(scope==='board')target=tasks.filter(function(t){return t.shared&&t.done;});
+  else target=tasks.filter(function(t){return t.assignee===scope&&t.done;});
+  if(!target.length){alert('삭제할 완료 업무가 없습니다.');return;}
+  if(!confirm('완료된 업무 '+target.length+'개를 모두 삭제할까요?'))return;
+  const ids=new Set(target.map(function(t){return t.id;}));
+  tasks=tasks.filter(function(t){return !ids.has(t.id);});
+  batchSelected.clear();sv('tm_t',tasks);refreshAll();
+}
+function renderBatchBar(container,doneIds,scope){
+  batchSelected.clear();
+  const bar=document.createElement('div');bar.className='batch-bar';
+  bar.innerHTML='<button class="btn btn-secondary btn-xs" onclick="batchSelectAll('+JSON.stringify(doneIds)+')">전체선택</button>'+
+    '<button class="btn btn-secondary btn-xs" id="batchDelSelBtn" disabled onclick="batchDeleteSelected()">선택 삭제</button>'+
+    '<button class="btn btn-secondary btn-xs" style="color:var(--red);border-color:var(--red)" onclick="batchDeleteAllDone(\''+scope+'\')">전체 삭제</button>'+
+    '<span class="batch-info"></span>';
+  container.appendChild(bar);
+}
+
 // ── BOARD ──
 function setBF(f,el){boardFilter=f;document.querySelectorAll('#boardTabs .tab-btn').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderBoard();}
 function setBoardView(v,el){boardView=v;document.querySelectorAll('.brd-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderBoard();}
@@ -1513,6 +1558,7 @@ function renderBoard(){
   if(boardFilter==='unassigned')f=f.filter(t=>!t.assignee);
   else if(boardFilter==='active')f=f.filter(t=>!t.done&&t.assignee);
   else if(boardFilter==='done')f=f.filter(t=>t.done);
+  if(boardFilter==='done'&&f.length){renderBatchBar(grid,f.map(function(t){return t.id;}),'board');}
   boardView==='task'?renderBoardTask(f):renderBoardEmp(f);
 }
 function renderBoardEmp(f){
@@ -1541,14 +1587,15 @@ function appendKanbanCard(container,t,showAss){
   const ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'';
   const prog=t.progress||0;
   const cmtCount=(taskComments[t.id]||[]).length;
-  const card=document.createElement('div');card.className='task-card'+(t.done?' done':'');
-  card.onclick=function(e){if(e.target.classList.contains('tc-check')||e.target.classList.contains('tc-check-mark')||e.target.classList.contains('tc-edit')||e.target.classList.contains('cmt-btn'))return;openTaskCmt(t.id);};
+  const card=document.createElement('div');card.className='task-card'+(t.done?' done':'');card.dataset.tid=t.id;
+  card.onclick=function(e){if(e.target.classList.contains('tc-check')||e.target.classList.contains('tc-check-mark')||e.target.classList.contains('tc-edit')||e.target.classList.contains('cmt-btn')||e.target.classList.contains('batch-cb'))return;openTaskCmt(t.id);};
+  const batchCb=boardFilter==='done'?'<input type="checkbox" class="batch-cb" data-tid="'+t.id+'" onclick="event.stopPropagation();batchToggle(\''+t.id+'\')" />':'';
   const idxSpan=t.idx?'<span style="color:var(--text3);font-size:11px">('+t.idx+') </span>':'';
   const assTag=(showAss&&en)?'<span class="tag" style="background:'+ec+'18;color:'+ec+';font-size:10.5px">'+en+'</span>':'';
   const dueTag=dl?'<span class="tag '+dl.cls+'" style="font-size:10.5px">'+dl.text+'</span>':'';
   const fileTag=(t.files&&t.files.length)?'<span class="tag" style="font-size:10.5px">📎 '+t.files.length+'</span>':'';
   const progBar=prog>0?'<div class="tc-prog"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div></div>':'';
-  card.innerHTML='<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+idxSpan+t.title+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
+  card.innerHTML=batchCb+'<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+idxSpan+t.title+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
     '<div class="tc-tags">'+assTag+(t.createdAt?'<span class="tag" style="font-size:10.5px">'+t.createdAt+'</span>':'')+dueTag+fileTag+'</div>'+
     progBar+
     '<div class="tc-footer"><button class="cmt-btn'+(cmtCount?' has-cmt':'')+'" onclick="openTaskCmt(\''+t.id+'\')">💬 '+(cmtCount||'댓글')+'</button></div>';
@@ -1558,19 +1605,22 @@ function renderBoardTask(f){
   const grid=document.getElementById('boardGrid');
   grid.className='task-list-wrap';
   if(!f.length){grid.innerHTML='<div class="empty-state"><div class="ei">📋</div>업무가 없습니다</div>';return;}
+  const isDone=boardFilter==='done';
+  const cols=isDone?'20px 28px 1fr 140px 110px 120px 80px 52px':'28px 1fr 140px 110px 120px 80px 52px';
   const header=document.createElement('div');header.className='task-list-header';
-  header.style.gridTemplateColumns='28px 1fr 140px 110px 120px 80px 52px';
-  header.innerHTML='<div></div><div>업무</div><div>담당자</div><div>작성일</div><div>기한</div><div>진행률</div><div></div>';
+  header.style.gridTemplateColumns=cols;
+  header.innerHTML=(isDone?'<div></div>':'')+'<div></div><div>업무</div><div>담당자</div><div>작성일</div><div>기한</div><div>진행률</div><div></div>';
   grid.appendChild(header);
   sortT(f).forEach(function(t){
     const emp=getP(t.assignee),dl=dL(t.due),ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'미배정',prog=t.progress||0;
     const cmtCount=(taskComments[t.id]||[]).length;
-    const row=document.createElement('div');row.className='task-list-row'+(t.done?' done':'');
-    row.style.cssText='grid-template-columns:28px 1fr 140px 110px 120px 80px 52px;border-left:3px solid '+ec;
+    const row=document.createElement('div');row.className='task-list-row'+(t.done?' done':'');row.dataset.tid=t.id;
+    row.style.cssText='grid-template-columns:'+cols+';border-left:3px solid '+ec;
     row.onmouseenter=function(){row.style.boxShadow='var(--shadow)';};
     row.onmouseleave=function(){row.style.boxShadow='';};
-    row.onclick=function(e){if(e.target.classList.contains('tc-check')||e.target.classList.contains('tc-check-mark')||e.target.classList.contains('btn-icon'))return;openTaskCmt(t.id);};
+    row.onclick=function(e){if(e.target.classList.contains('tc-check')||e.target.classList.contains('tc-check-mark')||e.target.classList.contains('btn-icon')||e.target.classList.contains('batch-cb'))return;openTaskCmt(t.id);};
 
+    if(isDone){const cbd=document.createElement('div');cbd.style.cssText='display:flex;align-items:center';cbd.innerHTML='<input type="checkbox" class="batch-cb" data-tid="'+t.id+'" onclick="event.stopPropagation();batchToggle(\''+t.id+'\')" />';row.appendChild(cbd);}
     const ck=document.createElement('div');ck.className='tc-check';ck.innerHTML='<span class="tc-check-mark">✓</span>';ck.onclick=function(e){qTog(t.id,e);};row.appendChild(ck);
     const nameDiv=document.createElement('div');
     const titleEl=document.createElement('div');titleEl.style.cssText='font-size:13px;font-weight:600;'+(t.done?'text-decoration:line-through;color:var(--text3);':'');
@@ -1731,19 +1781,22 @@ function renderEmpList(empId){
   et=sortT(et);
   if(!et.length){wrap.innerHTML='<div class="empty-state"><div class="ei">✅</div>업무가 없습니다</div>';return;}
 
+  if(empFilter==='done'&&et.length){renderBatchBar(wrap,et.map(function(t){return t.id;}),empId);}
+
   et.forEach(function(t){
     const dl=dL(t.due),emp=getP(t.assignee),ec=emp?emp.color:'#9ca3af';
     const prog=t.progress||0,cmtCount=(taskComments[t.id]||[]).length;
     const card=document.createElement('div');
     card.className='emp-task'+(t.done?' done':'')+(t.shared?' is-shared':' is-private');
-    card.id='tdp-'+t.id;
+    card.id='tdp-'+t.id;card.dataset.tid=t.id;
 
     // HEAD
     const head=document.createElement('div');head.className='emp-task-head';
     head.onclick=function(e){
-      if(e.target.classList.contains('et-check')||e.target.classList.contains('et-checkmark'))return;
+      if(e.target.classList.contains('et-check')||e.target.classList.contains('et-checkmark')||e.target.classList.contains('batch-cb'))return;
       card.classList.toggle('open');
     };
+    if(empFilter==='done'){var bcb=document.createElement('input');bcb.type='checkbox';bcb.className='batch-cb';bcb.dataset.tid=t.id;bcb.onclick=function(ev){ev.stopPropagation();batchToggle(t.id);};head.appendChild(bcb);}
     const ck=document.createElement('div');ck.className='et-check';ck.innerHTML='<span class="et-checkmark">✓</span>';
     ck.onclick=function(e){e.stopPropagation();qTog(t.id,e);};
     const nameDiv=document.createElement('div');nameDiv.className='emp-task-title';
