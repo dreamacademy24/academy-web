@@ -441,6 +441,17 @@ export default function HomePage() {
   <a href="/notice">공지사항</a>
   <a href="/community">커뮤니티</a>
   <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
+  <div style={{borderTop:"1px solid #e2e8f0",marginTop:8,paddingTop:8}}>
+    {adminInfo ? (<>
+      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요, {adminInfo.name}님</span>
+      <a href="#" onClick={(e)=>{e.preventDefault();clearAdminAuth();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
+    </>) : supaUser ? (<>
+      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요님</span>
+      <a href="#" onClick={async(e)=>{e.preventDefault();await supabase.auth.signOut();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
+    </>) : (
+      <a href="/admin" style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#1a6fc4",fontWeight:600}}>로그인</a>
+    )}
+  </div>
 </div>
 
 {/* HERO: 밝은 흰색 배경 */}

@@ -96,7 +96,7 @@ export default function AdminBookingsPage(){
 .act-b{background:#1a6fc4;color:#fff;}.act-b:hover{background:#0d3d7a;}
 .act-g{background:#16a34a;color:#fff;}.act-g:hover{background:#15803d;}
 .act-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.act-r:hover{background:#fee2e2;}
-@media(max-width:700px){.main-tab{font-size:12px;padding:10px 4px;}.aw{padding:16px 12px;}}
+@media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:12px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
   `}</style>
 
   <div className="aw">
@@ -144,6 +144,29 @@ export default function AdminBookingsPage(){
           </tr>);
         })}
       </tbody></table></div>
+      <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
+        {filtered.length===0?<div className="empty">예약이 없습니다.</div>:
+        filtered.map(b=>{
+          const sc=SC[b.status]||SC["접수"];
+          return(<div key={b.id} onClick={()=>router.push("/invoice?id="+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
+              <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
+            </div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name}</div>
+            <div style={{fontSize:13,color:"#6b7c93",marginBottom:4}}>{stuNames(b.students)}</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8"}}>
+              <span>체크인: {b.checkin_date||"미정"}</span>
+              <span>{b.assignee||"미지정"}</span>
+            </div>
+            <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
+              <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
+              <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act act-r" style={{flex:1,minHeight:40}} onClick={async()=>{if(confirm("삭제하시겠습니까?\n"+b.booker_name)){await supabase.from("bookings").delete().eq("id",b.id);load();}}}>삭제</button>
+            </div>
+          </div>);
+        })}
+      </div>
     </>)}
 
     {/* ── 탭2: 인보이스 ── */}
@@ -167,6 +190,23 @@ export default function AdminBookingsPage(){
           </tr>);
         })}
       </tbody></table></div>
+      <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
+        {invList.length===0?<div className="empty">인보이스 발행 내역이 없습니다.</div>:
+        invList.map(b=>{
+          const sc=SC[b.status]||SC["접수"];
+          return(<div key={b.id} onClick={()=>router.push("/invoice?id="+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
+              <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
+            </div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name} / {stuNames(b.students)}</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#6b7c93"}}>
+              <span>체크인: {b.checkin_date||"미정"}</span>
+              <span style={{fontWeight:700,color:"#1a1a2e"}}>{fmt(b.base_price)}</span>
+            </div>
+          </div>);
+        })}
+      </div>
     )}
 
     {/* ── 탭3: 영수증 ── */}
@@ -185,6 +225,19 @@ export default function AdminBookingsPage(){
           </tr>
         ))}
       </tbody></table></div>
+      <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
+        {rcpList.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
+        rcpList.map(b=>(
+          <div key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
+              <span style={{fontWeight:700}}>{fmt(b.final_price)}</span>
+            </div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name}</div>
+            <div style={{fontSize:13,color:"#6b7c93"}}>{stuNames(b.students)} · 체크인: {b.checkin_date||"미정"}</div>
+          </div>
+        ))}
+      </div>
     )}
 
     {/* ── 탭4: 견적계산기 ── */}

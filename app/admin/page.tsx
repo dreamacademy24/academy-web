@@ -71,6 +71,7 @@ export default function AdminPage() {
 .pw-b{width:100%;padding:13px;background:#1a6fc4;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:4px;}.pw-b:hover{background:#0d3d7a;}
 .pw-err{color:#dc2626;font-size:13px;margin-top:12px;}
 .bk-link{display:inline-block;margin-top:20px;font-size:13px;color:#6b7c93;text-decoration:none;}.bk-link:hover{color:#1a6fc4;}
+@media(max-width:500px){.pw-c{padding:32px 20px;margin:0 16px;max-width:100%;}.pw-i{min-height:44px;font-size:16px;}.pw-b{min-height:48px;font-size:16px;}.pw-c h1{font-size:22px;}}
     `}</style>
     <div className="pw-w"><div className="pw-c">
       <h1>Admin</h1>

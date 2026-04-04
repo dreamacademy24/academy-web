@@ -247,7 +247,13 @@ export default function EstimatePage() {
 
         @media(max-width:600px){
           .est-header{padding:70px 20px 40px;}
+          .est-body{padding:0 16px 40px;}
           .f-row{flex-direction:column;gap:12px;}
+          .f-select{min-height:44px;font-size:14px;}
+          .mode-btn{min-height:44px;font-size:14px;}
+          .accom-card{padding:16px;}
+          .result-card{padding:16px;}
+          .cta-kakao{min-height:48px;}
         }
       `}</style>
 

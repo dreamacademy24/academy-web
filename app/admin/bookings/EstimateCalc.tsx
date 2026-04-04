@@ -164,7 +164,7 @@ export default function EstimateCalc(){
             <button style={addBtnS} onClick={()=>addItem(setter,"extras")}>+ 추가</button>
           </div>
           {plan.extras.map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:6,marginBottom:4}}>
+            <div key={i} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
               <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(setter,"extras",i,{name:e.target.value})}/>
               <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(setter,"extras",i,{amount:Number(e.target.value)})}/>
               <button style={delBtnS} onClick={()=>rmItem(setter,"extras",i)}>×</button>
@@ -178,7 +178,7 @@ export default function EstimateCalc(){
             <button style={addBtnS} onClick={()=>addItem(setter,"discounts")}>+ 추가</button>
           </div>
           {plan.discounts.map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:6,marginBottom:4}}>
+            <div key={i} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
               <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(setter,"discounts",i,{name:e.target.value})}/>
               <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(setter,"discounts",i,{amount:Number(e.target.value)})}/>
               <button style={delBtnS} onClick={()=>rmItem(setter,"discounts",i)}>×</button>
@@ -192,7 +192,7 @@ export default function EstimateCalc(){
   /* ── 출력 카드 ── */
   function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string){
     if(!r) return(
-      <div style={{flex:1,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0"}}>
+      <div style={{flex:1,minWidth:280,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0"}}>
         {label}: 가격 정보 없음<br/>조건을 변경해주세요.
       </div>
     );
@@ -200,7 +200,7 @@ export default function EstimateCalc(){
     const hasDiscounts=plan.discounts.filter(e=>e.name&&e.amount).length>0;
     const showStrike=r.listPrice!==r.finalPrice;
     return(
-      <div style={{flex:1,background:"#fff",borderRadius:12,padding:24,border:"1px solid #e2e8f0"}}>
+      <div style={{flex:1,minWidth:280,background:"#fff",borderRadius:12,padding:24,border:"1px solid #e2e8f0"}}>
         {/* 카드 헤더 */}
         <div style={{textAlign:"center",marginBottom:16,paddingBottom:14,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
@@ -286,7 +286,7 @@ export default function EstimateCalc(){
           <div style={{fontSize:11,color:"#94a3b8"}}>발행일: {todayFmt}</div>
         </div>
 
-        <div style={{display:"flex",gap:16,marginBottom:24}}>
+        <div style={{display:"flex",gap:16,marginBottom:24,flexWrap:"wrap"}}>
           {renderCard(p1,r1,"1안")}
           {show2&&renderCard(p2,r2,"2안")}
         </div>
@@ -298,7 +298,7 @@ export default function EstimateCalc(){
 
       {/* ── 버튼 ── */}
       <div className="no-print" style={{marginTop:16,textAlign:"center"}}>
-        <button onClick={saveImage} style={{padding:"12px 32px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>
+        <button onClick={saveImage} style={{padding:"12px 32px",width:"100%",minHeight:44,background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>
           📷 이미지 저장
         </button>
       </div>
