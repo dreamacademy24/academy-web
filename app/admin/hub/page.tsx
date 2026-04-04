@@ -7,11 +7,13 @@ export default function AdminHubPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [staffId, setStaffId] = useState("");
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/admin"); return; }
     const info = getAdminInfo();
-    if (info) setName(info.name);
+    if (info) { setName(info.name); setRole(info.role); setStaffId(info.staffId); }
     setReady(true);
   }, [router]);
 
@@ -42,7 +44,7 @@ export default function AdminHubPage() {
     <div className="hub-w">
       <div className="hub-h">
         <h1>드림아카데미 관리자</h1>
-        <p>안녕하세요, {name}님. 관리 메뉴를 선택하세요.</p>
+        <p>안녕하세요, {name}님{role === 'admin' ? ' (관리자)' : ' (스태프)'}. 관리 메뉴를 선택하세요.</p>
       </div>
       <div className="hub-grid">
         <div className="hub-card card-blue" onClick={() => router.push("/admin/bookings")}>
@@ -55,10 +57,10 @@ export default function AdminHubPage() {
           <h2>사이트 관리</h2>
           <p>공지사항 · 셔틀 · 필드트립 · 회원</p>
         </div>
-        <div className="hub-card card-gray" onClick={() => router.push("/staff")}>
+        <div className="hub-card card-gray" onClick={() => router.push(role === 'staff' && staffId ? `/staff?user=${staffId}` : '/staff')}>
           <div className="ic">👥</div>
           <h2>직원업무</h2>
-          <p>직원 업무 관리</p>
+          <p>팀 업무 · 일정 · 프로젝트</p>
         </div>
       </div>
       <div className="hub-footer">

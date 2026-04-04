@@ -24,12 +24,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAdminAuthed()) {
-      const info = getAdminInfo();
-      if (info?.role === 'staff' && info.staffId) {
-        router.replace('/staff?user=' + info.staffId);
-      } else {
-        router.replace('/admin/hub');
-      }
+      router.replace('/admin/hub');
     } else {
       setReady(true);
     }
@@ -48,11 +43,7 @@ export default function AdminPage() {
     localStorage.setItem("adminStaffId", account.staffId || "");
     localStorage.setItem("adminExpiry", String(Date.now() + 24 * 60 * 60 * 1000));
 
-    if (account.role === "admin") {
-      router.push("/admin/hub");
-    } else {
-      router.push("/staff?user=" + account.staffId);
-    }
+    router.push("/admin/hub");
   }
 
   if (!ready) return null;

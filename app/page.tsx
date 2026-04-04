@@ -424,7 +424,7 @@ export default function HomePage() {
       <button onClick={() => router.push('/admin')} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"7px 14px",fontSize:"13px",color:"#374151",fontWeight:600,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그인</button>
     )}
     {adminInfo ? (
-      <a href="/admin/bookings" className="nav-cta">관리페이지</a>
+      <a href="/admin/hub" className="nav-cta">관리페이지</a>
     ) : (
       <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
     )}
@@ -445,7 +445,7 @@ export default function HomePage() {
   <a href="/notice">공지사항</a>
   <a href="/community">커뮤니티</a>
   {adminInfo ? (
-    <a href="/admin/bookings">관리페이지 →</a>
+    <a href="/admin/hub">관리페이지 →</a>
   ) : (
     <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
   )}
