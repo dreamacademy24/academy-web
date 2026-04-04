@@ -17,9 +17,9 @@ function StaffIframe() {
     const info = getAdminInfo()
     const userId = userParam || info?.staffId || ''
     if (userId) {
-      setSrc('/team_manager2_4.html?user=' + encodeURIComponent(userId))
+      setSrc('/team_manager3.html?user=' + encodeURIComponent(userId))
     } else {
-      setSrc('/team_manager2_4.html')
+      setSrc('/team_manager3.html')
     }
   }, [sp, router])
 
