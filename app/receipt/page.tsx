@@ -11,7 +11,7 @@ interface LC { id:number; name:string; amount:string }
 interface Payment { id:number; type:string; date:string; amount:string }
 interface InvoicePayload {
   name:string; englishName:string; reservationNo:string; reservationDate:string; balanceDate:string;
-  accom:string; checkInDate:string; checkOutDate:string; houseNo:string;
+  accom:string; checkInDate:string; checkOutDate:string; houseNo:string; people:string;
   pickup:string; drop:string; pickupPlace:string; flightIn:string; flightOut:string;
   packageType:string; basePrice:number; totalDiscount:number; finalPrice:number;
   deposit:number; balance:number;
@@ -52,7 +52,7 @@ function ReceiptPageInner(){
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
             checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
-            houseNo:"미정",
+            people:row.accom_people||"", houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
             packageType:items.map((i:BillItem)=>i.label).join(" + "),
@@ -113,12 +113,11 @@ function ReceiptPageInner(){
 
   const receiptNo="R-"+data.reservationNo;
   const filledPayments=payments.filter(p=>p.amount.trim()!=="");
-  // 인원구성 자동 계산: 학생 수 + 보호자(locals) 수
+  // 인원구성: DB값 우선, 없으면 students로 계산
   const studentCount=data.students?.length||0;
-  const guardianCount=data.locals?.length||0;
-  const peopleStr=studentCount>0
-    ?(guardianCount>0?`보호자 ${guardianCount}명 + 학생 ${studentCount}명`:`학생 ${studentCount}명`)
-    :"-";
+  const peopleStr=data.people&&data.people.trim()!==""
+    ?data.people
+    :studentCount>0?`학생 ${studentCount}명`:"-";
 
   return(<>
     <style>{`
@@ -333,7 +332,7 @@ function ReceiptPageInner(){
         <button className="rbn sh" onClick={saveToDreamhouse} disabled={sheetSaved}>{sheetSaved?"✅ 등록 완료":"🏠 드림하우스 등록"}</button>
         <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
         <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
-        <button className="rbn cl" onClick={()=>router.push("/admin/hub")}>관리자 홈</button>
+        <button className="rbn cl" onClick={()=>router.push("/admin/bookings")}>예약관리</button>
       </div>
     </div>
   </>);
