@@ -64,7 +64,7 @@ function InvoicePageInner(){
   const [a2R,setA2R]=useState("디럭스");
   const [a2W,setA2W]=useState(2);
   const [cP,setCP]=useState(1);
-  const [cK,setCK]=useState(2);
+  const [cK,setCK]=useState(1);
   const [ex1Cnt,setEx1Cnt]=useState(0);
   const [ex2Cnt,setEx2Cnt]=useState(0);
 
@@ -105,7 +105,7 @@ function InvoicePageInner(){
       if(data.checkin_date) setA1CI(data.checkin_date);
       if(data.accom_weeks) setA1W(data.accom_weeks);
       if(data.adults) setCP(data.adults);
-      if(data.children) setCK(data.children);
+      if(data.children){setCK(data.children);}else if(sts&&sts.length>0){setCK(sts.length);}
       if(data.base_price>0){
         const items=typeof data.billing_items==="string"?JSON.parse(data.billing_items):(data.billing_items||[]);
         const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
