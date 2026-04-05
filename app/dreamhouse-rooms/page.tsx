@@ -105,18 +105,22 @@ export default function DreamhouseRooms() {
   })
 
   // 레이트체크아웃 + 새벽체크인 충돌 감지
-  const conflictSet = new Set<string>()
+  // 같은 룸, 같은 날짜에 checkout_date=당일인 예약의 checkout_time과 checkin_date=다음날인 예약의 checkin_time이 너무 가까울때
+  const conflictSet = new Set<string>() // "dateStr_room"
   ROOMS.forEach(room => {
     const roomBookings = bookings.filter(b => b.accom_room === room)
     roomBookings.forEach(b1 => {
       roomBookings.forEach(b2 => {
         if (b1.id === b2.id) return
+        // b1 체크아웃날 = b2 체크인날 (당일 전환)
         if (b1.checkout_date === b2.checkin_date) {
           const outTime = parseTime(b1.checkout_time)
           const inTime = parseTime(b2.checkin_time)
+          // 체크아웃과 체크인 간격이 2시간 미만이면 충돌 경고
           if (inTime > 0 && outTime > 0 && inTime - outTime < 120) {
             conflictSet.add(`${b1.checkout_date}_${room}`)
           }
+          // 새벽 체크인 (0~6시)이면 무조건 경고
           if (inTime > 0 && inTime < 360) {
             conflictSet.add(`${b2.checkin_date}_${room}`)
           }
