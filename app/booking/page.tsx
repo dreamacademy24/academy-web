@@ -10,7 +10,7 @@ const todayCompact = todayStr.replace(/-/g,"");
 export default function BookingPage(){
   const [booker,setBooker]=useState({name:"",english:""});
   const [students,setStudents]=useState<Student[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",photo:"O"}]);
-  const [schedule,setSchedule]=useState({checkIn:"",checkOut:"",comboMode:false,weeks:"4",accomType:"드림하우스",weeks2:"2",accomType2:"제이파크"});
+  const [schedule,setSchedule]=useState({checkIn:"",checkOut:"",comboMode:false,weeks:"4",accomType:"드림하우스",weeks2:"2",accomType2:"제이파크",adults:"1",children:"1"});
 
   useEffect(()=>{
     if(!schedule.checkIn||!schedule.weeks) return;
@@ -42,6 +42,8 @@ export default function BookingPage(){
       accom_weeks:schedule.comboMode?Number(schedule.weeks)+Number(schedule.weeks2):Number(schedule.weeks),
       checkin_date:schedule.checkIn||null,
       checkout_date:schedule.checkOut||null,
+      adults:Number(schedule.adults),
+      children:Number(schedule.children),
       pickup:service.pickup,
       drop_off:service.drop,
       special_request:specialRequest,
@@ -114,6 +116,7 @@ export default function BookingPage(){
     <div className="bs"><h2>일정 / 숙소</h2>
       <div className="tg"><button className={`tgb${!schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:false})}>숙소 1개</button><button className={`tgb${schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:true})}>숙소 2개 조합</button></div>
       <div className="fr"><div className="fg"><label className="fl">희망 체크인 날짜</label><input className="fi" type="date" value={schedule.checkIn} onChange={e=>setSchedule({...schedule,checkIn:e.target.value})}/></div><div className="fg"><label className="fl">체크아웃 (자동계산)</label><input className="fi" type="date" value={schedule.checkOut} readOnly style={{background:'#f3f4f6'}}/></div></div>
+      <div className="fr"><div className="fg"><label className="fl">보호자 수</label><select className="fsl" value={schedule.adults} onChange={e=>setSchedule({...schedule,adults:e.target.value})}>{[1,2,3].map(v=><option key={v} value={v}>{v}명</option>)}</select></div><div className="fg"><label className="fl">아이 수</label><select className="fsl" value={schedule.children} onChange={e=>setSchedule({...schedule,children:e.target.value})}>{[1,2,3,4,5].map(v=><option key={v} value={v}>{v}명</option>)}</select></div></div>
       {!schedule.comboMode?(
         <div className="fr"><div className="fg"><label className="fl">희망 기간</label><select className="fsl" value={schedule.weeks} onChange={e=>setSchedule({...schedule,weeks:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="fg"><label className="fl">숙소 선택</label><select className="fsl" value={schedule.accomType} onChange={e=>setSchedule({...schedule,accomType:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div></div>
       ):(<>
