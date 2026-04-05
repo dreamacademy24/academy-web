@@ -8,12 +8,13 @@ interface StudentData { korName:string; engName:string; age:string; grade:string
 interface BillItem { label:string; price:number; season:string }
 interface Disc { id:number; name:string; amount:number }
 interface LC { id:number; name:string; amount:string }
-interface Payment { id:number; payMethod:string; date:string; amount:string }
+interface Payment { id:number; type:string; date:string; amount:string }
 interface InvoicePayload {
   name:string; englishName:string; reservationNo:string; reservationDate:string; balanceDate:string;
-  accom:string; checkInDate:string; checkOutDate:string; people:string; houseNo:string;
+  accom:string; checkInDate:string; checkOutDate:string; houseNo:string;
   pickup:string; drop:string; pickupPlace:string; flightIn:string; flightOut:string;
   packageType:string; basePrice:number; totalDiscount:number; finalPrice:number;
+  deposit:number; balance:number;
   students:StudentData[]; note:string; agency?:string; ssp?:string; assignee?:string;
   billingItems:BillItem[]; discounts:Disc[]; locals:LC[];
 }
@@ -31,7 +32,7 @@ function ReceiptPageInner(){
   const [data,setData]=useState<InvoicePayload|null>(null);
   const [sheetSaved,setSheetSaved]=useState(false);
   const [payments,setPayments]=useState<Payment[]>([
-    {id:1,payMethod:"무통장",date:new Date().toISOString().slice(0,10),amount:""}
+    {id:1,type:"예약금",date:new Date().toISOString().slice(0,10),amount:""}
   ]);
   const today=new Date().toISOString().slice(0,10);
 
@@ -40,24 +41,31 @@ function ReceiptPageInner(){
       if(bookingId){
         const {data:row}=await supabase.from("bookings").select("*").eq("id",bookingId).single();
         if(row){
-          const sts=typeof row.students==="string"?JSON.parse(row.students):(row.students||[]);
-          const items=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
-          const discs=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
-          const locs=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
+          const sts:StudentData[]=typeof row.students==="string"?JSON.parse(row.students):(row.students||[]);
+          const items:BillItem[]=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
+          const discs:Disc[]=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
+          const locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
+          // 예약금/잔금 계산: billingItems 중 보증금 항목 찾기, 없으면 finalPrice의 20%
+          const depositItem=items.find((i:BillItem)=>i.label.includes("보증금")||i.label.includes("예약금")||i.label.includes("deposit"));
+          const deposit=depositItem?depositItem.price:Math.round((row.final_price||0)*0.2/10000)*10000;
+          const balance=(row.final_price||0)-deposit;
           setData({
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
             checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
-            people:"", houseNo:row.house_no||row.accom_room||"",
+            houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
-            packageType:items.map((i:any)=>i.label).join(" + "),
+            packageType:items.map((i:BillItem)=>i.label).join(" + "),
             basePrice:row.base_price, totalDiscount:row.total_discount, finalPrice:row.final_price,
+            deposit, balance,
             students:sts, note:row.special_request||"",
             agency:row.agency||"", ssp:row.ssp||"", assignee:row.assignee||"",
             billingItems:items, discounts:discs, locals:locs,
           });
+          // 초기 지불내역에 예약금 자동 세팅
+          setPayments([{id:1,type:"예약금",date:today,amount:deposit>0?fmt(deposit):""}]);
           await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
           return;
         }
@@ -67,7 +75,7 @@ function ReceiptPageInner(){
     load();
   },[bookingId]);
 
-  function addPayment(){setPayments(prev=>[...prev,{id:Date.now(),payMethod:"무통장",date:today,amount:""}]);}
+  function addPayment(){setPayments(prev=>[...prev,{id:Date.now(),type:"잔금",date:today,amount:""}]);}
   function removePayment(id:number){if(payments.length>1)setPayments(prev=>prev.filter(p=>p.id!==id));}
   function upd(id:number,field:keyof Payment,value:string){setPayments(prev=>prev.map(p=>p.id===id?{...p,[field]:value}:p));}
 
@@ -85,6 +93,7 @@ function ReceiptPageInner(){
     const{error}=await supabase.from("bookings").update({accom_room:assigned,checkin_date:ci,checkout_date:co,status:"영수증발행"}).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
     setSheetSaved(true);
+    setData(prev=>prev?{...prev,houseNo:assigned}:prev);
     alert("✅ 드림하우스 예약 완료!\n배정 룸: "+assigned);
   }
 
@@ -106,6 +115,12 @@ function ReceiptPageInner(){
 
   const receiptNo="R-"+data.reservationNo;
   const filledPayments=payments.filter(p=>p.amount.trim()!=="");
+  // 인원구성 자동 계산: 학생 수 + 보호자(locals) 수
+  const studentCount=data.students?.length||0;
+  const guardianCount=data.locals?.length||0;
+  const peopleStr=studentCount>0
+    ?(guardianCount>0?`보호자 ${guardianCount}명 + 학생 ${studentCount}명`:`학생 ${studentCount}명`)
+    :"-";
 
   return(<>
     <style>{`
@@ -126,8 +141,10 @@ function ReceiptPageInner(){
       .rt td{font-size:13px;padding:9px 12px;border:1px solid #e2e8f0;color:#1a1a2e;}
       .lb{font-weight:600;background:#fafbfc;width:22%;color:#374151;font-size:12px;}
       .dc{color:#dc2626;font-weight:600;}
-      .fr td{font-weight:800;font-size:14px;background:#1a6fc4;color:#fff;}
-      .total-row td{font-weight:800;font-size:14px;background:#f0f9ff;color:#1a6fc4;}
+      .fr td{font-weight:800;font-size:15px;background:#1a6fc4;color:#fff;}
+      .dep-row td{background:#f0fdf4;color:#16a34a;font-weight:700;}
+      .bal-row td{background:#fff7ed;color:#ea580c;font-weight:600;}
+      .now-row td{background:#eff6ff;color:#1a6fc4;font-weight:800;font-size:14px;}
       .rf{margin-top:32px;text-align:center;padding:24px;}
       .rf p{font-size:14px;font-weight:600;color:#374151;margin-bottom:16px;}
       .notice{font-size:12px;color:#6b7c93;line-height:1.9;margin-top:20px;text-align:center;}
@@ -135,17 +152,18 @@ function ReceiptPageInner(){
       .stamp .s1{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:900;letter-spacing:0.08em;}
       .stamp .s2{font-size:9px;opacity:0.7;margin-top:1px;}
       .stamp .s3{font-size:8px;font-weight:600;margin-top:4px;}
-      /* 입금 에디터 */
-      .pay-editor{background:#fff;padding:24px 32px;box-shadow:0 2px 20px rgba(0,0,0,0.08);margin-bottom:24px;}
-      .pay-editor-title{font-size:15px;font-weight:800;color:#1a1a2e;margin-bottom:14px;}
-      .pay-row{display:grid;grid-template-columns:1fr 160px 1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
+      .pay-editor{background:#fff;padding:24px 32px;box-shadow:0 2px 20px rgba(0,0,0,0.08);margin-bottom:24px;border-left:4px solid #1a6fc4;}
+      .pay-editor-title{font-size:15px;font-weight:800;color:#1a1a2e;margin-bottom:6px;}
+      .pay-editor-sub{font-size:12px;color:#6b7c93;margin-bottom:16px;}
+      .pay-row{display:grid;grid-template-columns:130px 160px 1fr auto;gap:8px;align-items:center;margin-bottom:8px;}
       .pay-input{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;}
       .pay-input:focus{border-color:#1a6fc4;}
+      .pay-select{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;outline:none;background:#fff;cursor:pointer;}
+      .pay-select:focus{border-color:#1a6fc4;}
       .pay-del{background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:14px;}
       .pay-add{background:#f0f9ff;color:#1a6fc4;border:1px dashed #93c5fd;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;width:100%;margin-top:4px;}
-      .pay-header{display:grid;grid-template-columns:1fr 160px 1fr auto;gap:8px;margin-bottom:6px;}
+      .pay-header{display:grid;grid-template-columns:130px 160px 1fr auto;gap:8px;margin-bottom:6px;}
       .pay-header span{font-size:11px;color:#6b7c93;font-weight:600;}
-      /* 버튼 */
       .rb{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap;}
       .rbn{padding:12px 28px;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;min-height:44px;}
       .rbn.pr{background:#1a6fc4;color:#fff;}
@@ -170,17 +188,23 @@ function ReceiptPageInner(){
     `}</style>
     <div className="rw">
 
-      {/* ── 입금 내역 에디터 (화면 전용) ── */}
+      {/* ── 지불내역 에디터 (화면 전용) ── */}
       <div className="pay-editor no-print">
         <div className="pay-editor-title">💰 지불내역 입력</div>
+        <div className="pay-editor-sub">입금받은 내역을 입력하세요. 영수증 하단에 자동으로 표시됩니다.</div>
         <div className="pay-header">
-          <span>결제수단</span><span>결제일</span><span>금액</span><span></span>
+          <span>구분</span><span>날짜</span><span>금액 (원)</span><span></span>
         </div>
         {payments.map(p=>(
           <div key={p.id} className="pay-row">
-            <input className="pay-input" type="text" placeholder="무통장 / PayPal / 현금..." value={p.payMethod} onChange={e=>upd(p.id,"payMethod",e.target.value)}/>
+            <select className="pay-select" value={p.type} onChange={e=>upd(p.id,"type",e.target.value)}>
+              <option value="예약금">예약금</option>
+              <option value="잔금">잔금</option>
+              <option value="추가입금">추가입금</option>
+              <option value="현지결제">현지결제</option>
+            </select>
             <input className="pay-input" type="date" value={p.date} onChange={e=>upd(p.id,"date",e.target.value)}/>
-            <input className="pay-input" type="text" placeholder="금액 (예: 1,000,000)" value={p.amount} onChange={e=>upd(p.id,"amount",e.target.value)}/>
+            <input className="pay-input" type="text" placeholder="예: 1,000,000" value={p.amount} onChange={e=>upd(p.id,"amount",e.target.value)}/>
             <button className="pay-del" onClick={()=>removePayment(p.id)} disabled={payments.length===1}>✕</button>
           </div>
         ))}
@@ -204,8 +228,9 @@ function ReceiptPageInner(){
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
             <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일자</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">숙소</td><td>{data.accom}{data.houseNo?` (${data.houseNo})`:""}</td><td className="lb">담당자</td><td>{data.assignee||"-"}</td></tr>
+            <tr><td className="lb">숙소</td><td>{data.accom}</td><td className="lb">하우스번호</td><td>{data.houseNo}</td></tr>
             <tr><td className="lb">체크인</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃</td><td>{fmtFull(data.checkOutDate)}</td></tr>
+            <tr><td className="lb">인원구성</td><td>{peopleStr}</td><td className="lb">담당자</td><td>{data.assignee||"-"}</td></tr>
             <tr><td className="lb">잔금납부일</td><td>{fmtFull(data.balanceDate)||"미정"}</td><td className="lb">유학원</td><td>{data.agency||"-"}</td></tr>
             <tr><td className="lb">픽업</td><td>{data.pickup}</td><td className="lb">드롭</td><td>{data.drop}</td></tr>
             <tr><td className="lb">픽업 장소</td><td>{data.pickupPlace||"미정"}</td><td className="lb">SSP</td><td>{data.ssp||"-"}</td></tr>
@@ -217,22 +242,48 @@ function ReceiptPageInner(){
         {/* 학생 정보 */}
         {data.students&&data.students.length>0&&(
           <div className="rs"><div className="rst">Student Information</div>
-            <table className="rt"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>오전/종일</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
-              {data.students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.classType}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
+            <table className="rt"><thead>
+              <tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>아카데미 기간</th><th>사진허용</th></tr>
+            </thead><tbody>
+              {data.students.map((s,i)=>(
+                <tr key={i}>
+                  <td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td>
+                  <td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td>
+                  <td>{s.photo}</td>
+                </tr>
+              ))}
             </tbody></table>
           </div>
         )}
 
         {/* 청구 내역 */}
         <div className="rs"><div className="rst">Billing Details</div>
-          <table className="rt"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+          <table className="rt"><thead>
+            <tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr>
+          </thead><tbody>
             {data.billingItems&&data.billingItems.length>0
               ?data.billingItems.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>)
               :<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(data.basePrice)}원</td></tr>}
             {data.discounts&&data.discounts.map((d,i)=><tr key={`d${i}`}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
             {data.totalDiscount>0&&<tr><td style={{fontWeight:600}}>총 할인</td><td style={{textAlign:"right",color:"#dc2626",fontWeight:600}}>-{fmt(data.totalDiscount)}원</td></tr>}
-            <tr className="fr"><td>청구 금액 합계</td><td style={{textAlign:"right"}}>{fmt(data.finalPrice)}원</td></tr>
+            {/* 총 청구금액 */}
+            <tr className="fr"><td>총 청구금액</td><td style={{textAlign:"right"}}>{fmt(data.finalPrice)}원</td></tr>
+            {/* 예약금 */}
+            <tr className="dep-row">
+              <td>예약금 <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td>
+              <td style={{textAlign:"right"}}>{fmt(data.deposit)}원</td>
+            </tr>
+            {/* 잔금 */}
+            <tr className="bal-row">
+              <td>잔금 <span style={{fontSize:11,fontWeight:400}}>{data.balanceDate?`(납부일: ${data.balanceDate})`:""}</span></td>
+              <td style={{textAlign:"right"}}>{fmt(data.balance)}원</td>
+            </tr>
           </tbody></table>
+          {data.deposit>0&&(
+            <div style={{fontSize:12,color:"#6b7c93",marginTop:8,paddingLeft:4}}>
+              ※ 예약금 {fmt(data.deposit)}원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.
+            </div>
+          )}
         </div>
 
         {/* 현지 지불 */}
@@ -244,20 +295,22 @@ function ReceiptPageInner(){
           </div>
         )}
 
-        {/* 지불 내역 (입금 기록) */}
+        {/* 지불 내역 */}
         <div className="rs"><div className="rst">지불내역</div>
           <table className="rt"><thead>
-            <tr><th style={{width:"30%"}}>결제수단</th><th style={{width:"35%"}}>결제일</th><th style={{width:"35%",textAlign:"right"}}>금액</th></tr>
+            <tr><th style={{width:"25%"}}>구분</th><th style={{width:"35%"}}>결제일</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr>
           </thead><tbody>
             {filledPayments.length>0
-              ?filledPayments.map((p,i)=>(
+              ?filledPayments.map((p)=>(
                 <tr key={p.id}>
-                  <td>{p.payMethod||"무통장"}</td>
+                  <td style={{fontWeight:700}}>{p.type}</td>
                   <td>{fmtFull(p.date)}</td>
-                  <td style={{textAlign:"right",fontWeight:700}}>{p.amount}</td>
+                  <td style={{textAlign:"right",fontWeight:700,color:"#1a6fc4"}}>{p.amount}원</td>
                 </tr>
               ))
-              :<tr><td colSpan={3} style={{textAlign:"center",color:"#94a3b8",fontSize:12}}>입금 내역을 위에서 입력해주세요</td></tr>
+              :<tr><td colSpan={3} style={{textAlign:"center",color:"#94a3b8",fontSize:12,padding:"16px"}}>
+                위 입력란에서 지불내역을 입력해주세요
+              </td></tr>
             }
           </tbody></table>
         </div>
