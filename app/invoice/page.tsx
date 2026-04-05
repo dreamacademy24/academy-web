@@ -40,7 +40,8 @@ function extraRate(t:AT){return t==="cubenine"?250000:340000;}
 /* ── 타입 ── */
 interface Disc{id:number;name:string;amount:number}
 interface LC{id:number;name:string;amount:string}
-interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;classType:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string}
+interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string}
+function getNextMonday(dateStr:string){const d=new Date(dateStr);const day=d.getDay();const daysUntilMonday=day===1?7:(8-day)%7;d.setDate(d.getDate()+daysUntilMonday);return d.toISOString().split('T')[0];}
 
 const todayStr = new Date().toISOString().slice(0,10);
 const todayCompact = todayStr.replace(/-/g,"");
@@ -78,15 +79,17 @@ function InvoicePageInner(){
   const [reservationNo,setReservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900+100));
   const [reservationDate,setReservationDate]=useState(todayStr);
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
-  const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
+  const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
+  const [applied,setApplied]=useState(false);
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
 
-  /* ── 학생 academyStart 자동동기화 ── */
+  /* ── 학생 academyStart 자동동기화 (다음 월요일) ── */
   useEffect(()=>{
     if(!a1CI||dbLoaded) return;
-    setStudents(prev=>prev.map(s=>({...s,academyStart:a1CI,academyEnd:s.academyWeeks?addDays(a1CI,Number(s.academyWeeks)*7):""})));
+    const monday=getNextMonday(a1CI);
+    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyWeeks?addDays(monday,Number(s.academyWeeks)*7):""})));
   },[a1CI,dbLoaded]);
 
   /* ── DB에서 예약 로드 ── */
@@ -106,6 +109,7 @@ function InvoicePageInner(){
         const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
         const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
         setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
+        setApplied(true);
       }
       if(data.reservation_no) setReservationNo(data.reservation_no);
       if(data.reservation_date) setReservationDate(data.reservation_date);
@@ -184,6 +188,7 @@ function InvoicePageInner(){
     if(!est)return;
     const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
     setBilling(b=>({...b,basePrice:est.total,items:billItems}));
+    setApplied(true);
   }
 
   /* ── 견적 선택 UI (기존 유지) ── */
@@ -211,7 +216,7 @@ function InvoicePageInner(){
   function upL(id:number,f:string,v:string){setBilling(b=>({...b,locals:b.locals.map(c=>c.id===id?{...c,[f]:v}:c)}));}
 
   /* ── 학생 헬퍼 ── */
-  function addStudent(){if(students.length>=6)return;setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",classType:"종일",academyStart:a1CI,academyEnd:a1CI?addDays(a1CI,2*7):"",academyWeeks:"2",photo:"O"}]);}
+  function addStudent(){if(students.length>=6)return;const monday=a1CI?getNextMonday(a1CI):"";setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:monday?addDays(monday,2*7):"",academyWeeks:"2",photo:"O"}]);}
   function rmStudent(id:number){setStudents(students.filter(s=>s.id!==id));}
   function upStudent(id:number,f:string,v:string){
     setStudents(students.map(s=>{
@@ -287,7 +292,7 @@ function InvoicePageInner(){
       flightIn:checkin.flightIn,flightOut:checkin.flightOut,
       packageType:billing.items.map(i=>i.label).join(" + "),
       basePrice:billing.basePrice,totalDiscount,finalPrice,
-      students:students.map(s=>({korName:s.korName,engName:s.engName,age:s.age,grade:s.grade,classType:s.classType,academyStart:s.academyStart,academyEnd:s.academyEnd,academyWeeks:s.academyWeeks,photo:s.photo})),
+      students:students.map(s=>({korName:s.korName,engName:s.engName,age:s.age,grade:s.grade,academyStart:s.academyStart,academyEnd:s.academyEnd,academyWeeks:s.academyWeeks,photo:s.photo})),
       note:checkin.specialRequest,agency:adminOnly.agency,ssp:adminOnly.ssp,
       billingItems:billing.items,
       discounts:billing.discounts.filter(d=>d.name),
@@ -373,7 +378,7 @@ function InvoicePageInner(){
         {students.length>1&&<button className="sc-del" onClick={()=>rmStudent(s.id)}>X</button>}
         <div className="sc-num">학생 {idx+1}</div>
         <div className="f-row"><div className="f-group"><label className="f-label">한글이름</label><input className="f-input" placeholder="홍민준" value={s.korName} onChange={e=>upStudent(s.id,"korName",e.target.value)}/></div><div className="f-group"><label className="f-label">영문이름</label><input className="f-input" placeholder="HONG MINJUN" value={s.engName} onChange={e=>upStudent(s.id,"engName",e.target.value.toUpperCase())}/></div></div>
-        <div className="f-row"><div className="f-group"><label className="f-label">나이</label><input className="f-input" type="number" value={s.age} onChange={e=>upStudent(s.id,"age",e.target.value)}/></div><div className="f-group"><label className="f-label">킨더/주니어</label><select className="f-select" value={s.grade} onChange={e=>upStudent(s.id,"grade",e.target.value)}><option value="킨더">킨더</option><option value="주니어">주니어</option></select></div><div className="f-group"><label className="f-label">오전/종일</label><select className="f-select" value={s.classType} onChange={e=>upStudent(s.id,"classType",e.target.value)}><option value="오전">오전</option><option value="종일">종일</option></select></div></div>
+        <div className="f-row"><div className="f-group"><label className="f-label">나이</label><input className="f-input" type="number" value={s.age} onChange={e=>upStudent(s.id,"age",e.target.value)}/></div><div className="f-group"><label className="f-label">킨더/주니어</label><select className="f-select" value={s.grade} onChange={e=>upStudent(s.id,"grade",e.target.value)}><option value="킨더">킨더</option><option value="주니어">주니어</option></select></div></div>
         <div className="f-row"><div className="f-group"><label className="f-label">아카데미 시작일</label><input className="f-input" type="date" value={s.academyStart} onChange={e=>upStudent(s.id,"academyStart",e.target.value)}/></div><div className="f-group"><label className="f-label">기간</label><select className="f-select" value={s.academyWeeks} onChange={e=>upStudent(s.id,"academyWeeks",e.target.value)}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="f-group"><label className="f-label">아카데미 종료일</label><input className="f-input auto" type="date" value={s.academyEnd} readOnly/></div></div>
         <div className="f-row"><div className="f-group"><label className="f-label">사진촬영 허용</label><select className="f-select" value={s.photo} onChange={e=>upStudent(s.id,"photo",e.target.value)}><option value="O">O</option><option value="X">X</option></select><div className="f-hint">인스타그램 등 SNS 활용 / 미허용 시 별도 사진 제공 없음</div></div></div>
       </div>
@@ -425,18 +430,18 @@ function InvoicePageInner(){
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>오전/종일</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
-        {students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.classType}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
+      <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
+        {students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Billing Details</div><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+      <div className="is"><div className="ist">Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 적용 후 표시됩니다</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
         <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {fp>0&&(isFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>⚠️ 입실 2달 미만 — 전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
-      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{(c.name.includes("SSP")||c.name.includes("보증금"))?" 페소":""}</td></tr>)}</tbody></table>}</div>
+      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{(c.name.includes("SSP")||c.name.includes("보증금"))?" 페소":""}</td></tr>)}</tbody></table>}</>}</div>
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
