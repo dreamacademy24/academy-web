@@ -228,13 +228,9 @@ function ReceiptPageInner(){
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
             <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일자</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">숙소</td><td>{data.accom}</td><td className="lb">하우스번호</td><td>{data.houseNo}</td></tr>
+            <tr><td className="lb">숙소</td><td colSpan={3}>{data.accom}</td></tr>
             <tr><td className="lb">체크인</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃</td><td>{fmtFull(data.checkOutDate)}</td></tr>
-            <tr><td className="lb">인원구성</td><td>{peopleStr}</td><td className="lb">담당자</td><td>{data.assignee||"-"}</td></tr>
-            <tr><td className="lb">잔금납부일</td><td>{fmtFull(data.balanceDate)||"미정"}</td><td className="lb">유학원</td><td>{data.agency||"-"}</td></tr>
-            <tr><td className="lb">픽업</td><td>{data.pickup}</td><td className="lb">드롭</td><td>{data.drop}</td></tr>
-            <tr><td className="lb">픽업 장소</td><td>{data.pickupPlace||"미정"}</td><td className="lb">SSP</td><td>{data.ssp||"-"}</td></tr>
-            <tr><td className="lb">항공편 IN</td><td>{data.flightIn||"미정"}</td><td className="lb">항공편 OUT</td><td>{data.flightOut||"미정"}</td></tr>
+            <tr><td className="lb">인원구성</td><td colSpan={3}>{peopleStr}</td></tr>
             {data.note&&<tr><td className="lb">특이사항</td><td colSpan={3}>{data.note}</td></tr>}
           </tbody></table>
         </div>
