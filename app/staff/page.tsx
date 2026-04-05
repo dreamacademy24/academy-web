@@ -1,11 +1,10 @@
 'use client'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { isAdminAuthed, getAdminInfo } from '@/lib/adminAuth'
 
 function StaffIframe() {
   const sp = useSearchParams()
-  const router = useRouter()
   const [src, setSrc] = useState('')
 
   useEffect(() => {
@@ -13,18 +12,21 @@ function StaffIframe() {
       window.location.href = '/admin'
       return
     }
-    const userParam = sp.get('user')
+
     const info = getAdminInfo()
-    const userId = userParam || info?.staffId || ''
+    // ?user= 파라미터 우선, 없으면 로그인 계정에서 추출
+    // admin-eric → eric, admin-ceo → ceo, ceo → ceo
+    const rawUser = sp.get('user') || info?.staffId || ''
+    const userId = rawUser.replace(/^admin-/, '')
+
     if (userId) {
       setSrc('/team_manager3.html?user=' + encodeURIComponent(userId))
     } else {
-      setSrc('/team_manager3.html')
+      window.location.href = '/admin'
     }
-  }, [sp, router])
+  }, [sp])
 
   if (!src) return null
-
   return (
     <iframe
       src={src}
