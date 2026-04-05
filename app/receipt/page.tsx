@@ -52,7 +52,7 @@ function ReceiptPageInner(){
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
             checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
-            people:row.accom_people||"", houseNo:"미정",
+            people:row.adults||"", houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
             packageType:items.map((i:BillItem)=>i.label).join(" + "),
@@ -113,7 +113,7 @@ function ReceiptPageInner(){
 
   const receiptNo="R-"+data.reservationNo;
   const filledPayments=payments.filter(p=>p.amount.trim()!=="");
-  // 인원구성: DB값 우선, 없으면 students로 계산
+  // 인원구성: DB adults 필드 우선, 없으면 students로 계산
   const studentCount=data.students?.length||0;
   const peopleStr=data.people&&data.people.trim()!==""
     ?data.people
@@ -332,7 +332,7 @@ function ReceiptPageInner(){
         <button className="rbn sh" onClick={saveToDreamhouse} disabled={sheetSaved}>{sheetSaved?"✅ 등록 완료":"🏠 드림하우스 등록"}</button>
         <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
         <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
-        <button className="rbn cl" onClick={()=>router.push("/admin/bookings")}>예약관리</button>
+        <button className="rbn cl" onClick={()=>router.push("/admin/bookings")}>← 예약관리</button>
       </div>
     </div>
   </>);
