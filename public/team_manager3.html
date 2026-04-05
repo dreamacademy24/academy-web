@@ -1514,13 +1514,11 @@ function savePw(){
 const PAGES=['home','board','calendar','emp','projects','proj-detail','daily'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
-  const vis=isAdmin()?ALL:EMPS.filter(e=>e.id===CU.id);
+  const vis=ALL.filter(e=>e.id===CU.id);
   vis.forEach(function(emp){
     const el=document.createElement('div');el.className='emp-nav-item';el.dataset.eid=emp.id;
-    const isSelf=emp.id===CU.id;
     const roleSpan=emp.role?'<span style="font-size:10px;color:var(--text3)">'+emp.role+'</span>':'';
-    const selfSpan=isSelf?'<span style="font-size:10px;color:var(--text3)">(나)</span>':'';
-    el.innerHTML='<div class="emp-av" style="background:'+emp.color+'">'+emp.initial+'</div><span>'+emp.name+' '+roleSpan+selfSpan+'</span>';
+    el.innerHTML='<div class="emp-av" style="background:'+emp.color+'">'+emp.initial+'</div><span>'+emp.name+' '+roleSpan+'<span style="font-size:10px;color:var(--text3)">(나)</span></span>';
     el.onclick=function(){showEmpPage(emp.id);};nav.appendChild(el);
   });
 }
@@ -1546,6 +1544,7 @@ function showPage(p){
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
 }
 function showEmpPage(empId){
+  if(empId!==CU.id){alert('접근 권한이 없습니다.');showEmpPage(CU.id);return;}
   PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
   document.getElementById('page-emp').classList.remove('hidden');
   curEmpId=empId;setNav(null,empId);
@@ -1612,7 +1611,7 @@ function renderHomeSG(){
       r.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};
       body.appendChild(r);
     });
-    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+( g.items.length-5)+'개 더';m.onclick=function(){g.id==='_u'?showPage('board'):showEmpPage(g.id);};body.appendChild(m);}
+    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+(g.items.length-5)+'개 더';m.onclick=function(){if(g.id==='_u'){showPage('board');}else if(g.id===CU.id){showEmpPage(g.id);}else{alert('접근 권한이 없습니다.');}};body.appendChild(m);}
     grid.appendChild(div);
   });
 }
