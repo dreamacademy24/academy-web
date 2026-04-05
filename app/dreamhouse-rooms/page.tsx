@@ -11,13 +11,13 @@ const supabase = createClient(
 const ROOMS = [
   'b13L10','b16L19',
   'b17L4','b17L5','b17L6','b17L7','b17L8','b17L9',
-  'b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16'
+  'b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'
 ]
 
 const ROOM_COLORS = [
   '#6366f1','#8b5cf6','#ec4899','#f43f5e','#f97316',
   '#eab308','#22c55e','#10b981','#14b8a6','#06b6d4',
-  '#3b82f6','#6366f1','#a855f7','#d946ef','#f43f5e'
+  '#3b82f6','#6366f1','#a855f7','#d946ef','#f43f5e','#0ea5e9','#84cc16'
 ]
 
 type Booking = {
@@ -142,39 +142,39 @@ export default function DreamhouseRooms() {
   const DOW_KO = ['일','월','화','수','목','금','토']
 
   return (
-    <div style={{minHeight:'100vh',background:'#0f0f1a',color:'#e2e8f0',fontFamily:'sans-serif'}}>
+    <div style={{minHeight:'100vh',background:'#f8fafc',color:'#1e293b',fontFamily:'sans-serif'}}>
       {/* 헤더 */}
-      <div style={{background:'linear-gradient(135deg,#1e1b4b,#312e81)',padding:'20px 24px',borderBottom:'1px solid #312e81',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+      <div style={{background:'#1e40af',padding:'20px 24px',borderBottom:'1px solid #1e3a8a',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
-          <button onClick={()=>router.push('/admin')} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#a5b4fc',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>← 어드민</button>
-          <h1 style={{margin:0,fontSize:20,fontWeight:700,color:'#c7d2fe'}}>🏠 Dream House 예약현황</h1>
+          <button onClick={()=>router.push('/admin')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#dbeafe',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>← 어드민</button>
+          <h1 style={{margin:0,fontSize:20,fontWeight:700,color:'#ffffff'}}>🏠 Dream House 예약현황</h1>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <button onClick={prevMonth} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#e2e8f0',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>‹</button>
-          <span style={{fontSize:18,fontWeight:700,color:'#c7d2fe',minWidth:80,textAlign:'center'}}>{year}년 {MONTH_KO[month]}</span>
-          <button onClick={nextMonth} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',color:'#e2e8f0',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>›</button>
-          <button onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}} style={{background:'#4f46e5',border:'none',color:'white',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>오늘</button>
+          <button onClick={prevMonth} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#ffffff',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>‹</button>
+          <span style={{fontSize:18,fontWeight:700,color:'#ffffff',minWidth:80,textAlign:'center'}}>{year}년 {MONTH_KO[month]}</span>
+          <button onClick={nextMonth} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#ffffff',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>›</button>
+          <button onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}} style={{background:'#2563eb',border:'1px solid #3b82f6',color:'white',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>오늘</button>
         </div>
       </div>
 
       {/* 범례 */}
-      <div style={{padding:'12px 24px',display:'flex',gap:20,flexWrap:'wrap',borderBottom:'1px solid #1e1b4b',background:'#0f0f1a'}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#4f46e5'}}></div><span style={{fontSize:12,color:'#94a3b8'}}>예약 있음</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:12,color:'#94a3b8'}}>중복 예약</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:12,color:'#94a3b8'}}>⚠️ 시간 충돌 주의 (레이트체크아웃/새벽체크인)</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#1e293b',border:'1px solid #334155'}}></div><span style={{fontSize:12,color:'#94a3b8'}}>빈 날</span></div>
+      <div style={{padding:'12px 24px',display:'flex',gap:20,flexWrap:'wrap',borderBottom:'1px solid #e2e8f0',background:'#ffffff'}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#3b82f6'}}></div><span style={{fontSize:12,color:'#475569'}}>예약 있음</span></div>
+        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:12,color:'#475569'}}>중복 예약</span></div>
+        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:12,color:'#475569'}}>⚠️ 시간 충돌 주의 (레이트체크아웃/새벽체크인)</span></div>
+        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#f1f5f9',border:'1px solid #cbd5e1'}}></div><span style={{fontSize:12,color:'#475569'}}>빈 날</span></div>
       </div>
 
       {loading ? (
-        <div style={{textAlign:'center',padding:60,color:'#6366f1',fontSize:18}}>불러오는 중...</div>
+        <div style={{textAlign:'center',padding:60,color:'#3b82f6',fontSize:18}}>불러오는 중...</div>
       ) : (
         <div style={{overflowX:'auto'}}>
           <table style={{borderCollapse:'collapse',minWidth:'100%'}}>
             <thead>
               <tr>
-                <th style={{position:'sticky',left:0,zIndex:10,background:'#1e1b4b',padding:'10px 8px',fontSize:12,color:'#a5b4fc',borderRight:'2px solid #312e81',borderBottom:'2px solid #312e81',minWidth:70,textAlign:'center'}}>날짜</th>
+                <th style={{position:'sticky',left:0,zIndex:10,background:'#1e3a8a',padding:'10px 8px',fontSize:12,color:'#dbeafe',borderRight:'2px solid #1e40af',borderBottom:'2px solid #1e40af',minWidth:70,textAlign:'center'}}>날짜</th>
                 {ROOMS.map((room, ri) => (
-                  <th key={room} style={{background:'#1e1b4b',padding:'10px 6px',fontSize:11,color:ROOM_COLORS[ri],borderRight:'1px solid #1e293b',borderBottom:'2px solid #312e81',minWidth:68,textAlign:'center',fontWeight:700}}>
+                  <th key={room} style={{background:'#1e3a8a',padding:'10px 6px',fontSize:11,color:ROOM_COLORS[ri],borderRight:'1px solid #1e40af',borderBottom:'2px solid #1e40af',minWidth:68,textAlign:'center',fontWeight:700}}>
                     {room}
                   </th>
                 ))}
@@ -185,22 +185,22 @@ export default function DreamhouseRooms() {
                 const isToday = dateStr === toDateStr(today)
                 const isSun = dow === 0
                 const isSat = dow === 6
-                const rowBg = isToday ? '#1e1b4b' : day % 2 === 0 ? '#0d0d1a' : '#0f0f1a'
+                const rowBg = isToday ? '#eff6ff' : day % 2 === 0 ? '#f1f5f9' : '#ffffff'
                 return (
                   <tr key={dateStr} style={{background:rowBg}}>
                     <td style={{
                       position:'sticky',left:0,zIndex:5,
-                      background: isToday ? '#312e81' : rowBg,
+                      background: isToday ? '#dbeafe' : rowBg,
                       padding:'6px 8px',
-                      borderRight:'2px solid #312e81',
-                      borderBottom:'1px solid #1e293b',
+                      borderRight:'2px solid #cbd5e1',
+                      borderBottom:'1px solid #e2e8f0',
                       textAlign:'center',
                       fontSize:12,
                       fontWeight: isToday ? 800 : 400,
-                      color: isToday ? '#c7d2fe' : isSun ? '#f87171' : isSat ? '#93c5fd' : '#94a3b8',
+                      color: isToday ? '#1e40af' : isSun ? '#dc2626' : isSat ? '#2563eb' : '#475569',
                       whiteSpace:'nowrap'
                     }}>
-                      {isToday && <span style={{fontSize:9,color:'#818cf8',display:'block'}}>TODAY</span>}
+                      {isToday && <span style={{fontSize:9,color:'#1e40af',display:'block'}}>TODAY</span>}
                       {day}일 {DOW_KO[dow]}
                     </td>
                     {ROOMS.map((room, ri) => {
@@ -212,16 +212,16 @@ export default function DreamhouseRooms() {
                       const isCheckout = cellBookings.some(b => b.checkout_date === toDateStr(new Date(new Date(dateStr).getTime() + 86400000)))
 
                       let cellBg = 'transparent'
-                      let cellBorder = '1px solid #1e293b'
+                      let cellBorder = '1px solid #e2e8f0'
                       let glowStyle = {}
 
                       if (isDouble) {
-                        cellBg = '#7f1d1d'
+                        cellBg = '#fef2f2'
                         cellBorder = '1px solid #ef4444'
                       } else if (isConflict) {
-                        cellBg = '#78350f'
+                        cellBg = '#fffbeb'
                         cellBorder = '2px solid #f59e0b'
-                        glowStyle = {boxShadow:'inset 0 0 8px rgba(245,158,11,0.4)'}
+                        glowStyle = {boxShadow:'inset 0 0 8px rgba(245,158,11,0.2)'}
                       } else if (hasBooking) {
                         cellBg = ROOM_COLORS[ri] + '33'
                         cellBorder = `1px solid ${ROOM_COLORS[ri]}66`
@@ -237,8 +237,8 @@ export default function DreamhouseRooms() {
                           onMouseLeave={() => setTooltip(null)}
                           style={{
                             padding:'4px 4px',
-                            borderRight:'1px solid #1e293b',
-                            borderBottom:'1px solid #1e293b',
+                            borderRight:'1px solid #e2e8f0',
+                            borderBottom:'1px solid #e2e8f0',
                             background: cellBg,
                             border: cellBorder,
                             cursor: hasBooking ? 'pointer' : 'default',
@@ -255,7 +255,7 @@ export default function DreamhouseRooms() {
                             <div style={{fontSize:14,lineHeight:1}}>⚠️</div>
                           )}
                           {isDouble && (
-                            <div style={{fontSize:9,color:'#fca5a5',fontWeight:700}}>중복!</div>
+                            <div style={{fontSize:9,color:'#dc2626',fontWeight:700}}>중복!</div>
                           )}
                           {!isDouble && !isConflict && isCheckin && b && (
                             <div style={{fontSize:9,color:ROOM_COLORS[ri],fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 2px'}}>
@@ -286,20 +286,20 @@ export default function DreamhouseRooms() {
           left: Math.min(tooltip.x, window.innerWidth-220),
           top: tooltip.y - 10,
           transform:'translateY(-100%)',
-          background:'#1e1b4b',
-          border:'1px solid #4f46e5',
+          background:'#ffffff',
+          border:'1px solid #cbd5e1',
           borderRadius:10,
           padding:'12px 16px',
           zIndex:1000,
           minWidth:180,
           pointerEvents:'none',
-          boxShadow:'0 8px 32px rgba(0,0,0,0.5)'
+          boxShadow:'0 8px 32px rgba(0,0,0,0.15)'
         }}>
-          <div style={{fontWeight:700,color:'#c7d2fe',marginBottom:6}}>{tooltip.booking.accom_room}</div>
-          <div style={{fontSize:12,color:'#94a3b8'}}>예약번호: <span style={{color:'#e2e8f0'}}>{tooltip.booking.booking_number || '-'}</span></div>
-          <div style={{fontSize:12,color:'#94a3b8'}}>투숙객: <span style={{color:'#e2e8f0'}}>{tooltip.booking.guest_name || '-'}</span></div>
-          <div style={{fontSize:12,color:'#94a3b8'}}>체크인: <span style={{color:'#4ade80'}}>{tooltip.booking.checkin_date} {tooltip.booking.checkin_time || ''}</span></div>
-          <div style={{fontSize:12,color:'#94a3b8'}}>체크아웃: <span style={{color:'#fb923c'}}>{tooltip.booking.checkout_date} {tooltip.booking.checkout_time || ''}</span></div>
+          <div style={{fontWeight:700,color:'#1e40af',marginBottom:6}}>{tooltip.booking.accom_room}</div>
+          <div style={{fontSize:12,color:'#64748b'}}>예��번호: <span style={{color:'#1e293b'}}>{tooltip.booking.booking_number || '-'}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>투숙객: <span style={{color:'#1e293b'}}>{tooltip.booking.guest_name || '-'}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>체크인: <span style={{color:'#16a34a'}}>{tooltip.booking.checkin_date} {tooltip.booking.checkin_time || ''}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>체크아웃: <span style={{color:'#ea580c'}}>{tooltip.booking.checkout_date} {tooltip.booking.checkout_time || ''}</span></div>
         </div>
       )}
     </div>
