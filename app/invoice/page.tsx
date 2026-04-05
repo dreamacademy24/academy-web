@@ -357,8 +357,12 @@ function InvoicePageInner(){
     {est?(<div className="er">
       {est.items.map((item,i)=>(<div className="erl" key={i}>
         <strong>{item.label}</strong>{item.ci&&<> / {fmtDate(item.ci)} ~ {fmtDate(item.co)}</>} <span className={`sb ${item.season==="성수기"?"pk":"of"}`}>{item.season}</span>
+        {cm==="combo"&&<><br/><span className="dm">합산 {item.totalW}주 요금({fmt(item.fullPrice)}) × {Math.round(item.ratio*100)}% = </span><strong>{fmt(item.price)}원</strong></>}
+        {cm==="single"&&<><br/><strong>{fmt(item.price)}원</strong></>}
       </div>))}
+      {est.extras.length>0&&est.extras.map((x,i)=><div className="erl" key={`ex${i}`}><strong>{x.label}</strong>: <strong style={{color:"#d97706"}}>{fmt(x.price)}원</strong></div>)}
       {cm==="combo"&&<div className="erl"><span className="dm">보호자 {cP}명 + 아이 {cK}명</span></div>}
+      <div className="ert"><span>총 합계</span><span className="pr">{fmt(est.total)}원</span></div>
       <button className="ba" onClick={applyInv}>인보이스에 적용</button>
     </div>):(<div className="ne">선택하신 조건의 가격 정보가 없습니다.</div>)}
   </div>
@@ -387,19 +391,13 @@ function InvoicePageInner(){
 
   {/* ── 섹션4: 결제 정보 ── */}
   <div className="fs"><h2>결제 정보</h2>
-    {billing.items.length===0&&<div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>}
+    {billing.items.length>0?(<div style={{marginBottom:"14px"}}>{billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label} ({item.season}): <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}<div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div></div>):(<div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>)}
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
     <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목 <span style={{fontSize:"10px",color:"#94a3b8",fontWeight:400}}>단위: 페소(PHP)</span></label>
     {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
-    {(billing.items.length>0||billing.basePrice>0)&&<div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"14px 16px",marginTop:16,marginBottom:12}}>
-      {billing.items.map((item:any,i:number)=><div key={i} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#374151"}}>{item.label}</span><span style={{color:"#1d4ed8",fontWeight:600}}>{fmt(item.price)}원</span></div>)}
-      {billing.items.length===0&&billing.basePrice>0&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#374151"}}>패키지 금액</span><span style={{color:"#1d4ed8",fontWeight:600}}>{fmt(billing.basePrice)}원</span></div>}
-      {billing.discounts.filter((d:any)=>d.name&&d.amount).map((d:any,i:number)=><div key={i} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#374151"}}>{d.name}</span><span style={{color:"#dc2626",fontWeight:600}}>-{fmt(Number(d.amount))}원</span></div>)}
-      <div style={{borderTop:"1px solid #bfdbfe",marginTop:8,paddingTop:8,display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:700,fontSize:15}}>총 합계</span><span style={{fontWeight:800,color:"#1d4ed8",fontSize:17}}>{fp.toLocaleString()}원</span></div>
-    </div>}
     {a1CI&&(<div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"8px",background:isFullPayment?"#fef2f2":"#f0f7ff",border:isFullPayment?"1px solid #fecaca":"1px solid #bfdbfe",fontSize:"13px"}}>{isFullPayment?(<span style={{color:"#dc2626",fontWeight:700}}>⚠️ 전액 입금 — 체크인이 2달 미만입니다. 전체 금액({fmt(fp)}원)을 납부해 주세요.</span>):(<><div style={{marginBottom:"4px"}}><strong>예약금:</strong> 1,000,000원</div><div style={{marginBottom:"4px"}}><strong>잔금:</strong> {fmt(fp>1000000?fp-1000000:0)}원{booker.balanceDate?` (납부일: ${booker.balanceDate})`:""}</div><div style={{color:"#6b7c93",fontSize:"11px",marginTop:"6px"}}>※ 예약금 입금 후 예약 확정, 잔금은 입실 2달 전까지 납부</div></>)}</div>)}
   </div>
 
