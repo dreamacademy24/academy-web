@@ -57,7 +57,7 @@ export default function AdminHubPage() {
           <h2>사이트 관리</h2>
           <p>공지사항 · 셔틀 · 필드트립 · 회원</p>
         </div>
-        <div className="hub-card card-gray" onClick={() => router.push(role === 'staff' && staffId ? `/staff?user=${staffId}` : '/staff')}>
+        <div className="hub-card card-gray" onClick={() => router.push(staffId ? `/staff?user=${staffId.replace(/^admin-/, '')}` : '/staff')}>
           <div className="ic">👥</div>
           <h2>직원업무</h2>
           <p>팀 업무 · 일정 · 프로젝트</p>
