@@ -1448,7 +1448,7 @@ function submitLogin(){
 }
 function doLogin(u){
   CU=u;
-  localStorage.setItem('tm_session',JSON.stringify({id:u.id}));
+  localStorage.setItem('tm_session',JSON.stringify({id:u.id,name:u.name,role:u.role}));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sbName').textContent=u.name;
@@ -2755,7 +2755,7 @@ window.addEventListener('DOMContentLoaded', function(){
       var su=ALL.find(function(e){return e.id===saved.id;});
       if(su){doLogin(su);return;}
     }
-  }catch(e){}
+  }catch(e){localStorage.removeItem('tm_session');}
   buildLogin();
 });
 </script>
