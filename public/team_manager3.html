@@ -1448,6 +1448,7 @@ function submitLogin(){
 }
 function doLogin(u){
   CU=u;
+  localStorage.setItem('tm_session',JSON.stringify({id:u.id}));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sbName').textContent=u.name;
@@ -1459,6 +1460,7 @@ function doLogin(u){
 }
 function logout(){
   CU=null;
+  localStorage.removeItem('tm_session');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('app').classList.add('hidden');
   ['btnNotice','btnProj'].forEach(function(id){document.getElementById(id).style.display='none';});
@@ -2747,6 +2749,13 @@ window.addEventListener('DOMContentLoaded', function(){
     var u=ALL.find(function(e){return e.id===autoUser;});
     if(u){doLogin(u);return;}
   }
+  try{
+    var saved=JSON.parse(localStorage.getItem('tm_session'));
+    if(saved&&saved.id){
+      var su=ALL.find(function(e){return e.id===saved.id;});
+      if(su){doLogin(su);return;}
+    }
+  }catch(e){}
   buildLogin();
 });
 </script>
