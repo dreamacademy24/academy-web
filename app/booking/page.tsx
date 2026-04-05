@@ -1,23 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-interface Student { id:number; korName:string; engName:string; age:string; grade:string; classType:string; photo:string }
+interface Student { id:number; korName:string; engName:string; age:string; grade:string; photo:string }
 
 const todayStr = new Date().toISOString().slice(0,10);
 const todayCompact = todayStr.replace(/-/g,"");
 
 export default function BookingPage(){
   const [booker,setBooker]=useState({name:"",english:""});
-  const [students,setStudents]=useState<Student[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",classType:"종일",photo:"O"}]);
-  const [schedule,setSchedule]=useState({checkIn:"",comboMode:false,weeks:"4",accomType:"드림하우스",weeks2:"2",accomType2:"제이파크"});
+  const [students,setStudents]=useState<Student[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",photo:"O"}]);
+  const [schedule,setSchedule]=useState({checkIn:"",checkOut:"",comboMode:false,weeks:"4",accomType:"드림하우스",weeks2:"2",accomType2:"제이파크"});
+
+  useEffect(()=>{
+    if(!schedule.checkIn||!schedule.weeks) return;
+    const totalWeeks=schedule.comboMode?Number(schedule.weeks)+Number(schedule.weeks2):Number(schedule.weeks);
+    const d=new Date(schedule.checkIn);d.setDate(d.getDate()+totalWeeks*7);
+    setSchedule(s=>({...s,checkOut:d.toISOString().split('T')[0]}));
+  },[schedule.checkIn,schedule.weeks,schedule.weeks2,schedule.comboMode]);
   const [service,setService]=useState({pickup:"미정",drop:"미정"});
   const [specialRequest,setSpecialRequest]=useState("");
   const [loading,setLoading]=useState(false);
   const [done,setDone]=useState(false);
   const [reservationNo,setReservationNo]=useState("");
 
-  function addStudent(){if(students.length>=4)return;setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",classType:"종일",photo:"O"}]);}
+  function addStudent(){if(students.length>=4)return;setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",photo:"O"}]);}
   function rmStudent(id:number){setStudents(students.filter(s=>s.id!==id));}
   function upStudent(id:number,f:string,v:string){setStudents(students.map(s=>s.id===id?{...s,[f]:v}:s));}
 
@@ -34,6 +41,7 @@ export default function BookingPage(){
       accom_type:schedule.comboMode?schedule.accomType+"+"+schedule.accomType2:schedule.accomType,
       accom_weeks:schedule.comboMode?Number(schedule.weeks)+Number(schedule.weeks2):Number(schedule.weeks),
       checkin_date:schedule.checkIn||null,
+      checkout_date:schedule.checkOut||null,
       pickup:service.pickup,
       drop_off:service.drop,
       special_request:specialRequest,
@@ -96,7 +104,7 @@ export default function BookingPage(){
           {students.length>1&&<button className="sc-del" onClick={()=>rmStudent(s.id)}>X</button>}
           <div className="sc-num">학생 {idx+1}</div>
           <div className="fr"><div className="fg"><label className="fl">한글이름 <span className="req">*</span></label><input className="fi" placeholder="홍민준" value={s.korName} onChange={e=>upStudent(s.id,"korName",e.target.value)}/></div><div className="fg"><label className="fl">영문이름</label><input className="fi" placeholder="HONG MINJUN" value={s.engName} onChange={e=>upStudent(s.id,"engName",e.target.value.toUpperCase())}/></div></div>
-          <div className="fr"><div className="fg"><label className="fl">나이</label><input className="fi" type="number" placeholder="7" value={s.age} onChange={e=>upStudent(s.id,"age",e.target.value)}/></div><div className="fg"><label className="fl">킨더/주니어</label><select className="fsl" value={s.grade} onChange={e=>upStudent(s.id,"grade",e.target.value)}><option value="킨더">킨더</option><option value="주니어">주니어</option></select></div></div>
+          <div className="fr"><div className="fg"><label className="fl">나이</label><input className="fi" type="number" placeholder="7" value={s.age} onChange={e=>upStudent(s.id,"age",e.target.value)}/></div><div className="fg"><label className="fl">킨더/주니어</label><p style={{fontSize:11,color:'#6b7280',margin:'0 0 4px 0'}}>킨더: 유치원생 / 주니어: 초등학생 이상</p><select className="fsl" value={s.grade} onChange={e=>upStudent(s.id,"grade",e.target.value)}><option value="킨더">킨더</option><option value="주니어">주니어</option></select></div></div>
           <div className="fr"><div className="fg"><label className="fl">사진촬영 허용</label><select className="fsl" value={s.photo} onChange={e=>upStudent(s.id,"photo",e.target.value)}><option value="O">O</option><option value="X">X</option></select><div className="fh">📸 인스타그램 등 SNS 활용 / 미허용 시 별도 사진 제공 없음</div></div></div>
         </div>
       ))}
@@ -105,7 +113,7 @@ export default function BookingPage(){
 
     <div className="bs"><h2>일정 / 숙소</h2>
       <div className="tg"><button className={`tgb${!schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:false})}>숙소 1개</button><button className={`tgb${schedule.comboMode?" ac":""}`} onClick={()=>setSchedule({...schedule,comboMode:true})}>숙소 2개 조합</button></div>
-      <div className="fr"><div className="fg"><label className="fl">희망 체크인 날짜</label><input className="fi" type="date" value={schedule.checkIn} onChange={e=>setSchedule({...schedule,checkIn:e.target.value})}/></div></div>
+      <div className="fr"><div className="fg"><label className="fl">희망 체크인 날짜</label><input className="fi" type="date" value={schedule.checkIn} onChange={e=>setSchedule({...schedule,checkIn:e.target.value})}/></div><div className="fg"><label className="fl">체크아웃 (자동계산)</label><input className="fi" type="date" value={schedule.checkOut} readOnly style={{background:'#f3f4f6'}}/></div></div>
       {!schedule.comboMode?(
         <div className="fr"><div className="fg"><label className="fl">희망 기간</label><select className="fsl" value={schedule.weeks} onChange={e=>setSchedule({...schedule,weeks:e.target.value})}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="fg"><label className="fl">숙소 선택</label><select className="fsl" value={schedule.accomType} onChange={e=>setSchedule({...schedule,accomType:e.target.value})}><option value="드림하우스">드림하우스</option><option value="제이파크">제이파크</option><option value="큐브나인">큐브나인</option></select></div></div>
       ):(<>
