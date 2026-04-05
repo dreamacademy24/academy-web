@@ -145,6 +145,48 @@ export default function GuidePage() {
           </div>
         </div>
 
+        {/* 손님 견적 흐름 */}
+        <div className="sec">
+          <h2>🧮 손님 자체 견적 흐름</h2>
+          <div className="steps">
+            <div className="step">
+              <div className="step-dot" style={{background:"#8b5cf6"}}>1</div>
+              <div className="step-line"/>
+              <div className="step-body">
+                <h3>견적 페이지 접속</h3>
+                <ul>
+                  <li>손님이 홈페이지 메인에서 <strong>[견적 내보기]</strong> 버튼 클릭</li>
+                  <li><code>/estimate</code> 페이지에서 숙소/기간/인원 선택 → 정가 기준 견적 자동 계산</li>
+                </ul>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-dot" style={{background:"#8b5cf6"}}>2</div>
+              <div className="step-line"/>
+              <div className="step-body">
+                <h3>할인가 안내 유도</h3>
+                <ul>
+                  <li>하단 &quot;💡 실제 할인가는 정가보다 훨씬 저렴합니다!&quot; 문구 확인</li>
+                  <li><strong>[할인가 확인하러 가기]</strong> 버튼 → 카카오톡 채널로 연결</li>
+                </ul>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-dot" style={{background:"#8b5cf6"}}>3</div>
+              <div className="step-body">
+                <h3>상담 및 예약 연결</h3>
+                <ul>
+                  <li>담당자가 카카오톡으로 실제 할인가 안내 및 상담 진행</li>
+                  <li>상담 후 예약 접수로 연결</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="warn-box">
+            ⚠️ <code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>/estimate</code> 견적은 <strong>정가 기준</strong>입니다. 실제 할인가는 어드민 견적계산기(<code style={{background:"#fee2e2",padding:"1px 5px",borderRadius:3}}>/admin/bookings</code> 견적탭)에서 계산하여 손님께 안내해주세요.
+          </div>
+        </div>
+
         {/* 예약 처리 전체 흐름 */}
         <div className="sec">
           <h2>📌 예약 처리 전체 흐름</h2>
@@ -399,6 +441,29 @@ export default function GuidePage() {
 
       {/* ════════════ 탭 3: 직원관리 페이지 사용법 ════════════ */}
       {tab === 2 && (<>
+        {/* 초기 계정 정보 */}
+        <div className="sec">
+          <h2>🔑 초기 계정 정보</h2>
+          <div style={{overflowX:'auto'}}>
+            <table className="url-tbl">
+              <thead><tr><th>아이디</th><th>초기 비밀번호</th><th>이동 페이지</th></tr></thead>
+              <tbody>
+                <tr><td>admin-may</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>may1234</td><td>/admin/hub (전체)</td></tr>
+                <tr><td>admin-ceo</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>ceo1234</td><td>/admin/hub (전체)</td></tr>
+                <tr><td>admin-jenna</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>jenna1234</td><td>/staff (jenna)</td></tr>
+                <tr><td>admin-jamie</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>jamie1234</td><td>/staff (jamie)</td></tr>
+                <tr><td>admin-yuna</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>yuna1234</td><td>/staff (yuna)</td></tr>
+                <tr><td>admin-hanny</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>hanny1234</td><td>/staff (hanny)</td></tr>
+                <tr><td>admin-sage</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>sage1234</td><td>/staff (sage)</td></tr>
+                <tr><td>admin-eric</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>eric1234</td><td>/staff (eric)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="info-box">
+            🔒 초기 비밀번호는 반드시 변경해주세요. <strong>설정(⚙️) → 비밀번호 변경 탭</strong>에서 변경 가능합니다.
+          </div>
+        </div>
+
         {/* 접속 방법 */}
         <div className="sec">
           <h2>🚀 접속 방법</h2>
