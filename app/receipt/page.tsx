@@ -63,7 +63,11 @@ function ReceiptPageInner(){
 
   async function saveToDreamhouse(){
     if(!bookingId||!data) return;
-    const{error}=await supabase.from("bookings").update({accom_room:data.houseNo,checkin_date:data.checkInDate,checkout_date:data.checkOutDate,status:"영수증발행"}).eq("id",bookingId);
+    const checkinDate=data.checkInDate&&data.checkInDate.trim()!==""?data.checkInDate:null;
+    const checkoutDate=data.checkOutDate&&data.checkOutDate.trim()!==""?data.checkOutDate:null;
+    const accomRoom=data.houseNo&&data.houseNo.trim()!==""?data.houseNo:null;
+    if(!checkinDate||!checkoutDate||!accomRoom){alert("⚠️ 체크인 날짜, 체크아웃 날짜, 하우스 번호가 인보이스에 입력되어 있어야 합니다.\n인보이스로 돌아가서 먼저 입력해주세요.");return;}
+    const{error}=await supabase.from("bookings").update({accom_room:accomRoom,checkin_date:checkinDate,checkout_date:checkoutDate,status:"영수증발행"}).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
     setSheetSaved(true);
     alert("✅ 드림하우스 예약이 등록되었습니다!");
