@@ -53,6 +53,8 @@ export default function DreamhouseRooms() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [tooltip, setTooltip] = useState<{x:number,y:number,booking:Booking}|null>(null)
+  const [modal, setModal] = useState<Booking|null>(null)
+  const [modalRoom, setModalRoom] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -232,7 +234,7 @@ export default function DreamhouseRooms() {
                       return (
                         <td
                           key={room}
-                          onClick={() => b && router.push(`/invoice?id=${b.id}`)}
+                          onClick={() => { if(b){setModal(b);setModalRoom(b.accom_room);setTooltip(null);} }}
                           onMouseEnter={e => b && setTooltip({x:(e.target as HTMLElement).getBoundingClientRect().left, y:(e.target as HTMLElement).getBoundingClientRect().top, booking:b})}
                           onMouseLeave={() => setTooltip(null)}
                           style={{
@@ -276,6 +278,54 @@ export default function DreamhouseRooms() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 모달 */}
+      {modal && (
+        <div onClick={()=>setModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:2000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#ffffff',borderRadius:16,padding:'32px 28px',boxShadow:'0 12px 48px rgba(0,0,0,0.2)',minWidth:340,maxWidth:420,width:'90%'}}>
+            <h3 style={{margin:'0 0 20px',fontSize:18,fontWeight:700,color:'#1e293b'}}>예약 상세</h3>
+            <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:20}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+                <span style={{color:'#64748b'}}>예약자명</span>
+                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.guest_name || '-'}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+                <span style={{color:'#64748b'}}>예약번호</span>
+                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.booking_number || '-'}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+                <span style={{color:'#64748b'}}>체크인</span>
+                <span style={{fontWeight:600,color:'#16a34a'}}>{modal.checkin_date}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+                <span style={{color:'#64748b'}}>체크아웃</span>
+                <span style={{fontWeight:600,color:'#ea580c'}}>{modal.checkout_date}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13}}>
+                <span style={{color:'#64748b'}}>현재 룸</span>
+                <span style={{fontWeight:700,color:'#1e40af'}}>{modal.accom_room}</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13}}>
+                <span style={{color:'#64748b'}}>룸 변경</span>
+                <select value={modalRoom} onChange={e=>setModalRoom(e.target.value)} style={{padding:'6px 12px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,color:'#1e293b',fontWeight:600}}>
+                  {ROOMS.map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={async()=>{
+                if(modalRoom===modal.accom_room){alert('동일한 룸입니다.');return;}
+                const{error}=await supabase.from('bookings').update({accom_room:modalRoom}).eq('id',modal.id);
+                if(error){alert('변경 실패: '+error.message);return;}
+                alert('✅ 룸이 '+modalRoom+'으로 변경되었습니다.');
+                setModal(null);fetchBookings();
+              }} style={{flex:1,padding:'10px 0',background:'#1e40af',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>변경 저장</button>
+              <button onClick={()=>{setModal(null);router.push('/invoice?id='+modal.id);}} style={{flex:1,padding:'10px 0',background:'#f1f5f9',color:'#1e40af',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>인보이스 보기</button>
+              <button onClick={()=>setModal(null)} style={{padding:'10px 16px',background:'#fff',color:'#64748b',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer'}}>닫기</button>
+            </div>
+          </div>
         </div>
       )}
 
