@@ -448,9 +448,7 @@ export default function GuidePage() {
             <table className="url-tbl">
               <thead><tr><th>아이디</th><th>초기 비밀번호</th><th>이동 페이지</th></tr></thead>
               <tbody>
-                <tr><td>admin-may</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>may1234</td><td>/admin/hub (전체)</td></tr>
-                <tr><td>admin-ceo</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>ceo1234</td><td>/admin/hub (전체)</td></tr>
-                <tr><td>admin-jenna</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>jenna1234</td><td>/staff (jenna)</td></tr>
+<tr><td>admin-jenna</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>jenna1234</td><td>/staff (jenna)</td></tr>
                 <tr><td>admin-jamie</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>jamie1234</td><td>/staff (jamie)</td></tr>
                 <tr><td>admin-yuna</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>yuna1234</td><td>/staff (yuna)</td></tr>
                 <tr><td>admin-hanny</td><td style={{fontFamily:'monospace',color:'#1a6fc4'}}>hanny1234</td><td>/staff (hanny)</td></tr>
