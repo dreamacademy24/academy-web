@@ -45,9 +45,7 @@ function ReceiptPageInner(){
           const items:BillItem[]=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
           const discs:Disc[]=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
           const locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
-          // 예약금/잔금 계산: billingItems 중 보증금 항목 찾기, 없으면 finalPrice의 20%
-          const depositItem=items.find((i:BillItem)=>i.label.includes("보증금")||i.label.includes("예약금")||i.label.includes("deposit"));
-          const deposit=depositItem?depositItem.price:Math.round((row.final_price||0)*0.2/10000)*10000;
+          const deposit=1000000;
           const balance=(row.final_price||0)-deposit;
           setData({
             name:row.booker_name, englishName:row.booker_english||"",
@@ -65,7 +63,7 @@ function ReceiptPageInner(){
             billingItems:items, discounts:discs, locals:locs,
           });
           // 초기 지불내역에 예약금 자동 세팅
-          setPayments([{id:1,type:"예약금",date:today,amount:deposit>0?fmt(deposit):""}]);
+          setPayments([{id:1,type:"예약금",date:today,amount:"1,000,000"}]);
           await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
           return;
         }
@@ -227,10 +225,10 @@ function ReceiptPageInner(){
         <div className="rs"><div className="rst">Customer Information</div>
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
-            <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일자</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">숙소</td><td colSpan={3}>{data.accom}</td></tr>
+            <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일</td><td>{fmtFull(data.reservationDate)}</td></tr>
             <tr><td className="lb">체크인</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃</td><td>{fmtFull(data.checkOutDate)}</td></tr>
-            <tr><td className="lb">인원구성</td><td colSpan={3}>{peopleStr}</td></tr>
+            <tr><td className="lb">패키지</td><td>{data.packageType}</td><td className="lb">인원 구성</td><td>{peopleStr}</td></tr>
+            <tr><td className="lb">잔금납부일</td><td colSpan={3}>{fmtFull(data.balanceDate)||"미정"}</td></tr>
             {data.note&&<tr><td className="lb">특이사항</td><td colSpan={3}>{data.note}</td></tr>}
           </tbody></table>
         </div>
