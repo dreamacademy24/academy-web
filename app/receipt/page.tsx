@@ -44,7 +44,7 @@ function ReceiptPageInner(){
             reservationNo:row.reservation_no,reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"",accom:row.accom_type||"",
             checkInDate:row.checkin_date||"",checkOutDate:row.checkout_date||"",
-            people:"",houseNo:row.house_no||"",
+            people:"",houseNo:row.house_no||row.accom_room||"",
             pickup:row.pickup||"O",drop:row.drop_off||"O",pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"",flightOut:row.flight_out||"",
             packageType:items.map((i:any)=>i.label).join(" + "),
