@@ -61,16 +61,22 @@ function ReceiptPageInner(){
     load();
   },[bookingId]);
 
+  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L5','b17L6','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
+
   async function saveToDreamhouse(){
     if(!bookingId||!data) return;
     const checkinDate=data.checkInDate&&data.checkInDate.trim()!==""?data.checkInDate:null;
     const checkoutDate=data.checkOutDate&&data.checkOutDate.trim()!==""?data.checkOutDate:null;
-    const accomRoom=data.houseNo&&data.houseNo.trim()!==""?data.houseNo:null;
-    if(!checkinDate||!checkoutDate||!accomRoom){alert("⚠️ 체크인 날짜, 체크아웃 날짜, 하우스 번호가 인보이스에 입력되어 있어야 합니다.\n인보이스로 돌아가서 먼저 입력해주세요.");return;}
-    const{error}=await supabase.from("bookings").update({accom_room:accomRoom,checkin_date:checkinDate,checkout_date:checkoutDate,status:"영수증발행"}).eq("id",bookingId);
+    if(!checkinDate||!checkoutDate){alert("⚠️ 체크인/체크아웃 날짜가 인보이스에 입력되어 있어야 합니다.");return;}
+    const{data:overlapping}=await supabase.from("bookings").select("accom_room").neq("id",bookingId).not("accom_room","is",null).lt("checkin_date",checkoutDate).gt("checkout_date",checkinDate);
+    const occupiedRooms=(overlapping||[]).map((b:any)=>b.accom_room);
+    const availableRooms=DH_ROOMS.filter(r=>!occupiedRooms.includes(r));
+    if(availableRooms.length===0){alert("⚠️ 해당 기간에 가용 가능한 룸이 없습니다!");return;}
+    const assigned=availableRooms[Math.floor(Math.random()*availableRooms.length)];
+    const{error}=await supabase.from("bookings").update({accom_room:assigned,checkin_date:checkinDate,checkout_date:checkoutDate,status:"영수증발행"}).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
     setSheetSaved(true);
-    alert("✅ 드림하우스 예약이 등록되었습니다!");
+    alert("✅ 드림하우스 예약 완료!\n배정된 룸: "+assigned);
   }
 
   async function saveAsImage(){
