@@ -25,10 +25,8 @@ type Booking = {
   accom_room: string
   checkin_date: string
   checkout_date: string
-  checkin_time?: string
-  checkout_time?: string
-  guest_name?: string
-  booking_number?: string
+  booker_name?: string
+  reservation_no?: string
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -37,12 +35,6 @@ function getDaysInMonth(year: number, month: number) {
 
 function toDateStr(date: Date) {
   return date.toISOString().split('T')[0]
-}
-
-function parseTime(timeStr?: string): number {
-  if (!timeStr) return 0
-  const [h, m] = timeStr.split(':').map(Number)
-  return h * 60 + (m || 0)
 }
 
 export default function DreamhouseRooms() {
@@ -102,26 +94,15 @@ export default function DreamhouseRooms() {
     })
   })
 
-  // 레이트체크아웃 + 새벽체크인 충돌 감지
-  // 같은 룸, 같은 날짜에 checkout_date=당일인 예약의 checkout_time과 checkin_date=다음날인 예약의 checkin_time이 너무 가까울때
+  // 당일 전환 충돌 감지 (같은 룸에서 체크아웃일 = 다른 예약 체크인일)
   const conflictSet = new Set<string>() // "dateStr_room"
   ROOMS.forEach(room => {
     const roomBookings = bookings.filter(b => b.accom_room === room)
     roomBookings.forEach(b1 => {
       roomBookings.forEach(b2 => {
         if (b1.id === b2.id) return
-        // b1 체크아웃날 = b2 체크인날 (당일 전환)
         if (b1.checkout_date === b2.checkin_date) {
-          const outTime = parseTime(b1.checkout_time)
-          const inTime = parseTime(b2.checkin_time)
-          // 체크아웃과 체크인 간격이 2시간 미만이면 충돌 경고
-          if (inTime > 0 && outTime > 0 && inTime - outTime < 120) {
-            conflictSet.add(`${b1.checkout_date}_${room}`)
-          }
-          // 새벽 체크인 (0~6시)이면 무조건 경고
-          if (inTime > 0 && inTime < 360) {
-            conflictSet.add(`${b2.checkin_date}_${room}`)
-          }
+          conflictSet.add(`${b1.checkout_date}_${room}`)
         }
       })
     })
@@ -257,7 +238,7 @@ export default function DreamhouseRooms() {
                           )}
                           {!isDouble && !isConflict && isCheckin && b && (
                             <div style={{fontSize:9,color:ROOM_COLORS[ri],fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 2px'}}>
-                              {b.booking_number || b.guest_name || 'IN'}
+                              {b.reservation_no || b.booker_name || 'IN'}
                             </div>
                           )}
                           {!isDouble && hasBooking && (
@@ -285,11 +266,11 @@ export default function DreamhouseRooms() {
             <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:20}}>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
                 <span style={{color:'#64748b'}}>예약자명</span>
-                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.guest_name || '-'}</span>
+                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.booker_name || '-'}</span>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
                 <span style={{color:'#64748b'}}>예약번호</span>
-                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.booking_number || '-'}</span>
+                <span style={{fontWeight:600,color:'#1e293b'}}>{modal.reservation_no || '-'}</span>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
                 <span style={{color:'#64748b'}}>체크인</span>
@@ -342,10 +323,10 @@ export default function DreamhouseRooms() {
           boxShadow:'0 8px 32px rgba(0,0,0,0.15)'
         }}>
           <div style={{fontWeight:700,color:'#1e40af',marginBottom:6}}>{tooltip.booking.accom_room}</div>
-          <div style={{fontSize:12,color:'#64748b'}}>예��번호: <span style={{color:'#1e293b'}}>{tooltip.booking.booking_number || '-'}</span></div>
-          <div style={{fontSize:12,color:'#64748b'}}>투숙객: <span style={{color:'#1e293b'}}>{tooltip.booking.guest_name || '-'}</span></div>
-          <div style={{fontSize:12,color:'#64748b'}}>체크인: <span style={{color:'#16a34a'}}>{tooltip.booking.checkin_date} {tooltip.booking.checkin_time || ''}</span></div>
-          <div style={{fontSize:12,color:'#64748b'}}>체크아웃: <span style={{color:'#ea580c'}}>{tooltip.booking.checkout_date} {tooltip.booking.checkout_time || ''}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>예약번호: <span style={{color:'#1e293b'}}>{tooltip.booking.reservation_no || '-'}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>예약자: <span style={{color:'#1e293b'}}>{tooltip.booking.booker_name || '-'}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>체크인: <span style={{color:'#16a34a'}}>{tooltip.booking.checkin_date}</span></div>
+          <div style={{fontSize:12,color:'#64748b'}}>체크아웃: <span style={{color:'#ea580c'}}>{tooltip.booking.checkout_date}</span></div>
         </div>
       )}
     </div>

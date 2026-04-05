@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, accom_room, checkin_date, checkout_date, checkin_time, checkout_time, guest_name, booking_number')
+    .select('id, accom_room, checkin_date, checkout_date, booker_name, reservation_no')
     .not('accom_room', 'is', null)
     .neq('accom_room', '')
     .lte('checkin_date', lastDay)
