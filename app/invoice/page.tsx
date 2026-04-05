@@ -88,10 +88,10 @@ function InvoicePageInner(){
 
   /* ── 학생 academyStart 자동동기화 (다음 월요일) ── */
   useEffect(()=>{
-    if(!a1CI||dbLoaded) return;
+    if(!a1CI) return;
     const monday=getNextMonday(a1CI);
     setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyWeeks?addDays(monday,Number(s.academyWeeks)*7):""})));
-  },[a1CI,dbLoaded]);
+  },[a1CI]);
 
   /* ── DB에서 예약 로드 ── */
   useEffect(()=>{
@@ -437,7 +437,7 @@ function InvoicePageInner(){
         {students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 적용 후 표시됩니다</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+      <div className="is"><div className="ist">Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
