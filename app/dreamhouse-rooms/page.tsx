@@ -238,7 +238,7 @@ export default function DreamhouseRooms() {
                           )}
                           {!isDouble && !isConflict && isCheckin && b && (
                             <div style={{fontSize:9,color:ROOM_COLORS[ri],fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 2px'}}>
-                              {b.reservation_no || b.booker_name || 'IN'}
+                              {b.booker_name || b.reservation_no || 'IN'}
                             </div>
                           )}
                           {!isDouble && hasBooking && (
