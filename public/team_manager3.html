@@ -1101,10 +1101,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           </div>
         </div>
         <div class="tab-group" id="empTabs" style="margin-bottom:16px;width:fit-content">
-          <button class="tab-btn active" onclick="setEF('active',this)">진행 중</button>
+          <button class="tab-btn active" onclick="setEF('daily',this)">☀️ 데일리</button>
+          <button class="tab-btn" onclick="setEF('active',this)">진행 중</button>
           <button class="tab-btn" onclick="setEF('done',this)">완료</button>
           <button class="tab-btn" onclick="setEF('all',this)">전체</button>
-          <button class="tab-btn" onclick="setEF('daily',this)">☀️ 데일리</button>
         </div>
         <div id="empList"></div>
         <div id="empDailyWrap" class="hidden"></div>
@@ -1862,7 +1862,7 @@ function renderEmpPage(empId){
   // default to daily tab
   document.getElementById('empList').style.display='none';
   document.getElementById('empDailyWrap').classList.remove('hidden');
-  document.querySelectorAll('#empTabs .tab-btn').forEach(function(t,i){t.classList.toggle('active',i===3);});
+  document.querySelectorAll('#empTabs .tab-btn').forEach(function(t,i){t.classList.toggle('active',i===0);});
   empFilter='daily';
   renderEmpDailyChecklist(empId,document.getElementById('empDailyWrap'));renderCeoPanel(empId);
 }
