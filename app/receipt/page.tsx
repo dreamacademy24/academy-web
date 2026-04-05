@@ -68,7 +68,7 @@ function ReceiptPageInner(){
     const checkinDate=data.checkInDate&&data.checkInDate.trim()!==""?data.checkInDate:null;
     const checkoutDate=data.checkOutDate&&data.checkOutDate.trim()!==""?data.checkOutDate:null;
     if(!checkinDate||!checkoutDate){alert("⚠️ 체크인/체크아웃 날짜가 인보이스에 입력되어 있어야 합니다.");return;}
-    const{data:overlapping}=await supabase.from("bookings").select("accom_room").neq("id",bookingId).not("accom_room","is",null).lt("checkin_date",checkoutDate).gt("checkout_date",checkinDate);
+    const{data:overlapping}=await supabase.from("bookings").select("accom_room").neq("id",bookingId).not("accom_room","is",null).neq("accom_room","").lt("checkin_date",checkoutDate).gt("checkout_date",checkinDate);
     const occupiedRooms=(overlapping||[]).map((b:any)=>b.accom_room);
     const availableRooms=DH_ROOMS.filter(r=>!occupiedRooms.includes(r));
     if(availableRooms.length===0){alert("⚠️ 해당 기간에 가용 가능한 룸이 없습니다!");return;}

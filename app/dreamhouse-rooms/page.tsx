@@ -74,6 +74,8 @@ export default function DreamhouseRooms() {
     const { data } = await supabase
       .from('bookings')
       .select('id, accom_room, checkin_date, checkout_date, checkin_time, checkout_time, guest_name, booking_number')
+      .not('accom_room', 'is', null)
+      .neq('accom_room', '')
       .lte('checkin_date', lastDay)
       .gte('checkout_date', firstDay)
       .order('checkin_date')
