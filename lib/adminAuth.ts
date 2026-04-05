@@ -2,14 +2,20 @@ const KEYS = ['adminAuthed', 'adminRole', 'adminName', 'adminStaffId', 'adminExp
 
 export function isAdminAuthed(): boolean {
   if (typeof window === 'undefined') return false;
-  const authed = localStorage.getItem('adminAuthed');
-  const expiry = localStorage.getItem('adminExpiry');
-  if (!authed || !expiry) return false;
-  if (Date.now() > Number(expiry)) {
-    clearAdminAuth();
+  try {
+    const authed = localStorage.getItem('adminAuthed');
+    if (authed !== 'true') return false;
+    const expiry = localStorage.getItem('adminExpiry');
+    // 하위호환: expiry 없어도 adminAuthed만 있으면 통과
+    if (!expiry) return true;
+    if (Date.now() > Number(expiry)) {
+      clearAdminAuth();
+      return false;
+    }
+    return true;
+  } catch {
     return false;
   }
-  return true;
 }
 
 export function getAdminInfo() {

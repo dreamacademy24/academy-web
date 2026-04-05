@@ -10,7 +10,7 @@ function StaffIframe() {
 
   useEffect(() => {
     if (!isAdminAuthed()) {
-      router.replace('/admin')
+      window.location.href = '/admin'
       return
     }
     const userParam = sp.get('user')

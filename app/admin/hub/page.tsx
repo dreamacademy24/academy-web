@@ -11,7 +11,7 @@ export default function AdminHubPage() {
   const [staffId, setStaffId] = useState("");
 
   useEffect(() => {
-    if (!isAdminAuthed()) { router.replace("/admin"); return; }
+    if (!isAdminAuthed()) { window.location.href = "/admin"; return; }
     const info = getAdminInfo();
     if (info) { setName(info.name); setRole(info.role); setStaffId(info.staffId); }
     setReady(true);
