@@ -71,15 +71,9 @@ export default function DreamhouseRooms() {
     setLoading(true)
     const firstDay = `${year}-${String(month+1).padStart(2,'0')}-01`
     const lastDay = `${year}-${String(month+1).padStart(2,'0')}-${getDaysInMonth(year,month)}`
-    const { data } = await supabase
-      .from('bookings')
-      .select('id, accom_room, checkin_date, checkout_date, checkin_time, checkout_time, guest_name, booking_number')
-      .not('accom_room', 'is', null)
-      .neq('accom_room', '')
-      .lte('checkin_date', lastDay)
-      .gte('checkout_date', firstDay)
-      .order('checkin_date')
-    setBookings(data || [])
+    const res = await fetch(`/api/dreamhouse?firstDay=${firstDay}&lastDay=${lastDay}`)
+    const data = await res.json()
+    setBookings(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
