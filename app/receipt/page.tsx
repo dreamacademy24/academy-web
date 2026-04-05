@@ -61,13 +61,12 @@ function ReceiptPageInner(){
     load();
   },[bookingId]);
 
-  async function saveToSheet(){
-    if(!data) return;
-    try{
-      const res=await fetch("/api/receipt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
-      if(!res.ok) throw new Error();
-      setSheetSaved(true);
-    }catch{alert("시트 기록 실패");}
+  async function saveToDreamhouse(){
+    if(!bookingId||!data) return;
+    const{error}=await supabase.from("bookings").update({accom_room:data.houseNo,checkin_date:data.checkInDate,checkout_date:data.checkOutDate,status:"영수증발행"}).eq("id",bookingId);
+    if(error){alert("등록 실패: "+error.message);return;}
+    setSheetSaved(true);
+    alert("✅ 드림하우스 예약이 등록되었습니다!");
   }
 
   async function saveAsImage(){
@@ -192,7 +191,7 @@ function ReceiptPageInner(){
 
       <div className="rb no-print">
         <button className="rbn bk" onClick={()=>{bookingId?router.push("/invoice?id="+bookingId):window.history.back();}} style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}}>← 인보이스로</button>
-        <button className="rbn sh" onClick={saveToSheet} disabled={sheetSaved}>{sheetSaved?"✅ 시트 기록 완료":"📊 구글 시트 기록"}</button>
+        <button className="rbn sh" onClick={saveToDreamhouse} disabled={sheetSaved}>{sheetSaved?"✅ 등록 완료":"🏠 드림하우스 예약 등록"}</button>
         <button className="rbn img" onClick={saveAsImage}>📷 이미지 저장</button>
         <button className="rbn pr" onClick={()=>window.print()}>🖨 PDF 저장 / 인쇄</button>
         <button className="rbn bk" onClick={()=>router.push("/admin")} style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}}>관리자 홈</button>
