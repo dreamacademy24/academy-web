@@ -353,18 +353,6 @@ function InvoicePageInner(){
       {rSel(a2T,setA2T,a2R,setA2R,a2W,setA2W,a2CI,null,a2CO,"숙소 B")}
       <div className="ex-box"><div className="ex-title">숙소 B 추가 인원 (1주일 고정 · {fmt(extraRate(a2T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex2Cnt} onChange={e=>setEx2Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex2Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a2T)*ex2Cnt)}원</div>}</div></div>
     </>)}
-
-    {est?(<div className="er">
-      {est.items.map((item,i)=>(<div className="erl" key={i}>
-        <strong>{item.label}</strong>{item.ci&&<> / {fmtDate(item.ci)} ~ {fmtDate(item.co)}</>} <span className={`sb ${item.season==="성수기"?"pk":"of"}`}>{item.season}</span>
-        {cm==="combo"&&<><br/><span className="dm">합산 {item.totalW}주 요금({fmt(item.fullPrice)}) × {Math.round(item.ratio*100)}% = </span><strong>{fmt(item.price)}원</strong></>}
-        {cm==="single"&&<><br/><strong>{fmt(item.price)}원</strong></>}
-      </div>))}
-      {est.extras.length>0&&est.extras.map((x,i)=><div className="erl" key={`ex${i}`}><strong>{x.label}</strong>: <strong style={{color:"#d97706"}}>{fmt(x.price)}원</strong></div>)}
-      {cm==="combo"&&<div className="erl"><span className="dm">보호자 {cP}명 + 아이 {cK}명</span></div>}
-      <div className="ert"><span>총 합계</span><span className="pr">{fmt(est.total)}원</span></div>
-      <button className="ba" onClick={applyInv}>인보이스에 적용</button>
-    </div>):(<div className="ne">선택하신 조건의 가격 정보가 없습니다.</div>)}
   </div>
 
   {/* ── 섹션2: 예약자 정보 ── */}
@@ -391,6 +379,17 @@ function InvoicePageInner(){
 
   {/* ── 섹션4: 결제 정보 ── */}
   <div className="fs"><h2>결제 정보</h2>
+    {est?(<div className="er">
+      {est.items.map((item,i)=>(<div className="erl" key={i}>
+        <strong>{item.label}</strong>{item.ci&&<> / {fmtDate(item.ci)} ~ {fmtDate(item.co)}</>} <span className={`sb ${item.season==="성수기"?"pk":"of"}`}>{item.season}</span>
+        {cm==="combo"&&<><br/><span className="dm">합산 {item.totalW}주 요금({fmt(item.fullPrice)}) × {Math.round(item.ratio*100)}% = </span><strong>{fmt(item.price)}원</strong></>}
+        {cm==="single"&&<><br/><strong>{fmt(item.price)}원</strong></>}
+      </div>))}
+      {est.extras.length>0&&est.extras.map((x,i)=><div className="erl" key={`ex${i}`}><strong>{x.label}</strong>: <strong style={{color:"#d97706"}}>{fmt(x.price)}원</strong></div>)}
+      {cm==="combo"&&<div className="erl"><span className="dm">보호자 {cP}명 + 아이 {cK}명</span></div>}
+      <div className="ert"><span>총 합계</span><span className="pr">{fmt(est.total)}원</span></div>
+      <button className="ba" onClick={applyInv}>인보이스에 적용</button>
+    </div>):(<div className="ne">선택하신 조건의 가격 정보가 없습니다.</div>)}
     {billing.items.length>0?(<div style={{marginBottom:"14px"}}>{billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label} ({item.season}): <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}<div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div></div>):(<div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>)}
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
