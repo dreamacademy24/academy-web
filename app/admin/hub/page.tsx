@@ -62,6 +62,11 @@ export default function AdminHubPage() {
           <h2>직원업무</h2>
           <p>팀 업무 · 일정 · 프로젝트</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/dreamhouse-rooms')}>
+          <div className="ic">🏠</div>
+          <h2>드림하우스</h2>
+          <p>룸 예약현황 · 충돌감지</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
