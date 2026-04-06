@@ -2025,6 +2025,85 @@ function renderApprovalPage(empId){
     wrap.innerHTML=html;
   });
 }
+
+function renderOpinionList(){
+  var wrap=document.getElementById('opinionList');
+  if(!wrap)return;
+  wrap.innerHTML='<div style="max-width:760px;margin:0 auto"><div style="display:flex;justify-content:flex-end;margin-bottom:20px"><button onclick="openOpinionModal()" style="padding:10px 22px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ 의견 요청</button></div><div style="text-align:center;padding:20px;color:#94a3b8">로딩 중...</div></div>';
+  Promise.all([
+    sbGet('staff_opinions','order=ts.desc&limit=50'),
+    sbGet('staff_op_replies','select=opinion_id')
+  ]).then(function(results){
+    var opinions=results[0]||[];
+    var replyCounts={};
+    (results[1]||[]).forEach(function(r){replyCounts[r.opinion_id]=(replyCounts[r.opinion_id]||0)+1;});
+    var html='<div style="max-width:760px;margin:0 auto"><div style="display:flex;justify-content:flex-end;margin-bottom:20px"><button onclick="openOpinionModal()" style="padding:10px 22px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ 의견 요청</button></div>';
+    if(!opinions.length){html+='<div style="text-align:center;padding:60px;color:#94a3b8;font-size:14px">아직 의견 요청이 없습니다</div>';}
+    else opinions.forEach(function(op){
+      var author=ALL.find(function(u){return u.id===op.from_id;});
+      var cnt=replyCounts[op.id]||0;
+      var date=new Date(op.ts);
+      var ds=(date.getMonth()+1)+'/'+date.getDate();
+      var isOwn=CU&&CU.id===op.from_id;
+      var targetLabel=op.target==='all'?'전체':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
+      html+='<div onclick="openOpinionDetail('+op.id+')" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:14px;cursor:pointer" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
+      html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#1a1a2e">'+esc(op.title)+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:12px"><span style="background:#eff6ff;color:#1a6fc4;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">'+esc(targetLabel)+'</span>';
+      html+='<span style="background:#f1f5f9;color:#94a3b8;font-size:11px;padding:3px 9px;border-radius:20px">'+cnt+'</span>';
+      if(isOwn)html+='<button onclick="event.stopPropagation();deleteOpinion('+op.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>';
+      html+='</div></div><div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">'+esc(op.body)+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:8px">';
+      if(author)html+='<div style="width:22px;height:22px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+author.name[0]+'</div>';
+      html+='<span style="font-size:12px;color:#94a3b8">'+(author?esc(author.name):'?')+' · '+ds+'</span></div></div>';
+    });
+    html+='</div>';
+    wrap.innerHTML=html;
+  });
+}
+function openOpinionDetail(opId){
+  var wrap=document.getElementById('opinionList');
+  if(!wrap)return;
+  wrap.innerHTML='<div style="max-width:760px;margin:0 auto"><div style="text-align:center;padding:20px;color:#94a3b8">로딩 중...</div></div>';
+  Promise.all([
+    sbGet('staff_opinions','id=eq.'+opId),
+    sbGet('staff_op_replies','opinion_id=eq.'+opId+'&order=ts.asc')
+  ]).then(function(results){
+    var op=(results[0]||[])[0];
+    var replies=results[1]||[];
+    if(!op){wrap.innerHTML='<button onclick="renderOpinionList()">목록으로</button>';return;}
+    var author=ALL.find(function(u){return u.id===op.from_id;});
+    var date=new Date(op.ts);
+    var ds=(date.getMonth()+1)+'/'+date.getDate()+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+    var targetLabel=op.target==='all'?'전체':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
+    var html='<div style="max-width:760px;margin:0 auto">';
+    html+='<button onclick="renderOpinionList()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;font-weight:600;padding:0;margin-bottom:16px;font-family:inherit">← 목록으로</button>';
+    html+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:20px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="background:#eff6ff;color:#1a6fc4;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px">'+esc(targetLabel)+'에게</span><span style="font-size:12px;color:#94a3b8">'+ds+'</span></div>';
+    html+='<div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:12px">'+esc(op.title)+'</div>';
+    html+='<div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap;margin-bottom:16px">'+esc(op.body)+'</div>';
+    if(author)html+='<div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #e2e8f0"><div style="width:28px;height:28px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+author.name[0]+'</div><span style="font-size:13px;font-weight:600">'+esc(author.name)+'</span></div>';
+    html+='</div><div style="margin-bottom:16px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">답변 '+replies.length+'개</div>';
+    if(!replies.length)html+='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px">첫 번째 답변을 남겨보세요!</div>';
+    else replies.forEach(function(r){
+      var rA=ALL.find(function(u){return u.id===r.from_id;});
+      var rd=new Date(r.ts);
+      var rds=(rd.getMonth()+1)+'/'+rd.getDate()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0');
+      var isOwn=CU&&CU.id===r.from_id;
+      html+='<div style="display:flex;gap:12px;margin-bottom:12px">';
+      if(rA)html+='<div style="width:32px;height:32px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+rA.name[0]+'</div>';
+      html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:13px;font-weight:700">'+(rA?esc(rA.name):'?')+'</span><span style="font-size:11px;color:#94a3b8">'+rds+'</span>';
+      if(isOwn)html+='<button onclick="deleteReply('+opId+','+r.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:12px;padding:0;margin-left:auto">✕</button>';
+      html+='</div><div style="background:#f8fafc;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
+    });
+    html+='</div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">';
+    html+='<textarea id="replyInput" placeholder="답변 입력... (Ctrl+Enter 전송)" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:72px;outline:none;box-sizing:border-box;line-height:1.6"></textarea>';
+    html+='<div style="display:flex;justify-content:flex-end;margin-top:8px"><button onclick="submitReply('+opId+')" style="padding:9px 22px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">답변 등록</button></div></div></div>';
+    wrap.innerHTML=html;
+    var ri=document.getElementById('replyInput');
+    if(ri)ri.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter')submitReply(opId);});
+  });
+}
+
 function submitOpinion(){
   var title=document.getElementById('opTitle').value.trim();
   var body=document.getElementById('opBody').value.trim();
@@ -2041,16 +2120,15 @@ function submitReply(opId){
   sbPost('staff_op_replies',{opinion_id:opId,from_id:CU?CU.id:'',text:text,ts:Date.now()})
     .then(function(){toast('답변 등록!');openOpinionDetail(opId);});
 }
-function deleteReply(opId,ts){
-  if(!confirm('\uB2F5\uBCC0\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'))return;
-  var replies=ld('tm_op_replies',{});if(replies[opId])replies[opId]=replies[opId].filter(function(r){return r.ts!==ts;});
-  sv('tm_op_replies',replies);openOpinionDetail(opId);
+function deleteReply(opId,replyId){
+  if(!confirm('답변을 삭제할까요?'));return;
+  sbDel('staff_op_replies','id=eq.'+replyId).then(function(){openOpinionDetail(opId);});
 }
 function deleteOpinion(opId){
-  if(!confirm('\uC758\uACAC \uC694\uCCAD\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'))return;
-  var opinions=ld('tm_opinions',[]);sv('tm_opinions',opinions.filter(function(o){return o.id!==opId;}));
-  var replies=ld('tm_op_replies',{});delete replies[opId];sv('tm_op_replies',replies);
-  toast('\uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4');renderOpinionList();
+  if(!confirm('의견 요청을 삭제할까요?'))return;
+  sbDel('staff_op_replies','opinion_id=eq.'+opId)
+    .then(function(){return sbDel('staff_opinions','id=eq.'+opId);})
+    .then(function(){toast('삭제됨');renderOpinionList();});
 }
 /* \u2500\u2500 \uC758\uACAC\uC694\uCCAD \uC2DC\uC2A4\uD15C \uB05D \u2500\u2500 */
 
