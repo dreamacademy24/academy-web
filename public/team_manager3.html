@@ -3165,7 +3165,7 @@ function renderChatMsgs(chId){
       html+='<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:34px;flex-shrink:0"></div><div style="flex:1">';
     }
     html+='<div style="display:inline-flex;align-items:flex-start;gap:4px">';
-    html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap;word-break:break-word;padding:6px 10px;background:'+(isOwn?'#eff6ff':'var(--surface,#f8fafc)')+';border-radius:10px;max-width:600px;border:'+(isOwn?'1px solid #bfdbfe':'1px solid var(--border,#e2e8f0)')+'">'+esc(msg.text)+'</div>';
+    html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap;word-break:break-word;padding:6px 10px;background:'+(isOwn?'#eff6ff':'var(--surface,#f8fafc)')+';border-radius:10px;max-width:600px;border:'+(isOwn?'1px solid #bfdbfe':'1px solid var(--border,#e2e8f0)')+'">'+highlightMention(msg.text)+'</div>';
     if(isOwn)html+='<button onclick="deleteChatMsg(\''+chId+'\','+msg.ts+')" style="background:none;border:none;color:transparent;cursor:pointer;font-size:12px;padding:4px" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'transparent\'">\u2715</button>';
     html+='</div></div></div>';
     prevFrom=msg.from;
@@ -3175,11 +3175,61 @@ function renderChatMsgs(chId){
 function renderChatInput(chId){
   var el=document.getElementById('chatInputArea');if(!el)return;
   var chName=(getChannels().find(function(c){return c.id===chId;})||{name:chId}).name;
-  el.innerHTML='<div style="display:flex;gap:10px;align-items:flex-end">'+
+  el.innerHTML='<div style="position:relative">'+
+    '<div id="mentionPicker" style="display:none;position:absolute;bottom:52px;left:0;background:var(--bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:6px;min-width:180px;z-index:100"></div>'+
+    '<div style="display:flex;gap:10px;align-items:flex-end">'+
     '<div style="flex:1;border:1.5px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 14px;background:var(--bg,#fff)">'+
-    '<textarea id="chatTxt" placeholder="# '+esc(chName)+' \uCC44\uB110\uC5D0 \uBA54\uC2DC\uC9C0 \uBCF4\uB0B4\uAE30..." style="width:100%;border:none;outline:none;font-size:13px;font-family:inherit;resize:none;min-height:20px;max-height:120px;background:transparent;line-height:1.5;box-sizing:border-box;color:var(--text,#1a1a2e)" rows="1" oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,120)+\'px\'" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();sendChatMsg(\''+chId+'\');}"></textarea></div>'+
+    '<textarea id="chatTxt" placeholder="# '+esc(chName)+' \uCC44\uB110\uC5D0 \uBA54\uC2DC\uC9C0 \uBCF4\uB0B4\uAE30... (@\uC774\uB984\uC73C\uB85C \uBA58\uC158)" style="width:100%;border:none;outline:none;font-size:13px;font-family:inherit;resize:none;min-height:20px;max-height:120px;background:transparent;line-height:1.5;box-sizing:border-box;color:var(--text,#1a1a2e)" rows="1" oninput="this.style.height=\'auto\';this.style.height=Math.min(this.scrollHeight,120)+\'px\';handleMentionInput(this)" onkeydown="handleChatKey(event,\''+chId+'\')"></textarea></div>'+
     '<button onclick="sendChatMsg(\''+chId+'\')" style="padding:10px 18px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit;flex-shrink:0;height:42px">\uC804\uC1A1</button></div>'+
-    '<div style="font-size:11px;color:var(--text3,#94a3b8);margin-top:6px">Enter\uB85C \uC804\uC1A1 \u00B7 Shift+Enter\uB85C \uC904\uBC14\uAFC8</div>';
+    '<div style="font-size:11px;color:var(--text3,#94a3b8);margin-top:6px">Enter\uB85C \uC804\uC1A1 \u00B7 Shift+Enter\uB85C \uC904\uBC14\uAFC8 \u00B7 @\uC774\uB984\uC73C\uB85C \uBA58\uC158</div></div>';
+}
+var _mentionStart=-1,_mentionQuery='';
+function handleChatKey(e,chId){
+  var picker=document.getElementById('mentionPicker');
+  if(picker&&picker.style.display!=='none'){
+    if(e.key==='Escape'){picker.style.display='none';return;}
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      var items=picker.querySelectorAll('.mi');var focused=picker.querySelector('.mi.mf');
+      if(focused)focused.classList.remove('mf');
+      if(e.key==='ArrowDown'){var next=focused?focused.nextElementSibling:items[0];if(!next)next=items[0];if(next)next.classList.add('mf');}
+      else{var prev=focused?focused.previousElementSibling:items[items.length-1];if(!prev)prev=items[items.length-1];if(prev)prev.classList.add('mf');}
+      e.preventDefault();return;
+    }
+    if(e.key==='Enter'||e.key==='Tab'){var f=picker.querySelector('.mi.mf')||picker.querySelector('.mi');if(f){f.click();e.preventDefault();return;}}
+  }
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMsg(chId);}
+}
+function handleMentionInput(ta){
+  var val=ta.value,cur=ta.selectionStart,picker=document.getElementById('mentionPicker');if(!picker)return;
+  var atPos=-1;
+  for(var i=cur-1;i>=0;i--){if(val[i]==='@'){atPos=i;break;}if(val[i]===' '||val[i]==='\n')break;}
+  if(atPos===-1){picker.style.display='none';return;}
+  _mentionStart=atPos;_mentionQuery=val.slice(atPos+1,cur).toLowerCase();
+  var matched=ALL.filter(function(u){return u.name.toLowerCase().indexOf(_mentionQuery)>-1||u.id.toLowerCase().indexOf(_mentionQuery)>-1;});
+  if(!matched.length){picker.style.display='none';return;}
+  picker.innerHTML=matched.map(function(u){
+    return '<div class="mi" onclick="insertMention(\''+u.id+'\',\''+u.name+'\')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;cursor:pointer" onmouseover="this.parentElement.querySelectorAll(\'.mi\').forEach(function(x){x.classList.remove(\'mf\')});this.classList.add(\'mf\')" >'+
+    '<div style="width:26px;height:26px;border-radius:50%;background:'+u.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:11px">'+u.initial+'</div>'+
+    '<span style="font-size:13px;font-weight:600;color:var(--text,#1a1a2e)">'+esc(u.name)+'</span></div>';
+  }).join('');
+  picker.style.display='block';
+  if(!document.getElementById('mentionStyle')){var s=document.createElement('style');s.id='mentionStyle';s.textContent='.mi.mf{background:var(--surface,#f0f4ff)!important;}.mi:hover{background:var(--surface,#f0f4ff);}';document.head.appendChild(s);}
+}
+function insertMention(userId,userName){
+  var ta=document.getElementById('chatTxt'),picker=document.getElementById('mentionPicker');if(!ta)return;
+  var val=ta.value,cur=ta.selectionStart;
+  var before=val.slice(0,_mentionStart),after=val.slice(cur);
+  ta.value=before+'@'+userName+' '+after;
+  var np=before.length+userName.length+2;ta.setSelectionRange(np,np);ta.focus();
+  if(picker)picker.style.display='none';
+}
+function highlightMention(text){
+  var escaped=esc(text);
+  return escaped.replace(/@([\w\uAC00-\uD7A3]+)/g,function(match,name){
+    var user=ALL.find(function(u){return u.name===name||u.id===name;});
+    var color=user?user.color:'#1a6fc4';
+    return '<span style="background:'+color+'22;color:'+color+';font-weight:700;border-radius:4px;padding:0 3px">@'+name+'</span>';
+  });
 }
 function sendChatMsg(chId){
   var inp=document.getElementById('chatTxt');if(!inp)return;
