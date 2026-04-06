@@ -1395,6 +1395,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <div id="pomoBar" style="display:none"></div>
 
 <script>
+
+var SB_URL='https://yiglafscjvjgkxpycevk.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MjY5MDQsImV4cCI6MjA1OTQwMjkwNH0.Lgz7KBTP_KNarM24AgrmjtLc-_-ytPA';
+function sbFetch(path,opts){return fetch(SB_URL+'/rest/v1/'+path,Object.assign({headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'}},opts||{}));}
+function sbGet(table,query){return sbFetch(table+'?'+query).then(function(r){return r.json();});}
+function sbPost(table,body){return sbFetch(table,{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();});}
+function sbPatch(table,query,body){return sbFetch(table+'?'+query,{method:'PATCH',body:JSON.stringify(body)}).then(function(r){return r.json();});}
+function sbDel(table,query){return sbFetch(table+'?'+query,{method:'DELETE'});}
+
 const EMPS=[
   {id:'jenna',name:'Jenna', color:'#6366f1',initial:'J', role:'부원장'},
   {id:'jamie',name:'Jamie', color:'#0ea5e9',initial:'JA'},
@@ -3148,35 +3157,38 @@ function renderChatHeader(chId){
 }
 function renderChatMsgs(chId){
   var el=document.getElementById('chatMessages');if(!el)return;
-  var msgs=getChatMsgs(chId);
-  if(!msgs.length){el.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3,#94a3b8);font-size:13px;padding:40px 0">\uCCAB \uBC88\uC9F8 \uBA54\uC2DC\uC9C0\uB97C \uBCF4\uB0B4\uBCF4\uC138\uC694! \uD83D\uDC4B</div>';return;}
-  var html='';var prevFrom=null;var prevDate=null;
-  msgs.forEach(function(msg,i){
-    var author=ALL.find(function(u){return u.id===msg.from;});
-    var d=new Date(msg.ts);var dateStr=d.getFullYear()+'\uB144 '+(d.getMonth()+1)+'\uC6D4 '+d.getDate()+'\uC77C';
-    var timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    var isOwn=CU&&CU.id===msg.from;
-    var isCont=prevFrom===msg.from&&(msg.ts-(msgs[i-1]||{ts:0}).ts)<300000;
-    if(dateStr!==prevDate){
-      html+='<div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px"><div style="flex:1;height:1px;background:var(--border,#e2e8f0)"></div><span style="font-size:11px;color:var(--text3,#94a3b8);font-weight:600">'+dateStr+'</span><div style="flex:1;height:1px;background:var(--border,#e2e8f0)"></div></div>';
-      prevDate=dateStr;
-    }
-    if(!isCont){
-      html+='<div style="display:flex;gap:10px;margin-top:12px;align-items:flex-start">';
-      html+='<div style="width:34px;height:34px;border-radius:50%;background:'+(author?author.color:'#ccc')+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;flex-shrink:0">'+(author?author.initial:'?')+'</div>';
-      html+='<div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">';
-      html+='<span style="font-size:13px;font-weight:700;color:var(--text,#1a1a2e)">'+(author?esc(author.name):'?')+'</span>';
-      html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+timeStr+'</span></div>';
-    }else{
-      html+='<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:34px;flex-shrink:0"></div><div style="flex:1">';
-    }
-    html+='<div style="display:inline-flex;align-items:flex-start;gap:4px">';
-    html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap;word-break:break-word;padding:6px 10px;background:'+(isOwn?'#eff6ff':'var(--surface,#f8fafc)')+';border-radius:10px;max-width:600px;border:'+(isOwn?'1px solid #bfdbfe':'1px solid var(--border,#e2e8f0)')+'">'+highlightMention(msg.text)+'</div>';
-    if(isOwn)html+='<button onclick="deleteChatMsg(\''+chId+'\','+msg.ts+')" style="background:none;border:none;color:transparent;cursor:pointer;font-size:12px;padding:4px" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'transparent\'">\u2715</button>';
-    html+='</div></div></div>';
-    prevFrom=msg.from;
-  });
-  el.innerHTML=html;el.scrollTop=el.scrollHeight;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">로딩 중...</div>';
+  sbGet('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&order=ts.asc&limit=200')
+    .then(function(msgs){
+      if(!msgs||!msgs.length){el.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3,#94a3b8);font-size:13px;padding:40px 0">첨 번째 메시지를 보내보세요!</div>';return;}
+      var html='';var prevFrom=null;var prevDate=null;
+      msgs.forEach(function(msg,i){
+        var author=ALL.find(function(u){return u.id===msg.from_id;});
+        var d=new Date(msg.ts);var dateStr=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
+        var timeStr=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+        var isOwn=CU&&CU.id===msg.from_id;
+        var isCont=prevFrom===msg.from_id&&(msg.ts-(msgs[i-1]||{ts:0}).ts)<300000;
+        if(dateStr!==prevDate){
+          html+='<div style="display:flex;align-items:center;gap:10px;margin:16px 0 8px"><div style="flex:1;height:1px;background:var(--border,#e2e8f0)"></div><span style="font-size:11px;color:var(--text3,#94a3b8);font-weight:600">'+dateStr+'</span><div style="flex:1;height:1px;background:var(--border,#e2e8f0)"></div></div>';
+          prevDate=dateStr;
+        }
+        if(!isCont){
+          html+='<div style="display:flex;gap:10px;margin-top:12px;align-items:flex-start">';
+          html+='<div style="width:34px;height:34px;border-radius:50%;background:'+(author?author.color:'#ccc')+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;flex-shrink:0">'+(author?author.initial:'?')+'</div>';
+          html+='<div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">';
+          html+='<span style="font-size:13px;font-weight:700;color:var(--text,#1a1a2e)">'+(author?esc(author.name):'?')+'</span>';
+          html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+timeStr+'</span></div>';
+        }else{
+          html+='<div style="display:flex;gap:10px;align-items:flex-start"><div style="width:34px;flex-shrink:0"></div><div style="flex:1">';
+        }
+        html+='<div style="display:inline-flex;align-items:flex-start;gap:4px">';
+        html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap;word-break:break-word;padding:6px 10px;background:'+(isOwn?'#eff6ff':'var(--surface,#f8fafc)')+';border-radius:10px;max-width:600px;border:'+(isOwn?'1px solid #bfdbfe':'1px solid var(--border,#e2e8f0)')+'">'+highlightMention(msg.text)+'</div>';
+        if(isOwn)html+='<button onclick="deleteChatMsg(\x27'+chId+'\x27,'+msg.ts+')" style="background:none;border:none;color:transparent;cursor:pointer;font-size:12px;padding:4px" onmouseover="this.style.color=\x27#ef4444\x27" onmouseout="this.style.color=\x27transparent\x27">\u2715</button>';
+        html+='</div></div></div>';
+        prevFrom=msg.from_id;
+      });
+      el.innerHTML=html;el.scrollTop=el.scrollHeight;
+    });
 }
 function renderChatInput(chId){
   var el=document.getElementById('chatInputArea');if(!el)return;
@@ -3240,14 +3252,13 @@ function highlightMention(text){
 function sendChatMsg(chId){
   var inp=document.getElementById('chatTxt');if(!inp)return;
   var text=inp.value.trim();if(!text)return;
-  var chat=ld('tm_chat',{});if(!chat[chId])chat[chId]=[];
-  chat[chId].push({from:CU?CU.id:'',text:text,ts:Date.now()});
-  sv('tm_chat',chat);inp.value='';inp.style.height='auto';
-  renderChatMsgs(chId);renderChatHeader(chId);markChatRead(chId);
+  inp.value='';inp.style.height='auto';
+  sbPost('staff_chat',{channel:chId,from_id:CU?CU.id:'',text:text,ts:Date.now()})
+    .then(function(){renderChatMsgs(chId);renderChatHeader(chId);markChatRead(chId);});
 }
 function deleteChatMsg(chId,ts){
-  var chat=ld('tm_chat',{});if(chat[chId])chat[chId]=chat[chId].filter(function(m){return m.ts!==ts;});
-  sv('tm_chat',chat);renderChatMsgs(chId);
+  sbDel('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&ts=eq.'+ts)
+    .then(function(){renderChatMsgs(chId);});
 }
 /* \u2500\u2500 \uCC44\uD305 \uC2DC\uC2A4\uD15C \uB05D \u2500\u2500 */
 
