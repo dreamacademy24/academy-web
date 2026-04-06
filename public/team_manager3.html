@@ -3114,10 +3114,23 @@ var DEFAULT_CHANNELS=[
   {id:'free',name:'\uC7A1\uB2F4',desc:'\uC790\uC720\uB85C\uC6B4 \uB300\uD654'},
   {id:'work',name:'\uC5C5\uBB34',desc:'\uC5C5\uBB34 \uAD00\uB828 \uC18C\uD1B5'}
 ];
-function getChatMsgs(chId){return(ld('tm_chat',{})[chId])||[];}
+function getChatMsgs(chId){return[];}
 function getChannels(){return DEFAULT_CHANNELS;}
-function markChatRead(chId){var rd=ld('tm_chat_read',{});var msgs=getChatMsgs(chId);rd[chId]=msgs.length>0?msgs[msgs.length-1].ts:0;sv('tm_chat_read',rd);}
-function getUnread(chId){var rd=ld('tm_chat_read',{});var last=rd[chId]||0;return getChatMsgs(chId).filter(function(m){return m.ts>last&&(!CU||m.from!==CU.id);}).length;}
+function markChatRead(chId){sbGet('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&order=ts.desc&limit=1').then(function(msgs){var rd=ld('tm_chat_read',{});rd[chId]=(msgs&&msgs.length>0)?msgs[0].ts:0;sv('tm_chat_read',rd);});}
+var _unreadCache={};
+function getUnread(chId){return _unreadCache[chId]||0;}
+function refreshUnreadCounts(){
+  var chs=getChannels();var rd=ld('tm_chat_read',{});
+  chs.forEach(function(ch){
+    var last=rd[ch.id]||0;
+    sbGet('staff_chat','channel=eq.'+encodeURIComponent(ch.id)+'&ts=gt.'+last+'&select=from_id')
+      .then(function(msgs){
+        if(!msgs)return;
+        _unreadCache[ch.id]=msgs.filter(function(m){return !CU||m.from_id!==CU.id;}).length;
+        renderChannelList();
+      });
+  });
+}
 
 function renderChatPage(){
   var wrap=document.getElementById('chatWrap');if(!wrap)return;
@@ -3129,7 +3142,7 @@ function renderChatPage(){
     '<div id="chatHeader" style="padding:14px 20px;border-bottom:1px solid var(--border,#e2e8f0);background:var(--surface2,#fff);flex-shrink:0"></div>'+
     '<div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:2px"></div>'+
     '<div id="chatInputArea" style="padding:12px 20px;border-top:1px solid var(--border,#e2e8f0);background:var(--surface2,#fff);flex-shrink:0"></div></div>';
-  renderChannelList();switchChannel(curChannel);
+  renderChannelList();refreshUnreadCounts();switchChannel(curChannel);
 }
 function renderChannelList(){
   var chs=getChannels();var el=document.getElementById('channelList');if(!el)return;
@@ -3145,15 +3158,18 @@ function switchChannel(chId){
   curChannel=chId;markChatRead(chId);renderChannelList();renderChatHeader(chId);renderChatMsgs(chId);renderChatInput(chId);
   setTimeout(function(){var el=document.getElementById('chatMessages');if(el)el.scrollTop=el.scrollHeight;},50);
   if(chatRefreshTimer)clearInterval(chatRefreshTimer);
-  chatRefreshTimer=setInterval(function(){if(curChannel===chId)renderChatMsgs(chId);},30000);
+  chatRefreshTimer=setInterval(function(){if(curChannel===chId){renderChatMsgs(chId);refreshUnreadCounts();}},30000);
 }
 function renderChatHeader(chId){
   var ch=getChannels().find(function(c){return c.id===chId;});if(!ch)return;
-  var msgs=getChatMsgs(chId);var el=document.getElementById('chatHeader');if(!el)return;
-  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between">'+
-    '<div><div style="font-size:15px;font-weight:800;color:var(--text,#1a1a2e)"># '+esc(ch.name)+' <span style="font-size:13px;font-weight:400;color:var(--text3,#94a3b8)">'+esc(ch.desc)+'</span></div>'+
-    '<div style="font-size:11px;color:var(--text3,#94a3b8);margin-top:2px">\uBA54\uC2DC\uC9C0 '+msgs.length+'\uAC1C</div></div>'+
-    '<button onclick="renderChatMsgs(\''+chId+'\')" style="background:none;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3,#94a3b8);cursor:pointer;font-family:inherit">\uD83D\uDD04 \uC0C8\uB85C\uACE0\uCE68</button></div>';
+  var el=document.getElementById('chatHeader');if(!el)return;
+  sbGet('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&select=id&limit=1000').then(function(msgs){
+    var count=(msgs&&msgs.length)||0;
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between">'+
+      '<div><div style="font-size:15px;font-weight:800;color:var(--text,#1a1a2e)"># '+esc(ch.name)+' <span style="font-size:13px;font-weight:400;color:var(--text3,#94a3b8)">'+esc(ch.desc)+'</span></div>'+
+      '<div style="font-size:11px;color:var(--text3,#94a3b8);margin-top:2px">\uBA54\uC2DC\uC9C0 '+count+'\uAC1C</div></div>'+
+      '<button onclick="renderChatMsgs(\''+chId+'\')" style="background:none;border:1px solid var(--border,#e2e8f0);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--text3,#94a3b8);cursor:pointer;font-family:inherit">\uD83D\uDD04 \uC0C8\uB85C\uACE0\uCE68</button></div>';
+  });
 }
 function renderChatMsgs(chId){
   var el=document.getElementById('chatMessages');if(!el)return;
