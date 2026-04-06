@@ -5,7 +5,7 @@ import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 
 const ADMIN_ACCOUNTS = [
   { id: 'admin-may',   pw: 'may1234',   role: 'admin', name: 'May', staffId: 'may' },
-  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO', staffId: 'ceo' },
+  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO', staffId: 'may' },
   { id: 'admin-jenna', pw: 'jenna1234', role: 'staff', name: 'Jenna', staffId: 'jenna' },
   { id: 'admin-jamie', pw: 'jamie1234', role: 'staff', name: 'Jamie', staffId: 'jamie' },
   { id: 'admin-yuna',  pw: 'yuna1234',  role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
