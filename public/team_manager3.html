@@ -1397,7 +1397,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <script>
 
 var SB_URL='https://yiglafscjvjgkxpycevk.supabase.co';
-var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MjY5MDQsImV4cCI6MjA1OTQwMjkwNH0.Lgz7KBTP_KNarM24AgrmjtLc-_-ytPA';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODgzMjcsImV4cCI6MjA4OTY2NDMyN30.k_HErGsz5oYkILWvUGRaU3x1IXKMQOuO5X312tDcXe4';
 function sbFetch(path,opts){return fetch(SB_URL+'/rest/v1/'+path,Object.assign({headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation'}},opts||{}));}
 function sbGet(table,query){return sbFetch(table+'?'+query).then(function(r){return r.json();}).then(function(d){return Array.isArray(d)?d:[];});}
 function sbPost(table,body){return sbFetch(table,{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();});}
