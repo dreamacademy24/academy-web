@@ -961,6 +961,32 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .report-submit-btn:hover{opacity:.9;}
 .report-hint{font-size:11px;color:#94a3b8;}
 .report-empty{font-size:12px;color:#94a3b8;padding:12px;text-align:center;background:var(--surface,#f8fafc);border-radius:8px;border:1px dashed var(--border,#e2e8f0);}
+
+/* ── 보고 카드 칸반 스타일 ── */
+.report-kanban{display:flex;flex-direction:column;gap:12px;}
+.rk-card{background:#fff;border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:16px;transition:box-shadow 0.15s;}
+.rk-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+.rk-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.rk-card-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.rk-card-title{font-size:14px;font-weight:700;color:var(--text,#1a1a2e);flex:1;line-height:1.4;}
+.rk-card-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;}
+.rk-card-body{font-size:13px;color:var(--text2,#374151);line-height:1.7;white-space:pre-wrap;padding:10px 12px;background:var(--surface,#f8fafc);border-radius:8px;margin-bottom:10px;}
+.rk-card-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#94a3b8;}
+.rk-del-btn{background:none;border:none;cursor:pointer;font-size:14px;color:#cbd5e1;padding:2px 4px;}
+.rk-del-btn:hover{color:#dc2626;}
+.rk-new-card{background:var(--bg,#fff);border:1.5px dashed var(--border,#e2e8f0);border-radius:12px;padding:16px;}
+.rk-new-card-header{margin-bottom:12px;}
+.rk-status-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.rk-status-tab{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border,#e2e8f0);background:var(--surface,#f8fafc);color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.rk-status-tab:hover{border-color:#1a6fc4;color:#1a6fc4;}
+.rk-title-input{width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;outline:none;margin-bottom:8px;box-sizing:border-box;color:var(--text,#1a1a2e);background:var(--bg,#fff);}
+.rk-title-input:focus{border-color:var(--primary,#1a6fc4);box-shadow:0 0 0 3px rgba(26,111,196,0.08);}
+.rk-body-input{width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:90px;outline:none;box-sizing:border-box;color:var(--text,#1a1a2e);line-height:1.6;background:var(--bg,#fff);}
+.rk-body-input:focus{border-color:var(--primary,#1a6fc4);box-shadow:0 0 0 3px rgba(26,111,196,0.08);}
+.rk-new-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;}
+.rk-hint{font-size:11px;color:#94a3b8;}
+.rk-submit-btn{padding:9px 22px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.rk-submit-btn:hover{opacity:.9;}
 </style>
 </head>
 <body>
@@ -2453,6 +2479,25 @@ function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
   t.assignee=CU.id;sv('tm_t',tasks);toast('내 업무로 배정되었습니다!');refreshAll();
 }
+function pickReportStatus(btn, memberId) {
+  var tabs = btn.closest('.rk-status-tabs');
+  if(!tabs) return;
+  tabs.querySelectorAll('.rk-status-tab').forEach(function(t) {
+    t.classList.remove('active');
+    t.style.background = '';
+    t.style.color = '';
+    t.style.borderColor = '';
+  });
+  btn.classList.add('active');
+  var st = btn.dataset.status;
+  var sBg = {done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var sC = {done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  btn.style.background = sBg[st];
+  btn.style.color = sC[st];
+  btn.style.borderColor = sC[st];
+  var hiddenInput = document.getElementById('rStatus_' + memberId);
+  if(hiddenInput) hiddenInput.value = st;
+}
 function submitReport(projId,memberId){
   var titleEl=document.getElementById('rTitle_'+memberId);
   var statusEl=document.getElementById('rStatus_'+memberId);
@@ -2470,50 +2515,99 @@ function delReport(projId,reportId){
   var reps=ld('tm_reports',{});if(reps[projId])reps[projId]=reps[projId].filter(function(r){return r.id!==reportId;});
   sv('tm_reports',reps);renderProjDetail(projId);
 }
-function buildReportDashboard(projId){
-  var p=projects.find(function(pr){return pr.id===projId;});if(!p)return '';
-  var reps=ld('tm_reports',{});var projReps=reps[projId]||[];
-  var members=(p.members&&p.members.length>0)?p.members:ALL.map(function(u){return u.id;});
-  var SL={done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
-  var SB={done:'badge-done',progress:'badge-progress',issue:'badge-issue',plan:'badge-plan'};
-  var SE={done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
-  var h='<div class="report-dashboard"><div class="report-dashboard-title">📊 담당자별 보고 현황</div>';
-  members.forEach(function(mid){
-    var u=getP(mid);if(!u)return;
-    var mr=projReps.filter(function(r){return r.author===mid;}).sort(function(a,b){return b.ts-a.ts;});
-    var isMe=CU&&CU.id===mid;
-    h+='<div class="report-member-col">';
-    h+='<div class="report-member-header"><div class="report-member-avatar" style="background:'+u.color+'">'+u.initial+'</div>';
-    h+='<div class="report-member-name">'+esc(u.name)+'</div>';
-    h+='<div class="report-member-count">보고 '+mr.length+'건</div></div>';
-    if(mr.length>0){
-      h+='<div class="report-cards">';
-      mr.forEach(function(r){
-        var isOwn=CU&&CU.id===r.author;
-        var dt=new Date(r.ts);var ds=(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
-        var st=r.status||'progress';
-        h+='<div class="report-card"><div class="report-card-header">';
-        h+='<div class="report-card-title">'+(SE[st]||'🔄')+' '+esc(r.title||'보고')+'</div>';
-        h+='<span class="report-card-badge '+(SB[st]||'badge-progress')+'">'+(SL[st]||'진행중')+'</span></div>';
-        if(r.body)h+='<div class="report-card-body">'+esc(r.body)+'</div>';
-        h+='<div class="report-card-footer"><span>🕐 '+ds+'</span>';
-        if(isOwn)h+='<button class="report-card-del" onclick="delReport(\''+projId+'\','+r.id+')">🗑</button>';
-        h+='</div></div>';
+function buildReportDashboard(projId) {
+  const proj = projects.find(p => p.id === projId);
+  if(!proj) return '';
+  const reports = ld('tm_reports', {});
+  const projReports = reports[projId] || [];
+  const members = (proj.members && proj.members.length > 0) ? proj.members : ALL.map(u => u.id);
+
+  const statusLabel = {done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
+  const statusBadge = {done:'badge-done',progress:'badge-progress',issue:'badge-issue',plan:'badge-plan'};
+  const statusEmoji = {done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
+  const statusColor = {done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  const statusBg   = {done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+
+  let html = '<div class="report-dashboard">';
+  html += '<div class="report-dashboard-title">📊 담당자별 보고 현황</div>';
+
+  members.forEach(memberId => {
+    const user = ALL.find(u => u.id === memberId);
+    if(!user) return;
+    const mReports = projReports.filter(r => r.author === memberId).sort((a,b) => b.ts - a.ts);
+    const isMe = CU && CU.id === memberId;
+
+    html += '<div class="report-member-col">';
+    html += '<div class="report-member-header">';
+    html += '<div class="report-member-avatar" style="background:' + user.color + '">' + user.name[0] + '</div>';
+    html += '<div class="report-member-name">' + esc(user.name) + '</div>';
+    html += '<div class="report-member-count">보고 ' + mReports.length + '건</div>';
+    html += '</div>';
+
+    if(isMe) {
+      html += '<div class="report-kanban">';
+      mReports.forEach(r => {
+        const st = r.status || 'progress';
+        const date = new Date(r.ts);
+        const dateStr = (date.getMonth()+1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2,'0') + ':' + String(date.getMinutes()).padStart(2,'0');
+        html += '<div class="rk-card">';
+        html += '<div class="rk-card-top">';
+        html += '<div class="rk-card-icon" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusEmoji[st] + '</div>';
+        html += '<div class="rk-card-title">' + esc(r.title||'보고') + '</div>';
+        html += '<span class="rk-card-badge" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusLabel[st] + '</span>';
+        html += '</div>';
+        if(r.body) html += '<div class="rk-card-body">' + esc(r.body) + '</div>';
+        html += '<div class="rk-card-footer">';
+        html += '<span>🕐 ' + dateStr + '</span>';
+        html += '<button class="rk-del-btn" onclick="delReport(\'' + projId + '\',' + r.id + ')">🗑</button>';
+        html += '</div></div>';
       });
-      h+='</div>';
-    }else{h+='<div class="report-empty">아직 보고 내용이 없습니다</div>';}
-    if(isMe){
-      h+='<div class="report-input-box"><div class="report-input-row">';
-      h+='<input id="rTitle_'+mid+'" class="report-input-title" placeholder="보고 제목 (예: 인스타 광고 소재 제작 완료)" />';
-      h+='<select id="rStatus_'+mid+'" class="report-input-status">';
-      h+='<option value="progress">🔄 진행중</option><option value="done">✅ 완료</option><option value="plan">📋 계획</option><option value="issue">⚠️ 이슈</option></select></div>';
-      h+='<textarea id="rBody_'+mid+'" class="report-input-body" placeholder="상세 내용을 입력하세요..."></textarea>';
-      h+='<div class="report-input-actions"><span class="report-hint">Ctrl+Enter로 등록</span>';
-      h+='<button class="report-submit-btn" onclick="submitReport(\''+projId+'\',\''+mid+'\')">보고 등록</button></div></div>';
+
+      html += '<div class="rk-new-card">';
+      html += '<div class="rk-new-card-header">';
+      html += '<div class="rk-status-tabs" id="rStatusTabs_' + memberId + '">';
+      ['progress','done','plan','issue'].forEach((st,i) => {
+        const cls = i===0 ? 'rk-status-tab active' : 'rk-status-tab';
+        const sty = i===0 ? 'background:' + statusBg[st] + ';color:' + statusColor[st] + ';border-color:' + statusColor[st] : '';
+        html += '<button class="' + cls + '" data-status="' + st + '" onclick="pickReportStatus(this,\'' + memberId + '\')" style="' + sty + '">' + statusEmoji[st] + ' ' + statusLabel[st] + '</button>';
+      });
+      html += '</div></div>';
+      html += '<input id="rTitle_' + memberId + '" class="rk-title-input" type="text" placeholder="보고 제목  (예: 인스타 광고 소재 3개 완성)">';
+      html += '<textarea id="rBody_' + memberId + '" class="rk-body-input" placeholder="상세 내용을 입력하세요...\n\n진행상황, 완료사항, 이슈 등을 자유롭게 작성하세요"></textarea>';
+      html += '<div class="rk-new-card-footer">';
+      html += '<span class="rk-hint">Ctrl+Enter로 등록</span>';
+      html += '<button class="rk-submit-btn" onclick="submitReport(\'' + projId + '\',\'' + memberId + '\')">보고 등록</button>';
+      html += '</div>';
+      html += '<input type="hidden" id="rStatus_' + memberId + '" value="progress">';
+      html += '</div>';
+      html += '</div>';
+    } else {
+      if(mReports.length > 0) {
+        html += '<div class="report-cards">';
+        mReports.forEach(r => {
+          const st = r.status || 'progress';
+          const date = new Date(r.ts);
+          const dateStr = (date.getMonth()+1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2,'0') + ':' + String(date.getMinutes()).padStart(2,'0');
+          html += '<div class="rk-card">';
+          html += '<div class="rk-card-top">';
+          html += '<div class="rk-card-icon" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusEmoji[st] + '</div>';
+          html += '<div class="rk-card-title">' + esc(r.title||'보고') + '</div>';
+          html += '<span class="rk-card-badge" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusLabel[st] + '</span>';
+          html += '</div>';
+          if(r.body) html += '<div class="rk-card-body">' + esc(r.body) + '</div>';
+          html += '<div class="rk-card-footer"><span>🕐 ' + dateStr + '</span></div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="report-empty">아직 보고 내용이 없습니다</div>';
+      }
     }
-    h+='</div>';
+    html += '</div>';
   });
-  h+='</div>';return h;
+
+  html += '</div>';
+  return html;
 }
 function liveProgress(projId,val,input){
   const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;
