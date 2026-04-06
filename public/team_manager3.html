@@ -2559,6 +2559,22 @@ function pickReportStatus(btn, memberId) {
   var hiddenInput = document.getElementById('rStatus_' + memberId);
   if(hiddenInput) hiddenInput.value = st;
 }
+function pickSt(btn,memberId){
+  var container=btn.parentElement;
+  var statusBg={done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var statusColor={done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  container.querySelectorAll('.rk-st-btn').forEach(function(b){
+    b.style.background='transparent';
+    b.style.color='var(--text3,#94a3b8)';
+    b.style.borderColor='var(--border,#e2e8f0)';
+  });
+  var st=btn.dataset.st;
+  btn.style.background=statusBg[st];
+  btn.style.color=statusColor[st];
+  btn.style.borderColor=statusColor[st];
+  var h=document.getElementById('rStatus_'+memberId);
+  if(h)h.value=st;
+}
 function submitReport(projId,memberId){
   var titleEl=document.getElementById('rTitle_'+memberId);
   var statusEl=document.getElementById('rStatus_'+memberId);
@@ -2577,100 +2593,79 @@ function delReport(projId,reportId){
   sv('tm_reports',reps);renderProjDetail(projId);
 }
 function buildReportDashboard(projId) {
-  // CU가 아직 설정 안됐으면 전역에서 재취득
-  if(!CU) { console.warn('buildReportDashboard: CU is null'); }
-  const proj = projects.find(p => p.id === projId);
+  var cuNow = CU;
+  var proj = projects.find(function(p){return p.id===projId;});
   if(!proj) return '';
-  const reports = ld('tm_reports', {});
-  const projReports = reports[projId] || [];
-  const members = (proj.members && proj.members.length > 0) ? proj.members : ALL.map(u => u.id);
+  var reports = ld('tm_reports',{});
+  var projReports = reports[projId]||[];
+  var members = (proj.members&&proj.members.length>0)?proj.members:ALL.map(function(u){return u.id;});
+  var statusLabel={done:'\uC644\uB8CC',progress:'\uC9C4\uD589\uC911',issue:'\uC774\uC288',plan:'\uACC4\uD68D'};
+  var statusBg={done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var statusColor={done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  var statusEmoji={done:'\u2705',progress:'\uD83D\uDD04',issue:'\u26A0\uFE0F',plan:'\uD83D\uDCCB'};
 
-  const statusLabel = {done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
-  const statusBadge = {done:'badge-done',progress:'badge-progress',issue:'badge-issue',plan:'badge-plan'};
-  const statusEmoji = {done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
-  const statusColor = {done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
-  const statusBg   = {done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var html='<div style="margin-top:28px;padding-top:24px;border-top:2px solid var(--border,#e2e8f0)">';
+  html+='<div style="font-size:15px;font-weight:800;color:var(--text,#1a1a2e);margin-bottom:16px">\uD83D\uDCCA \uB2F4\uB2F9\uC790\uBCC4 \uBCF4\uACE0 \uD604\uD669</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">';
 
-  let html = '<div class="report-dashboard">';
-  html += '<div class="report-dashboard-title">📊 담당자별 보고 현황</div>';
+  members.forEach(function(memberId){
+    var user=ALL.find(function(u){return u.id===memberId;});
+    if(!user)return;
+    var mReports=projReports.filter(function(r){return r.author===memberId;}).sort(function(a,b){return b.ts-a.ts;});
+    var isMe=cuNow&&cuNow.id===memberId;
 
-  members.forEach(memberId => {
-    const user = ALL.find(u => u.id === memberId);
-    if(!user) return;
-    const mReports = projReports.filter(r => r.author === memberId).sort((a,b) => b.ts - a.ts);
-    const cuId = (typeof CU !== 'undefined' && CU) ? CU.id : null;
-    const isMe = cuId === memberId;
+    html+='<div style="background:var(--surface2,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between">';
+    html+='<div style="display:flex;align-items:center;gap:8px">';
+    html+='<span style="width:10px;height:10px;border-radius:50%;background:'+user.color+';display:inline-block;flex-shrink:0"></span>';
+    html+='<span style="font-size:14px;font-weight:700;color:var(--text,#1a1a2e)">'+esc(user.name)+'</span>';
+    html+='</div>';
+    html+='<span style="background:var(--surface,#f1f5f9);color:var(--text3,#94a3b8);font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px">'+mReports.length+'\uAC74</span>';
+    html+='</div>';
 
-    html += '<div class="report-member-col">';
-    html += '<div class="report-member-header">';
-    html += '<div class="report-member-avatar" style="background:' + user.color + '">' + user.name[0] + '</div>';
-    html += '<div class="report-member-name">' + esc(user.name) + '</div>';
-    html += '<div class="report-member-count">보고 ' + mReports.length + '건</div>';
-    html += '</div>';
-
-    if(isMe) {
-      html += '<div class="report-kanban">';
-      mReports.forEach(r => {
-        const st = r.status || 'progress';
-        const date = new Date(r.ts);
-        const dateStr = (date.getMonth()+1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2,'0') + ':' + String(date.getMinutes()).padStart(2,'0');
-        html += '<div class="rk-card">';
-        html += '<div class="rk-card-top">';
-        html += '<div class="rk-card-icon" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusEmoji[st] + '</div>';
-        html += '<div class="rk-card-title">' + esc(r.title||'보고') + '</div>';
-        html += '<span class="rk-card-badge" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusLabel[st] + '</span>';
-        html += '</div>';
-        if(r.body) html += '<div class="rk-card-body">' + esc(r.body) + '</div>';
-        html += '<div class="rk-card-footer">';
-        html += '<span>🕐 ' + dateStr + '</span>';
-        html += '<button class="rk-del-btn" onclick="delReport(\'' + projId + '\',' + r.id + ')">🗑</button>';
-        html += '</div></div>';
+    if(mReports.length>0){
+      mReports.slice(0,3).forEach(function(r){
+        var st=r.status||'progress';
+        var date=new Date(r.ts);
+        var ds=(date.getMonth()+1)+'/'+(date.getDate());
+        html+='<div style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;position:relative">';
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html+='<span style="font-size:10px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:2px 7px;border-radius:20px;font-weight:700">'+(statusEmoji[st]||'\uD83D\uDD04')+' '+(statusLabel[st]||'\uC9C4\uD589\uC911')+'</span>';
+        html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+ds+'</span>';
+        if(cuNow&&cuNow.id===r.author){
+          html+='<button onclick="delReport(\''+projId+'\','+r.id+')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3,#cbd5e1);cursor:pointer;font-size:12px">\u2715</button>';
+        }
+        html+='</div>';
+        html+='<div style="font-size:13px;font-weight:600;color:var(--text,#1a1a2e);margin-bottom:2px">'+esc(r.title||'\uBCF4\uACE0')+'</div>';
+        if(r.body)html+='<div style="font-size:12px;color:var(--text2,#374151);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden">'+esc(r.body)+'</div>';
+        html+='</div>';
       });
-
-      html += '<div class="rk-new-card">';
-      html += '<div class="rk-new-card-header">';
-      html += '<div class="rk-status-tabs" id="rStatusTabs_' + memberId + '">';
-      ['progress','done','plan','issue'].forEach((st,i) => {
-        const cls = i===0 ? 'rk-status-tab active' : 'rk-status-tab';
-        const sty = i===0 ? 'background:' + statusBg[st] + ';color:' + statusColor[st] + ';border-color:' + statusColor[st] : '';
-        html += '<button class="' + cls + '" data-status="' + st + '" onclick="pickReportStatus(this,\'' + memberId + '\')" style="' + sty + '">' + statusEmoji[st] + ' ' + statusLabel[st] + '</button>';
-      });
-      html += '</div></div>';
-      html += '<input id="rTitle_' + memberId + '" class="rk-title-input" type="text" placeholder="보고 제목  (예: 인스타 광고 소재 3개 완성)">';
-      html += '<textarea id="rBody_' + memberId + '" class="rk-body-input" placeholder="상세 내용을 입력하세요...\n\n진행상황, 완료사항, 이슈 등을 자유롭게 작성하세요"></textarea>';
-      html += '<div class="rk-new-card-footer">';
-      html += '<span class="rk-hint">Ctrl+Enter로 등록</span>';
-      html += '<button class="rk-submit-btn" onclick="submitReport(\'' + projId + '\',\'' + memberId + '\')">보고 등록</button>';
-      html += '</div>';
-      html += '<input type="hidden" id="rStatus_' + memberId + '" value="progress">';
-      html += '</div>';
-      html += '</div>';
-    } else {
-      if(mReports.length > 0) {
-        html += '<div class="report-cards">';
-        mReports.forEach(r => {
-          const st = r.status || 'progress';
-          const date = new Date(r.ts);
-          const dateStr = (date.getMonth()+1) + '/' + date.getDate() + ' ' + String(date.getHours()).padStart(2,'0') + ':' + String(date.getMinutes()).padStart(2,'0');
-          html += '<div class="rk-card">';
-          html += '<div class="rk-card-top">';
-          html += '<div class="rk-card-icon" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusEmoji[st] + '</div>';
-          html += '<div class="rk-card-title">' + esc(r.title||'보고') + '</div>';
-          html += '<span class="rk-card-badge" style="background:' + statusBg[st] + ';color:' + statusColor[st] + '">' + statusLabel[st] + '</span>';
-          html += '</div>';
-          if(r.body) html += '<div class="rk-card-body">' + esc(r.body) + '</div>';
-          html += '<div class="rk-card-footer"><span>🕐 ' + dateStr + '</span></div>';
-          html += '</div>';
-        });
-        html += '</div>';
-      } else {
-        html += '<div class="report-empty">아직 보고 내용이 없습니다</div>';
+      if(mReports.length>3){
+        html+='<div style="font-size:11px;color:var(--primary,#1a6fc4);text-align:center;padding:4px 0;cursor:pointer">+'+(mReports.length-3)+'\uAC1C \uB354\uBCF4\uAE30</div>';
       }
+    } else {
+      html+='<div style="font-size:12px;color:var(--text3,#94a3b8);text-align:center;padding:12px 0">\uBCF4\uACE0 \uC5C6\uC74C</div>';
     }
-    html += '</div>';
+
+    if(isMe){
+      html+='<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px;display:flex;flex-direction:column;gap:6px">';
+      html+='<div style="display:flex;gap:4px;flex-wrap:wrap">';
+      ['progress','done','plan','issue'].forEach(function(st,i){
+        var active=i===0;
+        html+='<button class="rk-st-btn" data-st="'+st+'" data-mid="'+memberId+'" onclick="pickSt(this,\''+memberId+'\')" style="padding:3px 8px;border-radius:20px;border:1.5px solid '+(active?statusColor[st]:'var(--border,#e2e8f0)')+';background:'+(active?statusBg[st]:'transparent')+';color:'+(active?statusColor[st]:'var(--text3,#94a3b8)')+';font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">'+(statusEmoji[st])+' '+(statusLabel[st])+'</button>';
+      });
+      html+='</div>';
+      html+='<input id="rTitle_'+memberId+'" type="text" placeholder="\uBCF4\uACE0 \uC81C\uBAA9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">';
+      html+='<textarea id="rBody_'+memberId+'" placeholder="\uB0B4\uC6A9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;resize:none;min-height:56px;outline:none;box-sizing:border-box;line-height:1.5"></textarea>';
+      html+='<input type="hidden" id="rStatus_'+memberId+'" value="progress">';
+      html+='<button onclick="submitReport(\''+projId+'\',\''+memberId+'\')" style="padding:7px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\uBCF4\uACE0 \uB4F1\uB85D</button>';
+      html+='</div>';
+    }
+
+    html+='</div>';
   });
 
-  html += '</div>';
+  html+='</div></div>';
   return html;
 }
 function liveProgress(projId,val,input){
@@ -2810,7 +2805,6 @@ function openM(id){document.getElementById(id).classList.add('open');setTimeout(
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});});
-// tmAssPicker close listener
 document.addEventListener('click',function(e){var w=document.getElementById('tmAssWrap'),p=document.getElementById('tmAssPicker');if(w&&p&&!w.contains(e.target)&&!p.contains(e.target))p.style.display='none';});
 
 // ── WEEKLY REPORT ──
