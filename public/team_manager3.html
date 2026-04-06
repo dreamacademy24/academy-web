@@ -2412,8 +2412,6 @@ function toggleAssignPicker(){
   var p=document.getElementById('tmAssPicker');if(!p)return;
   if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
   else p.style.display='none';
-});
-  const co=document.createElement('option');co.value='ceo';co.textContent='CEO (대표)';co.selected=sel==='ceo';s.appendChild(co);
 }
 function handleTMF(e){Array.from(e.target.files).forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
 function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
