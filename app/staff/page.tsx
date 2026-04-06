@@ -19,7 +19,7 @@ function StaffIframe() {
     const rawUser = sp.get('user') || info?.staffId || ''
     const userId = rawUser.replace(/^admin-/, '')
     if (userId) {
-      setSrc('/team_manager5.html?user=' + encodeURIComponent(userId))
+      setSrc('/api/tm?user=' + encodeURIComponent(userId))
     } else {
       window.location.href = '/admin'
     }
