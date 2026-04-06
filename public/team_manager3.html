@@ -1464,10 +1464,18 @@ let pendingUser=null;
 
 function rebuildIdx(){let n=1;[...tasks].sort((a,b)=>a.createdAt<b.createdAt?-1:1).forEach(t=>{if(t.shared)t.idx=n++;else t.idx=null;});}
 function sortT(arr){return[...arr].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(!a.due)return 1;if(!b.due)return -1;return a.due<b.due?-1:1;});}
+
+function parseLocalDate(str){
+  if(!str)return null;
+  var parts=str.split('-');
+  if(parts.length!==3)return new Date(str);
+  return new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+}
 function dL(due){
   if(!due)return null;
-  const now=new Date();now.setHours(0,0,0,0);
-  const d=new Date(due),diff=Math.round((d-now)/86400000);
+  var now=new Date();now.setHours(0,0,0,0);
+  var d=parseLocalDate(due);if(!d||isNaN(d))return null;
+  var diff=Math.round((d-now)/86400000);
   if(diff<0)return{text:'D+'+Math.abs(diff),cls:'tag-over'};
   if(diff===0)return{text:'TODAY',cls:'tag-soon'};
   if(diff<=3)return{text:'D-'+diff,cls:'tag-soon'};
@@ -1935,7 +1943,7 @@ function renderEmpPage(empId){
   const av=document.getElementById('ehAv');av.textContent=emp.initial;av.style.background=emp.color;
   document.getElementById('ehN').textContent=empId===CU.id?emp.name+' (나의 공간)':emp.name;
   const et=tasks.filter(t=>t.assignee===empId);
-  const done=et.filter(t=>t.done).length,active=et.filter(t=>!t.done).length,overdue=et.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length;
+  const done=et.filter(t=>t.done).length,active=et.filter(t=>!t.done).length,overdue=et.filter(t=>!t.done&&t.due&&parseLocalDate(t.due)<new Date()).length;
   document.getElementById('ehS').textContent='총 '+et.length+'개 (개인 '+et.filter(t=>!t.shared).length+' + 공유 '+et.filter(t=>t.shared).length+')';
   document.getElementById('empStats').innerHTML=
     '<div class="stat-chip"><span class="stat-chip-num" style="color:var(--primary)">'+active+'</span><span class="stat-chip-label">진행 중</span></div>'+
@@ -3316,10 +3324,10 @@ function renderWeekReport(){
   const wrap=document.getElementById('weekReport');wrap.innerHTML='';
   const now=new Date(),dow=now.getDay(),mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));mon.setHours(0,0,0,0);
   const sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
-  const weekTasks=tasks.filter(function(t){if(!t.shared)return false;if(!t.due)return false;var d=new Date(t.due);return d>=mon&&d<=sun;});
+  const weekTasks=tasks.filter(function(t){if(!t.shared)return false;if(!t.due)return false;var d=parseLocalDate(t.due);return d>=mon&&d<=sun;});
   const done=weekTasks.filter(function(t){return t.done;}).length;
   const active=weekTasks.filter(function(t){return !t.done;}).length;
-  const overdue=weekTasks.filter(function(t){return !t.done&&t.due&&new Date(t.due)<now;}).length;
+  const overdue=weekTasks.filter(function(t){return !t.done&&t.due&&parseLocalDate(t.due)<now;}).length;
   const total=weekTasks.length,pct=total?Math.round(done/total*100):0;
   var html='<div class="week-report"><div class="wr-title">📊 이번 주 리포트</div>';
   html+='<div class="wr-stats"><div class="wr-stat"><div class="wr-stat-n" style="color:var(--green)">'+done+'</div><div class="wr-stat-l">완료</div></div>';
