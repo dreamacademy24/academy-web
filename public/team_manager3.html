@@ -2054,18 +2054,17 @@ function submitOpinion(){
   var title=document.getElementById('opTitle').value.trim();
   var body=document.getElementById('opBody').value.trim();
   var target=document.getElementById('opTarget').value;
-  if(!title){toast('\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
-  var opinions=ld('tm_opinions',[]);
-  opinions.push({id:Date.now(),from:CU?CU.id:'',target:target,title:title,body:body,ts:Date.now()});
-  sv('tm_opinions',opinions);closeM('opinionModal');
-  toast('\u2705 \uC758\uACAC \uC694\uCCAD\uC774 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4!');renderOpinionList();
+  if(!title){toast('제목을 입력해주세요');return;}
+  sbPost('staff_opinions',{from_id:CU?CU.id:'',target:target,title:title,body:body,ts:Date.now()})
+    .then(function(){closeM('opinionModal');toast('의견 요청 등록!');renderOpinionList();});
 }
 function submitReply(opId){
-  var inp=document.getElementById('replyInput');if(!inp)return;
-  var text=inp.value.trim();if(!text){toast('\uB2F5\uBCC0 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
-  var replies=ld('tm_op_replies',{});if(!replies[opId])replies[opId]=[];
-  replies[opId].push({from:CU?CU.id:'',text:text,ts:Date.now()});
-  sv('tm_op_replies',replies);toast('\uD83D\uDCAC \uB2F5\uBCC0\uC774 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4!');openOpinionDetail(opId);
+  var inp=document.getElementById('replyInput');
+  if(!inp)return;
+  var text=inp.value.trim();
+  if(!text){toast('답변 내용을 입력해주세요');return;}
+  sbPost('staff_op_replies',{opinion_id:opId,from_id:CU?CU.id:'',text:text,ts:Date.now()})
+    .then(function(){toast('답변 등록!');openOpinionDetail(opId);});
 }
 function deleteReply(opId,ts){
   if(!confirm('\uB2F5\uBCC0\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'))return;
