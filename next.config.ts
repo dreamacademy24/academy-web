@@ -9,12 +9,6 @@ const nextConfig: NextConfig = {
         { key: "Service-Worker-Allowed", value: "/" },
       ],
     },
-    {
-      source: "/(.*\\.html)",
-      headers: [
-        { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
-      ],
-    },
   ],
   images: {
     remotePatterns: [
