@@ -1369,6 +1369,30 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- OPINION MODAL -->
+<div class="overlay" id="opinionModal">
+  <div class="modal-box" style="width:520px">
+    <div class="modal-title">\ud83d\udcac \uc758\uacac \uc694\uccad</div>
+    <input id="opTitle" type="text" placeholder="\uc81c\ubaa9" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
+    <textarea id="opBody" placeholder="\ub0b4\uc6a9\uc744 \uc785\ub825\ud558\uc138\uc694..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
+    <div style="margin-bottom:12px">
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
+        \ud83d\udcce \ud30c\uc77c/\uc0ac\uc9c4 \ucca8\ubd80
+        <input type="file" id="opFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,'opFilePreview')})">
+      </label>
+      <div id="opFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <span style="font-size:13px;font-weight:600">\ub300\uc0c1:</span>
+      <select id="opTarget" style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeM('opinionModal')">\ucde8\uc18c</button>
+      <button class="btn btn-primary btn-sm" onclick="submitOpinion()">\ub4f1\ub85d</button>
+    </div>
+  </div>
+</div>
+
 <!-- SETTINGS MODAL -->
 <div class="overlay" id="settingsModal">
   <div class="modal-box" style="width:560px">
@@ -1977,7 +2001,8 @@ function renderApprovalPage(empId){
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (부원장)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> 둘 다</label>';
-    html+='</div><button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
+    html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
+    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
     var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
     if(pending.length){
       html+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">결재 대기 '+pending.length+'건</div>';
@@ -1991,6 +2016,7 @@ function renderApprovalPage(empId){
         html+='<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">대기중</span></div>';
         html+='<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+esc(a.title)+'</div>';
         html+='<div style="font-size:13px;color:#374151;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
+        if(a.files&&a.files.length)html+=renderAttachments(a.files);
         html+='<div style="display:flex;gap:8px"><button onclick="processApproval('+a.id+',\x27approve\x27)" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">승인</button>';
         html+='<input id="rejectReason_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
         html+='<button onclick="processApproval('+a.id+',\x27reject\x27)" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">반려</button></div></div>';
@@ -2006,6 +2032,7 @@ function renderApprovalPage(empId){
         html+='<div style="background:#fff;border-left:4px solid '+st.color+';border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px">';
         html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:14px;font-weight:700">'+esc(a.title)+'</div><span style="background:'+st.bg+';color:'+st.color+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.label+'</span></div>';
         html+='<div style="font-size:13px;color:#374151;white-space:pre-wrap">'+esc(a.body)+'</div>';
+        if(a.files&&a.files.length)html+=renderAttachments(a.files);
         if(a.status==='reject'&&a.reject_reason){
           html+='<div style="margin-top:8px;padding:8px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626">반려 사유: '+esc(a.reject_reason)+'</div>';
           html+='<button onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27block\x27" style="margin-top:8px;padding:6px 14px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">수정 후 재상신</button>';
@@ -2073,6 +2100,11 @@ function resubmitApproval(id){
 }
 
 function openOpinionModal(){
+  ['opTitle','opBody'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var fp=document.getElementById('opFilePreview');if(fp)fp.innerHTML='';
+  var fi=document.getElementById('opFiles');if(fi)fi.value='';
+  var sel=document.getElementById('opTarget');
+  if(sel){sel.innerHTML='<option value="all">\uc804\uccb4</option>'+ALL.filter(function(u){return !CU||u.id!==CU.id;}).map(function(u){return '<option value="'+u.id+'">'+u.name+'</option>';}).join('');}
   openM('opinionModal');
 }
 
@@ -2102,6 +2134,7 @@ function renderOpinionList(){
       html+='<span style="background:#f1f5f9;color:#94a3b8;font-size:11px;padding:3px 9px;border-radius:20px">'+cnt+'</span>';
       if(isOwn)html+='<button onclick="event.stopPropagation();deleteOpinion('+op.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>';
       html+='</div></div><div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">'+esc(op.body)+'</div>';
+      if(op.files&&op.files.length)html+=renderAttachments(op.files);
       html+='<div style="display:flex;align-items:center;gap:8px">';
       if(author)html+='<div style="width:22px;height:22px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+author.name[0]+'</div>';
       html+='<span style="font-size:12px;color:#94a3b8">'+(author?esc(author.name):'?')+' · '+ds+'</span></div></div>';
@@ -2131,6 +2164,7 @@ function openOpinionDetail(opId){
     html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="background:#eff6ff;color:#1a6fc4;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px">'+esc(targetLabel)+'에게</span><span style="font-size:12px;color:#94a3b8">'+ds+'</span></div>';
     html+='<div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:12px">'+esc(op.title)+'</div>';
     html+='<div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap;margin-bottom:16px">'+esc(op.body)+'</div>';
+    if(op.files&&op.files.length)html+=renderAttachments(op.files);
     if(author)html+='<div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #e2e8f0"><div style="width:28px;height:28px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+author.name[0]+'</div><span style="font-size:13px;font-weight:600">'+esc(author.name)+'</span></div>';
     html+='</div><div style="margin-bottom:16px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">답변 '+replies.length+'개</div>';
     if(!replies.length)html+='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px">첫 번째 답변을 남겨보세요!</div>';
@@ -2158,9 +2192,12 @@ function submitOpinion(){
   var title=document.getElementById('opTitle').value.trim();
   var body=document.getElementById('opBody').value.trim();
   var target=document.getElementById('opTarget').value;
-  if(!title){toast('제목을 입력해주세요');return;}
-  sbPost('staff_opinions',{from_id:CU?CU.id:'',target:target,title:title,body:body,ts:Date.now()})
-    .then(function(){closeM('opinionModal');toast('의견 요청 등록!');renderOpinionList();});
+  if(!title){toast('\uc81c\ubaa9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694');return;}
+  var fileInput=document.getElementById('opFiles');
+  readFilesAsBase64(fileInput||{files:[]}).then(function(files){
+    sbPost('staff_opinions',{from_id:CU?CU.id:'',target:target,title:title,body:body,files:files,ts:Date.now()})
+      .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();});
+  });
 }
 function submitReply(opId){
   var inp=document.getElementById('replyInput');
