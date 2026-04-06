@@ -2022,6 +2022,15 @@ function renderApprovalPage(empId){
       html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.5;white-space:pre-wrap">'+esc(a.body)+'</div>';
       if(a.status==='reject'&&a.rejectReason){
         html+='<div style="margin-top:10px;padding:10px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626"><b>\uBC18\uB824 \uC0AC\uC720:</b> '+esc(a.rejectReason)+'</div>';
+        html+='<div id="resubmitArea_'+a.id+'" style="display:none;margin-top:12px;padding:14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">';
+        html+='<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px">\u270F\uFE0F \uC218\uC815 \uB0B4\uC6A9</div>';
+        html+='<input id="resubTitle_'+a.id+'" type="text" value="'+esc(a.title)+'" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">';
+        html+='<textarea id="resubBody_'+a.id+'" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box;line-height:1.5">'+esc(a.body)+'</textarea>';
+        html+='<div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">';
+        html+='<button onclick="document.getElementById(\'resubmitArea_'+a.id+'\').style.display=\'none\'" style="padding:7px 16px;background:#f1f5f9;color:#374151;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">\uCDE8\uC18C</button>';
+        html+='<button onclick="resubmitApproval('+a.id+')" style="padding:7px 16px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\uC7AC\uC0C1\uC2E0</button>';
+        html+='</div></div>';
+        html+='<button onclick="toggleResub('+a.id+')" style="margin-top:10px;padding:7px 16px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\u270F\uFE0F \uC218\uC815 \uD6C4 \uC7AC\uC0C1\uC2E0</button>';
       }
       html+='</div>';
     });
@@ -2049,6 +2058,25 @@ function submitApproval(fromId){
   renderApprovalPage(fromId);
 }
 
+function toggleResub(id){
+  var el=document.getElementById('resubmitArea_'+id);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+function resubmitApproval(id){
+  var titleEl=document.getElementById('resubTitle_'+id);
+  var bodyEl=document.getElementById('resubBody_'+id);
+  if(!titleEl||!bodyEl)return;
+  var title=titleEl.value.trim();
+  var body=bodyEl.value.trim();
+  if(!title){toast('\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
+  var approvals=ld('tm_approvals',[]);
+  var a=approvals.find(function(x){return x.id===id;});
+  if(!a)return;
+  a.title=title;a.body=body;a.status='pending';a.rejectReason='';a.resubmittedAt=Date.now();
+  sv('tm_approvals',approvals);
+  toast('\u2705 \uC7AC\uC0C1\uC2E0 \uC644\uB8CC!');
+  renderApprovalPage(CU?CU.id:'');
+}
 function processApproval(id,action){
   var approvals=ld('tm_approvals',[]);
   var a=approvals.find(function(x){return x.id===id;});
