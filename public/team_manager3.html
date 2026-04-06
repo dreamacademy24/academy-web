@@ -926,6 +926,41 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 /* TEMPLATE */
 .tmpl-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:var(--rs);margin-bottom:6px;}
 .tmpl-item span{flex:1;font-size:13px;font-weight:500;}
+/* ── 프로젝트 보고 대시보드 ── */
+.report-dashboard{margin-top:28px;padding-top:24px;border-top:2px solid var(--border,#e2e8f0);}
+.report-dashboard-title{font-size:16px;font-weight:800;color:var(--text,#1a1a2e);margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.report-member-col{margin-bottom:24px;}
+.report-member-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--border,#e2e8f0);}
+.report-member-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;}
+.report-member-name{font-size:15px;font-weight:800;color:var(--text,#1a1a2e);}
+.report-member-count{font-size:12px;color:#94a3b8;margin-left:auto;background:var(--surface,#f8fafc);padding:2px 10px;border-radius:20px;border:1px solid var(--border,#e2e8f0);}
+.report-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:12px;}
+.report-card{background:var(--surface,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:16px;position:relative;transition:box-shadow .15s;}
+.report-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.report-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px;}
+.report-card-title{font-size:14px;font-weight:700;color:var(--text,#1a1a2e);line-height:1.4;}
+.report-card-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;}
+.badge-done{background:#dcfce7;color:#16a34a;}
+.badge-progress{background:#dbeafe;color:#1d4ed8;}
+.badge-issue{background:#fee2e2;color:#dc2626;}
+.badge-plan{background:#f3f4f6;color:#6b7280;}
+.report-card-body{font-size:13px;color:var(--text2,#374151);line-height:1.7;white-space:pre-wrap;margin-bottom:12px;}
+.report-card-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#94a3b8;}
+.report-card-del{background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px 4px;line-height:1;}
+.report-card-del:hover{color:#dc2626;}
+.report-input-box{background:var(--bg,#fff);border:1.5px solid var(--border,#e2e8f0);border-radius:12px;padding:16px;margin-top:4px;}
+.report-input-row{display:flex;gap:8px;margin-bottom:8px;}
+.report-input-title{flex:1;padding:9px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg);color:var(--text);}
+.report-input-title:focus{border-color:var(--primary);}
+.report-input-status{padding:9px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg);cursor:pointer;color:var(--text);}
+.report-input-status:focus{border-color:var(--primary);}
+.report-input-body{width:100%;padding:10px 12px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box;background:var(--bg);color:var(--text);}
+.report-input-body:focus{border-color:var(--primary);}
+.report-input-actions{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.report-submit-btn{padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.report-submit-btn:hover{opacity:.9;}
+.report-hint{font-size:11px;color:#94a3b8;}
+.report-empty{font-size:12px;color:#94a3b8;padding:12px;text-align:center;background:var(--surface,#f8fafc);border-radius:8px;border:1px dashed var(--border,#e2e8f0);}
 </style>
 </head>
 <body>
@@ -2408,55 +2443,77 @@ function renderProjDetail(projId){
     ptsl.appendChild(item);
   });
   lay.appendChild(pts);wrap.appendChild(lay);
-  // 담당자별 보고 섹션
-  const reps=ld('tm_reports',{});
-  const projReps=reps[projId]||[];
-  const mts=(p.members&&p.members.length>0)?p.members:ALL.map(function(u){return u.id;});
-  let rHTML='<div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--border)">';
-  rHTML+='<div style="font-size:14px;font-weight:800;margin-bottom:16px">📝 담당자별 보고</div>';
-  mts.forEach(function(mid){
-    const mu=getP(mid);if(!mu)return;
-    const mr=projReps.filter(function(r){return r.author===mid;}).sort(function(a,b){return b.ts-a.ts;});
-    const isMe=CU&&CU.id===mid;
-    rHTML+='<div style="margin-bottom:20px;background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border)">';
-    rHTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
-    rHTML+='<div style="width:32px;height:32px;border-radius:50%;background:'+mu.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px">'+mu.initial+'</div>';
-    rHTML+='<span style="font-weight:700;font-size:14px">'+mu.name+'</span></div>';
-    if(mr.length>0){mr.slice(0,5).forEach(function(r){
-      var isOwn=CU&&CU.id===r.author;
-      var dt=new Date(r.ts);var ds=(dt.getMonth()+1)+'/'+(dt.getDate())+' '+(dt.getHours())+':'+(String(dt.getMinutes()).padStart(2,'0'));
-      rHTML+='<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid var(--border);position:relative">';
-      rHTML+='<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div>';
-      rHTML+='<div style="font-size:11px;color:var(--text3);margin-top:6px">'+ds+'</div>';
-      if(isOwn)rHTML+='<button onclick="delReport(\''+projId+'\','+r.ts+')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>';
-      rHTML+='</div>';
-    });}else{rHTML+='<div style="font-size:12px;color:var(--text3);padding:8px 0">아직 보고 내용이 없습니다</div>';}
-    if(isMe){
-      rHTML+='<div style="display:flex;gap:8px;margin-top:8px">';
-      rHTML+='<textarea id="reportInp_'+mid+'" placeholder="보고 내용을 입력하세요..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:72px;outline:none;background:var(--bg);color:var(--text)" onkeydown="if(event.ctrlKey&&event.key===\'Enter\')submitReport(\''+projId+'\',\''+mid+'\')"></textarea>';
-      rHTML+='<button onclick="submitReport(\''+projId+'\',\''+mid+'\')" class="btn btn-primary btn-sm" style="align-self:flex-end;height:40px">등록</button></div>';
-      rHTML+='<div style="font-size:11px;color:var(--text3);margin-top:4px">Ctrl+Enter로 등록</div>';
-    }
-    rHTML+='</div>';
+  // 담당자별 보고 대시보드
+  wrap.innerHTML+=buildReportDashboard(projId);
+  wrap.querySelectorAll('.report-input-body').forEach(function(el){
+    el.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter'){var mid=this.id.replace('rBody_','');submitReport(projId,mid);}});
   });
-  rHTML+='</div>';
-  wrap.innerHTML+=rHTML;
 }
 function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
   t.assignee=CU.id;sv('tm_t',tasks);toast('내 업무로 배정되었습니다!');refreshAll();
 }
 function submitReport(projId,memberId){
-  var el=document.getElementById('reportInp_'+memberId);if(!el)return;
-  var text=el.value.trim();if(!text)return;
+  var titleEl=document.getElementById('rTitle_'+memberId);
+  var statusEl=document.getElementById('rStatus_'+memberId);
+  var bodyEl=document.getElementById('rBody_'+memberId);
+  if(!titleEl||!bodyEl)return;
+  var title=titleEl.value.trim(),body=bodyEl.value.trim();
+  if(!title&&!body){toast('제목 또는 내용을 입력해주세요');return;}
   var reps=ld('tm_reports',{});if(!reps[projId])reps[projId]=[];
-  reps[projId].push({author:memberId,text:text,ts:Date.now()});
-  sv('tm_reports',reps);el.value='';renderProjDetail(projId);
+  reps[projId].push({id:Date.now(),author:memberId,title:title||'보고',status:statusEl?statusEl.value:'progress',body:body,ts:Date.now()});
+  sv('tm_reports',reps);titleEl.value='';if(statusEl)statusEl.value='progress';bodyEl.value='';
+  renderProjDetail(projId);toast('보고가 등록되었습니다');
 }
-function delReport(projId,ts){
-  if(!confirm('보고 내용을 삭제할까요?'))return;
-  var reps=ld('tm_reports',{});if(reps[projId])reps[projId]=reps[projId].filter(function(r){return r.ts!==ts;});
+function delReport(projId,reportId){
+  if(!confirm('보고를 삭제할까요?'))return;
+  var reps=ld('tm_reports',{});if(reps[projId])reps[projId]=reps[projId].filter(function(r){return r.id!==reportId;});
   sv('tm_reports',reps);renderProjDetail(projId);
+}
+function buildReportDashboard(projId){
+  var p=projects.find(function(pr){return pr.id===projId;});if(!p)return '';
+  var reps=ld('tm_reports',{});var projReps=reps[projId]||[];
+  var members=(p.members&&p.members.length>0)?p.members:ALL.map(function(u){return u.id;});
+  var SL={done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
+  var SB={done:'badge-done',progress:'badge-progress',issue:'badge-issue',plan:'badge-plan'};
+  var SE={done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
+  var h='<div class="report-dashboard"><div class="report-dashboard-title">📊 담당자별 보고 현황</div>';
+  members.forEach(function(mid){
+    var u=getP(mid);if(!u)return;
+    var mr=projReps.filter(function(r){return r.author===mid;}).sort(function(a,b){return b.ts-a.ts;});
+    var isMe=CU&&CU.id===mid;
+    h+='<div class="report-member-col">';
+    h+='<div class="report-member-header"><div class="report-member-avatar" style="background:'+u.color+'">'+u.initial+'</div>';
+    h+='<div class="report-member-name">'+esc(u.name)+'</div>';
+    h+='<div class="report-member-count">보고 '+mr.length+'건</div></div>';
+    if(mr.length>0){
+      h+='<div class="report-cards">';
+      mr.forEach(function(r){
+        var isOwn=CU&&CU.id===r.author;
+        var dt=new Date(r.ts);var ds=(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+        var st=r.status||'progress';
+        h+='<div class="report-card"><div class="report-card-header">';
+        h+='<div class="report-card-title">'+(SE[st]||'🔄')+' '+esc(r.title||'보고')+'</div>';
+        h+='<span class="report-card-badge '+(SB[st]||'badge-progress')+'">'+(SL[st]||'진행중')+'</span></div>';
+        if(r.body)h+='<div class="report-card-body">'+esc(r.body)+'</div>';
+        h+='<div class="report-card-footer"><span>🕐 '+ds+'</span>';
+        if(isOwn)h+='<button class="report-card-del" onclick="delReport(\''+projId+'\','+r.id+')">🗑</button>';
+        h+='</div></div>';
+      });
+      h+='</div>';
+    }else{h+='<div class="report-empty">아직 보고 내용이 없습니다</div>';}
+    if(isMe){
+      h+='<div class="report-input-box"><div class="report-input-row">';
+      h+='<input id="rTitle_'+mid+'" class="report-input-title" placeholder="보고 제목 (예: 인스타 광고 소재 제작 완료)" />';
+      h+='<select id="rStatus_'+mid+'" class="report-input-status">';
+      h+='<option value="progress">🔄 진행중</option><option value="done">✅ 완료</option><option value="plan">📋 계획</option><option value="issue">⚠️ 이슈</option></select></div>';
+      h+='<textarea id="rBody_'+mid+'" class="report-input-body" placeholder="상세 내용을 입력하세요..."></textarea>';
+      h+='<div class="report-input-actions"><span class="report-hint">Ctrl+Enter로 등록</span>';
+      h+='<button class="report-submit-btn" onclick="submitReport(\''+projId+'\',\''+mid+'\')">보고 등록</button></div></div>';
+    }
+    h+='</div>';
+  });
+  h+='</div>';return h;
 }
 function liveProgress(projId,val,input){
   const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;
