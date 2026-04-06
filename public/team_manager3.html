@@ -2469,11 +2469,16 @@ function renderProjDetail(projId){
     ptsl.appendChild(item);
   });
   lay.appendChild(pts);wrap.appendChild(lay);
-  // 담당자별 보고 대시보드
-  wrap.innerHTML+=buildReportDashboard(projId);
-  wrap.querySelectorAll('.report-input-body').forEach(function(el){
-    el.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter'){var mid=this.id.replace('rBody_','');submitReport(projId,mid);}});
-  });
+  // 담당자별 보고 대시보드 (CU 설정 후 렌더링)
+  setTimeout(function(){
+    var rw=document.getElementById('projDetail');
+    if(rw&&!rw.querySelector('.report-dashboard')){
+      rw.innerHTML+=buildReportDashboard(projId);
+      rw.querySelectorAll('.rk-body-input').forEach(function(el){
+        el.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter'){var mid=this.id.replace('rBody_','');submitReport(projId,mid);}});
+      });
+    }
+  },100);
 }
 function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
@@ -2516,6 +2521,8 @@ function delReport(projId,reportId){
   sv('tm_reports',reps);renderProjDetail(projId);
 }
 function buildReportDashboard(projId) {
+  // CU가 아직 설정 안됐으면 전역에서 재취득
+  if(!CU) { console.warn('buildReportDashboard: CU is null'); }
   const proj = projects.find(p => p.id === projId);
   if(!proj) return '';
   const reports = ld('tm_reports', {});
@@ -2535,7 +2542,8 @@ function buildReportDashboard(projId) {
     const user = ALL.find(u => u.id === memberId);
     if(!user) return;
     const mReports = projReports.filter(r => r.author === memberId).sort((a,b) => b.ts - a.ts);
-    const isMe = CU && CU.id === memberId;
+    const cuId = (typeof CU !== 'undefined' && CU) ? CU.id : null;
+    const isMe = cuId === memberId;
 
     html += '<div class="report-member-col">';
     html += '<div class="report-member-header">';
