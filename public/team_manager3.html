@@ -1706,7 +1706,7 @@ function appendKanbanCard(container,t,showAss){
   card.innerHTML=batchCb+'<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+idxSpan+t.title+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
     '<div class="tc-tags">'+assTag+(t.createdAt?'<span class="tag" style="font-size:10.5px">'+t.createdAt+'</span>':'')+dueTag+fileTag+'</div>'+
     progBar+
-    '<div class="tc-footer"><button class="pomo-btn" onclick="event.stopPropagation();startPomo(\''+t.id+'\')" title="포모도로 시작">⏱</button><button class="cmt-btn'+(cmtCount?' has-cmt':'')+'" onclick="openTaskCmt(\''+t.id+'\')">💬 '+(cmtCount||'댓글')+'</button></div>';
+    '<div class="tc-footer">'+(!t.assignee&&CU?'<button class="btn btn-sm" onclick="event.stopPropagation();claimTask(\''+t.id+'\')" style="padding:2px 8px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer">내 업무로</button>':'')+'<button class="pomo-btn" onclick="event.stopPropagation();startPomo(\''+t.id+'\')" title="포모도로 시작">⏱</button><button class="cmt-btn'+(cmtCount?' has-cmt':'')+'" onclick="openTaskCmt(\''+t.id+'\')">💬 '+(cmtCount||'댓글')+'</button></div>';
   container.appendChild(card);
 }
 function renderBoardTask(f){
@@ -1744,6 +1744,7 @@ function renderBoardTask(f){
     row.appendChild(dueDiv);
     const progDiv=document.createElement('div');progDiv.innerHTML='<div style="font-size:11px;font-weight:700;color:'+ec+';margin-bottom:3px">'+prog+'%</div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div>';row.appendChild(progDiv);
     const editDiv=document.createElement('div');editDiv.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:4px;';
+    if(!t.assignee&&CU){const clb=document.createElement('button');clb.style.cssText='padding:2px 8px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer';clb.textContent='내 업무로';clb.onclick=function(e){e.stopPropagation();claimTask(t.id);};editDiv.appendChild(clb);}
     const eb=document.createElement('button');eb.className='btn-icon';eb.textContent='✎';eb.style.cssText='font-size:12px;padding:4px 7px;';eb.onclick=function(){openTaskEdit(t.id);};editDiv.appendChild(eb);
     const pb=document.createElement('button');pb.className='pomo-btn';pb.textContent='⏱';pb.title='포모도로';pb.onclick=function(e){e.stopPropagation();startPomo(t.id);};editDiv.appendChild(pb);
     const cb=document.createElement('button');cb.className='cmt-btn'+(cmtCount?' has-cmt':'');cb.innerHTML='💬'+(cmtCount?'<span style="font-size:10px"> '+cmtCount+'</span>':'');cb.onclick=function(){openTaskCmt(t.id);};editDiv.appendChild(cb);
@@ -2407,6 +2408,55 @@ function renderProjDetail(projId){
     ptsl.appendChild(item);
   });
   lay.appendChild(pts);wrap.appendChild(lay);
+  // 담당자별 보고 섹션
+  const reps=ld('tm_reports',{});
+  const projReps=reps[projId]||[];
+  const mts=(p.members&&p.members.length>0)?p.members:ALL.map(function(u){return u.id;});
+  let rHTML='<div style="margin-top:24px;padding-top:20px;border-top:2px solid var(--border)">';
+  rHTML+='<div style="font-size:14px;font-weight:800;margin-bottom:16px">📝 담당자별 보고</div>';
+  mts.forEach(function(mid){
+    const mu=getP(mid);if(!mu)return;
+    const mr=projReps.filter(function(r){return r.author===mid;}).sort(function(a,b){return b.ts-a.ts;});
+    const isMe=CU&&CU.id===mid;
+    rHTML+='<div style="margin-bottom:20px;background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border)">';
+    rHTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+    rHTML+='<div style="width:32px;height:32px;border-radius:50%;background:'+mu.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px">'+mu.initial+'</div>';
+    rHTML+='<span style="font-weight:700;font-size:14px">'+mu.name+'</span></div>';
+    if(mr.length>0){mr.slice(0,5).forEach(function(r){
+      var isOwn=CU&&CU.id===r.author;
+      var dt=new Date(r.ts);var ds=(dt.getMonth()+1)+'/'+(dt.getDate())+' '+(dt.getHours())+':'+(String(dt.getMinutes()).padStart(2,'0'));
+      rHTML+='<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid var(--border);position:relative">';
+      rHTML+='<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div>';
+      rHTML+='<div style="font-size:11px;color:var(--text3);margin-top:6px">'+ds+'</div>';
+      if(isOwn)rHTML+='<button onclick="delReport(\''+projId+'\','+r.ts+')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>';
+      rHTML+='</div>';
+    });}else{rHTML+='<div style="font-size:12px;color:var(--text3);padding:8px 0">아직 보고 내용이 없습니다</div>';}
+    if(isMe){
+      rHTML+='<div style="display:flex;gap:8px;margin-top:8px">';
+      rHTML+='<textarea id="reportInp_'+mid+'" placeholder="보고 내용을 입력하세요..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:72px;outline:none;background:var(--bg);color:var(--text)" onkeydown="if(event.ctrlKey&&event.key===\'Enter\')submitReport(\''+projId+'\',\''+mid+'\')"></textarea>';
+      rHTML+='<button onclick="submitReport(\''+projId+'\',\''+mid+'\')" class="btn btn-primary btn-sm" style="align-self:flex-end;height:40px">등록</button></div>';
+      rHTML+='<div style="font-size:11px;color:var(--text3);margin-top:4px">Ctrl+Enter로 등록</div>';
+    }
+    rHTML+='</div>';
+  });
+  rHTML+='</div>';
+  wrap.innerHTML+=rHTML;
+}
+function claimTask(taskId){
+  if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
+  t.assignee=CU.id;sv('tm_t',tasks);toast('내 업무로 배정되었습니다!');refreshAll();
+}
+function submitReport(projId,memberId){
+  var el=document.getElementById('reportInp_'+memberId);if(!el)return;
+  var text=el.value.trim();if(!text)return;
+  var reps=ld('tm_reports',{});if(!reps[projId])reps[projId]=[];
+  reps[projId].push({author:memberId,text:text,ts:Date.now()});
+  sv('tm_reports',reps);el.value='';renderProjDetail(projId);
+}
+function delReport(projId,ts){
+  if(!confirm('보고 내용을 삭제할까요?'))return;
+  var reps=ld('tm_reports',{});if(reps[projId])reps[projId]=reps[projId].filter(function(r){return r.ts!==ts;});
+  sv('tm_reports',reps);renderProjDetail(projId);
 }
 function liveProgress(projId,val,input){
   const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;
@@ -2437,8 +2487,17 @@ function sendMsg(projId){const inp=document.getElementById('tti-'+projId);const 
 function delMsg(projId,msgId){if(!threads[projId])return;threads[projId]=threads[projId].filter(function(m){return m.id!==msgId;});sv('tm_th',threads);renderProjDetail(projId);}
 function openProjModal(){editProjId=null;selColor='#4361ee';document.getElementById('pmTitle').textContent='🚀 새 프로젝트';['pmN','pmD','pmDue'].forEach(id=>document.getElementById(id).value='');document.getElementById('pmC').value='#4361ee';document.getElementById('pmDel').style.display='none';document.querySelectorAll('.color-opt').forEach((el,i)=>el.classList.toggle('sel',i===0));buildMPicker([]);openM('projModal');}
 function openEditProj(projId){const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;editProjId=projId;selColor=p.color;document.getElementById('pmTitle').textContent='✏️ 프로젝트 편집';document.getElementById('pmN').value=p.name;document.getElementById('pmD').value=p.desc||'';document.getElementById('pmDue').value=p.due||'';document.getElementById('pmC').value=p.color;document.getElementById('pmDel').style.display='inline-flex';document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.dataset.c===p.color));buildMPicker(p.members);openM('projModal');}
+function toggleAllMembers(){
+  var chips=document.querySelectorAll('#mpick .member-chip');
+  var allOn=[...chips].every(function(c){return c.dataset.active==='1';});
+  chips.forEach(function(c){c.dataset.active=allOn?'0':'1';var e=getP(c.dataset.eid);if(!e)return;if(!allOn){c.style.borderColor=e.color;c.style.background=e.color+'22';c.style.color=e.color;}else{c.style.borderColor='var(--border2)';c.style.background='transparent';c.style.color='var(--text3)';}});
+  var btn=document.getElementById('mPickAll');if(btn){btn.style.background=allOn?'transparent':'var(--primary)';btn.style.color=allOn?'var(--text3)':'#fff';}
+}
 function buildMPicker(selected){
   const pick=document.getElementById('mpick');pick.innerHTML='';
+  var allOn=selected.length===ALL.length;
+  var allBtn=document.createElement('div');allBtn.id='mPickAll';allBtn.style.cssText='display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border2);margin-bottom:8px;'+(allOn?'background:var(--primary);color:#fff':'background:transparent;color:var(--text3)');
+  allBtn.textContent='전체';allBtn.onclick=toggleAllMembers;pick.appendChild(allBtn);
   ALL.forEach(function(e){
     const isSel=selected.includes(e.id);const chip=document.createElement('div');chip.className='member-chip';chip.dataset.eid=e.id;chip.dataset.active=isSel?'1':'0';
     if(isSel){chip.style.borderColor=e.color;chip.style.background=e.color+'22';chip.style.color=e.color;}
