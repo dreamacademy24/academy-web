@@ -1233,7 +1233,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       📅 작성일: <span id="tmCreated" style="font-weight:600;color:var(--text2)"></span>
     </div>
     <div class="form-group"><label class="form-label">업무 내용</label><input class="form-input" id="tmTit" placeholder="업무 내용" /></div>
-    <div class="form-group"><label class="form-label">담당자</label><select class="form-select" id="tmAss"></select></div>
+    <div class="form-group" style="position:relative"><label class="form-label">담당자</label>
+      <div id="tmAssWrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px;cursor:pointer;background:var(--bg)" onclick="toggleAssignPicker()"></div>
+      <div id="tmAssPicker" style="display:none;position:absolute;z-index:100;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;box-shadow:var(--shadow);min-width:220px;margin-top:4px;max-height:320px;overflow-y:auto"></div>
+      <input type="hidden" id="tmAss" value="" /></div>
     <div class="form-group">
       <label class="form-label">기한</label>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -2354,11 +2357,62 @@ function openTaskEdit(id){
   document.getElementById('tmCreated').textContent=t.createdAt||new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
-  buildAssignSel(t.assignee);renderTMFL();renderTMChecklist();openM('taskModal');
+  buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));renderTMFL();renderTMChecklist();openM('taskModal');
 }
 function buildAssignSel(sel){
-  const s=document.getElementById('tmAss');s.innerHTML='<option value="">— 미배정 —</option>';
-  EMPS.forEach(function(e){const o=document.createElement('option');o.value=e.id;o.textContent=e.name+(e.role?' ('+e.role+')':'');o.selected=e.id===sel;s.appendChild(o);});
+  // 하위호환 래퍼 → buildAssignPicker 호출
+  if(Array.isArray(sel)) buildAssignPicker(sel);
+  else buildAssignPicker(sel?[sel]:[]);
+}
+var _assignSelected=new Set();
+function buildAssignPicker(selectedIds){
+  _assignSelected=new Set(selectedIds||[]);
+  renderAssignWrap();
+}
+function renderAssignWrap(){
+  var wrap=document.getElementById('tmAssWrap');if(!wrap)return;
+  if(_assignSelected.size===0||(_assignSelected.size===1&&_assignSelected.has(''))){
+    wrap.innerHTML='<span style="color:var(--text3);font-size:13px;line-height:24px">담당자 선택 (다중 가능)</span>';
+  }else{
+    wrap.innerHTML=[..._assignSelected].filter(function(id){return id;}).map(function(id){
+      var u=getP(id);if(!u)return '';
+      return '<span style="background:'+u.color+';color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px">'+esc(u.name)+'<span onclick="removeAssign(event,\''+id+'\')" style="cursor:pointer;margin-left:2px">✕</span></span>';
+    }).join('');
+  }
+  document.getElementById('tmAss').value=[..._assignSelected].filter(function(id){return id;}).join(',');
+}
+function renderAssignPicker(){
+  var picker=document.getElementById('tmAssPicker');if(!picker)return;
+  var h='';
+  var unsel=_assignSelected.size===0||(_assignSelected.size===1&&_assignSelected.has(''));
+  h+='<div onclick="toggleAssign(\'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(unsel?'background:var(--primary-l);font-weight:700':'')+'">';
+  h+='<span style="width:22px;height:22px;border-radius:50%;background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;font-size:10px">—</span> 미배정</div>';
+  h+='<div style="border-top:1px solid var(--border);margin:6px 0"></div>';
+  ALL.forEach(function(u){
+    var sel=_assignSelected.has(u.id);
+    h+='<div onclick="toggleAssign(\''+u.id+'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(sel?'background:var(--primary-l);font-weight:700':'')+'">';
+    h+='<span style="width:22px;height:22px;border-radius:50%;background:'+u.color+';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+u.initial+'</span>';
+    h+=esc(u.name)+(sel?' ✓':'')+'</div>';
+  });
+  picker.innerHTML=h;
+}
+function toggleAssign(id){
+  if(id===''){_assignSelected.clear();_assignSelected.add('');}
+  else{
+    _assignSelected.delete('');
+    if(_assignSelected.has(id))_assignSelected.delete(id);
+    else _assignSelected.add(id);
+  }
+  renderAssignWrap();renderAssignPicker();
+}
+function removeAssign(e,id){
+  e.stopPropagation();_assignSelected.delete(id);renderAssignWrap();
+}
+function toggleAssignPicker(){
+  var p=document.getElementById('tmAssPicker');if(!p)return;
+  if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
+  else p.style.display='none';
+});
   const co=document.createElement('option');co.value='ceo';co.textContent='CEO (대표)';co.selected=sel==='ceo';s.appendChild(co);
 }
 function handleTMF(e){Array.from(e.target.files).forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
@@ -2366,14 +2420,16 @@ function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(funct
 function rmMF(i){mFiles.splice(i,1);renderTMFL();}
 function saveTask(){
   const title=document.getElementById('tmTit').value.trim();if(!title)return;
-  const assignee=document.getElementById('tmAss').value;
+  var _selIds=[..._assignSelected].filter(function(id){return id&&id!=='';});
+  const assignee=_selIds[0]||'';
+  const assignees=_selIds;
   const dueM=document.querySelector('input[name="tmDM"]:checked').value;
   const due=dueM==='date'?document.getElementById('tmDue').value:'';
   const note=document.getElementById('tmNt').value;
   const createdAt=document.getElementById('tmCreated').textContent;
   const clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
-  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;if(tmProjId)t.projId=tmProjId;}}
-  else tasks.unshift({id:uid(),title,assignee,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:true,projId:tmProjId||null});
+  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;if(tmProjId)t.projId=tmProjId;}}
+  else tasks.unshift({id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:true,projId:tmProjId||null});
   rebuildIdx();sv('tm_t',tasks);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
 }
 function deleteTsk(){if(!editTaskId)return;tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();sv('tm_t',tasks);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
@@ -2470,7 +2526,8 @@ function renderProjDetail(projId){
   });
   lay.appendChild(pts);wrap.appendChild(lay);
   // 담당자별 보고 대시보드 (CU 설정 후 렌더링)
-  setTimeout(function(){
+  function _renderReportSection(attempt){
+    if(!CU&&attempt<20){setTimeout(function(){_renderReportSection(attempt+1);},100);return;}
     var rw=document.getElementById('projDetail');
     if(rw&&!rw.querySelector('.report-dashboard')){
       rw.innerHTML+=buildReportDashboard(projId);
@@ -2478,7 +2535,8 @@ function renderProjDetail(projId){
         el.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter'){var mid=this.id.replace('rBody_','');submitReport(projId,mid);}});
       });
     }
-  },100);
+  }
+  _renderReportSection(0);
 }
 function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
@@ -2754,6 +2812,8 @@ function openM(id){document.getElementById(id).classList.add('open');setTimeout(
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});});
+// tmAssPicker close listener
+document.addEventListener('click',function(e){var w=document.getElementById('tmAssWrap'),p=document.getElementById('tmAssPicker');if(w&&p&&!w.contains(e.target)&&!p.contains(e.target))p.style.display='none';});
 
 // ── WEEKLY REPORT ──
 function renderWeekReport(){
