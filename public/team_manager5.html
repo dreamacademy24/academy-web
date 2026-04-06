@@ -1395,6 +1395,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <div id="pomoBar" style="display:none"></div>
 
 <script>
+// ── COPY ALL LOGIC FROM ORIGINAL ──
+// All JS is identical to team_manager.html — only CSS classes differ
 
 const EMPS=[
   {id:'jenna',name:'Jenna', color:'#6366f1',initial:'J', role:'부원장'},
@@ -1485,6 +1487,7 @@ function toast(msg,color){
   f.textContent=msg;document.body.appendChild(f);setTimeout(()=>f.remove(),2500);
 }
 
+// ── LOGIN ──
 function buildLogin(){
   const o=document.getElementById('loginOpts');o.innerHTML='';
   ALL.forEach(function(u){
@@ -1551,6 +1554,7 @@ function logout(){
   buildLogin();
 }
 
+// ── PASSWORD ──
 function togPwVis(inputId,btn){
   const inp=document.getElementById(inputId);
   if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}
@@ -1595,6 +1599,7 @@ function savePw(){
   setTimeout(function(){closeM('pwModal');},1500);
 }
 
+// ── NAV ──
 const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions','chat'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
@@ -1644,6 +1649,7 @@ function showEmpPage(empId){
   renderEmpPage(empId);
 }
 
+// ── HOME ──
 function renderHome(){renderWeekReport();renderGoalsCard();renderNotices();renderHomeSG();}
 function renderNotices(){
   const list=document.getElementById('noticeList');
@@ -1702,6 +1708,7 @@ function renderHomeSG(){
 }
 function qTog(id,e){e&&e.stopPropagation();const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;sv('tm_t',tasks);refreshAll();}}
 
+// ── BATCH DELETE ──
 let batchSelected=new Set();
 function batchToggle(id){if(batchSelected.has(id))batchSelected.delete(id);else batchSelected.add(id);updateBatchUI();}
 function batchSelectAll(ids){if(batchSelected.size===ids.length){batchSelected.clear();}else{batchSelected=new Set(ids);}updateBatchUI();}
@@ -1739,6 +1746,7 @@ function renderBatchBar(container,doneIds,scope){
   container.appendChild(bar);
 }
 
+// ── BOARD ──
 function setBF(f,el){boardFilter=f;document.querySelectorAll('#boardTabs .tab-btn').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderBoard();}
 function setBoardView(v,el){boardView=v;document.querySelectorAll('.brd-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderBoard();}
 function renderBoard(){
@@ -1835,6 +1843,7 @@ function renderBoardTask(f){
   const addBtn=document.createElement('button');addBtn.className='btn btn-ghost btn-sm';addBtn.style.cssText='width:100%;margin-top:4px;justify-content:center';addBtn.textContent='+ 업무 추가';addBtn.onclick=function(){openTaskModal('');};grid.appendChild(addBtn);
 }
 
+// ── CALENDAR ──
 function calNav(dir){
   if(calView==='month'){if(dir===0)calDate=new Date();else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+dir,1);}
   else{if(dir===0)calDate=new Date();else{calDate=new Date(calDate);calDate.setDate(calDate.getDate()+dir*7);}}
@@ -1928,6 +1937,7 @@ function renderWeekCal(){
   body.appendChild(si);
 }
 
+// ── EMP PAGE ──
 function renderEmpPage(empId){
   const emp=getP(empId);if(!emp)return;
   const av=document.getElementById('ehAv');av.textContent=emp.initial;av.style.background=emp.color;
@@ -2352,6 +2362,7 @@ function renderEmpList(empId){
   });
 }
 
+// ── CHECKLIST ──
 let tmChecklist=[];
 function renderTMChecklist(){
   const list=document.getElementById('tmClList');if(!list)return;
@@ -2472,6 +2483,7 @@ function togDetailCl(taskId,idx){
 function addDetailCl(taskId){const inp=document.getElementById('dcl-inp-'+taskId);if(!inp)return;const text=inp.value.trim();if(!text)return;const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;if(!t.checklist)t.checklist=[];t.checklist.push({id:uid(),text,done:false});sv('tm_t',tasks);inp.value='';const clSec=document.getElementById('tcm-cl-'+taskId);if(clSec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderDetailChecklist(taskId,clSec,ce);}}
 function delDetailCl(taskId,idx){const t=tasks.find(function(t){return t.id===taskId;});if(!t||!t.checklist)return;t.checklist.splice(idx,1);if(t.checklist.length>0)t.progress=Math.round(t.checklist.filter(function(c){return c.done;}).length/t.checklist.length*100);sv('tm_t',tasks);const clSec=document.getElementById('tcm-cl-'+taskId);if(clSec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderDetailChecklist(taskId,clSec,ce);}}
 
+// ── PROGRESS ──
 function liveSlider(taskId,input,color){
   const val=input.value;
   const pct=document.getElementById('pp-'+taskId);if(pct){pct.textContent=val+'%';pct.style.color=color;}
@@ -2497,6 +2509,7 @@ function autoSaveProgressModal(taskId,input){
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
 }
 
+// ── INLINE COMMENTS ──
 function renderInlineCmt(container,taskId){
   container.innerHTML='';const msgs=taskComments[taskId]||[];
   const titleRow=document.createElement('div');titleRow.className='cmt-preview-title';
@@ -2526,6 +2539,7 @@ function sendInlineCmt(taskId){
   if(document.getElementById('taskCmtModal').classList.contains('open')&&curCmtTaskId===taskId)renderTaskCmtBody(taskId);
 }
 
+// ── TASK DETAIL MODAL ──
 let curCmtTaskId=null;
 function openTaskEditFromDetail(){if(curCmtTaskId)openTaskEdit(curCmtTaskId);}
 function qTogFromDetail(){if(curCmtTaskId){qTog(curCmtTaskId,null);openTaskCmt(curCmtTaskId);}}
@@ -2579,10 +2593,12 @@ function delTaskCmt(taskId,cmtId){
   sv('tm_tc',taskComments);renderTaskCmtBody(taskId);refreshAll();
 }
 
+// ── NOTICES ──
 function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;notices.unshift({id:uid(),text,done:false,date:nowStr(),requireRead:rr});sv('tm_n',notices);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();}
 function togNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('tm_n',notices);renderNotices();}}
 function delNotice(id){notices=notices.filter(n=>n.id!==id);sv('tm_n',notices);renderNotices();}
 
+// ── TASK MODAL ──
 let tmProjId=null,tmChecklist2=[];
 function togQADue(r){document.getElementById('qaDue').style.display=r.value==='date'?'block':'none';if(r.value==='none')document.getElementById('qaDue').value='';}
 function togTMDue(r){document.getElementById('tmDue').style.display=r.value==='date'?'inline-block':'none';if(r.value==='none')document.getElementById('tmDue').value='';}
@@ -2722,6 +2738,7 @@ function saveTask(){
 function deleteTsk(){if(!editTaskId)return;tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();sv('tm_t',tasks);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
 function shareTask(id){const t=tasks.find(function(t){return t.id===id;});if(!t)return;t.shared=true;rebuildIdx();sv('tm_t',tasks);refreshAll();toast('✓ ('+t.idx+') 달력·전체 보드에 공유됐어요!');}
 
+// ── CEO PANEL ──
 function renderCeoPanel(empId){
   const wrap=document.getElementById('ceoCmt');wrap.innerHTML='';if(!isAdmin()||empId===CU.id)return;
   const et=tasks.filter(function(t){return t.assignee===empId;});
@@ -2740,6 +2757,7 @@ function renderCeoPanel(empId){
 function addCmt(empId){const tid=document.getElementById('cmtTask').value,txt=document.getElementById('cmtTxt').value.trim();if(!tid||!txt)return;if(!comments[tid])comments[tid]=[];comments[tid].push({id:uid(),text:txt,date:new Date().toLocaleString('ko-KR')});sv('tm_c',comments);document.getElementById('cmtTxt').value='';renderCeoPanel(empId);}
 function delCmt(tid,cid){if(!comments[tid])return;comments[tid]=comments[tid].filter(function(c){return c.id!==cid;});sv('tm_c',comments);renderCeoPanel(curEmpId);}
 
+// ── PROJECTS ──
 function renderProjList(){
   const wrap=document.getElementById('projList');wrap.innerHTML='';
   const vis=isAdmin()?projects:projects.filter(p=>p.members.includes(CU.id));
@@ -3015,6 +3033,7 @@ function saveProj(){
 }
 function deleteProj(){if(!editProjId)return;projects=projects.filter(function(p){return p.id!==editProjId;});sv('tm_p',projects);closeM('projModal');showPage('projects');}
 
+// ── DAILY ──
 function getDailyData(empId){if(!dailyData[empId])dailyData[empId]={fixed:[],daily:{}};return dailyData[empId];}
 function saveDailyData(){sv('tm_daily',dailyData);}
 function renderDailyPage(){renderEmpDailyChecklist(CU.id,document.getElementById('dclPage'));}
@@ -3078,6 +3097,7 @@ function delEmpDCL(empId,itemId,dateStr){const data=getDailyData(empId);if(data.
 function addEmpFixed(empId){const inp=document.getElementById('emp-fix-inp');if(!inp)return;const text=inp.value.trim();if(!text)return;const data=getDailyData(empId);data.fixed.push({id:uid(),text});saveDailyData();inp.value='';const w=document.getElementById('empDailyWrap');if(w&&!w.classList.contains('hidden'))renderEmpDailyChecklist(empId,w);}
 function delEmpFixed(empId,fixId){const data=getDailyData(empId);data.fixed=data.fixed.filter(function(f){return f.id!==fixId;});saveDailyData();const w=document.getElementById('empDailyWrap');if(w&&!w.classList.contains('hidden'))renderEmpDailyChecklist(empId,w);}
 
+// ── MODAL & REFRESH ──
 
 /* \u2500\u2500 \uCC44\uD305 \uC2DC\uC2A4\uD15C \u2500\u2500 */
 var curChannel='general';
@@ -3299,6 +3319,7 @@ document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('cl
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});});
 document.addEventListener('click',function(e){var w=document.getElementById('tmAssWrap'),p=document.getElementById('tmAssPicker');if(w&&p&&!w.contains(e.target)&&!p.contains(e.target))p.style.display='none';});
 
+// ── WEEKLY REPORT ──
 function renderWeekReport(){
   const wrap=document.getElementById('weekReport');wrap.innerHTML='';
   const now=new Date(),dow=now.getDay(),mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));mon.setHours(0,0,0,0);
@@ -3317,6 +3338,7 @@ function renderWeekReport(){
   wrap.innerHTML=html;
 }
 
+// ── GOALS CARD ──
 function renderGoalsCard(){
   const wrap=document.getElementById('goalsCard');wrap.innerHTML='';
   if(!goals.length)return;
@@ -3329,6 +3351,7 @@ function renderGoalsCard(){
   html+='</div>';wrap.innerHTML=html;
 }
 
+// ── POMODORO TIMER ──
 var pomoInterval=null,pomoEnd=0,pomoTaskName='';
 function startPomo(taskId){
   var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
@@ -3348,6 +3371,7 @@ function updatePomo(){
 }
 function cancelPomo(){if(pomoInterval)clearInterval(pomoInterval);pomoInterval=null;document.getElementById('pomoBar').style.display='none';}
 
+// ── TEMPLATES ──
 function saveAsTemplate(){
   var title=document.getElementById('tmTit').value.trim();if(!title){toast('업무 내용을 입력하세요','var(--red)');return;}
   templates.push({id:uid(),title:title,note:document.getElementById('tmNt').value.trim(),checklist:[...tmChecklist]});
@@ -3375,6 +3399,7 @@ function applyTmpl(id){
 }
 function delTemplate(id){templates=templates.filter(function(t){return t.id!==id;});sv('tm_tmpl',templates);renderSettingsTab1();}
 
+// ── SETTINGS MODAL ──
 function openSettings(){renderAllSettingsTabs();openM('settingsModal');}
 function setSettingsTab(idx,el){
   document.querySelectorAll('#settingsTabs .settings-tab').forEach(function(t){t.classList.remove('active');});
