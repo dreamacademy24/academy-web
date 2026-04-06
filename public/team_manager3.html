@@ -1372,23 +1372,23 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <!-- OPINION MODAL -->
 <div class="overlay" id="opinionModal">
   <div class="modal-box" style="width:520px">
-    <div class="modal-title">\ud83d\udcac \uc758\uacac \uc694\uccad</div>
-    <input id="opTitle" type="text" placeholder="\uc81c\ubaa9" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
-    <textarea id="opBody" placeholder="\ub0b4\uc6a9\uc744 \uc785\ub825\ud558\uc138\uc694..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
+    <div class="modal-title">💬 의견 요청</div>
+    <input id="opTitle" type="text" placeholder="제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
+    <textarea id="opBody" placeholder="내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
     <div style="margin-bottom:12px">
       <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
-        \ud83d\udcce \ud30c\uc77c/\uc0ac\uc9c4 \ucca8\ubd80
+        📎 파일/사진 첨부
         <input type="file" id="opFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,'opFilePreview')})">
       </label>
       <div id="opFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      <span style="font-size:13px;font-weight:600">\ub300\uc0c1:</span>
+      <span style="font-size:13px;font-weight:600">대상:</span>
       <select id="opTarget" style="padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none"></select>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="closeM('opinionModal')">\ucde8\uc18c</button>
-      <button class="btn btn-primary btn-sm" onclick="submitOpinion()">\ub4f1\ub85d</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeM('opinionModal')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="submitOpinion()">등록</button>
     </div>
   </div>
 </div>
