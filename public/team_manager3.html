@@ -1034,6 +1034,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무</button>
     <button class="nav-item" data-p="calendar" onclick="showPage('calendar')"><span class="ni-icon">📅</span> 달력</button>
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트</button>
+    <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청</button>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
     <div id="empNav"></div>
@@ -1180,6 +1181,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       </div>
       <div id="page-proj-detail" class="hidden">
         <div id="projDetail"></div>
+      </div>
+
+      <!-- OPINIONS -->
+      <div id="page-opinions" class="hidden">
+        <div id="opinionList"></div>
       </div>
 
       <!-- DAILY (standalone - not used, daily is in emp page) -->
@@ -1579,7 +1585,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','board','calendar','emp','projects','proj-detail','daily'];
+const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -1610,6 +1616,7 @@ function showPage(p){
   if(p==='calendar')renderCal();
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
+  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';}
 }
 function showEmpPage(empId){
   if(empId!==CU.id){alert('접근 권한이 없습니다.');showEmpPage(CU.id);return;}
@@ -2095,6 +2102,138 @@ function processApproval(id,action){
   renderApprovalPage(CU?CU.id:'');
 }
 /* ──── 결재 시스템 끝 ──── */
+
+/* \u2500\u2500 \uC758\uACAC\uC694\uCCAD \uC2DC\uC2A4\uD15C \u2500\u2500 */
+var curOpinionId=null;
+function renderOpinionList(){
+  var wrap=document.getElementById('opinionList');if(!wrap)return;
+  var opinions=ld('tm_opinions',[]).sort(function(a,b){return b.ts-a.ts;});
+  var html='<div style="max-width:760px;margin:0 auto">';
+  html+='<div style="display:flex;justify-content:flex-end;margin-bottom:20px">';
+  html+='<button onclick="openOpinionModal()" style="padding:10px 22px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">+ \uC758\uACAC \uC694\uCCAD</button></div>';
+  if(!opinions.length){
+    html+='<div style="text-align:center;padding:60px;color:var(--text3,#94a3b8);font-size:14px">\uC544\uC9C1 \uC758\uACAC \uC694\uCCAD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4</div>';
+  }else{
+    opinions.forEach(function(op){
+      var author=ALL.find(function(u){return u.id===op.from;});
+      var replies=(ld('tm_op_replies',{}))[op.id]||[];
+      var date=new Date(op.ts);var ds=(date.getMonth()+1)+'/'+date.getDate();
+      var isOwn=CU&&CU.id===op.from;
+      var targetLabel=op.target==='all'?'\uC804\uCCB4':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
+      html+='<div onclick="openOpinionDetail('+op.id+')" style="background:var(--surface2,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:20px;margin-bottom:14px;cursor:pointer;transition:box-shadow 0.15s" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
+      html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">';
+      html+='<div style="font-size:15px;font-weight:800;color:var(--text,#1a1a2e);line-height:1.4">'+esc(op.title)+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:12px">';
+      html+='<span style="background:#eff6ff;color:#1a6fc4;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">\u2192 '+esc(targetLabel)+'</span>';
+      html+='<span style="background:var(--surface,#f1f5f9);color:var(--text3,#94a3b8);font-size:11px;padding:3px 9px;border-radius:20px">\uD83D\uDCAC '+replies.length+'</span>';
+      if(isOwn)html+='<button onclick="event.stopPropagation();deleteOpinion('+op.id+')" style="background:none;border:none;color:var(--text3,#cbd5e1);cursor:pointer;font-size:14px;padding:2px 4px">\uD83D\uDDD1</button>';
+      html+='</div></div>';
+      html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;margin-bottom:12px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc(op.body)+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:8px">';
+      if(author)html+='<div style="width:22px;height:22px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+author.initial+'</div>';
+      html+='<span style="font-size:12px;color:var(--text3,#94a3b8)">'+(author?esc(author.name):'?')+' \u00B7 '+ds+'</span></div></div>';
+    });
+  }
+  html+='</div>';wrap.innerHTML=html;
+}
+function openOpinionDetail(opId){
+  var opinions=ld('tm_opinions',[]);var op=opinions.find(function(o){return o.id===opId;});if(!op)return;
+  curOpinionId=opId;
+  var replies=(ld('tm_op_replies',{}))[opId]||[];
+  var author=ALL.find(function(u){return u.id===op.from;});
+  var date=new Date(op.ts);var ds=(date.getMonth()+1)+'/'+date.getDate()+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+  var targetLabel=op.target==='all'?'\uC804\uCCB4':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
+  var html='<div style="max-width:760px;margin:0 auto">';
+  html+='<button onclick="renderOpinionList()" style="background:none;border:none;color:var(--text3,#94a3b8);cursor:pointer;font-size:13px;font-weight:600;padding:0;margin-bottom:16px;font-family:inherit">\u2190 \uBAA9\uB85D\uC73C\uB85C</button>';
+  html+='<div style="background:var(--surface2,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:24px;margin-bottom:20px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  html+='<span style="background:#eff6ff;color:#1a6fc4;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px">\u2192 '+esc(targetLabel)+'\uC5D0\uAC8C \uC758\uACAC \uC694\uCCAD</span>';
+  html+='<span style="font-size:12px;color:var(--text3,#94a3b8)">'+ds+'</span></div>';
+  html+='<div style="font-size:17px;font-weight:800;color:var(--text,#1a1a2e);margin-bottom:12px;line-height:1.4">'+esc(op.title)+'</div>';
+  html+='<div style="font-size:14px;color:var(--text2,#374151);line-height:1.8;white-space:pre-wrap;margin-bottom:16px">'+esc(op.body)+'</div>';
+  html+='<div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--border,#e2e8f0)">';
+  if(author)html+='<div style="width:28px;height:28px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+author.initial+'</div>';
+  html+='<span style="font-size:13px;font-weight:600;color:var(--text,#1a1a2e)">'+(author?esc(author.name):'?')+'</span></div></div>';
+  html+='<div style="margin-bottom:16px"><div style="font-size:14px;font-weight:800;color:var(--text,#1a1a2e);margin-bottom:12px">\uD83D\uDCAC \uB2F5\uBCC0 '+replies.length+'\uAC1C</div>';
+  if(!replies.length){
+    html+='<div style="text-align:center;padding:24px;color:var(--text3,#94a3b8);font-size:13px;background:var(--surface,#f8fafc);border-radius:10px">\uCCAB \uBC88\uC9F8 \uB2F5\uBCC0\uC744 \uB0A8\uACA8\uBCF4\uC138\uC694!</div>';
+  }else{
+    replies.sort(function(a,b){return a.ts-b.ts;}).forEach(function(r){
+      var rA=ALL.find(function(u){return u.id===r.from;});
+      var rD=new Date(r.ts);var rDs=(rD.getMonth()+1)+'/'+rD.getDate()+' '+String(rD.getHours()).padStart(2,'0')+':'+String(rD.getMinutes()).padStart(2,'0');
+      var isOwn=CU&&CU.id===r.from;
+      html+='<div style="display:flex;gap:12px;margin-bottom:12px">';
+      if(rA)html+='<div style="width:32px;height:32px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+rA.initial+'</div>';
+      html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+      html+='<span style="font-size:13px;font-weight:700;color:var(--text,#1a1a2e)">'+(rA?esc(rA.name):'?')+'</span>';
+      html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+rDs+'</span>';
+      if(isOwn)html+='<button onclick="deleteReply('+opId+','+r.ts+')" style="background:none;border:none;color:var(--text3,#cbd5e1);cursor:pointer;font-size:12px;padding:0;margin-left:auto">\u2715</button>';
+      html+='</div><div style="background:var(--surface,#f8fafc);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
+    });
+  }
+  html+='</div>';
+  html+='<div style="background:var(--surface2,#fff);border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:16px">';
+  html+='<textarea id="replyInput" placeholder="\uB2F5\uBCC0\uC744 \uC785\uB825\uD558\uC138\uC694... (Ctrl+Enter \uC804\uC1A1)" style="width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:72px;outline:none;box-sizing:border-box;line-height:1.6"></textarea>';
+  html+='<div style="display:flex;justify-content:flex-end;margin-top:8px">';
+  html+='<button onclick="submitReply('+opId+')" style="padding:9px 22px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\uB2F5\uBCC0 \uB4F1\uB85D</button></div></div></div>';
+  var wrap=document.getElementById('opinionList');
+  if(wrap){wrap.innerHTML=html;var ri=document.getElementById('replyInput');if(ri)ri.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter')submitReply(opId);});}
+}
+function openOpinionModal(){
+  var modal=document.getElementById('opinionModal');
+  if(!modal){
+    var m=document.createElement('div');m.id='opinionModal';m.className='overlay open';
+    m.innerHTML='<div class="modal-box" style="width:520px;max-width:95vw">'+
+      '<div style="font-size:16px;font-weight:800;margin-bottom:20px;color:var(--text,#1a1a2e)">\uD83D\uDCAC \uC758\uACAC \uC694\uCCAD\uD558\uAE30</div>'+
+      '<input id="opTitle" type="text" placeholder="\uC81C\uBAA9" style="width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px">'+
+      '<textarea id="opBody" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD558\uC138\uC694..." style="width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:120px;outline:none;box-sizing:border-box;margin-bottom:10px;line-height:1.6"></textarea>'+
+      '<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;color:var(--text2,#374151);margin-bottom:8px">\uC758\uACAC \uC694\uCCAD \uB300\uC0C1</div>'+
+      '<select id="opTarget" style="width:100%;padding:9px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:var(--bg,#fff)">'+
+      '<option value="all">\uD83D\uDCE2 \uC804\uCCB4 \uC9C1\uC6D0</option>'+
+      ALL.map(function(u){return '<option value="'+u.id+'">'+u.name+'</option>';}).join('')+
+      '</select></div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px">'+
+      '<button onclick="closeM(\'opinionModal\')" style="padding:10px 20px;background:var(--surface,#f1f5f9);color:var(--text2,#374151);border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">\uCDE8\uC18C</button>'+
+      '<button onclick="submitOpinion()" style="padding:10px 22px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">\uC694\uCCAD\uD558\uAE30</button>'+
+      '</div></div>';
+    m.onclick=function(e){if(e.target===m)m.classList.remove('open');};
+    document.body.appendChild(m);
+  }else{
+    modal.classList.add('open');
+    document.getElementById('opTitle').value='';
+    document.getElementById('opBody').value='';
+  }
+}
+function submitOpinion(){
+  var title=document.getElementById('opTitle').value.trim();
+  var body=document.getElementById('opBody').value.trim();
+  var target=document.getElementById('opTarget').value;
+  if(!title){toast('\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
+  var opinions=ld('tm_opinions',[]);
+  opinions.push({id:Date.now(),from:CU?CU.id:'',target:target,title:title,body:body,ts:Date.now()});
+  sv('tm_opinions',opinions);closeM('opinionModal');
+  toast('\u2705 \uC758\uACAC \uC694\uCCAD\uC774 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4!');renderOpinionList();
+}
+function submitReply(opId){
+  var inp=document.getElementById('replyInput');if(!inp)return;
+  var text=inp.value.trim();if(!text){toast('\uB2F5\uBCC0 \uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
+  var replies=ld('tm_op_replies',{});if(!replies[opId])replies[opId]=[];
+  replies[opId].push({from:CU?CU.id:'',text:text,ts:Date.now()});
+  sv('tm_op_replies',replies);toast('\uD83D\uDCAC \uB2F5\uBCC0\uC774 \uB4F1\uB85D\uB418\uC5C8\uC2B5\uB2C8\uB2E4!');openOpinionDetail(opId);
+}
+function deleteReply(opId,ts){
+  if(!confirm('\uB2F5\uBCC0\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'))return;
+  var replies=ld('tm_op_replies',{});if(replies[opId])replies[opId]=replies[opId].filter(function(r){return r.ts!==ts;});
+  sv('tm_op_replies',replies);openOpinionDetail(opId);
+}
+function deleteOpinion(opId){
+  if(!confirm('\uC758\uACAC \uC694\uCCAD\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?'))return;
+  var opinions=ld('tm_opinions',[]);sv('tm_opinions',opinions.filter(function(o){return o.id!==opId;}));
+  var replies=ld('tm_op_replies',{});delete replies[opId];sv('tm_op_replies',replies);
+  toast('\uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4');renderOpinionList();
+}
+/* \u2500\u2500 \uC758\uACAC\uC694\uCCAD \uC2DC\uC2A4\uD15C \uB05D \u2500\u2500 */
+
 
 function renderEmpList(empId){
   const wrap=document.getElementById('empList');wrap.innerHTML='';
