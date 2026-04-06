@@ -1042,6 +1042,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="sb-divider"></div>
     <button class="nav-item" onclick="openSettings()"><span class="ni-icon">⚙️</span> 설정</button>
     <div class="sb-footer">
+      <button id="btnAdminHub" onclick="location.href='/admin/hub'" style="display:none;width:100%;padding:8px 14px;background:none;border:1px solid var(--primary,#1a6fc4);color:var(--primary,#1a6fc4);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px">🔒 어드민</button>
       <div class="sb-user" onclick="logout()">
         <div class="sb-user-av" id="sbAv"></div>
         <div><div class="sb-user-name" id="sbName"></div><div class="sb-user-role">로그아웃 →</div></div>
@@ -1545,7 +1546,7 @@ function doLogin(u){
   document.getElementById('sbName').textContent=u.name;
   document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
-  if(isAdmin())document.getElementById('btnNotice').style.display='inline-flex';
+  if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';document.getElementById('btnAdminHub').style.display='block';}
   backToStep1();buildEmpNav();showPage('home');
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
@@ -1555,7 +1556,7 @@ function logout(){
   localStorage.removeItem('tm_session');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('app').classList.add('hidden');
-  ['btnNotice','btnProj'].forEach(function(id){document.getElementById(id).style.display='none';});
+  ['btnNotice','btnProj','btnAdminHub'].forEach(function(id){document.getElementById(id).style.display='none';});
   buildLogin();
 }
 
