@@ -1166,8 +1166,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           <button class="tab-btn" onclick="setEF('active',this)">진행 중</button>
           <button class="tab-btn" onclick="setEF('done',this)">완료</button>
           <button class="tab-btn" onclick="setEF('all',this)">전체</button>
+            <button class="tab-btn" onclick="setEF('approval',this)">📋 결재</button>
         </div>
         <div id="empList"></div>
+        <div id="empApprovalWrap" style="display:none"></div>
         <div id="empDailyWrap" class="hidden"></div>
         <div id="ceoCmt"></div>
       </div>
@@ -1938,6 +1940,11 @@ function setEF(f,el){
   el.classList.add('active');
   const listWrap=document.getElementById('empList');
   const dailyWrap=document.getElementById('empDailyWrap');
+  if(f==='approval'){
+    listWrap.style.display='none';dailyWrap.classList.add('hidden');
+    document.getElementById('empApprovalWrap').style.display='block';
+    renderApprovalPage(curEmpId);return;
+  }
   if(f==='daily'){
     listWrap.style.display='none';dailyWrap.classList.remove('hidden');
     renderEmpDailyChecklist(curEmpId,dailyWrap);
@@ -1945,6 +1952,121 @@ function setEF(f,el){
     listWrap.style.display='';dailyWrap.classList.add('hidden');renderEmpList(curEmpId);
   }
 }
+
+
+/* ──── 결재 시스템 ──── */
+function renderApprovalPage(empId){
+  var wrap=document.getElementById('empApprovalWrap');if(!wrap)return;
+  var approvals=ld('tm_approvals',[]);
+  var isApprover=CU&&(CU.id==='ceo'||CU.id==='jenna');
+  var mySubmitted=approvals.filter(function(a){return a.from===empId;});
+  var pendingForMe=isApprover?approvals.filter(function(a){return a.status==='pending';}):[];
+  var html='<div style="padding:0 2px">';
+
+  // 결재 상신 폼
+  html+='<div style="background:var(--surface2,#fff);border:1px solid var(--border,#e2e8f0);border-radius:14px;padding:20px;margin-bottom:20px">';
+  html+='<div style="font-size:15px;font-weight:800;margin-bottom:14px;color:var(--text,#1a1a2e)">\uD83D\uDCCB \uACB0\uC7AC \uC0C1\uC2E0</div>';
+  html+='<input id="apvTitle" type="text" placeholder="\uACB0\uC7AC \uC81C\uBAA9" style="width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">';
+  html+='<textarea id="apvBody" placeholder="\uACB0\uC7AC \uB0B4\uC6A9\uC744 \uC785\uB825\uD558\uC138\uC694..." style="width:100%;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+  html+='<span style="font-size:13px;font-weight:600;color:var(--text2,#374151)">\uACB0\uC7AC\uC790:</span>';
+  html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (\uB300\uD45C)</label>';
+  html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (\uBD80\uC6D0\uC7A5)</label>';
+  html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> \uB458 \uB2E4</label>';
+  html+='</div>';
+  html+='<button onclick="submitApproval(\''+empId+'\')" style="padding:10px 24px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">\uC0C1\uC2E0\uD558\uAE30</button>';
+  html+='</div>';
+
+  // 결재 대기 (결재자만)
+  if(isApprover&&pendingForMe.length>0){
+    html+='<div style="margin-bottom:20px">';
+    html+='<div style="font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text,#1a1a2e)">\u23F3 \uACB0\uC7AC \uB300\uAE30 <span style="background:#fee2e2;color:#dc2626;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700">'+pendingForMe.length+'\uAC74</span></div>';
+    pendingForMe.forEach(function(a){
+      var fromUser=ALL.find(function(u){return u.id===a.from;});
+      var date=new Date(a.ts);var ds=(date.getMonth()+1)+'/'+(date.getDate())+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+      html+='<div style="background:var(--surface2,#fff);border:1px solid #fca5a5;border-radius:12px;padding:16px;margin-bottom:10px;border-left:4px solid #dc2626">';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+      html+='<div style="display:flex;align-items:center;gap:8px">';
+      html+='<div style="width:28px;height:28px;border-radius:50%;background:'+(fromUser?fromUser.color:'#ccc')+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:12px">'+(fromUser?fromUser.initial:'?')+'</div>';
+      html+='<span style="font-size:12px;color:var(--text2,#374151)">'+(fromUser?esc(fromUser.name):'?')+'</span>';
+      html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+ds+'</span>';
+      html+='</div>';
+      html+='<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">\uB300\uAE30\uC911</span>';
+      html+='</div>';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--text,#1a1a2e);margin-bottom:6px">'+esc(a.title)+'</div>';
+      html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
+      html+='<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">';
+      html+='<button onclick="processApproval('+a.id+',\'approve\')" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\u2705 \uC2B9\uC778</button>';
+      html+='<div style="flex:1;display:flex;gap:6px;min-width:200px">';
+      html+='<input id="rejectReason_'+a.id+'" type="text" placeholder="\uBC18\uB824 \uC0AC\uC720 \uC785\uB825..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
+      html+='<button onclick="processApproval('+a.id+',\'reject\')" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">\u274C \uBC18\uB824</button>';
+      html+='</div></div></div>';
+    });
+    html+='</div>';
+  }
+
+  // 상신 내역
+  if(mySubmitted.length>0){
+    html+='<div><div style="font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text,#1a1a2e)">\uD83D\uDCE4 \uC0C1\uC2E0 \uB0B4\uC5ED</div>';
+    mySubmitted.sort(function(a,b){return b.ts-a.ts;}).forEach(function(a){
+      var sm={pending:{l:'\uB300\uAE30\uC911',bg:'#fff7ed',c:'#ea580c',bc:'#fed7aa'},approve:{l:'\uC2B9\uC778',bg:'#f0fdf4',c:'#16a34a',bc:'#86efac'},reject:{l:'\uBC18\uB824',bg:'#fef2f2',c:'#dc2626',bc:'#fca5a5'}};
+      var st=sm[a.status]||sm.pending;
+      var toUser=a.to==='both'?'CEO+Jenna':((ALL.find(function(u){return u.id===a.to;})||{name:a.to}).name);
+      var date=new Date(a.ts);var ds=(date.getMonth()+1)+'/'+(date.getDate());
+      html+='<div style="background:var(--surface2,#fff);border:1px solid '+st.bc+';border-left:4px solid '+st.c+';border-radius:12px;padding:16px;margin-bottom:10px">';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+      html+='<div style="font-size:14px;font-weight:700;color:var(--text,#1a1a2e)">'+esc(a.title)+'</div>';
+      html+='<span style="background:'+st.bg+';color:'+st.c+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.l+'</span>';
+      html+='</div>';
+      html+='<div style="font-size:12px;color:var(--text3,#94a3b8);margin-bottom:6px">\u2192 '+esc(toUser)+' \u00B7 '+ds+'</div>';
+      html+='<div style="font-size:13px;color:var(--text2,#374151);line-height:1.5;white-space:pre-wrap">'+esc(a.body)+'</div>';
+      if(a.status==='reject'&&a.rejectReason){
+        html+='<div style="margin-top:10px;padding:10px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626"><b>\uBC18\uB824 \uC0AC\uC720:</b> '+esc(a.rejectReason)+'</div>';
+      }
+      html+='</div>';
+    });
+    html+='</div>';
+  } else if(!isApprover||pendingForMe.length===0){
+    html+='<div style="text-align:center;padding:40px;color:var(--text3,#94a3b8);font-size:13px">\uC0C1\uC2E0\uD55C \uACB0\uC7AC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4</div>';
+  }
+
+  html+='</div>';
+  wrap.innerHTML=html;
+}
+
+function submitApproval(fromId){
+  var title=document.getElementById('apvTitle').value.trim();
+  var body=document.getElementById('apvBody').value.trim();
+  var toEl=document.querySelector('input[name="apvTo"]:checked');
+  var to=toEl?toEl.value:'ceo';
+  if(!title){toast('\uACB0\uC7AC \uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
+  var approvals=ld('tm_approvals',[]);
+  approvals.push({id:Date.now(),from:fromId,to:to,title:title,body:body,status:'pending',ts:Date.now(),rejectReason:''});
+  sv('tm_approvals',approvals);
+  document.getElementById('apvTitle').value='';
+  document.getElementById('apvBody').value='';
+  toast('\u2705 \uACB0\uC7AC \uC0C1\uC2E0 \uC644\uB8CC!');
+  renderApprovalPage(fromId);
+}
+
+function processApproval(id,action){
+  var approvals=ld('tm_approvals',[]);
+  var a=approvals.find(function(x){return x.id===id;});
+  if(!a)return;
+  if(action==='approve'){
+    a.status='approve';a.approvedBy=CU?CU.id:'';a.approvedAt=Date.now();
+    toast('\u2705 \uACB0\uC7AC \uC2B9\uC778 \uC644\uB8CC');
+  }else{
+    var reason=document.getElementById('rejectReason_'+id);
+    var r=reason?reason.value.trim():'';
+    if(!r){toast('\uBC18\uB824 \uC0AC\uC720\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694');return;}
+    a.status='reject';a.rejectReason=r;a.rejectedBy=CU?CU.id:'';a.rejectedAt=Date.now();
+    toast('\u274C \uACB0\uC7AC \uBC18\uB824 \uCC98\uB9AC\uB428');
+  }
+  sv('tm_approvals',approvals);
+  renderApprovalPage(CU?CU.id:'');
+}
+/* ──── 결재 시스템 끝 ──── */
 
 function renderEmpList(empId){
   const wrap=document.getElementById('empList');wrap.innerHTML='';
