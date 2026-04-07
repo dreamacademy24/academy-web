@@ -1370,6 +1370,33 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+
+<!-- REPORT VIEW MODAL -->
+<div class="overlay" id="reportViewModal">
+  <div class="modal-box" style="width:560px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div id="rvStatus"></div>
+      <button onclick="closeM('reportViewModal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94a3b8">✕</button>
+    </div>
+    <div id="rvTitle" style="font-size:18px;font-weight:800;color:#1a1a2e;margin-bottom:12px"></div>
+    <div id="rvBody" style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap;margin-bottom:16px"></div>
+    <div id="rvChecklist" style="margin-bottom:12px"></div>
+    <div id="rvFiles" style="margin-bottom:12px"></div>
+    <div id="rvMeta" style="font-size:12px;color:#94a3b8;padding-top:12px;border-top:1px solid #e2e8f0"></div>
+  </div>
+</div>
+
+<!-- REPORT ALL MODAL -->
+<div class="overlay" id="reportAllModal">
+  <div class="modal-box" style="width:600px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div id="raTitle" style="font-size:16px;font-weight:800"></div>
+      <button onclick="closeM('reportAllModal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:#94a3b8">✕</button>
+    </div>
+    <div id="raList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
+
 <!-- REPORT MODAL -->
 <div class="overlay" id="reportModal">
   <div class="modal-box" style="width:580px;max-height:85vh;overflow-y:auto">
@@ -2887,6 +2914,55 @@ function pickSt(btn,memberId){
   var h=document.getElementById('rStatus_'+memberId);
   if(h)h.value=st;
 }
+
+var _rvReport=null;
+function openReportView(r){
+  var statusLabel={done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
+  var statusBg={done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var statusColor={done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  var statusEmoji={done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
+  var st=r.status||'progress';
+  document.getElementById('rvStatus').innerHTML='<span style="font-size:12px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:4px 12px;border-radius:20px;font-weight:700">'+statusEmoji[st]+' '+statusLabel[st]+'</span>';
+  document.getElementById('rvTitle').textContent=r.title||'보고';
+  document.getElementById('rvBody').textContent=r.body||'';
+  var cl=document.getElementById('rvChecklist');
+  if(r.checklist&&r.checklist.length){
+    var done=r.checklist.filter(function(c){return c.done;}).length;
+    cl.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:6px">✔️ 체크리스트 ('+done+'/'+r.checklist.length+')</div>'+r.checklist.map(function(ch){return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8fafc;border-radius:6px;margin-bottom:4px"><span>'+(ch.done?'☑':'☐')+'</span><span style="font-size:13px;'+(ch.done?'text-decoration:line-through;color:#94a3b8':'')+'">' +esc(ch.text)+'</span></div>';}).join('');
+  } else {cl.innerHTML='';}
+  var fi=document.getElementById('rvFiles');
+  fi.innerHTML=(r.files&&r.files.length)?renderAttachments(r.files):'';
+  var author=ALL.find(function(u){return u.id===r.author;});
+  var date=new Date(r.ts);
+  var ds=(date.getMonth()+1)+'/'+date.getDate()+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+  document.getElementById('rvMeta').textContent=(author?author.name:'')+' · '+ds;
+  openM('reportViewModal');
+}
+function openAllReports(projId,memberId){
+  var reports=ld('tm_reports',{});
+  var projReports=(reports[projId]||[]).filter(function(r){return r.author===memberId;}).sort(function(a,b){return b.ts-a.ts;});
+  var user=ALL.find(function(u){return u.id===memberId;});
+  var statusLabel={done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
+  var statusBg={done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
+  var statusColor={done:'#16a34a',progress:'#1a6fc4',issue:'#dc2626',plan:'#6b7280'};
+  var statusEmoji={done:'✅',progress:'🔄',issue:'⚠️',plan:'📋'};
+  document.getElementById('raTitle').textContent=(user?user.name:'')+'의 보고 '+projReports.length+'건';
+  document.getElementById('raList').innerHTML=projReports.map(function(r){
+    var st=r.status||'progress';
+    var date=new Date(r.ts);
+    var ds=(date.getMonth()+1)+'/'+date.getDate();
+    return '<div onclick="openReportView('+JSON.stringify(r)+')" style="background:#f8fafc;border-radius:10px;padding:14px;cursor:pointer;border:1px solid #e2e8f0" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='#f8fafc'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<span style="font-size:11px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:2px 8px;border-radius:20px;font-weight:700">'+statusEmoji[st]+' '+statusLabel[st]+'</span>'
+      +'<span style="font-size:11px;color:#94a3b8">'+ds+'</span></div>'
+      +'<div style="font-size:14px;font-weight:700;margin-bottom:4px">'+esc(r.title||'보고')+'</div>'
+      +(r.body?'<div style="font-size:12px;color:#374151;line-height:1.5;white-space:pre-wrap;max-height:48px;overflow:hidden">'+esc(r.body)+'</div>':'')
+      +(r.checklist&&r.checklist.length?'<div style="font-size:11px;color:#6b7280;margin-top:4px">✔️ '+r.checklist.filter(function(c){return c.done;}).length+'/'+r.checklist.length+' 완료</div>':'')
+      +'</div>';
+  }).join('');
+  openM('reportAllModal');
+}
+
 var _rmChecklist=[];
 function openReportModal(projId,memberId){
   document.getElementById('rmProjId').value=projId;
@@ -2982,7 +3058,7 @@ function buildReportDashboard(projId) {
         var st=r.status||'progress';
         var date=new Date(r.ts);
         var ds=(date.getMonth()+1)+'/'+(date.getDate());
-        html+='<div style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;position:relative">';
+        html+='<div onclick="openReportView('+JSON.stringify(r)+')" style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;position:relative;cursor:pointer" onmouseover="this.style.background='#f0f4ff'" onmouseout="this.style.background='var(--surface,#f8fafc)'">';
         html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
         html+='<span style="font-size:10px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:2px 7px;border-radius:20px;font-weight:700">'+(statusEmoji[st]||'\uD83D\uDD04')+' '+(statusLabel[st]||'\uC9C4\uD589\uC911')+'</span>';
         html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+ds+'</span>';
@@ -2991,7 +3067,7 @@ function buildReportDashboard(projId) {
         }
         html+='</div>';
         html+='<div style="font-size:13px;font-weight:600;color:var(--text,#1a1a2e);margin-bottom:2px">'+esc(r.title||'\uBCF4\uACE0')+'</div>';
-        if(r.body)html+='<div style="font-size:12px;color:var(--text2,#374151);line-height:1.5;white-space:pre-wrap;max-height:60px;overflow:hidden">'+esc(r.body)+'</div>';
+        if(r.body)html+='<div style="font-size:12px;color:var(--text2,#374151);line-height:1.5;white-space:pre-wrap;max-height:48px;overflow:hidden;mask-image:linear-gradient(to bottom,#000 60%,transparent)">'+esc(r.body)+'</div>';
         html+='</div>';
       });
       if(mReports.length>3){
