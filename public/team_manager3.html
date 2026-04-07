@@ -2999,17 +2999,8 @@ function buildReportDashboard(projId) {
     }
 
     if(isMe){
-      html+='<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px;display:flex;flex-direction:column;gap:6px">';
-      html+='<div style="display:flex;gap:4px;flex-wrap:wrap">';
-      ['progress','done','plan','issue'].forEach(function(st,i){
-        var active=i===0;
-        html+='<button class="rk-st-btn" data-st="'+st+'" data-mid="'+memberId+'" onclick="pickSt(this,\''+memberId+'\')" style="padding:3px 8px;border-radius:20px;border:1.5px solid '+(active?statusColor[st]:'var(--border,#e2e8f0)')+';background:'+(active?statusBg[st]:'transparent')+';color:'+(active?statusColor[st]:'var(--text3,#94a3b8)')+';font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">'+(statusEmoji[st])+' '+(statusLabel[st])+'</button>';
-      });
-      html+='</div>';
-      html+='<input id="rTitle_'+memberId+'" type="text" placeholder="\uBCF4\uACE0 \uC81C\uBAA9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">';
-      html+='<textarea id="rBody_'+memberId+'" placeholder="\uB0B4\uC6A9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;resize:none;min-height:56px;outline:none;box-sizing:border-box;line-height:1.5"></textarea>';
-      html+='<input type="hidden" id="rStatus_'+memberId+'" value="progress">';
-      html+='<button onclick="openReportModal(\''+projId+'\',\''+memberId+'\')" style="padding:7px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📝 보고 등록</button>';
+      html+='<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px">';
+      html+='<button onclick="openReportModal(\''+projId+'\',\''+memberId+'\')" style="width:100%;padding:8px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📝 보고 등록</button>';
       html+='</div>';
     }
 
