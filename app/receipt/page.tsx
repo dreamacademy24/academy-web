@@ -52,7 +52,7 @@ function ReceiptPageInner(){
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
             checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
-            people:row.adults||"", houseNo:"미정",
+            people:row.adults!=null?String(row.adults):"", houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
             packageType:items.map((i:BillItem)=>i.label).join(" + "),
@@ -115,8 +115,8 @@ function ReceiptPageInner(){
   const filledPayments=payments.filter(p=>p.amount.trim()!=="");
   // 인원구성: DB adults 필드 우선, 없으면 students로 계산
   const studentCount=data.students?.length||0;
-  const peopleStr=data.people&&data.people.trim()!==""
-    ?data.people
+  const peopleStr=data.people&&String(data.people).trim()!==""
+    ?String(data.people)
     :studentCount>0?`학생 ${studentCount}명`:"-";
 
   return(<>
