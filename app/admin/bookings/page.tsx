@@ -11,7 +11,7 @@ interface Booking {
   base_price?:number; final_price?:number; balance_date?:string; updated_at?:string;
   flight_in?:string; flight_out?:string; house_no?:string; pickup?:string; drop_off?:string;
   pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
-  billing_items?:any; locals?:any;
+  billing_items?:any; locals?:any; confirmed?:boolean;
 }
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -34,6 +34,19 @@ function stuCount(s:any):number{
 function fmt(n?:number){return n?n.toLocaleString("ko-KR")+"원":"-";}
 function fDate(d?:string){return d?new Date(d).toLocaleDateString("ko-KR"):"";}
 function shortNo(no:string){return no?no.replace("DA-","").slice(-7):"-";}
+function addWeeks(dateStr:string,weeks:number):string{
+  const d=new Date(dateStr);d.setDate(d.getDate()+weeks*7);return d.toISOString().slice(0,10);
+}
+function acaStart(b:any):string{
+  if(!b.checkin_date)return"-";
+  const d=new Date(b.checkin_date);d.setDate(d.getDate()+1);
+  if(d.getDay()===0)d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10);
+}
+function acaEnd(b:any):string{
+  const start=acaStart(b);if(start==="-")return"-";
+  try{const a=typeof b.students==="string"?JSON.parse(b.students):b.students;if(!Array.isArray(a)||!a[0]?.weeks)return"-";return addWeeks(start,Number(a[0].weeks));}catch{return"-";}
+}
 
 export default function AdminBookingsPage(){
   const router=useRouter();
@@ -44,6 +57,8 @@ export default function AdminBookingsPage(){
   const [confirmFilter,setConfirmFilter]=useState("전체");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"list"|"invoice"|"receipt"|"confirm"|"estimate">("list");
+  const [confirmSearch,setConfirmSearch]=useState("");
+  const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const ASSIGNEES=["May","Jamin","Yuna","Jena"];
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
   const confirmStatuses=["전체","영수증발행","결제완료","완료"];
@@ -130,6 +145,19 @@ export default function AdminBookingsPage(){
 .act-g{background:#16a34a;color:#fff;}.act-g:hover{background:#15803d;}
 .act-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.act-r:hover{background:#fee2e2;}
 .dday{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f0fdf4;}
+.ss-w{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e2e8f0;}
+.ss{width:100%;border-collapse:collapse;min-width:1600px;}
+.ss th{font-size:10px;font-weight:700;color:#6b7c93;padding:8px 6px;text-align:left;background:#f1f5f9;border:1px solid #e2e8f0;white-space:nowrap;cursor:pointer;user-select:none;position:relative;}.ss th:hover{background:#e2e8f0;}
+.ss th .arr{margin-left:2px;font-size:9px;color:#94a3b8;}
+.ss th .arr.ac{color:#1a6fc4;}
+.ss td{font-size:11px;padding:6px 6px;border:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;}
+.ss tbody tr:hover td{background:#eff6ff;}
+.ss tbody tr.confirmed-row td{background:#f0fdf4;}
+.ss td.wrap{white-space:normal;min-width:100px;max-width:180px;word-break:break-word;}
+.ss .chk{width:16px;height:16px;cursor:pointer;accent-color:#16a34a;}
+.cf-search{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+.cf-search input{padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;outline:none;font-family:'Noto Sans KR',sans-serif;}.cf-search input:focus{border-color:#1a6fc4;}
+.cf-search .cnt{font-size:12px;color:#6b7c93;}
 @media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
   `}</style>
 
@@ -272,52 +300,94 @@ export default function AdminBookingsPage(){
       </div>
     </>)}
 
-    {/* ── 탭4: 확정 예약 ── */}
-    {mainTab==="confirm"&&(<>
-      <div className="sub-tabs">
-        {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
-      </div>
-      <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자/학생</th><th>체크인</th><th>D-day</th>
-        <th>숙소/룸</th><th>투숙인원</th><th>아카데미</th><th>항공(IN)</th><th>픽업장소</th>
-        <th>유학원</th><th>특이사항</th><th>금액</th><th>잔금일</th><th>액션</th>
-      </tr></thead><tbody>
-        {confirmFiltered.length===0?<tr><td colSpan={16} className="empty">확정 예약이 없습니다.</td></tr>:
-        confirmFiltered.map(b=>{
-          const sc=SC[b.status]||SC["영수증발행"];
-          const dday=getDday(b.checkin_date);
-          const bdday=getBalanceDday(b.balance_date);
-          const stuCnt=stuCount(b.students);
-          const accomLabel=(b.accom_type||"")+(b.house_no?` (${b.house_no})`:"");
-          const guardianCount=1;
-          const peopleLabel=`보호자${guardianCount}+${stuCnt>0?stuCnt:"?"}`;
-          return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
-            <td style={{fontWeight:700,color:"#1a6fc4",fontSize:12}}>{shortNo(b.reservation_no)}</td>
-            <td><span className="badge" style={{background:sc.bg,color:sc.color,fontSize:10}}>{b.status}</span></td>
-            <td style={{fontSize:12}}>{b.assignee||"-"}</td>
-            <td style={{fontSize:12}}>
-              <div style={{fontWeight:600}}>{b.booker_name}</div>
-              <div style={{color:"#6b7c93",fontSize:11}}>{stuNames(b.students)}</div>
-            </td>
-            <td style={{fontSize:12,fontWeight:600}}>{b.checkin_date||"-"}</td>
-            <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:10,color:bdday.color,fontWeight:700,marginTop:2}}>{bdday.label}</div>}</td>
-            <td style={{fontSize:12}}>{accomLabel||"-"}</td>
-            <td style={{fontSize:12}}>{peopleLabel}</td>
-            <td style={{fontSize:12}}>{stuWeeks(b.students)||"-"}</td>
-            <td style={{fontSize:12}}>{b.flight_in||"-"}</td>
-            <td style={{fontSize:12}}>{b.pickup_place||"-"}</td>
-            <td style={{fontSize:12}}>{b.agency||"-"}</td>
-            <td className="wrap">{b.special_request||"-"}</td>
-            <td style={{fontSize:12,fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
-            <td style={{fontSize:12}}>{b.balance_date||"-"}</td>
-            <td onClick={e=>e.stopPropagation()}>
-              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
-              <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
-            </td>
-          </tr>);
-        })}
-      </tbody></table></div>
-    </>)}
+    {/* ── 탭4: 확정 예약 (스프레드시트) ── */}
+    {mainTab==="confirm"&&(()=>{
+      const q=confirmSearch.toLowerCase();
+      const searched=confirmFiltered.filter(b=>{
+        if(!q)return true;
+        return [b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.agency,b.pickup_place,b.drop_off,b.special_request,b.accom_type,b.house_no].some(v=>v&&v.toLowerCase().includes(q));
+      });
+      const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
+        {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
+        {key:"assignee",label:"담당자",get:b=>b.assignee||"-"},
+        {key:"booker_name",label:"예약자/학생",get:b=>b.booker_name},
+        {key:"checkin_date",label:"체크인",get:b=>b.checkin_date||"-"},
+        {key:"checkout_date",label:"체크아웃",get:b=>b.checkout_date||"-"},
+        {key:"dday",label:"D-day",get:b=>{const d=getDday(b.checkin_date);return d?parseInt(d.label.replace(/[^-\d]/g,""))||0:9999;}},
+        {key:"accom",label:"숙소/룸",get:b=>(b.accom_type||"")+(b.house_no?` ${b.house_no}`:"")+(b.accom_room?` ${b.accom_room}`:"")},
+        {key:"aca_start",label:"아카데미시작",get:b=>acaStart(b)},
+        {key:"aca_end",label:"아카데미종료",get:b=>acaEnd(b)},
+        {key:"flight_in",label:"항공IN",get:b=>b.flight_in||"-"},
+        {key:"flight_out",label:"항공OUT",get:b=>b.flight_out||"-"},
+        {key:"pickup_place",label:"픽업장소",get:b=>b.pickup_place||"-"},
+        {key:"drop_off",label:"드랍장소",get:b=>b.drop_off||"-"},
+        {key:"agency",label:"유학원",get:b=>b.agency||"-"},
+        {key:"balance_date",label:"잔금일",get:b=>b.balance_date||"-"},
+        {key:"price",label:"금액",get:b=>b.final_price||b.base_price||0},
+        {key:"special_request",label:"특이사항",get:b=>b.special_request||"-"},
+      ];
+      const sorted=[...searched].sort((a,b)=>{
+        const {key,asc}=confirmSort;
+        let va:any,vb:any;
+        const col=cols.find(c=>c.key===key);
+        if(col){va=col.get(a);vb=col.get(b);}
+        else if(key==="confirmed"){va=a.confirmed?1:0;vb=b.confirmed?1:0;}
+        else{va="";vb="";}
+        if(typeof va==="number"&&typeof vb==="number")return asc?va-vb:vb-va;
+        return asc?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+      });
+      const toggleSort=(key:string)=>setConfirmSort(prev=>prev.key===key?{key,asc:!prev.asc}:{key,asc:true});
+      const arrow=(key:string)=>confirmSort.key===key?(confirmSort.asc?"▲":"▼"):"⇅";
+      const arrowCls=(key:string)=>confirmSort.key===key?"arr ac":"arr";
+      return(<>
+        <div className="sub-tabs">
+          {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
+        </div>
+        <div className="cf-search">
+          <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)}/>
+          <span className="cnt">{sorted.length}건</span>
+        </div>
+        <div className="ss-w"><table className="ss"><thead><tr>
+          {cols.map(c=><th key={c.key} onClick={()=>toggleSort(c.key)}>{c.label}<span className={arrowCls(c.key)}>{arrow(c.key)}</span></th>)}
+          <th onClick={()=>toggleSort("confirmed")}>최종확인<span className={arrowCls("confirmed")}>{arrow("confirmed")}</span></th>
+        </tr></thead><tbody>
+          {sorted.length===0?<tr><td colSpan={cols.length+1} className="empty">확정 예약이 없습니다.</td></tr>:
+          sorted.map(b=>{
+            const dday=getDday(b.checkin_date);
+            const bdday=getBalanceDday(b.balance_date);
+            return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/invoice?id="+b.id)} style={{cursor:"pointer"}}>
+              <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
+              <td>{b.assignee||"-"}</td>
+              <td>
+                <div style={{fontWeight:600}}>{b.booker_name}</div>
+                <div style={{color:"#6b7c93",fontSize:10}}>{stuNames(b.students)}</div>
+              </td>
+              <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
+              <td>{b.checkout_date||"-"}</td>
+              <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
+              <td>{(b.accom_type||"")+(b.house_no?` ${b.house_no}`:"")+(b.accom_room?` ${b.accom_room}`:"")||"-"}</td>
+              <td>{acaStart(b)}</td>
+              <td>{acaEnd(b)}</td>
+              <td>{b.flight_in||"-"}</td>
+              <td>{b.flight_out||"-"}</td>
+              <td>{b.pickup_place||"-"}</td>
+              <td>{b.drop_off||"-"}</td>
+              <td>{b.agency||"-"}</td>
+              <td>{b.balance_date||"-"}</td>
+              <td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
+              <td className="wrap">{b.special_request||"-"}</td>
+              <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
+                <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
+                  const v=e.target.checked;
+                  await supabase.from("bookings").update({confirmed:v}).eq("id",b.id);
+                  setBookings(prev=>prev.map(x=>x.id===b.id?{...x,confirmed:v}:x));
+                }}/>
+              </td>
+            </tr>);
+          })}
+        </tbody></table></div>
+      </>);
+    })()}
 
     {/* ── 탭5: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
