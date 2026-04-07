@@ -1029,8 +1029,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         </div>
       </div>
     </div>
-    <button class="nav-item" onclick="location.href='/admin/hub'" style="color:#1a6fc4;font-weight:700;margin-bottom:4px">🔒 어드민 홈</button>
-  <div class="sb-section">메뉴</div>
+    <div class="sb-section">메뉴</div>
     <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈</button>
     <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무</button>
     <button class="nav-item" data-p="calendar" onclick="showPage('calendar')"><span class="ni-icon">📅</span> 달력</button>
@@ -1043,7 +1042,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="sb-divider"></div>
     <button class="nav-item" onclick="openSettings()"><span class="ni-icon">⚙️</span> 설정</button>
     <div class="sb-footer">
-      <button id="btnAdminHub" onclick="location.href='/admin/hub'" style="display:none;width:100%;padding:8px 14px;background:none;border:1px solid var(--primary,#1a6fc4);color:var(--primary,#1a6fc4);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px">🔒 어드민</button>
       <div class="sb-user" onclick="logout()">
         <div class="sb-user-av" id="sbAv"></div>
         <div><div class="sb-user-name" id="sbName"></div><div class="sb-user-role">로그아웃 →</div></div>
@@ -1058,6 +1056,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         <div class="page-sub" id="topS"></div>
       </div>
       <div class="topbar-right">
+        <button id="btnAdminHome" onclick="location.href='/admin/hub'" style="display:none;padding:6px 14px;background:none;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;font-family:inherit;margin-right:6px">← 관리자 홈</button>
         <button class="btn btn-secondary btn-sm" id="btnNotice" onclick="openM('noticeModal')" style="display:none">📌 공지 추가</button>
         <button class="btn btn-secondary btn-sm" id="btnProj" onclick="openProjModal()" style="display:none">🚀 새 프로젝트</button>
         <button class="btn-icon" id="btnSettings" onclick="openSettings()" title="설정">⚙️</button>
@@ -1581,7 +1580,7 @@ function doLogin(u){
   document.getElementById('sbName').textContent=u.name;
   document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
-  if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';document.getElementById('btnAdminHub').style.display='block';}
+  if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';document.getElementById('btnAdminHome').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
@@ -1591,7 +1590,7 @@ function logout(){
   localStorage.removeItem('tm_session');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('app').classList.add('hidden');
-  ['btnNotice','btnProj','btnAdminHub'].forEach(function(id){document.getElementById(id).style.display='none';});
+  ['btnNotice','btnProj','btnAdminHome'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
   buildLogin();
 }
 
