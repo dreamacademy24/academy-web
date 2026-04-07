@@ -7,8 +7,11 @@ import EstimateCalc from "./EstimateCalc";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
-  checkin_date:string; accom_type:string; created_at:string; assignee?:string;
+  checkin_date:string; checkout_date?:string; accom_type:string; created_at:string; assignee?:string;
   base_price?:number; final_price?:number; balance_date?:string; updated_at?:string;
+  flight_in?:string; flight_out?:string; house_no?:string; pickup?:string; drop_off?:string;
+  pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
+  billing_items?:any; locals?:any;
 }
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -22,8 +25,15 @@ const SC:Record<string,{bg:string;color:string}>={
 function stuNames(s:any):string{
   try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return "";return a.map((x:any)=>x.korName).filter(Boolean).join(", ");}catch{return "";}
 }
+function stuWeeks(s:any):string{
+  try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return "";return a.map((x:any)=>x.weeks?x.weeks+"주":"").filter(Boolean).join(", ");}catch{return "";}
+}
+function stuCount(s:any):number{
+  try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return 0;return a.length;}catch{return 0;}
+}
 function fmt(n?:number){return n?n.toLocaleString("ko-KR")+"원":"-";}
 function fDate(d?:string){return d?new Date(d).toLocaleDateString("ko-KR"):"";}
+function shortNo(no:string){return no?no.replace("DA-","").slice(-7):"-";}
 
 export default function AdminBookingsPage(){
   const router=useRouter();
@@ -72,18 +82,16 @@ export default function AdminBookingsPage(){
   const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status));
   const confirmFiltered=confirmFilter==="전체"?confirmList:confirmList.filter(b=>b.status===confirmFilter);
 
-  // 체크인 기준으로 D-day 계산
   function getDday(dateStr?:string){
     if(!dateStr)return null;
     const today=new Date();today.setHours(0,0,0,0);
     const target=new Date(dateStr);target.setHours(0,0,0,0);
     const diff=Math.round((target.getTime()-today.getTime())/(1000*60*60*24));
     if(diff===0)return{label:"D-Day",color:"#dc2626"};
-    if(diff>0)return{label:"D-"+diff,color:diff<=7?"#ea580c":diff<=30?"#d97706":"#16a34a"};
+    if(diff>0)return{label:"D-"+diff,color:diff<=7?"#dc2626":diff<=30?"#ea580c":"#16a34a"};
     return{label:"D+"+Math.abs(diff),color:"#94a3b8"};
   }
 
-  // 잔금 D-day
   function getBalanceDday(dateStr?:string){
     if(!dateStr)return null;
     const today=new Date();today.setHours(0,0,0,0);
@@ -91,13 +99,13 @@ export default function AdminBookingsPage(){
     const diff=Math.round((target.getTime()-today.getTime())/(1000*60*60*24));
     if(diff<0)return{label:"잔금초과",color:"#dc2626"};
     if(diff===0)return{label:"잔금오늘",color:"#dc2626"};
-    if(diff<=7)return{label:"잔금D-"+diff,color:"#ea580c"};
+    if(diff<=14)return{label:"잔금D-"+diff,color:"#ea580c"};
     return null;
   }
 
   return(<><style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
-.aw{max-width:1200px;margin:0 auto;padding:24px;}
+.aw{max-width:1400px;margin:0 auto;padding:24px;}
 .ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;}.ah h1{font-size:22px;font-weight:800;}
 .ah-right{display:flex;gap:8px;align-items:center;}
 .ah-btn{padding:8px 16px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
@@ -113,6 +121,7 @@ export default function AdminBookingsPage(){
 .tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:12px 12px;text-align:left;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
 .tbl td{font-size:13px;padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;}
 .tbl tbody tr:hover td{background:#f8fafc;cursor:pointer;}
+.tbl td.wrap{white-space:normal;min-width:120px;max-width:200px;word-break:break-word;font-size:12px;}
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
 .asg{border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px;background:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;outline:none;}.asg:focus{border-color:#1a6fc4;}
@@ -120,22 +129,8 @@ export default function AdminBookingsPage(){
 .act-b{background:#1a6fc4;color:#fff;}.act-b:hover{background:#0d3d7a;}
 .act-g{background:#16a34a;color:#fff;}.act-g:hover{background:#15803d;}
 .act-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.act-r:hover{background:#fee2e2;}
-.confirm-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border-left:4px solid #16a34a;display:flex;align-items:center;gap:16px;cursor:pointer;transition:box-shadow 150ms;margin-bottom:10px;}
-.confirm-card:hover{box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-.confirm-card.overdue{border-left-color:#dc2626;}
-.confirm-card.soon{border-left-color:#ea580c;}
-.cc-no{font-size:13px;font-weight:700;color:#1a6fc4;min-width:130px;}
-.cc-name{font-size:14px;font-weight:700;min-width:80px;}
-.cc-stu{font-size:12px;color:#6b7c93;min-width:120px;}
-.cc-accom{font-size:12px;color:#374151;min-width:100px;}
-.cc-price{font-size:14px;font-weight:800;color:#1a1a2e;min-width:110px;}
-.cc-dday{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#16a34a;min-width:70px;text-align:center;}
-.cc-actions{display:flex;gap:6px;margin-left:auto;}
-.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
-.stat-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
-.stat-num{font-size:24px;font-weight:800;color:#1a6fc4;}
-.stat-label{font-size:12px;color:#94a3b8;margin-top:4px;}
-@media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}.stat-row{grid-template-columns:1fr 1fr;}.confirm-card{flex-wrap:wrap;}.cc-actions{width:100%;}}
+.dday{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f0fdf4;}
+@media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
   `}</style>
 
   <div className="aw">
@@ -153,7 +148,7 @@ export default function AdminBookingsPage(){
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📋 부킹 리스트</button>
       <button className={`main-tab${mainTab==="invoice"?" ac":""}`} onClick={()=>setMainTab("invoice")}>📄 인보이스</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
-      <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약 <span style={{background:"#16a34a",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{confirmList.length}</span></button>
+      <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약{confirmList.length>0&&<span style={{background:"#16a34a",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{confirmList.length}</span>}</button>
     </div>
 
     {/* ── 탭1: 부킹 리스트 ── */}
@@ -197,8 +192,7 @@ export default function AdminBookingsPage(){
             <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name}</div>
             <div style={{fontSize:13,color:"#6b7c93",marginBottom:4}}>{stuNames(b.students)}</div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8"}}>
-              <span>체크인: {b.checkin_date||"미정"}</span>
-              <span>{b.assignee||"미지정"}</span>
+              <span>체크인: {b.checkin_date||"미정"}</span><span>{b.assignee||"미지정"}</span>
             </div>
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
@@ -221,9 +215,7 @@ export default function AdminBookingsPage(){
           return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
-            <td>{b.assignee||"-"}</td>
-            <td>{b.booker_name}</td>
-            <td>{stuNames(b.students)}</td>
+            <td>{b.assignee||"-"}</td><td>{b.booker_name}</td><td>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td style={{fontWeight:600}}>{fmt(b.base_price)}</td>
             <td>{b.balance_date||"-"}</td>
@@ -259,8 +251,7 @@ export default function AdminBookingsPage(){
         rcpList.map(b=>(
           <tr key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
-            <td>{b.booker_name}</td>
-            <td>{stuNames(b.students)}</td>
+            <td>{b.booker_name}</td><td>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td style={{fontWeight:700}}>{fmt(b.final_price)}</td>
           </tr>
@@ -283,68 +274,49 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭4: 확정 예약 ── */}
     {mainTab==="confirm"&&(<>
-      {/* 통계 */}
-      <div className="stat-row">
-        <div className="stat-card">
-          <div className="stat-num">{confirmList.length}</div>
-          <div className="stat-label">전체 확정</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-num" style={{color:"#ea580c"}}>{confirmList.filter(b=>{const d=getDday(b.checkin_date);return d&&parseInt(d.label.replace("D-",""))<=30&&d.label.startsWith("D-");}).length}</div>
-          <div className="stat-label">30일 이내 체크인</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-num" style={{color:"#dc2626"}}>{confirmList.filter(b=>getBalanceDday(b.balance_date)!==null).length}</div>
-          <div className="stat-label">잔금 임박</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-num" style={{color:"#16a34a"}}>{confirmList.reduce((s,b)=>s+(b.final_price||b.base_price||0),0).toLocaleString("ko-KR")}원</div>
-          <div className="stat-label">총 확정금액</div>
-        </div>
-      </div>
-      {/* 필터 */}
       <div className="sub-tabs">
         {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
       </div>
-      {/* 카드 목록 */}
-      <div>
-        {confirmFiltered.length===0?<div className="empty">확정 예약이 없습니다.</div>:
+      <div className="tbl-w"><table className="tbl"><thead><tr>
+        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자/학생</th><th>체크인</th><th>D-day</th>
+        <th>숙소/룸</th><th>투숙인원</th><th>아카데미</th><th>항공(IN)</th><th>픽업장소</th>
+        <th>유학원</th><th>특이사항</th><th>금액</th><th>잔금일</th><th>액션</th>
+      </tr></thead><tbody>
+        {confirmFiltered.length===0?<tr><td colSpan={16} className="empty">확정 예약이 없습니다.</td></tr>:
         confirmFiltered.map(b=>{
+          const sc=SC[b.status]||SC["영수증발행"];
           const dday=getDday(b.checkin_date);
           const bdday=getBalanceDday(b.balance_date);
-          const sc=SC[b.status]||SC["영수증발행"];
-          const isOverdue=dday&&dday.label.startsWith("D+");
-          const isSoon=dday&&dday.label.startsWith("D-")&&parseInt(dday.label.replace("D-",""))<=7;
-          return(<div key={b.id} className={`confirm-card${isOverdue?" overdue":isSoon?" soon":""}`} onClick={()=>router.push("/invoice?id="+b.id)}>
-            <div>
-              <div className="cc-no">{b.reservation_no}</div>
-              <span className="badge" style={{background:sc.bg,color:sc.color,marginTop:4,display:"inline-block"}}>{b.status}</span>
-            </div>
-            <div>
-              <div className="cc-name">{b.booker_name}</div>
-              <div className="cc-stu">{stuNames(b.students)}</div>
-            </div>
-            <div>
-              <div className="cc-accom">{b.accom_type||"미정"}</div>
-              <div style={{fontSize:12,color:"#94a3b8",marginTop:2}}>{b.assignee||"미지정"}</div>
-            </div>
-            <div>
-              <div style={{fontSize:12,color:"#6b7c93"}}>체크인</div>
-              <div style={{fontSize:13,fontWeight:700}}>{b.checkin_date||"-"}</div>
-              {dday&&<div style={{fontSize:11,fontWeight:700,color:dday.color,marginTop:2}}>{dday.label}</div>}
-            </div>
-            <div>
-              <div className="cc-price">{fmt(b.final_price||b.base_price)}</div>
-              {bdday&&<div style={{fontSize:11,fontWeight:700,color:bdday.color,marginTop:2}}>{bdday.label}</div>}
-              {b.balance_date&&<div style={{fontSize:11,color:"#94a3b8"}}>잔금 {b.balance_date}</div>}
-            </div>
-            <div className="cc-actions" onClick={e=>e.stopPropagation()}>
+          const stuCnt=stuCount(b.students);
+          const accomLabel=(b.accom_type||"")+(b.house_no?` (${b.house_no})`:"");
+          const guardianCount=1;
+          const peopleLabel=`보호자${guardianCount}+${stuCnt>0?stuCnt:"?"}`;
+          return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
+            <td style={{fontWeight:700,color:"#1a6fc4",fontSize:12}}>{shortNo(b.reservation_no)}</td>
+            <td><span className="badge" style={{background:sc.bg,color:sc.color,fontSize:10}}>{b.status}</span></td>
+            <td style={{fontSize:12}}>{b.assignee||"-"}</td>
+            <td style={{fontSize:12}}>
+              <div style={{fontWeight:600}}>{b.booker_name}</div>
+              <div style={{color:"#6b7c93",fontSize:11}}>{stuNames(b.students)}</div>
+            </td>
+            <td style={{fontSize:12,fontWeight:600}}>{b.checkin_date||"-"}</td>
+            <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:10,color:bdday.color,fontWeight:700,marginTop:2}}>{bdday.label}</div>}</td>
+            <td style={{fontSize:12}}>{accomLabel||"-"}</td>
+            <td style={{fontSize:12}}>{peopleLabel}</td>
+            <td style={{fontSize:12}}>{stuWeeks(b.students)||"-"}</td>
+            <td style={{fontSize:12}}>{b.flight_in||"-"}</td>
+            <td style={{fontSize:12}}>{b.pickup_place||"-"}</td>
+            <td style={{fontSize:12}}>{b.agency||"-"}</td>
+            <td className="wrap">{b.special_request||"-"}</td>
+            <td style={{fontSize:12,fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
+            <td style={{fontSize:12}}>{b.balance_date||"-"}</td>
+            <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
-            </div>
-          </div>);
+            </td>
+          </tr>);
         })}
-      </div>
+      </tbody></table></div>
     </>)}
 
     {/* ── 탭5: 견적계산기 ── */}
