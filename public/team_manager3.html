@@ -2916,6 +2916,7 @@ function pickSt(btn,memberId){
 }
 
 var _rvReport=null;
+var _rvReports=[];
 function openReportView(r){
   var statusLabel={done:'완료',progress:'진행중',issue:'이슈',plan:'계획'};
   var statusBg={done:'#dcfce7',progress:'#dbeafe',issue:'#fee2e2',plan:'#f3f4f6'};
@@ -2951,7 +2952,7 @@ function openAllReports(projId,memberId){
     var st=r.status||'progress';
     var date=new Date(r.ts);
     var ds=(date.getMonth()+1)+'/'+date.getDate();
-    return '<div onclick="openReportView('+JSON.stringify(r)+')" style="background:#f8fafc;border-radius:10px;padding:14px;cursor:pointer;border:1px solid #e2e8f0" onmouseover="this.style.background=\x27#f0f4ff\x27" onmouseout="this.style.background=\x27#f8fafc\x27">'
+    return '<div onclick="openReportView(_rvReports['+(_rvReports.push(r)-1)+'])" style="background:#f8fafc;border-radius:10px;padding:14px;cursor:pointer;border:1px solid #e2e8f0" onmouseover="this.style.background=\x27#f0f4ff\x27" onmouseout="this.style.background=\x27#f8fafc\x27">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
       +'<span style="font-size:11px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:2px 8px;border-radius:20px;font-weight:700">'+statusEmoji[st]+' '+statusLabel[st]+'</span>'
       +'<span style="font-size:11px;color:#94a3b8">'+ds+'</span></div>'
@@ -3058,7 +3059,7 @@ function buildReportDashboard(projId) {
         var st=r.status||'progress';
         var date=new Date(r.ts);
         var ds=(date.getMonth()+1)+'/'+(date.getDate());
-        html+='<div onclick="openReportView('+JSON.stringify(r)+')" style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;position:relative;cursor:pointer" onmouseover="this.style.background=\x27#f0f4ff\x27" onmouseout="this.style.background=\x27var(--surface,#f8fafc)\x27">';
+        html+='<div onclick="openReportView(_rvReports['+(_rvReports.push(r)-1)+'])" style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;position:relative;cursor:pointer" onmouseover="this.style.background=\x27#f0f4ff\x27" onmouseout="this.style.background=\x27var(--surface,#f8fafc)\x27">';
         html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
         html+='<span style="font-size:10px;background:'+statusBg[st]+';color:'+statusColor[st]+';padding:2px 7px;border-radius:20px;font-weight:700">'+(statusEmoji[st]||'\uD83D\uDD04')+' '+(statusLabel[st]||'\uC9C4\uD589\uC911')+'</span>';
         html+='<span style="font-size:11px;color:var(--text3,#94a3b8)">'+ds+'</span>';
