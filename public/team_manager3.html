@@ -1863,7 +1863,10 @@ function renderBoardTask(f){
     const titleEl=document.createElement('div');titleEl.style.cssText='font-size:13px;font-weight:600;'+(t.done?'text-decoration:line-through;color:var(--text3);':'');
     if(t.idx)titleEl.innerHTML='<span style="color:var(--text3);font-size:11px;margin-right:3px">('+t.idx+')</span>'+t.title;
     else titleEl.textContent=t.title;
-    nameDiv.appendChild(titleEl);if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
+    nameDiv.appendChild(titleEl);
+    var tProj=t.projId?projects.find(function(p){return p.id===t.projId;}):null;
+    if(tProj){const pBadge=document.createElement('span');pBadge.style.cssText='display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-top:2px;font-weight:600;background:'+tProj.color+'22;color:'+tProj.color+';border:1px solid '+tProj.color+'44';pBadge.textContent='🚀 '+tProj.name;nameDiv.appendChild(pBadge);}
+    if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
     row.appendChild(nameDiv);
     const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;gap:6px;';assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';row.appendChild(assDiv);
     const dateDiv=document.createElement('div');dateDiv.style.cssText='font-size:11.5px;color:var(--text3);';dateDiv.textContent=t.createdAt||'—';row.appendChild(dateDiv);
@@ -2816,7 +2819,7 @@ function renderProjDetail(projId){
   const lay=document.createElement('div');lay.className='proj-detail-layout';
   const tw=document.createElement('div');tw.className='thread-wrap';buildThread(projId,tw);lay.appendChild(tw);
   const pts=document.createElement('div');pts.className='proj-tasks';
-  pts.innerHTML='<div class="pt-head"><span>📋 연결된 업무 <span class="badge badge-gray">'+total+'</span></span><button class="btn btn-primary btn-sm" onclick="openProjTaskModal(\''+projId+'\')">+ 추가</button></div><div class="pt-list" id="ptsl-'+projId+'"></div>';
+  pts.innerHTML='<div class="pt-head"><span>📋 연결된 업무 <span class="badge badge-gray">'+total+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="openLinkTaskModal(\''+projId+'\')">🔗 연결</button><button class="btn btn-primary btn-sm" onclick="openProjTaskModal(\''+projId+'\')">+ 추가</button></div></div><div class="pt-list" id="ptsl-'+projId+'"></div>';
   const ptsl=pts.querySelector('#ptsl-'+projId);
   if(!projTasks.length)ptsl.innerHTML='<div class="empty-state" style="padding:14px;font-size:12px">연결된 업무 없음</div>';
   sortT(projTasks).forEach(function(t){
