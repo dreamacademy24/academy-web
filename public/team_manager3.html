@@ -2385,6 +2385,8 @@ function renderEmpList(empId){
     // ACTIONS
     const actRow=document.createElement('div');actRow.style.cssText='display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;';
     if(!t.shared&&canEdit){const sb=document.createElement('button');sb.className='btn btn-green btn-sm';sb.textContent='↑ 전체 공유';sb.onclick=function(){shareTask(t.id);};actRow.appendChild(sb);}
+    if(t.shared&&canEdit){const ub=document.createElement('button');ub.className='btn btn-secondary btn-sm';ub.textContent='🔒 비공개로';ub.onclick=function(){unshareTask(t.id);};actRow.appendChild(ub);}
+    if(canEdit){const eb=document.createElement('button');eb.className='btn btn-secondary btn-sm';eb.textContent='✏️ 수정';eb.onclick=function(){openTaskEdit(t.id);};actRow.appendChild(eb);}
     const pomBtn=document.createElement('button');pomBtn.className='btn btn-secondary btn-sm';pomBtn.textContent='⏱ 포모도로';pomBtn.onclick=function(){startPomo(t.id);};actRow.appendChild(pomBtn);
     if(actRow.children.length)body.appendChild(actRow);
 
@@ -2770,7 +2772,8 @@ function saveTask(){
   rebuildIdx();sv('tm_t',tasks);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
 }
 function deleteTsk(){if(!editTaskId)return;tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();sv('tm_t',tasks);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
-function shareTask(id){const t=tasks.find(function(t){return t.id===id;});if(!t)return;t.shared=true;rebuildIdx();sv('tm_t',tasks);refreshAll();toast('✓ ('+t.idx+') 달력·전체 보드에 공유됐어요!');}
+function shareTask(id){if(!confirm('이 업무를 전체 공유로 전환할까요?'))return;const t=tasks.find(function(t){return t.id===id;});if(!t)return;t.shared=true;rebuildIdx();sv('tm_t',tasks);refreshAll();toast('✓ ('+t.idx+') 달력·전체 보드에 공유됐어요!');}
+function unshareTask(id){if(!confirm('이 업무를 비공개로 전환할까요?'))return;var t=tasks.find(function(x){return x.id===id;});if(!t)return;t.shared=false;sv('tm_t',tasks);refreshAll();toast('비공개로 전환되었습니다');}
 
 // ── CEO PANEL ──
 function renderCeoPanel(empId){
