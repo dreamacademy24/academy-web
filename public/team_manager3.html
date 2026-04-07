@@ -1371,6 +1371,40 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- REPORT MODAL -->
+<div class="overlay" id="reportModal">
+  <div class="modal-box" style="width:580px;max-height:85vh;overflow-y:auto">
+    <div class="modal-title">📋 보고 등록</div>
+    <input type="hidden" id="rmProjId">
+    <input type="hidden" id="rmMemberId">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="rmStatusBtns">
+      <button class="rk-st-btn" data-st="progress" onclick="rmPickSt(this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid #1a6fc4;background:#dbeafe;color:#1a6fc4;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🔄 진행중</button>
+      <button class="rk-st-btn" data-st="done" onclick="rmPickSt(this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✅ 완료</button>
+      <button class="rk-st-btn" data-st="plan" onclick="rmPickSt(this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📋 계획</button>
+      <button class="rk-st-btn" data-st="issue" onclick="rmPickSt(this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">⚠️ 이슈</button>
+    </div>
+    <input type="hidden" id="rmStatus" value="progress">
+    <input id="rmTitle" type="text" placeholder="보고 제목..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
+    <textarea id="rmBody" placeholder="내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:120px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
+    <div style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">✔️ 체크리스트</div>
+      <div id="rmChecklist" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px"></div>
+      <div style="display:flex;gap:6px">
+        <input id="rmCheckInput" type="text" placeholder="항목 추가..." style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key==='Enter'){addRmCheck();event.preventDefault();}">
+        <button onclick="addRmCheck()" style="padding:7px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">+ 추가</button>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">📎 파일/사진 첨부<input type="file" id="rmFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,'rmFilePreview')})"></label>
+      <div id="rmFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeM('reportModal')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="submitReportModal()">등록</button>
+    </div>
+  </div>
+</div>
+
 <!-- OPINION MODAL -->
 <div class="overlay" id="opinionModal">
   <div class="modal-box" style="width:520px">
@@ -2851,6 +2885,48 @@ function pickSt(btn,memberId){
   var h=document.getElementById('rStatus_'+memberId);
   if(h)h.value=st;
 }
+var _rmChecklist=[];
+function openReportModal(projId,memberId){
+  document.getElementById('rmProjId').value=projId;
+  document.getElementById('rmMemberId').value=memberId;
+  document.getElementById('rmTitle').value='';
+  document.getElementById('rmBody').value='';
+  document.getElementById('rmStatus').value='progress';
+  document.getElementById('rmFiles').value='';
+  document.getElementById('rmFilePreview').innerHTML='';
+  _rmChecklist=[];renderRmChecklist();
+  var colors={progress:['#1a6fc4','#dbeafe'],done:['#16a34a','#dcfce7'],plan:['#6b7280','#f3f4f6'],issue:['#dc2626','#fee2e2']};
+  document.querySelectorAll('#rmStatusBtns .rk-st-btn').forEach(function(b){var c=colors[b.dataset.st]||colors.progress;var active=b.dataset.st==='progress';b.style.borderColor=active?c[0]:'#e2e8f0';b.style.background=active?c[1]:'transparent';b.style.color=active?c[0]:'#94a3b8';});
+  openM('reportModal');setTimeout(function(){document.getElementById('rmTitle').focus();},80);
+}
+function rmPickSt(btn){
+  var colors={progress:['#1a6fc4','#dbeafe'],done:['#16a34a','#dcfce7'],plan:['#6b7280','#f3f4f6'],issue:['#dc2626','#fee2e2']};
+  document.querySelectorAll('#rmStatusBtns .rk-st-btn').forEach(function(b){b.style.borderColor='#e2e8f0';b.style.background='transparent';b.style.color='#94a3b8';});
+  var c=colors[btn.dataset.st]||colors.progress;btn.style.borderColor=c[0];btn.style.background=c[1];btn.style.color=c[0];
+  document.getElementById('rmStatus').value=btn.dataset.st;
+}
+function addRmCheck(){
+  var inp=document.getElementById('rmCheckInput');if(!inp||!inp.value.trim())return;
+  _rmChecklist.push({id:Date.now(),text:inp.value.trim(),done:false});inp.value='';renderRmChecklist();
+}
+function renderRmChecklist(){
+  var el=document.getElementById('rmChecklist');if(!el)return;
+  if(!_rmChecklist.length){el.innerHTML='';return;}
+  el.innerHTML=_rmChecklist.map(function(c,i){return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8fafc;border-radius:6px"><input type="checkbox"'+(c.done?' checked':'')+' onchange="_rmChecklist['+i+'].done=this.checked;renderRmChecklist()" style="cursor:pointer"><span style="flex:1;font-size:13px;'+(c.done?'text-decoration:line-through;color:#94a3b8;':'')+'">'+(typeof esc==="function"?esc(c.text):c.text)+'</span><button onclick="_rmChecklist.splice('+i+',1);renderRmChecklist()" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:13px">x</button></div>';}).join('');
+}
+function submitReportModal(){
+  var projId=document.getElementById('rmProjId').value;
+  var memberId=document.getElementById('rmMemberId').value;
+  var title=document.getElementById('rmTitle').value.trim();
+  var body=document.getElementById('rmBody').value.trim();
+  var status=document.getElementById('rmStatus').value||'progress';
+  if(!title&&!body){toast('제목 또는 내용을 입력해주세요');return;}
+  readFilesAsBase64(document.getElementById('rmFiles')||{files:[]}).then(function(files){
+    var reps=ld('tm_reports',{});if(!reps[projId])reps[projId]=[];
+    reps[projId].push({id:Date.now(),author:memberId,title:title||'보고',status:status,body:body,checklist:JSON.parse(JSON.stringify(_rmChecklist)),files:files,ts:Date.now()});
+    sv('tm_reports',reps);closeM('reportModal');renderProjDetail(projId);toast('보고가 등록되었습니다');
+  });
+}
 function submitReport(projId,memberId){
   var titleEl=document.getElementById('rTitle_'+memberId);
   var statusEl=document.getElementById('rStatus_'+memberId);
@@ -2934,7 +3010,7 @@ function buildReportDashboard(projId) {
       html+='<input id="rTitle_'+memberId+'" type="text" placeholder="\uBCF4\uACE0 \uC81C\uBAA9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box">';
       html+='<textarea id="rBody_'+memberId+'" placeholder="\uB0B4\uC6A9..." style="width:100%;padding:7px 10px;border:1px solid var(--border,#e2e8f0);border-radius:7px;font-size:12px;font-family:inherit;resize:none;min-height:56px;outline:none;box-sizing:border-box;line-height:1.5"></textarea>';
       html+='<input type="hidden" id="rStatus_'+memberId+'" value="progress">';
-      html+='<button onclick="submitReport(\''+projId+'\',\''+memberId+'\')" style="padding:7px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">\uBCF4\uACE0 \uB4F1\uB85D</button>';
+      html+='<button onclick="openReportModal(\''+projId+'\',\''+memberId+'\')" style="padding:7px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📝 보고 등록</button>';
       html+='</div>';
     }
 
