@@ -1,51 +1,74 @@
-# Dream Academy Philippines - 프로젝트 현황
+# 드림아카데미 프로젝트 현황
 
 ## 기본 정보
-- 스택: Next.js (App Router), Supabase, Vercel
+- 프레임워크: Next.js (App Router)
+- 호스팅: Vercel
 - 도메인: dreamacademyph.com
 - GitHub: dreamacademy24/academy-web
-- 로컬: C:/Users/user/academy-web
 - DB: Supabase (yiglafscjvjgkxpycevk.supabase.co)
+- 로컬 경로: C:/Users/user/academy-web
 
-## 어드민 계정
-| 아이디 | 비번 | 역할 | staffId |
-|--------|------|------|---------|
-| admin-ceo | ceo1234 | admin | ceo |
-| admin-jenna | jenna1234 | staff | jenna |
-| admin-jamie | jamie1234 | staff | jamie |
-| admin-yuna | yuna1234 | staff | yuna |
-| admin-hanny | hanny1234 | staff | hanny |
-| admin-sage | sage1234 | staff | sage |
-| admin-eric | eric1234 | staff | eric |
-
-## 직원 페이지
-- public/team_manager3.html (iframe)
-- app/staff/page.tsx → iframe src: /team_manager3.html?user=xxx
-- ?user=xxx 파라미터로 자동 doLogin()
-
-## Supabase 이전 현황 (team_manager3.html)
-✅ 완료:
-- sbFetch/sbGet/sbPost/sbPatch/sbDel 헬퍼 함수
-- 채팅: sendChatMsg, renderMessages, markChatRead, getUnread, renderChatHeader
-- 결재: submitApproval, processApproval, resubmitApproval, renderApprovalPage
-- 의견요청: renderOpinionList, openOpinionDetail, submitOpinion, submitReply, deleteReply, deleteOpinion
-
-⚠️ 미완료/버그:
-- 결재/의견요청 페이지 로딩만 되고 내용 안 뜸 (sbGet 배열 보장 추가됨, 재확인 필요)
-- 데일리 탭에 결재 상신 폼이 같이 뜨는 버그 (showEmpPage/setEF 함수 문제)
-- 보고서(staff_reports) Supabase 이전 미완료
+## 완성된 페이지
+- `/` : 메인
+- `/booking` : 예약 접수 폼
+- `/admin/hub` : 관리자 허브
+- `/admin/bookings` : 예약관리 (견적/부킹리스트/인보이스/영수증/확정예약 탭)
+- `/invoice` : 인보이스 작성
+- `/receipt` : 영수증 발행
+- `/dreamhouse-rooms` : 드림하우스 룸 캘린더
+- `/staff` : 직원 업무 페이지 (public/team_manager3.html)
+- `/guide` : 직원 가이드
 
 ## Supabase 테이블
-- staff_chat, staff_approvals, staff_opinions, staff_op_replies, staff_reports
-- 모두 RLS 비활성화
+- `bookings` : 예약 (flight_in, flight_out, house_no, pickup_place, special_request, agency, files jsonb 포함)
+- `staff_chat` : 채팅 (channel, from_id, text, ts)
+- `staff_approvals` : 결재 (from_id, to_id, title, body, files jsonb, status, reject_reason)
+- `staff_opinions` : 의견요청 (from_id, target, title, body, files jsonb, ts)
+- `staff_op_replies` : 의견 답변
+- `staff_reports` : 보고 (localStorage tm_reports 사용 중 - Supabase 미이전)
+- `notices`, `posts`, `comments`, `profiles`, `applications`, `shuttle_applications`, `fieldtrip_applications`
 
-## 컴퓨터 네트워크 문제
-- CEO 컴퓨터 크롬/엣지에서 dreamacademyph.com ERR_CONNECTION_REFUSED
-- 해결: hosts 파일에 76.76.21.21 dreamacademyph.com 추가 후 접속 가능
-- hosts 파일 위치: C:\Windows\System32\drivers\etc\hosts
+## team_manager3.html 주요 기능
+- 로그인: 직원별 비밀번호, localStorage tm_session
+- Supabase anon key: 2026년 갱신 완료
+- 채팅: staff_chat 테이블, 채널(전체/공지/잡담/업무)
+- 결재: staff_approvals, submitApproval/processApproval/resubmitApproval 함수
+- 의견요청: staff_opinions, opinionModal HTML 포함
+- 파일첨부: readFilesAsBase64/renderFilePreview/renderAttachments 함수
+- 보고: localStorage tm_reports, 보고 모달(reportModal), 상세보기(reportViewModal), 전체보기(reportAllModal)
+- 프로젝트 연결업무: linkTaskModal, openLinkTaskModal/linkTaskToProj 함수
+- 사이드바: 🔒 어드민 홈 버튼 제거, 상단 ← 관리자 홈 버튼으로 통합
+- 관리자 홈 버튼: 우측 상단 헤더에 ← 관리자 홈
 
-## 주요 규칙
-- team_manager3.html 수정 후 반드시 new Function() 파싱 검증
-- git push 전 파싱 OK 확인
-- node 스크립트 일괄치환 금지 → SyntaxError 위험
-- 새 대화: "드림아카데미 프로젝트 이어서 진행해줘"
+## 확정 예약 탭 (admin/bookings)
+- 영수증발행/결제완료/완료 상태 예약 표시
+- 컬럼: 예약번호(단축), 상태, 담당자, 예약자/학생, 체크인, D-day, 숙소/룸, 투숙인원, 아카데미주수, 항공IN, 픽업장소, 유학원, 특이사항, 금액, 잔금일, 액션
+- D-day 색상: 7일이내 빨강, 30일이내 주황, 이후 초록
+- 잔금 D-day: 14일이내 표시
+
+## PayPal
+- Sandbox 활성화 완료
+- Live 모드: 사무실 방문 서류 제출 후 Live Client ID → Vercel 환경변수 등록 필요
+
+## 환경변수 (Vercel)
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- GOOGLE_PRIVATE_KEY (실제 줄바꿈으로 저장)
+- NEXT_PUBLIC_PAYPAL_CLIENT_ID (Sandbox)
+
+## 주의사항
+- SHEET1, SHEET2 절대 건드리지 않음 (웹 데이터는 SHEET3만)
+- localStorage는 typeof window !== 'undefined' 체크 필수
+- git push하면 Vercel 자동 배포
+- Supabase free tier 자동 pause 주의
+
+## 다음 작업 예정
+- staff_reports Supabase 이전 (현재 localStorage)
+- PayPal Live 모드 활성화
+- 드림하우스 룸 캘린더 개선
+- 인보이스 결제섹션 레이아웃 (견적계산기 박스 이동)
+- 스태프 협업 기능 Supabase 연동 (staff_tasks, staff_projects, staff_comments, staff_files)
+
+## 새 대화 시작
+"드림아카데미 프로젝트 이어서 진행해줘"
+→ GitHub CLAUDE.md 읽고 현재 상태 파악 후 바로 작업
