@@ -77,7 +77,7 @@ function InvoicePageInner(){
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
-  const [reservationNo,setReservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900+100));
+  const [reservationNo,setReservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900000+100000));
   const [reservationDate,setReservationDate]=useState(todayStr);
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
@@ -241,7 +241,7 @@ function InvoicePageInner(){
   async function saveToDb(){
     if(!bookingId){alert("예약 ID가 없습니다. 관리자 페이지에서 접근해주세요.");return;}
     const totalDiscount=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
-    await supabase.from("bookings").update({
+    const {error}=await supabase.from("bookings").update({
       status:"인보이스발행",
       booker_name:booker.name,
       booker_english:booker.englishName,
@@ -267,6 +267,7 @@ function InvoicePageInner(){
       ssp:adminOnly.ssp,
       updated_at:new Date().toISOString(),
     }).eq("id",bookingId);
+    if(error){console.error(error);alert("저장 실패: "+error.message);return;}
     alert("저장 완료!");
   }
 

@@ -92,7 +92,13 @@ function PaymentContent() {
                   });
                 }}
                 onApprove={async (_data, actions) => {
-                  await actions.order!.capture();
+                  const details = await actions.order!.capture();
+                  const capturedAmount = details.purchase_units?.[0]?.payments?.captures?.[0]?.amount;
+                  if (!capturedAmount || capturedAmount.value !== usdAmount || capturedAmount.currency_code !== "USD") {
+                    setError("결제 금액이 일치하지 않습니다. 관리자에게 문의하세요.");
+                    console.error("Amount mismatch", { expected: usdAmount, captured: capturedAmount });
+                    return;
+                  }
                   await supabase.from("bookings").update({ status: "결제완료" }).eq("id", booking.id);
                   setPaid(true);
                 }}

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
 
 const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
@@ -11,13 +12,13 @@ export default function GuidePage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      if (localStorage.getItem("adminAuthed") === "true") setAuthed(true);
+      if (isAdminAuthed()) setAuthed(true);
     }
   }, []);
 
   function checkPw() {
     if (pw === ADMIN_PW) {
-      if (typeof window !== "undefined") localStorage.setItem("adminAuthed", "true");
+      setAdminAuthed('admin-guide');
       setAuthed(true);
     } else alert("비밀번호가 올바르지 않습니다.");
   }

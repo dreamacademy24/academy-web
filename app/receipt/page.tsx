@@ -46,7 +46,7 @@ function ReceiptPageInner(){
           const discs:Disc[]=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
           const locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
           const deposit=1000000;
-          const balance=(row.final_price||0)-deposit;
+          const balance=Math.max(0,(row.final_price||0)-deposit);
           setData({
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
@@ -64,7 +64,10 @@ function ReceiptPageInner(){
           });
           // 초기 지불내역에 예약금 자동 세팅
           setPayments([{id:1,type:"예약금",date:today,amount:"1,000,000"}]);
-          await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+          // Only transition to 영수증발행 if current status warrants it
+          if(row.status && row.status !== "영수증발행" && row.status !== "결제완료" && row.status !== "완료"){
+            await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+          }
           return;
         }
       }

@@ -67,7 +67,8 @@ export default function AdminBookingsPage(){
 
   const load=useCallback(async()=>{
     setLoading(true);
-    const {data}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
+    const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
+    if(error){console.error(error);alert("데이터 로드 실패");}
     if(data)setBookings(data as Booking[]);
     setLoading(false);
   },[]);

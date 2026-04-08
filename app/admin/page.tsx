@@ -1,17 +1,27 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return 'h_' + Math.abs(hash).toString(36);
+}
 
 const ADMIN_ACCOUNTS = [
-  { id: 'admin-may',   pw: 'may1234',   role: 'admin', name: 'May', staffId: 'may' },
-  { id: 'admin-ceo',   pw: 'ceo1234',   role: 'admin', name: 'CEO', staffId: 'ceo' },
-  { id: 'admin-jenna', pw: 'jenna1234', role: 'staff', name: 'Jenna', staffId: 'jenna' },
-  { id: 'admin-jamie', pw: 'jamie1234', role: 'staff', name: 'Jamie', staffId: 'jamie' },
-  { id: 'admin-yuna',  pw: 'yuna1234',  role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
-  { id: 'admin-hanny', pw: 'hanny1234', role: 'staff', name: 'Hanny', staffId: 'hanny' },
-  { id: 'admin-sage',  pw: 'sage1234',  role: 'staff', name: 'Sage',  staffId: 'sage'  },
-  { id: 'admin-eric',  pw: 'eric1234',  role: 'staff', name: 'Eric',  staffId: 'eric'  },
+  { id: 'admin-may',   pw: 'h_dyghlz', role: 'admin', name: 'May', staffId: 'may' },
+  { id: 'admin-ceo',   pw: 'h_azeaz3', role: 'admin', name: 'CEO', staffId: 'ceo' },
+  { id: 'admin-jenna', pw: 'h_9x7hvc', role: 'staff', name: 'Jenna', staffId: 'jenna' },
+  { id: 'admin-jamie', pw: 'h_4whzg',  role: 'staff', name: 'Jamie', staffId: 'jamie' },
+  { id: 'admin-yuna',  pw: 'h_25tbwx', role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
+  { id: 'admin-hanny', pw: 'h_5ytroi', role: 'staff', name: 'Hanny', staffId: 'hanny' },
+  { id: 'admin-sage',  pw: 'h_tmt0j2', role: 'staff', name: 'Sage',  staffId: 'sage'  },
+  { id: 'admin-eric',  pw: 'h_im0z0p', role: 'staff', name: 'Eric',  staffId: 'eric'  },
 ];
 
 export default function AdminPage() {
@@ -32,17 +42,13 @@ export default function AdminPage() {
   }, [router]);
 
   function handleLogin() {
-    const account = ADMIN_ACCOUNTS.find(a => a.id === id.trim() && a.pw === pw);
+    const account = ADMIN_ACCOUNTS.find(a => a.id === id.trim() && a.pw === simpleHash(pw));
     if (!account) {
       setErr("아이디 또는 비밀번호가 올바르지 않습니다.");
       return;
     }
     setErr("");
-    localStorage.setItem("adminAuthed", "true");
-    localStorage.setItem("adminRole", account.role);
-    localStorage.setItem("adminName", account.name);
-    localStorage.setItem("adminStaffId", account.staffId || "");
-    localStorage.setItem("adminExpiry", String(Date.now() + 24 * 60 * 60 * 1000));
+    setAdminAuthed(account.id, { role: account.role, name: account.name, staffId: account.staffId });
 
     window.location.href = "/admin/hub";
   }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminAuthed } from '@/lib/adminAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,8 +51,7 @@ export default function DreamhouseRooms() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const authed = localStorage.getItem('adminAuthed')
-      if (!authed) router.push('/admin')
+      if (!isAdminAuthed()) router.push('/admin')
     }
   }, [])
 

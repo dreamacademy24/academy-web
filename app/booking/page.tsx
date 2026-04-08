@@ -32,7 +32,7 @@ export default function BookingPage(){
     if(!booker.name){alert("예약자명을 입력해주세요.");return;}
     if(!students.some(s=>s.korName)){alert("학생 이름을 1명 이상 입력해주세요.");return;}
     setLoading(true);
-    const rno="DA-"+todayCompact+"-"+Math.floor(Math.random()*900+100);
+    const rno="DA-"+todayCompact+"-"+Math.floor(Math.random()*900000+100000);
     const {error}=await supabase.from("bookings").insert({
       reservation_no:rno,
       booker_name:booker.name,
