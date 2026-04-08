@@ -20,7 +20,12 @@
 - `/guide` : 직원 가이드
 
 ## Supabase 테이블
-- `bookings` : 예약 (flight_in, flight_out, house_no, pickup_place, special_request, agency, files jsonb 포함)
+- `bookings` : 예약 (flight_in, flight_out, house_no, pickup_place, special_request, agency, files jsonb, confirmed 포함)
+- `staff_tasks` : 업무 (id, title, assignee, assignees, due, created_at, note, done, files, checklist, progress, shared, proj_id, idx)
+- `staff_projects` : 프로젝트 (id, name, description, color, members, due, created_at, progress)
+- `staff_task_comments` : 업무 댓글 (id, task_id, from_id, text, ts)
+- `staff_threads` : 프로젝트 스레드 (id, proj_id, from_id, text, ts)
+- `staff_notices` : 공지사항 (id, text, done, date, require_read)
 - `staff_chat` : 채팅 (channel, from_id, text, ts)
 - `staff_approvals` : 결재 (from_id, to_id, title, body, files jsonb, status, reject_reason)
 - `staff_opinions` : 의견요청 (from_id, target, title, body, files jsonb, ts)
@@ -40,9 +45,12 @@
 - 사이드바: 🔒 어드민 홈 버튼 제거, 상단 ← 관리자 홈 버튼으로 통합
 - 관리자 홈 버튼: 우측 상단 헤더에 ← 관리자 홈
 
-## 확정 예약 탭 (admin/bookings)
+## 확정 예약 탭 (admin/bookings) - 스프레드시트 뷰
 - 영수증발행/결제완료/완료 상태 예약 표시
-- 컬럼: 예약번호(단축), 상태, 담당자, 예약자/학생, 체크인, D-day, 숙소/룸, 투숙인원, 아카데미주수, 항공IN, 픽업장소, 유학원, 특이사항, 금액, 잔금일, 액션
+- 컬럼: 예약번호(단축), 담당자, 예약자/학생, 체크인, 체크아웃, D-day, 숙소/룸, 아카데미시작, 아카데미종료, 항공IN, 항공OUT, 픽업장소, 드랍장소, 유학원, 잔금일, 금액, 특이사항, 최종확인(checkbox)
+- 컬럼 헤더 클릭으로 정렬 (오름/내림차순)
+- 검색바: 예약자, 학생, 유학원, 예약번호 등 검색
+- 최종확인 체크박스: Supabase bookings.confirmed 필드에 저장
 - D-day 색상: 7일이내 빨강, 30일이내 주황, 이후 초록
 - 잔금 D-day: 14일이내 표시
 
@@ -62,12 +70,35 @@
 - git push하면 Vercel 자동 배포
 - Supabase free tier 자동 pause 주의
 
-## 다음 작업 예정
-- staff_reports Supabase 이전 (현재 localStorage)
+## 보안 수정 (2026-04-08)
+- URL 파라미터 auth bypass 제거 (?user=ceo 불가)
+- XSS 방지 - innerHTML에 esc() 적용
+- adminAuth.ts 토큰 기반 인증으로 교체
+- 관리자 비밀번호 해시 처리 (simpleHash, 클라이언트 평문 노출 제거)
+- 예약번호 6자리로 변경 (충돌 방지)
+- 영수증 페이지 중복 상태변경 방지
+- PayPal 결제금액 서버검증 추가
+- console.log PII 제거
+- postMessage wildcard origin 제한
+- Supabase RLS 활성화 필요 (모든 테이블)
+
+## Supabase 이전 완료 (2026-04-08)
+- staff_tasks: 업무 (공유/동기화)
+- staff_projects: 프로젝트
+- staff_task_comments: 업무 댓글
+- staff_threads: 프로젝트 스레드
+- staff_notices: 공지사항
+- staff_chat: 채팅 (기존)
+- 30초 폴링으로 실시간 동기화 (showSyncBadge)
+- localStorage는 캐시 역할만 (Supabase가 source of truth)
+
+## 남은 작업
+- staff_reports Supabase 이전 (보고 현황, 현재 localStorage)
 - PayPal Live 모드 활성화
+- Supabase RLS 정책 설정 (모든 테이블)
+- Supabase Auth 도입 (장기 계획)
 - 드림하우스 룸 캘린더 개선
 - 인보이스 결제섹션 레이아웃 (견적계산기 박스 이동)
-- 스태프 협업 기능 Supabase 연동 (staff_tasks, staff_projects, staff_comments, staff_files)
 
 ## 새 대화 시작
 "드림아카데미 프로젝트 이어서 진행해줘"
