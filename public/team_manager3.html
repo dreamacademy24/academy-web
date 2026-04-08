@@ -1547,6 +1547,128 @@ function loadProjectsFromSB(){
   }).catch(function(e){console.error('[SB] proj load err, using localStorage',e);});
 }
 
+// ── Supabase sync: taskComments → staff_task_comments ──
+function tcToRow(taskId,c){return{id:c.id,task_id:taskId,from_id:c.author||'',text:c.text||'',ts:c.date||''};}
+function rowToTc(r){return{id:r.id,author:r.from_id||'',text:r.text||'',date:r.ts||''};}
+function syncTcToSB(taskId,c){sbUpsert('staff_task_comments',tcToRow(taskId,c)).catch(function(e){console.error('tc sync err',e);});}
+function delTcFromSB(id){sbDel('staff_task_comments','id=eq.'+id).catch(function(e){console.error('tc del err',e);});}
+function loadTaskCommentsFromSB(){
+  return sbGet('staff_task_comments','order=ts.asc').then(function(rows){
+    if(rows&&rows.length>0){
+      taskComments={};
+      rows.forEach(function(r){var tc=rowToTc(r);if(!taskComments[r.task_id])taskComments[r.task_id]=[];taskComments[r.task_id].push(tc);});
+      sv('tm_tc',taskComments);
+      console.log('[SB] taskComments loaded:',rows.length);
+    } else if(Object.keys(taskComments).length>0){
+      console.log('[SB] no remote taskComments, uploading local');
+      Object.keys(taskComments).forEach(function(tid){(taskComments[tid]||[]).forEach(function(c){syncTcToSB(tid,c);});});
+    }
+  }).catch(function(e){console.error('[SB] taskComments load err',e);});
+}
+
+// ── Supabase sync: threads → staff_threads ──
+function thToRow(projId,m){return{id:m.id,proj_id:projId,from_id:m.author||'',text:m.text||'',ts:m.date||''};}
+function rowToTh(r){return{id:r.id,author:r.from_id||'',text:r.text||'',date:r.ts||''};}
+function syncThToSB(projId,m){sbUpsert('staff_threads',thToRow(projId,m)).catch(function(e){console.error('thread sync err',e);});}
+function delThFromSB(id){sbDel('staff_threads','id=eq.'+id).catch(function(e){console.error('thread del err',e);});}
+function loadThreadsFromSB(){
+  return sbGet('staff_threads','order=ts.asc').then(function(rows){
+    if(rows&&rows.length>0){
+      threads={};
+      rows.forEach(function(r){var th=rowToTh(r);if(!threads[r.proj_id])threads[r.proj_id]=[];threads[r.proj_id].push(th);});
+      sv('tm_th',threads);
+      console.log('[SB] threads loaded:',rows.length);
+    } else if(Object.keys(threads).length>0){
+      console.log('[SB] no remote threads, uploading local');
+      Object.keys(threads).forEach(function(pid){(threads[pid]||[]).forEach(function(m){syncThToSB(pid,m);});});
+    }
+  }).catch(function(e){console.error('[SB] threads load err',e);});
+}
+
+// ── Supabase sync: notices → staff_notices ──
+function ntToRow(n){return{id:n.id,text:n.text||'',done:!!n.done,date:n.date||'',require_read:!!n.requireRead};}
+function rowToNt(r){return{id:r.id,text:r.text||'',done:!!r.done,date:r.date||'',requireRead:!!r.require_read};}
+function syncNtToSB(n){sbUpsert('staff_notices',ntToRow(n)).catch(function(e){console.error('notice sync err',e);});}
+function delNtFromSB(id){sbDel('staff_notices','id=eq.'+id).catch(function(e){console.error('notice del err',e);});}
+function loadNoticesFromSB(){
+  return sbGet('staff_notices','order=date.desc').then(function(rows){
+    if(rows&&rows.length>0){
+      notices=rows.map(rowToNt);
+      sv('tm_n',notices);
+      console.log('[SB] notices loaded:',rows.length);
+    } else if(notices.length>0){
+      console.log('[SB] no remote notices, uploading local');
+      notices.forEach(function(n){syncNtToSB(n);});
+    }
+  }).catch(function(e){console.error('[SB] notices load err',e);});
+}
+
+// ── Polling-based realtime sync ──
+var _pollHash={tasks:'',projects:'',tc:'',th:'',notices:''};
+var _pollTimer=null;
+function jsonHash(obj){return JSON.stringify(obj).length+'-'+JSON.stringify(obj).slice(0,100);}
+function startPolling(){
+  if(_pollTimer)clearInterval(_pollTimer);
+  _pollTimer=setInterval(pollForUpdates,30000);
+  console.log('[SB] polling started (30s)');
+}
+function stopPolling(){if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}}
+function pollForUpdates(){
+  if(!CU)return;
+  Promise.all([
+    sbGet('staff_tasks','order=created_at.desc&limit=500'),
+    sbGet('staff_projects','order=created_at.desc&limit=100'),
+    sbGet('staff_task_comments','order=ts.asc&limit=1000'),
+    sbGet('staff_threads','order=ts.asc&limit=1000'),
+    sbGet('staff_notices','order=date.desc&limit=100')
+  ]).then(function(results){
+    var newTasks=results[0],newProjs=results[1],newTc=results[2],newTh=results[3],newNt=results[4];
+    var changed=false;
+    // tasks
+    var th1=newTasks.length+'-'+(newTasks[0]?newTasks[0].id:'');
+    if(th1!==_pollHash.tasks&&newTasks.length>0){
+      _pollHash.tasks=th1;tasks=newTasks.map(rowToTask);rebuildIdx();sv('tm_t',tasks);changed=true;
+    }
+    // projects
+    var ph1=newProjs.length+'-'+(newProjs[0]?newProjs[0].id:'');
+    if(ph1!==_pollHash.projects&&newProjs.length>0){
+      _pollHash.projects=ph1;projects=newProjs.map(rowToProj);sv('tm_p',projects);changed=true;
+    }
+    // taskComments
+    var tch=newTc.length+'';
+    if(tch!==_pollHash.tc&&newTc.length>0){
+      _pollHash.tc=tch;taskComments={};
+      newTc.forEach(function(r){var c=rowToTc(r);if(!taskComments[r.task_id])taskComments[r.task_id]=[];taskComments[r.task_id].push(c);});
+      sv('tm_tc',taskComments);changed=true;
+    }
+    // threads
+    var thh=newTh.length+'';
+    if(thh!==_pollHash.th&&newTh.length>0){
+      _pollHash.th=thh;threads={};
+      newTh.forEach(function(r){var t=rowToTh(r);if(!threads[r.proj_id])threads[r.proj_id]=[];threads[r.proj_id].push(t);});
+      sv('tm_th',threads);changed=true;
+    }
+    // notices
+    var nth=newNt.length+'';
+    if(nth!==_pollHash.notices&&newNt.length>0){
+      _pollHash.notices=nth;notices=newNt.map(rowToNt);sv('tm_n',notices);changed=true;
+    }
+    if(changed){
+      refreshAll();showSyncBadge();
+      if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);
+    }
+  }).catch(function(e){console.error('[SB] poll err',e);});
+}
+function showSyncBadge(){
+  var ex=document.getElementById('syncBadge');if(ex)ex.remove();
+  var b=document.createElement('div');b.id='syncBadge';
+  b.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;background:#1a6fc4;color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,0.2);animation:slideIn 0.3s ease;cursor:pointer;';
+  b.textContent='🔄 새 업데이트 반영됨';
+  b.onclick=function(){b.remove();};
+  document.body.appendChild(b);
+  setTimeout(function(){if(b.parentNode){b.style.transition='opacity 0.5s';b.style.opacity='0';setTimeout(function(){if(b.parentNode)b.remove();},500);}},3000);
+}
+
 const EMPS=[
   {id:'jenna',name:'Jenna', color:'#6366f1',initial:'J', role:'부원장'},
   {id:'jamie',name:'Jamie', color:'#0ea5e9',initial:'JA'},
@@ -1666,11 +1788,12 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
-  loadTasksFromSB().then(function(){loadProjectsFromSB();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();});
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
 }
 function logout(){
+  stopPolling();
   CU=null;
   localStorage.removeItem('tm_session');
   document.getElementById('loginScreen').style.display='flex';
@@ -2628,8 +2751,9 @@ function renderInlineCmt(container,taskId){
 function sendInlineCmt(taskId){
   const inp=document.getElementById('tci-'+taskId);if(!inp)return;const text=inp.value.trim();if(!text)return;
   if(!taskComments[taskId])taskComments[taskId]=[];
-  taskComments[taskId].push({id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')});
-  sv('tm_tc',taskComments);inp.value='';inp.style.height='auto';
+  var _nc={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
+  taskComments[taskId].push(_nc);
+  sv('tm_tc',taskComments);syncTcToSB(taskId,_nc);inp.value='';inp.style.height='auto';
   const sec=document.getElementById('tcmt-'+taskId);if(sec)renderInlineCmt(sec,taskId);
   renderEmpList(curEmpId);
   if(document.getElementById('taskCmtModal').classList.contains('open')&&curCmtTaskId===taskId)renderTaskCmtBody(taskId);
@@ -2680,19 +2804,20 @@ function renderTaskCmtBody(taskId){
 function sendTaskCmt(){
   const inp=document.getElementById('tcmInp');const text=inp.value.trim();if(!text||!curCmtTaskId)return;
   if(!taskComments[curCmtTaskId])taskComments[curCmtTaskId]=[];
-  taskComments[curCmtTaskId].push({id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')});
-  sv('tm_tc',taskComments);inp.value='';inp.style.height='auto';
+  var _nc2={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
+  taskComments[curCmtTaskId].push(_nc2);
+  sv('tm_tc',taskComments);syncTcToSB(curCmtTaskId,_nc2);inp.value='';inp.style.height='auto';
   renderTaskCmtBody(curCmtTaskId);refreshAll();
 }
 function delTaskCmt(taskId,cmtId){
-  if(!taskComments[taskId])return;taskComments[taskId]=taskComments[taskId].filter(function(c){return c.id!==cmtId;});
+  if(!taskComments[taskId])return;delTcFromSB(cmtId);taskComments[taskId]=taskComments[taskId].filter(function(c){return c.id!==cmtId;});
   sv('tm_tc',taskComments);renderTaskCmtBody(taskId);refreshAll();
 }
 
 // ── NOTICES ──
-function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;notices.unshift({id:uid(),text,done:false,date:nowStr(),requireRead:rr});sv('tm_n',notices);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();}
-function togNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('tm_n',notices);renderNotices();}}
-function delNotice(id){notices=notices.filter(n=>n.id!==id);sv('tm_n',notices);renderNotices();}
+function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;var _nn={id:uid(),text,done:false,date:nowStr(),requireRead:rr};notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();}
+function togNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('tm_n',notices);syncNtToSB(n);renderNotices();}}
+function delNotice(id){delNtFromSB(id);notices=notices.filter(n=>n.id!==id);sv('tm_n',notices);renderNotices();}
 
 // ── TASK MODAL ──
 let tmProjId=null,tmChecklist2=[];
@@ -3179,8 +3304,8 @@ function buildThread(projId,container){
   });
   setTimeout(function(){body.scrollTop=body.scrollHeight;},50);
 }
-function sendMsg(projId){const inp=document.getElementById('tti-'+projId);const text=inp.value.trim();if(!text)return;if(!threads[projId])threads[projId]=[];threads[projId].push({id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')});sv('tm_th',threads);inp.value='';inp.style.height='auto';renderProjDetail(projId);}
-function delMsg(projId,msgId){if(!threads[projId])return;threads[projId]=threads[projId].filter(function(m){return m.id!==msgId;});sv('tm_th',threads);renderProjDetail(projId);}
+function sendMsg(projId){const inp=document.getElementById('tti-'+projId);const text=inp.value.trim();if(!text)return;if(!threads[projId])threads[projId]=[];var _nm={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};threads[projId].push(_nm);sv('tm_th',threads);syncThToSB(projId,_nm);inp.value='';inp.style.height='auto';renderProjDetail(projId);}
+function delMsg(projId,msgId){if(!threads[projId])return;delThFromSB(msgId);threads[projId]=threads[projId].filter(function(m){return m.id!==msgId;});sv('tm_th',threads);renderProjDetail(projId);}
 function openProjModal(){editProjId=null;selColor='#4361ee';document.getElementById('pmTitle').textContent='🚀 새 프로젝트';['pmN','pmD','pmDue'].forEach(id=>document.getElementById(id).value='');document.getElementById('pmC').value='#4361ee';document.getElementById('pmDel').style.display='none';document.querySelectorAll('.color-opt').forEach((el,i)=>el.classList.toggle('sel',i===0));buildMPicker([]);openM('projModal');}
 function openEditProj(projId){const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;editProjId=projId;selColor=p.color;document.getElementById('pmTitle').textContent='✏️ 프로젝트 편집';document.getElementById('pmN').value=p.name;document.getElementById('pmD').value=p.desc||'';document.getElementById('pmDue').value=p.due||'';document.getElementById('pmC').value=p.color;document.getElementById('pmDel').style.display='inline-flex';document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.dataset.c===p.color));buildMPicker(p.members);openM('projModal');}
 function toggleAllMembers(){
