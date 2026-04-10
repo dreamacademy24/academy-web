@@ -364,8 +364,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   display:grid;gap:12px;padding:9px 16px;
   font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);
-  grid-template-columns:28px 1fr 140px 110px 120px 80px 52px;
+  grid-template-columns:28px 2fr 1fr 1fr 1fr 80px;
 }
+.task-list-header>div:nth-child(n+3){text-align:center;}
+.task-list-row>div:nth-child(n+3){text-align:center;justify-content:center;}
 .task-list-row{
   display:grid;gap:12px;align-items:center;padding:11px 16px;
   background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);
@@ -2129,10 +2131,10 @@ function renderBoardTask(f){
   grid.className='task-list-wrap';
   if(!f.length){grid.innerHTML='<div class="empty-state"><div class="ei">📋</div>업무가 없습니다</div>';return;}
   const isDone=boardFilter==='done';
-  const cols=isDone?'20px 28px 1fr 140px 110px 120px 80px 52px':'28px 1fr 140px 110px 120px 80px 52px';
+  const cols=isDone?'20px 28px 2fr 1fr 1fr 1fr 80px':'28px 2fr 1fr 1fr 1fr 80px';
   const header=document.createElement('div');header.className='task-list-header';
   header.style.gridTemplateColumns=cols;
-  header.innerHTML=(isDone?'<div></div>':'')+'<div></div><div>업무</div><div>담당자</div><div>작성일</div><div>기한</div><div>진행률</div><div></div>';
+  header.innerHTML=(isDone?'<div></div>':'')+'<div></div><div>업무</div><div style="text-align:center">담당자</div><div style="text-align:center">마감일</div><div style="text-align:center">상태</div><div style="text-align:center">액션</div>';
   grid.appendChild(header);
   sortT(f).forEach(function(t){
     const emp=getP(t.assignee),dl=dL(t.due),ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'미배정',prog=t.progress||0;
@@ -2154,17 +2156,15 @@ function renderBoardTask(f){
     if(tProj){const pBadge=document.createElement('span');pBadge.style.cssText='display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-top:2px;font-weight:600;background:'+tProj.color+'22;color:'+tProj.color+';border:1px solid '+tProj.color+'44';pBadge.textContent='🚀 '+tProj.name;nameDiv.appendChild(pBadge);}
     if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
     row.appendChild(nameDiv);
-    const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;gap:6px;';assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';row.appendChild(assDiv);
-    const dateDiv=document.createElement('div');dateDiv.style.cssText='font-size:11.5px;color:var(--text3);';dateDiv.textContent=t.createdAt||'—';row.appendChild(dateDiv);
-    const dueDiv=document.createElement('div');
+    const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;';assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';row.appendChild(assDiv);
+    const dueDiv=document.createElement('div');dueDiv.style.cssText='text-align:center;';
     if(dl)dueDiv.innerHTML='<span class="tag '+dl.cls+'" style="font-size:11px;line-height:1.5">'+t.due+'<br><span style="font-size:10px">('+dl.text+')</span></span>';
     else dueDiv.innerHTML='<span style="font-size:12px;color:var(--text3)">없음</span>';
     row.appendChild(dueDiv);
-    const progDiv=document.createElement('div');progDiv.innerHTML='<div style="font-size:11px;font-weight:700;color:'+ec+';margin-bottom:3px">'+prog+'%</div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div>';row.appendChild(progDiv);
-    const editDiv=document.createElement('div');editDiv.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:4px;';
-    if(!t.assignee&&CU){const clb=document.createElement('button');clb.style.cssText='padding:2px 8px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer';clb.textContent='내 업무로';clb.onclick=function(e){e.stopPropagation();claimTask(t.id);};editDiv.appendChild(clb);}
+    const statusDiv=document.createElement('div');statusDiv.style.cssText='text-align:center;';
+    statusDiv.innerHTML='<div style="font-size:11px;font-weight:700;color:'+ec+';margin-bottom:3px">'+prog+'%</div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div>';row.appendChild(statusDiv);
+    const editDiv=document.createElement('div');editDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:4px;';
     const eb=document.createElement('button');eb.className='btn-icon';eb.textContent='✎';eb.style.cssText='font-size:12px;padding:4px 7px;';eb.onclick=function(){openTaskEdit(t.id);};editDiv.appendChild(eb);
-    const pb=document.createElement('button');pb.className='pomo-btn';pb.textContent='⏱';pb.title='포모도로';pb.onclick=function(e){e.stopPropagation();startPomo(t.id);};editDiv.appendChild(pb);
     const cb=document.createElement('button');cb.className='cmt-btn'+(cmtCount?' has-cmt':'');cb.innerHTML='💬'+(cmtCount?'<span style="font-size:10px"> '+cmtCount+'</span>':'');cb.onclick=function(){openTaskCmt(t.id);};editDiv.appendChild(cb);
     row.appendChild(editDiv);
     grid.appendChild(row);
@@ -3155,24 +3155,45 @@ function showProjDetail(projId){
   document.getElementById('btnTask').style.display='inline-flex';document.getElementById('btnProj').style.display='none';
   renderProjDetail(projId);
 }
+var _projTabActive='overview';
+function setProjTab(tab,projId){
+  _projTabActive=tab;
+  document.querySelectorAll('.pdt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  document.querySelectorAll('.pdt-panel').forEach(function(p){p.style.display=p.dataset.tab===tab?'block':'none';});
+}
 function renderProjDetail(projId){
   const wrap=document.getElementById('projDetail');wrap.innerHTML='';
   const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;
   const projTasks=tasks.filter(function(t){return t.projId===projId;});
   const done=projTasks.filter(function(t){return t.done;}).length,total=projTasks.length;
   const prog=typeof p.progress==='number'?p.progress:(total?Math.round(done/total*100):0);
+  // Hero (always visible)
   const hero=document.createElement('div');hero.className='proj-detail-hero';
   hero.innerHTML='<div class="pdh-top"><div style="display:flex;align-items:flex-start;gap:10px;flex:1"><div class="pdh-color-block" style="background:'+p.color+'"></div><div class="pdh-name">'+p.name+'</div></div>'+
     '<div style="display:flex;gap:6px">'+(isAdmin()?'<button class="btn btn-secondary btn-sm" onclick="openEditProj(\''+projId+'\')">✎ 편집</button>':'')+
-    '<button class="btn btn-secondary btn-sm" onclick="showPage(\'projects\')">← 목록</button></div></div>'+
-    '<div class="pdh-desc">'+esc(p.desc||'')+'</div>'+
+    '<button class="btn btn-secondary btn-sm" onclick="showPage(\'projects\')">← 목록</button></div></div>';
+  wrap.appendChild(hero);
+  // Tabs
+  var tabBar=document.createElement('div');
+  tabBar.style.cssText='display:flex;gap:2px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rs,8px);padding:3px;margin-bottom:16px';
+  var projFiles=[];projTasks.forEach(function(t){if(t.files&&t.files.length)t.files.forEach(function(f){projFiles.push({task:t.title,file:f});});});
+  var tabs=[{id:'overview',label:'📊 개요'},{id:'tasks',label:'📋 업무 ('+total+')'},{id:'thread',label:'💬 댓글'},{id:'reports',label:'📝 보고'}];
+  if(projFiles.length)tabs.push({id:'files',label:'📎 파일 ('+projFiles.length+')'});
+  tabs.forEach(function(tb){
+    var btn=document.createElement('button');btn.className='tab-btn pdt-btn'+(tb.id===_projTabActive?' active':'');btn.dataset.tab=tb.id;btn.textContent=tb.label;
+    btn.onclick=function(){setProjTab(tb.id,projId);};tabBar.appendChild(btn);
+  });
+  wrap.appendChild(tabBar);
+  // Panel: overview
+  var pOverview=document.createElement('div');pOverview.className='pdt-panel';pOverview.dataset.tab='overview';pOverview.style.display=_projTabActive==='overview'?'block':'none';
+  pOverview.innerHTML='<div class="pdh-desc">'+esc(p.desc||'설명 없음')+'</div>'+
     '<div style="margin-bottom:14px"><div class="proj-prog-label"><span style="font-size:12px;font-weight:700;color:var(--text2)">진행률</span><div style="display:flex;align-items:center;gap:12px"><span style="font-weight:800;color:'+p.color+';font-size:18px" id="pdh-prog">'+prog+'%</span>'+(isAdmin()?'<input type="range" min="0" max="100" value="'+prog+'" style="width:100px;accent-color:'+p.color+'" oninput="liveProgress(\''+projId+'\',this.value,this)" />':'')+'</div></div>'+
     '<div class="proj-bar" style="height:8px"><div class="proj-bar-fill" id="ppf-'+projId+'" style="width:'+prog+'%;background:'+p.color+'"></div></div></div>'+
     '<div class="pdh-meta">'+p.members.map(function(mid){const e=getP(mid);return e?'<span class="m-chip" style="background:'+e.color+'20;color:'+e.color+'"><div style="width:20px;height:20px;border-radius:6px;background:'+e.color+';display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff">'+e.initial+'</div>'+e.name+'</span>':'';}).join('')+(p.due?'<span class="badge badge-gray" style="margin-left:auto">📅 마감: '+p.due+'</span>':'')+'</div>';
-  wrap.appendChild(hero);
-  const lay=document.createElement('div');lay.className='proj-detail-layout';
-  const tw=document.createElement('div');tw.className='thread-wrap';buildThread(projId,tw);lay.appendChild(tw);
-  const pts=document.createElement('div');pts.className='proj-tasks';
+  wrap.appendChild(pOverview);
+  // Panel: tasks
+  var pTasks=document.createElement('div');pTasks.className='pdt-panel';pTasks.dataset.tab='tasks';pTasks.style.display=_projTabActive==='tasks'?'block':'none';
+  var pts=document.createElement('div');pts.className='proj-tasks';
   pts.innerHTML='<div class="pt-head"><span>📋 연결된 업무 <span class="badge badge-gray">'+total+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="openLinkTaskModal(\''+projId+'\')">🔗 연결</button><button class="btn btn-primary btn-sm" onclick="openProjTaskModal(\''+projId+'\')">+ 추가</button></div></div><div class="pt-list" id="ptsl-'+projId+'"></div>';
   const ptsl=pts.querySelector('#ptsl-'+projId);
   if(!projTasks.length)ptsl.innerHTML='<div class="empty-state" style="padding:14px;font-size:12px">연결된 업무 없음</div>';
@@ -3188,19 +3209,36 @@ function renderProjDetail(projId){
       '<button class="cmt-btn'+(cmtCnt?' has-cmt':'')+'" onclick="openTaskCmt(\''+t.id+'\')">💬 '+(cmtCnt||'')+'</button></div>';
     ptsl.appendChild(item);
   });
-  lay.appendChild(pts);wrap.appendChild(lay);
-  // 담당자별 보고 대시보드 (CU 설정 후 렌더링)
+  pTasks.appendChild(pts);wrap.appendChild(pTasks);
+  // Panel: thread
+  var pThread=document.createElement('div');pThread.className='pdt-panel';pThread.dataset.tab='thread';pThread.style.display=_projTabActive==='thread'?'block':'none';
+  const tw=document.createElement('div');tw.className='thread-wrap';buildThread(projId,tw);pThread.appendChild(tw);
+  wrap.appendChild(pThread);
+  // Panel: reports
+  var pReports=document.createElement('div');pReports.className='pdt-panel';pReports.dataset.tab='reports';pReports.style.display=_projTabActive==='reports'?'block':'none';
+  wrap.appendChild(pReports);
   function _renderReportSection(attempt){
     if(!CU&&attempt<20){setTimeout(function(){_renderReportSection(attempt+1);},100);return;}
-    var rw=document.getElementById('projDetail');
-    if(rw&&!rw.querySelector('.report-dashboard')){
-      rw.innerHTML+=buildReportDashboard(projId);
-      rw.querySelectorAll('.rk-body-input').forEach(function(el){
+    if(!pReports.querySelector('.report-dashboard')){
+      pReports.innerHTML=buildReportDashboard(projId);
+      pReports.querySelectorAll('.rk-body-input').forEach(function(el){
         el.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter'){var mid=this.id.replace('rBody_','');submitReport(projId,mid);}});
       });
     }
   }
   _renderReportSection(0);
+  // Panel: files
+  if(projFiles.length){
+    var pFiles=document.createElement('div');pFiles.className='pdt-panel';pFiles.dataset.tab='files';pFiles.style.display=_projTabActive==='files'?'block':'none';
+    var fhtml='<div style="display:flex;flex-direction:column;gap:8px">';
+    projFiles.forEach(function(pf){
+      fhtml+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px">';
+      fhtml+='<span style="font-size:16px">📄</span><div style="flex:1"><div style="font-size:13px;font-weight:600">'+esc(pf.file.name||'파일')+'</div><div style="font-size:11px;color:var(--text3)">업무: '+esc(pf.task)+'</div></div></div>';
+    });
+    fhtml+='</div>';
+    pFiles.innerHTML=fhtml;
+    wrap.appendChild(pFiles);
+  }
 }
 function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
@@ -3605,7 +3643,7 @@ function renderChannelList(){
     var active=ch.id===curChannel;var unread=getUnread(ch.id);
     return '<div onclick="switchChannel(\''+ch.id+'\')" style="padding:8px 14px;cursor:pointer;border-radius:6px;margin:1px 6px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:'+(active?'700':'500')+';background:'+(active?'var(--primary,#1a6fc4)':'transparent')+';color:'+(active?'#fff':'var(--text2,#374151)')+'">'+
     '<span># '+esc(ch.name)+'</span>'+
-    (unread>0&&!active?'<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px">'+unread+'</span>':'')+
+    (unread>0&&!active?'<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center">'+(unread>99?'99+':unread)+'</span>':'')+
     '</div>';
   }).join('');
 }
