@@ -30,6 +30,7 @@
 - `staff_approvals` : 결재 (from_id, to_id, title, body, files jsonb, status, reject_reason)
 - `staff_opinions` : 의견요청 (from_id, target, title, body, files jsonb, ts)
 - `staff_op_replies` : 의견 답변
+- `staff_notifications` : 알림 (id, to_id, type, ref_id, message, is_read, created_at)
 - `staff_reports` : 보고 (localStorage tm_reports 사용 중 - Supabase 미이전)
 - `notices`, `posts`, `comments`, `profiles`, `applications`, `shuttle_applications`, `fieldtrip_applications`
 
@@ -44,6 +45,13 @@
 - 프로젝트 연결업무: linkTaskModal, openLinkTaskModal/linkTaskToProj 함수
 - 사이드바: 🔒 어드민 홈 버튼 제거, 상단 ← 관리자 홈 버튼으로 통합
 - 관리자 홈 버튼: 우측 상단 헤더에 ← 관리자 홈
+- 담당자별 보고 현황: buildReportDashboard에서 각 멤버 카드에 프로젝트 업무도 표시
+- 다른 직원 업무 보기: showEmpPage 읽기전용 모드 (접근 차단 제거), "+N개 더" 인라인 펼침
+- 알림 시스템: staff_notifications 테이블, createNotif/createNotifMultiple 함수
+  - 트리거: 업무 댓글, 공지, 스레드, 결재, 의견요청, 미배정 업무
+  - UI: 네비게이션 빨간 점 뱃지 (.notif-dot), 섹션 방문 시 읽음 처리
+  - 로딩: 로그인 시 + 30초 폴링 (pollForUpdates에 통합)
+  - 타입: task_comment, notice, thread, approval, opinion, unassigned_task
 
 ## 확정 예약 탭 (admin/bookings) - 스프레드시트 뷰
 - 영수증발행/결제완료/완료 상태 예약 표시
@@ -89,13 +97,20 @@
 - staff_threads: 프로젝트 스레드
 - staff_notices: 공지사항
 - staff_chat: 채팅 (기존)
+- staff_notifications: 알림 (2026-04-10 추가)
 - 30초 폴링으로 실시간 동기화 (showSyncBadge)
 - localStorage는 캐시 역할만 (Supabase가 source of truth)
+
+## 버그 수정 (2026-04-10)
+- 달력 날짜 1일 밀림: toISOString()→localDateStr() 로컬 타임존 기준으로 변경
+  - 영향 범위: 월간/주간 달력, todayStr(), 주간 사이드바 weekDs, 마감 알림 tmrStr
+  - localDateStr(d): getFullYear/getMonth/getDate로 YYYY-MM-DD 생성
+  - parseLocalDate(str): 기존 함수, dL() 등에서 이미 사용 중
 
 ## 남은 작업
 - staff_reports Supabase 이전 (보고 현황, 현재 localStorage)
 - PayPal Live 모드 활성화
-- Supabase RLS 정책 설정 (모든 테이블)
+- Supabase RLS 정책 설정 (모든 테이블, staff_notifications 포함)
 - Supabase Auth 도입 (장기 계획)
 - 드림하우스 룸 캘린더 개선
 - 인보이스 결제섹션 레이아웃 (견적계산기 박스 이동)
