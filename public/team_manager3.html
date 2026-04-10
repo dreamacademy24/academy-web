@@ -2015,16 +2015,18 @@ function renderHomeSG(){
     const active=g.items.filter(t=>!t.done).length;
     div.innerHTML='<div class="summary-head"><div class="emp-dot" style="background:'+g.color+'"></div>'+g.name+'<span class="badge badge-gray" style="margin-left:auto">'+active+'</span></div><div id="hsg-'+g.id+'"></div>';
     const body=div.querySelector('#hsg-'+g.id);
-    sortT(g.items).slice(0,5).forEach(function(t){
-      const dl=dL(t.due);
-      const r=document.createElement('div');r.className='summary-row'+(t.done?' done':'');
+    function _hsgRow(t){
+      var dl=dL(t.due);var urgent=false,titleClr='';
+      if(!t.done&&t.due){var dd=parseLocalDate(t.due);if(dd){var now2=new Date();now2.setHours(0,0,0,0);var days=Math.ceil((dd-now2)/86400000);if(days<=2){urgent=true;titleClr='color:#ef4444;font-weight:700';}else{titleClr='color:#3b82f6';}}}
+      var r=document.createElement('div');r.className='summary-row'+(t.done?' done':'');
       r.innerHTML='<div class="round-check" onclick="qTog(\''+t.id+'\',event)"><div class="round-check-mark"></div></div>'+
-        '<div class="summary-title">'+(t.idx?'<span style="color:var(--text3);font-size:10px">('+esc(t.idx)+') </span>':'')+esc(t.title)+'</div>'+
-        (dl?'<span class="tag '+dl.cls+'" style="font-size:10px;padding:1px 6px">'+dl.text+'</span>':'');
+        '<div class="summary-title" style="'+titleClr+'">'+(t.idx?'<span style="color:var(--text3);font-size:10px">('+esc(t.idx)+') </span>':'')+esc(t.title)+'</div>'+
+        (dl?'<span class="tag '+dl.cls+'" style="font-size:10px;padding:1px 6px">'+(urgent?'⚠️ ':'')+dl.text+'</span>':'');
       r.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};
-      body.appendChild(r);
-    });
-    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+(g.items.length-5)+'개 더';m.onclick=function(){m.remove();sortT(g.items).slice(5).forEach(function(t){var dl2=dL(t.due);var r2=document.createElement('div');r2.className='summary-row'+(t.done?' done':'');r2.innerHTML='<div class="round-check" onclick="qTog(\''+t.id+'\',event)"><div class="round-check-mark"></div></div><div class="summary-title">'+(t.idx?'<span style="color:var(--text3);font-size:10px">('+esc(t.idx)+') </span>':'')+esc(t.title)+'</div>'+(dl2?'<span class="tag '+dl2.cls+'" style="font-size:10px;padding:1px 6px">'+dl2.text+'</span>':'');r2.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};body.appendChild(r2);});};body.appendChild(m);}
+      return r;
+    }
+    sortT(g.items).slice(0,5).forEach(function(t){body.appendChild(_hsgRow(t));});
+    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+(g.items.length-5)+'개 더';m.onclick=function(){m.remove();sortT(g.items).slice(5).forEach(function(t){body.appendChild(_hsgRow(t));});};body.appendChild(m);}
     grid.appendChild(div);
   });
 }
