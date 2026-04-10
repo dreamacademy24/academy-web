@@ -1277,6 +1277,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <input type="file" id="tmFI" multiple style="display:none" onchange="handleTMF(event)" />
       <div class="file-list" id="tmFL"></div>
     </div>
+    <div class="form-group" id="tmShareRow" style="display:flex;align-items:center;gap:10px">
+      <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
+        <input type="checkbox" id="tmShare" style="opacity:0;width:0;height:0" />
+        <span onclick="var c=document.getElementById('tmShare');c.checked=!c.checked;this.style.background=c.checked?'var(--primary,#1a6fc4)':'#cbd5e1';this.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+      </label>
+      <span style="font-size:13px;font-weight:600;color:var(--text2)">👥 팀 공유</span>
+      <span style="font-size:11px;color:var(--text3)">ON 시 달력·전체 보드에 표시</span>
+    </div>
     <div class="modal-footer">
       <div class="modal-footer-left">
         <button class="btn btn-danger btn-sm" id="tmDel" onclick="deleteTsk()" style="display:none">삭제</button>
@@ -1453,6 +1461,25 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" onclick="closeM('opinionModal')">취소</button>
       <button class="btn btn-primary btn-sm" onclick="submitOpinion()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- OPINION DETAIL MODAL -->
+<div class="overlay" id="opDetailModal">
+  <div class="modal-box" style="width:600px;max-height:85vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="modal-title" style="margin-bottom:0" id="opdTitle"></div>
+      <button onclick="closeM('opDetailModal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:4px">✕</button>
+    </div>
+    <div id="opdMeta" style="margin-bottom:12px"></div>
+    <div id="opdBody" style="font-size:14px;color:var(--text2);line-height:1.8;white-space:pre-wrap;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border,#e2e8f0)"></div>
+    <div id="opdFiles" style="margin-bottom:12px"></div>
+    <div style="font-size:13px;font-weight:800;margin-bottom:8px">💬 답변 <span id="opdReplyCnt" style="color:var(--text3);font-weight:600"></span></div>
+    <div id="opdReplies" style="flex:1;overflow-y:auto;margin-bottom:12px;max-height:260px"></div>
+    <div style="display:flex;gap:8px">
+      <textarea id="opdReplyInp" placeholder="답변 입력... (Ctrl+Enter 전송)" style="flex:1;padding:10px 14px;border:1px solid var(--border,#e2e8f0);border-radius:8px;font-size:13px;font-family:inherit;resize:none;min-height:44px;outline:none;line-height:1.5"></textarea>
+      <button id="opdReplyBtn" class="btn btn-primary btn-sm" style="align-self:flex-end">등록</button>
     </div>
   </div>
 </div>
@@ -2440,48 +2467,70 @@ function renderOpinionList(){
     wrap.innerHTML=html;
   });
 }
+var _opdCurId=null;
 function openOpinionDetail(opId){
-  var wrap=document.getElementById('opinionList');
-  if(!wrap)return;
-  wrap.innerHTML='<div style="max-width:760px;margin:0 auto"><div style="text-align:center;padding:20px;color:#94a3b8">로딩 중...</div></div>';
+  _opdCurId=opId;
+  document.getElementById('opdTitle').textContent='로딩 중...';
+  document.getElementById('opdMeta').innerHTML='';
+  document.getElementById('opdBody').textContent='';
+  document.getElementById('opdFiles').innerHTML='';
+  document.getElementById('opdReplies').innerHTML='';
+  document.getElementById('opdReplyCnt').textContent='';
+  openM('opDetailModal');
   Promise.all([
     sbGet('staff_opinions','id=eq.'+opId),
     sbGet('staff_op_replies','opinion_id=eq.'+opId+'&order=ts.asc')
   ]).then(function(results){
     var op=(results[0]||[])[0];
     var replies=results[1]||[];
-    if(!op){wrap.innerHTML='<button onclick="renderOpinionList()">목록으로</button>';return;}
+    if(!op){document.getElementById('opdTitle').textContent='삭제된 의견';return;}
     var author=ALL.find(function(u){return u.id===op.from_id;});
     var date=new Date(op.ts);
     var ds=(date.getMonth()+1)+'/'+date.getDate()+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
     var targetLabel=op.target==='all'?'전체':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
-    var html='<div style="max-width:760px;margin:0 auto">';
-    html+='<button onclick="renderOpinionList()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;font-weight:600;padding:0;margin-bottom:16px;font-family:inherit">← 목록으로</button>';
-    html+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:20px">';
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="background:#eff6ff;color:#1a6fc4;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px">'+esc(targetLabel)+'에게</span><span style="font-size:12px;color:#94a3b8">'+ds+'</span></div>';
-    html+='<div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-bottom:12px">'+esc(op.title)+'</div>';
-    html+='<div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap;margin-bottom:16px">'+esc(op.body)+'</div>';
-    if(op.files&&op.files.length)html+=renderAttachments(op.files);
-    if(author)html+='<div style="display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid #e2e8f0"><div style="width:28px;height:28px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">'+author.name[0]+'</div><span style="font-size:13px;font-weight:600">'+esc(author.name)+'</span></div>';
-    html+='</div><div style="margin-bottom:16px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">답변 '+replies.length+'개</div>';
-    if(!replies.length)html+='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px">첫 번째 답변을 남겨보세요!</div>';
-    else replies.forEach(function(r){
-      var rA=ALL.find(function(u){return u.id===r.from_id;});
-      var rd=new Date(r.ts);
-      var rds=(rd.getMonth()+1)+'/'+rd.getDate()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0');
-      var isOwn=CU&&CU.id===r.from_id;
-      html+='<div style="display:flex;gap:12px;margin-bottom:12px">';
-      if(rA)html+='<div style="width:32px;height:32px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+rA.name[0]+'</div>';
-      html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:13px;font-weight:700">'+(rA?esc(rA.name):'?')+'</span><span style="font-size:11px;color:#94a3b8">'+rds+'</span>';
-      if(isOwn)html+='<button onclick="deleteReply('+opId+','+r.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:12px;padding:0;margin-left:auto">✕</button>';
-      html+='</div><div style="background:#f8fafc;border-radius:10px;padding:12px 14px;font-size:13px;color:#374151;line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
-    });
-    html+='</div><div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px">';
-    html+='<textarea id="replyInput" placeholder="답변 입력... (Ctrl+Enter 전송)" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:72px;outline:none;box-sizing:border-box;line-height:1.6"></textarea>';
-    html+='<div style="display:flex;justify-content:flex-end;margin-top:8px"><button onclick="submitReply('+opId+')" style="padding:9px 22px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">답변 등록</button></div></div></div>';
-    wrap.innerHTML=html;
-    var ri=document.getElementById('replyInput');
-    if(ri)ri.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='Enter')submitReply(opId);});
+    document.getElementById('opdTitle').textContent=op.title;
+    document.getElementById('opdMeta').innerHTML='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+(author?'<div style="width:24px;height:24px;border-radius:50%;background:'+author.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+author.name[0]+'</div><span style="font-size:13px;font-weight:600">'+esc(author.name)+'</span>':'')+'<span style="background:#eff6ff;color:#1a6fc4;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">'+esc(targetLabel)+'</span><span style="font-size:12px;color:#94a3b8;margin-left:auto">'+ds+'</span></div>';
+    document.getElementById('opdBody').textContent=op.body||'';
+    if(op.files&&op.files.length)document.getElementById('opdFiles').innerHTML=renderAttachments(op.files);
+    _opdRenderReplies(opId,replies);
+    document.getElementById('opdReplyBtn').onclick=function(){_opdSubmitReply(opId);};
+    var inp=document.getElementById('opdReplyInp');
+    inp.value='';
+    inp.onkeydown=function(e){if(e.ctrlKey&&e.key==='Enter')_opdSubmitReply(opId);};
+  });
+}
+function _opdRenderReplies(opId,replies){
+  document.getElementById('opdReplyCnt').textContent=replies.length+'개';
+  var el=document.getElementById('opdReplies');
+  if(!replies.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;background:var(--surface,#f8fafc);border-radius:10px">첫 번째 답변을 남겨보세요!</div>';return;}
+  var html='';
+  replies.forEach(function(r){
+    var rA=ALL.find(function(u){return u.id===r.from_id;});
+    var rd=new Date(r.ts);
+    var rds=(rd.getMonth()+1)+'/'+rd.getDate()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0');
+    var isOwn=CU&&CU.id===r.from_id;
+    html+='<div style="display:flex;gap:10px;margin-bottom:10px">';
+    if(rA)html+='<div style="width:28px;height:28px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+rA.name[0]+'</div>';
+    html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+(rA?esc(rA.name):'?')+'</span><span style="font-size:10px;color:#94a3b8">'+rds+'</span>';
+    if(isOwn)html+='<button onclick="_opdDelReply('+opId+','+r.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:11px;padding:0;margin-left:auto">✕</button>';
+    html+='</div><div style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
+  });
+  el.innerHTML=html;
+  setTimeout(function(){el.scrollTop=el.scrollHeight;},30);
+}
+function _opdSubmitReply(opId){
+  var inp=document.getElementById('opdReplyInp');
+  var text=inp.value.trim();if(!text)return;
+  inp.value='';
+  sbPost('staff_op_replies',{from_id:CU?CU.id:'',opinion_id:opId,text:text,ts:Date.now()}).then(function(){
+    sbGet('staff_op_replies','opinion_id=eq.'+opId+'&order=ts.asc').then(function(replies){_opdRenderReplies(opId,replies);});
+    renderOpinionList();
+  });
+}
+function _opdDelReply(opId,replyId){
+  sbDel('staff_op_replies','id=eq.'+replyId).then(function(){
+    sbGet('staff_op_replies','opinion_id=eq.'+opId+'&order=ts.asc').then(function(replies){_opdRenderReplies(opId,replies);});
+    renderOpinionList();
   });
 }
 
@@ -2924,6 +2973,7 @@ function openTaskModal(pre){
   document.getElementById('tmCreated').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value==='none';});
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
+  var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;_tmSh.parentElement.querySelector('span').style.background='#cbd5e1';_tmSh.parentElement.querySelector('i').style.transform='translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
 function openProjTaskModal(projId){openTaskModal(CU?CU.id:'');tmProjId=projId;document.getElementById('tmTitle').textContent='📋 프로젝트 업무 추가';}
@@ -2967,7 +3017,9 @@ function openTaskEdit(id){
   document.getElementById('tmCreated').textContent=t.createdAt||new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
-  buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));renderTMFL();renderTMChecklist();openM('taskModal');
+  buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));
+  var _tmSh2=document.getElementById('tmShare');_tmSh2.checked=!!t.shared;_tmSh2.parentElement.querySelector('span').style.background=t.shared?'var(--primary,#1a6fc4)':'#cbd5e1';_tmSh2.parentElement.querySelector('i').style.transform=t.shared?'translateX(16px)':'translateX(0)';
+  renderTMFL();renderTMChecklist();openM('taskModal');
 }
 function buildAssignSel(sel){
   // 하위호환 래퍼 → buildAssignPicker 호출
@@ -3036,8 +3088,9 @@ function saveTask(){
   const note=document.getElementById('tmNt').value;
   const createdAt=document.getElementById('tmCreated').textContent;
   const clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
-  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;}}
-  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:true,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
+  const _tmShared=document.getElementById('tmShare').checked;
+  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;}}
+  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:_tmShared,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
   rebuildIdx();svTasks();var _syncT=editTaskId?tasks.find(function(t){return t.id===editTaskId;}):tasks[0];if(_syncT)syncTaskToSB(_syncT);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
 }
 function deleteTsk(){if(!editTaskId)return;delTaskFromSB(editTaskId);tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();svTasks();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
