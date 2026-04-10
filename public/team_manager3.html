@@ -1268,7 +1268,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
       <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
         <input type="checkbox" id="tmSubToggle" style="opacity:0;width:0;height:0" />
-        <span onclick="var c=document.getElementById('tmSubToggle');c.checked=!c.checked;this.style.background=c.checked?'#f59e0b':'#cbd5e1';this.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)';togSubtaskMode()" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+        <span id="tmSubToggleSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
       </label>
       <span style="font-size:13px;font-weight:600;color:var(--text2)">🔀 하위 업무로 관리</span>
       <span style="font-size:11px;color:var(--text3)">ON 시 체크리스트 대신 하위 업무 사용</span>
@@ -4206,6 +4206,14 @@ window.addEventListener('DOMContentLoaded', function(){
   if(_clBtn)_clBtn.addEventListener('click',function(){addTMChecklist();});
   var _clInp=document.getElementById('tmClInp');
   if(_clInp)_clInp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addTMChecklist();}});
+  // 하위 업무 토글 바인딩
+  var _subSpan=document.getElementById('tmSubToggleSpan');
+  if(_subSpan)_subSpan.addEventListener('click',function(){
+    var c=document.getElementById('tmSubToggle');c.checked=!c.checked;
+    this.style.background=c.checked?'#f59e0b':'#cbd5e1';
+    this.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)';
+    togSubtaskMode();
+  });
 
   try{
     var saved=JSON.parse(localStorage.getItem('tm_session'));
