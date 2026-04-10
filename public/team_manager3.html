@@ -1278,7 +1278,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <div id="tmClList" style="margin-bottom:6px"></div>
       <div style="display:flex;gap:6px">
         <input class="form-input" id="tmClInp" placeholder="항목 추가..." style="font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();addTMChecklist();}" />
-        <button class="btn btn-primary btn-sm" onclick="addTMChecklist()">+ 추가</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addTMChecklist()">+ 추가</button>
       </div>
     </div>
     <div id="tmSubSection" class="form-group" style="display:none">
@@ -1286,7 +1286,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <div id="tmSubList" style="margin-bottom:6px"></div>
       <div style="display:flex;gap:6px">
         <input class="form-input" id="tmSubInp" placeholder="하위 업무 제목..." style="font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();addTMSub();}" />
-        <button class="btn btn-primary btn-sm" onclick="addTMSub()">+ 추가</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addTMSub()">+ 추가</button>
       </div>
     </div>
     <div class="form-group">
@@ -2034,13 +2034,16 @@ function renderHomeSG(){
     div.innerHTML='<div class="summary-head"><div class="emp-dot" style="background:'+g.color+'"></div>'+g.name+'<span class="badge badge-gray" style="margin-left:auto">'+active+'</span></div><div id="hsg-'+g.id+'"></div>';
     const body=div.querySelector('#hsg-'+g.id);
     function _hsgRow(t){
-      var dl=dL(t.due);var urgent=false,titleStyle='';
-      if(!t.done&&t.due){var dd=parseLocalDate(t.due);if(dd){var now2=new Date();now2.setHours(0,0,0,0);var days=Math.ceil((dd-now2)/86400000);if(days<=2){urgent=true;titleStyle='color:#ef4444 !important;font-weight:700';}else{titleStyle='color:#3b82f6 !important';}}}
+      var dl=dL(t.due);var urgent=false,txtColor='';
+      if(!t.done&&t.due){var dd=parseLocalDate(t.due);if(dd){var now2=new Date();now2.setHours(0,0,0,0);var days=Math.ceil((dd-now2)/86400000);if(days<=2){urgent=true;txtColor='#ef4444';}else{txtColor='#3b82f6';}}}
       var r=document.createElement('div');r.className='summary-row'+(t.done?' done':'');
-      var idxPart=t.idx?'<span style="color:var(--text3) !important;font-size:10px;font-weight:400">('+esc(t.idx)+') </span>':'';
-      r.innerHTML='<div class="round-check" onclick="qTog(\''+t.id+'\',event)"><div class="round-check-mark"></div></div>'+
-        '<div class="summary-title" style="'+titleStyle+'">'+idxPart+esc(t.title)+'</div>'+
-        (dl?'<span class="tag '+dl.cls+'" style="font-size:10px;padding:1px 6px">'+(urgent?'⚠️ ':'')+dl.text+'</span>':'');
+      var idxPart=t.idx?'<span style="font-size:10px;opacity:0.5">('+esc(t.idx)+') </span>':'';
+      var titleDiv=document.createElement('div');titleDiv.className='summary-title';
+      titleDiv.innerHTML=idxPart+esc(t.title);
+      if(txtColor&&!t.done){titleDiv.style.setProperty('color',txtColor,'important');if(urgent)titleDiv.style.fontWeight='700';}
+      var checkDiv=document.createElement('div');checkDiv.className='round-check';checkDiv.innerHTML='<div class="round-check-mark"></div>';checkDiv.onclick=function(e){qTog(t.id,e);};
+      r.appendChild(checkDiv);r.appendChild(titleDiv);
+      if(dl){var tag=document.createElement('span');tag.className='tag '+dl.cls;tag.style.cssText='font-size:10px;padding:1px 6px';tag.textContent=(urgent?'⚠️ ':'')+dl.text;r.appendChild(tag);}
       r.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};
       return r;
     }
@@ -2799,7 +2802,19 @@ function renderTMChecklist(){
 function togTMCl(i){tmChecklist[i].done=!tmChecklist[i].done;renderTMChecklist();}
 function editTMCl(i,text){if(text.trim())tmChecklist[i].text=text.trim();}
 function delTMCl(i){tmChecklist.splice(i,1);renderTMChecklist();}
-function addTMChecklist(){var inp=document.getElementById('tmClInp');if(!inp)return;var raw=inp.value.trim();if(!raw)return;var parsed=parseClInput(raw);tmChecklist.push({id:uid(),text:parsed.text,done:false,dueDate:parsed.dueDate});inp.value='';renderTMChecklist();}
+function addTMChecklist(){
+  try{
+    var inp=document.getElementById('tmClInp');
+    if(!inp){console.error('tmClInp not found');return;}
+    var raw=inp.value.trim();
+    if(!raw){console.log('empty input');return;}
+    if(!Array.isArray(tmChecklist))tmChecklist=[];
+    var parsed=parseClInput(raw);
+    tmChecklist.push({id:uid(),text:parsed.text,done:false,dueDate:parsed.dueDate});
+    inp.value='';
+    renderTMChecklist();
+  }catch(e){console.error('addTMChecklist error:',e);}
+}
 
 function renderEmpChecklist(taskId,container,canEdit){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t){container.innerHTML='';return;}
