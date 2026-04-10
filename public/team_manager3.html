@@ -2683,6 +2683,32 @@ function renderEmpList(empId){
 
 // ── CHECKLIST ──
 let tmChecklist=[];
+function parseClInput(input){
+  var m=input.match(/(\d{1,2})\/(\d{1,2})/);
+  if(m){var text=input.replace(/[-\s()]*\d{1,2}\/\d{1,2}[-\s()]*/g,'').trim();return{text:text||input.trim(),dueDate:m[0]};}
+  return{text:input.trim(),dueDate:null};
+}
+function clDueHtml(c,prefix,i){
+  var dd=c.dueDate||null;var isOver=false;
+  if(dd){var pts=dd.split('/');var y=new Date().getFullYear();var d=new Date(y,parseInt(pts[0])-1,parseInt(pts[1]));var now=new Date();now.setHours(0,0,0,0);isOver=d<now;}
+  return '<span class="cl-due-btn" onclick="event.stopPropagation();togClDue(\''+prefix+'\','+i+')" style="cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;white-space:nowrap;'+(dd?(isOver?'color:#ef4444;font-weight:700':'color:var(--primary,#1a6fc4)'):'color:var(--text3,#94a3b8)')+'">📅 '+(dd||'')+'</span>';
+}
+function togClDue(prefix,i){
+  var existing=document.getElementById('cl-dp-'+prefix+'-'+i);if(existing){existing.remove();return;}
+  var btn=document.querySelectorAll('.cl-due-btn')[0];
+  var items=document.querySelectorAll('#'+prefix+' .cl-item');if(!items[i])return;
+  var inp=document.createElement('input');inp.type='date';inp.id='cl-dp-'+prefix+'-'+i;
+  inp.style.cssText='font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;font-family:inherit;outline:none;margin-left:4px';
+  inp.onchange=function(){saveClDue(prefix,i,inp.value);inp.remove();};
+  inp.onblur=function(){setTimeout(function(){inp.remove();},200);};
+  items[i].appendChild(inp);inp.focus();
+}
+function saveClDue(prefix,i,dateVal){
+  if(!dateVal)return;var d=new Date(dateVal+'T00:00:00');var dd=(d.getMonth()+1)+'/'+d.getDate();
+  if(prefix==='tmClList'){if(tmChecklist[i])tmChecklist[i].dueDate=dd;renderTMChecklist();}
+  else if(prefix.startsWith('ecl-')){var tid=prefix.replace('ecl-','');var t=tasks.find(function(x){return x.id===tid;});if(t&&t.checklist&&t.checklist[i]){t.checklist[i].dueDate=dd;svTasks();syncTaskToSB(t);var sec=document.getElementById(prefix);if(sec){var ce=isAdmin()||(CU&&CU.id===t.assignee);renderEmpChecklist(tid,sec,ce);}}}
+  else if(prefix.startsWith('tcm-cl-')){var tid2=prefix.replace('tcm-cl-','');var t2=tasks.find(function(x){return x.id===tid2;});if(t2&&t2.checklist&&t2.checklist[i]){t2.checklist[i].dueDate=dd;svTasks();syncTaskToSB(t2);var sec2=document.getElementById(prefix);if(sec2){var ce2=isAdmin()||(CU&&CU.id===t2.assignee);renderDetailChecklist(tid2,sec2,ce2);}}}
+}
 function renderTMChecklist(){
   const list=document.getElementById('tmClList');if(!list)return;
   if(!tmChecklist.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">항목을 추가하세요</div>';return;}
@@ -2691,14 +2717,14 @@ function renderTMChecklist(){
   list.innerHTML='<div class="cl-bar"><div class="cl-bar-fill" style="width:'+pct+'%;background:var(--green)"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+done+'/'+tmChecklist.length+' 완료 ('+pct+'%)</div>';
   tmChecklist.forEach(function(c,i){
     const item=document.createElement('div');item.className='cl-item';
-    item.innerHTML='<div class="cl-cb'+(c.done?' checked':'')+'" onclick="togTMCl('+i+')"></div><span class="cl-text'+(c.done?' done-text':'')+'" contenteditable="true" onblur="editTMCl('+i+',this.textContent)">'+esc(c.text)+'</span><button class="cl-del" onclick="delTMCl('+i+')">✕</button>';
+    item.innerHTML='<div class="cl-cb'+(c.done?' checked':'')+'" onclick="togTMCl('+i+')"></div><span class="cl-text'+(c.done?' done-text':'')+'" contenteditable="true" onblur="editTMCl('+i+',this.textContent)">'+esc(c.text)+'</span>'+clDueHtml(c,'tmClList',i)+'<button class="cl-del" onclick="delTMCl('+i+')">✕</button>';
     list.appendChild(item);
   });
 }
 function togTMCl(i){tmChecklist[i].done=!tmChecklist[i].done;renderTMChecklist();}
 function editTMCl(i,text){if(text.trim())tmChecklist[i].text=text.trim();}
 function delTMCl(i){tmChecklist.splice(i,1);renderTMChecklist();}
-function addTMChecklist(){const inp=document.getElementById('tmClInp');const text=inp.value.trim();if(!text)return;tmChecklist.push({id:uid(),text,done:false});inp.value='';renderTMChecklist();}
+function addTMChecklist(){const inp=document.getElementById('tmClInp');const raw=inp.value.trim();if(!raw)return;var p=parseClInput(raw);tmChecklist.push({id:uid(),text:p.text,done:false,dueDate:p.dueDate});inp.value='';renderTMChecklist();}
 
 function renderEmpChecklist(taskId,container,canEdit){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t){container.innerHTML='';return;}
@@ -2729,15 +2755,17 @@ function renderEmpChecklist(taskId,container,canEdit){
         item.insertBefore(inp,delBtn);inp.focus();inp.select();
       };
       item.appendChild(textSpan);
+      var dueSp=document.createElement('span');dueSp.innerHTML=clDueHtml(c,'ecl-'+taskId,i);item.appendChild(dueSp.firstChild);
       const delBtn=document.createElement('button');delBtn.className='cl-del';delBtn.textContent='✕';delBtn.onclick=function(){delEmpCl(taskId,i);};item.appendChild(delBtn);
     } else {
       const ts=document.createElement('span');ts.className='cl-text'+(c.done?' done-text':'');ts.textContent=c.text;item.appendChild(ts);
+      if(c.dueDate){var dd2=c.dueDate;var pts2=dd2.split('/');var y2=new Date().getFullYear();var isO=new Date(y2,parseInt(pts2[0])-1,parseInt(pts2[1]))<new Date(new Date().setHours(0,0,0,0));item.insertAdjacentHTML('beforeend','<span style="font-size:11px;padding:2px 6px;'+(isO?'color:#ef4444;font-weight:700':'color:var(--text3)')+'">📅 '+dd2+'</span>');}
     }
     wrap.appendChild(item);
   });
   if(canEdit){
     const ar=document.createElement('div');ar.className='cl-add-row';ar.style.marginTop='6px';
-    ar.innerHTML='<input class="cl-add-inp" id="ecli-'+taskId+'" placeholder="항목 추가..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEmpCl(\''+taskId+'\');}" /><button class="cl-add-btn" onclick="addEmpCl(\''+taskId+'\')">+</button>';
+    ar.innerHTML='<input class="cl-add-inp" id="ecli-'+taskId+'" placeholder="항목 추가... (4/24 형식으로 날짜 입력)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addEmpCl(\''+taskId+'\');}" /><button class="cl-add-btn" onclick="addEmpCl(\''+taskId+'\')">+</button>';
     wrap.appendChild(ar);
   }
   container.appendChild(wrap);
@@ -2753,7 +2781,7 @@ function togEmpCl(taskId,idx){
   const ps=document.getElementById('ps-'+taskId);if(ps){ps.value=pct;const ec=getP(t.assignee)?getP(t.assignee).color:'#9ca3af';ps.style.background='linear-gradient(to right,'+ec+' '+pct+'%,var(--border2) '+pct+'%)';}
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
 }
-function addEmpCl(taskId){const inp=document.getElementById('ecli-'+taskId);if(!inp)return;const text=inp.value.trim();if(!text)return;const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;if(!t.checklist)t.checklist=[];t.checklist.push({id:uid(),text,done:false});svTasks();syncTaskToSB(t);inp.value='';const sec=document.getElementById('ecl-'+taskId);if(sec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderEmpChecklist(taskId,sec,ce);}}
+function addEmpCl(taskId){const inp=document.getElementById('ecli-'+taskId);if(!inp)return;const raw=inp.value.trim();if(!raw)return;var pc=parseClInput(raw);const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;if(!t.checklist)t.checklist=[];t.checklist.push({id:uid(),text:pc.text,done:false,dueDate:pc.dueDate});svTasks();syncTaskToSB(t);inp.value='';const sec=document.getElementById('ecl-'+taskId);if(sec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderEmpChecklist(taskId,sec,ce);}}
 function delEmpCl(taskId,idx){const t=tasks.find(function(t){return t.id===taskId;});if(!t||!t.checklist)return;t.checklist.splice(idx,1);if(t.checklist.length>0)t.progress=Math.round(t.checklist.filter(function(c){return c.done;}).length/t.checklist.length*100);svTasks();syncTaskToSB(t);const sec=document.getElementById('ecl-'+taskId);if(sec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderEmpChecklist(taskId,sec,ce);}}
 
 function renderDetailChecklist(taskId,container,canEdit){
@@ -2778,8 +2806,8 @@ function renderDetailChecklist(taskId,container,canEdit){
         inp.onblur=save;inp.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();save();}if(e.key==='Escape'){inp.remove();ts.style.display='';}};
         item.insertBefore(inp,db);inp.focus();inp.select();
       };
-      item.appendChild(ts);const db=document.createElement('button');db.className='cl-del';db.textContent='✕';db.onclick=function(){delDetailCl(taskId,i);};item.appendChild(db);
-    } else {const ts=document.createElement('span');ts.className='cl-text'+(c.done?' done-text':'');ts.textContent=c.text;item.appendChild(ts);}
+      item.appendChild(ts);var dueSp2=document.createElement('span');dueSp2.innerHTML=clDueHtml(c,'tcm-cl-'+taskId,i);item.appendChild(dueSp2.firstChild);const db=document.createElement('button');db.className='cl-del';db.textContent='✕';db.onclick=function(){delDetailCl(taskId,i);};item.appendChild(db);
+    } else {const ts=document.createElement('span');ts.className='cl-text'+(c.done?' done-text':'');ts.textContent=c.text;item.appendChild(ts);if(c.dueDate){var dd3=c.dueDate;var pts3=dd3.split('/');var y3=new Date().getFullYear();var isO2=new Date(y3,parseInt(pts3[0])-1,parseInt(pts3[1]))<new Date(new Date().setHours(0,0,0,0));item.insertAdjacentHTML('beforeend','<span style="font-size:11px;padding:2px 6px;'+(isO2?'color:#ef4444;font-weight:700':'color:var(--text3)')+'">📅 '+dd3+'</span>');}}
     wrap.appendChild(item);
   });
   if(canEdit){const ar=document.createElement('div');ar.className='cl-add-row';ar.innerHTML='<input class="cl-add-inp" id="dcl-inp-'+taskId+'" placeholder="항목 추가..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addDetailCl(\''+taskId+'\');}" /><button class="cl-add-btn" onclick="addDetailCl(\''+taskId+'\')">+</button>';wrap.appendChild(ar);}
@@ -2799,7 +2827,7 @@ function togDetailCl(taskId,idx){
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
   if(!document.getElementById('page-home').classList.contains('hidden'))renderHomeSG();
 }
-function addDetailCl(taskId){const inp=document.getElementById('dcl-inp-'+taskId);if(!inp)return;const text=inp.value.trim();if(!text)return;const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;if(!t.checklist)t.checklist=[];t.checklist.push({id:uid(),text,done:false});svTasks();syncTaskToSB(t);inp.value='';const clSec=document.getElementById('tcm-cl-'+taskId);if(clSec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderDetailChecklist(taskId,clSec,ce);}}
+function addDetailCl(taskId){const inp=document.getElementById('dcl-inp-'+taskId);if(!inp)return;const raw=inp.value.trim();if(!raw)return;var pc2=parseClInput(raw);const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;if(!t.checklist)t.checklist=[];t.checklist.push({id:uid(),text:pc2.text,done:false,dueDate:pc2.dueDate});svTasks();syncTaskToSB(t);inp.value='';const clSec=document.getElementById('tcm-cl-'+taskId);if(clSec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderDetailChecklist(taskId,clSec,ce);}}
 function delDetailCl(taskId,idx){const t=tasks.find(function(t){return t.id===taskId;});if(!t||!t.checklist)return;t.checklist.splice(idx,1);if(t.checklist.length>0)t.progress=Math.round(t.checklist.filter(function(c){return c.done;}).length/t.checklist.length*100);svTasks();syncTaskToSB(t);const clSec=document.getElementById('tcm-cl-'+taskId);if(clSec){const ce=isAdmin()||(CU&&CU.id===t.assignee);renderDetailChecklist(taskId,clSec,ce);}}
 
 // ── PROGRESS ──
@@ -2932,11 +2960,11 @@ let qaChecklist=[];
 function renderQACl(){
   const list=document.getElementById('qaClList');if(!list)return;
   if(!qaChecklist.length){list.innerHTML='';return;}
-  list.innerHTML=qaChecklist.map(function(c,i){return '<div class="cl-item"><div class="cl-cb'+(c.done?' checked':'')+'" onclick="togQACl('+i+')"></div><span class="cl-text'+(c.done?' done-text':'')+'">'+esc(c.text)+'</span><button class="cl-del" onclick="delQACl('+i+')" style="opacity:1">✕</button></div>';}).join('');
+  list.innerHTML=qaChecklist.map(function(c,i){var ddHtml=c.dueDate?'<span style="font-size:11px;padding:2px 6px;color:var(--primary,#1a6fc4)">📅 '+c.dueDate+'</span>':'';return '<div class="cl-item"><div class="cl-cb'+(c.done?' checked':'')+'" onclick="togQACl('+i+')"></div><span class="cl-text'+(c.done?' done-text':'')+'">'+esc(c.text)+'</span>'+ddHtml+'<button class="cl-del" onclick="delQACl('+i+')" style="opacity:1">✕</button></div>';}).join('');
 }
 function togQACl(i){qaChecklist[i].done=!qaChecklist[i].done;renderQACl();}
 function delQACl(i){qaChecklist.splice(i,1);renderQACl();}
-function addQACl(){const inp=document.getElementById('qaClInp');if(!inp)return;const text=inp.value.trim();if(!text)return;qaChecklist.push({id:uid(),text,done:false});inp.value='';renderQACl();}
+function addQACl(){const inp=document.getElementById('qaClInp');if(!inp)return;const raw=inp.value.trim();if(!raw)return;var pc3=parseClInput(raw);qaChecklist.push({id:uid(),text:pc3.text,done:false,dueDate:pc3.dueDate});inp.value='';renderQACl();}
 
 function toggleQA(){
   const box=document.getElementById('qaBox');box.classList.toggle('hidden');
@@ -3012,7 +3040,7 @@ function linkTaskToProj(taskId){
 function openTaskEdit(id){
   const t=tasks.find(function(t){return t.id===id;});if(!t)return;
   editTaskId=id;tmProjId=t.projId||null;mFiles=[...(t.files||[])];
-  tmChecklist=[...(t.checklist||[])].map(function(c){return{id:c.id||uid(),text:c.text,done:c.done||false};});
+  tmChecklist=[...(t.checklist||[])].map(function(c){return{id:c.id||uid(),text:c.text,done:c.done||false,dueDate:c.dueDate||null};});
   document.getElementById('tmTitle').textContent='업무 편집';
   document.getElementById('tmTit').value=t.title;document.getElementById('tmNt').value=t.note||'';
   document.getElementById('tmDel').style.display='inline-flex';
