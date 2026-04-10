@@ -3310,6 +3310,23 @@ function buildReportDashboard(projId) {
       html+='<div style="font-size:12px;color:var(--text3,#94a3b8);text-align:center;padding:12px 0">\uBCF4\uACE0 \uC5C6\uC74C</div>';
     }
 
+    var mTasks=tasks.filter(function(t){return t.projId===projId&&t.assignee===memberId;});
+    if(mTasks.length>0){
+      html+='<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:8px;margin-top:2px">';
+      html+='<div style="font-size:11px;font-weight:700;color:var(--text2,#374151);margin-bottom:6px">📋 업무 ('+mTasks.length+')</div>';
+      sortT(mTasks).forEach(function(t){
+        var dl=dL(t.due);
+        var dueClr=dl?(dl.cls==='tag-over'?'#dc2626':dl.cls==='tag-soon'?'#ea580c':'#6b7280'):'';
+        var dueTag=dl?'<span style="font-size:10px;color:'+dueClr+';margin-left:auto;white-space:nowrap">'+dl.text+'</span>':'';
+        html+='<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:6px 10px;margin-bottom:4px;display:flex;align-items:center;gap:6px;cursor:pointer" onclick="openTaskEdit(\''+t.id+'\')">';
+        html+='<span onclick="qTog(\''+t.id+'\',event);event.stopPropagation()" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(t.done?'#16a34a':'#94a3b8')+';background:'+(t.done?'#dcfce7':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:10px;color:#16a34a">'+(t.done?'✓':'')+'</span>';
+        html+='<span style="font-size:12px;color:var(--text,#1a1a2e);'+(t.done?'text-decoration:line-through;opacity:0.6;':'')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(t.title)+'</span>';
+        html+=dueTag;
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+
     if(isMe){
       html+='<div style="border-top:1px solid var(--border,#e2e8f0);padding-top:10px">';
       html+='<button onclick="openReportModal(\''+projId+'\',\''+memberId+'\')" style="width:100%;padding:8px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📝 보고 등록</button>';
