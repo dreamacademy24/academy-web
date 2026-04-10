@@ -1455,6 +1455,18 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<!-- LINK TASK MODAL -->
+<div class="overlay" id="linkTaskModal">
+  <div class="modal-box" style="width:480px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="modal-title" style="margin-bottom:0">🔗 기존 업무 연결</div>
+      <button class="btn-icon" onclick="closeM('linkTaskModal')" style="font-size:14px;padding:5px 8px">✕</button>
+    </div>
+    <input id="ltSearch" type="text" placeholder="업무 검색..." oninput="filterLinkTasks()" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:10px">
+    <div id="ltList" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+</div>
+
 <!-- SETTINGS MODAL -->
 <div class="overlay" id="settingsModal">
   <div class="modal-box" style="width:560px">
@@ -2873,7 +2885,37 @@ function openTaskModal(pre){
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
-function openProjTaskModal(projId){openTaskModal('');tmProjId=projId;document.getElementById('tmTitle').textContent='📋 프로젝트 업무 추가';}
+function openProjTaskModal(projId){openTaskModal(CU?CU.id:'');tmProjId=projId;document.getElementById('tmTitle').textContent='📋 프로젝트 업무 추가';}
+var _linkProjId=null;
+function openLinkTaskModal(projId){
+  _linkProjId=projId;
+  document.getElementById('ltSearch').value='';
+  filterLinkTasks();
+  openM('linkTaskModal');
+}
+function filterLinkTasks(){
+  var q=(document.getElementById('ltSearch').value||'').trim().toLowerCase();
+  var list=document.getElementById('ltList');list.innerHTML='';
+  var candidates=tasks.filter(function(t){return !t.projId&&(!q||t.title.toLowerCase().indexOf(q)>=0);});
+  if(!candidates.length){list.innerHTML='<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">'+(q?'검색 결과 없음':'연결 가능한 업무 없음')+'</div>';return;}
+  candidates.slice(0,30).forEach(function(t){
+    var emp=getP(t.assignee);var empTag=emp?'<span style="background:'+emp.color+'18;color:'+emp.color+';font-size:10px;padding:1px 6px;border-radius:99px">'+emp.name+'</span>':'<span style="font-size:10px;color:var(--text3)">미배정</span>';
+    var el=document.createElement('div');
+    el.style.cssText='padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s';
+    el.onmouseenter=function(){this.style.background='var(--surface2)';};
+    el.onmouseleave=function(){this.style.background='';};
+    el.innerHTML='<div style="flex:1"><div style="font-size:13px;font-weight:600">'+esc(t.title)+'</div><div style="margin-top:2px">'+empTag+'</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();linkTaskToProj(\''+t.id+'\')">연결</button>';
+    list.appendChild(el);
+  });
+}
+function linkTaskToProj(taskId){
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t||!_linkProjId)return;
+  t.projId=_linkProjId;
+  if(CU&&!t.assignee){t.assignee=CU.id;t.assignees=t.assignees&&t.assignees.length?t.assignees:[CU.id];}
+  rebuildIdx();sv('tm_t',tasks);closeM('linkTaskModal');
+  if(curProjId)renderProjDetail(curProjId);
+  toast('✓ 업무가 프로젝트에 연결되었습니다');
+}
 function openTaskEdit(id){
   const t=tasks.find(function(t){return t.id===id;});if(!t)return;
   editTaskId=id;tmProjId=t.projId||null;mFiles=[...(t.files||[])];
@@ -3042,7 +3084,7 @@ function renderProjDetail(projId){
     const emp=getP(t.assignee),dl=dL(t.due),ec=emp?emp.color:'#9ca3af';
     const cmtCnt=(taskComments[t.id]||[]).length;
     const item=document.createElement('div');item.className='pt-item'+(t.done?' done':'');
-    const empTag=emp?'<span class="badge" style="background:'+ec+'18;color:'+ec+';font-size:10.5px">'+emp.name+'</span>':'';
+    const empTag=emp?'<span class="badge" style="background:'+ec+'18;color:'+ec+';font-size:10.5px;cursor:pointer" onclick="event.stopPropagation();showEmpPage(\''+t.assignee+'\')">'+emp.name+' →</span>':'';
     const dueTag=dl?'<span class="tag '+dl.cls+'" style="font-size:10px;padding:1px 5px">⏱ '+dl.text+'</span>':'';
     item.innerHTML='<div class="tc-check" onclick="qTog(\''+t.id+'\',event)" style="flex-shrink:0"><span class="tc-check-mark">✓</span></div>'+
       '<div style="flex:1"><div class="pt-title">'+esc(t.title)+'</div><div style="display:flex;gap:5px;margin-top:3px;flex-wrap:wrap">'+empTag+dueTag+'</div></div>'+
