@@ -1277,8 +1277,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <label class="form-label">✅ 체크리스트</label>
       <div id="tmClList" style="margin-bottom:6px"></div>
       <div style="display:flex;gap:6px">
-        <input class="form-input" id="tmClInp" placeholder="항목 추가..." style="font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();addTMChecklist();}" />
-        <button type="button" class="btn btn-primary btn-sm" onclick="addTMChecklist()">+ 추가</button>
+        <input class="form-input" id="tmClInp" placeholder="항목 추가..." style="font-size:13px;padding:7px 10px" />
+        <button type="button" class="btn btn-primary btn-sm" id="tmClAddBtn">+ 추가</button>
       </div>
     </div>
     <div id="tmSubSection" class="form-group" style="display:none">
@@ -4201,6 +4201,12 @@ function sAdminResetPw(userId,userName){
 }
 
 window.addEventListener('DOMContentLoaded', function(){
+  // 체크리스트 추가 버튼/Enter 이벤트 바인딩
+  var _clBtn=document.getElementById('tmClAddBtn');
+  if(_clBtn)_clBtn.addEventListener('click',function(){addTMChecklist();});
+  var _clInp=document.getElementById('tmClInp');
+  if(_clInp)_clInp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addTMChecklist();}});
+
   try{
     var saved=JSON.parse(localStorage.getItem('tm_session'));
     if(saved&&saved.id){
