@@ -2400,9 +2400,11 @@ function renderApprovalPage(empId){
 
 
 
+var MAX_FILES=10;
 function readFilesAsBase64(input){
   var files=Array.from(input.files||[]);
   if(!files.length)return Promise.resolve([]);
+  if(files.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');files=files.slice(0,MAX_FILES);}
   return Promise.all(files.map(function(f){
     return new Promise(function(res){
       var r=new FileReader();
@@ -3096,7 +3098,7 @@ function toggleQA(){
     document.getElementById('qaTit').focus();
   }
 }
-function handleQAF(e){Array.from(e.target.files).forEach(function(f){qaFiles.push({name:f.name,size:f.size});});renderQAFL();}
+function handleQAF(e){var added=Array.from(e.target.files);if(qaFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-qaFiles.length);}added.forEach(function(f){qaFiles.push({name:f.name,size:f.size});});renderQAFL();}
 function renderQAFL(){document.getElementById('qaFL').innerHTML=qaFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmQAF('+i+')">✕</button></div>';}).join('');}
 function rmQAF(i){qaFiles.splice(i,1);renderQAFL();}
 function saveQA(){
@@ -3228,7 +3230,7 @@ function toggleAssignPicker(){
   if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
   else p.style.display='none';
 }
-function handleTMF(e){Array.from(e.target.files).forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
+function handleTMF(e){var added=Array.from(e.target.files);if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-mFiles.length);}added.forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
 function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
 function rmMF(i){mFiles.splice(i,1);renderTMFL();}
 function saveTask(){
