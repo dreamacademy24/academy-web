@@ -1896,16 +1896,16 @@ function showPage(p){
   if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';}
 }
 function showEmpPage(empId){
-  if(empId!==CU.id){alert('접근 권한이 없습니다.');showEmpPage(CU.id);return;}
+  var isOwner=isAdmin()||CU.id===empId;
   PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
   document.getElementById('page-emp').classList.remove('hidden');
   curEmpId=empId;setNav(null,empId);
   const emp=getP(empId);
   document.getElementById('topT').textContent=emp.name+'의 업무 공간';
-  document.getElementById('topS').textContent='개인 업무 보드';
+  document.getElementById('topS').textContent=isOwner?'개인 업무 보드':'공유 업무 보기 (읽기전용)';
   document.getElementById('btnTask').textContent='+ '+emp.name+' 업무 추가';
   document.getElementById('btnTask').onclick=function(){openTaskModal(empId);};
-  document.getElementById('btnTask').style.display='inline-flex';
+  document.getElementById('btnTask').style.display=isOwner?'inline-flex':'none';
   document.getElementById('btnProj').style.display='none';
   renderEmpPage(empId);
 }
@@ -1963,7 +1963,7 @@ function renderHomeSG(){
       r.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};
       body.appendChild(r);
     });
-    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+(g.items.length-5)+'개 더';m.onclick=function(){if(g.id==='_u'){showPage('board');}else if(g.id===CU.id){showEmpPage(g.id);}else{alert('접근 권한이 없습니다.');}};body.appendChild(m);}
+    if(g.items.length>5){const m=document.createElement('div');m.style.cssText='padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer';m.textContent='+'+(g.items.length-5)+'개 더';m.onclick=function(){m.remove();sortT(g.items).slice(5).forEach(function(t){var dl2=dL(t.due);var r2=document.createElement('div');r2.className='summary-row'+(t.done?' done':'');r2.innerHTML='<div class="round-check" onclick="qTog(\''+t.id+'\',event)"><div class="round-check-mark"></div></div><div class="summary-title">'+(t.idx?'<span style="color:var(--text3);font-size:10px">('+esc(t.idx)+') </span>':'')+esc(t.title)+'</div>'+(dl2?'<span class="tag '+dl2.cls+'" style="font-size:10px;padding:1px 6px">'+dl2.text+'</span>':'');r2.onclick=function(e){if(!e.target.classList.contains('round-check')&&!e.target.classList.contains('round-check-mark'))openTaskCmt(t.id);};body.appendChild(r2);});};body.appendChild(m);}
     grid.appendChild(div);
   });
 }
@@ -2208,9 +2208,10 @@ function renderEmpPage(empId){
   const emp=getP(empId);if(!emp)return;
   const av=document.getElementById('ehAv');av.textContent=emp.initial;av.style.background=emp.color;
   document.getElementById('ehN').textContent=empId===CU.id?emp.name+' (나의 공간)':emp.name;
-  const et=tasks.filter(t=>t.assignee===empId);
+  var canSeeAll=isAdmin()||CU.id===empId;
+  const et=tasks.filter(t=>t.assignee===empId&&(canSeeAll||t.shared));
   const done=et.filter(t=>t.done).length,active=et.filter(t=>!t.done).length,overdue=et.filter(t=>!t.done&&t.due&&parseLocalDate(t.due)<new Date()).length;
-  document.getElementById('ehS').textContent='총 '+et.length+'개 (개인 '+et.filter(t=>!t.shared).length+' + 공유 '+et.filter(t=>t.shared).length+')';
+  document.getElementById('ehS').textContent=canSeeAll?'총 '+et.length+'개 (개인 '+et.filter(t=>!t.shared).length+' + 공유 '+et.filter(t=>t.shared).length+')':'공유 업무 '+et.length+'개';
   document.getElementById('empStats').innerHTML=
     '<div class="stat-chip"><span class="stat-chip-num" style="color:var(--primary)">'+active+'</span><span class="stat-chip-label">진행 중</span></div>'+
     '<div class="stat-chip"><span class="stat-chip-num" style="color:var(--green)">'+done+'</span><span class="stat-chip-label">완료</span></div>'+
