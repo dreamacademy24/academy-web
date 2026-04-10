@@ -2471,11 +2471,11 @@ function renderOpinionList(){
       var ds=(date.getMonth()+1)+'/'+date.getDate();
       var isOwn=CU&&CU.id===op.from_id;
       var targetLabel=op.target==='all'?'전체':(ALL.find(function(u){return u.id===op.target;})||{name:op.target}).name;
-      html+='<div onclick="openOpinionDetail('+op.id+')" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:14px;cursor:pointer" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
+      html+='<div onclick="openOpinionDetail(\''+op.id+'\')" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:14px;cursor:pointer" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,0.08)\'" onmouseout="this.style.boxShadow=\'none\'">';
       html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px"><div style="font-size:15px;font-weight:800;color:#1a1a2e">'+esc(op.title)+'</div>';
       html+='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:12px"><span style="background:#eff6ff;color:#1a6fc4;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">'+esc(targetLabel)+'</span>';
       html+='<span style="background:#f1f5f9;color:#94a3b8;font-size:11px;padding:3px 9px;border-radius:20px">'+cnt+'</span>';
-      if(isOwn)html+='<button onclick="event.stopPropagation();deleteOpinion('+op.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>';
+      if(isOwn)html+='<button onclick="event.stopPropagation();deleteOpinion(\''+op.id+'\')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px 4px">🗑</button>';
       html+='</div></div><div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px">'+esc(op.body)+'</div>';
       if(op.files&&op.files.length)html+=renderAttachments(op.files);
       html+='<div style="display:flex;align-items:center;gap:8px">';
@@ -2531,7 +2531,7 @@ function _opdRenderReplies(opId,replies){
     html+='<div style="display:flex;gap:10px;margin-bottom:10px">';
     if(rA)html+='<div style="width:28px;height:28px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+rA.name[0]+'</div>';
     html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+(rA?esc(rA.name):'?')+'</span><span style="font-size:10px;color:#94a3b8">'+rds+'</span>';
-    if(isOwn)html+='<button onclick="_opdDelReply('+opId+','+r.id+')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:11px;padding:0;margin-left:auto">✕</button>';
+    if(isOwn)html+='<button onclick="_opdDelReply(\''+opId+'\',\''+r.id+'\')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:11px;padding:0;margin-left:auto">✕</button>';
     html+='</div><div style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
   });
   el.innerHTML=html;
