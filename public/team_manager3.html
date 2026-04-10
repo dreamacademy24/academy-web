@@ -138,6 +138,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   margin-left:auto;background:var(--primary);color:#fff;
   font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;
 }
+.notif-dot{width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-left:4px;vertical-align:top;}
 .emp-nav-item{
   display:flex;align-items:center;gap:10px;
   padding:8px 14px;margin:1px 6px;border-radius:var(--rs);
@@ -1030,11 +1031,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       </div>
     </div>
     <div class="sb-section">메뉴</div>
-    <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈</button>
-    <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무</button>
+    <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span></button>
+    <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="calendar" onclick="showPage('calendar')"><span class="ni-icon">📅</span> 달력</button>
-    <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트</button>
-    <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청</button>
+    <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
+    <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅</button>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
@@ -1169,7 +1170,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           <button class="tab-btn" onclick="setEF('active',this)">진행 중</button>
           <button class="tab-btn" onclick="setEF('done',this)">완료</button>
           <button class="tab-btn" onclick="setEF('all',this)">전체</button>
-            <button class="tab-btn" onclick="setEF('approval',this)">📋 결재</button>
+            <button class="tab-btn" onclick="setEF('approval',this)">📋 결재<span id="notif-dot-approval" class="notif-dot" style="display:none"></span></button>
         </div>
         <div id="empList"></div>
         <div id="empApprovalWrap" style="display:none"></div>
@@ -1618,6 +1619,36 @@ function loadNoticesFromSB(){
 // ── Polling-based realtime sync ──
 var _pollHash={tasks:'',projects:'',tc:'',th:'',notices:''};
 var _pollTimer=null;
+var myNotifs=[];
+function createNotif(toId,type,refId,message){
+  if(!toId||toId===(CU&&CU.id))return;
+  sbPost('staff_notifications',{id:uid(),to_id:toId,type:type,ref_id:refId||'',message:message,is_read:false,created_at:new Date().toISOString()}).catch(function(e){console.error('notif err',e);});
+}
+function createNotifMultiple(toIds,type,refId,message){
+  toIds.forEach(function(id){createNotif(id,type,refId,message);});
+}
+function loadMyNotifs(){
+  if(!CU)return Promise.resolve();
+  return sbGet('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false&order=created_at.desc&limit=200').then(function(rows){myNotifs=rows;renderNotifBadges();});
+}
+function markNotifsRead(type){
+  if(!CU||!myNotifs.length)return;
+  var has=myNotifs.some(function(n){return n.type===type;});
+  if(!has)return;
+  sbPatch('staff_notifications','to_id=eq.'+CU.id+'&type=eq.'+type+'&is_read=eq.false',{is_read:true}).catch(function(){});
+  myNotifs=myNotifs.filter(function(n){return n.type!==type;});
+  renderNotifBadges();
+}
+function renderNotifBadges(){
+  var counts={};
+  myNotifs.forEach(function(n){counts[n.type]=(counts[n.type]||0)+1;});
+  var map={board:['task_comment','unassigned_task'],projects:['thread'],opinions:['opinion'],approval:['approval'],notice:['notice']};
+  Object.keys(map).forEach(function(key){
+    var total=0;map[key].forEach(function(t){total+=(counts[t]||0);});
+    var dot=document.getElementById('notif-dot-'+key);
+    if(dot)dot.style.display=total>0?'inline-block':'none';
+  });
+}
 function jsonHash(obj){return JSON.stringify(obj).length+'-'+JSON.stringify(obj).slice(0,100);}
 function startPolling(){
   if(_pollTimer)clearInterval(_pollTimer);
@@ -1669,6 +1700,7 @@ function pollForUpdates(){
       refreshAll();showSyncBadge();
       if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);
     }
+    loadMyNotifs();
   }).catch(function(e){console.error('[SB] poll err',e);});
 }
 function showSyncBadge(){
@@ -1801,7 +1833,7 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
-  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
 }
@@ -1887,13 +1919,13 @@ function showPage(p){
   document.getElementById('btnTask').onclick=function(){openTaskModal('');};
   document.getElementById('btnTask').style.display='inline-flex';
   document.getElementById('btnProj').style.display='none';
-  if(p==='home')renderHome();
-  if(p==='board')renderBoard();
+  if(p==='home'){renderHome();markNotifsRead('notice');}
+  if(p==='board'){renderBoard();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
   if(p==='calendar')renderCal();
-  if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';}
+  if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
-  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';}
+  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');}
 }
 function showEmpPage(empId){
   var isOwner=isAdmin()||CU.id===empId;
@@ -2233,7 +2265,7 @@ function setEF(f,el){
   if(f==='approval'){
     listWrap.style.display='none';dailyWrap.classList.add('hidden');
     document.getElementById('empApprovalWrap').style.display='block';
-    renderApprovalPage(curEmpId);return;
+    renderApprovalPage(curEmpId);markNotifsRead('approval');return;
   }
   if(f==='daily'){
     listWrap.style.display='none';dailyWrap.classList.remove('hidden');
@@ -2343,8 +2375,9 @@ function submitApproval(empId){
   if(!title||!title.value.trim()){toast("\uc81c\ubaa9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
   if(!body||!body.value.trim()){toast("\ub0b4\uc6a9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
   readFilesAsBase64(document.getElementById("apvFiles")||{files:[]}).then(function(files){
-    sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:toEl?toEl.value:"ceo",title:title.value.trim(),body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
-      .then(function(){toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");renderApprovalPage(empId);});
+    var _apvTo=toEl?toEl.value:"ceo";var _apvTitle=title.value.trim();
+    sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
+      .then(function(){toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");renderApprovalPage(empId);var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));});
   });
 }
 function processApproval(id,action){
@@ -2458,7 +2491,7 @@ function submitOpinion(){
   var fileInput=document.getElementById('opFiles');
   readFilesAsBase64(fileInput||{files:[]}).then(function(files){
     sbPost('staff_opinions',{from_id:CU?CU.id:'',target:target,title:title,body:body,files:files,ts:Date.now()})
-      .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();});
+      .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();var _opIds=target==='all'?ALL.map(function(u){return u.id;}):[target];createNotifMultiple(_opIds,'opinion','',CU.name+'님이 의견을 요청했습니다: '+title.slice(0,20));});
   });
 }
 function submitReply(opId){
@@ -2768,6 +2801,8 @@ function sendInlineCmt(taskId){
   var _nc={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
   taskComments[taskId].push(_nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,_nc);inp.value='';inp.style.height='auto';
+  var _ct=tasks.find(function(t){return t.id===taskId;});
+  if(_ct&&_ct.assignee)createNotif(_ct.assignee,'task_comment',taskId,CU.name+'님이 "'+(_ct.title||'업무').slice(0,20)+'"에 댓글을 남겼습니다');
   const sec=document.getElementById('tcmt-'+taskId);if(sec)renderInlineCmt(sec,taskId);
   renderEmpList(curEmpId);
   if(document.getElementById('taskCmtModal').classList.contains('open')&&curCmtTaskId===taskId)renderTaskCmtBody(taskId);
@@ -2821,6 +2856,8 @@ function sendTaskCmt(){
   var _nc2={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
   taskComments[curCmtTaskId].push(_nc2);
   sv('tm_tc',taskComments);syncTcToSB(curCmtTaskId,_nc2);inp.value='';inp.style.height='auto';
+  var _ct2=tasks.find(function(t){return t.id===curCmtTaskId;});
+  if(_ct2&&_ct2.assignee)createNotif(_ct2.assignee,'task_comment',curCmtTaskId,CU.name+'님이 "'+(_ct2.title||'업무').slice(0,20)+'"에 댓글을 남겼습니다');
   renderTaskCmtBody(curCmtTaskId);refreshAll();
 }
 function delTaskCmt(taskId,cmtId){
@@ -2829,7 +2866,7 @@ function delTaskCmt(taskId,cmtId){
 }
 
 // ── NOTICES ──
-function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;var _nn={id:uid(),text,done:false,date:nowStr(),requireRead:rr};notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();}
+function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;var _nn={id:uid(),text,done:false,date:nowStr(),requireRead:rr};notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'새 공지: '+text.slice(0,30));}
 function togNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('tm_n',notices);syncNtToSB(n);renderNotices();}}
 function delNotice(id){delNtFromSB(id);notices=notices.filter(n=>n.id!==id);sv('tm_n',notices);renderNotices();}
 
@@ -2998,7 +3035,7 @@ function saveTask(){
   const createdAt=document.getElementById('tmCreated').textContent;
   const clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
   if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;}}
-  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:true,projId:tmProjId||null};tasks.unshift(_newT);}
+  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:true,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
   rebuildIdx();svTasks();var _syncT=editTaskId?tasks.find(function(t){return t.id===editTaskId;}):tasks[0];if(_syncT)syncTaskToSB(_syncT);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
 }
 function deleteTsk(){if(!editTaskId)return;delTaskFromSB(editTaskId);tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();svTasks();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
@@ -3365,7 +3402,7 @@ function buildThread(projId,container){
   });
   setTimeout(function(){body.scrollTop=body.scrollHeight;},50);
 }
-function sendMsg(projId){const inp=document.getElementById('tti-'+projId);const text=inp.value.trim();if(!text)return;if(!threads[projId])threads[projId]=[];var _nm={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};threads[projId].push(_nm);sv('tm_th',threads);syncThToSB(projId,_nm);inp.value='';inp.style.height='auto';renderProjDetail(projId);}
+function sendMsg(projId){const inp=document.getElementById('tti-'+projId);const text=inp.value.trim();if(!text)return;if(!threads[projId])threads[projId]=[];var _nm={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};threads[projId].push(_nm);sv('tm_th',threads);syncThToSB(projId,_nm);inp.value='';inp.style.height='auto';var _tp=projects.find(function(p){return p.id===projId;});if(_tp&&_tp.members)createNotifMultiple(_tp.members,'thread',projId,CU.name+'님이 "'+(_tp.name||'프로젝트').slice(0,15)+'" 스레드에 글을 남겼습니다');renderProjDetail(projId);}
 function delMsg(projId,msgId){if(!threads[projId])return;delThFromSB(msgId);threads[projId]=threads[projId].filter(function(m){return m.id!==msgId;});sv('tm_th',threads);renderProjDetail(projId);}
 function openProjModal(){editProjId=null;selColor='#4361ee';document.getElementById('pmTitle').textContent='🚀 새 프로젝트';['pmN','pmD','pmDue'].forEach(id=>document.getElementById(id).value='');document.getElementById('pmC').value='#4361ee';document.getElementById('pmDel').style.display='none';document.querySelectorAll('.color-opt').forEach((el,i)=>el.classList.toggle('sel',i===0));buildMPicker([]);openM('projModal');}
 function openEditProj(projId){const p=projects.find(function(pr){return pr.id===projId;});if(!p)return;editProjId=projId;selColor=p.color;document.getElementById('pmTitle').textContent='✏️ 프로젝트 편집';document.getElementById('pmN').value=p.name;document.getElementById('pmD').value=p.desc||'';document.getElementById('pmDue').value=p.due||'';document.getElementById('pmC').value=p.color;document.getElementById('pmDel').style.display='inline-flex';document.querySelectorAll('.color-opt').forEach(el=>el.classList.toggle('sel',el.dataset.c===p.color));buildMPicker(p.members);openM('projModal');}
