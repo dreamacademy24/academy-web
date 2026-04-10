@@ -1268,7 +1268,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
       <div id="tmSubToggleWrap" style="position:relative;width:36px;height:20px;flex-shrink:0;cursor:pointer">
         <input type="checkbox" id="tmSubToggle" onchange="var sp=document.getElementById('tmSubToggleSpan');sp.style.background=this.checked?'#f59e0b':'#cbd5e1';sp.querySelector('i').style.transform=this.checked?'translateX(16px)':'translateX(0)';togSubtaskMode()" style="position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2" />
-        <span id="tmSubToggleSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+        <span id="tmSubToggleSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
       </div>
       <span style="font-size:13px;font-weight:600;color:var(--text2)">🔀 하위 업무로 관리</span>
       <span style="font-size:11px;color:var(--text3)">ON 시 체크리스트 대신 하위 업무 사용</span>
