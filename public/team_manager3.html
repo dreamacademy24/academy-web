@@ -1735,7 +1735,8 @@ function ld(k,d){try{return JSON.parse(localStorage.getItem(k))??d;}catch{return
 function sv(k,v){localStorage.setItem(k,JSON.stringify(v));}
 function uid(){try{return crypto.randomUUID();}catch(e){return Date.now().toString(36)+Math.random().toString(36).slice(2);}}
 function nowStr(){return new Date().toLocaleDateString('ko-KR');}
-function todayStr(){return new Date().toISOString().split('T')[0];}
+function localDateStr(d){var mm=d.getMonth()+1;var dd=d.getDate();return d.getFullYear()+'-'+(mm<10?'0':'')+mm+'-'+(dd<10?'0':'')+dd;}
+function todayStr(){return localDateStr(new Date());}
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
 
 let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
@@ -2160,7 +2161,7 @@ function renderMonthCal(){
   const first=new Date(y,m,1),last=new Date(y,m+1,0),today=new Date();today.setHours(0,0,0,0);
   const vis=calVis();
   const mk=function(date,isCur){
-    const ds=date.toISOString().split('T')[0];
+    const ds=localDateStr(date);
     const cell=document.createElement('div');cell.className='cal-cell'+(!isCur?' other-month':'');
     if(date.getTime()===today.getTime())cell.classList.add('today');
     const dn=document.createElement('div');dn.className='cal-date';dn.textContent=date.getDate();cell.appendChild(dn);
@@ -2202,7 +2203,7 @@ function renderWeekCal(){
   wrap.appendChild(hg);
   const bg=document.createElement('div');bg.className='week-body-grid';
   days.forEach(function(d){
-    const ds=d.toISOString().split('T')[0];
+    const ds=localDateStr(d);
     const col=document.createElement('div');col.className='week-cell';
     const dayT=vis.filter(t=>t.due===ds);
     if(!dayT.length)col.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 2px">—</div>';
@@ -2218,7 +2219,7 @@ function renderWeekCal(){
   wrap.appendChild(bg);body.appendChild(wrap);
   // sidebar
   const si=document.createElement('div');si.className='week-sidebar';
-  const weekDs=new Set(days.map(d=>d.toISOString().split('T')[0]));
+  const weekDs=new Set(days.map(d=>localDateStr(d)));
   const wt=vis.filter(t=>t.due&&weekDs.has(t.due));
   si.innerHTML='<div class="week-sidebar-title">📋 이번 주 직원별 업무</div>';
   const grps=[{emp:{id:'_u',name:'미배정',color:'#9ca3af'},tasks:wt.filter(t=>!t.assignee)},...ALL.map(e=>({emp:e,tasks:wt.filter(t=>t.assignee===e.id)}))].filter(g=>g.tasks.length);
@@ -3895,7 +3896,7 @@ function checkDueNotif(){
   if(!CU)return;var notifKey='tm_notif_'+CU.id;if(localStorage.getItem(notifKey)!=='true')return;
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   var today=todayStr(),now=new Date();now.setHours(0,0,0,0);
-  var tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);var tmrStr=tomorrow.toISOString().split('T')[0];
+  var tomorrow=new Date(now);tomorrow.setDate(tomorrow.getDate()+1);var tmrStr=localDateStr(tomorrow);
   var urgent=tasks.filter(function(t){return !t.done&&t.assignee===CU.id&&(t.due===today||t.due===tmrStr);});
   if(urgent.length){new Notification('⏰ Dream Academy - 마감 임박',{body:urgent.length+'개 업무가 곧 마감됩니다: '+urgent.map(function(t){return t.title;}).slice(0,3).join(', '),icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏰</text></svg>'});}
 }
