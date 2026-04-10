@@ -1265,12 +1265,28 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       </div>
     </div>
     <div class="form-group"><label class="form-label">메모</label><textarea class="form-textarea" id="tmNt" placeholder="추가 메모..."></textarea></div>
-    <div class="form-group">
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
+        <input type="checkbox" id="tmSubToggle" style="opacity:0;width:0;height:0" />
+        <span onclick="var c=document.getElementById('tmSubToggle');c.checked=!c.checked;this.style.background=c.checked?'#f59e0b':'#cbd5e1';this.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)';togSubtaskMode()" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+      </label>
+      <span style="font-size:13px;font-weight:600;color:var(--text2)">🔀 하위 업무로 관리</span>
+      <span style="font-size:11px;color:var(--text3)">ON 시 체크리스트 대신 하위 업무 사용</span>
+    </div>
+    <div id="tmClSection" class="form-group">
       <label class="form-label">✅ 체크리스트</label>
       <div id="tmClList" style="margin-bottom:6px"></div>
       <div style="display:flex;gap:6px">
         <input class="form-input" id="tmClInp" placeholder="항목 추가..." style="font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();addTMChecklist();}" />
         <button class="btn btn-primary btn-sm" onclick="addTMChecklist()">+ 추가</button>
+      </div>
+    </div>
+    <div id="tmSubSection" class="form-group" style="display:none">
+      <label class="form-label">🔀 하위 업무</label>
+      <div id="tmSubList" style="margin-bottom:6px"></div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="tmSubInp" placeholder="하위 업무 제목..." style="font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();addTMSub();}" />
+        <button class="btn btn-primary btn-sm" onclick="addTMSub()">+ 추가</button>
       </div>
     </div>
     <div class="form-group">
@@ -2709,6 +2725,63 @@ function saveClDue(prefix,i,dateVal){
   else if(prefix.startsWith('ecl-')){var tid=prefix.replace('ecl-','');var t=tasks.find(function(x){return x.id===tid;});if(t&&t.checklist&&t.checklist[i]){t.checklist[i].dueDate=dd;svTasks();syncTaskToSB(t);var sec=document.getElementById(prefix);if(sec){var ce=isAdmin()||(CU&&CU.id===t.assignee);renderEmpChecklist(tid,sec,ce);}}}
   else if(prefix.startsWith('tcm-cl-')){var tid2=prefix.replace('tcm-cl-','');var t2=tasks.find(function(x){return x.id===tid2;});if(t2&&t2.checklist&&t2.checklist[i]){t2.checklist[i].dueDate=dd;svTasks();syncTaskToSB(t2);var sec2=document.getElementById(prefix);if(sec2){var ce2=isAdmin()||(CU&&CU.id===t2.assignee);renderDetailChecklist(tid2,sec2,ce2);}}}
 }
+// ── SUBTASK SYSTEM ──
+var tmSubtasks=[];
+function togSubtaskMode(){
+  var on=document.getElementById('tmSubToggle').checked;
+  document.getElementById('tmClSection').style.display=on?'none':'';
+  document.getElementById('tmSubSection').style.display=on?'':'none';
+}
+function renderTMSubList(){
+  var list=document.getElementById('tmSubList');if(!list)return;
+  if(!tmSubtasks.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">하위 업무를 추가하세요</div>';return;}
+  var done=tmSubtasks.filter(function(s){return s.done;}).length;
+  var pct=Math.round(done/tmSubtasks.length*100);
+  list.innerHTML='<div class="cl-bar"><div class="cl-bar-fill" style="width:'+pct+'%;background:var(--green)"></div></div><div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+done+'/'+tmSubtasks.length+' 완료 ('+pct+'%)</div>';
+  tmSubtasks.forEach(function(s,i){
+    var emp=getP(s.assignee);var empTag=emp?'<span style="font-size:10px;background:'+emp.color+'18;color:'+emp.color+';padding:1px 6px;border-radius:99px">'+emp.name+'</span>':'';
+    var dl=dL(s.due);var dueTag=dl?'<span class="tag '+dl.cls+'" style="font-size:10px;padding:1px 5px">'+dl.text+'</span>':'';
+    var el=document.createElement('div');el.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:8px;margin-bottom:4px';
+    el.innerHTML='<div class="cl-cb'+(s.done?' checked':'')+'" onclick="togTMSub('+i+')"></div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;'+(s.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(s.title)+'</div>'+
+      (empTag||dueTag?'<div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">'+empTag+dueTag+'</div>':'')+'</div>'+
+      '<button class="btn-icon" onclick="editTMSub('+i+')" style="font-size:11px;padding:3px 6px">✎</button>'+
+      '<button class="cl-del" onclick="delTMSub('+i+')">✕</button>';
+    list.appendChild(el);
+  });
+}
+function addTMSub(){
+  var inp=document.getElementById('tmSubInp');var title=inp.value.trim();if(!title)return;
+  tmSubtasks.push({id:uid(),title:title,assignee:'',due:'',done:false,note:'',checklist:[]});
+  inp.value='';renderTMSubList();
+}
+function togTMSub(i){tmSubtasks[i].done=!tmSubtasks[i].done;renderTMSubList();}
+function delTMSub(i){tmSubtasks.splice(i,1);renderTMSubList();}
+function editTMSub(i){
+  var s=tmSubtasks[i];if(!s)return;
+  var html='<div style="padding:10px"><div class="form-group"><label class="form-label">제목</label><input class="form-input" id="subEditTitle" value="'+esc(s.title)+'" /></div>'+
+    '<div class="form-group"><label class="form-label">담당자</label><select class="form-input" id="subEditAss"><option value="">미배정</option>'+ALL.map(function(u){return '<option value="'+u.id+'"'+(s.assignee===u.id?' selected':'')+'>'+u.name+'</option>';}).join('')+'</select></div>'+
+    '<div class="form-group"><label class="form-label">마감일</label><input class="form-input" type="date" id="subEditDue" value="'+(s.due||'')+'" /></div>'+
+    '<div class="form-group"><label class="form-label">메모</label><textarea class="form-textarea" id="subEditNote" placeholder="메모...">'+(s.note||'')+'</textarea></div>'+
+    '<div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn btn-secondary btn-sm" onclick="closeM(\'subEditModal\')">취소</button><button class="btn btn-primary btn-sm" onclick="saveTMSubEdit('+i+')">저장</button></div></div>';
+  var modal=document.getElementById('subEditModal');
+  if(!modal){modal=document.createElement('div');modal.id='subEditModal';modal.className='overlay';modal.innerHTML='<div class="modal-box" style="width:400px"><div class="modal-title">🔀 하위 업무 편집</div><div id="subEditBody"></div></div>';document.body.appendChild(modal);}
+  document.getElementById('subEditBody').innerHTML=html;openM('subEditModal');
+}
+function saveTMSubEdit(i){
+  var s=tmSubtasks[i];if(!s)return;
+  s.title=document.getElementById('subEditTitle').value.trim()||s.title;
+  s.assignee=document.getElementById('subEditAss').value;
+  s.due=document.getElementById('subEditDue').value;
+  s.note=document.getElementById('subEditNote').value.trim();
+  closeM('subEditModal');renderTMSubList();
+}
+function getSubtasksFromTask(t){
+  if(!t||!t.checklist)return null;
+  if(t.checklist._sub)return t.checklist.items||[];
+  return null;
+}
+function taskHasSubtasks(t){return t&&t.checklist&&t.checklist._sub===true;}
 function renderTMChecklist(){
   const list=document.getElementById('tmClList');if(!list)return;
   if(!tmChecklist.length){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px 0">항목을 추가하세요</div>';return;}
@@ -2728,7 +2801,8 @@ function addTMChecklist(){const inp=document.getElementById('tmClInp');const raw
 
 function renderEmpChecklist(taskId,container,canEdit){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t){container.innerHTML='';return;}
-  if(!t.checklist)t.checklist=[];
+  if(taskHasSubtasks(t)){container.innerHTML='';return;}
+  if(!t.checklist||!Array.isArray(t.checklist))t.checklist=[];
   const emp=getP(t.assignee),ec=emp?emp.color:'#9ca3af';
   const done=t.checklist.filter(function(c){return c.done;}).length,total=t.checklist.length,pct=total?Math.round(done/total*100):0;
   container.innerHTML='';
@@ -2786,7 +2860,8 @@ function delEmpCl(taskId,idx){const t=tasks.find(function(t){return t.id===taskI
 
 function renderDetailChecklist(taskId,container,canEdit){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;
-  const ec=getP(t.assignee)?getP(t.assignee).color:'#9ca3af';if(!t.checklist)t.checklist=[];
+  if(taskHasSubtasks(t)){container.innerHTML='';return;}
+  const ec=getP(t.assignee)?getP(t.assignee).color:'#9ca3af';if(!t.checklist||!Array.isArray(t.checklist))t.checklist=[];
   const done=t.checklist.filter(function(c){return c.done;}).length,total=t.checklist.length,pct=total?Math.round(done/total*100):0;
   container.innerHTML='';const wrap=document.createElement('div');wrap.className='cl-wrap';
   const hdr=document.createElement('div');hdr.className='cl-header';
@@ -2893,6 +2968,12 @@ function sendInlineCmt(taskId){
 let curCmtTaskId=null;
 function openTaskEditFromDetail(){if(curCmtTaskId)openTaskEdit(curCmtTaskId);}
 function qTogFromDetail(){if(curCmtTaskId){qTog(curCmtTaskId,null);openTaskCmt(curCmtTaskId);}}
+function togSubInDetail(taskId,idx){
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t||!taskHasSubtasks(t))return;
+  t.checklist.items[idx].done=!t.checklist.items[idx].done;
+  var si=t.checklist.items;t.progress=si.length?Math.round(si.filter(function(s){return s.done;}).length/si.length*100):0;
+  svTasks();syncTaskToSB(t);openTaskCmt(taskId);
+}
 function openTaskCmt(taskId){
   curCmtTaskId=taskId;
   const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;
@@ -2909,9 +2990,28 @@ function openTaskCmt(taskId){
   const noteEl=document.getElementById('tcmNote');if(t.note){noteEl.style.display='block';noteEl.textContent='📝 '+t.note;}else noteEl.style.display='none';
   const filesEl=document.getElementById('tcmFiles');if(t.files&&t.files.length){filesEl.style.display='block';filesEl.innerHTML='📎 첨부파일: '+t.files.map(function(f){return '<span style="font-family:JetBrains Mono,monospace;font-size:11.5px;background:var(--surface2);padding:2px 7px;border-radius:4px;margin-left:4px">'+f.name+'</span>';}).join('');}else filesEl.style.display='none';
   const progWrap=document.getElementById('tcmProgWrap');progWrap.innerHTML='';
-  const clDiv=document.createElement('div');clDiv.id='tcm-cl-'+taskId;renderDetailChecklist(taskId,clDiv,canEdit);progWrap.appendChild(clDiv);
+  if(taskHasSubtasks(t)){
+    var subItems=t.checklist.items||[];
+    var subDone=subItems.filter(function(s){return s.done;}).length;
+    var subPct=subItems.length?Math.round(subDone/subItems.length*100):0;
+    var subDiv=document.createElement('div');
+    subDiv.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🔀 하위 업무 ('+subDone+'/'+subItems.length+')</div>';
+    var subBar=document.createElement('div');subBar.className='cl-bar';subBar.innerHTML='<div class="cl-bar-fill" style="width:'+subPct+'%;background:'+ec+'"></div>';subDiv.appendChild(subBar);
+    subItems.forEach(function(s,si){
+      var se=getP(s.assignee);var seTag=se?'<span style="font-size:10px;background:'+se.color+'18;color:'+se.color+';padding:1px 6px;border-radius:99px">'+se.name+'</span>':'';
+      var sdl=dL(s.due);var sdTag=sdl?'<span class="tag '+sdl.cls+'" style="font-size:10px;padding:1px 5px">'+sdl.text+'</span>':'';
+      var sEl=document.createElement('div');sEl.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+(s.done?'var(--surface,#f8fafc)':'#eff6ff')+';border:1px solid '+(s.done?'var(--border,#e2e8f0)':'#bfdbfe')+';border-radius:8px;margin-top:6px;cursor:pointer';
+      sEl.innerHTML='<div class="cl-cb'+(s.done?' checked':'')+'" onclick="togSubInDetail(\''+taskId+'\','+si+')"></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;'+(s.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(s.title)+'</div>'+
+        (seTag||sdTag||s.note?'<div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">'+seTag+sdTag+(s.note?'<span style="font-size:10px;color:var(--text3)">📝</span>':'')+'</div>':'')+'</div>';
+      subDiv.appendChild(sEl);
+    });
+    progWrap.appendChild(subDiv);
+  } else {
+    const clDiv=document.createElement('div');clDiv.id='tcm-cl-'+taskId;renderDetailChecklist(taskId,clDiv,canEdit);progWrap.appendChild(clDiv);
+  }
   const progDiv=document.createElement('div');progDiv.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:700;color:var(--text2)">📊 진행률</span><span id="tcm-pp" style="font-size:20px;font-weight:800;color:'+ec+'">'+prog+'%</span></div>';
-  if(canEdit){progDiv.innerHTML+='<input type="range" class="prog-slider" id="tcm-ps" min="0" max="100" value="'+prog+'" style="width:100%;background:linear-gradient(to right,'+ec+' '+prog+'%,var(--border2) '+prog+'%)" oninput="liveSliderModal(\''+taskId+'\',this,\''+ec+'\')" onchange="autoSaveProgressModal(\''+taskId+'\',this)" /><div class="prog-hint" style="text-align:right;margin-top:4px">슬라이더를 놓으면 자동 저장 ✓</div>';}
+  if(canEdit&&!taskHasSubtasks(t)){progDiv.innerHTML+='<input type="range" class="prog-slider" id="tcm-ps" min="0" max="100" value="'+prog+'" style="width:100%;background:linear-gradient(to right,'+ec+' '+prog+'%,var(--border2) '+prog+'%)" oninput="liveSliderModal(\''+taskId+'\',this,\''+ec+'\')" onchange="autoSaveProgressModal(\''+taskId+'\',this)" /><div class="prog-hint" style="text-align:right;margin-top:4px">슬라이더를 놓으면 자동 저장 ✓</div>';}
   else{progDiv.innerHTML+='<div class="prog-bar"><div class="prog-bar-fill" style="width:'+prog+'%;background:'+ec+'"></div></div>';}
   progWrap.appendChild(progDiv);
   renderTaskCmtBody(taskId);openM('taskCmtModal');setTimeout(function(){document.getElementById('tcmInp').focus();},100);
@@ -2995,7 +3095,7 @@ function saveQA(){
   if(shared)toast('✓ 달력·전체 보드에 공유됐어요!');renderEmpPage(curEmpId);
 }
 function openTaskModal(pre){
-  editTaskId=null;tmProjId=null;mFiles=[];tmChecklist=[];
+  editTaskId=null;tmProjId=null;mFiles=[];tmChecklist=[];tmSubtasks=[];
   document.getElementById('tmTitle').textContent='업무 추가';
   ['tmTit','tmNt'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tmDue').value='';document.getElementById('tmDue').style.display='none';
@@ -3003,6 +3103,8 @@ function openTaskModal(pre){
   document.getElementById('tmCreated').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value==='none';});
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
+  var _tmSub=document.getElementById('tmSubToggle');_tmSub.checked=false;_tmSub.parentElement.querySelector('span').style.background='#cbd5e1';_tmSub.parentElement.querySelector('i').style.transform='translateX(0)';
+  document.getElementById('tmClSection').style.display='';document.getElementById('tmSubSection').style.display='none';renderTMSubList();
   var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;_tmSh.parentElement.querySelector('span').style.background='#cbd5e1';_tmSh.parentElement.querySelector('i').style.transform='translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -3040,7 +3142,11 @@ function linkTaskToProj(taskId){
 function openTaskEdit(id){
   const t=tasks.find(function(t){return t.id===id;});if(!t)return;
   editTaskId=id;tmProjId=t.projId||null;mFiles=[...(t.files||[])];
-  tmChecklist=[...(t.checklist||[])].map(function(c){return{id:c.id||uid(),text:c.text,done:c.done||false,dueDate:c.dueDate||null};});
+  var _isSub=taskHasSubtasks(t);
+  if(_isSub){tmChecklist=[];tmSubtasks=(t.checklist.items||[]).map(function(s){return Object.assign({},s);});}
+  else{tmChecklist=[...(Array.isArray(t.checklist)?t.checklist:[])].map(function(c){return{id:c.id||uid(),text:c.text,done:c.done||false,dueDate:c.dueDate||null};});tmSubtasks=[];}
+  var _subTog=document.getElementById('tmSubToggle');_subTog.checked=_isSub;_subTog.parentElement.querySelector('span').style.background=_isSub?'#f59e0b':'#cbd5e1';_subTog.parentElement.querySelector('i').style.transform=_isSub?'translateX(16px)':'translateX(0)';
+  document.getElementById('tmClSection').style.display=_isSub?'none':'';document.getElementById('tmSubSection').style.display=_isSub?'':'none';renderTMSubList();
   document.getElementById('tmTitle').textContent='업무 편집';
   document.getElementById('tmTit').value=t.title;document.getElementById('tmNt').value=t.note||'';
   document.getElementById('tmDel').style.display='inline-flex';
@@ -3117,10 +3223,18 @@ function saveTask(){
   const due=dueM==='date'?document.getElementById('tmDue').value:'';
   const note=document.getElementById('tmNt').value;
   const createdAt=document.getElementById('tmCreated').textContent;
-  const clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
+  var _isSubMode=document.getElementById('tmSubToggle').checked;
+  var _clData,clProg;
+  if(_isSubMode){
+    _clData={_sub:true,items:[...tmSubtasks]};
+    clProg=tmSubtasks.length?Math.round(tmSubtasks.filter(function(s){return s.done;}).length/tmSubtasks.length*100):0;
+  } else {
+    _clData=[...tmChecklist];
+    clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
+  }
   const _tmShared=document.getElementById('tmShare').checked;
-  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=[...tmChecklist];if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;}}
-  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:[...tmChecklist],progress:clProg||0,shared:_tmShared,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
+  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;}}
+  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
   rebuildIdx();svTasks();var _syncT=editTaskId?tasks.find(function(t){return t.id===editTaskId;}):tasks[0];if(_syncT)syncTaskToSB(_syncT);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
 }
 function deleteTsk(){if(!editTaskId)return;delTaskFromSB(editTaskId);tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();svTasks();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
