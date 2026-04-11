@@ -107,6 +107,11 @@ export default function AdminHubPage() {
           <h2>SSP 관리</h2>
           <p>신청현황 · 발급추적 · 학생별 관리</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/students')}>
+          <div className="ic">🎒</div>
+          <h2>학생 관리</h2>
+          <p>학생 목록 · 과정별 조회 · 정보 관리</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
