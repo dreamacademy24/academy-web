@@ -211,3 +211,39 @@ Phase 8: 자동화 고도화 + 기타 (47~54)
 ### 새 대화 시작 방법
 "드림아카데미 프로젝트 이어서 진행해줘"
 → CLAUDE.md 읽고 STEP 22 (어드민 예약 개편)부터 바로 이어서 진행
+
+## 현재 진행 상황 (2026-04-11 최신)
+
+### 완료된 작업 (STEP 1~21)
+- STEP 1 ✅ CLAUDE.md 업데이트
+- STEP 2~7 ✅ Supabase 신규 테이블 18개 생성
+- STEP 8~9 ✅ CSV 마이그레이션 — bookings_new 117건, students 426건
+- STEP 10 ✅ Auth + RLS 전체 설정 + exec_sql 함수
+- STEP 11 ✅ /admin/drivers — 기사 + 차량 등록
+- STEP 12~13 ✅ /admin/pickups — 픽드랍 자동추출 + 기사배정
+- STEP 14 ✅ /admin/shuttle — 셔틀 관리
+- STEP 15 ✅ admin/hub 9개 카드
+- STEP 16 ✅ /admin/driver-schedule — 주간 달력뷰
+- STEP 17~21 ✅ /admin/checkin-details — 자동생성 + PDF
+- 🔧 ✅ 직원업무 자동로그인 + Jun 역할 수정
+- 🔧 ✅ URL 링크 자동 변환
+
+### 다음 작업 (STEP 22부터)
+- STEP 22: /admin/bookings 예약 유형 선택 UI + 숙소 조합 동적 필드
+- STEP 23: 항공권 구조화 + 학생 자동생성
+- STEP 24: 결제 상태 구조화 + 확정예약 탭 개선
+- STEP 25~27: 인보이스 3가지 + 리조트용 예약확인서
+- STEP 28~32: 학생/튜터/화상영어/엑셀
+- STEP 33~42: 손님 포털
+- STEP 43~48: 다국어 한/영/일
+- STEP 49~54: 홈페이지 개선
+
+### admin/hub 카드 9개
+1.예약관리 2.사이트관리 3.직원업무 4.드림하우스
+5.기사관리(/admin/drivers) 6.픽드랍(/admin/pickups)
+7.셔틀(/admin/shuttle) 8.기사스케줄(/admin/driver-schedule)
+9.체크인디테일(/admin/checkin-details)
+
+### 새 대화 시작 방법
+"드림아카데미 프로젝트 이어서 진행해줘"
+→ CLAUDE.md 읽고 STEP 22 (어드민 예약 개편)부터 바로 이어서 진행
