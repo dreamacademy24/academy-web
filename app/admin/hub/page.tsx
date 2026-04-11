@@ -24,12 +24,12 @@ export default function AdminHubPage() {
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
-.hub-w{max-width:600px;margin:0 auto;padding:60px 24px;}
-.hub-h{text-align:center;margin-bottom:44px;}
-.hub-h h1{font-size:28px;font-weight:800;margin-bottom:8px;}
+.hub-w{max-width:720px;margin:0 auto;padding:32px 24px;}
+.hub-h{text-align:center;margin-bottom:24px;}
+.hub-h h1{font-size:24px;font-weight:800;margin-bottom:6px;}
 .hub-h p{font-size:14px;color:#6b7c93;}
-.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:36px;}
-.hub-card{border-radius:16px;padding:40px 24px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all 180ms;}
+.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+.hub-card{border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all 180ms;}
 .hub-card:hover{transform:translateY(-3px);}
 .hub-card .ic{font-size:44px;margin-bottom:14px;}
 .hub-card h2{font-size:18px;font-weight:800;margin-bottom:8px;}
@@ -39,7 +39,7 @@ export default function AdminHubPage() {
 .hub-footer{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
 .hub-link{color:#6b7c93;font-size:13px;font-weight:600;text-decoration:none;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;}.hub-link:hover{color:#1a6fc4;border-color:#1a6fc4;}
 .logout{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;margin-top:24px;display:block;text-align:center;width:100%;font-family:'Noto Sans KR',sans-serif;}.logout:hover{color:#dc2626;}
-@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:40px 16px;}}
+@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:24px 16px;}}
     `}</style>
     <div className="hub-w">
       <div className="hub-h">
