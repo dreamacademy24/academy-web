@@ -104,6 +104,41 @@ export default function AdminBookingsPage(){
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
 
+  /* ── STEP 33: 항공권 확인 자동 태스크 생성 ── */
+  async function createFlightCheckTasks(){
+    const today=new Date();today.setHours(0,0,0,0);
+    const targets=confirmList.filter(b=>{
+      if(!b.checkin_date)return false;
+      const ci=new Date(b.checkin_date);ci.setHours(0,0,0,0);
+      const diff=Math.round((ci.getTime()-today.getTime())/(1000*60*60*24));
+      return diff>=25&&diff<=35;
+    });
+    if(targets.length===0){alert("체크인 25~35일 이내 예약이 없습니다.");return;}
+    // 기존 태스크 조회 (중복 방지 - title에 예약번호 포함 여부)
+    const {data:existing,error:eErr}=await supabase.from("staff_tasks").select("title");
+    if(eErr){alert("staff_tasks 테이블 조회 실패: "+eErr.message);return;}
+    const existTitles=new Set((existing??[]).map((t:{title:string})=>t.title));
+    const toInsert=targets.filter(b=>{
+      const title="✈️ 항공권 확인 - "+b.booker_name+" ("+b.checkin_date+")";
+      return !existTitles.has(title);
+    }).map(b=>{
+      const ci=new Date(b.checkin_date);ci.setDate(ci.getDate()-30);
+      const dueStr=ci.toISOString().slice(0,10);
+      return{
+        title:"✈️ 항공권 확인 - "+b.booker_name+" ("+b.checkin_date+")",
+        assignee:b.assignee||"all",
+        due:dueStr,
+        done:false,
+        shared:true,
+        note:"예약번호: "+b.reservation_no+"\n체크인: "+b.checkin_date+"\n학생: "+stuNames(b.students),
+      };
+    });
+    if(toInsert.length===0){alert("새로 생성할 태스크가 없습니다. (이미 생성됨)");return;}
+    const {error:iErr}=await supabase.from("staff_tasks").insert(toInsert);
+    if(iErr){alert("태스크 생성 실패: "+iErr.message);return;}
+    alert(toInsert.length+"개 항공권 확인 태스크가 생성됐어요!");
+  }
+
   async function saveNewBooking(){
     if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
     setSavingNew(true);
@@ -475,6 +510,7 @@ export default function AdminBookingsPage(){
           <div style={{padding:"8px 16px",background:"#fefce8",borderRadius:8,border:"1px solid #fde68a",fontSize:12}}>
             <span style={{color:"#854d0e"}}>미입금</span> <span style={{fontWeight:800,color:"#854d0e",marginLeft:4}}>{confirmList.filter(b=>!b.balance_date||!b.balance_date.includes("완료")).length}건</span>
           </div>
+          <button onClick={createFlightCheckTasks} style={{marginLeft:"auto",padding:"8px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>🔔 알림 태스크 생성</button>
         </div>
         <div className="ss-w"><table className="ss"><thead><tr>
           {cols.map(c=><th key={c.key} onClick={()=>toggleSort(c.key)}>{c.label}<span className={arrowCls(c.key)}>{arrow(c.key)}</span></th>)}
