@@ -67,6 +67,16 @@ export default function AdminHubPage() {
           <h2>드림하우스</h2>
           <p>룸 예약현황 · 충돌감지</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/drivers')}>
+          <div className="ic">🚗</div>
+          <h2>기사 관리</h2>
+          <p>기사 등록 · 차량 관리</p>
+        </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/pickups')}>
+          <div className="ic">🛬</div>
+          <h2>픽드랍 관리</h2>
+          <p>픽업 · 드랍 일정 · 기사 배정</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
