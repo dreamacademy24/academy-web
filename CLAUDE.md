@@ -138,3 +138,39 @@
 ## 새 대화 시작
 "드림아카데미 프로젝트 이어서 진행해줘"
 → GitHub CLAUDE.md 읽고 현재 상태 파악 후 바로 작업
+
+## 전체 로드맵 (2026-04 확정)
+
+### 예약 유형 4가지
+1. 드림하우스 단독 패키지
+2. 드하 + 제이파크 조합
+3. 드하 + 큐브나인 조합 (1주/2주/4주/6일)
+4. 숙소만 (Room Only)
+
+### 인보이스 2방향
+- 손님용: 한국어, 결제안내 중심
+- 리조트용 예약확인서: 영어, 이메일 자동발송
+
+### 새 Supabase 테이블 (구현 예정)
+bookings / booking_accommodations / invoices / students / academy_enrollments / online_class_enrollments / tutors / tutor_schedules / tutor_invoices / ssp_records / drivers / vehicles / pickup_requests / shuttle_requests / driver_schedules / checkin_details / guest_profiles / tutor_requests
+
+### 추가 기능 (구현 예정)
+- 픽드랍/셔틀/기사 관리 (기사 4명, 12인승, 스케줄 달력)
+- 드림하우스 체크인 디테일 자동생성
+- 학생/튜터/화상영어/SSP 관리
+- 엑셀 내보내기/가져오기
+- 손님 포털 (회원가입/예약신청/셔틀/픽드랍/튜터 신청)
+- 다국어 지원 (한/영/일) - next-intl
+- 기사 메신저 자동전달 (솔라피 연동, 나중에)
+- 카카오 채팅 위젯 (맨 나중)
+
+### 구현 순서 (54 스텝)
+Phase 0: DB 세팅 (1~9)
+Phase 1: 픽드랍/셔틀/기사 (10~15)
+Phase 2: 체크인 디테일 자동생성 (16~20)
+Phase 3: 어드민 예약 개편 + 인보이스 (21~25)
+Phase 4: 학생/튜터/화상영어/엑셀 (26~30)
+Phase 5: 손님 포털 (31~36)
+Phase 6: 다국어 한/영/일 (37~42)
+Phase 7: 홈페이지 콘텐츠 개선 (43~46)
+Phase 8: 자동화 고도화 + 기타 (47~54)
