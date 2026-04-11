@@ -82,7 +82,7 @@ export default function InstallPrompt() {
   }
 
   // 메인 페이지("/")에서만 표시
-  const hideOnPaths = ["/booking", "/invoice", "/receipt", "/admin", "/guide", "/estimate", "/apply", "/login", "/signup", "/qr"];
+  const hideOnPaths = ["/booking", "/invoice", "/receipt", "/admin", "/guide", "/estimate", "/apply", "/login", "/signup", "/qr", "/portal", "/driver", "/staff"];
   if (hideOnPaths.some(p => pathname.startsWith(p))) return null;
 
   if (!show) return null;

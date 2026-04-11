@@ -62,17 +62,17 @@ export default function MyBookingPage() {
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.mb-w{max-width:640px;margin:0 auto;padding:32px 24px}
-.mb-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:20px}.mb-back:hover{color:#1a6fc4}
-.mb-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:20px;padding:24px;color:#fff;margin-bottom:20px}
-.mb-head h1{font-size:20px;font-weight:800;margin-bottom:4px}
-.mb-head p{font-size:13px;opacity:0.8}
-.sec{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.05);margin-bottom:14px}
-.sec h2{font-size:14px;font-weight:800;color:#1a6fc4;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.item{padding:12px;background:#f8fafc;border-radius:10px}
-.item .lbl{font-size:11px;font-weight:700;color:#6b7c93;margin-bottom:3px}
-.item .val{font-size:14px;font-weight:600}
+.mb-w{max-width:640px;margin:0 auto;padding:24px 24px 40px}
+.mb-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}.mb-back:hover{color:#1a6fc4}
+.mb-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:12px}
+.mb-head h1{font-size:18px;font-weight:800;margin-bottom:2px}
+.mb-head p{font-size:12px;opacity:0.8}
+.sec{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 8px rgba(0,0,0,0.04);margin-bottom:10px}
+.sec h2{font-size:13px;font-weight:800;color:#1a6fc4;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.item{padding:10px;background:#f8fafc;border-radius:8px}
+.item .lbl{font-size:10px;font-weight:700;color:#6b7c93;margin-bottom:2px}
+.item .val{font-size:13px;font-weight:600}
 .badge{display:inline-block;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700}
 .stu{border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:8px}
 .stu .nm{font-size:15px;font-weight:700;margin-bottom:4px}
