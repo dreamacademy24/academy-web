@@ -60,9 +60,7 @@ export default function MyBookingPage() {
 
   return (<>
     <style>{`
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.mb-w{max-width:640px;margin:0 auto;padding:24px 24px 40px}
+.mb-w{max-width:640px;margin:0 auto;padding:24px 24px 40px;background:#f1f5f9;min-height:100vh;font-family:'Noto Sans KR',sans-serif;color:#1a1a2e}
 .mb-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}.mb-back:hover{color:#1a6fc4}
 .mb-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:12px}
 .mb-head h1{font-size:18px;font-weight:800;margin-bottom:2px}
