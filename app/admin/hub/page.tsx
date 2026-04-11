@@ -72,6 +72,11 @@ export default function AdminHubPage() {
           <h2>기사 관리</h2>
           <p>기사 등록 · 차량 관리</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/tutors')}>
+          <div className="ic">👩‍🏫</div>
+          <h2>튜터 관리</h2>
+          <p>튜터 목록 · 스케줄 · 수업료</p>
+        </div>
         <div className="hub-card card-gray" onClick={() => router.push('/admin/pickups')}>
           <div className="ic">🛬</div>
           <h2>픽드랍 관리</h2>
