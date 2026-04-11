@@ -68,6 +68,20 @@ export default function DriversPage() {
     load();
   }
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  async function copyDriverLink(driverId: string) {
+    const res = await fetch("/api/driver-token", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driver_id: driverId }),
+    });
+    if (!res.ok) { alert("토큰 생성 실패"); return; }
+    const { token } = await res.json();
+    const url = `${window.location.origin}/driver/${token}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(driverId);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
+
   if (!authed) return null;
 
   return (<>
@@ -128,6 +142,7 @@ export default function DriversPage() {
               <span className={`badge ${d.is_active ? "badge-on" : "badge-off"}`}>{d.is_active ? "활성" : "비활성"}</span>
               <button className="btn btn-sm btn-gray" onClick={() => toggleActive("driver", d.id, d.is_active)}>{d.is_active ? "비활성화" : "활성화"}</button>
               <button className="btn btn-sm btn-gray" onClick={() => openModal("driver", d)}>수정</button>
+              <button className="btn btn-sm" style={{background:copiedId===d.id?"#dcfce7":"#eff6ff",color:copiedId===d.id?"#166534":"#1a6fc4",border:"1px solid "+(copiedId===d.id?"#bbf7d0":"#bfdbfe")}} onClick={()=>copyDriverLink(d.id)}>{copiedId===d.id?"복사됨!":"📱 링크"}</button>
               <button className="btn btn-sm btn-red" onClick={() => del("driver", d.id, d.name)}>삭제</button>
             </div>
           </div>
