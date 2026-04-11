@@ -80,6 +80,16 @@ export default function AdminBookingsPage(){
   const CN_PERIODS=["1주","2주","4주","6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
 
+  /* ── STEP 23: 항공권 + 학생 ── */
+  const emptyFlight={airline:"",flight_no:"",date:"",time:"",place:""};
+  const [flightIn,setFlightIn]=useState({...emptyFlight,undecided:false});
+  const [flightOut,setFlightOut]=useState({...emptyFlight,undecided:false});
+  const emptyStudent={name_kr:"",name_en:"",birth_date:"",gender:"",level:""};
+  const [students23,setStudents23]=useState<typeof emptyStudent[]>([{...emptyStudent}]);
+  function addStudent(){if(students23.length<5)setStudents23([...students23,{...emptyStudent}]);}
+  function removeStudent(i:number){setStudents23(students23.filter((_,idx)=>idx!==i));}
+  function updateStudent(i:number,key:string,val:string){const arr=[...students23];arr[i]={...arr[i],[key]:val};setStudents23(arr);}
+
   async function saveNewBooking(){
     if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
     setSavingNew(true);
@@ -88,11 +98,20 @@ export default function AdminBookingsPage(){
     else if(bType==="dreamhouse_jaypark"){accomDetail.dh_weeks=newForm.dh_weeks;accomDetail.jp_weeks=newForm.jp_weeks;}
     else if(bType==="dreamhouse_cubenine"){accomDetail.dh_weeks=newForm.dh_weeks;accomDetail.cn_period=newForm.cn_period;}
     else{accomDetail.room_accom=newForm.room_accom;accomDetail.room_weeks=newForm.room_weeks;}
-    const res=await fetch("/api/admin/pickups",{method:"OPTIONS"}).catch(()=>null); // unused, just for structure
+    // Build flight info JSON
+    const flightInfo:Record<string,unknown>={};
+    if(!flightIn.undecided){flightInfo.in={airline:flightIn.airline,flight_no:flightIn.flight_no,date:flightIn.date,time:flightIn.time,place:flightIn.place};}else{flightInfo.in={undecided:true};}
+    if(!flightOut.undecided){flightInfo.out={airline:flightOut.airline,flight_no:flightOut.flight_no,date:flightOut.date,time:flightOut.time,place:flightOut.place};}else{flightInfo.out={undecided:true};}
     // Insert into bookings_new via API
-    const body={
+    const body:Record<string,unknown>={
       booking_type:bType,booker_name:newForm.booker_name.trim(),booker_phone:newForm.booker_phone.trim(),
       check_in:newForm.check_in||null,check_out:newForm.check_out||null,
+      flight_in_airline:flightIn.undecided?null:[flightIn.airline,flightIn.flight_no].filter(Boolean).join(" ")||null,
+      flight_in_date:flightIn.undecided?null:flightIn.date||null,
+      flight_in_time:flightIn.undecided?null:flightIn.time||null,
+      flight_out_airline:flightOut.undecided?null:[flightOut.airline,flightOut.flight_no].filter(Boolean).join(" ")||null,
+      flight_out_date:flightOut.undecided?null:flightOut.date||null,
+      flight_out_time:flightOut.undecided?null:flightOut.time||null,
       pickup_place:newForm.pickup_place.trim()||null,drop_place:newForm.drop_place.trim()||null,
       agency:newForm.agency.trim()||null,special_request:newForm.special_request.trim()||null,
       status:"pending",confirmed:false,
@@ -120,9 +139,23 @@ export default function AdminBookingsPage(){
         body:JSON.stringify(accomRows),
       });
     }
+    // STEP 23: Insert students
+    const bookingId=inserted[0]?.id;
+    const stuRows=students23.filter(s=>s.name_kr.trim()).map(s=>({
+      booking_id:bookingId,name_kr:s.name_kr.trim(),name_en:s.name_en.trim()||null,
+      age:s.birth_date||null,level:s.level||null,
+    }));
+    if(stuRows.length>0&&bookingId){
+      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/students`,{
+        method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
+        body:JSON.stringify(stuRows),
+      });
+    }
     setSavingNew(false);setShowNewBooking(false);
     setNewForm({booker_name:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
     setBType("dreamhouse");
+    setFlightIn({...emptyFlight,undecided:false});setFlightOut({...emptyFlight,undecided:false});
+    setStudents23([{...emptyStudent}]);
     alert("새 예약이 등록되었습니다! (bookings_new)");
   }
 
@@ -549,6 +582,61 @@ export default function AdminBookingsPage(){
         <label style={{fontSize:12,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>특이사항</label>
         <textarea value={newForm.special_request} onChange={e=>setNewForm({...newForm,special_request:e.target.value})}
           style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:50}}/>
+      </div>
+
+      {/* STEP 23: 항공권 */}
+      <div style={{marginBottom:16,padding:14,background:"#f0f4ff",borderRadius:10}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#1e40af",marginBottom:10}}>입국편</div>
+        <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,marginBottom:8,cursor:"pointer"}}>
+          <input type="checkbox" checked={flightIn.undecided} onChange={e=>setFlightIn({...flightIn,undecided:e.target.checked})}/>
+          <span style={{color:"#6b7c93"}}>미정</span>
+        </label>
+        {!flightIn.undecided&&(<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <input placeholder="항공사 (예: 대한항공)" value={flightIn.airline} onChange={e=>setFlightIn({...flightIn,airline:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input placeholder="편명 (예: KE631)" value={flightIn.flight_no} onChange={e=>setFlightIn({...flightIn,flight_no:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input type="date" value={flightIn.date} onChange={e=>setFlightIn({...flightIn,date:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input type="time" value={flightIn.time} onChange={e=>setFlightIn({...flightIn,time:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input placeholder="출발지 (예: 인천)" value={flightIn.place} onChange={e=>setFlightIn({...flightIn,place:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",gridColumn:"1/3"}}/>
+        </div>)}
+        <div style={{fontSize:13,fontWeight:700,color:"#166534",marginTop:14,marginBottom:10}}>출국편</div>
+        <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,marginBottom:8,cursor:"pointer"}}>
+          <input type="checkbox" checked={flightOut.undecided} onChange={e=>setFlightOut({...flightOut,undecided:e.target.checked})}/>
+          <span style={{color:"#6b7c93"}}>미정</span>
+        </label>
+        {!flightOut.undecided&&(<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <input placeholder="항공사" value={flightOut.airline} onChange={e=>setFlightOut({...flightOut,airline:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input placeholder="편명" value={flightOut.flight_no} onChange={e=>setFlightOut({...flightOut,flight_no:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input type="date" value={flightOut.date} onChange={e=>setFlightOut({...flightOut,date:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input type="time" value={flightOut.time} onChange={e=>setFlightOut({...flightOut,time:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          <input placeholder="도착지 (예: 인천)" value={flightOut.place} onChange={e=>setFlightOut({...flightOut,place:e.target.value})} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",gridColumn:"1/3"}}/>
+        </div>)}
+      </div>
+
+      {/* STEP 23: 학생 */}
+      <div style={{marginBottom:16,padding:14,background:"#fefce8",borderRadius:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <span style={{fontSize:13,fontWeight:700,color:"#854d0e"}}>학생 정보</span>
+          <span style={{fontSize:11,color:"#a16207"}}>{students23.length}/5명</span>
+          {students23.length<5&&<button onClick={addStudent} style={{marginLeft:"auto",padding:"4px 12px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ 학생 추가</button>}
+        </div>
+        {students23.map((s,i)=>(
+          <div key={i} style={{padding:10,background:"#fff",borderRadius:8,marginBottom:8,border:"1px solid #e2e8f0"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+              <span style={{fontSize:12,fontWeight:700,color:"#475569"}}>학생 {i+1}</span>
+              {students23.length>1&&<button onClick={()=>removeStudent(i)} style={{marginLeft:"auto",padding:"2px 8px",border:"none",background:"#fef2f2",color:"#dc2626",borderRadius:4,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              <input placeholder="한글 이름 *" value={s.name_kr} onChange={e=>updateStudent(i,"name_kr",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+              <input placeholder="영어 이름" value={s.name_en} onChange={e=>updateStudent(i,"name_en",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+              <input placeholder="생년월일/나이" value={s.birth_date} onChange={e=>updateStudent(i,"birth_date",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+              <select value={s.level} onChange={e=>updateStudent(i,"level",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff"}}>
+                <option value="">킨더/주니어 선택</option>
+                <option value="kinder">킨더 (Kinder)</option>
+                <option value="junior">주니어 (Junior)</option>
+              </select>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
