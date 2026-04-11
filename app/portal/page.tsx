@@ -19,13 +19,14 @@ export default function PortalPage() {
     });
     const data = await res.json();
     setLoading(false);
-    if (!res.ok) { setError(data.error || "예약을 찾을 수 없습니다."); return; }
+    if (!res.ok) { setError(data.error || "예약 정보를 찾을 수 없습니다."); return; }
     if (typeof window !== "undefined") {
-      localStorage.setItem("portal_session", JSON.stringify({
+      localStorage.setItem("portalSession", JSON.stringify({
         booking_id: data.booking_id,
         booking_number: data.booking_number,
         guest_name: data.guest_name,
         check_in_date: data.check_in_date,
+        status: data.status,
         expires: Date.now() + 24 * 60 * 60 * 1000,
       }));
     }
@@ -37,20 +38,21 @@ export default function PortalPage() {
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1a6fc4 100%);min-height:100vh}
 .pt-w{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-.pt-card{background:#fff;border-radius:20px;padding:48px 36px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center}
-.pt-logo{font-family:'Montserrat',sans-serif;font-size:26px;font-weight:900;color:#1a6fc4;margin-bottom:4px;letter-spacing:-0.5px}
-.pt-sub{font-size:13px;color:#6b7c93;margin-bottom:32px}
+.pt-card{background:#fff;border-radius:24px;padding:48px 36px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,0.3);text-align:center}
+.pt-logo{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#1a6fc4;margin-bottom:4px;letter-spacing:-0.5px}
+.pt-sub{font-size:14px;color:#6b7c93;margin-bottom:36px}
 .pt-label{display:block;text-align:left;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
-.pt-input{width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;font-family:inherit;outline:none;transition:border-color 200ms;margin-bottom:16px}
-.pt-input:focus{border-color:#1a6fc4}
+.pt-input{width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;font-family:inherit;outline:none;transition:border-color 200ms;margin-bottom:18px}
+.pt-input:focus{border-color:#1a6fc4;box-shadow:0 0 0 3px rgba(26,111,196,0.1)}
 .pt-input::placeholder{color:#cbd5e1}
-.pt-btn{width:100%;padding:16px;background:#1a6fc4;color:#fff;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:inherit;transition:background 200ms;margin-top:8px}
-.pt-btn:hover{background:#0d3d7a}
-.pt-btn:disabled{background:#94a3b8;cursor:not-allowed}
-.pt-err{margin-top:12px;padding:10px 14px;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:13px;font-weight:600}
-.pt-footer{margin-top:24px;font-size:11px;color:#94a3b8}
-.pt-footer a{color:#1a6fc4;text-decoration:none}.pt-footer a:hover{text-decoration:underline}
-@media(max-width:500px){.pt-card{padding:36px 24px;border-radius:16px}.pt-input,.pt-btn{min-height:48px}}
+.pt-btn{width:100%;padding:16px;background:linear-gradient(135deg,#1a6fc4,#7c3aed);color:#fff;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;font-family:inherit;transition:opacity 200ms;margin-top:8px}
+.pt-btn:hover{opacity:0.9}
+.pt-btn:disabled{opacity:0.5;cursor:not-allowed}
+.pt-err{margin-top:16px;padding:12px 16px;background:#fef2f2;color:#dc2626;border-radius:10px;font-size:13px;font-weight:600;border:1px solid #fecaca}
+.pt-footer{margin-top:28px;font-size:12px;color:#94a3b8}
+.pt-footer a{color:#1a6fc4;text-decoration:none;font-weight:600}.pt-footer a:hover{text-decoration:underline}
+.pt-hint{font-size:11px;color:#94a3b8;text-align:left;margin-top:-12px;margin-bottom:14px}
+@media(max-width:500px){.pt-card{padding:36px 24px;border-radius:20px}.pt-input,.pt-btn{min-height:50px;font-size:16px}}
     `}</style>
     <div className="pt-w">
       <div className="pt-card">
@@ -58,12 +60,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(135deg,#0f
         <div className="pt-sub">예약 조회 포털</div>
 
         <label className="pt-label">예약번호</label>
-        <input className="pt-input" placeholder="DA-20260411-123456" value={bookingNo}
+        <input className="pt-input" placeholder="DA-20260407-765432" value={bookingNo}
           onChange={e => setBookingNo(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") verify(); }} />
+          onKeyDown={e => { if (e.key === "Enter") document.getElementById("pt-name")?.focus(); }} />
+        <div className="pt-hint">인보이스에 기재된 예약번호를 입력하세요</div>
 
         <label className="pt-label">예약자 이름</label>
-        <input className="pt-input" placeholder="이름 (한글 또는 영문)" value={name}
+        <input id="pt-name" className="pt-input" placeholder="홍길동" value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") verify(); }} />
 
