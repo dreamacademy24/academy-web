@@ -90,6 +90,9 @@ export default function AdminBookingsPage(){
   function removeStudent(i:number){setStudents23(students23.filter((_,idx)=>idx!==i));}
   function updateStudent(i:number,key:string,val:string){const arr=[...students23];arr[i]={...arr[i],[key]:val};setStudents23(arr);}
 
+  /* ── STEP 24: 결제 상태 ── */
+  const [payForm,setPayForm]=useState({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
+
   async function saveNewBooking(){
     if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
     setSavingNew(true);
@@ -114,6 +117,8 @@ export default function AdminBookingsPage(){
       flight_out_time:flightOut.undecided?null:flightOut.time||null,
       pickup_place:newForm.pickup_place.trim()||null,drop_place:newForm.drop_place.trim()||null,
       agency:newForm.agency.trim()||null,special_request:newForm.special_request.trim()||null,
+      total_amount:payForm.total_amount||0,paid_amount:payForm.deposit_paid?payForm.deposit_amount:0,
+      payment_status:payForm.deposit_paid?"partial":"unpaid",
       status:"pending",confirmed:false,
     };
     const r=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings_new`,{
@@ -156,6 +161,7 @@ export default function AdminBookingsPage(){
     setBType("dreamhouse");
     setFlightIn({...emptyFlight,undecided:false});setFlightOut({...emptyFlight,undecided:false});
     setStudents23([{...emptyStudent}]);
+    setPayForm({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
     alert("새 예약이 등록되었습니다! (bookings_new)");
   }
 
@@ -445,6 +451,18 @@ export default function AdminBookingsPage(){
           <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)}/>
           <span className="cnt">{sorted.length}건</span>
         </div>
+        {/* STEP 24: 통계 바 */}
+        <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap"}}>
+          <div style={{padding:"8px 16px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0",fontSize:12}}>
+            <span style={{color:"#6b7c93"}}>전체 확정</span> <span style={{fontWeight:800,color:"#1a1a2e",marginLeft:4}}>{confirmList.length}건</span>
+          </div>
+          <div style={{padding:"8px 16px",background:"#f0fdf4",borderRadius:8,border:"1px solid #bbf7d0",fontSize:12}}>
+            <span style={{color:"#166534"}}>예약금 완료</span> <span style={{fontWeight:800,color:"#166534",marginLeft:4}}>{confirmList.filter(b=>b.balance_date&&b.balance_date.includes("완료")).length}건</span>
+          </div>
+          <div style={{padding:"8px 16px",background:"#fefce8",borderRadius:8,border:"1px solid #fde68a",fontSize:12}}>
+            <span style={{color:"#854d0e"}}>미입금</span> <span style={{fontWeight:800,color:"#854d0e",marginLeft:4}}>{confirmList.filter(b=>!b.balance_date||!b.balance_date.includes("완료")).length}건</span>
+          </div>
+        </div>
         <div className="ss-w"><table className="ss"><thead><tr>
           {cols.map(c=><th key={c.key} onClick={()=>toggleSort(c.key)}>{c.label}<span className={arrowCls(c.key)}>{arrow(c.key)}</span></th>)}
           <th onClick={()=>toggleSort("confirmed")}>최종확인<span className={arrowCls("confirmed")}>{arrow("confirmed")}</span></th>
@@ -637,6 +655,34 @@ export default function AdminBookingsPage(){
             </div>
           </div>
         ))}
+      </div>
+
+      {/* STEP 24: 결제 */}
+      <div style={{marginBottom:16,padding:14,background:"#f0fdf4",borderRadius:10}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#166534",marginBottom:10}}>결제 정보</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"block",marginBottom:2}}>전체 금액 (원)</label>
+            <input type="number" placeholder="0" value={payForm.total_amount||""} onChange={e=>setPayForm({...payForm,total_amount:parseInt(e.target.value)||0})}
+              style={{width:"100%",padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+          <div>
+            <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"block",marginBottom:2}}>예약금 (원)</label>
+            <input type="number" placeholder="0" value={payForm.deposit_amount||""} onChange={e=>setPayForm({...payForm,deposit_amount:parseInt(e.target.value)||0})}
+              style={{width:"100%",padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:8}}>
+          <label style={{fontSize:12,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}>
+            <input type="checkbox" checked={payForm.deposit_paid} onChange={e=>setPayForm({...payForm,deposit_paid:e.target.checked})}/>
+            <span>예약금 입금 완료</span>
+          </label>
+          {payForm.total_amount>0&&payForm.deposit_amount>0&&(
+            <span style={{fontSize:11,color:"#6b7c93"}}>잔금: {(payForm.total_amount-payForm.deposit_amount).toLocaleString()}원</span>
+          )}
+        </div>
+        <input placeholder="결제 메모 (선택)" value={payForm.payment_memo} onChange={e=>setPayForm({...payForm,payment_memo:e.target.value})}
+          style={{width:"100%",padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
       </div>
 
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
