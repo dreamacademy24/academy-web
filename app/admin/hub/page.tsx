@@ -97,6 +97,11 @@ export default function AdminHubPage() {
           <h2>체크인 디테일</h2>
           <p>자동생성 · PDF 출력</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/online-class')}>
+          <div className="ic">💻</div>
+          <h2>화상영어</h2>
+          <p>출석관리 · 수업일정 · 튜터매칭</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
