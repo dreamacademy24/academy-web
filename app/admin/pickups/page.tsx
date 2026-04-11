@@ -69,6 +69,27 @@ export default function PickupsPage() {
       .reduce((s, p) => s + (p.num_people || 0), 0);
   }
 
+  // 배정 시 초과 체크: 해당 pickup을 새 기사에 배정했을 때의 예상 합산
+  function wouldExceed(pickupId: string, newDriverId: string | null, date: string, people: number) {
+    if (!newDriverId) return 0;
+    const otherTotal = pickups
+      .filter(p => p.driver_id === newDriverId && p.request_date === date && p.status !== "cancelled" && p.id !== pickupId)
+      .reduce((s, p) => s + (p.num_people || 0), 0);
+    return otherTotal + people;
+  }
+
+  async function assignDriver(pickupId: string, newDriverId: string | null, date: string, people: number) {
+    if (newDriverId) {
+      const projected = wouldExceed(pickupId, newDriverId, date, people);
+      if (projected > 12) {
+        const dName = drivers.find(d => d.id === newDriverId)?.name || "기사";
+        const ok = confirm(`⚠️ 12인승 초과!\n\n${dName} 기사 ${fDate(date)} 합산: ${projected}명\n(정원 12명 초과)\n\n그래도 배정하시겠습니까?`);
+        if (!ok) return;
+      }
+    }
+    patch(pickupId, { driver_id: newDriverId || null });
+  }
+
   function driverName(id: string | null) {
     if (!id) return "";
     return drivers.find(d => d.id === id)?.name || "";
@@ -163,9 +184,12 @@ export default function PickupsPage() {
                     </td>
                     <td>
                       <select className="sel" value={p.driver_id || ""}
-                        onChange={e => patch(p.id, { driver_id: e.target.value || null })}>
+                        onChange={e => assignDriver(p.id, e.target.value || null, p.request_date, p.num_people || 0)}>
                         <option value="">미배정</option>
-                        {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        {drivers.map(d => {
+                          const proj = wouldExceed(p.id, d.id, p.request_date, p.num_people || 0);
+                          return <option key={d.id} value={d.id}>{d.name}{proj > 12 ? ` (${proj}명!)` : ""}</option>;
+                        })}
                       </select>
                       {p.driver_id && <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 2 }}>{driverName(p.driver_id)}</div>}
                     </td>
