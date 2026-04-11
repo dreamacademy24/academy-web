@@ -82,6 +82,16 @@ export default function AdminHubPage() {
           <h2>셔틀 관리</h2>
           <p>셔틀 신청 · 기사 배정</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/driver-schedule')}>
+          <div className="ic">📅</div>
+          <h2>기사 스케줄</h2>
+          <p>주간 달력 · 배정 현황</p>
+        </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/checkin-details')}>
+          <div className="ic">📝</div>
+          <h2>체크인 디테일</h2>
+          <p>자동생성 · PDF 출력</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
