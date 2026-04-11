@@ -1766,11 +1766,11 @@ const EMPS=[
   {id:'hanny',name:'Hanny', color:'#f59e0b',initial:'H'},
   {id:'sage', name:'Sage',  color:'#10b981',initial:'S'},
   {id:'eric', name:'Eric',  color:'#f97316',initial:'E'},
-  {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU', role:'관리자'},
+  {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU'},
 ];
 const CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
 const ALL=[...EMPS,CEO];
-function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jun');}
+function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jenna');}
 function getP(id){return ALL.find(e=>e.id===id);}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;
@@ -1829,9 +1829,9 @@ function toast(msg,color){
 function buildLogin(){
   const o=document.getElementById('loginOpts');o.innerHTML='';
   ALL.forEach(function(u){
-    const isA=u.id==='ceo'||u.id==='jenna'||u.id==='jun';
+    const isA=u.id==='ceo'||u.id==='jenna';
     const btn=document.createElement('button');btn.className='login-btn'+(isA?' is-admin':'');
-    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.id==='jun'?'👑 '+u.name+' (관리자)':u.name;
+    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.name;
     btn.innerHTML='<div class="login-av" style="background:'+u.color+'">'+u.initial+'</div><span>'+lbl+'</span>';
     btn.onclick=function(){selectUser(u);};
     o.appendChild(btn);
@@ -1843,8 +1843,8 @@ function selectUser(u){
   document.getElementById('loginStep2').style.display='block';
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginPwInp').value='';
-  const isA=u.id==='ceo'||u.id==='jenna'||u.id==='jun';
-  const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.id==='jun'?'👑 '+u.name+' (관리자)':u.name;
+  const isA=u.id==='ceo'||u.id==='jenna';
+  const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.name;
   document.getElementById('loginSelUser').innerHTML=
     '<div class="login-av" style="background:'+u.color+';width:36px;height:36px;border-radius:10px;font-size:12px;font-weight:800">'+u.initial+'</div>'+
     '<div><div style="font-size:15px;font-weight:700">'+lbl+'</div><div style="font-size:11px;color:var(--text3)">비밀번호를 입력하세요</div></div>';
@@ -1876,7 +1876,7 @@ function doLogin(u){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sbName').textContent=u.name;
-  document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':u.id==='jun'?'관리자':'직원';
+  document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
@@ -4217,6 +4217,17 @@ window.addEventListener('DOMContentLoaded', function(){
     togSubtaskMode();
   });
 
+  // iframe 내부에서 ?user= 파라미터로 자동 로그인 (부모가 adminAuth 검증 완료)
+  var inIframe=false;try{inIframe=window.self!==window.top;}catch(e){inIframe=true;}
+  if(inIframe){
+    var params=new URLSearchParams(window.location.search);
+    var autoUser=params.get('user');
+    if(autoUser){
+      var au=ALL.find(function(e){return e.id===autoUser;});
+      if(au){doLogin(au);return;}
+    }
+  }
+  // localStorage 세션 복원
   try{
     var saved=JSON.parse(localStorage.getItem('tm_session'));
     if(saved&&saved.id){
