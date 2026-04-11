@@ -30,7 +30,7 @@ export default function PortalDashboard() {
   if (!session) return null;
 
   const cards = [
-    { icon: "📋", title: "내 예약 정보", desc: "숙소, 기간, 인원 확인", ready: false },
+    { icon: "📋", title: "내 예약 정보", desc: "숙소, 기간, 인원 확인", ready: true, href: "/portal/my-booking" },
     { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: false },
     { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: false },
     { icon: "🚐", title: "셔틀/픽업 신청", desc: "공항 픽업, 셔틀 예약", ready: false },
@@ -83,7 +83,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       <div className="db-grid">
         {cards.map((c, i) => (
-          <div key={i} className="db-card">
+          <div key={i} className="db-card" style={c.ready ? { cursor: "pointer" } : {}}
+            onClick={() => { if (c.ready && (c as any).href) router.push((c as any).href); }}>
             {!c.ready && <span className="coming">준비 중</span>}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>
