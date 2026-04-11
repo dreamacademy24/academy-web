@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
+import * as XLSX from "xlsx";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -92,6 +93,16 @@ export default function AdminBookingsPage(){
 
   /* ── STEP 24: 결제 상태 ── */
   const [payForm,setPayForm]=useState({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
+
+  /* ── STEP 28: 엑셀 내보내기 ── */
+  function exportListXlsx(rows:Booking[]){
+    const data=rows.map(b=>({예약번호:b.reservation_no,상태:b.status,담당자:b.assignee||"",예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",숙소:b.accom_type||"",접수일:fDate(b.created_at)}));
+    const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"부킹리스트");XLSX.writeFile(wb,"부킹리스트_"+new Date().toISOString().slice(0,10)+".xlsx");
+  }
+  function exportConfirmXlsx(rows:Booking[]){
+    const data=rows.map(b=>({예약번호:shortNo(b.reservation_no),예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":(b.accom_type||"")+(b.house_no?" "+b.house_no:"")+(b.accom_room?" "+b.accom_room:""),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0}));
+    const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
+  }
 
   async function saveNewBooking(){
     if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
@@ -287,6 +298,7 @@ export default function AdminBookingsPage(){
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
+        <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(filtered)}>📥 엑셀</button>
       </div>
       <div className="tbl-w"><table className="tbl"><thead><tr>
         <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th><th>액션</th>
@@ -450,6 +462,7 @@ export default function AdminBookingsPage(){
         <div className="cf-search">
           <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)}/>
           <span className="cnt">{sorted.length}건</span>
+          <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportConfirmXlsx(sorted)}>📥 엑셀 내보내기</button>
         </div>
         {/* STEP 24: 통계 바 */}
         <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap"}}>
