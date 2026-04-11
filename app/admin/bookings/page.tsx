@@ -52,7 +52,6 @@ function acaEnd(b:any):string{
 export default function AdminBookingsPage(){
   const router=useRouter();
   const [authed,setAuthed]=useState(false);
-  const [pw,setPw]=useState("");
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
   const [confirmFilter,setConfirmFilter]=useState("전체");
@@ -211,7 +210,11 @@ export default function AdminBookingsPage(){
     alert("새 예약이 등록되었습니다! (bookings_new)");
   }
 
-  useEffect(()=>{if(isAdminAuthed())setAuthed(true);},[]);
+  useEffect(()=>{
+    if(typeof window==='undefined')return;
+    if(isAdminAuthed()){setAuthed(true);}
+    else{window.location.href="/admin";}
+  },[]);
 
   const load=useCallback(async()=>{
     setLoading(true);
@@ -223,22 +226,7 @@ export default function AdminBookingsPage(){
 
   useEffect(()=>{if(authed)load();},[authed,load]);
 
-  function checkPw(){router.push("/admin");}
-
-  if(!authed) return(<>
-    <style>{`*{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;}
-.pw-w{display:flex;align-items:center;justify-content:center;height:100vh;}
-.pw-c{background:#fff;padding:32px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.08);text-align:center;width:340px;}
-.pw-c h2{font-size:18px;font-weight:800;margin-bottom:16px;}
-.pw-i{width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;margin-bottom:12px;outline:none;font-family:'Noto Sans KR',sans-serif;}.pw-i:focus{border-color:#1a6fc4;}
-.pw-b{width:100%;padding:10px;background:#1a6fc4;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pw-b:hover{background:#0d3d7a;}
-    `}</style>
-    <div className="pw-w"><div className="pw-c">
-      <h2>관리자 로그인</h2>
-      <input className="pw-i" type="password" placeholder="비밀번호" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")checkPw();}}/>
-      <button className="pw-b" onClick={checkPw}>확인</button>
-    </div></div>
-  </>);
+  if(!authed) return null;
 
   const filtered=filter==="전체"?bookings:bookings.filter(b=>b.status===filter);
   const invList=bookings.filter(b=>["인보이스발행","영수증발행","완료"].includes(b.status));
