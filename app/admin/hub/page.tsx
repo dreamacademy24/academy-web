@@ -77,6 +77,11 @@ export default function AdminHubPage() {
           <h2>픽드랍 관리</h2>
           <p>픽업 · 드랍 일정 · 기사 배정</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/shuttle')}>
+          <div className="ic">🚐</div>
+          <h2>셔틀 관리</h2>
+          <p>셔틀 신청 · 기사 배정</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
