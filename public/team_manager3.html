@@ -1783,7 +1783,7 @@ function uid(){try{return crypto.randomUUID();}catch(e){return Date.now().toStri
 function nowStr(){return new Date().toLocaleDateString('ko-KR');}
 function localDateStr(d){var mm=d.getMonth()+1;var dd=d.getDate();return d.getFullYear()+'-'+(mm<10?'0':'')+mm+'-'+(dd<10?'0':'')+dd;}
 function todayStr(){return localDateStr(new Date());}
-function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function esc(t){var s=String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');s=s.replace(/(https?:\/\/[^\s&<>"{}|\\^`\[\]]+)/g,function(u){return '<a href="'+u.replace(/&amp;/g,'&')+'" target="_blank" rel="noopener noreferrer" style="color:#6366f1;text-decoration:underline;word-break:break-all;">'+u+'</a>';});return s.replace(/\n/g,'<br>');}
 
 let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
     projects=ld('tm_p',[]),threads=ld('tm_th',{}),taskComments=ld('tm_tc',{});
