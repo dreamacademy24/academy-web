@@ -53,6 +53,7 @@ function InvoicePageInner(){
   const router = useRouter();
   const bookingId = searchParams.get("id");
   const assigneeParam = searchParams.get("assignee") || "";
+  const invoiceType = searchParams.get("type") || ""; // guest | resort | ""
   const [dbLoaded, setDbLoaded] = useState(false);
 
   /* ── 견적 상태 (기존 유지) ── */
@@ -336,6 +337,127 @@ function InvoicePageInner(){
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
   `}</style>
 
+  {/* ── STEP 25: 리조트용 예약확인서 (영어) ── */}
+  {invoiceType==="resort"?(
+    <div className="iw">
+      <div className="no-print" style={{marginBottom:12}}>
+        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+      </div>
+      <div className="iv" id="resort-confirmation">
+        <div className="it">
+          <div><div className="il">DREAM ACADEMY</div><div className="ils">Cebu, Philippines</div></div>
+          <div className="itr"><h1 style={{fontSize:22,letterSpacing:"0.05em"}}>RESERVATION<br/>CONFIRMATION</h1><p>Date: {new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p></div>
+        </div>
+
+        <div className="is"><div className="ist">Guest Information</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
+            <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Reservation Date</td><td>{reservationDate}</td></tr>
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">Stay Details</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">Check-in</td><td>{overallCI||"-"}</td><td className="lb">Check-out</td><td>{overallCO||"-"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Adults</td><td>{cP}</td><td className="lb">Children</td><td>{cK}</td></tr>
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">Student Details</div>
+          <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
+            {students.map((s,i)=>(
+              <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>
+            ))}
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">Transportation</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">Pickup</td><td>{checkin.pickup==="O"?"Yes":"No"}</td><td className="lb">Drop-off</td><td>{checkin.drop==="O"?"Yes":"No"}</td></tr>
+            <tr><td className="lb">Flight In</td><td>{checkin.flightIn||"TBA"}</td><td className="lb">Flight Out</td><td>{checkin.flightOut||"TBA"}</td></tr>
+            <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||"TBA"}</td></tr>
+          </tbody></table>
+        </div>
+
+        {checkin.specialRequest&&(
+          <div className="is"><div className="ist">Special Requests</div>
+            <div style={{padding:12,background:"#f8fafc",borderRadius:8,fontSize:13,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</div>
+          </div>
+        )}
+
+        <div style={{marginTop:32,padding:20,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
+          This reservation confirmation is issued by Dream Academy Philippines.<br/>
+          For any inquiries, please contact us at dreamacademyph@gmail.com
+        </div>
+      </div>
+      <div className="pb no-print">
+        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back</button>
+        <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
+        <button style={{padding:"12px 24px",background:"#ea580c",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}
+          onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\nCheck-in: "+(overallCI||"TBA")+"\nCheck-out: "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Academy Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
+          Email to Resort
+        </button>
+      </div>
+    </div>
+  ):invoiceType==="guest"?(
+    <div className="iw">
+      <div className="no-print" style={{marginBottom:12}}>
+        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button>
+      </div>
+      <div className="iv" id="guest-invoice">
+        <div className="it">
+          <div><div className="il">DREAM ACADEMY</div><div className="ils">Cebu, Philippines</div></div>
+          <div className="itr"><h1>예약 확인서</h1><p>납부 안내</p></div>
+        </div>
+
+        <div className="is"><div className="ist">예약 정보</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
+            <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
+            <tr><td className="lb">체크인</td><td>{overallCI||"-"}</td><td className="lb">체크아웃</td><td>{overallCO||"-"}</td></tr>
+            <tr><td className="lb">숙소</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">방번호</td><td>{checkin.houseNo||"미정"}</td></tr>
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">학생 정보</div>
+          <table className="tb"><thead><tr><th>번호</th><th>이름</th><th>나이</th><th>과정</th><th>시작</th><th>종료</th></tr></thead><tbody>
+            {students.map((s,i)=>(
+              <tr key={s.id}><td>{i+1}</td><td>{s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>
+            ))}
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">결제 안내</div>
+          <table className="tb"><tbody>
+            <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
+            {fp>0&&<>
+              <tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr>
+              <tr><td style={{padding:"10px 12px",fontSize:13,color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:13,fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr>
+            </>}
+          </tbody></table>
+        </div>
+
+        <div className="is"><div className="ist">결제 방법</div>
+          <div style={{padding:16,background:"#f8fafc",borderRadius:8,fontSize:13,lineHeight:1.8}}>
+            <div style={{fontWeight:700,marginBottom:8}}>계좌이체</div>
+            <div>은행: 하나은행</div>
+            <div>계좌번호: 218-910421-22507</div>
+            <div>예금주: 이지나</div>
+            <div style={{marginTop:12,fontWeight:700,marginBottom:8}}>PayPal</div>
+            <div>dreamacademyph@gmail.com</div>
+          </div>
+        </div>
+
+        <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
+      </div>
+      <div className="pb no-print">
+        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button>
+        <button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button>
+      </div>
+    </div>
+  ):(<>
+
   {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
@@ -458,5 +580,6 @@ function InvoicePageInner(){
     </div>
     <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={saveAsImage}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
+  </>)}
   </>);
 }
