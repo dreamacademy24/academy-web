@@ -391,7 +391,7 @@ export default function AdminBookingsPage(){
         {invList.length===0?<tr><td colSpan={9} className="empty">인보이스 발행 내역이 없습니다.</td></tr>:
         invList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
+          return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
             <td>{b.assignee||"-"}</td><td>{b.booker_name}</td><td>{stuNames(b.students)}</td>
@@ -406,7 +406,7 @@ export default function AdminBookingsPage(){
         {invList.length===0?<div className="empty">인보이스 발행 내역이 없습니다.</div>:
         invList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<div key={b.id} onClick={()=>router.push("/invoice?id="+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          return(<div key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
