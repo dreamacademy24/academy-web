@@ -341,7 +341,7 @@ export default function AdminBookingsPage(){
         {filtered.length===0?<tr><td colSpan={9} className="empty">예약이 없습니다.</td></tr>:
         filtered.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<tr key={b.id} onClick={()=>router.push("/invoice?id="+b.id)}>
+          return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
@@ -363,7 +363,7 @@ export default function AdminBookingsPage(){
         {filtered.length===0?<div className="empty">예약이 없습니다.</div>:
         filtered.map(b=>{
           const sc=SC[b.status]||SC["접수"];
-          return(<div key={b.id} onClick={()=>router.push("/invoice?id="+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          return(<div key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
@@ -520,7 +520,7 @@ export default function AdminBookingsPage(){
           sorted.map(b=>{
             const dday=getDday(b.checkin_date);
             const bdday=getBalanceDday(b.balance_date);
-            return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/invoice?id="+b.id)} style={{cursor:"pointer"}}>
+            return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td>{b.assignee||"-"}</td>
               <td>
