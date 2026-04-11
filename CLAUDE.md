@@ -177,40 +177,37 @@ Phase 8: 자동화 고도화 + 기타 (47~54)
 
 ## 현재 진행 상황 (2026-04-11 업데이트)
 
-### 완료된 작업 (STEP 1~9)
-- STEP 1 ✅ CLAUDE.md 업데이트 & git push
-- STEP 2 ✅ bookings_new, booking_accommodations, invoices_new 테이블 생성
-- STEP 3 ✅ students, academy_enrollments, ssp_records 테이블 생성
-- STEP 4 ✅ tutors, tutor_schedules, tutor_invoices, online_class_enrollments 테이블 생성
-- STEP 5 ✅ drivers, vehicles, pickup_requests, shuttle_requests, driver_schedules 테이블 생성
-- STEP 6 ✅ checkin_details 테이블 생성
-- STEP 7 ✅ guest_profiles, tutor_requests 테이블 생성
-- STEP 8 ✅ CSV 마이그레이션 스크립트 작성 (scripts/migrate-csv.mjs)
-- STEP 9 ✅ 마이그레이션 실행 완료 — bookings_new 117건, students 426건 INSERT
-- 🔧 버그픽스: 직원업무 자동 로그인 수정 + Jun 역할 일반직원으로 변경
+### 완료된 작업 (STEP 1~21)
+- STEP 1 ✅ CLAUDE.md 업데이트
+- STEP 2~7 ✅ Supabase 신규 테이블 18개 생성
+- STEP 8~9 ✅ CSV 마이그레이션 — bookings_new 117건, students 426건
+- STEP 10 ✅ Supabase Auth 활성화 + RLS 전체 설정 + exec_sql 함수
+- STEP 11 ✅ /admin/drivers — 기사 4명 + 차량 등록 화면
+- STEP 12 ✅ 픽드랍 자동 추출 (bookings_new → pickup_requests)
+- STEP 13 ✅ /admin/pickups — 픽드랍 목록 + 기사 배정 + 12인승 초과 경고
+- STEP 14 ✅ /admin/shuttle — 셔틀 관리 + 기사 배정
+- STEP 15 ✅ admin/hub 카드 9개 (기사관리/픽드랍/셔틀/기사스케줄/체크인디테일 추가)
+- STEP 16 ✅ /admin/driver-schedule — 주간 달력뷰 (날짜×기사 격자, 인쇄)
+- STEP 17~21 ✅ /admin/checkin-details — 체크인 디테일 자동생성 + PDF 출력
+- 🔧 버그픽스 ✅ 직원업무 자동 로그인 + Jun 역할 일반직원 변경
+- 🔧 링크 자동 연결 ✅ 의견요청/공지/채팅/댓글 URL 클릭 가능하게
 
-### 다음 작업 (STEP 10부터)
-- STEP 10: Supabase Auth 활성화 + RLS 전체 설정
-  - 이메일/비밀번호 Auth 활성화
-  - 전체 테이블 RLS 설정 (손님은 자기 데이터만, 어드민 전체 접근)
-  - service role key 사용 API 경유 확인
-- STEP 11~: Phase 1 직원 업무 — 픽드랍/셔틀/기사 시스템
+### 다음 작업 (STEP 22부터)
+- STEP 22: 예약 유형 선택 UI + 숙소 조합 동적 필드 (/admin/bookings 개편)
+- STEP 23: 항공권 구조화 + 학생 자동생성
+- STEP 24: 결제 상태 구조화 + 확정예약 탭 개선
+- STEP 25~27: 인보이스 3가지 템플릿 + 리조트용 예약확인서 + 결제섹션 개선
+- STEP 28~32: 학생/튜터/화상영어/엑셀
+- STEP 33~42: 손님 포털
+- STEP 43~48: 다국어 한/영/일
+- STEP 49~54: 홈페이지 개선 + 마무리
 
-### Supabase 신규 테이블 목록 (총 18개)
-bookings_new, booking_accommodations, invoices_new,
-students, academy_enrollments, ssp_records,
-tutors, tutor_schedules, tutor_invoices, online_class_enrollments,
-drivers, vehicles, pickup_requests, shuttle_requests, driver_schedules,
-checkin_details, guest_profiles, tutor_requests
-
-### 주요 데이터 현황
-- bookings_new: 117건 (기존 CSV 마이그레이션)
-- students: 426건 (기존 CSV 마이그레이션)
-- 기존 bookings 테이블 유지 (구 스키마, Phase 3에서 코드 전환 시 제거 예정)
-
-### 로드맵 체크리스트 파일
-- dreamacademy-roadmap.html (로컬 파일, 54개 스텝 체크리스트)
+### admin/hub 카드 현황 (9개)
+예약 관리 / 사이트 관리 / 직원업무 / 드림하우스 /
+기사 관리(/admin/drivers) / 픽드랍 관리(/admin/pickups) /
+셔틀 관리(/admin/shuttle) / 기사 스케줄(/admin/driver-schedule) /
+체크인 디테일(/admin/checkin-details)
 
 ### 새 대화 시작 방법
 "드림아카데미 프로젝트 이어서 진행해줘"
-→ CLAUDE.md 읽고 STEP 10부터 이어서 진행
+→ CLAUDE.md 읽고 STEP 22 (어드민 예약 개편)부터 바로 이어서 진행
