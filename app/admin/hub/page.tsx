@@ -117,6 +117,11 @@ export default function AdminHubPage() {
           <h2>튜터 스케줄</h2>
           <p>주간 일정 · 튜터별 수업 현황</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/tutor-invoice')}>
+          <div className="ic">💰</div>
+          <h2>튜터 인보이스</h2>
+          <p>월별 수업료 정산 · 출력</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
