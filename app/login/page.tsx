@@ -56,15 +56,16 @@ export default function LoginPage() {
       return;
     }
 
-    // 일반 회원 (이메일 기반 Supabase Auth)
+    // 일반 회원 (아이디 → 가상 이메일 변환)
+    const internalEmail = `${idTrim}@dreamacademyph.com`;
     const { error } = await supabase.auth.signInWithPassword({
-      email: idTrim,
+      email: internalEmail,
       password: form.password,
     });
     setLoading(false);
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
-        setErr("이메일 또는 비밀번호가 올바르지 않습니다.");
+        setErr("아이디 또는 비밀번호가 올바르지 않습니다.");
       } else {
         setErr("로그인 실패: " + error.message);
       }
@@ -102,11 +103,11 @@ a{text-decoration:none;color:inherit;}
         <p className="sub">드림아카데미 계정으로 로그인하세요.</p>
 
         <div className="form-group">
-          <label className="form-label">아이디 또는 이메일</label>
+          <label className="form-label">아이디</label>
           <input
             className="form-input"
             type="text"
-            placeholder="admin-xxx 또는 example@email.com"
+            placeholder="아이디 입력"
             value={form.id}
             onChange={e => { setForm({ ...form, id: e.target.value }); setErr(""); }}
             onKeyDown={e => e.key === "Enter" && handleLogin()}
@@ -138,7 +139,7 @@ a{text-decoration:none;color:inherit;}
         {err && <div className="err">{err}</div>}
 
         <div className="hint">
-          💡 관리자는 admin- 으로 시작하는 아이디, 일반 회원은 가입한 이메일로 로그인하세요.
+          💡 관리자는 admin- 으로 시작하는 아이디로, 일반 회원은 가입한 아이디로 로그인하세요.
         </div>
 
         <div className="bottom">아직 계정이 없으신가요? <a href="/signup">회원가입</a></div>

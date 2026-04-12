@@ -11,8 +11,10 @@ declare global {
   }
 }
 
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
+
 export default function SignupPage() {
-  const [form, setForm] = useState({ email: "", password: "", passwordConfirm: "", name: "", phone: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", passwordConfirm: "", name: "", phone: "" });
   const [zipcode, setZipcode] = useState("");
   const [address, setAddress] = useState("");
   const [addressDetail, setAddressDetail] = useState("");
@@ -23,11 +25,36 @@ export default function SignupPage() {
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
 
   function addChild() { if (children.length < 5) setChildren([...children, { name: "", birth_year: "" }]); }
   function removeChild(i: number) { setChildren(children.filter((_, idx) => idx !== i)); }
   function updateChild(i: number, key: "name" | "birth_year", val: string) {
     const arr = [...children]; arr[i] = { ...arr[i], [key]: val }; setChildren(arr);
+  }
+
+  function onUsernameChange(val: string) {
+    // 영문 소문자 + 숫자만
+    const cleaned = val.toLowerCase().replace(/[^a-z0-9]/g, "");
+    setForm({ ...form, username: cleaned });
+    setUsernameStatus("idle");
+    if (errors.username) setErrors({ ...errors, username: "" });
+  }
+
+  async function checkUsername() {
+    const u = form.username.trim();
+    if (u.length < 4 || u.length > 20) {
+      setUsernameStatus("invalid");
+      return;
+    }
+    if (u.startsWith("admin-")) {
+      setUsernameStatus("invalid");
+      setErrors({ ...errors, username: "admin- 로 시작하는 아이디는 사용할 수 없습니다." });
+      return;
+    }
+    setUsernameStatus("checking");
+    const { data } = await supabase.from("profiles").select("username").eq("username", u).maybeSingle();
+    setUsernameStatus(data ? "taken" : "available");
   }
 
   function openAddressSearch() {
@@ -46,6 +73,9 @@ export default function SignupPage() {
 
   function validate(): boolean {
     const e: Record<string, string> = {};
+    if (!form.username.trim()) e.username = "아이디를 입력해주세요.";
+    else if (form.username.length < 4 || form.username.length > 20) e.username = "아이디는 4~20자여야 합니다.";
+    else if (usernameStatus !== "available") e.username = "아이디 중복확인이 필요합니다.";
     if (!form.name.trim()) e.name = "이름을 입력해주세요.";
     else if (form.name.trim().length < 2) e.name = "이름은 2자 이상이어야 합니다.";
     if (!form.phone.trim()) e.phone = "전화번호를 입력해주세요.";
@@ -64,15 +94,18 @@ export default function SignupPage() {
     if (!validate()) return;
 
     setLoading(true);
+    // 내부 가상 이메일: username@dreamacademyph.com
+    const internalEmail = `${form.username.trim()}@dreamacademyph.com`;
     const { data, error } = await supabase.auth.signUp({
-      email: form.email.trim(),
+      email: internalEmail,
       password: form.password,
     });
 
     if (error) {
       setLoading(false);
       if (error.message.includes("already registered") || error.message.includes("User already")) {
-        setErrors({ email: "이미 가입된 이메일입니다. 로그인해주세요." });
+        setErrors({ username: "이미 사용 중인 아이디입니다." });
+        setUsernameStatus("taken");
       } else {
         setErrors({ submit: "회원가입 실패: " + error.message });
       }
@@ -84,8 +117,10 @@ export default function SignupPage() {
       const fullAddress = [zipcode ? `(${zipcode})` : "", address, addressDetail].filter(Boolean).join(" ").trim();
       const { error: profileError } = await supabase.from("profiles").insert({
         id: data.user.id,
+        username: form.username.trim(),
         name: form.name.trim(),
         phone: form.phone.trim(),
+        email: form.email.trim(),
         children: validChildren,
         address: fullAddress || null,
       });
@@ -100,17 +135,16 @@ export default function SignupPage() {
     setDone(true);
   }
 
-  // 실시간 비밀번호 확인 체크
+  // 실시간 비밀번호 확인
   useEffect(() => {
     if (form.passwordConfirm && form.password !== form.passwordConfirm) {
       setErrors(e => ({ ...e, passwordConfirm: "비밀번호가 일치하지 않습니다." }));
     } else if (form.passwordConfirm && form.password === form.passwordConfirm) {
-      setErrors(e => { const { passwordConfirm, ...rest } = e; return rest; });
+      setErrors(e => { const copy = { ...e }; delete copy.passwordConfirm; return copy; });
     }
   }, [form.password, form.passwordConfirm]);
 
   function onPhoneChange(val: string) {
-    // 숫자와 하이픈만 허용
     const cleaned = val.replace(/[^0-9-]/g, "");
     setForm({ ...form, phone: cleaned });
     if (errors.phone) setErrors({ ...errors, phone: "" });
@@ -129,7 +163,7 @@ export default function SignupPage() {
       <div className="wrap">
         <div className="box">
           <h1>회원가입 완료!</h1>
-          <p>이메일 인증 후 로그인할 수 있습니다.<br/>메일함을 확인해주세요.</p>
+          <p>아이디로 바로 로그인할 수 있습니다.<br/>입력하신 이메일로 보안 알림이 발송됩니다.</p>
           <a href="/login" className="link">로그인 하러 가기</a>
         </div>
       </div>
@@ -151,13 +185,22 @@ a{text-decoration:none;color:inherit}
 .fg{margin-bottom:18px}
 .fg .fl{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
 .fg .fl .req{color:#ef4444;margin-left:2px}
+.fg .fl .hint-inline{font-size:11px;color:#9ca3af;font-weight:400;margin-left:4px}
 .fg .hint{font-size:11px;color:#9ca3af;margin-top:5px}
 .fi{width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:all 160ms;background:#fff;color:#111827}
 .fi:focus{border-color:#2563eb;outline:2px solid #3b82f6;outline-offset:-1px}
 .fi:disabled,.fi[readonly]{background:#f3f4f6;color:#6b7280;cursor:default}
 .err-msg{color:#ef4444;font-size:12px;margin-top:5px;font-weight:500}
+.ok-msg{color:#059669;font-size:12px;margin-top:5px;font-weight:500}
 .pw-wrap{position:relative}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px;color:#9ca3af}.pw-eye:hover{color:#2563eb}
+.username-row{display:flex;gap:8px}
+.username-row .fi{flex:1}
+.check-btn{padding:12px 18px;background:#6b7280;color:#fff;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 160ms}
+.check-btn:hover{background:#4b5563}
+.check-btn:disabled{background:#d1d5db;cursor:not-allowed}
+.check-btn.checked-ok{background:#059669}
+.check-btn.checked-ng{background:#dc2626}
 .addr-row{display:flex;gap:8px}
 .addr-row .fi{flex:1}
 .addr-btn{padding:12px 18px;background:#2563eb;color:#fff;font-size:13px;font-weight:700;border:none;border-radius:8px;cursor:pointer;font-family:inherit;white-space:nowrap}.addr-btn:hover{background:#1d4ed8}
@@ -191,6 +234,23 @@ a{text-decoration:none;color:inherit}
           <div className="sec-header">기본 정보</div>
 
           <div className="fg">
+            <label className="fl">아이디<span className="req">*</span></label>
+            <div className="username-row">
+              <input className="fi" placeholder="영문, 숫자 조합 4~20자" value={form.username} onChange={e => onUsernameChange(e.target.value)} maxLength={20} />
+              <button type="button"
+                className={`check-btn${usernameStatus === "available" ? " checked-ok" : usernameStatus === "taken" || usernameStatus === "invalid" ? " checked-ng" : ""}`}
+                onClick={checkUsername}
+                disabled={usernameStatus === "checking" || form.username.length < 4}>
+                {usernameStatus === "checking" ? "확인 중..." : "중복확인"}
+              </button>
+            </div>
+            {usernameStatus === "available" && <div className="ok-msg">✓ 사용 가능한 아이디입니다</div>}
+            {usernameStatus === "taken" && <div className="err-msg">이미 사용 중인 아이디입니다</div>}
+            {usernameStatus === "invalid" && <div className="err-msg">{errors.username || "유효하지 않은 아이디입니다 (4~20자)"}</div>}
+            {errors.username && usernameStatus !== "invalid" && usernameStatus !== "taken" && <div className="err-msg">{errors.username}</div>}
+          </div>
+
+          <div className="fg">
             <label className="fl">이름<span className="req">*</span></label>
             <input className="fi" placeholder="홍길동" value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: "" }); }} />
             {errors.name && <div className="err-msg">{errors.name}</div>}
@@ -203,7 +263,7 @@ a{text-decoration:none;color:inherit}
           </div>
 
           <div className="fg">
-            <label className="fl">이메일<span className="req">*</span></label>
+            <label className="fl">이메일<span className="req">*</span><span className="hint-inline">(비밀번호 찾기, 보안 알림용)</span></label>
             <input className="fi" type="email" placeholder="example@email.com" value={form.email} onChange={e => { setForm({ ...form, email: e.target.value }); setErrors({ ...errors, email: "" }); }} />
             {errors.email && <div className="err-msg">{errors.email}</div>}
           </div>
@@ -231,7 +291,6 @@ a{text-decoration:none;color:inherit}
         {/* 자녀 정보 */}
         <div className="sec">
           <div className="sec-header">자녀 정보 (선택)</div>
-
           {children.length === 0 ? (
             <div className="child-empty">등록된 자녀가 없습니다</div>
           ) : children.map((c, i) => (
@@ -244,14 +303,12 @@ a{text-decoration:none;color:inherit}
               </div>
             </div>
           ))}
-
           {children.length < 5 && <button type="button" className="add-btn" onClick={addChild}>+ 자녀 추가 ({children.length}/5)</button>}
         </div>
 
         {/* 주소 */}
         <div className="sec">
           <div className="sec-header">주소 정보 (선택)</div>
-
           <div className="fg">
             <label className="fl">우편번호</label>
             <div className="addr-row">
@@ -259,12 +316,10 @@ a{text-decoration:none;color:inherit}
               <button type="button" className="addr-btn" onClick={openAddressSearch}>🔍 주소 검색</button>
             </div>
           </div>
-
           <div className="fg">
             <label className="fl">도로명 주소</label>
             <input className="fi" placeholder="주소 검색 버튼을 눌러주세요" value={address} readOnly />
           </div>
-
           <div className="fg">
             <label className="fl">상세 주소</label>
             <input id="address-detail" className="fi" placeholder="동/호수 등" value={addressDetail} onChange={e => setAddressDetail(e.target.value)} />
@@ -275,9 +330,8 @@ a{text-decoration:none;color:inherit}
         {/* 약관 동의 */}
         <div className="sec">
           <div className="sec-header">약관 동의<span style={{ color: "#ef4444", marginLeft: 4 }}>*</span></div>
-
           <div className="agree-box">
-            <div className="agree-text">수집된 개인정보(이름, 전화번호, 자녀정보(이름, 출생연도), 주소)는 서비스 이용 및 이벤트 선물 발송 목적으로만 사용되며 제3자에게 절대 제공되지 않습니다.</div>
+            <div className="agree-text">수집된 개인정보(아이디, 이름, 전화번호, 이메일, 자녀정보(이름, 출생연도), 주소)는 서비스 이용 및 이벤트 선물 발송 목적으로만 사용되며 제3자에게 절대 제공되지 않습니다.</div>
             <label className="agree-check">
               <input type="checkbox" checked={agreed} onChange={e => { setAgreed(e.target.checked); setErrors({ ...errors, agreed: "" }); }} />
               <span>개인정보 수집·이용에 동의합니다 (필수)</span>
