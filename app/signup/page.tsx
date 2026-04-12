@@ -47,26 +47,35 @@ export default function SignupPage() {
     setErrors(e => { const copy = { ...e }; delete copy.username; return copy; });
 
     const u = form.username.trim();
-    if (u.length < 4 || u.length > 20) {
-      setUsernameStatus("invalid");
-      return;
-    }
-    if (u.startsWith("admin-") || u === "admin") {
-      setUsernameStatus("invalid");
-      return;
-    }
+    if (u.length < 4 || u.length > 20) { setUsernameStatus("invalid"); return; }
+    if (u.startsWith("admin-") || u === "admin") { setUsernameStatus("invalid"); return; }
+
     try {
-      const { data, error } = await supabase.from("profiles").select("username").eq("username", u).maybeSingle();
-      if (error) {
-        console.error("username check error:", error);
+      // 서버 API: profiles + Auth 양쪽 체크
+      const res = await fetch("/api/check-username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error("check-username error:", body);
         setUsernameStatus("idle");
-        setErrors(e => ({ ...e, username: "중복확인 실패: " + error.message }));
+        setErrors(e => ({ ...e, username: "중복확인 실패: " + (body.error || res.status) }));
         return;
       }
-      setUsernameStatus(data ? "taken" : "available");
+      const data = await res.json();
+      if (data.available) {
+        setUsernameStatus("available");
+      } else if (data.reason === "invalid" || data.reason === "reserved") {
+        setUsernameStatus("invalid");
+      } else {
+        setUsernameStatus("taken");
+      }
     } catch (err) {
       console.error("username check exception:", err);
       setUsernameStatus("idle");
+      setErrors(e => ({ ...e, username: "네트워크 오류로 중복확인 실패" }));
     }
   }
 
