@@ -42,19 +42,32 @@ export default function SignupPage() {
   }
 
   async function checkUsername() {
+    // 이전 상태/에러 초기화 (중복 메시지 방지)
+    setUsernameStatus("checking");
+    setErrors(e => { const copy = { ...e }; delete copy.username; return copy; });
+
     const u = form.username.trim();
     if (u.length < 4 || u.length > 20) {
       setUsernameStatus("invalid");
       return;
     }
-    if (u.startsWith("admin-")) {
+    if (u.startsWith("admin-") || u === "admin") {
       setUsernameStatus("invalid");
-      setErrors({ ...errors, username: "admin- 로 시작하는 아이디는 사용할 수 없습니다." });
       return;
     }
-    setUsernameStatus("checking");
-    const { data } = await supabase.from("profiles").select("username").eq("username", u).maybeSingle();
-    setUsernameStatus(data ? "taken" : "available");
+    try {
+      const { data, error } = await supabase.from("profiles").select("username").eq("username", u).maybeSingle();
+      if (error) {
+        console.error("username check error:", error);
+        setUsernameStatus("idle");
+        setErrors(e => ({ ...e, username: "중복확인 실패: " + error.message }));
+        return;
+      }
+      setUsernameStatus(data ? "taken" : "available");
+    } catch (err) {
+      console.error("username check exception:", err);
+      setUsernameStatus("idle");
+    }
   }
 
   function openAddressSearch() {
@@ -94,45 +107,63 @@ export default function SignupPage() {
     if (!validate()) return;
 
     setLoading(true);
-    // 내부 가상 이메일: username@dreamacademyph.com
-    const internalEmail = `${form.username.trim()}@dreamacademyph.com`;
-    const { data, error } = await supabase.auth.signUp({
-      email: internalEmail,
-      password: form.password,
-    });
+    setErrors(e => { const copy = { ...e }; delete copy.submit; return copy; });
 
-    if (error) {
-      setLoading(false);
-      if (error.message.includes("already registered") || error.message.includes("User already")) {
-        setErrors({ username: "이미 사용 중인 아이디입니다." });
-        setUsernameStatus("taken");
-      } else {
-        setErrors({ submit: "회원가입 실패: " + error.message });
+    try {
+      // 내부 가상 이메일: username@dreamacademyph.com
+      const internalEmail = `${form.username.trim()}@dreamacademyph.com`;
+      const { data, error } = await supabase.auth.signUp({
+        email: internalEmail,
+        password: form.password,
+      });
+
+      if (error) {
+        console.error("signUp error:", error);
+        setLoading(false);
+        if (error.message.includes("already registered") || error.message.includes("User already")) {
+          setUsernameStatus("taken");
+          setErrors({ submit: "이미 사용 중인 아이디입니다." });
+        } else {
+          setErrors({ submit: "회원가입 실패: " + error.message });
+        }
+        return;
       }
-      return;
-    }
 
-    if (data.user) {
+      if (!data?.user?.id) {
+        console.error("signUp: no user.id returned", data);
+        setLoading(false);
+        setErrors({ submit: "회원가입 실패: 사용자 정보를 받지 못했습니다. 잠시 후 다시 시도해주세요." });
+        return;
+      }
+
       const validChildren = children.filter(c => c.name.trim());
       const fullAddress = [zipcode ? `(${zipcode})` : "", address, addressDetail].filter(Boolean).join(" ").trim();
-      const { error: profileError } = await supabase.from("profiles").insert({
+      const profilePayload: Record<string, unknown> = {
         id: data.user.id,
         username: form.username.trim(),
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
         children: validChildren,
-        address: fullAddress || null,
-      });
+      };
+      if (fullAddress) profilePayload.address = fullAddress;
+
+      const { error: profileError } = await supabase.from("profiles").insert(profilePayload);
       if (profileError) {
+        console.error("profile insert error:", profileError);
         setLoading(false);
         setErrors({ submit: "프로필 저장 실패: " + profileError.message });
         return;
       }
-    }
 
-    setLoading(false);
-    setDone(true);
+      setLoading(false);
+      setDone(true);
+    } catch (err: unknown) {
+      console.error("handleSubmit exception:", err);
+      setLoading(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrors({ submit: "예상치 못한 오류: " + msg });
+    }
   }
 
   // 실시간 비밀번호 확인
@@ -246,8 +277,8 @@ a{text-decoration:none;color:inherit}
             </div>
             {usernameStatus === "available" && <div className="ok-msg">✓ 사용 가능한 아이디입니다</div>}
             {usernameStatus === "taken" && <div className="err-msg">이미 사용 중인 아이디입니다</div>}
-            {usernameStatus === "invalid" && <div className="err-msg">{errors.username || "유효하지 않은 아이디입니다 (4~20자)"}</div>}
-            {errors.username && usernameStatus !== "invalid" && usernameStatus !== "taken" && <div className="err-msg">{errors.username}</div>}
+            {usernameStatus === "invalid" && <div className="err-msg">유효하지 않은 아이디입니다 (4~20자, admin- 금지)</div>}
+            {usernameStatus === "idle" && errors.username && <div className="err-msg">{errors.username}</div>}
           </div>
 
           <div className="fg">
