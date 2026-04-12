@@ -3,7 +3,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
-type Tab = "info" | "students" | "pickup" | "invoice";
+type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle";
+
+const REQ_ST: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: "대기중", bg: "#fef3c7", color: "#92400e" },
+  confirmed: { label: "확정",   bg: "#dcfce7", color: "#166534" },
+  cancelled: { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
+};
 
 const PAY_ST: Record<string, { label: string; bg: string; color: string }> = {
   unpaid:  { label: "미납", bg: "#fef2f2", color: "#dc2626" },
@@ -58,6 +64,8 @@ export default function BookingDetailPage() {
   const checkin = data.checkin;
   const invoices = data.invoices || [];
   const accoms = data.accommodations || [];
+  const tutorReqs = data.tutor_requests || [];
+  const shuttleReqs = data.shuttle_requests || [];
 
   const payStatus = PAY_ST[b.payment_status] || PAY_ST.unpaid;
 
@@ -109,7 +117,7 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="tabs">
-        {([["info","기본정보"],["students","학생"],["pickup","픽업/체크인"],["invoice","인보이스"]] as const).map(([k,v]) => (
+        {([["info","기본정보"],["pickup","픽업/체크인"],["students","학생"],["invoice","인보이스"],["tutor","튜터"],["shuttle","셔틀"]] as const).map(([k,v]) => (
           <button key={k} className={`tab${tab===k?" ac":""}`} onClick={() => setTab(k as Tab)}>{v}</button>
         ))}
       </div>
@@ -160,20 +168,30 @@ export default function BookingDetailPage() {
         </div></div>}
       </>)}
 
-      {/* 탭2: 학생 */}
+      {/* 탭3: 학생 */}
       {tab === "students" && (
         <div className="sec">
-          <h2>학생 목록 ({students.length}명)</h2>
-          {students.length === 0 ? <div className="empty">등록된 학생이 없습니다</div> :
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
+            <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>학생 목록 ({students.length}명)</h2>
+            <button className="btn btn-sm btn-blue" onClick={() => router.push(`/admin/bookings?tab=list`)}>+ 학생 추가</button>
+          </div>
+          {students.length === 0 ? <div className="empty">등록된 학생이 없습니다<br/>손님이 /booking 폼에서 등록하거나 어드민이 직접 추가할 수 있습니다</div> :
             students.map((s: any, i: number) => (
-              <div key={s.id} className="stu-card">
+              <div key={s.id} className="stu-card" style={{ flexWrap: "wrap" }}>
                 <div className="stu-av">{i + 1}</div>
-                <div className="stu-info">
+                <div className="stu-info" style={{ width: "100%" }}>
                   <div className="nm">{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
                   <div className="sub">
                     {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
                     {s.academy_start && ` · ${s.academy_start} ~ ${s.academy_end || ""}`}
                   </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8, fontSize: 12 }}>
+                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>SSP:</span> {s.ssp ? "있음" : "없음"}</div>
+                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>사진허용:</span> {s.photo_allowed ? "O" : "X"}</div>
+                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>픽드롭:</span> {s.pickup_location || "-"}</div>
+                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>주소:</span> {s.address_detail || "-"}</div>
+                  </div>
+                  {s.special_request && <div style={{ marginTop: 8, padding: 8, background: "#fef3c7", borderRadius: 6, fontSize: 12, color: "#92400e" }}>📝 {s.special_request}</div>}
                 </div>
               </div>
             ))
@@ -246,6 +264,69 @@ export default function BookingDetailPage() {
               <button className="btn btn-sm btn-gray" onClick={() => router.push(`/invoice?id=${id}&type=resort`)}>리조트용 생성</button>
             </div>
           </>)}
+        </div>
+      )}
+
+      {/* 탭5: 튜터 */}
+      {tab === "tutor" && (
+        <div className="sec">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
+            <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>튜터 신청 ({tutorReqs.length}건)</h2>
+            <button className="btn btn-sm btn-blue" onClick={() => alert("튜터 신청 추가 기능은 /admin/tutors에서 사용하세요.")}>+ 튜터 신청 추가</button>
+          </div>
+          {tutorReqs.length === 0 ? <div className="empty">튜터 신청 내역이 없습니다<br/>손님이 /portal/tutor에서 신청하면 여기에 표시됩니다</div> :
+            tutorReqs.map((t: any) => {
+              const st = REQ_ST[t.status] || REQ_ST.pending;
+              return (
+                <div key={t.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 8, background: "#f8fafc" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{t.student_name_kr || "-"} {t.student_name_en ? `(${t.student_name_en})` : ""}</div>
+                    <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 12, color: "#475569" }}>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>유형:</span> {t.class_type || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>나이:</span> {t.student_age || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>기간:</span> {t.start_date || "-"} ~ {t.end_date || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>요일:</span> {(t.preferred_days_arr || []).join(",") || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>시간:</span> {t.preferred_time || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>영어:</span> {t.level_english || "-"}</div>
+                    {t.class_style && <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>방향:</span> {t.class_style}</div>}
+                    {t.textbook && <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>교재:</span> {t.textbook}</div>}
+                  </div>
+                  {t.child_personality && <div style={{ marginTop: 8, padding: 8, background: "#fff", borderRadius: 6, fontSize: 12 }}>👦 {t.child_personality}</div>}
+                </div>
+              );
+            })
+          }
+        </div>
+      )}
+
+      {/* 탭6: 셔틀 */}
+      {tab === "shuttle" && (
+        <div className="sec">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
+            <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>셔틀 신청 ({shuttleReqs.length}건)</h2>
+            <button className="btn btn-sm btn-blue" onClick={() => router.push("/admin/shuttle")}>+ 셔틀 관리로</button>
+          </div>
+          {shuttleReqs.length === 0 ? <div className="empty">셔틀 신청 내역이 없습니다<br/>손님이 /portal/shuttle에서 신청하면 여기에 표시됩니다</div> :
+            shuttleReqs.map((s: any) => {
+              const st = REQ_ST[s.status] || REQ_ST.pending;
+              return (
+                <div key={s.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 8, background: "#f8fafc" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{s.request_date || "-"} {s.request_time || ""}</div>
+                    <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 12, color: "#475569" }}>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>장소:</span> {s.destination || "-"}</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>인원:</span> {s.num_people || 0}명</div>
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>왕복:</span> {s.round_trip ? "왕복" : "편도"}</div>
+                    {s.notes && <div style={{ gridColumn: "1/3" }}><span style={{ fontWeight: 700, color: "#6b7c93" }}>메모:</span> {s.notes.replace(/portal_booking_id:[a-f0-9-]+/gi, "").trim() || "-"}</div>}
+                  </div>
+                </div>
+              );
+            })
+          }
         </div>
       )}
     </div>
