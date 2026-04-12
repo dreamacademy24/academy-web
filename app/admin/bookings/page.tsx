@@ -118,7 +118,11 @@ export default function AdminBookingsPage(){
   }
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:false});
-  const [stuMonth,setStuMonth]=useState(""); // "" = 전체, "YYYY-MM" = 특정 월
+  const _now=new Date();
+  const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
+  const [stuMonthNum,setStuMonthNum]=useState<string>(String(_now.getMonth()+1).padStart(2,"0")); // "" = 전체, "01"~"12"
+  const [stuSpecialPopup,setStuSpecialPopup]=useState<{booking_id:string;current:string}|null>(null);
+  const [stuSpecialEdit,setStuSpecialEdit]=useState("");
 
   // 모든 예약(bookings)의 students JSONB를 평탄화
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
@@ -155,7 +159,6 @@ export default function AdminBookingsPage(){
       한글이름:s.korName,영어이름:s.engName,나이:s.age,
       숙소:fmtAccom(s as unknown as Record<string,string>),
       체크인:s.checkin_date,체크아웃:s.checkout_date,
-      항공IN:s.flight_in,항공OUT:s.flight_out,
       예약자명:s.booker_name,잔금일:s.balance_date,
       사진허용:s.photo,특이사항:s.special_request,
     }));
@@ -628,16 +631,15 @@ export default function AdminBookingsPage(){
         {key:"accom",label:"숙소/룸",get:s=>fmtAccom(s as unknown as Record<string,string>)},
         {key:"checkin_date",label:"체크인",get:s=>s.checkin_date||""},
         {key:"checkout_date",label:"체크아웃",get:s=>s.checkout_date||""},
-        {key:"flight_in",label:"항공IN",get:s=>s.flight_in||""},
-        {key:"flight_out",label:"항공OUT",get:s=>s.flight_out||""},
         {key:"balance_date",label:"잔금일",get:s=>s.balance_date||""},
         {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
         {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
       ];
       const searched=studentsList.filter(s=>{
-        // 월 필터: academyStart가 선택한 YYYY-MM으로 시작하는 것만
-        if(stuMonth&&(!s.academyStart||!s.academyStart.startsWith(stuMonth)))return false;
+        // 년/월 필터: academyStart가 선택한 년도/월과 일치해야 함
+        if(stuYear&&(!s.academyStart||!s.academyStart.startsWith(stuYear+"-")))return false;
+        if(stuMonthNum&&(!s.academyStart||s.academyStart.slice(5,7)!==stuMonthNum))return false;
         if(!q)return true;
         return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
       });
@@ -654,10 +656,20 @@ export default function AdminBookingsPage(){
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
-          <input type="month" value={stuMonth} onChange={e=>setStuMonth(e.target.value)} style={{padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} />
-          {stuMonth&&<button onClick={()=>setStuMonth("")} style={{padding:"6px 10px",fontSize:11,border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",color:"#6b7c93",cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
           <span className="cnt">{sorted.length}명</span>
           <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>
+        </div>
+        <div className="sub-tabs" style={{marginBottom:8}}>
+          <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>년도:</span>
+          {["",String(_now.getFullYear()-1),String(_now.getFullYear()),String(_now.getFullYear()+1)].map(y=>(
+            <button key={y||"all-y"} className={`sub-tab${stuYear===y?" ac":""}`} onClick={()=>setStuYear(y)}>{y||"전체"}</button>
+          ))}
+        </div>
+        <div className="sub-tabs">
+          <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>월:</span>
+          {["","01","02","03","04","05","06","07","08","09","10","11","12"].map(m=>(
+            <button key={m||"all-m"} className={`sub-tab${stuMonthNum===m?" ac":""}`} onClick={()=>setStuMonthNum(m)}>{m?parseInt(m)+"월":"전체"}</button>
+          ))}
         </div>
         <div className="ss-w"><table className="ss"><thead><tr>
           {stuCols.map(c=><th key={c.key} onClick={()=>toggleStuSort(c.key)}>{c.label}<span className={arrCls(c.key)}>{arr(c.key)}</span></th>)}
@@ -679,12 +691,12 @@ export default function AdminBookingsPage(){
               <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
               <td>{s.checkin_date||"-"}</td>
               <td>{s.checkout_date||"-"}</td>
-              <td>{s.flight_in||"-"}</td>
-              <td>{s.flight_out||"-"}</td>
               <td>{s.balance_date||"-"}</td>
               <td>{s.booker_name||"-"}</td>
               <td style={{textAlign:"center"}}>{s.photo||""}</td>
-              <td className="wrap">{s.special_request||"-"}</td>
+              <td className="wrap" onClick={e=>{e.stopPropagation();setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}} style={{cursor:"pointer",color:s.special_request?"#1a6fc4":"#94a3b8",textDecoration:s.special_request?"underline":"none"}}>
+                {s.special_request?(s.special_request.length>30?s.special_request.slice(0,30)+"...":s.special_request):"+ 추가"}
+              </td>
             </tr>);
           })}
         </tbody></table></div>
@@ -694,6 +706,25 @@ export default function AdminBookingsPage(){
     {/* ── 탭5: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
   </div>
+
+  {/* 특이사항 편집 팝업 */}
+  {stuSpecialPopup&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setStuSpecialPopup(null)}>
+    <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:520,boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
+      <h2 style={{fontSize:17,fontWeight:800,marginBottom:14}}>특이사항 편집</h2>
+      <textarea value={stuSpecialEdit} onChange={e=>setStuSpecialEdit(e.target.value)}
+        style={{width:"100%",padding:12,border:"1px solid #e2e8f0",borderRadius:10,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:200,lineHeight:1.6}}
+        placeholder="특이사항을 입력하세요..."/>
+      <div style={{fontSize:11,color:"#94a3b8",marginTop:6}}>기존 내용에 추가하거나 수정할 수 있습니다. 저장 시 해당 예약의 모든 학생에 공통 반영됩니다.</div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+        <button onClick={()=>setStuSpecialPopup(null)} style={{padding:"10px 20px",border:"1px solid #e2e8f0",borderRadius:8,background:"#f1f5f9",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+        <button onClick={async()=>{
+          await supabase.from("bookings").update({special_request:stuSpecialEdit}).eq("id",stuSpecialPopup.booking_id);
+          setBookings(prev=>prev.map(b=>b.id===stuSpecialPopup.booking_id?{...b,special_request:stuSpecialEdit}:b));
+          setStuSpecialPopup(null);
+        }} style={{padding:"10px 24px",border:"none",borderRadius:8,background:"#1a6fc4",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
+      </div>
+    </div>
+  </div>)}
 
   {/* ── STEP 22: 예약 유형 선택 모달 ── */}
   {showNewBooking&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setShowNewBooking(false)}>
