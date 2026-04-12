@@ -21,112 +21,67 @@ export default function AdminHubPage() {
 
   if (!ready) return null;
 
+  const staffHref = staffId ? `/staff?user=${staffId.replace(/^admin-/, '')}` : '/staff';
+
+  // 우선순위 순 카드 배열
+  const cards = [
+    { icon: "📋", title: "예약 관리",       desc: "부킹 접수 · 인보이스 · 영수증",     href: "/admin/bookings",        primary: true },
+    { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 셔틀 · 필드트립 · 회원", href: "/admin/site" },
+    { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
+    { icon: "🏠", title: "드림하우스",       desc: "룸 예약현황 · 충돌감지",             href: "/dreamhouse-rooms" },
+    { icon: "📝", title: "체크인 디테일",    desc: "자동생성 · PDF 출력",               href: "/admin/checkin-details" },
+    { icon: "🎒", title: "학생 관리",       desc: "학생 목록 · 과정별 조회",            href: "/admin/students" },
+    { icon: "📨", title: "손님 신청관리",    desc: "셔틀 · 픽업 · 튜터 승인",            href: "/admin/portal-requests" },
+    { icon: "🛬", title: "픽드랍 관리",     desc: "픽업 · 드랍 일정 · 기사 배정",       href: "/admin/pickups" },
+    { icon: "🚐", title: "셔틀 관리",       desc: "셔틀 신청 · 기사 배정",              href: "/admin/shuttle" },
+    { icon: "🚗", title: "기사 관리",       desc: "기사 등록 · 차량 관리",              href: "/admin/drivers" },
+    { icon: "📅", title: "기사 스케줄",     desc: "주간 달력 · 배정 현황",              href: "/admin/driver-schedule" },
+    { icon: "👩‍🏫", title: "튜터 관리",       desc: "튜터 목록 · 수업료",                  href: "/admin/tutors" },
+    { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정",                 href: "/admin/online-class" },
+    { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
+    { icon: "📅", title: "튜터 스케줄",      desc: "주간 일정 · 수업 현황",              href: "/admin/tutor-schedule" },
+    { icon: "💰", title: "튜터 인보이스",    desc: "월별 수업료 정산 · 출력",            href: "/admin/tutor-invoice" },
+  ];
+
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
-.hub-w{max-width:720px;margin:0 auto;padding:32px 24px;}
-.hub-h{text-align:center;margin-bottom:24px;}
-.hub-h h1{font-size:24px;font-weight:800;margin-bottom:6px;}
-.hub-h p{font-size:14px;color:#6b7c93;}
-.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
-.hub-card{border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;border:2px solid transparent;transition:all 180ms;}
-.hub-card:hover{transform:translateY(-3px);}
-.hub-card .ic{font-size:44px;margin-bottom:14px;}
-.hub-card h2{font-size:18px;font-weight:800;margin-bottom:8px;}
-.hub-card p{font-size:13px;line-height:1.6;opacity:0.85;}
-.card-blue{background:#1a6fc4;color:#fff;box-shadow:0 6px 24px rgba(26,111,196,0.25);}.card-blue:hover{box-shadow:0 10px 36px rgba(26,111,196,0.35);}
-.card-gray{background:#fff;color:#1a1a2e;box-shadow:0 4px 20px rgba(0,0,0,0.06);border:1px solid #e2e8f0;}.card-gray:hover{border-color:#1a6fc4;box-shadow:0 8px 30px rgba(26,111,196,0.12);}
-.hub-footer{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
-.hub-link{color:#6b7c93;font-size:13px;font-weight:600;text-decoration:none;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;}.hub-link:hover{color:#1a6fc4;border-color:#1a6fc4;}
-.logout{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer;margin-top:24px;display:block;text-align:center;width:100%;font-family:'Noto Sans KR',sans-serif;}.logout:hover{color:#dc2626;}
-@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:24px 16px;}}
+.hub-w{max-width:820px;margin:0 auto;padding:28px 20px;}
+.hub-h{text-align:center;margin-bottom:20px;}
+.hub-h h1{font-size:22px;font-weight:800;margin-bottom:4px;}
+.hub-h p{font-size:13px;color:#6b7c93;}
+.hub-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+.hub-card{border-radius:12px;padding:14px 16px;cursor:pointer;border:2px solid transparent;transition:all 180ms;display:flex;align-items:center;gap:12px;}
+.hub-card:hover{transform:translateY(-2px);}
+.hub-card .ic{font-size:26px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;flex-shrink:0;background:rgba(255,255,255,0.15);}
+.hub-card .tx{flex:1;min-width:0;}
+.hub-card h2{font-size:14px;font-weight:800;margin-bottom:2px;line-height:1.2;}
+.hub-card p{font-size:11px;line-height:1.4;opacity:0.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-blue{background:#1a6fc4;color:#fff;box-shadow:0 4px 16px rgba(26,111,196,0.22);}
+.card-blue:hover{box-shadow:0 8px 28px rgba(26,111,196,0.3);}
+.card-gray{background:#fff;color:#1a1a2e;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #e2e8f0;}
+.card-gray:hover{border-color:#1a6fc4;box-shadow:0 4px 20px rgba(26,111,196,0.1);}
+.card-gray .ic{background:#f1f5f9;}
+.hub-footer{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+.hub-link{color:#6b7c93;font-size:12px;font-weight:600;text-decoration:none;padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;}.hub-link:hover{color:#1a6fc4;border-color:#1a6fc4;}
+.logout{background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;margin-top:20px;display:block;text-align:center;width:100%;font-family:'Noto Sans KR',sans-serif;}.logout:hover{color:#dc2626;}
+@media(max-width:500px){.hub-grid{grid-template-columns:1fr;}.hub-w{padding:20px 14px;}}
     `}</style>
     <div className="hub-w">
       <div className="hub-h">
         <h1>드림아카데미 관리자</h1>
-        <p>안녕하세요, {name}님{role === 'admin' ? ' (관리자)' : ' (스태프)'}. 관리 메뉴를 선택하세요.</p>
+        <p>안녕하세요, {name}님{role === 'admin' ? ' (관리자)' : ' (스태프)'}</p>
       </div>
       <div className="hub-grid">
-        <div className="hub-card card-blue" onClick={() => router.push("/admin/bookings")}>
-          <div className="ic">📋</div>
-          <h2>예약 관리</h2>
-          <p>부킹 접수 · 인보이스 · 영수증</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push("/admin/site")}>
-          <div className="ic">⚙️</div>
-          <h2>사이트 관리</h2>
-          <p>공지사항 · 셔틀 · 필드트립 · 회원</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push(staffId ? `/staff?user=${staffId.replace(/^admin-/, '')}` : '/staff')}>
-          <div className="ic">👥</div>
-          <h2>직원업무</h2>
-          <p>팀 업무 · 일정 · 프로젝트</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/dreamhouse-rooms')}>
-          <div className="ic">🏠</div>
-          <h2>드림하우스</h2>
-          <p>룸 예약현황 · 충돌감지</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/drivers')}>
-          <div className="ic">🚗</div>
-          <h2>기사 관리</h2>
-          <p>기사 등록 · 차량 관리</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/tutors')}>
-          <div className="ic">👩‍🏫</div>
-          <h2>튜터 관리</h2>
-          <p>튜터 목록 · 스케줄 · 수업료</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/pickups')}>
-          <div className="ic">🛬</div>
-          <h2>픽드랍 관리</h2>
-          <p>픽업 · 드랍 일정 · 기사 배정</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/shuttle')}>
-          <div className="ic">🚐</div>
-          <h2>셔틀 관리</h2>
-          <p>셔틀 신청 · 기사 배정</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/driver-schedule')}>
-          <div className="ic">📅</div>
-          <h2>기사 스케줄</h2>
-          <p>주간 달력 · 배정 현황</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/checkin-details')}>
-          <div className="ic">📝</div>
-          <h2>체크인 디테일</h2>
-          <p>자동생성 · PDF 출력</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/online-class')}>
-          <div className="ic">💻</div>
-          <h2>화상영어</h2>
-          <p>출석관리 · 수업일정 · 튜터매칭</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/ssp')}>
-          <div className="ic">📋</div>
-          <h2>SSP 관리</h2>
-          <p>신청현황 · 발급추적 · 학생별 관리</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/students')}>
-          <div className="ic">🎒</div>
-          <h2>학생 관리</h2>
-          <p>학생 목록 · 과정별 조회 · 정보 관리</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/tutor-schedule')}>
-          <div className="ic">📅</div>
-          <h2>튜터 스케줄</h2>
-          <p>주간 일정 · 튜터별 수업 현황</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/tutor-invoice')}>
-          <div className="ic">💰</div>
-          <h2>튜터 인보이스</h2>
-          <p>월별 수업료 정산 · 출력</p>
-        </div>
-        <div className="hub-card card-gray" onClick={() => router.push('/admin/portal-requests')}>
-          <div className="ic">📨</div>
-          <h2>손님 신청 관리</h2>
-          <p>셔틀 · 픽업 · 튜터 승인</p>
-        </div>
+        {cards.map((c, i) => (
+          <div key={i} className={`hub-card ${c.primary ? "card-blue" : "card-gray"}`} onClick={() => router.push(c.href)}>
+            <div className="ic">{c.icon}</div>
+            <div className="tx">
+              <h2>{c.title}</h2>
+              <p>{c.desc}</p>
+            </div>
+          </div>
+        ))}
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
