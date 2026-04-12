@@ -1,0 +1,87 @@
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+async function loadBooking(bookingId: string) {
+  const { data: newB } = await supabase.from('bookings_new').select('*').eq('id', bookingId).maybeSingle()
+  if (newB) return { booking: newB, source: 'new' as const }
+  const { data: oldB } = await supabase.from('bookings').select('*').eq('id', bookingId).maybeSingle()
+  if (oldB) return { booking: oldB, source: 'old' as const }
+  return null
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const bookingId = searchParams.get('booking_id')
+  if (!bookingId) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
+
+  const result = await loadBooking(bookingId)
+  if (!result) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+  const b = result.booking
+  const total = b.total_amount || b.final_price || b.base_price || 0
+  const paid = b.paid_amount || 0
+  const balance = total - paid
+  const paymentStatus = b.payment_status || (b.status === '결제완료' || b.status === '완료' ? 'paid' : balance === 0 && total > 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid')
+
+  return NextResponse.json({
+    booking_id: bookingId,
+    booker_name: b.booker_name,
+    reservation_no: b.reservation_no || bookingId,
+    total_amount: total,
+    paid_amount: paid,
+    balance,
+    payment_status: paymentStatus,
+    source: result.source,
+  })
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json()
+    const { booking_id, paypal_order_id, captured_amount_usd, amount_krw } = body
+    if (!booking_id || !paypal_order_id) {
+      return NextResponse.json({ error: 'booking_id, paypal_order_id required' }, { status: 400 })
+    }
+
+    const result = await loadBooking(booking_id)
+    if (!result) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+    const bookerName = result.booking.booker_name || '손님'
+    const prevPaid = result.booking.paid_amount || 0
+    const newPaid = prevPaid + (amount_krw || 0)
+    const total = result.booking.total_amount || result.booking.final_price || result.booking.base_price || 0
+    const newStatus = newPaid >= total && total > 0 ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid'
+
+    if (result.source === 'new') {
+      await supabase.from('bookings_new').update({
+        paid_amount: newPaid,
+        payment_status: newStatus,
+      }).eq('id', booking_id)
+    } else {
+      await supabase.from('bookings').update({
+        status: newStatus === 'paid' ? '결제완료' : result.booking.status,
+      }).eq('id', booking_id)
+    }
+
+    // 어드민 알림 태스크
+    const today = new Date().toISOString().slice(0, 10)
+    await supabase.from('staff_tasks').insert({
+      title: `💳 ${bookerName}님이 PayPal로 결제했습니다`,
+      assignee: 'all',
+      due: today,
+      done: false,
+      shared: true,
+      note: `예약 ID: ${booking_id}\nPayPal Order: ${paypal_order_id}\n결제 금액(USD): $${captured_amount_usd}\n결제 금액(KRW): ₩${(amount_krw || 0).toLocaleString()}\n납입 합계: ₩${newPaid.toLocaleString()}`,
+    })
+
+    return NextResponse.json({ ok: true, new_paid: newPaid, new_status: newStatus })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'unknown'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}

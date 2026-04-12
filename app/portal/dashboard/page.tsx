@@ -32,7 +32,7 @@ export default function PortalDashboard() {
   const cards = [
     { icon: "📋", title: "내 예약 정보", desc: "숙소, 기간, 인원 확인", ready: true, href: "/portal/my-booking" },
     { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: true, href: "/portal/flight" },
-    { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: false },
+    { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: true, href: "/portal/payment" },
     { icon: "🚐", title: "셔틀/픽업 신청", desc: "공항 픽업, 셔틀 예약", ready: false },
   ];
 
