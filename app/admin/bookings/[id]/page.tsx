@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 
-type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle";
+type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle" | "comments";
+interface Comment { id: string; booking_id: string; author: string; content: string; created_at: string }
 
 const REQ_ST: Record<string, { label: string; bg: string; color: string }> = {
   pending:   { label: "대기중", bg: "#fef3c7", color: "#92400e" },
@@ -36,7 +37,45 @@ export default function BookingDetailPage() {
   const [data, setData] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  const [currentAuthor, setCurrentAuthor] = useState("");
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    if (isAdminAuthed()) {
+      setAuthed(true);
+      const info = getAdminInfo();
+      if (info?.name) setCurrentAuthor(info.name);
+    } else if (typeof window !== "undefined") window.location.href = "/admin";
+  }, []);
+
+  const loadComments = useCallback(async () => {
+    const res = await fetch(`/api/bookings/${id}/comments`);
+    if (res.ok) { const d = await res.json(); setComments(d.comments || []); }
+  }, [id]);
+
+  useEffect(() => { if (authed && tab === "comments") loadComments(); }, [authed, tab, loadComments]);
+
+  async function postComment() {
+    if (!newComment.trim()) return;
+    setPosting(true);
+    const res = await fetch(`/api/bookings/${id}/comments`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: currentAuthor || "관리자", content: newComment }),
+    });
+    setPosting(false);
+    if (!res.ok) { alert("작성 실패"); return; }
+    setNewComment("");
+    loadComments();
+  }
+
+  async function deleteComment(commentId: string) {
+    if (!confirm("이 코멘트를 삭제하시겠습니까?")) return;
+    const res = await fetch(`/api/bookings/${id}/comments?comment_id=${commentId}&author=${encodeURIComponent(currentAuthor)}`, { method: "DELETE" });
+    if (!res.ok) { const r = await res.json(); alert(r.error || "삭제 실패"); return; }
+    loadComments();
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,7 +156,7 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="tabs">
-        {([["info","기본정보"],["pickup","픽업/체크인"],["students","학생"],["invoice","인보이스"],["tutor","튜터"],["shuttle","셔틀"]] as const).map(([k,v]) => (
+        {([["info","기본정보"],["pickup","픽업/체크인"],["students","학생"],["invoice","인보이스"],["tutor","튜터"],["shuttle","셔틀"],["comments","코멘트"]] as const).map(([k,v]) => (
           <button key={k} className={`tab${tab===k?" ac":""}`} onClick={() => setTab(k as Tab)}>{v}</button>
         ))}
       </div>
@@ -298,6 +337,55 @@ export default function BookingDetailPage() {
               );
             })
           }
+        </div>
+      )}
+
+      {/* 탭7: 코멘트 */}
+      {tab === "comments" && (
+        <div className="sec">
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
+            <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>💬 직원 코멘트 ({comments.length})</h2>
+          </div>
+
+          {/* 작성 폼 */}
+          <div style={{ marginBottom: 16, padding: 14, background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 12, color: "#6b7c93", marginBottom: 6 }}>작성자: <b style={{ color: "#1a6fc4" }}>{currentAuthor || "관리자"}</b></div>
+            <textarea
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              placeholder="이 손님에 대한 메모를 작성하세요..."
+              style={{ width: "100%", padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 70, marginBottom: 8 }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-sm btn-blue"
+                onClick={postComment}
+                disabled={posting || !newComment.trim()}
+                style={{ opacity: posting || !newComment.trim() ? 0.5 : 1 }}>
+                {posting ? "작성 중..." : "작성"}
+              </button>
+            </div>
+          </div>
+
+          {/* 코멘트 목록 */}
+          {comments.length === 0 ? (
+            <div className="empty">작성된 코멘트가 없습니다</div>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 8, background: "#fff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#1a6fc4" }}>✍️ {c.author}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>
+                    {new Date(c.created_at).toLocaleString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    {c.author === currentAuthor && (
+                      <button onClick={() => deleteComment(c.id)} style={{ marginLeft: 8, padding: "2px 8px", fontSize: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>삭제</button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", color: "#1a1a2e" }}>{c.content}</div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
