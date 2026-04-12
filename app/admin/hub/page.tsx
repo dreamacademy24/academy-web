@@ -30,6 +30,7 @@ export default function AdminHubPage() {
     { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
     { icon: "🏠", title: "드림하우스",       desc: "룸 예약현황 · 충돌감지",             href: "/dreamhouse-rooms" },
     { icon: "📝", title: "체크인 디테일",    desc: "자동생성 · PDF 출력",               href: "/admin/checkin-details" },
+    { icon: "🏠", title: "하우스 보고",      desc: "호실 점검 · 조치 현황",              href: "/admin/house-reports" },
     { icon: "🎒", title: "학생 관리",       desc: "학생 목록 · 과정별 조회",            href: "/admin/students" },
     { icon: "📨", title: "손님 신청관리",    desc: "셔틀 · 픽업 · 튜터 승인",            href: "/admin/portal-requests" },
     { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management" },
