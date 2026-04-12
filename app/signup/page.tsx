@@ -2,31 +2,31 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+interface Child { name: string; age: string }
+
 export default function SignupPage() {
-  const [form, setForm] = useState({ email: "", password: "", passwordConfirm: "", name: "", phone: "" });
+  const [form, setForm] = useState({ email: "", password: "", passwordConfirm: "", name: "", phone: "", address: "" });
+  const [children, setChildren] = useState<Child[]>([]);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
 
+  function addChild() { if (children.length < 5) setChildren([...children, { name: "", age: "" }]); }
+  function removeChild(i: number) { setChildren(children.filter((_, idx) => idx !== i)); }
+  function updateChild(i: number, key: "name" | "age", val: string) {
+    const arr = [...children]; arr[i] = { ...arr[i], [key]: val }; setChildren(arr);
+  }
+
   async function handleSubmit() {
     if (!form.name.trim() || !form.phone.trim() || !form.email.trim() || !form.password) {
-      alert("모든 항목을 입력해주세요.");
+      alert("필수 항목(이름/전화번호/이메일/비밀번호)을 입력해주세요.");
       return;
     }
-    if (form.password.length < 6) {
-      alert("비밀번호는 6자 이상이어야 합니다.");
-      return;
-    }
-    if (form.password !== form.passwordConfirm) {
-      alert("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-    if (!agreed) {
-      alert("개인정보 수집·이용에 동의해주세요.");
-      return;
-    }
+    if (form.password.length < 6) { alert("비밀번호는 6자 이상이어야 합니다."); return; }
+    if (form.password !== form.passwordConfirm) { alert("비밀번호가 일치하지 않습니다."); return; }
+    if (!agreed) { alert("개인정보 수집·이용에 동의해주세요."); return; }
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
@@ -35,20 +35,27 @@ export default function SignupPage() {
     });
 
     if (error) {
-      alert("회원가입 실패: " + error.message);
       setLoading(false);
+      if (error.message.includes("already registered") || error.message.includes("User already")) {
+        alert("이미 사용 중인 이메일입니다. 로그인해주세요.");
+      } else {
+        alert("회원가입 실패: " + error.message);
+      }
       return;
     }
 
     if (data.user) {
+      const validChildren = children.filter(c => c.name.trim());
       const { error: profileError } = await supabase.from("profiles").insert({
         id: data.user.id,
         name: form.name.trim(),
         phone: form.phone.trim(),
+        children: validChildren,
+        address: form.address.trim() || null,
       });
       if (profileError) {
-        alert("프로필 저장 실패: " + profileError.message);
         setLoading(false);
+        alert("프로필 저장 실패: " + profileError.message);
         return;
       }
     }
@@ -147,8 +154,32 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* 자녀 정보 (선택) */}
+          <div style={{ marginTop: 8, marginBottom: 12, padding: 14, background: "#fefce8", border: "1px solid #fde68a", borderRadius: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#854d0e" }}>자녀 정보 (선택)</span>
+              <span style={{ fontSize: 11, color: "#a16207" }}>{children.length}/5명</span>
+              {children.length < 5 && (
+                <button type="button" onClick={addChild} style={{ marginLeft: "auto", padding: "5px 12px", fontSize: 11, fontWeight: 700, border: "1px solid #e2e8f0", background: "#fff", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}>+ 자녀 추가</button>
+              )}
+            </div>
+            {children.map((c, i) => (
+              <div key={i} style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                <input className="form-input" style={{ flex: 2 }} placeholder={`자녀 ${i + 1} 이름`} value={c.name} onChange={e => updateChild(i, "name", e.target.value)} />
+                <input className="form-input" style={{ flex: 1 }} placeholder="나이" value={c.age} onChange={e => updateChild(i, "age", e.target.value)} />
+                <button type="button" onClick={() => removeChild(i)} style={{ padding: "8px 10px", fontSize: 11, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontFamily: "inherit" }}>삭제</button>
+              </div>
+            ))}
+          </div>
+
+          {/* 주소 (선택) */}
+          <div className="form-group">
+            <label className="form-label">주소 (선택)</label>
+            <input className="form-input" placeholder="이벤트 당첨 시 선물 발송에 사용됩니다" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+          </div>
+
           <div className="agree-box">
-            <div className="agree-text">수집된 개인정보(이름, 전화번호)는 서비스 이용 목적으로만 사용되며 제3자에게 절대 제공되지 않습니다.</div>
+            <div className="agree-text">수집된 개인정보(이름, 전화번호, 자녀정보, 주소)는 서비스 이용 및 이벤트 선물 발송 목적으로만 사용되며 제3자에게 절대 제공되지 않습니다.</div>
             <label className="agree-check">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
               <span>개인정보 수집·이용에 동의합니다 (필수)</span>

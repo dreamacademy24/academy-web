@@ -2526,19 +2526,30 @@ function openOpinionDetail(opId){
 function _opdRenderReplies(opId,replies){
   document.getElementById('opdReplyCnt').textContent=replies.length+'개';
   var el=document.getElementById('opdReplies');
-  if(!replies.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;background:var(--surface,#f8fafc);border-radius:10px">첫 번째 답변을 남겨보세요!</div>';return;}
-  var html='';
+  if(!replies.length){el.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:10px">첫 번째 답변을 남겨보세요!</div>';return;}
+  // 최신순: 서버가 asc로 주지만 최신이 아래에 오는게 자연스러운 대화형(이미 그렇게 되어 있음)
+  var html='<div style="display:flex;flex-direction:column;gap:12px">';
   replies.forEach(function(r){
     var rA=ALL.find(function(u){return u.id===r.from_id;});
     var rd=new Date(r.ts);
     var rds=(rd.getMonth()+1)+'/'+rd.getDate()+' '+String(rd.getHours()).padStart(2,'0')+':'+String(rd.getMinutes()).padStart(2,'0');
     var isOwn=CU&&CU.id===r.from_id;
-    html+='<div style="display:flex;gap:10px;margin-bottom:10px">';
-    if(rA)html+='<div style="width:28px;height:28px;border-radius:50%;background:'+rA.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0">'+rA.name[0]+'</div>';
-    html+='<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+(rA?esc(rA.name):'?')+'</span><span style="font-size:10px;color:#94a3b8">'+rds+'</span>';
-    if(isOwn)html+='<button onclick="_opdDelReply(\''+opId+'\',\''+r.id+'\')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:11px;padding:0;margin-left:auto">✕</button>';
-    html+='</div><div style="background:var(--surface,#f8fafc);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text2,#374151);line-height:1.6;white-space:pre-wrap">'+esc(r.text)+'</div></div></div>';
+    var color=rA?rA.color:'#94a3b8';
+    var initial=rA?rA.name[0]:'?';
+    var name=rA?esc(rA.name):'?';
+    // 본인: 오른쪽 정렬, 파란 배경 / 타인: 왼쪽 정렬, 흰 배경
+    html+='<div style="display:flex;'+(isOwn?'flex-direction:row-reverse;':'')+'gap:10px;align-items:flex-start">';
+    html+='<div style="width:32px;height:32px;border-radius:50%;background:'+color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0">'+initial+'</div>';
+    html+='<div style="max-width:80%;'+(isOwn?'align-items:flex-end;':'')+'display:flex;flex-direction:column;gap:3px">';
+    html+='<div style="display:flex;align-items:center;gap:6px;'+(isOwn?'flex-direction:row-reverse':'')+'">';
+    html+='<span style="font-size:12px;font-weight:700;color:#1a1a2e">'+name+'</span>';
+    html+='<span style="font-size:10px;color:#94a3b8">'+rds+'</span>';
+    if(isOwn)html+='<button onclick="_opdDelReply(\''+opId+'\',\''+r.id+'\')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:11px;padding:0">✕</button>';
+    html+='</div>';
+    html+='<div style="background:'+(isOwn?'#dbeafe':'#fff')+';border:1px solid '+(isOwn?'#bfdbfe':'#e2e8f0')+';border-radius:12px;padding:10px 14px;font-size:13px;color:#1a1a2e;line-height:1.6;white-space:pre-wrap;word-break:break-word">'+esc(r.text)+'</div>';
+    html+='</div></div>';
   });
+  html+='</div>';
   el.innerHTML=html;
   setTimeout(function(){el.scrollTop=el.scrollHeight;},30);
 }
