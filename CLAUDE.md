@@ -315,3 +315,41 @@ Phase 8: 자동화 고도화 + 기타 (47~54)
 - scripts/setup-booking-comments.sql
 - scripts/setup-tutor-requests.sql
 - scripts/setup-profiles-extended.sql
+
+## 2026-04-13 완료 작업
+### 회원가입 시스템 개편
+- ✅ 아이디 기반 회원가입/로그인 (내부적으로 username@dreamacademyph.com 가상이메일)
+- ✅ 카카오 주소 검색 API (우편번호 + 도로명 + 상세주소)
+- ✅ 자녀 정보 나이 → 출생연도(birth_year)로 변경
+- ✅ 이메일 필수 입력 (비밀번호 찾기/보안 알림용)
+- ✅ 중복확인 Auth + profiles 양쪽 체크 (/api/check-username)
+- ✅ profiles 테이블 컬럼 추가: username(unique), email, address, children, phone
+- ✅ 회원가입 페이지 전면 재작성 (CSS/로직 버그 수정)
+### 직원업무 (team_manager3.html) 개선
+- ✅ 내 업무 탭: 진행률 바 + Urgent/Schedule 섹션 분리
+- ✅ 인라인 상태 드롭다운 + 호버 액션 버튼 + 사이드패널 (진행 중)
+- ✅ 의견요청 마스터-디테일 레이아웃 (좌측 리스트 + 우측 상세/댓글)
+### 하우스 보고 시스템
+- ✅ 하우스 보고 탭 전체 직원 공개 (jun 전용 조건 제거)
+- ✅ 상태버튼 문제/해결중/해결로 변경 (텍스트 버튼)
+- ✅ 첫방문/재방문 제거
+- ✅ 미해결 항목 이월 기능 (house_pending_items 테이블)
+- ✅ 어드민 하우스 보고 확인 페이지 (/admin/house-reports)
+### Supabase 추가 작업 필요
+- house_pending_items 테이블 생성 SQL:
+CREATE TABLE IF NOT EXISTS house_pending_items (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  room_no text NOT NULL,
+  content text NOT NULL,
+  status text DEFAULT 'problem',
+  report_id uuid REFERENCES house_reports(id),
+  created_at timestamptz DEFAULT now(),
+  resolved_at timestamptz
+);
+ALTER TABLE house_pending_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "all" ON house_pending_items FOR ALL USING (true) WITH CHECK (true);
+### 다음 작업
+- 내 업무 탭 인라인 상태변경 + 호버액션 + 사이드패널 Claude Code 결과 확인
+- house_pending_items SQL 실행 필요
+- PayPal Live 모드 전환
+- Supabase RLS 세부 정책
