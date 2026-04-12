@@ -48,6 +48,17 @@ function acaEnd(b:any):string{
   const start=acaStart(b);if(start==="-")return"-";
   try{const a=typeof b.students==="string"?JSON.parse(b.students):b.students;if(!Array.isArray(a)||!a[0]?.weeks)return"-";return addWeeks(start,Number(a[0].weeks));}catch{return"-";}
 }
+function fmtAccom(b:any):string{
+  const t=b.accom_type||"";
+  if(t.includes("드림하우스")||t.includes("드하")){
+    const h=(b.house_no||"").replace(/\s+/g,"");
+    const r=(b.accom_room||"").replace(/\s+/g,"").toLowerCase();
+    return "DH"+h+r;
+  }
+  if(t.includes("제이파크"))return "JPARK";
+  if(t.includes("큐브나인"))return "CUBE9";
+  return t||"-";
+}
 
 export default function AdminBookingsPage(){
   const router=useRouter();
@@ -143,7 +154,7 @@ export default function AdminBookingsPage(){
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"부킹리스트");XLSX.writeFile(wb,"부킹리스트_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
   function exportConfirmXlsx(rows:Booking[]){
-    const data=rows.map(b=>({예약번호:shortNo(b.reservation_no),예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":(b.accom_type||"")+(b.house_no?" "+b.house_no:"")+(b.accom_room?" "+b.accom_room:""),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0}));
+    const data=rows.map(b=>({예약번호:shortNo(b.reservation_no),예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0}));
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
 
@@ -498,7 +509,7 @@ export default function AdminBookingsPage(){
         {key:"checkin_date",label:"체크인",get:b=>b.checkin_date||"-"},
         {key:"checkout_date",label:"체크아웃",get:b=>b.checkout_date||"-"},
         {key:"dday",label:"D-day",get:b=>{const d=getDday(b.checkin_date);return d?parseInt(d.label.replace(/[^-\d]/g,""))||0:9999;}},
-        {key:"accom",label:"숙소/룸",get:b=>(b.accom_type||"")+(b.house_no?` ${b.house_no}`:"")+(b.accom_room?` ${b.accom_room}`:"")},
+        {key:"accom",label:"숙소/룸",get:b=>fmtAccom(b)},
         {key:"aca_start",label:"아카데미시작",get:b=>acaStart(b)},
         {key:"aca_end",label:"아카데미종료",get:b=>acaEnd(b)},
         {key:"flight_in",label:"항공IN",get:b=>b.flight_in||"-"},
@@ -563,7 +574,7 @@ export default function AdminBookingsPage(){
               <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
               <td>{b.checkout_date||"-"}</td>
               <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
-              <td>{(b.accom_type||"")+(b.house_no?` ${b.house_no}`:"")+(b.accom_room?` ${b.accom_room}`:"")||"-"}</td>
+              <td>{fmtAccom(b)}</td>
               <td>{acaStart(b)}</td>
               <td>{acaEnd(b)}</td>
               <td>{b.flight_in||"-"}</td>
