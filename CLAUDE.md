@@ -272,6 +272,23 @@ Phase 8: 자동화 고도화 + 기타 (47~54)
   - "User already registered" 한국어 에러 메시지
 - ✅ /portal/tutor 18항목 폼 (네이버 폼 대체)
 
+### 손님 포털 6개 기능 완성
+- ✅ /portal (예약 조회 로그인, 24h 세션)
+- ✅ /portal/dashboard (6개 메뉴 카드)
+- ✅ /portal/my-booking (예약 상세)
+- ✅ /portal/flight (항공편 등록, 체크인 7일 전 잠금)
+- ✅ /portal/payment (PayPal 잔금 결제)
+- ✅ /portal/shuttle (셔틀 신청, 4개 장소)
+- ✅ /portal/pickup (추가 픽드랍)
+- ✅ /portal/tutor (튜터 수업 18항목 폼)
+- 모든 신청 → 어드민 태스크 자동 생성 (staff_tasks)
+
+### 어드민 손님 신청관리
+- ✅ /admin/portal-requests (3탭 통합: 셔틀/픽업/튜터)
+- 상태 필터 (전체/대기/확정/취소)
+- 승인 시 driver_schedules 자동 등록 (셔틀/픽업)
+- 구 bookings 예약은 notes의 portal_booking_id로 매핑
+
 ### 직원업무 (team_manager3.html)
 - ✅ 의견요청 댓글 말풍선 UI:
   본인=오른쪽 파란색, 타인=왼쪽 흰색, 아바타 32px, 단어 단위 줄바꿈
