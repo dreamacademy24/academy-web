@@ -60,7 +60,6 @@ export default function MyBookingPage() {
 
   return (<>
     <style>{`
-.mb-page{background:#f1f5f9;min-height:100vh;font-family:'Noto Sans KR',sans-serif;color:#1a1a2e}
 .mb-w{max-width:640px;margin:0 auto;padding:24px 24px 40px}
 .mb-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}.mb-back:hover{color:#1a6fc4}
 .mb-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:12px}
@@ -79,7 +78,7 @@ export default function MyBookingPage() {
 .empty{text-align:center;padding:20px;color:#94a3b8;font-size:13px}
 @media(max-width:500px){.mb-w{padding:24px 16px}.grid{grid-template-columns:1fr}}
     `}</style>
-    <div className="mb-page"><div className="mb-w">
+    <div className="mb-w">
       <button className="mb-back" onClick={() => router.push("/portal/dashboard")}>← 대시보드로</button>
 
       <div className="mb-head">
@@ -141,6 +140,6 @@ export default function MyBookingPage() {
           <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{b.special_request}</div>
         </div>
       )}
-    </div></div>
+    </div>
   </>);
 }
