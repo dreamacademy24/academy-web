@@ -1040,6 +1040,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅</button>
+    <button class="nav-item" id="nav-house" data-p="house" onclick="showPage('house')" style="display:none"><span class="ni-icon">🏠</span> 하우스 보고</button>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
     <div id="empNav"></div>
@@ -1197,6 +1198,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <!-- CHAT -->
       <div id="page-chat" class="hidden">
         <div id="chatWrap" style="display:flex;height:calc(100vh - 140px);overflow:hidden"></div>
+      </div>
+
+      <!-- HOUSE REPORT (admin-jun 전용) -->
+      <div id="page-house" class="hidden">
+        <div id="houseReportWrap"></div>
       </div>
 
       <!-- DAILY (standalone - not used, daily is in emp page) -->
@@ -1879,6 +1885,9 @@ function doLogin(u){
   document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
+  // admin-jun(jun) 전용: 하우스 보고 탭 표시
+  var navHouse=document.getElementById('nav-house');
+  if(navHouse)navHouse.style.display=(u.id==='jun')?'flex':'none';
   backToStep1();buildEmpNav();showPage('home');
   loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(checkDueNotif,1500);
@@ -1940,7 +1949,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions','chat'];
+const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions','chat','house'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -1973,6 +1982,7 @@ function showPage(p){
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
   if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');}
+  if(p==='house'){renderHouseReport();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='🏠 하우스 보고';document.getElementById('topS').textContent='일일 호실 점검';}
 }
 function showEmpPage(empId){
   var isOwner=isAdmin()||CU.id===empId;
@@ -2604,15 +2614,48 @@ function deleteOpinion(opId){
 function renderEmpList(empId){
   const wrap=document.getElementById('empList');wrap.innerHTML='';
   const canSee=isAdmin()||CU.id===empId,canEdit=isAdmin()||CU.id===empId;
+  // 본인 전체 업무로 진행률 계산 (필터 무관)
+  const allMine=tasks.filter(function(t){return t.assignee===empId&&(canSee||t.shared);});
+  const totalCount=allMine.length, doneCount=allMine.filter(function(t){return t.done;}).length;
+  const progPct=totalCount?Math.round(doneCount/totalCount*100):0;
   let et=tasks.filter(function(t){return t.assignee===empId&&(canSee||t.shared);});
   if(empFilter==='active')et=et.filter(function(t){return !t.done;});
   else if(empFilter==='done')et=et.filter(function(t){return t.done;});
   et=sortT(et);
-  if(!et.length){wrap.innerHTML='<div class="empty-state"><div class="ei">✅</div>업무가 없습니다</div>';return;}
+
+  // 요약 카운터 + 진행률 바 (항상 표시)
+  if(CU.id===empId||isAdmin()){
+    const summary=document.createElement('div');
+    summary.style.cssText='background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:14px';
+    summary.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:700;color:#374151">완료 <span style="color:#2563eb">'+doneCount+'</span> / 전체 '+totalCount+'</div><div style="font-size:12px;font-weight:700;color:'+(progPct>=70?'#059669':progPct>=30?'#2563eb':'#6b7280')+'">진행률 '+progPct+'%</div></div><div style="background:#e5e7eb;height:8px;border-radius:4px;overflow:hidden"><div style="background:'+(progPct>=70?'#059669':'#3b82f6')+';height:100%;width:'+progPct+'%;transition:width 300ms ease;border-radius:4px"></div></div>';
+    wrap.appendChild(summary);
+  }
+
+  if(!et.length){const emptyDiv=document.createElement('div');emptyDiv.className='empty-state';emptyDiv.innerHTML='<div class="ei">✅</div>업무가 없습니다';wrap.appendChild(emptyDiv);return;}
 
   if(empFilter==='done'&&et.length){renderBatchBar(wrap,et.map(function(t){return t.id;}),empId);}
 
+  // Urgent / Schedule 그룹 분리 (empFilter==='active'일 때만)
+  const _today=new Date();_today.setHours(0,0,0,0);
+  const urgentTasks=[], scheduleTasks=[];
   et.forEach(function(t){
+    var isUrgent=false;
+    if(t.due){var dd=parseLocalDate(t.due);if(dd&&dd<=_today)isUrgent=true;}
+    if(t.priority==='high')isUrgent=true;
+    if(isUrgent&&!t.done)urgentTasks.push(t);
+    else scheduleTasks.push(t);
+  });
+
+  function _secHeader(label){
+    const h=document.createElement('div');
+    h.style.cssText='font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin:14px 0 8px;padding:0 4px';
+    h.textContent=label;
+    return h;
+  }
+  const useGroups=empFilter==='active'&&urgentTasks.length>0;
+  if(useGroups)wrap.appendChild(_secHeader('🔥 오늘 당장 ('+urgentTasks.length+')'));
+
+  (useGroups?urgentTasks:et).forEach(function(t){
     const dl=dL(t.due),emp=getP(t.assignee),ec=emp?emp.color:'#9ca3af';
     const prog=t.progress||0,cmtCount=(taskComments[t.id]||[]).length;
     const card=document.createElement('div');
@@ -2712,6 +2755,35 @@ function renderEmpList(empId){
 
     card.appendChild(body);wrap.appendChild(card);
   });
+  // 나중에 섹션 렌더링
+  if(useGroups&&scheduleTasks.length){
+    wrap.appendChild(_secHeader('📅 나중에 ('+scheduleTasks.length+')'));
+    scheduleTasks.forEach(function(t){
+      const dl=dL(t.due),emp=getP(t.assignee),ec=emp?emp.color:'#9ca3af';
+      const prog=t.progress||0,cmtCount=(taskComments[t.id]||[]).length;
+      const card=document.createElement('div');
+      card.className='emp-task'+(t.done?' done':'')+(t.shared?' is-shared':' is-private');
+      card.id='tdp-'+t.id;card.dataset.tid=t.id;
+      const head=document.createElement('div');head.className='emp-task-head';
+      head.onclick=function(e){if(e.target.classList.contains('et-check')||e.target.classList.contains('et-checkmark')||e.target.classList.contains('batch-cb'))return;card.classList.toggle('open');};
+      const ck=document.createElement('div');ck.className='et-check';ck.innerHTML='<span class="et-checkmark">✓</span>';
+      ck.onclick=function(e){e.stopPropagation();qTog(t.id,e);};
+      const nameDiv=document.createElement('div');nameDiv.className='emp-task-title';
+      nameDiv.innerHTML=(t.idx?'<span style="color:var(--text3);font-size:11px;margin-right:3px">('+esc(t.idx)+')</span>':'')+esc(t.title);
+      const bdg=document.createElement('div');bdg.className='et-badges';
+      bdg.innerHTML='<span class="badge '+(t.shared?'badge-green':'badge-amber')+'">'+(t.shared?'📋 공유':'🔒 개인')+'</span>';
+      if(dl)bdg.innerHTML+='<span class="tag '+dl.cls+'" style="font-size:10.5px">'+dl.text+'</span>';
+      if(cmtCount)bdg.innerHTML+='<span class="badge badge-blue">💬 '+cmtCount+'</span>';
+      if(prog>0)bdg.innerHTML+='<span class="badge" style="background:'+ec+'18;color:'+ec+'">'+prog+'%</span>';
+      const arrow=document.createElement('div');arrow.className='et-arrow';arrow.textContent='▾';
+      head.appendChild(ck);head.appendChild(nameDiv);head.appendChild(bdg);head.appendChild(arrow);
+      card.appendChild(head);
+      // 나중에 섹션은 간단히 head만 (본문은 클릭 시 펼침 - CSS 기본 동작)
+      const body=document.createElement('div');body.className='emp-task-body';
+      body.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3)">상세 내용을 보려면 카드를 클릭하세요</div>';
+      card.appendChild(body);wrap.appendChild(card);
+    });
+  }
 }
 
 // ── CHECKLIST ──
@@ -4211,6 +4283,134 @@ function sAdminResetPw(userId,userName){
   PASSWORDS[userId]=newPw;sv('tm_pw',PASSWORDS);inp.value='';inp.style.borderColor='var(--green)';
   toast('✓ '+userName+'의 비밀번호가 변경됐어요!');
   setTimeout(function(){inp.style.borderColor='var(--border2)';},2000);
+}
+
+/* ═══════════════════════ 하우스 보고 (admin-jun 전용) ═══════════════════════ */
+var HOUSE_ROOMS=['b17-4','b17-5','b17-6','b17-7','b17-8','b17-9','b17-10','b17-11','b17-12','b17-13','b17-14','b17-15','b17-16','b17-17','b17-18','b16-19','b13-10'];
+var houseForm={date:'',timeSlot:'',rooms:[],memo:''};
+
+function _defaultTimeSlot(){var h=new Date().getHours();if(h<12)return 'morning';if(h<18)return 'afternoon';return 'checkin';}
+
+function renderHouseReport(){
+  var wrap=document.getElementById('houseReportWrap');if(!wrap)return;
+  if(!houseForm.date)houseForm.date=todayStr();
+  if(!houseForm.timeSlot)houseForm.timeSlot=_defaultTimeSlot();
+  wrap.innerHTML='<div style="max-width:480px;margin:0 auto;padding:16px 4px 40px">'+
+    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px">날짜</div>'+
+      '<input id="hrDate" type="date" value="'+houseForm.date+'" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-bottom:16px;min-height:44px" />'+
+      '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px">시간대</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
+        ['morning','afternoon','checkin'].map(function(s){var lbl=s==='morning'?'오전 보고':s==='afternoon'?'오후 보고':'체크인 보고';var on=houseForm.timeSlot===s;return '<button onclick="setHouseTimeSlot(\''+s+'\')" style="padding:12px 8px;min-height:44px;border:1px solid '+(on?'#2563eb':'#d1d5db')+';background:'+(on?'#2563eb':'#fff')+';color:'+(on?'#fff':'#374151')+';border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+lbl+'</button>';}).join('')+
+      '</div>'+
+    '</div>'+
+    '<div id="hrRooms"></div>'+
+    '<button onclick="addHouseRoom()" style="width:100%;padding:12px;min-height:48px;background:#fff;border:1px dashed #d1d5db;color:#6b7280;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:16px">+ 호실 추가</button>'+
+    '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px;margin-bottom:16px">'+
+      '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px">전체 메모</div>'+
+      '<textarea id="hrMemo" placeholder="전체 특이사항 메모" style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:vertical;height:80px">'+(houseForm.memo||'')+'</textarea>'+
+    '</div>'+
+    '<button onclick="submitHouseReport()" id="hrSubmit" style="width:100%;padding:14px;min-height:52px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:24px">보고 제출</button>'+
+    '<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;padding-top:16px;border-top:1px solid #e5e7eb">📋 최근 보고 (7일)</div>'+
+    '<div id="hrHistory"><div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px">로딩 중...</div></div>'+
+  '</div>';
+  renderHouseRooms();
+  loadHouseHistory();
+  document.getElementById('hrDate').addEventListener('change',function(e){houseForm.date=e.target.value;});
+  document.getElementById('hrMemo').addEventListener('input',function(e){houseForm.memo=e.target.value;});
+}
+
+function setHouseTimeSlot(s){houseForm.timeSlot=s;renderHouseReport();}
+
+function addHouseRoom(){houseForm.rooms.push({room_no:'',visit_type:'first',items:[{content:'',status:'done'}]});renderHouseRooms();}
+
+function removeHouseRoom(idx){houseForm.rooms.splice(idx,1);renderHouseRooms();}
+
+function setHouseRoomNo(idx,v){houseForm.rooms[idx].room_no=v;}
+
+function setHouseVisitType(idx,t){houseForm.rooms[idx].visit_type=t;renderHouseRooms();}
+
+function addHouseItem(rIdx){houseForm.rooms[rIdx].items.push({content:'',status:'done'});renderHouseRooms();}
+
+function removeHouseItem(rIdx,iIdx){houseForm.rooms[rIdx].items.splice(iIdx,1);renderHouseRooms();}
+
+function setHouseItemContent(rIdx,iIdx,v){houseForm.rooms[rIdx].items[iIdx].content=v;}
+
+function setHouseItemStatus(rIdx,iIdx,s){houseForm.rooms[rIdx].items[iIdx].status=s;renderHouseRooms();}
+
+function renderHouseRooms(){
+  var el=document.getElementById('hrRooms');if(!el)return;
+  if(!houseForm.rooms.length){el.innerHTML='<div style="background:#f9fafb;border:1px dashed #d1d5db;border-radius:10px;padding:20px;text-align:center;color:#9ca3af;font-size:13px;margin-bottom:10px">호실을 추가해주세요</div>';return;}
+  el.innerHTML=houseForm.rooms.map(function(r,idx){
+    var roomOpts='<option value="">선택</option>'+HOUSE_ROOMS.map(function(n){return '<option value="'+n+'"'+(r.room_no===n?' selected':'')+'>'+n+'</option>';}).join('');
+    var statusLabel={done:'✅ 완료',progress:'🔄 조치중',check:'❗ 확인필요'};
+    var statusBg={done:'#dcfce7',progress:'#fed7aa',check:'#fecaca'};
+    var statusColor={done:'#166534',progress:'#9a3412',check:'#991b1b'};
+    var itemsHtml=r.items.map(function(it,iIdx){
+      return '<div style="display:flex;gap:4px;margin-bottom:6px;align-items:center"><input value="'+esc(it.content||'')+'" oninput="setHouseItemContent('+idx+','+iIdx+',this.value)" placeholder="업무 내용" style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:inherit;outline:none;min-height:40px" />'+
+        ['done','progress','check'].map(function(s){var on=it.status===s;return '<button onclick="setHouseItemStatus('+idx+','+iIdx+',\''+s+'\')" style="padding:8px 6px;min-width:44px;min-height:40px;border:1px solid '+(on?statusColor[s]:'#d1d5db')+';background:'+(on?statusBg[s]:'#fff')+';color:'+(on?statusColor[s]:'#6b7280')+';border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(s==='done'?'✅':s==='progress'?'🔄':'❗')+'</button>';}).join('')+
+        '<button onclick="removeHouseItem('+idx+','+iIdx+')" style="padding:8px 10px;min-width:40px;min-height:40px;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:6px;font-size:14px;cursor:pointer;font-family:inherit">🗑️</button></div>';
+    }).join('');
+    return '<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:12px;position:relative">'+
+      '<button onclick="removeHouseRoom('+idx+')" style="position:absolute;top:10px;right:10px;width:32px;height:32px;border:none;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit">×</button>'+
+      '<div style="font-size:11px;color:#6b7280;font-weight:700;margin-bottom:6px">호실 '+(idx+1)+'</div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:10px;padding-right:36px"><select onchange="setHouseRoomNo('+idx+',this.value)" style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;outline:none;background:#fff;min-height:44px">'+roomOpts+'</select>'+
+      '<input value="'+esc(r.room_no||'')+'" oninput="setHouseRoomNo('+idx+',this.value)" placeholder="직접입력" style="flex:1;padding:10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:inherit;outline:none;min-height:44px" /></div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:14px">'+
+        ['first','revisit'].map(function(v){var lbl=v==='first'?'첫방문':'재방문';var on=r.visit_type===v;return '<button onclick="setHouseVisitType('+idx+',\''+v+'\')" style="flex:1;padding:10px;min-height:40px;border:1px solid '+(on?'#2563eb':'#d1d5db')+';background:'+(on?'#2563eb':'#fff')+';color:'+(on?'#fff':'#374151')+';border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+lbl+'</button>';}).join('')+
+      '</div>'+
+      '<div style="font-size:11px;color:#6b7280;font-weight:700;margin-bottom:6px">업무 항목</div>'+
+      itemsHtml+
+      '<button onclick="addHouseItem('+idx+')" style="width:100%;padding:8px;min-height:40px;background:#f9fafb;border:1px dashed #d1d5db;color:#6b7280;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ 항목 추가</button>'+
+    '</div>';
+  }).join('');
+}
+
+function submitHouseReport(){
+  if(!houseForm.rooms.length){toast('호실을 1개 이상 추가해주세요');return;}
+  var btn=document.getElementById('hrSubmit');btn.disabled=true;btn.textContent='제출 중...';
+  var payload={reporter:CU?CU.id:'jun',report_date:houseForm.date,time_slot:houseForm.timeSlot,rooms:houseForm.rooms.filter(function(r){return r.room_no;}),memo:houseForm.memo||null};
+  sbPost('house_reports',payload).then(function(){
+    toast('보고 완료! ✅');
+    houseForm={date:todayStr(),timeSlot:_defaultTimeSlot(),rooms:[],memo:''};
+    renderHouseReport();
+  }).catch(function(e){alert('제출 실패: '+(e.message||e));btn.disabled=false;btn.textContent='보고 제출';});
+}
+
+function loadHouseHistory(){
+  sbGet('house_reports','order=created_at.desc&limit=30').then(function(rows){
+    var el=document.getElementById('hrHistory');if(!el)return;
+    var cutoff=Date.now()-7*86400000;
+    var recent=(rows||[]).filter(function(r){return new Date(r.created_at).getTime()>=cutoff;});
+    if(!recent.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px">최근 7일 보고 내역이 없습니다</div>';return;}
+    el.innerHTML=recent.map(function(r){
+      var slot=r.time_slot==='morning'?'🌅 오전':r.time_slot==='afternoon'?'☀️ 오후':'🌙 체크인';
+      var roomCnt=(r.rooms||[]).length;
+      return '<div onclick="toggleHouseItem(\''+r.id+'\')" style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:700">'+r.report_date+' · '+slot+'</div><div style="font-size:12px;color:#6b7280;margin-top:2px">호실 '+roomCnt+'개</div></div><div style="color:#9ca3af">▼</div></div>'+
+        '<div id="hr-detail-'+r.id+'" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">'+renderHouseReportDetail(r)+'</div>'+
+      '</div>';
+    }).join('');
+  }).catch(function(){var el=document.getElementById('hrHistory');if(el)el.innerHTML='<div style="text-align:center;padding:20px;color:#dc2626;font-size:13px">조회 실패 (house_reports 테이블 생성 필요)</div>';});
+}
+
+function toggleHouseItem(id){
+  var el=document.getElementById('hr-detail-'+id);if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
+  event.stopPropagation();
+}
+
+function renderHouseReportDetail(r){
+  var html=(r.rooms||[]).map(function(rm){
+    var items=(rm.items||[]).map(function(it){
+      var st={done:{bg:'#dcfce7',c:'#166534',ic:'✅'},progress:{bg:'#fed7aa',c:'#9a3412',ic:'🔄'},check:{bg:'#fecaca',c:'#991b1b',ic:'❗'}}[it.status]||{bg:'#f3f4f6',c:'#374151',ic:''};
+      var bold=it.status==='progress'||it.status==='check'?'font-weight:700':'';
+      return '<div style="display:flex;gap:6px;align-items:center;padding:6px 0;font-size:13px;'+bold+'"><span style="display:inline-block;padding:2px 8px;background:'+st.bg+';color:'+st.c+';border-radius:4px;font-size:11px;font-weight:700">'+st.ic+'</span><span>'+esc(it.content||'')+'</span></div>';
+    }).join('');
+    return '<div style="margin-bottom:10px;padding:10px;background:#f9fafb;border-radius:8px"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+esc(rm.room_no||'')+' <span style="font-size:11px;color:#6b7280;font-weight:500">· '+(rm.visit_type==='first'?'첫방문':'재방문')+'</span></div>'+items+'</div>';
+  }).join('');
+  if(r.memo)html+='<div style="margin-top:10px;padding:10px;background:#fef3c7;border-radius:8px;font-size:13px;color:#92400e"><b>📝 메모:</b> '+esc(r.memo)+'</div>';
+  return html||'<div style="font-size:12px;color:#9ca3af">상세 내용 없음</div>';
 }
 
 window.addEventListener('DOMContentLoaded', function(){
