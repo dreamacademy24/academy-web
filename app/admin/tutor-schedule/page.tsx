@@ -38,7 +38,7 @@ export default function TutorSchedulePage() {
     if (l.data) setLessons(l.data as Lesson[]);
   }, [dates[0], dates[6]]);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   function shift(n: number) { const d = new Date(baseDate); d.setDate(d.getDate() + n * 7); setBaseDate(d); }

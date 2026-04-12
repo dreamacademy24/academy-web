@@ -20,7 +20,7 @@ export default function DriversPage() {
     if (res.ok) { const d = await res.json(); setDrivers(d.drivers); setVehicles(d.vehicles); }
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   function openModal(kind: "driver" | "vehicle", data?: Driver | Vehicle) {

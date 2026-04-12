@@ -43,7 +43,7 @@ export default function CheckinDetailsPage() {
     if (res.ok) { const d = await res.json(); setBookings(d.bookings || []); }
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) loadBookings(); }, [authed, loadBookings]);
 
   async function selectBooking(id: string) {

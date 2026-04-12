@@ -75,7 +75,7 @@ export default function ShuttleManagementPage() {
   const [popup, setPopup] = useState<Entry | null>(null);
   const dates = weekDates(baseDate);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
 
   // ─── Shuttle load ───
   const loadShuttles = useCallback(async () => {

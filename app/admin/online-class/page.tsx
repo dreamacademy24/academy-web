@@ -44,7 +44,7 @@ export default function OnlineClassPage() {
     if (data) setLessons(data as Lesson[]);
   }, [month]);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   async function addLesson() {

@@ -36,9 +36,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAdminAuthed()) {
       window.location.href = '/admin/hub';
-      return;
     } else {
-      setReady(true);
+      // 로그인 페이지로 통합 (레거시 /admin 접근 시 /login으로 리다이렉트)
+      window.location.href = '/login';
     }
   }, [router]);
 

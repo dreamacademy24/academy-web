@@ -19,7 +19,7 @@ export default function TutorInvoicePage() {
   const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [lessons, setLessons] = useState<Lesson[]>([]);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/login"; }, []);
 
   const loadTutors = useCallback(async () => {
     const { data } = await supabase.from("tutors").select("id, name, hourly_rate").eq("is_active", true).order("name");

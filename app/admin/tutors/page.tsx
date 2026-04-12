@@ -52,7 +52,7 @@ export default function TutorsPage() {
     if (data) setTutors(data as Tutor[]);
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) loadTutors(); }, [authed, loadTutors]);
 
   // Load schedule lessons when schedule tab active

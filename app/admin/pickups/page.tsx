@@ -40,7 +40,7 @@ export default function PickupsPage() {
     if (res.ok) { const d = await res.json(); setPickups(d.pickups); setDrivers(d.drivers); }
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   async function extract() {

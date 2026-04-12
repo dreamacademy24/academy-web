@@ -11,13 +11,13 @@ export default function AdminHubPage() {
   const [staffId, setStaffId] = useState("");
 
   useEffect(() => {
-    if (!isAdminAuthed()) { window.location.href = "/admin"; return; }
+    if (!isAdminAuthed()) { window.location.href = "/login"; return; }
     const info = getAdminInfo();
     if (info) { setName(info.name); setRole(info.role); setStaffId(info.staffId); }
     setReady(true);
   }, [router]);
 
-  function logout() { clearAdminAuth(); router.push("/admin"); }
+  function logout() { clearAdminAuth(); router.push("/login"); }
 
   if (!ready) return null;
 

@@ -35,7 +35,7 @@ export default function PortalRequestsPage() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [requests, setRequests] = useState<Array<ShuttleReq | PickupReq | TutorReq>>([]);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/login"; }, []);
 
   const load = useCallback(async () => {
     if (!authed) return;

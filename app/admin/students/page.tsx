@@ -36,7 +36,7 @@ export default function StudentsPage() {
     if (data) setStudents(data as Student[]);
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else if (typeof window !== "undefined") window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   const filtered = students.filter(s => {

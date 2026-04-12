@@ -49,7 +49,7 @@ export default function DriverSchedulePage() {
     if (res.ok) { const d = await res.json(); setEntries(d.entries); setDrivers(d.drivers); }
   }, [dates[0], dates[6]]);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   function shiftWeek(n: number) {

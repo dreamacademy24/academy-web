@@ -38,7 +38,7 @@ export default function ShuttlePage() {
     if (res.ok) { const d = await res.json(); setShuttles(d.shuttles); setDrivers(d.drivers); }
   }, []);
 
-  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/admin"; }, []);
+  useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   async function patch(id: string, updates: Record<string, unknown>) {

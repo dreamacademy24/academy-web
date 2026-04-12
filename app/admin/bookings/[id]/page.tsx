@@ -47,7 +47,7 @@ export default function BookingDetailPage() {
       setAuthed(true);
       const info = getAdminInfo();
       if (info?.name) setCurrentAuthor(info.name);
-    } else if (typeof window !== "undefined") window.location.href = "/admin";
+    } else if (typeof window !== "undefined") window.location.href = "/login";
   }, []);
 
   const loadComments = useCallback(async () => {
