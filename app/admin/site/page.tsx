@@ -334,9 +334,6 @@ export default function AdminPage() {
           <button className={`tab-btn${tab === "notices" ? " active" : ""}`} onClick={() => setTab("notices")}>
             📋 공지사항 관리
           </button>
-          <button className={`tab-btn${tab === "shuttle" ? " active" : ""}`} onClick={() => setTab("shuttle")}>
-            🚐 셔틀
-          </button>
           <button className={`tab-btn${tab === "fieldtrip" ? " active" : ""}`} onClick={() => setTab("fieldtrip")}>
             🌿 필드트립
           </button>

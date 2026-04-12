@@ -26,21 +26,17 @@ export default function AdminHubPage() {
   // 우선순위 순 카드 배열
   const cards = [
     { icon: "📋", title: "예약 관리",       desc: "부킹 접수 · 인보이스 · 영수증",     href: "/admin/bookings",        primary: true },
-    { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 셔틀 · 필드트립 · 회원", href: "/admin/site" },
+    { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 필드트립 · 회원",         href: "/admin/site" },
     { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
     { icon: "🏠", title: "드림하우스",       desc: "룸 예약현황 · 충돌감지",             href: "/dreamhouse-rooms" },
     { icon: "📝", title: "체크인 디테일",    desc: "자동생성 · PDF 출력",               href: "/admin/checkin-details" },
     { icon: "🎒", title: "학생 관리",       desc: "학생 목록 · 과정별 조회",            href: "/admin/students" },
     { icon: "📨", title: "손님 신청관리",    desc: "셔틀 · 픽업 · 튜터 승인",            href: "/admin/portal-requests" },
+    { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management" },
     { icon: "🛬", title: "픽드랍 관리",     desc: "픽업 · 드랍 일정 · 기사 배정",       href: "/admin/pickups" },
-    { icon: "🚐", title: "셔틀 관리",       desc: "셔틀 신청 · 기사 배정",              href: "/admin/shuttle" },
-    { icon: "🚗", title: "기사 관리",       desc: "기사 등록 · 차량 관리",              href: "/admin/drivers" },
-    { icon: "📅", title: "기사 스케줄",     desc: "주간 달력 · 배정 현황",              href: "/admin/driver-schedule" },
-    { icon: "👩‍🏫", title: "튜터 관리",       desc: "튜터 목록 · 수업료",                  href: "/admin/tutors" },
+    { icon: "👩‍🏫", title: "튜터 관리",       desc: "목록 · 스케줄 · 인보이스",             href: "/admin/tutors" },
     { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정",                 href: "/admin/online-class" },
     { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
-    { icon: "📅", title: "튜터 스케줄",      desc: "주간 일정 · 수업 현황",              href: "/admin/tutor-schedule" },
-    { icon: "💰", title: "튜터 인보이스",    desc: "월별 수업료 정산 · 출력",            href: "/admin/tutor-invoice" },
   ];
 
   return (<>
