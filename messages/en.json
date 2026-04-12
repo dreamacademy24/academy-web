@@ -1,0 +1,45 @@
+{
+  "common": {
+    "home": "Home",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "nav": {
+    "about": "About",
+    "program": "Program",
+    "facilities": "Facilities",
+    "booking": "Booking",
+    "faq": "FAQ"
+  },
+  "home": {
+    "hero_title": "Premium English Camp in Cebu, Philippines",
+    "hero_subtitle": "All you need is a passport!",
+    "cta_booking": "Book Now",
+    "cta_portal": "Check Reservation"
+  },
+  "portal": {
+    "title": "Reservation Portal",
+    "booking_number": "Booking Number",
+    "guest_name": "Guest Name",
+    "verify": "Check Reservation",
+    "welcome": "Hello, {name}!",
+    "logout": "Logout",
+    "my_booking": "My Reservation",
+    "flight": "Register Flight",
+    "payment": "Payment",
+    "shuttle": "Shuttle Request",
+    "pickup": "Additional Pickup",
+    "tutor": "Tutor Lessons"
+  },
+  "language": {
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  }
+}

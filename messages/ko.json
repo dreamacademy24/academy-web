@@ -1,0 +1,45 @@
+{
+  "common": {
+    "home": "홈",
+    "back": "뒤로",
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "edit": "수정",
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다"
+  },
+  "nav": {
+    "about": "소개",
+    "program": "프로그램",
+    "facilities": "시설",
+    "booking": "예약",
+    "faq": "자주 묻는 질문"
+  },
+  "home": {
+    "hero_title": "필리핀 세부 프리미엄 영어캠프",
+    "hero_subtitle": "여권만 챙기세요!",
+    "cta_booking": "예약하기",
+    "cta_portal": "예약 조회"
+  },
+  "portal": {
+    "title": "예약 조회 포털",
+    "booking_number": "예약번호",
+    "guest_name": "예약자 이름",
+    "verify": "예약 확인하기",
+    "welcome": "안녕하세요, {name}님!",
+    "logout": "로그아웃",
+    "my_booking": "내 예약 정보",
+    "flight": "항공편 등록",
+    "payment": "결제 안내",
+    "shuttle": "셔틀 신청",
+    "pickup": "추가 픽드랍",
+    "tutor": "튜터 수업"
+  },
+  "language": {
+    "ko": "한국어",
+    "en": "English",
+    "ja": "日本語"
+  }
+}
