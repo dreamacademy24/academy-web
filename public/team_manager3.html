@@ -1040,7 +1040,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅</button>
-    <button class="nav-item" id="nav-house" data-p="house" onclick="showPage('house')" style="display:none"><span class="ni-icon">🏠</span> 하우스 보고</button>
+    <button class="nav-item" id="nav-house" data-p="house" onclick="showPage('house')"><span class="ni-icon">🏠</span> 하우스 보고</button>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
     <div id="empNav"></div>
@@ -1887,7 +1887,7 @@ function doLogin(u){
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   // admin-jun(jun) 전용: 하우스 보고 탭 표시
   var navHouse=document.getElementById('nav-house');
-  if(navHouse)navHouse.style.display=(u.id==='jun')?'flex':'none';
+  if(navHouse)navHouse.style.display='flex';
   backToStep1();buildEmpNav();showPage('home');
   loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(checkDueNotif,1500);
