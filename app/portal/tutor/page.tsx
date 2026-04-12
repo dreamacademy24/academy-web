@@ -106,7 +106,7 @@ export default function PortalTutorPage() {
 
   return (<>
     <style>{`
-.tu-w{max-width:720px;margin:0 auto;padding:24px 24px 40px}
+.tu-w{max-width:720px;margin:0 auto;padding:16px 20px 40px}
 .tu-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}.tu-back:hover{color:#1a6fc4}
 .tu-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:12px}
 .tu-head h1{font-size:19px;font-weight:800;margin-bottom:2px}.tu-head p{font-size:12px;opacity:0.8}
@@ -186,11 +186,12 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">5·6</span>수업 시작일 ~ 종료일</label>
-          <div className="row2">
-            <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
-            <input className="inp" type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
-          </div>
+          <label className="q-label"><span className="num">5</span>수업 시작일</label>
+          <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+        </div>
+        <div className="q">
+          <label className="q-label"><span className="num">6</span>수업 종료일</label>
+          <input className="inp" type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
         <div className="q">
           <label className="q-label"><span className="num">7</span>원하는 수업 요일 (복수 선택)</label>
@@ -269,13 +270,13 @@ export default function PortalTutorPage() {
         <div className="agree">
           <label>
             <input type="checkbox" checked={form.privacy_agreed} onChange={e => setForm({ ...form, privacy_agreed: e.target.checked })} />
-            <span>개인정보 수집 및 이용에 동의합니다. (수업 매칭 및 튜터 배정 목적)</span>
+            <span><b>18-1. 개인정보 수집 및 이용 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>수업 매칭 및 튜터 배정 목적으로 수집한 정보를 활용합니다.</span></span>
           </label>
         </div>
         <div className="agree">
           <label>
             <input type="checkbox" checked={form.rules_agreed} onChange={e => setForm({ ...form, rules_agreed: e.target.checked })} />
-            <span>튜터 규정에 동의합니다. (취소/변경 규정, 결제 방식 등)</span>
+            <span><b>18-2. 튜터 규정 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>신청 후 4일 이내만 취소 가능, 결제는 수업 완료 후 월별 정산.</span></span>
           </label>
         </div>
         <button className="btn" onClick={submit} disabled={saving}>{saving ? "신청 중..." : "튜터 수업 신청하기"}</button>
