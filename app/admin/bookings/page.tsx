@@ -358,7 +358,7 @@ export default function AdminBookingsPage(){
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수").length;return n>0&&<span style={{background:"#16a34a",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{n}</span>;})()}</button>
       <button className={`main-tab${mainTab==="invoice"?" ac":""}`} onClick={()=>setMainTab("invoice")}>📄 인보이스</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
-      <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약{confirmList.length>0&&<span style={{background:"#16a34a",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{confirmList.length}</span>}</button>
+      <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
       <button className={`main-tab${mainTab==="students"?" ac":""}`} onClick={()=>setMainTab("students")}>📚 학생관리</button>
     </div>
 
