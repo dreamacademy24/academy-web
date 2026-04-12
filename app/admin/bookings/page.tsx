@@ -535,10 +535,6 @@ export default function AdminBookingsPage(){
                   await supabase.from("bookings").update({confirmed:v}).eq("id",b.id);
                   setBookings(prev=>prev.map(x=>x.id===b.id?{...x,confirmed:v}:x));
                 }}/>
-                <div style={{display:"flex",gap:3,marginTop:4,justifyContent:"center"}}>
-                  <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe",fontSize:9,padding:"2px 5px"}} onClick={()=>router.push("/invoice?id="+b.id+"&type=guest")}>손님용</button>
-                  <button className="act" style={{background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",fontSize:9,padding:"2px 5px"}} onClick={()=>router.push("/invoice?id="+b.id+"&type=resort")}>리조트</button>
-                </div>
               </td>
             </tr>);
           })}
