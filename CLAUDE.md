@@ -243,3 +243,58 @@ Phase 8: 자동화 고도화 + 기타 (47~54)
 ### 새 대화 시작 방법
 "드림아카데미 프로젝트 이어서 진행해줘"
 → CLAUDE.md 읽고 STEP 34부터 바로 이어서 진행
+
+## 2026-04-12 완료 작업
+
+### 통합 UI 개편
+- ✅ Master View 7탭 완성 (/admin/bookings/[id]):
+  기본정보 → 픽업/체크인 → 학생 → 인보이스 → 튜터 → 셔틀 → **코멘트**
+  - 코멘트 탭: 직원 메모, 본인 작성만 삭제 가능
+- ✅ /admin/tutors 3탭 통합: 튜터 목록 / 튜터 스케줄 / 튜터 인보이스
+- ✅ /admin/shuttle-management 3탭 통합: 셔틀 / 기사 / 기사 스케줄
+- ✅ admin/hub 12개 카드 가로형 정리 (기존 16개 → 통합)
+
+### 로그인 통합
+- ✅ /login 페이지 하나로 통합
+  - admin- 접두사 → 관리자 로직 (adminAuth.ts, simpleHash)
+  - 그 외 → Supabase Auth 이메일 로그인
+  - 성공 시: 관리자 /admin/hub, 일반 /portal/dashboard
+- ✅ 14개 어드민 페이지 /admin → /login 리다이렉트 통일
+- ✅ 비밀번호 눈 아이콘 👁/🙈 (/login, /signup, /guide, /admin/*)
+
+### 손님 예약 폼 개편
+- ✅ /booking 전면 개편 (6섹션):
+  예약유형 4카드(드하/드하+제이파크/드하+큐브나인/통학형)
+  → 숙소 기간 → 예약자 정보 → 체크인·항공편 → 학생 정보 → 특이사항
+  - 통학형 선택 시 숙소+항공편 섹션 자동 숨김
+  - 체크아웃 자동 계산, 항공편 "미정" 체크박스
+- ✅ /signup 확장: 자녀 정보 (최대 5명), 주소 필드, 눈 아이콘
+  - "User already registered" 한국어 에러 메시지
+- ✅ /portal/tutor 18항목 폼 (네이버 폼 대체)
+
+### 직원업무 (team_manager3.html)
+- ✅ 의견요청 댓글 말풍선 UI:
+  본인=오른쪽 파란색, 타인=왼쪽 흰색, 아바타 32px, 단어 단위 줄바꿈
+
+### Supabase 테이블 확장
+- ✅ booking_comments 테이블 생성 (scripts/setup-booking-comments.sql)
+- ✅ tutor_requests 21컬럼 추가 (scripts/setup-tutor-requests.sql)
+- ✅ profiles children(jsonb), address(text) 추가 (scripts/setup-profiles-extended.sql)
+- ✅ drivers.share_token 추가 (기사 전용 모바일 뷰 /driver/[token])
+
+### admin/hub 최종 12개 카드
+1.예약관리(파랑) 2.사이트관리 3.직원업무 4.드림하우스
+5.체크인디테일 6.학생관리 7.손님신청관리
+8.셔틀·기사관리(3탭) 9.픽드랍관리
+10.튜터관리(3탭) 11.화상영어 12.SSP관리
+
+### 다음 작업 대기
+- STEP 43~48: 다국어 한/영/일 (next-intl 기반 세팅은 STEP 43~44 완료)
+- STEP 49~54: 홈페이지 콘텐츠 개선
+- Supabase RLS 세부 정책 (손님 포털 데이터 격리)
+- PayPal Live 모드 전환
+
+### Supabase 대시보드 실행 필요 SQL
+- scripts/setup-booking-comments.sql
+- scripts/setup-tutor-requests.sql
+- scripts/setup-profiles-extended.sql
