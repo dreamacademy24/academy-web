@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
@@ -38,13 +38,29 @@ export default function PortalPaymentPage() {
     } catch { router.replace("/portal"); }
   }, [router]);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/portal/payment?booking_id=${session.booking_id}`);
+        if (res.ok) {
+          const d = await res.json();
+          setData(d);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setError(errData.error || `조회 실패 (${res.status})`);
+        }
+      } catch (e) {
+        setError("네트워크 오류: " + (e instanceof Error ? e.message : "unknown"));
+      }
+    })();
+  }, [session]);
+
+  async function reload() {
     if (!session) return;
     const res = await fetch(`/api/portal/payment?booking_id=${session.booking_id}`);
     if (res.ok) setData(await res.json());
-  }, [session]);
-
-  useEffect(() => { if (session) load(); }, [session, load]);
+  }
 
   if (!session) return null;
 
@@ -88,7 +104,7 @@ export default function PortalPaymentPage() {
 
       <div className="sec">
         <h2>결제 정보</h2>
-        {!data ? <div style={{ padding: 20, textAlign: "center", color: "#94a3b8" }}>로딩 중...</div> : (<>
+        {error && !data ? <div className="err">{error}</div> : !data ? <div style={{ padding: 20, textAlign: "center", color: "#94a3b8" }}>로딩 중...</div> : (<>
           <div className="row">
             <span className="lbl">결제 상태</span>
             <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
@@ -147,7 +163,7 @@ export default function PortalPaymentPage() {
                   });
                   if (!res.ok) { const r = await res.json(); setError(r.error || "결제 처리 실패"); return; }
                   setPaid(true);
-                  load();
+                  reload();
                 }}
                 onError={(err) => { console.error(err); setError("결제 중 오류가 발생했습니다. 다시 시도해주세요."); }}
               />
