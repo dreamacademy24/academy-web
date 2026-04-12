@@ -122,6 +122,11 @@ export default function AdminHubPage() {
           <h2>튜터 인보이스</h2>
           <p>월별 수업료 정산 · 출력</p>
         </div>
+        <div className="hub-card card-gray" onClick={() => router.push('/admin/portal-requests')}>
+          <div className="ic">📨</div>
+          <h2>손님 신청 관리</h2>
+          <p>셔틀 · 픽업 · 튜터 승인</p>
+        </div>
       </div>
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
