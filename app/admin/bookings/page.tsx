@@ -104,46 +104,59 @@ export default function AdminBookingsPage(){
   /* ── STEP 24: 결제 상태 ── */
   const [payForm,setPayForm]=useState({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
 
-  /* ── 학생관리 탭 ── */
-  interface StudentRow{id:string;booking_id:string|null;name_kr:string;name_en:string;age:string;level:string;class_type:string;academy_start:string;academy_end:string;pickup_location:string;address_detail:string;ssp:boolean;photo_allowed:boolean;special_request:string;created_at:string;bookings_new:{booker_name:string;agency:string|null;booking_type:string|null}|null}
-  const [studentsList,setStudentsList]=useState<StudentRow[]>([]);
-  const [stuSearch,setStuSearch]=useState("");
-  const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academy_start",asc:false});
-  const [stuEditId,setStuEditId]=useState<string|null>(null);
-  const [stuEditData,setStuEditData]=useState<Partial<StudentRow>>({});
-
-  useEffect(()=>{
-    if(!authed||mainTab!=="students")return;
-    (async()=>{
-      const {data}=await supabase.from("students").select("*, bookings_new(booker_name, agency, booking_type)").order("academy_start",{ascending:false,nullsFirst:false});
-      if(data)setStudentsList(data as unknown as StudentRow[]);
-    })();
-  },[authed,mainTab]);
-
-  async function saveStudent(){
-    if(!stuEditId)return;
-    const upd={name_kr:stuEditData.name_kr,name_en:stuEditData.name_en,age:stuEditData.age,level:stuEditData.level,class_type:stuEditData.class_type,academy_start:stuEditData.academy_start||null,academy_end:stuEditData.academy_end||null,pickup_location:stuEditData.pickup_location,address_detail:stuEditData.address_detail,ssp:stuEditData.ssp,photo_allowed:stuEditData.photo_allowed,special_request:stuEditData.special_request};
-    await supabase.from("students").update(upd).eq("id",stuEditId);
-    setStudentsList(prev=>prev.map(s=>s.id===stuEditId?{...s,...upd as Partial<StudentRow>}:s));
-    setStuEditId(null);
+  /* ── 학생관리 탭 (bookings의 students JSONB에서 추출) ── */
+  interface StudentRow{
+    key:string; // booking_id + index
+    booking_id:string; reservation_no:string; status:string; booker_name:string;
+    accom_type:string; house_no:string; accom_room:string;
+    agency:string; balance_date:string; checkin_date:string; checkout_date:string;
+    flight_in:string; flight_out:string;
+    special_request:string;
+    // from students jsonb
+    korName:string; engName:string; age:string; grade:string;
+    academyStart:string; academyEnd:string; academyWeeks:string; photo:string;
   }
+  const [stuSearch,setStuSearch]=useState("");
+  const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:false});
+
+  // 모든 예약(bookings)의 students JSONB를 평탄화
+  const studentsList:StudentRow[]=bookings.flatMap(b=>{
+    try{
+      const arr=typeof b.students==="string"?JSON.parse(b.students):b.students;
+      if(!Array.isArray(arr)||arr.length===0)return[];
+      return arr.map((s:Record<string,string>,i:number)=>({
+        key:b.id+"_"+i,
+        booking_id:b.id,
+        reservation_no:b.reservation_no||"",
+        status:b.status||"",
+        booker_name:b.booker_name||"",
+        accom_type:b.accom_type||"",
+        house_no:b.house_no||"",
+        accom_room:b.accom_room||"",
+        agency:b.agency||"",
+        balance_date:b.balance_date||"",
+        checkin_date:b.checkin_date||"",
+        checkout_date:b.checkout_date||"",
+        flight_in:b.flight_in||"",
+        flight_out:b.flight_out||"",
+        special_request:b.special_request||"",
+        korName:s.korName||"",engName:s.engName||"",age:s.age||"",grade:s.grade||"",
+        academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"",photo:s.photo||"",
+      }));
+    }catch{return[];}
+  });
 
   function exportStudentsXlsx(rows:StudentRow[]){
     const data=rows.map(s=>({
-      시작일:s.academy_start||"",종료일:s.academy_end||"",
-      기간:"",
-      "오전/종일":s.class_type==="morning"?"오전":s.class_type==="fullday"?"종일":"",
-      "킨더/주니어":s.level==="kinder"?"킨더":s.level==="junior"?"주니어":"",
-      한글이름:s.name_kr||"",영어이름:s.name_en||"",나이:s.age||"",
-      패키지여부:s.bookings_new?.booking_type||"",
-      "픽/드롭":s.pickup_location||"",
-      상세주소:s.address_detail||"",
-      등록일자:s.created_at?.slice(0,10)||"",
-      특이사항:s.special_request||"",
-      SSP:s.ssp?"O":"",
-      사진허용:s.photo_allowed?"O":"",
-      유학원:s.bookings_new?.agency||"",
-      예약자명:s.bookings_new?.booker_name||"",
+      예약번호:shortNo(s.reservation_no),상태:s.status,
+      시작일:s.academyStart,종료일:s.academyEnd,기간:s.academyWeeks?s.academyWeeks+"주":"",
+      "킨더/주니어":s.grade||"",
+      한글이름:s.korName,영어이름:s.engName,나이:s.age,
+      숙소:fmtAccom(s as unknown as Record<string,string>),
+      체크인:s.checkin_date,체크아웃:s.checkout_date,
+      항공IN:s.flight_in,항공OUT:s.flight_out,
+      유학원:s.agency,예약자명:s.booker_name,잔금일:s.balance_date,
+      사진허용:s.photo,특이사항:s.special_request,
     }));
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"학생관리");XLSX.writeFile(wb,"학생관리_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
@@ -598,30 +611,33 @@ export default function AdminBookingsPage(){
       </>);
     })()}
 
-    {/* ── 탭6: 학생관리 ── */}
+    {/* ── 탭6: 학생관리 (bookings.students JSONB 평탄화) ── */}
     {mainTab==="students"&&(()=>{
       const q=stuSearch.toLowerCase();
       const stuCols:{key:string;label:string;get:(s:StudentRow)=>string|number}[]=[
-        {key:"academy_start",label:"시작일",get:s=>s.academy_start||""},
-        {key:"academy_end",label:"종료일",get:s=>s.academy_end||""},
-        {key:"class_type",label:"오전/종일",get:s=>s.class_type==="morning"?"오전":s.class_type==="fullday"?"종일":""},
-        {key:"level",label:"킨더/주니어",get:s=>s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""},
-        {key:"name_kr",label:"한글이름",get:s=>s.name_kr||""},
-        {key:"name_en",label:"영어이름",get:s=>s.name_en||""},
+        {key:"reservation_no",label:"예약번호",get:s=>shortNo(s.reservation_no)},
+        {key:"status",label:"상태",get:s=>s.status||""},
+        {key:"academyStart",label:"시작일",get:s=>s.academyStart||""},
+        {key:"academyEnd",label:"종료일",get:s=>s.academyEnd||""},
+        {key:"academyWeeks",label:"기간",get:s=>s.academyWeeks?s.academyWeeks+"주":""},
+        {key:"grade",label:"킨더/주니어",get:s=>s.grade||""},
+        {key:"korName",label:"한글이름",get:s=>s.korName||""},
+        {key:"engName",label:"영어이름",get:s=>s.engName||""},
         {key:"age",label:"나이",get:s=>s.age||""},
-        {key:"booking_type",label:"패키지여부",get:s=>s.bookings_new?.booking_type||""},
-        {key:"pickup_location",label:"픽/드롭",get:s=>s.pickup_location||""},
-        {key:"address_detail",label:"상세주소",get:s=>s.address_detail||""},
-        {key:"created_at",label:"등록일자",get:s=>s.created_at?.slice(0,10)||""},
+        {key:"accom",label:"숙소/룸",get:s=>fmtAccom(s as unknown as Record<string,string>)},
+        {key:"checkin_date",label:"체크인",get:s=>s.checkin_date||""},
+        {key:"checkout_date",label:"체크아웃",get:s=>s.checkout_date||""},
+        {key:"flight_in",label:"항공IN",get:s=>s.flight_in||""},
+        {key:"flight_out",label:"항공OUT",get:s=>s.flight_out||""},
+        {key:"agency",label:"유학원",get:s=>s.agency||""},
+        {key:"balance_date",label:"잔금일",get:s=>s.balance_date||""},
+        {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
+        {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
-        {key:"ssp",label:"SSP",get:s=>s.ssp?"O":""},
-        {key:"photo_allowed",label:"사진허용",get:s=>s.photo_allowed?"O":""},
-        {key:"agency",label:"유학원",get:s=>s.bookings_new?.agency||""},
-        {key:"booker_name",label:"예약자명",get:s=>s.bookings_new?.booker_name||""},
       ];
       const searched=studentsList.filter(s=>{
         if(!q)return true;
-        return [s.name_kr,s.name_en,s.bookings_new?.booker_name,s.bookings_new?.agency].some(v=>v&&v.toLowerCase().includes(q));
+        return [s.korName,s.engName,s.booker_name,s.agency,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
       });
       const sorted=[...searched].sort((a,b)=>{
         const {key,asc}=stuSort;
@@ -635,7 +651,7 @@ export default function AdminBookingsPage(){
       const arrCls=(k:string)=>stuSort.key===k?"arr ac":"arr";
       return(<>
         <div className="cf-search">
-          <input placeholder="🔍 한글/영어 이름, 예약자명 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
+          <input placeholder="🔍 한글/영어 이름, 예약자명, 유학원, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
           <span className="cnt">{sorted.length}명</span>
           <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>
         </div>
@@ -643,26 +659,31 @@ export default function AdminBookingsPage(){
           {stuCols.map(c=><th key={c.key} onClick={()=>toggleStuSort(c.key)}>{c.label}<span className={arrCls(c.key)}>{arr(c.key)}</span></th>)}
         </tr></thead><tbody>
           {sorted.length===0?<tr><td colSpan={stuCols.length} className="empty">학생 데이터가 없습니다.</td></tr>:
-          sorted.map(s=>(
-            <tr key={s.id} onClick={()=>{setStuEditId(s.id);setStuEditData(s);}} style={{cursor:"pointer"}}>
-              <td>{s.academy_start||"-"}</td>
-              <td>{s.academy_end||"-"}</td>
-              <td>{s.class_type==="morning"?"오전":s.class_type==="fullday"?"종일":"-"}</td>
-              <td>{s.level==="kinder"?"킨더":s.level==="junior"?"주니어":"-"}</td>
-              <td style={{fontWeight:700,color:"#1a1a2e"}}>{s.name_kr||"-"}</td>
-              <td>{s.name_en||"-"}</td>
+          sorted.map(s=>{
+            const sc=SC[s.status]||SC["접수"];
+            return(
+            <tr key={s.key} onClick={()=>router.push("/admin/bookings/"+s.booking_id)} style={{cursor:"pointer"}}>
+              <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(s.reservation_no)}</td>
+              <td><span className="badge" style={{background:sc.bg,color:sc.color,fontSize:10,padding:"2px 6px"}}>{s.status}</span></td>
+              <td>{s.academyStart||"-"}</td>
+              <td>{s.academyEnd||"-"}</td>
+              <td>{s.academyWeeks?s.academyWeeks+"주":"-"}</td>
+              <td>{s.grade||"-"}</td>
+              <td style={{fontWeight:700}}>{s.korName||"-"}</td>
+              <td>{s.engName||"-"}</td>
               <td>{s.age||"-"}</td>
-              <td>{s.bookings_new?.booking_type||"-"}</td>
-              <td>{s.pickup_location||"-"}</td>
-              <td className="wrap">{s.address_detail||"-"}</td>
-              <td>{s.created_at?.slice(0,10)||"-"}</td>
+              <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
+              <td>{s.checkin_date||"-"}</td>
+              <td>{s.checkout_date||"-"}</td>
+              <td>{s.flight_in||"-"}</td>
+              <td>{s.flight_out||"-"}</td>
+              <td>{s.agency||"-"}</td>
+              <td>{s.balance_date||"-"}</td>
+              <td>{s.booker_name||"-"}</td>
+              <td style={{textAlign:"center"}}>{s.photo||""}</td>
               <td className="wrap">{s.special_request||"-"}</td>
-              <td style={{textAlign:"center"}}>{s.ssp?"O":""}</td>
-              <td style={{textAlign:"center"}}>{s.photo_allowed?"O":""}</td>
-              <td>{s.bookings_new?.agency||"-"}</td>
-              <td>{s.bookings_new?.booker_name||"-"}</td>
-            </tr>
-          ))}
+            </tr>);
+          })}
         </tbody></table></div>
       </>);
     })()}
@@ -670,33 +691,6 @@ export default function AdminBookingsPage(){
     {/* ── 탭5: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
   </div>
-
-  {/* 학생 편집 모달 */}
-  {stuEditId&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setStuEditId(null)}>
-    <div style={{background:"#fff",borderRadius:16,padding:24,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
-      <h2 style={{fontSize:18,fontWeight:800,marginBottom:16}}>학생 정보 편집</h2>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>한글이름</label><input style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.name_kr||""} onChange={e=>setStuEditData({...stuEditData,name_kr:e.target.value})}/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>영어이름</label><input style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.name_en||""} onChange={e=>setStuEditData({...stuEditData,name_en:e.target.value})}/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>나이</label><input style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.age||""} onChange={e=>setStuEditData({...stuEditData,age:e.target.value})}/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>레벨</label><select style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff"}} value={stuEditData.level||""} onChange={e=>setStuEditData({...stuEditData,level:e.target.value})}><option value="">선택</option><option value="kinder">킨더</option><option value="junior">주니어</option></select></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>수업타입</label><select style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",background:"#fff"}} value={stuEditData.class_type||""} onChange={e=>setStuEditData({...stuEditData,class_type:e.target.value})}><option value="">선택</option><option value="morning">오전</option><option value="fullday">종일</option></select></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>픽/드롭</label><input style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.pickup_location||""} onChange={e=>setStuEditData({...stuEditData,pickup_location:e.target.value})}/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>시작일</label><input type="date" style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.academy_start||""} onChange={e=>setStuEditData({...stuEditData,academy_start:e.target.value})}/></div>
-        <div><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>종료일</label><input type="date" style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.academy_end||""} onChange={e=>setStuEditData({...stuEditData,academy_end:e.target.value})}/></div>
-      </div>
-      <div style={{marginBottom:12}}><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>상세주소</label><input style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} value={stuEditData.address_detail||""} onChange={e=>setStuEditData({...stuEditData,address_detail:e.target.value})}/></div>
-      <div style={{marginBottom:12}}><label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:3}}>특이사항</label><textarea style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:50}} value={stuEditData.special_request||""} onChange={e=>setStuEditData({...stuEditData,special_request:e.target.value})}/></div>
-      <div style={{display:"flex",gap:14,marginBottom:16}}>
-        <label style={{fontSize:13,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}><input type="checkbox" checked={!!stuEditData.ssp} onChange={e=>setStuEditData({...stuEditData,ssp:e.target.checked})}/>SSP</label>
-        <label style={{fontSize:13,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}><input type="checkbox" checked={!!stuEditData.photo_allowed} onChange={e=>setStuEditData({...stuEditData,photo_allowed:e.target.checked})}/>사진 허용</label>
-      </div>
-      <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-        <button onClick={()=>setStuEditId(null)} style={{padding:"10px 20px",border:"1px solid #e2e8f0",borderRadius:8,background:"#f1f5f9",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-        <button onClick={saveStudent} style={{padding:"10px 24px",border:"none",borderRadius:8,background:"#1a6fc4",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
-      </div>
-    </div>
-  </div>)}
 
   {/* ── STEP 22: 예약 유형 선택 모달 ── */}
   {showNewBooking&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setShowNewBooking(false)}>
