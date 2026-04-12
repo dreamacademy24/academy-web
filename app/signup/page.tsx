@@ -7,6 +7,8 @@ export default function SignupPage() {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
 
   async function handleSubmit() {
     if (!form.name.trim() || !form.phone.trim() || !form.email.trim() || !form.password) {
@@ -131,12 +133,18 @@ export default function SignupPage() {
 
           <div className="form-group">
             <label className="form-label">비밀번호</label>
-            <input className="form-input" type="password" placeholder="6자 이상" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <div style={{ position: "relative" }}>
+              <input className="form-input" style={{ paddingRight: 44 }} type={showPw ? "text" : "password"} placeholder="6자 이상" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: "#94a3b8" }} aria-label={showPw ? "숨기기" : "보기"}>{showPw ? "🙈" : "👁"}</button>
+            </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">비밀번호 확인</label>
-            <input className="form-input" type="password" placeholder="비밀번호 재입력" value={form.passwordConfirm} onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })} />
+            <div style={{ position: "relative" }}>
+              <input className="form-input" style={{ paddingRight: 44 }} type={showPw2 ? "text" : "password"} placeholder="비밀번호 재입력" value={form.passwordConfirm} onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })} />
+              <button type="button" onClick={() => setShowPw2(!showPw2)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: "#94a3b8" }} aria-label={showPw2 ? "숨기기" : "보기"}>{showPw2 ? "🙈" : "👁"}</button>
+            </div>
           </div>
 
           <div className="agree-box">

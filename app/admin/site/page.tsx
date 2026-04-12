@@ -59,6 +59,7 @@ interface FieldtripApp {
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [tab, setTab] = useState<"notices" | "shuttle" | "fieldtrip" | "members">("notices");
 
   useEffect(() => {
@@ -220,14 +221,18 @@ export default function AdminPage() {
           <div className="login-box">
             <h1>Admin</h1>
             <p>관리자 비밀번호를 입력하세요.</p>
-            <input
-              className="login-input"
-              type="password"
-              placeholder="비밀번호"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                className="login-input"
+                style={{ paddingRight: 44 }}
+                type={showPw ? "text" : "password"}
+                placeholder="비밀번호"
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
+              <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: "#94a3b8" }} aria-label={showPw ? "숨기기" : "보기"}>{showPw ? "🙈" : "👁"}</button>
+            </div>
             <button className="login-btn" onClick={handleLogin}>로그인</button>
             <a href="/" className="back-link">← 홈으로 돌아가기</a>
           </div>

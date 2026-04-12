@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   async function handleLogin() {
     if (!form.email.trim() || !form.password) {
@@ -18,7 +19,11 @@ export default function LoginPage() {
     });
 
     if (error) {
-      alert("로그인 실패: " + error.message);
+      if (error.message.includes("Invalid login credentials")) {
+        alert("이메일 또는 비밀번호가 올바르지 않습니다.\n\n※ 관리자 계정(admin-xxx)으로 로그인하려면 /admin 페이지를 이용하세요.");
+      } else {
+        alert("로그인 실패: " + error.message);
+      }
       setLoading(false);
       return;
     }
@@ -67,14 +72,22 @@ export default function LoginPage() {
 
           <div className="form-group">
             <label className="form-label">비밀번호</label>
-            <input
-              className="form-input"
-              type="password"
-              placeholder="비밀번호 입력"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                className="form-input"
+                style={{ paddingRight: 44 }}
+                type={showPw ? "text" : "password"}
+                placeholder="비밀번호 입력"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: "#94a3b8" }}
+                aria-label={showPw ? "비밀번호 숨기기" : "비밀번호 보기"}>
+                {showPw ? "🙈" : "👁"}
+              </button>
+            </div>
           </div>
 
           <button className="btn" disabled={loading} onClick={handleLogin}>

@@ -7,6 +7,7 @@ const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 export default function GuidePage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [tab, setTab] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -37,7 +38,10 @@ export default function GuidePage() {
     <div className="pw-w"><div className="pw-c">
       <h1>직원 가이드</h1>
       <p>관리자 비밀번호를 입력하세요.</p>
-      <input className="pw-i" type="password" placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === "Enter") checkPw(); }} />
+      <div style={{ position: "relative" }}>
+        <input className="pw-i" style={{ paddingRight: 44 }} type={showPw ? "text" : "password"} placeholder="비밀번호" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => { if (e.key === "Enter") checkPw(); }} />
+        <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, padding: 4, color: "#94a3b8" }} aria-label={showPw ? "숨기기" : "보기"}>{showPw ? "🙈" : "👁"}</button>
+      </div>
       <button className="pw-b" onClick={checkPw}>로그인</button>
       <a href="/admin" className="bk-link">← 관리자 홈</a>
     </div></div>
