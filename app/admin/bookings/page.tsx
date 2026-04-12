@@ -118,6 +118,7 @@ export default function AdminBookingsPage(){
   }
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:false});
+  const [stuMonth,setStuMonth]=useState(""); // "" = 전체, "YYYY-MM" = 특정 월
 
   // 모든 예약(bookings)의 students JSONB를 평탄화
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
@@ -155,7 +156,7 @@ export default function AdminBookingsPage(){
       숙소:fmtAccom(s as unknown as Record<string,string>),
       체크인:s.checkin_date,체크아웃:s.checkout_date,
       항공IN:s.flight_in,항공OUT:s.flight_out,
-      유학원:s.agency,예약자명:s.booker_name,잔금일:s.balance_date,
+      예약자명:s.booker_name,잔금일:s.balance_date,
       사진허용:s.photo,특이사항:s.special_request,
     }));
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"학생관리");XLSX.writeFile(wb,"학생관리_"+new Date().toISOString().slice(0,10)+".xlsx");
@@ -629,15 +630,16 @@ export default function AdminBookingsPage(){
         {key:"checkout_date",label:"체크아웃",get:s=>s.checkout_date||""},
         {key:"flight_in",label:"항공IN",get:s=>s.flight_in||""},
         {key:"flight_out",label:"항공OUT",get:s=>s.flight_out||""},
-        {key:"agency",label:"유학원",get:s=>s.agency||""},
         {key:"balance_date",label:"잔금일",get:s=>s.balance_date||""},
         {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
         {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
       ];
       const searched=studentsList.filter(s=>{
+        // 월 필터: academyStart가 선택한 YYYY-MM으로 시작하는 것만
+        if(stuMonth&&(!s.academyStart||!s.academyStart.startsWith(stuMonth)))return false;
         if(!q)return true;
-        return [s.korName,s.engName,s.booker_name,s.agency,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
+        return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
       });
       const sorted=[...searched].sort((a,b)=>{
         const {key,asc}=stuSort;
@@ -651,7 +653,9 @@ export default function AdminBookingsPage(){
       const arrCls=(k:string)=>stuSort.key===k?"arr ac":"arr";
       return(<>
         <div className="cf-search">
-          <input placeholder="🔍 한글/영어 이름, 예약자명, 유학원, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
+          <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
+          <input type="month" value={stuMonth} onChange={e=>setStuMonth(e.target.value)} style={{padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}} />
+          {stuMonth&&<button onClick={()=>setStuMonth("")} style={{padding:"6px 10px",fontSize:11,border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",color:"#6b7c93",cursor:"pointer",fontFamily:"inherit"}}>전체</button>}
           <span className="cnt">{sorted.length}명</span>
           <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>
         </div>
@@ -677,7 +681,6 @@ export default function AdminBookingsPage(){
               <td>{s.checkout_date||"-"}</td>
               <td>{s.flight_in||"-"}</td>
               <td>{s.flight_out||"-"}</td>
-              <td>{s.agency||"-"}</td>
               <td>{s.balance_date||"-"}</td>
               <td>{s.booker_name||"-"}</td>
               <td style={{textAlign:"center"}}>{s.photo||""}</td>
