@@ -352,14 +352,14 @@ export default function AdminBookingsPage(){
 .act-r{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}.act-r:hover{background:#fee2e2;}
 .dday{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f0fdf4;}
 .ss-w{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e2e8f0;}
-.ss{width:100%;border-collapse:collapse;min-width:1600px;}
-.ss th{font-size:10px;font-weight:700;color:#6b7c93;padding:8px 6px;text-align:left;background:#f1f5f9;border:1px solid #e2e8f0;white-space:nowrap;cursor:pointer;user-select:none;position:relative;}.ss th:hover{background:#e2e8f0;}
-.ss th .arr{margin-left:2px;font-size:9px;color:#94a3b8;}
+.ss{width:100%;border-collapse:collapse;min-width:1200px;table-layout:auto;}
+.ss th{font-size:10px;font-weight:700;color:#6b7c93;padding:6px 4px;text-align:left;background:#f1f5f9;border:1px solid #e2e8f0;white-space:nowrap;cursor:pointer;user-select:none;position:relative;}.ss th:hover{background:#e2e8f0;}
+.ss th .arr{margin-left:1px;font-size:9px;color:#94a3b8;}
 .ss th .arr.ac{color:#1a6fc4;}
-.ss td{font-size:11px;padding:6px 6px;border:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;}
+.ss td{font-size:11px;padding:5px 4px;border:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
 .ss tbody tr:hover td{background:#eff6ff;}
 .ss tbody tr.confirmed-row td{background:#f0fdf4;}
-.ss td.wrap{white-space:normal;min-width:100px;max-width:180px;word-break:break-word;}
+.ss td.wrap{white-space:normal;min-width:80px;max-width:140px;word-break:break-word;overflow:hidden;}
 .ss .chk{width:16px;height:16px;cursor:pointer;accent-color:#16a34a;}
 .cf-search{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 .cf-search input{padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;outline:none;font-family:'Noto Sans KR',sans-serif;}.cf-search input:focus{border-color:#1a6fc4;}
