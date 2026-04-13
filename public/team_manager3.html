@@ -1555,7 +1555,22 @@ function sbGet(table,query){return sbFetch(table+'?'+query).then(function(r){ret
 function sbPost(table,body){return sbFetch(table,{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();});}
 function sbPatch(table,query,body){return sbFetch(table+'?'+query,{method:'PATCH',body:JSON.stringify(body)}).then(function(r){return r.json();});}
 function sbDel(table,query){return sbFetch(table+'?'+query,{method:'DELETE'});}
-function sbUpsert(table,body){return fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(body)}).then(function(r){return r.text().then(function(txt){var data;try{data=txt?JSON.parse(txt):null;}catch(e){data=txt;}if(!r.ok){var msg=(data&&data.message)||(data&&data.error)||(typeof data==='string'?data:'')||('HTTP '+r.status);var err=new Error('Supabase '+table+' upsert 실패: '+msg);err.status=r.status;err.detail=data;throw err;}return data;});});}
+async function sbUpsert(table,body){
+  var url=SB_URL+'/rest/v1/'+table;
+  console.log('[sbUpsert] url:',url);
+  console.log('[sbUpsert] table:',table,'payload keys:',body&&typeof body==='object'?Object.keys(body):typeof body);
+  var response=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(body)});
+  console.log('[sbUpsert] response status:',response.status,response.statusText);
+  var responseText=await response.text();
+  console.log('[sbUpsert] response body:',responseText);
+  var data;try{data=responseText?JSON.parse(responseText):null;}catch(e){data=responseText;}
+  if(!response.ok){
+    var msg=(data&&data.message)||(data&&data.error)||(typeof data==='string'?data:'')||('HTTP '+response.status);
+    var err=new Error('Supabase '+table+' upsert 실패: '+msg);
+    err.status=response.status;err.detail=data;throw err;
+  }
+  return data;
+}
 
 // ── Supabase sync helpers for tasks & projects ──
 function taskToRow(t){return{id:t.id,title:t.title||'',assignee:t.assignee||'',assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||'',note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,proj_id:t.projId||null,idx:t.idx||null};}
@@ -3429,7 +3444,11 @@ function saveTask(){
   var _btn=document.getElementById('tmSaveBtn');if(_btn){_btn.disabled=true;_btn.textContent='저장 중...';}
   var _finish=function(){if(_btn){_btn.disabled=false;_btn.textContent='저장';}};
   if(!_syncT){_finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);return;}
-  sbUpsert('staff_tasks',taskToRow(_syncT))
+  var _payload=taskToRow(_syncT);
+  console.log('[saveTask] INSERT 시도:',JSON.stringify(_payload));
+  console.log('[saveTask] SB_URL:',SB_URL);
+  console.log('[saveTask] SB_KEY 앞 20자:',SB_KEY?SB_KEY.substring(0,20):'(없음)');
+  sbUpsert('staff_tasks',_payload)
     .then(function(){
       _finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
     })
