@@ -3287,6 +3287,7 @@ function saveQA(){
 function openTaskModal(pre){
   editTaskId=null;tmProjId=null;mFiles=[];tmChecklist=[];tmSubtasks=[];
   if(typeof clearTaskErr==='function')clearTaskErr();
+  var _sb=document.getElementById('tmSaveBtn');if(_sb){_sb.disabled=false;_sb.textContent='저장';}
   document.getElementById('tmTitle').textContent='업무 추가';
   ['tmTit','tmNt'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tmDue').value='';document.getElementById('tmDue').style.display='none';
@@ -3333,6 +3334,7 @@ function linkTaskToProj(taskId){
 function openTaskEdit(id){
   const t=tasks.find(function(t){return t.id===id;});if(!t)return;
   if(typeof clearTaskErr==='function')clearTaskErr();
+  var _sbE=document.getElementById('tmSaveBtn');if(_sbE){_sbE.disabled=false;_sbE.textContent='저장';}
   editTaskId=id;tmProjId=t.projId||null;mFiles=[...(t.files||[])];
   var _isSub=taskHasSubtasks(t);
   if(_isSub){tmChecklist=[];tmSubtasks=(t.checklist.items||[]).map(function(s){return Object.assign({},s);});}
@@ -3409,8 +3411,12 @@ function rmMF(i){mFiles.splice(i,1);renderTMFL();}
 function showTaskErr(msg){var el=document.getElementById('tmErr');if(!el)return;el.textContent='⚠️ '+msg;el.style.display='block';}
 function clearTaskErr(){var el=document.getElementById('tmErr');if(el){el.textContent='';el.style.display='none';}}
 function saveTask(){
+  console.log('[saveTask] 시작');
   clearTaskErr();
+  var _saveBtnEarly=document.getElementById('tmSaveBtn');
+  console.log('[saveTask] tmSaveBtn:',_saveBtnEarly,'disabled:',_saveBtnEarly?_saveBtnEarly.disabled:'(없음)','editTaskId:',editTaskId);
   const title=document.getElementById('tmTit').value.trim();
+  console.log('[saveTask] title:',title);
   if(!title){showTaskErr('업무 내용을 입력하세요.');return;}
   var _selIds=[..._assignSelected].filter(function(id){return id&&id!=='';});
   const assignee=_selIds[0]||'';
@@ -3454,15 +3460,16 @@ function saveTask(){
   var _finish=function(){if(_btn){_btn.disabled=false;_btn.textContent='저장';}};
   if(!_syncT){_finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);return;}
   var _payload=taskToRow(_syncT);
-  console.log('[saveTask] INSERT 시도:',JSON.stringify(_payload));
+  console.log('[saveTask] Supabase INSERT 직전 payload:',JSON.stringify(_payload));
   console.log('[saveTask] SB_URL:',SB_URL);
   console.log('[saveTask] SB_KEY 앞 20자:',SB_KEY?SB_KEY.substring(0,20):'(없음)');
   sbUpsert('staff_tasks',_payload)
-    .then(function(){
+    .then(function(result){
+      console.log('[saveTask] INSERT 성공:',result);
       _finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
     })
     .catch(function(err){
-      console.error('[saveTask] Supabase INSERT 실패',err,'detail:',err&&err.detail);
+      console.error('[saveTask] INSERT 실패:',err,'detail:',err&&err.detail);
       if(_isNew&&_newTaskId){
         tasks=tasks.filter(function(t){return t.id!==_newTaskId;});
       } else if(editTaskId&&_prevSnapshot){
