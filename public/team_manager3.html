@@ -1629,10 +1629,19 @@ function loadProjectsFromSB(){
 }
 
 // ── Supabase sync: taskComments → staff_task_comments ──
-function tcToRow(taskId,c){return{id:c.id,task_id:taskId,from_id:c.author||'',text:c.text||'',ts:c.date||''};}
+// NOTE: staff_task_comments.id is bigint (DB auto-generated). Do NOT send local temp id.
+function tcToRow(taskId,c){return{task_id:taskId,from_id:c.author||'',text:c.text||'',ts:c.date||''};}
 function rowToTc(r){return{id:r.id,author:r.from_id||'',text:r.text||'',date:r.ts||''};}
-function syncTcToSB(taskId,c){sbUpsert('staff_task_comments',tcToRow(taskId,c)).catch(function(e){console.error('tc sync err',e);});}
-function delTcFromSB(id){sbDel('staff_task_comments','id=eq.'+id).catch(function(e){console.error('tc del err',e);});}
+function syncTcToSB(taskId,c){
+  return sbUpsert('staff_task_comments',tcToRow(taskId,c)).then(function(data){
+    if(Array.isArray(data)&&data.length&&data[0]&&data[0].id!=null){
+      c.id=data[0].id;
+      sv('tm_tc',taskComments);
+    }
+    return data;
+  }).catch(function(e){console.error('tc sync err',e);});
+}
+function delTcFromSB(id){if(id==null||id==='')return;sbDel('staff_task_comments','id=eq.'+encodeURIComponent(id)).catch(function(e){console.error('tc del err',e);});}
 function loadTaskCommentsFromSB(){
   return sbGet('staff_task_comments','order=ts.asc').then(function(rows){
     if(rows&&rows.length>0){
