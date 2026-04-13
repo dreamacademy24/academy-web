@@ -1309,13 +1309,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <span style="font-size:13px;font-weight:600;color:var(--text2)">👥 팀 공유</span>
       <span style="font-size:11px;color:var(--text3)">ON 시 달력·전체 보드에 표시</span>
     </div>
+    <div id="tmErr" style="display:none;margin:8px 0;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;font-size:12.5px;white-space:pre-wrap"></div>
     <div class="modal-footer">
       <div class="modal-footer-left">
         <button class="btn btn-danger btn-sm" id="tmDel" onclick="deleteTsk()" style="display:none">삭제</button>
         <button class="btn btn-secondary btn-sm" onclick="saveAsTemplate()">📋 템플릿으로 저장</button>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="closeM('taskModal')">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="saveTask()">저장</button>
+      <button class="btn btn-primary btn-sm" id="tmSaveBtn" onclick="saveTask()">저장</button>
     </div>
   </div>
 </div>
@@ -1554,7 +1555,7 @@ function sbGet(table,query){return sbFetch(table+'?'+query).then(function(r){ret
 function sbPost(table,body){return sbFetch(table,{method:'POST',body:JSON.stringify(body)}).then(function(r){return r.json();});}
 function sbPatch(table,query,body){return sbFetch(table+'?'+query,{method:'PATCH',body:JSON.stringify(body)}).then(function(r){return r.json();});}
 function sbDel(table,query){return sbFetch(table+'?'+query,{method:'DELETE'});}
-function sbUpsert(table,body){return fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(body)}).then(function(r){return r.json();});}
+function sbUpsert(table,body){return fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(body)}).then(function(r){return r.text().then(function(txt){var data;try{data=txt?JSON.parse(txt):null;}catch(e){data=txt;}if(!r.ok){var msg=(data&&data.message)||(data&&data.error)||(typeof data==='string'?data:'')||('HTTP '+r.status);var err=new Error('Supabase '+table+' upsert 실패: '+msg);err.status=r.status;err.detail=data;throw err;}return data;});});}
 
 // ── Supabase sync helpers for tasks & projects ──
 function taskToRow(t){return{id:t.id,title:t.title||'',assignee:t.assignee||'',assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||'',note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,proj_id:t.projId||null,idx:t.idx||null};}
@@ -3261,6 +3262,7 @@ function saveQA(){
 }
 function openTaskModal(pre){
   editTaskId=null;tmProjId=null;mFiles=[];tmChecklist=[];tmSubtasks=[];
+  if(typeof clearTaskErr==='function')clearTaskErr();
   document.getElementById('tmTitle').textContent='업무 추가';
   ['tmTit','tmNt'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('tmDue').value='';document.getElementById('tmDue').style.display='none';
@@ -3306,6 +3308,7 @@ function linkTaskToProj(taskId){
 }
 function openTaskEdit(id){
   const t=tasks.find(function(t){return t.id===id;});if(!t)return;
+  if(typeof clearTaskErr==='function')clearTaskErr();
   editTaskId=id;tmProjId=t.projId||null;mFiles=[...(t.files||[])];
   var _isSub=taskHasSubtasks(t);
   if(_isSub){tmChecklist=[];tmSubtasks=(t.checklist.items||[]).map(function(s){return Object.assign({},s);});}
@@ -3379,8 +3382,12 @@ function toggleAssignPicker(){
 function handleTMF(e){var added=Array.from(e.target.files);if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-mFiles.length);}added.forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
 function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
 function rmMF(i){mFiles.splice(i,1);renderTMFL();}
+function showTaskErr(msg){var el=document.getElementById('tmErr');if(!el)return;el.textContent='⚠️ '+msg;el.style.display='block';}
+function clearTaskErr(){var el=document.getElementById('tmErr');if(el){el.textContent='';el.style.display='none';}}
 function saveTask(){
-  const title=document.getElementById('tmTit').value.trim();if(!title)return;
+  clearTaskErr();
+  const title=document.getElementById('tmTit').value.trim();
+  if(!title){showTaskErr('업무 내용을 입력하세요.');return;}
   var _selIds=[..._assignSelected].filter(function(id){return id&&id!=='';});
   const assignee=_selIds[0]||'';
   const assignees=_selIds;
@@ -3398,9 +3405,49 @@ function saveTask(){
     clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
   }
   const _tmShared=document.getElementById('tmShare').checked;
-  if(editTaskId){const t=tasks.find(function(t){return t.id===editTaskId;});if(t){t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;}}
-  else{var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null};tasks.unshift(_newT);if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));}
-  rebuildIdx();svTasks();var _syncT=editTaskId?tasks.find(function(t){return t.id===editTaskId;}):tasks[0];if(_syncT)syncTaskToSB(_syncT);closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
+  var _prevSnapshot=null,_isNew=!editTaskId,_newTaskId=null;
+  try{
+    if(editTaskId){
+      const t=tasks.find(function(t){return t.id===editTaskId;});
+      if(t){
+        _prevSnapshot=JSON.parse(JSON.stringify(t));
+        t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;
+      }
+    } else {
+      var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null};
+      _newTaskId=_newT.id;
+      tasks.unshift(_newT);
+      if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));
+    }
+    rebuildIdx();svTasks();
+  }catch(err){
+    console.error('[saveTask] local update error',err);
+    showTaskErr('로컬 저장 중 오류: '+(err&&err.message?err.message:String(err)));
+    return;
+  }
+  var _syncT=editTaskId?tasks.find(function(t){return t.id===editTaskId;}):tasks[0];
+  var _btn=document.getElementById('tmSaveBtn');if(_btn){_btn.disabled=true;_btn.textContent='저장 중...';}
+  var _finish=function(){if(_btn){_btn.disabled=false;_btn.textContent='저장';}};
+  if(!_syncT){_finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);return;}
+  sbUpsert('staff_tasks',taskToRow(_syncT))
+    .then(function(){
+      _finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
+    })
+    .catch(function(err){
+      console.error('[saveTask] Supabase INSERT 실패',err,'detail:',err&&err.detail);
+      if(_isNew&&_newTaskId){
+        tasks=tasks.filter(function(t){return t.id!==_newTaskId;});
+      } else if(editTaskId&&_prevSnapshot){
+        var t2=tasks.find(function(t){return t.id===editTaskId;});
+        if(t2)Object.assign(t2,_prevSnapshot);
+      }
+      rebuildIdx();svTasks();
+      _finish();
+      var msg=err&&err.message?err.message:String(err);
+      if(err&&err.status===401)msg+='\n(인증 오류 — anon key 확인 필요)';
+      else if(err&&err.status===403)msg+='\n(RLS 정책에 의해 차단됨 — staff_tasks INSERT 권한 확인 필요)';
+      showTaskErr('저장 실패: '+msg);
+    });
 }
 function deleteTsk(){if(!editTaskId)return;delTaskFromSB(editTaskId);tasks=tasks.filter(function(t){return t.id!==editTaskId;});rebuildIdx();svTasks();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);}
 function shareTask(id){if(!confirm('이 업무를 전체 공유로 전환할까요?'))return;const t=tasks.find(function(t){return t.id===id;});if(!t)return;t.shared=true;rebuildIdx();svTasks();syncTaskToSB(t);refreshAll();toast('✓ ('+t.idx+') 달력·전체 보드에 공유됐어요!');}
