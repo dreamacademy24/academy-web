@@ -139,7 +139,7 @@ export default function AdminPage() {
     // fallback: 직접 supabase에서 조회
     const { data } = await supabase
       .from("profiles")
-      .select("id, username, phone, email, address, children, created_at")
+      .select("id, username, name, phone, email, address, children, created_at")
       .order("created_at", { ascending: false });
     if (data) setMembers(data);
     setMemberLoading(false);
