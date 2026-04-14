@@ -1093,10 +1093,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <div id="page-board" class="hidden">
         <div class="board-toolbar">
           <div class="tab-group" id="boardTabs">
-            <button class="tab-btn active" onclick="setBF('all',this)">전체</button>
-            <button class="tab-btn" onclick="setBF('unassigned',this)">미배정</button>
-            <button class="tab-btn" onclick="setBF('active',this)">진행 중</button>
-            <button class="tab-btn" onclick="setBF('done',this)">완료</button>
+            <button class="tab-btn active" data-bf="all" onclick="setBF('all',this)">전체</button>
+            <button class="tab-btn" data-bf="unassigned" onclick="setBF('unassigned',this)">미배정</button>
+            <button class="tab-btn" data-bf="active" onclick="setBF('active',this)">진행 중</button>
+            <button class="tab-btn" data-bf="done" onclick="setBF('done',this)">완료</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-size:12px;color:var(--text3);font-weight:500">보기</span>
@@ -1258,6 +1258,22 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       📅 작성일: <span id="tmCreated" style="font-weight:600;color:var(--text2)"></span>
     </div>
     <div class="form-group"><label class="form-label">업무 내용</label><input class="form-input" id="tmTit" placeholder="업무 내용" /></div>
+    <div style="display:flex;gap:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;cursor:pointer" onclick="var c=document.getElementById('tmUrgent');c.click();">
+        <div style="position:relative;width:36px;height:20px;flex-shrink:0">
+          <input type="checkbox" id="tmUrgent" onchange="var sp=document.getElementById('tmUrgentSpan');sp.style.background=this.checked?'#ef4444':'#cbd5e1';sp.querySelector('i').style.transform=this.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2" />
+          <span id="tmUrgentSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:#b91c1c">🚨 긴급</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;cursor:pointer" onclick="var c=document.getElementById('tmShare');c.checked=!c.checked;var sp=c.nextElementSibling;sp.style.background=c.checked?'var(--primary,#1a6fc4)':'#cbd5e1';sp.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)';">
+        <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
+          <input type="checkbox" id="tmShare" style="opacity:0;width:0;height:0" />
+          <span style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+        </label>
+        <span style="font-size:13px;font-weight:600;color:#1e40af">👥 팀 공유</span>
+      </div>
+    </div>
     <div class="form-group" style="position:relative"><label class="form-label">담당자</label>
       <div id="tmAssWrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px;cursor:pointer;background:var(--bg)" onclick="toggleAssignPicker()"></div>
       <div id="tmAssPicker" style="display:none;position:absolute;z-index:100;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;box-shadow:var(--shadow);min-width:220px;margin-top:4px;max-height:320px;overflow-y:auto"></div>
@@ -1301,22 +1317,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <input type="file" id="tmFI" multiple style="display:none" onchange="handleTMF(event)" />
       <div class="file-list" id="tmFL"></div>
     </div>
-    <div class="form-group" style="display:flex;align-items:center;gap:10px">
-      <div style="position:relative;width:36px;height:20px;flex-shrink:0;cursor:pointer">
-        <input type="checkbox" id="tmUrgent" onchange="var sp=document.getElementById('tmUrgentSpan');sp.style.background=this.checked?'#ef4444':'#cbd5e1';sp.querySelector('i').style.transform=this.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2" />
-        <span id="tmUrgentSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
-      </div>
-      <span style="font-size:13px;font-weight:600;color:var(--text2)">🚨 긴급 업무</span>
-      <span style="font-size:11px;color:var(--text3)">ON 시 긴급 표시</span>
-    </div>
-    <div class="form-group" id="tmShareRow" style="display:flex;align-items:center;gap:10px">
-      <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
-        <input type="checkbox" id="tmShare" style="opacity:0;width:0;height:0" />
-        <span onclick="var c=document.getElementById('tmShare');c.checked=!c.checked;this.style.background=c.checked?'var(--primary,#1a6fc4)':'#cbd5e1';this.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
-      </label>
-      <span style="font-size:13px;font-weight:600;color:var(--text2)">👥 팀 공유</span>
-      <span style="font-size:11px;color:var(--text3)">ON 시 달력·전체 보드에 표시</span>
-    </div>
+    <!-- 긴급/팀공유 토글은 상단으로 이동됨 -->
     <div id="tmErr" style="display:none;margin:8px 0;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;font-size:12.5px;white-space:pre-wrap"></div>
     <div class="modal-footer">
       <div class="modal-footer-left">
@@ -2138,14 +2139,28 @@ function renderBatchBar(container,doneIds,scope){
 }
 
 // ── BOARD ──
-function setBF(f,el){boardFilter=f;document.querySelectorAll('#boardTabs .tab-btn').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderBoard();}
+function isUnassignedTask(t){
+  return !t.assignee && (!t.assignees || t.assignees.length===0 || (t.assignees.length===1 && !t.assignees[0]));
+}
+function setBF(f,el){
+  boardFilter=f;
+  document.querySelectorAll('#boardTabs .tab-btn').forEach(function(t){
+    t.classList.toggle('active', t.getAttribute('data-bf')===f);
+  });
+  if(el && !el.classList.contains('active')) el.classList.add('active');
+  renderBoard();
+}
 function setBoardView(v,el){boardView=v;document.querySelectorAll('.brd-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderBoard();}
 function renderBoard(){
   const grid=document.getElementById('boardGrid');grid.innerHTML='';
-  let f=tasks.filter(t=>t.shared);
-  if(boardFilter==='unassigned')f=f.filter(t=>!t.assignee);
-  else if(boardFilter==='active')f=f.filter(t=>!t.done&&t.assignee);
-  else if(boardFilter==='done')f=f.filter(t=>t.done);
+  let f;
+  if(boardFilter==='unassigned'){
+    f=tasks.filter(isUnassignedTask);
+  } else {
+    f=tasks.filter(t=>t.shared);
+    if(boardFilter==='active')f=f.filter(t=>!t.done&&t.assignee);
+    else if(boardFilter==='done')f=f.filter(t=>t.done);
+  }
   if(boardFilter==='done'&&f.length){renderBatchBar(grid,f.map(function(t){return t.id;}),'board');}
   boardView==='task'?renderBoardTask(f):renderBoardEmp(f);
 }
@@ -2153,7 +2168,7 @@ function renderBoardEmp(f){
   const grid=document.getElementById('boardGrid');
   grid.className='kanban-grid';
   const groups=[
-    {id:'_u',name:'미배정',color:'#9ca3af',items:f.filter(t=>!t.assignee)},
+    {id:'_u',name:'미배정',color:'#9ca3af',items:f.filter(isUnassignedTask)},
     ...EMPS.map(e=>({id:e.id,name:e.name,color:e.color,items:f.filter(t=>t.assignee===e.id)})),
     {id:'ceo',name:'CEO',color:CEO.color,items:f.filter(t=>t.assignee==='ceo')},
   ];
@@ -2224,7 +2239,13 @@ function renderBoardTask(f){
     if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
     if(t.createdAt){const cDate=document.createElement('div');cDate.style.cssText='font-size:11px;color:#9ca3af;margin-top:2px';var _cd=t.createdAt;try{var _dp=new Date(_cd);if(!isNaN(_dp))_cd=(_dp.getMonth()+1)+'/'+_dp.getDate();}catch(e){}cDate.textContent='작성 '+_cd;nameDiv.appendChild(cDate);}
     row.appendChild(nameDiv);
-    const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;';assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';row.appendChild(assDiv);
+    const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;position:relative';
+    if(isUnassignedTask(t)){
+      assDiv.innerHTML='<button class="ass-pick-btn" data-tid="'+t.id+'" onclick="event.stopPropagation();toggleAssignPicker(\''+t.id+'\',this)" style="padding:3px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">+ 담당자 지정</button>';
+    } else {
+      assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';
+    }
+    row.appendChild(assDiv);
     const dueDiv=document.createElement('div');dueDiv.style.cssText='text-align:center;';
     if(dl)dueDiv.innerHTML='<span class="tag '+dl.cls+'" style="font-size:11px;line-height:1.5">'+t.due+'<br><span style="font-size:10px">('+dl.text+')</span></span>';
     else dueDiv.innerHTML='<span style="font-size:12px;color:var(--text3)">없음</span>';
@@ -3335,7 +3356,7 @@ function openTaskModal(pre){
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
   var _tmSub=document.getElementById('tmSubToggle');_tmSub.checked=false;_tmSub.parentElement.querySelector('span').style.background='#cbd5e1';_tmSub.parentElement.querySelector('i').style.transform='translateX(0)';
   document.getElementById('tmClSection').style.display='';document.getElementById('tmSubSection').style.display='none';renderTMSubList();
-  var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;_tmSh.parentElement.querySelector('span').style.background='#cbd5e1';_tmSh.parentElement.querySelector('i').style.transform='translateX(0)';
+  var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;var _tmShSp=_tmSh.nextElementSibling;if(_tmShSp){_tmShSp.style.background='#cbd5e1';var _tmShI=_tmShSp.querySelector('i');if(_tmShI)_tmShI.style.transform='translateX(0)';}
   var _tmUrg=document.getElementById('tmUrgent');_tmUrg.checked=false;document.getElementById('tmUrgentSpan').style.background='#cbd5e1';document.getElementById('tmUrgentSpan').querySelector('i').style.transform='translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -3387,7 +3408,7 @@ function openTaskEdit(id){
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
   buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));
-  var _tmSh2=document.getElementById('tmShare');_tmSh2.checked=!!t.shared;_tmSh2.parentElement.querySelector('span').style.background=t.shared?'var(--primary,#1a6fc4)':'#cbd5e1';_tmSh2.parentElement.querySelector('i').style.transform=t.shared?'translateX(16px)':'translateX(0)';
+  var _tmSh2=document.getElementById('tmShare');_tmSh2.checked=!!t.shared;var _tmShSp2=_tmSh2.nextElementSibling;if(_tmShSp2){_tmShSp2.style.background=t.shared?'var(--primary,#1a6fc4)':'#cbd5e1';var _tmShI2=_tmShSp2.querySelector('i');if(_tmShI2)_tmShI2.style.transform=t.shared?'translateX(16px)':'translateX(0)';}
   var _isHigh=t.priority==='high';var _tmUrg2=document.getElementById('tmUrgent');_tmUrg2.checked=_isHigh;document.getElementById('tmUrgentSpan').style.background=_isHigh?'#ef4444':'#cbd5e1';document.getElementById('tmUrgentSpan').querySelector('i').style.transform=_isHigh?'translateX(16px)':'translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -3681,7 +3702,41 @@ function renderProjDetail(projId){
 }
 function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
-  t.assignee=CU.id;svTasks();syncTaskToSB(t);toast('내 업무로 배정되었습니다!');refreshAll();
+  t.assignee=CU.id;t.assignees=[CU.id];svTasks();syncTaskToSB(t);toast('내 업무로 배정되었습니다!');refreshAll();
+}
+function toggleAssignPicker(taskId,btn){
+  document.querySelectorAll('.ass-pick-menu').forEach(function(m){if(m.dataset.tid!==taskId)m.remove();});
+  var existing=btn.parentNode.querySelector('.ass-pick-menu');
+  if(existing){existing.remove();return;}
+  var menu=document.createElement('div');
+  menu.className='ass-pick-menu';menu.dataset.tid=taskId;
+  menu.style.cssText='position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);padding:4px;z-index:100;min-width:140px;max-height:280px;overflow-y:auto';
+  menu.onclick=function(e){e.stopPropagation();};
+  ALL.forEach(function(emp){
+    var isCu=CU&&CU.id===emp.id;
+    var item=document.createElement('div');
+    item.style.cssText='padding:6px 10px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:12px;'+(isCu?'background:'+emp.color+'18;font-weight:700;':'');
+    item.onmouseenter=function(){item.style.background=emp.color+'33';};
+    item.onmouseleave=function(){item.style.background=isCu?emp.color+'18':'';};
+    item.innerHTML='<div style="width:18px;height:18px;border-radius:5px;background:'+emp.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800">'+emp.initial+'</div><span style="color:'+emp.color+'">'+emp.name+'</span>'+(isCu?'<span style="font-size:10px;color:var(--text3);margin-left:auto">(나)</span>':'');
+    item.onclick=function(e){e.stopPropagation();assignTaskTo(taskId,emp.id);};
+    menu.appendChild(item);
+  });
+  btn.parentNode.appendChild(menu);
+  setTimeout(function(){
+    var off=function(e){if(!menu.contains(e.target)&&e.target!==btn){menu.remove();document.removeEventListener('click',off);}};
+    document.addEventListener('click',off);
+  },0);
+}
+function assignTaskTo(taskId,empId){
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t||!empId)return;
+  t.assignee=empId;t.assignees=[empId];
+  svTasks();syncTaskToSB(t);
+  var emp=getP(empId);
+  createNotif(empId,'task_assigned',taskId,'업무가 배정되었습니다: '+(t.title||'').slice(0,20));
+  if(CU&&CU.id!==empId){toast('✓ '+(emp?emp.name:empId)+'에게 배정되었습니다');}
+  else{toast('내 업무로 배정되었습니다!');}
+  refreshAll();
 }
 function pickReportStatus(btn, memberId) {
   var tabs = btn.closest('.rk-status-tabs');
