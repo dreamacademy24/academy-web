@@ -1090,22 +1090,33 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- BOARD -->
       <div id="page-board" class="hidden">
-        <div class="board-toolbar">
-          <div class="tab-group" id="boardTabs">
-            <button class="tab-btn active" data-bf="all" onclick="setBF('all',this)">전체</button>
-            <button class="tab-btn" data-bf="unassigned" onclick="setBF('unassigned',this)">미배정</button>
-            <button class="tab-btn" data-bf="active" onclick="setBF('active',this)">진행 중</button>
-            <button class="tab-btn" data-bf="done" onclick="setBF('done',this)">완료</button>
+        <!-- NEW MASTER-DETAIL LAYOUT -->
+        <div id="boardMD" style="display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px);background:var(--bg);margin:-24px -24px 0 -24px">
+          <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
+            <div id="boardSbHead" style="padding:14px;border-bottom:1px solid var(--border);flex-shrink:0;background:#fff"></div>
+            <div id="boardSbList" style="flex:1;overflow-y:auto;padding:10px 14px;min-height:0"></div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:12px;color:var(--text3);font-weight:500">보기</span>
-            <div class="view-toggle">
-              <button class="view-btn brd-vtb" id="bv-emp" onclick="setBoardView('emp',this)">👤 직원별</button>
-              <button class="view-btn brd-vtb active" id="bv-task" onclick="setBoardView('task',this)">📋 업무별</button>
+          <div id="boardDetail" style="overflow-y:auto;padding:24px;min-width:0"></div>
+        </div>
+        <!-- LEGACY (hidden, kept for compat) -->
+        <div id="boardLegacy" style="display:none">
+          <div class="board-toolbar">
+            <div class="tab-group" id="boardTabs">
+              <button class="tab-btn active" data-bf="all" onclick="setBF('all',this)">전체</button>
+              <button class="tab-btn" data-bf="unassigned" onclick="setBF('unassigned',this)">미배정</button>
+              <button class="tab-btn" data-bf="active" onclick="setBF('active',this)">진행 중</button>
+              <button class="tab-btn" data-bf="done" onclick="setBF('done',this)">완료</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--text3);font-weight:500">보기</span>
+              <div class="view-toggle">
+                <button class="view-btn brd-vtb" id="bv-emp" onclick="setBoardView('emp',this)">👤 직원별</button>
+                <button class="view-btn brd-vtb active" id="bv-task" onclick="setBoardView('task',this)">📋 업무별</button>
+              </div>
             </div>
           </div>
+          <div id="boardGrid"></div>
         </div>
-        <div id="boardGrid"></div>
       </div>
 
       <!-- CALENDAR -->
@@ -2159,6 +2170,7 @@ function shortCreated(d){
   if(m) return m[2]+'/'+m[3];
   return String(d);
 }
+var _boardSelTaskId=null,_boardSelEmpId=null,_boardSearch='';
 function setBF(f,el){
   boardFilter=f;
   document.querySelectorAll('#boardTabs .tab-btn').forEach(function(t){
@@ -2167,9 +2179,260 @@ function setBF(f,el){
   if(el && !el.classList.contains('active')) el.classList.add('active');
   renderBoard();
 }
-function setBoardView(v,el){boardView=v;document.querySelectorAll('.brd-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderBoard();}
+function setBoardView(v,el){
+  boardView=v;
+  document.querySelectorAll('.brd-vtb').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+  _boardSelTaskId=null;_boardSelEmpId=null;
+  renderBoard();
+}
+function _setBoardFilter(f){boardFilter=f;_boardSelTaskId=null;renderBoard();}
+function _setBoardView(v){boardView=v;_boardSelTaskId=null;_boardSelEmpId=null;renderBoard();}
+function _setBoardSearch(v){_boardSearch=(v||'').trim().toLowerCase();renderBoardSidebar();}
 function renderBoard(){
-  const grid=document.getElementById('boardGrid');grid.innerHTML='';
+  // Render new master-detail UI
+  renderBoardSidebar();
+  if(boardView==='emp'){
+    if(_boardSelEmpId) renderBoardEmpDetail(_boardSelEmpId);
+    else renderBoardDetailEmpty('직원을 선택하세요');
+  } else {
+    if(_boardSelTaskId) renderBoardTaskDetail(_boardSelTaskId);
+    else renderBoardDetailEmpty('업무를 선택하세요');
+  }
+  // Legacy boardGrid (hidden) — clear to avoid stale data
+  var grid=document.getElementById('boardGrid');if(grid)grid.innerHTML='';
+}
+function _boardFiltered(){
+  // Filter the shared task pool (or unassigned including non-shared)
+  var f;
+  if(boardFilter==='unassigned'){
+    f=tasks.filter(isUnassignedTask);
+  } else {
+    f=tasks.filter(function(t){return t.shared;});
+    if(boardFilter==='active')f=f.filter(function(t){return !isDoneTask(t)&&t.assignee;});
+    else if(boardFilter==='done')f=f.filter(isDoneTask);
+  }
+  if(_boardSearch){
+    f=f.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0||(t.note||'').toLowerCase().indexOf(_boardSearch)>=0;});
+  }
+  return f;
+}
+function renderBoardSidebar(){
+  var head=document.getElementById('boardSbHead');
+  var list=document.getElementById('boardSbList');
+  if(!head||!list)return;
+  // Header with title + view toggle + filter tabs + search
+  var h='';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:15px;font-weight:800">전체 업무</div>';
+  h+='<div style="display:flex;background:var(--surface2);border-radius:6px;padding:2px;font-size:11px">';
+  h+='<button onclick="_setBoardView(\'task\')" style="padding:4px 8px;border:none;background:'+(boardView!=='emp'?'#fff':'transparent')+';color:'+(boardView!=='emp'?'var(--primary)':'var(--text3)')+';border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">📋 업무별</button>';
+  h+='<button onclick="_setBoardView(\'emp\')" style="padding:4px 8px;border:none;background:'+(boardView==='emp'?'#fff':'transparent')+';color:'+(boardView==='emp'?'var(--primary)':'var(--text3)')+';border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">👤 직원별</button>';
+  h+='</div></div>';
+  if(boardView!=='emp'){
+    h+='<div style="display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap">';
+    [['all','전체'],['unassigned','미배정'],['active','진행중'],['done','완료']].forEach(function(p){
+      var on=boardFilter===p[0];
+      h+='<button onclick="_setBoardFilter(\''+p[0]+'\')" style="padding:4px 9px;border:1px solid '+(on?'var(--primary)':'var(--border)')+';background:'+(on?'var(--primary)':'#fff')+';color:'+(on?'#fff':'var(--text2)')+';border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+p[1]+'</button>';
+    });
+    h+='</div>';
+  }
+  h+='<input type="text" placeholder="🔍 검색..." value="'+esc(_boardSearch||'')+'" oninput="_setBoardSearch(this.value)" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;outline:none">';
+  head.innerHTML=h;
+  // List
+  if(boardView==='emp') list.innerHTML=_renderBoardEmpList();
+  else list.innerHTML=_renderBoardTaskList();
+}
+function _renderBoardTaskItem(t,color){
+  var emp=t.assignee?getP(t.assignee):null;
+  var ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'미배정';
+  var dueT=t.due?dL(t.due):null;
+  var prog=t.progress||0;
+  var cmt=(taskComments[t.id]||[]).length;
+  var sel=_boardSelTaskId===t.id;
+  var bgSel=sel?'background:#f3f4f6;border-left:2px solid #534AB7':'border-left:2px solid transparent';
+  return '<div onclick="selectBoardTask(\''+t.id+'\')" style="padding:7px 8px;cursor:pointer;border-radius:5px;margin-bottom:3px;'+bgSel+';display:flex;flex-direction:column;gap:2px">'+
+    '<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+(color||ec)+';flex-shrink:0"></span>'+
+    '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+
+    (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0">'+cmt+'</span>':'')+
+    '</div>'+
+    '<div style="font-size:10.5px;color:var(--text3);margin-left:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
+    '<span style="background:'+ec+'18;color:'+ec+';padding:1px 6px;border-radius:8px;font-weight:700">'+esc(en)+'</span>'+
+    (dueT?'<span style="color:'+(dueT.cls==='tag-red'||dueT.cls==='tag-orange'?'#ef4444':'var(--text3)')+'">'+dueT.text+'</span>':'')+
+    (prog>0?'<span style="color:var(--text3)">'+prog+'%</span>':'')+
+    '</div></div>';
+}
+function _renderBoardTaskList(){
+  var f=_boardFiltered();
+  if(!f.length) return '<div style="text-align:center;padding:30px 14px;color:var(--text3);font-size:12px">표시할 업무가 없습니다</div>';
+  var notDone=f.filter(function(t){return !isDoneTask(t);});
+  var done=f.filter(isDoneTask);
+  var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));});
+  var unassigned=notDone.filter(isUnassignedTask);
+  var active=notDone.filter(function(t){return !urgent.includes(t)&&!unassigned.includes(t);});
+  function section(label,list,color,collapsed){
+    if(!list.length)return '';
+    return '<details '+(collapsed?'':'open')+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--text2);padding:4px 0;letter-spacing:.3px;list-style:none">'+label+' <span style="color:var(--text3);font-weight:600">('+list.length+')</span></summary><div style="margin-top:4px">'+list.map(function(t){return _renderBoardTaskItem(t,color);}).join('')+'</div></details>';
+  }
+  var html='';
+  if(boardFilter==='unassigned'){
+    html+=unassigned.map(function(t){return _renderBoardTaskItem(t,'#9ca3af');}).join('');
+  } else if(boardFilter==='done'){
+    html+=done.map(function(t){return _renderBoardTaskItem(t,'#10b981');}).join('');
+  } else if(boardFilter==='active'){
+    html+=section('🚨 긴급',urgent,'#ef4444');
+    html+=section('📋 진행 중',active,'#3b82f6');
+  } else {
+    html+=section('🚨 긴급',urgent,'#ef4444');
+    html+=section('📋 진행 중',active,'#3b82f6');
+    html+=section('🚫 미배정',unassigned,'#9ca3af');
+    html+=section('✅ 완료',done,'#10b981',true);
+  }
+  return html;
+}
+function _renderBoardEmpList(){
+  var emps=ALL.slice();
+  var html='';
+  emps.forEach(function(e){
+    var et=tasks.filter(function(t){return t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0);});
+    if(_boardSearch) et=et.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0;});
+    var notDone=et.filter(function(t){return !isDoneTask(t);}),done=et.filter(isDoneTask);
+    var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));}).length;
+    var sel=_boardSelEmpId===e.id;
+    var bgSel=sel?'background:#f3f4f6;border-left:2px solid #534AB7':'border-left:2px solid transparent';
+    html+='<div onclick="selectBoardEmp(\''+e.id+'\')" style="padding:8px 8px;cursor:pointer;border-radius:5px;margin-bottom:3px;'+bgSel+';display:flex;align-items:center;gap:8px">'+
+      '<div style="width:30px;height:30px;border-radius:8px;background:'+e.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">'+e.initial+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:var(--text)">'+esc(e.name)+'</div>'+
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:1px">'+notDone.length+' 진행중 · '+done.length+' 완료</div></div>'+
+      (urgent>0?'<span style="background:#fef2f2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 6px;border-radius:9px;flex-shrink:0">🚨 '+urgent+'</span>':'')+
+      '</div>';
+  });
+  // Unassigned section
+  var un=tasks.filter(isUnassignedTask);
+  if(_boardSearch) un=un.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0;});
+  if(un.length){
+    var sel=_boardSelEmpId==='_unassigned';
+    var bgSel=sel?'background:#f3f4f6;border-left:2px solid #534AB7':'border-left:2px solid transparent';
+    html+='<div onclick="selectBoardEmp(\'_unassigned\')" style="padding:8px;cursor:pointer;border-radius:5px;margin-top:8px;border-top:1px dashed var(--border);'+bgSel+';display:flex;align-items:center;gap:8px">'+
+      '<div style="width:30px;height:30px;border-radius:8px;background:#9ca3af;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">?</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;color:var(--text2)">미배정</div>'+
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:1px">'+un.length+'개 업무</div></div></div>';
+  }
+  return html;
+}
+function selectBoardTask(taskId){_boardSelTaskId=taskId;renderBoardSidebar();renderBoardTaskDetail(taskId);}
+function selectBoardEmp(empId){_boardSelEmpId=empId;renderBoardSidebar();renderBoardEmpDetail(empId);}
+function renderBoardDetailEmpty(msg){
+  var d=document.getElementById('boardDetail');if(!d)return;
+  d.innerHTML='<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:14px;font-weight:600">'+esc(msg||'')+'</div></div>';
+}
+function renderBoardTaskDetail(taskId){
+  var d=document.getElementById('boardDetail');if(!d)return;
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t){renderBoardDetailEmpty('업무를 찾을 수 없습니다');return;}
+  var emp=t.assignee?getP(t.assignee):null;
+  var ec=emp?emp.color:'#9ca3af';
+  var dueT=t.due?dL(t.due):null;
+  var prog=t.progress||0;
+  var cmts=taskComments[t.id]||[];
+  var html='';
+  html+='<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">';
+  html+='<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
+  if(t.priority==='high')html+='<span style="background:#fef2f2;color:#991b1b;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">🚨 긴급</span>';
+  if(emp)html+='<span style="background:'+ec+'18;color:'+ec+';padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">'+esc(emp.name)+'</span>';
+  else html+='<span style="background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">미배정</span>';
+  if(dueT)html+='<span class="tag '+dueT.cls+'" style="font-size:11px">📅 '+t.due+' ('+dueT.text+')</span>';
+  if(prog>0)html+='<span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">'+prog+'%</span>';
+  html+='</div>';
+  html+='<h2 style="font-size:18px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+'</h2></div>';
+  html+='<div style="display:flex;gap:6px;flex-shrink:0">';
+  html+='<button onclick="qTog(\''+t.id+'\',event)" style="padding:6px 12px;background:'+(isDoneTask(t)?'#10b981':'#fff')+';color:'+(isDoneTask(t)?'#fff':'#374151')+';border:1px solid '+(isDoneTask(t)?'#10b981':'var(--border)')+';border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">'+(isDoneTask(t)?'✓ 완료됨':'완료')+'</button>';
+  html+='<button onclick="openTaskEdit(\''+t.id+'\')" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✎ 편집</button>';
+  html+='</div></div>';
+  if(prog>0){
+    html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
+  }
+  if(t.note){
+    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
+  }
+  if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
+    html+=t.checklist.map(function(c){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'"><span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
+    html+='</div>';
+  }
+  if(t.files&&t.files.length){
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">📎 첨부파일</div>'+renderTaskFiles(t)+'</div>';
+  }
+  // Comments
+  html+='<div style="border-top:1px solid var(--border);padding-top:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:8px">💬 댓글 '+(cmts.length?'('+cmts.length+')':'')+'</div>';
+  if(cmts.length){
+    html+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'+cmts.map(function(c){var au=getP(c.author);var aColor=au?au.color:'#9ca3af',aName=au?au.name:c.author||'?';var dt=c.date?(typeof c.date==='string'?c.date:new Date(c.date).toLocaleString('ko-KR')):'';return '<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 10px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:3px"><span style="background:'+aColor+';color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px">'+esc(aName)+'</span><span style="font-size:10px;color:var(--text3)">'+esc(dt)+'</span></div><div style="font-size:13px;color:var(--text)">'+esc(c.text||'')+'</div></div>';}).join('')+'</div>';
+  }
+  html+='<div style="display:flex;gap:6px"><textarea id="boardCmtInp" placeholder="댓글 입력..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:none;height:60px"></textarea><button onclick="_boardSendCmt(\''+t.id+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">전송</button></div></div>';
+  d.innerHTML=html;
+}
+function _boardSendCmt(taskId){
+  var inp=document.getElementById('boardCmtInp');if(!inp)return;
+  var text=(inp.value||'').trim();if(!text||!CU)return;
+  if(!taskComments[taskId])taskComments[taskId]=[];
+  var nc={id:uid(),author:CU.id,text:text,date:new Date().toISOString()};
+  taskComments[taskId].push(nc);
+  sv('tm_tc',taskComments);syncTcToSB(taskId,nc);
+  var ct=tasks.find(function(t){return t.id===taskId;});
+  if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
+  inp.value='';renderBoardTaskDetail(taskId);renderBoardSidebar();
+}
+function renderBoardEmpDetail(empId){
+  var d=document.getElementById('boardDetail');if(!d)return;
+  if(empId==='_unassigned'){
+    var un=tasks.filter(isUnassignedTask);
+    var html='<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px"><div style="width:44px;height:44px;border-radius:11px;background:#9ca3af;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">?</div><div><div style="font-size:18px;font-weight:800">미배정 업무</div><div style="font-size:12px;color:var(--text3)">담당자가 지정되지 않은 업무 '+un.length+'개</div></div></div>';
+    html+='<div style="display:flex;flex-direction:column;gap:8px">'+un.map(_boardEmpTaskCard).join('')+'</div>';
+    d.innerHTML=html||renderBoardDetailEmpty('업무 없음');
+    return;
+  }
+  var emp=getP(empId);if(!emp){renderBoardDetailEmpty('직원 정보 없음');return;}
+  var et=tasks.filter(function(t){return t.assignee===empId||(t.assignees&&t.assignees.indexOf(empId)>=0);});
+  var notDone=et.filter(function(t){return !isDoneTask(t);}),done=et.filter(isDoneTask);
+  var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));});
+  var active=notDone.filter(function(t){return !urgent.includes(t);});
+  var avgProg=et.length?Math.round(et.reduce(function(s,t){return s+(t.progress||0);},0)/et.length):0;
+  var html='';
+  html+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">';
+  html+='<div style="width:48px;height:48px;border-radius:12px;background:'+emp.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px">'+emp.initial+'</div>';
+  html+='<div><div style="font-size:18px;font-weight:800;color:'+emp.color+'">'+esc(emp.name)+'</div><div style="font-size:12px;color:var(--text3)">총 '+et.length+'개 업무</div></div></div>';
+  // Stats cards
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">';
+  html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#3b82f6">'+notDone.length+'</div><div style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:700">진행중</div></div>';
+  html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#10b981">'+done.length+'</div><div style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:700">완료</div></div>';
+  html+='<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:'+emp.color+'">'+avgProg+'%</div><div style="font-size:11px;color:var(--text3);margin-top:2px;font-weight:700">평균 진행률</div></div>';
+  html+='</div>';
+  function sec(label,list){
+    if(!list.length)return '';
+    return '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:8px">'+label+' ('+list.length+')</div><div style="display:flex;flex-direction:column;gap:6px">'+list.map(_boardEmpTaskCard).join('')+'</div></div>';
+  }
+  html+=sec('🚨 긴급',urgent);
+  html+=sec('📋 진행 중',active);
+  html+=sec('✅ 완료',done);
+  if(!et.length) html+='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">등록된 업무가 없습니다</div>';
+  d.innerHTML=html;
+}
+function _boardEmpTaskCard(t){
+  var dueT=t.due?dL(t.due):null;
+  var prog=t.progress||0;
+  var cmt=(taskComments[t.id]||[]).length;
+  var emp=t.assignee?getP(t.assignee):null;
+  var ec=emp?emp.color:'#9ca3af';
+  return '<div onclick="selectBoardTask(\''+t.id+'\');_setBoardView(\'task\')" style="background:#fff;border:1px solid var(--border);border-left:3px solid '+ec+';border-radius:8px;padding:10px 12px;cursor:pointer">'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="flex:1;font-size:13px;font-weight:700;color:var(--text);'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+
+    (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">'+cmt+'</span>':'')+'</div>'+
+    '<div style="display:flex;gap:6px;font-size:11px;color:var(--text3);align-items:center;flex-wrap:wrap">'+
+    (dueT?'<span class="tag '+dueT.cls+'" style="font-size:10px">📅 '+dueT.text+'</span>':'')+
+    (prog>0?'<span>진행률 '+prog+'%</span>':'')+'</div>'+
+    (prog>0?'<div style="margin-top:6px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div>':'')+
+    '</div>';
+}
+function _renderBoardLegacyAll(){
+  // Compatibility: legacy single-list render (kept for any external caller, no-op now)
+  var grid=document.getElementById('boardGrid');if(grid)grid.innerHTML='';
   let f;
   if(boardFilter==='unassigned'){
     f=tasks.filter(isUnassignedTask);
@@ -2178,7 +2441,7 @@ function renderBoard(){
     if(boardFilter==='active')f=f.filter(t=>!isDoneTask(t)&&t.assignee);
     else if(boardFilter==='done')f=f.filter(isDoneTask);
   }
-  if(boardFilter==='done'&&f.length){renderBatchBar(grid,f.map(function(t){return t.id;}),'board');}
+  if(boardFilter==='done'&&f.length){var grid2=document.getElementById('boardGrid');if(grid2)renderBatchBar(grid2,f.map(function(t){return t.id;}),'board');}
   boardView==='task'?renderBoardTask(f):renderBoardEmp(f);
 }
 function renderBoardEmp(f){
