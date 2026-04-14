@@ -2116,7 +2116,8 @@ function _homeVisibleTasks(){
   return tasks.filter(function(t){return CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));});
 }
 function _homeGotoBoardTask(taskId){
-  boardView='task';_boardSelTaskId=taskId;showPage('board');
+  // 미배정/필터 상관없이 항상 찾을 수 있도록 필터를 '전체'로 리셋
+  boardView='task';boardFilter='all';_boardSelTaskId=taskId;showPage('board');
 }
 function _homeGotoBoardFilter(f){
   boardFilter=f;_boardSelTaskId=null;showPage('board');
@@ -2341,6 +2342,33 @@ var isUnassignedTask = isUnassigned;
 function isDoneTask(t){
   return t.done===true || t.progress===100 || t.progress==='100' || t.progress==='완료';
 }
+function canDeleteTask(t){
+  if(!CU||!t)return false;
+  if(!isDoneTask(t))return false;
+  if(isManagerCU())return true;
+  if(t.assignee===CU.id)return true;
+  if(t.assignees&&t.assignees.indexOf(CU.id)>=0)return true;
+  return false;
+}
+function deleteTaskFull(taskId){
+  var t=tasks.find(function(x){return String(x.id)===String(taskId);});
+  if(!t){toast('업무를 찾을 수 없습니다','#ef4444');return;}
+  if(!canDeleteTask(t)){toast('삭제 권한이 없습니다','#ef4444');return;}
+  if(!confirm('이 업무를 삭제할까요? 되돌릴 수 없습니다.'))return;
+  // FK 우선: 댓글 먼저 삭제
+  sbDel('staff_task_comments','task_id=eq.'+encodeURIComponent(t.id))
+    .catch(function(e){console.error('tc del err',e);})
+    .then(function(){return sbDel('staff_tasks','id=eq.'+encodeURIComponent(t.id));})
+    .then(function(){
+      tasks=tasks.filter(function(x){return String(x.id)!==String(taskId);});
+      delete taskComments[taskId];
+      svTasks();sv('tm_tc',taskComments);
+      _boardSelTaskId=null;_empSelTaskId=null;
+      toast('업무가 삭제되었습니다','#10b981');
+      refreshAll();
+    })
+    .catch(function(e){console.error('task del err',e);toast('삭제 실패: '+(e&&e.message||e),'#ef4444');});
+}
 function isNewTask(t){
   var c=t.created_at||t.createdAt;
   if(!c)return false;
@@ -2513,7 +2541,17 @@ function _renderBoardEmpList(){
   }
   return html;
 }
-function selectBoardTask(taskId){_boardSelTaskId=taskId;renderBoardSidebar();renderBoardTaskDetail(taskId);}
+function selectBoardTask(taskId){
+  try{
+    _boardSelTaskId=taskId;
+    renderBoardSidebar();
+    renderBoardTaskDetail(taskId);
+  }catch(err){
+    console.error('[selectBoardTask] err',err,'taskId:',taskId);
+    var d=document.getElementById('boardDetail');
+    if(d)d.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">상세 로드 실패: '+esc(String(err&&err.message||err))+'</div>';
+  }
+}
 function selectBoardEmp(empId){_boardSelEmpId=empId;renderBoardSidebar();renderBoardEmpDetail(empId);}
 function renderBoardDetailEmpty(msg){
   var d=document.getElementById('boardDetail');if(!d)return;
@@ -2521,7 +2559,12 @@ function renderBoardDetailEmpty(msg){
 }
 function renderBoardTaskDetail(taskId){
   var d=document.getElementById('boardDetail');if(!d)return;
-  var t=tasks.find(function(x){return x.id===taskId;});if(!t){renderBoardDetailEmpty('업무를 찾을 수 없습니다');return;}
+  // String 비교로 bigint/uuid 양쪽 모두 매칭
+  var t=tasks.find(function(x){return String(x.id)===String(taskId);});
+  if(!t){
+    console.warn('[renderBoardTaskDetail] task not found, taskId:',taskId,'tasks length:',tasks.length);
+    renderBoardDetailEmpty('업무를 찾을 수 없습니다 (id: '+taskId+')');return;
+  }
   var emp=t.assignee?getP(t.assignee):null;
   var ec=emp?emp.color:'#9ca3af';
   var dueT=t.due?dL(t.due):null;
@@ -2539,6 +2582,9 @@ function renderBoardTaskDetail(taskId){
   html+='<h2 style="font-size:18px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2></div>';
   html+='<div style="display:flex;gap:6px;flex-shrink:0">';
   html+='<button onclick="qTog(\''+t.id+'\',event)" style="padding:6px 12px;background:'+(isDoneTask(t)?'#10b981':'#fff')+';color:'+(isDoneTask(t)?'#fff':'#374151')+';border:1px solid '+(isDoneTask(t)?'#10b981':'var(--border)')+';border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">'+(isDoneTask(t)?'✓ 완료됨':'완료')+'</button>';
+  if(canDeleteTask(t)){
+    html+='<button onclick="deleteTaskFull(\''+t.id+'\')" onmouseenter="this.style.background=\'#FCEBEB\'" onmouseleave="this.style.background=\'transparent\'" style="padding:6px 12px;background:transparent;color:#E24B4A;border:1px solid #E24B4A;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑 삭제</button>';
+  }
   html+='<button onclick="openTaskEdit(\''+t.id+'\')" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✎ 편집</button>';
   html+='</div></div>';
   if(prog>0){
@@ -2944,6 +2990,9 @@ function renderEmpDetail(taskId){
   html+='<h2 style="font-size:18px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2></div>';
   html+='<div style="display:flex;gap:6px;flex-shrink:0">';
   html+='<button onclick="qTog(\''+t.id+'\',event)" style="padding:6px 12px;background:'+(isDoneTask(t)?'#10b981':'#fff')+';color:'+(isDoneTask(t)?'#fff':'#374151')+';border:1px solid '+(isDoneTask(t)?'#10b981':'var(--border)')+';border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">'+(isDoneTask(t)?'✓ 완료됨':'완료')+'</button>';
+  if(canDeleteTask(t)){
+    html+='<button onclick="deleteTaskFull(\''+t.id+'\')" onmouseenter="this.style.background=\'#FCEBEB\'" onmouseleave="this.style.background=\'transparent\'" style="padding:6px 12px;background:transparent;color:#E24B4A;border:1px solid #E24B4A;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🗑 삭제</button>';
+  }
   html+='<button onclick="openTaskEdit(\''+t.id+'\')" style="padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✎ 편집</button>';
   html+='</div></div>';
   if(prog>0){
