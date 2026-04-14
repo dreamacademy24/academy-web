@@ -2116,8 +2116,18 @@ function _homeVisibleTasks(){
   return tasks.filter(function(t){return CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));});
 }
 function _homeGotoBoardTask(taskId){
-  // 미배정/필터 상관없이 항상 찾을 수 있도록 필터를 '전체'로 리셋
-  boardView='task';boardFilter='all';_boardSelTaskId=taskId;showPage('board');
+  // 미배정 업무는 'unassigned' 필터로, 그 외는 'all'로 — 좌측 목록에 항상 표시되도록
+  var t=tasks.find(function(x){return String(x.id)===String(taskId);});
+  boardView='task';
+  boardFilter=(t&&isUnassigned(t))?'unassigned':'all';
+  _boardSelTaskId=taskId;
+  showPage('board');
+  // 렌더링 직후 재호출로 사이드패널 확실히 열기 (타이밍 안전장치)
+  setTimeout(function(){
+    if(_boardSelTaskId===taskId){
+      try{ renderBoardTaskDetail(taskId); }catch(e){ console.error('[_homeGotoBoardTask] detail err',e); }
+    }
+  },100);
 }
 function _homeGotoBoardFilter(f){
   boardFilter=f;_boardSelTaskId=null;showPage('board');
@@ -2511,11 +2521,15 @@ function _renderBoardTaskList(){
   return html;
 }
 function _renderBoardEmpList(){
-  // Manager만 전체 직원 노출, 그 외는 본인만
-  var emps=isManagerCU()?ALL.slice():(CU?[getP(CU.id)].filter(function(x){return x;}):[]);
+  // 모든 직원에게 전체 직원 목록 노출 (읽기 허용, 편집/삭제는 기존 권한 체크 유지)
+  var emps=ALL.slice();
   var html='';
   emps.forEach(function(e){
     var et=tasks.filter(function(t){return t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0);});
+    // 비관리자가 타인 업무 카운트 볼 때: shared만 집계
+    if(!isManagerCU() && CU && CU.id!==e.id){
+      et=et.filter(function(t){return t.shared;});
+    }
     if(_boardSearch) et=et.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0;});
     var notDone=et.filter(function(t){return !isDoneTask(t);}),done=et.filter(isDoneTask);
     var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));}).length;
@@ -2551,6 +2565,11 @@ function selectBoardTask(taskId){
     var d=document.getElementById('boardDetail');
     if(d)d.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">상세 로드 실패: '+esc(String(err&&err.message||err))+'</div>';
   }
+}
+function _boardGotoTaskFromEmp(taskId){
+  // 직원별 뷰 → 업무별 뷰 + 선택. 순서: view 먼저, 그다음 task 선택 (덮어쓰기 방지)
+  boardView='task';_boardSelEmpId=null;_boardSelTaskId=taskId;
+  renderBoard();
 }
 function selectBoardEmp(empId){_boardSelEmpId=empId;renderBoardSidebar();renderBoardEmpDetail(empId);}
 function renderBoardDetailEmpty(msg){
@@ -2631,6 +2650,10 @@ function renderBoardEmpDetail(empId){
   }
   var emp=getP(empId);if(!emp){renderBoardDetailEmpty('직원 정보 없음');return;}
   var et=tasks.filter(function(t){return t.assignee===empId||(t.assignees&&t.assignees.indexOf(empId)>=0);});
+  // 비관리자가 타인 업무 보는 경우: shared 업무만 노출 (읽기 허용, 비공개 업무는 숨김)
+  if(!isManagerCU() && CU && CU.id!==empId){
+    et=et.filter(function(t){return t.shared;});
+  }
   var notDone=et.filter(function(t){return !isDoneTask(t);}),done=et.filter(isDoneTask);
   var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));});
   var active=notDone.filter(function(t){return !urgent.includes(t);});
@@ -2661,7 +2684,7 @@ function _boardEmpTaskCard(t){
   var cmt=(taskComments[t.id]||[]).length;
   var emp=t.assignee?getP(t.assignee):null;
   var ec=emp?emp.color:'#9ca3af';
-  return '<div onclick="selectBoardTask(\''+t.id+'\');_setBoardView(\'task\')" style="background:#fff;border:1px solid var(--border);border-left:3px solid '+ec+';border-radius:8px;padding:10px 12px;cursor:pointer">'+
+  return '<div onclick="_boardGotoTaskFromEmp(\''+t.id+'\')" style="background:#fff;border:1px solid var(--border);border-left:3px solid '+ec+';border-radius:8px;padding:10px 12px;cursor:pointer">'+
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="flex:1;font-size:13px;font-weight:700;color:var(--text);'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+newBadgeHtml(t)+'</span>'+
     (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">'+cmt+'</span>':'')+'</div>'+
     '<div style="display:flex;gap:6px;font-size:11px;color:var(--text3);align-items:center;flex-wrap:wrap">'+
