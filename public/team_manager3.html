@@ -1301,6 +1301,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <input type="file" id="tmFI" multiple style="display:none" onchange="handleTMF(event)" />
       <div class="file-list" id="tmFL"></div>
     </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <div style="position:relative;width:36px;height:20px;flex-shrink:0;cursor:pointer">
+        <input type="checkbox" id="tmUrgent" onchange="var sp=document.getElementById('tmUrgentSpan');sp.style.background=this.checked?'#ef4444':'#cbd5e1';sp.querySelector('i').style.transform=this.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2" />
+        <span id="tmUrgentSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
+      </div>
+      <span style="font-size:13px;font-weight:600;color:var(--text2)">🚨 긴급 업무</span>
+      <span style="font-size:11px;color:var(--text3)">ON 시 긴급 표시</span>
+    </div>
     <div class="form-group" id="tmShareRow" style="display:flex;align-items:center;gap:10px">
       <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
         <input type="checkbox" id="tmShare" style="opacity:0;width:0;height:0" />
@@ -1573,8 +1581,8 @@ async function sbUpsert(table,body){
 }
 
 // ── Supabase sync helpers for tasks & projects ──
-function taskToRow(t){return{id:t.id,title:t.title||'',assignee:t.assignee||'',assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||'',note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,proj_id:t.projId||null,idx:t.idx||null};}
-function rowToTask(r){return{id:r.id,title:r.title||'',assignee:r.assignee||'',assignees:tryParse(r.assignees,[]),due:r.due||'',createdAt:r.created_at||'',note:r.note||'',done:!!r.done,files:tryParse(r.files,[]),checklist:tryParse(r.checklist,[]),progress:r.progress||0,shared:!!r.shared,projId:r.proj_id||null,idx:r.idx||null};}
+function taskToRow(t){return{id:t.id,title:t.title||'',assignee:t.assignee||null,assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||new Date().toISOString(),note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,proj_id:t.projId||null,idx:t.idx||null,priority:t.priority||'normal'};}
+function rowToTask(r){return{id:r.id,title:r.title||'',assignee:r.assignee||'',assignees:tryParse(r.assignees,[]),due:r.due||'',createdAt:r.created_at||'',note:r.note||'',done:!!r.done,files:tryParse(r.files,[]),checklist:tryParse(r.checklist,[]),progress:r.progress||0,shared:!!r.shared,projId:r.proj_id||null,idx:r.idx||null,priority:r.priority||'normal'};}
 function projToRow(p){return{id:p.id,name:p.name||'',description:p.desc||'',color:p.color||'#4361ee',members:JSON.stringify(p.members||[]),due:p.due||null,created_at:p.createdAt||'',progress:p.progress||0};}
 function rowToProj(r){return{id:r.id,name:r.name||'',desc:r.description||'',color:r.color||'#4361ee',members:tryParse(r.members,[]),due:r.due||'',createdAt:r.created_at||'',progress:r.progress||0};}
 function tryParse(v,d){if(!v)return d;if(typeof v!=='string')return v;try{return JSON.parse(v);}catch(e){return d;}}
@@ -2170,13 +2178,16 @@ function appendKanbanCard(container,t,showAss){
   const card=document.createElement('div');card.className='task-card'+(t.done?' done':'');card.dataset.tid=t.id;
   card.onclick=function(e){if(e.target.classList.contains('tc-check')||e.target.classList.contains('tc-check-mark')||e.target.classList.contains('tc-edit')||e.target.classList.contains('cmt-btn')||e.target.classList.contains('batch-cb'))return;openTaskCmt(t.id);};
   const batchCb=boardFilter==='done'?'<input type="checkbox" class="batch-cb" data-tid="'+t.id+'" onclick="event.stopPropagation();batchToggle(\''+t.id+'\')" />':'';
+  const urgentIcon=t.priority==='high'?'🚨 ':'';
   const idxSpan=t.idx?'<span style="color:var(--text3);font-size:11px">('+t.idx+') </span>':'';
+  const cmtBadge=cmtCount>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px">'+cmtCount+'</span>':'';
   const assTag=(showAss&&en)?'<span class="tag" style="background:'+ec+'18;color:'+ec+';font-size:10.5px">'+en+'</span>':'';
   const dueTag=dl?'<span class="tag '+dl.cls+'" style="font-size:10.5px">'+dl.text+'</span>':'';
   const fileTag=(t.files&&t.files.length)?'<span class="tag" style="font-size:10.5px">📎 '+t.files.length+'</span>':'';
+  var _createdShort='';if(t.createdAt){try{var _dpk=new Date(t.createdAt);if(!isNaN(_dpk))_createdShort='작성 '+(_dpk.getMonth()+1)+'/'+_dpk.getDate();}catch(e){_createdShort=t.createdAt;}}
   const progBar=prog>0?'<div class="tc-prog"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div></div>':'';
-  card.innerHTML=batchCb+'<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+idxSpan+esc(t.title)+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
-    '<div class="tc-tags">'+assTag+(t.createdAt?'<span class="tag" style="font-size:10.5px">'+t.createdAt+'</span>':'')+dueTag+fileTag+'</div>'+
+  card.innerHTML=batchCb+'<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+urgentIcon+idxSpan+esc(t.title)+cmtBadge+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
+    '<div class="tc-tags">'+assTag+(_createdShort?'<span class="tag" style="font-size:10.5px;color:#9ca3af">'+_createdShort+'</span>':'')+dueTag+fileTag+'</div>'+
     progBar+
     '<div class="tc-footer">'+(!t.assignee&&CU?'<button class="btn btn-sm" onclick="event.stopPropagation();claimTask(\''+t.id+'\')" style="padding:2px 8px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer">내 업무로</button>':'')+'<button class="pomo-btn" onclick="event.stopPropagation();startPomo(\''+t.id+'\')" title="포모도로 시작">⏱</button><button class="cmt-btn'+(cmtCount?' has-cmt':'')+'" onclick="openTaskCmt(\''+t.id+'\')">💬 '+(cmtCount||'댓글')+'</button></div>';
   container.appendChild(card);
@@ -2203,13 +2214,15 @@ function renderBoardTask(f){
     if(isDone){const cbd=document.createElement('div');cbd.style.cssText='display:flex;align-items:center';cbd.innerHTML='<input type="checkbox" class="batch-cb" data-tid="'+t.id+'" onclick="event.stopPropagation();batchToggle(\''+t.id+'\')" />';row.appendChild(cbd);}
     const ck=document.createElement('div');ck.className='tc-check';ck.innerHTML='<span class="tc-check-mark">✓</span>';ck.onclick=function(e){qTog(t.id,e);};row.appendChild(ck);
     const nameDiv=document.createElement('div');
-    const titleEl=document.createElement('div');titleEl.style.cssText='font-size:13px;font-weight:600;'+(t.done?'text-decoration:line-through;color:var(--text3);':'');
-    if(t.idx)titleEl.innerHTML='<span style="color:var(--text3);font-size:11px;margin-right:3px">('+esc(t.idx)+')</span>'+esc(t.title);
-    else titleEl.textContent=t.title;
+    const titleEl=document.createElement('div');titleEl.style.cssText='font-size:13px;font-weight:600;display:flex;align-items:center;gap:4px;'+(t.done?'text-decoration:line-through;color:var(--text3);':'');
+    var _titleHtml=(t.priority==='high'?'<span style="font-size:13px">🚨</span>':'')+(t.idx?'<span style="color:var(--text3);font-size:11px">('+esc(t.idx)+')</span>':'')+('<span>'+esc(t.title)+'</span>');
+    if(cmtCount>0)_titleHtml+='<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">'+cmtCount+'</span>';
+    titleEl.innerHTML=_titleHtml;
     nameDiv.appendChild(titleEl);
     var tProj=t.projId?projects.find(function(p){return p.id===t.projId;}):null;
     if(tProj){const pBadge=document.createElement('span');pBadge.style.cssText='display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-top:2px;font-weight:600;background:'+tProj.color+'22;color:'+tProj.color+';border:1px solid '+tProj.color+'44';pBadge.textContent='🚀 '+tProj.name;nameDiv.appendChild(pBadge);}
     if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
+    if(t.createdAt){const cDate=document.createElement('div');cDate.style.cssText='font-size:11px;color:#9ca3af;margin-top:2px';var _cd=t.createdAt;try{var _dp=new Date(_cd);if(!isNaN(_dp))_cd=(_dp.getMonth()+1)+'/'+_dp.getDate();}catch(e){}cDate.textContent='작성 '+_cd;nameDiv.appendChild(cDate);}
     row.appendChild(nameDiv);
     const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;';assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';row.appendChild(assDiv);
     const dueDiv=document.createElement('div');dueDiv.style.cssText='text-align:center;';
@@ -2760,7 +2773,7 @@ function renderEmpList(empId){
     const ck=document.createElement('div');ck.className='et-check';ck.innerHTML='<span class="et-checkmark">✓</span>';
     ck.onclick=function(e){e.stopPropagation();qTog(t.id,e);};
     const nameDiv=document.createElement('div');nameDiv.className='emp-task-title';
-    nameDiv.innerHTML=(t.idx?'<span style="color:var(--text3);font-size:11px;margin-right:3px">('+esc(t.idx)+')</span>':'')+esc(t.title);
+    nameDiv.innerHTML=(t.priority==='high'?'<span style="font-size:13px;margin-right:2px">🚨</span>':'')+(t.idx?'<span style="color:var(--text3);font-size:11px;margin-right:3px">('+esc(t.idx)+')</span>':'')+esc(t.title)+(cmtCount>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px;margin-left:4px">'+cmtCount+'</span>':'');
     const bdg=document.createElement('div');bdg.className='et-badges';
     bdg.innerHTML='<span class="badge '+(t.shared?'badge-green':'badge-amber')+'">'+(t.shared?'📋 공유':'🔒 개인')+'</span>';
     if(dl)bdg.innerHTML+='<span class="tag '+dl.cls+'" style="font-size:10.5px">'+dl.text+'</span>';
@@ -3148,7 +3161,7 @@ function sendInlineCmt(taskId){
   taskComments[taskId].push(_nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,_nc);inp.value='';inp.style.height='auto';
   var _ct=tasks.find(function(t){return t.id===taskId;});
-  if(_ct&&_ct.assignee)createNotif(_ct.assignee,'task_comment',taskId,CU.name+'님이 "'+(_ct.title||'업무').slice(0,20)+'"에 댓글을 남겼습니다');
+  if(_ct){var _cmtMsg=CU.name+'님이 "'+(_ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets=(_ct.assignees&&_ct.assignees.length?_ct.assignees:[_ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(_cmtTargets.length)createNotifMultiple(_cmtTargets,'task_comment',taskId,_cmtMsg);}
   const sec=document.getElementById('tcmt-'+taskId);if(sec)renderInlineCmt(sec,taskId);
   renderEmpList(curEmpId);
   if(document.getElementById('taskCmtModal').classList.contains('open')&&curCmtTaskId===taskId)renderTaskCmtBody(taskId);
@@ -3228,7 +3241,7 @@ function sendTaskCmt(){
   taskComments[curCmtTaskId].push(_nc2);
   sv('tm_tc',taskComments);syncTcToSB(curCmtTaskId,_nc2);inp.value='';inp.style.height='auto';
   var _ct2=tasks.find(function(t){return t.id===curCmtTaskId;});
-  if(_ct2&&_ct2.assignee)createNotif(_ct2.assignee,'task_comment',curCmtTaskId,CU.name+'님이 "'+(_ct2.title||'업무').slice(0,20)+'"에 댓글을 남겼습니다');
+  if(_ct2){var _cmtMsg2=CU.name+'님이 "'+(_ct2.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets2=(_ct2.assignees&&_ct2.assignees.length?_ct2.assignees:[_ct2.assignee]).filter(function(id){return id&&id!==CU.id;});if(_cmtTargets2.length)createNotifMultiple(_cmtTargets2,'task_comment',curCmtTaskId,_cmtMsg2);}
   renderTaskCmtBody(curCmtTaskId);refreshAll();
 }
 function delTaskCmt(taskId,cmtId){
@@ -3298,6 +3311,7 @@ function openTaskModal(pre){
   var _tmSub=document.getElementById('tmSubToggle');_tmSub.checked=false;_tmSub.parentElement.querySelector('span').style.background='#cbd5e1';_tmSub.parentElement.querySelector('i').style.transform='translateX(0)';
   document.getElementById('tmClSection').style.display='';document.getElementById('tmSubSection').style.display='none';renderTMSubList();
   var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;_tmSh.parentElement.querySelector('span').style.background='#cbd5e1';_tmSh.parentElement.querySelector('i').style.transform='translateX(0)';
+  var _tmUrg=document.getElementById('tmUrgent');_tmUrg.checked=false;document.getElementById('tmUrgentSpan').style.background='#cbd5e1';document.getElementById('tmUrgentSpan').querySelector('i').style.transform='translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
 function openProjTaskModal(projId){openTaskModal(CU?CU.id:'');tmProjId=projId;document.getElementById('tmTitle').textContent='📋 프로젝트 업무 추가';}
@@ -3349,6 +3363,7 @@ function openTaskEdit(id){
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
   buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));
   var _tmSh2=document.getElementById('tmShare');_tmSh2.checked=!!t.shared;_tmSh2.parentElement.querySelector('span').style.background=t.shared?'var(--primary,#1a6fc4)':'#cbd5e1';_tmSh2.parentElement.querySelector('i').style.transform=t.shared?'translateX(16px)':'translateX(0)';
+  var _isHigh=t.priority==='high';var _tmUrg2=document.getElementById('tmUrgent');_tmUrg2.checked=_isHigh;document.getElementById('tmUrgentSpan').style.background=_isHigh?'#ef4444':'#cbd5e1';document.getElementById('tmUrgentSpan').querySelector('i').style.transform=_isHigh?'translateX(16px)':'translateX(0)';
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
 function buildAssignSel(sel){
@@ -3435,16 +3450,18 @@ function saveTask(){
     clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
   }
   const _tmShared=document.getElementById('tmShare').checked;
+  const _tmUrgent=document.getElementById('tmUrgent').checked;
+  const _priority=_tmUrgent?'high':'normal';
   var _prevSnapshot=null,_isNew=!editTaskId,_newTaskId=null;
   try{
     if(editTaskId){
       const t=tasks.find(function(t){return t.id===editTaskId;});
       if(t){
         _prevSnapshot=JSON.parse(JSON.stringify(t));
-        t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;
+        t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;t.priority=_priority;
       }
     } else {
-      var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null};
+      var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null,priority:_priority};
       _newTaskId=_newT.id;
       tasks.unshift(_newT);
       if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));
