@@ -1259,7 +1259,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     </div>
     <div class="form-group"><label class="form-label">업무 내용</label><input class="form-input" id="tmTit" placeholder="업무 내용" /></div>
     <div style="display:flex;gap:16px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;cursor:pointer" onclick="var c=document.getElementById('tmUrgent');c.click();">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;cursor:pointer">
         <div style="position:relative;width:36px;height:20px;flex-shrink:0">
           <input type="checkbox" id="tmUrgent" onchange="var sp=document.getElementById('tmUrgentSpan');sp.style.background=this.checked?'#ef4444':'#cbd5e1';sp.querySelector('i').style.transform=this.checked?'translateX(16px)':'translateX(0)'" style="position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2" />
           <span id="tmUrgentSpan" style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
@@ -3438,12 +3438,12 @@ function renderAssignPicker(){
   var picker=document.getElementById('tmAssPicker');if(!picker)return;
   var h='';
   var unsel=_assignSelected.size===0||(_assignSelected.size===1&&_assignSelected.has(''));
-  h+='<div onclick="toggleAssign(\'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(unsel?'background:var(--primary-l);font-weight:700':'')+'">';
+  h+='<div onclick="event.stopPropagation();toggleAssign(\'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(unsel?'background:var(--primary-l);font-weight:700':'')+'">';
   h+='<span style="width:22px;height:22px;border-radius:50%;background:var(--surface2);display:inline-flex;align-items:center;justify-content:center;font-size:10px">—</span> 미배정</div>';
   h+='<div style="border-top:1px solid var(--border);margin:6px 0"></div>';
   ALL.forEach(function(u){
     var sel=_assignSelected.has(u.id);
-    h+='<div onclick="toggleAssign(\''+u.id+'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(sel?'background:var(--primary-l);font-weight:700':'')+'">';
+    h+='<div onclick="event.stopPropagation();toggleAssign(\''+u.id+'\')" style="padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;'+(sel?'background:var(--primary-l);font-weight:700':'')+'">';
     h+='<span style="width:22px;height:22px;border-radius:50%;background:'+u.color+';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">'+u.initial+'</span>';
     h+=esc(u.name)+(sel?' ✓':'')+'</div>';
   });
