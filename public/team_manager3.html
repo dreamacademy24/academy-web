@@ -2241,7 +2241,7 @@ function renderBoardTask(f){
     row.appendChild(nameDiv);
     const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;position:relative';
     if(isUnassignedTask(t)){
-      assDiv.innerHTML='<button class="ass-pick-btn" data-tid="'+t.id+'" onclick="event.stopPropagation();toggleAssignPicker(\''+t.id+'\',this)" style="padding:3px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">+ 담당자 지정</button>';
+      assDiv.innerHTML='<button class="ass-pick-btn" data-tid="'+t.id+'" onclick="event.stopPropagation();toggleBoardAssignPicker(\''+t.id+'\',this)" style="padding:3px 10px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">+ 담당자 지정</button>';
     } else {
       assDiv.innerHTML='<div style="width:22px;height:22px;border-radius:7px;background:'+ec+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff">'+(emp?emp.initial:'?')+'</div><span style="font-size:12px;font-weight:600;color:'+ec+'">'+en+'</span>';
     }
@@ -3707,7 +3707,7 @@ function claimTask(taskId){
   if(!CU)return;var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
   t.assignee=CU.id;t.assignees=[CU.id];svTasks();syncTaskToSB(t);toast('내 업무로 배정되었습니다!');refreshAll();
 }
-function toggleAssignPicker(taskId,btn){
+function toggleBoardAssignPicker(taskId,btn){
   document.querySelectorAll('.ass-pick-menu').forEach(function(m){if(m.dataset.tid!==taskId)m.remove();});
   var existing=btn.parentNode.querySelector('.ass-pick-menu');
   if(existing){existing.remove();return;}
