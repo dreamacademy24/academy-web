@@ -9,10 +9,9 @@ const supabase = supabaseAdmin
 
 export async function GET() {
   try {
-    // 컬럼 누락 시에도 동작하도록 select '*' 사용
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('id, username, phone, email, address, children, created_at')
       .order('created_at', { ascending: false })
     if (error) {
       console.error('[/api/admin/users] profiles fetch error:', error)

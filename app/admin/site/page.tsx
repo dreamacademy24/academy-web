@@ -30,7 +30,6 @@ interface Profile {
   id: string;
   username?: string;
   name?: string;
-  full_name?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -140,7 +139,7 @@ export default function AdminPage() {
     // fallback: 직접 supabase에서 조회
     const { data } = await supabase
       .from("profiles")
-      .select("id, username, full_name, name, phone, email, address, children, created_at")
+      .select("id, username, phone, email, address, children, created_at")
       .order("created_at", { ascending: false });
     if (data) setMembers(data);
     setMemberLoading(false);
@@ -607,7 +606,7 @@ export default function AdminPage() {
                 (() => {
                   const q = memberSearch.trim().toLowerCase();
                   const filtered = q
-                    ? members.filter((m) => ((m.username || "").toLowerCase().includes(q) || (m.full_name || m.name || "").toLowerCase().includes(q)))
+                    ? members.filter((m) => ((m.username || "").toLowerCase().includes(q) || (m.name || "").toLowerCase().includes(q)))
                     : members;
                   return (
                     <table className="ntable">
@@ -627,14 +626,14 @@ export default function AdminPage() {
                         {filtered.map((m) => (
                           <tr key={m.id} style={{ cursor: "pointer" }} onClick={() => setSelMember(m)}>
                             <td>{m.username || "-"}</td>
-                            <td className="m-name">{m.full_name || m.name || "-"}</td>
+                            <td className="m-name">{m.name || m.username || "-"}</td>
                             <td className="hide-m">{maskPhone(m.phone)}</td>
                             <td className="hide-m m-email">{m.email || "-"}</td>
                             <td className="hide-m">{shortAddr(m.address)}</td>
                             <td className="hide-m">{childLabel(m.children)}</td>
                             <td className="hide-m">{formatDate(m.created_at)}</td>
                             <td onClick={(e) => e.stopPropagation()}>
-                              <button className="btn-del" onClick={() => handleDeleteMember(m.id, m.full_name || m.name || m.username || "회원")}>삭제</button>
+                              <button className="btn-del" onClick={() => handleDeleteMember(m.id, m.name || m.username || "회원")}>삭제</button>
                             </td>
                           </tr>
                         ))}
@@ -653,7 +652,7 @@ export default function AdminPage() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "10px 14px", fontSize: 14 }}>
                     <div style={{ color: "#6b7280", fontWeight: 700 }}>아이디</div><div>{selMember.username || "-"}</div>
-                    <div style={{ color: "#6b7280", fontWeight: 700 }}>이름</div><div>{selMember.full_name || selMember.name || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>이름</div><div>{selMember.name || selMember.username || "-"}</div>
                     <div style={{ color: "#6b7280", fontWeight: 700 }}>전화번호</div><div>{selMember.phone || "-"}</div>
                     <div style={{ color: "#6b7280", fontWeight: 700 }}>이메일</div><div>{selMember.email || "-"}</div>
                     <div style={{ color: "#6b7280", fontWeight: 700 }}>주소</div><div>{selMember.address || "-"}</div>
@@ -668,7 +667,7 @@ export default function AdminPage() {
                   </div>
                   <div style={{ marginTop: 22, display: "flex", justifyContent: "flex-end", gap: 8 }}>
                     <button onClick={() => setSelMember(null)} style={{ padding: "8px 18px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#6b7280", fontFamily: "inherit" }}>닫기</button>
-                    <button onClick={() => handleDeleteMember(selMember.id, selMember.full_name || selMember.name || selMember.username || "회원")} style={{ padding: "8px 18px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>회원 삭제</button>
+                    <button onClick={() => handleDeleteMember(selMember.id, selMember.name || selMember.username || "회원")} style={{ padding: "8px 18px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>회원 삭제</button>
                   </div>
                 </div>
               </div>
