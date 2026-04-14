@@ -2248,7 +2248,7 @@ function renderHomeSG(){
   const grid=document.getElementById('homeSG');grid.innerHTML='';
   const shared=tasks.filter(t=>t.shared);
   const groups=[
-    {id:'_u',name:'미배정',color:'#9ca3af',items:shared.filter(t=>!t.assignee)},
+    {id:'_u',name:'미배정',color:'#9ca3af',items:shared.filter(isUnassigned)},
     ...EMPS.map(e=>({id:e.id,name:e.name,color:e.color,items:shared.filter(t=>t.assignee===e.id)})),
     {id:'ceo',name:'CEO',color:CEO.color,items:shared.filter(t=>t.assignee==='ceo')},
   ].filter(g=>g.items.length>0);
@@ -2320,9 +2320,12 @@ function renderBatchBar(container,doneIds,scope){
 }
 
 // ── BOARD ──
-function isUnassignedTask(t){
-  return !t.assignee && (!t.assignees || t.assignees.length===0 || (t.assignees.length===1 && !t.assignees[0]));
+function isUnassigned(t){
+  var noAssignee = !t.assignee || t.assignee==='';
+  var noAssignees = !t.assignees || t.assignees.length===0 || (t.assignees.length===1 && (!t.assignees[0]||t.assignees[0]===''));
+  return noAssignee && noAssignees;
 }
+var isUnassignedTask = isUnassigned;
 function isDoneTask(t){
   return t.done===true || t.progress===100 || t.progress==='100' || t.progress==='완료';
 }
@@ -2378,14 +2381,14 @@ function renderBoard(){
   var grid=document.getElementById('boardGrid');if(grid)grid.innerHTML='';
 }
 function _boardFiltered(){
-  // Manager(ceo/jenna)는 전체, 그 외는 본인 업무만
-  var pool;
-  if(isManagerCU()) pool=tasks.slice();
-  else pool=tasks.filter(function(t){return CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));});
   var f;
   if(boardFilter==='unassigned'){
-    f=pool.filter(isUnassignedTask);
+    // 미배정은 권한 무관, 모든 task에서 isUnassigned 체크 (홈/사이드바와 동일)
+    f=tasks.filter(isUnassigned);
   } else {
+    var pool;
+    if(isManagerCU()) pool=tasks.slice();
+    else pool=tasks.filter(function(t){return CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));});
     f=pool.filter(function(t){return t.shared;});
     if(boardFilter==='active')f=f.filter(function(t){return !isDoneTask(t)&&t.assignee;});
     else if(boardFilter==='done')f=f.filter(isDoneTask);
@@ -2802,7 +2805,7 @@ function renderWeekCal(){
   const weekDs=new Set(days.map(d=>localDateStr(d)));
   const wt=vis.filter(t=>t.due&&weekDs.has(t.due));
   si.innerHTML='<div class="week-sidebar-title">📋 이번 주 직원별 업무</div>';
-  const grps=[{emp:{id:'_u',name:'미배정',color:'#9ca3af'},tasks:wt.filter(t=>!t.assignee)},...ALL.map(e=>({emp:e,tasks:wt.filter(t=>t.assignee===e.id)}))].filter(g=>g.tasks.length);
+  const grps=[{emp:{id:'_u',name:'미배정',color:'#9ca3af'},tasks:wt.filter(isUnassigned)},...ALL.map(e=>({emp:e,tasks:wt.filter(t=>t.assignee===e.id)}))].filter(g=>g.tasks.length);
   if(!grps.length)si.innerHTML+='<div class="empty-state" style="padding:12px">이번 주 마감 업무가 없습니다</div>';
   grps.forEach(function(g){
     const bl=document.createElement('div');bl.className='week-emp-block';
