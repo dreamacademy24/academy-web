@@ -1840,7 +1840,7 @@ sv('tm_pw',PASSWORDS);
 let pendingUser=null;
 
 function rebuildIdx(){let n=1;[...tasks].sort((a,b)=>a.createdAt<b.createdAt?-1:1).forEach(t=>{if(t.shared)t.idx=n++;else t.idx=null;});}
-function sortT(arr){return[...arr].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;if(!a.due)return 1;if(!b.due)return -1;return a.due<b.due?-1:1;});}
+function sortT(arr){return[...arr].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;var aH=a.priority==='high'?1:0,bH=b.priority==='high'?1:0;if(aH!==bH)return bH-aH;if(!a.due)return 1;if(!b.due)return -1;return a.due<b.due?-1:1;});}
 
 function parseLocalDate(str){
   if(!str)return null;
