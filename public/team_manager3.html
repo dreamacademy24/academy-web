@@ -1254,23 +1254,18 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       📅 작성일: <span id="tmCreated" style="font-weight:600;color:var(--text2)"></span>
     </div>
     <div class="form-group">
-      <label class="form-label">업무 내용</label>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input class="form-input" id="tmTit" placeholder="업무 내용" style="flex:1" />
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1px solid #fecaca;border-radius:6px;background:#fef2f2;font-size:12px;font-weight:600;color:#b91c1c">
-          <input type="checkbox" id="tmUrgent" style="position:relative;opacity:1;width:14px;height:14px;margin:0;cursor:pointer;accent-color:#ef4444" />
-          🚨 긴급
-        </label>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label class="form-label" style="margin:0">업무 내용</label>
+        <div style="display:flex;gap:6px">
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;padding:3px 8px;border:1px solid #fecaca;border-radius:5px;background:#fef2f2;font-size:11px;font-weight:600;color:#b91c1c">
+            <input type="checkbox" id="tmUrgent" style="width:12px;height:12px;accent-color:#ef4444" /> 🚨 긴급
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;padding:3px 8px;border:1px solid #bfdbfe;border-radius:5px;background:#eff6ff;font-size:11px;font-weight:600;color:#1e40af">
+            <input type="checkbox" id="tmShare" style="width:12px;height:12px;accent-color:#2563eb" /> 👥 팀공유
+          </label>
+        </div>
       </div>
-    </div>
-    <div style="display:flex;gap:16px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;cursor:pointer" onclick="var c=document.getElementById('tmShare');c.checked=!c.checked;var sp=c.nextElementSibling;sp.style.background=c.checked?'var(--primary,#1a6fc4)':'#cbd5e1';sp.querySelector('i').style.transform=c.checked?'translateX(16px)':'translateX(0)';">
-        <label style="position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0">
-          <input type="checkbox" id="tmShare" style="opacity:0;width:0;height:0" />
-          <span style="position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:background .2s;pointer-events:none"><i style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;display:block"></i></span>
-        </label>
-        <span style="font-size:13px;font-weight:600;color:#1e40af">👥 팀 공유</span>
-      </div>
+      <input class="form-input" id="tmTit" placeholder="업무 내용" />
     </div>
     <div class="form-group" style="position:relative"><label class="form-label">담당자</label>
       <div id="tmAssWrap" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px;cursor:pointer;background:var(--bg)" onclick="toggleAssignPicker()"></div>
@@ -3361,7 +3356,7 @@ function openTaskModal(pre){
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
   var _tmSub=document.getElementById('tmSubToggle');_tmSub.checked=false;_tmSub.parentElement.querySelector('span').style.background='#cbd5e1';_tmSub.parentElement.querySelector('i').style.transform='translateX(0)';
   document.getElementById('tmClSection').style.display='';document.getElementById('tmSubSection').style.display='none';renderTMSubList();
-  var _tmSh=document.getElementById('tmShare');_tmSh.checked=false;var _tmShSp=_tmSh.nextElementSibling;if(_tmShSp){_tmShSp.style.background='#cbd5e1';var _tmShI=_tmShSp.querySelector('i');if(_tmShI)_tmShI.style.transform='translateX(0)';}
+  var _tmSh=document.getElementById('tmShare');if(_tmSh)_tmSh.checked=false;
   var _tmUrg=document.getElementById('tmUrgent');if(_tmUrg)_tmUrg.checked=false;
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -3413,7 +3408,7 @@ function openTaskEdit(id){
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
   buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));
-  var _tmSh2=document.getElementById('tmShare');_tmSh2.checked=!!t.shared;var _tmShSp2=_tmSh2.nextElementSibling;if(_tmShSp2){_tmShSp2.style.background=t.shared?'var(--primary,#1a6fc4)':'#cbd5e1';var _tmShI2=_tmShSp2.querySelector('i');if(_tmShI2)_tmShI2.style.transform=t.shared?'translateX(16px)':'translateX(0)';}
+  var _tmSh2=document.getElementById('tmShare');if(_tmSh2)_tmSh2.checked=!!t.shared;
   var _isHigh=t.priority==='high';var _tmUrg2=document.getElementById('tmUrgent');if(_tmUrg2)_tmUrg2.checked=_isHigh;
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
