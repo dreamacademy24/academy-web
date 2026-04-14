@@ -1638,8 +1638,8 @@ function loadProjectsFromSB(){
 
 // ── Supabase sync: taskComments → staff_task_comments ──
 // NOTE: staff_task_comments.id is bigint (DB auto-generated). Do NOT send local temp id.
-function tcToRow(taskId,c){return{task_id:taskId,from_id:c.author||'',text:c.text||'',ts:c.date||''};}
-function rowToTc(r){return{id:r.id,author:r.from_id||'',text:r.text||'',date:r.ts||''};}
+function tcToRow(taskId,c){var _ts=c.date;if(_ts&&typeof _ts==='string'){var _d=new Date(_ts);_ts=isNaN(_d.getTime())?Date.now():_d.getTime();}if(!_ts)_ts=Date.now();return{task_id:taskId,from_id:c.author||'',text:c.text||'',ts:_ts};}
+function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',date:_ds};}
 function syncTcToSB(taskId,c){
   return sbUpsert('staff_task_comments',tcToRow(taskId,c)).then(function(data){
     if(Array.isArray(data)&&data.length&&data[0]&&data[0].id!=null){
@@ -3182,7 +3182,7 @@ function renderInlineCmt(container,taskId){
 function sendInlineCmt(taskId){
   const inp=document.getElementById('tci-'+taskId);if(!inp)return;const text=inp.value.trim();if(!text)return;
   if(!taskComments[taskId])taskComments[taskId]=[];
-  var _nc={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
+  var _nc={id:uid(),author:CU.id,text,date:new Date().toISOString()};
   taskComments[taskId].push(_nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,_nc);inp.value='';inp.style.height='auto';
   var _ct=tasks.find(function(t){return t.id===taskId;});
@@ -3262,7 +3262,7 @@ function renderTaskCmtBody(taskId){
 function sendTaskCmt(){
   const inp=document.getElementById('tcmInp');const text=inp.value.trim();if(!text||!curCmtTaskId)return;
   if(!taskComments[curCmtTaskId])taskComments[curCmtTaskId]=[];
-  var _nc2={id:uid(),author:CU.id,text,date:new Date().toLocaleString('ko-KR')};
+  var _nc2={id:uid(),author:CU.id,text,date:new Date().toISOString()};
   taskComments[curCmtTaskId].push(_nc2);
   sv('tm_tc',taskComments);syncTcToSB(curCmtTaskId,_nc2);inp.value='';inp.style.height='auto';
   var _ct2=tasks.find(function(t){return t.id===curCmtTaskId;});
