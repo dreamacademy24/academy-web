@@ -1841,6 +1841,7 @@ function pollForUpdates(){
     }
     loadMyNotifs();
     try{refreshUnreadCounts();}catch(e){}
+    try{refreshApvPendingCount();}catch(e){}
     updateNavBadges();
   }).catch(function(e){console.error('[SB] poll err',e);});
 }
@@ -2832,6 +2833,7 @@ function renderEmpPage(empId){
   // Legacy IDs (kept for backward compat — set silently if exist)
   var av=document.getElementById('ehAv');if(av){av.textContent=emp.initial;av.style.background=emp.color;}
   var ehN=document.getElementById('ehN');if(ehN)ehN.textContent=empId===CU.id?emp.name+' (나의 공간)':emp.name;
+  refreshApvPendingCount();
   renderEmpSidebar(empId);
   renderEmpDailyMini(empId);
   if(_empSelTaskId){
@@ -2868,10 +2870,15 @@ function renderEmpSidebar(empId){
   html+=_renderEmpSection('🚨 긴급', urgent, '#ef4444');
   html+=_renderEmpSection('📋 진행 중', active, '#3b82f6');
   html+=_renderEmpSection('✅ 완료', doneList, '#10b981', true);
-  // Approval shortcut for owner
-  if(isOwner||isAdmin()){
-    html+='<button onclick="_empOpenApproval()" style="margin-top:8px;width:100%;padding:8px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px">📋 결재함 열기</button>';
+  // Approval buttons (모든 직원에게 표시)
+  var pendBadge='';
+  if(isManagerCU() && _apvPendingCount>0){
+    pendBadge='<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;margin-left:auto">'+(_apvPendingCount>99?'99+':_apvPendingCount)+'</span>';
   }
+  html+='<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">';
+  html+='<button onclick="_empOpenApproval()" style="display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer"><span>📋 결재함</span>'+pendBadge+'</button>';
+  html+='<button onclick="_empOpenApprovalSubmit()" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:8px 10px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 결재 상신</button>';
+  html+='</div>';
   top.innerHTML=html;
 }
 function _renderEmpSection(label, list, color, collapsed){
@@ -2961,6 +2968,14 @@ function _empSendCmt(taskId){
   if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
   inp.value='';renderEmpDetail(taskId);renderEmpSidebar(curEmpId);
 }
+var _apvPendingCount=0;
+function refreshApvPendingCount(){
+  if(!CU||!isManagerCU()){_apvPendingCount=0;return Promise.resolve();}
+  return sbGet('staff_approvals','status=eq.pending&or=(to_id.eq.'+CU.id+',to_id.eq.both)&select=id').then(function(rows){
+    _apvPendingCount=(rows||[]).length;
+    if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpSidebar(curEmpId);
+  }).catch(function(){_apvPendingCount=0;});
+}
 function _empOpenApproval(){
   // Render approval into detail panel
   var d=document.getElementById('empDetail');if(!d)return;
@@ -2973,6 +2988,11 @@ function _empOpenApproval(){
     wrap.style.display='none';
   }
   markNotifsRead('approval');
+  refreshApvPendingCount();
+}
+function _empOpenApprovalSubmit(){
+  _empOpenApproval();
+  setTimeout(function(){var ti=document.getElementById('apvTitle');if(ti){ti.focus();ti.scrollIntoView({behavior:'smooth',block:'center'});}},150);
 }
 function renderEmpDailyMini(empId){
   var bot=document.getElementById('empSbBottom');if(!bot)return;
