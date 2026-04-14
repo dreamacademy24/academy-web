@@ -1,18 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+const supabase = supabaseAdmin
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, username, full_name, name, phone, email, address, children, created_at')
-    .order('created_at', { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ users: data || [] })
+  try {
+    // 컬럼 누락 시에도 동작하도록 select '*' 사용
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('[/api/admin/users] profiles fetch error:', error)
+      return NextResponse.json({ error: error.message, hint: error.hint, code: error.code }, { status: 500 })
+    }
+    return NextResponse.json({ users: data || [] })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[/api/admin/users] GET error:', e)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: Request) {
