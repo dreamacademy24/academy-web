@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>예시 4 — 숫자 강조 대시보드</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard','Apple SD Gothic Neo',sans-serif}
+body{background:#0f172a;color:#e2e8f0;padding:24px;line-height:1.5;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto}
+.h{font-size:24px;font-weight:800;margin-bottom:6px;color:#f1f5f9}
+.sub{font-size:13px;color:#94a3b8;margin-bottom:24px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.k{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:18px}
+.k-lbl{font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:6px}
+.k-num{font-size:36px;font-weight:800;line-height:1}
+.k-sub{font-size:11px;color:#64748b;margin-top:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:18px}
+.p-h{font-size:14px;font-weight:800;margin-bottom:14px;color:#f1f5f9}
+.li{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #334155}
+.li:last-child{border-bottom:none}
+.li-t{font-size:13px;color:#cbd5e1}
+.bigbar{height:8px;background:#334155;border-radius:4px;overflow:hidden;flex:1;margin:0 12px}
+.bigbar div{height:100%;background:linear-gradient(90deg,#a78bfa,#7c3aed)}
+.li-pct{font-size:13px;font-weight:800;color:#a78bfa;width:40px;text-align:right}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="h">📊 프로젝트 — 숫자 강조 대시보드 (다크)</div>
+  <div class="sub">큰 KPI 카드 + 진행률 비교. 한눈에 핵심 지표 파악</div>
+  <div class="kpi">
+    <div class="k"><div class="k-lbl">전체 프로젝트</div><div class="k-num" style="color:#a78bfa">12</div><div class="k-sub">진행 9 · 완료 3</div></div>
+    <div class="k"><div class="k-lbl">평균 진행률</div><div class="k-num" style="color:#34d399">63%</div><div class="k-sub">▲ 8% (전주대비)</div></div>
+    <div class="k"><div class="k-lbl">긴급 업무</div><div class="k-num" style="color:#f87171">7</div><div class="k-sub">D-3 이내 마감</div></div>
+    <div class="k"><div class="k-lbl">팀 활성도</div><div class="k-num" style="color:#fbbf24">98%</div><div class="k-sub">댓글 47 · 업데이트 22</div></div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <div class="p-h">🚀 진행률 TOP</div>
+      <div class="li"><div class="li-t">웹사이트 리뉴얼</div><div class="bigbar"><div style="width:78%"></div></div><div class="li-pct">78%</div></div>
+      <div class="li"><div class="li-t">교재 개정판</div><div class="bigbar"><div style="width:65%"></div></div><div class="li-pct">65%</div></div>
+      <div class="li"><div class="li-t">신규 모집</div><div class="bigbar"><div style="width:45%"></div></div><div class="li-pct">45%</div></div>
+      <div class="li"><div class="li-t">하우스 점검</div><div class="bigbar"><div style="width:15%"></div></div><div class="li-pct">15%</div></div>
+    </div>
+    <div class="panel">
+      <div class="p-h">⚡ 활동량</div>
+      <div class="li"><div class="li-t">📝 신규 업무</div><div class="li-pct" style="color:#fbbf24;width:auto">14</div></div>
+      <div class="li"><div class="li-t">✅ 완료 업무</div><div class="li-pct" style="color:#34d399;width:auto">22</div></div>
+      <div class="li"><div class="li-t">💬 댓글</div><div class="li-pct" style="color:#60a5fa;width:auto">47</div></div>
+      <div class="li"><div class="li-t">📎 첨부파일</div><div class="li-pct" style="color:#a78bfa;width:auto">19</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

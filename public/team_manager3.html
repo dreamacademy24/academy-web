@@ -1498,8 +1498,18 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <div class="overlay" id="opinionModal">
   <div class="modal-box" style="width:520px">
     <div class="modal-title">💬 의견 요청</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px" id="opTypeToggle">
+      <button type="button" data-optype="general" onclick="setOpType('general')" style="flex:1;padding:8px;border:1.5px solid #534AB7;background:#534AB7;color:#fff;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">💬 일반 의견</button>
+      <button type="button" data-optype="vote" onclick="setOpType('vote')" style="flex:1;padding:8px;border:1.5px solid #e2e8f0;background:#fff;color:#6b7280;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📊 투표</button>
+    </div>
     <input id="opTitle" type="text" placeholder="제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
-    <textarea id="opBody" placeholder="내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
+    <textarea id="opBody" placeholder="내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
+    <div id="opVoteSection" style="display:none;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa">
+      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px">📊 투표 항목 <span style="color:#9ca3af;font-weight:600">(최대 5개, 라벨 + 선택적 URL)</span></div>
+      <div id="opVoteOpts"></div>
+      <button type="button" id="opVoteAddBtn" onclick="opVoteAddOpt()" style="width:100%;padding:7px;background:#fff;border:1px dashed #cbd5e1;border-radius:6px;font-size:12px;font-weight:700;color:#6b7280;cursor:pointer;font-family:inherit;margin-bottom:8px">+ 항목 추가</button>
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:#374151">마감일:</span><input id="opVoteDeadline" type="date" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;outline:none"></div>
+    </div>
     <div style="margin-bottom:12px">
       <label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">
         📎 파일/사진 첨부
@@ -1977,6 +1987,7 @@ function doLogin(u){
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
   loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();loadMyNotifs();});
+  setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
 }
@@ -3206,6 +3217,9 @@ function openOpinionModal(){
   var fi=document.getElementById('opFiles');if(fi)fi.value='';
   var sel=document.getElementById('opTarget');
   if(sel){sel.innerHTML='<option value="all">\uc804\uccb4</option>'+ALL.filter(function(u){return !CU||u.id!==CU.id;}).map(function(u){return '<option value="'+u.id+'">'+u.name+'</option>';}).join('');}
+  var opts=document.getElementById('opVoteOpts');if(opts)opts.innerHTML='';
+  var dl=document.getElementById('opVoteDeadline');if(dl)dl.value='';
+  setOpType('general');
   openM('opinionModal');
 }
 
@@ -3307,6 +3321,9 @@ function openOpinionDetail(opId){
     html+='<div style="padding:16px 20px;overflow-y:auto;flex:1">';
     html+='<div style="font-size:14px;color:#374151;line-height:1.8;white-space:pre-wrap;margin-bottom:16px">'+esc(op.body||'')+'</div>';
     if(op.files&&op.files.length)html+='<div style="margin-bottom:16px">'+renderAttachments(op.files)+'</div>';
+    if(op.type==='vote'){
+      html+='<div id="opdVote_'+op.id+'" style="margin-bottom:16px"><div style="text-align:center;padding:14px;color:#94a3b8;font-size:12px">투표 데이터 로딩 중...</div></div>';
+    }
     html+='<div style="margin:16px 0;padding-top:16px;border-top:1px solid #e5e7eb"><div style="font-size:13px;font-weight:800;margin-bottom:12px">💬 답변 <span id="opdReplyCnt" style="color:#94a3b8;font-weight:600">'+replies.length+'개</span></div>';
     html+='<div id="opdReplies"></div></div>';
     html+='</div>';
@@ -3328,6 +3345,52 @@ function openOpinionDetail(opId){
     var inp=document.getElementById('opdReplyInp');
     inp.value='';
     inp.onkeydown=function(e){if(e.ctrlKey&&e.key==='Enter')_opdSubmitReply(opId);};
+    if(op.type==='vote') _voteRender(op);
+  });
+}
+function _voteRender(op){
+  var slot=document.getElementById('opdVote_'+op.id);if(!slot)return;
+  sbGet('staff_votes','opinion_id=eq.'+op.id+'&select=voter_id,option_idx').then(function(votes){
+    votes=votes||[];
+    var opts=[];try{opts=Array.isArray(op.vote_options)?op.vote_options:JSON.parse(op.vote_options||'[]');}catch(e){opts=[];}
+    var counts=opts.map(function(){return 0;});
+    var myIdx=-1;
+    votes.forEach(function(v){if(v.option_idx>=0&&v.option_idx<counts.length)counts[v.option_idx]++;if(CU&&v.voter_id===CU.id)myIdx=v.option_idx;});
+    var total=votes.length;
+    var participants=Object.keys(votes.reduce(function(a,v){a[v.voter_id]=1;return a;},{})).length;
+    var deadline=op.vote_deadline?new Date(op.vote_deadline+'T23:59:59'):null;
+    var expired=deadline&&new Date()>deadline;
+    var html='<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-size:13px;font-weight:800;color:#374151">📊 투표</div>';
+    if(expired) html+='<span style="font-size:11px;font-weight:700;background:#f3f4f6;color:#6b7280;padding:3px 8px;border-radius:6px">투표 마감</span>';
+    else if(deadline) html+='<span style="font-size:11px;color:#6b7280">마감 '+op.vote_deadline+'</span>';
+    html+='</div>';
+    opts.forEach(function(o,i){
+      var c=counts[i],pct=total?Math.round(c/total*100):0;
+      var voted=myIdx===i;
+      var fillCol=voted?'#10b981':'#534AB7';
+      html+='<div style="background:#fff;border:1px solid '+(voted?'#10b981':'#e5e7eb')+';border-radius:8px;padding:10px;margin-bottom:8px;position:relative;overflow:hidden">';
+      html+='<div style="position:absolute;inset:0;background:'+fillCol+'15;width:'+pct+'%;transition:width .3s"></div>';
+      html+='<div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1f2937">'+(voted?'✓ ':'')+esc(o.label||'')+'</div>';
+      if(o.url) html+='<a href="'+esc(o.url)+'" target="_blank" rel="noopener" style="font-size:11px;color:#1a6fc4;text-decoration:none;background:#eff6ff;padding:3px 9px;border-radius:5px;font-weight:700">미리보기 ↗</a>';
+      if(!expired&&!voted) html+='<button onclick="castVote(\''+op.id+'\','+i+')" style="font-size:11px;background:#534AB7;color:#fff;border:none;padding:4px 12px;border-radius:5px;font-weight:700;cursor:pointer;font-family:inherit">투표하기</button>';
+      html+='<div style="font-size:11px;font-weight:800;color:'+fillCol+';min-width:60px;text-align:right">'+pct+'% ('+c+'표)</div></div>';
+      html+='</div>';
+    });
+    html+='<div style="font-size:11px;color:#6b7280;text-align:center;margin-top:6px">총 '+total+'표 · 참여 '+participants+'명</div>';
+    html+='</div>';
+    slot.innerHTML=html;
+  }).catch(function(e){console.error('vote render err',e);slot.innerHTML='<div style="text-align:center;color:#ef4444;font-size:12px;padding:14px">투표 데이터 로드 실패</div>';});
+}
+function castVote(opId,idx){
+  if(!CU){toast('로그인 필요','#ef4444');return;}
+  sbPost('staff_votes',{opinion_id:opId,voter_id:CU.id,option_idx:idx}).then(function(){
+    toast('투표 완료!');
+    if(_opdCurId===opId)openOpinionDetail(opId);
+  }).catch(function(e){
+    var msg=(e&&e.message)||String(e);
+    if(msg.indexOf('duplicate')>=0||msg.indexOf('unique')>=0) toast('이미 투표했습니다','#f59e0b');
+    else toast('투표 실패: '+msg,'#ef4444');
   });
 }
 
@@ -3385,16 +3448,85 @@ function _opdDelReply(opId,replyId){
   });
 }
 
+var _opCurType='general';
+function setOpType(t){
+  _opCurType=t;
+  document.querySelectorAll('#opTypeToggle button').forEach(function(b){
+    var on=b.getAttribute('data-optype')===t;
+    b.style.background=on?'#534AB7':'#fff';
+    b.style.color=on?'#fff':'#6b7280';
+    b.style.borderColor=on?'#534AB7':'#e2e8f0';
+  });
+  var sec=document.getElementById('opVoteSection');if(sec)sec.style.display=t==='vote'?'block':'none';
+  if(t==='vote'){
+    var dl=document.getElementById('opVoteDeadline');
+    if(dl&&!dl.value){var d=new Date();d.setDate(d.getDate()+7);dl.value=d.toISOString().slice(0,10);}
+    if(!document.querySelectorAll('#opVoteOpts .opv-row').length){opVoteAddOpt();opVoteAddOpt();}
+  }
+}
+function opVoteAddOpt(){
+  var c=document.getElementById('opVoteOpts');if(!c)return;
+  var rows=c.querySelectorAll('.opv-row');if(rows.length>=5){toast('최대 5개까지 추가 가능합니다','#ef4444');return;}
+  var idx=rows.length;
+  var div=document.createElement('div');
+  div.className='opv-row';
+  div.style.cssText='display:flex;gap:4px;margin-bottom:6px';
+  div.innerHTML='<input class="opv-label" placeholder="항목 '+(idx+1)+' 라벨" style="flex:1;padding:6px 9px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;font-family:inherit;outline:none">'+
+    '<input class="opv-url" placeholder="URL (선택, 미리보기)" style="flex:1.3;padding:6px 9px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;font-family:inherit;outline:none">'+
+    '<button type="button" onclick="this.parentNode.remove()" style="padding:6px 9px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:5px;font-size:11px;cursor:pointer;font-family:inherit">×</button>';
+  c.appendChild(div);
+}
+function _collectVoteOptions(){
+  var opts=[];
+  document.querySelectorAll('#opVoteOpts .opv-row').forEach(function(row){
+    var lbl=(row.querySelector('.opv-label')||{}).value||'';
+    var url=(row.querySelector('.opv-url')||{}).value||'';
+    if(lbl.trim()) opts.push({label:lbl.trim(),url:url.trim()});
+  });
+  return opts;
+}
 function submitOpinion(){
   var title=document.getElementById('opTitle').value.trim();
   var body=document.getElementById('opBody').value.trim();
   var target=document.getElementById('opTarget').value;
   if(!title){toast('\uc81c\ubaa9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694');return;}
+  var payload={from_id:CU?CU.id:'',target:target,title:title,body:body,ts:Date.now(),type:_opCurType||'general'};
+  if(_opCurType==='vote'){
+    var voteOpts=_collectVoteOptions();
+    if(voteOpts.length<2){toast('투표 항목을 2개 이상 입력해주세요','#ef4444');return;}
+    payload.vote_options=voteOpts;
+    var dl=(document.getElementById('opVoteDeadline')||{}).value;
+    if(dl) payload.vote_deadline=dl;
+  }
   var fileInput=document.getElementById('opFiles');
   readFilesAsBase64(fileInput||{files:[]}).then(function(files){
-    sbPost('staff_opinions',{from_id:CU?CU.id:'',target:target,title:title,body:body,files:files,ts:Date.now()})
+    payload.files=files;
+    sbPost('staff_opinions',payload)
       .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();var _opIds=target==='all'?ALL.map(function(u){return u.id;}):[target];createNotifMultiple(_opIds,'opinion','',CU.name+'님이 의견을 요청했습니다: '+title.slice(0,20));});
   });
+}
+function seedDesignVotePost(){
+  var SEED_TITLE='프로젝트 페이지 디자인 투표';
+  sbGet('staff_opinions','title=eq.'+encodeURIComponent(SEED_TITLE)+'&limit=1').then(function(rows){
+    if(rows&&rows.length>0)return; // 이미 존재
+    var d=new Date();d.setDate(d.getDate()+7);
+    var deadline=d.toISOString().slice(0,10);
+    var voteOpts=[
+      {label:'예시 1 - 리스트+타임라인',url:'/vote/design-1.html'},
+      {label:'예시 2 - 카드+담당자',url:'/vote/design-2.html'},
+      {label:'예시 3 - 갤러리+노션',url:'/vote/design-3.html'},
+      {label:'예시 4 - 숫자강조 대시보드',url:'/vote/design-4.html'},
+      {label:'예시 5 - 수평진행바+피드',url:'/vote/design-5.html'}
+    ];
+    sbPost('staff_opinions',{
+      from_id:'ceo',target:'all',title:SEED_TITLE,
+      body:'직원들의 의견을 반영해서 프로젝트 페이지를 새롭게 만들려고 해요. 각 예시를 확인하고 가장 마음에 드는 디자인에 투표해주세요!',
+      files:[],ts:Date.now(),type:'vote',vote_options:voteOpts,vote_deadline:deadline
+    }).then(function(){
+      console.log('[seed] design vote post created');
+      createNotifMultiple(ALL.map(function(u){return u.id;}),'opinion','','📊 새 투표: '+SEED_TITLE);
+    }).catch(function(e){console.error('[seed] vote post err',e);});
+  }).catch(function(e){console.error('[seed] check err',e);});
 }
 function submitReply(opId){
   var inp=document.getElementById('replyInput');

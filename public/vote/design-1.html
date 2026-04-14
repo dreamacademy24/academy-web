@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>예시 1 — 리스트 + 타임라인</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard','Apple SD Gothic Neo',sans-serif}
+body{background:#f6f7fb;color:#1f2937;padding:24px;line-height:1.5}
+.wrap{max-width:980px;margin:0 auto}
+.h{font-size:22px;font-weight:800;margin-bottom:6px}
+.sub{font-size:13px;color:#6b7280;margin-bottom:18px}
+.row{display:grid;grid-template-columns:1fr 320px;gap:18px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:12px}
+.proj{display:flex;align-items:center;gap:10px;padding:12px;border-radius:8px;cursor:pointer;border-bottom:1px solid #f3f4f6}
+.proj:hover{background:#f9fafb}
+.dot{width:8px;height:8px;border-radius:50%}
+.title{font-weight:700;flex:1}
+.bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-top:6px}
+.fill{height:100%;background:#534AB7;border-radius:3px}
+.tl-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed #e5e7eb}
+.tl-date{font-size:11px;color:#9ca3af;width:50px;flex-shrink:0;text-align:right}
+.tl-text{font-size:13px;flex:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="h">📋 프로젝트 — 리스트 + 타임라인</div>
+  <div class="sub">좌측: 프로젝트 리스트(상태/진행률) · 우측: 최근 활동 타임라인</div>
+  <div class="row">
+    <div>
+      <div class="card">
+        <div class="proj"><div class="dot" style="background:#10b981"></div><div class="title">웹사이트 리뉴얼</div><div style="font-size:11px;color:#10b981;font-weight:700">진행중 78%</div></div>
+        <div class="bar"><div class="fill" style="width:78%"></div></div>
+      </div>
+      <div class="card">
+        <div class="proj"><div class="dot" style="background:#f59e0b"></div><div class="title">신규 학생 모집 캠페인</div><div style="font-size:11px;color:#f59e0b;font-weight:700">진행중 45%</div></div>
+        <div class="bar"><div class="fill" style="width:45%;background:#f59e0b"></div></div>
+      </div>
+      <div class="card">
+        <div class="proj"><div class="dot" style="background:#3b82f6"></div><div class="title">하우스 시설 점검</div><div style="font-size:11px;color:#3b82f6;font-weight:700">계획중 15%</div></div>
+        <div class="bar"><div class="fill" style="width:15%;background:#3b82f6"></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:800;margin-bottom:10px">📌 최근 활동</div>
+        <div class="tl-item"><div class="tl-date">오늘</div><div class="tl-text">🎉 '웹사이트 리뉴얼' 인보이스 작업 완료</div></div>
+        <div class="tl-item"><div class="tl-date">어제</div><div class="tl-text">💬 '하우스 점검' 새 댓글 3개</div></div>
+        <div class="tl-item"><div class="tl-date">2일전</div><div class="tl-text">👤 'Jenna' 신규 업무 배정됨</div></div>
+        <div class="tl-item"><div class="tl-date">3일전</div><div class="tl-text">📅 '캠페인' 마감일 7일 연장</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
