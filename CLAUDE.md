@@ -353,3 +353,42 @@ CREATE POLICY "all" ON house_pending_items FOR ALL USING (true) WITH CHECK (true
 - house_pending_items SQL 실행 필요
 - PayPal Live 모드 전환
 - Supabase RLS 세부 정책
+
+## 2026-04-15 완료 작업
+- 홈 대시보드 전면 개편 (미배정/확인필요/오늘마감/이번주완료 + 클릭연결)
+- 알림 뱃지 시스템 개선 (미읽은 알림 수 표시)
+- 의견요청 투표 기능 추가 (staff_votes 테이블, 투표 UI, 결과 바)
+- 프로젝트 디자인 예시 1~5 HTML (public/vote/design-1~5.html)
+- 회원 관리 페이지 개편 (app/admin/site/page.tsx - 8컬럼 테이블)
+- 회원 API 수정 (full_name→name, SUPABASE_SERVICE_ROLE_KEY Vercel 추가)
+- 홈 미배정 클릭 → 전체업무 연동 수정 (확인됨)
+- 전체업무 사이드패널 오픈 버그 수정 (확인됨)
+- 직원별 뷰 읽기 권한 개방 (비관리자도 shared 업무 열람 가능)
+- 완료 업무 삭제 기능 (CEO/Jenna: 전체, 일반직원: 본인 업무만)
+- 개인업무 공간 null-safe 방어코드 추가
+
+### 내일 할 작업 (우선순위순)
+1. 개인업무 공간 사이드바 클릭 버그 - Eric(나) 클릭 시 showEmpPage 자동 호출 안됨
+2. 개인업무 데일리 레이아웃 - 업무목록 아래 데일리 자연스럽게 이어지도록
+3. Supabase SQL 실행 확인 - staff_votes 테이블 생성 여부
+4. 투표 기능 실제 작동 확인 - 의견요청 탭 투표 게시글 자동 생성
+5. 프로젝트 페이지 디자인 적용 - 투표 결과 후 적용
+6. PayPal Live 활성화 (회사에서 서류 제출)
+
+### Supabase SQL 미실행 항목
+아래 SQL을 Supabase SQL Editor에서 실행해야 함:
+```sql
+ALTER TABLE staff_opinions ADD COLUMN IF NOT EXISTS type text DEFAULT 'general';
+ALTER TABLE staff_opinions ADD COLUMN IF NOT EXISTS vote_options jsonb DEFAULT '[]';
+ALTER TABLE staff_opinions ADD COLUMN IF NOT EXISTS vote_deadline date;
+CREATE TABLE IF NOT EXISTS staff_votes (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  opinion_id bigint NOT NULL,
+  voter_id text NOT NULL,
+  option_idx integer NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(opinion_id, voter_id)
+);
+ALTER TABLE staff_votes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "all" ON staff_votes FOR ALL USING (true) WITH CHECK (true);
+```
