@@ -2144,6 +2144,17 @@ function renderBatchBar(container,doneIds,scope){
 function isUnassignedTask(t){
   return !t.assignee && (!t.assignees || t.assignees.length===0 || (t.assignees.length===1 && !t.assignees[0]));
 }
+function isDoneTask(t){
+  return t.done===true || t.progress===100 || t.progress==='100' || t.progress==='완료';
+}
+function shortCreated(d){
+  if(!d) return '';
+  var dt=new Date(d);
+  if(!isNaN(dt.getTime())) return (dt.getMonth()+1)+'/'+dt.getDate();
+  var m=String(d).match(/(\d+)\s*년\s*(\d+)\s*월\s*(\d+)\s*일/);
+  if(m) return m[2]+'/'+m[3];
+  return String(d);
+}
 function setBF(f,el){
   boardFilter=f;
   document.querySelectorAll('#boardTabs .tab-btn').forEach(function(t){
@@ -2160,8 +2171,8 @@ function renderBoard(){
     f=tasks.filter(isUnassignedTask);
   } else {
     f=tasks.filter(t=>t.shared);
-    if(boardFilter==='active')f=f.filter(t=>!t.done&&t.assignee);
-    else if(boardFilter==='done')f=f.filter(t=>t.done);
+    if(boardFilter==='active')f=f.filter(t=>!isDoneTask(t)&&t.assignee);
+    else if(boardFilter==='done')f=f.filter(isDoneTask);
   }
   if(boardFilter==='done'&&f.length){renderBatchBar(grid,f.map(function(t){return t.id;}),'board');}
   boardView==='task'?renderBoardTask(f):renderBoardEmp(f);
@@ -2201,7 +2212,7 @@ function appendKanbanCard(container,t,showAss){
   const assTag=(showAss&&en)?'<span class="tag" style="background:'+ec+'18;color:'+ec+';font-size:10.5px">'+en+'</span>':'';
   const dueTag=dl?'<span class="tag '+dl.cls+'" style="font-size:10.5px">'+dl.text+'</span>':'';
   const fileTag=(t.files&&t.files.length)?'<span class="tag" style="font-size:10.5px">📎 '+t.files.length+'</span>':'';
-  var _createdShort='';if(t.createdAt){try{var _dpk=new Date(t.createdAt);if(!isNaN(_dpk))_createdShort='작성 '+(_dpk.getMonth()+1)+'/'+_dpk.getDate();}catch(e){_createdShort=t.createdAt;}}
+  var _createdShort=t.createdAt?'작성 '+shortCreated(t.createdAt):'';
   const progBar=prog>0?'<div class="tc-prog"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div class="tc-prog-bar"><div class="tc-prog-fill" style="width:'+prog+'%;background:'+ec+'"></div></div></div>':'';
   card.innerHTML=batchCb+'<div class="tc-top"><div class="tc-check" onclick="qTog(\''+t.id+'\',event)"><span class="tc-check-mark">✓</span></div><div class="tc-title">'+urgentIcon+idxSpan+esc(t.title)+cmtBadge+'</div><button class="tc-edit" onclick="openTaskEdit(\''+t.id+'\')">✎</button></div>'+
     '<div class="tc-tags">'+assTag+(_createdShort?'<span class="tag" style="font-size:10.5px;color:#9ca3af">'+_createdShort+'</span>':'')+dueTag+fileTag+'</div>'+
@@ -2239,7 +2250,7 @@ function renderBoardTask(f){
     var tProj=t.projId?projects.find(function(p){return p.id===t.projId;}):null;
     if(tProj){const pBadge=document.createElement('span');pBadge.style.cssText='display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-top:2px;font-weight:600;background:'+tProj.color+'22;color:'+tProj.color+';border:1px solid '+tProj.color+'44';pBadge.textContent='🚀 '+tProj.name;nameDiv.appendChild(pBadge);}
     if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
-    if(t.createdAt){const cDate=document.createElement('div');cDate.style.cssText='font-size:11px;color:#9ca3af;margin-top:2px';var _cd=t.createdAt;try{var _dp=new Date(_cd);if(!isNaN(_dp))_cd=(_dp.getMonth()+1)+'/'+_dp.getDate();}catch(e){}cDate.textContent='작성 '+_cd;nameDiv.appendChild(cDate);}
+    if(t.createdAt){const cDate=document.createElement('div');cDate.style.cssText='font-size:11px;color:#9ca3af;margin-top:2px';cDate.textContent='작성 '+shortCreated(t.createdAt);nameDiv.appendChild(cDate);}
     row.appendChild(nameDiv);
     const assDiv=document.createElement('div');assDiv.style.cssText='display:flex;align-items:center;justify-content:center;gap:6px;position:relative';
     if(isUnassignedTask(t)){
