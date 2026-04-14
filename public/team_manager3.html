@@ -139,6 +139,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;
 }
 .notif-dot{width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;margin-left:4px;vertical-align:top;}
+.nav-badge{display:none;background:#ef4444;color:#fff;border-radius:9px;min-width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;padding:0 5px;margin-left:auto;line-height:1;}
 .emp-nav-item{
   display:flex;align-items:center;gap:10px;
   padding:8px 14px;margin:1px 6px;border-radius:var(--rs);
@@ -1034,12 +1035,12 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       </div>
     </div>
     <div class="sb-section">메뉴</div>
-    <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span></button>
-    <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span></button>
+    <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span><span id="badge-notif" class="nav-badge">0</span></button>
+    <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
     <button class="nav-item" data-p="calendar" onclick="showPage('calendar')"><span class="ni-icon">📅</span> 달력</button>
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
-    <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span></button>
-    <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅</button>
+    <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span><span id="badge-opinions" class="nav-badge">0</span></button>
+    <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅<span id="badge-chat" class="nav-badge">0</span></button>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
     <div id="empNav"></div>
@@ -1755,6 +1756,28 @@ function renderNotifBadges(){
     var dot=document.getElementById('notif-dot-'+key);
     if(dot)dot.style.display=total>0?'inline-block':'none';
   });
+  updateNavBadges();
+}
+function _setNavBadge(id,count){
+  var el=document.getElementById(id);if(!el)return;
+  if(!count||count<=0){el.style.display='none';return;}
+  el.textContent=count>99?'99+':String(count);
+  el.style.display='inline-flex';
+}
+function updateNavBadges(){
+  // 전체 업무: 미배정 업무 수 (현재 사용자가 볼 수 있는 범위)
+  var unassignedCount;
+  if(isManagerCU()) unassignedCount=tasks.filter(isUnassignedTask).length;
+  else unassignedCount=tasks.filter(function(t){return isUnassignedTask(t)&&CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));}).length;
+  _setNavBadge('badge-board',unassignedCount);
+  // 의견요청: myNotifs 중 type='opinion'
+  var opCount=myNotifs.filter(function(n){return n.type==='opinion';}).length;
+  _setNavBadge('badge-opinions',opCount);
+  // 채팅: 채널별 _unreadCache 합산
+  var chatTotal=0;try{Object.keys(_unreadCache||{}).forEach(function(k){chatTotal+=(_unreadCache[k]||0);});}catch(e){}
+  _setNavBadge('badge-chat',chatTotal);
+  // 전체 알림
+  _setNavBadge('badge-notif',(myNotifs||[]).length);
 }
 function jsonHash(obj){return JSON.stringify(obj).length+'-'+JSON.stringify(obj).slice(0,100);}
 function startPolling(){
@@ -1808,6 +1831,8 @@ function pollForUpdates(){
       if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);
     }
     loadMyNotifs();
+    try{refreshUnreadCounts();}catch(e){}
+    updateNavBadges();
   }).catch(function(e){console.error('[SB] poll err',e);});
 }
 function showSyncBadge(){
@@ -2033,7 +2058,8 @@ function showPage(p){
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
-  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');}
+  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');_setNavBadge('badge-opinions',0);}
+  if(typeof updateNavBadges==='function')updateNavBadges();
 }
 function showEmpPage(empId){
   var isOwner=isAdmin()||CU.id===empId;
