@@ -3424,7 +3424,7 @@ function saveTask(){
   const dueM=document.querySelector('input[name="tmDM"]:checked').value;
   const due=dueM==='date'?document.getElementById('tmDue').value:'';
   const note=document.getElementById('tmNt').value;
-  const createdAt=document.getElementById('tmCreated').textContent;
+  const createdAt=new Date().toISOString();
   var _isSubMode=document.getElementById('tmSubToggle').checked;
   var _clData,clProg;
   if(_isSubMode){
@@ -3466,7 +3466,9 @@ function saveTask(){
   sbUpsert('staff_tasks',_payload)
     .then(function(result){
       console.log('[saveTask] INSERT 성공:',result);
-      _finish();closeM('taskModal');refreshAll();if(curProjId)renderProjDetail(curProjId);
+      _finish();
+      closeM('taskModal');
+      loadTasksFromSB().then(function(){refreshAll();if(curProjId)renderProjDetail(curProjId);});
     })
     .catch(function(err){
       console.error('[saveTask] INSERT 실패:',err,'detail:',err&&err.detail);
