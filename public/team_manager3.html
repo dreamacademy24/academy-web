@@ -3424,14 +3424,16 @@ function buildAssignPicker(selectedIds){
 }
 function renderAssignWrap(){
   var wrap=document.getElementById('tmAssWrap');if(!wrap)return;
+  var inner;
   if(_assignSelected.size===0||(_assignSelected.size===1&&_assignSelected.has(''))){
-    wrap.innerHTML='<span style="color:var(--text3);font-size:13px;line-height:24px">담당자 선택 (다중 가능)</span>';
+    inner='<span style="color:var(--text3);font-size:13px;line-height:24px">담당자 선택 (다중 가능)</span>';
   }else{
-    wrap.innerHTML=[..._assignSelected].filter(function(id){return id;}).map(function(id){
+    inner=[..._assignSelected].filter(function(id){return id;}).map(function(id){
       var u=getP(id);if(!u)return '';
-      return '<span style="background:'+u.color+';color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px">'+esc(u.name)+'<span onclick="removeAssign(event,\''+id+'\')" style="cursor:pointer;margin-left:2px">✕</span></span>';
+      return '<span style="background:'+u.color+';color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px">'+esc(u.name)+'<span onclick="removeAssign(event,\''+id+'\')" style="cursor:pointer;margin-left:2px;pointer-events:auto">✕</span></span>';
     }).join('');
   }
+  wrap.innerHTML='<div style="pointer-events:none;display:flex;flex-wrap:wrap;gap:6px;width:100%">'+inner+'</div>';
   document.getElementById('tmAss').value=[..._assignSelected].filter(function(id){return id;}).join(',');
 }
 function renderAssignPicker(){
@@ -3462,6 +3464,7 @@ function removeAssign(e,id){
   e.stopPropagation();_assignSelected.delete(id);renderAssignWrap();
 }
 function toggleAssignPicker(){
+  console.log('[toggleAssignPicker] 호출됨');
   var p=document.getElementById('tmAssPicker');if(!p)return;
   if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
   else p.style.display='none';
