@@ -3468,7 +3468,13 @@ function saveTask(){
       console.log('[saveTask] INSERT 성공:',result);
       _finish();
       closeM('taskModal');
-      loadTasksFromSB().then(function(){refreshAll();if(curProjId)renderProjDetail(curProjId);});
+      loadTasksFromSB().then(function(){
+        // 현재 활성 탭 기준 렌더 (renderAllTasks=renderBoard, renderMyPage=renderEmpPage)
+        if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
+        else if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);
+        else refreshAll();
+        if(curProjId)renderProjDetail(curProjId);
+      });
     })
     .catch(function(err){
       console.error('[saveTask] INSERT 실패:',err,'detail:',err&&err.detail);
@@ -4651,6 +4657,28 @@ function renderHouseReportDetail(r){
 // CREATE POLICY "all" ON house_pending_items FOR ALL USING (true) WITH CHECK (true);
 
 window.addEventListener('DOMContentLoaded', function(){
+  // tm_tc 데이터 정리 - 잘못된 bigint id 제거
+  try {
+    var rawTc = localStorage.getItem('tm_tc');
+    if (rawTc) {
+      var tcData = JSON.parse(rawTc);
+      var cleaned = {};
+      Object.keys(tcData).forEach(function(taskId) {
+        if (Array.isArray(tcData[taskId])) {
+          cleaned[taskId] = tcData[taskId].map(function(c) {
+            if (c.id && typeof c.id === 'string' && isNaN(Number(c.id))) {
+              var copy = Object.assign({}, c);
+              delete copy.id;
+              return copy;
+            }
+            return c;
+          });
+        }
+      });
+      localStorage.setItem('tm_tc', JSON.stringify(cleaned));
+    }
+  } catch(e) { localStorage.removeItem('tm_tc'); }
+
   // 체크리스트 추가 버튼/Enter 이벤트 바인딩
   var _clBtn=document.getElementById('tmClAddBtn');
   if(_clBtn)_clBtn.addEventListener('click',function(){addTMChecklist();});
