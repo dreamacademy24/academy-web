@@ -25,12 +25,17 @@ interface Notice {
   content: string;
 }
 
+interface ChildInfo { name?: string; birth_year?: number | string; age?: number | string }
 interface Profile {
   id: string;
-  name: string;
-  phone: string;
-  created_at: string;
+  username?: string;
+  name?: string;
+  full_name?: string;
+  phone?: string;
   email?: string;
+  address?: string;
+  children?: ChildInfo[] | string;
+  created_at: string;
 }
 
 interface ShuttleApp {
@@ -76,6 +81,8 @@ export default function AdminPage() {
   // members
   const [members, setMembers] = useState<Profile[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selMember, setSelMember] = useState<Profile | null>(null);
 
   // shuttle
   const [shuttleApps, setShuttleApps] = useState<ShuttleApp[]>([]);
@@ -123,12 +130,43 @@ export default function AdminPage() {
 
   async function fetchMembers() {
     setMemberLoading(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) {
+        const j = await res.json();
+        if (j.users) { setMembers(j.users); setMemberLoading(false); return; }
+      }
+    } catch {}
+    // fallback: 직접 supabase에서 조회
     const { data } = await supabase
       .from("profiles")
-      .select("*")
+      .select("id, username, full_name, name, phone, email, address, children, created_at")
       .order("created_at", { ascending: false });
     if (data) setMembers(data);
     setMemberLoading(false);
+  }
+  function maskPhone(p?: string): string {
+    if (!p) return "-";
+    const digits = p.replace(/[^0-9]/g, "");
+    if (digits.length < 7) return p;
+    if (digits.length === 11) return `${digits.slice(0,3)}-****-${digits.slice(7)}`;
+    if (digits.length === 10) return `${digits.slice(0,3)}-***-${digits.slice(6)}`;
+    return p;
+  }
+  function shortAddr(a?: string): string {
+    if (!a) return "-";
+    const parts = a.trim().split(/\s+/);
+    if (parts.length < 2) return a;
+    return parts.slice(0, 2).join(" ");
+  }
+  function parseChildren(c: ChildInfo[] | string | undefined): ChildInfo[] {
+    if (!c) return [];
+    if (Array.isArray(c)) return c;
+    try { const v = JSON.parse(c); return Array.isArray(v) ? v : []; } catch { return []; }
+  }
+  function childLabel(c: ChildInfo[] | string | undefined): string {
+    const arr = parseChildren(c);
+    return arr.length ? `${arr.length}명` : "-";
   }
 
   useEffect(() => {
@@ -194,10 +232,19 @@ export default function AdminPage() {
   }
 
   async function handleDeleteMember(id: string, name: string) {
-    if (!confirm(`"${name}" 회원을 정말 삭제하시겠습니까?\n프로필 정보가 삭제됩니다.`)) return;
-    const { error } = await supabase.from("profiles").delete().eq("id", id);
-    if (error) alert("삭제 실패: " + error.message);
-    else await fetchMembers();
+    if (!confirm(`"${name}" 회원을 정말 삭제하시겠습니까?\nauth + profiles 모두 삭제됩니다.`)) return;
+    try {
+      const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert('삭제 실패: ' + (j.error || res.status));
+        return;
+      }
+      setSelMember(null);
+      await fetchMembers();
+    } catch (e) {
+      alert('삭제 실패: ' + (e instanceof Error ? e.message : String(e)));
+    }
   }
 
   if (!authed) {
@@ -543,37 +590,89 @@ export default function AdminPage() {
 
             <div className="list-card">
               <h2>👥 회원 목록 ({members.length}명)</h2>
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="text"
+                  placeholder="아이디 또는 이름으로 검색"
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  style={{ width: "100%", maxWidth: 320, padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit" }}
+                />
+              </div>
               {memberLoading ? (
                 <div className="loading-msg">불러오는 중...</div>
               ) : members.length === 0 ? (
                 <div className="empty-msg">가입된 회원이 없습니다.</div>
               ) : (
-                <table className="ntable">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "20%" }}>이름</th>
-                      <th className="hide-m" style={{ width: "25%" }}>이메일</th>
-                      <th className="hide-m" style={{ width: "20%" }}>전화번호</th>
-                      <th className="hide-m" style={{ width: "15%" }}>가입일</th>
-                      <th style={{ width: "10%" }}>관리</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {members.map((m) => (
-                      <tr key={m.id}>
-                        <td className="m-name">{m.name}</td>
-                        <td className="hide-m m-email">{m.id.slice(0, 8)}...</td>
-                        <td className="hide-m">{m.phone}</td>
-                        <td className="hide-m">{formatDate(m.created_at)}</td>
-                        <td>
-                          <button className="btn-del" onClick={() => handleDeleteMember(m.id, m.name)}>삭제</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                (() => {
+                  const q = memberSearch.trim().toLowerCase();
+                  const filtered = q
+                    ? members.filter((m) => ((m.username || "").toLowerCase().includes(q) || (m.full_name || m.name || "").toLowerCase().includes(q)))
+                    : members;
+                  return (
+                    <table className="ntable">
+                      <thead>
+                        <tr>
+                          <th style={{ width: "12%" }}>아이디</th>
+                          <th style={{ width: "12%" }}>이름</th>
+                          <th className="hide-m" style={{ width: "16%" }}>전화번호</th>
+                          <th className="hide-m" style={{ width: "20%" }}>이메일</th>
+                          <th className="hide-m" style={{ width: "16%" }}>주소</th>
+                          <th className="hide-m" style={{ width: "8%" }}>자녀</th>
+                          <th className="hide-m" style={{ width: "11%" }}>가입일</th>
+                          <th style={{ width: "5%" }}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((m) => (
+                          <tr key={m.id} style={{ cursor: "pointer" }} onClick={() => setSelMember(m)}>
+                            <td>{m.username || "-"}</td>
+                            <td className="m-name">{m.full_name || m.name || "-"}</td>
+                            <td className="hide-m">{maskPhone(m.phone)}</td>
+                            <td className="hide-m m-email">{m.email || "-"}</td>
+                            <td className="hide-m">{shortAddr(m.address)}</td>
+                            <td className="hide-m">{childLabel(m.children)}</td>
+                            <td className="hide-m">{formatDate(m.created_at)}</td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <button className="btn-del" onClick={() => handleDeleteMember(m.id, m.full_name || m.name || m.username || "회원")}>삭제</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()
               )}
             </div>
+            {selMember && (
+              <div onClick={() => setSelMember(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }}>
+                <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 520, width: "100%", maxHeight: "85vh", overflowY: "auto" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>👤 회원 상세</h3>
+                    <button onClick={() => setSelMember(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94a3b8" }}>×</button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "10px 14px", fontSize: 14 }}>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>아이디</div><div>{selMember.username || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>이름</div><div>{selMember.full_name || selMember.name || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>전화번호</div><div>{selMember.phone || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>이메일</div><div>{selMember.email || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>주소</div><div>{selMember.address || "-"}</div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>자녀</div>
+                    <div>
+                      {parseChildren(selMember.children).length === 0 ? "-" :
+                        parseChildren(selMember.children).map((c, i) => (
+                          <div key={i} style={{ marginBottom: 4 }}>· {c.name || "(이름없음)"} {c.birth_year ? `(${c.birth_year}년생)` : c.age ? `(${c.age}세)` : ""}</div>
+                        ))}
+                    </div>
+                    <div style={{ color: "#6b7280", fontWeight: 700 }}>가입일</div><div>{formatDate(selMember.created_at)}</div>
+                  </div>
+                  <div style={{ marginTop: 22, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <button onClick={() => setSelMember(null)} style={{ padding: "8px 18px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#6b7280", fontFamily: "inherit" }}>닫기</button>
+                    <button onClick={() => handleDeleteMember(selMember.id, selMember.full_name || selMember.name || selMember.username || "회원")} style={{ padding: "8px 18px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>회원 삭제</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
