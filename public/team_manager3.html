@@ -1979,7 +1979,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions','chat','house'];
+const PAGES=['home','board','calendar','emp','projects','proj-detail','daily','opinions','chat'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -1995,8 +1995,8 @@ function setNav(pg,eid){
   document.querySelectorAll('.emp-nav-item').forEach(el=>el.classList.toggle('active',el.dataset.eid===eid));
 }
 function showPage(p){
-  PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
-  document.getElementById('page-'+p).classList.remove('hidden');
+  PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
+  var _pgEl=document.getElementById('page-'+p);if(_pgEl)_pgEl.classList.remove('hidden');
   curEmpId=null;curProjId=null;setNav(p,null);
   const tt={home:'홈',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트'};
   document.getElementById('topT').textContent=tt[p]||'';
