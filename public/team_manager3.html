@@ -1743,9 +1743,17 @@ function loadMyNotifs(){
   return sbGet('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false&order=created_at.desc&limit=200').then(function(rows){myNotifs=rows;renderNotifBadges();});
 }
 function markNotifsRead(type){
-  if(!CU||!myNotifs.length)return;
+  if(!CU)return;
+  if(type==='all'){
+    if(!myNotifs.length){updateNavBadges();return;}
+    sbPatch('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false',{is_read:true}).catch(function(){});
+    myNotifs=[];
+    renderNotifBadges();
+    return;
+  }
+  if(!myNotifs.length){updateNavBadges();return;}
   var has=myNotifs.some(function(n){return n.type===type;});
-  if(!has)return;
+  if(!has){updateNavBadges();return;}
   sbPatch('staff_notifications','to_id=eq.'+CU.id+'&type=eq.'+type+'&is_read=eq.false',{is_read:true}).catch(function(){});
   myNotifs=myNotifs.filter(function(n){return n.type!==type;});
   renderNotifBadges();
@@ -1768,11 +1776,9 @@ function _setNavBadge(id,count){
   el.style.display='inline-flex';
 }
 function updateNavBadges(){
-  // 전체 업무: 미배정 업무 수 (현재 사용자가 볼 수 있는 범위)
-  var unassignedCount;
-  if(isManagerCU()) unassignedCount=tasks.filter(isUnassignedTask).length;
-  else unassignedCount=tasks.filter(function(t){return isUnassignedTask(t)&&CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));}).length;
-  _setNavBadge('badge-board',unassignedCount);
+  // 전체 업무: 미읽은 업무 관련 알림 수 (task_comment + unassigned_task)
+  var boardNotif=myNotifs.filter(function(n){return n.type==='task_comment'||n.type==='unassigned_task';}).length;
+  _setNavBadge('badge-board',boardNotif);
   // 의견요청: myNotifs 중 type='opinion'
   var opCount=myNotifs.filter(function(n){return n.type==='opinion';}).length;
   _setNavBadge('badge-opinions',opCount);
@@ -2055,7 +2061,7 @@ function showPage(p){
   document.getElementById('btnTask').onclick=function(){openTaskModal('');};
   document.getElementById('btnTask').style.display='inline-flex';
   document.getElementById('btnProj').style.display='none';
-  if(p==='home'){renderHome();markNotifsRead('notice');}
+  if(p==='home'){renderHome();markNotifsRead('all');}
   if(p==='board'){renderBoard();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
   if(p==='calendar')renderCal();
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
