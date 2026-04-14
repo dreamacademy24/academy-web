@@ -2083,17 +2083,18 @@ function showPage(p){
   if(typeof updateNavBadges==='function')updateNavBadges();
 }
 function showEmpPage(empId){
-  var isOwner=isAdmin()||CU.id===empId;
-  PAGES.forEach(id=>document.getElementById('page-'+id).classList.add('hidden'));
-  document.getElementById('page-emp').classList.remove('hidden');
+  var emp=getP(empId);
+  if(!emp){console.error('[showEmpPage] unknown empId:',empId);return;}
+  var isOwner=isAdmin()||(CU&&CU.id===empId);
+  // null-safe 페이지 숨김 (없는 페이지 엘리먼트로 인한 throw 방지)
+  PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
+  var pg=document.getElementById('page-emp');if(pg)pg.classList.remove('hidden');
   curEmpId=empId;setNav(null,empId);
-  const emp=getP(empId);
-  document.getElementById('topT').textContent=emp.name+'의 업무 공간';
-  document.getElementById('topS').textContent=isOwner?'개인 업무 보드':'공유 업무 보기 (읽기전용)';
-  document.getElementById('btnTask').textContent='+ '+emp.name+' 업무 추가';
-  document.getElementById('btnTask').onclick=function(){openTaskModal(empId);};
-  document.getElementById('btnTask').style.display=isOwner?'inline-flex':'none';
-  document.getElementById('btnProj').style.display='none';
+  var topT=document.getElementById('topT');if(topT)topT.textContent=emp.name+'의 업무 공간';
+  var topS=document.getElementById('topS');if(topS)topS.textContent=isOwner?'개인 업무 보드':'공유 업무 보기 (읽기전용)';
+  var btnTask=document.getElementById('btnTask');
+  if(btnTask){btnTask.textContent='+ '+emp.name+' 업무 추가';btnTask.onclick=function(){openTaskModal(empId);};btnTask.style.display=isOwner?'inline-flex':'none';}
+  var btnProj=document.getElementById('btnProj');if(btnProj)btnProj.style.display='none';
   renderEmpPage(empId);
 }
 
@@ -2960,6 +2961,9 @@ function renderEmpSidebar(empId){
   html+=_renderEmpSection('🚨 긴급', urgent, '#ef4444');
   html+=_renderEmpSection('📋 진행 중', active, '#3b82f6');
   html+=_renderEmpSection('✅ 완료', doneList, '#10b981', true);
+  if(!pool.length){
+    html+='<div style="text-align:center;color:var(--text3);padding:24px 12px;font-size:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px">등록된 업무가 없습니다'+(isOwner?'<br><span style="font-size:11px">상단 + 버튼으로 추가</span>':'')+'</div>';
+  }
   // Approval buttons (모든 직원에게 표시)
   var pendBadge='';
   if(isManagerCU() && _apvPendingCount>0){
