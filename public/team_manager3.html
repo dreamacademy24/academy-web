@@ -1664,7 +1664,7 @@ function loadProjectsFromSB(){
 
 // ── Supabase sync: taskComments → staff_task_comments ──
 // NOTE: staff_task_comments.id is bigint (DB auto-generated). Do NOT send local temp id.
-function tcToRow(taskId,c){var _ts=c.date;if(_ts&&typeof _ts==='string'){var _d=new Date(_ts);_ts=isNaN(_d.getTime())?Date.now():_d.getTime();}if(!_ts)_ts=Date.now();return{task_id:taskId,from_id:c.author||'',text:c.text||'',ts:_ts};}
+function tcToRow(taskId,c){var _ts=c.ts||c.date;if(_ts&&typeof _ts==='string'){var _d=new Date(_ts);_ts=isNaN(_d.getTime())?Date.now():_d.getTime();}if(!_ts)_ts=Date.now();return{task_id:taskId,from_id:c.author||c.from_id||'',text:c.text||'',ts:_ts};}
 function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',date:_ds};}
 function syncTcToSB(taskId,c){
   return sbUpsert('staff_task_comments',tcToRow(taskId,c)).then(function(data){
@@ -2979,13 +2979,32 @@ function refreshApvPendingCount(){
 function _empOpenApproval(){
   // Render approval into detail panel
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div id="_empApprovalSlot"></div>';
+  d.innerHTML='<div id="_empApprovalSlot"><div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">로딩 중...</div></div>';
   var wrap=document.getElementById('empApprovalWrap');
-  if(wrap){wrap.style.display='block';renderApprovalPage(curEmpId);
-    // Move into detail
+  if(!wrap){markNotifsRead('approval');refreshApvPendingCount();return;}
+  try{
+    wrap.style.display='block';
+    renderApprovalPage(curEmpId);
+    // renderApprovalPage is async (sbGet) — poll wrap until content loads, then copy to slot
+    var attempts=0;
+    var poll=setInterval(function(){
+      attempts++;
+      var html=wrap.innerHTML||'';
+      var loaded=html.indexOf('로딩 중')<0 && html.length>40;
+      if(loaded||attempts>40){
+        clearInterval(poll);
+        var slot=document.getElementById('_empApprovalSlot');
+        if(slot){
+          if(loaded) slot.innerHTML=wrap.innerHTML;
+          else slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
+        }
+        wrap.style.display='none';
+      }
+    },200);
+  }catch(err){
+    console.error('[_empOpenApproval] error:',err);
     var slot=document.getElementById('_empApprovalSlot');
-    if(slot){slot.innerHTML=wrap.innerHTML;}
-    wrap.style.display='none';
+    if(slot)slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">에러: '+esc(String(err&&err.message||err))+'</div>';
   }
   markNotifsRead('approval');
   refreshApvPendingCount();
