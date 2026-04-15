@@ -2095,7 +2095,7 @@ function showEmpPage(empId){
   var btnTask=document.getElementById('btnTask');
   if(btnTask){btnTask.textContent='+ '+emp.name+' 업무 추가';btnTask.onclick=function(){openTaskModal(empId);};btnTask.style.display=isOwner?'inline-flex':'none';}
   var btnProj=document.getElementById('btnProj');if(btnProj)btnProj.style.display='none';
-  renderEmpPage(empId);
+  requestAnimationFrame(function(){renderEmpPage(empId);});
 }
 
 // ── HOME ──
