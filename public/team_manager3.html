@@ -2711,6 +2711,17 @@ function renderBoardTaskDetail(taskId){
     html+=t.checklist.map(function(c){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'"><span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
     html+='</div>';
   }
+  if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    html+=t.checklist.items.map(function(c){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
+        '<div style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex-shrink:0">'+(c.done?'✓':'')+'</div>'+
+        '<span style="flex:1;font-size:13px;color:var(--text);'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(c.title||c.text||'')+'</span>'+
+        (c.due?'<span style="font-size:10px;color:var(--text3)">📅 '+c.due+'</span>':'')+
+        '</div>';
+    }).join('');
+    html+='</div>';
+  }
   if(t.files&&t.files.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">📎 첨부파일</div>'+renderTaskFiles(t)+'</div>';
   }
@@ -3434,6 +3445,17 @@ function renderEmpDetail(taskId){
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
     html+=t.checklist.map(function(c){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'"><span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
+    html+='</div>';
+  }
+  if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    html+=t.checklist.items.map(function(c){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
+        '<div style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex-shrink:0">'+(c.done?'✓':'')+'</div>'+
+        '<span style="flex:1;font-size:13px;color:var(--text);'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(c.title||c.text||'')+'</span>'+
+        (c.due?'<span style="font-size:10px;color:var(--text3)">📅 '+c.due+'</span>':'')+
+        '</div>';
+    }).join('');
     html+='</div>';
   }
   if(t.files&&t.files.length){
