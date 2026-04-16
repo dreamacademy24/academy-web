@@ -149,7 +149,7 @@ export default function OnlineClassPage() {
         class_period: "post", sessions_per_week: "3",
         pre_sessions: "0", post_sessions: "0", total_sessions: "0", notes: "",
       });
-      loadEnrollments();
+      await loadEnrollments();
       setTab("list");
     } catch (e) { alert("등록 실패: " + (e instanceof Error ? e.message : "unknown")); }
     finally { setSubmitting(false); }
