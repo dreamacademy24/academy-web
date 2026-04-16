@@ -3045,7 +3045,32 @@ function renderEmpSidebar(empId){
   html+='<button onclick="_empOpenApproval()" style="display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer"><span>📋 결재함</span>'+pendBadge+'</button>';
   html+='<button onclick="_empOpenApprovalSubmit()" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:8px 10px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 결재 상신</button>';
   html+='</div>';
-  top.innerHTML=html;
+  var dailyHtml=_buildEmpDailyHtml(empId);
+  top.innerHTML=html+dailyHtml;
+  var bot=document.getElementById('empSbBottom');
+  if(bot) bot.innerHTML='';
+}
+function _buildEmpDailyHtml(empId){
+  var today=todayStr();
+  var todayTasks=tasks.filter(function(t){return t.assignee===empId&&t.due===today;});
+  var doneCnt=todayTasks.filter(isDoneTask).length;
+  var pct=todayTasks.length?Math.round(doneCnt/todayTasks.length*100):0;
+  var h='<div style="border-top:2px dashed #f0e68c;margin-top:14px;padding-top:14px">';
+  h+='<div style="background:#fffef0;border-radius:10px;padding:12px">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:13px;font-weight:800;color:#92400e">☀️ 오늘의 데일리</div><div style="font-size:11px;color:var(--text3);font-weight:700">'+doneCnt+'/'+todayTasks.length+'</div></div>';
+  h+='<div style="height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:'+pct+'%;background:#f59e0b;transition:width .2s"></div></div>';
+  if(todayTasks.length){
+    h+='<div style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:6px">';
+    h+=todayTasks.map(function(t){var d=isDoneTask(t);return '<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11.5px;cursor:pointer" onclick="selectEmpTask(\''+t.id+'\')">'+
+      '<input type="checkbox" '+(d?'checked':'')+' onclick="event.stopPropagation();qTog(\''+t.id+'\',event)" style="margin:0;cursor:pointer;accent-color:#534AB7;width:13px;height:13px" />'+
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(d?'text-decoration:line-through;color:var(--text3)':'color:var(--text2)')+'">'+esc(t.title||'')+'</span></div>';}).join('');
+    h+='</div>';
+  }
+  if(CU&&CU.id===empId){
+    h+='<input id="empDailyInp" placeholder="오늘 할 일 추가 + Enter" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_empAddDailyTask(\''+empId+'\')}" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:11.5px;font-family:inherit;outline:none;background:#fff">';
+  }
+  h+='</div></div>';
+  return h;
 }
 function _renderEmpSection(label, list, color, collapsed){
   if(!list.length) return '';
@@ -3191,6 +3216,7 @@ function _empOpenApprovalSubmit(){
 }
 function renderEmpDailyMini(empId){
   var bot=document.getElementById('empSbBottom');if(!bot)return;
+  if(!bot.innerHTML.trim()) return;
   var today=todayStr();
   var todayTasks=tasks.filter(function(t){return t.assignee===empId&&t.due===today;});
   var doneCnt=todayTasks.filter(isDoneTask).length;
