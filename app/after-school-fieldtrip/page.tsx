@@ -353,7 +353,7 @@ export default function AfterSchoolFieldtripPage() {
       <main className="wrap">
         <section className="page">
           <header className="top-bar">
-            <a href="/apply" className="back-link">← 드림아카데미 신청서로 돌아가기</a>
+            <a href="/portal/dashboard" className="back-link">← 마이페이지로 돌아가기</a>
             <span>드림아카데미 애프터스쿨 &amp; 현장학습</span>
           </header>
 
