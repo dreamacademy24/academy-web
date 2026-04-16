@@ -70,9 +70,11 @@ export default function PortalDashboard() {
     { icon: "📋", title: "내 예약 현황", desc: "예약 상태 및 상세 확인", ready: true, href: "/portal/my-booking" },
     { icon: "📝", title: "내 신청 내역", desc: "셔틀/픽업/튜터 신청 확인", ready: true, href: "/portal/my-requests" },
     { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: true, href: "/portal/flight" },
-    { icon: "🚐", title: "셔틀 신청", desc: "SM/Ayala/IT Park 셔틀", ready: true, href: "/portal/shuttle" },
+    { icon: "🚐", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/shuttle" },
+    { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/apply" },
     { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "원어민 1:1 수업 신청", ready: true, href: "/portal/tutor" },
+    { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: true, href: "/portal/payment" },
   ] : cards;
 
   const displayName = session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]);
