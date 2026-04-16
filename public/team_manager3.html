@@ -1201,11 +1201,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
             <!-- 탭 헤더 -->
             <div id="empSbTabs" style="display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0">
-              <button id="empTab-work" onclick="setEmpTab('work')" style="flex:1;padding:9px 4px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 업무</button>
-              <button id="empTab-apv" onclick="setEmpTab('apv')" style="flex:1;padding:9px 4px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
+              <button id="empTab-work" onclick="setEmpTab('work')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 업무</button>
+              <button id="empTab-daily" onclick="setEmpTab('daily')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">☀️ 데일리</button>
+              <button id="empTab-apv" onclick="setEmpTab('apv')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
             </div>
             <!-- 업무 탭 -->
             <div id="empSbWork" style="flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
+            <!-- 데일리 탭 -->
+            <div id="empSbDaily" style="display:none;flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
             <!-- 결재 탭 -->
             <div id="empSbApv" style="display:none;flex:1;overflow-y:auto;min-height:0"></div>
           </div>
@@ -3043,8 +3046,7 @@ function renderEmpSidebar(empId){
   if(!pool.length){
     html+='<div style="text-align:center;color:var(--text3);padding:24px 12px;font-size:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px">등록된 업무가 없습니다'+(isOwner?'<br><span style="font-size:11px">상단 + 버튼으로 추가</span>':'')+'</div>';
   }
-  var dailyHtml=_buildEmpDailyHtml(empId);
-  top.innerHTML=html+dailyHtml;
+  top.innerHTML=html;
 }
 function _buildEmpDailyHtml(empId){
   var today=todayStr();
@@ -3070,30 +3072,27 @@ function _buildEmpDailyHtml(empId){
 }
 function setEmpTab(tab){
   var workEl=document.getElementById('empSbWork');
+  var dailyEl=document.getElementById('empSbDaily');
   var apvEl=document.getElementById('empSbApv');
-  var tabWork=document.getElementById('empTab-work');
-  var tabApv=document.getElementById('empTab-apv');
-  if(!workEl||!apvEl||!tabWork||!tabApv)return;
-  if(tab==='work'){
-    workEl.style.display='block';
-    apvEl.style.display='none';
-    tabWork.style.color='var(--primary)';
-    tabWork.style.borderBottom='2px solid var(--primary)';
-    tabWork.style.background='var(--primary-l)';
-    tabApv.style.color='var(--text2)';
-    tabApv.style.borderBottom='2px solid transparent';
-    tabApv.style.background='none';
-  } else {
-    workEl.style.display='none';
-    apvEl.style.display='block';
-    tabWork.style.color='var(--text2)';
-    tabWork.style.borderBottom='2px solid transparent';
-    tabWork.style.background='none';
-    tabApv.style.color='var(--primary)';
-    tabApv.style.borderBottom='2px solid var(--primary)';
-    tabApv.style.background='var(--primary-l)';
-    renderEmpApvTab(curEmpId);
+  var tabs=['work','daily','apv'];
+  tabs.forEach(function(t){
+    var btn=document.getElementById('empTab-'+t);
+    if(!btn)return;
+    btn.style.color='var(--text2)';
+    btn.style.borderBottom='2px solid transparent';
+    btn.style.background='none';
+  });
+  var activeBtn=document.getElementById('empTab-'+tab);
+  if(activeBtn){
+    activeBtn.style.color='var(--primary)';
+    activeBtn.style.borderBottom='2px solid var(--primary)';
+    activeBtn.style.background='var(--primary-l)';
   }
+  if(workEl)workEl.style.display=tab==='work'?'block':'none';
+  if(dailyEl)dailyEl.style.display=tab==='daily'?'block':'none';
+  if(apvEl)apvEl.style.display=tab==='apv'?'block':'none';
+  if(tab==='daily') renderEmpDailyTab(curEmpId);
+  if(tab==='apv') renderEmpApvTab(curEmpId);
 }
 function renderEmpApvTab(empId){
   var el=document.getElementById('empSbApv');if(!el)return;
@@ -3241,6 +3240,125 @@ function _empApvShowMyList(status){
     html+='</div>';
     d.innerHTML=html;
   });
+}
+function renderEmpDailyTab(empId){
+  var el=document.getElementById('empSbDaily');if(!el)return;
+  var today=todayStr();
+  var fixedKey='tm_fixed_'+empId;
+  var dailyKey='tm_daily_'+empId+'_'+today;
+  var fixedItems=ld(fixedKey,[]);
+  var dailyItems=ld(dailyKey,[]);
+  fixedItems.forEach(function(f){
+    var exists=dailyItems.find(function(d){return d.fixedId===f.id;});
+    if(!exists){dailyItems.push({id:uid(),text:f.text,done:false,fixedId:f.id});}
+  });
+  sv(dailyKey,dailyItems);
+  var doneCount=dailyItems.filter(function(d){return d.done;}).length;
+  var pct=dailyItems.length?Math.round(doneCount/dailyItems.length*100):0;
+  var html='';
+  html+='<div style="margin-bottom:14px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html+='<div style="font-size:13px;font-weight:700;color:#92400e">\u2600\ufe0f \uc624\ub298\uc758 \ub370\uc77c\ub9ac</div>';
+  html+='<div style="font-size:11px;color:#b45309;font-weight:600">'+doneCount+'/'+dailyItems.length+'</div>';
+  html+='</div>';
+  html+='<div style="height:4px;background:#fef3c7;border-radius:2px;overflow:hidden;margin-bottom:10px">';
+  html+='<div style="height:100%;width:'+pct+'%;background:#f59e0b;transition:width .3s"></div></div>';
+  if(dailyItems.length){
+    html+='<div style="display:flex;flex-direction:column;gap:2px;margin-bottom:8px">';
+    dailyItems.forEach(function(item){
+      var isFixed=!!item.fixedId;
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:'+(item.done?'#f9fafb':'#fffbeb')+';cursor:pointer" onclick="_dailyToggle(\''+empId+'\',\''+item.id+'\')">';
+      html+='<div style="width:18px;height:18px;border-radius:4px;border:1.5px solid '+(item.done?'#f59e0b':'#d0b860')+';background:'+(item.done?'#f59e0b':'#fff')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+      if(item.done)html+='<span style="color:#fff;font-size:10px">\u2713</span>';
+      html+='</div>';
+      html+='<span style="flex:1;font-size:12.5px;color:'+(item.done?'#9ca3af':'#5c4a14')+';'+(item.done?'text-decoration:line-through':'')+'">';
+      html+=esc(item.text||'');
+      if(isFixed)html+='<span style="font-size:9px;color:#b45309;margin-left:4px">\ud83d\udccc</span>';
+      html+='</span>';
+      if(!item.fixedId){
+        html+='<button onclick="event.stopPropagation();_dailyDel(\''+empId+'\',\''+item.id+'\')" style="background:none;border:none;cursor:pointer;color:#d0b860;font-size:12px;opacity:0.6;padding:0 2px">\u2715</button>';
+      }
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  if(CU&&CU.id===empId){
+    html+='<div style="display:flex;gap:6px">';
+    html+='<input id="dailyTabInp" placeholder="\uc624\ub298 \ud560 \uc77c \ucd94\uac00..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();_dailyAdd(\''+empId+'\')}" style="flex:1;padding:7px 10px;border:1px solid #f0e68c;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#fffde7">';
+    html+='<button onclick="_dailyAdd(\''+empId+'\')" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">\ucd94\uac00</button>';
+    html+='</div>';
+  }
+  html+='</div>';
+  html+='<div style="border-top:1px dashed #f0e68c;padding-top:12px">';
+  html+='<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px">\ud83d\udccc \uace0\uc815 \ud56d\ubaa9 (\ub9e4\uc77c \uc790\ub3d9\ucd94\uac00)</div>';
+  if(fixedItems.length){
+    fixedItems.forEach(function(f){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:#fff8e6;margin-bottom:4px">';
+      html+='<span style="flex:1;font-size:12px;color:#92400e">\ud83d\udccc '+esc(f.text)+'</span>';
+      if(CU&&CU.id===empId){
+        html+='<button onclick="_fixedDel(\''+empId+'\',\''+f.id+'\')" style="background:none;border:none;cursor:pointer;color:#d0b860;font-size:12px">\u2715</button>';
+      }
+      html+='</div>';
+    });
+  } else {
+    html+='<div style="font-size:11px;color:#b45309;padding:6px 0">\uace0\uc815 \ud56d\ubaa9\uc774 \uc5c6\uc2b5\ub2c8\ub2e4</div>';
+  }
+  if(CU&&CU.id===empId){
+    html+='<div style="display:flex;gap:6px;margin-top:6px">';
+    html+='<input id="fixedTabInp" placeholder="\ub9e4\uc77c \ubc18\ubcf5\ud560 \ud56d\ubaa9..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();_fixedAdd(\''+empId+'\')}" style="flex:1;padding:7px 10px;border:1px solid #f0e68c;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#fffde7">';
+    html+='<button onclick="_fixedAdd(\''+empId+'\')" style="padding:7px 10px;background:#b45309;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">\uace0\uc815</button>';
+    html+='</div>';
+  }
+  html+='</div>';
+  el.innerHTML=html;
+}
+function _dailyToggle(empId,itemId){
+  var today=todayStr();
+  var key='tm_daily_'+empId+'_'+today;
+  var items=ld(key,[]);
+  for(var i=0;i<items.length;i++){if(items[i].id===itemId){items[i].done=!items[i].done;break;}}
+  sv(key,items);
+  renderEmpDailyTab(empId);
+}
+function _dailyAdd(empId){
+  var inp=document.getElementById('dailyTabInp');
+  if(!inp)return;
+  var text=(inp.value||'').trim();if(!text)return;
+  var today=todayStr();
+  var key='tm_daily_'+empId+'_'+today;
+  var items=ld(key,[]);
+  items.push({id:uid(),text:text,done:false});
+  sv(key,items);
+  inp.value='';
+  renderEmpDailyTab(empId);
+}
+function _dailyDel(empId,itemId){
+  var today=todayStr();
+  var key='tm_daily_'+empId+'_'+today;
+  var items=ld(key,[]).filter(function(d){return d.id!==itemId;});
+  sv(key,items);
+  renderEmpDailyTab(empId);
+}
+function _fixedAdd(empId){
+  var inp=document.getElementById('fixedTabInp');
+  if(!inp)return;
+  var text=(inp.value||'').trim();if(!text)return;
+  var key='tm_fixed_'+empId;
+  var items=ld(key,[]);
+  items.push({id:uid(),text:text});
+  sv(key,items);
+  inp.value='';
+  renderEmpDailyTab(empId);
+}
+function _fixedDel(empId,fixedId){
+  var key='tm_fixed_'+empId;
+  var items=ld(key,[]).filter(function(f){return f.id!==fixedId;});
+  sv(key,items);
+  var today=todayStr();
+  var dKey='tm_daily_'+empId+'_'+today;
+  var dItems=ld(dKey,[]).filter(function(d){return d.fixedId!==fixedId;});
+  sv(dKey,dItems);
+  renderEmpDailyTab(empId);
 }
 function _renderEmpSection(label, list, color, collapsed){
   if(!list.length) return '';
