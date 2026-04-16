@@ -3233,7 +3233,8 @@ function renderApprovalPage(empId){
   query+=')&order=ts.desc';
   sbGet('staff_approvals',query).then(function(rows){
     var html='<div style="padding:0 2px">';
-    html+='<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:20px">';
+    html+='<button onclick="document.getElementById(\'apvFormSection\').style.display=document.getElementById(\'apvFormSection\').style.display===\'none\'?\'block\':\'none\'" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">+ 결재 상신하기</button>';
+    html+='<div id="apvFormSection" style="display:none"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:20px">';
     html+='<div style="font-size:15px;font-weight:800;margin-bottom:14px">결재 상신</div>';
     html+='<input id="apvTitle" type="text" placeholder="결재 제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">';
     html+='<textarea id="apvBody" placeholder="결재 내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>';
@@ -3242,7 +3243,7 @@ function renderApprovalPage(empId){
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (부원장)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> 둘 다</label>';
     html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
-    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
+    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div></div>';
     var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
     if(pending.length){
       html+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">결재 대기 '+pending.length+'건</div>';
@@ -3360,7 +3361,26 @@ function processApproval(id,action){
   var reason="";
   if(action==="reject"){reason=(document.getElementById("rejectReason_"+id)||{}).value||"";if(!reason){toast("\ubc18\ub824 \uc0ac\uc720\ub97c \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}}
   sbPatch("staff_approvals","id=eq."+id,{status:action,reject_reason:reason,updated_at:Date.now()})
-    .then(function(){toast(action==="approve"?"\uc2b9\uc778\ud588\uc2b5\ub2c8\ub2e4":"\ubc18\ub824\ud588\uc2b5\ub2c8\ub2e4",action==="approve"?"#16a34a":"#dc2626");if(CU)renderApprovalPage(CU.id);});
+    .then(function(){
+      toast('\u2705 \ucc98\ub9ac \uc644\ub8cc',action==="approve"?"#16a34a":"#dc2626");
+      if(curEmpId){
+        renderApprovalPage(curEmpId);
+        var d=document.getElementById('empDetail');
+        if(d){
+          d.innerHTML='<div id="_empApprovalSlot"></div>';
+          var wrap2=document.getElementById('empApprovalWrap');
+          if(wrap2){
+            wrap2.style.display='block';
+            renderApprovalPage(curEmpId);
+            setTimeout(function(){
+              var slot=document.getElementById('_empApprovalSlot');
+              var w2=document.getElementById('empApprovalWrap');
+              if(slot&&w2){slot.innerHTML=w2.innerHTML;w2.style.display='none';}
+            },600);
+          }
+        }
+      } else if(CU){renderApprovalPage(CU.id);}
+    });
 }
 function resubmitApproval(id){
   var title=(document.getElementById("resubTitle_"+id)||{}).value||"";
