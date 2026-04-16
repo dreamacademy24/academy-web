@@ -3296,8 +3296,19 @@ function renderApprovalPage(empId){
 
 
 var MAX_FILES=10;
+var MAX_FILE_SIZE=20*1024*1024;
+var BLOCKED_EXTENSIONS=/\.(mp4|mov|avi|mkv|webm|wmv|flv|m4v|3gp|ts|mts)$/i;
+var ALLOWED_MIME_PREFIXES=['image/','application/pdf','application/msword','application/vnd.openxmlformats','application/vnd.ms-excel','application/vnd.ms-powerpoint','text/'];
+function _validateFile(f){
+  if(BLOCKED_EXTENSIONS.test(f.name)){toast(f.name+': 영상 파일은 구글 드라이브 링크로 공유해주세요','#ef4444');return false;}
+  if(f.type&&f.type.startsWith('video/')){toast(f.name+': 영상 파일은 구글 드라이브 링크로 공유해주세요','#ef4444');return false;}
+  if(f.size>MAX_FILE_SIZE){toast(f.name+': 파일이 너무 큽니다 (최대 20MB)','#ef4444');return false;}
+  return true;
+}
 function readFilesAsBase64(input){
   var files=Array.from(input.files||[]);
+  if(!files.length)return Promise.resolve([]);
+  files=files.filter(_validateFile);
   if(!files.length)return Promise.resolve([]);
   if(files.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');files=files.slice(0,MAX_FILES);}
   return Promise.all(files.map(function(f){
@@ -4292,7 +4303,7 @@ function toggleQA(){
     document.getElementById('qaTit').focus();
   }
 }
-function handleQAF(e){var added=Array.from(e.target.files);if(qaFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-qaFiles.length);}added.forEach(function(f){qaFiles.push({name:f.name,size:f.size});});renderQAFL();}
+function handleQAF(e){var added=Array.from(e.target.files).filter(_validateFile);if(qaFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-qaFiles.length);}added.forEach(function(f){qaFiles.push({name:f.name,size:f.size});});renderQAFL();}
 function renderQAFL(){document.getElementById('qaFL').innerHTML=qaFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmQAF('+i+')">✕</button></div>';}).join('');}
 function rmQAF(i){qaFiles.splice(i,1);renderQAFL();}
 function saveQA(){
@@ -4433,7 +4444,7 @@ function toggleAssignPicker(){
   if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
   else p.style.display='none';
 }
-function handleTMF(e){var added=Array.from(e.target.files);if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-mFiles.length);}added.forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
+function handleTMF(e){var added=Array.from(e.target.files).filter(_validateFile);if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-mFiles.length);}added.forEach(function(f){mFiles.push({name:f.name,size:f.size});});renderTMFL();}
 function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
 function rmMF(i){mFiles.splice(i,1);renderTMFL();}
 function showTaskErr(msg){var el=document.getElementById('tmErr');if(!el)return;el.textContent='⚠️ '+msg;el.style.display='block';}
