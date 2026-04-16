@@ -3268,7 +3268,7 @@ function renderApprovalPage(empId){
         var fromUser=ALL.find(function(u){return u.id===a.from_id;});
         var ds=new Date(a.ts);
         var dateStr=(ds.getMonth()+1)+'/'+(ds.getDate());
-        html+='<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid #dc2626">';
+        html+='<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid #1a6fc4">';
         html+='<div style="display:flex;justify-content:space-between;margin-bottom:10px">';
         html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:600">'+(fromUser?esc(fromUser.name):'?')+'</span><span style="font-size:11px;color:#94a3b8">'+dateStr+'</span></div>';
         html+='<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">대기중</span></div>';
