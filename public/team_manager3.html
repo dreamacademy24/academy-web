@@ -1199,8 +1199,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         <!-- NEW MASTER-DETAIL LAYOUT -->
         <div id="empMD" style="display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 60px);background:var(--bg);margin:-24px -24px 0 -24px">
           <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
-            <div id="empSbTop" style="flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
-            <div id="empSbBottom" style="border-top:1px solid var(--border);background:var(--surface2);padding:12px;flex-shrink:0"></div>
+            <div id="empSbTop" style="flex:1;overflow-y:auto;padding:14px;min-height:0;max-height:calc(100vh - 280px)"></div>
+            <div id="empSbBottom" style="border-top:2px solid var(--primary-b);background:linear-gradient(135deg,#fef9c3,#fffde7);padding:16px;flex-shrink:0;max-height:280px;overflow-y:auto"></div>
           </div>
           <div id="empDetail" style="overflow-y:auto;padding:24px;min-width:0"></div>
         </div>
@@ -3196,8 +3196,8 @@ function renderEmpDailyMini(empId){
   var doneCnt=todayTasks.filter(isDoneTask).length;
   var pct=todayTasks.length?Math.round(doneCnt/todayTasks.length*100):0;
   var html='';
-  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11.5px;font-weight:800;color:var(--text2)">☀️ 오늘의 데일리</div><div style="font-size:11px;color:var(--text3);font-weight:700">'+doneCnt+'/'+todayTasks.length+'</div></div>';
-  html+='<div style="height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:'+pct+'%;background:#534AB7;transition:width .2s"></div></div>';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><div style="font-size:11.5px;font-weight:800;color:#92400e">☀️ 오늘의 데일리</div><div style="font-size:11px;color:var(--text3);font-weight:700">'+doneCnt+'/'+todayTasks.length+'</div></div>';
+  html+='<div style="height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:'+pct+'%;background:#f59e0b;transition:width .2s"></div></div>';
   if(todayTasks.length){
     html+='<div style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;margin-bottom:6px">';
     html+=todayTasks.map(function(t){var d=isDoneTask(t);return '<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;font-size:11.5px;cursor:pointer" onclick="selectEmpTask(\''+t.id+'\')">'+
