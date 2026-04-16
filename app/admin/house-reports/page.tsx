@@ -25,7 +25,7 @@ const STATUS_MAP: Record<string, { label: string; bg: string; color: string; bol
   check:    { label: "확인필요", bg: "#fecaca", color: "#991b1b", bold: true },
 };
 
-const HOUSE_ROOMS = ['b17-4','b17-5','b17-6','b17-7','b17-8','b17-9','b17-10','b17-11','b17-12','b17-13','b17-14','b17-15','b17-16','b17-17','b17-18','b16-19','b13-10'];
+const HOUSE_ROOMS = ['b17-4','b17-5','b17-6','b17-7','b17-8','b17-9','b17-10','b17-11','b17-12','b17-13','b17-14','b17-17','b17-18','b16-19','b13-10'];
 
 /* ──── Helpers ──── */
 function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
