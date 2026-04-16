@@ -2200,7 +2200,7 @@ function renderHomePage(){
   var dow=todayD.getDay(),mon=new Date(todayD);mon.setDate(todayD.getDate()-(dow===0?6:dow-1));mon.setHours(0,0,0,0);
   var sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
   // Stat data
-  var unassigned=tasks.filter(isUnassignedTask);
+  var unassigned=tasks.filter(function(t){return isUnassignedTask(t)&&!isDoneTask(t);});
   var todayDue=visible.filter(function(t){if(!t.due)return false;var d=parseLocalDate(t.due);return d>=todayD&&d<=endTodayD;});
   var weekDone=visible.filter(function(t){if(!isDoneTask(t))return false;var c=t.created_at||t.createdAt;if(!c)return false;var dt=new Date(c);if(isNaN(dt.getTime()))return false;return dt>=mon&&dt<=sun;});
   var inProgress=visible.filter(function(t){return !isDoneTask(t);}).length;
@@ -2230,6 +2230,26 @@ function renderHomePage(){
   html+=_homeCardWrap('⚠️ 미배정 업무','<span style="font-size:11px;color:var(--text3);font-weight:700">'+unassigned.length+'개</span>',unBody,'#fed7aa');
   // Card 2: Confirm needed
   var cnBody='';
+  // 최근 24시간 내 나에게 새로 배정된 업무
+  var newlyAssigned=[];
+  if(CU){
+    var oneDayAgo=Date.now()-24*60*60*1000;
+    newlyAssigned=tasks.filter(function(t){
+      if(isDoneTask(t))return false;
+      var isAssigned=t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0);
+      if(!isAssigned)return false;
+      var c=t.created_at||t.createdAt;
+      if(!c)return false;
+      var dt=new Date(c);
+      return !isNaN(dt.getTime())&&dt.getTime()>oneDayAgo;
+    });
+  }
+  if(newlyAssigned.length){
+    cnBody+='<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px">🆕 새로 배정된 내 업무</div>';
+    cnBody+=newlyAssigned.slice(0,5).map(function(t){
+      return '<div onclick="_homeGotoBoardTask(\''+t.id+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;margin-bottom:3px;background:#f0fdf4;border:1px solid #bbf7d0"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+'</span><span style="background:#10b981;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px">NEW</span></div>';
+    }).join('');
+  }
   var commentedTasks=visible.filter(function(t){return (taskComments[t.id]||[]).length>0;});
   if(commentedTasks.length){
     cnBody+='<div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px">💬 댓글 달린 내 업무</div>';
@@ -2249,14 +2269,11 @@ function renderHomePage(){
   html+='<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;height:300px">';
   if(isManagerCU()){
     var empBody=ALL.map(function(e){
-      var et=tasks.filter(function(t){return t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0);});
-      var doneN=et.filter(isDoneTask).length;
-      var pct=et.length?Math.round(doneN/et.length*100):0;
+      var et=tasks.filter(function(t){return (t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0))&&!isDoneTask(t);});
       return '<div onclick="_homeGotoBoardEmp(\''+e.id+'\')" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px" onmouseenter="this.style.background=\'#f9fafb\'" onmouseleave="this.style.background=\'\'">'+
         '<div style="width:32px;height:32px;border-radius:9px;background:'+e.color+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0">'+e.initial+'</div>'+
-        '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px"><span>'+esc(e.name)+'</span><span style="color:'+e.color+'">'+pct+'%</span></div>'+
-        '<div style="height:5px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+e.color+';transition:width .3s"></div></div>'+
-        '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">완료 '+doneN+' / 전체 '+et.length+'</div>'+
+        '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px"><span>'+esc(e.name)+'</span><span style="color:'+(et.length?e.color:'#10b981')+'">'+et.length+'개</span></div>'+
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">남은 업무 '+et.length+'개</div>'+
         '</div></div>';
     }).join('');
     html+=_homeCardWrap('👥 직원별 업무 현황','',empBody);
