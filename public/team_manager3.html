@@ -3233,8 +3233,8 @@ function renderApprovalPage(empId){
   query+=')&order=ts.desc';
   sbGet('staff_approvals',query).then(function(rows){
     var html='<div style="padding:0 2px">';
-    html+='<button onclick="document.getElementById(\'apvFormSection\').style.display=document.getElementById(\'apvFormSection\').style.display===\'none\'?\'block\':\'none\'" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">+ 결재 상신하기</button>';
-    html+='<div id="apvFormSection" style="display:none"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:20px">';
+    html+='<button onclick="var s=document.getElementById(\'apvFormSection\');s.style.display=s.style.display===\'none\'?\'block\':\'none\'" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">\u270f\ufe0f 결재 상신하기 \u25bc</button>';
+    html+='<div id="apvFormSection" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:20px">';
     html+='<div style="font-size:15px;font-weight:800;margin-bottom:14px">결재 상신</div>';
     html+='<input id="apvTitle" type="text" placeholder="결재 제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">';
     html+='<textarea id="apvBody" placeholder="결재 내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>';
@@ -3243,7 +3243,7 @@ function renderApprovalPage(empId){
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (부원장)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> 둘 다</label>';
     html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
-    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div></div>';
+    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
     var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
     if(pending.length){
       html+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">결재 대기 '+pending.length+'건</div>';
@@ -3251,12 +3251,12 @@ function renderApprovalPage(empId){
         var fromUser=ALL.find(function(u){return u.id===a.from_id;});
         var ds=new Date(a.ts);
         var dateStr=(ds.getMonth()+1)+'/'+(ds.getDate());
-        html+='<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:16px;margin-bottom:10px;border-left:4px solid #dc2626">';
-        html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
+        html+='<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid #dc2626">';
+        html+='<div style="display:flex;justify-content:space-between;margin-bottom:10px">';
         html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:600">'+(fromUser?esc(fromUser.name):'?')+'</span><span style="font-size:11px;color:#94a3b8">'+dateStr+'</span></div>';
         html+='<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">대기중</span></div>';
-        html+='<div style="font-size:14px;font-weight:700;margin-bottom:6px">'+esc(a.title)+'</div>';
-        html+='<div style="font-size:13px;color:#374151;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
+        html+='<div style="font-size:16px;font-weight:800;margin-bottom:8px">'+esc(a.title)+'</div>';
+        html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
         if(a.files&&a.files.length)html+=renderAttachments(a.files);
         html+='<div style="display:flex;gap:8px"><button onclick="processApproval('+a.id+',\x27approve\x27)" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">승인</button>';
         html+='<input id="rejectReason_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
@@ -3270,9 +3270,9 @@ function renderApprovalPage(empId){
       mine.forEach(function(a){
         var stMap={pending:{label:'대기중',color:'#ea580c',bg:'#fff7ed'},approve:{label:'승인',color:'#16a34a',bg:'#f0fdf4'},reject:{label:'반려',color:'#dc2626',bg:'#fef2f2'}};
         var st=stMap[a.status]||stMap.pending;
-        html+='<div style="background:#fff;border-left:4px solid '+st.color+';border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px">';
-        html+='<div style="display:flex;justify-content:space-between;margin-bottom:6px"><div style="font-size:14px;font-weight:700">'+esc(a.title)+'</div><span style="background:'+st.bg+';color:'+st.color+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.label+'</span></div>';
-        html+='<div style="font-size:13px;color:#374151;white-space:pre-wrap">'+esc(a.body)+'</div>';
+        html+='<div style="background:#fff;border-left:4px solid '+st.color+';border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px">';
+        html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:16px;font-weight:800">'+esc(a.title)+'</div><span style="background:'+st.bg+';color:'+st.color+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.label+'</span></div>';
+        html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap">'+esc(a.body)+'</div>';
         if(a.files&&a.files.length)html+=renderAttachments(a.files);
         if(a.status==='reject'&&a.reject_reason){
           html+='<div style="margin-top:8px;padding:8px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626">반려 사유: '+esc(a.reject_reason)+'</div>';
@@ -3362,12 +3362,11 @@ function processApproval(id,action){
   if(action==="reject"){reason=(document.getElementById("rejectReason_"+id)||{}).value||"";if(!reason){toast("\ubc18\ub824 \uc0ac\uc720\ub97c \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}}
   sbPatch("staff_approvals","id=eq."+id,{status:action,reject_reason:reason,updated_at:Date.now()})
     .then(function(){
-      toast('\u2705 \ucc98\ub9ac \uc644\ub8cc',action==="approve"?"#16a34a":"#dc2626");
+      toast(action==='approve'?'\u2705 \uc2b9\uc778 \uc644\ub8cc':'\u274c \ubc18\ub824 \uc644\ub8cc');
       if(curEmpId){
-        renderApprovalPage(curEmpId);
         var d=document.getElementById('empDetail');
         if(d){
-          d.innerHTML='<div id="_empApprovalSlot"></div>';
+          d.innerHTML='<div id="_empApprovalSlot"><div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">\ub85c\ub529 \uc911...</div></div>';
           var wrap2=document.getElementById('empApprovalWrap');
           if(wrap2){
             wrap2.style.display='block';
@@ -3375,11 +3374,14 @@ function processApproval(id,action){
             setTimeout(function(){
               var slot=document.getElementById('_empApprovalSlot');
               var w2=document.getElementById('empApprovalWrap');
-              if(slot&&w2){slot.innerHTML=w2.innerHTML;w2.style.display='none';}
-            },600);
+              if(slot&&w2&&w2.innerHTML.indexOf('\ub85c\ub529 \uc911')<0){
+                slot.innerHTML=w2.innerHTML;
+                w2.style.display='none';
+              }
+            },800);
           }
         }
-      } else if(CU){renderApprovalPage(CU.id);}
+      }
     });
 }
 function resubmitApproval(id){
