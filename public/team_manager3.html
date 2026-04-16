@@ -1199,8 +1199,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         <!-- NEW MASTER-DETAIL LAYOUT -->
         <div id="empMD" style="display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 60px);background:var(--bg);margin:-24px -24px 0 -24px">
           <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
-            <div id="empSbTop" style="flex:1;overflow-y:auto;padding:14px;min-height:0;max-height:calc(100vh - 280px)"></div>
-            <div id="empSbBottom" style="border-top:2px solid var(--primary-b);background:linear-gradient(135deg,#fef9c3,#fffde7);padding:16px;flex-shrink:0;max-height:280px;overflow-y:auto"></div>
+            <!-- 탭 헤더 -->
+            <div id="empSbTabs" style="display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0">
+              <button id="empTab-work" onclick="setEmpTab('work')" style="flex:1;padding:9px 4px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 업무</button>
+              <button id="empTab-apv" onclick="setEmpTab('apv')" style="flex:1;padding:9px 4px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
+            </div>
+            <!-- 업무 탭 -->
+            <div id="empSbWork" style="flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
+            <!-- 결재 탭 -->
+            <div id="empSbApv" style="display:none;flex:1;overflow-y:auto;min-height:0"></div>
           </div>
           <div id="empDetail" style="overflow-y:auto;padding:24px;min-width:0"></div>
         </div>
@@ -2150,7 +2157,7 @@ function showEmpPage(empId){
   var btnTask=document.getElementById('btnTask');
   if(btnTask){btnTask.textContent='+ '+emp.name+' 업무 추가';btnTask.onclick=function(){openTaskModal(empId);};btnTask.style.display=isOwner?'inline-flex':'none';}
   var btnProj=document.getElementById('btnProj');if(btnProj)btnProj.style.display='none';
-  requestAnimationFrame(function(){renderEmpPage(empId);});
+  requestAnimationFrame(function(){renderEmpPage(empId);setEmpTab('work');});
 }
 
 // ── HOME ──
@@ -3008,7 +3015,7 @@ function renderEmpPage(empId){
   }
 }
 function renderEmpSidebar(empId){
-  var top=document.getElementById('empSbTop');if(!top)return;
+  var top=document.getElementById('empSbWork');if(!top)return;
   var emp=getP(empId);
   var isOwner=CU&&CU.id===empId;
   // 모든 직원(ceo/jenna 포함) 본인 업무만 표시
@@ -3036,19 +3043,8 @@ function renderEmpSidebar(empId){
   if(!pool.length){
     html+='<div style="text-align:center;color:var(--text3);padding:24px 12px;font-size:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px">등록된 업무가 없습니다'+(isOwner?'<br><span style="font-size:11px">상단 + 버튼으로 추가</span>':'')+'</div>';
   }
-  // Approval buttons (모든 직원에게 표시)
-  var pendBadge='';
-  if(isManagerCU() && _apvPendingCount>0){
-    pendBadge='<span style="background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:9px;margin-left:auto">'+(_apvPendingCount>99?'99+':_apvPendingCount)+'</span>';
-  }
-  html+='<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">';
-  html+='<button onclick="_empOpenApproval()" style="display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer"><span>📋 결재함</span>'+pendBadge+'</button>';
-  html+='<button onclick="_empOpenApprovalSubmit()" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:8px 10px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ 결재 상신</button>';
-  html+='</div>';
   var dailyHtml=_buildEmpDailyHtml(empId);
   top.innerHTML=html+dailyHtml;
-  var bot=document.getElementById('empSbBottom');
-  if(bot) bot.innerHTML='';
 }
 function _buildEmpDailyHtml(empId){
   var today=todayStr();
@@ -3071,6 +3067,180 @@ function _buildEmpDailyHtml(empId){
   }
   h+='</div></div>';
   return h;
+}
+function setEmpTab(tab){
+  var workEl=document.getElementById('empSbWork');
+  var apvEl=document.getElementById('empSbApv');
+  var tabWork=document.getElementById('empTab-work');
+  var tabApv=document.getElementById('empTab-apv');
+  if(!workEl||!apvEl||!tabWork||!tabApv)return;
+  if(tab==='work'){
+    workEl.style.display='block';
+    apvEl.style.display='none';
+    tabWork.style.color='var(--primary)';
+    tabWork.style.borderBottom='2px solid var(--primary)';
+    tabWork.style.background='var(--primary-l)';
+    tabApv.style.color='var(--text2)';
+    tabApv.style.borderBottom='2px solid transparent';
+    tabApv.style.background='none';
+  } else {
+    workEl.style.display='none';
+    apvEl.style.display='block';
+    tabWork.style.color='var(--text2)';
+    tabWork.style.borderBottom='2px solid transparent';
+    tabWork.style.background='none';
+    tabApv.style.color='var(--primary)';
+    tabApv.style.borderBottom='2px solid var(--primary)';
+    tabApv.style.background='var(--primary-l)';
+    renderEmpApvTab(curEmpId);
+  }
+}
+function renderEmpApvTab(empId){
+  var el=document.getElementById('empSbApv');if(!el)return;
+  var isCeoJenna=CU&&(CU.id==='ceo'||CU.id==='jenna');
+  if(isCeoJenna){
+    sbGet('staff_approvals','order=ts.desc').then(function(rows){
+      var pending=(rows||[]).filter(function(a){return a.status==='pending'&&(a.to_id===CU.id||a.to_id==='both');});
+      var approved=(rows||[]).filter(function(a){return a.status==='approve'&&(a.to_id===CU.id||a.to_id==='both');});
+      var rejected=(rows||[]).filter(function(a){return a.status==='reject'&&(a.to_id===CU.id||a.to_id==='both');});
+      var dot=document.getElementById('empApvDot');
+      if(dot)dot.style.display=pending.length?'inline-block':'none';
+      var h='<div style="padding:0">';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:10px 14px 4px;text-transform:uppercase;letter-spacing:.5px">결재 관리</div>';
+      h+='<div onclick="_empApvShowList(\'pending\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:12px">⏳</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">대기 중</span>';
+      if(pending.length)h+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700">'+pending.length+'건</span>';
+      h+='</div>';
+      h+='<div onclick="_empApvShowList(\'approve\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:12px">✅</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">승인 완료</span>';
+      h+='<span style="background:#f0fdf4;color:#166534;font-size:10px;padding:2px 7px;border-radius:4px">'+approved.length+'</span>';
+      h+='</div>';
+      h+='<div onclick="_empApvShowList(\'reject\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:12px">❌</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">반려</span>';
+      h+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:4px">'+rejected.length+'</span>';
+      h+='</div>';
+      h+='</div>';
+      el.innerHTML=h;
+      _empApvShowList('pending',rows);
+    });
+  } else {
+    sbGet('staff_approvals','from_id=eq.'+empId+'&order=ts.desc').then(function(rows){
+      var pending=(rows||[]).filter(function(a){return a.status==='pending';});
+      var approved=(rows||[]).filter(function(a){return a.status==='approve';});
+      var rejected=(rows||[]).filter(function(a){return a.status==='reject';});
+      var h='<div style="padding:0">';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:10px 14px 4px;text-transform:uppercase;letter-spacing:.5px">내 결재</div>';
+      h+='<div onclick="_empApvShowForm()" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border);background:#fffbeb">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:12px">📤</div>';
+      h+='<span style="font-size:12px;font-weight:600;color:#92400e;flex:1">새 결재 상신</span>';
+      h+='</div>';
+      h+='<div onclick="_empApvShowMyList(\'pending\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:12px">⏳</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">대기 중</span>';
+      if(pending.length)h+='<span style="background:#eff6ff;color:#1e40af;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700">'+pending.length+'건</span>';
+      h+='</div>';
+      h+='<div onclick="_empApvShowMyList(\'approve\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:12px">✅</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">승인된 결재</span>';
+      h+='<span style="background:#f0fdf4;color:#166534;font-size:10px;padding:2px 7px;border-radius:4px">'+approved.length+'</span>';
+      h+='</div>';
+      h+='<div onclick="_empApvShowMyList(\'reject\')" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border)">';
+      h+='<div style="width:26px;height:26px;border-radius:6px;background:#fef2f2;display:flex;align-items:center;justify-content:center;font-size:12px">❌</div>';
+      h+='<span style="font-size:12px;color:var(--text);flex:1">반려된 결재</span>';
+      if(rejected.length)h+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:4px">'+rejected.length+'</span>';
+      h+='</div>';
+      h+='</div>';
+      el.innerHTML=h;
+      _empApvShowForm();
+    });
+  }
+}
+function _empApvShowList(status,allRows){
+  var d=document.getElementById('empDetail');if(!d)return;
+  if(!allRows){
+    sbGet('staff_approvals','order=ts.desc').then(function(rows){_empApvShowList(status,rows);});
+    return;
+  }
+  var filtered=(allRows||[]).filter(function(a){
+    return a.status===status&&(a.to_id===CU.id||a.to_id==='both');
+  });
+  var titleMap={pending:'⏳ 결재 대기',approve:'✅ 승인 완료',reject:'❌ 반려'};
+  var html='<div style="padding:0">';
+  html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">'+(titleMap[status]||status)+' '+filtered.length+'건</div>';
+  if(!filtered.length){
+    html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">항목이 없습니다</div>';
+  }
+  filtered.forEach(function(a){
+    var fromUser=ALL.find(function(u){return u.id===a.from_id;});
+    var ds=a.ts?new Date(a.ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}):'';
+    var borderColor=status==='pending'?'#378ADD':status==='approve'?'#10b981':'#ef4444';
+    html+='<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid '+borderColor+'">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+    html+='<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:700">'+(fromUser?esc(fromUser.name):'?')+'</span><span style="font-size:11px;color:var(--text3)">'+ds+'</span></div>';
+    if(status==='reject'&&a.reject_reason)html+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 8px;border-radius:5px">반려: '+esc(a.reject_reason)+'</span>';
+    html+='</div>';
+    html+='<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(a.title||'')+'</div>';
+    html+='<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-bottom:10px">'+esc(a.body||'')+'</div>';
+    if(a.files&&a.files.length)html+=renderAttachments(a.files);
+    if(status==='pending'){
+      html+='<div style="display:flex;gap:6px">';
+      html+='<button onclick="processApproval('+a.id+',\'approve\')" style="flex:1;padding:8px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✓ 승인</button>';
+      html+='<input id="rejectReason_'+a.id+'" placeholder="반려 사유..." style="flex:2;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none" />';
+      html+='<button onclick="processApproval('+a.id+',\'reject\')" style="padding:8px 14px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✕ 반려</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+  d.innerHTML=html;
+}
+function _empApvShowForm(){
+  var d=document.getElementById('empDetail');if(!d)return;
+  d.innerHTML='<div style="padding:0">'+
+    '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">📤 결재 상신</div>'+
+    '<div style="background:var(--surface2);border-radius:10px;padding:16px;margin-bottom:16px">'+
+    '<input id="apvTitle" type="text" placeholder="결재 제목" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">'+
+    '<textarea id="apvBody" placeholder="결재 내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:90px;outline:none;box-sizing:border-box;margin-bottom:10px;line-height:1.6"></textarea>'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:7px">결재자</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:12px">'+
+    '<label style="flex:1;padding:8px;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:7px;font-size:12px;font-weight:600;color:#1e40af;text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked style="display:none"> CEO</label>'+
+    '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="jenna" style="display:none"> Jenna</label>'+
+    '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="both" style="display:none"> 둘 다</label>'+
+    '</div>'+
+    '<div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151">\ud83d\udcce 파일 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
+    '<button onclick="submitApproval(\''+curEmpId+'\')" style="width:100%;padding:11px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button>'+
+    '</div></div>';
+}
+function _empApvShowMyList(status){
+  var d=document.getElementById('empDetail');if(!d)return;
+  sbGet('staff_approvals','from_id=eq.'+curEmpId+'&order=ts.desc').then(function(rows){
+    var filtered=(rows||[]).filter(function(a){return a.status===status;});
+    var titleMap={pending:'⏳ 대기 중',approve:'✅ 승인된 결재',reject:'❌ 반려된 결재'};
+    var html='<div style="padding:0">';
+    html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">'+(titleMap[status]||status)+' '+filtered.length+'건</div>';
+    if(!filtered.length){
+      html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">항목이 없습니다</div>';
+    }
+    filtered.forEach(function(a){
+      var ds=a.ts?new Date(a.ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}):'';
+      var borderColor=status==='pending'?'#378ADD':status==='approve'?'#10b981':'#ef4444';
+      html+='<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid '+borderColor+'">';
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+      html+='<span style="font-size:13px;font-weight:700">'+esc(a.title||'')+'</span>';
+      html+='<span style="font-size:11px;color:var(--text3)">'+ds+'</span>';
+      html+='</div>';
+      html+='<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-bottom:6px">'+esc(a.body||'')+'</div>';
+      if(status==='reject'&&a.reject_reason){
+        html+='<div style="background:#fef2f2;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:6px">\ud83d\udcac 반려 사유: '+esc(a.reject_reason)+'</div>';
+      }
+      html+='</div>';
+    });
+    html+='</div>';
+    d.innerHTML=html;
+  });
 }
 function _renderEmpSection(label, list, color, collapsed){
   if(!list.length) return '';
@@ -3397,7 +3567,7 @@ function submitApproval(empId){
   readFilesAsBase64(document.getElementById("apvFiles")||{files:[]}).then(function(files){
     var _apvTo=toEl?toEl.value:"ceo";var _apvTitle=title.value.trim();
     sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
-      .then(function(){toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");renderApprovalPage(empId);var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));});
+      .then(function(){toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");renderApprovalPage(empId);renderEmpApvTab(curEmpId);_empApvShowForm();var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));});
   });
 }
 function processApproval(id,action){
@@ -3406,25 +3576,8 @@ function processApproval(id,action){
   sbPatch("staff_approvals","id=eq."+id,{status:action,reject_reason:reason,updated_at:Date.now()})
     .then(function(){
       toast(action==='approve'?'\u2705 \uc2b9\uc778 \uc644\ub8cc':'\u274c \ubc18\ub824 \uc644\ub8cc');
-      if(curEmpId){
-        var d=document.getElementById('empDetail');
-        if(d){
-          d.innerHTML='<div id="_empApprovalSlot"><div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">\ub85c\ub529 \uc911...</div></div>';
-          var wrap2=document.getElementById('empApprovalWrap');
-          if(wrap2){
-            wrap2.style.display='block';
-            renderApprovalPage(curEmpId);
-            setTimeout(function(){
-              var slot=document.getElementById('_empApprovalSlot');
-              var w2=document.getElementById('empApprovalWrap');
-              if(slot&&w2&&w2.innerHTML.indexOf('\ub85c\ub529 \uc911')<0){
-                slot.innerHTML=w2.innerHTML;
-                w2.style.display='none';
-              }
-            },800);
-          }
-        }
-      }
+      renderEmpApvTab(curEmpId);
+      _empApvShowList('pending');
     });
 }
 function resubmitApproval(id){
