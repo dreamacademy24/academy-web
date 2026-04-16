@@ -8,12 +8,18 @@ export default function HomePage() {
   const router = useRouter();
   const [adminInfo, setAdminInfo] = useState<{name:string; role:string; staffId:string} | null>(null);
   const [supaUser, setSupaUser] = useState<any>(null);
+  const [supaProfile, setSupaProfile] = useState<any>(null);
 
   useEffect(() => {
     const info = getAdminInfo();
     if (info) { setAdminInfo(info); return; }
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setSupaUser(data.user);
+      if (data.user) {
+        setSupaUser(data.user);
+        supabase.from("profiles").select("*").eq("id", data.user.id).single().then(({ data: prof }) => {
+          if (prof) setSupaProfile(prof);
+        });
+      }
     });
   }, []);
 
@@ -408,23 +414,24 @@ export default function HomePage() {
         <a href="/accommodation/cubenine">큐브나인</a>
       </div>
     </div>
-    <a href="/portal/dashboard">내 페이지</a>
     <a href="/playdream">플레이드림</a>
     <a href="/notice">공지사항</a>
     <a href="/community">커뮤니티</a>
   </div>
   <div className="nav-right">
     {adminInfo ? (<>
-      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요, {adminInfo.name}님</span>
+      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {adminInfo.name}님</span>
       <button onClick={() => { clearAdminAuth(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
     </>) : supaUser ? (<>
-      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요님</span>
+      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {supaProfile?.name || supaUser?.email?.split('@')[0]}님</span>
       <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
     </>) : (
       <button onClick={() => router.push('/admin')} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"7px 14px",fontSize:"13px",color:"#374151",fontWeight:600,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그인</button>
     )}
     {adminInfo ? (
       <a href="/admin/hub" className="nav-cta">관리페이지</a>
+    ) : supaUser ? (
+      <a href="/portal/dashboard" className="nav-cta">마이페이지</a>
     ) : (
       <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
     )}
@@ -440,21 +447,22 @@ export default function HomePage() {
   <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
   <a href="/accommodation/jpark">제이파크</a>
   <a href="/accommodation/cubenine">큐브나인</a>
-  <a href="/portal/dashboard">내 페이지</a>
   <a href="/playdream">플레이드림</a>
   <a href="/notice">공지사항</a>
   <a href="/community">커뮤니티</a>
   {adminInfo ? (
     <a href="/admin/hub">관리페이지 →</a>
+  ) : supaUser ? (
+    <a href="/portal/dashboard">마이페이지 →</a>
   ) : (
     <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
   )}
   <div style={{borderTop:"1px solid #e2e8f0",marginTop:8,paddingTop:8}}>
     {adminInfo ? (<>
-      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요, {adminInfo.name}님</span>
+      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {adminInfo.name}님</span>
       <a href="#" onClick={(e)=>{e.preventDefault();clearAdminAuth();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
     </>) : supaUser ? (<>
-      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요님</span>
+      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {supaProfile?.name || supaUser?.email?.split('@')[0]}님</span>
       <a href="#" onClick={async(e)=>{e.preventDefault();await supabase.auth.signOut();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
     </>) : (
       <a href="/admin" style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#1a6fc4",fontWeight:600}}>로그인</a>
@@ -813,7 +821,7 @@ export default function HomePage() {
     </div>
     <div><div className="ftitle">커리큘럼</div><div className="flinks"><a href="/junior">주니어 커리큘럼</a><a href="/kinder">킨더 커리큘럼</a><a href="/after-school-fieldtrip">애프터스쿨</a></div></div>
     <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="/accommodation/jpark">제이파크</a><a href="/accommodation/cubenine">큐브나인</a><a href="#">패키지 안내</a></div></div>
-    <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/portal/dashboard">내 페이지</a><a href="/notice">공지사항</a><a href="/community">커뮤니티</a></div></div>
+    <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/portal/dashboard">마이페이지</a><a href="/notice">공지사항</a><a href="/community">커뮤니티</a></div></div>
   </div>
   <div className="fbottom">
     <span>© 2026 Dream Academy by Dream Company. All rights reserved.</span>
