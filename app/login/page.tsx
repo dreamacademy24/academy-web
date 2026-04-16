@@ -138,10 +138,6 @@ a{text-decoration:none;color:inherit;}
 
         {err && <div className="err">{err}</div>}
 
-        <div className="hint">
-          💡 관리자는 admin- 으로 시작하는 아이디로, 일반 회원은 가입한 아이디로 로그인하세요.
-        </div>
-
         <div className="bottom">아직 계정이 없으신가요? <a href="/signup">회원가입</a></div>
         <a href="/" className="back">← 홈으로 돌아가기</a>
       </div>
