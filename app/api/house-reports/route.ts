@@ -83,6 +83,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true })
     }
 
+    // 보고 수정
+    if (action === 'update_report') {
+      const { id, rooms, memo } = body
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      const { error } = await supabase
+        .from('house_reports')
+        .update({ rooms, memo })
+        .eq('id', id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
+
     // 기존: 조치중/확인필요 항목 → staff_tasks 자동 생성
     if (action === 'create_task') {
       const { room_no, content, status, report_date, reporter } = body

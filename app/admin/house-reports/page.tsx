@@ -54,6 +54,12 @@ export default function HouseReportsPage() {
   const [dateTo, setDateTo] = useState(todayStr());
   const [creating, setCreating] = useState<string | null>(null);
 
+  // --- Edit modal state ---
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
+  const [editMemo, setEditMemo] = useState("");
+  const [editRooms, setEditRooms] = useState<Room[]>([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   // --- Write tab state ---
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [formDate, setFormDate] = useState(todayStr());
@@ -236,6 +242,83 @@ export default function HouseReportsPage() {
     }
   }
 
+  /* ──── Edit: functions ──── */
+  function startEdit(r: Report) {
+    setEditingReport(r);
+    setEditMemo(r.memo || "");
+    setEditRooms(JSON.parse(JSON.stringify(r.rooms || [])));
+  }
+
+  function editAddRoom() { setEditRooms([...editRooms, { room_no: "", items: [{ content: "", status: "problem" }] }]); }
+  function editRemoveRoom(idx: number) { setEditRooms(editRooms.filter((_, i) => i !== idx)); }
+  function editSetRoomNo(idx: number, v: string) { const r = [...editRooms]; r[idx] = { ...r[idx], room_no: v }; setEditRooms(r); }
+  function editAddItem(rIdx: number) { const r = [...editRooms]; r[rIdx] = { ...r[rIdx], items: [...r[rIdx].items, { content: "", status: "problem" }] }; setEditRooms(r); }
+  function editRemoveItem(rIdx: number, iIdx: number) { const r = [...editRooms]; r[rIdx] = { ...r[rIdx], items: r[rIdx].items.filter((_, i) => i !== iIdx) }; setEditRooms(r); }
+  function editSetItemContent(rIdx: number, iIdx: number, v: string) { const r = [...editRooms]; r[rIdx] = { ...r[rIdx], items: r[rIdx].items.map((it, i) => i === iIdx ? { ...it, content: v } : it) }; setEditRooms(r); }
+  function editSetItemStatus(rIdx: number, iIdx: number, s: string) { const r = [...editRooms]; r[rIdx] = { ...r[rIdx], items: r[rIdx].items.map((it, i) => i === iIdx ? { ...it, status: s } : it) }; setEditRooms(r); }
+
+  function handleEditFileAttach(rIdx: number, fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const r = [...editRooms];
+    const existing = r[rIdx].files || [];
+    const newFiles: FileAttachment[] = [...existing];
+    const existingImages = existing.filter(f => IMAGE_TYPES.includes(f.type)).length;
+    const existingVideos = existing.filter(f => VIDEO_TYPES.includes(f.type)).length;
+    let addedImages = 0, addedVideos = 0;
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const isImage = IMAGE_TYPES.includes(file.type);
+      const isVideo = VIDEO_TYPES.includes(file.type);
+      if (!isImage && !isVideo) { alert(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
+      if (isImage && file.size > IMAGE_MAX_SIZE) { alert(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isVideo && file.size > VIDEO_MAX_SIZE) { alert(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { alert(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { alert(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isImage) addedImages++;
+      if (isVideo) addedVideos++;
+      promises.push(new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => { newFiles.push({ name: file.name, type: file.type, data: reader.result as string, size: file.size }); resolve(); };
+        reader.readAsDataURL(file);
+      }));
+    }
+    Promise.all(promises).then(() => { r[rIdx] = { ...r[rIdx], files: newFiles }; setEditRooms([...r]); });
+  }
+
+  function editRemoveFile(rIdx: number, fIdx: number) {
+    const r = [...editRooms];
+    const files = [...(r[rIdx].files || [])];
+    files.splice(fIdx, 1);
+    r[rIdx] = { ...r[rIdx], files };
+    setEditRooms(r);
+  }
+
+  async function submitEdit() {
+    if (!editingReport) return;
+    setEditSubmitting(true);
+    try {
+      const res = await fetch("/api/house-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_report",
+          id: editingReport.id,
+          rooms: editRooms.filter(r => r.room_no),
+          memo: editMemo || null,
+        }),
+      });
+      if (!res.ok) { const r = await res.json(); alert(r.error || "수정 실패"); return; }
+      alert("수정 완료! ✅");
+      setEditingReport(null);
+      loadReports();
+    } catch (e) {
+      alert("수정 실패: " + (e instanceof Error ? e.message : "unknown"));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
   /* ──── Stats (View tab) ──── */
   const todayReports = reports.filter(r => r.report_date === todayStr());
   let progressCount = 0, checkCount = 0;
@@ -310,6 +393,8 @@ export default function HouseReportsPage() {
 .file-preview.vid{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:#374151}
 .file-preview .del-btn{position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;background:rgba(0,0,0,0.5);color:#fff;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 .file-preview .del-btn:hover{background:rgba(220,38,38,0.8)}
+.edit-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.edit-modal{background:#fff;border-radius:16px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px}
 @media(max-width:600px){.hr-w{padding:20px 12px}.stats{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}}
     `}</style>
     <div className="hr-w">
@@ -371,6 +456,7 @@ export default function HouseReportsPage() {
                 <div className="report-date">{r.report_date || "-"}</div>
                 <span className="badge" style={{ background: slotBg, color: slotColor }}>{SLOT_LABEL[r.time_slot] || r.time_slot}</span>
                 <span className="badge" style={{ background: "#e0e7ff", color: "#3730a3" }}>👤 {r.reporter}</span>
+                <button onClick={() => startEdit(r)} style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", cursor: "pointer", color: "#374151" }}>✏️ 수정</button>
                 <div className="report-meta">제출 {submitTime}</div>
               </div>
               {(r.rooms || []).map((rm, rIdx) => (
@@ -614,5 +700,109 @@ export default function HouseReportsPage() {
       </div>}
 
     </div>
+
+    {/* ════════════════════════════════════════════════════════ */}
+    {/*  EDIT MODAL                                             */}
+    {/* ════════════════════════════════════════════════════════ */}
+    {editingReport && (
+      <div className="edit-overlay" onClick={() => setEditingReport(null)}>
+        <div className="edit-modal" onClick={e => e.stopPropagation()}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800 }}>보고 수정</h2>
+            <button onClick={() => setEditingReport(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+          </div>
+
+          {/* 읽기전용 날짜/시간대 */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <span className="badge" style={{ background: "#f3f4f6", color: "#374151" }}>{editingReport.report_date}</span>
+            <span className="badge" style={{ background: SLOT_BG[editingReport.time_slot] || "#f3f4f6", color: SLOT_COLOR[editingReport.time_slot] || "#374151" }}>{SLOT_LABEL[editingReport.time_slot] || editingReport.time_slot}</span>
+            <span className="badge" style={{ background: "#e0e7ff", color: "#3730a3" }}>👤 {editingReport.reporter}</span>
+          </div>
+
+          {/* 호실 목록 */}
+          {editRooms.map((rm, rIdx) => (
+            <div key={rIdx} className="room-card">
+              <button className="room-del" onClick={() => editRemoveRoom(rIdx)}>×</button>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 6 }}>호실 {rIdx + 1}</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14, paddingRight: 36 }}>
+                <select className="form-input" style={{ flex: 1 }} value={rm.room_no} onChange={e => editSetRoomNo(rIdx, e.target.value)}>
+                  <option value="">선택</option>
+                  <option value="전체">전체 (공용공간)</option>
+                  {HOUSE_ROOMS.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <input className="form-input" style={{ flex: 1 }} placeholder="직접입력" value={rm.room_no} onChange={e => editSetRoomNo(rIdx, e.target.value)} />
+              </div>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 700, marginBottom: 6 }}>업무 항목</div>
+              {rm.items.map((it, iIdx) => (
+                <div key={iIdx} style={{ marginBottom: 10, padding: 10, background: "#f9fafb", borderRadius: 8 }}>
+                  <div style={{ display: "flex", gap: 4, marginBottom: 8, alignItems: "center" }}>
+                    <input className="form-input" style={{ flex: 1 }} placeholder="업무 내용" value={it.content} onChange={e => editSetItemContent(rIdx, iIdx, e.target.value)} />
+                    <button onClick={() => editRemoveItem(rIdx, iIdx)} style={{ padding: "8px 10px", minWidth: 40, minHeight: 40, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>🗑️</button>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {(["problem", "progress", "done"] as const).map(s => {
+                      const on = it.status === s;
+                      const st = STATUS_MAP[s] || STATUS_MAP.done;
+                      return (
+                        <button key={s} className="status-btn"
+                          style={{ borderColor: st.color, background: on ? st.color : "#fff", color: on ? "#fff" : st.color }}
+                          onClick={() => editSetItemStatus(rIdx, iIdx, s)}
+                        >{st.label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => editAddItem(rIdx)} style={{ width: "100%", padding: 8, minHeight: 40, background: "#f9fafb", border: "1px dashed #d1d5db", color: "#6b7280", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ 항목 추가</button>
+
+              {/* 파일 첨부 */}
+              <label className="file-attach-btn" style={{ display: "block", textAlign: "center" }}>
+                📎 사진/동영상 첨부
+                <input type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo"
+                  style={{ display: "none" }}
+                  onChange={e => { handleEditFileAttach(rIdx, e.target.files); e.target.value = ""; }}
+                />
+              </label>
+              {(rm.files && rm.files.length > 0) && (
+                <div className="file-preview-wrap">
+                  {rm.files.map((f, fIdx) => {
+                    const isImage = IMAGE_TYPES.includes(f.type);
+                    return isImage ? (
+                      <div key={fIdx} className="file-preview img">
+                        <img src={f.data} alt={f.name} />
+                        <button className="del-btn" onClick={() => editRemoveFile(rIdx, fIdx)}>×</button>
+                      </div>
+                    ) : (
+                      <div key={fIdx} className="file-preview vid">
+                        <span>🎥</span>
+                        <div>
+                          <div style={{ fontWeight: 600, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                          <div style={{ fontSize: 11, color: "#6b7280" }}>{formatFileSize(f.size)}</div>
+                        </div>
+                        <button className="del-btn" onClick={() => editRemoveFile(rIdx, fIdx)}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <button onClick={editAddRoom} style={{ width: "100%", padding: 10, background: "#fff", border: "1px dashed #d1d5db", color: "#6b7280", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>+ 호실 추가</button>
+
+          {/* 메모 */}
+          <div style={{ marginBottom: 20 }}>
+            <div className="form-label">전체 메모</div>
+            <textarea className="form-input" placeholder="전체 특이사항 메모" value={editMemo} onChange={e => setEditMemo(e.target.value)} style={{ resize: "vertical", height: 80 }} />
+          </div>
+
+          {/* 하단 버튼 */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setEditingReport(null)} style={{ flex: 1, padding: 12, border: "1px solid #d1d5db", background: "#fff", color: "#374151", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>취소</button>
+            <button onClick={submitEdit} disabled={editSubmitting} style={{ flex: 1, padding: 12, border: "none", background: "#2563eb", color: "#fff", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: editSubmitting ? 0.5 : 1 }}>{editSubmitting ? "수정 중..." : "수정 완료"}</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }
