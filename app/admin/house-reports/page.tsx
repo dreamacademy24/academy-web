@@ -109,6 +109,10 @@ export default function HouseReportsPage() {
   }
 
   async function createTask(room_no: string, item: Item, rReporter: string, report_date: string, key: string) {
+    if (!item.content || !item.content.trim()) {
+      alert('업무 내용이 없습니다');
+      return;
+    }
     setCreating(key);
     const res = await fetch("/api/house-reports", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -304,7 +308,7 @@ export default function HouseReportsPage() {
                   <div className="room-head"><span className="room-no">{rm.room_no || "-"}</span></div>
                   {(rm.items || []).map((it, iIdx) => {
                     const st = STATUS_MAP[it.status] || STATUS_MAP.done;
-                    const canCreate = it.status !== "done";
+                    const canCreate = it.status !== "done" && !!(it.content && it.content.trim());
                     const key = `${r.id}-${rIdx}-${iIdx}`;
                     return (
                       <div key={iIdx} className="item">
