@@ -27,6 +27,9 @@ const STATUS_LABEL: Record<string, string> = { active: "수업중", completed: "
 const STATUS_BG: Record<string, string> = { active: "#dcfce7", completed: "#f1f5f9", paused: "#fef3c7" };
 const STATUS_COLOR: Record<string, string> = { active: "#166534", completed: "#64748b", paused: "#92400e" };
 
+const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일", "월": "월", "화": "화", "수": "수", "목": "목", "금": "금", "토": "토" };
+function daysToKr(days: string[]) { return (days || []).map(d => DAY_KR[d.toLowerCase()] || d).join("/"); }
+
 const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:  { label: "-",  bg: "#f1f5f9", color: "#94a3b8" },
   attended:   { label: "O",  bg: "#dcfce7", color: "#166534" },
@@ -252,7 +255,7 @@ export default function OnlineClassPage() {
                       <td style={{ fontWeight: 700 }}>{e.student_name}</td>
                       <td>{e.student_name_en || "-"}</td>
                       <td>{e.tutor?.name_display || "-"}</td>
-                      <td>{(e.days_of_week || []).join("/")}</td>
+                      <td>{daysToKr(e.days_of_week)}</td>
                       <td>{e.class_time_kr || "-"}</td>
                       <td>{e.start_date || "-"}</td>
                       <td>{e.end_date || "-"}</td>
