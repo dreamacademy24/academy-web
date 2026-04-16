@@ -1,6 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function PortalPage() {
   const router = useRouter();
@@ -8,6 +14,14 @@ export default function PortalPage() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace("/portal/dashboard");
+      }
+    });
+  }, [router]);
 
   async function verify() {
     if (!bookingNo.trim() || !name.trim()) { setError("예약번호와 이름을 모두 입력해주세요."); return; }
@@ -58,6 +72,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(135deg,#0f
       <div className="pt-card">
         <div className="pt-logo">DREAM ACADEMY</div>
         <div className="pt-sub">예약 조회 포털</div>
+        <div style={{fontSize:'12px',color:'#94a3b8',marginTop:'4px'}}>
+          회원이시면 <a href="/login" style={{color:'#1a6fc4',fontWeight:700}}>로그인</a>하세요
+        </div>
 
         <label className="pt-label">예약번호</label>
         <input className="pt-input" placeholder="DA-20260407-765432" value={bookingNo}
