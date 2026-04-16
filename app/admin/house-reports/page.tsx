@@ -4,14 +4,23 @@ import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
 /* ──── Types ──── */
+interface FileAttachment { name: string; type: string; data: string; size: number }
 interface Item { content: string; status: string }
-interface Room { room_no: string; items: Item[] }
+interface Room { room_no: string; items: Item[]; files?: FileAttachment[] }
 interface Report {
   id: string; reporter: string; report_date: string;
   time_slot: "morning" | "afternoon" | "checkin";
   rooms: Room[]; memo: string | null; created_at: string;
 }
 interface PendingItem { id: string; room_no: string; content: string; status: string; created_at: string }
+
+/* ──── File upload constants ──── */
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/x-msvideo"];
+const IMAGE_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const VIDEO_MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const IMAGE_MAX_COUNT = 5;
+const VIDEO_MAX_COUNT = 2;
 
 /* ──── Constants ──── */
 const SLOT_LABEL: Record<string, string> = { morning: "🌅 오전", afternoon: "☀️ 오후", checkin: "🌙 체크인" };
@@ -132,6 +141,58 @@ export default function HouseReportsPage() {
   function setItemContent(rIdx: number, iIdx: number, v: string) { const r = [...formRooms]; r[rIdx] = { ...r[rIdx], items: r[rIdx].items.map((it, i) => i === iIdx ? { ...it, content: v } : it) }; setFormRooms(r); }
   function setItemStatus(rIdx: number, iIdx: number, s: string) { const r = [...formRooms]; r[rIdx] = { ...r[rIdx], items: r[rIdx].items.map((it, i) => i === iIdx ? { ...it, status: s } : it) }; setFormRooms(r); }
 
+  function handleFileAttach(rIdx: number, fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return;
+    const r = [...formRooms];
+    const existing = r[rIdx].files || [];
+    const newFiles: FileAttachment[] = [...existing];
+
+    const existingImages = existing.filter(f => IMAGE_TYPES.includes(f.type)).length;
+    const existingVideos = existing.filter(f => VIDEO_TYPES.includes(f.type)).length;
+    let addedImages = 0, addedVideos = 0;
+
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const isImage = IMAGE_TYPES.includes(file.type);
+      const isVideo = VIDEO_TYPES.includes(file.type);
+      if (!isImage && !isVideo) { alert(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
+      if (isImage && file.size > IMAGE_MAX_SIZE) { alert(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isVideo && file.size > VIDEO_MAX_SIZE) { alert(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { alert(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { alert(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isImage) addedImages++;
+      if (isVideo) addedVideos++;
+
+      promises.push(new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          newFiles.push({ name: file.name, type: file.type, data: reader.result as string, size: file.size });
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      }));
+    }
+    Promise.all(promises).then(() => {
+      r[rIdx] = { ...r[rIdx], files: newFiles };
+      setFormRooms([...r]);
+    });
+  }
+
+  function removeFile(rIdx: number, fIdx: number) {
+    const r = [...formRooms];
+    const files = [...(r[rIdx].files || [])];
+    files.splice(fIdx, 1);
+    r[rIdx] = { ...r[rIdx], files };
+    setFormRooms(r);
+  }
+
+  function formatFileSize(bytes: number) {
+    if (bytes < 1024) return bytes + "B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + "KB";
+    return (bytes / 1024 / 1024).toFixed(1) + "MB";
+  }
+
   async function updatePendingStatus(id: string, status: string) {
     const res = await fetch("/api/house-reports", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -240,6 +301,15 @@ export default function HouseReportsPage() {
 .pending-ok{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;text-align:center;color:#166534;font-size:13px;font-weight:600;margin-bottom:16px}
 .history-item{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer}
 .history-item:hover{background:#f9fafb}
+.file-attach-btn{width:100%;padding:10px;background:#fff;border:1px dashed #93c5fd;color:#2563eb;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px;margin-bottom:6px;transition:background .15s}
+.file-attach-btn:hover{background:#eff6ff}
+.file-preview-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.file-preview{position:relative;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#f9fafb}
+.file-preview.img{width:80px;height:80px}
+.file-preview.img img{width:80px;height:80px;object-fit:cover;display:block}
+.file-preview.vid{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:12px;color:#374151}
+.file-preview .del-btn{position:absolute;top:2px;right:2px;width:20px;height:20px;border:none;background:rgba(0,0,0,0.5);color:#fff;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.file-preview .del-btn:hover{background:rgba(220,38,38,0.8)}
 @media(max-width:600px){.hr-w{padding:20px 12px}.stats{grid-template-columns:1fr}.toolbar{flex-direction:column;align-items:stretch}}
     `}</style>
     <div className="hr-w">
@@ -322,6 +392,24 @@ export default function HouseReportsPage() {
                       </div>
                     );
                   })}
+                  {(rm.files && rm.files.length > 0) && (
+                    <div className="file-preview-wrap" style={{ marginTop: 8 }}>
+                      {rm.files.map((f: FileAttachment, fIdx: number) => {
+                        const isImg = IMAGE_TYPES.includes(f.type);
+                        return isImg ? (
+                          <div key={fIdx} className="file-preview img"><img src={f.data} alt={f.name} /></div>
+                        ) : (
+                          <div key={fIdx} className="file-preview vid">
+                            <span>🎥</span>
+                            <div>
+                              <div style={{ fontWeight: 600, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                              <div style={{ fontSize: 11, color: "#6b7280" }}>{f.size ? (f.size < 1024*1024 ? (f.size/1024).toFixed(1)+"KB" : (f.size/1024/1024).toFixed(1)+"MB") : ""}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
               {r.memo && <div className="memo">📝 <b>메모:</b> {r.memo}</div>}
@@ -417,6 +505,37 @@ export default function HouseReportsPage() {
               </div>
             ))}
             <button onClick={() => addItem(rIdx)} style={{ width: "100%", padding: 8, minHeight: 40, background: "#f9fafb", border: "1px dashed #d1d5db", color: "#6b7280", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ 항목 추가</button>
+
+            {/* 파일 첨부 */}
+            <label className="file-attach-btn" style={{ display: "block", textAlign: "center" }}>
+              📎 사진/동영상 첨부
+              <input type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo"
+                style={{ display: "none" }}
+                onChange={e => { handleFileAttach(rIdx, e.target.files); e.target.value = ""; }}
+              />
+            </label>
+            {(rm.files && rm.files.length > 0) && (
+              <div className="file-preview-wrap">
+                {rm.files.map((f, fIdx) => {
+                  const isImage = IMAGE_TYPES.includes(f.type);
+                  return isImage ? (
+                    <div key={fIdx} className="file-preview img">
+                      <img src={f.data} alt={f.name} />
+                      <button className="del-btn" onClick={() => removeFile(rIdx, fIdx)}>×</button>
+                    </div>
+                  ) : (
+                    <div key={fIdx} className="file-preview vid">
+                      <span>🎥</span>
+                      <div>
+                        <div style={{ fontWeight: 600, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                        <div style={{ fontSize: 11, color: "#6b7280" }}>{formatFileSize(f.size)}</div>
+                      </div>
+                      <button className="del-btn" onClick={() => removeFile(rIdx, fIdx)}>×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         ))}
 
@@ -466,6 +585,24 @@ export default function HouseReportsPage() {
                           </div>
                         );
                       })}
+                      {(rm.files && rm.files.length > 0) && (
+                        <div className="file-preview-wrap" style={{ marginTop: 6 }}>
+                          {rm.files.map((f: FileAttachment, fIdx: number) => {
+                            const isImg = IMAGE_TYPES.includes(f.type);
+                            return isImg ? (
+                              <div key={fIdx} className="file-preview img"><img src={f.data} alt={f.name} /></div>
+                            ) : (
+                              <div key={fIdx} className="file-preview vid">
+                                <span>🎥</span>
+                                <div>
+                                  <div style={{ fontWeight: 600, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                                  <div style={{ fontSize: 11, color: "#6b7280" }}>{f.size ? (f.size < 1024*1024 ? (f.size/1024).toFixed(1)+"KB" : (f.size/1024/1024).toFixed(1)+"MB") : ""}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {r.memo && <div className="memo">📝 <b>메모:</b> {r.memo}</div>}
