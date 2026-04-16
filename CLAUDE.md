@@ -6,7 +6,7 @@
 - 도메인: dreamacademyph.com
 - GitHub: dreamacademy24/academy-web
 - DB: Supabase (yiglafscjvjgkxpycevk.supabase.co)
-- 로컬 경로: C:/Users/user/academy-web
+- 로컬 경로: C:/Users/desko/academy-web
 
 ## 완성된 페이지
 - `/` : 메인
@@ -392,3 +392,25 @@ CREATE TABLE IF NOT EXISTS staff_votes (
 ALTER TABLE staff_votes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "all" ON staff_votes FOR ALL USING (true) WITH CHECK (true);
 ```
+
+## 2026-04-16 완료 작업
+- ✅ 사이드바 클릭 버그 수정 (showEmpPage requestAnimationFrame)
+- ✅ 결재함 UX 개선 (상신폼 토글, 승인 후 즉시 갱신, 가독성)
+- ✅ 하우스보고 content required 버그 수정
+- ✅ 하우스보고 사진/동영상 첨부 기능 추가
+- ✅ 하우스보고 수정 기능 추가
+- ✅ b17-5, b17-6 룸 목록 제거 / 전체(공용공간) 옵션 추가
+- ✅ 홈 대시보드 개선 (미배정/완료 제외, 새로 배정된 업무 카드 추가)
+- ✅ 개인업무 사이드바 데일리 레이아웃 개선 (노란 배경, 앰버 진행바)
+- ✅ staff_votes 테이블 생성 + staff_opinions 컬럼 추가 완료
+- ✅ 투표 항목 이미지 첨부 기능 추가
+
+### 내일 할 작업 (우선순위순)
+1. 투표 기능 실제 작동 확인 (의견요청 탭)
+2. 프로젝트 페이지 디자인 적용 (투표 결과 후)
+3. PayPal Live 활성화 (회사에서 서류 제출)
+
+### 작업 방식 (매 대화 적용)
+- Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
+- 수정 후 항상 git push → Vercel 자동 배포
+- 로컬 경로: C:/Users/desko/academy-web
