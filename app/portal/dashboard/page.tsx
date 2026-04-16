@@ -1,6 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface Session {
   booking_id: string; booking_number: string; guest_name: string;
@@ -10,24 +16,46 @@ interface Session {
 export default function PortalDashboard() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (!raw) { router.replace("/portal"); return; }
-      const s: Session = JSON.parse(raw);
-      if (s.expires < Date.now()) { localStorage.removeItem("portalSession"); router.replace("/portal"); return; }
-      setSession(s);
-    } catch { router.replace("/portal"); }
+    async function init() {
+      if (typeof window === "undefined") return;
+      // 1) portalSession 체크
+      try {
+        const raw = localStorage.getItem("portalSession");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s.expires > Date.now()) { setSession(s); return; }
+          localStorage.removeItem("portalSession");
+        }
+      } catch {}
+      // 2) Supabase Auth 체크
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setAuthUser(data.session.user);
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.session.user.id)
+          .single();
+        setProfile(prof);
+        return;
+      }
+      // 3) 둘 다 없으면 포털로
+      router.replace("/portal");
+    }
+    init();
   }, [router]);
 
-  function logout() {
+  async function logout() {
     if (typeof window !== "undefined") localStorage.removeItem("portalSession");
+    await supabase.auth.signOut();
     router.replace("/portal");
   }
 
-  if (!session) return null;
+  if (!session && !authUser) return null;
 
   const cards = [
     { icon: "📋", title: "내 예약 정보", desc: "숙소, 기간, 인원 확인", ready: true, href: "/portal/my-booking" },
@@ -37,6 +65,17 @@ export default function PortalDashboard() {
     { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "원어민 1:1 수업 신청", ready: true, href: "/portal/tutor" },
   ];
+
+  const memberCards = authUser ? [
+    { icon: "📋", title: "내 예약 현황", desc: "예약 상태 및 상세 확인", ready: true, href: "/portal/my-booking" },
+    { icon: "📝", title: "내 신청 내역", desc: "셔틀/픽업/튜터 신청 확인", ready: true, href: "/portal/my-requests" },
+    { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: true, href: "/portal/flight" },
+    { icon: "🚐", title: "셔틀 신청", desc: "SM/Ayala/IT Park 셔틀", ready: true, href: "/portal/shuttle" },
+    { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
+    { icon: "👩‍🏫", title: "튜터 수업", desc: "원어민 1:1 수업 신청", ready: true, href: "/portal/tutor" },
+  ] : cards;
+
+  const displayName = session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]);
 
   return (<>
     <style>{`
@@ -70,23 +109,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       </div>
 
       <div className="db-welcome">
-        <h1>안녕하세요, {session.guest_name}님!</h1>
-        <div className="db-info">
-          <div className="db-item">
-            <div className="lbl">예약번호</div>
-            <div className="val">{session.booking_number}</div>
+        <h1>안녕하세요, {displayName}님!</h1>
+        {session ? (
+          <div className="db-info">
+            <div className="db-item"><div className="lbl">예약번호</div><div className="val">{session.booking_number}</div></div>
+            <div className="db-item"><div className="lbl">체크인</div><div className="val">{session.check_in_date || "미정"}</div></div>
           </div>
-          <div className="db-item">
-            <div className="lbl">체크인</div>
-            <div className="val">{session.check_in_date || "미정"}</div>
+        ) : (
+          <div className="db-info">
+            <div className="db-item"><div className="lbl">이메일</div><div className="val" style={{fontSize:13}}>{authUser?.email}</div></div>
+            <div className="db-item"><div className="lbl">회원 포털</div><div className="val">내 신청 관리</div></div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="db-grid">
-        {cards.map((c, i) => (
+        {(authUser ? memberCards : cards).map((c, i) => (
           <div key={i} className="db-card" style={c.ready ? { cursor: "pointer" } : {}}
-            onClick={() => { if (c.ready && (c as any).href) router.push((c as any).href); }}>
+            onClick={() => { if (c.ready && c.href) router.push(c.href); }}>
             {!c.ready && <span className="coming">준비 중</span>}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>
