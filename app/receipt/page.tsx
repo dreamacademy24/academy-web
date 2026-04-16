@@ -80,7 +80,7 @@ function ReceiptPageInner(){
   function removePayment(id:number){if(payments.length>1)setPayments(prev=>prev.filter(p=>p.id!==id));}
   function upd(id:number,field:keyof Payment,value:string){setPayments(prev=>prev.map(p=>p.id===id?{...p,[field]:value}:p));}
 
-  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L5','b17L6','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L17','b17L18'];
+  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
   async function saveToDreamhouse(){
     if(!bookingId||!data)return;
     const ci=data.checkInDate?.trim()||null;

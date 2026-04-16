@@ -11,8 +11,8 @@ const supabase = createClient(
 
 const ROOMS = [
   'b13L10','b16L19',
-  'b17L4','b17L5','b17L6','b17L7','b17L8','b17L9',
-  'b17L10','b17L11','b17L12','b17L13','b17L14','b17L17','b17L18'
+  'b17L4','b17L7','b17L8','b17L9',
+  'b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'
 ]
 
 const ROOM_COLORS = [
