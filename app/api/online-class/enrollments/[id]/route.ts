@@ -26,3 +26,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   return NextResponse.json({ enrollment, sessions: sessions ?? [] })
 }
+
+export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const body = await req.json()
+  const allowed: Record<string, unknown> = {}
+  if ('tutor_notes' in body) allowed.tutor_notes = body.tutor_notes
+  if ('notes' in body) allowed.notes = body.notes
+  if (Object.keys(allowed).length === 0) return NextResponse.json({ error: 'no valid fields' }, { status: 400 })
+  const { error } = await supabase.from('online_enrollments').update(allowed).eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
 
 interface Tutor {
   id: string;
@@ -28,6 +29,7 @@ interface Enrollment {
   used_sessions: number | null;
   status: string | null;
   notes: string | null;
+  tutor_notes: string | null;
 }
 
 interface SessionItem {
@@ -57,12 +59,20 @@ const DAY_LABEL: Record<string, string> = {
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function fmt(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-function weekRange() {
+function weekRange(offset = 0) {
   const now = new Date();
   const day = now.getDay();
   const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
-  return { start: fmt(mon), end: fmt(sat), startDate: mon, endDate: sat };
+  mon.setDate(mon.getDate() + offset * 7);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return { start: fmt(mon), end: fmt(sun), startDate: mon, endDate: sun };
+}
+function weekLabel(offset: number) {
+  if (offset === 0) return "이번 주";
+  if (offset === 1) return "다음 주";
+  if (offset === -1) return "지난 주";
+  if (offset > 0) return `${offset}주 후`;
+  return `${-offset}주 전`;
 }
 
 function formatWeekRangeEN(start: Date, end: Date) {
@@ -93,6 +103,10 @@ function TutorOnlineClassInner() {
   const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
   const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -123,14 +137,14 @@ function TutorOnlineClassInner() {
 
   const loadWeek = useCallback(async () => {
     if (!tutor) return;
-    const { start, end } = weekRange();
+    const { start, end } = weekRange(weekOffset);
     const res = await fetch(`/api/online-class/sessions?start=${start}&end=${end}`);
     if (res.ok) {
       const d = await res.json();
       const all = (d.sessions || []) as (SessionItem & { tutor?: { id: string } | null })[];
       setWeekSessions(all.filter(s => s.tutor && s.tutor.id === tutor.id));
     }
-  }, [tutor]);
+  }, [tutor, weekOffset]);
 
   const loadToday = useCallback(async () => {
     if (!tutor) return;
@@ -159,7 +173,19 @@ function TutorOnlineClassInner() {
 
   useEffect(() => { if (tutor) { loadEnrollments(); loadWeek(); loadToday(); } }, [tutor, loadEnrollments, loadWeek, loadToday]);
 
-  const { startDate, endDate } = weekRange();
+  async function saveNote(enrollmentId: string, value: string) {
+    const res = await fetch(`/api/online-class/enrollments/${enrollmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tutor_notes: value }),
+    });
+    if (res.ok) {
+      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, tutor_notes: value } : e));
+    }
+    setEditingNoteId(null);
+  }
+
+  const { startDate, endDate } = weekRange(weekOffset);
   const weekByDate: Record<string, SessionItem[]> = {};
   weekSessions.forEach(s => {
     if (!weekByDate[s.scheduled_date]) weekByDate[s.scheduled_date] = [];
@@ -172,7 +198,7 @@ function TutorOnlineClassInner() {
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.tv-w{max-width:1100px;margin:0 auto;padding:20px 16px;min-height:100vh}
+.tv-w{max-width:1500px;margin:0 auto;padding:20px 24px;min-height:100vh}
 .tv-back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:#6b7c93;cursor:pointer;text-decoration:none;margin-bottom:14px}
 .tv-back:hover{background:#f8fafc}
 .tv-head{margin-bottom:20px}
@@ -183,15 +209,20 @@ function TutorOnlineClassInner() {
 .tv-tab.ac{background:#1a6fc4;color:#fff}
 .tv-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:12px}
 .tv-empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;background:#fff;border:1px dashed #e2e8f0;border-radius:12px}
-.tbl-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow-x:auto}
-.tbl{width:100%;border-collapse:collapse;min-width:1100px;font-size:13px}
+.tbl-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:visible}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-.tbl td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;white-space:nowrap}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tr:hover td{background:#fafbfc}
 .cell-remaining{color:#166534;font-weight:800}
 .cell-name{font-weight:700}
-.cell-notes{white-space:normal;min-width:160px;color:#475569}
+.cell-en-link{font-weight:800;color:#1a6fc4;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.cell-en-link:hover{color:#0d3d7a}
+.cell-notes{white-space:normal;min-width:200px;color:#475569;cursor:pointer;padding:6px 12px !important;border-radius:6px}
+.cell-notes:hover{background:#eff6ff}
+.cell-notes.empty{color:#cbd5e1;font-style:italic}
+.cell-notes textarea{width:100%;min-height:60px;padding:6px 8px;border:1px solid #1a6fc4;border-radius:6px;font-family:inherit;font-size:12px;outline:none;resize:vertical;background:#fff}
 .day-header{font-size:15px;font-weight:800;color:#374151;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}
 .sch-row{display:grid;grid-template-columns:80px 1fr 80px 60px 100px;gap:10px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px}
 .sch-time{font-size:15px;font-weight:800;color:#1a6fc4}
@@ -200,6 +231,13 @@ function TutorOnlineClassInner() {
 .sch-no{font-size:12px;color:#6b7c93}
 .badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;text-align:center}
 .week-range{font-size:13px;color:#6b7c93;margin-bottom:12px}
+.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px}
+.week-nav button{padding:7px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#334155}
+.week-nav button:hover{background:#f8fafc;border-color:#1a6fc4;color:#1a6fc4}
+.week-nav .center{flex:1;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e}
+.week-nav .center .sub{font-size:12px;font-weight:500;color:#64748b;margin-left:8px}
+.week-nav .today-btn{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
+.week-nav .today-btn:hover{background:#0d3d7a;color:#fff}
 .td-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px}
 .td-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .td-time{font-size:17px;font-weight:800;color:#1a6fc4}
@@ -214,11 +252,7 @@ function TutorOnlineClassInner() {
 .td-btn.ac-attended{background:#16a34a;border-color:#16a34a;color:#fff}
 .td-btn.ac-absent{background:#dc2626;border-color:#dc2626;color:#fff}
 .td-btn.ac-makeup{background:#eab308;border-color:#eab308;color:#fff}
-@media(max-width:640px){
-  .sch-row{grid-template-columns:70px 1fr 90px;grid-template-rows:auto auto;gap:6px}
-  .sch-kr{grid-column:2;font-size:11px}
-  .sch-no{display:none}
-}
+.td-btn.ac-undo{background:#64748b;border-color:#64748b;color:#fff}
     `}</style>
     <div className="tv-w">
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
@@ -268,7 +302,7 @@ function TutorOnlineClassInner() {
                       <div className="meta">Session #{s.session_number}</div>
                     </div>
                     <div className="td-btns">
-                      <button className={`td-btn${cur === "scheduled" ? " ac-scheduled" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "scheduled")}>↺ Scheduled</button>
+                      <button className={`td-btn${cur === "scheduled" ? " ac-undo" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "scheduled")} style={{background:"#f1f5f9",color:"#64748b",borderColor:"#cbd5e1"}}>↺ Undo</button>
                       <button className={`td-btn${cur === "attended" ? " ac-attended" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✓ Attended</button>
                       <button className={`td-btn${(cur === "no_show" || cur === "absent") ? " ac-absent" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>✗ Absent</button>
                       <button className={`td-btn${cur === "makeup" ? " ac-makeup" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>△ Makeup</button>
@@ -288,10 +322,11 @@ function TutorOnlineClassInner() {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Student</th><th>English Name</th><th>Age</th><th>Days</th>
+                  <th>English Name</th><th>Age</th><th>Days</th>
                   <th>KR Time</th><th>PH Time</th><th>Start</th><th>End</th>
                   <th>Period</th><th>Class Period</th>
-                  <th>Pre</th><th>Post</th><th>Total</th><th>Remaining</th><th>Notes</th>
+                  <th>Pre</th><th>Post</th><th>Total</th><th>Remaining</th>
+                  <th style={{ minWidth: 220 }}>특이사항</th>
                 </tr>
               </thead>
               <tbody>
@@ -300,10 +335,12 @@ function TutorOnlineClassInner() {
                   const used = e.used_sessions || 0;
                   const remaining = Math.max(0, total - used);
                   const age = e.student_birth_year ? (new Date().getFullYear() - Number(e.student_birth_year)) : null;
+                  const isEditing = editingNoteId === e.id;
                   return (
                     <tr key={e.id}>
-                      <td className="cell-name">{e.student_name || "-"}</td>
-                      <td>{e.student_name_en || "-"}</td>
+                      <td className="cell-en-link" onClick={() => setInvoiceStudent(e.id)} title="Click to view calendar">
+                        {e.student_name_en || e.student_name || "-"}
+                      </td>
                       <td>{age !== null && !isNaN(age) ? age : (e.student_birth_year || "-")}</td>
                       <td>{capDays(e.days_of_week)}</td>
                       <td>{e.class_time_kr || "-"}</td>
@@ -316,7 +353,26 @@ function TutorOnlineClassInner() {
                       <td>{e.post_sessions ?? 0}</td>
                       <td>{total}</td>
                       <td className="cell-remaining">{remaining}</td>
-                      <td className="cell-notes">{e.notes || "-"}</td>
+                      <td
+                        className={`cell-notes${!e.tutor_notes && !isEditing ? " empty" : ""}`}
+                        onClick={() => { if (!isEditing) { setEditingNoteId(e.id); setNoteDraft(e.tutor_notes || ""); } }}
+                      >
+                        {isEditing ? (
+                          <textarea
+                            autoFocus
+                            value={noteDraft}
+                            onChange={ev => setNoteDraft(ev.target.value)}
+                            onBlur={() => saveNote(e.id, noteDraft.trim())}
+                            onKeyDown={ev => {
+                              if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); saveNote(e.id, noteDraft.trim()); }
+                              if (ev.key === "Escape") { setEditingNoteId(null); }
+                            }}
+                            placeholder="메모 입력 후 Enter (Shift+Enter: 줄바꿈)"
+                          />
+                        ) : (
+                          e.tutor_notes || "클릭해서 메모 추가"
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -326,11 +382,21 @@ function TutorOnlineClassInner() {
         )
       )}
 
+      {invoiceStudent && <StudentInvoiceCalendar enrollmentId={invoiceStudent} onClose={() => setInvoiceStudent(null)} />}
+
       {tutor && tab === "schedule" && (
         <>
-          <div className="week-range">📅 {formatWeekRangeEN(startDate, endDate)}</div>
+          <div className="week-nav">
+            <button onClick={() => setWeekOffset(o => o - 1)}>◀ 이전 주</button>
+            <div className="center">
+              📅 {weekLabel(weekOffset)}
+              <span className="sub">{formatWeekRangeEN(startDate, endDate)}</span>
+            </div>
+            {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>오늘</button>}
+            <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
+          </div>
           {sortedDates.length === 0 ? (
-            <div className="tv-empty">No classes this week.</div>
+            <div className="tv-empty">{weekLabel(weekOffset)}에 예정된 수업이 없습니다.</div>
           ) : sortedDates.map(date => (
             <div key={date}>
               <div className="day-header">{formatDayHeader(date)}</div>

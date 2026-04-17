@@ -211,7 +211,7 @@ export default function OnlineClassPage() {
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.oc-w{max-width:1100px;margin:0 auto;padding:28px 20px}
+.oc-w{max-width:1500px;margin:0 auto;padding:28px 24px}
 .oc-top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .oc-back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px}.oc-back:hover{background:#e2e8f0}
 .oc-top h1{font-size:22px;font-weight:800;flex:1}

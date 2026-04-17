@@ -23,13 +23,25 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string; bord
 
 function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 
-function weekRange() {
+function weekRange(offset = 0) {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
   const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  mon.setDate(mon.getDate() + offset * 7);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
   const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-  return { start: fmt(mon), end: fmt(sat) };
+  return { start: fmt(mon), end: fmt(sun), startDate: mon, endDate: sun };
+}
+function weekLabelKR(offset: number) {
+  if (offset === 0) return "이번 주";
+  if (offset === 1) return "다음 주";
+  if (offset === -1) return "지난 주";
+  if (offset > 0) return `${offset}주 후`;
+  return `${-offset}주 전`;
+}
+function formatWeekRange(start: Date, end: Date) {
+  const opt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${start.toLocaleDateString("en-US", opt)} – ${end.toLocaleDateString("en-US", opt)}, ${end.getFullYear()}`;
 }
 
 function formatDateEN(dateStr: string) {
@@ -50,6 +62,7 @@ export default function StaffOnlineClassPage() {
   const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [tutorFilter, setTutorFilter] = useState("all");
+  const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
     if (isAdminAuthed()) {
@@ -65,10 +78,10 @@ export default function StaffOnlineClassPage() {
   }, []);
 
   const loadWeek = useCallback(async () => {
-    const { start, end } = weekRange();
+    const { start, end } = weekRange(weekOffset);
     const res = await fetch(`/api/online-class/sessions?start=${start}&end=${end}`);
     if (res.ok) { const d = await res.json(); setWeekSessions(d.sessions || []); }
-  }, []);
+  }, [weekOffset]);
 
   const loadTutors = useCallback(async () => {
     const res = await fetch("/api/online-class/tutors");
@@ -93,7 +106,15 @@ export default function StaffOnlineClassPage() {
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.sc-w{max-width:600px;margin:0 auto;padding:20px 16px;min-height:100vh}
+.sc-w{max-width:1200px;margin:0 auto;padding:20px 24px;min-height:100vh}
+.sc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px}
+.week-nav button{padding:7px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#334155}
+.week-nav button:hover{background:#f8fafc;border-color:#1a6fc4;color:#1a6fc4}
+.week-nav .center{flex:1;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e}
+.week-nav .center .sub{font-size:12px;font-weight:500;color:#64748b;margin-left:8px}
+.week-nav .today-btn{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
+.week-nav .today-btn:hover{background:#0d3d7a;color:#fff}
 .sc-head{margin-bottom:20px}
 .sc-head h1{font-size:20px;font-weight:800;color:#1a1a2e;margin-bottom:4px}
 .sc-head .date{font-size:13px;color:#6b7c93}
@@ -131,6 +152,7 @@ export default function StaffOnlineClassPage() {
     <div className="sc-w">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
         <a href="/admin/hub" className="sc-back" style={{ marginBottom: 0 }}>← 관리자 홈</a>
+        <a href="/guide?tab=tutor" className="sc-back" style={{ marginBottom: 0 }}>📖 Tutor Guide</a>
         <a href="/tutor/online-class" className="sc-back" style={{ marginBottom: 0, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1a6fc4" }}>👤 My Schedule (Tutor View) →</a>
       </div>
 
@@ -157,32 +179,45 @@ export default function StaffOnlineClassPage() {
       {tab === "today" && <>
         {todaySessions.length === 0 ? (
           <div className="empty">No classes scheduled for today.</div>
-        ) : todaySessions.map(s => {
-          const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-          const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
-          const tutorName = s.tutor?.name_display || "-";
-          const tutorColor = getTutorColor(tutorName);
-          return (
-            <div key={s.id} className="card">
-              <div className="color-bar" style={{ background: tutorColor }} />
-              <div className="card-top">
-                <div className="card-time">{s.scheduled_time_ph || "-"}</div>
-                <span className="card-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-              </div>
-              <div className="card-info">
-                <div className="line1">
-                  <span className="name">{studentName}</span>
-                  <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
+        ) : (
+          <div className="sc-grid">
+            {todaySessions.map(s => {
+              const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+              const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
+              const tutorName = s.tutor?.name_display || "-";
+              const tutorColor = getTutorColor(tutorName);
+              return (
+                <div key={s.id} className="card">
+                  <div className="color-bar" style={{ background: tutorColor }} />
+                  <div className="card-top">
+                    <div className="card-time">{s.scheduled_time_ph || "-"}</div>
+                    <span className="card-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                  </div>
+                  <div className="card-info">
+                    <div className="line1">
+                      <span className="name">{studentName}</span>
+                      <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
+                    </div>
+                    <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
+                  </div>
                 </div>
-                <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </>}
 
       {/* ═══ WEEK ═══ */}
       {tab === "week" && <>
+        <div className="week-nav">
+          <button onClick={() => setWeekOffset(o => o - 1)}>◀ 이전 주</button>
+          <div className="center">
+            📅 {weekLabelKR(weekOffset)}
+            <span className="sub">{formatWeekRange(weekRange(weekOffset).startDate, weekRange(weekOffset).endDate)}</span>
+          </div>
+          {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>오늘</button>}
+          <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
+        </div>
         <div className="filter-bar">
           <select value={tutorFilter} onChange={e => setTutorFilter(e.target.value)}>
             <option value="all">All Tutors</option>
@@ -192,7 +227,7 @@ export default function StaffOnlineClassPage() {
         </div>
 
         {sortedDates.length === 0 ? (
-          <div className="empty">No classes this week.</div>
+          <div className="empty">{weekLabelKR(weekOffset)}에 예정된 수업이 없습니다.</div>
         ) : sortedDates.map(date => (
           <div key={date}>
             <div className="day-header">{formatDateShort(date)}</div>
