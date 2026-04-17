@@ -21,6 +21,7 @@ interface Session {
   id: string; enrollment_id: string; session_number: number;
   scheduled_date: string; scheduled_time_ph: string | null; scheduled_time_kr: string | null;
   status: string; is_makeup_added: boolean; note: string | null;
+  cancel_days_before?: number | null;
 }
 
 const STATUS_LABEL: Record<string, string> = { active: "수업중", completed: "완료", paused: "일시중지" };
@@ -55,6 +56,8 @@ export default function OnlineClassPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{ session: Session; daysBefore: number } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   // register tab
   const [form, setForm] = useState({
@@ -108,6 +111,44 @@ export default function OnlineClassPage() {
     const res = await fetch(`/api/online-class/sessions?enrollment_id=${enrollmentId}`);
     if (res.ok) { const d = await res.json(); setSessions(d.sessions || []); }
     setSessionsLoading(false);
+  }
+
+  function openCancelModal(s: Session) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const sched = new Date((s.scheduled_date || "") + "T00:00:00");
+    const daysBefore = Math.round((sched.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    setCancelTarget({ session: s, daysBefore });
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget) return;
+    const { session, daysBefore } = cancelTarget;
+    const targetStatus = daysBefore >= 4 ? "makeup" : "cancelled";
+    setCancelling(true);
+    try {
+      const res = await fetch("/api/online-class/sessions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: session.id,
+          status: targetStatus,
+          cancel_noticed_at: new Date().toISOString(),
+        }),
+      });
+      const r = await res.json();
+      if (!res.ok) { alert(r.error || "취소 실패"); return; }
+      alert(r.message || (r.makeup_added ? "보강 처리되었습니다." : "취소되었습니다."));
+      setCancelTarget(null);
+      if (expandedId) {
+        const res2 = await fetch(`/api/online-class/sessions?enrollment_id=${expandedId}`);
+        if (res2.ok) { const d = await res2.json(); setSessions(d.sessions || []); }
+      }
+      await loadEnrollments();
+    } catch (e) {
+      alert("취소 실패: " + (e instanceof Error ? e.message : "unknown"));
+    } finally {
+      setCancelling(false);
+    }
   }
 
   function toggleDay(d: string) {
@@ -189,8 +230,20 @@ export default function OnlineClassPage() {
 .btn-sm{padding:5px 10px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:#475569}.btn-sm:hover{background:#f1f5f9}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px}
 .ses-row{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding:10px 0}
-.ses-cell{min-width:44px;height:44px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;cursor:default}
+.ses-cell{position:relative;min-width:44px;height:44px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;cursor:default}
 .ses-cell .num{font-size:8px;opacity:0.7}
+.ses-cell .cancel-btn{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:none;font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;padding:0;font-weight:700}
+.ses-cell:hover .cancel-btn{display:flex}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:24px}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:12px;color:#1a1a2e}
+.modal p{font-size:14px;color:#475569;line-height:1.6;margin-bottom:16px}
+.modal .btns{display:flex;gap:8px}
+.modal .btn{flex:1;padding:12px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+.modal .btn.cancel{background:#f1f5f9;color:#475569}
+.modal .btn.confirm{background:#1a6fc4;color:#fff}
+.modal .btn.danger{background:#ef4444;color:#fff}
+.modal .btn:disabled{opacity:0.5;cursor:not-allowed}
 .form-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:16px}
 .form-label{font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;display:block}
 .form-input{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;min-height:42px;background:#fff}
@@ -287,12 +340,21 @@ export default function OnlineClassPage() {
               ) : (
                 <div className="ses-row">
                   {sessions.map(s => {
-                    const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                    let st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                    // cancelled within 3 days = red X (deducted), 4+ days = yellow △ (makeup)
+                    if (s.status === "cancelled") {
+                      const dB = s.cancel_days_before;
+                      st = (dB != null && dB >= 4) ? SES_STYLE.makeup : SES_STYLE.cancelled;
+                    }
                     const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
+                    const tt = `#${s.session_number} ${s.scheduled_date} ${s.status}` + (s.cancel_days_before != null ? ` (${s.cancel_days_before}d)` : "");
                     return (
-                      <div key={s.id} className="ses-cell" style={{ background: st.bg, color: st.color }} title={`#${s.session_number} ${s.scheduled_date} ${s.status}`}>
+                      <div key={s.id} className="ses-cell" style={{ background: st.bg, color: st.color }} title={tt}>
                         <div className="num">{d}</div>
                         <div>{st.label}</div>
+                        {s.status === "scheduled" && (
+                          <button className="cancel-btn" onClick={() => openCancelModal(s)} title="취소">×</button>
+                        )}
                       </div>
                     );
                   })}
@@ -404,5 +466,32 @@ export default function OnlineClassPage() {
         <button className="submit-btn" onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
       </div>}
     </div>
+
+    {cancelTarget && (() => {
+      const { session, daysBefore } = cancelTarget;
+      const isMakeup = daysBefore >= 4;
+      return (
+        <div className="modal-bg" onClick={() => !cancelling && setCancelTarget(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>{isMakeup ? "보강 처리" : "⚠️ 회차 차감 안내"}</h3>
+            <p>
+              <b>#{session.session_number}</b> · {session.scheduled_date} {session.scheduled_time_kr ? `· ${session.scheduled_time_kr}` : ""}<br />
+              취소까지 <b>{daysBefore}일</b> 남음
+            </p>
+            <p>
+              {isMakeup
+                ? "보강으로 처리됩니다. 마지막 회차에 1회 자동 추가됩니다."
+                : "3일 이내 취소는 회차가 차감됩니다. 계속하시겠습니까?"}
+            </p>
+            <div className="btns">
+              <button className="btn cancel" disabled={cancelling} onClick={() => setCancelTarget(null)}>닫기</button>
+              <button className={`btn ${isMakeup ? "confirm" : "danger"}`} disabled={cancelling} onClick={confirmCancel}>
+                {cancelling ? "처리 중..." : isMakeup ? "보강 처리" : "차감하고 취소"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   </>);
 }
