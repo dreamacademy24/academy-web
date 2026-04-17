@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -62,6 +62,14 @@ function daysBefore(targetDate: string): number {
 }
 
 export default function PortalOnlineClassPage() {
+  return (
+    <Suspense fallback={null}>
+      <PortalOnlineClassInner />
+    </Suspense>
+  );
+}
+
+function PortalOnlineClassInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const testUser = searchParams.get("test_user") === "true";
