@@ -108,7 +108,10 @@ export default function GuidePage() {
           <h1>드림아카데미 직원 업무 가이드</h1>
           <p>예약 시스템 사용 매뉴얼 · 현재 시스템 기준</p>
         </div>
-        <a href="/admin" className="g-back">← 관리자 홈</a>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <a href="/guide/tutor" className="g-back" style={{background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Tutor Guide (English)</a>
+          <a href="/admin" className="g-back">← 관리자 홈</a>
+        </div>
       </div>
 
       {/* 탭 버튼 */}

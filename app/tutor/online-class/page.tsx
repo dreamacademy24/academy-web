@@ -180,7 +180,10 @@ function TutorOnlineClassInner() {
 }
     `}</style>
     <div className="tv-w">
-      <a href="/staff/online-class" className="tv-back">← Back to Attendance</a>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+        <a href="/staff/online-class" className="tv-back" style={{margin:0}}>← Back to Attendance</a>
+        <a href="/guide/tutor" className="tv-back" style={{margin:0,background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Guide</a>
+      </div>
 
       <div className="tv-head">
         <h1>My Online Class</h1>
