@@ -3146,10 +3146,10 @@ function renderEmpApvTab(empId){
       _empApvShowList('pending',rows);
     });
   } else {
-    sbGet('staff_approvals','from_id=eq.'+empId+'&order=ts.desc').then(function(rows){
+    sbGet('staff_approvals','from_id=eq.'+empId+'&order=created_at.desc').then(function(rows){
       var pending=(rows||[]).filter(function(a){return a.status==='pending';});
-      var approved=(rows||[]).filter(function(a){return a.status==='approve';});
-      var rejected=(rows||[]).filter(function(a){return a.status==='reject';});
+      var approved=(rows||[]).filter(function(a){return a.status==='approved';});
+      var rejected=(rows||[]).filter(function(a){return a.status==='rejected';});
       var h='<div style="padding:0">';
       h+='<div style="font-size:10px;font-weight:700;color:var(--text3);padding:10px 14px 4px;text-transform:uppercase;letter-spacing:.5px">내 결재</div>';
       h+='<div onclick="_empApvShowForm()" style="display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;border-bottom:0.5px solid var(--border);background:#fffbeb">';
@@ -3287,7 +3287,7 @@ function _empApvShowForm(){
 }
 function _empApvShowMyList(status){
   var d=document.getElementById('empDetail');if(!d)return;
-  sbGet('staff_approvals','from_id=eq.'+curEmpId+'&order=ts.desc').then(function(rows){
+  sbGet('staff_approvals','from_id=eq.'+curEmpId+'&order=created_at.desc').then(function(rows){
     var filtered=(rows||[]).filter(function(a){return a.status===status;});
     var titleMap={pending:'⏳ 대기 중',approve:'✅ 승인된 결재',reject:'❌ 반려된 결재'};
     var html='<div style="padding:0">';
@@ -3674,7 +3674,7 @@ function renderApprovalPage(empId){
   var isApprover=CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jun');
   var query='or=(from_id.eq.'+empId;
   if(isApprover)query+=',to_id.eq.'+CU.id+',to_id.eq.both';
-  query+=')&order=ts.desc';
+  query+=')&order=created_at.desc';
   sbGet('staff_approvals',query).then(function(rows){
     var html='<div style="padding:0 2px">';
     html+='<button onclick="var s=document.getElementById(\'apvFormSection\');s.style.display=s.style.display===\'none\'?\'block\':\'none\'" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">\u270f\ufe0f 결재 상신하기 \u25bc</button>';
@@ -6016,9 +6016,9 @@ function checkUpdates(){
   }
   if(CU){
     var approvals2=ld('tm_approvals',[]);
-    var processed=approvals2.filter(function(a){return a.from===CU.id&&(a.status==='approve'||a.status==='reject')&&((a.approvedAt||a.rejectedAt||0)>lastCheck);});
-    var approved=processed.filter(function(a){return a.status==='approve';}).length;
-    var rejected=processed.filter(function(a){return a.status==='reject';}).length;
+    var processed=approvals2.filter(function(a){return a.from===CU.id&&(a.status==='approved'||a.status==='rejected')&&((a.approvedAt||a.rejectedAt||0)>lastCheck);});
+    var approved=processed.filter(function(a){return a.status==='approved';}).length;
+    var rejected=processed.filter(function(a){return a.status==='rejected';}).length;
     if(approved>0)updates.push({icon:'\u2705',msg:'\uACB0\uC7AC '+approved+'\uAC74\uC774 \uC2B9\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4',action:function(){showEmpPage(CU.id);setTimeout(function(){var btns=document.querySelectorAll('#empTabs .tab-btn');btns.forEach(function(b){if(b.textContent.indexOf('\uACB0\uC7AC')>-1)b.click();});},200);}});
     if(rejected>0)updates.push({icon:'\u274C',msg:'\uACB0\uC7AC '+rejected+'\uAC74\uC774 \uBC18\uB824\uB418\uC5C8\uC2B5\uB2C8\uB2E4',action:function(){showEmpPage(CU.id);setTimeout(function(){var btns=document.querySelectorAll('#empTabs .tab-btn');btns.forEach(function(b){if(b.textContent.indexOf('\uACB0\uC7AC')>-1)b.click();});},200);}});
   }
