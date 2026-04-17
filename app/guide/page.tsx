@@ -1,10 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
 
 const ADMIN_PW = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "";
 
 export default function GuidePage() {
+  return (
+    <Suspense fallback={null}>
+      <GuideInner />
+    </Suspense>
+  );
+}
+
+function GuideInner() {
+  const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -15,7 +25,8 @@ export default function GuidePage() {
     if (typeof window !== "undefined") {
       if (isAdminAuthed()) setAuthed(true);
     }
-  }, []);
+    if (searchParams.get("tab") === "tutor") setTab(3);
+  }, [searchParams]);
 
   function checkPw() {
     if (pw === ADMIN_PW) {
@@ -47,7 +58,7 @@ export default function GuidePage() {
     </div></div>
   </>);
 
-  const TABS = ["전체 업무 흐름", "이메일 설정", "직원관리 페이지"];
+  const TABS = ["전체 업무 흐름", "이메일 설정", "직원관리 페이지", "🌐 Tutor Guide (EN)"];
 
   return (<>
     <style>{`
@@ -108,10 +119,7 @@ export default function GuidePage() {
           <h1>드림아카데미 직원 업무 가이드</h1>
           <p>예약 시스템 사용 매뉴얼 · 현재 시스템 기준</p>
         </div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          <a href="/guide/tutor" className="g-back" style={{background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Tutor Guide (English)</a>
-          <a href="/admin" className="g-back">← 관리자 홈</a>
-        </div>
+        <a href="/admin" className="g-back">← 관리자 홈</a>
       </div>
 
       {/* 탭 버튼 */}
@@ -581,6 +589,144 @@ export default function GuidePage() {
               <li>또는 <strong>[전체 삭제]</strong>로 한번에 정리</li>
             </ul>
           </div>
+        </div>
+      </>)}
+
+      {/* ════════════ 탭 4: Tutor Guide (English) ════════════ */}
+      {tab === 3 && (<>
+        <style>{`
+.tg-tbl-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0}
+.tg-cred{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+.tg-cred th{background:#f8fafc;padding:10px 14px;text-align:left;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;font-size:12px}
+.tg-cred td{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-family:'SF Mono',Consolas,monospace;font-size:13px}
+.tg-cred tr:last-child td{border-bottom:none}
+.tg-status{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+.tg-status-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px}
+.tg-status-card .lbl{font-weight:700;font-size:14px;margin-bottom:4px}
+.tg-status-card .dsc{font-size:12px;color:#6b7c93;line-height:1.5}
+.tg-status-card.attended{background:#f0fdf4;border-color:#bbf7d0}
+.tg-status-card.attended .lbl{color:#166534}
+.tg-status-card.absent{background:#fef2f2;border-color:#fecaca}
+.tg-status-card.absent .lbl{color:#991b1b}
+.tg-status-card.resched{background:#fff7ed;border-color:#fed7aa}
+.tg-status-card.resched .lbl{color:#9a3412}
+.tg-status-card.makeup{background:#fef3c7;border-color:#fde047}
+.tg-status-card.makeup .lbl{color:#92400e}
+.tg-callout{border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px;line-height:1.6}
+.tg-callout.info{background:#eff6ff;border-left:4px solid #3b82f6;color:#1e3a8a}
+.tg-callout.warn{background:#fef2f2;border-left:4px solid #dc2626;color:#991b1b}
+.tg-sec p{font-size:14px;line-height:1.7;color:#475569;margin-bottom:10px}
+.tg-sec ul, .tg-sec ol{padding-left:20px;margin:8px 0 12px}
+.tg-sec li{font-size:14px;line-height:1.8;color:#475569}
+.tg-sec code{background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:13px;color:#1a6fc4;font-family:'SF Mono',Consolas,monospace}
+.tg-sec strong{color:#1a1a2e;font-weight:700}
+.tg-sec a{color:#1a6fc4;text-decoration:none;font-weight:600}
+.tg-sec a:hover{text-decoration:underline}
+@media(max-width:600px){.tg-status{grid-template-columns:1fr}}
+        `}</style>
+
+        {/* 1. Login */}
+        <div className="sec tg-sec">
+          <h2>🔐 1. Login</h2>
+          <p><strong>URL:</strong> <a href="https://dreamacademyph.com/login">https://dreamacademyph.com/login</a></p>
+          <p>Use your assigned credentials below:</p>
+          <div className="tg-tbl-wrap">
+            <table className="tg-cred">
+              <thead>
+                <tr><th>Tutor</th><th>Username</th><th>Password</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>T.Ann</td><td>admin-ann</td><td>ann2026!</td></tr>
+                <tr><td>T.Angel</td><td>admin-angel</td><td>angel2026!</td></tr>
+                <tr><td>T.Carla</td><td>admin-carla</td><td>carla2026!</td></tr>
+                <tr><td>T.Amelyn</td><td>admin-amelyn</td><td>amelyn2026!</td></tr>
+                <tr><td>T.Cristel</td><td>admin-cristel</td><td>cristel2026!</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>After login, you will be automatically redirected to your dashboard at <code>/tutor/online-class</code>.</p>
+        </div>
+
+        {/* 2. Your Dashboard */}
+        <div className="sec tg-sec">
+          <h2>📊 2. Your Dashboard</h2>
+          <p>Your dashboard at <code>/tutor/online-class</code> has:</p>
+          <ul>
+            <li><strong>Student List</strong> — all students currently assigned to you, with schedule/time/remaining sessions.</li>
+            <li><strong>Class Schedule</strong> — This Week / Next Week / Month view of upcoming sessions.</li>
+            <li><strong>Attendance Log</strong> — past sessions with recorded status.</li>
+          </ul>
+        </div>
+
+        {/* 3. Recording Attendance */}
+        <div className="sec tg-sec">
+          <h2>✍️ 3. Recording Attendance</h2>
+          <p>After each class:</p>
+          <ol>
+            <li>Find the session in your schedule</li>
+            <li>Click the <strong>[Attendance]</strong> button on the session row</li>
+            <li>Select the appropriate status (see below)</li>
+            <li>Add a short note if needed (optional)</li>
+            <li>Save — the record is updated instantly</li>
+          </ol>
+          <h3>Status Options</h3>
+          <div className="tg-status">
+            <div className="tg-status-card attended">
+              <div className="lbl">✓ Attended</div>
+              <div className="dsc">Student joined and completed the class. Counts as one used session.</div>
+            </div>
+            <div className="tg-status-card absent">
+              <div className="lbl">✗ Absent</div>
+              <div className="dsc">Student did not join without prior notice. Counts as one used session.</div>
+            </div>
+            <div className="tg-status-card resched">
+              <div className="lbl">⟳ Rescheduled</div>
+              <div className="dsc">Class moved to another date. Select the new date when saving.</div>
+            </div>
+            <div className="tg-status-card makeup">
+              <div className="lbl">△ Makeup</div>
+              <div className="dsc">Compensation session for a previously missed class. Does not deduct from total.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Schedule Rules */}
+        <div className="sec tg-sec">
+          <h2>📅 4. Class Schedule Rules</h2>
+          <ul>
+            <li>Classes follow each student&apos;s assigned days and Korea time. All times shown on your dashboard are <strong>Korea Standard Time (KST, UTC+9)</strong>.</li>
+            <li>Philippine Time (PHT) is <strong>1 hour behind KST</strong> (e.g. KST 19:30 = PHT 18:30).</li>
+            <li><strong>Saturday classes</strong> may have a different time than weekday classes — check each session carefully.</li>
+            <li>Holiday dates (Korean public holidays, academy-specific closures) are <strong>automatically excluded</strong> from the schedule. No classes are generated on those days.</li>
+          </ul>
+        </div>
+
+        {/* 5. Cancellation Policy */}
+        <div className="sec tg-sec">
+          <h2>⚠️ 5. Cancellation Policy</h2>
+          <ul>
+            <li><strong>4+ days before class:</strong> Free reschedule or cancel — <em>no session deducted</em>.</li>
+            <li><strong>Less than 4 days before class:</strong> Session counts as <em>used</em> — no refund or reschedule.</li>
+            <li><strong>No show without notice:</strong> Session counts as <em>used</em>.</li>
+          </ul>
+          <div className="tg-callout info">
+            💡 Students manage their own cancellations through the customer portal. You only need to record the final attendance status after the class.
+          </div>
+        </div>
+
+        {/* 6. Need Help */}
+        <div className="sec tg-sec">
+          <h2>💬 6. Need Help?</h2>
+          <p>Contact <strong>May</strong> for:</p>
+          <ul>
+            <li>Login issues (forgot password, account locked)</li>
+            <li>Student information changes</li>
+            <li>Schedule conflicts or missing sessions</li>
+            <li>Any technical problems with the system</li>
+          </ul>
+          <p style={{marginTop:14}}>
+            📧 <a href="mailto:may@dreamacademyph.com">may@dreamacademyph.com</a>
+          </p>
         </div>
       </>)}
 
