@@ -319,7 +319,11 @@ export default function OnlineClassPage() {
                       <td>{e.used_sessions}</td>
                       <td style={{ fontWeight: 700, color: (e.remaining_sessions ?? 0) <= 3 ? "#dc2626" : "#166534" }}>{e.remaining_sessions ?? "-"}</td>
                       <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
-                      <td><button className="btn-sm" onClick={() => loadSessions(e.id)}>{isOpen ? "접기" : "출결"}</button></td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <button className="btn-sm" onClick={() => loadSessions(e.id)}>{isOpen ? "접기" : "출결"}</button>
+                        {" "}
+                        <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
+                      </td>
                     </tr>
                   );
                 })}
