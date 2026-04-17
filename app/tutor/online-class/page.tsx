@@ -86,11 +86,13 @@ function capDays(days: string[] | null) {
 function TutorOnlineClassInner() {
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"students" | "schedule">("students");
+  const [tab, setTab] = useState<"today" | "students" | "schedule">("today");
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [loadingTutor, setLoadingTutor] = useState(true);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
+  const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -130,7 +132,32 @@ function TutorOnlineClassInner() {
     }
   }, [tutor]);
 
-  useEffect(() => { if (tutor) { loadEnrollments(); loadWeek(); } }, [tutor, loadEnrollments, loadWeek]);
+  const loadToday = useCallback(async () => {
+    if (!tutor) return;
+    const today = fmt(new Date());
+    const res = await fetch(`/api/online-class/sessions?date=${today}`);
+    if (res.ok) {
+      const d = await res.json();
+      const all = (d.sessions || []) as (SessionItem & { tutor?: { id: string } | null })[];
+      setTodaySessions(all.filter(s => s.tutor && s.tutor.id === tutor.id));
+    }
+  }, [tutor]);
+
+  async function markStatus(sessionId: string, status: string) {
+    if (!tutor) return;
+    setUpdating(sessionId);
+    const res = await fetch("/api/online-class/sessions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: sessionId, status, recorded_by: tutor.staff_user_id || "" }),
+    });
+    if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); }
+    await loadToday();
+    await loadWeek();
+    setUpdating(null);
+  }
+
+  useEffect(() => { if (tutor) { loadEnrollments(); loadWeek(); loadToday(); } }, [tutor, loadEnrollments, loadWeek, loadToday]);
 
   const { startDate, endDate } = weekRange();
   const weekByDate: Record<string, SessionItem[]> = {};
@@ -173,6 +200,20 @@ function TutorOnlineClassInner() {
 .sch-no{font-size:12px;color:#6b7c93}
 .badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;text-align:center}
 .week-range{font-size:13px;color:#6b7c93;margin-bottom:12px}
+.td-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.td-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.td-time{font-size:17px;font-weight:800;color:#1a6fc4}
+.td-info{margin-bottom:12px}
+.td-info .name{font-size:16px;font-weight:800;color:#1a1a2e}
+.td-info .meta{font-size:12px;color:#6b7c93;margin-top:4px}
+.td-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.td-btn{padding:9px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;color:#64748b}
+.td-btn:hover{background:#f8fafc}
+.td-btn:disabled{opacity:0.4;cursor:not-allowed}
+.td-btn.ac-scheduled{background:#f1f5f9;border-color:#94a3b8;color:#334155}
+.td-btn.ac-attended{background:#16a34a;border-color:#16a34a;color:#fff}
+.td-btn.ac-absent{background:#dc2626;border-color:#dc2626;color:#fff}
+.td-btn.ac-makeup{background:#eab308;border-color:#eab308;color:#fff}
 @media(max-width:640px){
   .sch-row{grid-template-columns:70px 1fr 90px;grid-template-rows:auto auto;gap:6px}
   .sch-kr{grid-column:2;font-size:11px}
@@ -193,6 +234,7 @@ function TutorOnlineClassInner() {
       </div>
 
       <div className="tv-tabs">
+        <button className={`tv-tab${tab === "today" ? " ac" : ""}`} onClick={() => setTab("today")}>📅 Today</button>
         <button className={`tv-tab${tab === "students" ? " ac" : ""}`} onClick={() => setTab("students")}>👩‍🎓 My Students</button>
         <button className={`tv-tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📆 My Schedule</button>
       </div>
@@ -201,6 +243,41 @@ function TutorOnlineClassInner() {
         <div className="tv-empty">
           No tutor profile linked to this account. Please contact admin or use ?tutor=&lt;staff_user_id&gt; in the URL.
         </div>
+      )}
+
+      {tutor && tab === "today" && (
+        todaySessions.length === 0 ? (
+          <div className="tv-empty">No classes scheduled for today.</div>
+        ) : (
+          <>
+            {todaySessions
+              .slice()
+              .sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""))
+              .map(s => {
+                const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
+                const cur = s.status;
+                return (
+                  <div key={s.id} className="td-card">
+                    <div className="td-top">
+                      <div className="td-time">{s.scheduled_time_ph || "-"} <span style={{fontSize:12,fontWeight:600,color:"#94a3b8"}}>· KR {s.scheduled_time_kr || "-"}</span></div>
+                      <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                    </div>
+                    <div className="td-info">
+                      <div className="name">{studentName}</div>
+                      <div className="meta">Session #{s.session_number}</div>
+                    </div>
+                    <div className="td-btns">
+                      <button className={`td-btn${cur === "scheduled" ? " ac-scheduled" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "scheduled")}>↺ Scheduled</button>
+                      <button className={`td-btn${cur === "attended" ? " ac-attended" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✓ Attended</button>
+                      <button className={`td-btn${(cur === "no_show" || cur === "absent") ? " ac-absent" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>✗ Absent</button>
+                      <button className={`td-btn${cur === "makeup" ? " ac-makeup" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>△ Makeup</button>
+                    </div>
+                  </div>
+                );
+              })}
+          </>
+        )
       )}
 
       {tutor && tab === "students" && (

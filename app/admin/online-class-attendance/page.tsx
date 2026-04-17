@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import { isAdminAuthed } from "@/lib/adminAuth";
+import { getTutorColor } from "@/lib/tutorColors";
 
 interface SessionItem {
   id: string; session_number: number;
@@ -44,19 +45,15 @@ function formatDateShort(dateStr: string) {
 export default function StaffOnlineClassPage() {
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<"today" | "week">("today");
-  const [userId, setUserId] = useState("");
 
   const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
   const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [tutorFilter, setTutorFilter] = useState("all");
-  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdminAuthed()) {
       setAuthed(true);
-      const info = getAdminInfo();
-      if (info) setUserId(info.staffId || "");
     } else if (typeof window !== "undefined") {
       window.location.href = "/login";
     }
@@ -82,19 +79,6 @@ export default function StaffOnlineClassPage() {
     if (authed) { loadToday(); loadWeek(); loadTutors(); }
   }, [authed, loadToday, loadWeek, loadTutors]);
 
-  async function markStatus(sessionId: string, status: string) {
-    setUpdating(sessionId);
-    const res = await fetch("/api/online-class/sessions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: sessionId, status, recorded_by: userId }),
-    });
-    if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); }
-    await loadToday();
-    await loadWeek();
-    setUpdating(null);
-  }
-
   const weekByDate: Record<string, SessionItem[]> = {};
   const filteredWeek = weekSessions.filter(s => tutorFilter === "all" || s.tutor?.name_display === tutorFilter);
   filteredWeek.forEach(s => {
@@ -118,28 +102,31 @@ export default function StaffOnlineClassPage() {
 .sc-tab.ac{background:#1a6fc4;color:#fff}
 .sc-back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:#6b7c93;cursor:pointer;text-decoration:none;margin-bottom:14px}
 .sc-back:hover{background:#f8fafc}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;border:2px solid #e2e8f0;transition:border-color .15s}
-.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.card-time{font-size:18px;font-weight:800;color:#1a6fc4}
+.card{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;border:1px solid #e2e8f0;position:relative;overflow:hidden}
+.card .color-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-left:8px}
+.card-time{font-size:17px;font-weight:800;color:#1a6fc4}
 .card-badge{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700}
-.card-info{margin-bottom:12px}
-.card-info .name{font-size:15px;font-weight:700;color:#1a1a2e}
-.card-info .meta{font-size:12px;color:#6b7c93;margin-top:2px}
-.card-btns{display:flex;gap:8px}
-.card-btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
-.card-btn:disabled{opacity:0.4;cursor:not-allowed}
-.card-btn.green{background:#dcfce7;color:#166534}.card-btn.green:hover{background:#bbf7d0}
-.card-btn.red{background:#fef2f2;color:#dc2626}.card-btn.red:hover{background:#fecaca}
-.card-btn.yellow{background:#fef9c3;color:#92400e}.card-btn.yellow:hover{background:#fde68a}
+.card-info{padding-left:8px}
+.card-info .line1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card-info .name{font-size:16px;font-weight:800;color:#1a1a2e}
+.card-info .tutor-tag{font-size:13px;font-weight:700}
+.card-info .meta{font-size:12px;color:#6b7c93;margin-top:4px}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;background:#fff;border:1px dashed #e2e8f0;border-radius:14px}
 .day-header{font-size:14px;font-weight:800;color:#374151;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}
-.week-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e2e8f0}
+.week-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e2e8f0;position:relative;overflow:hidden;padding-left:16px}
+.week-card .color-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
 .week-card .time{font-size:14px;font-weight:800;color:#1a6fc4;min-width:50px}
 .week-card .info{flex:1;min-width:0}
-.week-card .info .name{font-size:13px;font-weight:700}
-.week-card .info .tutor{font-size:11px;color:#6b7c93}
-.filter-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center}
+.week-card .info .line1{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.week-card .info .name{font-size:13px;font-weight:800}
+.week-card .info .tutor-tag{font-size:11px;font-weight:700}
+.week-card .info .meta{font-size:11px;color:#94a3b8;margin-top:2px}
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
 .filter-bar select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:#fff}
+.tutor-legend{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:#64748b}
+.tutor-legend .lg{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border-radius:6px;border:1px solid #e2e8f0}
+.tutor-legend .sw{width:10px;height:10px;border-radius:2px}
     `}</style>
     <div className="sc-w">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
@@ -148,7 +135,7 @@ export default function StaffOnlineClassPage() {
       </div>
 
       <div className="sc-head">
-        <h1>Online Class — Attendance</h1>
+        <h1>Online Class — Attendance Monitor</h1>
         <div className="date">{formatDateEN(todayStr())}</div>
       </div>
 
@@ -157,31 +144,38 @@ export default function StaffOnlineClassPage() {
         <button className={`sc-tab${tab === "week" ? " ac" : ""}`} onClick={() => setTab("week")}>📆 This Week</button>
       </div>
 
+      <div className="tutor-legend" style={{ marginBottom: 12 }}>
+        {tutors.map(t => (
+          <span key={t.id} className="lg">
+            <span className="sw" style={{ background: getTutorColor(t.name_display) }} />
+            {t.name_display}
+          </span>
+        ))}
+      </div>
+
       {/* ═══ TODAY ═══ */}
       {tab === "today" && <>
         {todaySessions.length === 0 ? (
           <div className="empty">No classes scheduled for today.</div>
         ) : todaySessions.map(s => {
           const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-          const isScheduled = s.status === "scheduled";
           const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
+          const tutorName = s.tutor?.name_display || "-";
+          const tutorColor = getTutorColor(tutorName);
           return (
-            <div key={s.id} className="card" style={{ borderColor: st.border }}>
+            <div key={s.id} className="card">
+              <div className="color-bar" style={{ background: tutorColor }} />
               <div className="card-top">
                 <div className="card-time">{s.scheduled_time_ph || "-"}</div>
                 <span className="card-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
               </div>
               <div className="card-info">
-                <div className="name">{studentName}</div>
-                <div className="meta">Tutor: {s.tutor?.name_display || "-"} · KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
-              </div>
-              {isScheduled && (
-                <div className="card-btns">
-                  <button className="card-btn green" disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✅ Attended</button>
-                  <button className="card-btn red" disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>❌ Absent</button>
-                  <button className="card-btn yellow" disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>🔄 Makeup</button>
+                <div className="line1">
+                  <span className="name">{studentName}</span>
+                  <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
                 </div>
-              )}
+                <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
+              </div>
             </div>
           );
         })}
@@ -204,12 +198,18 @@ export default function StaffOnlineClassPage() {
             <div className="day-header">{formatDateShort(date)}</div>
             {weekByDate[date].map(s => {
               const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+              const tutorName = s.tutor?.name_display || "-";
+              const tutorColor = getTutorColor(tutorName);
               return (
                 <div key={s.id} className="week-card">
+                  <div className="color-bar" style={{ background: tutorColor }} />
                   <div className="time">{s.scheduled_time_ph || "-"}</div>
                   <div className="info">
-                    <div className="name">{s.enrollment?.student_name_en || s.enrollment?.student_name || "-"}</div>
-                    <div className="tutor">{s.tutor?.name_display || "-"}</div>
+                    <div className="line1">
+                      <span className="name">{s.enrollment?.student_name_en || s.enrollment?.student_name || "-"}</span>
+                      <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
+                    </div>
+                    <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
                   </div>
                   <span className="card-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                 </div>
