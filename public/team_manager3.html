@@ -3180,7 +3180,7 @@ function renderEmpApvTab(empId){
 function _empApvShowList(status,allRows){
   var d=document.getElementById('empDetail');if(!d)return;
   if(!allRows){
-    sbGet('staff_approvals','order=ts.desc').then(function(rows){_empApvShowList(status,rows);});
+    sbGet('staff_approvals','order=created_at.desc').then(function(rows){_empApvShowList(status,rows);});
     return;
   }
   var filtered=(allRows||[]).filter(function(a){
@@ -3195,11 +3195,11 @@ function _empApvShowList(status,allRows){
   filtered.forEach(function(a){
     var fromUser=ALL.find(function(u){return u.id===a.from_id;});
     var ds=a.ts?new Date(a.ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}):'';
-    var borderColor=status==='pending'?'#378ADD':status==='approve'?'#10b981':'#ef4444';
+    var borderColor=status==='pending'?'#378ADD':status==='approved'?'#10b981':status==='rejected'?'#6b7280':'#ef4444';
     html+='<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid '+borderColor+'">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
     html+='<div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;font-weight:700">'+(fromUser?esc(fromUser.name):'?')+'</span><span style="font-size:11px;color:var(--text3)">'+ds+'</span></div>';
-    if(status==='reject'&&a.reject_reason)html+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 8px;border-radius:5px">반려: '+esc(a.reject_reason)+'</span>';
+    if(status==='rejected'&&a.reject_reason)html+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 8px;border-radius:5px">반려: '+esc(a.reject_reason)+'</span>';
     html+='</div>';
     html+='<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+esc(a.title||'')+'</div>';
     html+='<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-bottom:10px">'+esc(a.body||'')+'</div>';
@@ -3297,14 +3297,14 @@ function _empApvShowMyList(status){
     }
     filtered.forEach(function(a){
       var ds=a.ts?new Date(a.ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}):'';
-      var borderColor=status==='pending'?'#378ADD':status==='approve'?'#10b981':'#ef4444';
+      var borderColor=status==='pending'?'#378ADD':status==='approved'?'#10b981':status==='rejected'?'#6b7280':'#ef4444';
       html+='<div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid '+borderColor+'">';
       html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
       html+='<span style="font-size:13px;font-weight:700">'+esc(a.title||'')+'</span>';
       html+='<span style="font-size:11px;color:var(--text3)">'+ds+'</span>';
       html+='</div>';
       html+='<div style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;margin-bottom:6px">'+esc(a.body||'')+'</div>';
-      if(status==='reject'&&a.reject_reason){
+      if(status==='rejected'&&a.reject_reason){
         html+='<div style="background:#fef2f2;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:6px">\ud83d\udcac 반려 사유: '+esc(a.reject_reason)+'</div>';
       }
       html+='</div>';
@@ -3718,7 +3718,7 @@ function renderApprovalPage(empId){
         html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:16px;font-weight:800">'+esc(a.title)+'</div><span style="background:'+st.bg+';color:'+st.color+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.label+'</span></div>';
         html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap">'+esc(a.body)+'</div>';
         if(a.files&&a.files.length)html+=renderAttachments(a.files);
-        if(a.status==='reject'&&a.reject_reason){
+        if(a.status==='rejected'&&a.reject_reason){
           html+='<div style="margin-top:8px;padding:8px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626">반려 사유: '+esc(a.reject_reason)+'</div>';
           html+='<button onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27block\x27" style="margin-top:8px;padding:6px 14px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">수정 후 재상신</button>';
           html+='<div id="resubArea_'+a.id+'" style="display:none;margin-top:10px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">';
