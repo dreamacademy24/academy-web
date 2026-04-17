@@ -80,14 +80,10 @@ export default function HouseReportsPage() {
     // Get reporter from localStorage admin session
     if (typeof window !== "undefined") {
       try {
-        const s = localStorage.getItem("admin_user");
-        if (s) setReporter(s);
-        else {
-          const adminSession = localStorage.getItem("admin_session") || localStorage.getItem("adminSession");
-          if (adminSession) {
-            const parsed = JSON.parse(adminSession);
-            setReporter(parsed.username || parsed.user || parsed.name || "admin");
-          }
+        const stored = localStorage.getItem("adminUser") || localStorage.getItem("adminInfo");
+        if (stored) {
+          const p = JSON.parse(stored);
+          setReporter(p.name || p.staffId || p.id || "admin");
         }
       } catch { /* ignore */ }
     }
@@ -130,6 +126,7 @@ export default function HouseReportsPage() {
 
   useEffect(() => {
     if (mainTab === "write") { loadPending(); loadHistory(); }
+    if (mainTab === "view") { loadPending(); }
   }, [mainTab, loadPending, loadHistory]);
 
   /* ──── View: helpers ──── */
@@ -430,20 +427,17 @@ export default function HouseReportsPage() {
         <h1>🏠 하우스 보고</h1>
       </div>
 
-      {/* ──── Unified Tab Row ──── */}
+      {/* ──── Tab Row ──── */}
       <div className="tabs">
         {([
           ["write", "📝 보고하기"],
           ["all", "전체"],
-          ["morning", "🌅 오전"],
-          ["afternoon", "☀️ 오후"],
-          ["checkin", "🌙 체크인"],
         ] as const).map(([k, v]) => {
-          const active = k === "write" ? mainTab === "write" : mainTab === "view" && slot === k;
+          const active = k === "write" ? mainTab === "write" : mainTab === "view";
           return (
             <button key={k} className={`tab${active ? " ac" : ""}`} onClick={() => {
               if (k === "write") { setMainTab("write"); }
-              else { setMainTab("view"); setSlot(k as typeof slot); }
+              else { setMainTab("view"); setSlot("all"); }
             }}>{v}</button>
           );
         })}
@@ -453,6 +447,35 @@ export default function HouseReportsPage() {
       {/*  VIEW TAB                                               */}
       {/* ════════════════════════════════════════════════════════ */}
       {mainTab === "view" && <>
+        {pending.length > 0 && (
+          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: "#92400e", marginBottom: 12 }}>
+              ⚠️ 미해결 항목 ({pending.length}개)
+            </div>
+            {pending.map(p => (
+              <div key={p.id} style={{ background: "#fff", borderRadius: 8, padding: 12, marginBottom: 8, border: "1px solid #fde68a" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{p.room_no}</div>
+                  <div style={{ fontSize: 11, color: "#92400e" }}>{(p.created_at || "").slice(0, 10)}</div>
+                </div>
+                <div style={{ fontSize: 13, marginBottom: 8 }}>{p.content}</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {(["문제","해결중","해결"] as const).map(s => {
+                    const key = s === "해결" ? "done" : s === "해결중" ? "in_progress" : "problem";
+                    const isActive = p.status === key;
+                    const bg = isActive ? (s === "해결" ? "#10b981" : s === "해결중" ? "#f59e0b" : "#ef4444") : "#f3f4f6";
+                    const color = isActive ? "#fff" : "#374151";
+                    return (
+                      <button key={s} onClick={() => updatePendingStatus(p.id, key)}
+                        style={{ padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, background: bg, color, fontFamily: "inherit" }}>{s}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="stats">
           <div className="stat"><div className="lbl">오늘 보고</div><div className="val">{todayReports.length}건</div></div>
           <div className={`stat${progressCount > 0 ? " warn" : ""}`}><div className="lbl">🔄 조치중</div><div className="val">{progressCount}개</div></div>
