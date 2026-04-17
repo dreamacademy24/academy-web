@@ -154,6 +154,10 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   font-size:10px;font-weight:800;color:#fff;flex-shrink:0;
 }
 .sb-divider{height:1px;background:var(--border);margin:8px 14px;}
+.nav-group .ni-caret{margin-left:auto;font-size:11px;color:var(--text3);transition:transform .15s;}
+.nav-group.collapsed .ni-caret{transform:rotate(-90deg);}
+.nav-group.collapsed .nav-group-items{display:none;}
+.nav-group .nav-sub{padding-left:32px;font-size:13px;}
 .sb-footer{
   margin-top:auto;border-top:1px solid var(--border);padding:14px;
 }
@@ -1093,7 +1097,17 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
     <button class="nav-item" data-p="opinions" onclick="showPage('opinions')"><span class="ni-icon">💬</span> 의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span><span id="badge-opinions" class="nav-badge">0</span></button>
     <button class="nav-item" data-p="chat" onclick="showPage('chat')"><span class="ni-icon">🗨️</span> 채팅<span id="badge-chat" class="nav-badge">0</span></button>
-    <button class="nav-item" onclick="top.location.href='/staff/online-class'"><span class="ni-icon">🎧</span> Online Class</button>
+    <div class="nav-group" id="ocGroup">
+      <button class="nav-item nav-group-head" onclick="toggleNavGroup('ocGroup')">
+        <span class="ni-icon">🎧</span>
+        <span style="flex:1">화상영어</span>
+        <span class="ni-caret">▾</span>
+      </button>
+      <div class="nav-group-items">
+        <button class="nav-item nav-sub" onclick="top.location.href='/staff/online-class'"><span class="ni-icon">📅</span> 출결 관리</button>
+        <button class="nav-item nav-sub" onclick="top.location.href='/tutor/online-class'"><span class="ni-icon">👤</span> 내 스케줄</button>
+      </div>
+    </div>
     <div class="sb-divider"></div>
     <div class="sb-section">직원 공간</div>
     <div id="empNav"></div>
@@ -2127,6 +2141,10 @@ function buildEmpNav(){
 function setNav(pg,eid){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.p===pg));
   document.querySelectorAll('.emp-nav-item').forEach(el=>el.classList.toggle('active',el.dataset.eid===eid));
+}
+function toggleNavGroup(id){
+  var g=document.getElementById(id);if(!g)return;
+  g.classList.toggle('collapsed');
 }
 function showPage(p){
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
