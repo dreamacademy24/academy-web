@@ -1,0 +1,406 @@
+"use client";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+interface Tutor { id: string; name_display: string; name_en: string }
+interface Enrollment {
+  id: string; student_name: string; student_name_en: string | null;
+  customer_user_id: string | null;
+  tutor_id: string | null; tutor: Tutor | null;
+  enrollment_type: string; level: string | null;
+  days_of_week: string[]; class_time_kr: string | null; class_time_ph: string | null;
+  start_date: string; end_date: string | null;
+  class_period: string; sessions_per_week: number;
+  total_sessions: number; pre_sessions: number; post_sessions: number;
+  used_sessions: number;
+  status: string; notes: string | null;
+}
+interface Session {
+  id: string; enrollment_id: string; session_number: number;
+  scheduled_date: string; scheduled_time_kr: string | null; scheduled_time_ph: string | null;
+  status: string; note: string | null; cancel_days_before?: number | null;
+}
+
+const DAY_KR: Record<string, string> = {
+  mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일",
+  "월": "월", "화": "화", "수": "수", "목": "목", "금": "금", "토": "토", "일": "일",
+};
+function daysToKr(days: string[]) { return (days || []).map(d => DAY_KR[d.toLowerCase()] || d).join("/"); }
+
+const PERIOD_LABEL: Record<string, string> = { pre: "선(pre)", post: "후(post)", ssp: "SSP" };
+
+const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
+  scheduled:  { label: "예정",   bg: "#dbeafe", color: "#1e40af" },
+  attended:   { label: "출석",   bg: "#dcfce7", color: "#166534" },
+  absent:     { label: "결석",   bg: "#fef2f2", color: "#dc2626" },
+  no_show:    { label: "결석",   bg: "#fef2f2", color: "#dc2626" },
+  cancelled:  { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
+  makeup:     { label: "보강",   bg: "#fef9c3", color: "#92400e" },
+};
+
+const WEEKDAY_HEADS = ["일", "월", "화", "수", "목", "금", "토"];
+const MONTHS_KR = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+
+function pad2(n: number) { return n < 10 ? "0" + n : "" + n }
+function localStr(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}` }
+function parseLocal(s: string): Date { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d) }
+function fmtDateKr(s: string) {
+  const d = parseLocal(s);
+  const wd = ["일","월","화","수","목","금","토"][d.getDay()];
+  return `${d.getMonth()+1}월 ${d.getDate()}일 ${wd}요일`;
+}
+function daysBefore(targetDate: string): number {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sched = parseLocal(targetDate); sched.setHours(0,0,0,0);
+  return Math.round((sched.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export default function PortalOnlineClassPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const testUser = searchParams.get("test_user") === "true";
+
+  const [authChecking, setAuthChecking] = useState(true);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
+  const [calMonth, setCalMonth] = useState<Date>(() => { const d = new Date(); d.setDate(1); return d });
+  const [cancelTarget, setCancelTarget] = useState<{ session: Session; info: any } | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (testUser) { setAuthChecking(false); return; }
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        if (typeof window !== "undefined") router.replace("/login");
+        return;
+      }
+      setAuthUserId(data.session.user.id);
+      setAuthEmail(data.session.user.email || null);
+      setAuthChecking(false);
+    })();
+  }, [router, testUser]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const qs = testUser ? "test_user=true" : `customer_user_id=${authUserId}`;
+    const res = await fetch(`/api/portal/online-class/enrollments?${qs}`);
+    if (res.ok) {
+      const d = await res.json();
+      setEnrollments(d.enrollments || []);
+      setSessions(d.sessions || []);
+    }
+    setLoading(false);
+  }, [authUserId, testUser]);
+
+  useEffect(() => { if (!authChecking && (authUserId || testUser)) load(); }, [authChecking, authUserId, testUser, load]);
+
+  const activeEnroll = useMemo(
+    () => enrollments.find(e => e.status === "active") || enrollments[0] || null,
+    [enrollments]
+  );
+  const activeSessions = useMemo(
+    () => activeEnroll ? sessions.filter(s => s.enrollment_id === activeEnroll.id) : [],
+    [sessions, activeEnroll]
+  );
+
+  const upcomingSessions = useMemo(
+    () => activeSessions.filter(s => s.status === "scheduled").sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date)),
+    [activeSessions]
+  );
+  const pastSessions = useMemo(
+    () => activeSessions.filter(s => ["attended", "absent", "no_show", "cancelled", "makeup"].includes(s.status))
+      .sort((a,b) => b.scheduled_date.localeCompare(a.scheduled_date)),
+    [activeSessions]
+  );
+
+  const sessionsByDate = useMemo(() => {
+    const map: Record<string, Session[]> = {};
+    for (const s of activeSessions) {
+      if (!map[s.scheduled_date]) map[s.scheduled_date] = [];
+      map[s.scheduled_date].push(s);
+    }
+    return map;
+  }, [activeSessions]);
+
+  const calendarCells = useMemo(() => {
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const first = new Date(y, m, 1);
+    const startWd = first.getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const cells: Array<{ date: Date | null; dateStr: string | null }> = [];
+    for (let i = 0; i < startWd; i++) cells.push({ date: null, dateStr: null });
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(y, m, d);
+      cells.push({ date: dt, dateStr: localStr(dt) });
+    }
+    while (cells.length % 7 !== 0) cells.push({ date: null, dateStr: null });
+    return cells;
+  }, [calMonth]);
+
+  function shiftMonth(delta: number) {
+    const nm = new Date(calMonth);
+    nm.setMonth(nm.getMonth() + delta);
+    setCalMonth(nm);
+  }
+
+  async function openCancel(session: Session) {
+    if (!activeEnroll) return;
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/portal/online-class/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: session.id,
+          customer_user_id: testUser ? activeEnroll.customer_user_id : authUserId,
+          confirm: false,
+        }),
+      });
+      const info = await res.json();
+      if (!res.ok) { setMsg({ text: info.error || "오류가 발생했습니다.", type: "err" }); return; }
+      setCancelTarget({ session, info });
+    } catch {
+      setMsg({ text: "네트워크 오류가 발생했습니다.", type: "err" });
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  async function confirmCancel() {
+    if (!cancelTarget || !activeEnroll) return;
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/portal/online-class/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: cancelTarget.session.id,
+          customer_user_id: testUser ? activeEnroll.customer_user_id : authUserId,
+          confirm: true,
+        }),
+      });
+      const r = await res.json();
+      if (!res.ok) { setMsg({ text: r.error || "취소에 실패했습니다.", type: "err" }); return; }
+      setMsg({ text: r.message_ko || "취소 완료되었습니다.", type: "ok" });
+      setCancelTarget(null);
+      await load();
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
+  if (authChecking) return null;
+
+  return (<>
+    <style>{`
+.oc-w{max-width:680px;margin:0 auto;padding:24px 20px 48px}
+.oc-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}
+.oc-back:hover{color:#1a6fc4}
+.oc-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:18px;padding:22px;color:#fff;margin-bottom:14px}
+.oc-head h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.oc-head p{font-size:12px;opacity:0.88}
+.sec{background:#fff;border-radius:14px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,0.05);margin-bottom:12px}
+.sec h2{font-size:13px;font-weight:800;color:#1a6fc4;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.item{padding:10px;background:#f8fafc;border-radius:8px}
+.item .lbl{font-size:10px;font-weight:700;color:#6b7c93;margin-bottom:3px}
+.item .val{font-size:13px;font-weight:600}
+.sess-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.stat{padding:14px 8px;background:#f8fafc;border-radius:10px;text-align:center}
+.stat .num{font-size:22px;font-weight:800;color:#1a1a2e}
+.stat .lbl{font-size:11px;color:#6b7c93;font-weight:600;margin-top:2px}
+.stat.remain{background:#dcfce7}
+.stat.remain .num{color:#166534}
+.stat.used{background:#fef3c7}
+.stat.used .num{color:#92400e}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-title{font-size:14px;font-weight:800}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{width:28px;height:28px;border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:13px}
+.cal-nav button:hover{background:#f1f5f9}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-wd{text-align:center;font-size:11px;font-weight:700;color:#6b7c93;padding:4px 0}
+.cal-wd.sun{color:#dc2626}
+.cal-wd.sat{color:#1d4ed8}
+.cal-cell{aspect-ratio:1/1;border-radius:8px;padding:4px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border:1px solid transparent;position:relative}
+.cal-cell.empty{visibility:hidden}
+.cal-cell.today{border-color:#1a6fc4;background:#eff6ff}
+.cal-cell .d{font-weight:600;color:#1a1a2e}
+.cal-cell.today .d{color:#1a6fc4}
+.cal-cell .marks{display:flex;gap:2px;margin-top:auto;padding-top:2px;flex-wrap:wrap;justify-content:center}
+.cal-dot{width:6px;height:6px;border-radius:50%}
+.cal-dot.scheduled{background:#3b82f6}
+.cal-dot.attended{background:#16a34a}
+.cal-dot.absent,.cal-dot.no_show{background:#dc2626}
+.cal-dot.cancelled{background:#dc2626}
+.cal-dot.makeup{background:#eab308}
+.cal-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#6b7c93}
+.cal-legend span{display:inline-flex;align-items:center;gap:4px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;background:#f1f5f9;padding:4px;border-radius:10px}
+.tab{flex:1;padding:9px 10px;border:none;background:transparent;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;color:#6b7c93}
+.tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px}
+.row .info{flex:1;min-width:0}
+.row .date{font-size:13px;font-weight:700;margin-bottom:3px}
+.row .meta{font-size:11px;color:#6b7c93;line-height:1.5}
+.row .act{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
+.cancel-btn{padding:6px 12px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.cancel-btn:hover{background:#fee2e2}
+.cancel-btn:disabled{opacity:0.5;cursor:not-allowed}
+.empty{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
+.msg{position:fixed;top:16px;left:50%;transform:translateX(-50%);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:100;box-shadow:0 4px 14px rgba(0,0,0,0.15)}
+.msg.ok{background:#dcfce7;color:#166534}
+.msg.err{background:#fef2f2;color:#dc2626}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:14px;padding:22px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.2)}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.modal .detail{font-size:13px;color:#475569;background:#f8fafc;padding:10px;border-radius:8px;margin-bottom:12px}
+.modal .ques{font-size:13px;line-height:1.65;margin-bottom:16px;white-space:pre-wrap}
+.modal .acts{display:flex;gap:8px}
+.modal .acts button{flex:1;padding:10px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:none}
+.modal .btn-cancel{background:#f1f5f9;color:#475569}
+.modal .btn-confirm{background:#dc2626;color:#fff}
+.modal .btn-confirm:disabled{opacity:0.6;cursor:not-allowed}
+@media(max-width:500px){.oc-w{padding:20px 14px}.grid{grid-template-columns:1fr}.sess-stats{grid-template-columns:1fr 1fr 1fr}}
+    `}</style>
+
+    {msg && <div className={`msg ${msg.type}`} onClick={() => setMsg(null)}>{msg.text}</div>}
+
+    <div className="oc-w">
+      <button className="oc-back" onClick={() => router.push("/portal/dashboard")}>← 마이페이지로 돌아가기</button>
+
+      <div className="oc-head">
+        <h1>화상영어 수업</h1>
+        <p>내 수업 스케줄 및 출결 현황</p>
+      </div>
+
+      {loading ? <div className="sec"><div className="empty">불러오는 중...</div></div> : !activeEnroll ? (
+        <div className="sec"><div className="empty">등록된 화상영어 수강 정보가 없습니다.</div></div>
+      ) : (
+        <>
+          <div className="sec">
+            <h2>수강 정보</h2>
+            <div className="grid">
+              <div className="item"><div className="lbl">담당 선생님</div><div className="val">{activeEnroll.tutor?.name_display || "-"}</div></div>
+              <div className="item"><div className="lbl">수업 구분</div><div className="val">{PERIOD_LABEL[activeEnroll.class_period] || activeEnroll.class_period}</div></div>
+              <div className="item"><div className="lbl">수업 요일</div><div className="val">{daysToKr(activeEnroll.days_of_week || [])}</div></div>
+              <div className="item"><div className="lbl">수업 시간 (한국)</div><div className="val">{activeEnroll.class_time_kr || "-"}</div></div>
+              <div className="item"><div className="lbl">수강 시작</div><div className="val">{activeEnroll.start_date || "-"}</div></div>
+              <div className="item"><div className="lbl">수강 종료</div><div className="val">{activeEnroll.end_date || "-"}</div></div>
+            </div>
+            <div className="sess-stats">
+              <div className="stat"><div className="num">{activeEnroll.total_sessions}</div><div className="lbl">총 회차</div></div>
+              <div className="stat used"><div className="num">{activeEnroll.used_sessions}</div><div className="lbl">사용 회차</div></div>
+              <div className="stat remain"><div className="num">{activeEnroll.total_sessions - activeEnroll.used_sessions}</div><div className="lbl">잔여 회차</div></div>
+            </div>
+          </div>
+
+          <div className="sec">
+            <div className="cal-head">
+              <div className="cal-title">{calMonth.getFullYear()}년 {MONTHS_KR[calMonth.getMonth()]}</div>
+              <div className="cal-nav">
+                <button onClick={() => shiftMonth(-1)}>‹</button>
+                <button onClick={() => setCalMonth(() => { const d = new Date(); d.setDate(1); return d })}>오늘</button>
+                <button onClick={() => shiftMonth(1)}>›</button>
+              </div>
+            </div>
+            <div className="cal-grid">
+              {WEEKDAY_HEADS.map((w, i) => (
+                <div key={w} className={`cal-wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}`}>{w}</div>
+              ))}
+              {calendarCells.map((c, idx) => {
+                if (!c.date || !c.dateStr) return <div key={idx} className="cal-cell empty" />;
+                const todayStr = localStr(new Date());
+                const isToday = c.dateStr === todayStr;
+                const dayS = sessionsByDate[c.dateStr] || [];
+                return (
+                  <div key={idx} className={`cal-cell ${isToday ? "today" : ""}`}>
+                    <div className="d">{c.date.getDate()}</div>
+                    <div className="marks">
+                      {dayS.map(s => <span key={s.id} className={`cal-dot ${s.status}`} title={STATUS_STYLE[s.status]?.label} />)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="cal-legend">
+              <span><span className="cal-dot scheduled" /> 예정</span>
+              <span><span className="cal-dot attended" /> 출석</span>
+              <span><span className="cal-dot cancelled" /> 취소</span>
+              <span><span className="cal-dot makeup" /> 보강</span>
+            </div>
+          </div>
+
+          <div className="sec">
+            <h2>수업 목록</h2>
+            <div className="tabs">
+              <button className={`tab ${tab === "upcoming" ? "active" : ""}`} onClick={() => setTab("upcoming")}>예정된 수업 ({upcomingSessions.length})</button>
+              <button className={`tab ${tab === "past" ? "active" : ""}`} onClick={() => setTab("past")}>지난 수업 ({pastSessions.length})</button>
+            </div>
+            {(tab === "upcoming" ? upcomingSessions : pastSessions).length === 0 ? (
+              <div className="empty">{tab === "upcoming" ? "예정된 수업이 없습니다." : "지난 수업 기록이 없습니다."}</div>
+            ) : (
+              (tab === "upcoming" ? upcomingSessions : pastSessions).map(s => {
+                const st = STATUS_STYLE[s.status] || STATUS_STYLE.scheduled;
+                return (
+                  <div key={s.id} className="row">
+                    <div className="info">
+                      <div className="date">{fmtDateKr(s.scheduled_date)} <span style={{fontSize:11,color:"#6b7c93",fontWeight:600}}>#{s.session_number}</span></div>
+                      <div className="meta">
+                        {s.scheduled_time_kr || activeEnroll.class_time_kr || "-"} · {activeEnroll.tutor?.name_display || "-"}
+                      </div>
+                    </div>
+                    <div className="act">
+                      <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                      {tab === "upcoming" && s.status === "scheduled" && (
+                        <button className="cancel-btn" disabled={cancelLoading} onClick={() => openCancel(s)}>취소 신청</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
+      )}
+    </div>
+
+    {cancelTarget && (
+      <div className="modal-bg" onClick={() => !cancelLoading && setCancelTarget(null)}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <h3>수업 취소 확인</h3>
+          <div className="detail">
+            {fmtDateKr(cancelTarget.session.scheduled_date)} · #{cancelTarget.session.session_number}회차<br/>
+            {cancelTarget.session.scheduled_time_kr || activeEnroll?.class_time_kr}
+          </div>
+          <div className="ques">
+            {(() => {
+              const db = cancelTarget.info.days_before;
+              if (db >= 4) return "취소하면 마지막 회차 뒤에 1회 추가됩니다. 취소하시겠습니까?";
+              if (db >= 1) return "⚠️ 3일 이내 취소로 회차가 1회 차감됩니다.\n그래도 취소하시겠습니까?";
+              return "❌ 당일 취소입니다. 회차가 차감됩니다.\n그래도 취소하시겠습니까?";
+            })()}
+          </div>
+          <div className="acts">
+            <button className="btn-cancel" disabled={cancelLoading} onClick={() => setCancelTarget(null)}>닫기</button>
+            <button className="btn-confirm" disabled={cancelLoading} onClick={confirmCancel}>{cancelLoading ? "처리중..." : "취소하기"}</button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
+}
