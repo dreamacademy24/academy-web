@@ -3119,10 +3119,10 @@ function renderEmpApvTab(empId){
   var el=document.getElementById('empSbApv');if(!el)return;
   var isCeoJenna=CU&&(CU.id==='ceo'||CU.id==='jenna');
   if(isCeoJenna){
-    sbGet('staff_approvals','order=ts.desc').then(function(rows){
+    sbGet('staff_approvals','order=created_at.desc').then(function(rows){
       var pending=(rows||[]).filter(function(a){return a.status==='pending'&&(a.to_id===CU.id||a.to_id==='both');});
-      var approved=(rows||[]).filter(function(a){return a.status==='approve'&&(a.to_id===CU.id||a.to_id==='both');});
-      var rejected=(rows||[]).filter(function(a){return a.status==='reject'&&(a.to_id===CU.id||a.to_id==='both');});
+      var approved=(rows||[]).filter(function(a){return a.status==='approved';});
+      var rejected=(rows||[]).filter(function(a){return a.status==='rejected';});
       var dot=document.getElementById('empApvDot');
       if(dot)dot.style.display=pending.length?'inline-block':'none';
       var h='<div style="padding:0">';
@@ -3185,9 +3185,9 @@ function _empApvShowList(status,allRows){
     return;
   }
   var filtered=(allRows||[]).filter(function(a){
-    return a.status===status&&(a.to_id===CU.id||a.to_id==='both');
+    return a.status===status;
   });
-  var titleMap={pending:'⏳ 결재 대기',approve:'✅ 승인 완료',reject:'❌ 반려'};
+  var titleMap={pending:'⏳ 결재 대기',approved:'✅ 승인 완료',rejected:'❌ 반려'};
   var html='<div style="padding:0">';
   html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">'+(titleMap[status]||status)+' '+filtered.length+'건</div>';
   if(!filtered.length){
@@ -3873,11 +3873,11 @@ function processApproval(id, action){
   };
   if(action === 'reject') updateData.reject_reason = reason;
 
-  sbPatch('staff_approvals', 'id=eq.'+id, updateData)
+  sbPatch('staff_approvals', 'id=eq.'+String(id), updateData)
     .then(function(){
       toast(action === 'approve' ? '✅ 승인 완료' : '❌ 반려 완료');
       // 상신자에게 알림 전송
-      sbGet('staff_approvals', 'id=eq.'+id+'&select=from_id,title').then(function(rows){
+      sbGet('staff_approvals', 'id=eq.'+String(id)+'&select=from_id,title').then(function(rows){
         if(rows && rows.length){
           var a = rows[0];
           var msg = action === 'approve'
