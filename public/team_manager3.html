@@ -3807,14 +3807,44 @@ function submitApproval(empId){
       createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));
     });
 }
-function processApproval(id,action){
-  var reason="";
-  if(action==="reject"){reason=(document.getElementById("rejectReason_"+id)||{}).value||"";if(!reason){toast("\ubc18\ub824 \uc0ac\uc720\ub97c \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}}
-  sbPatch("staff_approvals","id=eq."+id,{status:action,reject_reason:reason,updated_at:Date.now()})
+function processApproval(id, action){
+  var reasonInp = document.getElementById('rr_'+id);
+  var reason = reasonInp ? reasonInp.value.trim() : '';
+  if(action === 'reject' && !reason){
+    if(reasonInp) reasonInp.focus();
+    toast('반려 사유를 입력해주세요', '#ef4444');
+    return;
+  }
+  var updateData = {
+    status: action === 'approve' ? 'approved' : 'rejected',
+    updated_at: new Date().toISOString()
+  };
+  if(action === 'reject') updateData.reject_reason = reason;
+
+  sbPatch('staff_approvals', 'id=eq.'+id, updateData)
     .then(function(){
-      toast(action==='approve'?'\u2705 \uc2b9\uc778 \uc644\ub8cc':'\u274c \ubc18\ub824 \uc644\ub8cc');
-      renderEmpApvTab(curEmpId);
-      _empApvShowList('pending');
+      toast(action === 'approve' ? '✅ 승인 완료' : '❌ 반려 완료');
+      // 상신자에게 알림 전송
+      sbGet('staff_approvals', 'id=eq.'+id+'&select=from_id,title').then(function(rows){
+        if(rows && rows.length){
+          var a = rows[0];
+          var msg = action === 'approve'
+            ? '결재가 승인됐어요: ' + (a.title || '').slice(0,20)
+            : '결재가 반려됐어요: ' + (a.title || '').slice(0,20) + (reason ? ' ('+reason+')' : '');
+          if(a.from_id && a.from_id !== CU.id) createNotif(a.from_id, 'approval', String(id), msg);
+        }
+      });
+      // 600ms 후 재렌더 (DB 반영 시간)
+      setTimeout(function(){
+        if(curEmpId) renderEmpApvTab(curEmpId);
+        // 승인완료 탭으로 이동
+        setTimeout(function(){
+          _empApvShowList(action === 'approve' ? 'approved' : 'rejected');
+        }, 200);
+      }, 600);
+    })
+    .catch(function(e){
+      toast('처리 실패: ' + (e && e.message || e), '#ef4444');
     });
 }
 function resubmitApproval(id){
