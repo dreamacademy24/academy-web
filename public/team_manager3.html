@@ -5182,7 +5182,7 @@ function showProjDetail(projId){
   document.getElementById('btnTask').style.display='inline-flex';document.getElementById('btnProj').style.display='none';
   renderProjDetail(projId);
 }
-var _projTabActive='overview';
+var _projTabActive='tasks';
 function setProjTab(tab,projId){
   _projTabActive=tab;
   document.querySelectorAll('.pdt-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
@@ -5210,37 +5210,15 @@ function renderProjDetail(projId){
   var tabBar=document.createElement('div');
   tabBar.style.cssText='display:flex;gap:2px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rs,8px);padding:3px;margin-bottom:16px';
   var projFiles=[];projTasks.forEach(function(t){if(t.files&&t.files.length)t.files.forEach(function(f){projFiles.push({task:t.title,file:f});});});
-  var tabs=[{id:'overview',label:'📊 개요'},{id:'tasks',label:'📋 업무 ('+total+')'},{id:'thread',label:'💬 댓글'},{id:'reports',label:'📝 보고'}];
+  if(_projTabActive==='overview')_projTabActive='tasks';
+  var tabs=[{id:'tasks',label:'📋 업무피드 ('+total+')'},{id:'thread',label:'💬 댓글'},{id:'reports',label:'📝 보고'}];
   if(projFiles.length)tabs.push({id:'files',label:'📎 파일 ('+projFiles.length+')'});
   tabs.forEach(function(tb){
     var btn=document.createElement('button');btn.className='tab-btn pdt-btn'+(tb.id===_projTabActive?' active':'');btn.dataset.tab=tb.id;btn.textContent=tb.label;
     btn.onclick=function(){setProjTab(tb.id,projId);};tabBar.appendChild(btn);
   });
   wrap.appendChild(tabBar);
-  // Panel: overview — per-member progress bars + admin slider
-  var pOverview=document.createElement('div');pOverview.className='pdt-panel';pOverview.dataset.tab='overview';pOverview.style.display=_projTabActive==='overview'?'block':'none';
-  var ovHtml='';
-  if(isAdmin()){
-    ovHtml+='<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px"><span style="font-size:12px;font-weight:700;color:var(--text2)">진행률 조정</span>'+
-      '<input type="range" min="0" max="100" value="'+prog+'" style="width:140px;accent-color:'+p.color+'" oninput="liveProgress(\''+projId+'\',this.value,this)" />'+
-      '<span id="pdh-prog" style="font-weight:800;color:'+p.color+'">'+prog+'%</span></div>';
-  }
-  ovHtml+='<div class="proj-mb-rows" style="margin-bottom:16px">';
-  p.members.forEach(function(mid){
-    var e=getP(mid);if(!e)return;
-    var mt=projTasks.filter(function(t){return t.assignee===mid;});
-    var md=mt.filter(function(t){return t.done;}).length;
-    var mPct=mt.length?Math.round(md/mt.length*100):0;
-    ovHtml+='<div class="proj-mb-row"><div class="proj-mb-av" style="background:'+e.color+'">'+e.initial+'</div>'+
-      '<div class="proj-mb-name">'+e.name+'</div>'+
-      '<div class="proj-mb-bar"><div class="proj-mb-bar-fill" style="width:'+mPct+'%;background:'+e.color+'">'+(mPct>=15?'<span>'+mPct+'%</span>':'')+'</div></div>'+
-      '<div class="proj-mb-cnt">'+md+'/'+mt.length+'</div></div>';
-  });
-  ovHtml+='</div>';
-  ovHtml+='<div class="pdh-meta">'+p.members.map(function(mid){var e=getP(mid);return e?'<span class="m-chip" style="background:'+e.color+'20;color:'+e.color+'"><div style="width:20px;height:20px;border-radius:6px;background:'+e.color+';display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff">'+e.initial+'</div>'+e.name+'</span>':'';}).join('')+(p.due?'<span class="badge badge-gray" style="margin-left:auto">📅 마감: '+p.due+'</span>':'')+'</div>';
-  pOverview.innerHTML=ovHtml;
-  wrap.appendChild(pOverview);
-  // Panel: tasks — Design 5 feed view
+  // Panel: tasks — Design 5 feed view (기본)
   var pTasks=document.createElement('div');pTasks.className='pdt-panel';pTasks.dataset.tab='tasks';pTasks.style.display=_projTabActive==='tasks'?'block':'none';
   var taskHead=document.createElement('div');
   taskHead.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px';
