@@ -53,6 +53,7 @@ export default function HouseReportsPage() {
   const [dateFrom, setDateFrom] = useState(todayStr());
   const [dateTo, setDateTo] = useState(todayStr());
   const [creating, setCreating] = useState<string | null>(null);
+  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set());
 
   // --- Edit modal state ---
   const [editingReport, setEditingReport] = useState<Report | null>(null);
@@ -81,6 +82,13 @@ export default function HouseReportsPage() {
       try {
         const s = localStorage.getItem("admin_user");
         if (s) setReporter(s);
+        else {
+          const adminSession = localStorage.getItem("admin_session") || localStorage.getItem("adminSession");
+          if (adminSession) {
+            const parsed = JSON.parse(adminSession);
+            setReporter(parsed.username || parsed.user || parsed.name || "admin");
+          }
+        }
       } catch { /* ignore */ }
     }
   }, []);
@@ -93,6 +101,15 @@ export default function HouseReportsPage() {
   }, [authed, dateFrom, dateTo, slot]);
 
   useEffect(() => { loadReports(); }, [loadReports]);
+
+  useEffect(() => {
+    const t = todayStr();
+    setExpandedReports(prev => {
+      const next = new Set(prev);
+      reports.forEach(r => { if (r.report_date === t) next.add(r.id); });
+      return next;
+    });
+  }, [reports]);
 
   /* ──── Write: load pending + history ──── */
   const loadPending = useCallback(async () => {
@@ -136,6 +153,16 @@ export default function HouseReportsPage() {
     setCreating(null);
     if (!res.ok) { const r = await res.json(); alert(r.error || "생성 실패"); return; }
     alert("✓ 업무가 생성되었습니다");
+  }
+
+  async function deleteReport(id: string) {
+    if (!confirm("이 보고를 삭제할까요?")) return;
+    const res = await fetch("/api/house-reports", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id }),
+    });
+    if (res.ok) { loadReports(); loadHistory(); }
+    else alert("삭제 실패");
   }
 
   /* ──── Write: form actions ──── */
@@ -450,26 +477,49 @@ export default function HouseReportsPage() {
           const slotBg = SLOT_BG[r.time_slot] || "#f3f4f6";
           const slotColor = SLOT_COLOR[r.time_slot] || "#374151";
           const submitTime = new Date(r.created_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+          const isOpen = expandedReports.has(r.id);
+          const totalFiles = (r.rooms || []).reduce((sum, rm) => sum + (rm.files?.length || 0), 0);
+          const totalItems = (r.rooms || []).reduce((sum, rm) => sum + (rm.items?.length || 0), 0);
           return (
-            <div key={r.id} className="report">
-              <div className="report-head">
+            <div key={r.id} className="report" style={{ padding: 20, marginBottom: 14 }}>
+              <div
+                className="report-head"
+                style={{ cursor: "pointer", marginBottom: isOpen ? 14 : 0, paddingBottom: isOpen ? 10 : 0, borderBottom: isOpen ? "1px solid #e5e7eb" : "none" }}
+                onClick={() => {
+                  setExpandedReports(prev => {
+                    const next = new Set(prev);
+                    if (next.has(r.id)) next.delete(r.id); else next.add(r.id);
+                    return next;
+                  });
+                }}
+              >
+                <span style={{ fontSize: 13, color: "#9ca3af", marginRight: 4 }}>{isOpen ? "▲" : "▼"}</span>
                 <div className="report-date">{r.report_date || "-"}</div>
                 <span className="badge" style={{ background: slotBg, color: slotColor }}>{SLOT_LABEL[r.time_slot] || r.time_slot}</span>
                 <span className="badge" style={{ background: "#e0e7ff", color: "#3730a3" }}>👤 {r.reporter}</span>
-                <button onClick={() => startEdit(r)} style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", cursor: "pointer", color: "#374151" }}>✏️ 수정</button>
-                <div className="report-meta">제출 {submitTime}</div>
+                {!isOpen && (
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>
+                    호실 {(r.rooms || []).length} · 항목 {totalItems}{totalFiles > 0 ? ` · 📎 ${totalFiles}` : ""}
+                  </span>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); startEdit(r); }} style={{ padding: "4px 12px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", cursor: "pointer", color: "#374151", marginLeft: "auto" }}>✏️ 수정</button>
+                <button onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }} style={{ padding: "4px 12px", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", cursor: "pointer", color: "#dc2626" }}>🗑 삭제</button>
+                <div className="report-meta" style={{ marginLeft: 0 }}>제출 {submitTime}</div>
               </div>
-              {(r.rooms || []).map((rm, rIdx) => (
+              {isOpen && (r.rooms || []).map((rm, rIdx) => (
                 <div key={rIdx} className="room">
-                  <div className="room-head"><span className="room-no">{rm.room_no || "-"}</span></div>
+                  <div className="room-head">
+                    <span className="room-no" style={{ fontSize: 15, fontWeight: 800 }}>{rm.room_no || "-"}</span>
+                    {rm.files && rm.files.length > 0 && <span style={{ fontSize: 12, color: "#6b7280" }}>📎 {rm.files.length}</span>}
+                  </div>
                   {(rm.items || []).map((it, iIdx) => {
                     const st = STATUS_MAP[it.status] || STATUS_MAP.done;
                     const canCreate = it.status !== "done" && !!(it.content && it.content.trim());
                     const key = `${r.id}-${rIdx}-${iIdx}`;
                     return (
                       <div key={iIdx} className="item">
-                        <span className="badge-sm" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                        <span className="content" style={{ fontWeight: st.bold ? 700 : 400, color: st.bold ? st.color : "#374151" }}>{it.content}</span>
+                        <span className="badge-sm" style={{ background: st.bg, color: st.color, fontSize: 12, padding: "3px 10px" }}>{st.label}</span>
+                        <span className="content" style={{ fontWeight: st.bold ? 700 : 500, fontSize: 14, color: st.bold ? st.color : "#374151" }}>{it.content}</span>
                         {canCreate && (
                           <button className="task-btn" onClick={() => createTask(rm.room_no, it, r.reporter, r.report_date, key)} disabled={creating === key}>
                             {creating === key ? "생성 중..." : "📝 업무 생성"}
@@ -498,7 +548,7 @@ export default function HouseReportsPage() {
                   )}
                 </div>
               ))}
-              {r.memo && <div className="memo">📝 <b>메모:</b> {r.memo}</div>}
+              {isOpen && r.memo && <div className="memo">📝 <b>메모:</b> {r.memo}</div>}
             </div>
           );
         })}

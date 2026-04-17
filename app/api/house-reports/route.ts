@@ -83,6 +83,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true })
     }
 
+    // 보고 삭제
+    if (action === 'delete') {
+      const { id } = body
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      await supabase.from('house_pending_items').delete().eq('report_id', id)
+      const { error } = await supabase.from('house_reports').delete().eq('id', id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
+
     // 보고 수정
     if (action === 'update_report') {
       const { id, rooms, memo } = body
