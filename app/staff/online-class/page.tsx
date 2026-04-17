@@ -142,7 +142,10 @@ export default function StaffOnlineClassPage() {
 .filter-bar select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:#fff}
     `}</style>
     <div className="sc-w">
-      <a href="/staff" className="sc-back">← Back to Team Manager</a>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
+        <a href="/staff" className="sc-back" style={{ marginBottom: 0 }}>← Back to Team Manager</a>
+        <a href="/tutor/online-class" className="sc-back" style={{ marginBottom: 0, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1a6fc4" }}>👤 My Schedule (Tutor View) →</a>
+      </div>
 
       <div className="sc-head">
         <h1>Online Class — Attendance</h1>

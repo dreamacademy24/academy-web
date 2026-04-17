@@ -6,11 +6,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export async function GET() {
-  const { data, error } = await supabase
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const tutorId = searchParams.get('tutor_id')
+
+  let q = supabase
     .from('online_enrollments')
     .select('*, tutor:online_tutors(id, name_display, name_en)')
     .order('created_at', { ascending: false })
+
+  if (tutorId) q = q.eq('tutor_id', tutorId)
+
+  const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ enrollments: data ?? [] })
 }
