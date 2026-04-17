@@ -3230,7 +3230,7 @@ function _empApvShowForm(){
     '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="jenna" style="display:none"> Jenna</label>'+
     '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="both" style="display:none"> 둘 다</label>'+
     '</div>'+
-    '<div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151">\ud83d\udcce 파일 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
+    '<div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151">\ud83d\udcce 파일 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
     '<button onclick="submitApproval(\''+curEmpId+'\')" style="width:100%;padding:11px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button>'+
     '</div></div>';
 }
@@ -3635,7 +3635,7 @@ function renderApprovalPage(empId){
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (부원장)</label>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> 둘 다</label>';
-    html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="readFilesAsBase64(this).then(function(f){renderFilePreview(f,\'apvFilePreview\')})"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
+    html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
     html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
     var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
     if(pending.length){
@@ -3715,7 +3715,7 @@ function readFilesAsBase64(input){
 }
 function renderFilePreview(files,containerId){
   var el=document.getElementById(containerId);if(!el||!files||!files.length)return;
-  el.innerHTML=files.map(function(f){var isImg=f.type&&f.type.startsWith("image/");return "<div style=\"display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:8px;padding:5px 10px;font-size:12px;margin:3px\">"+(isImg?"<img src=\""+f.data+"\" style=\"width:32px;height:32px;object-fit:cover;border-radius:4px\">":"\ud83d\udcce")+"<span>"+esc(f.name)+"</span></div>";}).join("");
+  el.innerHTML=files.map(function(f){var isImg=f.type&&f.type.startsWith("image/");var src=f.url||f.data||"";return "<div style=\"display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:8px;padding:5px 10px;font-size:12px;margin:3px\">"+(isImg?"<img src=\""+src+"\" style=\"width:32px;height:32px;object-fit:cover;border-radius:4px\">":"\ud83d\udcce")+"<span>"+esc(f.name)+"</span></div>";}).join("");
 }
 function openLightbox(src){var lb=document.getElementById('imgLightbox');if(!lb)return;document.getElementById('imgLightboxImg').src=src;lb.style.display='flex';}
 function closeLightbox(){var lb=document.getElementById('imgLightbox');if(lb)lb.style.display='none';}
@@ -3724,13 +3724,13 @@ function fileIcon(kind){return kind==='image'?'🖼️':kind==='video'?'🎬':ki
 function fmtFileSize(s){if(!s)return '';if(s<1024)return s+'B';if(s<1024*1024)return (s/1024).toFixed(1)+'KB';return (s/1024/1024).toFixed(1)+'MB';}
 function renderAttachments(files){
   if(!files||!files.length)return "";
-  return "<div style=\"margin-top:10px;display:flex;flex-wrap:wrap;gap:6px\">"+files.map(function(f){var isImg=fileKind(f)==='image';if(isImg)return "<img src=\""+f.data+"\" onclick=\"openLightbox('"+f.data+"')\" style=\"max-width:160px;max-height:120px;border-radius:8px;border:1px solid #e2e8f0;cursor:zoom-in;object-fit:cover\">";return "<a href=\""+f.data+"\" download=\""+esc(f.name)+"\" style=\"display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;border-radius:8px;padding:5px 10px;font-size:12px;color:#1a6fc4;text-decoration:none\">"+fileIcon(fileKind(f))+" "+esc(f.name)+"</a>";}).join("")+"</div>";
+  return "<div style=\"margin-top:10px;display:flex;flex-wrap:wrap;gap:6px\">"+files.map(function(f){var src=f.url||f.data||"";var isImg=fileKind(f)==='image';if(isImg)return "<img src=\""+src+"\" onclick=\"openLightbox('"+src+"')\" style=\"max-width:160px;max-height:120px;border-radius:8px;border:1px solid #e2e8f0;cursor:zoom-in;object-fit:cover\">";return "<a href=\""+src+"\" download=\""+esc(f.name)+"\" target=\"_blank\" style=\"display:inline-flex;align-items:center;gap:5px;background:#f1f5f9;border-radius:8px;padding:5px 10px;font-size:12px;color:#1a6fc4;text-decoration:none\">"+fileIcon(fileKind(f))+" "+esc(f.name)+"</a>";}).join("")+"</div>";
 }
 function renderTaskFiles(t){
   if(!t.files||!t.files.length)return '';
   var files=t.files;
   var rows=files.map(function(f,i){
-    var k=fileKind(f),src=f.data||'',sizeTxt=fmtFileSize(f.size);
+    var k=fileKind(f),src=f.url||f.data||'',sizeTxt=fmtFileSize(f.size);
     var thumb=(k==='image'&&src)?'<img src="'+src+'" onclick="event.stopPropagation();openLightbox(\''+src+'\')" style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:zoom-in;flex-shrink:0">':'<span style="font-size:18px;width:36px;text-align:center;flex-shrink:0">'+fileIcon(k)+'</span>';
     var dl=src?'<a href="'+src+'" download="'+esc(f.name)+'" onclick="event.stopPropagation()" style="font-size:11px;color:#1a6fc4;text-decoration:none;background:#eff6ff;padding:3px 8px;border-radius:5px;font-weight:600;flex-shrink:0">⬇ 다운로드</a>':'';
     return '<div style="display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:11.5px">'+thumb+'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(f.name)+'">'+esc(f.name)+(sizeTxt?' <span style="color:var(--text3);font-size:10.5px">('+sizeTxt+')</span>':'')+'</span>'+dl+'</div>';
@@ -3738,17 +3738,74 @@ function renderTaskFiles(t){
   if(files.length<=2) return '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">'+rows+'</div>';
   return '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:11px;color:var(--text3);font-weight:600;padding:2px 0">📎 파일 '+files.length+'개 ▼</summary><div style="display:flex;flex-direction:column;gap:4px;margin-top:4px">'+rows+'</div></details>';
 }
+var _apvFiles=[];
+async function uploadToStorage(file){
+  var ext=file.name.split('.').pop();
+  var fileName=Date.now()+'_'+Math.random().toString(36).slice(2)+'.'+ext;
+  var path='approvals/'+fileName;
+  var response=await fetch(SB_URL+'/storage/v1/object/staff-files/'+path,{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':file.type,'x-upsert':'true'},
+    body:file
+  });
+  if(!response.ok){var err=await response.text();throw new Error('업로드 실패: '+err);}
+  var publicUrl=SB_URL+'/storage/v1/object/public/staff-files/'+path;
+  return {name:file.name,url:publicUrl,type:file.type,size:file.size};
+}
+async function handleApvFiles(event){
+  var files=Array.from(event.target.files||[]);
+  var MAX_SIZE_IMG=10*1024*1024;
+  var MAX_SIZE_VID=100*1024*1024;
+  var preview=document.getElementById('apvFilePreview');
+  if(preview){preview.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px">⏳ 업로드 중...</div>';}
+  var results=[];var errors=[];
+  for(var i=0;i<files.length;i++){
+    var file=files[i];
+    var isVideo=file.type.startsWith('video/');
+    var maxSize=isVideo?MAX_SIZE_VID:MAX_SIZE_IMG;
+    if(file.size>maxSize){errors.push(file.name+': '+(isVideo?'영상은 100MB':'이미지는 10MB')+' 이하만 가능합니다');continue;}
+    try{var result=await uploadToStorage(file);results.push(result);}
+    catch(e){errors.push(file.name+': 업로드 실패');console.error(e);}
+  }
+  if(errors.length){alert('일부 파일 오류:\n'+errors.join('\n'));}
+  _apvFiles=(_apvFiles||[]).concat(results);
+  renderApvFilePreview(_apvFiles);
+}
+function renderApvFilePreview(files){
+  var preview=document.getElementById('apvFilePreview');
+  if(!preview)return;
+  if(!files||!files.length){preview.innerHTML='';return;}
+  preview.innerHTML=files.map(function(f,idx){
+    var isImg=f.type&&f.type.startsWith('image/');
+    var isVid=f.type&&f.type.startsWith('video/');
+    var sizeMB=f.size?(f.size/1024/1024).toFixed(1)+'MB':'';
+    return '<div style="display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:4px;position:relative;vertical-align:top">'+
+      '<button onclick="_apvFileRemove('+idx+')" style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:none;cursor:pointer;font-size:10px;z-index:1;display:flex;align-items:center;justify-content:center">×</button>'+
+      (isImg?'<img src="'+f.url+'" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border)" />':
+       isVid?'<div style="width:72px;height:72px;background:#1a1a2e;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px">🎬</div>':
+       '<div style="width:72px;height:72px;background:var(--surface2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px">📄</div>')+
+      '<div style="font-size:9px;color:var(--text3);max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(f.name)+'</div>'+
+      '<div style="font-size:9px;color:var(--text3)">'+sizeMB+'</div>'+
+      '</div>';
+  }).join('');
+}
+function _apvFileRemove(idx){_apvFiles.splice(idx,1);renderApvFilePreview(_apvFiles);}
 function submitApproval(empId){
   var title=document.getElementById("apvTitle");
   var body=document.getElementById("apvBody");
   var toEl=document.querySelector("input[name=\"apvTo\"]:checked");
   if(!title||!title.value.trim()){toast("\uc81c\ubaa9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
   if(!body||!body.value.trim()){toast("\ub0b4\uc6a9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
-  readFilesAsBase64(document.getElementById("apvFiles")||{files:[]}).then(function(files){
-    var _apvTo=toEl?toEl.value:"ceo";var _apvTitle=title.value.trim();
-    sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
-      .then(function(){toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");renderApprovalPage(empId);renderEmpApvTab(curEmpId);_empApvShowForm();var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));});
-  });
+  var files=_apvFiles||[];
+  var _apvTo=toEl?toEl.value:"ceo";var _apvTitle=title.value.trim();
+  sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
+    .then(function(){
+      toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");
+      _apvFiles=[];renderApvFilePreview([]);
+      renderApprovalPage(empId);renderEmpApvTab(curEmpId);_empApvShowForm();
+      var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];
+      createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));
+    });
 }
 function processApproval(id,action){
   var reason="";
