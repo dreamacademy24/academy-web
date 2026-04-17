@@ -24,6 +24,12 @@ const ADMIN_ACCOUNTS = [
   { id: "admin-sage",  pw: "h_tmt0j2", role: "staff", name: "Sage",  staffId: "sage"  },
   { id: "admin-eric",  pw: "h_im0z0p", role: "staff", name: "Eric",  staffId: "eric"  },
   { id: "admin-jun",   pw: "h_krvnp7", role: "staff", name: "Jun",   staffId: "jun"   },
+  // 튜터 계정 (화상영어 전용) — staffId는 online_tutors.staff_user_id와 매핑
+  { id: "admin-ann",     pw: "h_bpke76", role: "tutor", name: "T.Ann",     staffId: "admin-ann"     },
+  { id: "admin-angel",   pw: "h_nn1req", role: "tutor", name: "T.Angel",   staffId: "admin-angel"   },
+  { id: "admin-carla",   pw: "h_8aonka", role: "tutor", name: "T.Carla",   staffId: "admin-carla"   },
+  { id: "admin-amelyn",  pw: "h_zbg7cn", role: "tutor", name: "T.Amelyn",  staffId: "admin-amelyn"  },
+  { id: "admin-cristel", pw: "h_hn7tab", role: "tutor", name: "T.Cristel", staffId: "admin-cristel" },
 ];
 
 export default function LoginPage() {
@@ -35,7 +41,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && isAdminAuthed()) {
-      router.replace("/admin/hub");
+      try {
+        const info = JSON.parse(localStorage.getItem("adminInfo") || "{}");
+        router.replace(info.role === "tutor" ? "/tutor/online-class" : "/admin/hub");
+      } catch { router.replace("/admin/hub"); }
     }
   }, [router]);
 
@@ -52,7 +61,7 @@ export default function LoginPage() {
         setLoading(false); return;
       }
       setAdminAuthed(account.id, { role: account.role, name: account.name, staffId: account.staffId });
-      window.location.href = "/admin/hub";
+      window.location.href = account.role === "tutor" ? "/tutor/online-class" : "/admin/hub";
       return;
     }
 
