@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       class_time_kr, class_time_ph,
       start_date, end_date, duration_weeks, class_duration_weeks, class_period,
       sessions_per_week, total_sessions, pre_sessions, post_sessions,
-      package_booking_id, notes,
+      package_booking_id, notes, status,
     } = body
 
     if (!student_name || !start_date || !total_sessions || !days_of_week?.length) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         post_sessions: Number(post_sessions) || 0,
         used_sessions: 0,
         package_booking_id: package_booking_id || null,
-        status: 'active',
+        status: status || 'active',
         notes: notes || null,
       })
       .select()

@@ -262,6 +262,10 @@ export default function OnlineClassPage() {
       <div className="oc-top">
         <button className="oc-back" onClick={() => router.push("/admin/hub")}>←</button>
         <h1>화상영어 출결 관리</h1>
+        <button
+          onClick={() => router.push("/admin/online-class/availability")}
+          style={{ marginLeft: "auto", padding: "8px 14px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >📊 시간대별 가용 현황</button>
       </div>
 
       <div className="tabs">
