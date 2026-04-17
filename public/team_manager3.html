@@ -5126,6 +5126,8 @@ function delCmt(tid,cid){if(!comments[tid])return;comments[tid]=comments[tid].fi
 
 // ── PROJECTS ──
 function renderProjList(){
+  var _pp=document.getElementById('page-projects');
+  if(_pp){_pp.classList.remove('hidden');_pp.style.display='';}
   var wrap=document.getElementById('projList');wrap.innerHTML='';
   var vis=isAdmin()?projects:projects.filter(function(p){return p.members.includes(CU.id);});
   if(!vis.length){wrap.innerHTML='<div class="empty-state"><div class="ei">🚀</div>프로젝트가 없습니다<br><span style="font-size:12px">'+(isAdmin()?'"새 프로젝트"로 시작하세요':'관리자가 프로젝트를 만들면 여기 표시됩니다')+'</span></div>';return;}
@@ -6079,6 +6081,7 @@ function refreshAll(){
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
   if(!document.getElementById('page-calendar').classList.contains('hidden'))renderCal();
   if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);
+  if(!document.getElementById('page-projects').classList.contains('hidden'))renderProjList();
   if(!document.getElementById('page-proj-detail').classList.contains('hidden')&&curProjId)renderProjDetail(curProjId);
   const dw=document.getElementById('empDailyWrap');if(dw&&!dw.classList.contains('hidden')&&curEmpId)renderEmpDailyChecklist(curEmpId,dw);
 }
