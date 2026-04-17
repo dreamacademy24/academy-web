@@ -3208,14 +3208,66 @@ function _empApvShowList(status,allRows){
     if(status==='pending'){
       html+='<div style="display:flex;gap:6px">';
       html+='<button onclick="processApproval('+a.id+',\'approve\')" style="flex:1;padding:8px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✓ 승인</button>';
-      html+='<input id="rejectReason_'+a.id+'" placeholder="반려 사유..." style="flex:2;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none" />';
+      html+='<input id="rr_'+a.id+'" placeholder="반려 사유..." style="flex:2;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none" />';
       html+='<button onclick="processApproval('+a.id+',\'reject\')" style="padding:8px 14px;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">✕ 반려</button>';
       html+='</div>';
     }
+    // 댓글 섹션
+    html+='<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">';
+    html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
+    html+='<div style="display:flex;gap:6px">';
+    html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();_apvAddCmt(\''+String(a.id)+'\')}" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:var(--surface2)">';
+    html+='<button onclick="_apvAddCmt(\''+String(a.id)+'\')" style="padding:7px 12px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
+    html+='</div>';
+    html+='</div>';
     html+='</div>';
   });
   html+='</div>';
   d.innerHTML=html;
+  // 각 카드의 댓글 로드
+  filtered.forEach(function(a){_apvLoadCmts(String(a.id));});
+}
+
+function _apvLoadCmts(apvId){
+  sbGet('staff_approvals', 'id=eq.'+apvId+'&select=comments').then(function(rows){
+    if(!rows||!rows.length)return;
+    var cmts = rows[0].comments || [];
+    var el = document.getElementById('apvCmts_'+apvId);
+    if(!el)return;
+    if(!cmts.length){el.innerHTML='';return;}
+    el.innerHTML = cmts.map(function(c){
+      var au = getP(c.author);
+      var aColor = au?au.color:'#9ca3af';
+      var aName = au?au.name:(c.author||'?');
+      return '<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">'+
+        '<div style="width:24px;height:24px;border-radius:7px;background:'+aColor+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+esc(aName.charAt(0))+'</div>'+
+        '<div style="flex:1;background:var(--surface2);border-radius:4px 10px 10px 10px;padding:7px 10px">'+
+          '<div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:2px">'+esc(aName)+'</div>'+
+          '<div style="font-size:12.5px;color:var(--text);line-height:1.5">'+esc(c.text||'')+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  });
+}
+
+function _apvAddCmt(apvId){
+  var inp = document.getElementById('apvCmtInp_'+apvId);
+  if(!inp)return;
+  var text = (inp.value||'').trim();
+  if(!text||!CU)return;
+  inp.value='';
+  sbGet('staff_approvals','id=eq.'+apvId+'&select=comments,from_id,title').then(function(rows){
+    if(!rows||!rows.length)return;
+    var a = rows[0];
+    var cmts = a.comments || [];
+    cmts.push({id:uid(),author:CU.id,text:text,ts:new Date().toISOString()});
+    sbPatch('staff_approvals','id=eq.'+apvId,{comments:cmts}).then(function(){
+      _apvLoadCmts(apvId);
+      if(a.from_id && a.from_id !== CU.id){
+        createNotif(a.from_id,'approval',String(apvId),CU.name+'님이 결재에 댓글: '+text.slice(0,30));
+      }
+    });
+  });
 }
 function _empApvShowForm(){
   var d=document.getElementById('empDetail');if(!d)return;
@@ -3652,7 +3704,7 @@ function renderApprovalPage(empId){
         html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
         if(a.files&&a.files.length)html+=renderAttachments(a.files);
         html+='<div style="display:flex;gap:8px"><button onclick="processApproval('+a.id+',\x27approve\x27)" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">승인</button>';
-        html+='<input id="rejectReason_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
+        html+='<input id="rr_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
         html+='<button onclick="processApproval('+a.id+',\x27reject\x27)" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">반려</button></div></div>';
       });
       html+='</div>';
