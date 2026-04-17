@@ -414,3 +414,27 @@ CREATE POLICY "all" ON staff_votes FOR ALL USING (true) WITH CHECK (true);
 - Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
 - 수정 후 항상 git push → Vercel 자동 배포
 - 로컬 경로: C:/Users/desko/academy-web
+
+## 2026-04-17 완료 작업
+- ✅ 하위업무 체크 토글 + 참고 메모 기능
+- ✅ 결재 파일첨부 Supabase Storage 업로드로 변경 (용량 제한 해결)
+- ✅ staff-files Storage 버킷 생성 + 정책 설정
+- ✅ 하우스보고 전면 개선 (삭제/상세보기/가독성/reporter 수정)
+- ✅ 포털 내 신청 내역 페이지 (/portal/my-requests)
+- ✅ 메인 상담하기→마이페이지 버튼, 네비 내페이지 제거
+- ✅ 모든 포털 뒤로가기 → 마이페이지로 통일
+- ✅ 개인업무 공간 탭 3개 (업무/데일리/결재) 완성
+- ✅ 결재 탭 CEO/Jenna vs 직원 분리
+
+### 로컬 경로
+C:/Users/desko/academy-web
+
+### 내일 할 작업
+1. 결재 파일 첨부 실제 작동 확인
+2. 투표 기능 실제 작동 확인
+3. PayPal Live 활성화
+
+### 작업 방식 (매 대화 적용)
+- Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
+- 수정 후 항상 git push → Vercel 자동 배포
+- 로컬 경로: C:/Users/desko/academy-web
