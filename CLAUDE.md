@@ -426,13 +426,38 @@ CREATE POLICY "all" ON staff_votes FOR ALL USING (true) WITH CHECK (true);
 - ✅ 개인업무 공간 탭 3개 (업무/데일리/결재) 완성
 - ✅ 결재 탭 CEO/Jenna vs 직원 분리
 
+## 현재 진행 상황 (2026-04-17 최신)
+
+### 2026-04-17 완료 작업 — 화상영어 시스템 대개편
+- 세션 데이터 재처리 31명 (25 + 6) · 휴강 테이블 35건 (2025~2026)
+- 튜터 계정 5개 생성 (admin-ann/angel/carla/amelyn/cristel)
+- 튜터 영문 가이드 (/guide 4번째 탭)
+- Team Manager ↔ 어드민 허브 Online Class 분리
+- 관리자/튜터 페이지 역할 분리
+  · /admin/online-class-attendance (모니터링 전용, 튜터 색상/범례)
+  · /tutor/online-class (Today/My Students/My Schedule 3탭)
+- 인보이스 캘린더 모달 (월별 그리드 + Print)
+- 특이사항 inline 편집 (online_enrollments.tutor_notes 컬럼)
+- Undo 버튼 라벨
+- 주간 네비게이션 (이전/이번/다음/오늘)
+- PC 기준 레이아웃 (1500px)
+
+### 보류 작업
+- 심시우 (심시아와 혼동), 전가빈 (notes 기간 이상) — 원본 재확인 필요
+
+### 다음 작업 우선순위
+1. ⭐ 화상영어 입력 시스템 새 구조 — 손님 신청 → 메이 승인 → 자동 생성
+2. STEP 43~48 다국어 (한/영/일)
+3. STEP 49~54 홈페이지 개선 + PWA
+4. PayPal Live 활성화
+5. 카카오톡 채널 위젯
+6. 브라우저 푸시 알림
+
+### 새 대화 시작
+"드림아카데미 프로젝트 이어서 진행해줘"
+
 ### 로컬 경로
 C:/Users/desko/academy-web
-
-### 내일 할 작업
-1. 결재 파일 첨부 실제 작동 확인
-2. 투표 기능 실제 작동 확인
-3. PayPal Live 활성화
 
 ### 작업 방식 (매 대화 적용)
 - Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
