@@ -3179,19 +3179,15 @@ function renderEmpApvTab(empId){
 }
 function _empApvShowList(status,allRows){
   var d=document.getElementById('empDetail');if(!d)return;
-  if(!allRows){
-    sbGet('staff_approvals','order=created_at.desc').then(function(rows){_empApvShowList(status,rows);});
-    return;
-  }
-  var filtered=(allRows||[]).filter(function(a){
-    return a.status===status;
-  });
-  var titleMap={pending:'⏳ 결재 대기',approved:'✅ 승인 완료',rejected:'❌ 반려'};
-  var html='<div style="padding:0">';
-  html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">'+(titleMap[status]||status)+' '+filtered.length+'건</div>';
-  if(!filtered.length){
-    html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">항목이 없습니다</div>';
-  }
+  // 항상 DB에서 새로 조회 (캐시 무시)
+  sbGet('staff_approvals','order=created_at.desc').then(function(rows){
+    var filtered=(rows||[]).filter(function(a){return a.status===status;});
+    var titleMap={pending:'⏳ 결재 대기',approved:'✅ 승인 완료',rejected:'❌ 반려'};
+    var html='<div style="padding:0">';
+    html+='<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">'+(titleMap[status]||status)+' '+filtered.length+'건</div>';
+    if(!filtered.length){
+      html+='<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">항목이 없습니다</div>';
+    }
   filtered.forEach(function(a){
     var fromUser=ALL.find(function(u){return u.id===a.from_id;});
     var ds=a.ts?new Date(a.ts).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}):'';
@@ -3225,6 +3221,7 @@ function _empApvShowList(status,allRows){
   d.innerHTML=html;
   // 각 카드의 댓글 로드
   filtered.forEach(function(a){_apvLoadCmts(String(a.id));});
+  });
 }
 
 function _apvLoadCmts(apvId){
