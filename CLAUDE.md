@@ -463,3 +463,30 @@ C:/Users/desko/academy-web
 - Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
 - 수정 후 항상 git push → Vercel 자동 배포
 - 로컬 경로: C:/Users/desko/academy-web
+
+## 2026-04-19 완료 작업
+- ✅ 결재 승인완료/반려 탭 status 오타 전체 수정 (approve→approved, reject→rejected)
+- ✅ 결재 승인완료 탭 내용 표시 버그 수정 (renderEmpApvTab onclick 오타)
+- ✅ 하우스보고 전체 탭 미해결 항목 섹션 연동 완료
+- ✅ 하우스보고 reporter "CEO/Jun" 정상 표시
+- ✅ 하우스보고 오전/오후/체크인 탭 제거 (보고하기/전체 2개로 단순화)
+- ✅ house_pending_items 마이그레이션 (기존 problem 항목 3건)
+- ✅ 확인필요 카운트 미해결 항목 수와 연동
+- ✅ 보고 제출 시 problem 항목 pending 자동 생성 확인
+- ✅ status 키 progress→in_progress 통일
+- ✅ 결재 파일첨부 Supabase Storage 업로드 (staff-files 버킷)
+- ✅ task/결재 댓글 id null 에러 수정
+- ✅ 하위업무 체크 토글 + 참고 메모 기능
+
+### 하우스보고 남은 개선사항
+- 보고/지시 유형 구분 (보고 vs 지시 선택 기능) - 미완료
+- 전체 카드에서 수정/사진/영상 첨부 - 이미 있음 확인됨
+- 댓글/피드백 기능 - 미완료
+
+### 로컬 경로
+C:/Users/desko/academy-web
+
+### 작업 방식 (매 대화 적용)
+- Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
+- 수정 후 항상 git push → Vercel 자동 배포
+- 로컬 경로: C:/Users/desko/academy-web
