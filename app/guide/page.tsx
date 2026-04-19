@@ -688,6 +688,11 @@ function GuideInner() {
               <div className="dsc">Compensation session for a previously missed class. Does not deduct from total.</div>
             </div>
           </div>
+          <h3>Adding Notes (Optional)</h3>
+          <p>Below the status buttons, you can add a note about the class if needed.</p>
+          <p>Examples: student was late, technical issues, special situation.</p>
+          <p>Notes are optional — leave blank if there&apos;s nothing special.</p>
+          <p>Notes will automatically appear in the Korean admin&apos;s view as well.</p>
         </div>
 
         {/* 4. Schedule Rules */}

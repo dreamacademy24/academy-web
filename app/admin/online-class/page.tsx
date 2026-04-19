@@ -21,6 +21,7 @@ interface Session {
   id: string; enrollment_id: string; session_number: number;
   scheduled_date: string; scheduled_time_ph: string | null; scheduled_time_kr: string | null;
   status: string; is_makeup_added: boolean; note: string | null;
+  session_note: string | null;
   cancel_days_before?: number | null;
 }
 
@@ -355,17 +356,30 @@ export default function OnlineClassPage() {
                       st = (dB != null && dB >= 4) ? SES_STYLE.makeup : SES_STYLE.cancelled;
                     }
                     const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
-                    const tt = `#${s.session_number} ${s.scheduled_date} ${s.status}` + (s.cancel_days_before != null ? ` (${s.cancel_days_before}d)` : "");
+                    const tt = `#${s.session_number} ${s.scheduled_date} ${s.status}` + (s.cancel_days_before != null ? ` (${s.cancel_days_before}d)` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "");
                     return (
                       <div key={s.id} className="ses-cell" style={{ background: st.bg, color: st.color }} title={tt}>
                         <div className="num">{d}</div>
                         <div>{st.label}</div>
+                        {s.session_note && <span style={{ position: "absolute", top: 2, right: 2, fontSize: 10 }}>💬</span>}
                         {s.status === "scheduled" && (
                           <button className="cancel-btn" onClick={() => openCancelModal(s)} title="취소">×</button>
                         )}
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {sessions.some(s => s.session_note) && (
+                <div style={{ marginTop: 16, padding: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#78350f", marginBottom: 10 }}>📝 튜터 메모</div>
+                  {sessions.filter(s => s.session_note).map(s => (
+                    <div key={s.id} style={{ background: "#fff", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px", marginBottom: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>#{s.session_number} · {s.scheduled_date}{s.scheduled_time_kr ? ` · ${s.scheduled_time_kr}` : ""}</div>
+                      <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{s.session_note}</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: "#a16207", marginTop: 4 }}>읽기 전용 — 튜터만 수정 가능</div>
                 </div>
               )}
             </div>

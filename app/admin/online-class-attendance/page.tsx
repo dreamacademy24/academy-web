@@ -6,7 +6,7 @@ import { getTutorColor } from "@/lib/tutorColors";
 interface SessionItem {
   id: string; session_number: number;
   scheduled_date: string; scheduled_time_ph: string | null; scheduled_time_kr: string | null;
-  status: string; note: string | null;
+  status: string; note: string | null; session_note: string | null;
   enrollment: { id: string; student_name: string; student_name_en: string | null; student_birth_year: string | null; status: string } | null;
   tutor: { id: string; name_display: string; name_en: string } | null;
 }
@@ -202,6 +202,19 @@ export default function StaffOnlineClassPage() {
 .view-as-bar .clear-link{font-size:11px;color:#1a6fc4;cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;font-family:inherit}
 .viewing-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700;color:#fff;margin-top:6px}
 .date-hidden{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.note-icon{cursor:help;font-size:12px}
+.note-preview{margin-top:6px;padding:6px 10px;background:#fef9c3;border-left:3px solid #eab308;border-radius:4px;font-size:11px;color:#78350f;line-height:1.4}
+.wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.wk-col{min-height:120px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.wk-head{font-size:12px;font-weight:800;color:#1a1a2e;text-align:center;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.wk-empty{font-size:11px;color:#cbd5e1;text-align:center;padding:14px 0;font-style:italic}
+.wk-card{position:relative;padding:8px 8px 8px 12px;background:#f8fafc;border-radius:7px;overflow:hidden}
+.wk-card .wk-bar{position:absolute;left:0;top:0;bottom:0;width:3px}
+.wk-time{font-size:12px;font-weight:800;color:#1a6fc4;margin-bottom:2px}
+.wk-name{font-size:12px;font-weight:700;color:#1a1a2e;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-tutor{font-size:10px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.wk-note-icon{position:absolute;top:6px;right:6px;font-size:11px;cursor:help}
     `}</style>
     <div className="sc-w">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
@@ -286,8 +299,10 @@ export default function StaffOnlineClassPage() {
                     <div className="line1">
                       <span className="name">{studentName}</span>
                       <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
+                      {s.session_note && <span className="note-icon" title={s.session_note}>💬</span>}
                     </div>
                     <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
+                    {s.session_note && <div className="note-preview">📝 {s.session_note}</div>}
                   </div>
                 </div>
               );
@@ -315,32 +330,41 @@ export default function StaffOnlineClassPage() {
           <span style={{ fontSize: 12, color: "#6b7c93", marginLeft: "auto" }}>{filteredWeek.length} sessions</span>
         </div>
 
-        {sortedDates.length === 0 ? (
+        {filteredWeek.length === 0 ? (
           <div className="empty">No classes scheduled {weekOffset === 0 ? "this week" : weekOffset === 1 ? "next week" : weekOffset === -1 ? "last week" : `in ${weekLabelEN(weekOffset).toLowerCase()}`}.</div>
-        ) : sortedDates.map(date => (
-          <div key={date}>
-            <div className="day-header">{formatDateShort(date)}</div>
-            {weekByDate[date].map(s => {
-              const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-              const tutorName = s.tutor?.name_display || "-";
-              const tutorColor = getTutorColor(tutorName);
+        ) : (
+          <div className="wk-grid">
+            {Array.from({ length: 7 }).map((_, i) => {
+              const d = new Date(weekRange(weekOffset).startDate); d.setDate(weekRange(weekOffset).startDate.getDate() + i);
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+              const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
+              const dayNum = d.getDate();
+              const list = (weekByDate[dateStr] || []).slice().sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""));
               return (
-                <div key={s.id} className="week-card">
-                  <div className="color-bar" style={{ background: tutorColor }} />
-                  <div className="time">{s.scheduled_time_ph || "-"}</div>
-                  <div className="info">
-                    <div className="line1">
-                      <span className="name">{s.enrollment?.student_name_en || s.enrollment?.student_name || "-"}</span>
-                      <span className="tutor-tag" style={{ color: tutorColor }}>/ {tutorName}</span>
-                    </div>
-                    <div className="meta">KR: {s.scheduled_time_kr || "-"} · #{s.session_number}</div>
-                  </div>
-                  <span className="card-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                <div key={dateStr} className="wk-col">
+                  <div className="wk-head">{dayLabel} {dayNum}</div>
+                  {list.length === 0 ? (
+                    <div className="wk-empty">No class</div>
+                  ) : list.map(s => {
+                    const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                    const tutorName = s.tutor?.name_display || "-";
+                    const tutorColor = getTutorColor(tutorName);
+                    return (
+                      <div key={s.id} className="wk-card">
+                        <div className="wk-bar" style={{ background: tutorColor }} />
+                        <div className="wk-time">{s.scheduled_time_ph || "-"}</div>
+                        <div className="wk-name">{s.enrollment?.student_name_en || s.enrollment?.student_name || "-"}</div>
+                        <div className="wk-tutor" style={{ color: tutorColor }}>{tutorName}</div>
+                        <span className="wk-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        {s.session_note && <span className="wk-note-icon" title={s.session_note}>💬</span>}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
           </div>
-        ))}
+        )}
       </>}
     </div>
   </>);

@@ -48,8 +48,19 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json()
     const sessionId = body.session_id || body.id
-    const { status, recorded_by, cancel_noticed_at } = body
+    const { status, recorded_by, cancel_noticed_at, session_note } = body
     if (!sessionId) return NextResponse.json({ error: 'session_id required' }, { status: 400 })
+
+    // 노트만 단독 저장 (status 변경 없이)
+    if (typeof session_note !== 'undefined' && !status) {
+      const noteVal = (session_note || '').toString().trim()
+      const { error } = await supabase
+        .from('online_sessions')
+        .update({ session_note: noteVal || null })
+        .eq('id', sessionId)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
 
     const { data: prev } = await supabase
       .from('online_sessions')
@@ -72,6 +83,7 @@ export async function PATCH(req: Request) {
         cancel_days_before: daysBefore,
       }
       if (recorded_by) { update.recorded_by = recorded_by; update.recorded_at = new Date().toISOString() }
+      if (typeof session_note !== 'undefined') update.session_note = (session_note || '').toString().trim() || null
 
       const { error } = await supabase.from('online_sessions').update(update).eq('id', sessionId)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -114,6 +126,7 @@ export async function PATCH(req: Request) {
     // 기존: attended / no_show / scheduled 등 일반 처리
     const update: Record<string, unknown> = { status }
     if (recorded_by) { update.recorded_by = recorded_by; update.recorded_at = new Date().toISOString() }
+    if (typeof session_note !== 'undefined') update.session_note = (session_note || '').toString().trim() || null
 
     const { error } = await supabase.from('online_sessions').update(update).eq('id', sessionId)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

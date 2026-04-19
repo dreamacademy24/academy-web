@@ -39,6 +39,7 @@ interface SessionItem {
   scheduled_time_ph: string | null;
   scheduled_time_kr: string | null;
   status: string;
+  session_note: string | null;
   enrollment: { id: string; student_name: string; student_name_en: string | null } | null;
 }
 
@@ -124,6 +125,7 @@ function TutorOnlineClassInner() {
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [sessionNoteDraft, setSessionNoteDraft] = useState<Record<string, string>>({});
 
   const selectedDate = addDays(fmt(new Date()), dateOffset);
 
@@ -178,15 +180,28 @@ function TutorOnlineClassInner() {
   async function markStatus(sessionId: string, status: string) {
     if (!tutor) return;
     setUpdating(sessionId);
+    const body: Record<string, unknown> = { id: sessionId, status, recorded_by: tutor.staff_user_id || "" };
+    if (sessionNoteDraft[sessionId] !== undefined) body.session_note = sessionNoteDraft[sessionId];
     const res = await fetch("/api/online-class/sessions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: sessionId, status, recorded_by: tutor.staff_user_id || "" }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); }
     await loadToday();
     await loadWeek();
     setUpdating(null);
+  }
+
+  async function saveSessionNote(sessionId: string, value: string) {
+    const res = await fetch("/api/online-class/sessions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: sessionId, session_note: value }),
+    });
+    if (res.ok) {
+      setTodaySessions(prev => prev.map(s => s.id === sessionId ? { ...s, session_note: value.trim() || null } : s));
+    }
   }
 
   useEffect(() => { if (tutor) { loadEnrollments(); loadWeek(); loadToday(); } }, [tutor, loadEnrollments, loadWeek, loadToday]);
@@ -271,6 +286,22 @@ function TutorOnlineClassInner() {
 .td-btn.ac-absent{background:#dc2626;border-color:#dc2626;color:#fff}
 .td-btn.ac-makeup{background:#eab308;border-color:#eab308;color:#fff}
 .td-btn.ac-undo{background:#64748b;border-color:#64748b;color:#fff}
+.td-note{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:10px}
+.td-note-label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.td-note-ta{width:100%;min-height:32px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-family:inherit;font-size:12.5px;outline:none;resize:vertical;background:#fff;color:#334155;line-height:1.5;overflow:hidden}
+.td-note-ta:focus{border-color:#1a6fc4;background:#fffdf5}
+.td-note-ta::placeholder{color:#cbd5e1;font-style:italic}
+.wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.wk-col{min-height:120px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.wk-head{font-size:12px;font-weight:800;color:#1a1a2e;text-align:center;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.wk-empty{font-size:11px;color:#cbd5e1;text-align:center;padding:14px 0;font-style:italic}
+.wk-card{position:relative;padding:8px 8px 8px 12px;background:#f8fafc;border-radius:7px;font-size:11px;overflow:hidden}
+.wk-card .wk-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:#94a3b8}
+.wk-time{font-size:12px;font-weight:800;color:#1a6fc4;margin-bottom:2px}
+.wk-name{font-size:12px;font-weight:700;color:#1a1a2e;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-meta{font-size:10px;color:#94a3b8;margin-bottom:4px}
+.wk-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.wk-note-icon{position:absolute;top:6px;right:6px;font-size:11px;cursor:help}
     `}</style>
     <div className="tv-w">
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
@@ -350,6 +381,29 @@ function TutorOnlineClassInner() {
                       <button className={`td-btn${cur === "attended" ? " ac-attended" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✓ Attended</button>
                       <button className={`td-btn${(cur === "no_show" || cur === "absent") ? " ac-absent" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>✗ Absent</button>
                       <button className={`td-btn${cur === "makeup" ? " ac-makeup" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>△ Makeup</button>
+                    </div>
+                    <div className="td-note">
+                      <label className="td-note-label">Notes (optional)</label>
+                      <textarea
+                        className="td-note-ta"
+                        rows={1}
+                        placeholder="Any notes about today's class? (e.g., student was late, tech issue)"
+                        value={sessionNoteDraft[s.id] !== undefined ? sessionNoteDraft[s.id] : (s.session_note || "")}
+                        onChange={e => {
+                          setSessionNoteDraft(prev => ({ ...prev, [s.id]: e.target.value }));
+                          const el = e.target as HTMLTextAreaElement;
+                          el.style.height = "auto";
+                          el.style.height = el.scrollHeight + "px";
+                        }}
+                        onBlur={e => {
+                          const draft = sessionNoteDraft[s.id];
+                          if (draft !== undefined && draft !== (s.session_note || "")) {
+                            saveSessionNote(s.id, draft);
+                          }
+                          const el = e.target as HTMLTextAreaElement;
+                          if (!el.value) { el.style.height = ""; }
+                        }}
+                      />
                     </div>
                   </div>
                 );
@@ -439,28 +493,36 @@ function TutorOnlineClassInner() {
             {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>Today</button>}
             <button onClick={() => setWeekOffset(o => o + 1)}>Next Week ▶</button>
           </div>
-          {sortedDates.length === 0 ? (
-            <div className="tv-empty">No classes scheduled {weekOffset === 0 ? "this week" : weekOffset === 1 ? "next week" : weekOffset === -1 ? "last week" : `in ${weekLabel(weekOffset).toLowerCase()}`}.</div>
-          ) : sortedDates.map(date => (
-            <div key={date}>
-              <div className="day-header">{formatDayHeader(date)}</div>
-              {weekByDate[date]
-                .sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""))
-                .map(s => {
-                  const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-                  const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
-                  return (
-                    <div key={s.id} className="sch-row">
-                      <div className="sch-time">{s.scheduled_time_ph || "-"}</div>
-                      <div className="sch-name">{studentName}</div>
-                      <div className="sch-kr">KR: {s.scheduled_time_kr || "-"}</div>
-                      <div className="sch-no">#{s.session_number}</div>
-                      <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                    </div>
-                  );
-                })}
-            </div>
-          ))}
+          <div className="wk-grid">
+            {Array.from({ length: 7 }).map((_, i) => {
+              const d = new Date(startDate); d.setDate(startDate.getDate() + i);
+              const dateStr = fmt(d);
+              const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
+              const dayNum = d.getDate();
+              const list = (weekByDate[dateStr] || []).slice().sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""));
+              return (
+                <div key={dateStr} className="wk-col">
+                  <div className="wk-head">{dayLabel} {dayNum}</div>
+                  {list.length === 0 ? (
+                    <div className="wk-empty">No class</div>
+                  ) : list.map(s => {
+                    const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                    const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
+                    return (
+                      <div key={s.id} className="wk-card">
+                        <div className="wk-bar" />
+                        <div className="wk-time">{s.scheduled_time_ph || "-"}</div>
+                        <div className="wk-name">{studentName}</div>
+                        <div className="wk-meta">#{s.session_number}</div>
+                        <span className="wk-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        {s.session_note && <span className="wk-note-icon" title={s.session_note}>💬</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </>
       )}
     </div>
