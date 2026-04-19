@@ -102,6 +102,20 @@ function GuideInner() {
 
 .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;font-size:13px;color:#1e40af;line-height:1.8;margin:12px 0;}
 .warn-box{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;font-size:13px;color:#dc2626;line-height:1.8;margin:12px 0;}
+.callout-yellow{background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px 18px;font-size:13px;color:#78350f;line-height:1.8;margin:12px 0;}
+.callout-blue{background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:14px 18px;font-size:13px;color:#1e3a8a;line-height:1.8;margin:12px 0;}
+.callout-green{background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px 18px;font-size:13px;color:#166534;line-height:1.8;margin:12px 0;}
+.tutor-clr-tbl{width:100%;border-collapse:collapse;margin:12px 0;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;}
+.tutor-clr-tbl th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;}
+.tutor-clr-tbl td{padding:10px 12px;font-size:13px;color:#334155;border-bottom:1px solid #f1f5f9;}
+.tutor-clr-tbl tr:last-child td{border-bottom:none;}
+.tutor-clr-sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle;margin-right:8px;}
+.qa-item{background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #60a5fa;border-radius:8px;padding:12px 16px;margin-bottom:10px;}
+.qa-item .q{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:6px;}
+.qa-item .a{font-size:13px;color:#475569;line-height:1.8;margin:0;}
+.num-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-size:13px;line-height:1.8;color:#4a5568;}
+.num-step .num{display:inline-flex;width:22px;height:22px;border-radius:50%;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:800;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.screenshot-ph{background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:14px;text-align:center;font-size:12px;color:#64748b;margin:12px 0;}
 
 .feat-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:14px;}
 .feat-card h4{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
@@ -159,6 +173,104 @@ function GuideInner() {
               <div><strong style={{fontSize:14}}>직원업무</strong><p style={{fontSize:12,color:'#6b7c93',margin:0}}>팀 업무 관리 페이지</p></div>
             </div>
           </div>
+        </div>
+
+        {/* 🎥 화상영어 시스템 */}
+        <div className="sec">
+          <h2>🎥 화상영어 시스템</h2>
+
+          <div className="callout-yellow">
+            ⚠️ <strong>변경 공지:</strong> Team Manager 사이드바에서 화상영어 섹션이 제거되었습니다.
+            화상영어 업무는 어드민 허브의 <strong>[화상영어]</strong> 또는 <strong>[Online Class]</strong> 카드를 사용하세요.
+          </div>
+
+          <h3>🎨 튜터 색상 약속</h3>
+          <p style={{fontSize:13,color:'#4a5568',lineHeight:1.8,marginBottom:8}}>각 튜터는 고유 색상이 있어 스케줄에서 한눈에 구분 가능. 카드 좌측 세로 바가 해당 튜터 색깔로 표시됨.</p>
+          <table className="tutor-clr-tbl">
+            <thead><tr><th>튜터</th><th>색상</th><th>헥스</th></tr></thead>
+            <tbody>
+              <tr><td><strong>T.Ann</strong></td><td><span className="tutor-clr-sw" style={{background:'#3b82f6'}}/>🔵 파랑</td><td><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>#3b82f6</code></td></tr>
+              <tr><td><strong>T.Angel</strong></td><td><span className="tutor-clr-sw" style={{background:'#8b5cf6'}}/>🟣 보라</td><td><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>#8b5cf6</code></td></tr>
+              <tr><td><strong>T.Carla</strong></td><td><span className="tutor-clr-sw" style={{background:'#10b981'}}/>🟢 초록</td><td><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>#10b981</code></td></tr>
+              <tr><td><strong>T.Amelyn</strong></td><td><span className="tutor-clr-sw" style={{background:'#ec4899'}}/>🩷 분홍</td><td><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>#ec4899</code></td></tr>
+              <tr><td><strong>T.Cristel</strong></td><td><span className="tutor-clr-sw" style={{background:'#f59e0b'}}/>🟠 주황</td><td><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>#f59e0b</code></td></tr>
+            </tbody>
+          </table>
+
+          <h3>📋 자주 하는 작업 — 한국 관리자 기준</h3>
+
+          <h4 style={{fontSize:14,fontWeight:700,color:'#1a6fc4',margin:'16px 0 8px'}}>① 학생의 출결 확인하고 싶을 때</h4>
+          <div className="num-step"><span className="num">1</span><span><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>dreamacademyph.com/admin</code> 로그인</span></div>
+          <div className="num-step"><span className="num">2</span><span>어드민 허브에서 <strong>[화상영어]</strong> 카드 클릭</span></div>
+          <div className="num-step"><span className="num">3</span><span>수강생 목록에서 학생 찾기 (학생명/영문명 검색 가능)</span></div>
+          <div className="num-step"><span className="num">4</span><span>해당 행의 <strong>[출결]</strong> 버튼 클릭 → 세션 그리드가 펼쳐짐</span></div>
+          <div className="num-step"><span className="num">5</span><span>
+            날짜 셀 확인:
+            <ul style={{paddingLeft:18,marginTop:4}}>
+              <li><strong>O</strong> = Attended (출석)</li>
+              <li><strong>X</strong> = Absent (결석)</li>
+              <li><strong>△</strong> = Makeup (보강)</li>
+              <li><strong>-</strong> = Scheduled (예정)</li>
+              <li>우상단 <strong>💬</strong> = 튜터가 메모 작성함</li>
+            </ul>
+          </span></div>
+          <div className="num-step"><span className="num">6</span><span>그리드 아래 노란 박스에서 튜터 메모 전문 확인</span></div>
+          <div className="callout-blue">💡 <strong>읽기 전용:</strong> 메모는 튜터만 수정 가능. 한국 관리자는 확인만.</div>
+          <div className="screenshot-ph">📸 스크린샷 추가 예정 — 2-online-class-korean.png / 8-tutor-memo.png</div>
+
+          <h4 style={{fontSize:14,fontWeight:700,color:'#1a6fc4',margin:'20px 0 8px'}}>② 오늘/이번 주 전체 수업 현황 보기</h4>
+          <div className="num-step"><span className="num">1</span><span>어드민 허브에서 <strong>[Online Class]</strong> 카드 클릭</span></div>
+          <div className="num-step"><span className="num">2</span><span>제목: &quot;Online Class — Attendance Monitor&quot;</span></div>
+          <div className="num-step"><span className="num">3</span><span>
+            <strong>Today&apos;s Schedule 탭</strong>: 오늘 수업 전체 (2-컬럼 그리드)
+            <ul style={{paddingLeft:18,marginTop:4}}>
+              <li>날짜 네비게이션: <strong>◀ Previous</strong> / Date / <strong>Next ▶</strong></li>
+              <li>중앙 날짜 클릭 → 달력으로 특정일 선택</li>
+            </ul>
+          </span></div>
+          <div className="num-step"><span className="num">4</span><span>
+            <strong>This Week 탭</strong>: 7-컬럼 가로형 (Mon~Sun)
+            <ul style={{paddingLeft:18,marginTop:4}}>
+              <li><strong>◀ Previous Week</strong> / This Week Apr 13 – Apr 19 / <strong>Next Week ▶</strong></li>
+              <li>미래/과거 주 무제한 이동 가능</li>
+            </ul>
+          </span></div>
+          <div className="screenshot-ph">📸 스크린샷 추가 예정 — 3-attendance-monitor.png / 7-week-grid.png</div>
+
+          <h4 style={{fontSize:14,fontWeight:700,color:'#1a6fc4',margin:'20px 0 8px'}}>③ CEO가 특정 튜터 시점으로 보기 (CEO 전용)</h4>
+          <div className="num-step"><span className="num">1</span><span><strong>[Online Class]</strong> 카드 접속</span></div>
+          <div className="num-step"><span className="num">2</span><span>상단 &quot;<strong>👤 View as:</strong>&quot; 드롭다운 → 원하는 튜터 선택</span></div>
+          <div className="num-step"><span className="num">3</span><span>&quot;Viewing: T.Angel&quot; 배지 표시, 해당 튜터 수업만 보임</span></div>
+          <div className="num-step"><span className="num">4</span><span><strong>Clear filter</strong> 링크로 해제</span></div>
+          <div className="callout-blue">💡 <strong>일반 직원은 이 드롭다운이 안 보임</strong> (CEO/관리자만)</div>
+
+          <h3>🔄 데이터 실시간 연동 — 중요</h3>
+          <p style={{fontSize:13,color:'#4a5568',lineHeight:1.8,marginBottom:8}}>튜터가 Today 탭에서 출결 찍고 노트 쓰면:</p>
+          <ul style={{paddingLeft:18,marginBottom:12}}>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>1초 이내 DB 저장됨</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>한국 관리자 페이지 새로고침하면 바로 반영</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>사용/잔여 카운트 자동 계산</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>노트 있으면 💬 아이콘 + 노란 박스 자동 표시</li>
+          </ul>
+
+          <h3>⚠️ 자주 발생하는 문제 + 해결법</h3>
+          <div className="qa-item"><div className="q">Q1. 튜터가 출결 잘못 찍었어요</div><p className="a">→ 튜터가 본인 Today 탭에서 <strong>[↺ Undo]</strong> 클릭하면 Scheduled로 복원됨</p></div>
+          <div className="qa-item"><div className="q">Q2. 메모를 관리자가 수정/삭제하고 싶어요</div><p className="a">→ 안 됨. 튜터 페이지에서만 수정 가능 (데이터 무결성 위해)<br/>→ 정 수정이 필요하면 튜터에게 요청해서 본인이 직접 수정</p></div>
+          <div className="qa-item"><div className="q">Q3. 다른 날짜의 수업을 보고 싶어요</div><p className="a">→ Today 탭에서 <strong>◀ Previous</strong> / <strong>Next ▶</strong> 버튼 또는 날짜 클릭해서 달력으로 선택</p></div>
+          <div className="qa-item"><div className="q">Q4. 다른 주를 미리 보고 싶어요</div><p className="a">→ This Week 탭에서 <strong>Previous Week</strong> / <strong>Next Week</strong> 버튼 (무제한)</p></div>
+          <div className="qa-item"><div className="q">Q5. 학생의 세부 출결 기록을 전체 확인하고 싶어요</div><p className="a">→ 한국 관리자: 화상영어 → [출결] 클릭 → 전체 그리드<br/>→ 튜터: My Students → 영문명 클릭 → 월별 캘린더 모달</p></div>
+          <div className="qa-item"><div className="q">Q6. 휴강일은 어떻게 처리되나요?</div><p className="a">→ 시스템에 2025-2026 휴강일 등록되어 있어 자동으로 수업일 제외함<br/>→ 아카데미 노란/보라 휴무 + 센터 초록 휴무 모두 포함</p></div>
+          <div className="qa-item"><div className="q">Q7. 튜터 계정 비번을 잊어버렸어요</div><p className="a">→ 기본 비번: <code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>&#123;튜터이름&#125;2026!</code> (예: angel2026!)<br/>→ 재설정 필요하면 개발팀에게 요청</p></div>
+          <div className="qa-item"><div className="q">Q8. 새 수강생은 어떻게 등록하나요?</div><p className="a">→ 화상영어 → <strong>[+ 수강 등록]</strong> 탭에서 폼 작성<br/>→ 자동으로 휴강일 제외하고 세션 생성됨</p></div>
+
+          <h3>🔗 페이지 이동 맵</h3>
+          <ul style={{paddingLeft:18}}>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>허브 → 화상영어: <code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>/admin/hub</code> → <strong>[화상영어]</strong> 카드</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>허브 → Online Class: <code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>/admin/hub</code> → <strong>[Online Class]</strong> 카드</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>Online Class → 튜터 페이지: 상단 <strong>[My Schedule (Tutor View) →]</strong> 버튼</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>튜터 페이지 → Online Class: 상단 <strong>[← Back to Attendance]</strong> 버튼</li>
+            <li style={{fontSize:13,lineHeight:1.9,color:'#4a5568'}}>어디서든 가이드: 상단 <strong>[📖 Tutor Guide]</strong> / <strong>[📖 Guide]</strong> 버튼</li>
+          </ul>
         </div>
 
         {/* 손님 견적 흐름 */}
@@ -457,6 +569,15 @@ function GuideInner() {
 
       {/* ════════════ 탭 3: 직원관리 페이지 사용법 ════════════ */}
       {tab === 2 && (<>
+        {/* 변경 공지 */}
+        <div className="sec">
+          <div className="callout-yellow" style={{margin:0}}>
+            ⚠️ <strong>중요:</strong> Team Manager 사이드바에서 화상영어 섹션이 제거되었습니다.
+            화상영어 관련 업무는 어드민 허브의 <strong>[화상영어]</strong> 또는 <strong>[Online Class]</strong> 카드를 사용하세요.
+            상세는 탭 1 &quot;🎥 화상영어 시스템&quot; 참조.
+          </div>
+        </div>
+
         {/* 초기 계정 정보 */}
         <div className="sec">
           <h2>🔑 초기 계정 정보</h2>
@@ -732,6 +853,58 @@ function GuideInner() {
           <p style={{marginTop:14}}>
             📧 <a href="mailto:may@dreamacademyph.com">may@dreamacademyph.com</a>
           </p>
+        </div>
+
+        {/* 7. Common Issues */}
+        <div className="sec tg-sec">
+          <h2>🛟 7. Common Issues</h2>
+          <div className="qa-item"><div className="q">Q1. I marked attendance by mistake.</div><p className="a">Click the <strong>[↺ Undo]</strong> button. Status returns to Scheduled.</p></div>
+          <div className="qa-item"><div className="q">Q2. Notes won&apos;t save.</div><p className="a">Notes save automatically when you click outside the text box (blur) or change status. Make sure to wait 1-2 seconds before closing the page.</p></div>
+          <div className="qa-item"><div className="q">Q3. Today tab shows wrong date.</div><p className="a">Use <strong>◀ Previous</strong> / <strong>Next ▶</strong> buttons to navigate. Click the date in the middle to open a calendar and pick a specific date. Click <strong>[Today]</strong> button to return to today.</p></div>
+          <div className="qa-item"><div className="q">Q4. My students list is empty.</div><p className="a">Your tutor profile may not be linked to your account. Contact May to verify.</p></div>
+          <div className="qa-item"><div className="q">Q5. I can&apos;t see other tutors&apos; students.</div><p className="a">That&apos;s by design. Each tutor only sees their own students. If you need to see someone else&apos;s schedule, ask May.</p></div>
+          <div className="qa-item"><div className="q">Q6. I opened the wrong student&apos;s calendar.</div><p className="a">Click <strong>[Close]</strong> button or press <strong>ESC</strong> key.</p></div>
+        </div>
+
+        {/* 8. Best Practices */}
+        <div className="sec tg-sec">
+          <h2>⭐ 8. Best Practices</h2>
+
+          <div className="callout-green">
+            💚 <strong>Mark attendance right after class ends</strong><br/>
+            Don&apos;t wait until end of day. You might forget details.
+          </div>
+
+          <div className="callout-green">
+            💚 <strong>Keep notes short and factual</strong><br/>
+            Good: &quot;Student joined 10 min late, made up for it&quot;<br/>
+            Avoid: Long personal opinions or judgments
+          </div>
+
+          <div className="callout-green">
+            💚 <strong>If unsure about status, leave as Scheduled</strong><br/>
+            You can update later. Wrong status confuses admins.
+          </div>
+
+          <div className="callout-green">
+            💚 <strong>Always verify time zone</strong><br/>
+            Dashboard shows Korea Standard Time (KST, UTC+9). Philippine Time (PHT) is 1 hour behind KST.
+          </div>
+
+          <div className="callout-green">
+            💚 <strong>Check your schedule daily</strong><br/>
+            Use My Schedule tab to see your full week. Saturday classes may have different times than weekdays.
+          </div>
+
+          <div className="callout-green">
+            💚 <strong>Use notes wisely</strong><br/>
+            Notes help the Korean admin understand situations. Examples of good notes:
+            <ul style={{paddingLeft:18,marginTop:6}}>
+              <li>&quot;Internet issue, class cut short at 25 min&quot;</li>
+              <li>&quot;Student absent, parent notified in advance&quot;</li>
+              <li>&quot;Very engaged today, finished advanced unit&quot;</li>
+            </ul>
+          </div>
         </div>
       </>)}
 
