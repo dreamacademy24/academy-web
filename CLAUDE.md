@@ -523,3 +523,9 @@ C:/Users/desko/academy-web
 - Claude Code 앱에 프롬프트 붙여넣기 → 결과 여기 공유
 - 수정 후 항상 git push → Vercel 자동 배포
 - 로컬 경로: C:/Users/desko/academy-web
+
+## 2026-04-19 추가 완료
+- ✅ 하우스보고 미해결 항목 API RLS 정책 추가 (anon 역할 허용)
+- ✅ house-reports API anon key fallback 추가
+- ✅ 보고하기 탭 최근 보고 목록 삭제 버튼 추가
+- ✅ 결재 승인완료 탭 onclick 오타 수정 (approve→approved)
