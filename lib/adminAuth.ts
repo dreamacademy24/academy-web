@@ -43,3 +43,41 @@ export function getAdminInfo(): { role: string; name: string; staffId: string } 
     return { role: '', name: '', staffId: '' };
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// Online Class standalone login helper (additive; used by
+// components/OnlineClassLoginScreen.tsx). Whitelist: 5 tutors
+// + May + CEO only. Hashes mirror app/login/page.tsx values.
+// ─────────────────────────────────────────────────────────────
+function _onlineClassHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return 'h_' + Math.abs(hash).toString(36);
+}
+
+const ONLINE_CLASS_ACCOUNTS: { id: string; pw: string; role: 'tutor' | 'admin' }[] = [
+  { id: 'admin-ann',     pw: 'h_bpke76', role: 'tutor' },
+  { id: 'admin-angel',   pw: 'h_nn1req', role: 'tutor' },
+  { id: 'admin-carla',   pw: 'h_8aonka', role: 'tutor' },
+  { id: 'admin-amelyn',  pw: 'h_zbg7cn', role: 'tutor' },
+  { id: 'admin-cristel', pw: 'h_hn7tab', role: 'tutor' },
+  { id: 'admin-may',     pw: 'h_dyghlz', role: 'admin' },
+  { id: 'admin-ceo',     pw: 'h_azeaz3', role: 'admin' },
+];
+
+export function validateOnlineClassLogin(
+  username: string,
+  password: string
+): { success: boolean; role: 'tutor' | 'admin'; userId: string } | null {
+  const id = (username || '').trim();
+  if (!id || !password) return null;
+  const account = ONLINE_CLASS_ACCOUNTS.find(
+    a => a.id === id && a.pw === _onlineClassHash(password)
+  );
+  if (!account) return null;
+  return { success: true, role: account.role, userId: account.id };
+}

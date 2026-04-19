@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { getTutorColor } from "@/lib/tutorColors";
+import OnlineClassLoginScreen from "@/components/OnlineClassLoginScreen";
 
 interface SessionItem {
   id: string; session_number: number;
@@ -67,7 +68,7 @@ function formatDateShort(dateStr: string) {
 const TUTOR_OPTIONS = ["T.Ann", "T.Angel", "T.Carla", "T.Amelyn", "T.Cristel"];
 
 export default function StaffOnlineClassPage() {
-  const [authed, setAuthed] = useState(false);
+  const [authState, setAuthState] = useState<'loading' | 'guest' | 'authed'>('loading');
   const [adminRole, setAdminRole] = useState("");
   const [tab, setTab] = useState<"today" | "week">("today");
 
@@ -82,15 +83,16 @@ export default function StaffOnlineClassPage() {
 
   const selectedDate = addDays(todayStr(), dateOffset);
 
-  useEffect(() => {
-    if (isAdminAuthed()) {
-      setAuthed(true);
-      const info = getAdminInfo();
-      if (info) setAdminRole(info.role || "");
-    } else if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+  const applyAuthedInfo = useCallback(() => {
+    const info = getAdminInfo();
+    if (info) setAdminRole(info.role || "");
+    setAuthState('authed');
   }, []);
+
+  useEffect(() => {
+    if (isAdminAuthed()) applyAuthedInfo();
+    else setAuthState('guest');
+  }, [applyAuthedInfo]);
 
   const loadToday = useCallback(async () => {
     const res = await fetch(`/api/online-class/sessions?date=${selectedDate}`);
@@ -108,9 +110,9 @@ export default function StaffOnlineClassPage() {
     if (res.ok) { const d = await res.json(); setTutors(d.tutors || []); }
   }, []);
 
-  useEffect(() => { if (authed) loadTutors(); }, [authed, loadTutors]);
-  useEffect(() => { if (authed) loadToday(); }, [authed, loadToday]);
-  useEffect(() => { if (authed) loadWeek(); }, [authed, loadWeek]);
+  useEffect(() => { if (authState === 'authed') loadTutors(); }, [authState, loadTutors]);
+  useEffect(() => { if (authState === 'authed') loadToday(); }, [authState, loadToday]);
+  useEffect(() => { if (authState === 'authed') loadWeek(); }, [authState, loadWeek]);
 
   const canViewAll = adminRole === "admin";
 
@@ -147,7 +149,8 @@ export default function StaffOnlineClassPage() {
 
   const viewingTutorColor = viewAsTutor !== "all" ? getTutorColor(viewAsTutor) : null;
 
-  if (!authed) return null;
+  if (authState === 'loading') return null;
+  if (authState === 'guest') return <OnlineClassLoginScreen onAuthenticated={applyAuthedInfo} />;
 
   return (<>
     <style>{`
