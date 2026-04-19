@@ -345,11 +345,8 @@ export default function HouseReportsPage() {
 
   /* ──── Stats (View tab) ──── */
   const todayReports = reports.filter(r => r.report_date === todayStr());
-  let progressCount = 0, checkCount = 0;
-  reports.forEach(r => r.rooms?.forEach(rm => rm.items?.forEach(it => {
-    if (it.status === "progress") progressCount++;
-    if (it.status === "check" || it.status === "problem") checkCount++;
-  })));
+  const progressCount = pending.filter(p => p.status === 'in_progress').length;
+  const checkCount = pending.filter(p => p.status === 'problem').length;
 
   if (!authed) return null;
 
