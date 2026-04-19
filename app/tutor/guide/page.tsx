@@ -76,7 +76,7 @@ export default function TutorGuidePage() {
         </p>
         <p>
           Your daily job here is simple: <strong>after each class ends, open your dashboard, mark the
-          session&apos;s status, and add a short note if anything was worth mentioning.</strong>{' '}That&apos;s it.
+          session&apos;s status, and add a short note if anything was worth mentioning</strong>. That&apos;s it.
         </p>
       </div>
 
@@ -168,7 +168,7 @@ export default function TutorGuidePage() {
         </p>
 
         <div className="tg-callout warn">
-          ⚠️ <strong>Record attendance right after class ends.</strong>{' '}If you wait until later, you may forget
+          ⚠️ <strong>Record attendance right after class ends</strong>. If you wait until later, you may forget
           details, and May can&apos;t see today&apos;s report.
         </div>
       </div>
@@ -248,7 +248,7 @@ export default function TutorGuidePage() {
           <li>Stick to what <strong>happened</strong>, not your feelings or judgments.</li>
           <li>Use the student&apos;s behavior as the subject (&quot;Student was...&quot;), not yours.</li>
           <li>If you&apos;re unsure whether something is worth noting, write it anyway — May can decide what to pass on to parents.</li>
-          <li><strong>Notes save automatically when you click or tap outside the box.</strong>{' '}Wait 1–2 seconds before closing the page.</li>
+          <li><strong>Notes save automatically when you click or tap outside the box</strong>. Wait 1–2 seconds before closing the page.</li>
         </ul>
 
         <h3>Good examples</h3>
