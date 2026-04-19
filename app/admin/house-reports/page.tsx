@@ -158,7 +158,7 @@ export default function HouseReportsPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete", id }),
     });
-    if (res.ok) { loadReports(); loadHistory(); }
+    if (res.ok) { loadReports(); loadHistory(); loadPending(); }
     else alert("삭제 실패");
   }
 
@@ -725,7 +725,15 @@ export default function HouseReportsPage() {
                   <div style={{ fontSize: 14, fontWeight: 700 }}>{r.report_date} · {slotLabel}</div>
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>호실 {roomCnt}개 · 👤 {r.reporter}</div>
                 </div>
-                <div style={{ color: "#9ca3af" }}>{isOpen ? "▲" : "▼"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteReport(r.id); }}
+                    style={{ padding: "4px 10px", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, fontWeight: 600, background: "#fff", cursor: "pointer", color: "#ef4444" }}
+                  >
+                    🗑 삭제
+                  </button>
+                  <div style={{ color: "#9ca3af" }}>{isOpen ? "▲" : "▼"}</div>
+                </div>
               </div>
               {isOpen && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e5e7eb" }}>
