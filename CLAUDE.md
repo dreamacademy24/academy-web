@@ -464,6 +464,39 @@ C:/Users/desko/academy-web
 - 수정 후 항상 git push → Vercel 자동 배포
 - 로컬 경로: C:/Users/desko/academy-web
 
+## 2026-04-17 화상영어 시스템 대개편 완료
+
+### 데이터 정리
+- 31명 세션 재처리 (25+6명), 누락 세션 443개 → 교정
+- 휴강 테이블 구축 (online_class_holidays) — 2025 DEC 5건 + 2026 전체 30건
+- online_enrollments에 tutor_notes 컬럼 추가
+
+### 계정
+- 튜터 5명 로그인 계정: admin-ann/angel/carla/amelyn/cristel (비번: 이름+2026!)
+
+### 페이지 구조 개편
+- /admin/online-class-attendance: 관리자 모니터링 (출결 버튼 제거, 튜터 색상/범례, 2-col 그리드)
+- /tutor/online-class: 튜터 개인 (Today/My Students/My Schedule 3탭)
+- /guide: 4번째 탭 "Tutor Guide (English)" 추가
+- /staff/online-class 삭제 + Team Manager 사이드바 화상영어 제거
+- lib/tutorColors.ts (5색 공통 매핑)
+
+### 기능
+- 인보이스 캘린더 모달 (영문명 클릭 → 월별 그리드 + Print)
+- 특이사항 inline 편집
+- Undo 버튼 (출결 되돌리기)
+- 주간 네비게이션 (이전/이번/다음 주 + 오늘 버튼, 관리자+튜터 공통)
+- PC 기준 레이아웃 (1500px)
+
+### 보류 작업 (다음 섹션)
+- 심시우 (심시아와 혼동), 전가빈 (notes 이상) — 원본 재확인 필요
+- 화상영어 새 입력 시스템 (손님 신청 → 메이 승인 → 자동 생성)
+- STEP 43~54 (다국어/홈페이지/PWA)
+- PayPal Live, 카카오톡 위젯, 웹푸시
+
+### 새 대화 시작
+"드림아카데미 프로젝트 이어서 진행해줘"
+
 ## 2026-04-19 완료 작업
 - ✅ 결재 승인완료/반려 탭 status 오타 전체 수정 (approve→approved, reject→rejected)
 - ✅ 결재 승인완료 탭 내용 표시 버그 수정 (renderEmpApvTab onclick 오타)
