@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { getTutorColor } from "@/lib/tutorColors";
 
 interface SessionItem {
@@ -22,6 +22,16 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string; bord
 };
 
 function todayStr() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function addDays(dateStr: string, days: number) {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function diffDays(a: string, b: string) {
+  const da = new Date(a + "T12:00:00").getTime();
+  const db = new Date(b + "T12:00:00").getTime();
+  return Math.round((da - db) / (1000 * 60 * 60 * 24));
+}
 
 function weekRange(offset = 0) {
   const now = new Date();
@@ -32,12 +42,12 @@ function weekRange(offset = 0) {
   const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   return { start: fmt(mon), end: fmt(sun), startDate: mon, endDate: sun };
 }
-function weekLabelKR(offset: number) {
-  if (offset === 0) return "이번 주";
-  if (offset === 1) return "다음 주";
-  if (offset === -1) return "지난 주";
-  if (offset > 0) return `${offset}주 후`;
-  return `${-offset}주 전`;
+function weekLabelEN(offset: number) {
+  if (offset === 0) return "This Week";
+  if (offset === 1) return "Next Week";
+  if (offset === -1) return "Last Week";
+  if (offset > 0) return `${offset} weeks later`;
+  return `${-offset} weeks ago`;
 }
 function formatWeekRange(start: Date, end: Date) {
   const opt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -54,28 +64,38 @@ function formatDateShort(dateStr: string) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
+const TUTOR_OPTIONS = ["T.Ann", "T.Angel", "T.Carla", "T.Amelyn", "T.Cristel"];
+
 export default function StaffOnlineClassPage() {
   const [authed, setAuthed] = useState(false);
+  const [adminRole, setAdminRole] = useState("");
   const [tab, setTab] = useState<"today" | "week">("today");
 
   const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
   const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [tutorFilter, setTutorFilter] = useState("all");
+  const [viewAsTutor, setViewAsTutor] = useState("all");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [dateOffset, setDateOffset] = useState(0);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedDate = addDays(todayStr(), dateOffset);
 
   useEffect(() => {
     if (isAdminAuthed()) {
       setAuthed(true);
+      const info = getAdminInfo();
+      if (info) setAdminRole(info.role || "");
     } else if (typeof window !== "undefined") {
       window.location.href = "/login";
     }
   }, []);
 
   const loadToday = useCallback(async () => {
-    const res = await fetch(`/api/online-class/sessions?date=${todayStr()}`);
+    const res = await fetch(`/api/online-class/sessions?date=${selectedDate}`);
     if (res.ok) { const d = await res.json(); setTodaySessions(d.sessions || []); }
-  }, []);
+  }, [selectedDate]);
 
   const loadWeek = useCallback(async () => {
     const { start, end } = weekRange(weekOffset);
@@ -88,18 +108,44 @@ export default function StaffOnlineClassPage() {
     if (res.ok) { const d = await res.json(); setTutors(d.tutors || []); }
   }, []);
 
-  useEffect(() => {
-    if (authed) { loadToday(); loadWeek(); loadTutors(); }
-  }, [authed, loadToday, loadWeek, loadTutors]);
+  useEffect(() => { if (authed) loadTutors(); }, [authed, loadTutors]);
+  useEffect(() => { if (authed) loadToday(); }, [authed, loadToday]);
+  useEffect(() => { if (authed) loadWeek(); }, [authed, loadWeek]);
+
+  const canViewAll = adminRole === "admin";
+
+  const filteredToday = useMemo(() => {
+    if (!canViewAll || viewAsTutor === "all") return todaySessions;
+    return todaySessions.filter(s => s.tutor?.name_display === viewAsTutor);
+  }, [todaySessions, viewAsTutor, canViewAll]);
 
   const weekByDate: Record<string, SessionItem[]> = {};
-  const filteredWeek = weekSessions.filter(s => tutorFilter === "all" || s.tutor?.name_display === tutorFilter);
+  const filteredWeek = weekSessions.filter(s => {
+    if (tutorFilter !== "all" && s.tutor?.name_display !== tutorFilter) return false;
+    if (canViewAll && viewAsTutor !== "all" && s.tutor?.name_display !== viewAsTutor) return false;
+    return true;
+  });
   filteredWeek.forEach(s => {
     const d = s.scheduled_date;
     if (!weekByDate[d]) weekByDate[d] = [];
     weekByDate[d].push(s);
   });
   const sortedDates = Object.keys(weekByDate).sort();
+
+  function onDatePicked(newDate: string) {
+    if (!newDate) return;
+    setDateOffset(diffDays(newDate, todayStr()));
+  }
+
+  function openDatePicker() {
+    const el = dateInputRef.current;
+    if (!el) return;
+    const picker = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
+    if (typeof picker === "function") picker.call(el);
+    else el.click();
+  }
+
+  const viewingTutorColor = viewAsTutor !== "all" ? getTutorColor(viewAsTutor) : null;
 
   if (!authed) return null;
 
@@ -113,6 +159,8 @@ export default function StaffOnlineClassPage() {
 .week-nav button:hover{background:#f8fafc;border-color:#1a6fc4;color:#1a6fc4}
 .week-nav .center{flex:1;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e}
 .week-nav .center .sub{font-size:12px;font-weight:500;color:#64748b;margin-left:8px}
+.week-nav .center.clickable{cursor:pointer}
+.week-nav .center.clickable:hover{color:#1a6fc4}
 .week-nav .today-btn{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
 .week-nav .today-btn:hover{background:#0d3d7a;color:#fff}
 .sc-head{margin-bottom:20px}
@@ -148,23 +196,48 @@ export default function StaffOnlineClassPage() {
 .tutor-legend{display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:#64748b}
 .tutor-legend .lg{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#fff;border-radius:6px;border:1px solid #e2e8f0}
 .tutor-legend .sw{width:10px;height:10px;border-radius:2px}
+.view-as-bar{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin-bottom:12px;flex-wrap:wrap}
+.view-as-bar label{font-size:12px;font-weight:700;color:#475569}
+.view-as-bar select{padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#fff}
+.view-as-bar .clear-link{font-size:11px;color:#1a6fc4;cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;font-family:inherit}
+.viewing-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700;color:#fff;margin-top:6px}
+.date-hidden{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
     `}</style>
     <div className="sc-w">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
-        <a href="/admin/hub" className="sc-back" style={{ marginBottom: 0 }}>← 관리자 홈</a>
+        <a href="/admin/hub" className="sc-back" style={{ marginBottom: 0 }}>← Admin Home</a>
         <a href="/guide?tab=tutor" className="sc-back" style={{ marginBottom: 0 }}>📖 Tutor Guide</a>
         <a href="/tutor/online-class" className="sc-back" style={{ marginBottom: 0, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1a6fc4" }}>👤 My Schedule (Tutor View) →</a>
       </div>
 
       <div className="sc-head">
         <h1>Online Class — Attendance Monitor</h1>
-        <div className="date">{formatDateEN(todayStr())}</div>
+        <div className="date">{formatDateEN(selectedDate)}</div>
+        {viewingTutorColor && (
+          <span className="viewing-badge" style={{ background: viewingTutorColor }}>
+            👤 Viewing: {viewAsTutor}
+            <button type="button" onClick={() => setViewAsTutor("all")} style={{ background: "rgba(255,255,255,0.25)", color: "#fff", border: "none", borderRadius: 4, padding: "0 6px", cursor: "pointer", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>Clear</button>
+          </span>
+        )}
       </div>
 
       <div className="sc-tabs">
         <button className={`sc-tab${tab === "today" ? " ac" : ""}`} onClick={() => setTab("today")}>📅 Today&apos;s Schedule</button>
         <button className={`sc-tab${tab === "week" ? " ac" : ""}`} onClick={() => setTab("week")}>📆 This Week</button>
       </div>
+
+      {canViewAll && (
+        <div className="view-as-bar">
+          <label>👤 View as:</label>
+          <select value={viewAsTutor} onChange={e => setViewAsTutor(e.target.value)}>
+            <option value="all">All Tutors</option>
+            {TUTOR_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          {viewAsTutor !== "all" && (
+            <button type="button" className="clear-link" onClick={() => setViewAsTutor("all")}>Clear filter</button>
+          )}
+        </div>
+      )}
 
       <div className="tutor-legend" style={{ marginBottom: 12 }}>
         {tutors.map(t => (
@@ -177,11 +250,27 @@ export default function StaffOnlineClassPage() {
 
       {/* ═══ TODAY ═══ */}
       {tab === "today" && <>
-        {todaySessions.length === 0 ? (
-          <div className="empty">No classes scheduled for today.</div>
+        <div className="week-nav">
+          <button onClick={() => setDateOffset(o => o - 1)}>◀ Previous</button>
+          <div className="center clickable" onClick={openDatePicker} title="Click to pick a date">
+            📅 {formatDateEN(selectedDate)}
+          </div>
+          {dateOffset !== 0 && <button className="today-btn" onClick={() => setDateOffset(0)}>Today</button>}
+          <button onClick={() => setDateOffset(o => o + 1)}>Next ▶</button>
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={selectedDate}
+            onChange={e => onDatePicked(e.target.value)}
+            className="date-hidden"
+          />
+        </div>
+
+        {filteredToday.length === 0 ? (
+          <div className="empty">No classes scheduled on {formatDateEN(selectedDate)}.</div>
         ) : (
           <div className="sc-grid">
-            {todaySessions.map(s => {
+            {filteredToday.map(s => {
               const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
               const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
               const tutorName = s.tutor?.name_display || "-";
@@ -210,13 +299,13 @@ export default function StaffOnlineClassPage() {
       {/* ═══ WEEK ═══ */}
       {tab === "week" && <>
         <div className="week-nav">
-          <button onClick={() => setWeekOffset(o => o - 1)}>◀ 이전 주</button>
+          <button onClick={() => setWeekOffset(o => o - 1)}>◀ Previous Week</button>
           <div className="center">
-            📅 {weekLabelKR(weekOffset)}
+            📅 {weekLabelEN(weekOffset)}
             <span className="sub">{formatWeekRange(weekRange(weekOffset).startDate, weekRange(weekOffset).endDate)}</span>
           </div>
-          {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>오늘</button>}
-          <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
+          {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>Today</button>}
+          <button onClick={() => setWeekOffset(o => o + 1)}>Next Week ▶</button>
         </div>
         <div className="filter-bar">
           <select value={tutorFilter} onChange={e => setTutorFilter(e.target.value)}>
@@ -227,7 +316,7 @@ export default function StaffOnlineClassPage() {
         </div>
 
         {sortedDates.length === 0 ? (
-          <div className="empty">{weekLabelKR(weekOffset)}에 예정된 수업이 없습니다.</div>
+          <div className="empty">No classes scheduled {weekOffset === 0 ? "this week" : weekOffset === 1 ? "next week" : weekOffset === -1 ? "last week" : `in ${weekLabelEN(weekOffset).toLowerCase()}`}.</div>
         ) : sortedDates.map(date => (
           <div key={date}>
             <div className="day-header">{formatDateShort(date)}</div>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
@@ -68,11 +68,26 @@ function weekRange(offset = 0) {
   return { start: fmt(mon), end: fmt(sun), startDate: mon, endDate: sun };
 }
 function weekLabel(offset: number) {
-  if (offset === 0) return "이번 주";
-  if (offset === 1) return "다음 주";
-  if (offset === -1) return "지난 주";
-  if (offset > 0) return `${offset}주 후`;
-  return `${-offset}주 전`;
+  if (offset === 0) return "This Week";
+  if (offset === 1) return "Next Week";
+  if (offset === -1) return "Last Week";
+  if (offset > 0) return `${offset} weeks later`;
+  return `${-offset} weeks ago`;
+}
+
+function addDays(dateStr: string, days: number) {
+  const d = new Date(dateStr + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function diffDays(a: string, b: string) {
+  const da = new Date(a + "T12:00:00").getTime();
+  const db = new Date(b + "T12:00:00").getTime();
+  return Math.round((da - db) / (1000 * 60 * 60 * 24));
+}
+function formatTodayEN(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
 function formatWeekRangeEN(start: Date, end: Date) {
@@ -104,9 +119,13 @@ function TutorOnlineClassInner() {
   const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [dateOffset, setDateOffset] = useState(0);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+
+  const selectedDate = addDays(fmt(new Date()), dateOffset);
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -148,14 +167,13 @@ function TutorOnlineClassInner() {
 
   const loadToday = useCallback(async () => {
     if (!tutor) return;
-    const today = fmt(new Date());
-    const res = await fetch(`/api/online-class/sessions?date=${today}`);
+    const res = await fetch(`/api/online-class/sessions?date=${selectedDate}`);
     if (res.ok) {
       const d = await res.json();
       const all = (d.sessions || []) as (SessionItem & { tutor?: { id: string } | null })[];
       setTodaySessions(all.filter(s => s.tutor && s.tutor.id === tutor.id));
     }
-  }, [tutor]);
+  }, [tutor, selectedDate]);
 
   async function markStatus(sessionId: string, status: string) {
     if (!tutor) return;
@@ -280,11 +298,37 @@ function TutorOnlineClassInner() {
       )}
 
       {tutor && tab === "today" && (
-        todaySessions.length === 0 ? (
-          <div className="tv-empty">No classes scheduled for today.</div>
-        ) : (
-          <>
-            {todaySessions
+        <>
+          <div className="week-nav">
+            <button onClick={() => setDateOffset(o => o - 1)}>◀ Previous</button>
+            <div
+              className="center"
+              style={{ cursor: "pointer" }}
+              title="Click to pick a date"
+              onClick={() => {
+                const el = dateInputRef.current;
+                if (!el) return;
+                const picker = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
+                if (typeof picker === "function") picker.call(el);
+                else el.click();
+              }}
+            >
+              📅 {formatTodayEN(selectedDate)}
+            </div>
+            {dateOffset !== 0 && <button className="today-btn" onClick={() => setDateOffset(0)}>Today</button>}
+            <button onClick={() => setDateOffset(o => o + 1)}>Next ▶</button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={selectedDate}
+              onChange={e => { if (e.target.value) setDateOffset(diffDays(e.target.value, fmt(new Date()))); }}
+              style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+            />
+          </div>
+          {todaySessions.length === 0 ? (
+            <div className="tv-empty">No classes scheduled on {formatTodayEN(selectedDate)}.</div>
+          ) : (
+            todaySessions
               .slice()
               .sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""))
               .map(s => {
@@ -309,9 +353,9 @@ function TutorOnlineClassInner() {
                     </div>
                   </div>
                 );
-              })}
-          </>
-        )
+              })
+          )}
+        </>
       )}
 
       {tutor && tab === "students" && (
@@ -326,7 +370,7 @@ function TutorOnlineClassInner() {
                   <th>KR Time</th><th>PH Time</th><th>Start</th><th>End</th>
                   <th>Period</th><th>Class Period</th>
                   <th>Pre</th><th>Post</th><th>Total</th><th>Remaining</th>
-                  <th style={{ minWidth: 220 }}>특이사항</th>
+                  <th style={{ minWidth: 220 }}>Notes</th>
                 </tr>
               </thead>
               <tbody>
@@ -367,10 +411,10 @@ function TutorOnlineClassInner() {
                               if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); saveNote(e.id, noteDraft.trim()); }
                               if (ev.key === "Escape") { setEditingNoteId(null); }
                             }}
-                            placeholder="메모 입력 후 Enter (Shift+Enter: 줄바꿈)"
+                            placeholder="Enter to save (Shift+Enter: new line)"
                           />
                         ) : (
-                          e.tutor_notes || "클릭해서 메모 추가"
+                          e.tutor_notes || "Click to add notes"
                         )}
                       </td>
                     </tr>
@@ -387,16 +431,16 @@ function TutorOnlineClassInner() {
       {tutor && tab === "schedule" && (
         <>
           <div className="week-nav">
-            <button onClick={() => setWeekOffset(o => o - 1)}>◀ 이전 주</button>
+            <button onClick={() => setWeekOffset(o => o - 1)}>◀ Previous Week</button>
             <div className="center">
               📅 {weekLabel(weekOffset)}
               <span className="sub">{formatWeekRangeEN(startDate, endDate)}</span>
             </div>
-            {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>오늘</button>}
-            <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
+            {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>Today</button>}
+            <button onClick={() => setWeekOffset(o => o + 1)}>Next Week ▶</button>
           </div>
           {sortedDates.length === 0 ? (
-            <div className="tv-empty">{weekLabel(weekOffset)}에 예정된 수업이 없습니다.</div>
+            <div className="tv-empty">No classes scheduled {weekOffset === 0 ? "this week" : weekOffset === 1 ? "next week" : weekOffset === -1 ? "last week" : `in ${weekLabel(weekOffset).toLowerCase()}`}.</div>
           ) : sortedDates.map(date => (
             <div key={date}>
               <div className="day-header">{formatDayHeader(date)}</div>
