@@ -29,7 +29,7 @@ const SLOT_COLOR: Record<string, string> = { morning: "#92400e", afternoon: "#9a
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string; bold: boolean }> = {
   done:     { label: "해결",   bg: "#dcfce7", color: "#166534", bold: false },
-  progress: { label: "해결중", bg: "#fed7aa", color: "#9a3412", bold: true  },
+  in_progress: { label: "해결중", bg: "#fed7aa", color: "#9a3412", bold: true  },
   problem:  { label: "문제",   bg: "#fecaca", color: "#991b1b", bold: true  },
   check:    { label: "확인필요", bg: "#fecaca", color: "#991b1b", bold: true },
 };
@@ -595,7 +595,7 @@ export default function HouseReportsPage() {
                     <div key={p.id} style={{ background: "#fff", border: "1px solid #fed7aa", borderRadius: 6, padding: 10, marginBottom: 6 }}>
                       <div style={{ fontSize: 13, color: "#374151", marginBottom: 8 }}>{p.content}</div>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {(["problem", "progress", "done"] as const).map(s => {
+                        {(["problem", "in_progress", "done"] as const).map(s => {
                           const on = p.status === s;
                           const st = STATUS_MAP[s] || STATUS_MAP.done;
                           return (
@@ -647,7 +647,7 @@ export default function HouseReportsPage() {
                   <button onClick={() => removeItem(rIdx, iIdx)} style={{ padding: "8px 10px", minWidth: 40, minHeight: 40, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>🗑️</button>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {(["problem", "progress", "done"] as const).map(s => {
+                  {(["problem", "in_progress", "done"] as const).map(s => {
                     const on = it.status === s;
                     const st = STATUS_MAP[s] || STATUS_MAP.done;
                     return (
@@ -810,7 +810,7 @@ export default function HouseReportsPage() {
                     <button onClick={() => editRemoveItem(rIdx, iIdx)} style={{ padding: "8px 10px", minWidth: 40, minHeight: 40, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", borderRadius: 6, fontSize: 14, cursor: "pointer" }}>🗑️</button>
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {(["problem", "progress", "done"] as const).map(s => {
+                    {(["problem", "in_progress", "done"] as const).map(s => {
                       const on = it.status === s;
                       const st = STATUS_MAP[s] || STATUS_MAP.done;
                       return (

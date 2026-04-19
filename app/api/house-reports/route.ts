@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       const { room_no, content, status, report_date, reporter } = body
       if (!content) return NextResponse.json({ error: 'content required' }, { status: 400 })
 
-      const emoji = status === 'progress' ? '🔄' : status === 'check' ? '❗' : '📝'
+      const emoji = status === 'in_progress' ? '🔄' : status === 'check' ? '❗' : '📝'
       const title = `${emoji} [${room_no || '호실'}] ${content}`
       const today = new Date().toISOString().slice(0, 10)
 
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
         due: today,
         done: false,
         shared: true,
-        note: `하우스 보고에서 자동 생성\n호실: ${room_no || '-'}\n상태: ${status === 'progress' ? '조치중' : status === 'check' ? '확인필요' : '완료'}\n보고일: ${report_date || '-'}\n보고자: ${reporter || '-'}`,
+        note: `하우스 보고에서 자동 생성\n호실: ${room_no || '-'}\n상태: ${status === 'in_progress' ? '조치중' : status === 'check' ? '확인필요' : '완료'}\n보고일: ${report_date || '-'}\n보고자: ${reporter || '-'}`,
       })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
@@ -129,12 +129,12 @@ export async function POST(req: Request) {
     // 하위호환: 기존 POST (action 없는 요청)
     const { room_no, content, status, report_date, reporter } = body
     if (content) {
-      const emoji = status === 'progress' ? '🔄' : status === 'check' ? '❗' : '📝'
+      const emoji = status === 'in_progress' ? '🔄' : status === 'check' ? '❗' : '📝'
       const title = `${emoji} [${room_no || '호실'}] ${content}`
       const today = new Date().toISOString().slice(0, 10)
       const { error } = await supabase.from('staff_tasks').insert({
         title, assignee: reporter || 'all', due: today, done: false, shared: true,
-        note: `하우스 보고에서 자동 생성\n호실: ${room_no || '-'}\n상태: ${status === 'progress' ? '조치중' : status === 'check' ? '확인필요' : '완료'}\n보고일: ${report_date || '-'}\n보고자: ${reporter || '-'}`,
+        note: `하우스 보고에서 자동 생성\n호실: ${room_no || '-'}\n상태: ${status === 'in_progress' ? '조치중' : status === 'check' ? '확인필요' : '완료'}\n보고일: ${report_date || '-'}\n보고자: ${reporter || '-'}`,
       })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
