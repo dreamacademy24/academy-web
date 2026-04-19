@@ -222,7 +222,7 @@ export default function StaffOnlineClassPage() {
     <div className="sc-w">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 8, flexWrap: "wrap" }}>
         <a href="/admin/hub" className="sc-back" style={{ marginBottom: 0 }}>← Admin Home</a>
-        <a href="/guide?tab=tutor" className="sc-back" style={{ marginBottom: 0 }}>📖 Tutor Guide</a>
+        <a href="/tutor/guide" className="sc-back" style={{ marginBottom: 0 }}>📖 Tutor Guide</a>
         <a href="/tutor/online-class" className="sc-back" style={{ marginBottom: 0, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1a6fc4" }}>👤 My Schedule (Tutor View) →</a>
       </div>
 

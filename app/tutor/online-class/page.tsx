@@ -306,7 +306,7 @@ function TutorOnlineClassInner() {
     <div className="tv-w">
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
         <a href="/admin/online-class-attendance" className="tv-back" style={{margin:0}}>← Back to Attendance</a>
-        <a href="/guide?tab=tutor" className="tv-back" style={{margin:0,background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Guide</a>
+        <a href="/tutor/guide" className="tv-back" style={{margin:0,background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Guide</a>
       </div>
 
       <div className="tv-head">
