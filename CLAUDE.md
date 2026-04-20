@@ -529,3 +529,25 @@ C:/Users/desko/academy-web
 - ✅ house-reports API anon key fallback 추가
 - ✅ 보고하기 탭 최근 보고 목록 삭제 버튼 추가
 - ✅ 결재 승인완료 탭 onclick 오타 수정 (approve→approved)
+
+## 미완료 / 보류 (결재)
+- 🐛 결재 상신자 본인 화면에서 첨부파일 미표시 (재확인 필요)
+  · 증상: Sage가 결재 상신 시 이미지 첨부 → CEO 결재자 화면은 정상, 상신자 본인의 직원 공간 결재 탭에서 자기 결재 열람 시 첨부파일 영역 안 보임
+  · ✅ 60abb9a 수정 시도됨: `_empApvShowMyList` (3285~3312) 에 `renderAttachments(a.files)` 호출 누락분 추가
+  · 유저 프롬프트에 적혀있던 `_empApvShowList`(CEO용)가 아닌 `_empApvShowMyList`(본인용)가 실제 렌더 경로
+  · 확인 방법: Sage로 로그인 → 결재 탭 → 대기 중/승인됨/반려됨 클릭 → 본인이 이미지 첨부한 건 열어서 첨부 썸네일 보이는지 확인
+  · 만약 여전히 안 보이면: submitApproval → files 저장 실패 여부 DB 확인, sbGet select 쿼리 검증, 캐시 강제 새로고침(Ctrl+F5)
+
+## 2026-04-20 완료 작업
+- ✅ 결재 `_empApvShowMyList` approve→approved, reject→rejected 오타 수정 (48ab885)
+- ✅ 의견요청 게시판 이미지/동영상/오디오 첨부 인라인 미리보기 (38a3c5d)
+- ✅ 결재 상신자 본인 화면 첨부파일 렌더 누락 수정 (60abb9a)
+- ✅ 개인 업무 공간 "진행 중" 섹션 드래그 정렬 기능
+
+### Supabase SQL 미실행 (드래그 정렬 DB 동기화용)
+```sql
+ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS sort_idx int;
+```
+· 실행 전까지: 드래그 정렬은 localStorage에만 저장 (같은 브라우저에서만 순서 유지)
+· 실행 후: Supabase 동기화되어 기기 간 순서 공유 가능
+· 컬럼 없는 상태에서도 기존 업무 기능은 영향 없음 (sort_idx는 별도 sbPatch로 분리 호출, 실패 시 무시)
