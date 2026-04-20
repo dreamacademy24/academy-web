@@ -3312,10 +3312,20 @@ function _empApvShowMyList(status){
       if(status==='rejected'&&a.reject_reason){
         html+='<div style="background:#fef2f2;border-radius:6px;padding:8px 10px;font-size:12px;color:#991b1b;margin-top:6px">\ud83d\udcac 반려 사유: '+esc(a.reject_reason)+'</div>';
       }
+      // 댓글 섹션
+      html+='<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">';
+      html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
+      html+='<div style="display:flex;gap:6px">';
+      html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();_apvAddCmt(\''+String(a.id)+'\')}" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:var(--surface2)">';
+      html+='<button onclick="_apvAddCmt(\''+String(a.id)+'\')" style="padding:7px 12px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
+      html+='</div>';
+      html+='</div>';
       html+='</div>';
     });
     html+='</div>';
     d.innerHTML=html;
+    // 각 카드의 댓글 로드
+    filtered.forEach(function(a){_apvLoadCmts(String(a.id));});
   });
 }
 function renderEmpDailyTab(empId){
