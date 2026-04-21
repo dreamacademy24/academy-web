@@ -1,0 +1,530 @@
+"use client";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/lib/supabase";
+
+interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
+interface TutorApp {
+  id: string; created_at: string; updated_at?: string | null;
+  house_or_reserver: string; children_names: string; children_ages: string;
+  class_type: string; hourly_rate: number;
+  start_date: string; end_date: string;
+  class_days: string[] | null; excluded_dates: string | null; class_time: string;
+  overall_level: string; speaking_level: string; reading_level: string; writing_level: string;
+  textbook: string | null; class_style: string; class_focus: string[] | null; child_notes: string | null;
+  agreed_privacy: boolean; agreed_tutor_rules: boolean;
+  status: string; assigned_tutor_id: string | null;
+  total_sessions: number | null; total_amount: number | null; admin_memo: string | null;
+}
+
+const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토" };
+const LEVEL_OVERALL: Record<string, string> = { zero: "제로 베이스", beginner: "비기너", intermediate: "미디엄", advanced: "어드밴스" };
+const LEVEL_7: Record<string, string> = {
+  zero: "제로 베이스",
+  beginner1: "비기너1", beginner2: "비기너2",
+  intermediate1: "미디엄1", intermediate2: "미디엄2",
+  advanced1: "어드밴스1", advanced2: "어드밴스2",
+};
+const CLASS_STYLE_KR: Record<string, string> = { play: "놀이식", study: "학습식", combined: "놀이+학습" };
+const CLASS_FOCUS_KR: Record<string, string> = {
+  speaking: "스피킹", reading: "리딩", vocabulary: "보카",
+  writing: "롸이팅", phonics: "파닉스", activity: "액티비티",
+};
+const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: "대기중",  bg: "#f1f5f9", color: "#475569" },
+  assigned:  { label: "배정됨",  bg: "#dbeafe", color: "#1e40af" },
+  confirmed: { label: "확정",    bg: "#dcfce7", color: "#166534" },
+  completed: { label: "완료",    bg: "#d1fae5", color: "#065f46" },
+  cancelled: { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
+};
+const STATUS_ORDER = ["pending", "assigned", "confirmed", "completed", "cancelled"];
+
+const LEVEL_RANK: Record<string, number> = {
+  zero: 0,
+  beginner: 1, beginner1: 1, beginner2: 2,
+  intermediate: 3, intermediate1: 3, intermediate2: 4,
+  advanced: 5, advanced1: 5, advanced2: 6,
+};
+function levelRank(v: string): number { return LEVEL_RANK[v] ?? -1; }
+function isAsymmetric(a: TutorApp): boolean {
+  const ranks = [a.overall_level, a.speaking_level, a.reading_level, a.writing_level].map(levelRank).filter(r => r >= 0);
+  if (ranks.length < 2) return false;
+  return Math.max(...ranks) - Math.min(...ranks) >= 3;
+}
+
+const ADMIN_FORM_INIT = { status: "pending", assigned_tutor_id: "", total_sessions: "", total_amount: "", admin_memo: "" };
+
+export default function TutorApplications() {
+  const [apps, setApps] = useState<TutorApp[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // filters
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tutorFilter, setTutorFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
+
+  // detail modal
+  const [detail, setDetail] = useState<TutorApp | null>(null);
+  const [adminForm, setAdminForm] = useState(ADMIN_FORM_INIT);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const tutorSelectRef = useRef<HTMLSelectElement>(null);
+
+  // toast
+  const [toast, setToast] = useState("");
+
+  const loadApps = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from("tutor_applications").select("*").order("created_at", { ascending: false });
+    setLoading(false);
+    if (error) { console.error("신청 목록 로드 실패:", error); return; }
+    if (data) setApps(data as TutorApp[]);
+  }, []);
+  const loadTutors = useCallback(async () => {
+    const { data, error } = await supabase.from("tutors").select("*").eq("is_active", true).order("name");
+    if (error) { console.error("튜터 로드 실패:", error); return; }
+    if (data) setTutors(data as Tutor[]);
+  }, []);
+  useEffect(() => { loadApps(); loadTutors(); }, [loadApps, loadTutors]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  }
+
+  function openDetail(a: TutorApp, focusAssign = false) {
+    setDetail(a);
+    setAdminForm({
+      status: a.status || "pending",
+      assigned_tutor_id: a.assigned_tutor_id || "",
+      total_sessions: a.total_sessions != null ? String(a.total_sessions) : "",
+      total_amount: a.total_amount != null ? String(a.total_amount) : "",
+      admin_memo: a.admin_memo || "",
+    });
+    setModalError("");
+    if (focusAssign) setTimeout(() => tutorSelectRef.current?.focus(), 100);
+  }
+  function closeDetail() { setDetail(null); setModalError(""); setShowDeleteConfirm(false); }
+
+  async function saveAdmin() {
+    if (!detail) return;
+    setSaving(true);
+    setModalError("");
+    const payload = {
+      status: adminForm.status,
+      assigned_tutor_id: adminForm.assigned_tutor_id || null,
+      total_sessions: adminForm.total_sessions ? parseInt(adminForm.total_sessions) : null,
+      total_amount: adminForm.total_amount ? parseFloat(adminForm.total_amount) : null,
+      admin_memo: adminForm.admin_memo.trim() || null,
+    };
+    const { error } = await supabase.from("tutor_applications").update(payload).eq("id", detail.id).select();
+    setSaving(false);
+    if (error) {
+      console.error("신청 저장 실패:", error, "payload:", payload);
+      setModalError(error.message + (error.details ? " — " + error.details : "") + (error.hint ? " (" + error.hint + ")" : ""));
+      return;
+    }
+    closeDetail();
+    showToast("저장되었습니다");
+    await loadApps();
+  }
+
+  async function deleteApp() {
+    if (!detail) return;
+    setDeleting(true);
+    setModalError("");
+    const { error } = await supabase.from("tutor_applications").delete().eq("id", detail.id);
+    setDeleting(false);
+    if (error) {
+      console.error("신청 삭제 실패:", error);
+      setModalError("삭제 실패: " + error.message);
+      setShowDeleteConfirm(false);
+      return;
+    }
+    closeDetail();
+    showToast("삭제되었습니다");
+    await loadApps();
+  }
+
+  // Estimate helpers (for placeholders/hints only — not saved)
+  function estimateSessions(a: TutorApp): string {
+    if (!a.class_days || !a.start_date || !a.end_date) return "";
+    const s = new Date(a.start_date + "T00:00:00"), e = new Date(a.end_date + "T00:00:00");
+    const weeks = Math.ceil((e.getTime() - s.getTime()) / (7 * 86400000)) + 1;
+    return `자동: ${a.class_days.length}일/주 × ~${weeks}주 = ~${a.class_days.length * weeks}회`;
+  }
+  function estimateAmount(a: TutorApp, sessions: number | string): string {
+    const n = typeof sessions === "number" ? sessions : parseInt(sessions);
+    if (!n || !a.hourly_rate) return "";
+    return `시급 ₱${a.hourly_rate} × ${n}회 = ~₱${(a.hourly_rate * n).toLocaleString()}`;
+  }
+
+  // Filtered list
+  const filteredApps = apps.filter(a => {
+    if (statusFilter !== "all" && a.status !== statusFilter) return false;
+    if (tutorFilter !== "all") {
+      if (tutorFilter === "__unassigned__") { if (a.assigned_tutor_id) return false; }
+      else if (a.assigned_tutor_id !== tutorFilter) return false;
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const hay = `${a.house_or_reserver} ${a.children_names}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const statusCounts = apps.reduce<Record<string, number>>((acc, a) => {
+    acc[a.status] = (acc[a.status] || 0) + 1; return acc;
+  }, {});
+
+  function fmtMD(iso: string): string {
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  const tutorNameById = (id: string | null | undefined): string => id ? (tutors.find(t => t.id === id)?.name || "-") : "-";
+
+  return (
+    <>
+      <style>{`
+.ta-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.ta-filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ta-chip{padding:7px 13px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 120ms}
+.ta-chip:hover{background:#e2e8f0}
+.ta-chip.ac{background:#1a6fc4;color:#fff}
+.ta-chip .cnt{display:inline-block;margin-left:5px;padding:1px 7px;background:rgba(0,0,0,0.08);border-radius:10px;font-size:11px;font-weight:700}
+.ta-chip.ac .cnt{background:rgba(255,255,255,0.22)}
+.ta-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
+.ta-controls select,.ta-controls input{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff}
+.ta-controls select{min-width:160px}
+.ta-controls input{flex:1;min-width:180px}
+.ta-count{margin-left:auto;font-size:12.5px;color:#475569;font-weight:700;padding:6px 10px;background:#eff6ff;border-radius:8px}
+.ta-badge-type{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#eff6ff;color:#1a6fc4}
+.ta-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
+.ta-loading{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
+.ta-row-acts{display:flex;gap:4px}
+.ta-warn-chip{display:inline-block;margin-left:4px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-size:10px;font-weight:700}
+
+.ta-modal{background:#fff;border-radius:16px;width:100%;max-width:960px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.ta-modal-head{position:sticky;top:0;z-index:2;background:#fff;padding:18px 22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ta-modal-head h3{font-size:17px;font-weight:800;margin:0}
+.ta-close{background:none;border:none;font-size:22px;cursor:pointer;color:#6b7c93;line-height:1;padding:4px 8px;border-radius:6px}.ta-close:hover{background:#f1f5f9;color:#1a1a2e}
+.ta-modal-err{margin:0 22px 12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:8px;font-size:12.5px;line-height:1.5;font-weight:600}
+.ta-modal-body{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 22px}
+.ta-modal-foot{position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:14px 22px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+
+.ta-s{margin-bottom:14px}
+.ta-s h4{font-size:12px;font-weight:800;color:#1a6fc4;margin:0 0 6px;padding-bottom:4px;border-bottom:1.5px solid #e2e8f0;letter-spacing:0.02em}
+.ta-kv{display:grid;grid-template-columns:92px 1fr;gap:4px 10px;font-size:12.5px}
+.ta-kv .k{color:#6b7c93;font-weight:600}
+.ta-kv .v{color:#1a1a2e;word-break:break-word;white-space:pre-wrap;line-height:1.5}
+
+.ta-lvl-row{display:flex;align-items:center;gap:6px}
+.ta-lvl-r0{color:#94a3b8}
+.ta-lvl-r1,.ta-lvl-r2{color:#ea580c}
+.ta-lvl-r3,.ta-lvl-r4{color:#1a6fc4}
+.ta-lvl-r5,.ta-lvl-r6{color:#166534}
+.ta-asym{background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;margin-left:6px}
+
+.ta-admin label{display:block;font-size:12px;font-weight:700;color:#475569;margin:0 0 4px}
+.ta-admin .hint{font-size:11px;color:#94a3b8;margin:-2px 0 4px;line-height:1.4}
+.ta-admin input,.ta-admin select,.ta-admin textarea{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;margin-bottom:12px;box-sizing:border-box}
+.ta-admin input:focus,.ta-admin select:focus,.ta-admin textarea:focus{border-color:#1a6fc4}
+.ta-admin textarea{resize:vertical;min-height:80px;line-height:1.5}
+
+.ta-confirm{background:#fff;border-radius:14px;padding:24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.ta-confirm h4{font-size:15px;font-weight:800;margin:0 0 8px}
+.ta-confirm p{font-size:13px;color:#475569;line-height:1.6;margin:0 0 20px}
+.ta-confirm-foot{display:flex;justify-content:flex-end;gap:8px}
+
+.ta-btn-danger{padding:10px 18px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}.ta-btn-danger:hover{background:#b91c1c}.ta-btn-danger:disabled{opacity:0.5;cursor:not-allowed}
+
+.ta-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:12px 22px;border-radius:10px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,0.18);z-index:300;animation:taToastIn 250ms ease-out}
+@keyframes taToastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+@media(max-width:768px){
+  .ta-modal{max-height:100vh;border-radius:0}
+  .ta-modal-body{grid-template-columns:1fr;padding:16px}
+  .ta-kv{grid-template-columns:86px 1fr}
+  .ta-count{margin-left:0;width:100%;text-align:center}
+}
+      `}</style>
+
+      <div className="sec">
+        <div className="sec-head">
+          <h2>📬 튜터 신청 접수</h2>
+        </div>
+
+        <div className="ta-toolbar">
+          <div className="ta-filter-row">
+            <button className={`ta-chip${statusFilter === "all" ? " ac" : ""}`} onClick={() => setStatusFilter("all")}>
+              전체<span className="cnt">{apps.length}</span>
+            </button>
+            {STATUS_ORDER.map(s => (
+              <button key={s} className={`ta-chip${statusFilter === s ? " ac" : ""}`} onClick={() => setStatusFilter(s)}>
+                {STATUS_META[s].label}<span className="cnt">{statusCounts[s] || 0}</span>
+              </button>
+            ))}
+          </div>
+          <div className="ta-controls">
+            <select value={tutorFilter} onChange={e => setTutorFilter(e.target.value)} aria-label="튜터 필터">
+              <option value="all">모든 튜터</option>
+              <option value="__unassigned__">미배정만</option>
+              {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="예약자명 또는 수강자 이름 검색"
+              aria-label="검색"
+            />
+            <div className="ta-count">{filteredApps.length}건</div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="ta-loading">로딩 중...</div>
+        ) : filteredApps.length === 0 ? (
+          <div className="ta-empty">{apps.length === 0 ? "신청된 내역이 없습니다" : "필터 조건에 맞는 신청이 없습니다"}</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>접수</th>
+                  <th>예약자</th>
+                  <th>수강자</th>
+                  <th>나이</th>
+                  <th>유형</th>
+                  <th>기간</th>
+                  <th>요일</th>
+                  <th>담당 튜터</th>
+                  <th>상태</th>
+                  <th style={{ textAlign: "center" }}>액션</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredApps.map(a => {
+                  const st = STATUS_META[a.status] || STATUS_META.pending;
+                  const days = (a.class_days || []).map(d => DAY_KR[d] || d).join("/");
+                  return (
+                    <tr key={a.id}>
+                      <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(a.created_at)}</td>
+                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{a.house_or_reserver}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        {a.children_names}
+                        {isAsymmetric(a) && <span className="ta-warn-chip" title="레벨 편차 큼">⚠</span>}
+                      </td>
+                      <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>{a.children_ages}</td>
+                      <td><span className="ta-badge-type">{a.class_type}</span></td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{a.start_date} ~ {a.end_date}</td>
+                      <td style={{ fontSize: 12 }}>{days || "-"}</td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{tutorNameById(a.assigned_tutor_id)}</td>
+                      <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
+                      <td>
+                        <div className="ta-row-acts">
+                          <button className="btn btn-sm btn-gray" onClick={() => openDetail(a)}>상세</button>
+                          <button className="btn btn-sm btn-blue" onClick={() => openDetail(a, true)}>배정</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* 상세 모달 */}
+      {detail && (
+        <div className="overlay" onClick={closeDetail}>
+          <div className="ta-modal" onClick={e => e.stopPropagation()}>
+            <div className="ta-modal-head">
+              <h3>
+                📬 {detail.house_or_reserver} · {detail.children_names}
+                <span className="badge" style={{ background: STATUS_META[detail.status]?.bg, color: STATUS_META[detail.status]?.color, marginLeft: 10, fontSize: 11 }}>
+                  {STATUS_META[detail.status]?.label || detail.status}
+                </span>
+              </h3>
+              <button className="ta-close" onClick={closeDetail} aria-label="닫기">✕</button>
+            </div>
+
+            {modalError && <div className="ta-modal-err">⚠️ {modalError}</div>}
+
+            <div className="ta-modal-body">
+              {/* 좌측: 손님 입력 내용 */}
+              <div>
+                <div className="ta-s">
+                  <h4>1. 기본 정보</h4>
+                  <div className="ta-kv">
+                    <span className="k">예약자/하우스</span><span className="v">{detail.house_or_reserver}</span>
+                    <span className="k">수강자 이름</span><span className="v">{detail.children_names}</span>
+                    <span className="k">수강자 나이</span><span className="v">{detail.children_ages}</span>
+                    <span className="k">접수</span><span className="v">{new Date(detail.created_at).toLocaleString("ko-KR")}</span>
+                  </div>
+                </div>
+
+                <div className="ta-s">
+                  <h4>2. 수업 유형</h4>
+                  <div className="ta-kv">
+                    <span className="k">유형</span><span className="v">{detail.class_type}</span>
+                    <span className="k">시급</span><span className="v">₱{detail.hourly_rate?.toLocaleString()}/hr</span>
+                  </div>
+                </div>
+
+                <div className="ta-s">
+                  <h4>3. 일정</h4>
+                  <div className="ta-kv">
+                    <span className="k">시작일</span><span className="v">{detail.start_date}</span>
+                    <span className="k">종료일</span><span className="v">{detail.end_date}</span>
+                    <span className="k">요일</span><span className="v">{(detail.class_days || []).map(d => DAY_KR[d] || d).join(", ") || "-"}</span>
+                    <span className="k">시간 희망</span><span className="v">{detail.class_time}</span>
+                    <span className="k">빠지는 날</span><span className="v">{detail.excluded_dates || "-"}</span>
+                  </div>
+                </div>
+
+                <div className="ta-s">
+                  <h4>
+                    4. 영어 레벨
+                    {isAsymmetric(detail) && <span className="ta-asym">⚠ 편차 큼</span>}
+                  </h4>
+                  <div className="ta-kv">
+                    <span className="k">전체</span>
+                    <span className={`v ta-lvl-r${levelRank(detail.overall_level)}`}>
+                      {LEVEL_OVERALL[detail.overall_level] || detail.overall_level}
+                    </span>
+                    <span className="k">스피킹</span>
+                    <span className={`v ta-lvl-r${levelRank(detail.speaking_level)}`}>
+                      {LEVEL_7[detail.speaking_level] || detail.speaking_level}
+                    </span>
+                    <span className="k">리딩</span>
+                    <span className={`v ta-lvl-r${levelRank(detail.reading_level)}`}>
+                      {LEVEL_7[detail.reading_level] || detail.reading_level}
+                    </span>
+                    <span className="k">롸이팅</span>
+                    <span className={`v ta-lvl-r${levelRank(detail.writing_level)}`}>
+                      {LEVEL_7[detail.writing_level] || detail.writing_level}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="ta-s">
+                  <h4>5. 수업 방향</h4>
+                  <div className="ta-kv">
+                    <span className="k">교재</span><span className="v">{detail.textbook || "-"}</span>
+                    <span className="k">방향</span><span className="v">{CLASS_STYLE_KR[detail.class_style] || detail.class_style}</span>
+                    <span className="k">포커스</span><span className="v">{(detail.class_focus || []).map(f => CLASS_FOCUS_KR[f] || f).join(", ") || "-"}</span>
+                    <span className="k">성향/흥미</span><span className="v">{detail.child_notes || "-"}</span>
+                  </div>
+                </div>
+
+                <div className="ta-s">
+                  <h4>6. 동의</h4>
+                  <div className="ta-kv">
+                    <span className="k">개인정보</span><span className="v">{detail.agreed_privacy ? "✓" : "미동의"}</span>
+                    <span className="k">튜터 규정</span><span className="v">{detail.agreed_tutor_rules ? "✓" : "미동의"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 우측: 어드민 폼 */}
+              <div className="ta-admin">
+                <div className="ta-s">
+                  <h4>🛠 어드민 처리</h4>
+
+                  <label htmlFor="ta-status">상태</label>
+                  <select id="ta-status" value={adminForm.status} onChange={e => setAdminForm({ ...adminForm, status: e.target.value })}>
+                    {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                  </select>
+
+                  <label htmlFor="ta-tutor">담당 튜터</label>
+                  <select
+                    id="ta-tutor"
+                    ref={tutorSelectRef}
+                    value={adminForm.assigned_tutor_id}
+                    onChange={e => setAdminForm({ ...adminForm, assigned_tutor_id: e.target.value })}
+                  >
+                    <option value="">-- 미배정 --</option>
+                    {tutors.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.specialty ? ` (${t.specialty})` : ""}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label htmlFor="ta-sessions">확정 회차 (total_sessions)</label>
+                  <div className="hint">{estimateSessions(detail)}</div>
+                  <input
+                    id="ta-sessions"
+                    type="number"
+                    value={adminForm.total_sessions}
+                    onChange={e => setAdminForm({ ...adminForm, total_sessions: e.target.value })}
+                    placeholder="예: 12"
+                    min={0}
+                  />
+
+                  <label htmlFor="ta-amount">확정 금액 (total_amount, ₱)</label>
+                  <div className="hint">{estimateAmount(detail, adminForm.total_sessions)}</div>
+                  <input
+                    id="ta-amount"
+                    type="number"
+                    value={adminForm.total_amount}
+                    onChange={e => setAdminForm({ ...adminForm, total_amount: e.target.value })}
+                    placeholder="예: 3600"
+                    min={0}
+                    step={0.01}
+                  />
+
+                  <label htmlFor="ta-memo">어드민 메모 (admin_memo)</label>
+                  <textarea
+                    id="ta-memo"
+                    value={adminForm.admin_memo}
+                    onChange={e => setAdminForm({ ...adminForm, admin_memo: e.target.value })}
+                    placeholder="확정 시간, 변경 사항, 특이사항 기록"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="ta-modal-foot">
+              <button className="ta-btn-danger" onClick={() => setShowDeleteConfirm(true)} disabled={saving || deleting}>
+                🗑 삭제
+              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-gray" onClick={closeDetail} disabled={saving || deleting}>취소</button>
+                <button className="btn btn-blue" onClick={saveAdmin} disabled={saving || deleting}>
+                  {saving ? "저장 중..." : "저장"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && detail && (
+        <div className="overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="ta-confirm" onClick={e => e.stopPropagation()}>
+            <h4>⚠️ 신청을 삭제하시겠습니까?</h4>
+            <p>
+              <b>{detail.house_or_reserver}</b> — <b>{detail.children_names}</b> 님의 신청이 영구 삭제됩니다. 되돌릴 수 없습니다.
+            </p>
+            <div className="ta-confirm-foot">
+              <button className="btn btn-gray" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>취소</button>
+              <button className="ta-btn-danger" onClick={deleteApp} disabled={deleting}>
+                {deleting ? "삭제 중..." : "삭제"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="ta-toast" role="status" aria-live="polite">{toast}</div>}
+    </>
+  );
+}

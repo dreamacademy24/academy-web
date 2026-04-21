@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import TutorApplications from "./TutorApplications";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; hourly_rate: number; is_active: boolean }
 interface Lesson { id: string; student_name: string; tutor_name: string; lesson_date: string; lesson_time: string; lesson_type: string; status: string }
 
-type Tab = "list" | "schedule" | "invoice";
+type Tab = "list" | "schedule" | "invoice" | "applications";
 type ModalMode = null | { data?: Tutor };
 
 const DAYS = ["월","화","수","목","금","토","일"];
@@ -201,7 +202,10 @@ export default function TutorsPage() {
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>👩‍🏫 튜터 목록</button>
         <button className={`tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📅 튜터 스케줄</button>
         <button className={`tab${tab === "invoice" ? " ac" : ""}`} onClick={() => setTab("invoice")}>💰 튜터 인보이스</button>
+        <button className={`tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")}>📬 튜터 신청</button>
       </div>
+
+      {tab === "applications" && <TutorApplications />}
 
       {/* 탭1: 튜터 목록 */}
       {tab === "list" && (
