@@ -3665,8 +3665,15 @@ function _empOpenApproval(){
         clearInterval(poll);
         var slot=document.getElementById('_empApprovalSlot');
         if(slot){
-          if(loaded) slot.innerHTML=wrap.innerHTML;
-          else slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
+          if(loaded){
+            slot.innerHTML=wrap.innerHTML;
+            // 복제된 apvCmts_/apvCmtInp_ 중복 ID 제거 — 이후 getElementById가 slot을 찾도록
+            wrap.innerHTML='';
+            // slot의 댓글 컨테이너에 다시 로드 (초기 _apvLoadCmts가 복제 전 wrap을 타깃했을 수 있음)
+            slot.querySelectorAll('[id^="apvCmts_"]').forEach(function(el){
+              _apvLoadCmts(el.id.substring('apvCmts_'.length));
+            });
+          } else slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
         }
         wrap.style.display='none';
       }
@@ -3772,7 +3779,15 @@ function renderApprovalPage(empId){
         if(a.files&&a.files.length)html+=renderAttachments(a.files);
         html+='<div style="display:flex;gap:8px"><button onclick="processApproval('+a.id+',\x27approve\x27)" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">승인</button>';
         html+='<input id="rr_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
-        html+='<button onclick="processApproval('+a.id+',\x27reject\x27)" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">반려</button></div></div>';
+        html+='<button onclick="processApproval('+a.id+',\x27reject\x27)" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">반려</button></div>';
+        // 댓글 섹션 (source: _empApvShowList 3217-3225)
+        html+='<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">';
+        html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
+        html+='<div style="display:flex;gap:6px">';
+        html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#f8fafc">';
+        html+='<button onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)" style="padding:7px 12px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
+        html+='</div></div>';
+        html+='</div>';
       });
       html+='</div>';
     }
@@ -3795,6 +3810,13 @@ function renderApprovalPage(empId){
           html+='<div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end"><button onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27none\x27" style="padding:7px 16px;background:#f1f5f9;color:#374151;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">취소</button>';
           html+='<button onclick="resubmitApproval('+a.id+')" style="padding:7px 16px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">재상신</button></div></div>';
         }
+        // 댓글 섹션 (source: _empApvShowMyList 3315-3323)
+        html+='<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">';
+        html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
+        html+='<div style="display:flex;gap:6px">';
+        html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#f8fafc">';
+        html+='<button onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)" style="padding:7px 12px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
+        html+='</div></div>';
         html+='</div>';
       });
       html+='</div>';
@@ -3803,6 +3825,8 @@ function renderApprovalPage(empId){
     }
     html+='</div>';
     wrap.innerHTML=html;
+    // pending + mine 모든 결재 아이템에 댓글 로드
+    (rows||[]).forEach(function(a){_apvLoadCmts(String(a.id));});
   });
 }
 
