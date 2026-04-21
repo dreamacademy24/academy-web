@@ -309,7 +309,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-names"><span className="num">2</span>자녀 이름 (한글 + 영문)<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-names"><span className="num">2</span>수강자 이름 (한글 + 영문)<span className="req">*</span></label>
             <span className="q-hint">여러 명은 / 로 구분해주세요</span>
             <input
               id="f-names"
@@ -325,7 +325,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-ages"><span className="num">3</span>자녀 나이<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-ages"><span className="num">3</span>수강자 나이<span className="req">*</span></label>
             <span className="q-hint">예: 2019.09.03 만 5세 / 현재 나이로 기재 가능</span>
             <input
               id="f-ages"
@@ -436,7 +436,7 @@ export default function TutorApplyForm() {
 
           <div className="q">
             <label className="q-label" htmlFor="f-time"><span className="num">9</span>수업 시간대<span className="req">*</span></label>
-            <span className="q-hint">오전 10시 ~ 오후 8시 사이 가능 (일요일 불가)</span>
+            <span className="q-hint">오전 10시 ~ 오후 8시 사이 가능 (일요일 불가)<br />※ 확정 시간은 담당자가 연락 후 조율합니다</span>
             <input
               id="f-time"
               className={`inp${errors.class_time ? " err" : ""}`}
@@ -453,7 +453,7 @@ export default function TutorApplyForm() {
 
         {/* 섹션 4: 영어 레벨 */}
         <section className="sec" aria-labelledby="s4">
-          <h2 id="s4">4. 자녀의 영어 레벨</h2>
+          <h2 id="s4">4. 영어 레벨</h2>
           <p className="sec-sub">튜터 매칭 및 수업 준비를 위해 꼭 필요합니다</p>
 
           <LevelGroup
@@ -534,7 +534,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-notes"><span className="num">17</span>아이 성향 / 흥미</label>
+            <label className="q-label" htmlFor="f-notes"><span className="num">17</span>수강자 성향 / 흥미</label>
             <textarea
               id="f-notes"
               className="area"
