@@ -126,6 +126,10 @@
 - **Supabase bigint ID**: onclick에 숫자로 전달 시 JS 정수 정밀도(2^53) 초과로 ID 깨짐. 문자열로 전달('id')
 - **파일 개수 제한**: MAX_FILES 전역 변수로 관리. readFilesAsBase64 함수에서 참조
 - **인라인 핸들러 vs addEventListener**: let/const 변수는 window 스코프에 없어 인라인 onclick에서 접근 문제 가능. DOMContentLoaded addEventListener 권장
+- **Supabase 공개 폼 RLS 고통**: "TO public" 정책이 이론상 anon+authenticated 포함해야 하나 PostgREST 캐시/구현상 차이로 401 지속 가능. 정석 패턴은 Next.js API Route + service_role.
+- **React 폼 state 주입**: name 속성 없이 id만 쓰는 경우 `Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set` 사용 + `dispatchEvent('input'/'change')`
+- **Chrome MCP 검증 팁**: role=radiogroup + role=radio 패턴은 `querySelectorAll('[role="radiogroup"]')`로 그룹 순회 후 `querySelectorAll('button')[idx].click()`
+- **supabase-js silent fail**: `.insert(...)` 에러 체크 안 하면 400 응답도 성공처럼 진행됨. 항상 `const { error } = await ... .select()` 패턴 + alert/console.error로 노출.
 
 ## 남은 작업
 - staff_reports Supabase 이전 (보고 현황, 현재 localStorage)
@@ -551,3 +555,80 @@ ALTER TABLE staff_tasks ADD COLUMN IF NOT EXISTS sort_idx int;
 · 실행 전까지: 드래그 정렬은 localStorage에만 저장 (같은 브라우저에서만 순서 유지)
 · 실행 후: Supabase 동기화되어 기기 간 순서 공유 가능
 · 컬럼 없는 상태에서도 기존 업무 기능은 영향 없음 (sort_idx는 별도 sbPatch로 분리 호출, 실패 시 무시)
+
+## 2026-04-21 완료 작업
+
+### 튜터 시스템 Phase 1~2 전체 완료
+- ✅ /admin/tutors 튜터 POST 400 완전 해결 (1f7a93d)
+  · 증상: GET 성공 / POST 400 Silent Fail — 에러 체크 없이 모달 닫힘
+  · 수정: saveTutor/toggleActive/loadTutors 전부 `error` 체크 + alert + await loadTutors()
+  · Supabase 측에서 hourly_rate/phone/specialty/is_active/created_at 컬럼 추가로 최종 해결
+- ✅ /tutor-apply 공개 튜터 신청 폼 완료 (ab2b4c9 → 1f02426)
+  · 19문항 6섹션 (기본/유형/일정/영어레벨/수업방향/동의)
+  · 클라이언트 밸리데이션: 필수, end>=start, 일요일 차단, class_focus 1~2개
+  · 에러 인라인 배너 + aria-invalid, 성공 시 /tutor-apply/success 라우팅
+  · 성인 수강자 케이스 반영 라벨 수정 (자녀/아이 → 수강자, 섹션4 제목 간결화)
+  · 라이브 검증 3샘플 통과: A=성인, B=어린이 2명, C=비대칭 레벨
+- ✅ /admin/tutors "📬 튜터 신청" 4번째 탭 (ea6e0cb)
+  · 신규 파일 app/admin/tutors/TutorApplications.tsx (자립 컴포넌트, 530줄)
+  · 툴바: 상태 칩(6종) + 튜터 필터(전체/미배정/활성 튜터) + 검색(예약자·수강자명) + 카운터
+  · 테이블 10컬럼 + 레벨 편차 >=3 ⚠ 배지
+  · 2-col 상세 모달: 좌측 6섹션 읽기전용(pre-wrap) / 우측 어드민 폼
+    status, assigned_tutor_id, total_sessions, total_amount, admin_memo
+  · 회차·금액 자동 계산 힌트 (실제 저장은 수동)
+  · 저장 실패 → 모달 상단 inline 빨간 배너 / 성공 → 하단 토스트 (alert 미사용)
+  · 삭제 확인 모달 → DELETE → 토스트
+- ✅ team_manager3.html renderApprovalPage 댓글 블록 누락 패치 (0675ade)
+  · BUGS_VISIBILITY_AUDIT.md HIGH 1-1 해결
+  · pending/mine 양쪽에 _empApvShowList와 동일한 댓글 블록 이식
+  · _empOpenApproval 복제 경로 동반 버그 수정 (wrap clear + slot 재스캔)
+- ✅ admin/user 뷰 비대칭 버그 전수 감사 리포트 작성 (a111240)
+  · BUGS_VISIBILITY_AUDIT.md — HIGH 1 / MED 6 / LOW 8 집계
+  · 섹션별 admin 함수 vs user 함수 대칭 검증
+
+### Supabase 현재 상태 (tutor_applications)
+- RLS **비활성화 중** (공개 폼이라 실질 문제 없음)
+- 이유: `public_can_insert` / `insert_any_role` 정책 다 생성했으나 PostgREST 캐시 / authenticated role 충돌로 401 지속
+- 테이블 GRANT는 authenticated에만 SELECT/UPDATE/DELETE 허용 → RLS 없이도 실질 보안 유지
+- 관련 SQL들은 전부 Supabase SQL Editor에 저장됨
+- **Phase 3+에서 정석 패턴 전환 예정**: `/api/tutor-apply` Next.js API Route + `service_role` key (브라우저에는 anon만 노출)
+
+## On the horizon — 튜터 관리 시스템 통합 비전 (Phase 3+)
+
+### 레퍼런스
+- `/admin/online-class` (화상영어 관리) 패턴 거의 복붙 수준으로 재사용
+- 기존 운영 중: 수강생 33명, 튜터 5명 (T.Amelyn / Angel / Ann / Carla / Cristel)
+
+### 분리 운영 설계
+- `/admin/online-class` = **화상영어** (현재 운영 중, 유지)
+- `/admin/tutor-class` (가칭, 신설 예정) = **드림하우스 방문 튜터**
+  · 두 시스템은 데이터 모델도 분리 (`online_class_enrollments` vs `tutor_applications` + `tutor_lessons`)
+
+### 방문 튜터 16명 (2026-04-13 구글시트 기준)
+janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vincent, harper, gab, suzy, annie, abegail
+- "미배정" 컬럼 별도 운영 (신청 수신 후 배정 전 상태)
+- ※ 나열은 17명이지만 운영 기준 16명 표기 — 착수 시 명단 재확인 필요
+
+### 탭 구조 (`/admin/tutor-class`)
+1. 📋 **신청 수신함** — tutor_applications 기반 (이미 ea6e0cb에서 골격 완성)
+2. 📊 **주간 스케줄** — /online-class의 주간 그리드 패턴 복붙, 튜터별 색상
+3. 👥 **수강생 목록** — 확정된 신청건 기준 활성 수강생 카드
+4. 💰 **인보이스** — 튜터별 월별 방문 수업 집계
+
+### 티쳐 포털 (`/tutor/portal`)
+- 티쳐 개인 로그인 (`tutor-[name]` 패턴, 화상영어 티쳐 로그인 참고)
+- 본인 My Schedule (드하 방문 + 화상영어 통합 뷰)
+- Phase 1·2 완료되었으므로 Phase 3 착수 조건은 충족
+
+### Phase 3 디테일 작업들
+- **엑셀 Export**: tutor_applications 필터링된 목록 CSV/XLSX
+- **회차·금액 자동 저장 토글**: 현재 힌트만 표시 → "힌트 값 사용" 체크박스로 확정 저장
+- **확정 처리 워크플로우**: status=confirmed 전환 시 `tutor_lessons` 자동 생성 (요일×기간×시간 전개)
+- **인보이스 연동**: 기존 튜터 인보이스 탭에 방문수업 집계 합산
+- **연결 예약**: `booking_id` 컬럼 활용 — house_or_reserver 기반 bookings 퍼지 매치
+- **알림 자동화**: 상태 변경 시 담당 튜터에게 카카오/이메일 알림
+- **RLS 정석 전환**: /api/tutor-apply API Route + service_role
+
+### 우선순위
+- **천천히 진행** (2026-04-21 메이와 합의)
+- 긴급 아이템 아님, 기본 기능은 Phase 2로 이미 운영 가능
