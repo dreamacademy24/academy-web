@@ -3,12 +3,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
-import TutorApplications from "./TutorApplications";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; hourly_rate: number; is_active: boolean }
 interface Lesson { id: string; student_name: string; tutor_name: string; lesson_date: string; lesson_time: string; lesson_type: string; status: string }
 
-type Tab = "list" | "schedule" | "invoice" | "applications";
+type Tab = "list" | "schedule" | "invoice";
 type ModalMode = null | { data?: Tutor };
 
 const DAYS = ["월","화","수","목","금","토","일"];
@@ -198,14 +197,28 @@ export default function TutorsPage() {
         <h1>튜터 관리</h1>
       </div>
 
+      <div
+        onClick={() => router.push("/admin/tutor-class")}
+        style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "12px 16px",
+          background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12,
+          marginBottom: 14, cursor: "pointer", transition: "background 150ms",
+        }}
+        onMouseEnter={e => (e.currentTarget.style.background = "#dbeafe")}
+        onMouseLeave={e => (e.currentTarget.style.background = "#eff6ff")}
+      >
+        <span style={{ fontSize: 20 }}>📬</span>
+        <div style={{ flex: 1, fontSize: 13, color: "#1e40af", fontWeight: 600, lineHeight: 1.5 }}>
+          튜터 신청 관리는 <b>튜터 수업 관리</b>로 이전되었습니다
+        </div>
+        <span style={{ fontSize: 16, color: "#1a6fc4", fontWeight: 700 }}>→</span>
+      </div>
+
       <div className="tabs">
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>👩‍🏫 튜터 목록</button>
         <button className={`tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📅 튜터 스케줄</button>
         <button className={`tab${tab === "invoice" ? " ac" : ""}`} onClick={() => setTab("invoice")}>💰 튜터 인보이스</button>
-        <button className={`tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")}>📬 튜터 신청</button>
       </div>
-
-      {tab === "applications" && <TutorApplications />}
 
       {/* 탭1: 튜터 목록 */}
       {tab === "list" && (

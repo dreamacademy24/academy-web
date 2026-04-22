@@ -122,22 +122,120 @@ export default function TutorApplications() {
     if (!detail) return;
     setSaving(true);
     setModalError("");
+    const oldStatus = detail.status;
+    const newStatus = adminForm.status;
+    const parsedSessions = adminForm.total_sessions ? parseInt(adminForm.total_sessions) : null;
+    const parsedAmount = adminForm.total_amount ? parseFloat(adminForm.total_amount) : null;
     const payload = {
-      status: adminForm.status,
+      status: newStatus,
       assigned_tutor_id: adminForm.assigned_tutor_id || null,
-      total_sessions: adminForm.total_sessions ? parseInt(adminForm.total_sessions) : null,
-      total_amount: adminForm.total_amount ? parseFloat(adminForm.total_amount) : null,
+      total_sessions: parsedSessions,
+      total_amount: parsedAmount,
       admin_memo: adminForm.admin_memo.trim() || null,
     };
     const { error } = await supabase.from("tutor_applications").update(payload).eq("id", detail.id).select();
-    setSaving(false);
     if (error) {
+      setSaving(false);
       console.error("신청 저장 실패:", error, "payload:", payload);
       setModalError(error.message + (error.details ? " — " + error.details : "") + (error.hint ? " (" + error.hint + ")" : ""));
       return;
     }
+
+    // 최초 confirmed 전환 시 → tutor_lessons + tutor_lesson_sessions 자동 생성
+    let postMsg = "저장되었습니다";
+    if (newStatus === "confirmed" && oldStatus !== "confirmed") {
+      const { data: existing, error: exErr } = await supabase
+        .from("tutor_lessons")
+        .select("id")
+        .eq("application_id", detail.id)
+        .maybeSingle();
+      if (exErr) {
+        console.error("기존 수업 조회 실패:", exErr);
+      }
+      if (existing) {
+        postMsg = "확정 저장 (수업은 이미 생성됨)";
+      } else {
+        const dayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+        const targetDays = (detail.class_days || []).map(d => dayMap[d]).filter(n => n !== undefined);
+        const localStr = (d: Date) => {
+          const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+          return `${y}-${m}-${dd}`;
+        };
+        const sessions: { session_date: string; session_idx: number; status: string }[] = [];
+        if (detail.start_date && detail.end_date && targetDays.length > 0) {
+          const cur = new Date(detail.start_date + "T00:00:00");
+          const end = new Date(detail.end_date + "T00:00:00");
+          let idx = 1;
+          while (cur <= end) {
+            if (targetDays.includes(cur.getDay())) {
+              sessions.push({ session_date: localStr(cur), session_idx: idx++, status: "scheduled" });
+            }
+            cur.setDate(cur.getDate() + 1);
+          }
+        }
+
+        const computedTotalSessions = parsedSessions ?? sessions.length;
+        const computedTotalAmount = parsedAmount ?? (computedTotalSessions * (detail.hourly_rate || 0));
+
+        const { data: lesson, error: e2 } = await supabase
+          .from("tutor_lessons")
+          .insert({
+            application_id: detail.id,
+            house_or_reserver: detail.house_or_reserver,
+            student_names: detail.children_names,
+            student_ages: detail.children_ages,
+            tutor_id: adminForm.assigned_tutor_id || null,
+            class_type: detail.class_type,
+            hourly_rate: detail.hourly_rate,
+            start_date: detail.start_date,
+            end_date: detail.end_date,
+            class_days: detail.class_days,
+            class_time: detail.class_time,
+            confirmed_time: null,
+            overall_level: detail.overall_level,
+            speaking_level: detail.speaking_level,
+            reading_level: detail.reading_level,
+            writing_level: detail.writing_level,
+            textbook: detail.textbook,
+            class_style: detail.class_style,
+            class_focus: detail.class_focus,
+            total_sessions: computedTotalSessions,
+            total_amount: computedTotalAmount,
+            status: "active",
+            admin_memo: adminForm.admin_memo.trim() || null,
+          })
+          .select()
+          .single();
+
+        if (e2 || !lesson) {
+          setSaving(false);
+          console.error("수업 생성 실패:", e2);
+          closeDetail();
+          showToast(`확정 저장됐지만 수업 생성 실패: ${e2?.message || "unknown"}`);
+          await loadApps();
+          return;
+        }
+
+        if (sessions.length > 0) {
+          const sessionsWithLessonId = sessions.map(s => ({ ...s, lesson_id: (lesson as { id: string }).id }));
+          const { error: e3 } = await supabase.from("tutor_lesson_sessions").insert(sessionsWithLessonId);
+          if (e3) {
+            setSaving(false);
+            console.error("회차 생성 실패:", e3);
+            closeDetail();
+            showToast(`수업 생성됐지만 회차 생성 실패: ${e3.message}`);
+            await loadApps();
+            return;
+          }
+        }
+
+        postMsg = `✅ 확정 완료: ${sessions.length}회차 자동 생성`;
+      }
+    }
+
+    setSaving(false);
     closeDetail();
-    showToast("저장되었습니다");
+    showToast(postMsg);
     await loadApps();
   }
 
