@@ -7,7 +7,7 @@ interface Lesson {
   id: string; created_at: string;
   house_or_reserver: string; student_names: string; student_ages: string | null;
   tutor_id: string | null;
-  class_type: string; hourly_rate: number;
+  class_type: string; sessions_per_day: number | null; hourly_rate: number;
   start_date: string; end_date: string;
   class_days: string[] | null; class_time: string | null; confirmed_time: string | null;
   total_sessions: number | null; total_amount: number | null;
@@ -215,6 +215,9 @@ export default function TutorLessonList() {
 .tll-badge-type{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700}
 .tll-type-11{background:#1a6fc4;color:#fff}
 .tll-type-12{background:#dbeafe;color:#1e40af}
+.tll-badge-time{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:800}
+.tll-time-1{background:#f1f5f9;color:#475569}
+.tll-time-2{background:#dbeafe;color:#1e40af}
 .tll-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700}
 .tll-chip-remain{display:inline-block;padding:3px 10px;background:#dcfce7;color:#166534;border-radius:999px;font-size:11.5px;font-weight:800;min-width:28px;text-align:center}
 .tll-muted{color:#94a3b8;font-style:italic}
@@ -255,8 +258,8 @@ export default function TutorLessonList() {
 
 @media(max-width:900px){
   .tll-tbl{min-width:auto}
-  .tll-tbl th:nth-child(7),.tll-tbl td:nth-child(7),
-  .tll-tbl th:nth-child(9),.tll-tbl td:nth-child(9){display:none}
+  .tll-tbl th:nth-child(8),.tll-tbl td:nth-child(8),
+  .tll-tbl th:nth-child(10),.tll-tbl td:nth-child(10){display:none}
 }
 @media(max-width:700px){
   .tll-toolbar input{min-width:140px}
@@ -308,6 +311,7 @@ export default function TutorLessonList() {
               <th>수강자</th>
               <th>담당 T</th>
               <th>유형</th>
+              <th>타임</th>
               <th>요일</th>
               <th>시간</th>
               <th>기간</th>
@@ -334,6 +338,11 @@ export default function TutorLessonList() {
                     {l.tutor_name ? l.tutor_name : <span className="tll-muted">(미배정)</span>}
                   </td>
                   <td><span className={`tll-badge-type ${isType11 ? "tll-type-11" : "tll-type-12"}`}>{typeBase}</span></td>
+                  <td>
+                    <span className={`tll-badge-time ${l.sessions_per_day === 2 ? "tll-time-2" : "tll-time-1"}`}>
+                      {l.sessions_per_day === 2 ? "2T" : "1T"}
+                    </span>
+                  </td>
                   <td style={{ whiteSpace: "nowrap" }}>{daysStr || "-"}</td>
                   <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>
                     {l.confirmed_time

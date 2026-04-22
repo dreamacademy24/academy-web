@@ -6,13 +6,14 @@ import * as XLSX from "xlsx";
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
 interface TutorApp {
   id: string; created_at: string; updated_at?: string | null;
+  reserver_type: string | null;
   house_or_reserver: string; children_names: string; children_ages: string;
-  class_type: string; hourly_rate: number;
+  class_type: string; sessions_per_day: number | null; hourly_rate: number;
   start_date: string; end_date: string;
   class_days: string[] | null; excluded_dates: string | null; class_time: string;
   overall_level: string; speaking_level: string; reading_level: string; writing_level: string;
   textbook: string | null; class_style: string; class_focus: string[] | null; child_notes: string | null;
-  agreed_privacy: boolean; agreed_tutor_rules: boolean;
+  agreed_privacy: boolean; agreed_tutor_rules?: boolean; agreed_tutor_rules_bool?: boolean;
   status: string; assigned_tutor_id: string | null;
   total_sessions: number | null; total_amount: number | null; admin_memo: string | null;
 }
@@ -175,7 +176,8 @@ export default function TutorApplications() {
         }
 
         const computedTotalSessions = parsedSessions ?? sessions.length;
-        const computedTotalAmount = parsedAmount ?? (computedTotalSessions * (detail.hourly_rate || 0));
+        const sessionsPerDay = detail.sessions_per_day || 1;
+        const computedTotalAmount = parsedAmount ?? (computedTotalSessions * sessionsPerDay * (detail.hourly_rate || 0));
 
         const { data: lesson, error: e2 } = await supabase
           .from("tutor_lessons")
@@ -186,6 +188,7 @@ export default function TutorApplications() {
             student_ages: detail.children_ages,
             tutor_id: adminForm.assigned_tutor_id || null,
             class_type: detail.class_type,
+            sessions_per_day: sessionsPerDay,
             hourly_rate: detail.hourly_rate,
             start_date: detail.start_date,
             end_date: detail.end_date,
@@ -266,7 +269,8 @@ export default function TutorApplications() {
   function estimateAmount(a: TutorApp, sessions: number | string): string {
     const n = typeof sessions === "number" ? sessions : parseInt(sessions);
     if (!n || !a.hourly_rate) return "";
-    return `시급 ₱${a.hourly_rate} × ${n}회 = ~₱${(a.hourly_rate * n).toLocaleString()}`;
+    const spd = a.sessions_per_day || 1;
+    return `₱${a.hourly_rate} × ${spd}타임 × ${n}회 = ~₱${(a.hourly_rate * spd * n).toLocaleString()}`;
   }
 
   // Filtered list
@@ -348,6 +352,7 @@ export default function TutorApplications() {
         "수강자 이름": a.children_names || "",
         "수강자 나이": a.children_ages || "",
         "수업유형": classTypePriced(a),
+        "타임": a.sessions_per_day === 2 ? "2타임 (100분)" : "1타임 (50분)",
         "시작일": a.start_date || "",
         "종료일": a.end_date || "",
         "요일": joinDays(a.class_days),
@@ -362,12 +367,12 @@ export default function TutorApplications() {
         "수업 포커스": joinFocus(a.class_focus),
         "성향/흥미": a.child_notes || "",
         "개인정보 동의": a.agreed_privacy ? "✓" : "",
-        "튜터 규정 동의": a.agreed_tutor_rules ? "✓" : "",
+        "튜터 규정 동의": (a.agreed_tutor_rules_bool ?? a.agreed_tutor_rules) ? "✓" : "",
       }));
 
       // 시트 2: 정산용
       type Sheet2Row = {
-        "접수일": string | number; "예약자": string; "수강자": string; "수업유형": string;
+        "접수일": string | number; "예약자": string; "수강자": string; "수업유형": string; "타임": string;
         "시급": number | string; "시작일": string; "종료일": string; "기간(주)": number | string;
         "요일": string; "담당 튜터": string; "상태": string;
         "확정 회차": number | string; "확정 금액": number | string;
@@ -378,6 +383,7 @@ export default function TutorApplications() {
         "예약자": a.house_or_reserver || "",
         "수강자": a.children_names || "",
         "수업유형": classTypeBase(a.class_type),
+        "타임": a.sessions_per_day === 2 ? "2타임" : "1타임",
         "시급": a.hourly_rate || 0,
         "시작일": a.start_date || "",
         "종료일": a.end_date || "",
@@ -394,7 +400,7 @@ export default function TutorApplications() {
       const sumAmount = rows.reduce((s, a) => s + (a.total_amount || 0), 0);
       sheet2Rows.push({
         "접수일": `합계 (총 ${rows.length}건)`,
-        "예약자": "", "수강자": "", "수업유형": "", "시급": "",
+        "예약자": "", "수강자": "", "수업유형": "", "타임": "", "시급": "",
         "시작일": "", "종료일": "", "기간(주)": "", "요일": "",
         "담당 튜터": "", "상태": "",
         "확정 회차": sumSessions,
@@ -409,13 +415,13 @@ export default function TutorApplications() {
 
       // 컬럼 폭
       ws1["!cols"] = [
-        { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 14 }, { wch: 16 },
+        { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 14 }, { wch: 16 }, { wch: 14 },
         { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 40 }, { wch: 22 },
         { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 25 },
         { wch: 14 }, { wch: 22 }, { wch: 50 }, { wch: 14 }, { wch: 14 },
       ];
       ws2["!cols"] = [
-        { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 10 },
+        { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 10 },
         { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
         { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 40 }, { wch: 16 },
       ];
@@ -500,6 +506,9 @@ export default function TutorApplications() {
 .ta-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:taSpin 650ms linear infinite}
 @keyframes taSpin{to{transform:rotate(360deg)}}
 .ta-badge-type{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#eff6ff;color:#1a6fc4}
+.ta-badge-time{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:800}
+.ta-time-1{background:#f1f5f9;color:#475569}
+.ta-time-2{background:#dbeafe;color:#1e40af}
 .ta-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
 .ta-loading{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
 .ta-row-acts{display:flex;gap:4px}
@@ -606,6 +615,7 @@ export default function TutorApplications() {
                   <th>수강자</th>
                   <th>나이</th>
                   <th>유형</th>
+                  <th>타임</th>
                   <th>기간</th>
                   <th>요일</th>
                   <th>담당 튜터</th>
@@ -627,6 +637,11 @@ export default function TutorApplications() {
                       </td>
                       <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>{a.children_ages}</td>
                       <td><span className="ta-badge-type">{a.class_type}</span></td>
+                      <td>
+                        <span className={`ta-badge-time ${a.sessions_per_day === 2 ? "ta-time-2" : "ta-time-1"}`}>
+                          {a.sessions_per_day === 2 ? "2T" : "1T"}
+                        </span>
+                      </td>
                       <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{a.start_date} ~ {a.end_date}</td>
                       <td style={{ fontSize: 12 }}>{days || "-"}</td>
                       <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{tutorNameById(a.assigned_tutor_id)}</td>
@@ -679,7 +694,12 @@ export default function TutorApplications() {
                   <h4>2. 수업 유형</h4>
                   <div className="ta-kv">
                     <span className="k">유형</span><span className="v">{detail.class_type}</span>
-                    <span className="k">시급</span><span className="v">₱{detail.hourly_rate?.toLocaleString()}/hr</span>
+                    <span className="k">타임 수</span><span className="v">{detail.sessions_per_day || 1}타임 ({(detail.sessions_per_day || 1) * 50}분)</span>
+                    <span className="k">요금</span>
+                    <span className="v">
+                      {detail.class_type} (₱{detail.hourly_rate?.toLocaleString()}/타임 × {detail.sessions_per_day || 1}타임
+                      {" = ₱"}{((detail.hourly_rate || 0) * (detail.sessions_per_day || 1)).toLocaleString()}/회)
+                    </span>
                   </div>
                 </div>
 

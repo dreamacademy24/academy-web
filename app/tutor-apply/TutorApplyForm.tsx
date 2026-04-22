@@ -65,10 +65,12 @@ const CLASS_FOCUS = [
 ];
 
 type FormState = {
+  reserver_type: "" | "house" | "name";
   house_or_reserver: string;
   children_names: string;
   children_ages: string;
   class_type: "" | "1:1" | "1:2";
+  sessions_per_day: 1 | 2;
   start_date: string;
   end_date: string;
   class_days: string[];
@@ -87,10 +89,12 @@ type FormState = {
 };
 
 const INIT: FormState = {
+  reserver_type: "",
   house_or_reserver: "",
   children_names: "",
   children_ages: "",
   class_type: "",
+  sessions_per_day: 1,
   start_date: "",
   end_date: "",
   class_days: [],
@@ -122,7 +126,22 @@ export default function TutorApplyForm() {
   const topRef = useRef<HTMLDivElement>(null);
 
   const hourlyRate = form.class_type === "1:1" ? 300 : form.class_type === "1:2" ? 350 : 0;
-  const canSubmit = useMemo(() => form.agreed_privacy && form.agreed_tutor_rules && !submitting, [form.agreed_privacy, form.agreed_tutor_rules, submitting]);
+  const perSessionCost = hourlyRate * form.sessions_per_day;
+  const canSubmit = useMemo(
+    () => form.agreed_privacy && form.agreed_tutor_rules && !submitting,
+    [form.agreed_privacy, form.agreed_tutor_rules, submitting],
+  );
+
+  const reserverPlaceholder = form.reserver_type === "house"
+    ? "B17L15"
+    : form.reserver_type === "name"
+      ? "홍길동"
+      : "드림하우스 번호 또는 예약자 성함";
+  const reserverLabel = form.reserver_type === "house"
+    ? "드림하우스 호실 번호"
+    : form.reserver_type === "name"
+      ? "예약자 성함"
+      : "드림하우스 넘버 또는 예약자명";
 
   function setField<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm(f => ({ ...f, [k]: v }));
@@ -145,6 +164,7 @@ export default function TutorApplyForm() {
 
   function validate(): boolean {
     const e: Record<string, string> = {};
+    if (!form.reserver_type) e.reserver_type = "예약자 구분을 선택해주세요";
     if (!form.house_or_reserver.trim()) e.house_or_reserver = "필수 항목입니다";
     if (!form.children_names.trim()) e.children_names = "필수 항목입니다";
     if (!form.children_ages.trim()) e.children_ages = "필수 항목입니다";
@@ -179,10 +199,12 @@ export default function TutorApplyForm() {
     }
     setSubmitting(true);
     const payload = {
+      reserver_type: form.reserver_type,
       house_or_reserver: form.house_or_reserver.trim(),
       children_names: form.children_names.trim(),
       children_ages: form.children_ages.trim(),
       class_type: form.class_type,
+      sessions_per_day: form.sessions_per_day,
       hourly_rate: hourlyRate,
       start_date: form.start_date,
       end_date: form.end_date,
@@ -198,7 +220,7 @@ export default function TutorApplyForm() {
       class_focus: form.class_focus,
       child_notes: form.child_notes.trim() || null,
       agreed_privacy: form.agreed_privacy,
-      agreed_tutor_rules: form.agreed_tutor_rules,
+      agreed_tutor_rules_bool: form.agreed_tutor_rules,
     };
     const { error } = await supabase.from("tutor_applications").insert(payload).select();
     setSubmitting(false);
@@ -249,6 +271,9 @@ export default function TutorApplyForm() {
 .card-opt.on .t .dot{border-color:var(--p);background:var(--p);box-shadow:inset 0 0 0 3px #fff}
 .card-opt .d{font-size:12px;color:var(--ink2);margin:4px 0 0 22px;line-height:1.5}
 .fld-err{margin-top:5px;font-size:12px;color:var(--err);font-weight:600}
+.cost-box{margin-top:10px;padding:12px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-size:13px;color:#1e40af;font-weight:700;display:flex;align-items:center;gap:8px}
+.cost-box .big{font-size:17px;font-weight:900}
+.cost-box .sm{font-size:11.5px;color:#475569;font-weight:600}
 .agree-box{border:1px solid var(--bd);border-radius:10px;padding:14px;background:#f8fafc;margin-bottom:10px}
 .agree-box .tt{font-size:12.5px;font-weight:700;color:var(--ink2);margin-bottom:6px}
 .agree-box .bd{font-size:12px;color:var(--ink2);line-height:1.6}
@@ -294,13 +319,34 @@ export default function TutorApplyForm() {
           <p className="sec-sub">신청자 및 자녀 정보</p>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-house"><span className="num">1</span>드림하우스 넘버 또는 예약자명<span className="req">*</span></label>
+            <label className="q-label"><span className="num">1</span>예약자 구분<span className="req">*</span></label>
+            <div className="opts" role="radiogroup" aria-required="true" aria-invalid={!!errors.reserver_type}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={form.reserver_type === "house"}
+                className={`opt${form.reserver_type === "house" ? " on" : ""}`}
+                onClick={() => setField("reserver_type", "house")}
+              >🏠 드림하우스 투숙객</button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={form.reserver_type === "name"}
+                className={`opt${form.reserver_type === "name" ? " on" : ""}`}
+                onClick={() => setField("reserver_type", "name")}
+              >👤 외부 신청</button>
+            </div>
+            {errors.reserver_type && <div className="fld-err">{errors.reserver_type}</div>}
+          </div>
+
+          <div className="q">
+            <label className="q-label" htmlFor="f-house"><span className="num">2</span>{reserverLabel}<span className="req">*</span></label>
             <input
               id="f-house"
               className={`inp${errors.house_or_reserver ? " err" : ""}`}
               value={form.house_or_reserver}
               onChange={e => setField("house_or_reserver", e.target.value)}
-              placeholder="B17L5 또는 예약자 성함"
+              placeholder={reserverPlaceholder}
               aria-required="true"
               aria-invalid={!!errors.house_or_reserver}
               maxLength={100}
@@ -309,7 +355,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-names"><span className="num">2</span>수강자 이름 (한글 + 영문)<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-names"><span className="num">3</span>수강자 이름 (한글 + 영문)<span className="req">*</span></label>
             <span className="q-hint">여러 명은 / 로 구분해주세요</span>
             <input
               id="f-names"
@@ -325,7 +371,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-ages"><span className="num">3</span>수강자 나이<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-ages"><span className="num">4</span>수강자 나이<span className="req">*</span></label>
             <span className="q-hint">예: 2019.09.03 만 5세 / 현재 나이로 기재 가능</span>
             <input
               id="f-ages"
@@ -344,10 +390,10 @@ export default function TutorApplyForm() {
         {/* 섹션 2: 수업 유형 */}
         <section className="sec" aria-labelledby="s2">
           <h2 id="s2">2. 수업 유형</h2>
-          <p className="sec-sub">시간당 요금이 자동 결정됩니다</p>
+          <p className="sec-sub">타임 수에 따라 회당 요금이 결정됩니다 (1타임 = 50분 수업)</p>
 
           <div className="q">
-            <label className="q-label"><span className="num">4</span>수업 유형<span className="req">*</span></label>
+            <label className="q-label"><span className="num">5</span>수업 유형<span className="req">*</span></label>
             <div className="opts" role="radiogroup" aria-required="true" aria-invalid={!!errors.class_type}>
               <button
                 type="button"
@@ -355,16 +401,44 @@ export default function TutorApplyForm() {
                 aria-checked={form.class_type === "1:1"}
                 className={`opt${form.class_type === "1:1" ? " on" : ""}`}
                 onClick={() => setField("class_type", "1:1")}
-              >1:1 (시간당 ₱300)</button>
+              >1:1 (₱300/타임)</button>
               <button
                 type="button"
                 role="radio"
                 aria-checked={form.class_type === "1:2"}
                 className={`opt${form.class_type === "1:2" ? " on" : ""}`}
                 onClick={() => setField("class_type", "1:2")}
-              >1:2 (시간당 ₱350)</button>
+              >1:2 (₱350/타임)</button>
             </div>
             {errors.class_type && <div className="fld-err">{errors.class_type}</div>}
+          </div>
+
+          <div className="q">
+            <label className="q-label"><span className="num">6</span>타임 수 (1회 수업당)<span className="req">*</span></label>
+            <span className="q-hint">1일 최대 2타임까지 가능합니다</span>
+            <div className="opts" role="radiogroup" aria-required="true">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={form.sessions_per_day === 1}
+                className={`opt${form.sessions_per_day === 1 ? " on" : ""}`}
+                onClick={() => setField("sessions_per_day", 1)}
+              >1타임 (50분)</button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={form.sessions_per_day === 2}
+                className={`opt${form.sessions_per_day === 2 ? " on" : ""}`}
+                onClick={() => setField("sessions_per_day", 2)}
+              >2타임 (100분)</button>
+            </div>
+            {form.class_type && (
+              <div className="cost-box" aria-live="polite">
+                💰 <span>회당</span>
+                <span className="big">₱{perSessionCost.toLocaleString()}</span>
+                <span className="sm">= ₱{hourlyRate} × {form.sessions_per_day}타임</span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -376,7 +450,7 @@ export default function TutorApplyForm() {
           <div className="q">
             <div className="row2">
               <div>
-                <label className="q-label" htmlFor="f-start"><span className="num">5</span>시작일<span className="req">*</span></label>
+                <label className="q-label" htmlFor="f-start"><span className="num">7</span>시작일<span className="req">*</span></label>
                 <input
                   id="f-start"
                   className={`inp${errors.start_date ? " err" : ""}`}
@@ -389,7 +463,7 @@ export default function TutorApplyForm() {
                 {errors.start_date && <div className="fld-err">{errors.start_date}</div>}
               </div>
               <div>
-                <label className="q-label" htmlFor="f-end"><span className="num">6</span>종료일<span className="req">*</span></label>
+                <label className="q-label" htmlFor="f-end"><span className="num">8</span>종료일<span className="req">*</span></label>
                 <input
                   id="f-end"
                   className={`inp${errors.end_date ? " err" : ""}`}
@@ -405,7 +479,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label"><span className="num">7</span>수업 요일<span className="req">*</span></label>
+            <label className="q-label"><span className="num">9</span>수업 요일<span className="req">*</span></label>
             <span className="q-hint">복수 선택 가능 (일요일 제외)</span>
             <div className="opts">
               {DAY_OPTIONS.map(d => (
@@ -423,7 +497,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-excl"><span className="num">8</span>빠지는 날짜 / 변경 날짜</label>
+            <label className="q-label" htmlFor="f-excl"><span className="num">10</span>빠지는 날짜 / 변경 날짜</label>
             <textarea
               id="f-excl"
               className="area"
@@ -435,7 +509,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-time"><span className="num">9</span>수업 시간대<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-time"><span className="num">11</span>수업 시간대<span className="req">*</span></label>
             <span className="q-hint">오전 10시 ~ 오후 8시 사이 가능 (일요일 불가)<br />※ 확정 시간은 담당자가 연락 후 조율합니다</span>
             <input
               id="f-time"
@@ -457,25 +531,25 @@ export default function TutorApplyForm() {
           <p className="sec-sub">튜터 매칭 및 수업 준비를 위해 꼭 필요합니다</p>
 
           <LevelGroup
-            num={10} label="전체 영어 레벨" required
+            num={12} label="전체 영어 레벨" required
             value={form.overall_level} error={errors.overall_level}
             options={OVERALL_LEVELS}
             onPick={v => setField("overall_level", v)}
           />
           <LevelGroup
-            num={11} label="스피킹 레벨" required
+            num={13} label="스피킹 레벨" required
             value={form.speaking_level} error={errors.speaking_level}
             options={SPEAKING_LEVELS}
             onPick={v => setField("speaking_level", v)}
           />
           <LevelGroup
-            num={12} label="리딩 레벨" required
+            num={14} label="리딩 레벨" required
             value={form.reading_level} error={errors.reading_level}
             options={READING_LEVELS}
             onPick={v => setField("reading_level", v)}
           />
           <LevelGroup
-            num={13} label="롸이팅 레벨" required
+            num={15} label="롸이팅 레벨" required
             value={form.writing_level} error={errors.writing_level}
             options={WRITING_LEVELS}
             onPick={v => setField("writing_level", v)}
@@ -488,7 +562,7 @@ export default function TutorApplyForm() {
           <p className="sec-sub">어떤 스타일의 수업을 원하시는지 알려주세요</p>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-textbook"><span className="num">14</span>사용 중인 영어 교재</label>
+            <label className="q-label" htmlFor="f-textbook"><span className="num">16</span>사용 중인 영어 교재</label>
             <input
               id="f-textbook"
               className="inp"
@@ -500,14 +574,14 @@ export default function TutorApplyForm() {
           </div>
 
           <LevelGroup
-            num={15} label="수업 방향" required
+            num={17} label="수업 방향" required
             value={form.class_style} error={errors.class_style}
             options={CLASS_STYLES}
             onPick={v => setField("class_style", v)}
           />
 
           <div className="q">
-            <label className="q-label"><span className="num">16</span>수업 포커스<span className="req">*</span>
+            <label className="q-label"><span className="num">18</span>수업 포커스<span className="req">*</span>
               <span className={`focus-counter${form.class_focus.length >= 2 ? " full" : ""}`}>
                 {form.class_focus.length}/2 선택
               </span>
@@ -534,7 +608,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-notes"><span className="num">17</span>수강자 성향 / 흥미</label>
+            <label className="q-label" htmlFor="f-notes"><span className="num">19</span>수강자 성향 / 흥미</label>
             <textarea
               id="f-notes"
               className="area"
@@ -552,7 +626,7 @@ export default function TutorApplyForm() {
           <p className="sec-sub">신청 접수를 위해 필수입니다</p>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-privacy"><span className="num">18</span>개인정보 수집 및 이용 동의<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-privacy"><span className="num">20</span>개인정보 수집 및 이용 동의<span className="req">*</span></label>
             <div className="agree-box">
               <div className="tt">📋 개인정보 수집 및 이용 안내</div>
               <div className="bd">
@@ -576,7 +650,7 @@ export default function TutorApplyForm() {
           </div>
 
           <div className="q">
-            <label className="q-label" htmlFor="f-rules"><span className="num">19</span>튜터 규정 확인<span className="req">*</span></label>
+            <label className="q-label" htmlFor="f-rules"><span className="num">21</span>튜터 규정 확인<span className="req">*</span></label>
             <div className="agree-box">
               <div className="tt">📌 튜터 수업 운영 규정</div>
               <div className="bd" style={{ fontSize: 11.5, lineHeight: 1.75 }}>
