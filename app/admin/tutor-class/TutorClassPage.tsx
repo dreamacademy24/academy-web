@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import TutorApplications from "../tutors/TutorApplications";
 import TutorLessonList from "./TutorLessonList";
+import TutorInvoice from "./TutorInvoice";
 
 type Tab = "applications" | "schedule" | "students" | "invoice";
 
@@ -79,18 +80,7 @@ export default function TutorClassPage() {
 
       {tab === "students" && <TutorLessonList />}
 
-      {tab === "invoice" && (
-        <div className="tc-placeholder">
-          <div className="tc-ph-icon">💰</div>
-          <div className="tc-ph-title">인보이스</div>
-          <div className="tc-ph-note">다음 세션에서 구현 예정</div>
-          <ul className="tc-ph-list">
-            <li>✓ 수강생별 인보이스 미리보기</li>
-            <li>✓ Dream Academy 헤더 + 학생 정보 + 달력 그리드 + 규정 안내</li>
-            <li>✓ PDF 다운로드 / 이미지 저장</li>
-          </ul>
-        </div>
-      )}
+      {tab === "invoice" && <TutorInvoice />}
     </div>
   </>);
 }
