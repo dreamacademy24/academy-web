@@ -632,3 +632,69 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 ### 우선순위
 - **천천히 진행** (2026-04-21 메이와 합의)
 - 긴급 아이템 아님, 기본 기능은 Phase 2로 이미 운영 가능
+
+## 2026-04-22 완료 작업
+
+### 커밋
+- 15a87f5 — 엑셀 다운로드 (2시트: 손님명단/정산용)
+- 5322c95 — /admin/tutor-class 신설 (4탭 + 확정→레슨 자동 변환)
+- 9dd5da8 — 수강생 목록 + 출결 모달 (415라인)
+- 1b51b89 — 타임 수 + 예약자 타입 + 동의 체크박스
+
+### Supabase 스키마 변경
+- `tutor_lessons` + `tutor_lesson_sessions` 테이블 신설 (RLS 비활성화)
+- `tutor_applications`: `sessions_per_day`, `reserver_type`, `agreed_tutor_rules_bool` 추가
+- `tutor_lessons`: `sessions_per_day` 추가
+- 기존 3건 마이그레이션: 샘플 C=2타임, A/B=1타임
+- 기존 lesson(강연미)=1타임
+
+### 71건 실제 신청 데이터 분석 완료
+업로드 파일: 드림하우스__튜터_신청_폼.xlsx
+- 1:1 = 59건 (83%) / 1:2 = 12건 (17%)
+- 시간: 1시간 31건 / 2시간 15건 / 애매 22건 / 복잡 3건
+- 레벨: 비기너 34 / 미디엄 21 / 제로 15 / 어드밴스 1
+- 방향: 놀이+학습 37 / 놀이식 17 / 학습식 17
+- 포커스 1위: "스피킹+액티비티" 29건
+- 튜터 규정 동의 답변 11가지 형태(네/확인/동의/ㅇㅇ 등) → 체크박스로 통일
+
+### 가격 정책 확정
+- 1:1 × 1타임(50분) = ₱300/회
+- 1:1 × 2타임(100분) = ₱600/회
+- 1:2 × 1타임(50분) = ₱350/회
+- 1:2 × 2타임(100분) = ₱700/회
+- `total_amount = total_sessions × sessions_per_day × hourly_rate`
+- 회차 = 수업 날짜 수 (타임 수 아님)
+
+### 실제 운영 패턴 (드림아카데미_최신_26_04_13 CSV)
+- 운영 튜터 17명: janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vincent, harper, gab, suzy, annie, abegail
+- 수강생 14명 / 수업 81건 (4/12~5/28 기간)
+- 가장 활발한 튜터: gerlyn(한지민 Sally 전담) / cristel(한지율 Lily 전담) 각 19건
+- 주요 요일 패턴: 화/목(20), 월~금(12), 월/수/금(7), 화/목/금(6)
+- 한 학생 여러 튜터 케이스: 신도현/최우주 (abegail 5회 + janrey 4회)
+
+### 다음 세션 검증 대기 목록 (브라우저 필수)
+1. /admin/tutor-class 수강생 목록 탭 (강연미 lesson, 출결 모달 8회차, 출석→잔여 감소)
+2. /tutor-apply 새 폼 (Q1 예약자 구분, Q6 타임 수, 실시간 가격 계산)
+3. 테스트 제출 → sessions_per_day, reserver_type, agreed_tutor_rules_bool 저장
+4. /admin/tutors 테이블 "타임" 컬럼 (1T/1T/2T 뱃지)
+5. 샘플 C 모달 자동 계산 "₱300 × 2타임 × 8회 = ~₱4,800"
+6. 엑셀 다운로드 "타임" 컬럼 추가
+7. 샘플 C 재확정 시 lesson.sessions_per_day=2 저장
+8. /admin/tutor-class 수강생 목록 "타임" 컬럼
+
+### 추가 백로그 (우선순위순)
+- 💰 인보이스 탭 (Dream Academy 헤더 + 학생정보 + 달력 그리드 + 규정, html2canvas PDF)
+- 📅 주간 스케줄 탭 (sessions 기반 그리드, online-class This Week 복붙)
+- 수강생 목록 고도화 (confirmed_time 수동 입력 모달, lesson 편집/중단/취소)
+- 튜터 17명 import (CSV 기반)
+- 과거 71건 import (기록 보존용, sessions_per_day 추정 불가한 건 대기)
+- 예약자/하우스 필드 개선 (B번호+L번호 셀렉트박스 or 정규식)
+- 빠지는 날 UI 개선 (라디오 예/아니오/미정 + 조건부 텍스트)
+- 1:2 학생별 분리 (attendance_by_student JSONB)
+- 세션별 튜터 override (tutor_lesson_sessions.tutor_id 추가)
+- RLS 정석 복구 (/api/tutor-apply Next.js API Route + service_role)
+- xlsx-js-style 교체 (헤더 색상 반영)
+
+### 발견된 알려진 버그
+- **필터 모순 (재현 불안정):** 저장 직후 "전체 칩 + 모든 튜터"인데 "0건" 표시되는 경우 있음. 페이지 새로고침 후 정상. race condition 추정
+- **setNative로 모달 select 변경 시** PATCH payload에 assigned_tutor_id 누락 (사람이 직접 클릭 시 정상)
