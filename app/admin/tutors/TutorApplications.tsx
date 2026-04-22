@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
 interface TutorApp {
@@ -23,6 +24,12 @@ const LEVEL_7: Record<string, string> = {
   beginner1: "비기너1", beginner2: "비기너2",
   intermediate1: "미디엄1", intermediate2: "미디엄2",
   advanced1: "어드밴스1", advanced2: "어드밴스2",
+};
+const LEVEL_7_FULL: Record<string, string> = {
+  zero: "제로 베이스",
+  beginner1: "비기너1 (초급1)", beginner2: "비기너2 (초급2)",
+  intermediate1: "미디엄1 (중급1)", intermediate2: "미디엄2 (중급2)",
+  advanced1: "어드밴스1 (고급)", advanced2: "어드밴스2 (심화)",
 };
 const CLASS_STYLE_KR: Record<string, string> = { play: "놀이식", study: "학습식", combined: "놀이+학습" };
 const CLASS_FOCUS_KR: Record<string, string> = {
@@ -74,6 +81,9 @@ export default function TutorApplications() {
 
   // toast
   const [toast, setToast] = useState("");
+
+  // excel download
+  const [downloading, setDownloading] = useState(false);
 
   const loadApps = useCallback(async () => {
     setLoading(true);
@@ -187,6 +197,190 @@ export default function TutorApplications() {
 
   const tutorNameById = (id: string | null | undefined): string => id ? (tutors.find(t => t.id === id)?.name || "-") : "-";
 
+  async function downloadExcel() {
+    if (apps.length === 0 || downloading) return;
+    setDownloading(true);
+    try {
+      // 필터 무시, 전체 재조회
+      const { data, error } = await supabase
+        .from("tutor_applications")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const rows = (data || []) as TutorApp[];
+
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const fmtDT = (iso: string) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      };
+      const fmtD = (iso: string) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+      const joinDays = (arr: string[] | null) =>
+        (arr || []).map(d => DAY_KR[d] || d).join("/");
+      const joinFocus = (arr: string[] | null) =>
+        (arr || []).map(f => CLASS_FOCUS_KR[f] || f).join(", ");
+      const weeksBetween = (s: string, e: string): string => {
+        if (!s || !e) return "";
+        const ms = new Date(s + "T00:00:00").getTime();
+        const me = new Date(e + "T00:00:00").getTime();
+        if (isNaN(ms) || isNaN(me)) return "";
+        const days = Math.max(0, (me - ms) / 86400000);
+        return (days / 7).toFixed(1);
+      };
+      const classTypeBase = (ct: string): string => {
+        if (!ct) return "";
+        const m = ct.match(/1\s*[:：]\s*[12]/);
+        return m ? m[0].replace(/\s+/g, "") : ct;
+      };
+      const classTypePriced = (a: TutorApp): string => {
+        const base = classTypeBase(a.class_type);
+        const rate = a.hourly_rate ? `₱${a.hourly_rate}` : "";
+        return rate ? `${base} (${rate})` : base;
+      };
+
+      // 시트 1: 손님명단
+      const sheet1Rows = rows.map(a => ({
+        "접수일": fmtDT(a.created_at),
+        "예약자/하우스": a.house_or_reserver || "",
+        "수강자 이름": a.children_names || "",
+        "수강자 나이": a.children_ages || "",
+        "수업유형": classTypePriced(a),
+        "시작일": a.start_date || "",
+        "종료일": a.end_date || "",
+        "요일": joinDays(a.class_days),
+        "빠지는 날": a.excluded_dates || "",
+        "희망 시간대": a.class_time || "",
+        "전체 레벨": LEVEL_OVERALL[a.overall_level] || a.overall_level || "",
+        "스피킹": LEVEL_7_FULL[a.speaking_level] || a.speaking_level || "",
+        "리딩": LEVEL_7_FULL[a.reading_level] || a.reading_level || "",
+        "롸이팅": LEVEL_7_FULL[a.writing_level] || a.writing_level || "",
+        "교재": a.textbook || "",
+        "수업 방향": CLASS_STYLE_KR[a.class_style] || a.class_style || "",
+        "수업 포커스": joinFocus(a.class_focus),
+        "성향/흥미": a.child_notes || "",
+        "개인정보 동의": a.agreed_privacy ? "✓" : "",
+        "튜터 규정 동의": a.agreed_tutor_rules ? "✓" : "",
+      }));
+
+      // 시트 2: 정산용
+      type Sheet2Row = {
+        "접수일": string | number; "예약자": string; "수강자": string; "수업유형": string;
+        "시급": number | string; "시작일": string; "종료일": string; "기간(주)": number | string;
+        "요일": string; "담당 튜터": string; "상태": string;
+        "확정 회차": number | string; "확정 금액": number | string;
+        "어드민 메모": string; "업데이트일": string;
+      };
+      const sheet2Rows: Sheet2Row[] = rows.map(a => ({
+        "접수일": fmtD(a.created_at),
+        "예약자": a.house_or_reserver || "",
+        "수강자": a.children_names || "",
+        "수업유형": classTypeBase(a.class_type),
+        "시급": a.hourly_rate || 0,
+        "시작일": a.start_date || "",
+        "종료일": a.end_date || "",
+        "기간(주)": weeksBetween(a.start_date, a.end_date),
+        "요일": joinDays(a.class_days),
+        "담당 튜터": a.assigned_tutor_id ? (tutorNameById(a.assigned_tutor_id) || "(미배정)") : "(미배정)",
+        "상태": STATUS_META[a.status]?.label || a.status || "",
+        "확정 회차": a.total_sessions ?? "",
+        "확정 금액": a.total_amount ?? "",
+        "어드민 메모": a.admin_memo || "",
+        "업데이트일": a.updated_at ? fmtDT(a.updated_at) : "",
+      }));
+      const sumSessions = rows.reduce((s, a) => s + (a.total_sessions || 0), 0);
+      const sumAmount = rows.reduce((s, a) => s + (a.total_amount || 0), 0);
+      sheet2Rows.push({
+        "접수일": `합계 (총 ${rows.length}건)`,
+        "예약자": "", "수강자": "", "수업유형": "", "시급": "",
+        "시작일": "", "종료일": "", "기간(주)": "", "요일": "",
+        "담당 튜터": "", "상태": "",
+        "확정 회차": sumSessions,
+        "확정 금액": sumAmount,
+        "어드민 메모": "", "업데이트일": "",
+      });
+
+      // 워크북 생성
+      const wb = XLSX.utils.book_new();
+      const ws1 = XLSX.utils.json_to_sheet(sheet1Rows);
+      const ws2 = XLSX.utils.json_to_sheet(sheet2Rows);
+
+      // 컬럼 폭
+      ws1["!cols"] = [
+        { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 14 }, { wch: 16 },
+        { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 40 }, { wch: 22 },
+        { wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 25 },
+        { wch: 14 }, { wch: 22 }, { wch: 50 }, { wch: 14 }, { wch: 14 },
+      ];
+      ws2["!cols"] = [
+        { wch: 12 }, { wch: 20 }, { wch: 18 }, { wch: 12 }, { wch: 10 },
+        { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+        { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 40 }, { wch: 16 },
+      ];
+
+      // 자동 필터
+      const ws1Cols = sheet1Rows.length > 0 ? Object.keys(sheet1Rows[0]).length : 0;
+      const ws2Cols = sheet2Rows.length > 0 ? Object.keys(sheet2Rows[0]).length : 0;
+      const colLetter = (i: number) => {
+        let s = "";
+        let n = i;
+        while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+        return s;
+      };
+      if (ws1Cols > 0 && sheet1Rows.length > 0) {
+        ws1["!autofilter"] = { ref: `A1:${colLetter(ws1Cols - 1)}${sheet1Rows.length + 1}` };
+      }
+      if (ws2Cols > 0 && rows.length > 0) {
+        // 합계행 제외한 데이터 범위에만 필터
+        ws2["!autofilter"] = { ref: `A1:${colLetter(ws2Cols - 1)}${rows.length + 1}` };
+      }
+
+      // 셀 스타일 (xlsx 커뮤니티 에디션은 대부분 무시하지만 호환 버전에서는 적용됨)
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1A6FC4" } },
+        alignment: { vertical: "center", horizontal: "center" },
+      };
+      const totalStyle = {
+        font: { bold: true },
+        fill: { fgColor: { rgb: "F1F5F9" } },
+      };
+      const styleHeaderRow = (ws: XLSX.WorkSheet, colCount: number) => {
+        for (let c = 0; c < colCount; c++) {
+          const addr = `${colLetter(c)}1`;
+          const cell = ws[addr];
+          if (cell) (cell as XLSX.CellObject & { s?: unknown }).s = headerStyle;
+        }
+      };
+      styleHeaderRow(ws1, ws1Cols);
+      styleHeaderRow(ws2, ws2Cols);
+      const totalRowNum = rows.length + 2;
+      for (let c = 0; c < ws2Cols; c++) {
+        const addr = `${colLetter(c)}${totalRowNum}`;
+        const cell = ws2[addr];
+        if (cell) (cell as XLSX.CellObject & { s?: unknown }).s = totalStyle;
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws1, "손님명단");
+      XLSX.utils.book_append_sheet(wb, ws2, "정산용");
+
+      // 파일명: 튜터신청_전체_YYYYMMDD_HHmm.xlsx
+      const now = new Date();
+      const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+      XLSX.writeFile(wb, `튜터신청_전체_${stamp}.xlsx`);
+      showToast(`엑셀 다운로드 완료 (${rows.length}건)`);
+    } catch (e) {
+      console.error("엑셀 다운로드 실패:", e);
+      alert("다운로드 실패: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <>
       <style>{`
@@ -202,6 +396,11 @@ export default function TutorApplications() {
 .ta-controls select{min-width:160px}
 .ta-controls input{flex:1;min-width:180px}
 .ta-count{margin-left:auto;font-size:12.5px;color:#475569;font-weight:700;padding:6px 10px;background:#eff6ff;border-radius:8px}
+.ta-xlsx{padding:8px 14px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 120ms;display:inline-flex;align-items:center;gap:6px}
+.ta-xlsx:hover:not(:disabled){background:#15803d}
+.ta-xlsx:disabled{background:#cbd5e1;color:#94a3b8;cursor:not-allowed}
+.ta-spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:taSpin 650ms linear infinite}
+@keyframes taSpin{to{transform:rotate(360deg)}}
 .ta-badge-type{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;background:#eff6ff;color:#1a6fc4}
 .ta-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
 .ta-loading{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
@@ -283,6 +482,15 @@ export default function TutorApplications() {
               aria-label="검색"
             />
             <div className="ta-count">{filteredApps.length}건</div>
+            <button
+              className="ta-xlsx"
+              onClick={downloadExcel}
+              disabled={apps.length === 0 || downloading}
+              title={apps.length === 0 ? "다운로드할 신청이 없습니다" : "tutor_applications 전체 데이터 다운로드 (필터 무시)"}
+              aria-label="엑셀 다운로드"
+            >
+              {downloading ? (<><span className="ta-spin" aria-hidden="true" />생성중...</>) : (<>📥 엑셀 다운로드</>)}
+            </button>
           </div>
         </div>
 
