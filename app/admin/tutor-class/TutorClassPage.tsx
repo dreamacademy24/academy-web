@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import TutorApplications from "../tutors/TutorApplications";
+import TutorLessonList from "./TutorLessonList";
 
 type Tab = "applications" | "schedule" | "students" | "invoice";
 
@@ -76,18 +77,7 @@ export default function TutorClassPage() {
         </div>
       )}
 
-      {tab === "students" && (
-        <div className="tc-placeholder">
-          <div className="tc-ph-icon">👥</div>
-          <div className="tc-ph-title">수강생 목록</div>
-          <div className="tc-ph-note">다음 세션에서 구현 예정</div>
-          <ul className="tc-ph-list">
-            <li>✓ tutor_lessons 테이블 표시</li>
-            <li>✓ 학생명 / 담당 튜터 / 요일 / 기간 / 회차 / 잔여 / 상태</li>
-            <li>✓ 출결 / 인보이스 액션 버튼</li>
-          </ul>
-        </div>
-      )}
+      {tab === "students" && <TutorLessonList />}
 
       {tab === "invoice" && (
         <div className="tc-placeholder">
