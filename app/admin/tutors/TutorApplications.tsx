@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 
@@ -71,8 +71,12 @@ export default function TutorApplications() {
   const [tutorFilter, setTutorFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
 
-  // detail modal
-  const [detail, setDetail] = useState<TutorApp | null>(null);
+  // detail modal — 원본 row 객체를 저장하지 않고 id만 보관.
+  // 렌더 시점에 apps.find(a => a.id === detailId)로 조회하여
+  // 클릭 후 리스트가 재렌더/리페치되더라도 detail 필드와 id가 어긋나지 않도록 보장.
+  // apps에서 사라진 경우(삭제 등) 폴백으로 클릭 당시 스냅샷 사용.
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailSnap, setDetailSnap] = useState<TutorApp | null>(null);
   const [adminForm, setAdminForm] = useState(ADMIN_FORM_INIT);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -100,13 +104,29 @@ export default function TutorApplications() {
   }, []);
   useEffect(() => { loadApps(); loadTutors(); }, [loadApps, loadTutors]);
 
+  // 파생 detail — 항상 apps의 현재 상태 기준으로 조회. id와 필드 일관성 보장.
+  const detail = useMemo<TutorApp | null>(() => {
+    if (!detailId) return null;
+    const fromList = apps.find(a => a.id === detailId);
+    return fromList || detailSnap;
+  }, [detailId, apps, detailSnap]);
+
+  // 모달 오픈·detail 갱신 진단 로그 — id와 표시 필드의 일관성 추적용
+  useEffect(() => {
+    if (detailId) {
+      console.log("[modal state]", { detailId, resolved: detail ? { id: detail.id, names: detail.children_names, house: detail.house_or_reserver } : null });
+    }
+  }, [detailId, detail]);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(""), 2500);
   }
 
   function openDetail(a: TutorApp, focusAssign = false) {
-    setDetail(a);
+    console.log("[openDetail]", { id: a.id, names: a.children_names, house: a.house_or_reserver });
+    setDetailId(a.id);
+    setDetailSnap(a);
     setAdminForm({
       status: a.status || "pending",
       assigned_tutor_id: a.assigned_tutor_id || "",
@@ -117,10 +137,11 @@ export default function TutorApplications() {
     setModalError("");
     if (focusAssign) setTimeout(() => tutorSelectRef.current?.focus(), 100);
   }
-  function closeDetail() { setDetail(null); setModalError(""); setShowDeleteConfirm(false); }
+  function closeDetail() { setDetailId(null); setDetailSnap(null); setModalError(""); setShowDeleteConfirm(false); }
 
   async function saveAdmin() {
     if (!detail) return;
+    console.log("[save start]", { id: detail.id, names: detail.children_names, house: detail.house_or_reserver });
     setSaving(true);
     setModalError("");
     const oldStatus = detail.status;
