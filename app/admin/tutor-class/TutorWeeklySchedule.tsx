@@ -261,7 +261,6 @@ export default function TutorWeeklySchedule() {
 .tws-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;font-size:11.5px;color:#475569;font-weight:700;padding:8px 12px;background:#fff;border-radius:10px;border:1px solid #e2e8f0}
 .tws-legend .chip{display:inline-flex;align-items:center;gap:5px}
 .tws-legend .dot{width:10px;height:10px;border-radius:50%}
-.tws-legend .none{color:#94a3b8;font-weight:600}
 
 .tws-grid{display:grid;grid-template-columns:repeat(7,minmax(140px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
 .tws-col{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:10px;min-height:420px;display:flex;flex-direction:column}
@@ -337,31 +336,25 @@ export default function TutorWeeklySchedule() {
       <div className="tws-cnt">{filteredSessions.length} sessions</div>
     </div>
 
-    <div className="tws-legend">
-      {legendTutors.length === 0 && !hasUnassigned ? (
-        <span className="none">표시할 튜터가 없습니다</span>
-      ) : (
-        <>
-          {legendTutors.map(t => (
-            <span key={t.id} className="chip">
-              <span className="dot" style={{ background: t.color }} />
-              {t.name}
-            </span>
-          ))}
-          {hasUnassigned && (
-            <span className="chip">
-              <span className="dot" style={{ background: UNASSIGNED_COLOR }} />
-              (미배정)
-            </span>
-          )}
-        </>
-      )}
-    </div>
+    {(legendTutors.length > 0 || hasUnassigned) && (
+      <div className="tws-legend">
+        {legendTutors.map(t => (
+          <span key={t.id} className="chip">
+            <span className="dot" style={{ background: t.color }} />
+            {t.name}
+          </span>
+        ))}
+        {hasUnassigned && (
+          <span className="chip">
+            <span className="dot" style={{ background: UNASSIGNED_COLOR }} />
+            (미배정)
+          </span>
+        )}
+      </div>
+    )}
 
     {loading ? (
       <div className="tws-week-empty">로딩 중...</div>
-    ) : filteredSessions.length === 0 ? (
-      <div className="tws-week-empty">이 주에 예정된 수업이 없습니다.</div>
     ) : (
       <div className="tws-grid">
         {week.dates.map((date, i) => {
