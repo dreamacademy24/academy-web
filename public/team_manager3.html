@@ -1044,7 +1044,16 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .rk-hint{font-size:11px;color:#94a3b8;}
 .rk-submit-btn{padding:9px 22px;background:var(--primary,#1a6fc4);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
 .rk-submit-btn:hover{opacity:.9;}
+
+/* Drag-to-reorder (SortableJS) — Phase A+B: 체크리스트/하위업무 */
+.drag-handle{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;color:#9ca3af;font-size:13px;line-height:1;cursor:grab;user-select:none;flex-shrink:0;letter-spacing:-1px;touch-action:none;}
+.drag-handle:hover{color:#4b5563;}
+.drag-handle:active{cursor:grabbing;}
+.sortable-ghost{opacity:.5;}
+.sortable-chosen{cursor:grabbing;}
+.sortable-drag{opacity:1;box-shadow:0 4px 14px rgba(0,0,0,.12);}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
@@ -2712,9 +2721,11 @@ function renderBoardTaskDetail(taskId){
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    html+='<div class="sub-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.items.map(function(c,idx){
-      return '<div style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
+      return '<div class="sub-item" style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
         '<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="_subTaskToggle(\''+t.id+'\','+idx+',event)">'+
+          (canEdit?'<span class="drag-handle" title="드래그하여 순서 변경" onclick="event.stopPropagation()">⋮⋮</span>':'')+
           '<div style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex-shrink:0;transition:all .15s">'+(c.done?'✓':'')+'</div>'+
           '<span style="flex:1;font-size:13px;color:'+(c.done?'var(--text3)':'var(--text)')+';'+(c.done?'text-decoration:line-through':'')+'" >'+esc(c.title||c.text||'')+'</span>'+
           (c.due?'<span style="font-size:10px;color:var(--text3)">📅 '+c.due+'</span>':'')+
@@ -2728,7 +2739,7 @@ function renderBoardTaskDetail(taskId){
         '</div>'+
       '</div>';
     }).join('');
-    html+='</div>';
+    html+='</div></div>';
   }
   if(t.files&&t.files.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">📎 첨부파일</div>'+renderTaskFiles(t)+'</div>';
@@ -2740,6 +2751,7 @@ function renderBoardTaskDetail(taskId){
   }
   html+='<div style="display:flex;gap:6px"><textarea id="boardCmtInp" placeholder="댓글 입력..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:none;height:60px"></textarea><button onclick="_boardSendCmt(\''+t.id+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">전송</button></div></div>';
   d.innerHTML=html;
+  if(canEdit){var sl=d.querySelector('.sub-list');if(sl)_initClSortable(sl,t.id,'subtasks');}
 }
 function _boardSendCmt(taskId){
   var inp=document.getElementById('boardCmtInp');if(!inp)return;
@@ -3577,9 +3589,11 @@ function renderEmpDetail(taskId){
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    html+='<div class="sub-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.items.map(function(c,idx){
-      return '<div style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
+      return '<div class="sub-item" style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
         '<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="_subTaskToggle(\''+t.id+'\','+idx+',event)">'+
+          (canEdit?'<span class="drag-handle" title="드래그하여 순서 변경" onclick="event.stopPropagation()">⋮⋮</span>':'')+
           '<div style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#fff;flex-shrink:0;transition:all .15s">'+(c.done?'✓':'')+'</div>'+
           '<span style="flex:1;font-size:13px;color:'+(c.done?'var(--text3)':'var(--text)')+';'+(c.done?'text-decoration:line-through':'')+'" >'+esc(c.title||c.text||'')+'</span>'+
           (c.due?'<span style="font-size:10px;color:var(--text3)">📅 '+c.due+'</span>':'')+
@@ -3593,7 +3607,7 @@ function renderEmpDetail(taskId){
         '</div>'+
       '</div>';
     }).join('');
-    html+='</div>';
+    html+='</div></div>';
   }
   if(t.files&&t.files.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">📎 첨부파일</div>'+renderTaskFiles(t)+'</div>';
@@ -3605,6 +3619,7 @@ function renderEmpDetail(taskId){
   }
   html+='<div style="display:flex;gap:6px"><textarea id="empCmtInp" placeholder="댓글 입력..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:none;height:60px"></textarea><button onclick="_empSendCmt(\''+t.id+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">전송</button></div></div>';
   d.innerHTML=html;
+  if(canEdit){var sl2=d.querySelector('.sub-list');if(sl2)_initClSortable(sl2,t.id,'subtasks');}
 }
 function _empSendCmt(taskId){
   var inp=document.getElementById('empCmtInp');if(!inp)return;
@@ -4697,6 +4712,35 @@ function addTMChecklist(){
   }catch(e){console.error('addTMChecklist error:',e);}
 }
 
+// Phase A+B: SortableJS로 체크리스트/하위업무 재정렬. JSONB 배열을 새 순서로 덮어쓰기.
+// mode = 'checklist' | 'subtasks'
+function _initClSortable(wrap,taskId,mode){
+  if(!wrap||typeof Sortable==='undefined')return;
+  if(wrap._sortable){try{wrap._sortable.destroy();}catch(e){}}
+  wrap._sortable=Sortable.create(wrap,{
+    handle:'.drag-handle',
+    draggable:mode==='subtasks'?'.sub-item':'.cl-item',
+    animation:150,
+    ghostClass:'sortable-ghost',
+    chosenClass:'sortable-chosen',
+    dragClass:'sortable-drag',
+    onEnd:function(evt){
+      if(evt.oldIndex===evt.newIndex||evt.oldIndex==null||evt.newIndex==null)return;
+      var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
+      if(mode==='checklist'){
+        if(!Array.isArray(t.checklist))return;
+        var moved=t.checklist.splice(evt.oldIndex,1)[0];
+        t.checklist.splice(evt.newIndex,0,moved);
+      } else if(mode==='subtasks'){
+        if(!t.checklist||!t.checklist._sub||!Array.isArray(t.checklist.items))return;
+        var mItem=t.checklist.items.splice(evt.oldIndex,1)[0];
+        t.checklist.items.splice(evt.newIndex,0,mItem);
+      } else return;
+      svTasks();syncTaskToSB(t);
+    }
+  });
+}
+
 function renderEmpChecklist(taskId,container,canEdit){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t){container.innerHTML='';return;}
   if(taskHasSubtasks(t)){container.innerHTML='';return;}
@@ -4714,6 +4758,7 @@ function renderEmpChecklist(taskId,container,canEdit){
   }
   t.checklist.forEach(function(c,i){
     const item=document.createElement('div');item.className='cl-item';
+    if(canEdit){var dh=document.createElement('span');dh.className='drag-handle';dh.textContent='⋮⋮';dh.title='드래그하여 순서 변경';item.appendChild(dh);}
     const cb=document.createElement('div');cb.className='cl-cb'+(c.done?' checked':'');cb.onclick=function(){togEmpCl(taskId,i);};item.appendChild(cb);
     if(canEdit){
       const textSpan=document.createElement('span');textSpan.className='cl-text'+(c.done?' done-text':'');textSpan.style.cssText='flex:1;cursor:text;min-width:0;';textSpan.textContent=c.text;textSpan.title='클릭하여 수정';
@@ -4741,6 +4786,7 @@ function renderEmpChecklist(taskId,container,canEdit){
     wrap.appendChild(ar);
   }
   container.appendChild(wrap);
+  if(canEdit)_initClSortable(wrap,taskId,'checklist');
 }
 function togEmpCl(taskId,idx){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t||!t.checklist)return;
@@ -4768,6 +4814,7 @@ function renderDetailChecklist(taskId,container,canEdit){
   if(total>0){const bar=document.createElement('div');bar.className='cl-bar';bar.innerHTML='<div class="cl-bar-fill" style="width:'+pct+'%;background:'+ec+'"></div>';wrap.appendChild(bar);}
   t.checklist.forEach(function(c,i){
     const item=document.createElement('div');item.className='cl-item';
+    if(canEdit){var dh2=document.createElement('span');dh2.className='drag-handle';dh2.textContent='⋮⋮';dh2.title='드래그하여 순서 변경';item.appendChild(dh2);}
     const cb=document.createElement('div');cb.className='cl-cb'+(c.done?' checked':'');cb.onclick=function(){togDetailCl(taskId,i);};item.appendChild(cb);
     if(canEdit){
       const ts=document.createElement('span');ts.className='cl-text'+(c.done?' done-text':'');ts.style.cssText='flex:1;cursor:text;min-width:0;';ts.textContent=c.text;ts.title='클릭하여 수정';
@@ -4786,6 +4833,7 @@ function renderDetailChecklist(taskId,container,canEdit){
   if(canEdit){const ar=document.createElement('div');ar.className='cl-add-row';ar.innerHTML='<input class="cl-add-inp" id="dcl-inp-'+taskId+'" placeholder="항목 추가..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();addDetailCl(\''+taskId+'\');}" /><button class="cl-add-btn" onclick="addDetailCl(\''+taskId+'\')">+</button>';wrap.appendChild(ar);}
   if(!t.checklist.length&&!canEdit)wrap.innerHTML+='<div style="font-size:12px;color:var(--text3);padding:4px 0">체크리스트 항목이 없습니다</div>';
   container.appendChild(wrap);
+  if(canEdit)_initClSortable(wrap,taskId,'checklist');
 }
 function togDetailCl(taskId,idx){
   const t=tasks.find(function(t){return t.id===taskId;});if(!t||!t.checklist)return;
@@ -4895,16 +4943,20 @@ function openTaskCmt(taskId){
     var subDiv=document.createElement('div');
     subDiv.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🔀 하위 업무 ('+subDone+'/'+subItems.length+')</div>';
     var subBar=document.createElement('div');subBar.className='cl-bar';subBar.innerHTML='<div class="cl-bar-fill" style="width:'+subPct+'%;background:'+ec+'"></div>';subDiv.appendChild(subBar);
+    var subListEl=document.createElement('div');subListEl.className='sub-list';subListEl.dataset.task=t.id;
     subItems.forEach(function(s,si){
       var se=getP(s.assignee);var seTag=se?'<span style="font-size:10px;background:'+se.color+'18;color:'+se.color+';padding:1px 6px;border-radius:99px">'+se.name+'</span>':'';
       var sdl=dL(s.due);var sdTag=sdl?'<span class="tag '+sdl.cls+'" style="font-size:10px;padding:1px 5px">'+sdl.text+'</span>':'';
-      var sEl=document.createElement('div');sEl.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+(s.done?'var(--surface,#f8fafc)':'#eff6ff')+';border:1px solid '+(s.done?'var(--border,#e2e8f0)':'#bfdbfe')+';border-radius:8px;margin-top:6px;cursor:pointer';
-      sEl.innerHTML='<div class="cl-cb'+(s.done?' checked':'')+'" onclick="togSubInDetail(\''+taskId+'\','+si+')"></div>'+
+      var sEl=document.createElement('div');sEl.className='sub-item';sEl.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+(s.done?'var(--surface,#f8fafc)':'#eff6ff')+';border:1px solid '+(s.done?'var(--border,#e2e8f0)':'#bfdbfe')+';border-radius:8px;margin-top:6px;cursor:pointer';
+      sEl.innerHTML=(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+
+        '<div class="cl-cb'+(s.done?' checked':'')+'" onclick="togSubInDetail(\''+taskId+'\','+si+')"></div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;'+(s.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(s.title)+'</div>'+
         (seTag||sdTag||s.note?'<div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">'+seTag+sdTag+(s.note?'<span style="font-size:10px;color:var(--text3)">📝</span>':'')+'</div>':'')+'</div>';
-      subDiv.appendChild(sEl);
+      subListEl.appendChild(sEl);
     });
+    subDiv.appendChild(subListEl);
     progWrap.appendChild(subDiv);
+    if(canEdit)_initClSortable(subListEl,taskId,'subtasks');
   } else {
     const clDiv=document.createElement('div');clDiv.id='tcm-cl-'+taskId;renderDetailChecklist(taskId,clDiv,canEdit);progWrap.appendChild(clDiv);
   }
