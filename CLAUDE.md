@@ -712,3 +712,51 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 - Supabase 새 테이블 생성 시 자동 RLS enable. DISABLE + GRANT 별도 SQL 필요
 - `TRIM(boolean)` 에러 → `COALESCE(컬럼, false)` 사용
 - 과거 자유 텍스트 데이터는 자동 파싱 어려움. 새 폼에서 구조화 후 기록 보존용으로만 import
+
+# 2026-04-23 세션 (Phase 4 완성 + 17명 import + 동기화 버그 발견/수정)
+
+## 완료 커밋
+- aecbca5 — 인보이스(TUTOR INFORMATION) + html2canvas PNG 저장
+- bc5b8f6 — 주간 스케줄 (7-컬럼 그리드 + 튜터 색상 + 세션 모달)
+- 89c32c1 — fix: 신청 튜터 변경 시 tutor_lessons.tutor_id 자동 동기화
+
+## Supabase 작업
+- 튜터 17명 일괄 INSERT 완료 (Sam, Gerlyn, Jessa, Erica, Crista, Mel, Cristel, Janrey, Phen, Vincent, Harper, Gab, Suzy, Annie, Abegail) + Janet 시급 보정
+- 강연미 → Janet 배정 (PATCH 성공)
+- 이유정 → Joy 배정 (PATCH 성공)
+
+## tutors 테이블 스키마 메모
+- INSERT 시 `active` 컬럼 제외 필요 (default 자동)
+- 컬럼명: `name`, `specialty`, `hourly_rate`
+- 에러 42703: `column "active" does not exist` (다른 이름이거나 default 처리)
+
+## 라이브 검증 결과
+- ✅ Phase 4 인보이스 탭 완전 동작 (TUTOR INFORMATION 샘플 매칭)
+- ✅ Phase 4 주간 스케줄 탭 완전 동작
+- ✅ 17명 import 모든 드롭다운에 노출 확인 (필터/배정 모달)
+- ✅ 신청 수신함 테이블에 배정된 튜터 즉시 반영
+
+## 🐛 발견된 버그 + 수정 완료 (89c32c1)
+**튜터 배정 → 주간 스케줄 동기화 안 됨**
+- 증상: `tutor_applications.assigned_tutor_id` 업데이트 후 `tutor_lessons.tutor_id` 자동 sync 누락
+- 결과: 강연미에 Janet 배정 후 주간 스케줄 5/13 카드 여전히 "미배정" 회색
+- 해결: Option A (클라이언트 사이드 동기화) 채택
+  · `TutorApplications.saveAdmin()` 내부 application UPDATE 성공 후 `oldTutorId !== newTutorId` 조건일 때만
+    `UPDATE tutor_lessons SET tutor_id = $new WHERE application_id = $id` 실행
+  · lesson 미존재 시 0 rows matched = 안전한 no-op (최초 confirmed 분기는 INSERT가 tutor_id 직접 세팅)
+  · 동기화 실패 시 경고 토스트 append, 상위 저장은 성공 처리 (비차단)
+- 검증 대기: 이미 확정된 건에서 튜터 재배정 → 주간 스케줄 카드 색상/이름 즉시 반영
+- 향후 과제: Option B (Postgres Trigger)는 공개 API/다른 어드민 경로가 생길 때 정석 전환
+
+## 다음 세션 우선순위
+1. 빈 주 그리드 마이크로픽스 (Mon~Sun 헤더 항상 표시)
+2. 수강생 목록 고도화 (confirmed_time 수동 입력 모달, lesson 편집/중단/취소)
+3. 과거 71건 신청 import (기록 보존)
+4. 폼 개선 (하우스 정규식 B[숫자]-L[숫자], 1:2 학생 이름+나이 분리)
+5. `/tutor/portal` 튜터 개인 로그인
+
+## Key learnings 추가
+- Supabase INSERT 에러 42703: 존재하지 않는 컬럼명 지정 시 발생. default 처리되는 컬럼은 payload에서 제외
+- Native HTML `<select>`에 키보드 'j' 누르면 J로 시작하는 옵션 순환 점프 (Janet → Janrey → Jessa → Joy)
+- Postgres "Success. No rows returned" = INSERT/UPDATE 성공 응답 (RETURNING/SELECT 없으면 0 rows 반환)
+- **동기화 Option A vs B 패턴:** 단일 클라이언트 경로는 코드 내 동기화로 충분. 다중 진입점(공개 API, 직접 SQL) 예정이면 Trigger 정석. 상태 전환 직후 파생 데이터 동기화가 필요한 모든 케이스에 적용 가능
