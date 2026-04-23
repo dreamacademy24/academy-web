@@ -2716,8 +2716,9 @@ function renderBoardTaskDetail(taskId){
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
-    html+=t.checklist.map(function(c){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'"><span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
-    html+='</div>';
+    html+='<div class="cl-list" data-task="'+esc(t.id)+'">';
+    html+=t.checklist.map(function(c){return '<div class="cl-item" style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+'<span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
+    html+='</div></div>';
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
@@ -2751,7 +2752,7 @@ function renderBoardTaskDetail(taskId){
   }
   html+='<div style="display:flex;gap:6px"><textarea id="boardCmtInp" placeholder="댓글 입력..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:none;height:60px"></textarea><button onclick="_boardSendCmt(\''+t.id+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">전송</button></div></div>';
   d.innerHTML=html;
-  if(canEdit){var sl=d.querySelector('.sub-list');if(sl)_initClSortable(sl,t.id,'subtasks');}
+  if(canEdit){var sl=d.querySelector('.sub-list');if(sl)_initClSortable(sl,t.id,'subtasks');var cl=d.querySelector('.cl-list');if(cl)_initClSortable(cl,t.id,'checklist');}
 }
 function _boardSendCmt(taskId){
   var inp=document.getElementById('boardCmtInp');if(!inp)return;
@@ -3584,8 +3585,9 @@ function renderEmpDetail(taskId){
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
-    html+=t.checklist.map(function(c){return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'"><span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
-    html+='</div>';
+    html+='<div class="cl-list" data-task="'+esc(t.id)+'">';
+    html+=t.checklist.map(function(c){return '<div class="cl-item" style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+'<span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
+    html+='</div></div>';
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
     html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
@@ -3619,7 +3621,7 @@ function renderEmpDetail(taskId){
   }
   html+='<div style="display:flex;gap:6px"><textarea id="empCmtInp" placeholder="댓글 입력..." style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:none;height:60px"></textarea><button onclick="_empSendCmt(\''+t.id+'\')" style="padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">전송</button></div></div>';
   d.innerHTML=html;
-  if(canEdit){var sl2=d.querySelector('.sub-list');if(sl2)_initClSortable(sl2,t.id,'subtasks');}
+  if(canEdit){var sl2=d.querySelector('.sub-list');if(sl2)_initClSortable(sl2,t.id,'subtasks');var cl2=d.querySelector('.cl-list');if(cl2)_initClSortable(cl2,t.id,'checklist');}
 }
 function _empSendCmt(taskId){
   var inp=document.getElementById('empCmtInp');if(!inp)return;
