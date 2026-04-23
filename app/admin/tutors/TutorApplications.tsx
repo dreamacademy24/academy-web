@@ -142,8 +142,25 @@ export default function TutorApplications() {
       return;
     }
 
+    // 기존 tutor_lessons에 튜터 변경 동기화 — 이미 확정돼 lesson이 생성된 신청건에 대해
+    // application 측 assigned_tutor_id 변경이 lesson.tutor_id에 반영되도록.
+    // lesson이 아직 없으면 매칭 0건 = no-op (아래 최초 confirmed 분기가 INSERT 시 tutor_id 직접 세팅).
+    const oldTutorId = detail.assigned_tutor_id || null;
+    const newTutorId = adminForm.assigned_tutor_id || null;
+    let syncWarning = "";
+    if (oldTutorId !== newTutorId) {
+      const { error: syncErr } = await supabase
+        .from("tutor_lessons")
+        .update({ tutor_id: newTutorId })
+        .eq("application_id", detail.id);
+      if (syncErr) {
+        console.warn("lesson 튜터 동기화 실패:", syncErr);
+        syncWarning = " (수업 튜터 동기화 실패: " + syncErr.message + ")";
+      }
+    }
+
     // 최초 confirmed 전환 시 → tutor_lessons + tutor_lesson_sessions 자동 생성
-    let postMsg = "저장되었습니다";
+    let postMsg = "저장되었습니다" + syncWarning;
     if (newStatus === "confirmed" && oldStatus !== "confirmed") {
       const { data: existing, error: exErr } = await supabase
         .from("tutor_lessons")
