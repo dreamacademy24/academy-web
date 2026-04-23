@@ -5,6 +5,7 @@ import { isAdminAuthed } from "@/lib/adminAuth";
 import TutorApplications from "../tutors/TutorApplications";
 import TutorLessonList from "./TutorLessonList";
 import TutorInvoice from "./TutorInvoice";
+import TutorWeeklySchedule from "./TutorWeeklySchedule";
 
 type Tab = "applications" | "schedule" | "students" | "invoice";
 
@@ -64,19 +65,7 @@ export default function TutorClassPage() {
 
       {tab === "applications" && <TutorApplications />}
 
-      {tab === "schedule" && (
-        <div className="tc-placeholder">
-          <div className="tc-ph-icon">📅</div>
-          <div className="tc-ph-title">주간 스케줄</div>
-          <div className="tc-ph-note">다음 세션에서 구현 예정</div>
-          <ul className="tc-ph-list">
-            <li>✓ 월~일 그리드 (online-class This Week 스타일)</li>
-            <li>✓ 튜터별 색상 구분</li>
-            <li>✓ 세션 클릭 시 상세 모달</li>
-            <li>✓ 이전/다음 주 네비게이션</li>
-          </ul>
-        </div>
-      )}
+      {tab === "schedule" && <TutorWeeklySchedule />}
 
       {tab === "students" && <TutorLessonList />}
 
