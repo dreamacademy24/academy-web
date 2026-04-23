@@ -1665,6 +1665,9 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </div>
 
 <script>
+// 배포 버전 검증용 — 브라우저 콘솔에서 window.__tmVersion 로 확인
+window.__tmVersion='drag-fix-3:' + new Date().toISOString().slice(0,16);
+console.log('[TM] team_manager3.html loaded, version marker:', window.__tmVersion);
 
 var SB_URL='https://yiglafscjvjgkxpycevk.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODgzMjcsImV4cCI6MjA4OTY2NDMyN30.k_HErGsz5oYkILWvUGRaU3x1IXKMQOuO5X312tDcXe4';
@@ -2715,13 +2718,15 @@ function renderBoardTaskDetail(taskId){
     html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
-    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
+    console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트 <span style="font-size:10px;color:#9ca3af;font-weight:400">[drag-fix-3]</span></div>';
     html+='<div class="cl-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.map(function(c){return '<div class="cl-item" style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+'<span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
     html+='</div></div>';
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
-    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    console.log('[taskDetail] SUBTASK branch, items:',t.checklist.items.length,'canEdit:',canEdit,'taskId:',t.id);
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무 <span style="font-size:10px;color:#9ca3af;font-weight:400">[drag-fix-3]</span></div>';
     html+='<div class="sub-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.items.map(function(c,idx){
       return '<div class="sub-item" style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
@@ -3550,6 +3555,7 @@ function renderEmpDetail(taskId){
   var d=document.getElementById('empDetail');if(!d)return;
   var t=tasks.find(function(x){return x.id===taskId;});
   if(!t){renderEmpDetailEmpty(getP(curEmpId));return;}
+  console.log('[renderEmpDetail]',{taskId:taskId,title:t.title,checklistType:typeof t.checklist,isArray:Array.isArray(t.checklist),sub:t.checklist&&t.checklist._sub,length:t.checklist?(Array.isArray(t.checklist)?t.checklist.length:(t.checklist.items?t.checklist.items.length:0)):0});
   var emp=t.assignee?getP(t.assignee):null;
   var ec=emp?emp.color:'#9ca3af';
   var dueT=t.due?dL(t.due):null;
@@ -3584,13 +3590,15 @@ function renderEmpDetail(taskId){
     html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
-    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트</div>';
+    console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">✅ 체크리스트 <span style="font-size:10px;color:#9ca3af;font-weight:400">[drag-fix-3]</span></div>';
     html+='<div class="cl-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.map(function(c){return '<div class="cl-item" style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:13px;'+(c.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+'<span style="width:14px;height:14px;border:1.5px solid '+(c.done?'#10b981':'var(--border2)')+';background:'+(c.done?'#10b981':'transparent')+';color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">'+(c.done?'✓':'')+'</span>'+esc(c.text||'')+'</div>';}).join('');
     html+='</div></div>';
   }
   if(t.checklist&&t.checklist._sub&&Array.isArray(t.checklist.items)&&t.checklist.items.length){
-    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무</div>';
+    console.log('[taskDetail] SUBTASK branch, items:',t.checklist.items.length,'canEdit:',canEdit,'taskId:',t.id);
+    html+='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:800;color:var(--text2);margin-bottom:6px">🔀 하위 업무 <span style="font-size:10px;color:#9ca3af;font-weight:400">[drag-fix-3]</span></div>';
     html+='<div class="sub-list" data-task="'+esc(t.id)+'">';
     html+=t.checklist.items.map(function(c,idx){
       return '<div class="sub-item" style="display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:7px;background:'+(c.done?'#f0fdf4':'var(--surface2)')+';margin-bottom:4px">'+
