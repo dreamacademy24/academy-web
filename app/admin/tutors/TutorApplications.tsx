@@ -148,15 +148,33 @@ export default function TutorApplications() {
     const oldTutorId = detail.assigned_tutor_id || null;
     const newTutorId = adminForm.assigned_tutor_id || null;
     let syncWarning = "";
+    console.log("[lesson sync] appId:", detail.id, "oldTutorId:", oldTutorId, "newTutorId:", newTutorId);
     if (oldTutorId !== newTutorId) {
-      const { error: syncErr } = await supabase
+      console.log("[lesson sync] UPDATE tutor_lessons 실행");
+      const { error: syncErr, data: syncData } = await supabase
         .from("tutor_lessons")
         .update({ tutor_id: newTutorId })
-        .eq("application_id", detail.id);
+        .eq("application_id", detail.id)
+        .select("id, application_id, tutor_id");
+      console.log("[lesson sync] result:", { error: syncErr, rows: syncData });
       if (syncErr) {
         console.warn("lesson 튜터 동기화 실패:", syncErr);
         syncWarning = " (수업 튜터 동기화 실패: " + syncErr.message + ")";
+      } else if (!syncData || syncData.length === 0) {
+        // 에러는 아니지만 매칭된 lesson이 0건 — 원인 후보:
+        //   · lesson이 아직 없음 (최초 confirmed 분기에서 곧 INSERT됨 → OK)
+        //   · lesson은 있지만 application_id가 null이거나 다름 (수동 생성 건)
+        //   · RLS에 의해 UPDATE 대상이 필터링됨
+        console.warn("[lesson sync] 0 rows matched. application_id가 null이거나 lesson이 다른 방식으로 생성됐을 수 있음. appId:", detail.id);
+        // 새로 confirmed 전환 중이면 곧 INSERT될 예정이므로 경고 생략
+        if (!(newStatus === "confirmed" && oldStatus !== "confirmed")) {
+          syncWarning = " (연결된 수업을 찾지 못함 — 콘솔 확인)";
+        }
+      } else {
+        console.log("[lesson sync] ✓", syncData.length, "개 lesson 동기화 완료");
       }
+    } else {
+      console.log("[lesson sync] 변경 없음, 스킵");
     }
 
     // 최초 confirmed 전환 시 → tutor_lessons + tutor_lesson_sessions 자동 생성
