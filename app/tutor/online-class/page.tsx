@@ -1,8 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import { TUTOR_COLORS } from "@/lib/tutorColors";
 import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
+
+// Admin이 다른 튜터 대시보드를 열람할 때 사용할 계정 목록.
+// staff_user_id 값은 app/login/page.tsx의 tutor 계정과 동일.
+const TUTOR_ACCOUNTS: { id: string; label: string }[] = [
+  { id: "admin-ann",     label: "T.Ann" },
+  { id: "admin-angel",   label: "T.Angel" },
+  { id: "admin-carla",   label: "T.Carla" },
+  { id: "admin-amelyn",  label: "T.Amelyn" },
+  { id: "admin-cristel", label: "T.Cristel" },
+];
 
 interface Tutor {
   id: string;
@@ -110,8 +121,10 @@ function capDays(days: string[] | null) {
 }
 
 function TutorOnlineClassInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
+  const [adminRole, setAdminRole] = useState<string>("");
   const [tab, setTab] = useState<"today" | "students" | "schedule">("today");
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [loadingTutor, setLoadingTutor] = useState(true);
@@ -130,8 +143,13 @@ function TutorOnlineClassInner() {
   const selectedDate = addDays(fmt(new Date()), dateOffset);
 
   useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
-    else if (typeof window !== "undefined") window.location.href = "/login";
+    if (isAdminAuthed()) {
+      setAuthed(true);
+      const info = getAdminInfo();
+      setAdminRole(info?.role || "");
+    } else if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
   }, []);
 
   const resolveTutor = useCallback(async () => {
@@ -226,6 +244,8 @@ function TutorOnlineClassInner() {
   });
   const sortedDates = Object.keys(weekByDate).sort();
 
+  const tutorParam = searchParams.get("tutor");
+
   if (!authed) return null;
 
   return (<>
@@ -302,17 +322,51 @@ function TutorOnlineClassInner() {
 .wk-meta{font-size:10px;color:#94a3b8;margin-bottom:4px}
 .wk-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
 .wk-note-icon{position:absolute;top:6px;right:6px;font-size:11px;cursor:help}
+.tv-admin-ribbon{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;font-size:12.5px;color:#78350f;font-weight:700;flex-wrap:wrap;margin-bottom:14px}
+.tv-admin-ribbon select{padding:4px 10px;border:1px solid #fcd34d;border-radius:6px;background:#fff;font-size:12.5px;font-family:inherit;font-weight:700;color:#78350f;cursor:pointer;outline:none}
+.tv-admin-ribbon select:focus{border-color:#f59e0b}
+.tv-admin-ribbon .tv-admin-switch{color:#1a6fc4;font-weight:700;text-decoration:none;font-size:12px}
+.tv-admin-ribbon .tv-admin-switch:hover{text-decoration:underline}
+.tv-select-intro{margin-bottom:10px}
+.tv-select-intro h2{font-size:18px;font-weight:800;color:#1a1a2e;margin:0 0 4px}
+.tv-select-intro p{font-size:13px;color:#6b7c93;margin:0}
+.tv-select-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:14px}
+.tv-select-card{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;font-size:16px;font-weight:800;color:#fff;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.08);transition:transform 120ms,box-shadow 120ms;text-align:center;padding:8px}
+.tv-select-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.18)}
+@media(max-width:800px){.tv-select-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.tv-select-grid{grid-template-columns:repeat(2,1fr)}.tv-admin-ribbon{width:100%}}
     `}</style>
     <div className="tv-w">
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8}}>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8,alignItems:'center'}}>
         <a href="/admin/online-class-attendance" className="tv-back" style={{margin:0}}>← Back to Attendance</a>
         <a href="/tutor/guide" className="tv-back" style={{margin:0,background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Guide</a>
+        {adminRole === "admin" && tutorParam && tutor && (
+          <div className="tv-admin-ribbon" style={{marginLeft:'auto'}}>
+            <span>👁 Admin view — showing {tutor.name_display}</span>
+            <select
+              value={tutorParam}
+              onChange={e => router.push(`/tutor/online-class?tutor=${e.target.value}`)}
+              aria-label="View as tutor"
+            >
+              {TUTOR_ACCOUNTS.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.label}</option>
+              ))}
+            </select>
+            <a href="/tutor/online-class" className="tv-admin-switch">← All tutors</a>
+          </div>
+        )}
       </div>
 
       <div className="tv-head">
         <h1>My Online Class</h1>
         <div className="who">
-          {loadingTutor ? "Loading..." : (tutor ? `${tutor.name_display}${tutor.name_en ? ` (${tutor.name_en})` : ""}` : "⚠️ Tutor profile not found for this account.")}
+          {loadingTutor
+            ? "Loading..."
+            : tutor
+              ? `${tutor.name_display}${tutor.name_en ? ` (${tutor.name_en})` : ""}`
+              : adminRole === "admin" && !tutorParam
+                ? "Admin — select a tutor below"
+                : "⚠️ Tutor profile not found for this account."}
         </div>
       </div>
 
@@ -323,9 +377,30 @@ function TutorOnlineClassInner() {
       </div>
 
       {!loadingTutor && !tutor && (
-        <div className="tv-empty">
-          No tutor profile linked to this account. Please contact admin or use ?tutor=&lt;staff_user_id&gt; in the URL.
-        </div>
+        adminRole === "admin" && !tutorParam ? (
+          <div className="tv-card">
+            <div className="tv-select-intro">
+              <h2>Select a tutor to view</h2>
+              <p>As an admin, you can view any tutor&apos;s dashboard.</p>
+            </div>
+            <div className="tv-select-grid">
+              {TUTOR_ACCOUNTS.map(acc => (
+                <a
+                  key={acc.id}
+                  href={`/tutor/online-class?tutor=${acc.id}`}
+                  className="tv-select-card"
+                  style={{ background: TUTOR_COLORS[acc.label] || "#64748b" }}
+                >
+                  {acc.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="tv-empty">
+            No tutor profile linked to this account. Please contact admin or use ?tutor=&lt;staff_user_id&gt; in the URL.
+          </div>
+        )
       )}
 
       {tutor && tab === "today" && (
