@@ -760,3 +760,49 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 - Native HTML `<select>`에 키보드 'j' 누르면 J로 시작하는 옵션 순환 점프 (Janet → Janrey → Jessa → Joy)
 - Postgres "Success. No rows returned" = INSERT/UPDATE 성공 응답 (RETURNING/SELECT 없으면 0 rows 반환)
 - **동기화 Option A vs B 패턴:** 단일 클라이언트 경로는 코드 내 동기화로 충분. 다중 진입점(공개 API, 직접 SQL) 예정이면 Trigger 정석. 상태 전환 직후 파생 데이터 동기화가 필요한 모든 케이스에 적용 가능
+
+## 2026-04-24 세션 (튜터 배정 동기화 버그 완전 해결)
+
+### 완료 커밋
+- `89c32c1` fix: 튜터 배정 시 tutor_lessons.tutor_id 자동 동기화
+- `36d30c2` debug: lesson sync 진단 로그 추가
+- `fc3df3e` fix: TutorApplications detail.id stale reference 해결 (detailId + detailSnap 분리)
+
+### 진짜 원인 (라이브 콘솔 로그로 증명)
+`detail` 단일 state에 row 객체 전체를 저장하는 구조에서 list refetch(`await loadApps()`)
+중 detail이 stale해지며 다른 row의 id를 들고 있게 됨.
+콘솔 로그상 "강연미" 모달 헤더인데 내부 appId는 Amber(951811b8)/이유정(31e826ee)로 찍힘.
+
+### 해결 방식 (fc3df3e)
+- `detail` 단일 state → `detailId` (source of truth) + `detailSnap` (폴백) 분리
+- `detail = useMemo`로 `apps.find(a => a.id === detailId) || detailSnap`로 파생
+- 이제 `detail.id`와 `detail.children_names`가 어긋날 수 없음
+
+### 라이브 검증 결과 (fc3df3e 배포 후)
+- `[lesson sync]` appId: `63013125-a7e2...` (강연미) ✅ 정확하게 잡힘
+- oldTutorId: Janet, newTutorId: Joy, rows: 1건 동기화 완료
+- 주간 스케줄 5/13 카드 즉시 반영 확인
+
+### DB 데이터 피해 복구 (SQL Editor 수동)
+디버깅 중 버그로 잘못 저장된 건들 모두 수동 복구:
+- Amber: Janet → Angel (테스트) 복원
+- 이유정: Janet → Joy 복원
+- 강연미: Janet 재확정 + lesson tutor_id sync
+
+### 부가 발견 이슈 (낮은 우선순위, 별도 처리)
+1. `apple-mobile-web-app-capable` meta deprecated → `mobile-web-app-capable` 추가 필요
+2. `sw.js:1 Failed to convert value to 'Response'` → Service Worker 이슈 (PWA 도입 시)
+3. 주간 스케줄 fetch에서 `lesson_time.asc` 400 에러 → 해당 컬럼 존재 여부 확인 필요
+
+### 다음 세션 우선순위 (업데이트)
+1. 빈 주 그리드 마이크로픽스 (Mon~Sun 헤더 항상 표시, "표시할 튜터가 없습니다" 메시지 개선)
+2. 수강생 목록 고도화 (confirmed_time 모달, lesson 편집/중단)
+3. 과거 71건 신청 import
+4. 폼 개선 (하우스 정규식, 1:2 학생 분리)
+5. 부가 발견 이슈 3건 처리
+
+### Key learnings 추가
+- **React state 분리 원칙:** 단일 객체 state가 list refetch 중 stale해질 수 있으면,
+  id(source of truth) + snapshot(fallback) + useMemo로 파생하는 패턴이 안전
+- Chrome MCP의 find() + click() 자동화 자체는 정상이었음 — 진짜 버그는 앱의 state 관리 쪽
+- 디버깅 중 쓴 라이브 클릭이 실제 데이터를 변경할 수 있음 → 중요 환경에서는 test 플래그 가드 고려
