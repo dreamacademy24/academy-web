@@ -1097,6 +1097,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     </div>
     <div class="sb-section">메뉴</div>
     <button class="nav-item active" data-p="home" onclick="showPage('home')"><span class="ni-icon">🏠</span> 홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span><span id="badge-notif" class="nav-badge">0</span></button>
+    <button class="nav-item" data-p="announcements" onclick="showPage('announcements')"><span class="ni-icon">📢</span> 공지사항</button>
     <button class="nav-item" data-p="board" onclick="showPage('board')"><span class="ni-icon">📋</span> 전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
     <button class="nav-item" data-p="calendar" onclick="showPage('calendar')"><span class="ni-icon">📅</span> 달력</button>
     <button class="nav-item" data-p="projects" onclick="showPage('projects')"><span class="ni-icon">🚀</span> 프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
@@ -1151,6 +1152,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
             <div class="summary-grid" id="homeSG"></div>
           </div>
         </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS -->
+      <div id="page-announcements" class="hidden">
+        <div id="announcementsFeed" style="padding:20px;max-width:720px;margin:0 auto;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box"></div>
       </div>
 
       <!-- BOARD -->
@@ -2124,7 +2130,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat'];
+const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -2143,7 +2149,7 @@ function showPage(p){
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
   var _pgEl=document.getElementById('page-'+p);if(_pgEl)_pgEl.classList.remove('hidden');
   curEmpId=null;curProjId=null;setNav(p,null);
-  const tt={home:'홈',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트'};
+  const tt={home:'홈',announcements:'📢 공지사항',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트'};
   document.getElementById('topT').textContent=tt[p]||'';
   document.getElementById('topS').textContent='';
   document.getElementById('btnTask').textContent='+ 업무 추가';
@@ -2151,6 +2157,7 @@ function showPage(p){
   document.getElementById('btnTask').style.display='inline-flex';
   document.getElementById('btnProj').style.display='none';
   if(p==='home'){renderHome();markNotifsRead('all');}
+  if(p==='announcements'){renderAnnouncementsPage();document.getElementById('btnTask').style.display='none';markNotifsRead('notice');}
   if(p==='board'){renderBoard();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
   if(p==='calendar')renderCal();
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
@@ -2361,7 +2368,55 @@ function markRead(noticeId){
   if(!noticeReads[noticeId])noticeReads[noticeId]=[];
   if(!noticeReads[noticeId].includes(CU.id))noticeReads[noticeId].push(CU.id);
   sv('tm_read',noticeReads);renderNotices();
+  if(!document.getElementById('page-announcements').classList.contains('hidden'))renderAnnouncementsPage();
 }
+
+// 공지사항 전용 페이지 — 사이드바 📢 공지사항 클릭 시 진입.
+// notices 전역·isAdmin()·togNotice/delNotice/markRead 를 그대로 재사용.
+function renderAnnouncementsPage(){
+  var feed=document.getElementById('announcementsFeed');if(!feed)return;
+  if(!notices||!notices.length){
+    feed.innerHTML='<div class="empty-state" style="padding:60px 20px;text-align:center;color:var(--text3)"><div class="ei" style="font-size:40px;margin-bottom:10px">📋</div>등록된 공지사항이 없습니다</div>';
+    return;
+  }
+  var admin=isAdmin();
+  feed.innerHTML=notices.map(function(n){
+    var readers=noticeReads[n.id]||[];
+    var hasRead=readers.indexOf(CU.id)>=0;
+    var badges='';
+    if(n.requireRead)badges+='<span class="badge badge-amber" style="font-size:10px">읽음확인 필수</span>';
+    if(n.done)badges+='<span class="badge" style="background:#e5e7eb;color:#6b7280;font-size:10px">완료</span>';
+    var readBlock='';
+    if(n.requireRead){
+      if(admin){
+        readBlock='<div style="font-size:11.5px;color:var(--text3);margin-top:10px">📖 '+readers.length+'/'+ALL.length+' 읽음</div>';
+      } else if(hasRead){
+        readBlock='<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-top:10px">✓ 읽음 확인됨</div>';
+      } else {
+        readBlock='<div style="margin-top:10px"><button class="notice-read-btn" onclick="markRead(\''+n.id+'\')">읽음 확인</button></div>';
+      }
+    }
+    var adminActs='';
+    if(admin){
+      adminActs='<div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);justify-content:flex-end">'+
+        '<button class="notice-btn" onclick="_annTog(\''+n.id+'\')">'+(n.done?'↩ 되돌리기':'✓ 완료처리')+'</button>'+
+        '<button class="notice-btn" onclick="_annDel(\''+n.id+'\')" style="color:#dc2626">✕ 삭제</button>'+
+        '</div>';
+    }
+    return '<article style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);'+(n.done?'opacity:.6':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+        badges+
+        '<span style="font-size:11.5px;color:var(--text3);margin-left:auto">'+esc(n.date||'')+'</span>'+
+      '</div>'+
+      '<div style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word">'+esc(n.text||'')+'</div>'+
+      readBlock+
+      adminActs+
+    '</article>';
+  }).join('');
+}
+// 공지 페이지 내 액션 래퍼 — 기존 togNotice/delNotice 재사용 후 현재 피드만 갱신.
+function _annTog(id){togNotice(id);renderAnnouncementsPage();}
+function _annDel(id){if(!confirm('공지사항을 삭제할까요?'))return;delNotice(id);renderAnnouncementsPage();}
 function renderHomeSG(){
   const grid=document.getElementById('homeSG');grid.innerHTML='';
   const shared=tasks.filter(t=>t.shared);
