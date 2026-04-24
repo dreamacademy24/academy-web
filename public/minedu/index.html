@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>민에듀 × 세부드림아카데미 | 영어몰입 캠프</title>
+<meta name="description" content="민에듀 구독자님을 위한 세부드림아카데미 공동구매 안내 페이지입니다. 주니어/킨더 커리큘럼, 숙소 옵션, 예약 신청을 한눈에 확인하세요." />
+<meta property="og:title" content="민에듀 × 세부드림아카데미" />
+<meta property="og:description" content="민에듀 구독자 전용 세부 영어몰입 캠프 공동구매" />
+<meta property="og:type" content="website" />
+
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+
+<style>
+  :root {
+    --bg: #FBF8F3;
+    --bg-2: #F4EEE4;
+    --card: #FFFFFF;
+    --ink: #201C18;
+    --ink-2: #4A423B;
+    --ink-3: #7A7069;
+    --line: #E8DFD2;
+    --line-2: #F0E8DB;
+    --coral: #E8563F;
+    --coral-soft: #FBE7E0;
+    --teal: #1E5B6B;
+    --teal-soft: #DDECEF;
+    --gold: #B8894A;
+    --green: #4A7C59;
+    --red: #C44536;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(32,28,24,0.04), 0 2px 8px rgba(32,28,24,0.04);
+    --shadow-md: 0 4px 16px rgba(32,28,24,0.06), 0 12px 40px rgba(32,28,24,0.06);
+    --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'ss03';
+    letter-spacing: -0.01em;
+  }
+  img { max-width: 100%; display: block; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea, select {
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  /* ─── Header ─── */
+  .top-bar {
+    background: var(--ink);
+    color: #F7EFE2;
+    text-align: center;
+    padding: 9px 16px;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+  }
+  .top-bar span { color: #F4C56A; font-weight: 600; }
+
+  header.site {
+    background: rgba(251,248,243,0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .nav {
+    max-width: 1120px; margin: 0 auto;
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+  .brand-mark {
+    height: 36px; width: auto; max-width: 150px;
+    object-fit: contain;
+    display: block;
+  }
+  .brand-divider {
+    width: 1px; height: 22px;
+    background: var(--line);
+  }
+  .brand-text b { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand-text span { display: block; font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; text-transform: uppercase; }
+  .nav-cta {
+    padding: 10px 18px;
+    background: var(--ink);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .nav-cta:hover { background: var(--coral); transform: translateY(-1px); }
+
+  /* ─── Hero ─── */
+  .hero {
+    position: relative;
+    padding: 72px 24px 56px;
+    overflow: hidden;
+    background:
+      radial-gradient(1100px 400px at 85% -10%, rgba(232,86,63,0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(30,91,107,0.10), transparent 65%),
+      var(--bg);
+  }
+  .hero-inner { max-width: 1120px; margin: 0 auto; }
+  .collab-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 7px 14px 7px 10px;
+    background: #fff; border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--ink-2);
+    box-shadow: var(--shadow-sm);
+  }
+  .collab-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 4px rgba(232,86,63,0.14); }
+  .hero h1 {
+    margin-top: 18px;
+    font-size: clamp(32px, 5.2vw, 52px);
+    line-height: 1.12;
+    letter-spacing: -0.035em;
+    font-weight: 800;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--coral), var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.lead {
+    margin-top: 20px;
+    max-width: 640px;
+    font-size: clamp(15.5px, 1.6vw, 18px);
+    color: var(--ink-2);
+    line-height: 1.7;
+  }
+  .hero-stats {
+    margin-top: 36px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; max-width: 800px;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat span { font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em; }
+  @media (max-width: 680px) {
+    .hero { padding: 52px 20px 40px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ─── Tabs ─── */
+  .tab-wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .tab-nav {
+    position: sticky; top: 66px; z-index: 40;
+    background: var(--bg);
+    padding: 10px 0 12px;
+    margin: 0 -24px;
+    padding-left: 24px; padding-right: 24px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar { display: none; }
+  .tab-nav-inner { display: inline-flex; gap: 6px; }
+  .tab-btn {
+    white-space: nowrap;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 14px; font-weight: 600;
+    color: var(--ink-2);
+    border: 1px solid transparent;
+    transition: all .18s ease;
+  }
+  .tab-btn:hover { color: var(--ink); background: var(--bg-2); }
+  .tab-btn.active {
+    color: #fff;
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .tab-btn .num { opacity: 0.5; margin-right: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .tab-btn.active .num { opacity: 0.7; }
+
+  /* ─── Panels ─── */
+  .panels { padding: 40px 0 80px; }
+  .panel { display: none; animation: fade .35s ease; }
+  .panel.active { display: block; }
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-eyebrow { font-size: 12px; letter-spacing: 0.12em; color: var(--coral); font-weight: 700; text-transform: uppercase; }
+  .panel-title { font-size: clamp(26px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.025em; margin-top: 8px; }
+  .panel-sub { color: var(--ink-3); font-size: 14.5px; max-width: 520px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .card p { color: var(--ink-2); font-size: 14.5px; }
+  .card ul { margin-top: 10px; padding-left: 0; list-style: none; }
+  .card ul li {
+    position: relative; padding-left: 22px; margin: 8px 0;
+    font-size: 14.5px; color: var(--ink-2);
+  }
+  .card ul li::before {
+    content: ''; position: absolute; left: 4px; top: 10px;
+    width: 8px; height: 8px; border-radius: 2px;
+    background: var(--coral);
+    transform: rotate(45deg);
+  }
+
+  /* 패키지 혜택 리스트 (이모지 아이콘) */
+  .card ul.benefits {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0;
+  }
+  .card ul.benefits li {
+    padding-left: 34px;
+    position: relative;
+    margin: 11px 0;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .card ul.benefits li::before { display: none; }
+  .card ul.benefits li .b-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 17px;
+    line-height: 1.5;
+    width: 24px;
+    text-align: center;
+  }
+  .card ul.benefits li b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* feature cards (커리큘럼 특장점) */
+  .feature {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .feature:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .feature .icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: var(--coral-soft); color: var(--coral);
+    margin-bottom: 14px;
+    font-size: 20px;
+  }
+  .feature h4 { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.015em; }
+  .feature p { font-size: 13.5px; color: var(--ink-3); line-height: 1.6; }
+
+  /* schedule table */
+  .schedule {
+    width: 100%; border-collapse: collapse;
+    background: #fff; border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+    font-size: 14px;
+  }
+  .schedule th {
+    background: var(--ink); color: #fff;
+    padding: 13px 14px; text-align: left; font-weight: 600; font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  .schedule td {
+    padding: 13px 14px;
+    border-top: 1px solid var(--line-2);
+    color: var(--ink-2);
+    vertical-align: top;
+  }
+  .schedule td:first-child { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .schedule tr:hover td { background: var(--bg-2); }
+
+  /* pill tags */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .tag {
+    padding: 5px 11px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    background: var(--teal-soft); color: var(--teal);
+  }
+  .tag.coral { background: var(--coral-soft); color: var(--coral); }
+
+  /* 숙소 hero */
+  .lodging-hero {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 320px;
+    display: flex; align-items: flex-end;
+    padding: 28px;
+    color: #fff;
+    background-size: cover; background-position: center;
+    margin-bottom: 24px;
+  }
+  .lodging-hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.72) 100%);
+  }
+  .lodging-hero > * { position: relative; z-index: 1; }
+  .lodging-hero h3 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .lodging-hero p { font-size: 14.5px; opacity: 0.95; }
+
+  .dream-house .lodging-hero {
+    background-image: url('https://www.dreamacademyph.com/images/dreamhouse.jpg');
+  }
+  .jpark .lodging-hero {
+    background-image: url('https://www.dreamacademyph.com/images/jpark.png');
+  }
+  .cube-nine .lodging-hero {
+    background-image: url('https://www.dreamacademyph.com/images/cube9.png');
+  }
+
+  /* 갤러리 그리드 */
+  .gallery-section { margin-top: 28px; }
+  .gallery-heading {
+    font-size: 15px; font-weight: 700;
+    color: var(--ink);
+    margin: 22px 0 12px;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: -0.01em;
+  }
+  .gallery-heading .g-icon {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--coral-soft); color: var(--coral);
+    display: grid; place-items: center;
+    font-size: 13px;
+  }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .gallery-grid.single { grid-template-columns: 1fr; }
+  .gallery-grid.wide-first { grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .gallery-grid.wide-first > :first-child { grid-row: span 2; }
+  @media (max-width: 680px) {
+    .gallery-grid, .gallery-grid.wide-first { grid-template-columns: repeat(2, 1fr); grid-template-rows: none; }
+    .gallery-grid.wide-first > :first-child { grid-row: auto; grid-column: span 2; }
+  }
+  .gallery-item {
+    position: relative;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-2);
+    transition: transform .2s ease;
+    cursor: pointer;
+  }
+  .gallery-item:hover { transform: scale(1.02); }
+  .gallery-item img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform .4s ease;
+  }
+  .gallery-item:hover img { transform: scale(1.06); }
+
+  .facility-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 8px;
+  }
+  @media (max-width: 760px) { .facility-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px) { .facility-grid { grid-template-columns: 1fr; } }
+
+  .facility-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .facility-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .facility-img {
+    aspect-ratio: 16/10;
+    overflow: hidden;
+  }
+  .facility-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .facility-body { padding: 14px 16px 16px; }
+  .facility-body h5 {
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 6px; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .facility-body p {
+    font-size: 12px; color: var(--ink-3);
+    line-height: 1.55;
+  }
+
+  /* 브로슈어 섹션 (풀사이즈 마케팅 이미지) */
+  .brochure-section { margin-top: 32px; }
+  .brochure-item {
+    margin-bottom: 18px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    background: #fff;
+    border: 1px solid var(--line);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .brochure-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .brochure-item img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .brochure-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .brochure-row .brochure-item { margin-bottom: 0; }
+  @media (max-width: 860px) {
+    .brochure-row { grid-template-columns: 1fr; }
+  }
+
+  .info-row {
+    display: grid; grid-template-columns: 160px 1fr;
+    gap: 16px; padding: 14px 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .info-row:first-child { border-top: 0; }
+  .info-row dt { font-size: 13px; color: var(--ink-3); font-weight: 600; padding-top: 2px; letter-spacing: 0.02em; }
+  .info-row dd { font-size: 14.5px; color: var(--ink); }
+  @media (max-width: 680px) { .info-row { grid-template-columns: 1fr; gap: 4px; } }
+
+  /* notice blocks */
+  .notice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .notice-grid { grid-template-columns: 1fr; } }
+
+  .notice {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--coral);
+    border-radius: var(--radius-sm);
+    padding: 20px 22px;
+  }
+  .notice.teal { border-left-color: var(--teal); }
+  .notice.gold { border-left-color: var(--gold); }
+  .notice.green { border-left-color: var(--green); }
+  .notice h4 { font-size: 15.5px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.01em; }
+  .notice p, .notice li { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
+  .notice ul { padding-left: 18px; margin-top: 6px; }
+  .notice ul li { margin: 4px 0; }
+
+  .warning-box {
+    margin-top: 20px;
+    background: #FFF7E8;
+    border: 1px solid #F2D88A;
+    border-radius: var(--radius-sm);
+    padding: 18px 20px;
+    font-size: 14px;
+    color: #6A4A0B;
+  }
+  .warning-box b { color: #8A5E0E; }
+
+  /* Form */
+  .form-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 32px;
+    box-shadow: var(--shadow-sm);
+  }
+  .form-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+  @media (max-width: 680px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--ink-2); margin-bottom: 7px;
+    letter-spacing: 0.01em;
+  }
+  .field label .req { color: var(--coral); margin-left: 3px; }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #FBF8F3;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--ink);
+    background: #fff;
+  }
+  .field textarea { resize: vertical; min-height: 110px; }
+
+  .submit-row {
+    margin-top: 28px;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .submit-note { font-size: 13px; color: var(--ink-3); }
+  .btn-submit {
+    padding: 14px 34px;
+    background: var(--coral);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 15px; font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+    box-shadow: 0 6px 18px rgba(232,86,63,0.28);
+  }
+  .btn-submit:hover { background: #D9452D; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(232,86,63,0.36); }
+  .btn-submit:active { transform: translateY(0); }
+
+  .form-success {
+    display: none;
+    padding: 22px;
+    background: #EAF5EE;
+    border: 1px solid #B9DDC5;
+    border-radius: var(--radius-sm);
+    color: #2B5E3F;
+    margin-top: 20px;
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+  .form-success.show { display: block; }
+  .form-success b { color: #1F4A30; }
+
+  /* 예약 side info */
+  .booking-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; }
+  @media (max-width: 900px) { .booking-grid { grid-template-columns: 1fr; } }
+
+  .side-card {
+    background: linear-gradient(180deg, #fff 0%, var(--bg-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .side-card h4 { font-size: 15.5px; font-weight: 700; margin-bottom: 12px; }
+  .side-card .contact-line {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-top: 1px solid var(--line-2);
+    font-size: 14px; color: var(--ink-2);
+  }
+  .side-card .contact-line:first-of-type { border-top: 0; }
+  .side-card .contact-line b { color: var(--ink); font-weight: 600; min-width: 60px; }
+
+  /* ─── Curriculum Components ─── */
+  .quick-info {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 760px) { .quick-info { grid-template-columns: repeat(2, 1fr); } }
+  .info-pill {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .info-pill-icon { font-size: 20px; line-height: 1; }
+  .info-pill b { display: block; font-size: 17px; font-weight: 800; letter-spacing: -0.015em; margin-top: 6px; line-height: 1.25; }
+  .info-pill span { font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em; margin-top: 2px; display: block; }
+
+  .class-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .class-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .class-card .class-tag {
+    display: inline-block;
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em;
+    padding: 5px 12px; border-radius: 999px;
+    background: var(--coral-soft); color: var(--coral);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .class-card.teal .class-tag { background: var(--teal-soft); color: var(--teal); }
+  .class-card.gold .class-tag { background: #F6EBD8; color: var(--gold); }
+  .class-card h4 { font-size: 17px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.3; }
+  .class-card .class-sub { font-size: 13.5px; color: var(--ink-3); font-weight: 500; letter-spacing: 0; display: block; margin-top: 2px; }
+  .class-card p { font-size: 14px; color: var(--ink-2); margin: 10px 0 12px; line-height: 1.65; }
+  .class-card ul { list-style: none; padding: 0; margin: 0; }
+  .class-card ul li {
+    position: relative; padding-left: 18px; margin: 6px 0;
+    font-size: 13.5px; color: var(--ink-2);
+  }
+  .class-card ul li::before {
+    content: '✓'; position: absolute; left: 0; top: 0;
+    color: var(--coral); font-weight: 700;
+  }
+  .class-card.teal ul li::before { color: var(--teal); }
+  .class-card.gold ul li::before { color: var(--gold); }
+
+  .schedule tr.break td { background: #FDF7EC; color: var(--ink-3); }
+  .schedule tr.break:hover td { background: #FAEFD7; }
+  .schedule td.right { text-align: right; color: var(--ink-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  .subjects {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 760px) { .subjects { grid-template-columns: 1fr; } }
+  .subject {
+    display: flex; gap: 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .subject-num {
+    flex: 0 0 auto;
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--ink); color: #fff;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .subject-content { flex: 1 1 0; min-width: 0; }
+  .subject-name { font-size: 15.5px; font-weight: 800; letter-spacing: -0.01em; }
+  .subject-tag { font-size: 12.5px; color: var(--coral); font-weight: 600; margin: 3px 0 8px; }
+  .subject p { font-size: 13.5px; color: var(--ink-2); margin-bottom: 10px; line-height: 1.6; }
+  .subject-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .subject-chips span {
+    font-size: 11.5px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px;
+    background: var(--bg-2); color: var(--ink-2);
+  }
+  .subject-emoji {
+    font-size: 12.5px; color: var(--ink-3);
+    padding-top: 8px; border-top: 1px dashed var(--line);
+  }
+
+  .feature-lg { padding: 26px 24px; position: relative; }
+  .feature-num {
+    position: absolute;
+    top: 16px; right: 20px;
+    font-size: 26px; font-weight: 900;
+    color: var(--line);
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) { .mini-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 560px) { .mini-grid { grid-template-columns: repeat(2, 1fr); } }
+  .mini-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 16px 14px;
+    transition: all .18s ease;
+  }
+  .mini-card:hover {
+    border-color: var(--coral);
+    transform: translateY(-2px);
+  }
+  .mini-icon { font-size: 22px; display: block; margin-bottom: 8px; line-height: 1; }
+  .mini-card b { display: block; font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+  .mini-card span { font-size: 11.5px; color: var(--ink-3); line-height: 1.5; display: block; }
+
+  .special-card {
+    background: linear-gradient(135deg, var(--coral-soft) 0%, #FFF3EC 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px 26px;
+    text-align: center;
+  }
+  .special-card.teal-grad { background: linear-gradient(135deg, var(--teal-soft) 0%, #EEF6F8 100%); }
+  .special-icon { font-size: 40px; margin-bottom: 10px; line-height: 1; }
+  .special-card h4 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 14px; }
+  .special-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+  .special-chips span {
+    padding: 6px 12px; border-radius: 999px;
+    background: #fff;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--ink-2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .section-heading {
+    font-size: 19px; font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .section-sub {
+    font-size: 13.5px; color: var(--ink-3);
+    margin-bottom: 16px;
+  }
+
+  /* Footer */
+  footer {
+    background: var(--ink);
+    color: #D8CFC0;
+    padding: 40px 24px 28px;
+    margin-top: 40px;
+  }
+  footer .inner {
+    max-width: 1120px; margin: 0 auto;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px;
+    font-size: 13px;
+  }
+  footer b { color: #F7EFE2; font-size: 14px; display: block; margin-bottom: 6px; }
+  footer small { color: #9D9385; font-size: 11.5px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+
+<!-- 상단 알림바 -->
+<div class="top-bar">
+  민에듀 구독자 전용 공동구매 · <span>예약금 납부 후 확정</span>
+</div>
+
+<!-- 헤더 -->
+<header class="site">
+  <nav class="nav">
+    <a href="#" class="brand">
+      <img src="https://www.dreamacademyph.com/logo.png" alt="드림아카데미" class="brand-mark" />
+      <div class="brand-divider"></div>
+      <div class="brand-text">
+        <b>× 민에듀</b>
+        <span>공식 공동구매</span>
+      </div>
+    </a>
+    <a href="#panel-7" class="nav-cta" data-tab-jump="7">예약 문의하기</a>
+  </nav>
+</header>
+
+<!-- 히어로 -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="collab-badge">
+      <span class="dot"></span>
+      민에듀 × 세부드림아카데미 공식 공동구매
+    </div>
+    <h1>
+      우리 아이의 첫 영어,<br />
+      <em>세부에서 시작되는 몰입의 시간.</em>
+    </h1>
+    <p class="lead">
+      한국인 선생님의 세심한 케어와 원어민 수업이 균형을 이루는 세부드림아카데미에서,
+      민에듀 구독자님을 위한 특별한 공동구매를 준비했습니다.
+      아이의 연령과 성향에 맞는 커리큘럼, 가족 단위 맞춤 숙소를 확인해보세요.
+    </p>
+    <div class="hero-stats">
+      <div class="stat"><b>1:1</b><span>집중 영어 수업</span></div>
+      <div class="stat"><b>한국인</b><span>상주 매니저 운영</span></div>
+      <div class="stat"><b>3가지</b><span>숙소 선택 옵션</span></div>
+      <div class="stat"><b>안심</b><span>클린 리뷰 관리</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 탭 -->
+<div class="tab-wrap">
+
+  <!-- 탭 네비 -->
+  <div class="tab-nav">
+    <div class="tab-nav-inner">
+      <button class="tab-btn active" data-tab="1"><span class="num">01</span>주니어 커리큘럼</button>
+      <button class="tab-btn" data-tab="2"><span class="num">02</span>킨더 커리큘럼</button>
+      <button class="tab-btn" data-tab="3"><span class="num">03</span>드림하우스 (독채)</button>
+      <button class="tab-btn" data-tab="4"><span class="num">04</span>제이파크</button>
+      <button class="tab-btn" data-tab="5"><span class="num">05</span>큐브나인</button>
+      <button class="tab-btn" data-tab="6"><span class="num">06</span>중요 안내사항</button>
+      <button class="tab-btn" data-tab="7"><span class="num">07</span>예약 신청</button>
+    </div>
+  </div>
+
+  <div class="panels">
+
+    <!-- 1. 주니어 커리큘럼 -->
+    <section class="panel active" id="panel-1">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Junior Curriculum · 초1 ~ 중2</div>
+          <h2 class="panel-title">초등학생을 위한 체계적인 영어 수업</h2>
+        </div>
+        <p class="panel-sub">학생 개개인의 레벨에 맞춘 1:1 수업부터 소그룹 참여형 수업, 즐거운 액티비티 수업까지. 드림아카데미 주니어 라인에서 영어가 일상이 됩니다.</p>
+      </div>
+
+      <!-- Quick info -->
+      <div class="quick-info" style="margin-bottom: 36px;">
+        <div class="info-pill">
+          <div class="info-pill-icon">🎒</div>
+          <b>초1 ~ 중2</b>
+          <span>수업 대상</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">⏰</div>
+          <b>9:00 ~ 16:00</b>
+          <span>수업 시간</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">📅</div>
+          <b>월 ~ 금</b>
+          <span>수업 요일</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">🎯</div>
+          <b>1-on-1 · S-on-S · F-class</b>
+          <span>수업 구성</span>
+        </div>
+      </div>
+
+      <!-- 3가지 수업 유형 -->
+      <h3 class="section-heading">3가지 수업으로 완성되는 영어</h3>
+      <p class="section-sub">매일 10교시, 말하기부터 창의 액티비티까지 균형 있게 구성됩니다.</p>
+      <div class="grid-3" style="margin-bottom: 40px;">
+        <div class="class-card">
+          <div class="class-tag">1-on-1</div>
+          <h4>ONE ON ONE <span class="class-sub">개인 맞춤 1:1 수업</span></h4>
+          <p>학생 개개인의 레벨을 고려한 맞춤형 수업. 말하기, 듣기, 읽기, 쓰기, 어휘 등 영어 전 영역을 균형 있게 향상시킵니다.</p>
+          <ul>
+            <li>Speaking / Listening drill</li>
+            <li>Reading / Writing drill</li>
+            <li>Vocabulary building</li>
+            <li>약점 보완 + 강점 강화 맞춤 구성</li>
+            <li>자체 제작 교재 · 훈련된 교사진</li>
+          </ul>
+        </div>
+        <div class="class-card teal">
+          <div class="class-tag">S-on-S</div>
+          <h4>STUDY ON SUBJECT <span class="class-sub">최대 1:6 소그룹 참여형 수업</span></h4>
+          <p>레벨별 소그룹으로 진행되는 주제 중심 영어 수업. 영어로 생각하고 표현하며 소통하는 능동적 수업입니다.</p>
+          <ul>
+            <li>BTS · Solomon · Trump · Dream</li>
+            <li>레벨에 맞는 역할 배정 맞춤형 활동</li>
+            <li>하루 4타임, 다양한 주제</li>
+            <li>직접 참여하는 참여형 수업</li>
+          </ul>
+        </div>
+        <div class="class-card gold">
+          <div class="class-tag">F-class</div>
+          <h4>FUNTIVITY <span class="class-sub">즐겁게 배우는 창의 영어</span></h4>
+          <p>매일 마지막 그룹 수업. 롤플레잉, 야외 활동, 노래, 대본 수업 등 다양한 활동 중심의 수업으로 영어를 즐겁게 익힙니다.</p>
+          <ul>
+            <li>Fun 1: Vocab + Lyrics (노래)</li>
+            <li>Fun 2: Script + Play (연극)</li>
+            <li>Fun 3: Outdoor Activity (야외활동)</li>
+            <li>Fun 4: Talent Show / Party</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 시간표 -->
+      <h3 class="section-heading">📅 주니어 수업 시간표</h3>
+      <p class="section-sub">매일 9:00 ~ 16:00 · 1-on-1 수업 4회 &amp; S-on-S 수업 4회 · 점심 및 간식 포함 (샘플 시간표 기준)</p>
+      <table class="schedule" style="margin-bottom: 40px;">
+        <thead>
+          <tr>
+            <th style="width:180px;">시간</th>
+            <th>수업</th>
+            <th style="width:100px; text-align:right;">길이</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>9:00 ~ 9:40</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr><td>9:45 ~ 10:25</td><td>S-on-S</td><td class="right">40 min</td></tr>
+          <tr><td>10:35 ~ 11:15</td><td>S-on-S</td><td class="right">40 min</td></tr>
+          <tr><td>11:20 ~ 12:00</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr class="break"><td>12:00 ~ 12:50</td><td>Lunch 🍱</td><td class="right">–</td></tr>
+          <tr><td>12:50 ~ 13:30</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr><td>13:35 ~ 14:15</td><td>S-on-S</td><td class="right">40 min</td></tr>
+          <tr class="break"><td>14:15 ~ 14:30</td><td>Snack 🍪</td><td class="right">–</td></tr>
+          <tr><td>14:30 ~ 15:10</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr><td>15:15 ~ 16:00</td><td>F-class ⭐</td><td class="right">45 min</td></tr>
+        </tbody>
+      </table>
+
+      <!-- S-on-S 4가지 주제 -->
+      <h3 class="section-heading">S-on-S 4가지 수업 주제</h3>
+      <p class="section-sub">월~목요일에는 특정 주제 관련 역할, 기능, 준비사항을 단계별로 학습하고, 금요일에는 최종 발표를 진행합니다.</p>
+      <div class="subjects" style="margin-bottom: 40px;">
+        <div class="subject">
+          <div class="subject-num">01</div>
+          <div class="subject-content">
+            <div class="subject-name">BTS — Individual Skill</div>
+            <div class="subject-tag">Plan Your Speech · Become a Special Character</div>
+            <p>스피킹 스킬과 영어적 사고력 개발에 집중. 다양한 직업 역할을 수행하며 실생활 영어를 연습합니다.</p>
+            <div class="subject-chips">
+              <span>Weather Caster</span><span>Newscaster</span><span>Developer</span><span>Idol</span><span>Teacher</span>
+            </div>
+            <div class="subject-emoji">🎤 Makes learning both enjoyable and effective</div>
+          </div>
+        </div>
+        <div class="subject">
+          <div class="subject-num">02</div>
+          <div class="subject-content">
+            <div class="subject-name">Solomon — Group Skill</div>
+            <div class="subject-tag">Supporters vs. Opponents · Teamwork Presentation</div>
+            <p>찬반 토론과 팀 프레젠테이션을 통해 듣기, 정리, 쓰기, 발표 능력을 종합적으로 개발합니다.</p>
+            <div class="subject-chips">
+              <span>토론</span><span>팀워크</span><span>리서치</span><span>발표</span>
+            </div>
+            <div class="subject-emoji">🏛️ Promotes collaboration and communication skills</div>
+          </div>
+        </div>
+        <div class="subject">
+          <div class="subject-num">03</div>
+          <div class="subject-content">
+            <div class="subject-name">Trump — Individual &amp; Group</div>
+            <div class="subject-tag">Election Campaign · Learn About Great Figures</div>
+            <p>선거 캠페인 진행 및 위인 탐구를 통해 개인 역량과 그룹 협업을 동시에 강화합니다.</p>
+            <div class="subject-chips">
+              <span>후보</span><span>대변인</span><span>선거운동원</span><span>위인 탐구</span>
+            </div>
+            <div class="subject-emoji">🗳️ Individual skill + group collaboration</div>
+          </div>
+        </div>
+        <div class="subject">
+          <div class="subject-num">04</div>
+          <div class="subject-content">
+            <div class="subject-name">Dream — Group Skill</div>
+            <div class="subject-tag">Magazine · Newspaper · Encyclopedia · Poems</div>
+            <p>창의성, 협업, 영어 언어와 문화에 대한 깊은 이해를 동시에 키우는 프로젝트형 수업입니다.</p>
+            <div class="subject-chips">
+              <span>Dream Magazine</span><span>Dream Newspaper</span><span>Encyclopedia</span><span>Poems</span>
+            </div>
+            <div class="subject-emoji">📰 Creativity + collaboration + deeper understanding</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수업 안내사항 -->
+      <h3 class="section-heading">수업 안내사항</h3>
+      <p class="section-sub">등록 전 반드시 확인해 주세요.</p>
+      <div class="notice-grid">
+        <div class="notice">
+          <h4>📋 수업 대상 &amp; 기본 안내</h4>
+          <ul>
+            <li><b>대상</b> · 주니어 라인 (초1 ~ 중2)</li>
+            <li><b>수업 요일</b> · 월 ~ 금</li>
+            <li><b>시작일</b> · 매주 월요일만 가능</li>
+            <li><b>결석</b> · 결석 시 보강 수업 없음</li>
+            <li><b>공휴일</b> · 포함 시 일할 계산 환불</li>
+            <li><b>교재비</b> · 1권당 ₱350 (학생만 해당)</li>
+          </ul>
+        </div>
+        <div class="notice teal">
+          <h4>🔥 성수기 기간 안내</h4>
+          <ul>
+            <li><b>여름</b> · 7/15 ~ 8/30</li>
+            <li><b>겨울</b> · 12/15 ~ 2/29</li>
+            <li><b>성수기 등록</b> · 3주 이상 필수</li>
+            <li><b>종료 시점</b> · 2주 가능 (상담 필수)</li>
+            <li><b>7세 예비초1</b> · 킨더 / 주니어 선택 가능</li>
+          </ul>
+        </div>
+      </div>
+      <div class="warning-box">
+        <b>⚠️ 유의사항</b><br />
+        분리 가능한 아이만 수업 참여 가능합니다. 분리 불가능으로 인한 환불은 불가합니다. 학원 내 부모님 대기 및 수업 참관은 허용되지 않습니다. 수업 규정 및 환불 규정은 반드시 확인해 주세요.
+      </div>
+    </section>
+
+    <!-- 2. 킨더 커리큘럼 -->
+    <section class="panel" id="panel-2">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Kinder Curriculum · 5세 ~ 7세</div>
+          <h2 class="panel-title">유아를 위한 즐거운 영어 첫걸음</h2>
+        </div>
+        <p class="panel-sub">놀이와 교육이 결합된 최적의 프로그램으로, 아이들이 자연스럽게 영어와 친해지는 드림아카데미 킨더 라인.</p>
+      </div>
+
+      <!-- Quick info -->
+      <div class="quick-info" style="margin-bottom: 36px;">
+        <div class="info-pill">
+          <div class="info-pill-icon">🌱</div>
+          <b>5세 ~ 7세</b>
+          <span>수업 대상</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">⏰</div>
+          <b>9:00 ~ 16:00</b>
+          <span>수업 시간</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">📅</div>
+          <b>월 ~ 금</b>
+          <span>수업 요일</span>
+        </div>
+        <div class="info-pill">
+          <div class="info-pill-icon">🎯</div>
+          <b>1-on-1 · Group · Activity</b>
+          <span>수업 구성</span>
+        </div>
+      </div>
+
+      <!-- Dream Academy Kinder Line -->
+      <h3 class="section-heading">Dream Academy Kinder Line</h3>
+      <p class="section-sub">즐겁게 영어를 접할 수 있는 많은 프로그램들과 탄탄한 커리큘럼의 아카데미식 교육이 결합된 최적의 프로그램</p>
+      <div class="grid-3" style="margin-bottom: 40px;">
+        <div class="feature feature-lg">
+          <div class="feature-num">01</div>
+          <div class="icon">📖</div>
+          <h4>체계적인 1-on-1 수업</h4>
+          <p>Social English와 Topic English를 병행하는 체계적인 학습 플랜. 파닉스부터 읽기·쓰기, 수학, 테마 활동들을 통해 자신감을 키울 수 있도록 구성됩니다.</p>
+        </div>
+        <div class="feature feature-lg">
+          <div class="feature-num">02</div>
+          <div class="icon">👫</div>
+          <h4>함께 배우고 성장하는 Group Class</h4>
+          <p>아트, 쿠킹, 신체 활동 등 다양한 Special Activity와 뮤직, 액트 등의 테마 수업이 실내외에서 진행됩니다.</p>
+        </div>
+        <div class="feature feature-lg">
+          <div class="feature-num">03</div>
+          <div class="icon">🎯</div>
+          <h4>One Theme a Week</h4>
+          <p>매주 한 테마를 중심으로 영어, 과학, 미술, 신체 활동이 하나의 주제로 연결되는 통합형 교육 프로그램입니다.</p>
+        </div>
+      </div>
+
+      <!-- 시간표 -->
+      <h3 class="section-heading">📅 킨더 수업 시간표</h3>
+      <p class="section-sub">매일 9:00 ~ 16:00 · 1-on-1과 Group 수업이 균형 있게 구성됩니다 · 점심 및 간식 포함 (샘플 시간표)</p>
+      <table class="schedule" style="margin-bottom: 40px;">
+        <thead>
+          <tr>
+            <th style="width:180px;">시간</th>
+            <th>수업</th>
+            <th style="width:100px; text-align:right;">길이</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>9:00 ~ 9:40</td><td>Group</td><td class="right">40 min</td></tr>
+          <tr><td>9:45 ~ 10:25</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr><td>10:30 ~ 11:15</td><td>Group</td><td class="right">45 min</td></tr>
+          <tr><td>11:20 ~ 12:00</td><td>1-on-1</td><td class="right">40 min</td></tr>
+          <tr class="break"><td>11:55 ~ 12:50</td><td>Lunch 🍱</td><td class="right">55 min</td></tr>
+          <tr><td>12:50 ~ 13:30</td><td>Group</td><td class="right">40 min</td></tr>
+          <tr><td>13:35 ~ 14:20</td><td>1-on-1</td><td class="right">50 min</td></tr>
+          <tr class="break"><td>14:20 ~ 14:40</td><td>Snack 🍪</td><td class="right">15 min</td></tr>
+          <tr><td>14:40 ~ 15:10</td><td>Group</td><td class="right">40 min</td></tr>
+          <tr><td>15:15 ~ 16:00</td><td>1-on-1</td><td class="right">45 min</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Group Class -->
+      <h3 class="section-heading">👫 Group Class · 함께 즐기며 배우는 수업</h3>
+      <p class="section-sub">다양한 Special Activity와 테마 수업이 실내외에서 진행됩니다.</p>
+      <div class="mini-grid" style="margin-bottom: 40px;">
+        <div class="mini-card">
+          <div class="mini-icon">🎵</div>
+          <b>Music / Movement</b>
+          <span>Music and movement with lyrics, dance and act-play</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">⚽</div>
+          <b>Physical Education</b>
+          <span>Outdoor activities</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">🎨</div>
+          <b>Special Activity</b>
+          <span>Science, art, cooking and so on</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">🎭</div>
+          <b>Interactive Learning</b>
+          <span>Role play, show and tell, market day</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">📚</div>
+          <b>Story Reading</b>
+          <span>Diverse English reading</span>
+        </div>
+      </div>
+
+      <!-- 1-on-1 Class -->
+      <h3 class="section-heading">📖 1-on-1 Class · 개인 맞춤 1:1 수업</h3>
+      <p class="section-sub">Social English와 Topic English를 병행, 파닉스부터 읽기·쓰기·수학·테마까지 단계별로 접근합니다.</p>
+      <div class="mini-grid" style="margin-bottom: 40px;">
+        <div class="mini-card">
+          <div class="mini-icon">💬</div>
+          <b>Social English</b>
+          <span>Basic social English with topic English</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">🔤</div>
+          <b>Phonics</b>
+          <span>From basic phonics to diphthongs &amp; consonant blends</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">🔢</div>
+          <b>Math</b>
+          <span>From basic counting to arithmetic operations</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">✏️</div>
+          <b>Reading / Writing</b>
+          <span>Learn to read and write through story-based lessons</span>
+        </div>
+        <div class="mini-card">
+          <div class="mini-icon">🌍</div>
+          <b>Theme Project</b>
+          <span>Knowledge-based lessons organized by themes</span>
+        </div>
+      </div>
+
+      <!-- Special Programs -->
+      <h3 class="section-heading">🎨 킨더 특별 프로그램</h3>
+      <p class="section-sub">아이들이 가장 좋아하는 두 가지 대표 활동.</p>
+      <div class="grid-2">
+        <div class="special-card">
+          <div class="special-icon">👨‍🍳</div>
+          <h4>Cooking</h4>
+          <div class="special-chips">
+            <span>Fruit Skewers</span>
+            <span>Popcorn</span>
+            <span>Sandwich</span>
+            <span>Chocolate Fondue</span>
+            <span>Fruit Punch</span>
+          </div>
+        </div>
+        <div class="special-card teal-grad">
+          <div class="special-icon">🎨</div>
+          <h4>Art</h4>
+          <div class="special-chips">
+            <span>T-shirts</span>
+            <span>Ukelele</span>
+            <span>Dreamcatcher</span>
+            <span>Bracelets</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 드림하우스 (독채) -->
+    <section class="panel dream-house" id="panel-3">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Dream House · 베이스워터 빌리지 · 프라이빗 독채</div>
+          <h2 class="panel-title">드림하우스 (독채)</h2>
+        </div>
+        <p class="panel-sub">기숙사형이 아닌, 베이스워터 빌리지 내 단독 2층 주택. 한국 정수기·방충망·도어락·한국산 가전까지 구비된 진짜 세부살이 공간입니다.</p>
+      </div>
+
+      <div class="lodging-hero">
+        <div>
+          <h3>PRIVATE DREAM HOUSE</h3>
+          <p>독채 주택 · 방 3개 · 욕실 2개 · 거실 · 뒷마당</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>🏡 공간 구성</h3>
+          <dl>
+            <div class="info-row"><dt>구조</dt><dd>복층 구조 · 단독 2층 주택</dd></div>
+            <div class="info-row"><dt>객실</dt><dd>방 3개 / 욕실 2개 / 거실 / 뒷마당</dd></div>
+            <div class="info-row"><dt>위치</dt><dd>베이스워터 빌리지 내 (막탄)</dd></div>
+            <div class="info-row"><dt>가전</dt><dd>한국 정수기 · 한국산 가전 완비</dd></div>
+            <div class="info-row"><dt>보안</dt><dd>디지털 도어락 · 방충망 전 객실</dd></div>
+            <div class="info-row"><dt>학원 이동</dt><dd>드림아카데미 차량 약 5분</dd></div>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>🏡 패키지 포함 혜택</h3>
+          <ul class="benefits">
+            <li><span class="b-icon">🏠</span><b>3룸 독채 외부 숙소 제공</b> — 최대 6인 숙박 / 프라이빗하고 편안한 공간</li>
+            <li><span class="b-icon">👩‍🍳</span><b>주 6일 헬퍼 서비스 제공</b> — 청소 · 빨래 · 식사 준비 등 집안일 완전 해방</li>
+            <li><span class="b-icon">🍱</span><b>평일 3식 프리미엄 도시락</b> — 아침 / 점심 / 저녁 제공</li>
+            <li><span class="b-icon">🎓</span><b>드림아카데미 정규 수업</b> + 에프터 스쿨 &amp; 주말 체험학습</li>
+            <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
+            <li><span class="b-icon">📚</span><b>대여 물품 &amp; 도서관 이용</b> — 외부 숙소 관리실에서 대여 가능</li>
+            <li><span class="b-icon">📱</span><b>무료 유심 제공</b> — 별도 등록 없이 바로 사용 가능</li>
+          </ul>
+          <div class="tags">
+            <span class="tag coral">독채</span>
+            <span class="tag">헬퍼 포함</span>
+            <span class="tag">한국형 생활</span>
+            <span class="tag">장기 추천</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 드림하우스 객실 사진 갤러리 -->
+      <div class="gallery-section">
+        <h3 class="section-heading" style="margin-top: 8px;">🏠 드림하우스 객실 사진</h3>
+        <p class="section-sub">방 3개 · 욕실 2개 · 거실 · 뒷마당이 있는 독채 하우스. 기숙사가 아닌 진짜 세부살이를 경험할 수 있는 프라이빗 공간입니다.</p>
+
+        <div class="gallery-heading"><div class="g-icon">🏠</div>외관</div>
+        <div class="gallery-grid single">
+          <div class="gallery-item" style="aspect-ratio: 16/7;">
+            <img src="https://www.dreamacademyph.com/images/dh-exterior.jpg" alt="드림하우스 외관" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="gallery-heading"><div class="g-icon">🛋️</div>거실</div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dh-living1.jpg" alt="거실+주방 전체" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dh-living2.jpg" alt="거실" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dh-living3.jpg" alt="거실+소파" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="gallery-heading"><div class="g-icon">🛏️</div>방 3개</div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dh-room1.jpg" alt="침실1" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouse_Room-1.jpg" alt="침실2" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouseroom-11.jpg" alt="침실3" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="gallery-heading"><div class="g-icon">🍳</div>주방</div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/Dreamhouse_room-12_.png" alt="주방 전체" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouse_Room-4.jpg" alt="주방 싱크" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouse_Room-2.jpg" alt="주방 가전" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="gallery-heading"><div class="g-icon">🚿</div>욕실 2개</div>
+        <div class="gallery-grid">
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouseroom-10.jpg" alt="욕실1" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouseroom22.png" alt="샤워기" loading="lazy" />
+          </div>
+          <div class="gallery-item">
+            <img src="https://www.dreamacademyph.com/images/dreamhouse25.png" alt="욕실2" loading="lazy" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 베이스워터 부대시설 -->
+      <h3 class="section-heading" style="margin-top: 40px;">🌴 베이스워터 빌리지 부대시설</h3>
+      <p class="section-sub">드림하우스가 위치한 베이스워터 빌리지에서는 다양한 부대시설을 자유롭게 이용하실 수 있습니다.</p>
+      <div class="facility-grid">
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater002.jpg" alt="수영장" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>🏊 수영장</h5>
+            <p>8am–6pm · 수영복·수영모 착용 · 보호자 동반</p>
+          </div>
+        </div>
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater006.jpg" alt="농구 코트" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>🏀 농구 코트</h5>
+            <p>8am–10pm · 6pm 이후 단독사용 시 추가비 800페소</p>
+          </div>
+        </div>
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater007.jpg" alt="테니스장" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>🎾 테니스장</h5>
+            <p>7am–8pm · 오피스 예약 · 한 시간 단위</p>
+          </div>
+        </div>
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater003.jpg" alt="놀이터" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>🛝 놀이터</h5>
+            <p>8am–6pm · 수영장 옆</p>
+          </div>
+        </div>
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater005.jpg" alt="미니마트" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>🛒 미니마트</h5>
+            <p>6am–10pm · 카드 결제 · 생필품·육류·생선</p>
+          </div>
+        </div>
+        <div class="facility-card">
+          <div class="facility-img"><img src="https://www.dreamacademyph.com/images/bayswater008.png" alt="카페" loading="lazy" /></div>
+          <div class="facility-body">
+            <h5>☕ Lin's Coffee Shop</h5>
+            <p>수–월 7am–7pm · 크로아상·와플·쉐이크</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 제이파크 -->
+    <section class="panel jpark" id="panel-4">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">J-Park Island × Dream Academy · 5성급 리조트</div>
+          <h2 class="panel-title">제이파크 아일랜드 리조트</h2>
+        </div>
+        <p class="panel-sub">820개 객실 규모의 세부 최대 5성급 리조트. 테마 수영장 7개 이상, 워터파크, 전용 비치까지 모두 갖춘 프리미엄 올인클루시브 패키지입니다.</p>
+      </div>
+
+      <div class="lodging-hero">
+        <div>
+          <h3>Jpark Island × Dream Academy</h3>
+          <p>5성급 · 7개 테마 수영장 · 워터파크 · 전용 비치</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>🏨 객실 & 시설</h3>
+          <dl>
+            <div class="info-row"><dt>규모</dt><dd>820개 객실 · 세부 최대 규모 5성급</dd></div>
+            <div class="info-row"><dt>객실 타입</dt><dd>Deluxe (38㎡) · Premier (32㎡ 신축) · Mactan Suite (76㎡)</dd></div>
+            <div class="info-row"><dt>수용 인원</dt><dd>최대 4인 (객실 타입별 상이)</dd></div>
+            <div class="info-row"><dt>워터파크</dt><dd>Island / Wave / Beach / Toddler's Pool 등 7개 이상</dd></div>
+            <div class="info-row"><dt>액티비티</dt><dd>고카트 · 미니골프 · J Activity Zone · 풋볼 당구</dd></div>
+            <div class="info-row"><dt>부대시설</dt><dd>Gym · Cara Spa · 디저트 카페 · 의료센터</dd></div>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>🏨 패키지 포함 혜택</h3>
+          <ul class="benefits">
+            <li><span class="b-icon">🏨</span><b>제이파크 리조트 객실 이용</b> — 워터파크 &amp; 비치 모든 시설 자유 이용 (뽀로로 파크 제외)</li>
+            <li><span class="b-icon">🍽️</span><b>리조트 내 모든 레스토랑 30% 할인</b> (논끼 제외)</li>
+            <li><span class="b-icon">🥐</span><b>아발론 조식 50% 할인</b> — 보호자 1인 결제 시 6세 미만 아동 무료</li>
+            <li><span class="b-icon">🍱</span><b>평일 3식 프리미엄 도시락</b> — 아침 / 점심 / 저녁 제공</li>
+            <li><span class="b-icon">🎓</span><b>드림아카데미 정규 수업</b> + 에프터 스쿨 &amp; 주말 체험학습</li>
+            <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
+          </ul>
+          <div class="tags">
+            <span class="tag coral">5성급</span>
+            <span class="tag">워터파크</span>
+            <span class="tag">키즈 프렌들리</span>
+            <span class="tag">상스몰 도보 1분</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="warning-box" style="margin-top: 24px;">
+        <b>📍 위치</b><br />
+        M.L. Quezon Highway, Barangay Maribago, Lapu Lapu City, Cebu<br />
+        상스몰 <b>도보 1분</b> · 드림아카데미 <b>차량 10~13분</b> · 막탄 공항 <b>차량 약 20분</b>
+      </div>
+
+      <!-- 제이파크 상세 안내 브로슈어 -->
+      <h3 class="section-heading" style="margin-top: 40px;">📸 제이파크 상세 안내</h3>
+      <p class="section-sub">리조트 규모와 위치, 7개 테마 수영장, 야외 액티비티 &amp; 부대시설, 객실 타입까지 한눈에 확인하세요.</p>
+
+      <div class="brochure-section">
+        <!-- About J-Park (위치 & 주변 시설) -->
+        <div class="brochure-item">
+          <img src="jpark-about.jpg" alt="About J-Park · 위치 및 주변 시설" loading="lazy" />
+        </div>
+
+        <!-- Water Park (7+ 테마 수영장) -->
+        <div class="brochure-item">
+          <img src="jpark-waterpark.jpg" alt="J-Park Water Park · 7개 테마 수영장" loading="lazy" />
+        </div>
+
+        <!-- Activities & Other Facilities -->
+        <div class="brochure-item">
+          <img src="jpark-activities.jpg" alt="J-Park Outside Activities &amp; Other Facilities" loading="lazy" />
+        </div>
+
+        <!-- 객실 타입 3종 -->
+        <h4 style="font-size:17px; font-weight:800; letter-spacing:-0.015em; margin: 28px 0 14px;">🛏️ 객실 타입 상세 (Deluxe · Premier · Mactan Suite)</h4>
+        <div class="brochure-row">
+          <div class="brochure-item">
+            <img src="https://www.dreamacademyph.com/images/jpark-room-deluxe.jpg" alt="Deluxe Room · Tower B · 38㎡" loading="lazy" />
+          </div>
+          <div class="brochure-item">
+            <img src="https://www.dreamacademyph.com/images/jpark-room-premier.jpg" alt="Premier Room · Tower G 신축 · 32㎡" loading="lazy" />
+          </div>
+          <div class="brochure-item">
+            <img src="https://www.dreamacademyph.com/images/jpark-room-mactan.jpg" alt="Mactan Suite · Tower A,C · 76㎡" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 큐브나인 -->
+    <section class="panel cube-nine" id="panel-5">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Dream × Cube9 All-in-One Week · 오션뷰 리조트</div>
+          <h2 class="panel-title">큐브나인 리조트</h2>
+        </div>
+        <p class="panel-sub">세부 막탄 마리곤돈의 조용하고 여유로운 프리미엄 리조트. 오션뷰 인피니티 풀과 바다 액티비티를 즐기며 가족 맞춤형 올인원 케어를 받을 수 있습니다.</p>
+      </div>
+
+      <div class="lodging-hero">
+        <div>
+          <h3>Dream × Cube9 All-in-One</h3>
+          <p>오션뷰 인피니티 풀 · 바다 액티비티 · 프라이빗 리조트</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>🛋 객실 정보</h3>
+          <dl>
+            <div class="info-row"><dt>Deluxe Ocean</dt><dd>46.08㎡ · 오션뷰 · 테라스 · 선셋베드 · King/Twin</dd></div>
+            <div class="info-row"><dt>Deluxe Pool Access</dt><dd>43.68㎡ · 트윈퀸베드 · 메인 풀장 직접 연결 · 오션프론트</dd></div>
+            <div class="info-row"><dt>수용 인원</dt><dd>최대 4인 (성인 최대 2인)</dd></div>
+            <div class="info-row"><dt>어메니티</dt><dd>무료 WIFI · 개인금고 · 스마트TV · 목욕가운 · 배쓰어메니티</dd></div>
+            <div class="info-row"><dt>부대시설</dt><dd>인피니티 풀 · 더 나인 레스토랑 · Massage &amp; Spa</dd></div>
+            <div class="info-row"><dt>학원 이동</dt><dd>드림아카데미 차량 약 10분</dd></div>
+          </dl>
+        </div>
+        <div class="card">
+          <h3>🏨 패키지 포함 혜택</h3>
+          <ul class="benefits">
+            <li><span class="b-icon">🏨</span><b>큐브나인 객실 이용</b> — 조식 포함 / 인피니티 풀 및 시설 자유 이용</li>
+            <li><span class="b-icon">🍽️</span><b>식사 바우처 포함</b> — 1주 기준 10만원 / 더 나인 레스토랑 식사 이용</li>
+            <li><span class="b-icon">🎓</span><b>드림아카데미 정규 수업</b> + 에프터 스쿨 &amp; 주말 체험학습</li>
+            <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
+          </ul>
+          <div class="tags">
+            <span class="tag coral">오션뷰</span>
+            <span class="tag">인피니티 풀</span>
+            <span class="tag">조식 포함</span>
+            <span class="tag">상스몰 도보 10분</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="warning-box" style="margin-top: 24px;">
+        <b>📍 위치 · 세부 막탄 마리곤돈</b><br />
+        막탄 공항 <b>차량 20~30분</b> · 드림아카데미 <b>차량 10분</b> · 상스몰 <b>차량 3분 / 도보 10분</b> · 다이빙 스팟 인접
+      </div>
+
+      <!-- 큐브나인 상세 안내 브로슈어 -->
+      <h3 class="section-heading" style="margin-top: 40px;">📸 큐브나인 상세 안내</h3>
+      <p class="section-sub">리조트 위치와 주변 시설, 부대시설, 객실 타입, 식사 구성까지 한눈에 확인하세요.</p>
+
+      <div class="brochure-section">
+        <!-- Welcome to Cube9 (위치 & 주변 시설) -->
+        <div class="brochure-item">
+          <img src="cube9-about.jpg" alt="Welcome to Cube9 Resort · 위치 및 주변 시설" loading="lazy" />
+        </div>
+
+        <!-- Cube9 Overview (리조트 전경) -->
+        <div class="brochure-item">
+          <img src="cube9-overview.jpg" alt="Cube9 Resort · 리조트 전경" loading="lazy" />
+        </div>
+
+        <!-- Facilities (부대시설 상세) -->
+        <div class="brochure-item">
+          <img src="cube9-facilities.jpg" alt="Cube9 Resort Facilities · 야외수영장 / 바다 액티비티 / 레스토랑 / 스파" loading="lazy" />
+        </div>
+
+        <!-- Meals (식사 안내) -->
+        <h4 style="font-size:17px; font-weight:800; letter-spacing:-0.015em; margin: 28px 0 14px;">🍽️ Dream Academy × Cube9 식사 안내</h4>
+        <div class="brochure-item">
+          <img src="cube9-meals.jpg" alt="Dream Academy × Cube9 Included · 조식 포함 + 식사 바우처" loading="lazy" />
+        </div>
+
+        <!-- 객실 타입 2종 -->
+        <h4 style="font-size:17px; font-weight:800; letter-spacing:-0.015em; margin: 28px 0 14px;">🛏️ 객실 타입 상세 (Deluxe Ocean · Deluxe Pool Access)</h4>
+        <div class="brochure-row" style="grid-template-columns: repeat(2, 1fr);">
+          <div class="brochure-item">
+            <img src="cube9-room-deluxe-ocean.jpg" alt="Deluxe Ocean Room · 46.08㎡ · King/Twin" loading="lazy" />
+          </div>
+          <div class="brochure-item">
+            <img src="cube9-room-pool-access.jpg" alt="Deluxe Pool Access Room · 43.68㎡ · 트윈 퀸" loading="lazy" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 중요 안내사항 -->
+    <section class="panel" id="panel-6">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Important Notices · 반드시 확인</div>
+          <h2 class="panel-title">중요 안내사항</h2>
+        </div>
+        <p class="panel-sub">예약 전 꼭 확인해 주셔야 할 결제, 일정, 숙소, 취소 규정 안내입니다.</p>
+      </div>
+
+      <div class="notice-grid">
+        <div class="notice">
+          <h4>💳 결제 및 확정</h4>
+          <ul>
+            <li>예약금 납부 후 예약이 확정됩니다.</li>
+            <li>잔금은 출국 30일 전까지 납부 부탁드립니다.</li>
+            <li>결제는 세부드림아카데미 공식 페이지를 통해서만 진행됩니다.</li>
+            <li>영수증 및 확정서는 이메일로 발송됩니다.</li>
+          </ul>
+        </div>
+
+        <div class="notice teal">
+          <h4>✈️ 항공 및 비자</h4>
+          <ul>
+            <li>항공권은 개별 구매가 원칙이며, 원하시면 제휴사 연결 가능합니다.</li>
+            <li>필리핀은 30일 이내 무비자 입국, 초과 시 SSP(학생 허가증) 필요합니다.</li>
+            <li>SSP 발급은 현지에서 아카데미가 대행해 드립니다 (비용 별도 안내).</li>
+            <li>여권 유효기간은 출국일 기준 6개월 이상이어야 합니다.</li>
+          </ul>
+        </div>
+
+        <div class="notice gold">
+          <h4>🏡 숙소 공통 안내</h4>
+          <ul>
+            <li>체크인 15:00 / 체크아웃 11:00 (조기 요청 시 별도 협의)</li>
+            <li>모든 숙소는 학원 전용 차량으로 등·하원 왕복이 지원됩니다.</li>
+            <li>수영복, 모자, 선크림, 상비약은 개별 준비를 권장합니다.</li>
+            <li>어린 자녀용 침대 가드 / 유아 식기 요청 시 사전 신청해 주세요.</li>
+          </ul>
+        </div>
+
+        <div class="notice green">
+          <h4>📝 취소 및 변경</h4>
+          <ul>
+            <li>출국 45일 전: 예약금 전액 환불</li>
+            <li>출국 30일 전: 예약금 50% 환불</li>
+            <li>출국 15일 전: 예약금 환불 불가 (잔금은 환불)</li>
+            <li>출국 7일 이내 취소: 전액 환불 불가 (천재지변 제외)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <b>⚠️ 꼭 확인해 주세요</b><br />
+        본 공동구매 페이지는 <b>민에듀 구독자님만을 위한 전용 조건</b>으로 운영됩니다.
+        타 채널과 가격 및 혜택이 다를 수 있으며, 상담 시 <b>"민에듀를 통해 접속했다"</b>고 꼭 말씀해 주셔야 동일한 혜택 적용이 가능합니다.
+      </div>
+    </section>
+
+    <!-- 7. 예약 신청 -->
+    <section class="panel" id="panel-7">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Apply Now · 예약 신청서</div>
+          <h2 class="panel-title">예약 신청</h2>
+        </div>
+        <p class="panel-sub">아래 신청서를 작성해 주시면 평일 기준 1~2일 내 담당 매니저가 직접 연락드립니다.</p>
+      </div>
+
+      <div class="booking-grid">
+        <div class="form-card">
+          <form id="booking-form" autocomplete="off">
+            <div class="form-grid">
+              <div class="field">
+                <label>보호자 성함 <span class="req">*</span></label>
+                <input type="text" name="parent" required placeholder="홍길동" />
+              </div>
+              <div class="field">
+                <label>연락처 <span class="req">*</span></label>
+                <input type="tel" name="phone" required placeholder="010-0000-0000" />
+              </div>
+              <div class="field">
+                <label>이메일</label>
+                <input type="email" name="email" placeholder="example@mail.com" />
+              </div>
+              <div class="field">
+                <label>카카오톡 ID</label>
+                <input type="text" name="kakao" placeholder="카톡 상담 희망 시 입력" />
+              </div>
+              <div class="field">
+                <label>자녀 수 <span class="req">*</span></label>
+                <select name="children" required>
+                  <option value="">선택</option>
+                  <option>1명</option>
+                  <option>2명</option>
+                  <option>3명</option>
+                  <option>4명 이상</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>자녀 연령대 <span class="req">*</span></label>
+                <input type="text" name="ages" required placeholder="예: 7세 / 초등 3학년" />
+              </div>
+              <div class="field">
+                <label>희망 커리큘럼 <span class="req">*</span></label>
+                <select name="curriculum" required>
+                  <option value="">선택</option>
+                  <option>주니어 커리큘럼</option>
+                  <option>킨더 커리큘럼</option>
+                  <option>상담 후 결정</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>희망 숙소 <span class="req">*</span></label>
+                <select name="lodging" required>
+                  <option value="">선택</option>
+                  <option>드림하우스 (독채)</option>
+                  <option>제이파크</option>
+                  <option>큐브나인</option>
+                  <option>상담 후 결정</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>희망 출국일</label>
+                <input type="date" name="depart" />
+              </div>
+              <div class="field">
+                <label>체류 기간 <span class="req">*</span></label>
+                <select name="duration" required>
+                  <option value="">선택</option>
+                  <option>2주 (14박)</option>
+                  <option>3주 (21박)</option>
+                  <option>4주 (28박)</option>
+                  <option>1개월 이상</option>
+                  <option>기타</option>
+                </select>
+              </div>
+              <div class="field full">
+                <label>추가 문의사항</label>
+                <textarea name="message" placeholder="아이의 영어 수준, 알러지, 특별히 궁금한 점 등을 자유롭게 적어주세요."></textarea>
+              </div>
+              <div class="field full">
+                <label style="display:flex; align-items:center; gap:8px; font-weight:500; color:var(--ink-2);">
+                  <input type="checkbox" name="agree" required style="width:auto;" />
+                  개인정보 수집·이용(상담 목적)에 동의합니다. <span class="req">*</span>
+                </label>
+              </div>
+            </div>
+            <div class="submit-row">
+              <div class="submit-note">제출 후 담당 매니저가 영업일 기준 1~2일 내 연락드립니다.</div>
+              <button type="submit" class="btn-submit">예약 문의 보내기 →</button>
+            </div>
+            <div class="form-success" id="form-success">
+              <b>✓ 신청이 접수되었습니다.</b><br />
+              민에듀 구독자님께 감사드립니다. 담당 매니저가 곧 연락드릴 예정입니다.
+            </div>
+          </form>
+        </div>
+
+        <aside>
+          <div class="side-card" style="margin-bottom: 16px;">
+            <h4>📞 빠른 상담</h4>
+            <div class="contact-line"><b>카카오</b> @세부드림아카데미</div>
+            <div class="contact-line"><b>전화</b> +82 00-0000-0000</div>
+            <div class="contact-line"><b>운영</b> 평일 09:00 – 18:00 (KST)</div>
+          </div>
+          <div class="side-card">
+            <h4>🎁 민에듀 구독자 혜택</h4>
+            <p style="font-size:14px; color:var(--ink-2); line-height:1.7;">
+              공식 페이지 대비 <b>특별 할인</b>, <b>우선 예약 보장</b>, 도착 당일 <b>웰컴 패키지</b>를 제공해 드립니다.
+              <br /><br />
+              <span style="font-size:12.5px; color:var(--ink-3);">
+                ※ 구체적인 할인 금액 및 혜택은 민에듀 공동구매 공지 기준으로 적용됩니다.
+              </span>
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<footer>
+  <div class="inner">
+    <div>
+      <b>세부드림아카데미</b>
+      Cebu Dream Academy · 필리핀 세부 소재 한국계 영어 몰입 학원
+      <br />
+      <small>© 2026 Cebu Dream Academy. All rights reserved.</small>
+    </div>
+    <div>
+      <b>Contact</b>
+      카카오톡 @세부드림아카데미<br />
+      business@cebudreamacademy.com
+    </div>
+  </div>
+</footer>
+
+<script>
+  // 탭 전환
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.panel');
+
+  function activateTab(tabId) {
+    tabButtons.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
+    // URL 해시 갱신
+    history.replaceState(null, '', '#tab-' + tabId);
+    // 탭 상단으로 스크롤
+    const scrollTarget = document.querySelector('.tab-nav');
+    if (scrollTarget) {
+      window.scrollTo({ top: scrollTarget.offsetTop - 70, behavior: 'smooth' });
+    }
+  }
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+  });
+
+  // 히어로의 "예약 문의하기" 버튼
+  document.querySelectorAll('[data-tab-jump]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      activateTab(el.dataset.tabJump);
+    });
+  });
+
+  // 해시로 바로 진입
+  (function handleHash() {
+    const m = location.hash.match(/^#tab-(\d)$/);
+    if (m) activateTab(m[1]);
+  })();
+
+  // 폼 제출 (데모)
+  document.getElementById('booking-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // 실제 운영 시에는 여기서 fetch('/api/booking', ...) 또는 Google Form / Notion API 연결
+    document.getElementById('form-success').classList.add('show');
+    this.reset();
+    setTimeout(() => {
+      document.getElementById('form-success').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  });
+</script>
+
+</body>
+</html>
