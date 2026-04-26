@@ -1959,7 +1959,7 @@ const EMPS=[
 ];
 const CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
 const ALL=[...EMPS,CEO];
-function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jenna');}
+function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jamie');}
 function getP(id){return ALL.find(e=>e.id===id);}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;

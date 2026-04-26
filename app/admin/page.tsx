@@ -16,9 +16,7 @@ function simpleHash(str: string): string {
 const ADMIN_ACCOUNTS = [
   { id: 'admin-may',   pw: 'h_dyghlz', role: 'admin', name: 'May', staffId: 'may' },
   { id: 'admin-ceo',   pw: 'h_azeaz3', role: 'admin', name: 'CEO', staffId: 'ceo' },
-  { id: 'admin-jenna', pw: 'h_9x7hvc', role: 'staff', name: 'Jenna', staffId: 'jenna' },
   { id: 'admin-jamie', pw: 'h_4whzg',  role: 'staff', name: 'Jamie', staffId: 'jamie' },
-  { id: 'admin-yuna',  pw: 'h_25tbwx', role: 'staff', name: 'Yuna',  staffId: 'yuna'  },
   { id: 'admin-hanny', pw: 'h_5ytroi', role: 'staff', name: 'Hanny', staffId: 'hanny' },
   { id: 'admin-sage',  pw: 'h_tmt0j2', role: 'staff', name: 'Sage',  staffId: 'sage'  },
   { id: 'admin-eric',  pw: 'h_im0z0p', role: 'staff', name: 'Eric',  staffId: 'eric'  },
