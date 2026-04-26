@@ -1,318 +1,283 @@
-"use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { isAdminAuthed } from "@/lib/adminAuth";
+'use client';
 
-export interface MineduApp {
-  id: string;
+import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+type Application = {
+  id: number;
   created_at: string;
-  name: string | null;
+  name: string;
   phone: string | null;
   children: string | null;
   ages: string | null;
+  depart_date: string | null;
+  duration_weeks: string | null;
   period: string | null;
   lodging: string | null;
-}
+};
 
-interface Props {
-  initialRows: MineduApp[];
-  fetchError: string | null;
-}
-
-function pad2(n: number) { return String(n).padStart(2, "0"); }
-function fmtDateTime(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-function fmtDateOnly(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function csvEscape(v: string | null | undefined): string {
-  const s = (v ?? "").toString();
-  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
-  return s;
-}
-
-function toCsv(rows: MineduApp[]): string {
-  const headers = ["신청일", "이름", "연락처", "자녀명", "나이", "일정", "숙소"];
-  const lines = [headers.join(",")];
-  for (const r of rows) {
-    lines.push([
-      csvEscape(fmtDateTime(r.created_at)),
-      csvEscape(r.name),
-      csvEscape(r.phone),
-      csvEscape(r.children),
-      csvEscape(r.ages),
-      csvEscape(r.period),
-      csvEscape(r.lodging),
-    ].join(","));
-  }
-  // UTF-8 BOM — 한글 엑셀에서 깨지지 않게
-  return "﻿" + lines.join("\r\n");
-}
-
-export default function MineduListClient({ initialRows, fetchError }: Props) {
+export default function MineduListClient({
+  applications,
+  total,
+  today,
+}: {
+  applications: Application[];
+  total: number;
+  today: number;
+}) {
   const router = useRouter();
-  const [authed, setAuthed] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<MineduApp | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [toast, setToast] = useState("");
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Application | null>(null);
 
-  useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
-    else if (typeof window !== "undefined") window.location.href = "/login";
-  }, []);
-
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2000);
-  }, []);
-
+  // 검색 (이름/연락처/숙소/기간/연령 모두 포함)
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return initialRows;
-    return initialRows.filter(r => {
-      const hay = [r.name, r.phone, r.lodging, r.period, r.children, r.ages]
-        .map(v => (v || "").toString().toLowerCase()).join(" ");
-      return hay.includes(q);
+    if (!search.trim()) return applications;
+    const q = search.toLowerCase();
+    return applications.filter((a) => {
+      const haystack = [
+        a.name, a.phone, a.lodging, a.duration_weeks,
+        a.depart_date, a.period, a.ages, a.children,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
     });
-  }, [initialRows, search]);
+  }, [applications, search]);
 
-  const todayCount = useMemo(() => {
-    const td = todayStr();
-    return initialRows.filter(r => fmtDateOnly(r.created_at) === td).length;
-  }, [initialRows]);
-
-  function handleRefresh() {
-    setRefreshing(true);
-    router.refresh();
-    setTimeout(() => setRefreshing(false), 800);
-  }
-
-  function handleCsv() {
-    if (filtered.length === 0) {
-      showToast("다운로드할 데이터가 없습니다");
-      return;
+  // 일정 표시 헬퍼 (신/구 데이터 모두 호환)
+  const formatSchedule = (a: Application) => {
+    if (a.depart_date && a.duration_weeks) {
+      return `${a.depart_date} · ${a.duration_weeks}`;
     }
-    const csv = toCsv(filtered);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    if (a.depart_date) return a.depart_date;
+    if (a.duration_weeks) return a.duration_weeks;
+    return a.period || '-';
+  };
+
+  // CSV 다운로드
+  const downloadExcel = () => {
+    const headers = [
+      '신청시각', '이름', '연락처', '자녀인원', '자녀연령',
+      '출국일', '체류기간', '희망일정(구)', '희망숙소',
+    ];
+    const rows = filtered.map((a) => [
+      formatDateTimeFull(a.created_at),
+      a.name || '',
+      a.phone || '',
+      a.children || '',
+      a.ages || '',
+      a.depart_date || '',
+      a.duration_weeks || '',
+      a.period || '',
+      a.lodging || '',
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      )
+      .join('\r\n');
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const d = new Date();
-    const stamp = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
-    link.href = url;
-    link.download = `민에듀_공구신청_${stamp}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `민에듀_공구신청_${formatDate(new Date().toISOString())}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
-    showToast(`${filtered.length}건 다운로드 완료`);
-  }
+  };
 
-  async function copyPhone(phone: string) {
-    try {
-      await navigator.clipboard.writeText(phone);
-      showToast("연락처를 복사했습니다");
-    } catch {
-      showToast("복사 실패 — 수동으로 선택해 복사해주세요");
-    }
-  }
-
-  if (!authed) return null;
-
-  return (<>
-    <style>{`
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.mn-w{max-width:1280px;margin:0 auto;padding:28px 20px}
-.mn-top{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
-.mn-back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px;color:#475569}
-.mn-back:hover{background:#e2e8f0}
-.mn-top h1{font-size:22px;font-weight:800;flex:1;min-width:200px;margin:0}
-.mn-top .actions{display:flex;gap:8px;flex-wrap:wrap}
-.mn-btn{padding:9px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 120ms;border:1px solid transparent;white-space:nowrap}
-.mn-btn.primary{background:#1a6fc4;color:#fff}
-.mn-btn.primary:hover:not(:disabled){background:#155aa0}
-.mn-btn.secondary{background:#fff;color:#1a6fc4;border-color:#bfdbfe}
-.mn-btn.secondary:hover:not(:disabled){background:#eff6ff}
-.mn-btn:disabled{opacity:0.6;cursor:not-allowed}
-
-.mn-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.mn-stat{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,0.03)}
-.mn-stat .lbl{font-size:11px;font-weight:800;letter-spacing:0.04em;color:#6b7c93;text-transform:uppercase;margin-bottom:6px}
-.mn-stat .val{font-size:28px;font-weight:900;line-height:1;color:#1a1a2e}
-.mn-stat.blue .val{color:#1a6fc4}
-.mn-stat.amber .val{color:#d97706}
-.mn-stat.green .val{color:#059669}
-@media(max-width:700px){.mn-stats{grid-template-columns:1fr}}
-
-.mn-search{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.03)}
-.mn-search input{flex:1;border:none;outline:none;font-size:14px;font-family:inherit;color:#1a1a2e;background:transparent}
-.mn-search input::placeholder{color:#94a3b8}
-
-.mn-card{background:#fff;border-radius:14px;border:1px solid #e2e8f0;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.04)}
-.mn-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:880px}
-.mn-tbl th{background:#f8fafc;padding:12px 14px;text-align:left;font-size:11.5px;font-weight:800;color:#6b7c93;border-bottom:2px solid #e2e8f0;letter-spacing:0.03em;white-space:nowrap}
-.mn-tbl td{padding:12px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
-.mn-tbl tr:last-child td{border-bottom:none}
-.mn-tbl tbody tr{cursor:pointer;transition:background 100ms}
-.mn-tbl tbody tr:hover{background:#f8fafc}
-.mn-tbl .name{font-weight:700;color:#1a1a2e}
-.mn-tbl .muted{color:#6b7c93}
-.mn-tbl .nowrap{white-space:nowrap}
-
-.mn-empty{text-align:center;padding:60px 20px;color:#94a3b8;font-size:14px;line-height:1.8}
-.mn-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:12px;font-weight:600}
-
-.mn-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
-.mn-modal{background:#fff;border-radius:16px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.18)}
-.mn-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #e2e8f0}
-.mn-modal-head h3{font-size:16px;font-weight:800;margin:0}
-.mn-close{background:none;border:none;font-size:22px;cursor:pointer;color:#6b7c93;padding:4px 8px;border-radius:6px;line-height:1}
-.mn-close:hover{background:#f1f5f9;color:#1a1a2e}
-.mn-modal-body{padding:18px 22px}
-.mn-kv{display:grid;grid-template-columns:90px 1fr;gap:10px 16px;font-size:13.5px}
-.mn-kv .k{font-size:11.5px;font-weight:800;color:#6b7c93;letter-spacing:0.04em;align-self:center}
-.mn-kv .v{color:#1a1a2e;word-break:break-word;line-height:1.6}
-.mn-kv .v.copy{cursor:pointer;color:#1a6fc4;font-weight:700;text-decoration:underline;text-underline-offset:3px}
-.mn-kv .v.copy:hover{color:#155aa0}
-@media(max-width:480px){.mn-kv{grid-template-columns:1fr;gap:4px 0}.mn-kv .k{margin-top:8px}}
-
-.mn-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,0.18);z-index:300;animation:mnToastIn 220ms ease-out}
-@keyframes mnToastIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
-    `}</style>
-
-    <div className="mn-w">
-      <div className="mn-top">
-        <button className="mn-back" onClick={() => router.push("/admin/hub")} aria-label="뒤로">←</button>
-        <h1>📚 민에듀 공구 신청 관리</h1>
-        <div className="actions">
-          <button className="mn-btn secondary" onClick={handleRefresh} disabled={refreshing}>
-            {refreshing ? "⟳ 새로고침..." : "⟳ 새로고침"}
+  return (
+    <div className="mn-container">
+      <div className="mn-header">
+        <div>
+          <h1 className="mn-title">📋 민에듀 공구 신청 관리</h1>
+          <p className="mn-subtitle">민에듀 × 세부드림아카데미 공동구매 신청 내역</p>
+        </div>
+        <div className="mn-actions">
+          <button onClick={() => router.refresh()} className="mn-btn-secondary">
+            🔄 새로고침
           </button>
-          <button className="mn-btn primary" onClick={handleCsv}>
-            📥 엑셀 다운로드 (CSV)
+          <button onClick={downloadExcel} className="mn-btn-primary">
+            📥 엑셀 다운로드
           </button>
         </div>
       </div>
-
-      {fetchError && <div className="mn-err">⚠️ 데이터 로드 실패: {fetchError}</div>}
 
       <div className="mn-stats">
-        <div className="mn-stat blue">
-          <div className="lbl">전체 신청</div>
-          <div className="val">{initialRows.length}</div>
-        </div>
-        <div className="mn-stat amber">
-          <div className="lbl">오늘 신청</div>
-          <div className="val">{todayCount}</div>
-        </div>
-        <div className="mn-stat green">
-          <div className="lbl">검색 결과</div>
-          <div className="val">{search.trim() ? filtered.length : initialRows.length}</div>
-        </div>
+        <Stat label="전체 신청" value={total} color="#1a6fc4" />
+        <Stat label="오늘 신청" value={today} color="#E8563F" />
+        <Stat label="검색 결과" value={filtered.length} color="#1F7A4D" />
       </div>
 
-      <div className="mn-search">
-        <span aria-hidden="true" style={{ color: "#94a3b8", fontSize: 14 }}>🔍</span>
+      <div className="mn-search-wrap">
         <input
-          type="search"
+          type="text"
+          placeholder="🔍 이름 / 연락처 / 숙소 / 출국일 / 체류기간으로 검색..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="이름 / 연락처 / 숙소 / 일정 / 자녀명으로 검색"
-          aria-label="검색"
+          onChange={(e) => setSearch(e.target.value)}
+          className="mn-search"
         />
       </div>
 
-      <div className="mn-card">
-        {initialRows.length === 0 ? (
-          <div className="mn-empty">📭 신청된 내역이 없습니다</div>
-        ) : filtered.length === 0 ? (
-          <div className="mn-empty">검색 조건에 맞는 결과가 없습니다</div>
+      <div className="mn-table-wrap">
+        {filtered.length === 0 ? (
+          <div className="mn-empty">
+            {applications.length === 0 ? '아직 신청 내역이 없습니다.' : '검색 결과가 없습니다.'}
+          </div>
         ) : (
-          <table className="mn-tbl">
-            <thead>
-              <tr>
-                <th>신청일</th>
-                <th>이름</th>
-                <th>연락처</th>
-                <th>자녀명</th>
-                <th>나이</th>
-                <th>일정</th>
-                <th>숙소</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => (
-                <tr key={r.id} onClick={() => setSelected(r)}>
-                  <td className="muted nowrap">{fmtDateTime(r.created_at)}</td>
-                  <td className="name">{r.name || "-"}</td>
-                  <td className="nowrap">{r.phone || "-"}</td>
-                  <td>{r.children || "-"}</td>
-                  <td className="muted">{r.ages || "-"}</td>
-                  <td>{r.period || "-"}</td>
-                  <td>{r.lodging || "-"}</td>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="mn-table">
+              <thead>
+                <tr>
+                  <th>신청 시각</th>
+                  <th>이름</th>
+                  <th>연락처</th>
+                  <th>자녀</th>
+                  <th>연령</th>
+                  <th>출국일</th>
+                  <th>체류기간</th>
+                  <th>희망 숙소</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((app) => (
+                  <tr
+                    key={app.id}
+                    onClick={() => setSelected(app)}
+                    className="mn-tr"
+                  >
+                    <td>{formatDateTime(app.created_at)}</td>
+                    <td className="mn-td-name">{app.name}</td>
+                    <td>{app.phone || '-'}</td>
+                    <td>{app.children || '-'}</td>
+                    <td>{app.ages || '-'}</td>
+                    <td className="mn-td-depart">
+                      {app.depart_date || (app.period ? <span style={{color:'#999'}}>(구)</span> : '-')}
+                    </td>
+                    <td>{app.duration_weeks || (app.period ? <span style={{color:'#999', fontSize:12}}>{app.period}</span> : '-')}</td>
+                    <td>{app.lodging || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
-    </div>
 
-    {selected && (
-      <div className="mn-overlay" onClick={() => setSelected(null)}>
-        <div className="mn-modal" onClick={e => e.stopPropagation()}>
-          <div className="mn-modal-head">
-            <h3>📋 {selected.name || "신청 상세"}</h3>
-            <button className="mn-close" onClick={() => setSelected(null)} aria-label="닫기">✕</button>
-          </div>
-          <div className="mn-modal-body">
-            <div className="mn-kv">
-              <span className="k">신청일</span>
-              <span className="v">{fmtDateTime(selected.created_at)}</span>
-              <span className="k">이름</span>
-              <span className="v">{selected.name || "-"}</span>
-              <span className="k">연락처</span>
-              {selected.phone ? (
-                <span
-                  className="v copy"
-                  onClick={() => copyPhone(selected.phone!)}
-                  title="클릭하여 복사"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copyPhone(selected.phone!); } }}
-                >
-                  {selected.phone}
-                </span>
-              ) : (
-                <span className="v">-</span>
+      {selected && (
+        <div className="mn-modal-overlay" onClick={() => setSelected(null)}>
+          <div className="mn-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mn-modal-title">신청 상세 #{selected.id}</h2>
+            <div>
+              <Detail label="신청 시각" value={formatDateTimeFull(selected.created_at)} />
+              <Detail label="이름" value={selected.name} bold />
+              <Detail label="연락처" value={selected.phone || '-'} copyable />
+              <Detail label="자녀 인원" value={selected.children || '-'} />
+              <Detail label="자녀 연령" value={selected.ages || '-'} />
+              <Detail label="출국 희망일" value={selected.depart_date || '-'} bold />
+              <Detail label="체류 기간" value={selected.duration_weeks || '-'} bold />
+              {selected.period && (
+                <Detail label="희망 일정(구버전)" value={selected.period} />
               )}
-              <span className="k">자녀명</span>
-              <span className="v">{selected.children || "-"}</span>
-              <span className="k">나이</span>
-              <span className="v">{selected.ages || "-"}</span>
-              <span className="k">일정</span>
-              <span className="v">{selected.period || "-"}</span>
-              <span className="k">숙소</span>
-              <span className="v">{selected.lodging || "-"}</span>
+              <Detail label="희망 숙소" value={selected.lodging || '-'} />
+            </div>
+            <div className="mn-modal-actions">
+              <button onClick={() => setSelected(null)} className="mn-btn-primary">
+                닫기
+              </button>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {toast && <div className="mn-toast" role="status" aria-live="polite">{toast}</div>}
-  </>);
+      <style jsx>{`
+        .mn-container { padding: 32px; max-width: 1280px; margin: 0 auto; background: #f1f5f9; min-height: 100vh; }
+        .mn-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+        .mn-title { font-size: 24px; font-weight: 800; margin: 0; color: #1e293b; }
+        .mn-subtitle { font-size: 14px; color: #64748b; margin: 4px 0 0; }
+        .mn-actions { display: flex; gap: 10px; }
+        .mn-btn-primary { background: #1a6fc4; color: #fff; border: 0; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .mn-btn-secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .mn-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .mn-search-wrap { margin-bottom: 16px; }
+        .mn-search { width: 100%; padding: 12px 16px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 10px; outline: none; box-sizing: border-box; background: #fff; }
+        .mn-table-wrap { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        .mn-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .mn-table th { padding: 14px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left; font-weight: 700; color: #475569; font-size: 13px; white-space: nowrap; }
+        .mn-tr { cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .mn-tr:hover { background: #f8fafc; }
+        .mn-table td { padding: 14px 12px; color: #334155; vertical-align: middle; }
+        .mn-td-name { font-weight: 700; color: #1e293b; }
+        .mn-td-depart { font-weight: 600; color: #1a6fc4; }
+        .mn-empty { padding: 60px; text-align: center; color: #94a3b8; }
+        .mn-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .mn-modal { background: #fff; border-radius: 16px; padding: 32px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .mn-modal-title { font-size: 20px; font-weight: 800; margin: 0 0 20px; color: #1e293b; }
+        .mn-modal-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+        @media (max-width: 700px) {
+          .mn-container { padding: 16px; }
+          .mn-stats { grid-template-columns: 1fr; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #e2e8f0',
+      borderRadius: 12,
+      padding: '20px 24px',
+      borderLeft: `4px solid ${color}`,
+    }}>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 800, color }}>{value}</div>
+    </div>
+  );
+}
+
+function Detail({ label, value, bold, copyable }: { label: string; value: string; bold?: boolean; copyable?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    if (!copyable || value === '-') return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+  return (
+    <div style={{ padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{label}</div>
+      <div
+        onClick={onCopy}
+        style={{
+          fontSize: 15,
+          color: '#1e293b',
+          fontWeight: bold ? 700 : 400,
+          cursor: copyable && value !== '-' ? 'pointer' : 'default',
+        }}
+        title={copyable && value !== '-' ? '클릭하여 복사' : ''}
+      >
+        {value}
+        {copied && <span style={{ marginLeft: 8, color: '#1F7A4D', fontSize: 12 }}>✓ 복사됨</span>}
+      </div>
+    </div>
+  );
+}
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function formatDateTimeFull(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 }

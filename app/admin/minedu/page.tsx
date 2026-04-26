@@ -1,40 +1,55 @@
-import { createClient } from "@supabase/supabase-js";
-import MineduListClient, { type MineduApp } from "./MineduListClient";
+import { createClient } from '@supabase/supabase-js';
+import MineduListClient from './MineduListClient';
 
-export const revalidate = 60;
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-  title: "민에듀 공구 신청 관리 | 드림아카데미",
+type Application = {
+  id: number;
+  created_at: string;
+  name: string;
+  phone: string | null;
+  children: string | null;
+  ages: string | null;
+  depart_date: string | null;
+  duration_weeks: string | null;
+  period: string | null; // 호환성 위해 유지 (옛날 신청)
+  lodging: string | null;
 };
 
-export default async function MineduAdminPage() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+async function getApplications(): Promise<Application[]> {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
 
-  let rows: MineduApp[] = [];
-  let fetchError: string | null = null;
+  const { data, error } = await supabase
+    .from('minedu_applications')
+    .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging')
+    .order('created_at', { ascending: false });
 
-  if (!url || !serviceKey) {
-    fetchError = "Supabase 환경변수 누락 (SUPABASE_SERVICE_ROLE_KEY)";
-  } else {
-    try {
-      const supabase = createClient(url, serviceKey, {
-        auth: { persistSession: false },
-      });
-      const { data, error } = await supabase
-        .from("minedu_applications")
-        .select("id, created_at, name, phone, children, ages, period, lodging")
-        .order("created_at", { ascending: false });
-      if (error) {
-        fetchError = error.message;
-      } else {
-        rows = (data || []) as MineduApp[];
-      }
-    } catch (e) {
-      fetchError = e instanceof Error ? e.message : String(e);
-    }
+  if (error) {
+    console.error('[admin/minedu] fetch error:', error);
+    return [];
   }
-
-  return <MineduListClient initialRows={rows} fetchError={fetchError} />;
+  return (data as Application[]) || [];
 }
+
+export default async function MineduAdminPage() {
+  const applications = await getApplications();
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayCount = applications.filter(
+    (a) => new Date(a.created_at) >= today
+  ).length;
+
+  return (
+    <MineduListClient
+      applications={applications}
+      total={applications.length}
+      today={todayCount}
+    />
+  );
+}
+
+export const revalidate = 60;
+export const dynamic = 'force-dynamic';

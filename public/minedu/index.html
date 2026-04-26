@@ -717,52 +717,72 @@
   .side-card .contact-line:first-of-type { border-top: 0; }
   .side-card .contact-line b { color: var(--ink); font-weight: 600; min-width: 60px; }
 
-  /* ─── 새 예약 신청 (단순화 + 카카오 연결) ─── */
+  /* ─── 새 예약 신청 (인라인 폼) ─── */
   .apply-simple { max-width: 720px; margin: 0 auto; }
   .apply-card {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 48px 36px;
+    padding: 36px;
     box-shadow: var(--shadow-sm);
-    text-align: center;
   }
-  @media (max-width: 600px) { .apply-card { padding: 36px 22px; } }
-  .apply-icon {
-    font-size: 56px; line-height: 1; margin-bottom: 18px;
+  @media (max-width: 600px) { .apply-card { padding: 24px 18px; } }
+
+  .inline-form .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 16px;
   }
-  .apply-title {
-    font-size: 20px; font-weight: 800; letter-spacing: -0.02em;
-    margin-bottom: 12px; color: var(--ink);
+  @media (max-width: 540px) {
+    .inline-form .form-grid { grid-template-columns: 1fr; }
   }
-  .apply-desc {
-    font-size: 15px; color: var(--ink-2); line-height: 1.7;
-    margin-bottom: 28px;
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field-full { grid-column: 1 / -1; }
+  .form-field label {
+    font-size: 13.5px; font-weight: 700; color: var(--ink);
+    display: flex; align-items: center; gap: 4px;
   }
-  .apply-desc b { color: var(--ink); font-weight: 700; }
+  .form-field .req { color: var(--coral); font-size: 12px; }
+  .form-field input,
+  .form-field select {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 14.5px; font-family: inherit; background: #fff;
+    color: var(--ink); transition: border-color .15s ease;
+    box-sizing: border-box;
+  }
+  .form-field input:focus,
+  .form-field select:focus { outline: none; border-color: var(--coral); }
+  .form-field input::placeholder { color: var(--ink-3); }
+
+  .form-info {
+    background: #FFF8E5; border: 1px solid #F5E2A0;
+    padding: 14px 16px; border-radius: 10px;
+    font-size: 13px; color: #6A4A0B; line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .form-info b { color: #8A5E0E; }
 
   .btn-apply {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
     background: #FAE100; color: #3C1E1E;
     border: 0; border-radius: 14px;
-    padding: 18px 36px; font-size: 16.5px; font-weight: 800;
+    padding: 18px 28px; font-size: 16.5px; font-weight: 800;
     cursor: pointer; transition: transform .12s ease, box-shadow .15s ease;
     box-shadow: 0 6px 18px rgba(250, 225, 0, 0.35);
-    width: 100%; max-width: 360px;
+    width: 100%; font-family: inherit;
   }
   .btn-apply:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(250, 225, 0, 0.5); }
   .btn-apply:active { transform: translateY(0); }
+  .btn-apply:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .apply-meta {
     display: grid; grid-template-columns: 1fr; gap: 12px;
-    margin-top: 32px;
-    text-align: left;
+    margin-top: 32px; padding-top: 24px;
     border-top: 1px dashed var(--line);
-    padding-top: 24px;
   }
   .meta-item {
     display: flex; align-items: flex-start; gap: 12px;
-    padding: 10px 0;
+    padding: 8px 0;
   }
   .meta-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
   .meta-item b { display: block; font-size: 14.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
@@ -1916,7 +1936,7 @@
           </tr>
           <tr>
             <td><b>일정 변경</b></td>
-            <td><span class="danger">등록 완료 후 일정 변경 불가</span></td>
+            <td><span class="ok">1회 변경 가능</span> · 단, <b>입실 2개월 전</b>까지만 가능</td>
           </tr>
           <tr>
             <td><b>부분 변경·취소</b></td>
@@ -2083,7 +2103,7 @@
             <li>보호자와 <b>분리 가능한 아동만</b> 수업 참여 가능</li>
             <li>아동의 부적응 또는 분리 불가능 사유로 인한 환불 불가</li>
             <li>학원 내 부모님 대기 및 수업 참관 불가</li>
-            <li>등록 후 일정 변경 불가</li>
+            <li>일정 변경은 <b>1회 가능</b> (단, 입실 2개월 전까지만 가능)</li>
           </ul>
         </div>
 
@@ -2123,23 +2143,80 @@
           <h2 class="panel-title">예약 신청</h2>
         </div>
         <p class="panel-sub">
-          예약 신청 버튼을 누르시면 <b>드림아카데미 공식 카카오 채널</b>로 바로 연결됩니다.<br />
-          학원 채널에서 친절하게 상담을 이어드릴게요.
+          아래 정보를 입력하신 후 <b>"카카오 채널로 상담 신청하기"</b>를 누르시면<br />
+          드림아카데미 카카오 채널로 자동 연결됩니다.
         </p>
       </div>
 
       <div class="apply-simple">
         <div class="apply-card">
-          <div class="apply-icon">💬</div>
-          <h3 class="apply-title">민에듀 × 세부드림아카데미 공동구매 상담</h3>
-          <p class="apply-desc">
-            아래 버튼을 누르시면 <b>드림아카데미 카카오 채널</b>로 바로 이동합니다.<br />
-            연결되시면 <b>예약자 성함</b>을 먼저 알려주세요.
-          </p>
+          <form id="apply-form" class="inline-form" autocomplete="off">
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="f-name">예약자 성함 <span class="req">*</span></label>
+                <input type="text" id="f-name" name="name" required placeholder="홍길동" />
+              </div>
+              <div class="form-field">
+                <label for="f-phone">연락처 <span class="req">*</span></label>
+                <input type="tel" id="f-phone" name="phone" required placeholder="010-0000-0000" />
+              </div>
+              <div class="form-field">
+                <label for="f-children">자녀 인원 <span class="req">*</span></label>
+                <select id="f-children" name="children" required>
+                  <option value="">선택</option>
+                  <option>1명</option>
+                  <option>2명</option>
+                  <option>3명</option>
+                  <option>4명 이상</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="f-ages">자녀 연령 <span class="req">*</span></label>
+                <input type="text" id="f-ages" name="ages" required placeholder="예: 7세, 초등 3학년" />
+              </div>
+              <div class="form-field">
+                <label for="f-depart">출국 희망일 <span class="req">*</span></label>
+                <input type="date" id="f-depart" name="depart_date" required />
+              </div>
+              <div class="form-field">
+                <label for="f-duration">체류 기간 <span class="req">*</span></label>
+                <select id="f-duration" name="duration_weeks" required>
+                  <option value="">선택</option>
+                  <option>2주</option>
+                  <option>3주</option>
+                  <option>4주</option>
+                  <option>5주</option>
+                  <option>6주</option>
+                  <option>7주</option>
+                  <option>8주</option>
+                  <option>9주</option>
+                  <option>10주</option>
+                  <option>11주</option>
+                  <option>12주</option>
+                  <option>12주 이상</option>
+                </select>
+              </div>
+              <div class="form-field form-field-full">
+                <label for="f-lodging">희망 숙소</label>
+                <select id="f-lodging" name="lodging">
+                  <option value="">선택 (또는 상담 후 결정)</option>
+                  <option>드림하우스 (독채)</option>
+                  <option>제이파크 리조트</option>
+                  <option>큐브나인 리조트</option>
+                  <option>상담 후 결정</option>
+                </select>
+              </div>
+            </div>
 
-          <button type="button" class="btn-apply" id="btn-apply-kakao">
-            💛 카카오 채널로 상담 시작하기
-          </button>
+            <div class="form-info">
+              ✓ 신청 정보가 <b>자동으로 접수</b>되며 카카오 채널이 새 탭에서 열립니다.<br />
+              ✓ 채널에서 담당 매니저와 <b>바로 상담</b>을 시작하실 수 있어요.
+            </div>
+
+            <button type="submit" class="btn-apply" id="btn-apply">
+              💛 카카오 채널로 상담 신청하기
+            </button>
+          </form>
 
           <div class="apply-meta">
             <div class="meta-item">
@@ -2163,67 +2240,6 @@
                 <span>1인당 10만원 추가 할인 (조기 마감 가능)</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 카카오 연결 전 안내 + 정보 입력 팝업 -->
-      <div class="popup-overlay" id="popup-overlay">
-        <div class="popup-card popup-form">
-          <div class="popup-icon">💛</div>
-          <h3 class="popup-title">예약 신청 정보 입력</h3>
-          <p class="popup-desc">
-            아래 정보를 입력해 주시면 <b>드림아카데미 카카오 채널</b>로 연결됩니다.<br />
-            <span style="font-size:13px; color:var(--ink-3);">입력하신 내용은 메모로 복사되어 채널에 빠르게 보내실 수 있어요.</span>
-          </p>
-
-          <form id="apply-form" class="popup-form-grid" autocomplete="off">
-            <div class="popup-field">
-              <label for="f-name">예약자 성함 <span class="req">*</span></label>
-              <input type="text" id="f-name" name="name" required placeholder="홍길동" />
-            </div>
-            <div class="popup-field">
-              <label for="f-phone">연락처</label>
-              <input type="tel" id="f-phone" name="phone" placeholder="010-0000-0000 (선택)" />
-            </div>
-            <div class="popup-field">
-              <label for="f-children">자녀 인원 <span class="req">*</span></label>
-              <select id="f-children" name="children" required>
-                <option value="">선택</option>
-                <option>1명</option>
-                <option>2명</option>
-                <option>3명</option>
-                <option>4명 이상</option>
-              </select>
-            </div>
-            <div class="popup-field">
-              <label for="f-ages">자녀 연령 <span class="req">*</span></label>
-              <input type="text" id="f-ages" name="ages" required placeholder="예: 7세, 초등 3학년" />
-            </div>
-            <div class="popup-field popup-field-full">
-              <label for="f-period">희망 일정 <span class="req">*</span></label>
-              <input type="text" id="f-period" name="period" required placeholder="예: 2027년 1월 4주 / 여름방학 3주 등" />
-            </div>
-            <div class="popup-field popup-field-full">
-              <label for="f-lodging">희망 숙소</label>
-              <select id="f-lodging" name="lodging">
-                <option value="">선택 (또는 상담 후 결정)</option>
-                <option>드림하우스 (독채)</option>
-                <option>제이파크 리조트</option>
-                <option>큐브나인 리조트</option>
-                <option>상담 후 결정</option>
-              </select>
-            </div>
-          </form>
-
-          <div class="popup-note" style="text-align:left; background:#FFF8E5; border:1px solid #F5E2A0; padding:12px 14px; border-radius:10px; margin-top:6px;">
-            ✓ 신청 정보가 <b>자동으로 접수</b>되며 카카오 채널이 새 탭에서 열립니다.<br />
-            ✓ 채널에서 담당 매니저와 <b>바로 상담</b>을 시작하실 수 있어요.
-          </div>
-
-          <div class="popup-buttons">
-            <button type="button" class="popup-btn-cancel" id="popup-cancel">취소</button>
-            <button type="button" class="popup-btn-confirm" id="popup-confirm">카카오 채널로 이동 →</button>
           </div>
         </div>
       </div>
@@ -2283,87 +2299,67 @@
     if (m) activateTab(m[1]);
   })();
 
-  // ===== 카카오 채널 연결 (예약 신청) =====
+  // ===== 카카오 채널 연결 (예약 신청 - 인라인 폼) =====
   const KAKAO_CHANNEL_URL = 'https://pf.kakao.com/_Yuhxhn/chat';
 
-  const popup = document.getElementById('popup-overlay');
-  const btnApply = document.getElementById('btn-apply-kakao');
-  const btnCancel = document.getElementById('popup-cancel');
-  const btnConfirm = document.getElementById('popup-confirm');
   const applyForm = document.getElementById('apply-form');
+  const btnApply = document.getElementById('btn-apply');
 
-  function openPopup() {
-    popup.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    // 첫 입력칸 자동 포커스
-    setTimeout(() => { const f = document.getElementById('f-name'); if (f) f.focus(); }, 100);
-  }
-  function closePopup() {
-    popup.classList.remove('active');
-    document.body.style.overflow = '';
-  }
+  if (applyForm) {
+    applyForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-  if (btnApply) btnApply.addEventListener('click', openPopup);
-  if (btnCancel) btnCancel.addEventListener('click', closePopup);
-
-  if (btnConfirm) btnConfirm.addEventListener('click', async () => {
-    // 폼 검증
-    if (!applyForm.checkValidity()) {
-      applyForm.reportValidity();
-      return;
-    }
-
-    // 입력값 수집
-    const data = new FormData(applyForm);
-    const payload = {
-      name: (data.get('name') || '').trim(),
-      phone: (data.get('phone') || '').trim(),
-      children: (data.get('children') || '').trim(),
-      ages: (data.get('ages') || '').trim(),
-      period: (data.get('period') || '').trim(),
-      lodging: (data.get('lodging') || '').trim(),
-    };
-
-    // 버튼 비활성화 (중복 클릭 방지)
-    btnConfirm.disabled = true;
-    btnConfirm.textContent = '신청 중...';
-
-    // ① Supabase에 저장 (드림아카데미 API 호출)
-    try {
-      const res = await fetch('/api/minedu-apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || '신청 저장 실패');
+      // 폼 검증 (브라우저 기본 검증)
+      if (!applyForm.checkValidity()) {
+        applyForm.reportValidity();
+        return;
       }
-    } catch (err) {
-      console.error('[apply] save failed:', err);
-      // 저장 실패해도 카카오는 열어줌 (사용자 경험 우선)
-      // 단, 알림으로 안내
-      alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
-    }
 
-    // ② 카카오 채널 새 탭 열기 (저장 성공/실패 무관)
-    window.open(KAKAO_CHANNEL_URL, '_blank', 'noopener,noreferrer');
+      // 입력값 수집
+      const data = new FormData(applyForm);
+      const payload = {
+        name: (data.get('name') || '').trim(),
+        phone: (data.get('phone') || '').trim(),
+        children: (data.get('children') || '').trim(),
+        ages: (data.get('ages') || '').trim(),
+        depart_date: (data.get('depart_date') || '').trim(),
+        duration_weeks: (data.get('duration_weeks') || '').trim(),
+        lodging: (data.get('lodging') || '').trim(),
+      };
 
-    // ③ 팝업 닫고 폼 초기화
-    closePopup();
-    applyForm.reset();
-    btnConfirm.disabled = false;
-    btnConfirm.textContent = '카카오 채널로 이동 →';
+      // 버튼 비활성화 (중복 클릭 방지)
+      btnApply.disabled = true;
+      btnApply.textContent = '신청 접수 중...';
 
-    // ④ 안내 토스트
-    showToast('✓ 신청이 접수되었습니다. 카카오 채널에서 상담을 이어가세요!');
-  });
+      // ① Supabase에 저장 (드림아카데미 API 호출)
+      try {
+        const res = await fetch('/api/minedu-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-  // 오버레이 배경 클릭 시 닫기
-  if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) closePopup(); });
-  // ESC 키로 닫기
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopup(); });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || '신청 저장 실패');
+        }
+      } catch (err) {
+        console.error('[apply] save failed:', err);
+        alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
+      }
+
+      // ② 카카오 채널 새 탭 열기
+      window.open(KAKAO_CHANNEL_URL, '_blank', 'noopener,noreferrer');
+
+      // ③ 폼 초기화 + 버튼 복구
+      applyForm.reset();
+      btnApply.disabled = false;
+      btnApply.innerHTML = '💛 카카오 채널로 상담 신청하기';
+
+      // ④ 안내 토스트
+      showToast('✓ 신청이 접수되었습니다. 카카오 채널에서 상담을 이어가세요!');
+    });
+  }
 
   // 토스트 알림
   function showToast(text) {
