@@ -144,8 +144,8 @@
   }
   .hero-stats {
     margin-top: 36px;
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 14px; max-width: 900px;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 12px; max-width: 1080px;
   }
   .hero-stats-label {
     margin-top: 32px; margin-bottom: -10px;
@@ -175,6 +175,9 @@
   .stat .stat-icon { font-size: 22px; display: block; margin-bottom: 8px; }
   .stat b { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.35; margin-bottom: 6px; }
   .stat span { font-size: 12.5px; color: var(--ink-3); letter-spacing: 0.01em; line-height: 1.5; display: block; }
+  @media (max-width: 1100px) {
+    .hero-stats { grid-template-columns: repeat(3, 1fr); }
+  }
   @media (max-width: 860px) {
     .hero-stats { grid-template-columns: repeat(2, 1fr); }
   }
@@ -518,6 +521,21 @@
   }
   .notice.teal { border-left-color: var(--teal); }
   .notice.gold { border-left-color: var(--gold); }
+  .notice.coral { border-left-color: var(--coral); background: #FFF5F2; }
+  .notice.coral h4 { color: var(--coral); }
+
+  .badge-special {
+    display: inline-block;
+    background: linear-gradient(135deg, #E8563F 0%, #F08368 100%);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    letter-spacing: -0.01em;
+    box-shadow: 0 2px 6px rgba(232, 86, 63, 0.25);
+    margin-bottom: 4px;
+  }
   .notice.green { border-left-color: var(--green); }
   .notice h4 { font-size: 15.5px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.01em; }
   .notice p, .notice li { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
@@ -1103,6 +1121,11 @@
         <span class="stat-icon">💰</span>
         <b>전액 입금 추가 할인</b>
         <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br />등록 시 일시 결제 조건</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">📅</span>
+        <b>일정 변경 1회 가능</b>
+        <span><b style="color:var(--coral); font-size:12.5px;">잔금 납부 전</b>까지<br />유연한 일정 조정</span>
       </div>
     </div>
   </div>
@@ -1936,7 +1959,10 @@
           </tr>
           <tr>
             <td><b>일정 변경</b></td>
-            <td><span class="ok">1회 변경 가능</span> · 단, <b>입실 2개월 전</b>까지만 가능</td>
+            <td>
+              <span class="badge-special">🎁 민에듀 특별혜택</span><br />
+              <span class="ok">1회 변경 가능</span> · 단, <b>입실 2개월 전</b>까지만 가능
+            </td>
           </tr>
           <tr>
             <td><b>부분 변경·취소</b></td>
@@ -1944,6 +1970,23 @@
           </tr>
         </tbody>
       </table>
+
+      <div class="notice-grid" style="margin-top: 18px;">
+        <div class="notice coral" style="grid-column: 1 / -1;">
+          <h4>💰 전액 입금 후 취소 시 환불 안내</h4>
+          <p style="margin: 0 0 10px; color: var(--ink-2); font-size: 14.5px;">
+            예약금만 납부하셨든, <b>잔금까지 전액 납부</b>하셨든 <b>위 환불 규정이 동일하게 적용</b>됩니다.<br />
+            전액 입금 시점과 무관하게 <b>취소 시점</b>을 기준으로 차액이 환불됩니다.
+          </p>
+          <ul>
+            <li><b>출국 6주 전 취소</b> → 예약금 제외, 잔금의 50% 환불 (전액 납부자도 동일)
+              <br /><span style="color: var(--ink-3); font-size: 13.5px;">예) 드림하우스 전액 입금 후 6주 전 취소: 예약금 100만원 + 잔금의 50%를 제외한 차액 환불</span>
+            </li>
+            <li><b>출국 6주 이내 취소</b> → 환불 불가 (전액 납부자도 동일)</li>
+            <li><b>일정 변경(1회)</b>은 <span style="color: var(--coral); font-weight: 700;">민에듀 특별혜택</span>으로, 입실 2개월 전까지 가능합니다</li>
+          </ul>
+        </div>
+      </div>
 
       <div class="notice-grid" style="margin-top: 18px;">
         <div class="notice teal">
@@ -2103,7 +2146,7 @@
             <li>보호자와 <b>분리 가능한 아동만</b> 수업 참여 가능</li>
             <li>아동의 부적응 또는 분리 불가능 사유로 인한 환불 불가</li>
             <li>학원 내 부모님 대기 및 수업 참관 불가</li>
-            <li>일정 변경은 <b>1회 가능</b> (단, 입실 2개월 전까지만 가능)</li>
+            <li>일정 변경은 <b>1회 가능</b> (입실 2개월 전까지) — <span style="color:var(--coral); font-weight:700;">🎁 민에듀 특별혜택</span></li>
           </ul>
         </div>
 
