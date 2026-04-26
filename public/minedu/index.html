@@ -145,17 +145,39 @@
   .hero-stats {
     margin-top: 36px;
     display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 14px; max-width: 800px;
+    gap: 14px; max-width: 900px;
+  }
+  .hero-stats-label {
+    margin-top: 32px; margin-bottom: -10px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px;
+    background: var(--coral); color: #fff;
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
   }
   .stat {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 18px 16px;
+    padding: 22px 18px 20px;
     box-shadow: var(--shadow-sm);
+    position: relative;
   }
-  .stat b { display: block; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-  .stat span { font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em; }
+  .stat.highlight {
+    border: 1.5px solid var(--coral);
+    background: linear-gradient(180deg, #FFF7F2 0%, #FFFFFF 60%);
+  }
+  .stat.highlight::after {
+    content: "선착순"; position: absolute; top: -10px; right: 12px;
+    background: var(--coral); color: #fff;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.02em;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .stat .stat-icon { font-size: 22px; display: block; margin-bottom: 8px; }
+  .stat b { display: block; font-size: 15px; font-weight: 800; letter-spacing: -0.015em; line-height: 1.35; margin-bottom: 6px; }
+  .stat span { font-size: 12.5px; color: var(--ink-3); letter-spacing: 0.01em; line-height: 1.5; display: block; }
+  @media (max-width: 860px) {
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  }
   @media (max-width: 680px) {
     .hero { padding: 52px 20px 40px; }
     .hero-stats { grid-template-columns: repeat(2, 1fr); }
@@ -266,6 +288,25 @@
   .card ul.benefits li b {
     color: var(--ink);
     font-weight: 700;
+  }
+  /* 공통 강조 혜택 (화상영어 등) */
+  .card ul.benefits li.benefit-highlight {
+    background: linear-gradient(180deg, #FFF7F2 0%, #FFFBF8 100%);
+    border: 1px solid #F5C9B5;
+    border-radius: 12px;
+    padding: 12px 14px 12px 44px;
+    margin-top: 14px;
+  }
+  .card ul.benefits li.benefit-highlight .b-icon {
+    left: 12px; top: 12px;
+  }
+  .card ul.benefits li.benefit-highlight b { color: var(--coral); }
+  .card ul.benefits li .benefit-sub {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+    line-height: 1.5;
   }
 
   /* feature cards (커리큘럼 특장점) */
@@ -494,6 +535,103 @@
   }
   .warning-box b { color: #8A5E0E; }
 
+  /* 중요 안내 - 섹션 제목 */
+  .notice-section-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 36px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink);
+    color: var(--ink);
+  }
+  .notice-section-title:first-of-type { margin-top: 8px; }
+  .notice-section-sub {
+    font-size: 13.5px; color: var(--ink-3); margin: -6px 0 14px;
+  }
+
+  /* 예약 절차 단계 */
+  .step-list {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 8px;
+  }
+  @media (max-width: 860px) { .step-list { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .step-list { grid-template-columns: 1fr; } }
+  .step-item {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 18px 16px;
+    position: relative; min-height: 110px;
+  }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 999px;
+    background: var(--coral); color: #fff; font-size: 13px; font-weight: 800;
+    margin-bottom: 10px;
+  }
+  .step-item h5 { font-size: 14.5px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.01em; }
+  .step-item p { font-size: 13px; color: var(--ink-2); line-height: 1.55; }
+
+  /* 패키지별 카드 */
+  .pkg-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 860px) { .pkg-grid { grid-template-columns: 1fr; } }
+  .pkg-card {
+    background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 22px 22px 20px;
+    border-top: 4px solid var(--coral);
+  }
+  .pkg-card.dh { border-top-color: #E8A33F; }
+  .pkg-card.jp { border-top-color: var(--teal); }
+  .pkg-card.c9 { border-top-color: #2E7BA6; }
+  .pkg-card h4 {
+    font-size: 16px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.01em;
+  }
+  .pkg-card .pkg-deposit {
+    font-size: 13px; color: var(--ink-3); margin-bottom: 14px;
+  }
+  .pkg-card .pkg-deposit b { color: var(--coral); font-size: 15px; font-weight: 800; }
+  .pkg-card ul { padding-left: 0; list-style: none; margin: 0; }
+  .pkg-card ul li {
+    font-size: 13.5px; color: var(--ink-2); line-height: 1.6;
+    padding: 7px 0; border-top: 1px dashed var(--line);
+  }
+  .pkg-card ul li:first-child { border-top: 0; padding-top: 0; }
+  .pkg-card ul li b { color: var(--ink); font-weight: 700; }
+
+  /* 룸별 가격 sub-list */
+  .pkg-card .room-list {
+    list-style: none; padding: 6px 0 0 0; margin: 6px 0 0;
+  }
+  .pkg-card .room-list li {
+    padding: 4px 0 4px 14px; border: 0; font-size: 13px;
+    color: var(--ink-2); position: relative;
+  }
+  .pkg-card .room-list li::before {
+    content: "·"; position: absolute; left: 4px; top: 4px;
+    color: var(--ink-3); font-weight: 700;
+  }
+  .pkg-card .note {
+    display: block; font-size: 12.5px; color: var(--ink-3);
+    margin-top: 6px; line-height: 1.5;
+  }
+
+  /* 환불 표 */
+  .refund-table {
+    width: 100%; border-collapse: collapse; margin-top: 8px;
+    background: #fff; border-radius: var(--radius-sm); overflow: hidden;
+    border: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .refund-table th {
+    background: var(--bg-2); padding: 12px 14px; text-align: left;
+    font-weight: 700; color: var(--ink); border-bottom: 1px solid var(--line);
+  }
+  .refund-table td { padding: 12px 14px; border-top: 1px solid var(--line); color: var(--ink-2); }
+  .refund-table tr:first-child td { border-top: 0; }
+  .refund-table .danger { color: #B23A3A; font-weight: 700; }
+  .refund-table .ok { color: #1F7A4D; font-weight: 700; }
+
   /* Form */
   .form-card {
     background: #fff; border: 1px solid var(--line);
@@ -578,6 +716,143 @@
   }
   .side-card .contact-line:first-of-type { border-top: 0; }
   .side-card .contact-line b { color: var(--ink); font-weight: 600; min-width: 60px; }
+
+  /* ─── 새 예약 신청 (단순화 + 카카오 연결) ─── */
+  .apply-simple { max-width: 720px; margin: 0 auto; }
+  .apply-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 48px 36px;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+  }
+  @media (max-width: 600px) { .apply-card { padding: 36px 22px; } }
+  .apply-icon {
+    font-size: 56px; line-height: 1; margin-bottom: 18px;
+  }
+  .apply-title {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.02em;
+    margin-bottom: 12px; color: var(--ink);
+  }
+  .apply-desc {
+    font-size: 15px; color: var(--ink-2); line-height: 1.7;
+    margin-bottom: 28px;
+  }
+  .apply-desc b { color: var(--ink); font-weight: 700; }
+
+  .btn-apply {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: #FAE100; color: #3C1E1E;
+    border: 0; border-radius: 14px;
+    padding: 18px 36px; font-size: 16.5px; font-weight: 800;
+    cursor: pointer; transition: transform .12s ease, box-shadow .15s ease;
+    box-shadow: 0 6px 18px rgba(250, 225, 0, 0.35);
+    width: 100%; max-width: 360px;
+  }
+  .btn-apply:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(250, 225, 0, 0.5); }
+  .btn-apply:active { transform: translateY(0); }
+
+  .apply-meta {
+    display: grid; grid-template-columns: 1fr; gap: 12px;
+    margin-top: 32px;
+    text-align: left;
+    border-top: 1px dashed var(--line);
+    padding-top: 24px;
+  }
+  .meta-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0;
+  }
+  .meta-icon { font-size: 20px; flex-shrink: 0; line-height: 1.4; }
+  .meta-item b { display: block; font-size: 14.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .meta-item span { font-size: 13.5px; color: var(--ink-3); line-height: 1.5; }
+
+  /* 안내 팝업 */
+  .popup-overlay {
+    position: fixed; inset: 0;
+    background: rgba(32, 28, 24, 0.55);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .popup-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .popup-card { 
+    background: #fff; border-radius: 18px;
+    padding: 36px 30px 28px;
+    max-width: 440px; width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    animation: slideUp 0.25s ease;
+  }
+  .popup-card.popup-form {
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .popup-form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin: 8px 0 14px;
+    text-align: left;
+  }
+  @media (max-width: 480px) {
+    .popup-form-grid { grid-template-columns: 1fr; }
+  }
+  .popup-field { display: flex; flex-direction: column; gap: 5px; }
+  .popup-field-full { grid-column: 1 / -1; }
+  .popup-field label {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .popup-field .req { color: var(--coral); font-size: 12px; }
+  .popup-field input,
+  .popup-field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    color: var(--ink);
+    transition: border-color .15s ease;
+  }
+  .popup-field input:focus,
+  .popup-field select:focus {
+    outline: none; border-color: var(--coral);
+  }
+  .popup-field input::placeholder { color: var(--ink-3); }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .popup-icon { font-size: 44px; margin-bottom: 12px; line-height: 1; }
+  .popup-title { font-size: 19px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+  .popup-desc { font-size: 14.5px; color: var(--ink-2); line-height: 1.6; margin-bottom: 18px; }
+  .popup-box {
+    background: #FFF8E5; border: 1px solid #F5E2A0;
+    border-radius: 12px; padding: 16px 18px; text-align: left;
+    margin-bottom: 14px;
+  }
+  .popup-box-line {
+    font-size: 14px; color: var(--ink); padding: 5px 0;
+    line-height: 1.55;
+  }
+  .popup-box-line b { color: var(--coral); margin-right: 6px; }
+  .popup-note {
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
+    margin-bottom: 22px;
+  }
+  .popup-buttons { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+  .popup-btn-cancel, .popup-btn-confirm {
+    border: 0; border-radius: 12px; padding: 14px 16px;
+    font-size: 14.5px; font-weight: 700; cursor: pointer;
+    transition: background .15s ease;
+  }
+  .popup-btn-cancel { background: var(--bg-2); color: var(--ink-2); }
+  .popup-btn-cancel:hover { background: var(--line-2); }
+  .popup-btn-confirm { background: #FAE100; color: #3C1E1E; }
+  .popup-btn-confirm:hover { background: #F5D700; }
 
   /* ─── Curriculum Components ─── */
   .quick-info {
@@ -784,15 +1059,31 @@
       <em>세부에서 시작되는 몰입의 시간.</em>
     </h1>
     <p class="lead">
-      한국인 선생님의 세심한 케어와 원어민 수업이 균형을 이루는 세부드림아카데미에서,
-      민에듀 구독자님을 위한 특별한 공동구매를 준비했습니다.
-      아이의 연령과 성향에 맞는 커리큘럼, 가족 단위 맞춤 숙소를 확인해보세요.
+      한국인 선생님의 세심한 케어와 검증된 커리큘럼이 만드는 <b>프리미엄 영어 수업</b>,
+      그리고 가족 단위 맞춤 숙소까지. 민에듀 구독자님만을 위한 특별 공동구매 혜택을 확인해보세요.
     </p>
+    <div class="hero-stats-label">🎁 민에듀 공구 단독 혜택</div>
     <div class="hero-stats">
-      <div class="stat"><b>1:1</b><span>집중 영어 수업</span></div>
-      <div class="stat"><b>한국인</b><span>상주 매니저 운영</span></div>
-      <div class="stat"><b>3가지</b><span>숙소 선택 옵션</span></div>
-      <div class="stat"><b>안심</b><span>클린 리뷰 관리</span></div>
+      <div class="stat highlight">
+        <span class="stat-icon">🔥</span>
+        <b>선착순 3팀 특별가</b>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br />빠른 등록 권장</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">⭐</span>
+        <b>전기간 특별할인</b>
+        <span>민에듀 구독자 전용<br />운영 전 기간 적용</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">✈️</span>
+        <b>비수기 유류비 지원</b>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">20만원</b> 지원<br />비수기 한정</span>
+      </div>
+      <div class="stat">
+        <span class="stat-icon">💰</span>
+        <b>전액 입금 추가 할인</b>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br />등록 시 일시 결제 조건</span>
+      </div>
     </div>
   </div>
 </section>
@@ -1212,6 +1503,7 @@
             <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
             <li><span class="b-icon">📚</span><b>대여 물품 &amp; 도서관 이용</b> — 외부 숙소 관리실에서 대여 가능</li>
             <li><span class="b-icon">📱</span><b>무료 유심 제공</b> — 별도 등록 없이 바로 사용 가능</li>
+            <li class="benefit-highlight"><span class="b-icon">💻</span><b>무료 화상영어 — 출국 전 / 귀국 후 이용 가능</b><br /><span class="benefit-sub">등록 기간만큼 제공 (예: 4주 등록 시 주 3회 × 4주 제공)</span></li>
           </ul>
           <div class="tags">
             <span class="tag coral">독채</span>
@@ -1374,6 +1666,7 @@
             <li><span class="b-icon">🍱</span><b>평일 3식 프리미엄 도시락</b> — 아침 / 점심 / 저녁 제공</li>
             <li><span class="b-icon">🎓</span><b>드림아카데미 정규 수업</b> + 에프터 스쿨 &amp; 주말 체험학습</li>
             <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
+            <li class="benefit-highlight"><span class="b-icon">💻</span><b>무료 화상영어 — 출국 전 / 귀국 후 이용 가능</b><br /><span class="benefit-sub">등록 기간만큼 제공 (예: 4주 등록 시 주 3회 × 4주 제공)</span></li>
           </ul>
           <div class="tags">
             <span class="tag coral">5성급</span>
@@ -1462,6 +1755,7 @@
             <li><span class="b-icon">🍽️</span><b>식사 바우처 포함</b> — 1주 기준 10만원 / 더 나인 레스토랑 식사 이용</li>
             <li><span class="b-icon">🎓</span><b>드림아카데미 정규 수업</b> + 에프터 스쿨 &amp; 주말 체험학습</li>
             <li><span class="b-icon">🚐</span><b>공항 픽업 &amp; 드랍</b> + 주말 투어 셔틀 운영</li>
+            <li class="benefit-highlight"><span class="b-icon">💻</span><b>무료 화상영어 — 출국 전 / 귀국 후 이용 가능</b><br /><span class="benefit-sub">등록 기간만큼 제공 (예: 4주 등록 시 주 3회 × 4주 제공)</span></li>
           </ul>
           <div class="tags">
             <span class="tag coral">오션뷰</span>
@@ -1523,47 +1817,292 @@
           <div class="panel-eyebrow">Important Notices · 반드시 확인</div>
           <h2 class="panel-title">중요 안내사항</h2>
         </div>
-        <p class="panel-sub">예약 전 꼭 확인해 주셔야 할 결제, 일정, 숙소, 취소 규정 안내입니다.</p>
+        <p class="panel-sub">예약 전 꼭 확인해 주셔야 할 결제·취소 규정 및 패키지별 안내입니다.</p>
       </div>
 
-      <div class="notice-grid">
-        <div class="notice">
-          <h4>💳 결제 및 확정</h4>
+      <!-- ① 예약 절차 -->
+      <h3 class="notice-section-title">📋 예약 절차</h3>
+      <p class="notice-section-sub">아래 4단계로 진행되며, 모든 입금은 입실일 기준 2개월 전까지 완료되어야 합니다.</p>
+      <div class="step-list">
+        <div class="step-item">
+          <span class="step-num">1</span>
+          <h5>예약 신청 & 상담</h5>
+          <p>예약 신청서 작성 → 매니저가 1~2일 내 연락 → 일정·인원·숙소 확정</p>
+        </div>
+        <div class="step-item">
+          <span class="step-num">2</span>
+          <h5>예약금 납부</h5>
+          <p>입금 확인 후 등록 완료. <b>숙소별 금액 상이</b> (아래 ② 항목 참조)</p>
+        </div>
+        <div class="step-item">
+          <span class="step-num">3</span>
+          <h5>잔금 납부</h5>
+          <p>입실일 기준 <b>2개월 전</b>까지 전액 납부. 미납 시 자동 취소될 수 있습니다.</p>
+        </div>
+        <div class="step-item">
+          <span class="step-num">4</span>
+          <h5>출국 & 입실</h5>
+          <p>해외여행자 보험 가입 후 출국 → 공항 픽업 → 입실. 체크인 오후 3시 / 체크아웃 정오 12시.</p>
+        </div>
+      </div>
+
+      <!-- ② 패키지별 결제 안내 -->
+      <h3 class="notice-section-title">💳 패키지별 예약금 & 정원</h3>
+      <p class="notice-section-sub">숙소에 따라 예약금과 수용 인원이 다릅니다. 신중하게 선택해 주세요.</p>
+      <div class="pkg-grid">
+        <!-- 드림하우스 -->
+        <div class="pkg-card dh">
+          <h4>🏡 드림하우스 (3룸 독채)</h4>
+          <p class="pkg-deposit">예약금 <b>1채당 100만원</b> · 잔금 입실 2개월 전까지</p>
           <ul>
-            <li>예약금 납부 후 예약이 확정됩니다.</li>
-            <li>잔금은 출국 30일 전까지 납부 부탁드립니다.</li>
-            <li>결제는 세부드림아카데미 공식 페이지를 통해서만 진행됩니다.</li>
-            <li>영수증 및 확정서는 이메일로 발송됩니다.</li>
+            <li>패키지 정원: <b>최대 6인</b></li>
+            <li>체크인 15:00 / 체크아웃 12:00</li>
+            <li>보증금 <b>8,000페소</b> (현지, 4주 기준)<br /><span style="font-size:12.5px; color:var(--ink-3);">전기세·유료 서비스는 보증금에서 차감</span></li>
+            <li>전기세 <b>14페소/KW</b> (실사용량 기준)</li>
+            <li>SSP 발급 <b>필수</b> (체류 기간 무관)</li>
           </ul>
         </div>
 
-        <div class="notice teal">
-          <h4>✈️ 항공 및 비자</h4>
+        <!-- 제이파크 -->
+        <div class="pkg-card jp">
+          <h4>🌊 제이파크 리조트</h4>
+          <p class="pkg-deposit">예약금 <b>총 금액의 50%</b> · 잔금 입실 2개월 전까지</p>
           <ul>
-            <li>항공권은 개별 구매가 원칙이며, 원하시면 제휴사 연결 가능합니다.</li>
-            <li>필리핀은 30일 이내 무비자 입국, 초과 시 SSP(학생 허가증) 필요합니다.</li>
-            <li>SSP 발급은 현지에서 아카데미가 대행해 드립니다 (비용 별도 안내).</li>
-            <li>여권 유효기간은 출국일 기준 6개월 이상이어야 합니다.</li>
+            <li>패키지 정원: <b>최대 4인</b> (성인 최대 2인)</li>
+            <li>체크인 15:00 / 체크아웃 12:00</li>
+            <li>객실 확보를 위해 <b>50% 선입금</b> 필요</li>
+            <li>리조트 기본 운영 규정 준수 필수</li>
+            <li>SSP 발급 <b>필수</b> (체류 기간 무관)</li>
+          </ul>
+        </div>
+
+        <!-- 큐브나인 -->
+        <div class="pkg-card c9">
+          <h4>🐬 큐브나인 리조트</h4>
+          <p class="pkg-deposit">예약금 <b>총 금액의 50%</b> · 잔금 입실 2개월 전까지</p>
+          <ul>
+            <li>패키지 정원: <b>최대 4인</b> (성인 최대 2인)</li>
+            <li>체크인 15:00 / 체크아웃 12:00</li>
+            <li>객실 확보를 위해 <b>50% 선입금</b> 필요</li>
+            <li>리조트 기본 운영 규정 준수 필수</li>
+            <li>SSP 발급 <b>필수</b> (체류 기간 무관)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ③ 환불 및 변경 규정 (공통) -->
+      <h3 class="notice-section-title">🔁 환불 및 변경 규정 <span style="font-size:13px; color:var(--ink-3); font-weight:600;">(전 패키지 공통)</span></h3>
+      <p class="notice-section-sub">등록 후 환불·변경은 원칙적으로 불가하므로 신중히 결정 부탁드립니다.</p>
+
+      <table class="refund-table">
+        <thead>
+          <tr>
+            <th style="width:35%;">시점</th>
+            <th>환불 가능 여부</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>출국 6주 전 취소</b></td>
+            <td><span class="ok">예약금 제외, 잔금의 50% 환불 가능</span></td>
+          </tr>
+          <tr>
+            <td><b>출국 6주 이내 취소</b></td>
+            <td><span class="danger">환불 불가</span></td>
+          </tr>
+          <tr>
+            <td><b>입실 후 중도 퇴실</b></td>
+            <td><span class="danger">환불 불가</span> (개인 사정 사유)</td>
+          </tr>
+          <tr>
+            <td><b>일정 변경</b></td>
+            <td><span class="danger">등록 완료 후 일정 변경 불가</span></td>
+          </tr>
+          <tr>
+            <td><b>부분 변경·취소</b></td>
+            <td><span class="danger">불가</span> (예: 숙소만 / 수업만 / 식사 제외 등)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="notice-grid" style="margin-top: 18px;">
+        <div class="notice teal">
+          <h4>🌪️ 자연재해 · 불가항력 사유</h4>
+          <ul>
+            <li>태풍·지진·홍수·항공편 결항 등으로 수업이 불가능한 경우 일정 조정 가능</li>
+            <li>단, 숙소 및 학원이 정상 운영 가능한 경우 환불·변경 불가</li>
+            <li>드림 측과 사전 협의 후 조율됩니다</li>
           </ul>
         </div>
 
         <div class="notice gold">
-          <h4>🏡 숙소 공통 안내</h4>
+          <h4>🏥 중대 질병·출국 불가 사유</h4>
           <ul>
-            <li>체크인 15:00 / 체크아웃 11:00 (조기 요청 시 별도 협의)</li>
-            <li>모든 숙소는 학원 전용 차량으로 등·하원 왕복이 지원됩니다.</li>
-            <li>수영복, 모자, 선크림, 상비약은 개별 준비를 권장합니다.</li>
-            <li>어린 자녀용 침대 가드 / 유아 식기 요청 시 사전 신청해 주세요.</li>
+            <li><b>적용 대상</b>: 투숙인 본인 및 <b>직계가족까지</b>의 사유에 한해 인정</li>
+            <li>암·수술 등 연수 기간 내 치료 불가 질환 (의사 소견서 제출)</li>
+            <li>정부 명령·입원 등으로 인한 출국 불가 증빙</li>
+            <li>치료 기간이 연수 기간을 초과함을 증빙할 서류 제출</li>
+            <li>위 조건 충족 시 일부 일정 조정 가능</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ④ 패키지별 추가 비용 (현지 지불) -->
+      <h3 class="notice-section-title">💰 패키지별 추가 비용 (현지 지불)</h3>
+      <p class="notice-section-sub">아래 비용은 패키지 금액에 포함되지 않으며, 학생만 해당됩니다.</p>
+
+      <div class="notice-grid">
+        <div class="notice">
+          <h4>🏡 드림하우스 추가 비용</h4>
+          <ul>
+            <li>보증금: 독채 1채당 <b>8,000페소</b> (4주 기준)</li>
+            <li>전기세: <b>14페소/KW</b></li>
+            <li>SSP: <b>7,000페소/인</b> (유효기간 6개월)</li>
+            <li>SSP-i Card: <b>4,000페소/인</b> (유효기간 1년)</li>
+            <li>교재비 (주니어): <b>₩350/권</b></li>
+            <li>재료비 (킨더): <b>₩2,500/월</b></li>
+          </ul>
+        </div>
+
+        <div class="notice teal">
+          <h4>🌊 제이파크 / 🐬 큐브나인 추가 비용</h4>
+          <ul>
+            <li>SSP: <b>7,000페소/인</b> (유효기간 6개월)</li>
+            <li>SSP-i Card: <b>4,000페소/인</b> (유효기간 1년)</li>
+            <li>교재비 (주니어): <b>₩350/권</b></li>
+            <li>재료비 (킨더): <b>₩2,500/월</b></li>
+            <li><span style="color:var(--ink-3); font-size:13px;">※ 보증금·전기세는 리조트 패키지에 포함</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ⑤ 유료 선택 서비스 -->
+      <h3 class="notice-section-title">➕ 선택 가능 유료 서비스</h3>
+      <p class="notice-section-sub">필요 시 선택 가능한 추가 서비스 안내입니다.</p>
+
+      <div class="pkg-grid">
+        <!-- 드림하우스 유료 -->
+        <div class="pkg-card dh">
+          <h4>🏡 드림하우스</h4>
+          <ul>
+            <li>
+              <b>가족 추가 투숙</b> (1인 1박, 최대 4박)
+              <ul class="room-list">
+                <li>평일: <b>1,000페소</b></li>
+                <li>주말: <b>1,500페소</b></li>
+              </ul>
+            </li>
+            <li>
+              <b>연장 수업 (튜터)</b>
+              <ul class="room-list">
+                <li>1:1 수업: <b>300페소</b></li>
+                <li>1:2 수업: <b>350페소</b></li>
+              </ul>
+            </li>
+            <li><b>비자연장</b>: 4,160페소 + 수수료 500페소</li>
+            <li><b>공항 추가 픽드랍</b>: 픽업 ₩1,000 / 드랍 ₩800</li>
+          </ul>
+        </div>
+
+        <!-- 제이파크 유료 -->
+        <div class="pkg-card jp">
+          <h4>🌊 제이파크</h4>
+          <ul>
+            <li>
+              <b>추가 숙박</b> (룸 당, 최대 3박)
+              <ul class="room-list">
+                <li>디럭스: <b>₩260,000</b></li>
+                <li>프리미어: <b>₩300,000</b></li>
+                <li>막탄스위트: <b>₩370,000</b></li>
+              </ul>
+              <span class="note">※ 2인 기준, 성수기·인원·서차지에 따라 변동</span>
+            </li>
+            <li>
+              <b>가족 추가 투숙</b> (최대 3박)
+              <span class="note">무료 / 식사·셔틀 이용 불가</span>
+            </li>
+            <li>
+              <b>연장 수업 (튜터)</b>
+              <ul class="room-list">
+                <li>1:1 수업: <b>300페소</b></li>
+                <li>1:2 수업: <b>350페소</b></li>
+              </ul>
+            </li>
+            <li><b>비자연장</b>: 4,160페소 + 수수료 500페소</li>
+            <li><b>공항 추가 픽드랍</b>: 픽업 ₩1,000 / 드랍 ₩800</li>
+          </ul>
+        </div>
+
+        <!-- 큐브나인 유료 -->
+        <div class="pkg-card c9">
+          <h4>🐬 큐브나인</h4>
+          <ul>
+            <li>
+              <b>추가 숙박</b> (룸 당, 최대 3박)
+              <ul class="room-list">
+                <li>디럭스: <b>₩180,000</b></li>
+                <li>풀억세스: <b>₩230,000</b></li>
+              </ul>
+              <span class="note">※ 2인 기준, 성수기·인원·서차지에 따라 변동</span>
+            </li>
+            <li>
+              <b>가족 추가 투숙</b> (최대 3박)
+              <span class="note">$10 조식 비용 / 식사·셔틀 이용 불가</span>
+            </li>
+            <li>
+              <b>연장 수업 (튜터)</b>
+              <ul class="room-list">
+                <li>1:1 수업: <b>300페소</b></li>
+                <li>1:2 수업: <b>350페소</b></li>
+              </ul>
+            </li>
+            <li><b>비자연장</b>: 4,160페소 + 수수료 500페소</li>
+            <li><b>공항 추가 픽드랍</b>: 픽업 ₩1,000 / 드랍 ₩800</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ⑥ 공통 유의사항 -->
+      <h3 class="notice-section-title">⚠️ 공통 유의사항</h3>
+      <p class="notice-section-sub">전 패키지 공통으로 적용되는 이용·참여 규정입니다.</p>
+
+      <div class="notice-grid">
+        <div class="notice">
+          <h4>🏠 숙소 이용</h4>
+          <ul>
+            <li>모든 숙소는 <b>밤 10시 이후 정숙 유지</b> 원칙</li>
+            <li>타 가정 방문, 과도한 소음, 폭언·폭력 등 위반 시 즉시 퇴소 및 환불 불가</li>
+            <li>드림하우스는 필리핀 현지 이웃과 함께 생활하는 빌리지로, 닭 울음·개 짖음·파티 등 생활 소음 가능성 있음 (문화 차이 이해 필수)</li>
+            <li>얼리 체크인·레이트 체크아웃 시 추가 요금 발생</li>
+          </ul>
+        </div>
+
+        <div class="notice gold">
+          <h4>👨‍👩‍👧 프로그램 참여</h4>
+          <ul>
+            <li>보호자와 <b>분리 가능한 아동만</b> 수업 참여 가능</li>
+            <li>아동의 부적응 또는 분리 불가능 사유로 인한 환불 불가</li>
+            <li>학원 내 부모님 대기 및 수업 참관 불가</li>
+            <li>등록 후 일정 변경 불가</li>
+          </ul>
+        </div>
+
+        <div class="notice teal">
+          <h4>🛡️ 보험 안내</h4>
+          <ul>
+            <li><b>출국 전 해외여행자 보험 가입 필수 권장</b></li>
+            <li>미가입으로 인한 손해에 대해서는 학원에서 책임지지 않습니다</li>
+            <li>여권 유효기간은 출국일 기준 6개월 이상이어야 함</li>
           </ul>
         </div>
 
         <div class="notice green">
-          <h4>📝 취소 및 변경</h4>
+          <h4>📌 기타 안내</h4>
           <ul>
-            <li>출국 45일 전: 예약금 전액 환불</li>
-            <li>출국 30일 전: 예약금 50% 환불</li>
-            <li>출국 15일 전: 예약금 환불 불가 (잔금은 환불)</li>
-            <li>출국 7일 이내 취소: 전액 환불 불가 (천재지변 제외)</li>
+            <li>객실/하우스 배정 및 수업 일정은 양측 사정에 따라 변경될 수 있습니다</li>
+            <li>예약 내용·포함 사항·납부금·이용 규정 등 모든 안내 확인은 고객의 책임입니다</li>
+            <li>본 규정은 <b>등록 시 자동 동의된 것</b>으로 간주됩니다</li>
+            <li>드림아카데미는 운영상 필요에 따라 규정을 보완할 수 있습니다</li>
           </ul>
         </div>
       </div>
@@ -1571,7 +2110,8 @@
       <div class="warning-box">
         <b>⚠️ 꼭 확인해 주세요</b><br />
         본 공동구매 페이지는 <b>민에듀 구독자님만을 위한 전용 조건</b>으로 운영됩니다.
-        타 채널과 가격 및 혜택이 다를 수 있으며, 상담 시 <b>"민에듀를 통해 접속했다"</b>고 꼭 말씀해 주셔야 동일한 혜택 적용이 가능합니다.
+        타 채널과 가격 및 혜택이 다를 수 있으며, 상담 시 <b>"민에듀를 통해 접속했다"</b>고 꼭 말씀해 주셔야 동일한 혜택 적용이 가능합니다.<br /><br />
+        <b>💌 등록 및 환불 규정 미숙지로 인한 피해는 보상되지 않으므로</b>, 모든 규정을 반드시 확인 후 신중히 결정해 주세요.
       </div>
     </section>
 
@@ -1579,120 +2119,113 @@
     <section class="panel" id="panel-7">
       <div class="panel-head">
         <div>
-          <div class="panel-eyebrow">Apply Now · 예약 신청서</div>
+          <div class="panel-eyebrow">Apply Now · 예약 신청</div>
           <h2 class="panel-title">예약 신청</h2>
         </div>
-        <p class="panel-sub">아래 신청서를 작성해 주시면 평일 기준 1~2일 내 담당 매니저가 직접 연락드립니다.</p>
+        <p class="panel-sub">
+          예약 신청 버튼을 누르시면 <b>드림아카데미 공식 카카오 채널</b>로 바로 연결됩니다.<br />
+          학원 채널에서 친절하게 상담을 이어드릴게요.
+        </p>
       </div>
 
-      <div class="booking-grid">
-        <div class="form-card">
-          <form id="booking-form" autocomplete="off">
-            <div class="form-grid">
-              <div class="field">
-                <label>보호자 성함 <span class="req">*</span></label>
-                <input type="text" name="parent" required placeholder="홍길동" />
-              </div>
-              <div class="field">
-                <label>연락처 <span class="req">*</span></label>
-                <input type="tel" name="phone" required placeholder="010-0000-0000" />
-              </div>
-              <div class="field">
-                <label>이메일</label>
-                <input type="email" name="email" placeholder="example@mail.com" />
-              </div>
-              <div class="field">
-                <label>카카오톡 ID</label>
-                <input type="text" name="kakao" placeholder="카톡 상담 희망 시 입력" />
-              </div>
-              <div class="field">
-                <label>자녀 수 <span class="req">*</span></label>
-                <select name="children" required>
-                  <option value="">선택</option>
-                  <option>1명</option>
-                  <option>2명</option>
-                  <option>3명</option>
-                  <option>4명 이상</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>자녀 연령대 <span class="req">*</span></label>
-                <input type="text" name="ages" required placeholder="예: 7세 / 초등 3학년" />
-              </div>
-              <div class="field">
-                <label>희망 커리큘럼 <span class="req">*</span></label>
-                <select name="curriculum" required>
-                  <option value="">선택</option>
-                  <option>주니어 커리큘럼</option>
-                  <option>킨더 커리큘럼</option>
-                  <option>상담 후 결정</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>희망 숙소 <span class="req">*</span></label>
-                <select name="lodging" required>
-                  <option value="">선택</option>
-                  <option>드림하우스 (독채)</option>
-                  <option>제이파크</option>
-                  <option>큐브나인</option>
-                  <option>상담 후 결정</option>
-                </select>
-              </div>
-              <div class="field">
-                <label>희망 출국일</label>
-                <input type="date" name="depart" />
-              </div>
-              <div class="field">
-                <label>체류 기간 <span class="req">*</span></label>
-                <select name="duration" required>
-                  <option value="">선택</option>
-                  <option>2주 (14박)</option>
-                  <option>3주 (21박)</option>
-                  <option>4주 (28박)</option>
-                  <option>1개월 이상</option>
-                  <option>기타</option>
-                </select>
-              </div>
-              <div class="field full">
-                <label>추가 문의사항</label>
-                <textarea name="message" placeholder="아이의 영어 수준, 알러지, 특별히 궁금한 점 등을 자유롭게 적어주세요."></textarea>
-              </div>
-              <div class="field full">
-                <label style="display:flex; align-items:center; gap:8px; font-weight:500; color:var(--ink-2);">
-                  <input type="checkbox" name="agree" required style="width:auto;" />
-                  개인정보 수집·이용(상담 목적)에 동의합니다. <span class="req">*</span>
-                </label>
+      <div class="apply-simple">
+        <div class="apply-card">
+          <div class="apply-icon">💬</div>
+          <h3 class="apply-title">민에듀 × 세부드림아카데미 공동구매 상담</h3>
+          <p class="apply-desc">
+            아래 버튼을 누르시면 <b>드림아카데미 카카오 채널</b>로 바로 이동합니다.<br />
+            연결되시면 <b>예약자 성함</b>을 먼저 알려주세요.
+          </p>
+
+          <button type="button" class="btn-apply" id="btn-apply-kakao">
+            💛 카카오 채널로 상담 시작하기
+          </button>
+
+          <div class="apply-meta">
+            <div class="meta-item">
+              <span class="meta-icon">⏰</span>
+              <div>
+                <b>상담 가능 시간</b>
+                <span>평일 09:00 – 18:00 (KST)</span>
               </div>
             </div>
-            <div class="submit-row">
-              <div class="submit-note">제출 후 담당 매니저가 영업일 기준 1~2일 내 연락드립니다.</div>
-              <button type="submit" class="btn-submit">예약 문의 보내기 →</button>
+            <div class="meta-item">
+              <span class="meta-icon">🎁</span>
+              <div>
+                <b>민에듀 구독자 혜택</b>
+                <span>"민에듀 보고 왔다"고 꼭 말씀해 주세요</span>
+              </div>
             </div>
-            <div class="form-success" id="form-success">
-              <b>✓ 신청이 접수되었습니다.</b><br />
-              민에듀 구독자님께 감사드립니다. 담당 매니저가 곧 연락드릴 예정입니다.
+            <div class="meta-item">
+              <span class="meta-icon">🔥</span>
+              <div>
+                <b>선착순 3팀 특별 할인</b>
+                <span>1인당 10만원 추가 할인 (조기 마감 가능)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 카카오 연결 전 안내 + 정보 입력 팝업 -->
+      <div class="popup-overlay" id="popup-overlay">
+        <div class="popup-card popup-form">
+          <div class="popup-icon">💛</div>
+          <h3 class="popup-title">예약 신청 정보 입력</h3>
+          <p class="popup-desc">
+            아래 정보를 입력해 주시면 <b>드림아카데미 카카오 채널</b>로 연결됩니다.<br />
+            <span style="font-size:13px; color:var(--ink-3);">입력하신 내용은 메모로 복사되어 채널에 빠르게 보내실 수 있어요.</span>
+          </p>
+
+          <form id="apply-form" class="popup-form-grid" autocomplete="off">
+            <div class="popup-field">
+              <label for="f-name">예약자 성함 <span class="req">*</span></label>
+              <input type="text" id="f-name" name="name" required placeholder="홍길동" />
+            </div>
+            <div class="popup-field">
+              <label for="f-phone">연락처</label>
+              <input type="tel" id="f-phone" name="phone" placeholder="010-0000-0000 (선택)" />
+            </div>
+            <div class="popup-field">
+              <label for="f-children">자녀 인원 <span class="req">*</span></label>
+              <select id="f-children" name="children" required>
+                <option value="">선택</option>
+                <option>1명</option>
+                <option>2명</option>
+                <option>3명</option>
+                <option>4명 이상</option>
+              </select>
+            </div>
+            <div class="popup-field">
+              <label for="f-ages">자녀 연령 <span class="req">*</span></label>
+              <input type="text" id="f-ages" name="ages" required placeholder="예: 7세, 초등 3학년" />
+            </div>
+            <div class="popup-field popup-field-full">
+              <label for="f-period">희망 일정 <span class="req">*</span></label>
+              <input type="text" id="f-period" name="period" required placeholder="예: 2027년 1월 4주 / 여름방학 3주 등" />
+            </div>
+            <div class="popup-field popup-field-full">
+              <label for="f-lodging">희망 숙소</label>
+              <select id="f-lodging" name="lodging">
+                <option value="">선택 (또는 상담 후 결정)</option>
+                <option>드림하우스 (독채)</option>
+                <option>제이파크 리조트</option>
+                <option>큐브나인 리조트</option>
+                <option>상담 후 결정</option>
+              </select>
             </div>
           </form>
-        </div>
 
-        <aside>
-          <div class="side-card" style="margin-bottom: 16px;">
-            <h4>📞 빠른 상담</h4>
-            <div class="contact-line"><b>카카오</b> @세부드림아카데미</div>
-            <div class="contact-line"><b>전화</b> +82 00-0000-0000</div>
-            <div class="contact-line"><b>운영</b> 평일 09:00 – 18:00 (KST)</div>
+          <div class="popup-note" style="text-align:left; background:#FFF8E5; border:1px solid #F5E2A0; padding:12px 14px; border-radius:10px; margin-top:6px;">
+            ✓ 신청 정보가 <b>자동으로 접수</b>되며 카카오 채널이 새 탭에서 열립니다.<br />
+            ✓ 채널에서 담당 매니저와 <b>바로 상담</b>을 시작하실 수 있어요.
           </div>
-          <div class="side-card">
-            <h4>🎁 민에듀 구독자 혜택</h4>
-            <p style="font-size:14px; color:var(--ink-2); line-height:1.7;">
-              공식 페이지 대비 <b>특별 할인</b>, <b>우선 예약 보장</b>, 도착 당일 <b>웰컴 패키지</b>를 제공해 드립니다.
-              <br /><br />
-              <span style="font-size:12.5px; color:var(--ink-3);">
-                ※ 구체적인 할인 금액 및 혜택은 민에듀 공동구매 공지 기준으로 적용됩니다.
-              </span>
-            </p>
+
+          <div class="popup-buttons">
+            <button type="button" class="popup-btn-cancel" id="popup-cancel">취소</button>
+            <button type="button" class="popup-btn-confirm" id="popup-confirm">카카오 채널로 이동 →</button>
           </div>
-        </aside>
+        </div>
       </div>
     </section>
 
@@ -1750,16 +2283,105 @@
     if (m) activateTab(m[1]);
   })();
 
-  // 폼 제출 (데모)
-  document.getElementById('booking-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    // 실제 운영 시에는 여기서 fetch('/api/booking', ...) 또는 Google Form / Notion API 연결
-    document.getElementById('form-success').classList.add('show');
-    this.reset();
-    setTimeout(() => {
-      document.getElementById('form-success').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
+  // ===== 카카오 채널 연결 (예약 신청) =====
+  const KAKAO_CHANNEL_URL = 'https://pf.kakao.com/_Yuhxhn/chat';
+
+  const popup = document.getElementById('popup-overlay');
+  const btnApply = document.getElementById('btn-apply-kakao');
+  const btnCancel = document.getElementById('popup-cancel');
+  const btnConfirm = document.getElementById('popup-confirm');
+  const applyForm = document.getElementById('apply-form');
+
+  function openPopup() {
+    popup.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // 첫 입력칸 자동 포커스
+    setTimeout(() => { const f = document.getElementById('f-name'); if (f) f.focus(); }, 100);
+  }
+  function closePopup() {
+    popup.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (btnApply) btnApply.addEventListener('click', openPopup);
+  if (btnCancel) btnCancel.addEventListener('click', closePopup);
+
+  if (btnConfirm) btnConfirm.addEventListener('click', async () => {
+    // 폼 검증
+    if (!applyForm.checkValidity()) {
+      applyForm.reportValidity();
+      return;
+    }
+
+    // 입력값 수집
+    const data = new FormData(applyForm);
+    const payload = {
+      name: (data.get('name') || '').trim(),
+      phone: (data.get('phone') || '').trim(),
+      children: (data.get('children') || '').trim(),
+      ages: (data.get('ages') || '').trim(),
+      period: (data.get('period') || '').trim(),
+      lodging: (data.get('lodging') || '').trim(),
+    };
+
+    // 버튼 비활성화 (중복 클릭 방지)
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = '신청 중...';
+
+    // ① Supabase에 저장 (드림아카데미 API 호출)
+    try {
+      const res = await fetch('/api/minedu-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || '신청 저장 실패');
+      }
+    } catch (err) {
+      console.error('[apply] save failed:', err);
+      // 저장 실패해도 카카오는 열어줌 (사용자 경험 우선)
+      // 단, 알림으로 안내
+      alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
+    }
+
+    // ② 카카오 채널 새 탭 열기 (저장 성공/실패 무관)
+    window.open(KAKAO_CHANNEL_URL, '_blank', 'noopener,noreferrer');
+
+    // ③ 팝업 닫고 폼 초기화
+    closePopup();
+    applyForm.reset();
+    btnConfirm.disabled = false;
+    btnConfirm.textContent = '카카오 채널로 이동 →';
+
+    // ④ 안내 토스트
+    showToast('✓ 신청이 접수되었습니다. 카카오 채널에서 상담을 이어가세요!');
   });
+
+  // 오버레이 배경 클릭 시 닫기
+  if (popup) popup.addEventListener('click', (e) => { if (e.target === popup) closePopup(); });
+  // ESC 키로 닫기
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopup(); });
+
+  // 토스트 알림
+  function showToast(text) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toast';
+      toast.style.cssText = 'position:fixed; bottom:32px; left:50%; transform:translateX(-50%); background:#201C18; color:#fff; padding:14px 22px; border-radius:12px; font-size:14px; font-weight:600; box-shadow:0 8px 24px rgba(0,0,0,0.25); z-index:300; opacity:0; transition:opacity 0.3s ease, transform 0.3s ease; pointer-events:none; max-width:90%; text-align:center;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(10px)';
+    }, 4000);
+  }
 </script>
 
 </body>
