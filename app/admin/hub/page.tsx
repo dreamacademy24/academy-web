@@ -40,6 +40,7 @@ export default function AdminHubPage() {
     { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
     { icon: "🎧", title: "Online Class",    desc: "튜터 출결 입력 · 주간 스케줄",        href: "/admin/online-class-attendance" },
     { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
+    { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
   ];
 
   return (<>
