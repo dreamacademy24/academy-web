@@ -6,6 +6,30 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// students 테이블 행이 없을 때 booking.students JSON에서 변환 (옛 데이터 호환)
+function parseBookingStudents(raw: unknown): Array<Record<string, unknown>> {
+  if (!raw) return []
+  let arr: Array<Record<string, unknown>> = []
+  if (typeof raw === 'string') {
+    try { arr = JSON.parse(raw) } catch { return [] }
+  } else if (Array.isArray(raw)) {
+    arr = raw as Array<Record<string, unknown>>
+  } else {
+    return []
+  }
+  return arr
+    .filter((s) => s && (s.korName || s.name_kr))
+    .map((s) => ({
+      booking_id: null,
+      name_kr: (s.korName ?? s.name_kr ?? '') as string,
+      name_en: (s.engName ?? s.name_en ?? null) as string | null,
+      age: s.age ?? null,
+      level: (s.level ?? (s.grade === '킨더' ? 'kinder' : 'junior')) as string,
+      photo_allowed: (s.photo_allowed ?? s.photo === 'O') as boolean,
+      _source: 'booking_json',
+    }))
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
@@ -37,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     return NextResponse.json({
       booking: oldBooking, source: 'old',
-      students: students.data ?? [],
+      students: (students.data && students.data.length > 0) ? students.data : parseBookingStudents(oldBooking.students),
       pickups: [...(pickups.data ?? []), ...pickupExtra],
       checkin: checkin.data, invoices: invoices.data ?? [],
       accommodations: accommodations.data ?? [],
@@ -48,7 +72,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   return NextResponse.json({
     booking: booking.data, source: 'new',
-    students: students.data ?? [],
+    students: (students.data && students.data.length > 0) ? students.data : parseBookingStudents(booking.data.students),
     pickups: pickups.data ?? [],
     checkin: checkin.data, invoices: invoices.data ?? [],
     accommodations: accommodations.data ?? [],
