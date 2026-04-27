@@ -9,6 +9,25 @@ interface Flight { airline: string; flightNo: string; date: string; time: string
 const todayCompact = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 const emptyFlight: Flight = { airline: "", flightNo: "", date: "", time: "", place: "", undecided: false };
 
+function addDaysISO(dateStr: string, n: number): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function deriveAcademyStart(checkin: string): string {
+  if (!checkin) return "";
+  const d = new Date(checkin);
+  const day = d.getDay();
+  return addDaysISO(checkin, (8 - day) % 7);
+}
+function deriveAcademyEnd(checkin: string, weeks: number | string | null | undefined): string {
+  const start = deriveAcademyStart(checkin);
+  const w = Number(weeks);
+  if (!start || !w || w < 1) return "";
+  return addDaysISO(start, (w - 1) * 7 + 4);
+}
+
 const BOOKING_TYPES = [
   { value: "dreamhouse",         icon: "🏠", label: "드림하우스 단독",   desc: "드림하우스 패키지" },
   { value: "dreamhouse_jaypark", icon: "🏨", label: "드하 + 제이파크",   desc: "드림하우스 + 제이파크 조합" },
@@ -77,11 +96,20 @@ export default function BookingPage() {
     const flightInStr = flightIn.undecided ? "미정" : [flightIn.airline, flightIn.flightNo, flightIn.date, flightIn.time].filter(Boolean).join(" ");
     const flightOutStr = flightOut.undecided ? "미정" : [flightOut.airline, flightOut.flightNo, flightOut.date, flightOut.time].filter(Boolean).join(" ");
 
+    const academyStart = deriveAcademyStart(dates.checkIn);
+    const academyEnd = deriveAcademyEnd(dates.checkIn, accomWeeks);
+    const enrichedStudents = students.filter(s => s.korName.trim()).map(s => ({
+      ...s,
+      academyStart,
+      academyEnd,
+      academyWeeks: String(accomWeeks),
+    }));
+
     const { data: booking, error } = await supabase.from("bookings").insert({
       reservation_no: rno,
       booker_name: booker.name.trim(),
       booker_english: booker.phone.trim(), // 연락처 임시로 booker_english에 저장 (기존 스키마 호환)
-      students: JSON.stringify(students.filter(s => s.korName.trim())),
+      students: JSON.stringify(enrichedStudents),
       accom_type: accomType,
       accom_weeks: accomWeeks,
       checkin_date: dates.checkIn || null,
@@ -107,6 +135,8 @@ export default function BookingPage() {
         age: s.age || null,
         level: s.grade === "킨더" ? "kinder" : "junior",
         photo_allowed: s.photo === "O",
+        academy_start: academyStart || null,
+        academy_end: academyEnd || null,
       }));
       if (studentRows.length > 0) {
         await supabase.from("students").insert(studentRows);

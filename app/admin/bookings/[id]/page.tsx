@@ -28,6 +28,25 @@ const BT_LABEL: Record<string, string> = {
 function fDate(d: string | null) { return d || "-"; }
 function fAmt(n: number | null) { return n ? n.toLocaleString() + "원" : "-"; }
 
+function addDaysISO(dateStr: string, n: number): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function deriveAcademyStart(checkin: string): string {
+  if (!checkin) return "";
+  const d = new Date(checkin);
+  const day = d.getDay();
+  return addDaysISO(checkin, (8 - day) % 7);
+}
+function deriveAcademyEnd(checkin: string, weeks: number | string | null | undefined): string {
+  const start = deriveAcademyStart(checkin);
+  const w = Number(weeks);
+  if (!start || !w || w < 1) return "";
+  return addDaysISO(start, (w - 1) * 7 + 4);
+}
+
 export default function BookingDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -170,8 +189,8 @@ export default function BookingDetailPage() {
             <div className="item"><div className="lbl">연락처</div><div className="val">{b.booker_phone || "-"}</div></div>
             <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
             <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
-            <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start)}</div></div>
-            <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end)}</div></div>
+            <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
+            <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
             <div className="item"><div className="lbl">예약유형</div><div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div></div>
             <div className="item"><div className="lbl">유학원</div><div className="val">{b.agency || "-"}</div></div>
           </div>
@@ -222,7 +241,11 @@ export default function BookingDetailPage() {
                   <div className="nm">{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
                   <div className="sub">
                     {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
-                    {s.academy_start && ` · ${s.academy_start} ~ ${s.academy_end || ""}`}
+                    {(() => {
+                      const ast = s.academy_start || deriveAcademyStart(b.check_in || b.checkin_date);
+                      const aen = s.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks);
+                      return ast ? ` · ${ast} ~ ${aen || ""}` : "";
+                    })()}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8, fontSize: 12 }}>
                     <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>SSP:</span> {s.ssp ? "있음" : "없음"}</div>
