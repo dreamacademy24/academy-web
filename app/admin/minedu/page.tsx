@@ -12,6 +12,7 @@ type Application = {
   duration_weeks: string | null;
   period: string | null; // 호환성 위해 유지 (옛날 신청)
   lodging: string | null;
+  assignee: string | null;
 };
 
 async function getApplications(): Promise<Application[]> {
@@ -23,7 +24,7 @@ async function getApplications(): Promise<Application[]> {
 
   const { data, error } = await supabase
     .from('minedu_applications')
-    .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging')
+    .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging, assignee')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -42,11 +43,18 @@ export default async function MineduAdminPage() {
     (a) => new Date(a.created_at) >= today
   ).length;
 
+  const jamieCount = applications.filter((a) => a.assignee === 'jamie').length;
+  const mayCount = applications.filter((a) => a.assignee === 'may').length;
+  const unassignedCount = applications.filter((a) => !a.assignee).length;
+
   return (
     <MineduListClient
       applications={applications}
       total={applications.length}
       today={todayCount}
+      jamieCount={jamieCount}
+      mayCount={mayCount}
+      unassignedCount={unassignedCount}
     />
   );
 }

@@ -14,29 +14,53 @@ type Application = {
   duration_weeks: string | null;
   period: string | null;
   lodging: string | null;
+  assignee?: string | null;
 };
 
 export default function MineduListClient({
   applications,
   total,
   today,
+  jamieCount,
+  mayCount,
+  unassignedCount,
 }: {
   applications: Application[];
   total: number;
   today: number;
+  jamieCount: number;
+  mayCount: number;
+  unassignedCount: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Application | null>(null);
 
-  // 검색 (이름/연락처/숙소/기간/연령 모두 포함)
+  // 검색 (이름/연락처/숙소/기간/연령/담당자 포함)
   const filtered = useMemo(() => {
     if (!search.trim()) return applications;
-    const q = search.toLowerCase();
+    const qRaw = search.trim();
+    const q = qRaw.toLowerCase();
+
+    // 한글 별칭 → 담당자 키 매칭
+    const assigneeAlias: { match: (a: Application) => boolean } | null = (() => {
+      if (qRaw === '제이미' || q === 'jamie') {
+        return { match: (a) => a.assignee === 'jamie' };
+      }
+      if (qRaw === '메이' || q === 'may') {
+        return { match: (a) => a.assignee === 'may' };
+      }
+      if (qRaw === '미배정') {
+        return { match: (a) => !a.assignee };
+      }
+      return null;
+    })();
+
     return applications.filter((a) => {
+      if (assigneeAlias && assigneeAlias.match(a)) return true;
       const haystack = [
         a.name, a.phone, a.lodging, a.duration_weeks,
-        a.depart_date, a.period, a.ages, a.children,
+        a.depart_date, a.period, a.ages, a.children, a.assignee,
       ]
         .filter(Boolean)
         .join(' ')
@@ -44,6 +68,31 @@ export default function MineduListClient({
       return haystack.includes(q);
     });
   }, [applications, search]);
+
+  // 담당자 변경 (인라인 select / 모달 공용)
+  const updateAssignee = async (
+    appId: number,
+    next: string,
+    prev: string | null | undefined,
+    selectEl?: HTMLSelectElement
+  ) => {
+    try {
+      const res = await fetch(`/api/minedu-apply/${appId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignee: next || null }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      router.refresh();
+    } catch (err) {
+      console.error('[updateAssignee] failed:', err);
+      alert('담당자 변경에 실패했습니다. 다시 시도해주세요.');
+      if (selectEl) selectEl.value = prev || '';
+    }
+  };
+
+  const assigneeLabel = (v: string | null | undefined) =>
+    v === 'jamie' ? 'Jamie' : v === 'may' ? 'May' : '미배정';
 
   // 일정 표시 헬퍼 (신/구 데이터 모두 호환)
   const formatSchedule = (a: Application) => {
@@ -58,11 +107,12 @@ export default function MineduListClient({
   // CSV 다운로드
   const downloadExcel = () => {
     const headers = [
-      '신청시각', '이름', '연락처', '자녀인원', '자녀연령',
+      '신청시각', '담당자', '이름', '연락처', '자녀인원', '자녀연령',
       '출국일', '체류기간', '희망일정(구)', '희망숙소',
     ];
     const rows = filtered.map((a) => [
       formatDateTimeFull(a.created_at),
+      assigneeLabel(a.assignee),
       a.name || '',
       a.phone || '',
       a.children || '',
@@ -108,12 +158,15 @@ export default function MineduListClient({
         <Stat label="전체 신청" value={total} color="#1a6fc4" />
         <Stat label="오늘 신청" value={today} color="#E8563F" />
         <Stat label="검색 결과" value={filtered.length} color="#1F7A4D" />
+        <Stat label="🔵 Jamie 담당" value={jamieCount} color="#1a6fc4" />
+        <Stat label="🌸 May 담당" value={mayCount} color="#E8563F" />
+        <Stat label="⚪ 미배정" value={unassignedCount} color="#94a3b8" />
       </div>
 
       <div className="mn-search-wrap">
         <input
           type="text"
-          placeholder="🔍 이름 / 연락처 / 숙소 / 출국일 / 체류기간으로 검색..."
+          placeholder="🔍 이름 / 연락처 / 숙소 / 출국일 / 체류기간 / 담당자(Jamie·메이·미배정)로 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mn-search"
@@ -131,6 +184,7 @@ export default function MineduListClient({
               <thead>
                 <tr>
                   <th>신청 시각</th>
+                  <th>담당자</th>
                   <th>이름</th>
                   <th>연락처</th>
                   <th>자녀</th>
@@ -148,6 +202,14 @@ export default function MineduListClient({
                     className="mn-tr"
                   >
                     <td>{formatDateTime(app.created_at)}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <AssigneeSelect
+                        value={app.assignee || ''}
+                        onChange={(next, el) =>
+                          updateAssignee(app.id, next, app.assignee, el)
+                        }
+                      />
+                    </td>
                     <td className="mn-td-name">{app.name}</td>
                     <td>{app.phone || '-'}</td>
                     <td>{app.children || '-'}</td>
@@ -171,6 +233,16 @@ export default function MineduListClient({
             <h2 className="mn-modal-title">신청 상세 #{selected.id}</h2>
             <div>
               <Detail label="신청 시각" value={formatDateTimeFull(selected.created_at)} />
+              <div style={{ padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>📌 담당자</div>
+                <AssigneeSelect
+                  value={selected.assignee || ''}
+                  onChange={(next, el) => {
+                    updateAssignee(selected.id, next, selected.assignee, el);
+                    setSelected({ ...selected, assignee: next || null });
+                  }}
+                />
+              </div>
               <Detail label="이름" value={selected.name} bold />
               <Detail label="연락처" value={selected.phone || '-'} copyable />
               <Detail label="자녀 인원" value={selected.children || '-'} />
@@ -221,6 +293,44 @@ export default function MineduListClient({
         }
       `}</style>
     </div>
+  );
+}
+
+function AssigneeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string, el: HTMLSelectElement) => void;
+}) {
+  const style: React.CSSProperties =
+    value === 'jamie'
+      ? { background: '#DBEAFE', color: '#1a6fc4', fontWeight: 700 }
+      : value === 'may'
+      ? { background: '#FFE4E0', color: '#E8563F', fontWeight: 700 }
+      : { background: '#F1F5F9', color: '#64748B', fontWeight: 500 };
+  return (
+    <select
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value, e.currentTarget)}
+      style={{
+        ...style,
+        border: '1px solid #e2e8f0',
+        borderRadius: 999,
+        padding: '4px 10px',
+        fontSize: 13,
+        cursor: 'pointer',
+        outline: 'none',
+        appearance: 'none',
+        WebkitAppearance: 'none',
+        MozAppearance: 'none',
+      }}
+    >
+      <option value="">미배정</option>
+      <option value="jamie">Jamie</option>
+      <option value="may">May</option>
+    </select>
   );
 }
 
