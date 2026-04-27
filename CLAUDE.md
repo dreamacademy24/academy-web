@@ -806,3 +806,50 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
   id(source of truth) + snapshot(fallback) + useMemo로 파생하는 패턴이 안전
 - Chrome MCP의 find() + click() 자동화 자체는 정상이었음 — 진짜 버그는 앱의 state 관리 쪽
 - 디버깅 중 쓴 라이브 클릭이 실제 데이터를 변경할 수 있음 → 중요 환경에서는 test 플래그 가드 고려
+
+## 2026-04-27 작업
+
+### 완료
+- 가격 데이터 407개 항목 갱신 (전체금액.xlsx 기준): DH 132 + JP 165 + C9 110 = 407
+  - 정가 = 비수기 × 1.25 (10000원 단위 올림) 공식 적용
+  - 인덱스 [0]=정가, [1]=비수기, [2]=성수기
+  - 깨진 글자 풀억세스룸-7-1-2 복구
+- Booking 단독 옵션: 제이파크 단독, 큐브나인 단독 카드 추가 (BookingType union 확장)
+- 인보이스 매핑 fix: booking.accom_type → calculator state (setCm/setA1T/setA2T)
+- 사진촬영 X 시 "사진제공 없음" 표시 (조건부 렌더링)
+- 어드민 학생탭 0명 버그 fix: API route에서 students 빈 배열 시 booking.students JSON fallback (parseBookingStudents 헬퍼)
+- 인보이스 전액입금 토글: forceFullPayment state + effectiveFullPayment 헬퍼, 3곳 통일
+- 아카데미 시작/종료 자동 계산:
+  - getNextMonday: 월요일 입력 시 다음 주 월요일로 미루던 버그 fix
+  - calcAcademyEnd 헬퍼 신설: start + (weeks-1)*7 + 4 (월~금 운영)
+  - 6곳 통일 적용
+- booking submit 시 academy 자동 채움:
+  - bookings.students JSON enrichedStudents에 academyStart/End/Weeks 포함
+  - students 테이블 insert 시 academy_start/academy_end 컬럼 추가
+  - bookings 테이블에는 academy_* 컬럼 없으므로 INSERT 안 함 (안전)
+  - 어드민 부킹 상세 기본정보 + 학생 카드에 fallback derive 추가
+- 영수증 지불내역 자동채움:
+  - defaultAmountFor 헬퍼: 예약금 → 1,000,000, 잔금 → balance
+  - upd 함수: type 변경 시 amount 비어있으면 자동채움 (사용자 입력 보호)
+  - addPayment: 잔금 기본값 자동 채움
+- 인보이스/영수증 시간 표시:
+  - 인보이스 한국어 예약확인서: "체크인 (3PM 입실)" / "체크아웃 (12noon 퇴실)"
+  - 인보이스 INVOICE: 동일
+  - 영수증: "체크인 (오후 3시 입실)" / "체크아웃 (정오 12시 퇴실)"
+
+### 백업 태그
+- `backup-2026-04-27` (커밋 범위 6e47e44..ee9a0a9, 라이브 검증 완료)
+- 복원: `git checkout backup-2026-04-27`
+
+### 추후 작업
+- 새 예약관리 시스템 설계 (큰 작업): 4가지 예약 유형, 신규 DB 테이블 10개
+- Step 10: 직원 가이드 문서 (한/영)
+- 브라우저 푸시 알림 (PWA 전환 포함)
+- 카카오톡 채팅 위젯
+- PayPal Live 활성화 (서류 제출 후)
+
+### 핵심 학습 포인트
+- bookings vs bookings_new 테이블 분기: API route에서 bookings_new 우선 → 옛 bookings fallback
+- students 테이블 vs bookings.students JSON: 두 source 공존, fallback 패턴 필요
+- accom_type 컨벤션: "드림하우스", "드림하우스+제이파크", "드림하우스+큐브나인", "제이파크 단독", "큐브나인 단독", "통학형"
+- 깨진 UTF-8 바이트(EF BF BD) 발견 시 str_replace 실패 → Python/Node 라인 단위 교체로 우회
