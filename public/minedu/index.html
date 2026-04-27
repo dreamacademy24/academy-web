@@ -536,6 +536,226 @@
     box-shadow: 0 2px 6px rgba(232, 86, 63, 0.25);
     margin-bottom: 4px;
   }
+
+  /* ============== 패키지 금액 (panel-6) ============== */
+  /* 메인 탭 (정가 / 할인가) */
+  .price-main-tabs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 16px;
+  }
+  .price-main-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #fff; border: 2px solid var(--line); border-radius: 14px;
+    padding: 18px 14px; cursor: pointer; transition: all .15s ease;
+    font-family: inherit; position: relative;
+  }
+  .price-main-tab:hover { border-color: var(--ink-3); }
+  .price-main-tab.active { border-color: var(--coral); background: #FFF5F2; }
+  .price-main-tab .ptab-icon { font-size: 22px; }
+  .price-main-tab span:nth-child(2) { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -0.02em; }
+  .price-main-tab.active span:nth-child(2) { color: var(--coral); }
+  .price-main-tab .ptab-badge {
+    position: absolute; top: 8px; right: 10px;
+    background: var(--coral); color: #fff; font-size: 10.5px; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+  }
+
+  /* 서브 탭 (비수기 / 성수기) */
+  .price-sub-tabs {
+    display: flex; gap: 8px; margin-bottom: 14px; justify-content: center;
+  }
+  .price-sub-tab {
+    background: #fff; border: 1px solid var(--line); border-radius: 999px;
+    padding: 9px 22px; cursor: pointer; font-family: inherit;
+    font-size: 13.5px; font-weight: 700; color: var(--ink-2);
+    transition: all .15s ease;
+  }
+  .price-sub-tab:hover { border-color: var(--ink-3); }
+  .price-sub-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .peak-notice {
+    background: #FFF8E5; border: 1px solid #F5E2A0;
+    padding: 10px 16px; border-radius: 10px; margin-bottom: 16px;
+    font-size: 13.5px; color: #6A4A0B; text-align: center;
+  }
+
+  /* 숙소 탭 */
+  .lodging-tabs {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 600px) {
+    .lodging-tabs { grid-template-columns: 1fr; }
+  }
+  .lodging-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: #fff; border: 2px solid var(--line); border-radius: 14px;
+    padding: 16px 10px; cursor: pointer; font-family: inherit;
+    transition: all .15s ease;
+  }
+  .lodging-tab:hover { border-color: var(--ink-3); transform: translateY(-1px); }
+  .lodging-tab.active {
+    border-color: var(--ink); background: var(--ink); color: #fff;
+  }
+  .lodging-tab .ltab-icon { font-size: 24px; }
+  .lodging-tab .ltab-name { font-size: 15px; font-weight: 800; letter-spacing: -0.02em; }
+  .lodging-tab .ltab-sub { font-size: 12px; color: var(--ink-3); }
+  .lodging-tab.active .ltab-sub { color: rgba(255,255,255,0.7); }
+
+  /* 가격 계산기 */
+  .price-calculator {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 28px; margin-bottom: 24px; box-shadow: var(--shadow-sm);
+  }
+  @media (max-width: 600px) { .price-calculator { padding: 20px; } }
+  .calc-controls {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 540px) { .calc-controls { grid-template-columns: 1fr; } }
+  .calc-field { display: flex; flex-direction: column; gap: 6px; }
+  .calc-field-wide { grid-column: 1 / -1; }
+  .calc-field label {
+    font-size: 13px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em;
+  }
+  .calc-field select {
+    width: 100%; padding: 12px 14px; font-size: 14.5px; font-family: inherit;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    color: var(--ink); cursor: pointer;
+  }
+  .calc-field select:focus { outline: none; border-color: var(--coral); }
+
+  /* 결과 카드 */
+  .calc-result {
+    background: linear-gradient(135deg, #FFF5F2 0%, #FFFFFF 100%);
+    border: 2px solid var(--coral); border-radius: 16px;
+    padding: 28px; text-align: center; position: relative;
+  }
+  .result-header {
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .result-tag {
+    display: inline-block;
+    background: var(--coral); color: #fff;
+    font-size: 12px; font-weight: 800; letter-spacing: -0.01em;
+    padding: 4px 14px; border-radius: 999px;
+  }
+  .result-label {
+    font-size: 14.5px; color: var(--ink-2); font-weight: 600;
+  }
+  .result-price-wrap { margin-bottom: 14px; }
+  .result-price {
+    font-size: 42px; font-weight: 900; color: var(--coral);
+    letter-spacing: -0.03em; line-height: 1.2;
+  }
+  @media (max-width: 540px) { .result-price { font-size: 34px; } }
+  .result-discount {
+    margin-top: 8px; font-size: 14px; color: var(--ink-3);
+  }
+  .result-discount .strike {
+    text-decoration: line-through; color: var(--ink-3); margin: 0 4px;
+  }
+  .result-discount .save-amount {
+    display: inline-block; background: #1F7A4D; color: #fff;
+    font-size: 12px; font-weight: 800;
+    padding: 3px 10px; border-radius: 999px; margin-left: 6px;
+  }
+  .result-note {
+    font-size: 13px; color: var(--ink-2);
+    padding-top: 14px; border-top: 1px dashed var(--line);
+  }
+  .result-note b { color: var(--coral); }
+
+  .calc-warning {
+    background: #FFF8E5; border: 1px solid #F5E2A0;
+    padding: 14px 18px; border-radius: 10px; margin-top: 14px;
+    font-size: 14px; color: #6A4A0B; text-align: center;
+  }
+
+  /* 패키지 포함 / 불포함 사항 */
+  .package-includes-wrap {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px;
+    margin-bottom: 0;
+  }
+  @media (max-width: 740px) {
+    .package-includes-wrap { grid-template-columns: 1fr; }
+  }
+  .package-box {
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px; box-shadow: var(--shadow-sm);
+  }
+  @media (max-width: 600px) { .package-box { padding: 18px; } }
+  .package-box.includes-box {
+    border-left: 3px solid #1F7A4D;
+  }
+  .package-box.excludes-box {
+    border-left: 3px solid var(--coral);
+    background: #FFFBF9;
+  }
+  .includes-title, .excludes-title {
+    font-size: 16.5px; font-weight: 800; color: var(--ink);
+    margin-bottom: 14px; letter-spacing: -0.02em;
+  }
+  .excludes-title .excl-sub {
+    font-size: 12.5px; color: var(--ink-3); font-weight: 600; margin-left: 4px;
+  }
+  .includes-list {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .includes-list .inc-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 7px 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    border-bottom: 1px dashed transparent;
+  }
+  .includes-list .inc-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+  .includes-list .inc-item b { color: var(--ink); }
+  .includes-list .inc-item.exc-item b { color: var(--coral); }
+
+  /* 매주 월요일 수업 시작 강조 박스 */
+  .monday-notice {
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(135deg, #FFF5F2 0%, #FFFBF9 100%);
+    border: 2px solid var(--coral);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    box-shadow: 0 4px 14px rgba(232, 86, 63, 0.12);
+  }
+  @media (max-width: 540px) {
+    .monday-notice { flex-direction: column; text-align: center; gap: 12px; padding: 18px; }
+  }
+  .monday-icon {
+    font-size: 38px; line-height: 1; flex-shrink: 0;
+  }
+  .monday-content h4 {
+    font-size: 16.5px; font-weight: 800; color: var(--ink);
+    margin: 0 0 6px; letter-spacing: -0.02em;
+  }
+  .monday-content h4 .hl {
+    background: var(--coral); color: #fff;
+    padding: 2px 10px; border-radius: 6px;
+    font-weight: 800;
+  }
+  .monday-content p {
+    font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.6;
+  }
+  .monday-content p b { color: var(--coral); }
+
+  /* 푸터 안내 */
+  .pricing-footer { margin-top: 24px; }
+  .pricing-note {
+    background: #F8F5EE; border-left: 3px solid var(--gold);
+    padding: 18px 22px; border-radius: 10px;
+  }
+  .pricing-note b { color: var(--ink); font-weight: 700; display: block; margin-bottom: 8px; font-size: 14.5px; }
+  .pricing-note ul { padding-left: 18px; margin: 0; }
+  .pricing-note li {
+    font-size: 13.5px; color: var(--ink-2); line-height: 1.7; margin: 4px 0;
+  }
+  .pricing-note li b { color: var(--coral); display: inline; margin: 0; font-size: inherit; }
+  /* ============== /패키지 금액 끝 ============== */
+
   .notice.green { border-left-color: var(--green); }
   .notice h4 { font-size: 15.5px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.01em; }
   .notice p, .notice li { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
@@ -1081,7 +1301,7 @@
         <span>공식 공동구매</span>
       </div>
     </a>
-    <a href="#panel-7" class="nav-cta" data-tab-jump="7">예약 문의하기</a>
+    <a href="#panel-8" class="nav-cta" data-tab-jump="8">예약 문의하기</a>
   </nav>
 </header>
 
@@ -1142,8 +1362,9 @@
       <button class="tab-btn" data-tab="3"><span class="num">03</span>드림하우스 (독채)</button>
       <button class="tab-btn" data-tab="4"><span class="num">04</span>제이파크</button>
       <button class="tab-btn" data-tab="5"><span class="num">05</span>큐브나인</button>
-      <button class="tab-btn" data-tab="6"><span class="num">06</span>중요 안내사항</button>
-      <button class="tab-btn" data-tab="7"><span class="num">07</span>예약 신청</button>
+      <button class="tab-btn" data-tab="6"><span class="num">06</span>패키지 금액</button>
+      <button class="tab-btn" data-tab="7"><span class="num">07</span>중요 안내사항</button>
+      <button class="tab-btn" data-tab="8"><span class="num">08</span>예약 신청</button>
     </div>
   </div>
 
@@ -1311,7 +1532,7 @@
           <ul>
             <li><b>대상</b> · 주니어 라인 (초1 ~ 중2)</li>
             <li><b>수업 요일</b> · 월 ~ 금</li>
-            <li><b>시작일</b> · 매주 월요일만 가능</li>
+            <li><b>시작일</b> · <span style="background:var(--coral); color:#fff; padding:2px 8px; border-radius:5px; font-weight:800;">매주 월요일만 가능</span></li>
             <li><b>결석</b> · 결석 시 보강 수업 없음</li>
             <li><b>공휴일</b> · 포함 시 일할 계산 환불</li>
             <li><b>교재비</b> · 1권당 ₱350 (학생만 해당)</li>
@@ -1853,8 +2074,151 @@
       </div>
     </section>
 
-    <!-- 6. 중요 안내사항 -->
+    <!-- 6. 패키지 금액 -->
     <section class="panel" id="panel-6">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Pricing · 패키지 금액</div>
+          <h2 class="panel-title">패키지 금액 안내</h2>
+        </div>
+        <p class="panel-sub">
+          민에듀 구독자만을 위한 <b>특별 할인가</b>를 확인해보세요.<br />
+          기간과 인원을 선택하시면 맞춤 가격이 표시됩니다.
+        </p>
+      </div>
+
+      <!-- ─── 메인 탭: 정가 / 할인가 ─── -->
+      <div class="price-main-tabs">
+        <button class="price-main-tab active" data-price-tab="discount">
+          <span class="ptab-icon">⭐</span>
+          <span>민에듀 할인가</span>
+          <span class="ptab-badge">추천</span>
+        </button>
+        <button class="price-main-tab" data-price-tab="regular">
+          <span class="ptab-icon">💰</span>
+          <span>정가</span>
+        </button>
+      </div>
+
+      <!-- ─── 서브 탭: 비수기/성수기 (할인가 탭에서만 표시) ─── -->
+      <div class="price-sub-tabs" id="season-tabs">
+        <button class="price-sub-tab active" data-season="off">💎 비수기</button>
+        <button class="price-sub-tab" data-season="peak">🔥 성수기</button>
+      </div>
+
+      <!-- 성수기 안내 (성수기 선택 시만 표시) -->
+      <div class="peak-notice" id="peak-notice" style="display:none;">
+        <span>📌 성수기 기간: <b>7월 15일 ~ 8월 31일</b> · <b>12월 15일 ~ 2월 29일</b></span>
+      </div>
+
+      <!-- ─── 숙소 선택 탭 ─── -->
+      <div class="lodging-tabs">
+        <button class="lodging-tab active" data-lodging="dh">
+          <span class="ltab-icon">🏡</span>
+          <span class="ltab-name">드림하우스</span>
+          <span class="ltab-sub">독채 · 최대 6인</span>
+        </button>
+        <button class="lodging-tab" data-lodging="jp">
+          <span class="ltab-icon">🌊</span>
+          <span class="ltab-name">제이파크</span>
+          <span class="ltab-sub">5성급 리조트</span>
+        </button>
+        <button class="lodging-tab" data-lodging="c9">
+          <span class="ltab-icon">🐬</span>
+          <span class="ltab-name">큐브나인</span>
+          <span class="ltab-sub">오션뷰 리조트</span>
+        </button>
+      </div>
+
+      <!-- ─── 가격 계산기 ─── -->
+      <div class="price-calculator">
+        <div class="calc-controls">
+          <div class="calc-field">
+            <label>📅 체류 기간</label>
+            <select id="calc-duration">
+              <!-- JS가 동적으로 채움 -->
+            </select>
+          </div>
+          <div class="calc-field" id="room-field">
+            <label>🛏️ 객실 타입</label>
+            <select id="calc-room">
+              <!-- JS가 동적으로 채움 -->
+            </select>
+          </div>
+          <div class="calc-field calc-field-wide">
+            <label>👨‍👩‍👧 인원 구성</label>
+            <select id="calc-people">
+              <!-- JS가 동적으로 채움 -->
+            </select>
+          </div>
+        </div>
+
+        <!-- 결과 표시 -->
+        <div class="calc-result" id="calc-result">
+          <div class="result-header">
+            <span class="result-tag" id="result-tag">민에듀 할인가</span>
+            <span class="result-label" id="result-label">드림하우스 · 4주 · 3인</span>
+          </div>
+          <div class="result-price-wrap">
+            <div class="result-price" id="result-price">- 만원</div>
+            <div class="result-discount" id="result-discount" style="display:none;">
+              정가 <span class="strike" id="result-regular">-</span>
+              <span class="save-amount" id="result-save"></span>
+            </div>
+          </div>
+          <div class="result-note">
+            🎁 표기된 금액은 <b>1차 할인가</b>이며, 상단의 <b>공구 단독 혜택</b>은 별도 적용됩니다.<br />
+            상담 시 <b>"민에듀 보고 왔다"</b>고 말씀해주시면 최종 금액을 안내드립니다.
+          </div>
+        </div>
+
+        <!-- 별도 상담 안내 -->
+        <div class="calc-warning" id="calc-warning" style="display:none;">
+          ⚠️ 해당 조합은 <b>별도 상담</b>이 필요해요. 카카오 채널로 문의 부탁드립니다.
+        </div>
+      </div>
+
+      <!-- ─── 패키지 포함 / 불포함 사항 (숙소별로 변경) ─── -->
+      <div class="package-includes-wrap">
+        <div class="package-box includes-box">
+          <h3 class="includes-title">📦 패키지 포함 사항</h3>
+          <div class="includes-list" id="includes-grid">
+            <!-- JS가 동적으로 채움 -->
+          </div>
+        </div>
+        <div class="package-box excludes-box">
+          <h3 class="excludes-title">⚠️ 불포함 사항 <span class="excl-sub">(별도 비용)</span></h3>
+          <div class="includes-list" id="excludes-grid">
+            <!-- JS가 동적으로 채움 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 매주 월요일 수업 시작 강조 -->
+      <div class="monday-notice">
+        <div class="monday-icon">📅</div>
+        <div class="monday-content">
+          <h4>중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다</h4>
+          <p>출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.</p>
+        </div>
+      </div>
+
+      <!-- 추가 안내 -->
+      <div class="pricing-footer">
+        <div class="pricing-note">
+          <b>💡 가격 안내</b>
+          <ul>
+            <li>위 금액은 <b>학생 1인 기준 모든 항목 포함</b>된 패키지 가격입니다</li>
+            <li>SSP 발급, 교재비 등 일부 현지 지불 항목은 별도입니다 (자세히는 "07 중요 안내사항" 참고)</li>
+            <li>원하시는 기간/구성이 표에 없으면 카카오 채널로 별도 문의 부탁드립니다</li>
+            <li>예약금 납부 후 잔금은 <b>입실 2개월 전</b>까지 완료해 주세요</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. 중요 안내사항 -->
+    <section class="panel" id="panel-7">
       <div class="panel-head">
         <div>
           <div class="panel-eyebrow">Important Notices · 반드시 확인</div>
@@ -1885,8 +2249,21 @@
         <div class="step-item">
           <span class="step-num">4</span>
           <h5>출국 & 입실</h5>
-          <p>해외여행자 보험 가입 후 출국 → 공항 픽업 → 입실. 체크인 오후 3시 / 체크아웃 정오 12시.</p>
+          <p>해외여행자 보험 가입 후 출국 → 공항 픽업 → 입실. 체크인 오후 3시 / 체크아웃 정오 12시.<br /><span style="color:var(--coral); font-weight:700; font-size:13px;">📅 수업은 <b>매주 월요일</b>에만 시작 (일요일 입실 권장)</span></p>
         </div>
+      </div>
+
+      <!-- SSP 안내 -->
+      <div class="warning-box" style="margin-top: 18px; background: #FFF8E5; border-color: #F5E2A0; border-left: 4px solid #E8A33F;">
+        <h4 style="color: #8A5E0E; margin-bottom: 10px;">📋 SSP (Special Study Permit)란?</h4>
+        <p style="margin: 0 0 8px; font-size: 14.5px; color: var(--ink-2); line-height: 1.7;">
+          <b>SSP(Special Study Permit)</b>는 필리핀에서 단기 어학연수를 받을 때 필요한 <b>특별 학습 허가증</b>입니다.<br />
+          필리핀에서는 외국인이 학교(어학원, 아카데미 등)에서 수업을 들으려면 <b>반드시 SSP를 발급받아야</b> 합니다.
+        </p>
+        <p style="margin: 0; font-size: 13.5px; color: var(--ink-3);">
+          ⚠️ <b>모든 어학원의 필수 사항</b>이며, 체류 기간과 무관하게 발급이 필요합니다.<br />
+          📌 수수료: 7,000페소 (유효기간 6개월) · 현지 지불
+        </p>
       </div>
 
       <!-- ② 패키지별 결제 안내 -->
@@ -2039,7 +2416,48 @@
         </div>
       </div>
 
-      <!-- ⑤ 유료 선택 서비스 -->
+      <!-- ⑤ 보호자 추가 인원 요금 -->
+      <h3 class="notice-section-title">👨‍👩‍👧 보호자 추가 인원 요금 <span style="font-size:13px; color:var(--ink-3); font-weight:600;">(1인 1주일 기준)</span></h3>
+      <p class="notice-section-sub">기본 패키지 인원 외에 <b>보호자가 추가로 함께</b>하실 경우 아래 요금이 적용됩니다.</p>
+
+      <table class="refund-table" style="margin-bottom: 18px;">
+        <thead>
+          <tr>
+            <th style="width: 30%;">숙소</th>
+            <th style="width: 30%;">추가 보호자 1인 요금<br /><span style="font-size:12px; color:var(--ink-3); font-weight:500;">(1주일 기준)</span></th>
+            <th>비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>🏡 드림하우스</b></td>
+            <td><span style="color: var(--coral); font-weight: 800;">340,000원</span></td>
+            <td>정원 내 가능 · <b>동일 패키지 포함사항 이용 가능</b></td>
+          </tr>
+          <tr>
+            <td><b>🌊 제이파크</b></td>
+            <td><span style="color: var(--coral); font-weight: 800;">340,000원</span></td>
+            <td>정원 내 가능 · <b>동일 패키지 포함사항 이용 가능</b></td>
+          </tr>
+          <tr>
+            <td><b>🐬 큐브나인</b></td>
+            <td><span style="color: var(--coral); font-weight: 800;">250,000원</span></td>
+            <td>정원 내 가능 · <b>동일 패키지 포함사항 이용 가능</b></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warning-box" style="background: #FFF8E5; border-color: #F5E2A0; border-left: 4px solid #E8A33F; margin-bottom: 24px;">
+        <p style="margin: 0; font-size: 13.5px; color: #6A4A0B; line-height: 1.7;">
+          📌 <b>보호자 추가 인원 안내</b><br />
+          • 기본 패키지 인원 구성 외에 <b>보호자가 1명 더 함께</b> 오시는 경우의 요금입니다<br />
+          • <b>정원 내</b>에서만 추가 가능합니다 (드림하우스 6인 / 제이파크·큐브나인 4인)<br />
+          • 추가 보호자도 <b>식사·셔틀 등 패키지 포함 사항</b>을 그대로 이용하실 수 있습니다<br />
+          • 정확한 금액은 <b>인원·기간·시즌</b>에 따라 다를 수 있어 카카오 채널 상담을 통해 확인 부탁드립니다
+        </p>
+      </div>
+
+      <!-- ⑥ 유료 선택 서비스 -->
       <h3 class="notice-section-title">➕ 선택 가능 유료 서비스</h3>
       <p class="notice-section-sub">필요 시 선택 가능한 추가 서비스 안내입니다.</p>
 
@@ -2179,7 +2597,7 @@
     </section>
 
     <!-- 7. 예약 신청 -->
-    <section class="panel" id="panel-7">
+    <section class="panel" id="panel-8">
       <div class="panel-head">
         <div>
           <div class="panel-eyebrow">Apply Now · 예약 신청</div>
@@ -2341,6 +2759,427 @@
     const m = location.hash.match(/^#tab-(\d)$/);
     if (m) activateTab(m[1]);
   })();
+
+  // ===== 패키지 금액 계산기 (panel-6) =====
+  const PRICE_DATA = {
+    // 인원 라벨
+    peopleLabels: {
+      'p2': '2인 (보호자 1 + 아이 1)',
+      'p3a': '3인 (보호자 1 + 아이 2)',
+      'p3b': '3인 (보호자 2 + 아이 1)',
+      'p4a': '4인 (보호자 1 + 아이 3)',
+      'p4b': '4인 (보호자 2 + 아이 2)',
+      'p5': '5인 (보호자 2 + 아이 3)',
+      'p6': '6인 (보호자 2 + 아이 4)',
+    },
+    // 드림하우스
+    dh: {
+      name: '🏡 드림하우스',
+      hasRoom: false,
+      includes: [
+        { i: '🏠', t: '<b>3룸 독채 외부 숙소</b> · 최대 6인 / 프라이빗 공간' },
+        { i: '👩‍🍳', t: '<b>주 6일 헬퍼 서비스</b> · 청소·빨래·식사 준비' },
+        { i: '🍱', t: '<b>평일 3식 프리미엄 도시락</b> · 아침/점심/저녁' },
+        { i: '🎓', t: '<b>드림아카데미 정규 수업</b> + 에프터 스쿨 + 주말 체험' },
+        { i: '🚐', t: '<b>공항 픽업 & 드랍</b> + 주말 투어 셔틀' },
+        { i: '📚', t: '<b>대여 물품 & 도서관</b> 이용 가능' },
+        { i: '📱', t: '<b>무료 유심 제공</b> · 별도 등록 없이 사용' },
+        { i: '💻', t: '<b>무료 화상영어</b> · 출국 전 / 귀국 후 (등록기간만큼)' },
+      ],
+      excludes: [
+        { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '💰', t: '<b>보증금</b> · 8,000페소/4주 기준 (현지)' },
+        { i: '⚡', t: '<b>전기세</b> · 14페소/KW (실사용량)' },
+        { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
+      ],
+      regular: { // 정가 (단일)
+        durations: ['2주','3주','4주','8주','12주'],
+        people: ['p2','p3a','p3b','p4a','p4b','p5','p6'],
+        prices: {
+          'p2':  [349, 507, 629, 1249, 1868],
+          'p3a': [497, 719, 895, 1780, 2665],
+          'p3b': [407, 590, 736, 1452, 2168],
+          'p4a': [645, 930, 1160, 2311, 3461],
+          'p4b': [555, 801, 1001, 1983, 2964],
+          'p5':  [704, 1013, 1267, 2514, 3761],
+          'p6':  [852, 1224, 1532, 3045, 4557],
+        }
+      },
+      discount: {
+        off: { // 비수기
+          durations: ['2주','3주','4주','8주','12주'],
+          people: ['p2','p3a','p3b','p4a','p4b','p5','p6'],
+          prices: {
+            'p2':  [279, 405, 503, 999, 1494],
+            'p3a': [397, 575, 716, 1424, 2132],
+            'p3b': [325, 472, 588, 1161, 1734],
+            'p4a': [516, 744, 928, 1848, 2768],
+            'p4b': [444, 640, 800, 1586, 2371],
+            'p5':  [563, 810, 1013, 2011, 3008],
+            'p6':  [681, 979, 1225, 2436, 3645],
+          }
+        },
+        peak: { // 성수기
+          durations: ['2주','3주','4주','5주','8주','12주'],
+          people: ['p2','p3a','p3b','p4a','p4b','p5','p6'],
+          prices: {
+            'p2':  [314, 456, 566, 705, 1124, 1681],
+            'p3a': [447, 647, 805, 1003, 1602, 2398],
+            'p3b': [366, 531, 662, 822, 1306, 1951],
+            'p4a': [580, 837, 1044, 1302, 2079, 3114],
+            'p4b': [499, 720, 900, 1121, 1784, 2667],
+            'p5':  [633, 911, 1140, 1420, 2262, 3384],
+            'p6':  [766, 1101, 1378, 1718, 2740, 4101],
+          },
+          // 성수기 2주는 별도상담 (할인가 자료에 별표 표시되어있음)
+          consultOnly: { '2주': true }
+        }
+      }
+    },
+    // 제이파크
+    jp: {
+      name: '🌊 제이파크',
+      hasRoom: true,
+      rooms: { 'deluxe': '디럭스룸', 'premier': '프리미어룸', 'mactan': '막탄 스윗' },
+      includes: [
+        { i: '🏨', t: '<b>제이파크 리조트 객실</b> · 워터파크 & 비치 자유 이용 (뽀로로 파크 제외)' },
+        { i: '🍽️', t: '<b>리조트 내 모든 레스토랑 30% 할인</b> (논끼 제외)' },
+        { i: '🥐', t: '<b>아발론 조식 50% 할인</b> · 보호자 1인 결제 시 6세 미만 무료' },
+        { i: '🍱', t: '<b>평일 3식 프리미엄 도시락</b> · 아침/점심/저녁' },
+        { i: '🎓', t: '<b>드림아카데미 정규 수업</b> + 에프터 스쿨 + 주말 체험' },
+        { i: '🚐', t: '<b>공항 픽업 & 드랍</b> + 주말 투어 셔틀' },
+        { i: '💻', t: '<b>무료 화상영어</b> · 출국 전 / 귀국 후 (등록기간만큼)' },
+      ],
+      excludes: [
+        { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
+      ],
+      regular: {
+        durations: ['2주','3주','4주','5주'],
+        people: ['p2','p3a','p3b','p4b'],
+        rooms: ['deluxe','premier','mactan'],
+        prices: {
+          'p2':  { 'deluxe':[556,818,1072,1337], 'premier':[570,839,1100,1372], 'mactan':[626,923,1212,1512] },
+          'p3a': { 'deluxe':[704,1030,1337,1668], 'premier':[718,1051,1365,1703], 'mactan':[774,1135,1477,1843] },
+          'p3b': { 'deluxe':[614,901,1178,1467], 'premier':[628,922,1206,1502], 'mactan':[684,1006,1318,1642] },
+          'p4b': { 'deluxe':[763,1112,1444,1799], 'premier':[777,1133,1472,1834], 'mactan':[833,1217,1584,1974] },
+        }
+      },
+      discount: {
+        off: {
+          durations: ['2주','3주','4주','5주'],
+          people: ['p2','p3a','p3b','p4b'],
+          rooms: ['deluxe','premier','mactan'],
+          prices: {
+            'p2':  { 'deluxe':[444,654,857,1069], 'premier':[456,671,880,1097], 'mactan':[500,738,969,1209] },
+            'p3a': { 'deluxe':[563,824,1069,1334], 'premier':[574,840,1092,1362], 'mactan':[619,908,1181,1474] },
+            'p3b': { 'deluxe':[491,720,942,1173], 'premier':[502,737,964,1201], 'mactan':[547,804,1054,1313] },
+            'p4b': { 'deluxe':[610,889,1155,1439], 'premier':[621,906,1177,1467], 'mactan':[666,973,1267,1579] },
+          }
+        },
+        peak: {
+          durations: ['2주','3주','4주','5주'],
+          people: ['p2','p3a','p3b','p4b'],
+          rooms: ['deluxe','premier','mactan'],
+          prices: {
+            'p2':  { 'deluxe':[500,736,964,1203], 'premier':[513,755,990,1234], 'mactan':[563,830,1090,1360] },
+            'p3a': { 'deluxe':[633,927,1203,1501], 'premier':[646,945,1228,1532], 'mactan':[696,1021,1329,1658] },
+            'p3b': { 'deluxe':[552,810,1060,1320], 'premier':[565,829,1085,1351], 'mactan':[615,905,1186,1477] },
+            'p4b': { 'deluxe':[686,1000,1299,1619], 'premier':[699,1019,1324,1650], 'mactan':[749,1095,1425,1776] },
+          }
+        }
+      }
+    },
+    // 큐브나인
+    c9: {
+      name: '🐬 큐브나인',
+      hasRoom: true,
+      rooms: { 'ocean': '디럭스 오션룸 (등록금 포함)', 'pool': '풀억세스룸 (등록금 포함)' },
+      includes: [
+        { i: '🏨', t: '<b>큐브나인 객실</b> · 조식 포함 / 인피티니 풀 및 시설 자유 이용' },
+        { i: '🍽️', t: '<b>식사 바우처 포함</b> · 1주 기준 10만원 / 더 나인 레스토랑' },
+        { i: '🎓', t: '<b>드림아카데미 정규 수업</b> + 에프터 스쿨 + 주말 체험' },
+        { i: '🚐', t: '<b>공항 픽업 & 드랍</b> + 주말 투어 셔틀' },
+        { i: '💻', t: '<b>무료 화상영어</b> · 출국 전 / 귀국 후 (등록기간만큼)' },
+      ],
+      excludes: [
+        { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
+      ],
+      regular: {
+        durations: ['2주','3주','4주','5주'],
+        people: ['p2','p3a','p3b','p4b'],
+        rooms: ['ocean','pool'],
+        prices: {
+          'p2':  { 'ocean':[463,679,886,1105], 'pool':[502,738,964,1203] },
+          'p3a': { 'ocean':[573,833,1075,1341], 'pool':[612,892,1153,1439] },
+          'p3b': { 'ocean':[483,704,916,1140], 'pool':[522,763,994,1238] },
+          'p4b': { 'ocean':[593,858,1105,1376], 'pool':[632,917,1183,1474] },
+        }
+      },
+      discount: {
+        off: {
+          durations: ['2주','3주','4주','5주'],
+          people: ['p2','p3a','p3b','p4b'],
+          rooms: ['ocean','pool'],
+          prices: {
+            'p2':  { 'ocean':[370,543,708,884], 'pool':[401,590,771,962] },
+            'p3a': { 'ocean':[458,666,860,1072], 'pool':[489,713,922,1151] },
+            'p3b': { 'ocean':[386,563,732,912], 'pool':[417,610,795,990] },
+            'p4b': { 'ocean':[474,686,884,1100], 'pool':[505,733,946,1179] },
+          }
+        },
+        peak: {
+          durations: ['2주','3주','4주','5주'],
+          people: ['p2','p3a','p3b','p4b'],
+          rooms: ['ocean','pool'],
+          prices: {
+            'p2':  { 'ocean':[416,611,797,994], 'pool':[451,664,867,1082] },
+            'p3a': { 'ocean':[515,749,967,1206], 'pool':[550,802,1037,1295] },
+            'p3b': { 'ocean':[434,633,824,1026], 'pool':[469,686,894,1114] },
+            'p4b': { 'ocean':[533,772,994,1238], 'pool':[568,825,1064,1326] },
+          }
+        }
+      }
+    }
+  };
+
+  const calcState = {
+    mainTab: 'discount',  // 'regular' or 'discount'
+    season: 'off',        // 'off' or 'peak'
+    lodging: 'dh',        // 'dh', 'jp', 'c9'
+    duration: '4주',
+    room: '',
+    people: 'p3a',
+  };
+
+  function getCurrentDataset() {
+    const lodging = PRICE_DATA[calcState.lodging];
+    if (calcState.mainTab === 'regular') {
+      return { dataset: lodging.regular, isRegular: true };
+    }
+    return { dataset: lodging.discount[calcState.season], isRegular: false };
+  }
+
+  function updateDurationOptions() {
+    const { dataset } = getCurrentDataset();
+    const sel = document.getElementById('calc-duration');
+    sel.innerHTML = '';
+    dataset.durations.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d; opt.textContent = d;
+      sel.appendChild(opt);
+    });
+    // 기존 선택 유지 시도
+    if (dataset.durations.includes(calcState.duration)) {
+      sel.value = calcState.duration;
+    } else {
+      calcState.duration = dataset.durations[Math.min(2, dataset.durations.length-1)];
+      sel.value = calcState.duration;
+    }
+  }
+
+  function updateRoomOptions() {
+    const lodging = PRICE_DATA[calcState.lodging];
+    const roomField = document.getElementById('room-field');
+    if (!lodging.hasRoom) {
+      roomField.style.display = 'none';
+      calcState.room = '';
+      return;
+    }
+    roomField.style.display = 'flex';
+    const sel = document.getElementById('calc-room');
+    sel.innerHTML = '';
+    Object.entries(lodging.rooms).forEach(([val, label]) => {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = label;
+      sel.appendChild(opt);
+    });
+    if (lodging.rooms[calcState.room]) {
+      sel.value = calcState.room;
+    } else {
+      calcState.room = Object.keys(lodging.rooms)[0];
+      sel.value = calcState.room;
+    }
+  }
+
+  function updatePeopleOptions() {
+    const { dataset } = getCurrentDataset();
+    const sel = document.getElementById('calc-people');
+    sel.innerHTML = '';
+    dataset.people.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = PRICE_DATA.peopleLabels[p];
+      sel.appendChild(opt);
+    });
+    if (dataset.people.includes(calcState.people)) {
+      sel.value = calcState.people;
+    } else {
+      calcState.people = dataset.people[1] || dataset.people[0];
+      sel.value = calcState.people;
+    }
+  }
+
+  function getPrice(mainTab, season, lodgingKey, duration, room, people) {
+    const lodging = PRICE_DATA[lodgingKey];
+    const ds = mainTab === 'regular' ? lodging.regular : lodging.discount[season];
+    if (!ds) return null;
+    const idx = ds.durations.indexOf(duration);
+    if (idx === -1) return null;
+    let priceArr;
+    if (lodging.hasRoom) {
+      const peoplePrices = ds.prices[people];
+      if (!peoplePrices) return null;
+      priceArr = peoplePrices[room];
+    } else {
+      priceArr = ds.prices[people];
+    }
+    if (!priceArr) return null;
+    return priceArr[idx] || null;
+  }
+
+  function updateResult() {
+    const lodging = PRICE_DATA[calcState.lodging];
+    const { dataset, isRegular } = getCurrentDataset();
+    const lodgingName = lodging.name.replace(/^[^\s]+\s/, ''); // 이모지 제거된 이름
+    const peopleLabel = PRICE_DATA.peopleLabels[calcState.people].split(' ')[0]; // "3인" 만
+
+    // 라벨
+    const seasonLabel = isRegular ? '' : (calcState.season === 'off' ? '비수기 · ' : '성수기 · ');
+    const roomLabel = lodging.hasRoom && calcState.room ? ` · ${lodging.rooms[calcState.room].split(' ')[0]}` : '';
+    document.getElementById('result-tag').textContent = isRegular ? '정가' : '민에듀 할인가';
+    document.getElementById('result-tag').style.background = isRegular ? '#888' : 'var(--coral)';
+    document.getElementById('result-label').textContent =
+      `${seasonLabel}${lodging.name} · ${calcState.duration}${roomLabel} · ${peopleLabel}`;
+
+    // 별도상담 체크
+    const consultOnly = dataset.consultOnly && dataset.consultOnly[calcState.duration];
+    const warning = document.getElementById('calc-warning');
+    const result = document.getElementById('calc-result');
+
+    if (consultOnly) {
+      result.style.display = 'none';
+      warning.style.display = 'block';
+      warning.innerHTML = `⚠️ 성수기 <b>${calcState.duration}</b>는 <b>별도 상담</b>이 필요해요.<br />카카오 채널로 문의 부탁드립니다.`;
+      return;
+    }
+    result.style.display = 'block';
+    warning.style.display = 'none';
+
+    // 가격 계산
+    const price = getPrice(calcState.mainTab, calcState.season, calcState.lodging, calcState.duration, calcState.room, calcState.people);
+    if (price === null) {
+      document.getElementById('result-price').textContent = '문의 필요';
+      document.getElementById('result-discount').style.display = 'none';
+      return;
+    }
+    document.getElementById('result-price').textContent = price.toLocaleString() + '만원';
+
+    // 정가 비교 (할인가 탭일 때)
+    if (!isRegular) {
+      const regularPrice = getPrice('regular', null, calcState.lodging, calcState.duration, calcState.room, calcState.people);
+      if (regularPrice && regularPrice > price) {
+        const save = regularPrice - price;
+        document.getElementById('result-regular').textContent = regularPrice.toLocaleString() + '만원';
+        document.getElementById('result-save').textContent = `${save.toLocaleString()}만원 절약!`;
+        document.getElementById('result-discount').style.display = 'block';
+      } else {
+        document.getElementById('result-discount').style.display = 'none';
+      }
+    } else {
+      document.getElementById('result-discount').style.display = 'none';
+    }
+  }
+
+  function updateIncludes() {
+    const lodging = PRICE_DATA[calcState.lodging];
+    const grid = document.getElementById('includes-grid');
+    grid.innerHTML = '';
+    lodging.includes.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'inc-item';
+      div.innerHTML = `<span class="inc-icon">${item.i}</span><span>${item.t}</span>`;
+      grid.appendChild(div);
+    });
+
+    // 불포함 사항
+    const exGrid = document.getElementById('excludes-grid');
+    exGrid.innerHTML = '';
+    if (lodging.excludes && lodging.excludes.length) {
+      lodging.excludes.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'inc-item exc-item';
+        div.innerHTML = `<span class="inc-icon">${item.i}</span><span>${item.t}</span>`;
+        exGrid.appendChild(div);
+      });
+    }
+  }
+
+  function refreshAll() {
+    updateDurationOptions();
+    updateRoomOptions();
+    updatePeopleOptions();
+    updateResult();
+    updateIncludes();
+
+    // 서브 탭 표시 (할인가일 때만)
+    document.getElementById('season-tabs').style.display = calcState.mainTab === 'discount' ? 'flex' : 'none';
+    document.getElementById('peak-notice').style.display =
+      (calcState.mainTab === 'discount' && calcState.season === 'peak') ? 'block' : 'none';
+  }
+
+  // 메인 탭 (정가 / 할인가)
+  document.querySelectorAll('.price-main-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.price-main-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calcState.mainTab = btn.dataset.priceTab;
+      refreshAll();
+    });
+  });
+  // 서브 탭 (비수기 / 성수기)
+  document.querySelectorAll('.price-sub-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.price-sub-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calcState.season = btn.dataset.season;
+      refreshAll();
+    });
+  });
+  // 숙소 탭
+  document.querySelectorAll('.lodging-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lodging-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      calcState.lodging = btn.dataset.lodging;
+      refreshAll();
+    });
+  });
+  // 드롭다운
+  document.getElementById('calc-duration').addEventListener('change', e => {
+    calcState.duration = e.target.value; updateResult();
+  });
+  document.getElementById('calc-room').addEventListener('change', e => {
+    calcState.room = e.target.value; updateResult();
+  });
+  document.getElementById('calc-people').addEventListener('change', e => {
+    calcState.people = e.target.value; updateResult();
+  });
+
+  // 초기화
+  refreshAll();
 
   // ===== 카카오 채널 연결 (예약 신청 - 인라인 폼) =====
   const KAKAO_CHANNEL_URL = 'https://pf.kakao.com/_Yuhxhn/chat';
