@@ -22,6 +22,12 @@ interface InvoicePayload {
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function fmtDate(d:string){if(!d)return "";const dt=new Date(d);return `${dt.getMonth()+1}/${dt.getDate()}`;}
 function fmtFull(d:string){if(!d)return "";const[y,m,dd]=d.split("-");return `${y}년 ${Number(m)}월 ${Number(dd)}일`;}
+// 구분에 따라 기본 amount 반환 ("" = 자동채움 안 함)
+function defaultAmountFor(type: string, balance: number): string {
+  if (type === "예약금") return "1,000,000";
+  if (type === "잔금" && balance > 0) return new Intl.NumberFormat("ko-KR").format(balance);
+  return "";
+}
 
 export default function ReceiptPageWrapper(){ return <Suspense><ReceiptPageInner/></Suspense>; }
 
@@ -76,9 +82,22 @@ function ReceiptPageInner(){
     load();
   },[bookingId]);
 
-  function addPayment(){setPayments(prev=>[...prev,{id:Date.now(),type:"잔금",date:today,amount:""}]);}
+  function addPayment(){
+    const auto = defaultAmountFor("잔금", data?.balance ?? 0);
+    setPayments(prev=>[...prev,{id:Date.now(),type:"잔금",date:today,amount:auto}]);
+  }
   function removePayment(id:number){if(payments.length>1)setPayments(prev=>prev.filter(p=>p.id!==id));}
-  function upd(id:number,field:keyof Payment,value:string){setPayments(prev=>prev.map(p=>p.id===id?{...p,[field]:value}:p));}
+  function upd(id:number,field:keyof Payment,value:string){
+    setPayments(prev=>prev.map(p=>{
+      if(p.id!==id) return p;
+      const next = {...p, [field]: value};
+      if(field==="type" && (!p.amount || p.amount.trim()==="")){
+        const auto = defaultAmountFor(value, data?.balance ?? 0);
+        if(auto) next.amount = auto;
+      }
+      return next;
+    }));
+  }
 
   const DH_ROOMS=['b13L10','b16L19','b17L4','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
   async function saveToDreamhouse(){
@@ -228,7 +247,7 @@ function ReceiptPageInner(){
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
             <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">체크인</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃</td><td>{fmtFull(data.checkOutDate)}</td></tr>
+            <tr><td className="lb">체크인 (오후 3시 입실)</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃 (정오 12시 퇴실)</td><td>{fmtFull(data.checkOutDate)}</td></tr>
             <tr><td className="lb">패키지</td><td>{data.packageType}</td><td className="lb">인원 구성</td><td>{peopleStr}</td></tr>
             <tr><td className="lb">잔금납부일</td><td colSpan={3}>{fmtFull(data.balanceDate)||"미정"}</td></tr>
             {data.note&&<tr><td className="lb">특이사항</td><td colSpan={3}>{data.note}</td></tr>}
