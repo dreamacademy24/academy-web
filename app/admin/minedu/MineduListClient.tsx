@@ -58,6 +58,44 @@ export default function MineduListClient({
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Application | null>(null);
 
+  // 중복 연락처 감지 (전체 applications 기준)
+  const phoneCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const a of applications) {
+      const p = a.phone?.replace(/[-\s]/g, '');
+      if (p) map[p] = (map[p] || 0) + 1;
+    }
+    return map;
+  }, [applications]);
+  const isDuplicatePhone = (phone: string | null | undefined) => {
+    const p = phone?.replace(/[-\s]/g, '');
+    return !!(p && phoneCounts[p] > 1);
+  };
+
+  // 신청 삭제 (인라인 X / 모달 공용)
+  const handleDelete = async (app: Application, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const confirmed = window.confirm(
+      `정말로 삭제하시겠습니까?\n\n` +
+      `• 이름: ${app.name}\n` +
+      `• 연락처: ${app.phone || '-'}\n` +
+      `• 출국일: ${app.depart_date || '-'}\n\n` +
+      `⚠️ 이 작업은 되돌릴 수 없습니다.`
+    );
+    if (!confirmed) return;
+    try {
+      const res = await fetch(`/api/minedu-apply/${app.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '삭제 실패');
+      }
+      setSelected(null);
+      router.refresh();
+    } catch (err) {
+      alert('삭제에 실패했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
+    }
+  };
+
   // 검색 (이름/연락처/숙소/기간/연령/담당자 포함)
   const filtered = useMemo(() => {
     if (!search.trim()) return applications;
@@ -263,14 +301,18 @@ export default function MineduListClient({
                   <th>체류기간</th>
                   <th>희망 숙소</th>
                   <th>현재 상황</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((app) => (
+                {filtered.map((app) => {
+                  const dup = isDuplicatePhone(app.phone);
+                  return (
                   <tr
                     key={app.id}
                     onClick={() => setSelected(app)}
                     className="mn-tr"
+                    style={dup ? { background: '#FFFBEB' } : undefined}
                   >
                     <td>{formatDateTime(app.created_at)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
@@ -282,7 +324,17 @@ export default function MineduListClient({
                       />
                     </td>
                     <td className="mn-td-name">{app.name}</td>
-                    <td>{app.phone || '-'}</td>
+                    <td>
+                      {app.phone || '-'}
+                      {dup && (
+                        <span
+                          style={{ marginLeft: 4, fontSize: 11, color: '#92400E' }}
+                          title="중복 연락처"
+                        >
+                          ⚠️
+                        </span>
+                      )}
+                    </td>
                     <td>{app.children || '-'}</td>
                     <td>{app.ages || '-'}</td>
                     <td className="mn-td-depart">
@@ -298,8 +350,38 @@ export default function MineduListClient({
                         }
                       />
                     </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => handleDelete(app, e)}
+                        title="이 신청 삭제"
+                        style={{
+                          padding: '4px 8px',
+                          border: '1px solid transparent',
+                          background: 'transparent',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          borderRadius: 6,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#fee2e2';
+                          e.currentTarget.style.color = '#dc2626';
+                          e.currentTarget.style.borderColor = '#fecaca';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = '#94a3b8';
+                          e.currentTarget.style.borderColor = 'transparent';
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -343,7 +425,22 @@ export default function MineduListClient({
               )}
               <Detail label="희망 숙소" value={selected.lodging || '-'} />
             </div>
-            <div className="mn-modal-actions">
+            <div className="mn-modal-actions" style={{ justifyContent: 'space-between' }}>
+              <button
+                onClick={() => handleDelete(selected)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#fff',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 13.5,
+                  cursor: 'pointer',
+                }}
+              >
+                🗑️ 이 신청 삭제
+              </button>
               <button onClick={() => setSelected(null)} className="mn-btn-primary">
                 닫기
               </button>
