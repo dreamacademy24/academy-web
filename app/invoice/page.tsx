@@ -451,7 +451,15 @@ function extraRate(t:AT){return t==="cubenine"?250000:340000;}
 interface Disc{id:number;name:string;amount:number}
 interface LC{id:number;name:string;amount:string}
 interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string}
-function getNextMonday(dateStr:string){const d=new Date(dateStr);const day=d.getDay();const daysUntilMonday=day===1?7:(8-day)%7;d.setDate(d.getDate()+daysUntilMonday);return d.toISOString().split('T')[0];}
+function getNextMonday(dateStr:string){const d=new Date(dateStr);const day=d.getDay();const daysUntilMonday=(8-day)%7;d.setDate(d.getDate()+daysUntilMonday);return d.toISOString().split('T')[0];}
+// 아카데미 종료일 계산 (월~금 학원 운영 가정)
+// start = 월요일, weeks = 운영 주차 → end = start + (weeks-1)*7 + 4 (금요일)
+function calcAcademyEnd(startStr:string,weeks:number|string):string{
+  if(!startStr) return "";
+  const w=Number(weeks);
+  if(!w||w<1) return "";
+  return addDays(startStr,(w-1)*7+4);
+}
 
 const todayStr = new Date().toISOString().slice(0,10);
 const todayCompact = todayStr.replace(/-/g,"");
@@ -501,7 +509,7 @@ function InvoicePageInner(){
   useEffect(()=>{
     if(!a1CI) return;
     const monday=getNextMonday(a1CI);
-    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyWeeks?addDays(monday,Number(s.academyWeeks)*7):""})));
+    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:calcAcademyEnd(monday,s.academyWeeks)})));
   },[a1CI]);
 
   /* ── DB에서 예약 로드 ── */
@@ -565,7 +573,7 @@ function InvoicePageInner(){
     setStudents(prev=>prev.map(s=>({
       ...s,
       academyWeeks:String(totalWeeks),
-      academyEnd:s.academyStart?addDays(s.academyStart,totalWeeks*7):""
+      academyEnd:calcAcademyEnd(s.academyStart,totalWeeks)
     })));
   },[a1W,a2W,cm]);
 
@@ -646,14 +654,14 @@ function InvoicePageInner(){
   function upL(id:number,f:string,v:string){setBilling(b=>({...b,locals:b.locals.map(c=>c.id===id?{...c,[f]:v}:c)}));}
 
   /* ── 학생 헬퍼 ── */
-  function addStudent(){if(students.length>=6)return;const monday=a1CI?getNextMonday(a1CI):"";setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:monday?addDays(monday,2*7):"",academyWeeks:"2",photo:"O"}]);}
+  function addStudent(){if(students.length>=6)return;const monday=a1CI?getNextMonday(a1CI):"";setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:calcAcademyEnd(monday,2),academyWeeks:"2",photo:"O"}]);}
   function rmStudent(id:number){setStudents(students.filter(s=>s.id!==id));}
   function upStudent(id:number,f:string,v:string){
     setStudents(students.map(s=>{
       if(s.id!==id) return s;
       const next={...s,[f]:v};
-      if(f==="academyWeeks"&&next.academyStart) next.academyEnd=addDays(next.academyStart,Number(v)*7);
-      if(f==="academyStart"&&next.academyWeeks) next.academyEnd=addDays(v,Number(next.academyWeeks)*7);
+      if(f==="academyWeeks"&&next.academyStart) next.academyEnd=calcAcademyEnd(next.academyStart,v);
+      if(f==="academyStart"&&next.academyWeeks) next.academyEnd=calcAcademyEnd(v,next.academyWeeks);
       return next;
     }));
   }
