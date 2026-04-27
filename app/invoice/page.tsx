@@ -515,6 +515,20 @@ function InvoicePageInner(){
       setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:data.house_no||"",specialRequest:data.special_request||""}));
       setAdminOnly({agency:data.agency||"개인",ssp:data.ssp||"O"});
       if(data.checkin_date) setA1CI(data.checkin_date);
+      // accom_type 매핑 (booking → calculator)
+      const _at = data.accom_type as string | undefined;
+      if (_at === "드림하우스") {
+        setCm("single"); setA1T("dreamhouse");
+      } else if (_at === "제이파크 단독") {
+        setCm("single"); setA1T("jpark");
+      } else if (_at === "큐브나인 단독") {
+        setCm("single"); setA1T("cubenine");
+      } else if (_at === "드림하우스+제이파크") {
+        setCm("combo"); setA1T("dreamhouse"); setA2T("jpark"); setA2W(0);
+      } else if (_at === "드림하우스+큐브나인") {
+        setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine"); setA2W(0);
+      }
+      // "통학형" 또는 미일치 — 변경 없음 (default 유지)
       if(data.accom_weeks) setA1W(data.accom_weeks);
       if(data.adults) setCP(data.adults);
       if(data.children){setCK(data.children);}else if(sts&&sts.length>0){setCK(sts.length);}
