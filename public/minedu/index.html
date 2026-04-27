@@ -154,6 +154,27 @@
     background: var(--coral); color: #fff;
     font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
   }
+  /* 혜택 차등 지급 안내 박스 */
+  .benefit-prorate-notice {
+    margin-top: 16px;
+    display: flex; align-items: flex-start; gap: 12px;
+    background: linear-gradient(135deg, #FFF8E5 0%, #FFFBF2 100%);
+    border: 1px solid #F5E2A0;
+    border-left: 4px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .bpn-icon {
+    font-size: 20px; line-height: 1.2; flex-shrink: 0;
+  }
+  .bpn-content {
+    flex: 1; font-size: 13.5px; color: #6A4A0B; line-height: 1.6;
+  }
+  .bpn-content b { color: #8A5E0E; font-weight: 800; }
+  .bpn-sub {
+    display: block; margin-top: 4px;
+    font-size: 12.5px; color: var(--ink-3); font-weight: 500;
+  }
   .stat {
     background: #fff;
     border: 1px solid var(--line);
@@ -801,6 +822,119 @@
     .holiday-legend { flex-direction: column; gap: 8px; }
   }
 
+  /* 월별 휴무 카드 그리드 */
+  .holiday-months-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 900px) {
+    .holiday-months-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .holiday-months-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+  @media (max-width: 380px) {
+    .holiday-months-grid { grid-template-columns: 1fr; }
+  }
+  .hm-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    box-shadow: var(--shadow-sm);
+    display: flex; flex-direction: column;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .hm-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .hm-card.hm-empty {
+    background: #FAFAF7; border-style: dashed; opacity: 0.7;
+  }
+  .hm-card.hm-highlight {
+    border: 2px solid var(--coral); background: #FFFBF9;
+  }
+  .hm-month {
+    font-size: 16px; font-weight: 800; color: var(--ink);
+    margin-bottom: 10px; letter-spacing: -0.02em;
+    padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .hm-month span {
+    font-size: 11px; font-weight: 700; color: var(--ink-3);
+    letter-spacing: 0.05em;
+  }
+  .hm-card.hm-highlight .hm-month { color: var(--coral); }
+  .hm-card.hm-highlight .hm-month { border-bottom-color: rgba(232, 86, 63, 0.25); }
+  .hm-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .hm-list li {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 13px; color: var(--ink-2); line-height: 1.4;
+  }
+  .hm-list li b { color: var(--ink); font-weight: 700; }
+  .hm-dot {
+    display: inline-block; width: 11px; height: 11px;
+    border-radius: 50%; flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .hm-dot.yel { background: #FFD93D; }
+  .hm-dot.grn { background: #6FCF97; }
+  .hm-dot.pur { background: #D4A5E8; }
+  .hm-day { color: var(--ink-3); font-size: 12px; }
+  .hm-tag {
+    background: #F1F5F9; color: var(--ink-2);
+    font-size: 11px; padding: 1px 6px; border-radius: 4px;
+    margin-left: auto; font-weight: 600;
+  }
+  .hm-none {
+    font-size: 13px; color: var(--ink-3);
+    text-align: center; margin: 10px 0;
+    font-style: italic;
+  }
+  .hm-extra {
+    margin-top: 6px !important; padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    font-size: 11.5px !important; color: var(--coral) !important;
+    font-weight: 700; gap: 0 !important;
+  }
+  .hm-warn {
+    margin: 8px 0 0; padding: 6px 8px;
+    background: #FEF3C7; border-radius: 6px;
+    font-size: 11px; color: #78350F; font-weight: 600;
+    text-align: center;
+  }
+
+  /* 원본 이미지 토글 */
+  .holiday-image-toggle {
+    margin-bottom: 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .holiday-image-toggle summary {
+    padding: 14px 18px;
+    font-size: 13.5px; font-weight: 700; color: var(--ink-2);
+    cursor: pointer; user-select: none;
+    transition: background .15s ease;
+    list-style: none;
+  }
+  .holiday-image-toggle summary::-webkit-details-marker { display: none; }
+  .holiday-image-toggle summary::before {
+    content: '▶'; display: inline-block; margin-right: 8px;
+    transition: transform .2s ease; font-size: 11px;
+  }
+  .holiday-image-toggle[open] summary::before { transform: rotate(90deg); }
+  .holiday-image-toggle summary:hover { background: #FAFAF7; }
+  .holiday-image-toggle .holiday-calendar-wrap {
+    border: none; border-top: 1px solid var(--line);
+    border-radius: 0; box-shadow: none; margin: 0;
+  }
+
   /* 푸터 안내 */
   .pricing-footer { margin-top: 24px; }
   .pricing-note {
@@ -1384,7 +1518,7 @@
       <div class="stat highlight">
         <span class="stat-icon">🔥</span>
         <b>선착순 3팀 특별가</b>
-        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br />빠른 등록 권장</span>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br /><span style="color:var(--coral); font-size:11px; font-weight:700;">※ 4주 기준 차등 지급</span></span>
       </div>
       <div class="stat">
         <span class="stat-icon">⭐</span>
@@ -1394,17 +1528,25 @@
       <div class="stat">
         <span class="stat-icon">✈️</span>
         <b>비수기 유류비 지원</b>
-        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">20만원</b> 지원<br />비수기 한정</span>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">20만원</b> 지원<br /><span style="color:var(--coral); font-size:11px; font-weight:700;">※ 4주 기준 차등 지급</span></span>
       </div>
       <div class="stat">
         <span class="stat-icon">💰</span>
         <b>전액 입금 추가 할인</b>
-        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br />등록 시 일시 결제 조건</span>
+        <span>1인당 <b style="color:var(--coral); font-size:12.5px;">10만원</b> 추가 할인<br /><span style="color:var(--coral); font-size:11px; font-weight:700;">※ 4주 기준 차등 지급</span></span>
       </div>
       <div class="stat">
         <span class="stat-icon">📅</span>
         <b>일정 변경 1회 가능</b>
         <span><b style="color:var(--coral); font-size:12.5px;">잔금 납부 전</b>까지<br />유연한 일정 조정</span>
+      </div>
+    </div>
+    <!-- 차등 지급 안내 박스 -->
+    <div class="benefit-prorate-notice">
+      <span class="bpn-icon">📌</span>
+      <div class="bpn-content">
+        <b>혜택 금액은 4주 기준 차등 지급</b>됩니다.
+        <span class="bpn-sub">체류 기간에 따라 비례 적용되며, 정확한 적용 금액은 상담 시 안내드립니다.</span>
       </div>
     </div>
   </div>
@@ -2353,24 +2495,139 @@
       <h3 class="notice-section-title" style="margin-top: 32px;">🗓️ 2026 전체 휴무 일정</h3>
       <p class="notice-section-sub">아래 일정에 학원 및 드림센터(헬퍼, 셔틀)가 휴무합니다. 출국일 계획 시 참고해 주세요.</p>
 
-      <div class="holiday-calendar-wrap">
-        <img src="/minedu/holiday-2026.png" alt="2026 드림아카데미 휴무 일정" class="holiday-calendar-img" />
-      </div>
-
+      <!-- 색상 범례 (먼저 표시 - 카드 보기 전에 의미 파악) -->
       <div class="holiday-legend">
         <div class="legend-item">
           <span class="legend-dot" style="background: #FFD93D;"></span>
-          <span><b>드림아카데미 + 드림센터(헬퍼, 셔틀) 휴무</b></span>
+          <span><b>학원 + 드림센터(헬퍼, 셔틀)</b> 모두 휴무</span>
         </div>
         <div class="legend-item">
           <span class="legend-dot" style="background: #6FCF97;"></span>
-          <span><b>드림센터(헬퍼, 셔틀)만 추가 휴무</b></span>
+          <span><b>드림센터(헬퍼, 셔틀)만</b> 추가 휴무</span>
         </div>
         <div class="legend-item">
           <span class="legend-dot" style="background: #D4A5E8;"></span>
-          <span><b>드림아카데미만 추가 휴무</b></span>
+          <span><b>드림아카데미만</b> 추가 휴무</span>
         </div>
       </div>
+
+      <!-- 월별 휴무 카드 그리드 -->
+      <div class="holiday-months-grid">
+        <!-- 1월 -->
+        <div class="hm-card">
+          <div class="hm-month">1월 <span>JAN</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>1일</b><span class="hm-day">(목)</span> <span class="hm-tag">신정</span></li>
+            <li><span class="hm-dot pur"></span><b>2일</b><span class="hm-day">(금)</span></li>
+            <li class="hm-extra">📌 학원 방학 ~1/3</li>
+          </ul>
+        </div>
+
+        <!-- 2월 -->
+        <div class="hm-card hm-empty">
+          <div class="hm-month">2월 <span>FEB</span></div>
+          <p class="hm-none">휴무 없음</p>
+        </div>
+
+        <!-- 3월 -->
+        <div class="hm-card">
+          <div class="hm-month">3월 <span>MAR</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>20일</b><span class="hm-day">(금)</span></li>
+          </ul>
+        </div>
+
+        <!-- 4월 -->
+        <div class="hm-card">
+          <div class="hm-month">4월 <span>APR</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>2일</b><span class="hm-day">(목)</span></li>
+            <li><span class="hm-dot yel"></span><b>3일</b><span class="hm-day">(금)</span></li>
+            <li><span class="hm-dot grn"></span><b>4일</b><span class="hm-day">(토)</span></li>
+          </ul>
+        </div>
+
+        <!-- 5월 -->
+        <div class="hm-card">
+          <div class="hm-month">5월 <span>MAY</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>1일</b><span class="hm-day">(금)</span> <span class="hm-tag">노동절</span></li>
+            <li><span class="hm-dot yel"></span><b>29일</b><span class="hm-day">(금)</span></li>
+          </ul>
+        </div>
+
+        <!-- 6월 -->
+        <div class="hm-card">
+          <div class="hm-month">6월 <span>JUN</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>12일</b><span class="hm-day">(금)</span></li>
+          </ul>
+        </div>
+
+        <!-- 7월 -->
+        <div class="hm-card hm-empty">
+          <div class="hm-month">7월 <span>JUL</span></div>
+          <p class="hm-none">휴무 없음</p>
+        </div>
+
+        <!-- 8월 -->
+        <div class="hm-card">
+          <div class="hm-month">8월 <span>AUG</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot grn"></span><b>9일</b><span class="hm-day">(일)</span> <span class="hm-tag">아이언맨</span></li>
+          </ul>
+          <p class="hm-warn">⚠️ 8/9 도로통제로 투어셔틀 X</p>
+        </div>
+
+        <!-- 9월 -->
+        <div class="hm-card">
+          <div class="hm-month">9월 <span>SEP</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>24일</b><span class="hm-day">(목)</span></li>
+            <li><span class="hm-dot yel"></span><b>25일</b><span class="hm-day">(금)</span></li>
+            <li><span class="hm-dot yel"></span><b>26일</b><span class="hm-day">(토)</span></li>
+          </ul>
+        </div>
+
+        <!-- 10월 -->
+        <div class="hm-card">
+          <div class="hm-month">10월 <span>OCT</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>9일</b><span class="hm-day">(금)</span> <span class="hm-tag">한글날</span></li>
+            <li><span class="hm-dot yel"></span><b>30일</b><span class="hm-day">(금)</span></li>
+            <li><span class="hm-dot grn"></span><b>31일</b><span class="hm-day">(토)</span></li>
+          </ul>
+        </div>
+
+        <!-- 11월 -->
+        <div class="hm-card">
+          <div class="hm-month">11월 <span>NOV</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot yel"></span><b>27일</b><span class="hm-day">(금)</span></li>
+          </ul>
+        </div>
+
+        <!-- 12월 -->
+        <div class="hm-card hm-highlight">
+          <div class="hm-month">12월 <span>DEC</span></div>
+          <ul class="hm-list">
+            <li><span class="hm-dot pur"></span><b>24일</b><span class="hm-day">(목)</span></li>
+            <li><span class="hm-dot yel"></span><b>25일</b><span class="hm-day">(금)</span> <span class="hm-tag">크리스마스</span></li>
+            <li><span class="hm-dot pur"></span><b>26일</b><span class="hm-day">(토)</span></li>
+            <li><span class="hm-dot pur"></span><b>28~30일</b></li>
+            <li><span class="hm-dot yel"></span><b>31일</b><span class="hm-day">(목)</span></li>
+            <li class="hm-extra">📌 학원 방학 12/24~1/3</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 원본 캘린더 이미지 (펼치기 토글) -->
+      <details class="holiday-image-toggle">
+        <summary>🖼️ 원본 캘린더 이미지로 보기</summary>
+        <div class="holiday-calendar-wrap">
+          <img src="/minedu/holiday-2026.png" alt="2026 드림아카데미 휴무 일정" class="holiday-calendar-img" />
+        </div>
+      </details>
 
       <div class="warning-box" style="margin-top: 18px; background: #FFF8E5; border-color: #F5E2A0; border-left: 4px solid #E8A33F;">
         <h4 style="color: #8A5E0E; margin-bottom: 10px;">📌 휴무 관련 중요 안내</h4>
