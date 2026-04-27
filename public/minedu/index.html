@@ -742,6 +742,65 @@
   }
   .monday-content p b { color: var(--coral); }
 
+  /* 드림하우스 1월 4일 개강 고정 강조 */
+  .dh-startdate-notice {
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(135deg, #FFF5F2 0%, #FFE9E2 100%);
+    border: 2px solid var(--coral);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 18px rgba(232, 86, 63, 0.15);
+  }
+  @media (max-width: 540px) {
+    .dh-startdate-notice { flex-direction: column; text-align: center; gap: 12px; padding: 18px; }
+  }
+  .dh-sd-icon { font-size: 42px; line-height: 1; flex-shrink: 0; }
+  .dh-sd-content h4 {
+    font-size: 17px; font-weight: 800; color: var(--ink);
+    margin: 0 0 6px; letter-spacing: -0.02em;
+  }
+  .dh-sd-content h4 .hl {
+    background: var(--coral); color: #fff;
+    padding: 2px 10px; border-radius: 6px;
+    font-weight: 800;
+  }
+  .dh-sd-content p {
+    font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.6;
+  }
+  .dh-sd-content p b { color: var(--coral); }
+
+  /* 2026 휴무 캘린더 */
+  .holiday-calendar-wrap {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .holiday-calendar-img {
+    max-width: 100%; height: auto; border-radius: 8px;
+    display: block; margin: 0 auto;
+  }
+  .holiday-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 12px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--ink-2);
+  }
+  .legend-dot {
+    display: inline-block; width: 14px; height: 14px;
+    border-radius: 4px; border: 1px solid rgba(0,0,0,0.06); flex-shrink: 0;
+  }
+  @media (max-width: 600px) {
+    .holiday-legend { flex-direction: column; gap: 8px; }
+  }
+
   /* 푸터 안내 */
   .pricing-footer { margin-top: 24px; }
   .pricing-note {
@@ -1535,7 +1594,7 @@
             <li><b>시작일</b> · <span style="background:var(--coral); color:#fff; padding:2px 8px; border-radius:5px; font-weight:800;">매주 월요일만 가능</span></li>
             <li><b>결석</b> · 결석 시 보강 수업 없음</li>
             <li><b>공휴일</b> · 포함 시 일할 계산 환불</li>
-            <li><b>교재비</b> · 1권당 ₱350 (학생만 해당)</li>
+            <li><b>교재비</b> · 1권당 350페소 (학생만 해당)</li>
           </ul>
         </div>
         <div class="notice teal">
@@ -1546,6 +1605,7 @@
             <li><b>성수기 등록</b> · 3주 이상 필수</li>
             <li><b>종료 시점</b> · 2주 가능 (상담 필수)</li>
             <li><b>7세 예비초1</b> · 킨더 / 주니어 선택 가능</li>
+            <li><span style="background:#1a6fc4; color:#fff; padding:2px 8px; border-radius:5px; font-weight:800; font-size:13px;">🗓️ 학원 방학 12/24 ~ 1/3</span></li>
           </ul>
         </div>
       </div>
@@ -1736,6 +1796,16 @@
           <h2 class="panel-title">드림하우스 (독채)</h2>
         </div>
         <p class="panel-sub">기숙사형이 아닌, 베이스워터 빌리지 내 단독 2층 주택. 한국 정수기·방충망·도어락·한국산 가전까지 구비된 진짜 세부살이 공간입니다.</p>
+      </div>
+
+      <!-- 드림하우스 1월 4일 개강 고정 강조 -->
+      <div class="dh-startdate-notice">
+        <div class="dh-sd-icon">🗓️</div>
+        <div class="dh-sd-content">
+          <h4>드림하우스는 <span class="hl">1월 4일 개강만 가능</span>합니다</h4>
+          <p>독채 운영 특성상 <b>1월 4일 시작</b> 일정으로만 운영되며, 다른 날짜 시작은 불가합니다.<br />
+          📍 학원 방학 기간 <b>12월 24일 ~ 1월 3일</b> 직후 개강이니 출국일 계획 시 참고해 주세요.</p>
+        </div>
       </div>
 
       <div class="lodging-hero">
@@ -2194,12 +2264,12 @@
         </div>
       </div>
 
-      <!-- 매주 월요일 수업 시작 강조 -->
-      <div class="monday-notice">
-        <div class="monday-icon">📅</div>
+      <!-- 매주 월요일 수업 시작 강조 (드림하우스 선택 시 1월 4일로 변경됨) -->
+      <div class="monday-notice" id="schedule-notice">
+        <div class="monday-icon" id="schedule-icon">📅</div>
         <div class="monday-content">
-          <h4>중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다</h4>
-          <p>출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.</p>
+          <h4 id="schedule-title">중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다</h4>
+          <p id="schedule-desc">출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.</p>
         </div>
       </div>
 
@@ -2266,6 +2336,52 @@
         </p>
       </div>
 
+      <!-- 학원 방학 기간 안내 -->
+      <div class="warning-box" style="margin-top: 18px; background: #EFF6FF; border-color: #BFDBFE; border-left: 4px solid #1a6fc4;">
+        <h4 style="color: #1a6fc4; margin-bottom: 10px;">🗓️ 학원 방학 기간 안내</h4>
+        <p style="margin: 0 0 8px; font-size: 14.5px; color: var(--ink-2); line-height: 1.7;">
+          드림아카데미는 매년 <b style="color: #1a6fc4;">12월 24일 ~ 1월 3일</b>까지 <b>학원 방학</b>입니다.<br />
+          해당 기간에는 <b>정규 수업이 진행되지 않으니</b> 일정 계획 시 참고해 주세요.
+        </p>
+        <p style="margin: 0; font-size: 13.5px; color: var(--ink-3);">
+          📍 <b>드림하우스</b>는 방학 종료 직후인 <b>1월 4일에만 개강</b> 가능합니다.<br />
+          📍 <b>제이파크 / 큐브나인</b>도 방학 기간 입실은 가능하나, 정규 수업은 1월 4일(또는 그 이후 월요일)부터 시작됩니다.
+        </p>
+      </div>
+
+      <!-- 2026 전체 휴무 일정 -->
+      <h3 class="notice-section-title" style="margin-top: 32px;">🗓️ 2026 전체 휴무 일정</h3>
+      <p class="notice-section-sub">아래 일정에 학원 및 드림센터(헬퍼, 셔틀)가 휴무합니다. 출국일 계획 시 참고해 주세요.</p>
+
+      <div class="holiday-calendar-wrap">
+        <img src="/minedu/holiday-2026.png" alt="2026 드림아카데미 휴무 일정" class="holiday-calendar-img" />
+      </div>
+
+      <div class="holiday-legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #FFD93D;"></span>
+          <span><b>드림아카데미 + 드림센터(헬퍼, 셔틀) 휴무</b></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #6FCF97;"></span>
+          <span><b>드림센터(헬퍼, 셔틀)만 추가 휴무</b></span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #D4A5E8;"></span>
+          <span><b>드림아카데미만 추가 휴무</b></span>
+        </div>
+      </div>
+
+      <div class="warning-box" style="margin-top: 18px; background: #FFF8E5; border-color: #F5E2A0; border-left: 4px solid #E8A33F;">
+        <h4 style="color: #8A5E0E; margin-bottom: 10px;">📌 휴무 관련 중요 안내</h4>
+        <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink-2); line-height: 1.8;">
+          <li>휴무 기간에는 <b>수업, 투어셔틀, 헬퍼 서비스</b>가 운영되지 않습니다</li>
+          <li><b>식사는 기존 일정대로 정상 제공</b>됩니다</li>
+          <li style="color: var(--coral); font-weight: 700;">⚠️ 비수기 휴무에 대한 <b>별도 환불이나 보강은 없습니다</b></li>
+          <li><b>8월 9일</b> · 아이언맨 행사로 인한 도로통제 → 투어셔틀 운영 불가</li>
+        </ul>
+      </div>
+
       <!-- ② 패키지별 결제 안내 -->
       <h3 class="notice-section-title">💳 패키지별 예약금 & 정원</h3>
       <p class="notice-section-sub">숙소에 따라 예약금과 수용 인원이 다릅니다. 신중하게 선택해 주세요.</p>
@@ -2275,6 +2391,7 @@
           <h4>🏡 드림하우스 (3룸 독채)</h4>
           <p class="pkg-deposit">예약금 <b>1채당 100만원</b> · 잔금 입실 2개월 전까지</p>
           <ul>
+            <li><span style="background:var(--coral); color:#fff; padding:2px 8px; border-radius:5px; font-weight:800; font-size:13px;">🗓️ 1월 4일 개강만 가능</span></li>
             <li>패키지 정원: <b>최대 6인</b></li>
             <li>체크인 15:00 / 체크아웃 12:00</li>
             <li>보증금 <b>8,000페소</b> (현지, 4주 기준)<br /><span style="font-size:12.5px; color:var(--ink-3);">전기세·유료 서비스는 보증금에서 차감</span></li>
@@ -2399,8 +2516,8 @@
             <li>전기세: <b>14페소/KW</b></li>
             <li>SSP: <b>7,000페소/인</b> (유효기간 6개월)</li>
             <li>SSP-i Card: <b>4,000페소/인</b> (유효기간 1년)</li>
-            <li>교재비 (주니어): <b>₩350/권</b></li>
-            <li>재료비 (킨더): <b>₩2,500/월</b></li>
+            <li>교재비 (주니어): <b>350페소/권</b></li>
+            <li>재료비 (킨더): <b>2,500페소/월</b></li>
           </ul>
         </div>
 
@@ -2409,8 +2526,8 @@
           <ul>
             <li>SSP: <b>7,000페소/인</b> (유효기간 6개월)</li>
             <li>SSP-i Card: <b>4,000페소/인</b> (유효기간 1년)</li>
-            <li>교재비 (주니어): <b>₩350/권</b></li>
-            <li>재료비 (킨더): <b>₩2,500/월</b></li>
+            <li>교재비 (주니어): <b>350페소/권</b></li>
+            <li>재료비 (킨더): <b>2,500페소/월</b></li>
             <li><span style="color:var(--ink-3); font-size:13px;">※ 보증금·전기세는 리조트 패키지에 포함</span></li>
           </ul>
         </div>
@@ -2793,7 +2910,7 @@
         { i: '💰', t: '<b>보증금</b> · 8,000페소/4주 기준 (현지)' },
         { i: '⚡', t: '<b>전기세</b> · 14페소/KW (실사용량)' },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
-        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500페소/월' },
         { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
       ],
       regular: { // 정가 (단일)
@@ -2859,7 +2976,7 @@
         { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
         { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
-        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500페소/월' },
         { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
       ],
       regular: {
@@ -2915,7 +3032,7 @@
         { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
         { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
-        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500원/월' },
+        { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500페소/월' },
         { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
       ],
       regular: {
@@ -3133,11 +3250,28 @@
     updatePeopleOptions();
     updateResult();
     updateIncludes();
+    updateScheduleNotice();
 
     // 서브 탭 표시 (할인가일 때만)
     document.getElementById('season-tabs').style.display = calcState.mainTab === 'discount' ? 'flex' : 'none';
     document.getElementById('peak-notice').style.display =
       (calcState.mainTab === 'discount' && calcState.season === 'peak') ? 'block' : 'none';
+  }
+
+  function updateScheduleNotice() {
+    const title = document.getElementById('schedule-title');
+    const desc = document.getElementById('schedule-desc');
+    if (!title || !desc) return;
+
+    if (calcState.lodging === 'dh') {
+      // 드림하우스: 1월 4일 개강 고정
+      title.innerHTML = '드림하우스는 <span class="hl">1월 4일 개강만 가능</span>합니다';
+      desc.innerHTML = '독채 운영 특성상 <b>1월 4일 시작</b> 일정으로만 운영됩니다.<br />📍 학원 방학 기간 <b>12월 24일 ~ 1월 3일</b> 직후 개강이니 참고해 주세요.';
+    } else {
+      // 제이파크 / 큐브나인: 매주 월요일
+      title.innerHTML = '중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다';
+      desc.innerHTML = '출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.<br />🗓️ 학원 방학 기간: <b>12월 24일 ~ 1월 3일</b> (해당 기간 수업 없음)';
+    }
   }
 
   // 메인 탭 (정가 / 할인가)
