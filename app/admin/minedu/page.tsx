@@ -13,6 +13,7 @@ type Application = {
   period: string | null; // 호환성 위해 유지 (옛날 신청)
   lodging: string | null;
   assignee: string | null;
+  status: string | null;
 };
 
 async function getApplications(): Promise<Application[]> {
@@ -24,7 +25,7 @@ async function getApplications(): Promise<Application[]> {
 
   const { data, error } = await supabase
     .from('minedu_applications')
-    .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging, assignee')
+    .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging, assignee, status')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -47,6 +48,11 @@ export default async function MineduAdminPage() {
   const mayCount = applications.filter((a) => a.assignee === 'may').length;
   const unassignedCount = applications.filter((a) => !a.assignee).length;
 
+  const newCount = applications.filter((a) => !a.status || a.status === 'new').length;
+  const contactedCount = applications.filter((a) => a.status === 'contacted').length;
+  const inProgressCount = applications.filter((a) => a.status === 'in_progress').length;
+  const confirmedCount = applications.filter((a) => a.status === 'confirmed').length;
+
   return (
     <MineduListClient
       applications={applications}
@@ -55,6 +61,10 @@ export default async function MineduAdminPage() {
       jamieCount={jamieCount}
       mayCount={mayCount}
       unassignedCount={unassignedCount}
+      newCount={newCount}
+      contactedCount={contactedCount}
+      inProgressCount={inProgressCount}
+      confirmedCount={confirmedCount}
     />
   );
 }

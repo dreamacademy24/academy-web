@@ -13,19 +13,44 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { assignee } = body;
+    const { assignee, status } = body;
 
-    const ALLOWED = ['jamie', 'may'];
-    let normalizedAssignee: string | null = null;
-    if (assignee && typeof assignee === 'string' && assignee.trim()) {
-      const a = assignee.trim().toLowerCase();
-      if (!ALLOWED.includes(a)) {
-        return NextResponse.json(
-          { error: 'Invalid assignee. Must be: jamie | may | null' },
-          { status: 400 }
-        );
+    const updates: Record<string, string | null> = {};
+
+    if (assignee !== undefined) {
+      const ALLOWED_ASSIGNEE = ['jamie', 'may'];
+      if (assignee && typeof assignee === 'string' && assignee.trim()) {
+        const a = assignee.trim().toLowerCase();
+        if (!ALLOWED_ASSIGNEE.includes(a)) {
+          return NextResponse.json(
+            { error: 'Invalid assignee. Must be: jamie | may | null' },
+            { status: 400 }
+          );
+        }
+        updates.assignee = a;
+      } else {
+        updates.assignee = null;
       }
-      normalizedAssignee = a;
+    }
+
+    if (status !== undefined) {
+      const ALLOWED_STATUS = ['new', 'contacted', 'in_progress', 'paused', 'recheck', 'confirmed'];
+      if (status && typeof status === 'string' && status.trim()) {
+        const s = status.trim().toLowerCase();
+        if (!ALLOWED_STATUS.includes(s)) {
+          return NextResponse.json(
+            { error: 'Invalid status. Must be one of: ' + ALLOWED_STATUS.join(', ') },
+            { status: 400 }
+          );
+        }
+        updates.status = s;
+      } else {
+        updates.status = 'new';
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
     const supabase = createClient(
@@ -36,7 +61,7 @@ export async function PATCH(
 
     const { error } = await supabase
       .from('minedu_applications')
-      .update({ assignee: normalizedAssignee })
+      .update(updates)
       .eq('id', applicationId);
 
     if (error) {

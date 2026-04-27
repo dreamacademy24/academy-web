@@ -15,7 +15,21 @@ type Application = {
   period: string | null;
   lodging: string | null;
   assignee?: string | null;
+  status?: string | null;
 };
+
+const STATUS_OPTIONS = [
+  { value: 'new',         label: '신규',     bg: '#F1F5F9', fg: '#64748B', dot: '⚪' },
+  { value: 'contacted',   label: '연락옴',   bg: '#FEF3C7', fg: '#92400E', dot: '🟡' },
+  { value: 'in_progress', label: '상담중',   bg: '#DBEAFE', fg: '#1E40AF', dot: '🔵' },
+  { value: 'paused',      label: '상담멈춤', bg: '#FFE4E6', fg: '#BE123C', dot: '🟠' },
+  { value: 'recheck',     label: '재확인',   bg: '#EDE9FE', fg: '#6D28D9', dot: '🟣' },
+  { value: 'confirmed',   label: '예약확정', bg: '#D1FAE5', fg: '#047857', dot: '🟢' },
+] as const;
+
+const STATUS_BY_VALUE: Record<string, (typeof STATUS_OPTIONS)[number]> = Object.fromEntries(
+  STATUS_OPTIONS.map((o) => [o.value, o])
+);
 
 export default function MineduListClient({
   applications,
@@ -24,6 +38,10 @@ export default function MineduListClient({
   jamieCount,
   mayCount,
   unassignedCount,
+  newCount,
+  contactedCount,
+  inProgressCount,
+  confirmedCount,
 }: {
   applications: Application[];
   total: number;
@@ -31,6 +49,10 @@ export default function MineduListClient({
   jamieCount: number;
   mayCount: number;
   unassignedCount: number;
+  newCount: number;
+  contactedCount: number;
+  inProgressCount: number;
+  confirmedCount: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
@@ -56,11 +78,29 @@ export default function MineduListClient({
       return null;
     })();
 
+    // 한글 별칭 → 상태 키 매칭
+    const statusAlias: { match: (a: Application) => boolean } | null = (() => {
+      const labelMap: Record<string, string> = {
+        '신규': 'new',
+        '연락옴': 'contacted',
+        '상담중': 'in_progress',
+        '상담멈춤': 'paused',
+        '재확인': 'recheck',
+        '예약확정': 'confirmed',
+        '확정': 'confirmed',
+      };
+      const target = labelMap[qRaw];
+      if (target === 'new') return { match: (a) => !a.status || a.status === 'new' };
+      if (target) return { match: (a) => a.status === target };
+      return null;
+    })();
+
     return applications.filter((a) => {
       if (assigneeAlias && assigneeAlias.match(a)) return true;
+      if (statusAlias && statusAlias.match(a)) return true;
       const haystack = [
         a.name, a.phone, a.lodging, a.duration_weeks,
-        a.depart_date, a.period, a.ages, a.children, a.assignee,
+        a.depart_date, a.period, a.ages, a.children, a.assignee, a.status,
       ]
         .filter(Boolean)
         .join(' ')
@@ -94,6 +134,31 @@ export default function MineduListClient({
   const assigneeLabel = (v: string | null | undefined) =>
     v === 'jamie' ? 'Jamie' : v === 'may' ? 'May' : '미배정';
 
+  const statusLabel = (v: string | null | undefined) =>
+    (v && STATUS_BY_VALUE[v]?.label) || STATUS_BY_VALUE.new.label;
+
+  // 상태 변경 (인라인 select / 모달 공용)
+  const updateStatus = async (
+    appId: number,
+    next: string,
+    prev: string | null | undefined,
+    selectEl?: HTMLSelectElement
+  ) => {
+    try {
+      const res = await fetch(`/api/minedu-apply/${appId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next || 'new' }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      router.refresh();
+    } catch (err) {
+      console.error('[updateStatus] failed:', err);
+      alert('상태 변경에 실패했습니다. 다시 시도해주세요.');
+      if (selectEl) selectEl.value = prev || 'new';
+    }
+  };
+
   // 일정 표시 헬퍼 (신/구 데이터 모두 호환)
   const formatSchedule = (a: Application) => {
     if (a.depart_date && a.duration_weeks) {
@@ -108,7 +173,7 @@ export default function MineduListClient({
   const downloadExcel = () => {
     const headers = [
       '신청시각', '담당자', '이름', '연락처', '자녀인원', '자녀연령',
-      '출국일', '체류기간', '희망일정(구)', '희망숙소',
+      '출국일', '체류기간', '희망일정(구)', '희망숙소', '현재 상황',
     ];
     const rows = filtered.map((a) => [
       formatDateTimeFull(a.created_at),
@@ -121,6 +186,7 @@ export default function MineduListClient({
       a.duration_weeks || '',
       a.period || '',
       a.lodging || '',
+      statusLabel(a.status),
     ]);
     const csv = [headers, ...rows]
       .map((row) =>
@@ -161,12 +227,16 @@ export default function MineduListClient({
         <Stat label="🔵 Jamie 담당" value={jamieCount} color="#1a6fc4" />
         <Stat label="🌸 May 담당" value={mayCount} color="#E8563F" />
         <Stat label="⚪ 미배정" value={unassignedCount} color="#94a3b8" />
+        <Stat label="⚪ 신규" value={newCount} color="#64748B" />
+        <Stat label="🟡 연락옴" value={contactedCount} color="#92400E" />
+        <Stat label="🔵 상담중" value={inProgressCount} color="#1E40AF" />
+        <Stat label="🟢 예약확정" value={confirmedCount} color="#047857" />
       </div>
 
       <div className="mn-search-wrap">
         <input
           type="text"
-          placeholder="🔍 이름 / 연락처 / 숙소 / 출국일 / 체류기간 / 담당자(Jamie·메이·미배정)로 검색..."
+          placeholder="🔍 이름 / 연락처 / 숙소 / 출국일 / 체류기간 / 담당자 / 상태(연락옴·상담중·예약확정 등)로 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mn-search"
@@ -192,6 +262,7 @@ export default function MineduListClient({
                   <th>출국일</th>
                   <th>체류기간</th>
                   <th>희망 숙소</th>
+                  <th>현재 상황</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,6 +290,14 @@ export default function MineduListClient({
                     </td>
                     <td>{app.duration_weeks || (app.period ? <span style={{color:'#999', fontSize:12}}>{app.period}</span> : '-')}</td>
                     <td>{app.lodging || '-'}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <StatusSelect
+                        value={app.status || 'new'}
+                        onChange={(next, el) =>
+                          updateStatus(app.id, next, app.status, el)
+                        }
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -240,6 +319,16 @@ export default function MineduListClient({
                   onChange={(next, el) => {
                     updateAssignee(selected.id, next, selected.assignee, el);
                     setSelected({ ...selected, assignee: next || null });
+                  }}
+                />
+              </div>
+              <div style={{ padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>📊 현재 상황</div>
+                <StatusSelect
+                  value={selected.status || 'new'}
+                  onChange={(next, el) => {
+                    updateStatus(selected.id, next, selected.status, el);
+                    setSelected({ ...selected, status: next || 'new' });
                   }}
                 />
               </div>
@@ -330,6 +419,43 @@ function AssigneeSelect({
       <option value="">미배정</option>
       <option value="jamie">Jamie</option>
       <option value="may">May</option>
+    </select>
+  );
+}
+
+function StatusSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string, el: HTMLSelectElement) => void;
+}) {
+  const opt = STATUS_BY_VALUE[value] || STATUS_BY_VALUE.new;
+  return (
+    <select
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value, e.currentTarget)}
+      style={{
+        background: opt.bg,
+        color: opt.fg,
+        fontWeight: 700,
+        border: '1px solid #e2e8f0',
+        borderRadius: 6,
+        padding: '6px 12px',
+        fontSize: 13,
+        cursor: 'pointer',
+        outline: 'none',
+        appearance: 'none',
+        WebkitAppearance: 'none',
+        MozAppearance: 'none',
+      }}
+    >
+      {STATUS_OPTIONS.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.dot} {o.label}
+        </option>
+      ))}
     </select>
   );
 }
