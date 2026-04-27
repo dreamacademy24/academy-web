@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-type BookingType = "dreamhouse" | "dreamhouse_jaypark" | "dreamhouse_cubenine" | "commute";
+type BookingType = "dreamhouse" | "dreamhouse_jaypark" | "dreamhouse_cubenine" | "jaypark" | "cubenine" | "commute";
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
 interface Flight { airline: string; flightNo: string; date: string; time: string; place: string; undecided: boolean }
 
@@ -13,6 +13,8 @@ const BOOKING_TYPES = [
   { value: "dreamhouse",         icon: "🏠", label: "드림하우스 단독",   desc: "드림하우스 패키지" },
   { value: "dreamhouse_jaypark", icon: "🏨", label: "드하 + 제이파크",   desc: "드림하우스 + 제이파크 조합" },
   { value: "dreamhouse_cubenine",icon: "🏢", label: "드하 + 큐브나인",   desc: "드림하우스 + 큐브나인 조합" },
+  { value: "jaypark",            icon: "🏨", label: "제이파크 단독",     desc: "제이파크 패키지" },
+  { value: "cubenine",           icon: "🏢", label: "큐브나인 단독",     desc: "큐브나인 패키지" },
   { value: "commute",            icon: "🚶", label: "통학형",            desc: "숙소 없이 학원만" },
 ] as const;
 
@@ -35,11 +37,17 @@ export default function BookingPage() {
   // 자동 체크아웃 계산
   useEffect(() => {
     if (bType === "commute" || !dates.checkIn) return;
-    let totalWeeks = accom.dh_weeks;
-    if (bType === "dreamhouse_jaypark") totalWeeks += accom.jp_weeks;
-    if (bType === "dreamhouse_cubenine") {
+    let totalWeeks = 0;
+    if (bType === "dreamhouse") totalWeeks = accom.dh_weeks;
+    else if (bType === "dreamhouse_jaypark") totalWeeks = accom.dh_weeks + accom.jp_weeks;
+    else if (bType === "dreamhouse_cubenine") {
       const cnDays = accom.cn_period === "6일" ? 6 : parseInt(accom.cn_period) * 7;
       totalWeeks = accom.dh_weeks + cnDays / 7;
+    }
+    else if (bType === "jaypark") totalWeeks = accom.jp_weeks;
+    else if (bType === "cubenine") {
+      const cnDays = accom.cn_period === "6일" ? 6 : parseInt(accom.cn_period) * 7;
+      totalWeeks = cnDays / 7;
     }
     const d = new Date(dates.checkIn);
     d.setDate(d.getDate() + Math.round(totalWeeks * 7));
@@ -62,6 +70,8 @@ export default function BookingPage() {
     if (bType === "dreamhouse") { accomType = "드림하우스"; accomWeeks = accom.dh_weeks; }
     else if (bType === "dreamhouse_jaypark") { accomType = "드림하우스+제이파크"; accomWeeks = accom.dh_weeks + accom.jp_weeks; }
     else if (bType === "dreamhouse_cubenine") { accomType = "드림하우스+큐브나인"; accomWeeks = accom.dh_weeks + (accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period)); }
+    else if (bType === "jaypark") { accomType = "제이파크 단독"; accomWeeks = accom.jp_weeks; }
+    else if (bType === "cubenine") { accomType = "큐브나인 단독"; accomWeeks = accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period); }
     else { accomType = "통학형"; accomWeeks = 0; }
 
     const flightInStr = flightIn.undecided ? "미정" : [flightIn.airline, flightIn.flightNo, flightIn.date, flightIn.time].filter(Boolean).join(" ");
@@ -190,13 +200,15 @@ export default function BookingPage() {
           <div className="bs">
             <h2>2️⃣ 숙소 기간</h2>
             <div className="fr">
-              <div className="fg">
-                <label className="fl">드림하우스 기간</label>
-                <select className="fsl" value={accom.dh_weeks} onChange={e => setAccom({ ...accom, dh_weeks: parseInt(e.target.value) })}>
-                  {DH_WEEKS.map(w => <option key={w} value={w}>{w}주</option>)}
-                </select>
-              </div>
-              {bType === "dreamhouse_jaypark" && (
+              {(bType === "dreamhouse" || bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine") && (
+                <div className="fg">
+                  <label className="fl">드림하우스 기간</label>
+                  <select className="fsl" value={accom.dh_weeks} onChange={e => setAccom({ ...accom, dh_weeks: parseInt(e.target.value) })}>
+                    {DH_WEEKS.map(w => <option key={w} value={w}>{w}주</option>)}
+                  </select>
+                </div>
+              )}
+              {(bType === "dreamhouse_jaypark" || bType === "jaypark") && (
                 <div className="fg">
                   <label className="fl">제이파크 기간</label>
                   <select className="fsl" value={accom.jp_weeks} onChange={e => setAccom({ ...accom, jp_weeks: parseInt(e.target.value) })}>
@@ -204,7 +216,7 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
-              {bType === "dreamhouse_cubenine" && (
+              {(bType === "dreamhouse_cubenine" || bType === "cubenine") && (
                 <div className="fg">
                   <label className="fl">큐브나인 기간</label>
                   <select className="fsl" value={accom.cn_period} onChange={e => setAccom({ ...accom, cn_period: e.target.value })}>
