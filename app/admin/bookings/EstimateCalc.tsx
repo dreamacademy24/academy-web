@@ -497,6 +497,13 @@ export default function EstimateCalc(){
 
   function planName(p:PlanState){return accomLabel[p.accom]+(p.roomType?` ${p.roomType}`:"");}
   function fmtDate(d:string){if(!d)return"";const dt=new Date(d);return `${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;}
+  function calcCheckout(checkin:string, weeks:number){
+    if(!checkin) return "";
+    const d=new Date(checkin);
+    if(isNaN(d.getTime())) return "";
+    d.setDate(d.getDate()+weeks*7);
+    return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+  }
 
   async function saveImage(){
     const el=resultRef.current;
@@ -546,7 +553,9 @@ export default function EstimateCalc(){
               {Array.from({length:11},(_,i)=>i+2).map(w=><option key={w} value={w}>{w}주</option>)}
             </select></label>
           <label style={{flex:1}}><span style={lbl}>체크인 날짜</span>
-            <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/></label>
+            <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/>
+            {plan.checkin&&<div style={{marginTop:4,fontSize:12,color:"#6b7280"}}>체크아웃: {calcCheckout(plan.checkin,plan.weeks)}</div>}
+          </label>
         </div>
         {/* 자동판별 + 시즌 수동선택 */}
         <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end"}}>
