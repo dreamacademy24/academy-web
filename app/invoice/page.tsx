@@ -440,7 +440,12 @@ const C9:Record<string,P3>={
 
 /* ── 견적 계산 함수 (100% 기존 유지) ── */
 type AT=""| "dreamhouse"|"jpark"|"cubenine";
-function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{if(t==="dreamhouse")return DH[`${w}-${p}-${k}`]??null;if(t==="jpark")return JP[`${r}-${w}-${p}-${k}`]??null;return C9[`${r}-${w}-${p}-${k}`]??null;}
+function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
+  const half=(e:P3):P3=>[Math.round(e[0]/2),Math.round(e[1]/2),Math.round(e[2]/2)];
+  if(t==="dreamhouse"){const e=DH[`${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=DH[`2-${p}-${k}`];if(e2)return half(e2);}return null;}
+  if(t==="jpark"){const e=JP[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=JP[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;}
+  const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
+}
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
 function al(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
@@ -533,14 +538,36 @@ function InvoicePageInner(){
         setCm("single"); setA1T("cubenine");
       } else if (_at === "드림하우스+제이파크") {
         setCm("combo"); setA1T("dreamhouse"); setA2T("jpark");
+        if(data.dh_weeks) setA1W(data.dh_weeks);
+        if(data.jp_weeks) setA2W(data.jp_weeks);
+        if(data.jp_room_type) setA2R(data.jp_room_type);
       } else if (_at === "드림하우스+큐브나인") {
         setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
+        if(data.dh_weeks) setA1W(data.dh_weeks);
+        if(data.cn_period){
+          const m=String(data.cn_period).match(/(\d+)/);
+          if(m) setA2W(Number(m[1]));
+        }
+        if(data.cn_room_type) setA2R(data.cn_room_type);
       }
       // "통학형" 또는 미일치 — 변경 없음 (default 유지)
       // 콤보일 때 accom_weeks는 합산값이라 a1W에 통째 넣으면 a2W=0 사고 발생.
       const isCombo = !!_at && _at.includes("+");
       if (data.accom_weeks && !isCombo) {
         setA1W(data.accom_weeks);
+      }
+      // 단독: 분해 컬럼이 있으면 우선 사용 (정확도 ↑)
+      if (!isCombo) {
+        if (_at === "드림하우스" && data.dh_weeks) setA1W(data.dh_weeks);
+        if (_at === "제이파크 단독" && data.jp_weeks) {
+          setA1W(data.jp_weeks);
+          if(data.jp_room_type) setA1R(data.jp_room_type);
+        }
+        if (_at === "큐브나인 단독" && data.cn_period) {
+          const m=String(data.cn_period).match(/(\d+)/);
+          if(m) setA1W(Number(m[1]));
+          if(data.cn_room_type) setA1R(data.cn_room_type);
+        }
       }
       if(data.adults) setCP(data.adults);
       if(data.children){setCK(data.children);}else if(sts&&sts.length>0){setCK(sts.length);}
