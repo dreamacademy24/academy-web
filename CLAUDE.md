@@ -880,12 +880,15 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 - `booker_phone` (text)
 
 ### 테스트 부킹 (Chrome MCP 자동 검증)
-- `DA-20260428-155971` (id=`8573deae-3398-44cd-8a7b-163817248abf`)
-- 콤보 1+1주 (드하+제이파크), 보호자 2명, 학생 1명
+- `DA-20260428-155971` (id=`8573deae-3398-44cd-8a7b-163817248abf`) — 콤보 1+1주, 보호자 2명, 학생 1명
+- 추가 테스트 부킹 (52c19a9 fix 검증용): id=`a0d822cc-cd1b-46a1-8e62-665504bfa367` — fix 후에도 미동작 확인됨
 
 ### 남은 알려진 이슈 (다음 세션 우선)
-1. 🚨 **[긴급] 인보이스 콤보 자동 복원 버그** — 부킹에 dh_weeks=1, jp_weeks=1 정확히 저장되어 있음에도 인보이스에서 a1W=2, a2W=2 default 유지됨. 원인 추정: `app/invoice/page.tsx`의 `_at === "드림하우스+제이파크"` 정확 매칭이 실제 DB 값과 불일치.
-   - **다음 세션 첫 작업**: `SELECT accom_type FROM bookings WHERE id='8573deae-3398-44cd-8a7b-163817248abf'` 결과 확인 → 매칭을 `_at?.includes("드림하우스") && _at?.includes("제이파크")` 같은 inclusive 비교로 완화하거나 정확 문자열로 정렬.
+1. 🚨 **[긴급] 인보이스 콤보 자동 복원 버그 — fix 시도 후에도 미동작** — 커밋 `52c19a9`에서 매칭을 includes 기반으로 완화했음에도 인보이스에서 a1W/a2W가 여전히 default(2/2) 유지됨. accom_type 매칭 외에 다른 경로(예: `data.base_price>0`일 때 `billing_items`에서 복원하는 line 549~565 블록)가 오버라이드 가능성 있음.
+   - **다음 세션 첫 작업**:
+     1. Supabase에서 `SELECT accom_type, dh_weeks, jp_weeks, base_price, billing_items FROM bookings WHERE id='a0d822cc-cd1b-46a1-8e62-665504bfa367'` 실행 → 실제 저장값 확인
+     2. invoice items 복원 로직(line 547+ `if(data.base_price>0)` 분기) 점검 — billing_items가 있으면 콤보 분기보다 나중에 실행돼서 default 값으로 덮어쓰지 않는지 검증
+     3. useEffect 발화 순서 + setState 비동기 처리로 인한 race condition도 가설로 점검
 2. **cn_period="6일"** 케이스 → 정규식 `\d+`이 "6"을 추출 → a2W=6주로 잘못 매핑됨. 별도 분기 처리 필요 (1주로 매핑).
 3. **jp_room_type / cn_room_type 부킹 입력 UI 없음** — 컬럼만 추가되고 부킹 폼에 룸타입 select가 없어 항상 NULL 저장. 부킹 폼에 룸타입 입력 UI 추가 필요 또는 룸타입 분기 자체 보류.
 4. **픽업장소 select "드림하우스" 옵션** — 메이가 제거 요청했으나 미진행 (`app/booking/page.tsx:307`).
