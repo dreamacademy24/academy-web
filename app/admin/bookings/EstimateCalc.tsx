@@ -439,7 +439,7 @@ function lookup(t:AccomType,r:string,w:number,p:number,k:number):P3|null{
 function pickPrice(e:P3,s:Season):number{ return s==="off"?e[1]:s==="peak"?e[2]:e[0]; }
 function won(n:number){return n.toLocaleString("ko-KR")+"원";}
 
-interface ExtraItem{name:string;amount:number;}
+interface ExtraItem{id:number;name:string;amount:number;}
 interface PlanState{
   accom:AccomType; roomType:string; weeks:number; checkin:string; season:Season;
   parents:number; kids:number;
@@ -464,31 +464,30 @@ function calcPlan(p:PlanState){
 
 export default function EstimateCalc(){
   const resultRef=useRef<HTMLDivElement>(null);
-  const [p1,setP1]=useState<PlanState>(defaultPlan("dreamhouse"));
-  const [p2,setP2]=useState<PlanState>(defaultPlan("jpark"));
-  const [show2,setShow2]=useState(false);
+  const MAX_PLANS = 5;
+  const DEFAULT_ACCOM_ROTATION: AccomType[] = ["dreamhouse","jpark","cubenine","dreamhouse","jpark"];
+  const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
 
-  function up(setter:React.Dispatch<React.SetStateAction<PlanState>>,patch:Partial<PlanState>){
-    setter(prev=>{
-      const next={...prev,...patch};
+  function up(idx:number,patch:Partial<PlanState>){
+    setPlans(prev=>prev.map((p,i)=>{
+      if(i!==idx) return p;
+      const next={...p,...patch};
       if(patch.accom){ next.roomType=patch.accom==="dreamhouse"?"":"디럭스"; next.parents=1; next.kids=2; next.weeks=4; }
       return next;
-    });
+    }));
   }
-  function setCheckinAndSeason(setter:React.Dispatch<React.SetStateAction<PlanState>>,date:string){
-    setter(prev=>({...prev,checkin:date,season:autoSeason(date)}));
+  function setCheckinAndSeason(idx:number,date:string){
+    setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
-  function addItem(setter:React.Dispatch<React.SetStateAction<PlanState>>,field:"extras"|"discounts"){
-    setter(prev=>({...prev,[field]:[...prev[field],{name:"",amount:0}]}));
+  function addItem(idx:number,field:"extras"|"discounts"){
+    setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:[...p[field],{id:Date.now()+Math.floor(Math.random()*1000),name:"",amount:0}]}:p));
   }
-  function rmItem(setter:React.Dispatch<React.SetStateAction<PlanState>>,field:"extras"|"discounts",idx:number){
-    setter(prev=>({...prev,[field]:prev[field].filter((_,i)=>i!==idx)}));
+  function rmItem(idx:number,field:"extras"|"discounts",itemId:number){
+    setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:p[field].filter(it=>it.id!==itemId)}:p));
   }
-  function setItem(setter:React.Dispatch<React.SetStateAction<PlanState>>,field:"extras"|"discounts",idx:number,patch:Partial<ExtraItem>){
-    setter(prev=>({...prev,[field]:prev[field].map((item,i)=>i===idx?{...item,...patch}:item)}));
+  function setItem(idx:number,field:"extras"|"discounts",itemId:number,patch:Partial<ExtraItem>){
+    setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:p[field].map(it=>it.id===itemId?{...it,...patch}:it)}:p));
   }
-
-  const r1=calcPlan(p1), r2=show2?calcPlan(p2):null;
   const todayFmt=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
   const todayFile=new Date().toISOString().slice(0,10).replace(/-/g,"");
 
@@ -516,7 +515,7 @@ export default function EstimateCalc(){
   }
 
   /* ── 입력 폼 ── */
-  function renderInput(plan:PlanState,setter:React.Dispatch<React.SetStateAction<PlanState>>,label:string){
+  function renderInput(plan:PlanState,idx:number,label:string){
     const detected=autoSeason(plan.checkin);
     return(
       <div style={{flex:1,minWidth:300,background:"#fff",borderRadius:12,padding:20,border:"1px solid #e2e8f0"}}>
@@ -524,26 +523,26 @@ export default function EstimateCalc(){
         {/* 숙소 / 룸타입 */}
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>숙소</span>
-            <select style={sel} value={plan.accom} onChange={e=>up(setter,{accom:e.target.value as AccomType})}>
+            <select style={sel} value={plan.accom} onChange={e=>up(idx,{accom:e.target.value as AccomType})}>
               <option value="dreamhouse">드림하우스</option><option value="jpark">제이파크</option><option value="cubenine">큐브나인</option>
             </select></label>
           {plan.accom==="jpark"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
-            <select style={sel} value={plan.roomType} onChange={e=>up(setter,{roomType:e.target.value})}>
+            <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
             </select></label>}
           {plan.accom==="cubenine"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
-            <select style={sel} value={plan.roomType} onChange={e=>up(setter,{roomType:e.target.value})}>
+            <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option>
             </select></label>}
         </div>
         {/* 기간 / 체크인 */}
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>기간</span>
-            <select style={sel} value={plan.weeks} onChange={e=>up(setter,{weeks:Number(e.target.value)})}>
+            <select style={sel} value={plan.weeks} onChange={e=>up(idx,{weeks:Number(e.target.value)})}>
               {Array.from({length:11},(_,i)=>i+2).map(w=><option key={w} value={w}>{w}주</option>)}
             </select></label>
           <label style={{flex:1}}><span style={lbl}>체크인 날짜</span>
-            <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(setter,e.target.value)}/></label>
+            <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/></label>
         </div>
         {/* 자동판별 + 시즌 수동선택 */}
         <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end"}}>
@@ -552,18 +551,18 @@ export default function EstimateCalc(){
             <div style={{padding:"8px 0"}}>{plan.checkin?seasonBadge(detected):<span style={{fontSize:12,color:"#94a3b8"}}>날짜를 입력하세요</span>}</div>
           </div>
           <label style={{flex:1}}><span style={lbl}>시즌 (수동 변경 가능)</span>
-            <select style={{...sel,fontWeight:600,color:plan.season==="peak"?"#dc2626":plan.season==="off"?"#1d4ed8":"#64748b"}} value={plan.season} onChange={e=>up(setter,{season:e.target.value as Season})}>
+            <select style={{...sel,fontWeight:600,color:plan.season==="peak"?"#dc2626":plan.season==="off"?"#1d4ed8":"#64748b"}} value={plan.season} onChange={e=>up(idx,{season:e.target.value as Season})}>
               <option value="list">정가</option><option value="off">비수기</option><option value="peak">성수기</option>
             </select></label>
         </div>
         {/* 보호자 / 아이 */}
         <div style={{display:"flex",gap:8,marginBottom:10}}>
           <label style={{flex:1}}><span style={lbl}>보호자</span>
-            <select style={sel} value={plan.parents} onChange={e=>up(setter,{parents:Number(e.target.value)})}>
+            <select style={sel} value={plan.parents} onChange={e=>up(idx,{parents:Number(e.target.value)})}>
               {[1,2,3].map(n=><option key={n} value={n}>{n}명</option>)}
             </select></label>
           <label style={{flex:1}}><span style={lbl}>아이</span>
-            <select style={sel} value={plan.kids} onChange={e=>up(setter,{kids:Number(e.target.value)})}>
+            <select style={sel} value={plan.kids} onChange={e=>up(idx,{kids:Number(e.target.value)})}>
               {[1,2,3,4,5].map(n=><option key={n} value={n}>{n}명</option>)}
             </select></label>
         </div>
@@ -571,13 +570,13 @@ export default function EstimateCalc(){
         <div style={{marginBottom:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <span style={{fontSize:12,fontWeight:600,color:"#6b7c93"}}>추가항목</span>
-            <button style={addBtnS} onClick={()=>addItem(setter,"extras")}>+ 추가</button>
+            <button style={addBtnS} onClick={()=>addItem(idx,"extras")}>+ 추가</button>
           </div>
-          {plan.extras.map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-              <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(setter,"extras",i,{name:e.target.value})}/>
-              <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(setter,"extras",i,{amount:Number(e.target.value)})}/>
-              <button style={delBtnS} onClick={()=>rmItem(setter,"extras",i)}>×</button>
+          {plan.extras.map((item)=>(
+            <div key={item.id} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+              <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(idx,"extras",item.id,{name:e.target.value})}/>
+              <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(idx,"extras",item.id,{amount:Number(e.target.value)})}/>
+              <button style={delBtnS} onClick={()=>rmItem(idx,"extras",item.id)}>×</button>
             </div>
           ))}
         </div>
@@ -585,13 +584,13 @@ export default function EstimateCalc(){
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <span style={{fontSize:12,fontWeight:600,color:"#dc2626"}}>할인항목</span>
-            <button style={addBtnS} onClick={()=>addItem(setter,"discounts")}>+ 추가</button>
+            <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
           </div>
-          {plan.discounts.map((item,i)=>(
-            <div key={i} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
-              <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(setter,"discounts",i,{name:e.target.value})}/>
-              <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(setter,"discounts",i,{amount:Number(e.target.value)})}/>
-              <button style={delBtnS} onClick={()=>rmItem(setter,"discounts",i)}>×</button>
+          {plan.discounts.map((item)=>(
+            <div key={item.id} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
+              <input style={{...inp,flex:1}} placeholder="항목명" value={item.name} onChange={e=>setItem(idx,"discounts",item.id,{name:e.target.value})}/>
+              <input style={{...inp,width:100}} type="number" placeholder="금액" value={item.amount||""} onChange={e=>setItem(idx,"discounts",item.id,{amount:Number(e.target.value)})}/>
+              <button style={delBtnS} onClick={()=>rmItem(idx,"discounts",item.id)}>×</button>
             </div>
           ))}
         </div>
@@ -600,9 +599,10 @@ export default function EstimateCalc(){
   }
 
   /* ── 출력 카드 ── */
-  function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string){
+  function renderCard(plan:PlanState,r:ReturnType<typeof calcPlan>,label:string,onRemove?:()=>void){
     if(!r) return(
-      <div style={{flex:1,minWidth:280,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0"}}>
+      <div style={{flex:1,minWidth:280,background:"#f8fafc",borderRadius:12,padding:32,textAlign:"center",color:"#94a3b8",fontSize:13,border:"1px solid #e2e8f0",position:"relative"}}>
+        {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
         {label}: 가격 정보 없음<br/>조건을 변경해주세요.
       </div>
     );
@@ -610,7 +610,8 @@ export default function EstimateCalc(){
     const hasDiscounts=plan.discounts.filter(e=>e.name&&e.amount).length>0;
     const showStrike=r.listPrice!==r.finalPrice;
     return(
-      <div style={{flex:1,minWidth:280,background:"#fff",borderRadius:12,padding:24,border:"1px solid #e2e8f0"}}>
+      <div style={{flex:1,minWidth:280,background:"#fff",borderRadius:12,padding:24,border:"1px solid #e2e8f0",position:"relative"}}>
+        {onRemove&&<button onClick={onRemove} className="no-print" style={{position:"absolute",top:8,right:8,background:"transparent",border:"none",color:"#ef4444",fontSize:18,cursor:"pointer",lineHeight:1,fontFamily:"'Noto Sans KR',sans-serif"}} title="이 안 제거">×</button>}
         {/* 카드 헤더 */}
         <div style={{textAlign:"center",marginBottom:16,paddingBottom:14,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
@@ -678,14 +679,20 @@ export default function EstimateCalc(){
       {/* ── 입력 ── */}
       <div className="no-print">
         <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:12}}>
-          {renderInput(p1,setP1,"1안 설정")}
-          {show2&&renderInput(p2,setP2,"2안 설정")}
+          {plans.map((p,i)=>(
+            <div key={i} style={{flex:"1 1 300px",minWidth:300,display:"flex"}}>{renderInput(p,i,`${i+1}안 설정`)}</div>
+          ))}
         </div>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <button onClick={()=>setShow2(!show2)} style={{padding:"10px 24px",fontSize:13,fontWeight:700,borderRadius:8,border:"1px solid #e2e8f0",background:show2?"#fef2f2":"#eff6ff",color:show2?"#dc2626":"#1a6fc4",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>
-            {show2?"2안 제거":"+ 2안 추가하기"}
-          </button>
-        </div>
+        {plans.length<MAX_PLANS&&(
+          <div style={{textAlign:"center",marginBottom:20}}>
+            <button onClick={()=>{
+              const nextAccom=DEFAULT_ACCOM_ROTATION[plans.length]??"dreamhouse";
+              setPlans(prev=>[...prev,defaultPlan(nextAccom)]);
+            }} style={{padding:"10px 24px",fontSize:13,fontWeight:700,borderRadius:8,border:"1px solid #e2e8f0",background:"#eff6ff",color:"#1a6fc4",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>
+              + {plans.length+1}안 추가하기
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── 출력 ── */}
@@ -697,8 +704,11 @@ export default function EstimateCalc(){
         </div>
 
         <div style={{display:"flex",gap:16,marginBottom:24,flexWrap:"wrap"}}>
-          {renderCard(p1,r1,"1안")}
-          {show2&&renderCard(p2,r2,"2안")}
+          {plans.map((p,i)=>{
+            const r=calcPlan(p);
+            const onRemove=i>=1?()=>setPlans(prev=>prev.filter((_,idx)=>idx!==i)):undefined;
+            return <div key={i} style={{flex:"1 1 280px",minWidth:280,display:"flex"}}>{renderCard(p,r,`${i+1}안`,onRemove)}</div>;
+          })}
         </div>
 
         <div style={{padding:"14px 20px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
