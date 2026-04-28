@@ -4,9 +4,7 @@ import html2canvas from "html2canvas";
 import {
   COMMON_EXCLUSIONS,
   getInclusionsByAccom,
-  getDataKey,
   type AccomType,
-  type PackageDataKey,
 } from "@/lib/packageInfo";
 
 /* ── 가격 테이블 (invoice 동일, [정가, 비수기, 성수기]) ── */
@@ -719,43 +717,33 @@ export default function EstimateCalc(){
 
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",gap:16,marginTop:32,marginBottom:24,flexWrap:"wrap"}}>
-          {(() => {
-            const groups = new Map<PackageDataKey, AccomType[]>();
-            plans.forEach(p => {
-              const k = getDataKey(p.accom);
-              if (!groups.has(k)) groups.set(k, []);
-              const arr = groups.get(k)!;
-              if (!arr.includes(p.accom)) arr.push(p.accom);
-            });
-            return [...groups.entries()].map(([key, accoms]) => {
-              const items = getInclusionsByAccom(accoms[0]);
-              const label = accoms.map(a => accomLabel[a]).join(" / ");
-              return (
-                <div key={key} style={{
-                  flex:"1 1 320px",
-                  minWidth:280,
-                  padding:20,
-                  background:"#fff",
-                  border:"1px solid #e5e7eb",
-                  borderRadius:12,
-                  boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
-                }}>
-                  <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>
-                    📦 {label} 패키지 포함 사항
-                  </div>
-                  {items.map((it, idx) => (
-                    <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
-                      <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
-                      <div style={{fontSize:12.5,lineHeight:"20px"}}>
-                        <span style={{fontWeight:600,color:"#111"}}>{it.title}</span>
-                        {it.desc && <span style={{color:"#6b7280"}}> · {it.desc}</span>}
-                      </div>
-                    </div>
-                  ))}
+          {plans.map((p, i) => {
+            const items = getInclusionsByAccom(p.accom);
+            return (
+              <div key={i} style={{
+                flex:"1 1 320px",
+                minWidth:280,
+                padding:20,
+                background:"#fff",
+                border:"1px solid #e5e7eb",
+                borderRadius:12,
+                boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
+              }}>
+                <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>
+                  📦 {i+1}안 · {accomLabel[p.accom]} 패키지 포함 사항
                 </div>
-              );
-            });
-          })()}
+                {items.map((it, idx) => (
+                  <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
+                    <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
+                    <div style={{fontSize:12.5,lineHeight:"20px"}}>
+                      <span style={{fontWeight:600,color:"#111"}}>{it.title}</span>
+                      {it.desc && <span style={{color:"#6b7280"}}> · {it.desc}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
 
           <div style={{
             flex:"1 1 320px",
