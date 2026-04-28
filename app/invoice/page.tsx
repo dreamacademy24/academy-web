@@ -501,7 +501,7 @@ function InvoicePageInner(){
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [applied,setApplied]=useState(false);
-  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
+  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
 
@@ -546,6 +546,20 @@ function InvoicePageInner(){
         const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
         setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
         setApplied(true);
+        // calculator state 복원 (룸타입/주수/인원 — 신 포맷 items에만 존재. 옛 데이터는 undefined → no-op)
+        if(items[0]){
+          if(items[0].accom) setA1T(items[0].accom);
+          if(items[0].roomType) setA1R(items[0].roomType);
+          if(items[0].weeks) setA1W(items[0].weeks);
+          if(items[0].parents) setCP(items[0].parents);
+          if(items[0].kids) setCK(items[0].kids);
+        }
+        if(items[1]){
+          setCm("combo");
+          if(items[1].accom) setA2T(items[1].accom);
+          if(items[1].roomType) setA2R(items[1].roomType);
+          if(items[1].weeks) setA2W(items[1].weeks);
+        }
       }
       if(data.reservation_no) setReservationNo(data.reservation_no);
       if(data.reservation_date) setReservationDate(data.reservation_date);
@@ -604,7 +618,7 @@ function InvoicePageInner(){
       const pk=isPeak(a1CI);const price=sp(e,pk);
       if(ex1Cnt>0)extras.push({label:`추가 인원 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
       const extTotal=extras.reduce((s,x)=>s+x.price,0);
-      return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:pk?"성수기":"비수기"}]};
+      return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:pk?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK}]};
     }
     const tw=a1W+a2W;
     const e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);if(!e1||!e2)return null;
@@ -615,14 +629,14 @@ function InvoicePageInner(){
     if(ex2Cnt>0)extras.push({label:`${al(a2T,a2R)} 추가 ${ex2Cnt}명 × 1주`,price:extraRate(a2T)*ex2Cnt});
     const extTotal=extras.reduce((s,x)=>s+x.price,0);
     return{total:p1+p2+extTotal,extras,items:[
-      {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기"},
-      {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기"},
+      {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK},
+      {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기",accom:a2T,roomType:a2R,weeks:a2W,parents:cP,kids:cK},
     ]};
   },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt]);
 
   function applyInv(){
     if(!est)return;
-    const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
+    const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season,accom:i.accom,roomType:i.roomType,weeks:i.weeks,parents:i.parents,kids:i.kids})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
     setBilling(b=>({...b,basePrice:est.total,items:billItems}));
     setApplied(true);
   }
