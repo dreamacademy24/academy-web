@@ -393,7 +393,7 @@ export default function BookingPage() {
                 </div>
               </div>
               <div className="fg">
-                <label className="fl">사진촬영 허용</label>
+                <label className="fl">사진촬영 허용{s.photo === "X" && <span style={{marginLeft:8,fontSize:11,color:"#dc2626",fontWeight:500}}>⚠️ 사진촬영 자체가 없습니다</span>}</label>
                 <select className="fsl" value={s.photo} onChange={e => upStudent(s.id, "photo", e.target.value)}>
                   <option value="O">O (SNS 활용 허용)</option>
                   <option value="X">X (미허용)</option>

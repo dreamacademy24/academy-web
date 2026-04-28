@@ -225,19 +225,17 @@ export const REFUND_POLICIES: Record<RefundPolicyKey, RefundPolicy> = {
 // BookingType union이 영어/한국어 어느 쪽이어도 cover하도록 양쪽 매칭
 export function getRefundPolicyKeys(bType: string): RefundPolicyKey[] {
   const lower = bType.toLowerCase();
+  const isDH = lower.includes("dream") || lower.includes("dh") || bType.includes("드림");
+  const isJP = lower.includes("jpark") || lower.includes("jaypark") || bType.includes("제이파크");
+  const isC9 = lower.includes("cube") || bType.includes("큐브");
 
   // 콤보 (드림하우스 + X)
-  const isDH = lower.includes("dream") || lower.includes("dh") || bType.includes("드림");
-  if (isDH && (lower.includes("jpark") || bType.includes("제이파크"))) {
-    return ["dreamhouse", "jpark"];
-  }
-  if (isDH && (lower.includes("cubenine") || lower.includes("cube") || bType.includes("큐브"))) {
-    return ["dreamhouse", "cubenine"];
-  }
+  if (isDH && isJP) return ["dreamhouse", "jpark"];
+  if (isDH && isC9) return ["dreamhouse", "cubenine"];
 
   // 단독
-  if (lower.includes("jpark") || bType.includes("제이파크")) return ["jpark"];
-  if (lower.includes("cubenine") || lower.includes("cube") || bType.includes("큐브")) return ["cubenine"];
+  if (isJP) return ["jpark"];
+  if (isC9) return ["cubenine"];
 
   // 기본: 드림하우스 (드림하우스 단독, 통학형, 룸오프리 등)
   return ["dreamhouse"];
