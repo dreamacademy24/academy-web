@@ -670,6 +670,29 @@ function InvoicePageInner(){
   function addL(){setBilling(b=>({...b,locals:[...b.locals,{id:Date.now(),name:"",amount:""}]}));}
   function rmL(id:number){setBilling(b=>({...b,locals:b.locals.filter(c=>c.id!==id)}));}
   function upL(id:number,f:string,v:string){setBilling(b=>({...b,locals:b.locals.map(c=>c.id===id?{...c,[f]:v}:c)}));}
+  function autoFillLocals(){
+    const validStudents=students.filter(s=>s.korName.trim());
+    const totalCount=validStudents.length;
+    const juniorCount=validStudents.filter(s=>s.grade==="주니어").length;
+    const kinderCount=validStudents.filter(s=>s.grade==="킨더").length;
+    const kinderStudents=validStudents.filter(s=>s.grade==="킨더");
+    const kinderWeeks=kinderStudents.length>0?Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0)):0;
+    const calcKinder=(w:number)=>{if(w<=0)return 0;if(w===4)return 2500;if(w===2)return 1750;return Math.round((w/4)*2500);};
+    const kinderAmount=calcKinder(kinderWeeks);
+    const base=Date.now();
+    const newRows:LC[]=[];
+    if(totalCount>0){
+      newRows.push({id:base,name:`SSP (필수, ${totalCount}인)`,amount:String(7000*totalCount)});
+      newRows.push({id:base+1,name:`SSP-i Card (${totalCount}인)`,amount:String(4000*totalCount)});
+    }
+    if(juniorCount>0){
+      newRows.push({id:base+2,name:`교재비 (주니어)`,amount:"350"});
+    }
+    if(kinderCount>0&&kinderAmount>0){
+      newRows.push({id:base+3,name:`재료비 (킨더, ${kinderWeeks}주 기준)`,amount:String(kinderAmount)});
+    }
+    setBilling(b=>({...b,locals:[...b.locals,...newRows]}));
+  }
 
   /* ── 학생 헬퍼 ── */
   function addStudent(){if(students.length>=6)return;const monday=a1CI?getNextMonday(a1CI):"";setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:calcAcademyEnd(monday,2),academyWeeks:"2",photo:"O"}]);}
@@ -979,6 +1002,7 @@ function InvoicePageInner(){
     <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목 <span style={{fontSize:"10px",color:"#94a3b8",fontWeight:400}}>단위: 페소(PHP)</span></label>
     {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
+    <button type="button" onClick={autoFillLocals} style={{marginLeft:8,padding:"6px 12px",fontSize:12,background:"#3b82f6",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontWeight:600}}>🪙 현지지불 자동채움 (학생/기간 기준)</button>
     {a1CI&&(<div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"8px",background:effectiveFullPayment?"#fef2f2":"#f0f7ff",border:effectiveFullPayment?"1px solid #fecaca":"1px solid #bfdbfe",fontSize:"13px"}}>{effectiveFullPayment?(<><span style={{color:"#dc2626",fontWeight:700}}>{isFullPayment?"⚠️ 전액 입금 — 체크인이 2달 미만입니다. ":"💰 전액 입금 — "}전체 금액({fmt(fp)}원)을 납부해 주세요.</span>{!isFullPayment&&(<div style={{marginTop:"8px"}}><label style={{fontSize:"12px",color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={forceFullPayment} onChange={e=>setForceFullPayment(e.target.checked)} style={{marginRight:"6px"}} />💰 전액 입금으로 표시</label></div>)}</>):(<><div style={{marginBottom:"4px"}}><strong>예약금:</strong> 1,000,000원</div><div style={{marginBottom:"4px"}}><strong>잔금:</strong> {fmt(fp>1000000?fp-1000000:0)}원{booker.balanceDate?` (납부일: ${booker.balanceDate})`:""}</div><div style={{color:"#6b7c93",fontSize:"11px",marginTop:"6px"}}>※ 예약금 입금 후 예약 확정, 잔금은 입실 2달 전까지 납부</div><div style={{marginTop:"8px"}}><label style={{fontSize:"12px",color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={forceFullPayment} onChange={e=>setForceFullPayment(e.target.checked)} style={{marginRight:"6px"}} />💰 전액 입금으로 표시</label></div></>)}</div>)}
   </div>
 
@@ -1025,7 +1049,7 @@ function InvoicePageInner(){
         <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {fp>0&&(effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
-      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{(c.name.includes("SSP")||c.name.includes("보증금"))?" 페소":""}</td></tr>)}</tbody></table>}</>}</div>
+      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
