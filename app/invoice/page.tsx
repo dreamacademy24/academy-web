@@ -863,7 +863,7 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-            <tr><td className="lb">체크인 (3PM 입실)</td><td>{overallCI||"-"}</td><td className="lb">체크아웃 (12noon 퇴실)</td><td>{overallCO||"-"}</td></tr>
+            <tr><td className="lb">체크인 (오후 3시 입실)</td><td>{overallCI||"-"}</td><td className="lb">체크아웃 (정오 12시 퇴실)</td><td>{overallCO||"-"}</td></tr>
             <tr><td className="lb">숙소</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">방번호</td><td>{checkin.houseNo||"미정"}</td></tr>
           </tbody></table>
         </div>
@@ -1000,7 +1000,7 @@ function InvoicePageInner(){
       <div className="is"><div className="ist">Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-        <tr><td className="lb">체크인 (3PM 입실)</td><td>{overallCI}</td><td className="lb">체크아웃 (12noon 퇴실)</td><td>{overallCO}</td></tr>
+        <tr><td className="lb">체크인</td><td>{overallCI&&<>{overallCI} <span style={{color:"#6b7280",fontSize:"0.85em"}}>(오후 3시 입실)</span></>}</td><td className="lb">체크아웃</td><td>{overallCO&&<>{overallCO} <span style={{color:"#6b7280",fontSize:"0.85em"}}>(정오 12시 퇴실)</span></>}</td></tr>
         <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"수동입력"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
