@@ -853,3 +853,44 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 - students 테이블 vs bookings.students JSON: 두 source 공존, fallback 패턴 필요
 - accom_type 컨벤션: "드림하우스", "드림하우스+제이파크", "드림하우스+큐브나인", "제이파크 단독", "큐브나인 단독", "통학형"
 - 깨진 UTF-8 바이트(EF BF BD) 발견 시 str_replace 실패 → Python/Node 라인 단위 교체로 우회
+
+## 2026-04-28 세션 (인보이스/부킹 폼 정합성 + 환불규정 모달)
+
+### 완료 커밋 (9개)
+- `a7b55e4` 환불 규정 jaypark 매칭 + 사진촬영 미허용 안내
+- `9e4da90` 부킹 페이지 유학원 필드 제거
+- `8bced05` 견적 페이지 체크아웃 자동 표시 (체크인 input 아래 read-only)
+- `b7f5c33` BOOKING_TYPES 통합 (`lib/bookingTypes.ts` 신설) + 통학형/단독 어드민 추가
+- `585c3fa` 인보이스 콤보 0주 버그 fix + 한쪽 0주 시 빨간 가드
+- `d203e51` 인보이스 현지지불 자동채움 버튼 (SSP/SSP-i Card/주니어 교재/킨더 재료비)
+- `256443b` 인보이스 시간 형식 통일 (값 셀 "15:00PM"/"12noon", 라벨에서 영문 제거)
+- `a8b25a1` 부킹 영문명 + 추가 보호자(0~2명) + 1주 옵션 + 분해 컬럼 저장
+- `d5df3b7` 인보이스 자동 복원 (콤보 weeks/룸타입/영문명/인원, 1주 가격 fallback=2주/2)
+
+### 신규 파일
+- `lib/bookingTypes.ts` — 손님/어드민이 공유하는 BookingType 단일 source (PUBLIC 6종 + ADMIN_ONLY room_only)
+- `lib/refundPolicy.ts` (직전 세션) + `components/RefundPolicyModal.tsx` (직전 세션) — 부킹/견적 공유 환불 규정 데이터 + 모달
+
+### Supabase DB 마이그레이션 (실행 완료)
+`bookings` 테이블에 컬럼 추가:
+- `extra_guardians` (jsonb)
+- `adults` (int), `children` (int)
+- `dh_weeks` (int), `jp_weeks` (int), `cn_weeks` (int), `cn_period` (text)
+- `jp_room_type` (text), `cn_room_type` (text)
+- `booker_phone` (text)
+
+### 테스트 부킹 (Chrome MCP 자동 검증)
+- `DA-20260428-155971` (id=`8573deae-3398-44cd-8a7b-163817248abf`)
+- 콤보 1+1주 (드하+제이파크), 보호자 2명, 학생 1명
+
+### 남은 알려진 이슈 (다음 세션 우선)
+1. 🚨 **[긴급] 인보이스 콤보 자동 복원 버그** — 부킹에 dh_weeks=1, jp_weeks=1 정확히 저장되어 있음에도 인보이스에서 a1W=2, a2W=2 default 유지됨. 원인 추정: `app/invoice/page.tsx`의 `_at === "드림하우스+제이파크"` 정확 매칭이 실제 DB 값과 불일치.
+   - **다음 세션 첫 작업**: `SELECT accom_type FROM bookings WHERE id='8573deae-3398-44cd-8a7b-163817248abf'` 결과 확인 → 매칭을 `_at?.includes("드림하우스") && _at?.includes("제이파크")` 같은 inclusive 비교로 완화하거나 정확 문자열로 정렬.
+2. **cn_period="6일"** 케이스 → 정규식 `\d+`이 "6"을 추출 → a2W=6주로 잘못 매핑됨. 별도 분기 처리 필요 (1주로 매핑).
+3. **jp_room_type / cn_room_type 부킹 입력 UI 없음** — 컬럼만 추가되고 부킹 폼에 룸타입 select가 없어 항상 NULL 저장. 부킹 폼에 룸타입 입력 UI 추가 필요 또는 룸타입 분기 자체 보류.
+4. **픽업장소 select "드림하우스" 옵션** — 메이가 제거 요청했으나 미진행 (`app/booking/page.tsx:307`).
+5. **어드민 상세 페이지에 영문명/추가 보호자 표시 미반영** (Step 5) — `app/admin/bookings/[id]/page.tsx`에 `booker_english` / `extra_guardians` 표시 영역 추가 필요.
+
+### 다음 세션 시작 방법
+"드림아카데미 프로젝트 이어서 진행해줘 — 인보이스 콤보 자동 복원 버그부터"
+→ CLAUDE.md 읽고 위 #1 (긴급) 부터 시작
