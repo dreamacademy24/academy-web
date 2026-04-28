@@ -1,6 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import RefundPolicyModal from "@/components/RefundPolicyModal";
+import { getRefundPolicyKeys } from "@/lib/refundPolicy";
+import {
+  COMMON_EXCLUSIONS,
+  getInclusionsByAccom,
+  type AccomType,
+} from "@/lib/packageInfo";
 
 type BookingType = "dreamhouse" | "dreamhouse_jaypark" | "dreamhouse_cubenine" | "jaypark" | "cubenine" | "commute";
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
@@ -40,6 +47,20 @@ const BOOKING_TYPES = [
 const DH_WEEKS = [1, 2, 3, 4, 6, 8, 10];
 const CN_PERIODS = ["1주", "2주", "4주", "6일"];
 
+// BookingType → 표시할 패키지 박스 accom 키 배열
+function getPackageAccoms(bType: string): AccomType[] {
+  const lower = bType.toLowerCase();
+  const isDH = lower.includes("dream") || lower.includes("dh") || bType.includes("드림");
+  const isJP = lower.includes("jpark") || lower.includes("jaypark") || bType.includes("제이파크");
+  const isC9 = lower.includes("cube") || bType.includes("큐브");
+
+  if (isDH && isJP) return ["dreamhouse", "jpark"];
+  if (isDH && isC9) return ["dreamhouse", "cubenine"];
+  if (isJP) return ["jpark"];
+  if (isC9) return ["cubenine"];
+  return ["dreamhouse"]; // 드림하우스 단독, 통학형, 룸오프리 등 기본
+}
+
 export default function BookingPage() {
   const [bType, setBType] = useState<BookingType>("dreamhouse");
   const [booker, setBooker] = useState({ name: "", phone: "", agency: "" });
@@ -52,6 +73,8 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
+  const [agreed, setAgreed] = useState<boolean>(false);
+  const [policyOpen, setPolicyOpen] = useState<boolean>(false);
 
   // 자동 체크아웃 계산
   useEffect(() => {
@@ -81,6 +104,7 @@ export default function BookingPage() {
     if (!booker.name.trim()) { alert("예약자명을 입력해주세요."); return; }
     if (!students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; }
     if (bType !== "commute" && !dates.checkIn) { alert("체크인 날짜를 입력해주세요."); return; }
+    if (!agreed) { alert("포함/불포함 사항 및 환불규정 확인 동의가 필요합니다."); return; }
 
     setLoading(true);
     const rno = "DA-" + todayCompact + "-" + Math.floor(Math.random() * 900000 + 100000);
@@ -390,10 +414,141 @@ export default function BookingPage() {
           <textarea className="fta" placeholder="예) ADHD 약 복용 중, 특정 음식 알레르기, 기타 요청사항" value={specialRequest} onChange={e => setSpecialRequest(e.target.value)} />
         </div>
 
-        <button className="sb" onClick={submit} disabled={loading}>
+        {/* 패키지 포함/불포함 박스 */}
+        <div style={{
+          marginTop: 24,
+          padding: 16,
+          background: "#f9fafb",
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+        }}>
+          <div style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#111",
+            marginBottom: 12,
+          }}>
+            📦 패키지 안내
+          </div>
+          <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+            {getPackageAccoms(bType).map((accom, idx) => {
+              const items = getInclusionsByAccom(accom);
+              const label = accom === "dreamhouse" ? "드림하우스"
+                          : accom === "jpark" ? "제이파크"
+                          : "큐브나인";
+              return (
+                <div key={idx} style={{
+                  flex: "1 1 280px",
+                  minWidth: 240,
+                  padding: 14,
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                }}>
+                  <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:"#111"}}>
+                    📦 {label} 패키지 포함 사항
+                  </div>
+                  {items.map((it, i) => (
+                    <div key={i} style={{display:"flex", gap:8, marginBottom:8, alignItems:"flex-start"}}>
+                      <span style={{fontSize:14, lineHeight:"18px", flexShrink:0}}>{it.icon}</span>
+                      <div style={{fontSize:11.5, lineHeight:"17px"}}>
+                        <span style={{fontWeight:600, color:"#111"}}>{it.title}</span>
+                        {it.desc && <span style={{color:"#6b7280"}}> · {it.desc}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div style={{
+              flex: "1 1 280px",
+              minWidth: 240,
+              padding: 14,
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderLeft: "4px solid #ef4444",
+              borderRadius: 10,
+            }}>
+              <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:"#991b1b"}}>
+                ⚠️ 불포함 사항 <span style={{fontSize:11, fontWeight:500}}>(별도 비용)</span>
+              </div>
+              {COMMON_EXCLUSIONS.map((it, i) => (
+                <div key={i} style={{display:"flex", gap:8, marginBottom:8, alignItems:"flex-start"}}>
+                  <span style={{fontSize:14, lineHeight:"18px", flexShrink:0}}>{it.icon}</span>
+                  <div style={{fontSize:11.5, lineHeight:"17px"}}>
+                    <span style={{fontWeight:600, color:"#991b1b"}}>{it.title}</span>
+                    <span style={{color:"#7f1d1d"}}> · {it.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 동의 체크박스 + 환불규정 보기 */}
+        <div style={{
+          marginTop: 16,
+          padding: 14,
+          background: "#fff",
+          border: agreed ? "1px solid #10b981" : "1px solid #d1d5db",
+          borderRadius: 10,
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 10,
+          transition: "border-color 0.15s",
+        }}>
+          <input
+            type="checkbox"
+            id="agreed-checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            style={{
+              width: 18,
+              height: 18,
+              marginTop: 2,
+              flexShrink: 0,
+              cursor: "pointer",
+            }}
+          />
+          <label htmlFor="agreed-checkbox" style={{
+            flex: 1,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "#374151",
+            cursor: "pointer",
+          }}>
+            <strong style={{color:"#111"}}>포함/불포함 사항을 확인하였고, 환불규정도 확인하였으며, 예약에 동의합니다.</strong>
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); setPolicyOpen(true); }}
+              style={{
+                marginLeft: 8,
+                padding: "3px 10px",
+                fontSize: 12,
+                background: "#fff",
+                border: "1px solid #3b82f6",
+                color: "#3b82f6",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: 600,
+              }}
+            >
+              환불규정 보기 →
+            </button>
+          </label>
+        </div>
+
+        <button className="sb" onClick={submit} disabled={loading || !agreed}>
           {loading ? "접수 중..." : "예약 접수하기"}
         </button>
       </div>
     </div>
+
+    <RefundPolicyModal
+      open={policyOpen}
+      onClose={() => setPolicyOpen(false)}
+      policyKeys={getRefundPolicyKeys(bType)}
+    />
   </>);
 }
