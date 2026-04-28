@@ -530,25 +530,28 @@ function InvoicePageInner(){
       if(data.checkin_date) setA1CI(data.checkin_date);
       // accom_type 매핑 (booking → calculator)
       const _at = data.accom_type as string | undefined;
-      if (_at === "드림하우스") {
-        setCm("single"); setA1T("dreamhouse");
-      } else if (_at === "제이파크 단독") {
-        setCm("single"); setA1T("jpark");
-      } else if (_at === "큐브나인 단독") {
-        setCm("single"); setA1T("cubenine");
-      } else if (_at === "드림하우스+제이파크") {
-        setCm("combo"); setA1T("dreamhouse"); setA2T("jpark");
-        if(data.dh_weeks) setA1W(data.dh_weeks);
-        if(data.jp_weeks) setA2W(data.jp_weeks);
-        if(data.jp_room_type) setA2R(data.jp_room_type);
-      } else if (_at === "드림하우스+큐브나인") {
-        setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
-        if(data.dh_weeks) setA1W(data.dh_weeks);
-        if(data.cn_period){
-          const m=String(data.cn_period).match(/(\d+)/);
-          if(m) setA2W(Number(m[1]));
+      if (_at && _at.includes("+")) {
+        // 콤보 처리 — includes 기반 (정확매칭 실패 방지)
+        if (_at.includes("드림하우스") && _at.includes("제이파크")) {
+          setCm("combo"); setA1T("dreamhouse"); setA2T("jpark");
+          if(data.dh_weeks) setA1W(data.dh_weeks);
+          if(data.jp_weeks) setA2W(data.jp_weeks);
+          if(data.jp_room_type) setA2R(data.jp_room_type);
+        } else if (_at.includes("드림하우스") && (_at.includes("큐브나인") || _at.includes("큐브"))) {
+          setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
+          if(data.dh_weeks) setA1W(data.dh_weeks);
+          if(data.cn_period){
+            const m=String(data.cn_period).match(/(\d+)/);
+            if(m) setA2W(Number(m[1]));
+          }
+          if(data.cn_room_type) setA2R(data.cn_room_type);
         }
-        if(data.cn_room_type) setA2R(data.cn_room_type);
+      } else if (_at === "드림하우스") {
+        setCm("single"); setA1T("dreamhouse");
+      } else if (_at === "제이파크" || _at === "제이파크 단독") {
+        setCm("single"); setA1T("jpark");
+      } else if (_at === "큐브나인" || _at === "큐브나인 단독") {
+        setCm("single"); setA1T("cubenine");
       }
       // "통학형" 또는 미일치 — 변경 없음 (default 유지)
       // 콤보일 때 accom_weeks는 합산값이라 a1W에 통째 넣으면 a2W=0 사고 발생.
@@ -559,11 +562,11 @@ function InvoicePageInner(){
       // 단독: 분해 컬럼이 있으면 우선 사용 (정확도 ↑)
       if (!isCombo) {
         if (_at === "드림하우스" && data.dh_weeks) setA1W(data.dh_weeks);
-        if (_at === "제이파크 단독" && data.jp_weeks) {
+        if ((_at === "제이파크" || _at === "제이파크 단독") && data.jp_weeks) {
           setA1W(data.jp_weeks);
           if(data.jp_room_type) setA1R(data.jp_room_type);
         }
-        if (_at === "큐브나인 단독" && data.cn_period) {
+        if ((_at === "큐브나인" || _at === "큐브나인 단독") && data.cn_period) {
           const m=String(data.cn_period).match(/(\d+)/);
           if(m) setA1W(Number(m[1]));
           if(data.cn_room_type) setA1R(data.cn_room_type);
