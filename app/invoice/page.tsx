@@ -532,12 +532,16 @@ function InvoicePageInner(){
       } else if (_at === "큐브나인 단독") {
         setCm("single"); setA1T("cubenine");
       } else if (_at === "드림하우스+제이파크") {
-        setCm("combo"); setA1T("dreamhouse"); setA2T("jpark"); setA2W(0);
+        setCm("combo"); setA1T("dreamhouse"); setA2T("jpark");
       } else if (_at === "드림하우스+큐브나인") {
-        setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine"); setA2W(0);
+        setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
       }
       // "통학형" 또는 미일치 — 변경 없음 (default 유지)
-      if(data.accom_weeks) setA1W(data.accom_weeks);
+      // 콤보일 때 accom_weeks는 합산값이라 a1W에 통째 넣으면 a2W=0 사고 발생.
+      const isCombo = !!_at && _at.includes("+");
+      if (data.accom_weeks && !isCombo) {
+        setA1W(data.accom_weeks);
+      }
       if(data.adults) setCP(data.adults);
       if(data.children){setCK(data.children);}else if(sts&&sts.length>0){setCK(sts.length);}
       if(data.base_price>0){
@@ -925,6 +929,11 @@ function InvoicePageInner(){
       <div className="cp">+</div>
       {rSel(a2T,setA2T,a2R,setA2R,a2W,setA2W,a2CI,null,a2CO,"숙소 B")}
       <div className="ex-box"><div className="ex-title">숙소 B 추가 인원 (1주일 고정 · {fmt(extraRate(a2T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex2Cnt} onChange={e=>setEx2Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex2Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a2T)*ex2Cnt)}원</div>}</div></div>
+      {cm==="combo"&&(a1W===0||a2W===0)&&(
+        <div style={{marginTop:12,padding:12,background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #ef4444",borderRadius:8,color:"#991b1b",fontSize:13,fontWeight:600}}>
+          ⚠️ 콤보 모드에서 한쪽 숙소가 0주입니다. 두 숙소의 주수를 모두 입력해야 정확한 인보이스가 발행됩니다. (현재: 숙소 A {a1W}주 + 숙소 B {a2W}주)
+        </div>
+      )}
     </>)}
   </div>
 
