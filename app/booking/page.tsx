@@ -53,7 +53,8 @@ function getPackageAccoms(bType: string): AccomType[] {
 
 export default function BookingPage() {
   const [bType, setBType] = useState<BookingType>("dreamhouse");
-  const [booker, setBooker] = useState({ name: "", phone: "" });
+  const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
+  const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
   const [accom, setAccom] = useState({ dh_weeks: 4, jp_weeks: 2, cn_period: "1주" });
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
@@ -92,6 +93,14 @@ export default function BookingPage() {
 
   async function submit() {
     if (!booker.name.trim()) { alert("예약자명을 입력해주세요."); return; }
+    if (!booker.nameEng.trim()) { alert("예약자 영문명을 입력해주세요."); return; }
+    for (let i = 0; i < extraGuardians.length; i++) {
+      const g = extraGuardians[i];
+      if (!g.kor.trim() || !g.eng.trim()) {
+        alert(`보호자 ${i + 2}번의 한글/영문 이름을 모두 입력해주세요.`);
+        return;
+      }
+    }
     if (!students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; }
     if (bType !== "commute" && !dates.checkIn) { alert("체크인 날짜를 입력해주세요."); return; }
     if (!agreed) { alert("포함/불포함 사항 및 환불규정 확인 동의가 필요합니다."); return; }
@@ -119,13 +128,26 @@ export default function BookingPage() {
       academyWeeks: String(accomWeeks),
     }));
 
+    const cleanGuardians = extraGuardians.filter(g => g.kor.trim() && g.eng.trim()).map(g => ({kor: g.kor.trim(), eng: g.eng.trim()}));
+    const childrenCount = students.filter(s => s.korName.trim()).length;
+    const usesDH = bType === "dreamhouse" || bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine";
+    const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark";
+    const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine";
+
     const { data: booking, error } = await supabase.from("bookings").insert({
       reservation_no: rno,
       booker_name: booker.name.trim(),
-      booker_english: booker.phone.trim(), // 연락처 임시로 booker_english에 저장 (기존 스키마 호환)
+      booker_english: booker.nameEng.trim(),
+      booker_phone: booker.phone.trim() || null,
+      extra_guardians: cleanGuardians,
+      adults: 1 + cleanGuardians.length,
+      children: childrenCount,
       students: JSON.stringify(enrichedStudents),
       accom_type: accomType,
       accom_weeks: accomWeeks,
+      dh_weeks: usesDH ? accom.dh_weeks : null,
+      jp_weeks: usesJP ? accom.jp_weeks : null,
+      cn_period: usesCN ? accom.cn_period : null,
       checkin_date: dates.checkIn || null,
       checkout_date: dates.checkOut || null,
       pickup: bType === "commute" ? "불필요함" : "필요함",
@@ -280,9 +302,54 @@ export default function BookingPage() {
               <input className="fi" placeholder="홍길동" value={booker.name} onChange={e => setBooker({ ...booker, name: e.target.value })} />
             </div>
             <div className="fg">
-              <label className="fl">연락처</label>
-              <input className="fi" placeholder="010-1234-5678" value={booker.phone} onChange={e => setBooker({ ...booker, phone: e.target.value })} />
+              <label className="fl">예약자명 (영문)<span className="req">*</span></label>
+              <input className="fi" placeholder="Hong Gildong" value={booker.nameEng} onChange={e => setBooker({ ...booker, nameEng: e.target.value })} />
             </div>
+          </div>
+          <div className="fg" style={{marginTop: 10}}>
+            <label className="fl">연락처</label>
+            <input className="fi" placeholder="010-1234-5678" value={booker.phone} onChange={e => setBooker({ ...booker, phone: e.target.value })} />
+          </div>
+
+          <div style={{marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 8}}>
+            <div style={{fontSize: 13, fontWeight: 600, marginBottom: 10, color: "#374151"}}>
+              추가 보호자 ({1 + extraGuardians.length}/3명)
+              <span style={{fontWeight: 400, fontSize: 12, color: "#6b7280", marginLeft: 8}}>
+                — 예약자 외 동행 보호자가 있으면 입력해주세요
+              </span>
+            </div>
+            {extraGuardians.map((g, idx) => (
+              <div key={idx} className="fr" style={{marginBottom: 8, alignItems: "flex-end"}}>
+                <div className="fg">
+                  <label className="fl">보호자 {idx + 2} 한글<span className="req">*</span></label>
+                  <input className="fi" value={g.kor} onChange={e => {
+                    const next = [...extraGuardians];
+                    next[idx] = {...next[idx], kor: e.target.value};
+                    setExtraGuardians(next);
+                  }} placeholder="홍길자" />
+                </div>
+                <div className="fg">
+                  <label className="fl">보호자 {idx + 2} 영문<span className="req">*</span></label>
+                  <input className="fi" value={g.eng} onChange={e => {
+                    const next = [...extraGuardians];
+                    next[idx] = {...next[idx], eng: e.target.value};
+                    setExtraGuardians(next);
+                  }} placeholder="Hong Gilja" />
+                </div>
+                <button type="button"
+                  onClick={() => setExtraGuardians(extraGuardians.filter((_, i) => i !== idx))}
+                  style={{padding: "8px 12px", background: "#fff", border: "1px solid #ef4444", color: "#ef4444", borderRadius: 6, cursor: "pointer", fontSize: 12, marginBottom: 2}}>
+                  제거
+                </button>
+              </div>
+            ))}
+            {extraGuardians.length < 2 && (
+              <button type="button"
+                onClick={() => setExtraGuardians([...extraGuardians, {kor: "", eng: ""}])}
+                style={{padding: "6px 12px", background: "#fff", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600}}>
+                + 보호자 추가 (현재 {1 + extraGuardians.length}명)
+              </button>
+            )}
           </div>
         </div>
 
