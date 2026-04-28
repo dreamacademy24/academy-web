@@ -8,8 +8,7 @@ import {
   getInclusionsByAccom,
   type AccomType,
 } from "@/lib/packageInfo";
-
-type BookingType = "dreamhouse" | "dreamhouse_jaypark" | "dreamhouse_cubenine" | "jaypark" | "cubenine" | "commute";
+import { PUBLIC_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue as BookingType } from "@/lib/bookingTypes";
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
 interface Flight { airline: string; flightNo: string; date: string; time: string; place: string; undecided: boolean }
 
@@ -34,15 +33,6 @@ function deriveAcademyEnd(checkin: string, weeks: number | string | null | undef
   if (!start || !w || w < 1) return "";
   return addDaysISO(start, (w - 1) * 7 + 4);
 }
-
-const BOOKING_TYPES = [
-  { value: "dreamhouse",         icon: "🏠", label: "드림하우스 단독",   desc: "드림하우스 패키지" },
-  { value: "dreamhouse_jaypark", icon: "🏨", label: "드하 + 제이파크",   desc: "드림하우스 + 제이파크 조합" },
-  { value: "dreamhouse_cubenine",icon: "🏢", label: "드하 + 큐브나인",   desc: "드림하우스 + 큐브나인 조합" },
-  { value: "jaypark",            icon: "🏨", label: "제이파크 단독",     desc: "제이파크 패키지" },
-  { value: "cubenine",           icon: "🏢", label: "큐브나인 단독",     desc: "큐브나인 패키지" },
-  { value: "commute",            icon: "🚶", label: "통학형",            desc: "숙소 없이 학원만" },
-] as const;
 
 const DH_WEEKS = [1, 2, 3, 4, 6, 8, 10];
 const CN_PERIODS = ["1주", "2주", "4주", "6일"];

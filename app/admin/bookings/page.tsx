@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
+import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue } from "@/lib/bookingTypes";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -76,18 +77,12 @@ export default function AdminBookingsPage(){
 
   /* ── STEP 22: 예약 유형 선택 모달 ── */
   const [showNewBooking,setShowNewBooking]=useState(false);
-  const [bType,setBType]=useState<"dreamhouse"|"dreamhouse_jaypark"|"dreamhouse_cubenine"|"room_only">("dreamhouse");
+  const [bType,setBType]=useState<BookingTypeValue>("dreamhouse");
   const [newForm,setNewForm]=useState({booker_name:"",booker_phone:"",check_in:"",check_out:"",
     dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,
     pickup_place:"",drop_place:"",agency:"",special_request:""});
   const [savingNew,setSavingNew]=useState(false);
 
-  const BOOKING_TYPES=[
-    {value:"dreamhouse",label:"드림하우스 단독",desc:"드림하우스 패키지만"},
-    {value:"dreamhouse_jaypark",label:"드하 + 제이파크",desc:"드림하우스 + 제이파크 조합"},
-    {value:"dreamhouse_cubenine",label:"드하 + 큐브나인",desc:"드림하우스 + 큐브나인 조합"},
-    {value:"room_only",label:"숙소만 (Room Only)",desc:"숙소 예약만"},
-  ] as const;
   const CN_PERIODS=["1주","2주","4주","6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
 
@@ -217,7 +212,10 @@ export default function AdminBookingsPage(){
     if(bType==="dreamhouse"){accomDetail.dh_weeks=newForm.dh_weeks;}
     else if(bType==="dreamhouse_jaypark"){accomDetail.dh_weeks=newForm.dh_weeks;accomDetail.jp_weeks=newForm.jp_weeks;}
     else if(bType==="dreamhouse_cubenine"){accomDetail.dh_weeks=newForm.dh_weeks;accomDetail.cn_period=newForm.cn_period;}
-    else{accomDetail.room_accom=newForm.room_accom;accomDetail.room_weeks=newForm.room_weeks;}
+    else if(bType==="jaypark"){accomDetail.jp_weeks=newForm.jp_weeks;}
+    else if(bType==="cubenine"){accomDetail.cn_period=newForm.cn_period;}
+    else if(bType==="commute"){/* 통학형: 숙소 정보 없음 */}
+    else if(bType==="room_only"){accomDetail.room_accom=newForm.room_accom;accomDetail.room_weeks=newForm.room_weeks;}
     // Build flight info JSON
     const flightInfo:Record<string,unknown>={};
     if(!flightIn.undecided){flightInfo.in={airline:flightIn.airline,flight_no:flightIn.flight_no,date:flightIn.date,time:flightIn.time,place:flightIn.place};}else{flightInfo.in={undecided:true};}
@@ -254,7 +252,13 @@ export default function AdminBookingsPage(){
       const cnDays=newForm.cn_period==="6일"?6:parseInt(newForm.cn_period)*7;
       accomRows.push({booking_id:inserted[0]?.id,accommodation_type:"cubenine",nights:cnDays,package_type:newForm.cn_period});
     }
+    if(bType==="jaypark"){accomRows.push({booking_id:inserted[0]?.id,accommodation_type:"jaypark",nights:newForm.jp_weeks*7});}
+    if(bType==="cubenine"){
+      const cnDays=newForm.cn_period==="6일"?6:parseInt(newForm.cn_period)*7;
+      accomRows.push({booking_id:inserted[0]?.id,accommodation_type:"cubenine",nights:cnDays,package_type:newForm.cn_period});
+    }
     if(bType==="room_only"){accomRows.push({booking_id:inserted[0]?.id,accommodation_type:newForm.room_accom,nights:newForm.room_weeks*7});}
+    // commute(통학형): accomRows 추가 없음
     if(accomRows.length>0){
       await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/booking_accommodations`,{
         method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
@@ -777,6 +781,27 @@ export default function AdminBookingsPage(){
               {CN_PERIODS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+        )}
+        {bType==="jaypark"&&(
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <label style={{fontSize:13,minWidth:90}}>제이파크</label>
+            <select value={newForm.jp_weeks} onChange={e=>setNewForm({...newForm,jp_weeks:Number(e.target.value)})}
+              style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
+              {[1,2,3,4,5,6,7,8].map(w=><option key={w} value={w}>{w}주</option>)}
+            </select>
+          </div>
+        )}
+        {bType==="cubenine"&&(
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+            <label style={{fontSize:13,minWidth:90}}>큐브나인</label>
+            <select value={newForm.cn_period} onChange={e=>setNewForm({...newForm,cn_period:e.target.value})}
+              style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
+              {CN_PERIODS.map(p=><option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        )}
+        {bType==="commute"&&(
+          <div style={{fontSize:12,color:"#6b7c93",padding:"4px 0"}}>통학형: 숙소 정보 없이 학원만 이용</div>
         )}
         {bType==="room_only"&&(<>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
