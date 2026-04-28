@@ -63,7 +63,7 @@ function getPackageAccoms(bType: string): AccomType[] {
 
 export default function BookingPage() {
   const [bType, setBType] = useState<BookingType>("dreamhouse");
-  const [booker, setBooker] = useState({ name: "", phone: "", agency: "" });
+  const [booker, setBooker] = useState({ name: "", phone: "" });
   const [accom, setAccom] = useState({ dh_weeks: 4, jp_weeks: 2, cn_period: "1주" });
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
@@ -143,7 +143,6 @@ export default function BookingPage() {
       pickup_place: dates.pickupPlace,
       flight_in: flightInStr,
       flight_out: flightOutStr,
-      agency: booker.agency.trim() || "개인",
       special_request: specialRequest,
       status: "접수",
     }).select().single();
@@ -294,10 +293,6 @@ export default function BookingPage() {
               <label className="fl">연락처</label>
               <input className="fi" placeholder="010-1234-5678" value={booker.phone} onChange={e => setBooker({ ...booker, phone: e.target.value })} />
             </div>
-          </div>
-          <div className="fg">
-            <label className="fl">유학원 (선택)</label>
-            <input className="fi" placeholder="개인 예약이면 비워두세요" value={booker.agency} onChange={e => setBooker({ ...booker, agency: e.target.value })} />
           </div>
         </div>
 
