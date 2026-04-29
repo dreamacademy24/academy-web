@@ -294,7 +294,7 @@ export default function AdminBookingsPage(){
 
   const load=useCallback(async()=>{
     setLoading(true);
-    const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
+    const {data,error}=await supabase.from("bookings_new").select("*").order("check_in",{ascending:true});
     if(error){console.error(error);alert("데이터 로드 실패");}
     if(data)setBookings(data as Booking[]);
     setLoading(false);
@@ -409,7 +409,7 @@ export default function AdminBookingsPage(){
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
-            <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
+            <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings_new").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td>{b.booker_name}</td>
             <td>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
@@ -419,7 +419,7 @@ export default function AdminBookingsPage(){
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
               <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);alert("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
-              <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
+              <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings_new").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </td>
           </tr>);
         })}
@@ -441,7 +441,7 @@ export default function AdminBookingsPage(){
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
-              <button className="act act-r" style={{flex:1,minHeight:40}} onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
+              <button className="act act-r" style={{flex:1,minHeight:40}} onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name)){const{error}=await supabase.from("bookings_new").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </div>
           </div>);
         })}
@@ -463,7 +463,7 @@ export default function AdminBookingsPage(){
             <td>{b.checkin_date||"미정"}</td>
             <td style={{fontWeight:600}}>{fmt(b.base_price)}</td>
             <td>{b.balance_date||"-"}</td>
-            <td onClick={e=>e.stopPropagation()}><button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button></td>
+            <td onClick={e=>e.stopPropagation()}><button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings_new").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button></td>
           </tr>);
         })}
       </tbody></table></div>
@@ -609,7 +609,7 @@ export default function AdminBookingsPage(){
               <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
                 <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
                   const v=e.target.checked;
-                  await supabase.from("bookings").update({confirmed:v}).eq("id",b.id);
+                  await supabase.from("bookings_new").update({confirmed:v}).eq("id",b.id);
                   setBookings(prev=>prev.map(x=>x.id===b.id?{...x,confirmed:v}:x));
                 }}/>
               </td>
@@ -722,7 +722,7 @@ export default function AdminBookingsPage(){
       <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
         <button onClick={()=>setStuSpecialPopup(null)} style={{padding:"10px 20px",border:"1px solid #e2e8f0",borderRadius:8,background:"#f1f5f9",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
         <button onClick={async()=>{
-          await supabase.from("bookings").update({special_request:stuSpecialEdit}).eq("id",stuSpecialPopup.booking_id);
+          await supabase.from("bookings_new").update({special_request:stuSpecialEdit}).eq("id",stuSpecialPopup.booking_id);
           setBookings(prev=>prev.map(b=>b.id===stuSpecialPopup.booking_id?{...b,special_request:stuSpecialEdit}:b));
           setStuSpecialPopup(null);
         }} style={{padding:"10px 24px",border:"none",borderRadius:8,background:"#1a6fc4",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>저장</button>
