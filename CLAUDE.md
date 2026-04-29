@@ -897,3 +897,62 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 ### 다음 세션 시작 방법
 "드림아카데미 프로젝트 이어서 진행해줘 — 인보이스 콤보 자동 복원 버그부터"
 → CLAUDE.md 읽고 위 #1 (긴급) 부터 시작
+
+## 2026-04-29 세션 (Excel 마이그레이션 + bookings_new 전환)
+
+### 마이그레이션 데이터 INSERT 완료
+- 소스: `data/dream_migration_filled_1.xlsx` (구글시트 export)
+- **bookings_new 테이블에 36건 INSERT** (마이그레이션 명단 33명 + 도유민 2회 + 김장미/장이화 합쳐진 1행)
+- **students 테이블에 61명 INSERT** (booking_id FK로 연결)
+- 마이그레이션 스크립트:
+  - `scripts/migrate_from_excel.ts` — 메인 마이그레이션 (xlsx 파싱 + INSERT)
+  - `scripts/retry_commute.ts` — commute fallback (room_only 임시 사용)
+  - `scripts/insert_commute_students.ts` — 추가 학생 + 4번째 도유민
+  - `scripts/cleanup_final.ts` — 중복 students 정리 + 진단
+
+### Supabase DB 변경
+- **`bookings_new.booking_type` CHECK 제약 ALTER 완료**: `commute` 추가 (기존: dreamhouse / dreamhouse_jaypark / dreamhouse_cubenine / room_only / **commute**)
+- 도유민 / 김광진 / 정지은의 booking_type을 `room_only` → `commute`로 UPDATE 완료
+- 도유민#2(4번째)는 `room_only` 그대로 (UPDATE 누락 — 동일 ALTER에서 같이 처리할지 다음 작업)
+
+### bookings_new.booking_type 분포 (마이그레이션 데이터 기준)
+- dreamhouse 32건 + commute 3건(도유민, 김광진, 정지은) + room_only 1건(도유민#2 — commute 교정 필요)
+
+### 어드민 page.tsx 전환
+- 커밋 `d356723`: `app/admin/bookings/page.tsx`의 모든 `from("bookings")` → `from("bookings_new")` (load + delete + update + assignee 변경 + confirmed 토글). `.order("checkin_date")` → `.order("check_in")`.
+
+### 즉시 수정 필요 항목 (다음 세션 우선)
+
+🔴 **[긴급] /admin/bookings page.tsx 컬럼 매핑 보정 필요**
+- bookings → bookings_new 전환 완료됐으나 렌더링 컬럼명이 구 테이블 기준이라 "예약이 없습니다" 표시
+- 변환 필요:
+  - `b.checkin_date` → `b.check_in`
+  - `b.checkout_date` → `b.check_out`
+  - `b.accom_type` → `b.booking_type`
+  - `b.drop_off` → `b.drop_place`
+  - `b.balance_date` → `b.balance_due`
+  - `b.reservation_no` → 없음 (bookings_new에 reservation_no 컬럼 부재). `id.slice(-6).toUpperCase()` 또는 null 처리.
+  - `b.students` (JSONB) → 별도 students 테이블이라 빈 배열(`[]`) 처리. **학생관리 탭은 별도로 students 테이블에서 fetch하도록 재작성 필요**.
+
+### bookings_new 컬럼 (28개)
+```
+academy_end, academy_start, agency, balance_due, booker_name, booker_phone,
+booking_type, check_in, check_out, confirmed, created_at, drop_place,
+flight_in_airline, flight_in_date, flight_in_time,
+flight_out_airline, flight_out_date, flight_out_time, id, num_adults, num_children,
+paid_amount, payment_status, pickup_place, special_request, status, total_amount, updated_at
+```
+
+### students 컬럼 (15개)
+```
+academy_end, academy_start, address_detail, age, booking_id, class_type,
+created_at, id, level, name_en, name_kr, photo_allowed, pickup_location,
+special_request, ssp
+```
+
+### 옛 `bookings` 테이블
+- 마이그레이션 시도 38건 모두 롤백 완료 (`scripts/rollback_and_discover.ts` + `rollback_leftover.ts`)
+- 손님 부킹 페이지(`app/booking/page.tsx`)는 여전히 `from("bookings")`로 INSERT — 추후 통합 결정 필요
+
+### 다음 세션 시작 방법
+"드림아카데미 프로젝트 이어서 진행해줘 — admin/bookings 컬럼 매핑 보정부터"
