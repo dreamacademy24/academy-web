@@ -555,7 +555,26 @@ function InvoicePageInner(){
       }
       // "통학형" 또는 미일치 — 변경 없음 (default 유지)
       // 콤보일 때 accom_weeks는 합산값이라 a1W에 통째 넣으면 a2W=0 사고 발생.
-      const isCombo = !!_at && _at.includes("+");
+      const _bt = data.booking_type as string | undefined;
+      const isCombo = !!((_at && _at.includes("+")) || _bt === "dreamhouse_jaypark" || _bt === "dreamhouse_cubenine");
+      // booking_type 기반 콤보 감지 (accom_type이 없는 신규 예약용)
+      if (!(_at && _at.includes("+")) && _bt === "dreamhouse_jaypark") {
+        setCm("combo"); setA1T("dreamhouse"); setA2T("jpark");
+        if(data.dh_weeks) setA1W(data.dh_weeks);
+        if(data.jp_weeks) setA2W(data.jp_weeks);
+      } else if (!(_at && _at.includes("+")) && _bt === "dreamhouse_cubenine") {
+        setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
+        if(data.dh_weeks) setA1W(data.dh_weeks);
+      } else if (!(_at && _at.includes("+")) && (_bt === "dreamhouse")) {
+        setCm("single"); setA1T("dreamhouse");
+        if(data.dh_weeks) setA1W(data.dh_weeks);
+      } else if (!(_at && _at.includes("+")) && (_bt === "jaypark")) {
+        setCm("single"); setA1T("jpark");
+        if(data.jp_weeks) setA1W(data.jp_weeks);
+        if(data.jp_room_type) setA1R(data.jp_room_type);
+      } else if (!(_at && _at.includes("+")) && (_bt === "cubenine")) {
+        setCm("single"); setA1T("cubenine");
+      }
       if (data.accom_weeks && !isCombo) {
         setA1W(data.accom_weeks);
       }
@@ -680,7 +699,7 @@ function InvoicePageInner(){
     return(<div className="ab"><div className="ab-l">{label}</div><div className="f-row">
       <div className="f-group"><label className="f-label">숙소</label><select className="f-select" value={t} onChange={e=>{const v=e.target.value as AT;sT(v);sR(v==="jpark"?"디럭스":v==="cubenine"?"디럭스":"");sW(2);}}><option value="dreamhouse">드림하우스</option><option value="jpark">제이파크</option><option value="cubenine">큐브나인</option></select></div>
       {(t==="jpark"||t==="cubenine")&&<div className="f-group"><label className="f-label">룸타입</label><select className="f-select" value={r} onChange={e=>sR(e.target.value)}>{t==="jpark"?<><option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option></>:<><option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option></>}</select></div>}
-      <div className="f-group"><label className="f-label">기간</label><select className="f-select" value={w} onChange={e=>sW(Number(e.target.value))}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div>
+      <div className="f-group"><label className="f-label">기간</label><select className="f-select" value={w} onChange={e=>sW(Number(e.target.value))}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{v}주</option>)}</select></div>
     </div><div className="f-row">
       <div className="f-group"><label className="f-label">체크인</label>{sCI?<input className="f-input" type="date" value={ciVal} onChange={e=>sCI(e.target.value)}/>:<input className="f-input auto" type="date" value={ciVal} readOnly/>}</div>
       <div className="f-group"><label className="f-label">체크아웃 (자동)</label><input className="f-input auto" value={coVal} readOnly/></div>
@@ -771,6 +790,9 @@ function InvoicePageInner(){
       balance_date:booker.balanceDate||null,
       agency:adminOnly.agency,
       ssp:adminOnly.ssp,
+      dh_weeks: a1W,
+      jp_weeks: cm==="combo" ? a2W : null,
+      accom_weeks: cm==="combo" ? a1W+a2W : a1W,
       updated_at:new Date().toISOString(),
     }).eq("id",bookingId);
     if(error){console.error(error);alert("저장 실패: "+error.message);return;}

@@ -436,9 +436,10 @@ function isPeak(d:string):boolean{
 function autoSeason(d:string):Season{ return d?(isPeak(d)?"peak":"off"):"list"; }
 
 function lookup(t:AccomType,r:string,w:number,p:number,k:number):P3|null{
-  if(t==="dreamhouse") return DH[`${w}-${p}-${k}`]??null;
-  if(t==="jpark") return JP[`${r}-${w}-${p}-${k}`]??null;
-  return C9[`${r}-${w}-${p}-${k}`]??null;
+  const half=(e:P3):P3=>[Math.round(e[0]/2),Math.round(e[1]/2),Math.round(e[2]/2)];
+  if(t==="dreamhouse"){const e=DH[`${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=DH[`2-${p}-${k}`];if(e2)return half(e2);}return null;}
+  if(t==="jpark"){const e=JP[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=JP[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;}
+  const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
 }
 function pickPrice(e:P3,s:Season):number{ return s==="off"?e[1]:s==="peak"?e[2]:e[0]; }
 function won(n:number){return n.toLocaleString("ko-KR")+"원";}
@@ -550,7 +551,7 @@ export default function EstimateCalc(){
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>기간</span>
             <select style={sel} value={plan.weeks} onChange={e=>up(idx,{weeks:Number(e.target.value)})}>
-              {Array.from({length:11},(_,i)=>i+2).map(w=><option key={w} value={w}>{w}주</option>)}
+              {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
             </select></label>
           <label style={{flex:1}}><span style={lbl}>체크인 날짜</span>
             <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/>
