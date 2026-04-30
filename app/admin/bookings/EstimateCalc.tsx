@@ -423,9 +423,37 @@ const C9:Record<string,P3>={
   "풀억세스룸-12-2-2":[35100000,28080000,31590000]
 };
 
+// 통학형 (학원만, 킨더/주니어 동일) — [정가, 비수기, 성수기]
+const COMMUTE:Record<number,P3>={
+  2:[1000000, 900000, 1000000],
+  3:[1390000, 1251000, 1390000],
+  4:[1690000, 1521000, 1690000],
+  5:[2110000, 1899000, 2110000],
+  6:[2530000, 2277000, 2403500],
+  7:[2950000, 2522250, 2802500],
+  8:[3380000, 2889900, 3211000],
+};
+
 /* ── 유틸 ── */
 type Season="list"|"off"|"peak"; // 정가/비수기/성수기
-const accomLabel:Record<AccomType,string>={dreamhouse:"드림하우스",jpark:"제이파크",cubenine:"큐브나인"};
+// 견적 calc 전용 확장 타입 — 콤보 + 단독 + 통학 포함. 공유 AccomType은 그대로.
+type AccomLocal = AccomType | "dreamhouse_jaypark" | "dreamhouse_cubenine" | "jaypark" | "commute";
+const accomLabel:Record<AccomLocal,string>={
+  dreamhouse:"드림하우스 단독",
+  jpark:"제이파크 단독",
+  jaypark:"제이파크 단독",
+  cubenine:"큐브나인 단독",
+  dreamhouse_jaypark:"드하 + 제이파크",
+  dreamhouse_cubenine:"드하 + 큐브나인",
+  commute:"통학형",
+};
+// AccomLocal → packageInfo의 AccomType(3종) 매핑 (콤보/통학 → 단일 baseline)
+function toBaseAccom(a: AccomLocal): AccomType {
+  if (a === "dreamhouse_jaypark" || a === "jaypark") return "jpark";
+  if (a === "dreamhouse_cubenine") return "cubenine";
+  if (a === "commute") return "dreamhouse";
+  return a as AccomType;
+}
 const seasonLabel:Record<Season,string>={list:"정가",off:"비수기",peak:"성수기"};
 
 function isPeak(d:string):boolean{
@@ -435,8 +463,30 @@ function isPeak(d:string):boolean{
 }
 function autoSeason(d:string):Season{ return d?(isPeak(d)?"peak":"off"):"list"; }
 
-function lookup(t:AccomType,r:string,w:number,p:number,k:number):P3|null{
+function lookup(t:AccomLocal,r:string,w:number,p:number,k:number):P3|null{
   const half=(e:P3):P3=>[Math.round(e[0]/2),Math.round(e[1]/2),Math.round(e[2]/2)];
+  // 통학형: 학원만 (인원/룸타입 무관, 주수만 사용). 1주 미지원 시 2주의 절반 fallback.
+  if(t==="commute"){
+    if(COMMUTE[w]) return COMMUTE[w];
+    if(w===1&&COMMUTE[2]) return half(COMMUTE[2]);
+    return null;
+  }
+  // 단독 jaypark은 jpark 가격 테이블의 별칭
+  if(t==="jaypark") return lookup("jpark", r, w, p, k);
+  // 콤보: 두 숙소 가격 합산 (같은 주수로 각각 lookup)
+  if(t==="dreamhouse_jaypark"){
+    const dh=lookup("dreamhouse","",w,p,k);
+    const jp=lookup("jpark",r,w,p,k);
+    if(!dh||!jp) return null;
+    return [dh[0]+jp[0], dh[1]+jp[1], dh[2]+jp[2]];
+  }
+  if(t==="dreamhouse_cubenine"){
+    const dh=lookup("dreamhouse","",w,p,k);
+    const c9=lookup("cubenine",r,w,p,k);
+    if(!dh||!c9) return null;
+    return [dh[0]+c9[0], dh[1]+c9[1], dh[2]+c9[2]];
+  }
+  // 단독: dreamhouse / jpark / cubenine
   if(t==="dreamhouse"){const e=DH[`${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=DH[`2-${p}-${k}`];if(e2)return half(e2);}return null;}
   if(t==="jpark"){const e=JP[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=JP[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;}
   const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
@@ -446,13 +496,15 @@ function won(n:number){return n.toLocaleString("ko-KR")+"원";}
 
 interface ExtraItem{id:number;name:string;amount:number;}
 interface PlanState{
-  accom:AccomType; roomType:string; weeks:number; checkin:string; season:Season;
+  accom:AccomLocal; roomType:string; weeks:number; checkin:string; season:Season;
   parents:number; kids:number;
   extras:ExtraItem[]; discounts:ExtraItem[];
 }
 
-const defaultPlan=(accom:AccomType="dreamhouse"):PlanState=>({
-  accom, roomType:accom==="dreamhouse"?"":"디럭스", weeks:4, checkin:"", season:"list",
+const defaultPlan=(accom:AccomLocal="dreamhouse"):PlanState=>({
+  accom,
+  roomType:(accom==="dreamhouse"||accom==="commute")?"":"디럭스",
+  weeks:4, checkin:"", season:"list",
   parents:1, kids:2, extras:[], discounts:[],
 });
 
@@ -470,14 +522,14 @@ function calcPlan(p:PlanState){
 export default function EstimateCalc(){
   const resultRef=useRef<HTMLDivElement>(null);
   const MAX_PLANS = 5;
-  const DEFAULT_ACCOM_ROTATION: AccomType[] = ["dreamhouse","jpark","cubenine","dreamhouse","jpark"];
+  const DEFAULT_ACCOM_ROTATION: AccomLocal[] = ["dreamhouse","jpark","cubenine","dreamhouse","jpark"];
   const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
 
   function up(idx:number,patch:Partial<PlanState>){
     setPlans(prev=>prev.map((p,i)=>{
       if(i!==idx) return p;
       const next={...p,...patch};
-      if(patch.accom){ next.roomType=patch.accom==="dreamhouse"?"":"디럭스"; next.parents=1; next.kids=2; next.weeks=4; }
+      if(patch.accom){ next.roomType=(patch.accom==="dreamhouse"||patch.accom==="commute")?"":"디럭스"; next.parents=1; next.kids=2; next.weeks=4; }
       return next;
     }));
   }
@@ -535,7 +587,7 @@ export default function EstimateCalc(){
         {/* 숙소 / 룸타입 */}
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>숙소</span>
-            <select style={sel} value={plan.accom} onChange={e=>up(idx,{accom:e.target.value as AccomType})}>
+            <select style={sel} value={plan.accom} onChange={e=>up(idx,{accom:e.target.value as AccomLocal})}>
               <option value="dreamhouse">드림하우스 단독</option>
               <option value="dreamhouse_jaypark">드하 + 제이파크</option>
               <option value="dreamhouse_cubenine">드하 + 큐브나인</option>
@@ -543,11 +595,11 @@ export default function EstimateCalc(){
               <option value="cubenine">큐브나인 단독</option>
               <option value="commute">통학형</option>
             </select></label>
-          {plan.accom==="jpark"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
+          {(plan.accom==="jpark"||plan.accom==="jaypark"||plan.accom==="dreamhouse_jaypark")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
             </select></label>}
-          {plan.accom==="cubenine"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
+          {(plan.accom==="cubenine"||plan.accom==="dreamhouse_cubenine")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option>
             </select></label>}
@@ -733,7 +785,7 @@ export default function EstimateCalc(){
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",gap:16,marginTop:32,marginBottom:24,flexWrap:"wrap"}}>
           {plans.map((p, i) => {
-            const items = getInclusionsByAccom(p.accom);
+            const items = getInclusionsByAccom(toBaseAccom(p.accom));
             return (
               <div key={i} style={{
                 flex:"1 1 320px",
