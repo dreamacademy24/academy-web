@@ -536,7 +536,12 @@ export default function EstimateCalc(){
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>숙소</span>
             <select style={sel} value={plan.accom} onChange={e=>up(idx,{accom:e.target.value as AccomType})}>
-              <option value="dreamhouse">드림하우스</option><option value="jpark">제이파크</option><option value="cubenine">큐브나인</option>
+              <option value="dreamhouse">드림하우스 단독</option>
+              <option value="dreamhouse_jaypark">드하 + 제이파크</option>
+              <option value="dreamhouse_cubenine">드하 + 큐브나인</option>
+              <option value="jaypark">제이파크 단독</option>
+              <option value="cubenine">큐브나인 단독</option>
+              <option value="commute">통학형</option>
             </select></label>
           {plan.accom==="jpark"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
