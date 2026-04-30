@@ -3,8 +3,12 @@ import { useState, useRef, useEffect } from "react";
 import html2canvas from "html2canvas";
 import {
   COMMON_EXCLUSIONS,
-  getInclusionsByAccom,
+  INCLUSIONS_DH,
+  INCLUSIONS_JP,
+  INCLUSIONS_C9,
+  INCLUSIONS_COMMUTE,
   type AccomType,
+  type PkgItem,
 } from "@/lib/packageInfo";
 
 /* ── 가격 테이블 (invoice 동일, [정가, 비수기, 성수기]) ── */
@@ -785,7 +789,24 @@ export default function EstimateCalc(){
         {/* 패키지 포함/불포함 박스 영역 */}
         <div style={{display:"flex",gap:16,marginTop:32,marginBottom:24,flexWrap:"wrap"}}>
           {plans.map((p, i) => {
-            const items = getInclusionsByAccom(toBaseAccom(p.accom));
+            // accom 값 → 표시할 sub 패키지 박스 목록
+            const subBoxes: { label: string; items: PkgItem[] }[] = [];
+            if (p.accom === "dreamhouse_jaypark") {
+              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
+              subBoxes.push({ label: "제이파크", items: INCLUSIONS_JP });
+            } else if (p.accom === "dreamhouse_cubenine") {
+              subBoxes.push({ label: "드림하우스", items: INCLUSIONS_DH });
+              subBoxes.push({ label: "큐브나인", items: INCLUSIONS_C9 });
+            } else if (p.accom === "jpark" || p.accom === "jaypark") {
+              subBoxes.push({ label: "제이파크 단독", items: INCLUSIONS_JP });
+            } else if (p.accom === "cubenine") {
+              subBoxes.push({ label: "큐브나인 단독", items: INCLUSIONS_C9 });
+            } else if (p.accom === "commute") {
+              subBoxes.push({ label: "통학형", items: INCLUSIONS_COMMUTE });
+            } else {
+              // dreamhouse 단독
+              subBoxes.push({ label: "드림하우스 단독", items: INCLUSIONS_DH });
+            }
             return (
               <div key={i} style={{
                 flex:"1 1 320px",
@@ -799,13 +820,22 @@ export default function EstimateCalc(){
                 <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#111"}}>
                   📦 {i+1}안 · {accomLabel[p.accom]} 패키지 포함 사항
                 </div>
-                {items.map((it, idx) => (
-                  <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
-                    <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
-                    <div style={{fontSize:12.5,lineHeight:"20px"}}>
-                      <span style={{fontWeight:600,color:"#111"}}>{it.title}</span>
-                      {it.desc && <span style={{color:"#6b7280"}}> · {it.desc}</span>}
-                    </div>
+                {subBoxes.map((box, bi) => (
+                  <div key={bi} style={{marginBottom:subBoxes.length>1?14:0}}>
+                    {subBoxes.length > 1 && (
+                      <div style={{fontSize:13,fontWeight:700,color:"#1a6fc4",marginBottom:8,paddingBottom:4,borderBottom:"1px solid #e5e7eb"}}>
+                        · {box.label}
+                      </div>
+                    )}
+                    {box.items.map((it, idx) => (
+                      <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
+                        <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
+                        <div style={{fontSize:12.5,lineHeight:"20px"}}>
+                          <span style={{fontWeight:600,color:"#111"}}>{it.title}</span>
+                          {it.desc && <span style={{color:"#6b7280"}}> · {it.desc}</span>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
