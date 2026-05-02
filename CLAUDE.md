@@ -955,11 +955,20 @@ special_request, ssp
 ### 다음 세션 시작 방법
 "드림아카데미 프로젝트 이어서 진행해줘 — 신규 예약 저장 버그 확인부터"
 
-## 2026-04-30 세션
-- bookings_new 테이블 DROP + bookings 테이블 원복 완료
-- 정혜영 예약 복원 (영수증 이미지 참고하여 INSERT)
-- bookings + students 테이블 RLS allow_all 정책 추가
-- 견적 탭 숙소 옵션 3종→6종 확장 (dreamhouse/dreamhouse_jaypark/dreamhouse_cubenine/jaypark/cubenine/commute)
-- 통학형(commute) 가격 데이터 추가 (2주~8주, 정가/성수기/비수기)
-- 포함사항 분리 fix: INCLUSIONS_DH/JP/C9/COMMUTE 분리 (드림하우스 선택시 JP항목 표시되던 버그 수정)
-- 신규 예약 등록 모달 bookings_new→bookings INSERT 코드 수정
+⚠️ CLAUDE.md 로드 방법 (중요):
+- 새 대화에서 raw.githubusercontent.com 직접 접근은 차단됨
+- 반드시 dreamacademyph.com 탭이 열린 상태에서 시작할 것
+- Claude가 브라우저 탭 JS로 fetch해서 불러와야 함
+- 탭 없으면: 탭 먼저 열고 → 다시 "불러와줘" 요청
+
+### 2026-04-30 세션 완료
+- bookings_new DROP + bookings 원복 완료
+- 정혜영 복원 (영수증 기반 INSERT)
+- RLS allow_all 정책 추가 (bookings + students)
+- 견적 숙소 6종 확장 + 통학형 가격 추가
+- 포함사항 분리 fix (DH/JP/C9/COMMUTE 개별화)
+- 신규 예약 모달 bookings_new→bookings 수정
+
+### 미완료 작업
+🔴 신규 예약 저장 실제 동작 확인 필요 (alert 떴으나 리스트 미표시)
+🟠 인보이스 디자인 리디자인 (app/invoice/page.tsx, guest용)
