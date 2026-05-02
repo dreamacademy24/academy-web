@@ -923,16 +923,14 @@ janet, joy, sam, gerlyn, jessa, erica, crista, mel, cristel, janrey, phen, vince
 
 ### 즉시 수정 필요 항목 (다음 세션 우선)
 
-🔴 **[긴급] /admin/bookings page.tsx 컬럼 매핑 보정 필요**
-- bookings → bookings_new 전환 완료됐으나 렌더링 컬럼명이 구 테이블 기준이라 "예약이 없습니다" 표시
-- 변환 필요:
-  - `b.checkin_date` → `b.check_in`
-  - `b.checkout_date` → `b.check_out`
-  - `b.accom_type` → `b.booking_type`
-  - `b.drop_off` → `b.drop_place`
-  - `b.balance_date` → `b.balance_due`
-  - `b.reservation_no` → 없음 (bookings_new에 reservation_no 컬럼 부재). `id.slice(-6).toUpperCase()` 또는 null 처리.
-  - `b.students` (JSONB) → 별도 students 테이블이라 빈 배열(`[]`) 처리. **학생관리 탭은 별도로 students 테이블에서 fetch하도록 재작성 필요**.
+🔴 **[미확인]** 신규 예약 등록 모달 — 저장 후 리스트에 안 보이는 버그
+- bookings_new → bookings INSERT 코드 수정 완료했으나 실제 저장 확인 못함
+- 다음 세션 첫 번째로 테스트 필요
+- 테스트: "+ 신규 예약" → "드하+제이파크" → 예약자명 입력 → 예약 등록 클릭 → 리스트 확인
+
+🟠 **[미완료]** 인보이스 디자인 리디자인 (app/invoice/page.tsx)
+- 목표: 보라 그라데이션 헤더 제거 → 흰 배경 + teal 섹션헤더 + 네이비 총금액박스
+- Claude Code 프롬프트 이미 작성됨, 실행 필요
 
 ### bookings_new 컬럼 (28개)
 ```
@@ -955,4 +953,13 @@ special_request, ssp
 - 손님 부킹 페이지(`app/booking/page.tsx`)는 여전히 `from("bookings")`로 INSERT — 추후 통합 결정 필요
 
 ### 다음 세션 시작 방법
-"드림아카데미 프로젝트 이어서 진행해줘 — admin/bookings 컬럼 매핑 보정부터"
+"드림아카데미 프로젝트 이어서 진행해줘 — 신규 예약 저장 버그 확인부터"
+
+## 2026-04-30 세션
+- bookings_new 테이블 DROP + bookings 테이블 원복 완료
+- 정혜영 예약 복원 (영수증 이미지 참고하여 INSERT)
+- bookings + students 테이블 RLS allow_all 정책 추가
+- 견적 탭 숙소 옵션 3종→6종 확장 (dreamhouse/dreamhouse_jaypark/dreamhouse_cubenine/jaypark/cubenine/commute)
+- 통학형(commute) 가격 데이터 추가 (2주~8주, 정가/성수기/비수기)
+- 포함사항 분리 fix: INCLUSIONS_DH/JP/C9/COMMUTE 분리 (드림하우스 선택시 JP항목 표시되던 버그 수정)
+- 신규 예약 등록 모달 bookings_new→bookings INSERT 코드 수정
