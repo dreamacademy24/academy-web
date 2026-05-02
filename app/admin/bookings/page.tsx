@@ -220,23 +220,41 @@ export default function AdminBookingsPage(){
     const flightInfo:Record<string,unknown>={};
     if(!flightIn.undecided){flightInfo.in={airline:flightIn.airline,flight_no:flightIn.flight_no,date:flightIn.date,time:flightIn.time,place:flightIn.place};}else{flightInfo.in={undecided:true};}
     if(!flightOut.undecided){flightInfo.out={airline:flightOut.airline,flight_no:flightOut.flight_no,date:flightOut.date,time:flightOut.time,place:flightOut.place};}else{flightInfo.out={undecided:true};}
-    // Insert into bookings_new via API
-    const body:Record<string,unknown>={
-      booking_type:bType,booker_name:newForm.booker_name.trim(),booker_phone:newForm.booker_phone.trim(),
-      check_in:newForm.check_in||null,check_out:newForm.check_out||null,
-      flight_in_airline:flightIn.undecided?null:[flightIn.airline,flightIn.flight_no].filter(Boolean).join(" ")||null,
-      flight_in_date:flightIn.undecided?null:flightIn.date||null,
-      flight_in_time:flightIn.undecided?null:flightIn.time||null,
-      flight_out_airline:flightOut.undecided?null:[flightOut.airline,flightOut.flight_no].filter(Boolean).join(" ")||null,
-      flight_out_date:flightOut.undecided?null:flightOut.date||null,
-      flight_out_time:flightOut.undecided?null:flightOut.time||null,
-      pickup_place:newForm.pickup_place.trim()||null,drop_place:newForm.drop_place.trim()||null,
-      agency:newForm.agency.trim()||null,special_request:newForm.special_request.trim()||null,
-      total_amount:payForm.total_amount||0,paid_amount:payForm.deposit_paid?payForm.deposit_amount:0,
-      payment_status:payForm.deposit_paid?"partial":"unpaid",
-      status:"pending",confirmed:false,
+    // bookings 테이블용 매핑 (booking_type → accom_type 한글 라벨)
+    const BTYPE_KO:Record<string,string>={
+      dreamhouse:"드림하우스",
+      dreamhouse_jaypark:"드림하우스+제이파크",
+      dreamhouse_cubenine:"드림하우스+큐브나인",
+      jaypark:"제이파크 단독",
+      cubenine:"큐브나인 단독",
+      commute:"통학형",
+      room_only:"숙소만",
     };
-    const r=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings_new`,{
+    const flightInStr=flightIn.undecided?"미정":[flightIn.airline,flightIn.flight_no,flightIn.date,flightIn.time].filter(Boolean).join(" ");
+    const flightOutStr=flightOut.undecided?"미정":[flightOut.airline,flightOut.flight_no,flightOut.date,flightOut.time].filter(Boolean).join(" ");
+    // Insert into bookings via API (옛 테이블, KO 라벨 사용)
+    const body:Record<string,unknown>={
+      accom_type:BTYPE_KO[bType]||bType,
+      booker_name:newForm.booker_name.trim(),
+      booker_phone:newForm.booker_phone.trim()||null,
+      checkin_date:newForm.check_in||null,
+      checkout_date:newForm.check_out||null,
+      flight_in:flightInStr||null,
+      flight_out:flightOutStr||null,
+      pickup_place:newForm.pickup_place.trim()||null,
+      drop_off:newForm.drop_place.trim()||null,
+      agency:newForm.agency.trim()||null,
+      special_request:newForm.special_request.trim()||null,
+      base_price:payForm.total_amount||0,
+      final_price:payForm.total_amount||0,
+      status:"접수",
+      confirmed:false,
+      // accom 분해 컬럼 (bookings 테이블에 존재)
+      dh_weeks:(bType==="dreamhouse"||bType==="dreamhouse_jaypark"||bType==="dreamhouse_cubenine")?newForm.dh_weeks:null,
+      jp_weeks:(bType==="jaypark"||bType==="dreamhouse_jaypark")?newForm.jp_weeks:null,
+      cn_period:(bType==="cubenine"||bType==="dreamhouse_cubenine")?newForm.cn_period:null,
+    };
+    const r=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings`,{
       method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Prefer":"return=representation"},
       body:JSON.stringify(body),
     });
@@ -283,7 +301,8 @@ export default function AdminBookingsPage(){
     setFlightIn({...emptyFlight,undecided:false});setFlightOut({...emptyFlight,undecided:false});
     setStudents23([{...emptyStudent}]);
     setPayForm({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
-    alert("새 예약이 등록되었습니다! (bookings_new)");
+    await load(); // 리스트 새로고침
+    alert("새 예약이 등록되었습니다!");
   }
 
   useEffect(()=>{
