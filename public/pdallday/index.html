@@ -51,7 +51,37 @@
   img { max-width: 100%; display: block; }
   button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
-  /* ─── Top bar ─── */
+  /* ─── PlayDream 로고 텍스트 ─── */
+  .playdream-logo {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    background: linear-gradient(90deg,
+      #A855F7 0%,
+      #6366F1 18%,
+      #3B82F6 32%,
+      #10B981 48%,
+      #F59E0B 64%,
+      #F97316 80%,
+      #EC4899 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+  }
+  .playdream-logo-wrap {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none;
+  }
+  .playdream-sub-badge {
+    font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+    border: 1.5px solid var(--line);
+    color: var(--ink-2); background: var(--bg-2);
+    letter-spacing: 0.01em; white-space: nowrap;
+  }
   .top-bar {
     background: var(--ink);
     color: #F7EFE2;
@@ -431,13 +461,9 @@
 <!-- Header -->
 <header class="site">
   <div class="nav">
-    <a class="brand" href="/">
-      <img class="brand-mark" src="/logo.png" alt="Dream Academy" />
-      <div class="brand-divider"></div>
-      <div class="brand-text">
-        <b>플레이드림 AllDay</b>
-        <span>Dream Academy × PlayDream</span>
-      </div>
+    <a class="playdream-logo-wrap" href="/">
+      <span class="playdream-logo">Play Dream</span>
+      <span class="playdream-sub-badge">드림아카데미 AllDay</span>
     </a>
     <a class="nav-cta" href="http://pf.kakao.com/_PFMJb/chat" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
