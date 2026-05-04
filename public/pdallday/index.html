@@ -540,14 +540,13 @@
   <!-- Tab nav -->
   <div class="tab-nav">
     <div class="tab-nav-inner">
-      <button class="tab-btn active" data-tab="1"><span class="num">01</span>플레이드림 소개</button>
-      <button class="tab-btn" data-tab="2"><span class="num">02</span>데일리 클래스</button>
-      <button class="tab-btn" data-tab="3"><span class="num">03</span>올데이 프로그램</button>
-      <button class="tab-btn" data-tab="4"><span class="num">04</span>드림하우스</button>
-      <button class="tab-btn" data-tab="5"><span class="num">05</span>제이파크</button>
-      <button class="tab-btn" data-tab="6"><span class="num">06</span>큐브나인</button>
-      <button class="tab-btn" data-tab="7"><span class="num">07</span>투어 · 셔틀</button>
-      <button class="tab-btn" data-tab="8"><span class="num">08</span>규정 안내</button>
+      <button class="tab-btn active" data-tab="3"><span class="num">01</span>올데이 프로그램</button>
+      <button class="tab-btn" data-tab="4"><span class="num">02</span>드림하우스</button>
+      <button class="tab-btn" data-tab="5"><span class="num">03</span>제이파크</button>
+      <button class="tab-btn" data-tab="6"><span class="num">04</span>큐브나인</button>
+      <button class="tab-btn" data-tab="7"><span class="num">05</span>투어 · 셔틀</button>
+      <button class="tab-btn" data-tab="8"><span class="num">06</span>규정 안내</button>
+      <button class="tab-btn" data-tab="2"><span class="num">07</span>데일리 클래스</button>
     </div>
   </div>
 
@@ -555,7 +554,7 @@
   <div class="panels">
 
     <!-- ═══ 01 플레이드림 소개 ═══ -->
-    <section class="panel active" id="panel-1">
+    <section class="panel" id="panel-1" style="display:none!important;">
       <div class="panel-head">
         <div>
           <div class="panel-eyebrow">세부 최초 영어놀이센터</div>
@@ -849,7 +848,7 @@
     </section>
 
     <!-- ═══ 03 올데이 프로그램 ═══ -->
-    <section class="panel" id="panel-3">
+    <section class="panel active" id="panel-3">
 
       <!-- Hero concept -->
       <div style="background:linear-gradient(135deg,#FFF8E5,#FFF0D6); border:1.5px solid #F5C842; border-radius:var(--radius); padding:28px 28px 24px; margin-bottom:28px; text-align:center;">
@@ -1425,6 +1424,7 @@
   (function handleHash() {
     const m = location.hash.match(/^#tab-(\d)$/);
     if (m) activateTab(m[1]);
+    else activateTab('3');
   })();
 </script>
 </body>
