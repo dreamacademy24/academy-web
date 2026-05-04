@@ -1328,69 +1328,79 @@
       </div>
     </section>
 
-    <!-- ═══ 08 규정 안내 ═══ -->
+    <!-- ═══ 06 규정·주요 안내사항 ═══ -->
     <section class="panel" id="panel-8">
       <div class="panel-head">
         <div>
-          <div class="panel-eyebrow">Rules & Cancellation Policy</div>
-          <h2 class="panel-title">규정 안내</h2>
+          <div class="panel-eyebrow">Important Notices · 반드시 확인</div>
+          <h2 class="panel-title">주요 안내사항</h2>
         </div>
-        <p class="panel-sub">예약 전 반드시 확인해 주세요. 취소 및 환불 규정, 참가 안내 사항입니다.</p>
+        <p class="panel-sub">예약 전 꼭 확인해 주셔야 할 결제·취소 규정 및 플레이드림 운영 안내입니다.</p>
       </div>
 
-      <!-- Cancellation policy -->
-      <div class="rule-card">
+      <!-- 예약 절차 -->
+      <div class="rule-card" style="margin-bottom:16px;">
+        <h3><span>📋</span> 예약 절차</h3>
+        <p style="font-size:13.5px; color:var(--ink-2); margin-bottom:18px; line-height:1.7;">아래 3단계로 진행되며, 올데이 패키지는 최소 <b>하루 전 예약</b>이 필수입니다.</p>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+          <div style="background:var(--bg-2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--line);">
+            <div style="width:32px; height:32px; background:var(--ink); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; margin:0 auto 10px;">1</div>
+            <b style="display:block; font-size:13.5px; margin-bottom:6px;">카카오톡 상담</b>
+            <p style="font-size:12px; color:var(--ink-3); line-height:1.6;">날짜·인원·수업 종류·숙소 확정 → 매니저가 1~2일 내 연락</p>
+          </div>
+          <div style="background:var(--bg-2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--line);">
+            <div style="width:32px; height:32px; background:var(--ink); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; margin:0 auto 10px;">2</div>
+            <b style="display:block; font-size:13.5px; margin-bottom:6px;">예약금 납부</b>
+            <p style="font-size:12px; color:var(--ink-3); line-height:1.6;">입금 확인 후 예약 확정. 숙소 패키지 금액은 상담 시 안내</p>
+          </div>
+          <div style="background:var(--bg-2); border-radius:12px; padding:16px; text-align:center; border:1px solid var(--line);">
+            <div style="width:32px; height:32px; background:var(--ink); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; margin:0 auto 10px;">3</div>
+            <b style="display:block; font-size:13.5px; margin-bottom:6px;">잔금 납부 & 입실</b>
+            <p style="font-size:12px; color:var(--ink-3); line-height:1.6;">입실일 전 잔금 완납 → 공항 픽업 → 플레이드림 등원</p>
+          </div>
+        </div>
+        <div style="margin-top:14px; padding:12px 16px; background:var(--coral-soft); border-radius:10px; font-size:13px; color:var(--ink-2);">
+          📌 <b>올데이 당일 수업</b>은 최소 하루 전 예약 필수 · 수업 구성 및 테마 변경 불가 · 예약금 입금 완료 시에만 확정
+        </div>
+      </div>
+
+      <!-- 취소·환불 규정 -->
+      <div class="rule-card" style="margin-bottom:16px;">
         <h3><span>📋</span> 취소 · 환불 규정</h3>
         <div class="cancel-table">
           <table>
-            <thead>
-              <tr>
-                <th>취소 시점</th>
-                <th>환불 기준</th>
-              </tr>
-            </thead>
+            <thead><tr><th>취소 시점</th><th>환불 기준</th></tr></thead>
             <tbody>
-              <tr>
-                <td>출발 30일 전 이상</td>
-                <td>전액 환불</td>
-              </tr>
-              <tr>
-                <td>출발 15일 ~ 29일 전</td>
-                <td class="penalty">총 금액의 20% 취소 수수료</td>
-              </tr>
-              <tr>
-                <td>출발 7일 ~ 14일 전</td>
-                <td class="penalty">총 금액의 50% 취소 수수료</td>
-              </tr>
-              <tr>
-                <td>출발 6일 전 ~ 당일</td>
-                <td class="penalty">환불 불가 (100% 취소 수수료)</td>
-              </tr>
+              <tr><td>입실 30일 전 이상</td><td>전액 환불</td></tr>
+              <tr><td>입실 15일 ~ 29일 전</td><td class="penalty">총 금액의 20% 취소 수수료</td></tr>
+              <tr><td>입실 7일 ~ 14일 전</td><td class="penalty">총 금액의 50% 취소 수수료</td></tr>
+              <tr><td>입실 6일 전 ~ 당일</td><td class="penalty">환불 불가 (100% 취소 수수료)</td></tr>
             </tbody>
           </table>
         </div>
-        <ul class="rule-list" style="margin-top: 14px;">
+        <ul class="rule-list" style="margin-top:14px;">
+          <li>올데이 당일 수업 취소: <b>수업 하루 전 부터 환불 불가</b> / 픽업 후 취소 또는 수업 도중 취소 시 수업료 전액 지불</li>
           <li>취소는 반드시 <b>카카오톡 채널</b>을 통해 서면 요청하셔야 합니다.</li>
           <li>천재지변·전염병 등 불가항력 사유 발생 시 별도 협의합니다.</li>
           <li>현지 도착 후 조기 귀국 시에도 잔여 금액은 환불되지 않습니다.</li>
         </ul>
       </div>
 
-      <!-- Participation rules -->
-      <div class="rule-card">
-        <h3><span>✅</span> 참가 안내</h3>
+      <!-- 참가 안내 -->
+      <div class="rule-card" style="margin-bottom:16px;">
+        <h3><span>✅</span> 수업 참가 안내</h3>
         <ul class="rule-list">
-          <li>참가 대상: <b>유치원 ~ 초등 전 학년</b> (보호자 동반 필수)</li>
-          <li>영어 수업은 필리핀 원어민 강사 및 한국인 스태프가 함께 진행합니다.</li>
+          <li>참가 대상: <b>만 30개월 이상 ~ 초등 전 학년</b> (보호자 동반 필수)</li>
+          <li>센터 내 <b>보호자 대기 공간 없음</b> — 분리 수업으로 진행 · 보호자 수업 공간 입실 불가</li>
+          <li>분리가 어렵거나 수업 참여가 어려운 경우 수업 진행이 어려울 수 있으며, 중도 퇴실 시 환불 불가</li>
           <li>알레르기·특이 체질·복용 약물이 있으신 경우 사전에 반드시 고지해 주세요.</li>
           <li>수업 중 촬영된 사진·영상은 교육 목적 및 홍보 자료로 활용될 수 있습니다.</li>
-          <li>플레이드림 시설 내 지정 구역 외 출입은 금지됩니다.</li>
-          <li>타 학생 및 강사에 대한 폭력·욕설·기물 파손 시 퇴소 조치될 수 있습니다.</li>
+          <li>플레이드림 시설 내 지정 구역 외 출입 금지 · 기물 파손 시 실비 청구될 수 있습니다.</li>
         </ul>
       </div>
 
-      <!-- Accommodation rules -->
-      <div class="rule-card">
+      <!-- 숙소 이용 안내 -->
+      <div class="rule-card" style="margin-bottom:16px;">
         <h3><span>🏡</span> 숙소 이용 안내</h3>
         <ul class="rule-list">
           <li>체크인: <b>14:00 이후</b> · 체크아웃: <b>12:00 이전</b> (드림하우스 기준)</li>
@@ -1401,20 +1411,55 @@
         </ul>
       </div>
 
+      <!-- 휴무 안내 -->
+      <div class="rule-card" style="margin-bottom:16px;">
+        <h3><span>🗓️</span> 플레이드림 · 드림센터 휴무 안내</h3>
+        <p style="font-size:13.5px; color:var(--ink-2); margin-bottom:16px; line-height:1.7;">아래 일정에 플레이드림 수업 및 드림센터(헬퍼·셔틀)가 휴무합니다. 일정 계획 시 참고해 주세요.</p>
+
+        <!-- 범례 -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><span style="width:12px; height:12px; border-radius:2px; background:var(--coral); display:inline-block;"></span>플레이드림 + 드림센터 모두 휴무</div>
+          <div style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><span style="width:12px; height:12px; border-radius:2px; background:#B8894A; display:inline-block;"></span>드림센터(헬퍼·셔틀)만 휴무</div>
+        </div>
+
+        <!-- 휴무 테이블 -->
+        <div style="border-radius:12px; overflow:hidden; border:1px solid var(--line);">
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr style="background:var(--ink);"><th style="padding:10px 14px; color:#fff; text-align:left; font-weight:700; width:60px;">월</th><th style="padding:10px 14px; color:#fff; text-align:left; font-weight:700; width:70px;">날짜</th><th style="padding:10px 14px; color:#fff; text-align:left; font-weight:700; width:80px;">구분</th><th style="padding:10px 14px; color:#fff; text-align:left; font-weight:700;">내용</th></tr></thead>
+            <tbody>
+              <tr style="background:#FBE7E0;"><td style="padding:9px 14px; font-weight:800; color:var(--coral);">12월</td><td style="padding:9px 14px; font-weight:700;">31일 (수)</td><td style="padding:9px 14px;"><span style="background:var(--coral); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">전체</span></td><td style="padding:9px 14px; color:var(--ink-2);">플레이드림 + 드림센터 전체 휴무</td></tr>
+              <tr style="background:#FBE7E0;"><td style="padding:9px 14px; font-weight:800; color:var(--coral); border-top:1px solid var(--line-2);">1월</td><td style="padding:9px 14px; font-weight:700; border-top:1px solid var(--line-2);">1일 (목)</td><td style="padding:9px 14px; border-top:1px solid var(--line-2);"><span style="background:var(--coral); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">전체</span></td><td style="padding:9px 14px; color:var(--ink-2); border-top:1px solid var(--line-2);">신정 · 플레이드림 + 드림센터 전체 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">3월</td><td style="padding:9px 14px; font-weight:700;">1일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">삼일절 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2); background:var(--bg-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">4월</td><td style="padding:9px 14px; font-weight:700;">5일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">식목일 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">5월</td><td style="padding:9px 14px; font-weight:700;">5일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">어린이날 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2); background:var(--bg-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">6월</td><td style="padding:9px 14px; font-weight:700;">6일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">현충일 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">8월</td><td style="padding:9px 14px; font-weight:700;">15일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">광복절 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2); background:var(--bg-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">10월</td><td style="padding:9px 14px; font-weight:700;">3일~9일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">개천절·한글날 포함 추석 연휴 · 드림센터 휴무</td></tr>
+              <tr style="border-top:1px solid var(--line-2);"><td style="padding:9px 14px; font-weight:800; color:var(--gold);">12월</td><td style="padding:9px 14px; font-weight:700;">25일</td><td style="padding:9px 14px;"><span style="background:var(--gold); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;">드림센터</span></td><td style="padding:9px 14px; color:var(--ink-2);">성탄절 · 드림센터(헬퍼·셔틀) 휴무</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px; padding:11px 16px; background:var(--teal-soft); border-radius:10px; font-size:13px; color:var(--teal); line-height:1.65;">
+          ℹ️ <b>드림센터 휴무일</b>에는 헬퍼 서비스 및 셔틀이 운행되지 않습니다. 플레이드림 수업은 <b>12/31, 1/1에만</b> 휴무이며, 그 외 공휴일에는 정상 운영됩니다.
+        </div>
+      </div>
+
       <!-- FAQ -->
-      <div class="rule-card">
+      <div class="rule-card" style="margin-bottom:16px;">
         <h3><span>❓</span> 자주 묻는 질문</h3>
         <ul class="rule-list">
-          <li><b>영어를 전혀 못 해도 참가할 수 있나요?</b> — 네, 가능합니다. 초급자 레벨 수업이 별도로 구성됩니다.</li>
-          <li><b>혼자 오는 아이도 괜찮나요?</b> — 보호자 동반이 원칙이나 초등 고학년 이상은 개별 협의 가능합니다.</li>
-          <li><b>1주만 참가할 수 있나요?</b> — 네, 1주·2주 모두 가능합니다. 금액은 카카오톡으로 문의해 주세요.</li>
-          <li><b>숙소 조기 체크인·레이트 체크아웃이 가능한가요?</b> — 가용 객실 상황에 따라 조율 가능합니다. 사전 문의 필요합니다.</li>
+          <li><b>영어를 전혀 못 해도 참가할 수 있나요?</b> — 네, 가능합니다. 활동 중심 수업이라 영어 초보도 즐겁게 참여할 수 있어요.</li>
+          <li><b>만 30개월 미만 아이도 참가 가능한가요?</b> — 만 30개월 미만은 참가가 어렵습니다. 분리 수업이 가능한 아이여야 합니다.</li>
+          <li><b>보호자가 수업 중에 같이 있을 수 있나요?</b> — 보호자 대기 공간이 없으며, 수업 공간 입실이 불가합니다.</li>
+          <li><b>1주만 참가할 수 있나요?</b> — 네, 1주·2주 모두 가능합니다. 올데이 단일 수업도 가능해요.</li>
+          <li><b>숙소 조기 체크인·레이트 체크아웃이 가능한가요?</b> — 가용 상황에 따라 조율 가능합니다. 사전 문의 필요합니다.</li>
+          <li><b>픽드랍 가능 지역이 어디인가요?</b> — 막탄섬 내 노랑색 지역(제이파크·솔레아·탐블리 등). 세부 시티·타미아 등은 불가합니다.</li>
         </ul>
       </div>
 
       <div class="cta-banner">
         <h3>궁금한 점이 있으신가요?</h3>
-        <p>가격 문의, 일정 조율, 기타 모든 질문은 카카오톡으로 편하게 연락 주세요.</p>
+        <p>예약 문의, 가격 상담, 일정 조율 모두 카카오톡으로 편하게 연락 주세요.</p>
         <a class="btn-kakao" href="http://pf.kakao.com/_PFMJb/chat" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 3C6.477 3 2 6.693 2 11.25c0 2.836 1.748 5.332 4.393 6.838L5.25 21l3.994-2.098A11.7 11.7 0 0012 19.5c5.523 0 10-3.693 10-8.25S17.523 3 12 3z" fill="currentColor"/></svg>
           카카오톡 채널 문의하기
