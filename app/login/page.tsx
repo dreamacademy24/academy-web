@@ -22,6 +22,7 @@ const ADMIN_ACCOUNTS = [
   { id: "admin-sage",  pw: "h_tmt0j2", role: "staff", name: "Sage",  staffId: "sage"  },
   { id: "admin-eric",  pw: "h_im0z0p", role: "staff", name: "Eric",  staffId: "eric"  },
   { id: "admin-jun",   pw: "h_krvnp7", role: "staff", name: "Jun",   staffId: "jun"   },
+  { id: "admin-candice", pw: "h_1q6h54", role: "staff", name: "Candice", staffId: "candice" },
   // 튜터 계정 (화상영어 전용) — staffId는 online_tutors.staff_user_id와 매핑
   { id: "admin-ann",     pw: "h_bpke76", role: "tutor", name: "T.Ann",     staffId: "admin-ann"     },
   { id: "admin-angel",   pw: "h_nn1req", role: "tutor", name: "T.Angel",   staffId: "admin-angel"   },
