@@ -518,6 +518,7 @@ function InvoicePageInner(){
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
+  const [isCommute,setIsCommute]=useState(false);
 
   /* ── 학생 academyStart 자동동기화 (다음 월요일) ── */
   useEffect(()=>{
@@ -532,6 +533,7 @@ function InvoicePageInner(){
     supabase.from("bookings").select("*").eq("id",bookingId).single().then(async({data})=>{
       if(!data) return;
       setBooker({name:data.booker_name,englishName:data.booker_english||"",balanceDate:data.balance_date||""});
+      setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
       let sts:any[]=[];
       try{const parsed=typeof data.students==="string"?JSON.parse(data.students):data.students;if(Array.isArray(parsed))sts=parsed;}catch{}
       // JSONB가 비어있거나 이름이 모두 비어있으면 students 테이블 fallback
@@ -919,7 +921,7 @@ function InvoicePageInner(){
 
         <div className="is"><div className="ist">Stay Details</div>
           <table className="tb"><tbody>
-            <tr><td className="lb">Check-in</td><td>{overallCI||"-"}</td><td className="lb">Check-out</td><td>{overallCO||"-"}</td></tr>
+            <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO||"-"}</td></tr>
             <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
             <tr><td className="lb">Adults</td><td>{cP}</td><td className="lb">Children</td><td>{cK}</td></tr>
           </tbody></table>
@@ -956,7 +958,7 @@ function InvoicePageInner(){
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back</button>
         <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
         <button style={{padding:"12px 24px",background:"#ea580c",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}
-          onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\nCheck-in: "+(overallCI||"TBA")+"\nCheck-out: "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Company Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
+          onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const ciLbl=isCommute?"Class Start":"Check-in";const coLbl=isCommute?"Class End":"Check-out";const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\n"+ciLbl+": "+(overallCI||"TBA")+"\n"+coLbl+": "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Company Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
           Email to Resort
         </button>
       </div>
@@ -976,7 +978,7 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
-            <tr><td className="lb">Check-in</td><td>{overallCI?`${overallCI} 15:00PM`:"-"}</td><td className="lb">Check-out</td><td>{overallCO?`${overallCO} 12noon`:"-"}</td></tr>
+            <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} 12noon`):"-"}</td></tr>
             <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
           </tbody></table>
         </div>
