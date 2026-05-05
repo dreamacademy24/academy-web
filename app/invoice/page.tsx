@@ -984,9 +984,9 @@ function InvoicePageInner(){
               )}
             </tbody></table>
           )}
-          <div style={{marginTop:14,padding:"16px 20px",background:"linear-gradient(135deg,#a78bfa 0%,#60a5fa 100%)",color:"#fff",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 10px rgba(167,139,250,0.25)"}}>
-            <span style={{fontSize:16,fontWeight:800,letterSpacing:"0.02em"}}>Total Amount Due</span>
-            <span style={{fontSize:24,fontWeight:900}}>{fmt(fp)}원</span>
+          <div style={{marginTop:14,padding:"16px 20px",background:"linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%)",color:"#1f2937",border:"1px solid #ddd6fe",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 10px rgba(167,139,250,0.15)"}}>
+            <span style={{fontSize:16,fontWeight:800,letterSpacing:"0.02em",color:"#1f2937"}}>Total Amount Due</span>
+            <span style={{fontSize:24,fontWeight:900,color:"#1f2937"}}>{fmt(fp)}원</span>
           </div>
         </div>
 
