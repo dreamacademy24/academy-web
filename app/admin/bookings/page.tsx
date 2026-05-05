@@ -14,6 +14,7 @@ interface Booking {
   flight_in?:string; flight_out?:string; house_no?:string; pickup?:string; drop_off?:string;
   pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
   billing_items?:any; locals?:any; confirmed?:boolean;
+  booking_type?:string; accom_weeks?:number;
 }
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -38,6 +39,14 @@ function fDate(d?:string){return d?new Date(d).toLocaleDateString("ko-KR"):"";}
 function shortNo(no:string){return no?no.replace("DA-","").slice(-7):"-";}
 function addWeeks(dateStr:string,weeks:number):string{
   const d=new Date(dateStr);d.setDate(d.getDate()+weeks*7);return d.toISOString().slice(0,10);
+}
+// 학원 종료일 계산: start + (weeks-1)*7 + 4 (월~금 운영, invoice/page.tsx와 동일)
+function calcAcademyEnd(startStr:string,weeks:number|string):string{
+  if(!startStr)return"";
+  const w=Number(weeks);
+  if(!w||w<1)return"";
+  const d=new Date(startStr);d.setDate(d.getDate()+(w-1)*7+4);
+  return d.toISOString().slice(0,10);
 }
 function acaStart(b:any):string{
   if(!b.checkin_date)return"-";
@@ -120,29 +129,48 @@ export default function AdminBookingsPage(){
   const [stuSpecialEdit,setStuSpecialEdit]=useState("");
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
+  // 종료일/기간은 booking.accom_weeks를 source of truth로 매번 재계산 (stale JSONB 값 무시)
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
     try{
       const arr=typeof b.students==="string"?JSON.parse(b.students):b.students;
       if(!Array.isArray(arr)||arr.length===0)return[];
-      return arr.map((s:Record<string,string>,i:number)=>({
-        key:b.id+"_"+i,
-        booking_id:b.id,
-        reservation_no:b.reservation_no||"",
-        status:b.status||"",
-        booker_name:b.booker_name||"",
-        accom_type:b.accom_type||"",
-        house_no:b.house_no||"",
-        accom_room:b.accom_room||"",
-        agency:b.agency||"",
-        balance_date:b.balance_date||"",
-        checkin_date:b.checkin_date||"",
-        checkout_date:b.checkout_date||"",
-        flight_in:b.flight_in||"",
-        flight_out:b.flight_out||"",
-        special_request:b.special_request||"",
-        korName:s.korName||"",engName:s.engName||"",age:s.age||"",grade:s.grade||"",
-        academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"",photo:s.photo||"",
-      }));
+      const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+      // booking-level accom_weeks 우선, 없으면 jsonb academyWeeks 폴백
+      const wAccom=Number(b.accom_weeks)||0;
+      return arr.map((s:Record<string,string>,i:number)=>{
+        const academyStart=s.academyStart||"";
+        const w=wAccom||Number(s.academyWeeks)||0;
+        // 통학형: checkout_date를 수업종료로 사용 (admin/[id] 페이지와 일관)
+        // 그 외: calcAcademyEnd(start, w) 우선, 부재 시 stored academyEnd 폴백
+        let academyEnd="";
+        if(isCommute&&b.checkout_date){
+          academyEnd=b.checkout_date;
+        }else if(academyStart&&w>0){
+          academyEnd=calcAcademyEnd(academyStart,w);
+        }else{
+          academyEnd=s.academyEnd||"";
+        }
+        const academyWeeks=w>0?String(w):(s.academyWeeks||"");
+        return{
+          key:b.id+"_"+i,
+          booking_id:b.id,
+          reservation_no:b.reservation_no||"",
+          status:b.status||"",
+          booker_name:b.booker_name||"",
+          accom_type:b.accom_type||"",
+          house_no:b.house_no||"",
+          accom_room:b.accom_room||"",
+          agency:b.agency||"",
+          balance_date:b.balance_date||"",
+          checkin_date:b.checkin_date||"",
+          checkout_date:b.checkout_date||"",
+          flight_in:b.flight_in||"",
+          flight_out:b.flight_out||"",
+          special_request:b.special_request||"",
+          korName:s.korName||"",engName:s.engName||"",age:s.age||"",grade:s.grade||"",
+          academyStart,academyEnd,academyWeeks,photo:s.photo||"",
+        };
+      });
     }catch{return[];}
   }).sort((a,b)=>new Date(a.academyStart||"9999").getTime()-new Date(b.academyStart||"9999").getTime());
 
@@ -688,9 +716,19 @@ export default function AdminBookingsPage(){
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
       ];
       const searched=studentsList.filter(s=>{
-        // 년/월 필터: academyStart가 선택한 년도/월과 일치해야 함
+        // 년 필터: academyStart의 년도가 일치해야 함 (시작 기준 유지)
         if(stuYear&&(!s.academyStart||!s.academyStart.startsWith(stuYear+"-")))return false;
-        if(stuMonthNum&&(!s.academyStart||s.academyStart.slice(5,7)!==stuMonthNum))return false;
+        // 월 필터(overlap): 수업 기간[start, end]이 선택 월에 조금이라도 걸치면 포함
+        if(stuMonthNum){
+          if(!s.academyStart)return false;
+          const year=Number(stuYear)||new Date(s.academyStart).getFullYear();
+          const month=Number(stuMonthNum);
+          const monthStart=new Date(year,month-1,1);
+          const monthEnd=new Date(year,month,0);
+          const startDate=new Date(s.academyStart);
+          const endDate=new Date(s.academyEnd||s.academyStart);
+          if(startDate>monthEnd||endDate<monthStart)return false;
+        }
         if(!q)return true;
         return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
       });
