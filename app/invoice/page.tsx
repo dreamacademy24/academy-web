@@ -501,12 +501,14 @@ function InvoicePageInner(){
   const [cK,setCK]=useState(1);
   const [ex1Cnt,setEx1Cnt]=useState(0);
   const [ex2Cnt,setEx2Cnt]=useState(0);
+  const [dbCheckout,setDbCheckout]=useState<string>("");
 
   const a1CO=a1CI?addDays(a1CI,a1W*7):"";
   const a2CI=cm==="combo"?a1CO:"";
   const a2CO=a2CI?addDays(a2CI,a2W*7):"";
   const overallCI=a1CI;
-  const overallCO=cm==="combo"?a2CO:a1CO;
+  // DB checkout_date 우선, 없으면 a1W*7(또는 콤보 시 a2CO)로 계산
+  const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
@@ -534,6 +536,7 @@ function InvoicePageInner(){
       if(!data) return;
       setBooker({name:data.booker_name,englishName:data.booker_english||"",balanceDate:data.balance_date||""});
       setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
+      if(data.checkout_date) setDbCheckout(data.checkout_date);
       let sts:any[]=[];
       try{const parsed=typeof data.students==="string"?JSON.parse(data.students):data.students;if(Array.isArray(parsed))sts=parsed;}catch{}
       // JSONB가 비어있거나 이름이 모두 비어있으면 students 테이블 fallback

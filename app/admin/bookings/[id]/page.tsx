@@ -189,7 +189,7 @@ export default function BookingDetailPage() {
             <div className="item"><div className="lbl">연락처</div><div className="val">{b.booker_phone || "-"}</div></div>
             {(b.booking_type === "commute" || b.accom_type === "통학형") ? (<>
               <div className="item"><div className="lbl">수업시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
-              <div className="item"><div className="lbl">수업종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+              <div className="item"><div className="lbl">수업종료</div><div className="val">{fDate(b.checkout_date || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
             </>) : (<>
               <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
               <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
