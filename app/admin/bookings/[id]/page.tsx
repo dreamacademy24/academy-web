@@ -187,10 +187,15 @@ export default function BookingDetailPage() {
           <div className="grid">
             <div className="item"><div className="lbl">예약자</div><div className="val">{b.booker_name || "-"}</div></div>
             <div className="item"><div className="lbl">연락처</div><div className="val">{b.booker_phone || "-"}</div></div>
-            <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
-            <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
-            <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
-            <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+            {(b.booking_type === "commute" || b.accom_type === "통학형") ? (<>
+              <div className="item"><div className="lbl">수업시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
+              <div className="item"><div className="lbl">수업종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+            </>) : (<>
+              <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
+              <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
+              <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
+              <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+            </>)}
             <div className="item"><div className="lbl">예약유형</div><div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div></div>
             <div className="item"><div className="lbl">유학원</div><div className="val">{b.agency || "-"}</div></div>
           </div>
