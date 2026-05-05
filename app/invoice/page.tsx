@@ -506,7 +506,7 @@ function InvoicePageInner(){
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [applied,setApplied]=useState(false);
-  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
+  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
 
@@ -596,8 +596,9 @@ function InvoicePageInner(){
       if(data.base_price>0){
         const items=typeof data.billing_items==="string"?JSON.parse(data.billing_items):(data.billing_items||[]);
         const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
+        const adds=typeof data.additions==="string"?JSON.parse(data.additions):(data.additions||[]);
         const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
-        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
+        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
         setApplied(true);
         // calculator state 복원 (룸타입/주수/인원 — 신 포맷 items에만 존재. 옛 데이터는 undefined → no-op)
         if(items[0]){
@@ -706,9 +707,10 @@ function InvoicePageInner(){
     </div></div>);
   }
 
-  /* ── 할인/현지비용 헬퍼 ── */
+  /* ── 할인/추가/현지비용 헬퍼 ── */
   const td=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
-  const fp=billing.basePrice-td;
+  const ta=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
+  const fp=billing.basePrice+ta-td;
   const daysUntilCheckin=a1CI?Math.floor((new Date(a1CI).getTime()-Date.now())/86400000):999;
   const isFullPayment=daysUntilCheckin<60;
   const [forceFullPayment, setForceFullPayment] = useState(false);
@@ -716,6 +718,9 @@ function InvoicePageInner(){
   function addD(){setBilling(b=>({...b,discounts:[...b.discounts,{id:Date.now(),name:"",amount:0}]}));}
   function rmD(id:number){setBilling(b=>({...b,discounts:b.discounts.filter(d=>d.id!==id)}));}
   function upD(id:number,f:string,v:string|number){setBilling(b=>({...b,discounts:b.discounts.map(d=>d.id===id?{...d,[f]:v}:d)}));}
+  function addA(){setBilling(b=>({...b,additions:[...b.additions,{id:Date.now(),name:"",amount:0}]}));}
+  function rmA(id:number){setBilling(b=>({...b,additions:b.additions.filter(a=>a.id!==id)}));}
+  function upA(id:number,f:string,v:string|number){setBilling(b=>({...b,additions:b.additions.map(a=>a.id===id?{...a,[f]:v}:a)}));}
   function addL(){setBilling(b=>({...b,locals:[...b.locals,{id:Date.now(),name:"",amount:""}]}));}
   function rmL(id:number){setBilling(b=>({...b,locals:b.locals.filter(c=>c.id!==id)}));}
   function upL(id:number,f:string,v:string){setBilling(b=>({...b,locals:b.locals.map(c=>c.id===id?{...c,[f]:v}:c)}));}
@@ -766,6 +771,7 @@ function InvoicePageInner(){
   async function saveToDb(){
     if(!bookingId){alert("예약 ID가 없습니다. 관리자 페이지에서 접근해주세요.");return;}
     const totalDiscount=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
+    const totalAddition=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
     const {error}=await supabase.from("bookings").update({
       status:"인보이스발행",
       booker_name:booker.name,
@@ -774,9 +780,10 @@ function InvoicePageInner(){
       base_price:billing.basePrice,
       billing_items:billing.items,
       discounts:billing.discounts,
+      additions:billing.additions,
       locals:billing.locals,
       total_discount:totalDiscount,
-      final_price:billing.basePrice-totalDiscount,
+      final_price:billing.basePrice+totalAddition-totalDiscount,
       flight_in:checkin.flightIn,
       flight_out:checkin.flightOut,
       house_no:checkin.houseNo,
@@ -813,7 +820,8 @@ function InvoicePageInner(){
   /* ── 영수증 발행 ── */
   function openReceipt(){
     const totalDiscount=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
-    const finalPrice=billing.basePrice-totalDiscount;
+    const totalAddition=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
+    const finalPrice=billing.basePrice+totalAddition-totalDiscount;
     const payload={
       name:booker.name,englishName:booker.englishName,reservationNo,reservationDate,
       balanceDate:booker.balanceDate,
@@ -823,11 +831,12 @@ function InvoicePageInner(){
       pickup:checkin.pickup,drop:checkin.drop,pickupPlace:checkin.pickupPlace,
       flightIn:checkin.flightIn,flightOut:checkin.flightOut,
       packageType:billing.items.map(i=>i.label).join(" + "),
-      basePrice:billing.basePrice,totalDiscount,finalPrice,
+      basePrice:billing.basePrice,totalDiscount,totalAddition,finalPrice,
       students:students.map(s=>({korName:s.korName,engName:s.engName,age:s.age,grade:s.grade,academyStart:s.academyStart,academyEnd:s.academyEnd,academyWeeks:s.academyWeeks,photo:s.photo})),
       note:checkin.specialRequest,agency:adminOnly.agency,ssp:adminOnly.ssp,
       billingItems:billing.items,
       discounts:billing.discounts.filter(d=>d.name),
+      additions:billing.additions.filter(a=>a.name),
       locals:billing.locals.filter(l=>l.name&&l.amount),
     };
     sessionStorage.setItem("invoiceData",JSON.stringify(payload));
@@ -930,193 +939,110 @@ function InvoicePageInner(){
   ):invoiceType==="guest"?(
     <div className="iw">
       <div className="no-print" style={{marginBottom:12}}>
-        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button>
+        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
       </div>
-      <div id="guest-invoice" className="bg-white max-w-[680px] mx-auto p-10 font-sans">
-        {/* ── 헤더 ── */}
-        <div className="flex justify-between items-end pb-4 border-b-2 border-purple-200 mb-8">
-          <div>
-            <div className="font-bold text-2xl text-gray-900 leading-tight">DREAM ACADEMY</div>
-            <div className="text-sm text-gray-500 mt-1">Philippines</div>
-          </div>
-          <div className="text-right">
-            <h1 className="text-4xl font-black tracking-widest text-purple-600 m-0 leading-none">INVOICE</h1>
-            <p className="text-sm text-gray-600 m-0 mt-2">No. {reservationNo}</p>
-          </div>
+      <div className="iv" id="guest-invoice">
+        <div className="it">
+          <div><div className="il">DREAM ACADEMY</div><div className="ils">Cebu, Philippines</div></div>
+          <div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div>
         </div>
 
-        {/* ── CUSTOMER INFORMATION ── */}
-        <div className="mb-6">
-          <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-            Customer Information
-          </div>
-          <table className="w-full border border-gray-200 rounded text-sm border-collapse">
-            <tbody>
-              <tr>
-                <td className="bg-gray-50 text-gray-500 font-medium w-32 px-3 py-2 border-b border-r border-gray-200">예약자명</td>
-                <td className="text-gray-900 px-3 py-2 border-b border-r border-gray-200">{booker.name}</td>
-                <td className="bg-gray-50 text-gray-500 font-medium w-32 px-3 py-2 border-b border-r border-gray-200">영문이름</td>
-                <td className="text-gray-900 px-3 py-2 border-b border-gray-200">{booker.englishName||"-"}</td>
-              </tr>
-              <tr>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-b border-r border-gray-200">예약번호</td>
-                <td className="text-gray-900 px-3 py-2 border-b border-r border-gray-200">{reservationNo}</td>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-b border-r border-gray-200">예약일</td>
-                <td className="text-gray-900 px-3 py-2 border-b border-gray-200">{reservationDate}</td>
-              </tr>
-              <tr>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-b border-r border-gray-200">체크인</td>
-                <td className="text-blue-600 font-medium px-3 py-2 border-b border-r border-gray-200">{overallCI?`${overallCI} 15:00PM`:"-"}</td>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-b border-r border-gray-200">체크아웃</td>
-                <td className="text-blue-600 font-medium px-3 py-2 border-b border-gray-200">{overallCO?`${overallCO} 12noon`:"-"}</td>
-              </tr>
-              <tr>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-r border-gray-200">숙소</td>
-                <td className="text-gray-900 px-3 py-2 border-r border-gray-200">{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td>
-                <td className="bg-gray-50 text-gray-500 font-medium px-3 py-2 border-r border-gray-200">방번호</td>
-                <td className="text-gray-900 px-3 py-2">{checkin.houseNo||"미정"}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="is"><div className="ist">Customer Information</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
+            <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
+            <tr><td className="lb">Check-in</td><td>{overallCI?`${overallCI} 15:00PM`:"-"}</td><td className="lb">Check-out</td><td>{overallCO?`${overallCO} 12noon`:"-"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+          </tbody></table>
         </div>
 
-        {/* ── STUDENT INFORMATION ── */}
-        <div className="mb-6">
-          <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-            Student Information
-          </div>
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-purple-50 text-purple-700 text-xs font-semibold">
-                <th className="px-3 py-2 text-left">번호</th>
-                <th className="px-3 py-2 text-left">이름</th>
-                <th className="px-3 py-2 text-left">나이</th>
-                <th className="px-3 py-2 text-left">과정</th>
-                <th className="px-3 py-2 text-left">시작</th>
-                <th className="px-3 py-2 text-left">종료</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s,i)=>(
-                <tr key={s.id} className="border-b border-gray-100 text-sm">
-                  <td className="px-3 py-2 text-gray-700">{i+1}</td>
-                  <td className="px-3 py-2 text-gray-900">{s.korName||"-"}</td>
-                  <td className="px-3 py-2 text-gray-700">{s.age||"-"}</td>
-                  <td className="px-3 py-2 text-gray-700">{s.grade}</td>
-                  <td className="px-3 py-2 text-gray-700">{s.academyStart||"-"}</td>
-                  <td className="px-3 py-2 text-gray-700">{s.academyEnd||"-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="is"><div className="ist">Student Information</div>
+          <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
+            {students.map((s,i)=>(
+              <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>
+            ))}
+          </tbody></table>
         </div>
 
-        {/* ── BILLING DETAILS ── */}
-        <div className="mb-6">
-          <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-            Billing Details
-          </div>
+        <div className="is"><div className="ist">Billing Details</div>
           {billing.items.length>0&&(
-            <table className="w-full text-sm border-collapse mb-3">
-              <tbody>
-                {billing.items.map((item,i)=>(
-                  <tr key={i} className="text-gray-700 border-b border-gray-100">
-                    <td className="px-3 py-2">{item.label}{item.season?` (${item.season})`:""}</td>
-                    <td className="px-3 py-2 text-right">{fmt(item.price)}원</td>
-                  </tr>
-                ))}
-                {billing.discounts.filter(d=>d.name).map((d,i)=>(
-                  <tr key={`d${i}`} className="text-red-500 font-medium border-b border-gray-100">
-                    <td className="px-3 py-2">↓ {d.name}</td>
-                    <td className="px-3 py-2 text-right">-{fmt(Number(d.amount))}원</td>
-                  </tr>
-                ))}
-                {td>0&&(
-                  <tr className="text-red-600 font-semibold border-t border-gray-200">
-                    <td className="px-3 py-2">총 할인</td>
-                    <td className="px-3 py-2 text-right">-{fmt(td)}원</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            <table className="tb"><tbody>
+              {billing.items.map((item,i)=>(
+                <tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>
+              ))}
+              {billing.discounts.filter(d=>d.name).map((d,i)=>(
+                <tr key={`d${i}`}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>
+              ))}
+              {td>0&&(
+                <tr className="tr"><td>Total Discount</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>
+              )}
+              {billing.additions.filter(a=>a.name).map((a,i)=>(
+                <tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>
+              ))}
+              {ta>0&&(
+                <tr className="tr"><td>Total Additions</td><td style={{textAlign:"right",color:"#16a34a"}}>+{fmt(ta)}원</td></tr>
+              )}
+            </tbody></table>
           )}
-          {/* 총 청구금액 박스 */}
-          <div className="bg-purple-600 text-white rounded-lg p-4 flex justify-between items-center">
-            <span className="text-lg font-bold">🧡 총 청구금액</span>
-            <span className="text-2xl font-black">{fmt(fp)}원</span>
+          <div style={{marginTop:14,padding:"16px 20px",background:"linear-gradient(135deg,#a78bfa 0%,#60a5fa 100%)",color:"#fff",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 2px 10px rgba(167,139,250,0.25)"}}>
+            <span style={{fontSize:16,fontWeight:800,letterSpacing:"0.02em"}}>Total Amount Due</span>
+            <span style={{fontSize:24,fontWeight:900}}>{fmt(fp)}원</span>
           </div>
         </div>
 
-        {/* ── PAYMENT SCHEDULE ── */}
         {fp>0&&(
-          <div className="mb-6">
-            <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-              Payment Schedule
-            </div>
+          <div className="is"><div className="ist">Payment Schedule</div>
             {effectiveFullPayment?(
-              <div className="flex justify-between items-center py-3 px-4 bg-red-50 rounded">
-                <span className="font-bold text-red-600">전액 입금 (예약 확정)</span>
-                <span className="font-bold text-red-600">{fmt(fp)}원</span>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8}}>
+                <span style={{fontWeight:700,color:"#dc2626"}}>Full Payment (Booking Confirmation)</span>
+                <span style={{fontWeight:700,color:"#dc2626"}}>{fmt(fp)}원</span>
               </div>
             ):(<>
-              <div className="flex justify-between items-center py-3 px-4 bg-green-50 rounded mb-2">
-                <span className="font-bold text-green-700">예약금 (입금 시 예약 확정)</span>
-                <span className="font-bold text-blue-600">1,000,000원</span>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,marginBottom:8}}>
+                <span style={{fontWeight:700,color:"#166534"}}>Deposit (Booking Confirmation)</span>
+                <span style={{fontWeight:700,color:"#2563eb"}}>1,000,000원</span>
               </div>
-              <div className="flex justify-between items-center py-3 px-4">
-                <span className="text-gray-700">잔금 <span className="text-xs text-gray-500">(납부일: {booker.balanceDate||"입실 2달 전"})</span></span>
-                <span className="font-semibold text-blue-600">{fmt(fp>1000000?fp-1000000:0)}원</span>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px"}}>
+                <span style={{color:"#374151"}}>Balance <span style={{fontSize:11,color:"#6b7280"}}>(Due Date: {booker.balanceDate||"2 months before check-in"})</span></span>
+                <span style={{fontWeight:600,color:"#2563eb"}}>{fmt(fp>1000000?fp-1000000:0)}원</span>
               </div>
             </>)}
           </div>
         )}
 
-        {/* ── LOCAL PAYMENT (현지지불) ── */}
         {billing.locals.filter(c=>c.name&&c.amount).length>0&&(
-          <div className="mb-6">
-            <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-              Local Payment <span className="text-[10px] font-medium normal-case tracking-normal text-gray-500 ml-1">단위: 페소(PHP)</span>
-            </div>
-            <table className="w-full text-sm border-collapse">
-              <tbody>
-                {billing.locals.filter(c=>c.name&&c.amount).map((c,i)=>(
-                  <tr key={i} className="border-b border-gray-100">
-                    <td className="px-3 py-2 text-gray-700">{c.name}</td>
-                    <td className="px-3 py-2 text-right text-gray-900">{c.amount}{c.amount.includes("페소")?"":" 페소"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="is"><div className="ist">Local Payment <span style={{fontSize:10,color:"#94a3b8",fontWeight:400,marginLeft:6,letterSpacing:0,textTransform:"none"}}>Unit: PHP</span></div>
+            <table className="tb"><tbody>
+              {billing.locals.filter(c=>c.name&&c.amount).map((c,i)=>{
+                const raw=String(c.amount);
+                const cleaned=raw.replace(/페소|pesos?/gi,"PHP").trim();
+                const display=/PHP/i.test(cleaned)?cleaned:`${cleaned} PHP`;
+                return <tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{display}</td></tr>;
+              })}
+            </tbody></table>
           </div>
         )}
 
-        {/* ── PAYMENT METHOD (결제 방법) ── */}
-        <div className="mb-6">
-          <div className="text-xs font-bold tracking-widest uppercase text-purple-600 border-b border-purple-300 pb-2 mb-3">
-            Payment Method
-          </div>
-          <div className="bg-gray-50 rounded p-4 text-sm leading-7">
-            <div className="font-bold mb-1 text-gray-900">계좌이체</div>
-            <div className="text-gray-700">은행: 하나은행</div>
-            <div className="text-gray-700">계좌번호: 218-910421-22507</div>
-            <div className="text-gray-700">예금주: 이지나</div>
-            <div className="font-bold mt-3 mb-1 text-gray-900">PayPal</div>
-            <div className="text-gray-700">dreamacademyph@gmail.com</div>
+        <div className="is"><div className="ist">Payment Method</div>
+          <div style={{padding:16,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,fontSize:13,lineHeight:1.8}}>
+            <div style={{fontWeight:800,color:"#1f2937",marginBottom:4}}>Bank Transfer</div>
+            <div style={{color:"#374151"}}>Bank: Hana Bank</div>
+            <div style={{color:"#374151"}}>Account No.: 218-910421-22507</div>
+            <div style={{color:"#374151"}}>Account Holder: Lee Jina</div>
+            <div style={{fontWeight:800,color:"#1f2937",marginTop:12,marginBottom:4}}>PayPal</div>
+            <div style={{color:"#374151"}}>dreamacademyph@gmail.com</div>
           </div>
         </div>
 
-        {/* ── 안내문구 ── */}
-        <div className="text-gray-500 text-xs leading-relaxed mt-8 pt-4 border-t border-gray-200">
-          안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>
-          미확인으로 인한 문제는 책임지지 않습니다.<br/>
-          추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>
-          해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>
-          감사합니다.
+        <div className="ift">
+          Please confirm total amount and refund policy. We are not responsible for any issues arising from failure to do so.<br/>
+          For any inquiries, please contact Dream Academy.<br/>
+          Thank you.
         </div>
       </div>
       <div className="pb no-print">
-        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button>
-        <button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button>
+        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+        <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
       </div>
     </div>
   ):(<>
@@ -1185,6 +1111,9 @@ function InvoicePageInner(){
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
+    <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>추가 금액 항목</label>
+    {billing.additions.map(a=><div className="dr" key={a.id}><div className="f-group"><input className="f-input" placeholder="추가 항목 이름" value={a.name} onChange={e=>upA(a.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={a.amount||""} onChange={e=>upA(a.id,"amount",Number(e.target.value))}/></div><button className="bs" style={{background:"#dcfce7",color:"#166534",border:"1px solid #bbf7d0",padding:"7px 10px"}} onClick={()=>rmA(a.id)}>삭제</button></div>)}
+    <button className="bs" style={{background:"#dcfce7",color:"#166534",border:"1px solid #bbf7d0"}} onClick={addA}>+ 추가 항목 추가</button>
     <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>현지 지불 항목 <span style={{fontSize:"10px",color:"#94a3b8",fontWeight:400}}>단위: 페소(PHP)</span></label>
     {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
@@ -1232,6 +1161,8 @@ function InvoicePageInner(){
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
+        {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
+        {ta>0&&<tr className="tr"><td>총 추가</td><td style={{textAlign:"right",color:"#16a34a"}}>+{fmt(ta)}원</td></tr>}
         <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {fp>0&&(effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
