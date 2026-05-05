@@ -697,8 +697,9 @@ function InvoicePageInner(){
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
     const items:{name:string;amount:string}[]=[];
-    // 보호자 1명당 1줄: 1인 SSP / SSP I card = 11,000 PHP
-    for(let i=0;i<cP;i++){
+    // SSP: '항상 표시' — cP가 0/NaN/undefined여도 최소 1줄 보장
+    const adultCount=Math.max(1,Number(cP)||1);
+    for(let i=0;i<adultCount;i++){
       items.push({name:"1인 SSP / SSP I card",amount:"11,000"});
     }
     const isJunior=(s:StudentInfo)=>s.grade==="주니어"||(s.level||"").toLowerCase()==="junior";
