@@ -1015,3 +1015,59 @@ special_request, ssp
 ### 진행 중인 어드민 미완료 작업 (이전 세션 인계)
 🔴 신규 예약 저장 실제 동작 확인 필요 (alert 떴으나 리스트 미표시)
 🟠 인보이스 디자인 리디자인 (app/invoice/page.tsx, guest용)
+
+## 2026-05-05 세션 (인보이스 개선 + 직원 관리)
+
+### 인보이스 (app/invoice/page.tsx) 완료 사항
+- guest 인보이스 전면 개편:
+  - DREAM ACADEMY → DREAM COMPANY (이민국 대응)
+  - 학생이름 폴백 체인: engName → name_en → korName → name_kr
+  - students 테이블 fallback (booking.students 비어있으면 students 테이블 직접 조회)
+  - Total Amount Due 흰 글씨 → 검정 (#1f2937)
+  - PAYMENT METHOD 섹션 전체 제거 (계좌/PayPal)
+  - Account No. 제거, Account Holder: Cha Youngri
+  - 하단 안내 문구: "Please confirm the total amount and refund policy..."만 유지
+  - 드림하우스 → Dream House (영문화)
+  - Room No. 기본값: Dream House = B17L10
+- 구버전 인보이스 미리보기: 총 청구 금액 흰 글씨 → 검정 수정
+- 영수증: 인원 구성 "보호자 2 + 아이 1" 형식으로 변경
+
+### 신규 예약 (app/admin/bookings/page.tsx) 완료 사항
+- 보호자 영문이름(booker_english) 필드 추가 → 손님용 인보이스 English Name 자동 연결
+- 통학형: 숙소 상세 UI 숨김
+- 학생 JSONB 저장 버그 수정 (JSON.stringify 이중 래핑 제거, jsonb 타입 직접 저장)
+- reservation_no 자동 생성 (DA-YYYYMMDD-NNNNNN)
+- students 저장 후 bookings JSONB 동기화 → 부킹 리스트/학생관리/인보이스 연결
+
+### 예약 상세 (app/admin/bookings/[id]/page.tsx)
+- 통학형: 체크인→수업시작, 체크아웃→수업종료 (academy_start/end 값 표시)
+
+### 직원 관리
+- Jenna/Yuna 퇴사 처리 완료:
+  - app/admin/bookings/page.tsx ASSIGNEES에서 제거
+  - app/guide/page.tsx에서 제거
+  - public/team_manager3.html 전체 정리 (15곳: EMPS, isAdmin, DEFAULT_PASSWORDS, 결재 등)
+  - public/staff.html 정리 (5곳)
+  - Supabase auth.users에서 삭제 완료
+- Candice 추가:
+  - ASSIGNEES에 추가
+  - team_manager3.html / staff.html EMPS에 추가 (color: #14b8a6, initial: CA)
+  - app/login/page.tsx 허용 계정 목록에 추가 (h_1q6h54)
+  - 로그인: admin-candice / candice2026!
+  - Supabase auth.users에 계정 존재 확인
+
+### pdallday panel-8 (public/pdallday/index.html)
+- panel-8 주요 안내사항 전면 재작성 (정적 HTML):
+  - 예약절차 4단계 / 공통유의사항 4박스 / 패키지별 예약금&정원
+  - 환불규정 테이블 / 현지추가비용 / 보호자추가요금 / 유료서비스 / 2026 휴무캘린더
+  - 보호자 추가 요금: DH 17만 / JP 18만 / C9 15만
+  - SSP/방학 섹션 제거, 식사 단어 제거
+
+### 다음 세션 작업 목록
+1. 학생관리 탭: 날짜 빠른순 정렬 + 월별 필터 (academyStart 기준)
+2. 손님용 인보이스 추가 금액 항목 (어드민 결제 정보 폼에 표시 확인 필요)
+3. pdallday panel-8 휴무 테이블: 센터 휴무 = 12/31, 1/1만 / 드림센터 = mf-2025 tab-7 기준
+4. Supabase: additions jsonb 컬럼 추가 필요
+   ALTER TABLE bookings ADD COLUMN IF NOT EXISTS additions jsonb DEFAULT '[]';
+5. booker_english 컬럼 확인:
+   ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booker_english text;
