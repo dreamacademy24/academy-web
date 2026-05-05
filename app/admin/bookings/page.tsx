@@ -317,7 +317,8 @@ export default function AdminBookingsPage(){
       }));
       const patchR=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,{
         method:"PATCH",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
-        body:JSON.stringify({students:JSON.stringify(studentsJsonb)}),
+        // students 컬럼은 jsonb — 배열 그대로 전송 (JSON.stringify 이중 래핑 금지)
+        body:JSON.stringify({students:studentsJsonb}),
       });
       if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);alert("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
     }

@@ -529,11 +529,27 @@ function InvoicePageInner(){
   /* ── DB에서 예약 로드 ── */
   useEffect(()=>{
     if(!bookingId) return;
-    supabase.from("bookings").select("*").eq("id",bookingId).single().then(({data})=>{
+    supabase.from("bookings").select("*").eq("id",bookingId).single().then(async({data})=>{
       if(!data) return;
       setBooker({name:data.booker_name,englishName:data.booker_english||"",balanceDate:data.balance_date||""});
-      const sts=typeof data.students==="string"?JSON.parse(data.students):data.students;
-      if(sts&&sts.length>0) setStudents(sts.map((s:any,i:number)=>({...s,id:i+1,academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"2",photo:s.photo||"O"})));
+      let sts:any[]=[];
+      try{const parsed=typeof data.students==="string"?JSON.parse(data.students):data.students;if(Array.isArray(parsed))sts=parsed;}catch{}
+      // JSONB가 비어있거나 이름이 모두 비어있으면 students 테이블 fallback
+      const hasName=(s:any)=>String(s?.korName||s?.name_kr||s?.engName||s?.name_en||"").trim().length>0;
+      if(sts.length===0||!sts.some(hasName)){
+        const {data:fromTable}=await supabase.from("students").select("*").eq("booking_id",bookingId);
+        if(fromTable&&fromTable.length>0){
+          sts=fromTable.map((r:any)=>({
+            korName:r.name_kr||"",engName:r.name_en||"",
+            age:r.age||"",grade:r.class_type||"",
+            academyStart:r.academy_start||"",academyEnd:r.academy_end||"",
+            academyWeeks:"",photo:r.photo_allowed===false?"X":"O",
+            name_kr:r.name_kr||"",name_en:r.name_en||"",
+            birth_date:r.age||"",level:r.level||"",
+          }));
+        }
+      }
+      if(sts.length>0) setStudents(sts.map((s:any,i:number)=>({...s,id:i+1,academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"2",photo:s.photo||"O"})));
       setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:data.house_no||"",specialRequest:data.special_request||""}));
       setAdminOnly({agency:data.agency||"개인",ssp:data.ssp||"O"});
       if(data.checkin_date) setA1CI(data.checkin_date);
@@ -1040,13 +1056,15 @@ function InvoicePageInner(){
           <div style={{padding:16,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,fontSize:13,lineHeight:1.8}}>
             <div style={{fontWeight:800,color:"#1f2937",marginBottom:4}}>Bank Transfer</div>
             <div style={{color:"#374151"}}>Bank: Hana Bank</div>
-            <div style={{color:"#374151"}}>Account No.: 218-910421-22507</div>
             <div style={{color:"#374151"}}>Account Holder: Lee Jina</div>
             <div style={{fontWeight:800,color:"#1f2937",marginTop:12,marginBottom:4}}>PayPal</div>
             <div style={{color:"#374151"}}>dreamacademyph@gmail.com</div>
           </div>
         </div>
 
+        <div style={{fontSize:12,color:"#6b21a8",padding:"16px 20px",background:"#fdf4ff",border:"1px solid #fae8ff",borderRadius:12,marginTop:16}}>
+          Please confirm the total amount and refund policy before finalizing your reservation.
+        </div>
       </div>
       <div className="pb no-print">
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
