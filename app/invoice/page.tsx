@@ -447,7 +447,7 @@ function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
   const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
 }
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
-function al(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
+function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function mp(t:AT){return t==="dreamhouse"?6:4;}
 function extraRate(t:AT){return t==="cubenine"?250000:340000;}
@@ -920,7 +920,7 @@ function InvoicePageInner(){
         <div className="is"><div className="ist">Stay Details</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Check-in</td><td>{overallCI||"-"}</td><td className="lb">Check-out</td><td>{overallCO||"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
             <tr><td className="lb">Adults</td><td>{cP}</td><td className="lb">Children</td><td>{cK}</td></tr>
           </tbody></table>
         </div>
@@ -937,7 +937,7 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">Pickup</td><td>{checkin.pickup==="O"?"Yes":"No"}</td><td className="lb">Drop-off</td><td>{checkin.drop==="O"?"Yes":"No"}</td></tr>
             <tr><td className="lb">Flight In</td><td>{checkin.flightIn||"TBA"}</td><td className="lb">Flight Out</td><td>{checkin.flightOut||"TBA"}</td></tr>
-            <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
           </tbody></table>
         </div>
 
@@ -977,7 +977,7 @@ function InvoicePageInner(){
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
             <tr><td className="lb">Check-in</td><td>{overallCI?`${overallCI} 15:00PM`:"-"}</td><td className="lb">Check-out</td><td>{overallCO?`${overallCO} 12noon`:"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
           </tbody></table>
         </div>
 
@@ -1051,16 +1051,6 @@ function InvoicePageInner(){
             </tbody></table>
           </div>
         )}
-
-        <div className="is"><div className="ist">Payment Method</div>
-          <div style={{padding:16,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,fontSize:13,lineHeight:1.8}}>
-            <div style={{fontWeight:800,color:"#1f2937",marginBottom:4}}>Bank Transfer</div>
-            <div style={{color:"#374151"}}>Bank: Hana Bank</div>
-            <div style={{color:"#374151"}}>Account Holder: Lee Jina</div>
-            <div style={{fontWeight:800,color:"#1f2937",marginTop:12,marginBottom:4}}>PayPal</div>
-            <div style={{color:"#374151"}}>dreamacademyph@gmail.com</div>
-          </div>
-        </div>
 
         <div style={{fontSize:12,color:"#6b21a8",padding:"16px 20px",background:"#fdf4ff",border:"1px solid #fae8ff",borderRadius:12,marginTop:16}}>
           Please confirm the total amount and refund policy before finalizing your reservation.
@@ -1196,7 +1186,7 @@ function InvoicePageInner(){
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
-        <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
+        <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"미정")}</td></tr>
         <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
         {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
       </tbody></table>
