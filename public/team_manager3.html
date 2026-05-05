@@ -1949,17 +1949,16 @@ function showSyncBadge(){
 }
 
 const EMPS=[
-  {id:'jenna',name:'Jenna', color:'#6366f1',initial:'J', role:'부원장'},
   {id:'jamie',name:'Jamie', color:'#0ea5e9',initial:'JA'},
-  {id:'yuna', name:'Yuna',  color:'#ec4899',initial:'Y'},
   {id:'hanny',name:'Hanny', color:'#f59e0b',initial:'H'},
   {id:'sage', name:'Sage',  color:'#10b981',initial:'S'},
   {id:'eric', name:'Eric',  color:'#f97316',initial:'E'},
   {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU'},
+  {id:'candice',name:'Candice', color:'#14b8a6',initial:'CA'},
 ];
 const CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
 const ALL=[...EMPS,CEO];
-function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jamie');}
+function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jamie');}
 function getP(id){return ALL.find(e=>e.id===id);}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;
@@ -1982,7 +1981,7 @@ let goals=ld('tm_goals',[]);
 let noticeReads=ld('tm_read',{});
 
 
-const DEFAULT_PASSWORDS={jenna:'jenna1234',jamie:'jamie1234',yuna:'yuna1234',hanny:'hanny1234',sage:'sage1234',eric:'eric1234',jun:'jun1234',ceo:'ceo1234'};
+const DEFAULT_PASSWORDS={jamie:'jamie1234',hanny:'hanny1234',sage:'sage1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',ceo:'ceo1234'};
 let PASSWORDS=ld('tm_pw',DEFAULT_PASSWORDS);
 Object.keys(DEFAULT_PASSWORDS).forEach(function(k){if(!PASSWORDS[k])PASSWORDS[k]=DEFAULT_PASSWORDS[k];});
 sv('tm_pw',PASSWORDS);
@@ -2018,9 +2017,9 @@ function toast(msg,color){
 function buildLogin(){
   const o=document.getElementById('loginOpts');o.innerHTML='';
   ALL.forEach(function(u){
-    const isA=u.id==='ceo'||u.id==='jenna';
+    const isA=u.id==='ceo';
     const btn=document.createElement('button');btn.className='login-btn'+(isA?' is-admin':'');
-    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.name;
+    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.name;
     btn.innerHTML='<div class="login-av" style="background:'+u.color+'">'+u.initial+'</div><span>'+lbl+'</span>';
     btn.onclick=function(){selectUser(u);};
     o.appendChild(btn);
@@ -2032,8 +2031,8 @@ function selectUser(u){
   document.getElementById('loginStep2').style.display='block';
   document.getElementById('loginErr').style.display='none';
   document.getElementById('loginPwInp').value='';
-  const isA=u.id==='ceo'||u.id==='jenna';
-  const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?'👑 '+u.name+' (부원장)':u.name;
+  const isA=u.id==='ceo';
+  const lbl=u.id==='ceo'?'👑 CEO (대표)':u.name;
   document.getElementById('loginSelUser').innerHTML=
     '<div class="login-av" style="background:'+u.color+';width:36px;height:36px;border-radius:10px;font-size:12px;font-weight:800">'+u.initial+'</div>'+
     '<div><div style="font-size:15px;font-weight:700">'+lbl+'</div><div style="font-size:11px;color:var(--text3)">비밀번호를 입력하세요</div></div>';
@@ -2065,7 +2064,7 @@ function doLogin(u){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sbName').textContent=u.name;
-  document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
+  document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;av.style.borderRadius='10px';
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
@@ -2539,7 +2538,7 @@ function isNewTask(t){
 function newBadgeHtml(t){
   return isNewTask(t)?'<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-left:4px;vertical-align:middle">NEW</span>':'';
 }
-function isManagerCU(){return CU&&(CU.id==='ceo'||CU.id==='jenna');}
+function isManagerCU(){return CU&&CU.id==='ceo';}
 function shortCreated(d){
   if(!d) return '';
   var dt=new Date(d);
@@ -3114,7 +3113,7 @@ function renderEmpSidebar(empId){
   var top=document.getElementById('empSbWork');if(!top)return;
   var emp=getP(empId);
   var isOwner=CU&&CU.id===empId;
-  // 모든 직원(ceo/jenna 포함) 본인 업무만 표시
+  // 모든 직원(ceo 포함) 본인 업무만 표시
   var pool=tasks.filter(function(t){return t.assignee===empId||(t.assignees&&t.assignees.indexOf(empId)>=0);});
   var canSee=isAdmin()||isOwner;
   if(!canSee) pool=pool.filter(function(t){return t.shared;});
@@ -3196,8 +3195,8 @@ function setEmpTab(tab){
 }
 function renderEmpApvTab(empId){
   var el=document.getElementById('empSbApv');if(!el)return;
-  var isCeoJenna=CU&&(CU.id==='ceo'||CU.id==='jenna');
-  if(isCeoJenna){
+  var isCeo=CU&&CU.id==='ceo';
+  if(isCeo){
     sbGet('staff_approvals','order=created_at.desc').then(function(rows){
       var pending=(rows||[]).filter(function(a){return a.status==='pending'&&(a.to_id===CU.id||a.to_id==='both');});
       var approved=(rows||[]).filter(function(a){return a.status==='approved';});
@@ -3355,8 +3354,6 @@ function _empApvShowForm(){
     '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:7px">결재자</div>'+
     '<div style="display:flex;gap:6px;margin-bottom:12px">'+
     '<label style="flex:1;padding:8px;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:7px;font-size:12px;font-weight:600;color:#1e40af;text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked style="display:none"> CEO</label>'+
-    '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="jenna" style="display:none"> Jenna</label>'+
-    '<label style="flex:1;padding:8px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:12px;font-weight:600;color:var(--text3);text-align:center;cursor:pointer"><input type="radio" name="apvTo" value="both" style="display:none"> 둘 다</label>'+
     '</div>'+
     '<div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151">\ud83d\udcce 파일 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>'+
     '<button onclick="submitApproval(\''+curEmpId+'\')" style="width:100%;padding:11px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button>'+
@@ -3826,7 +3823,7 @@ function renderApprovalPage(empId){
   var wrap=document.getElementById('empApprovalWrap');
   if(!wrap)return;
   wrap.innerHTML='<div style="padding:20px;text-align:center;color:#94a3b8">로딩 중...</div>';
-  var isApprover=CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jun');
+  var isApprover=CU&&(CU.id==='ceo'||CU.id==='jun');
   var query='or=(from_id.eq.'+empId;
   if(isApprover)query+=',to_id.eq.'+CU.id+',to_id.eq.both';
   query+=')&order=created_at.desc';
@@ -3839,8 +3836,6 @@ function renderApprovalPage(empId){
     html+='<textarea id="apvBody" placeholder="결재 내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>';
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:13px;font-weight:600">결재자:</span>';
     html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
-    html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="jenna"> Jenna (부원장)</label>';
-    html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="both"> 둘 다</label>';
     html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
     html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
     var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
@@ -4040,7 +4035,7 @@ function submitApproval(empId){
       toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");
       _apvFiles=[];renderApvFilePreview([]);
       renderApprovalPage(empId);renderEmpApvTab(curEmpId);_empApvShowForm();
-      var _apvIds=_apvTo==='both'?['ceo','jenna']:[_apvTo];
+      var _apvIds=[_apvTo];
       createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));
     });
 }
@@ -5279,7 +5274,7 @@ function saveTask(){
       var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null,priority:_priority};
       _newTaskId=_newT.id;
       tasks.unshift(_newT);
-      if(!assignee)createNotifMultiple(['ceo','jenna'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));
+      if(!assignee)createNotifMultiple(['ceo'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));
     }
     rebuildIdx();svTasks();
   }catch(err){
@@ -6232,7 +6227,7 @@ var _lastCheckKey='tm_last_check';
 function checkUpdates(){
   var lastCheck=parseInt(localStorage.getItem(_lastCheckKey)||'0');
   var now=Date.now();var updates=[];
-  if(CU&&(CU.id==='ceo'||CU.id==='jenna'||CU.id==='jun')){
+  if(CU&&(CU.id==='ceo'||CU.id==='jun')){
     var approvals=ld('tm_approvals',[]);
     var pending=approvals.filter(function(a){return a.status==='pending'&&a.ts>lastCheck;});
     if(pending.length>0)updates.push({icon:'\uD83D\uDCCB',msg:'\uC0C8 \uACB0\uC7AC '+pending.length+'\uAC74\uC774 \uB300\uAE30 \uC911\uC785\uB2C8\uB2E4',action:function(){showEmpPage(CU.id);setTimeout(function(){var btns=document.querySelectorAll('#empTabs .tab-btn');btns.forEach(function(b){if(b.textContent.indexOf('\uACB0\uC7AC')>-1)b.click();});},200);}});

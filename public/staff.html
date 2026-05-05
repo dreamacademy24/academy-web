@@ -484,16 +484,15 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 //  CONSTANTS
 // ────────────────────────────────────────
 const EMPS = [
-  { id:'jenna', name:'Jenna',  color:'#6366f1', initial:'J',  role:'부원장' },
   { id:'jamie', name:'Jamie',  color:'#0ea5e9', initial:'JA' },
-  { id:'yuna',  name:'Yuna',   color:'#ec4899', initial:'Y'  },
   { id:'hanny', name:'Hanny',  color:'#f59e0b', initial:'H'  },
   { id:'sage',  name:'Sage',   color:'#10b981', initial:'S'  },
+  { id:'candice', name:'Candice', color:'#14b8a6', initial:'CA' },
 ];
 const CEO = { id:'ceo', name:'CEO', color:'#1e3a5f', initial:'C', role:'대표' };
 const ALL_PEOPLE = [...EMPS, CEO];
 
-function isAdmin(){ return CU && (CU.id==='ceo' || CU.id==='jenna'); }
+function isAdmin(){ return CU && CU.id==='ceo'; }
 function getEmp(id){ return ALL_PEOPLE.find(e=>e.id===id); }
 
 // ────────────────────────────────────────
@@ -516,9 +515,9 @@ if(!tasks.length){
   const d=n=>{const dt=new Date();dt.setDate(dt.getDate()+n);return dt.toISOString().split('T')[0];};
   const today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   tasks=[
-    {id:uid(),title:'클라이언트 미팅 자료 준비',assignee:'jenna',due:d(2),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'클라이언트 미팅 자료 준비',assignee:'candice',due:d(2),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'SNS 4월 콘텐츠 기획',assignee:'jamie',due:d(7),createdAt:today,note:'',done:false,files:[],shared:true},
-    {id:uid(),title:'3월 정산 마감',assignee:'yuna',due:d(1),createdAt:today,note:'',done:false,files:[],shared:true},
+    {id:uid(),title:'3월 정산 마감',assignee:'candice',due:d(1),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'디자인 시안 2차 수정',assignee:'hanny',due:d(3),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'계약서 검토',assignee:'sage',due:d(4),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'Q2 전략 기획서 작성',assignee:'',due:d(5),createdAt:today,note:'전체 공유',done:false,files:[],shared:true},
@@ -564,10 +563,10 @@ function dueLabel(due){
 function buildLogin(){
   const opts=document.getElementById('loginOpts');opts.innerHTML='';
   ALL_PEOPLE.forEach(u=>{
-    const isAdm=u.id==='ceo'||u.id==='jenna';
+    const isAdm=u.id==='ceo';
     const btn=document.createElement('button');
     btn.className='login-btn'+(isAdm?' adm':'');
-    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.id==='jenna'?`👑 ${u.name} (부원장)`:u.name;
+    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.name;
     btn.innerHTML=`<div class="l-av" style="background:${u.color}">${u.initial}</div><span>${lbl}</span>`;
     btn.onclick=()=>doLogin(u);
     opts.appendChild(btn);
@@ -578,7 +577,7 @@ function doLogin(u){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('sbName').textContent=u.name;
-  document.getElementById('sbRoleLbl').textContent=u.id==='ceo'?'CEO':u.id==='jenna'?'부원장':'직원';
+  document.getElementById('sbRoleLbl').textContent=u.id==='ceo'?'CEO':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   // admin badge
   const badge=document.getElementById('adminBadge');
