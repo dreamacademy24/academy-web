@@ -112,14 +112,14 @@ export default function AdminBookingsPage(){
     academyStart:string; academyEnd:string; academyWeeks:string; photo:string;
   }
   const [stuSearch,setStuSearch]=useState("");
-  const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:false});
+  const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
   const _now=new Date();
   const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
   const [stuMonthNum,setStuMonthNum]=useState<string>(String(_now.getMonth()+1).padStart(2,"0")); // "" = 전체, "01"~"12"
   const [stuSpecialPopup,setStuSpecialPopup]=useState<{booking_id:string;current:string}|null>(null);
   const [stuSpecialEdit,setStuSpecialEdit]=useState("");
 
-  // 모든 예약(bookings)의 students JSONB를 평탄화
+  // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
     try{
       const arr=typeof b.students==="string"?JSON.parse(b.students):b.students;
@@ -144,7 +144,7 @@ export default function AdminBookingsPage(){
         academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"",photo:s.photo||"",
       }));
     }catch{return[];}
-  });
+  }).sort((a,b)=>new Date(a.academyStart||"9999").getTime()-new Date(b.academyStart||"9999").getTime());
 
   function exportStudentsXlsx(rows:StudentRow[]){
     const data=rows.map(s=>({
