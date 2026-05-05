@@ -71,7 +71,7 @@ export default function AdminBookingsPage(){
   const [mainTab,setMainTab]=useState<"list"|"invoice"|"receipt"|"confirm"|"estimate"|"students">("list");
   const [confirmSearch,setConfirmSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
-  const ASSIGNEES=["May","Jamin","Yuna","Jena"];
+  const ASSIGNEES=["May","Jamin","Candice"];
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
   const confirmStatuses=["전체","영수증발행","결제완료","완료"];
 

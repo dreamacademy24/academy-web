@@ -150,7 +150,7 @@ function GuideInner() {
           <h2>🔐 로그인</h2>
           <ul style={{paddingLeft:18}}>
             <li style={{fontSize:13,lineHeight:'1.9',color:'#4a5568'}}><code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>dreamacademyph.com/admin</code> 접속</li>
-            <li style={{fontSize:13,lineHeight:'1.9',color:'#4a5568'}}>개인 아이디/비번으로 로그인 (admin-may, admin-jenna 등)</li>
+            <li style={{fontSize:13,lineHeight:'1.9',color:'#4a5568'}}>개인 아이디/비번으로 로그인 (admin-may, admin-candice 등)</li>
             <li style={{fontSize:13,lineHeight:'1.9',color:'#4a5568'}}>로그인 후 자동으로 관리자 허브(<code style={{background:'#f1f5f9',padding:'1px 6px',borderRadius:4,fontSize:12,color:'#1a6fc4',fontFamily:'monospace'}}>/admin/hub</code>)로 이동</li>
             <li style={{fontSize:13,lineHeight:'1.9',color:'#4a5568'}}>24시간 자동 로그인 유지</li>
           </ul>
@@ -339,7 +339,7 @@ function GuideInner() {
                 <h3><span className="tag" style={{background:"#16a34a"}}>지정</span> 담당자 지정</h3>
                 <ul>
                   <li>어드민 부킹 리스트에서 담당자 드롭다운으로 지정</li>
-                  <li>May / Jamin / Yuna / Jena 중 선택</li>
+                  <li>May / Jamin / Candice 중 선택</li>
                 </ul>
               </div>
             </div>
