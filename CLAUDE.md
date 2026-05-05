@@ -1071,3 +1071,102 @@ special_request, ssp
    ALTER TABLE bookings ADD COLUMN IF NOT EXISTS additions jsonb DEFAULT '[]';
 5. booker_english 컬럼 확인:
    ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booker_english text;
+
+## 2026-05-06 세션 (인보이스/예약상세/학생관리 대규모 개선)
+
+### 손님용 인보이스 (app/invoice/page.tsx)
+- 통학형 Check-in/Check-out → Class Start/Class End 레이블 변경 (resort/guest/email body 3곳)
+- DB checkout_date 우선 사용
+  · overallCO: dbCheckout state 추가, dbCheckout || (combo?a2CO:a1CO)
+  · 학생 academyEnd 표시 폴백: s.academyEnd || calcAcademyEnd(...)
+- useEffect에서 academyEnd stale 덮어쓰기 방지 (s.academyEnd || calc(...) 패턴)
+- LOCAL PAYMENT 자동 항목 prepend (autoLocals useMemo)
+  · 보호자(cP)당 1줄: '1인 SSP / SSP I card' 11,000 PHP
+  · 주니어 학생 ≥1: '교재비 - 주니어 1권' 350 PHP
+  · 킨더 학생 ≥1: '킨더 - 재료비 N주 X,XXX페소' (4주=2,500/2주=1,750/비례)
+  · adultCount = Math.max(1, Number(cP)||1) 방어 — cP=0/NaN 케이스에도 SSP 1줄 보장
+- guest invoice 기타: PAYMENT METHOD 섹션 제거, 'Please confirm...' 안내 단일 라인 유지
+
+### 예약 상세 (app/admin/bookings/[id]/page.tsx)
+- 기본정보 탭 수동 편집 기능
+  · ✏️수정 → 💾저장/취소 버튼 바
+  · 편집 가능: 예약자, 연락처, 체크인/아웃, 기간(주), 예약유형(드롭다운 6종), 유학원, 항공편(text), 픽업/드랍장소
+  · 통학형이면 체크인 라벨이 '수업시작', 체크아웃이 '수업종료'
+  · 저장: PATCH /api/bookings/[id] (bookings_new 우선, bookings 폴백, service_role)
+- 학생 탭 수동 편집 (모든 학생)
+  · DB row(UUID) + booking_json(JSONB-only) 둘 다 ✏️수정 가능
+  · idx 기반 매칭으로 JSON-only 학생도 식별
+  · 편집: 한글/영문이름, 생년도, 킨더/주니어 select, academy 시작/종료, SSP/사진허용/픽드롭/주소/특이사항
+  · 저장 분기: DB row 있으면 PATCH students 테이블 + PUT bookings.students JSONB / 없으면 PUT만
+- 픽업/체크인 탭: 기본 픽업정보 표시(b.pickup_place/drop_off) + row 인라인 편집
+- 셔틀 탭: row 인라인 편집 (날짜/시간/장소/인원/왕복/상태/메모)
+- 신규 API: /api/bookings/[id]/update-row
+  · PATCH: {table:'students'|'pickup_requests'|'shuttle_requests', rowId, fields} — 화이트리스트, booking_id 검증
+  · PUT: {studentsJsonb} — bookings.students JSONB 전체 동기화
+
+### 학생관리 (app/admin/bookings/page.tsx)
+- 리스트: 상태/잔금일 컬럼 제거 (사용자 요청)
+- 킨더/주니어 컬럼: grade || level 매핑으로 한글 라벨 표시
+- 달력 뷰 추가 (📋리스트/📅달력 토글, stuView state)
+  · 주별 월~일 7컬럼 + 좌측 주별 요약 (Kinder-N/Junior-N/합계 J/K)
+  · 셀 콘텐츠: M/D 날짜, 월요일에 'N New in' 초록 배지, 금요일에 'Graduation/N out' 빨강 배지
+  · 학생 표기: '+ 한글이름 영문이름(나이)' (academyStart) / '- ...' (academyEnd)
+  · ← 이전달 / 다음달 → 네비 (stuYear/stuMonthNum 동기 갱신)
+  · timezone-safe calYmd 헬퍼 (toISOString 회피)
+  · genCalWeeks(year, month): 월요일 시작 주 배열 생성
+  · getStudentAge(s): age 4자리=현재년-year, 1~2자리=그대로
+- academyStart 정확화 (김희영 5/9 → 5/11 케이스)
+  · getNextMonday(dateStr) 헬퍼 신설
+  · 비통학형: studentsList map에서 항상 getNextMonday(checkin_date)로 derive (JSONB stale 무시)
+  · 통학형: JSONB 값 우선 (사용자 수동 입력 보존)
+  · saveNewBooking studentsJsonb도 동일 로직 적용 (향후 stale 방지)
+- 월 필터 overlap (start<=monthEnd && end>=monthStart)로 변경 (시작월 정확 일치 → 기간 걸침)
+- academyStart 빠른순 .sort() 적용 + stuSort 기본 asc:true
+
+### 드림하우스 룸 캘린더 (app/dreamhouse-rooms/page.tsx)
+- toDateStr timezone 오류 수정 (toISOString → getFullYear/getMonth/getDate)
+  · KST/PHT에서 로컬 자정이 UTC 변환 시 하루 밀리던 버그 — 체크인 5/9 인데 5/10부터 블록되던 현상
+- 날짜 비교를 문자열 직접 비교로 변경 (lexicographic 안전)
+- 체크인 당일 ~ 체크아웃 당일까지 inclusive 양 끝 블록
+- isCheckout 단순화: cellBookings.some(b => b.checkout_date === dateStr)
+
+### 예약 접수 페이지 (app/booking/page.tsx)
+- 통학형 선택 시 섹션4 분기 렌더 (showAccom 가드 제거)
+  · 통학형: '4️⃣ 수업 일정' — 수업시작/수업종료 manual date input + '통학형은 픽업/항공편이 없습니다' 안내
+  · 그 외: 기존 '4️⃣ 체크인 · 항공편' 유지
+- 검증 강화: 통학형도 checkIn 필수 + checkOut 누락도 차단
+
+### 신규예약 모달 (app/admin/bookings/page.tsx)
+- 통학형 선택 시 체크인→'수업시작' / 체크아웃→'수업종료' 레이블 인라인 분기
+
+### 확정예약 탭 특이사항 컬럼
+- 22자 truncate + '...' 표시
+- title 속성으로 hover 툴팁
+- 클릭 토글 (expandedSr Set state)으로 셀 확장/접힘
+- 펼친 상태는 maxWidth:none, 접힘 상태는 160px
+
+### 데이터 보정
+- 차영리 예약 (DA-20260505-956940) Supabase 직접 PATCH
+  · checkout_date: 2026-05-26 → 2026-06-05
+  · students[0].academyEnd: "" → "2026-06-05"
+  · students[0].academyStart: "2026-05-09" → "2026-05-11" (Mon)
+
+## 다음 섹션 예정 작업
+
+### [최우선] 전체 가독성 및 업무 효율성 재검토
+- 페이지 순회로 버그·UX 문제 스캔:
+  · 예약 접수 (/booking)
+  · 어드민 예약관리 전체 탭 (부킹리스트/인보이스/영수증/확정예약/학생관리)
+  · 예약 상세 전체 탭 (기본정보/픽업체크인/학생/인보이스/튜터/셔틀/코멘트)
+  · 손님용 인보이스 (/invoice)
+  · 드림하우스 룸 캘린더 (/dreamhouse-rooms)
+  · 견적 탭
+- 불편한 UX 개선 리스트 작성
+- 발견 버그 우선순위 정리 후 일괄 수정
+
+### 기존 우선순위 (P1~P5)
+1. [P1] 견적서 포함/불포함 박스
+2. [P2] 예약 페이지 동의 체크박스
+3. [P3] 인보이스 현지 지불 자동화 (킨더 재료비 자동 채움까지 미완 — 부분 완료)
+4. [P4] 신규예약 모달 6가지 유형 정비
+5. [P5] 견적서 체크아웃 날짜 자동 표시
