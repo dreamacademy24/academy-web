@@ -97,13 +97,33 @@ function getStudentAge(s:{age?:string}):string{
 }
 function acaStart(b:any):string{
   if(!b.checkin_date)return"-";
-  const d=new Date(b.checkin_date);d.setDate(d.getDate()+1);
-  if(d.getDay()===0)d.setDate(d.getDate()+1);
-  return d.toISOString().slice(0,10);
+  const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+  if(isCommute){
+    // 통학형: JSONB academyStart 우선, 없으면 checkin_date 그대로
+    try{
+      const a=typeof b.students==="string"?JSON.parse(b.students):b.students;
+      if(Array.isArray(a)&&a[0]?.academyStart)return a[0].academyStart;
+    }catch{}
+    return b.checkin_date;
+  }
+  // 비통학형: 다음 월요일
+  return getNextMonday(b.checkin_date)||"-";
 }
 function acaEnd(b:any):string{
-  const start=acaStart(b);if(start==="-")return"-";
-  try{const a=typeof b.students==="string"?JSON.parse(b.students):b.students;if(!Array.isArray(a)||!a[0]?.weeks)return"-";return addWeeks(start,Number(a[0].weeks));}catch{return"-";}
+  const start=acaStart(b);if(start==="-"||!start)return"-";
+  // 통학형: checkout_date 우선
+  const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+  if(isCommute&&b.checkout_date)return b.checkout_date;
+  // booking.accom_weeks 우선, 없으면 students[0].academyWeeks 폴백
+  let weeks=Number(b.accom_weeks)||0;
+  if(!weeks){
+    try{
+      const a=typeof b.students==="string"?JSON.parse(b.students):b.students;
+      if(Array.isArray(a)&&a[0]?.academyWeeks)weeks=Number(a[0].academyWeeks)||0;
+    }catch{}
+  }
+  if(!weeks)return"-";
+  return calcAcademyEnd(start,weeks)||"-";
 }
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
