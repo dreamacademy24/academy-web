@@ -455,7 +455,16 @@ function extraRate(t:AT){return t==="cubenine"?250000:340000;}
 /* ── 타입 ── */
 interface Disc{id:number;name:string;amount:number}
 interface LC{id:number;name:string;amount:string}
-interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string}
+interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string;name_kr?:string;name_en?:string;birth_date?:string;level?:string}
+
+/* 한글 이름으로 students 테이블에서 영문 이름 자동 조회 (입력값 미존재 시 빈 문자열) */
+async function autofillEngName(korName:string):Promise<string>{
+  const k=korName.trim();
+  if(!k) return "";
+  const {data}=await supabase.from("students").select("name_en").eq("name_kr",k);
+  const found=(data||[]).find(r=>r.name_en&&r.name_en.trim());
+  return found?.name_en||"";
+}
 function getNextMonday(dateStr:string){const d=new Date(dateStr);const day=d.getDay();const daysUntilMonday=(8-day)%7;d.setDate(d.getDate()+daysUntilMonday);return d.toISOString().split('T')[0];}
 // 아카데미 종료일 계산 (월~금 학원 운영 가정)
 // start = 월요일, weeks = 운영 주차 → end = start + (weeks-1)*7 + 4 (금요일)
@@ -881,7 +890,7 @@ function InvoicePageInner(){
       </div>
       <div className="iv" id="resort-confirmation">
         <div className="it">
-          <div><div className="il">DREAM ACADEMY</div><div className="ils">Cebu, Philippines</div></div>
+          <div><div className="il">DREAM COMPANY</div><div className="ils">Cebu, Philippines</div></div>
           <div className="itr"><h1 style={{fontSize:22,letterSpacing:"0.05em"}}>RESERVATION<br/>CONFIRMATION</h1><p>Date: {new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p></div>
         </div>
 
@@ -923,7 +932,7 @@ function InvoicePageInner(){
         )}
 
         <div style={{marginTop:32,padding:20,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
-          This reservation confirmation is issued by Dream Academy Philippines.<br/>
+          This reservation confirmation is issued by Dream Company Philippines.<br/>
           For any inquiries, please contact us at dreamacademyph@gmail.com
         </div>
       </div>
@@ -931,7 +940,7 @@ function InvoicePageInner(){
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back</button>
         <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
         <button style={{padding:"12px 24px",background:"#ea580c",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}
-          onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\nCheck-in: "+(overallCI||"TBA")+"\nCheck-out: "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Academy Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
+          onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\nCheck-in: "+(overallCI||"TBA")+"\nCheck-out: "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Company Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
           Email to Resort
         </button>
       </div>
@@ -943,7 +952,7 @@ function InvoicePageInner(){
       </div>
       <div className="iv" id="guest-invoice">
         <div className="it">
-          <div><div className="il">DREAM ACADEMY</div><div className="ils">Cebu, Philippines</div></div>
+          <div><div className="il">DREAM COMPANY</div><div className="ils">Cebu, Philippines</div></div>
           <div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div>
         </div>
 
@@ -958,9 +967,13 @@ function InvoicePageInner(){
 
         <div className="is"><div className="ist">Student Information</div>
           <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
-            {students.map((s,i)=>(
-              <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>
-            ))}
+            {students.map((s,i)=>{
+              const name=s.engName||s.name_en||s.korName||s.name_kr||"-";
+              const age=s.age||s.birth_date||"-";
+              const courseRaw=s.grade||s.level||"";
+              const course=courseRaw==="킨더"?"Kinder":courseRaw==="주니어"?"Junior":(courseRaw||"-");
+              return <tr key={s.id}><td>{i+1}</td><td>{name}</td><td>{age}</td><td>{course}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>;
+            })}
           </tbody></table>
         </div>
 
@@ -1034,11 +1047,6 @@ function InvoicePageInner(){
           </div>
         </div>
 
-        <div className="ift">
-          Please confirm total amount and refund policy. We are not responsible for any issues arising from failure to do so.<br/>
-          For any inquiries, please contact Dream Academy.<br/>
-          Thank you.
-        </div>
       </div>
       <div className="pb no-print">
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
@@ -1085,7 +1093,7 @@ function InvoicePageInner(){
       <div className="sc" key={s.id}>
         {students.length>1&&<button className="sc-del" onClick={()=>rmStudent(s.id)}>X</button>}
         <div className="sc-num">학생 {idx+1}</div>
-        <div className="f-row"><div className="f-group"><label className="f-label">한글이름</label><input className="f-input" placeholder="홍민준" value={s.korName} onChange={e=>upStudent(s.id,"korName",e.target.value)}/></div><div className="f-group"><label className="f-label">영문이름</label><input className="f-input" placeholder="HONG MINJUN" value={s.engName} onChange={e=>upStudent(s.id,"engName",e.target.value.toUpperCase())}/></div></div>
+        <div className="f-row"><div className="f-group"><label className="f-label">한글이름</label><input className="f-input" placeholder="홍민준" value={s.korName} onChange={e=>upStudent(s.id,"korName",e.target.value)} onBlur={async()=>{if(s.korName.trim()&&!s.engName.trim()){const eng=await autofillEngName(s.korName);if(eng)upStudent(s.id,"engName",eng.toUpperCase());}}}/></div><div className="f-group"><label className="f-label">영문이름</label><input className="f-input" placeholder="HONG MINJUN" value={s.engName} onChange={e=>upStudent(s.id,"engName",e.target.value.toUpperCase())}/></div></div>
         <div className="f-row"><div className="f-group"><label className="f-label">나이</label><input className="f-input" type="number" value={s.age} onChange={e=>upStudent(s.id,"age",e.target.value)}/></div><div className="f-group"><label className="f-label">킨더/주니어</label><select className="f-select" value={s.grade} onChange={e=>upStudent(s.id,"grade",e.target.value)}><option value="킨더">킨더</option><option value="주니어">주니어</option></select></div></div>
         <div className="f-row"><div className="f-group"><label className="f-label">아카데미 시작일</label><input className="f-input" type="date" value={s.academyStart} onChange={e=>upStudent(s.id,"academyStart",e.target.value)}/></div><div className="f-group"><label className="f-label">기간</label><select className="f-select" value={s.academyWeeks} onChange={e=>upStudent(s.id,"academyWeeks",e.target.value)}>{Array.from({length:11},(_,i)=>i+2).map(v=><option key={v} value={v}>{v}주</option>)}</select></div><div className="f-group"><label className="f-label">아카데미 종료일</label><input className="f-input auto" type="date" value={s.academyEnd} readOnly/></div></div>
         <div className="f-row"><div className="f-group"><label className="f-label">사진촬영 허용</label><select className="f-select" value={s.photo} onChange={e=>upStudent(s.id,"photo",e.target.value)}><option value="O">O</option><option value="X">X</option></select><div className="f-hint">{s.photo === "X" ? "사진제공 없음" : "인스타그램 등 SNS 활용 / 미허용 시 별도 사진 제공 없음"}</div></div></div>
@@ -1153,7 +1161,7 @@ function InvoicePageInner(){
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
+      <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
         {students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
       </tbody></table></div>
 
@@ -1176,7 +1184,7 @@ function InvoicePageInner(){
       </tbody></table>
       <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>
 
-      <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림아카데미로 문의주세요.<br/>감사합니다.</div>
+      <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
     <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={saveAsImage}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
