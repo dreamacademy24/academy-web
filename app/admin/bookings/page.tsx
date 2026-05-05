@@ -48,6 +48,15 @@ function calcAcademyEnd(startStr:string,weeks:number|string):string{
   const d=new Date(startStr);d.setDate(d.getDate()+(w-1)*7+4);
   return d.toISOString().slice(0,10);
 }
+// 다음 월요일 (체크인이 월요일이면 그 날 그대로). academyStart 비통학형 기본 derive
+function getNextMonday(dateStr:string):string{
+  if(!dateStr)return"";
+  const d=new Date(dateStr);
+  const day=d.getDay();
+  const offset=(8-day)%7; // Mon→0, Tue→6, Wed→5, Thu→4, Fri→3, Sat→2, Sun→1
+  d.setDate(d.getDate()+offset);
+  return d.toISOString().slice(0,10);
+}
 // 달력용 helper: timezone-safe YYYY-MM-DD
 function calYmd(d:Date):string{
   const y=d.getFullYear();
@@ -178,7 +187,11 @@ export default function AdminBookingsPage(){
     const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
     const checkoutDate=b.checkout_date||"";
     return arr.map((s,i)=>{
-      const academyStart=s.academyStart||"";
+      // 비통학형: 체크인 다음 월요일이 academy 시작. JSONB stale 가능 (예: 김희영 5/9 Sat 그대로 저장됨)
+      // 통학형: JSONB 값 우선 (사용자가 직접 입력한 수업시작일)
+      const academyStart=isCommute
+        ?(s.academyStart||b.checkin_date||"")
+        :(b.checkin_date?getNextMonday(b.checkin_date):(s.academyStart||""));
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
       // 종료일: 통학형은 checkout_date, 그 외는 calc(start, weeks). 둘 다 안되면 stored
@@ -378,12 +391,15 @@ export default function AdminBookingsPage(){
     // bookings.students JSONB도 동기화 (리스트/학생관리 탭이 이 컬럼 참조)
     // /booking·/invoice와 동일하게 JSON.stringify 형태로 저장 (text/jsonb 양쪽 호환)
     if(bookingId){
+      // 비통학형: 체크인 다음 월요일이 academy 시작. 통학형: 체크인 그대로
+      const isCommuteNew=bType==="commute";
+      const academyStartCalc=isCommuteNew?(newForm.check_in||""):(newForm.check_in?getNextMonday(newForm.check_in):"");
       const studentsJsonb=students23.filter(s=>s.name_kr.trim()).map(s=>({
         korName:s.name_kr.trim(),
         engName:s.name_en.trim()||"",
         age:s.birth_date||"",
         grade:"",
-        academyStart:newForm.check_in||"",
+        academyStart:academyStartCalc,
         academyEnd:"",
         academyWeeks:"",
         photo:"",
