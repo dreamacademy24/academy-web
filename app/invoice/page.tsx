@@ -522,11 +522,11 @@ function InvoicePageInner(){
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
   const [isCommute,setIsCommute]=useState(false);
 
-  /* ── 학생 academyStart 자동동기화 (다음 월요일) ── */
+  /* ── 학생 academyStart 자동동기화 (다음 월요일) — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
     if(!a1CI) return;
     const monday=getNextMonday(a1CI);
-    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:calcAcademyEnd(monday,s.academyWeeks)})));
+    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyEnd||calcAcademyEnd(monday,s.academyWeeks)})));
   },[a1CI]);
 
   /* ── DB에서 예약 로드 ── */
@@ -665,13 +665,13 @@ function InvoicePageInner(){
     setBooker(b=>({...b,balanceDate:bd}));
   },[a1CI]);
 
-  /* ── 숙소 기간 → 학생 기간 자동동기화 ── */
+  /* ── 숙소 기간 → 학생 기간 자동동기화 — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
     const totalWeeks=cm==="combo"?a1W+a2W:a1W;
     setStudents(prev=>prev.map(s=>({
       ...s,
       academyWeeks:String(totalWeeks),
-      academyEnd:calcAcademyEnd(s.academyStart,totalWeeks)
+      academyEnd:s.academyEnd||calcAcademyEnd(s.academyStart,totalWeeks)
     })));
   },[a1W,a2W,cm]);
 
