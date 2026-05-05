@@ -129,49 +129,58 @@ export default function AdminBookingsPage(){
   const [stuSpecialEdit,setStuSpecialEdit]=useState("");
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
-  // 종료일/기간은 booking.accom_weeks를 source of truth로 매번 재계산 (stale JSONB 값 무시)
+  // ⚠️ 종료일/기간: stored s.academyEnd는 stale 가능 (예: 8주짜리가 4/17로 잘못 저장됨)
+  //    → calc(academyStart, booking.accom_weeks)를 우선 사용. 폴백은 calc 불가능할 때만.
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
+    let arr:Record<string,string>[]=[];
     try{
-      const arr=typeof b.students==="string"?JSON.parse(b.students):b.students;
-      if(!Array.isArray(arr)||arr.length===0)return[];
-      const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
-      // booking-level accom_weeks 우선, 없으면 jsonb academyWeeks 폴백
-      const wAccom=Number(b.accom_weeks)||0;
-      return arr.map((s:Record<string,string>,i:number)=>{
-        const academyStart=s.academyStart||"";
-        const w=wAccom||Number(s.academyWeeks)||0;
-        // 통학형: checkout_date를 수업종료로 사용 (admin/[id] 페이지와 일관)
-        // 그 외: calcAcademyEnd(start, w) 우선, 부재 시 stored academyEnd 폴백
-        let academyEnd="";
-        if(isCommute&&b.checkout_date){
-          academyEnd=b.checkout_date;
-        }else if(academyStart&&w>0){
-          academyEnd=calcAcademyEnd(academyStart,w);
-        }else{
-          academyEnd=s.academyEnd||"";
-        }
-        const academyWeeks=w>0?String(w):(s.academyWeeks||"");
-        return{
-          key:b.id+"_"+i,
-          booking_id:b.id,
-          reservation_no:b.reservation_no||"",
-          status:b.status||"",
-          booker_name:b.booker_name||"",
-          accom_type:b.accom_type||"",
-          house_no:b.house_no||"",
-          accom_room:b.accom_room||"",
-          agency:b.agency||"",
-          balance_date:b.balance_date||"",
-          checkin_date:b.checkin_date||"",
-          checkout_date:b.checkout_date||"",
-          flight_in:b.flight_in||"",
-          flight_out:b.flight_out||"",
-          special_request:b.special_request||"",
-          korName:s.korName||"",engName:s.engName||"",age:s.age||"",grade:s.grade||"",
-          academyStart,academyEnd,academyWeeks,photo:s.photo||"",
-        };
-      });
+      const parsed=typeof b.students==="string"?JSON.parse(b.students):b.students;
+      if(Array.isArray(parsed)) arr=parsed;
     }catch{return[];}
+    if(arr.length===0) return [];
+    const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+    const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
+    const checkoutDate=b.checkout_date||"";
+    return arr.map((s,i)=>{
+      const academyStart=s.academyStart||"";
+      // booking-level accom_weeks 우선, 부재 시 student-level 폴백
+      const weeks=bookingWeeks||Number(s.academyWeeks)||0;
+      // 종료일: 통학형은 checkout_date, 그 외는 calc(start, weeks). 둘 다 안되면 stored
+      let computedEnd:string;
+      if(isCommute&&checkoutDate){
+        computedEnd=checkoutDate;
+      }else if(academyStart&&weeks>0){
+        computedEnd=calcAcademyEnd(academyStart,weeks);
+      }else{
+        computedEnd=s.academyEnd||"";
+      }
+      const computedWeeks=weeks>0?String(weeks):(s.academyWeeks||"");
+      return{
+        key:b.id+"_"+i,
+        booking_id:b.id,
+        reservation_no:b.reservation_no||"",
+        status:b.status||"",
+        booker_name:b.booker_name||"",
+        accom_type:b.accom_type||"",
+        house_no:b.house_no||"",
+        accom_room:b.accom_room||"",
+        agency:b.agency||"",
+        balance_date:b.balance_date||"",
+        checkin_date:b.checkin_date||"",
+        checkout_date:b.checkout_date||"",
+        flight_in:b.flight_in||"",
+        flight_out:b.flight_out||"",
+        special_request:b.special_request||"",
+        korName:s.korName||"",
+        engName:s.engName||"",
+        age:s.age||"",
+        grade:s.grade||"",
+        academyStart,
+        academyEnd:computedEnd,
+        academyWeeks:computedWeeks,
+        photo:s.photo||"",
+      };
+    });
   }).sort((a,b)=>new Date(a.academyStart||"9999").getTime()-new Date(b.academyStart||"9999").getTime());
 
   function exportStudentsXlsx(rows:StudentRow[]){
