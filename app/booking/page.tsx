@@ -102,7 +102,8 @@ export default function BookingPage() {
       }
     }
     if (!students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; }
-    if (bType !== "commute" && !dates.checkIn) { alert("체크인 날짜를 입력해주세요."); return; }
+    if (!dates.checkIn) { alert(bType === "commute" ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
+    if (bType === "commute" && !dates.checkOut) { alert("수업종료 날짜를 입력해주세요."); return; }
     if (!agreed) { alert("포함/불포함 사항 및 환불규정 확인 동의가 필요합니다."); return; }
 
     setLoading(true);
@@ -353,8 +354,23 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* 4. 체크인/항공편 */}
-        {showAccom && (
+        {/* 4. 통학형: 수업 일정만 / 그 외: 체크인 + 항공편 */}
+        {bType === "commute" ? (
+          <div className="bs">
+            <h2>4️⃣ 수업 일정</h2>
+            <div className="fr">
+              <div className="fg">
+                <label className="fl">수업시작<span className="req">*</span></label>
+                <input className="fi" type="date" value={dates.checkIn} onChange={e => setDates({ ...dates, checkIn: e.target.value })} />
+              </div>
+              <div className="fg">
+                <label className="fl">수업종료<span className="req">*</span></label>
+                <input className="fi" type="date" value={dates.checkOut} onChange={e => setDates({ ...dates, checkOut: e.target.value })} />
+              </div>
+            </div>
+            <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 픽업/항공편이 없습니다.</div>
+          </div>
+        ) : (
           <div className="bs">
             <h2>4️⃣ 체크인 · 항공편</h2>
             <div className="fr">
