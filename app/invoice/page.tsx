@@ -694,6 +694,30 @@ function InvoicePageInner(){
     setBilling(b=>({...b,locals:b.locals.map(l=>l.name==="드림하우스 보증금"?{...l,amount:String(deposit)}:l)}));
   },[a1W,a2W,cm]);
 
+  /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
+  const autoLocals=useMemo(()=>{
+    const items:{name:string;amount:string}[]=[];
+    // 보호자 1명당 1줄: 1인 SSP / SSP I card = 11,000 PHP
+    for(let i=0;i<cP;i++){
+      items.push({name:"1인 SSP / SSP I card",amount:"11,000"});
+    }
+    const isJunior=(s:StudentInfo)=>s.grade==="주니어"||(s.level||"").toLowerCase()==="junior";
+    const isKinder=(s:StudentInfo)=>s.grade==="킨더"||(s.level||"").toLowerCase()==="kinder";
+    if(students.some(isJunior)){
+      items.push({name:"교재비 - 주니어 1권",amount:"350"});
+    }
+    const kinderStudents=students.filter(isKinder);
+    if(kinderStudents.length>0){
+      const weeks=Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0),0);
+      if(weeks>0){
+        const amt=weeks===4?2500:weeks===2?1750:Math.round((weeks/4)*2500);
+        const amtFmt=amt.toLocaleString();
+        items.push({name:`킨더 - 재료비 ${weeks}주 ${amtFmt}페소`,amount:amtFmt});
+      }
+    }
+    return items;
+  },[cP,students]);
+
   /* ── 견적 useMemo (100% 기존 유지) ── */
   const est=useMemo(()=>{
     const extras:{label:string;price:number}[]=[];
@@ -933,7 +957,7 @@ function InvoicePageInner(){
         <div className="is"><div className="ist">Student Details</div>
           <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
             {students.map((s,i)=>(
-              <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>
+              <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks)||"-"}</td></tr>
             ))}
           </tbody></table>
         </div>
@@ -993,7 +1017,8 @@ function InvoicePageInner(){
               const age=s.age||s.birth_date||"-";
               const courseRaw=s.grade||s.level||"";
               const course=courseRaw==="킨더"?"Kinder":courseRaw==="주니어"?"Junior":(courseRaw||"-");
-              return <tr key={s.id}><td>{i+1}</td><td>{name}</td><td>{age}</td><td>{course}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||"-"}</td></tr>;
+              const endDisplay=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks)||"-";
+              return <tr key={s.id}><td>{i+1}</td><td>{name}</td><td>{age}</td><td>{course}</td><td>{s.academyStart||"-"}</td><td>{endDisplay}</td></tr>;
             })}
           </tbody></table>
         </div>
@@ -1044,9 +1069,12 @@ function InvoicePageInner(){
           </div>
         )}
 
-        {billing.locals.filter(c=>c.name&&c.amount).length>0&&(
+        {(autoLocals.length>0||billing.locals.filter(c=>c.name&&c.amount).length>0)&&(
           <div className="is"><div className="ist">Local Payment <span style={{fontSize:10,color:"#94a3b8",fontWeight:400,marginLeft:6,letterSpacing:0,textTransform:"none"}}>Unit: PHP</span></div>
             <table className="tb"><tbody>
+              {autoLocals.map((c,i)=>(
+                <tr key={`auto-${i}`}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount} PHP</td></tr>
+              ))}
               {billing.locals.filter(c=>c.name&&c.amount).map((c,i)=>{
                 const raw=String(c.amount);
                 const cleaned=raw.replace(/페소|pesos?/gi,"PHP").trim();
@@ -1175,7 +1203,7 @@ function InvoicePageInner(){
       </tbody></table></div>
 
       <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
-        {students.map((s,i)=><tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(s.academyEnd)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>)}
+        {students.map((s,i)=>{const endVal=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks);return <tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(endVal)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>;})}
       </tbody></table></div>
 
       <div className="is"><div className="ist">Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
@@ -1187,7 +1215,7 @@ function InvoicePageInner(){
         <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {fp>0&&(effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
-      {billing.locals.filter(c=>c.name&&c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
+      {(autoLocals.length>0||billing.locals.filter(c=>c.name&&c.amount).length>0)&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{autoLocals.map((c,i)=><tr key={`auto-${i}`}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount} 페소</td></tr>)}{billing.locals.filter(c=>c.name&&c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
