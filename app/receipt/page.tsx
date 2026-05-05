@@ -54,12 +54,11 @@ function ReceiptPageInner(){
           const deposit=1000000;
           const balance=Math.max(0,(row.final_price||0)-deposit);
           // 인원 구성: 보호자 + 아이 합산. 양쪽 모두 0보다 크면 분리 표기, 아니면 단순 합계 숫자
-          const adultCount=Number(row.adults)||0;
-          const childCount=Number(row.children??row.kids??row.child_count)||0;
-          const totalPeople=adultCount+childCount;
-          const peopleDisplay=(adultCount>0&&childCount>0)
-            ?`보호자 ${adultCount} + 아이 ${childCount}`
-            :totalPeople>0?String(totalPeople):"";
+          const adultCnt=row.adults||0;
+          const childCnt=row.children||row.kids||0;
+          const peopleDisplay=(adultCnt>0&&childCnt>0)
+            ?"보호자 "+adultCnt+" + 아이 "+childCnt
+            :String(adultCnt+childCnt);
           setData({
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,

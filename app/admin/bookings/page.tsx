@@ -78,7 +78,7 @@ export default function AdminBookingsPage(){
   /* ── STEP 22: 예약 유형 선택 모달 ── */
   const [showNewBooking,setShowNewBooking]=useState(false);
   const [bType,setBType]=useState<BookingTypeValue>("dreamhouse");
-  const [newForm,setNewForm]=useState({booker_name:"",booker_phone:"",check_in:"",check_out:"",
+  const [newForm,setNewForm]=useState({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",
     dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,
     pickup_place:"",drop_place:"",agency:"",special_request:""});
   const [savingNew,setSavingNew]=useState(false);
@@ -240,6 +240,7 @@ export default function AdminBookingsPage(){
       reservation_no:rno,
       accom_type:BTYPE_KO[bType]||bType,
       booker_name:newForm.booker_name.trim(),
+      booker_english:newForm.booker_english.trim()||null,
       booker_phone:newForm.booker_phone.trim()||null,
       checkin_date:newForm.check_in||null,
       checkout_date:newForm.check_out||null,
@@ -323,7 +324,7 @@ export default function AdminBookingsPage(){
       if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);alert("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
     }
     setSavingNew(false);setShowNewBooking(false);
-    setNewForm({booker_name:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
+    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
     setBType("dreamhouse");
     setFlightIn({...emptyFlight,undecided:false});setFlightOut({...emptyFlight,undecided:false});
     setStudents23([{...emptyStudent}]);
@@ -869,6 +870,7 @@ export default function AdminBookingsPage(){
       {/* 기본 정보 */}
       {[
         {label:"예약자명 *",key:"booker_name",type:"text",ph:"홍길동"},
+        {label:"보호자 영문이름",key:"booker_english",type:"text",ph:"HONG GILDONG"},
         {label:"연락처",key:"booker_phone",type:"text",ph:"010-0000-0000"},
         {label:"체크인",key:"check_in",type:"date",ph:""},
         {label:"체크아웃",key:"check_out",type:"date",ph:""},
