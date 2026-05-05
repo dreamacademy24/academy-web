@@ -649,7 +649,7 @@ export default function AdminBookingsPage(){
         rcpList.map(b=>(
           <tr key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
-            <td>{b.booker_name}</td><td>{stuNames(b.students)}</td>
+            <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td style={{fontWeight:700}}>{fmt(b.final_price)}</td>
           </tr>
