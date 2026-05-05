@@ -174,7 +174,8 @@ export default function AdminBookingsPage(){
         korName:s.korName||"",
         engName:s.engName||"",
         age:s.age||"",
-        grade:s.grade||"",
+        // grade: 한글 라벨로 정규화. s.grade(킨더/주니어) 우선, 없으면 s.level(kinder/junior) 변환
+        grade:s.grade||(s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""),
         academyStart,
         academyEnd:computedEnd,
         academyWeeks:computedWeeks,

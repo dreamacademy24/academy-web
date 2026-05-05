@@ -66,6 +66,11 @@ export default function BookingDetailPage() {
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
+  // 학생/픽업/셔틀 row 편집 (단일 row만 동시 편집 가능)
+  const [rowEditing, setRowEditing] = useState<{table:string; id:string} | null>(null);
+  const [rowForm, setRowForm] = useState<Record<string, any>>({});
+  const [rowSaving, setRowSaving] = useState(false);
+
   useEffect(() => {
     if (isAdminAuthed()) {
       setAuthed(true);
@@ -124,6 +129,62 @@ export default function BookingDetailPage() {
     });
     setEditing(true);
   }
+  function startRowEdit(table: string, row: any) {
+    setRowEditing({ table, id: row.id });
+    setRowForm({ ...row });
+  }
+  async function saveRowEdit(opts?: {extraJsonbSync?: boolean}) {
+    if (!rowEditing) return;
+    setRowSaving(true);
+    // students table은 컬럼 화이트리스트로 추려서 PATCH
+    const fieldsByTable: Record<string, string[]> = {
+      students: ["name_kr","name_en","age","level","class_type","academy_start","academy_end","ssp","photo_allowed","pickup_location","address_detail","special_request"],
+      pickup_requests: ["request_date","request_time","location","destination","num_people","notes","status"],
+      shuttle_requests: ["request_date","request_time","destination","num_people","round_trip","notes","status"],
+    };
+    const allowed = fieldsByTable[rowEditing.table] || [];
+    const fields: Record<string, any> = {};
+    for (const k of allowed) if (k in rowForm) fields[k] = rowForm[k];
+    const res = await fetch(`/api/bookings/${id}/update-row`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: rowEditing.table, rowId: rowEditing.id, fields }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(()=>({}));
+      alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+      setRowSaving(false);
+      return;
+    }
+    // 학생 편집의 경우 bookings.students JSONB도 동기화 (다른 페이지 호환)
+    if (rowEditing.table === "students" && opts?.extraJsonbSync !== false) {
+      const arr = (data?.students || []).map((s: any) => {
+        if (s.id === rowEditing.id) {
+          return {
+            ...s,
+            ...fields,
+            // legacy field 동기화
+            korName: fields.name_kr || s.korName || "",
+            engName: fields.name_en || s.engName || "",
+            grade: fields.level === "kinder" ? "킨더" : fields.level === "junior" ? "주니어" : (s.grade || ""),
+            academyStart: fields.academy_start || s.academyStart || "",
+            academyEnd: fields.academy_end || s.academyEnd || "",
+            photo: fields.photo_allowed === false ? "X" : "O",
+          };
+        }
+        return s;
+      });
+      await fetch(`/api/bookings/${id}/update-row`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentsJsonb: arr }),
+      });
+    }
+    setRowSaving(false);
+    setRowEditing(null);
+    load();
+  }
+
   async function saveEdit() {
     setSaving(true);
     const payload: Record<string, any> = {
@@ -361,29 +422,74 @@ export default function BookingDetailPage() {
             <button className="btn btn-sm btn-blue" onClick={() => router.push(`/admin/bookings?tab=list`)}>+ 학생 추가</button>
           </div>
           {students.length === 0 ? <div className="empty">등록된 학생이 없습니다<br/>손님이 /booking 폼에서 등록하거나 어드민이 직접 추가할 수 있습니다</div> :
-            students.map((s: any, i: number) => (
-              <div key={s.id} className="stu-card" style={{ flexWrap: "wrap" }}>
+            students.map((s: any, i: number) => {
+              const isEditing = rowEditing?.table === "students" && rowEditing.id === s.id;
+              const canEdit = !!s.id && s._source !== "booking_json";
+              return (
+              <div key={s.id || i} className="stu-card" style={{ flexWrap: "wrap" }}>
                 <div className="stu-av">{i + 1}</div>
                 <div className="stu-info" style={{ width: "100%" }}>
-                  <div className="nm">{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
-                  <div className="sub">
-                    {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
-                    {(() => {
-                      const ast = s.academy_start || deriveAcademyStart(b.check_in || b.checkin_date);
-                      const aen = s.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks);
-                      return ast ? ` · ${ast} ~ ${aen || ""}` : "";
-                    })()}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8, fontSize: 12 }}>
-                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>SSP:</span> {s.ssp ? "있음" : "없음"}</div>
-                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>사진허용:</span> {s.photo_allowed ? "O" : "X"}</div>
-                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>픽드롭:</span> {s.pickup_location || "-"}</div>
-                    <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>주소:</span> {s.address_detail || "-"}</div>
-                  </div>
-                  {s.special_request && <div style={{ marginTop: 8, padding: 8, background: "#fef3c7", borderRadius: 6, fontSize: 12, color: "#92400e" }}>📝 {s.special_request}</div>}
+                  {!isEditing ? (<>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div className="nm" style={{flex:1}}>{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
+                      {canEdit && <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s)}>✏️ 수정</button>}
+                      {!canEdit && <span style={{fontSize:10,color:"#94a3b8"}}>JSON 학생 (편집 불가)</span>}
+                    </div>
+                    <div className="sub">
+                      {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
+                      {(() => {
+                        const ast = s.academy_start || deriveAcademyStart(b.check_in || b.checkin_date);
+                        const aen = s.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks);
+                        return ast ? ` · ${ast} ~ ${aen || ""}` : "";
+                      })()}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8, fontSize: 12 }}>
+                      <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>SSP:</span> {s.ssp ? "있음" : "없음"}</div>
+                      <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>사진허용:</span> {s.photo_allowed ? "O" : "X"}</div>
+                      <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>픽드롭:</span> {s.pickup_location || "-"}</div>
+                      <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>주소:</span> {s.address_detail || "-"}</div>
+                    </div>
+                    {s.special_request && <div style={{ marginTop: 8, padding: 8, background: "#fef3c7", borderRadius: 6, fontSize: 12, color: "#92400e" }}>📝 {s.special_request}</div>}
+                  </>) : (<>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <div style={{flex:1,fontWeight:700,color:"#1a6fc4"}}>학생 {i+1} 편집 중</div>
+                      <button className="btn btn-sm btn-gray" onClick={()=>setRowEditing(null)} disabled={rowSaving}>취소</button>
+                      <button className="btn btn-sm btn-blue" onClick={()=>saveRowEdit()} disabled={rowSaving}>{rowSaving?"저장 중...":"💾 저장"}</button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12}}>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>한글이름</div><input className="ed-inp" value={rowForm.name_kr||""} onChange={e=>setRowForm({...rowForm,name_kr:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>영문이름</div><input className="ed-inp" value={rowForm.name_en||""} onChange={e=>setRowForm({...rowForm,name_en:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>생년도/나이</div><input className="ed-inp" value={rowForm.age||""} onChange={e=>setRowForm({...rowForm,age:e.target.value})} placeholder="예: 2016 또는 7살"/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>킨더/주니어</div>
+                        <select className="ed-inp" value={rowForm.level||""} onChange={e=>setRowForm({...rowForm,level:e.target.value})}>
+                          <option value="">없음</option>
+                          <option value="kinder">킨더</option>
+                          <option value="junior">주니어</option>
+                        </select>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>아카데미 시작</div><input className="ed-inp" type="date" value={rowForm.academy_start||""} onChange={e=>setRowForm({...rowForm,academy_start:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>아카데미 종료</div><input className="ed-inp" type="date" value={rowForm.academy_end||""} onChange={e=>setRowForm({...rowForm,academy_end:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>SSP</div>
+                        <select className="ed-inp" value={rowForm.ssp?"true":"false"} onChange={e=>setRowForm({...rowForm,ssp:e.target.value==="true"})}>
+                          <option value="false">없음</option>
+                          <option value="true">있음</option>
+                        </select>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>사진허용</div>
+                        <select className="ed-inp" value={rowForm.photo_allowed?"true":"false"} onChange={e=>setRowForm({...rowForm,photo_allowed:e.target.value==="true"})}>
+                          <option value="true">O (허용)</option>
+                          <option value="false">X (미허용)</option>
+                        </select>
+                      </div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>픽드롭</div><input className="ed-inp" value={rowForm.pickup_location||""} onChange={e=>setRowForm({...rowForm,pickup_location:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>주소</div><input className="ed-inp" value={rowForm.address_detail||""} onChange={e=>setRowForm({...rowForm,address_detail:e.target.value})}/></div>
+                      <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>특이사항</div><textarea className="ed-inp" style={{minHeight:50,resize:"vertical"}} value={rowForm.special_request||""} onChange={e=>setRowForm({...rowForm,special_request:e.target.value})}/></div>
+                    </div>
+                  </>)}
                 </div>
               </div>
-            ))
+              );
+            })
           }
         </div>
       )}
@@ -400,21 +506,51 @@ export default function BookingDetailPage() {
         <div className="sec">
           <h2>픽업/드랍 신청 ({pickups.length}건) <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(손님 포털 신청)</span></h2>
           {pickups.length === 0 ? <div className="empty">픽업 일정이 없습니다</div> :
-            pickups.map((p: any) => (
+            pickups.map((p: any) => {
+              const isEditing = rowEditing?.table === "pickup_requests" && rowEditing.id === p.id;
+              return (
               <div key={p.id} className={`pk-card${p.request_type === "dropoff" ? " drop" : ""}`}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, alignItems:"center", gap:8 }}>
                   <span className="badge" style={{ background: p.request_type === "pickup" ? "#dbeafe" : "#dcfce7", color: p.request_type === "pickup" ? "#1e40af" : "#166534" }}>
                     {p.request_type === "pickup" ? "픽업" : "드랍"}
                   </span>
-                  <span className="badge" style={{ background: p.status === "confirmed" ? "#dcfce7" : "#fef3c7", color: p.status === "confirmed" ? "#166534" : "#92400e" }}>{p.status}</span>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <span className="badge" style={{ background: p.status === "confirmed" ? "#dcfce7" : "#fef3c7", color: p.status === "confirmed" ? "#166534" : "#92400e" }}>{p.status}</span>
+                    {!isEditing
+                      ? <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("pickup_requests", p)}>✏️ 수정</button>
+                      : (<>
+                          <button className="btn btn-sm btn-gray" onClick={()=>setRowEditing(null)} disabled={rowSaving}>취소</button>
+                          <button className="btn btn-sm btn-blue" onClick={()=>saveRowEdit()} disabled={rowSaving}>{rowSaving?"저장중":"💾 저장"}</button>
+                        </>)}
+                  </div>
                 </div>
-                <div className="pk-row"><span className="lbl">날짜</span>{fDate(p.request_date)}</div>
-                <div className="pk-row"><span className="lbl">시간</span>{p.request_time || "-"}</div>
-                <div className="pk-row"><span className="lbl">출발</span>{p.location || "-"}</div>
-                <div className="pk-row"><span className="lbl">도착</span>{p.destination || "-"}</div>
-                <div className="pk-row"><span className="lbl">인원</span>{p.num_people || 0}명</div>
+                {!isEditing ? (<>
+                  <div className="pk-row"><span className="lbl">날짜</span>{fDate(p.request_date)}</div>
+                  <div className="pk-row"><span className="lbl">시간</span>{p.request_time || "-"}</div>
+                  <div className="pk-row"><span className="lbl">출발</span>{p.location || "-"}</div>
+                  <div className="pk-row"><span className="lbl">도착</span>{p.destination || "-"}</div>
+                  <div className="pk-row"><span className="lbl">인원</span>{p.num_people || 0}명</div>
+                  {p.notes && <div className="pk-row"><span className="lbl">메모</span>{String(p.notes).replace(/portal_booking_id:[a-f0-9-]+/gi,"").trim() || "-"}</div>}
+                </>) : (
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12}}>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>날짜</div><input className="ed-inp" type="date" value={rowForm.request_date||""} onChange={e=>setRowForm({...rowForm,request_date:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={rowForm.request_time||""} onChange={e=>setRowForm({...rowForm,request_time:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>출발(픽업장소)</div><input className="ed-inp" value={rowForm.location||""} onChange={e=>setRowForm({...rowForm,location:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>도착(드랍장소)</div><input className="ed-inp" value={rowForm.destination||""} onChange={e=>setRowForm({...rowForm,destination:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>인원</div><input className="ed-inp" type="number" value={rowForm.num_people||0} onChange={e=>setRowForm({...rowForm,num_people:Number(e.target.value)})}/></div>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>상태</div>
+                      <select className="ed-inp" value={rowForm.status||"pending"} onChange={e=>setRowForm({...rowForm,status:e.target.value})}>
+                        <option value="pending">대기중</option>
+                        <option value="confirmed">확정</option>
+                        <option value="cancelled">취소</option>
+                      </select>
+                    </div>
+                    <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>메모</div><textarea className="ed-inp" style={{minHeight:50,resize:"vertical"}} value={rowForm.notes||""} onChange={e=>setRowForm({...rowForm,notes:e.target.value})}/></div>
+                  </div>
+                )}
               </div>
-            ))
+              );
+            })
           }
         </div>
         <div className="sec">
@@ -556,18 +692,50 @@ export default function BookingDetailPage() {
           {shuttleReqs.length === 0 ? <div className="empty">셔틀 신청 내역이 없습니다<br/>손님이 /portal/shuttle에서 신청하면 여기에 표시됩니다</div> :
             shuttleReqs.map((s: any) => {
               const st = REQ_ST[s.status] || REQ_ST.pending;
+              const isEditing = rowEditing?.table === "shuttle_requests" && rowEditing.id === s.id;
               return (
                 <div key={s.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 8, background: "#f8fafc" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap:8 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{s.request_date || "-"} {s.request_time || ""}</div>
-                    <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                      {!isEditing
+                        ? <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("shuttle_requests", s)}>✏️ 수정</button>
+                        : (<>
+                            <button className="btn btn-sm btn-gray" onClick={()=>setRowEditing(null)} disabled={rowSaving}>취소</button>
+                            <button className="btn btn-sm btn-blue" onClick={()=>saveRowEdit()} disabled={rowSaving}>{rowSaving?"저장중":"💾 저장"}</button>
+                          </>)}
+                    </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 12, color: "#475569" }}>
-                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>장소:</span> {s.destination || "-"}</div>
-                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>인원:</span> {s.num_people || 0}명</div>
-                    <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>왕복:</span> {s.round_trip ? "왕복" : "편도"}</div>
-                    {s.notes && <div style={{ gridColumn: "1/3" }}><span style={{ fontWeight: 700, color: "#6b7c93" }}>메모:</span> {s.notes.replace(/portal_booking_id:[a-f0-9-]+/gi, "").trim() || "-"}</div>}
-                  </div>
+                  {!isEditing ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: 12, color: "#475569" }}>
+                      <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>장소:</span> {s.destination || "-"}</div>
+                      <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>인원:</span> {s.num_people || 0}명</div>
+                      <div><span style={{ fontWeight: 700, color: "#6b7c93" }}>왕복:</span> {s.round_trip ? "왕복" : "편도"}</div>
+                      {s.notes && <div style={{ gridColumn: "1/3" }}><span style={{ fontWeight: 700, color: "#6b7c93" }}>메모:</span> {s.notes.replace(/portal_booking_id:[a-f0-9-]+/gi, "").trim() || "-"}</div>}
+                    </div>
+                  ) : (
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12}}>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>날짜</div><input className="ed-inp" type="date" value={rowForm.request_date||""} onChange={e=>setRowForm({...rowForm,request_date:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={rowForm.request_time||""} onChange={e=>setRowForm({...rowForm,request_time:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>장소</div><input className="ed-inp" value={rowForm.destination||""} onChange={e=>setRowForm({...rowForm,destination:e.target.value})}/></div>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>인원</div><input className="ed-inp" type="number" value={rowForm.num_people||0} onChange={e=>setRowForm({...rowForm,num_people:Number(e.target.value)})}/></div>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>왕복</div>
+                        <select className="ed-inp" value={rowForm.round_trip?"true":"false"} onChange={e=>setRowForm({...rowForm,round_trip:e.target.value==="true"})}>
+                          <option value="false">편도</option>
+                          <option value="true">왕복</option>
+                        </select>
+                      </div>
+                      <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>상태</div>
+                        <select className="ed-inp" value={rowForm.status||"pending"} onChange={e=>setRowForm({...rowForm,status:e.target.value})}>
+                          <option value="pending">대기중</option>
+                          <option value="confirmed">확정</option>
+                          <option value="cancelled">취소</option>
+                        </select>
+                      </div>
+                      <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>메모</div><textarea className="ed-inp" style={{minHeight:50,resize:"vertical"}} value={rowForm.notes||""} onChange={e=>setRowForm({...rowForm,notes:e.target.value})}/></div>
+                    </div>
+                  )}
                 </div>
               );
             })
