@@ -48,6 +48,39 @@ function calcAcademyEnd(startStr:string,weeks:number|string):string{
   const d=new Date(startStr);d.setDate(d.getDate()+(w-1)*7+4);
   return d.toISOString().slice(0,10);
 }
+// 달력용 helper: timezone-safe YYYY-MM-DD
+function calYmd(d:Date):string{
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,"0");
+  const dd=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dd}`;
+}
+// 월~일 주별로 분할. month는 1~12. 해당 월의 첫날을 포함하는 월요일부터 시작.
+function genCalWeeks(year:number,month:number):Date[][]{
+  const firstDay=new Date(year,month-1,1);
+  const lastDay=new Date(year,month,0);
+  const cursor=new Date(firstDay);
+  while(cursor.getDay()!==1)cursor.setDate(cursor.getDate()-1);
+  const weeks:Date[][]=[];
+  while(cursor<=lastDay){
+    const week:Date[]=[];
+    for(let i=0;i<7;i++){week.push(new Date(cursor));cursor.setDate(cursor.getDate()+1);}
+    weeks.push(week);
+  }
+  return weeks;
+}
+// 학생의 age 필드에서 나이 추출. '2016년'/'2016' → 현재년-2016, '7'/'7살' → 7
+function getStudentAge(s:{age?:string}):string{
+  if(!s.age)return"";
+  const a=String(s.age).trim();
+  const yearMatch=a.match(/^(\d{4})/);
+  if(yearMatch){
+    const age=new Date().getFullYear()-Number(yearMatch[1]);
+    return age>0&&age<120?String(age):"";
+  }
+  const num=parseInt(a);
+  return isNaN(num)?"":String(num);
+}
 function acaStart(b:any):string{
   if(!b.checkin_date)return"-";
   const d=new Date(b.checkin_date);d.setDate(d.getDate()+1);
@@ -122,6 +155,7 @@ export default function AdminBookingsPage(){
   }
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
+  const [stuView,setStuView]=useState<"list"|"cal">("list");
   const _now=new Date();
   const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
   const [stuMonthNum,setStuMonthNum]=useState<string>(String(_now.getMonth()+1).padStart(2,"0")); // "" = 전체, "01"~"12"
@@ -456,6 +490,18 @@ export default function AdminBookingsPage(){
 .cf-search{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
 .cf-search input{padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;width:260px;outline:none;font-family:'Noto Sans KR',sans-serif;}.cf-search input:focus{border-color:#1a6fc4;}
 .cf-search .cnt{font-size:12px;color:#6b7c93;}
+.cal-wrap{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e2e8f0;padding:14px;}
+.cal-tbl{width:100%;border-collapse:collapse;table-layout:fixed;min-width:1000px;}
+.cal-tbl th{font-size:11px;font-weight:700;color:#475569;padding:8px 6px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center;}
+.cal-tbl td{vertical-align:top;padding:6px;border:1px solid #e2e8f0;font-size:11px;height:90px;}
+.cal-side{background:#f5f3ff;color:#4c1d95;font-weight:700;text-align:center;width:100px;}
+.cal-side .cal-total{margin-top:6px;padding-top:6px;border-top:1px solid #ddd6fe;font-size:14px;color:#6d28d9;}
+.cal-cell .cal-d{font-weight:800;color:#1a1a2e;font-size:12px;margin-bottom:3px;}
+.cal-cell.out-month{background:#fafafa;}.cal-cell.out-month .cal-d{color:#cbd5e1;}
+.cal-newin{background:#dcfce7;color:#166534;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
+.cal-out{background:#fef2f2;color:#dc2626;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
+.cal-stu-in{color:#16a34a;font-size:10px;line-height:1.4;}
+.cal-stu-out{color:#dc2626;font-size:10px;line-height:1.4;}
 @media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
   `}</style>
 
@@ -755,8 +801,12 @@ export default function AdminBookingsPage(){
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
-          <span className="cnt">{sorted.length}명</span>
-          <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>
+          <div style={{display:"flex",gap:4}}>
+            <button className={`sub-tab${stuView==="list"?" ac":""}`} onClick={()=>setStuView("list")}>📋 리스트</button>
+            <button className={`sub-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
+          </div>
+          <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
+          {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
         </div>
         <div className="sub-tabs" style={{marginBottom:8}}>
           <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>년도:</span>
@@ -770,6 +820,7 @@ export default function AdminBookingsPage(){
             <button key={m||"all-m"} className={`sub-tab${stuMonthNum===m?" ac":""}`} onClick={()=>setStuMonthNum(m)}>{m?parseInt(m)+"월":"전체"}</button>
           ))}
         </div>
+        {stuView==="list"?(
         <div className="ss-w"><table className="ss"><thead><tr>
           {stuCols.map(c=><th key={c.key} onClick={()=>toggleStuSort(c.key)}>{c.label}<span className={arrCls(c.key)}>{arr(c.key)}</span></th>)}
         </tr></thead><tbody>
@@ -799,6 +850,80 @@ export default function AdminBookingsPage(){
             </tr>);
           })}
         </tbody></table></div>
+        ):(
+          (()=>{
+            const calYear=Number(stuYear)||_now.getFullYear();
+            const calMonth=Number(stuMonthNum)||(_now.getMonth()+1);
+            const weeks=genCalWeeks(calYear,calMonth);
+            return (
+              <div className="cal-wrap">
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <button className="sub-tab" onClick={()=>{
+                    let y=calYear,m=calMonth-1;
+                    if(m<1){y-=1;m=12;}
+                    setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));
+                  }}>← 이전달</button>
+                  <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>{calYear}년 {calMonth}월</div>
+                  <button className="sub-tab" onClick={()=>{
+                    let y=calYear,m=calMonth+1;
+                    if(m>12){y+=1;m=1;}
+                    setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));
+                  }}>다음달 →</button>
+                </div>
+                <table className="cal-tbl">
+                  <thead>
+                    <tr>
+                      <th className="cal-side">주별 요약</th>
+                      <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeks.map((week,wi)=>{
+                      const wsStr=calYmd(week[0]);
+                      const weStr=calYmd(week[6]);
+                      // 주별 재학중인 학생 (start <= weekEnd && end >= weekStart)
+                      const active=studentsList.filter(s=>{
+                        if(!s.academyStart)return false;
+                        const aen=s.academyEnd||s.academyStart;
+                        return s.academyStart<=weStr&&aen>=wsStr;
+                      });
+                      const kCount=active.filter(s=>s.grade==="킨더").length;
+                      const jCount=active.filter(s=>s.grade==="주니어").length;
+                      const newIns=studentsList.filter(s=>s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
+                      const outs=studentsList.filter(s=>s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
+                      return (
+                        <tr key={wi}>
+                          <td className="cal-side">
+                            <div>Kinder-{kCount}</div>
+                            <div>Junior-{jCount}</div>
+                            <div className="cal-total">{jCount}/{kCount}</div>
+                          </td>
+                          {week.map((day,di)=>{
+                            const dStr=calYmd(day);
+                            const inMonth=day.getMonth()===calMonth-1;
+                            const isMon=day.getDay()===1;
+                            const isFri=day.getDay()===5;
+                            const startList=studentsList.filter(s=>s.academyStart===dStr);
+                            const endList=studentsList.filter(s=>s.academyEnd===dStr);
+                            return (
+                              <td key={di} className={`cal-cell${inMonth?"":" out-month"}`}>
+                                <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
+                                {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
+                                {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
+                                {startList.map(s=>(<div key={`s${s.key}`} className="cal-stu-in">+ {s.korName}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
+                                {endList.map(s=>(<div key={`e${s.key}`} className="cal-stu-out">- {s.korName}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()
+        )}
       </>);
     })()}
 
