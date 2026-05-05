@@ -755,7 +755,6 @@ export default function AdminBookingsPage(){
       const q=stuSearch.toLowerCase();
       const stuCols:{key:string;label:string;get:(s:StudentRow)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:s=>shortNo(s.reservation_no)},
-        {key:"status",label:"상태",get:s=>s.status||""},
         {key:"academyStart",label:"시작일",get:s=>s.academyStart||""},
         {key:"academyEnd",label:"종료일",get:s=>s.academyEnd||""},
         {key:"academyWeeks",label:"기간",get:s=>s.academyWeeks?s.academyWeeks+"주":""},
@@ -766,7 +765,6 @@ export default function AdminBookingsPage(){
         {key:"accom",label:"숙소/룸",get:s=>fmtAccom(s as unknown as Record<string,string>)},
         {key:"checkin_date",label:"체크인",get:s=>s.checkin_date||""},
         {key:"checkout_date",label:"체크아웃",get:s=>s.checkout_date||""},
-        {key:"balance_date",label:"잔금일",get:s=>s.balance_date||""},
         {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
         {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
@@ -826,11 +824,9 @@ export default function AdminBookingsPage(){
         </tr></thead><tbody>
           {sorted.length===0?<tr><td colSpan={stuCols.length} className="empty">학생 데이터가 없습니다.</td></tr>:
           sorted.map(s=>{
-            const sc=SC[s.status]||SC["접수"];
             return(
             <tr key={s.key} onClick={()=>router.push("/admin/bookings/"+s.booking_id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(s.reservation_no)}</td>
-              <td><span className="badge" style={{background:sc.bg,color:sc.color,fontSize:10,padding:"2px 6px"}}>{s.status}</span></td>
               <td>{s.academyStart||"-"}</td>
               <td>{s.academyEnd||"-"}</td>
               <td>{s.academyWeeks?s.academyWeeks+"주":"-"}</td>
@@ -841,7 +837,6 @@ export default function AdminBookingsPage(){
               <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
               <td>{s.checkin_date||"-"}</td>
               <td>{s.checkout_date||"-"}</td>
-              <td>{s.balance_date||"-"}</td>
               <td>{s.booker_name||"-"}</td>
               <td style={{textAlign:"center"}}>{s.photo||""}</td>
               <td className="wrap" onClick={e=>{e.stopPropagation();setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}} style={{cursor:"pointer",color:s.special_request?"#1a6fc4":"#94a3b8",textDecoration:s.special_request?"underline":"none"}}>
