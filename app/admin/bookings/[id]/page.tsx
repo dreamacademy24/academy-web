@@ -67,7 +67,8 @@ export default function BookingDetailPage() {
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
   // 학생/픽업/셔틀 row 편집 (단일 row만 동시 편집 가능)
-  const [rowEditing, setRowEditing] = useState<{table:string; id:string} | null>(null);
+  // students는 booking_json 학생(DB row 없음)도 idx로 식별 가능하게
+  const [rowEditing, setRowEditing] = useState<{table:string; id:string|null; idx:number|null} | null>(null);
   const [rowForm, setRowForm] = useState<Record<string, any>>({});
   const [rowSaving, setRowSaving] = useState(false);
 
@@ -129,14 +130,14 @@ export default function BookingDetailPage() {
     });
     setEditing(true);
   }
-  function startRowEdit(table: string, row: any) {
-    setRowEditing({ table, id: row.id });
+  function startRowEdit(table: string, row: any, idx?: number) {
+    const rowId = row.id && /^[0-9a-f-]{36}$/i.test(row.id) ? row.id : null;
+    setRowEditing({ table, id: rowId, idx: idx ?? null });
     setRowForm({ ...row });
   }
-  async function saveRowEdit(opts?: {extraJsonbSync?: boolean}) {
+  async function saveRowEdit() {
     if (!rowEditing) return;
     setRowSaving(true);
-    // students table은 컬럼 화이트리스트로 추려서 PATCH
     const fieldsByTable: Record<string, string[]> = {
       students: ["name_kr","name_en","age","level","class_type","academy_start","academy_end","ssp","photo_allowed","pickup_location","address_detail","special_request"],
       pickup_requests: ["request_date","request_time","location","destination","num_people","notes","status"],
@@ -145,40 +146,65 @@ export default function BookingDetailPage() {
     const allowed = fieldsByTable[rowEditing.table] || [];
     const fields: Record<string, any> = {};
     for (const k of allowed) if (k in rowForm) fields[k] = rowForm[k];
-    const res = await fetch(`/api/bookings/${id}/update-row`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table: rowEditing.table, rowId: rowEditing.id, fields }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(()=>({}));
-      alert("저장 실패: " + (j.error || "알 수 없는 오류"));
-      setRowSaving(false);
-      return;
-    }
-    // 학생 편집의 경우 bookings.students JSONB도 동기화 (다른 페이지 호환)
-    if (rowEditing.table === "students" && opts?.extraJsonbSync !== false) {
-      const arr = (data?.students || []).map((s: any) => {
-        if (s.id === rowEditing.id) {
-          return {
-            ...s,
-            ...fields,
-            // legacy field 동기화
-            korName: fields.name_kr || s.korName || "",
-            engName: fields.name_en || s.engName || "",
-            grade: fields.level === "kinder" ? "킨더" : fields.level === "junior" ? "주니어" : (s.grade || ""),
-            academyStart: fields.academy_start || s.academyStart || "",
-            academyEnd: fields.academy_end || s.academyEnd || "",
-            photo: fields.photo_allowed === false ? "X" : "O",
-          };
+
+    // 학생: DB row(UUID) 있으면 PATCH + JSONB 동기화. 없으면(booking_json) JSONB만 업데이트
+    if (rowEditing.table === "students") {
+      // 1) DB row 있을 때만 PATCH
+      if (rowEditing.id) {
+        const res = await fetch(`/api/bookings/${id}/update-row`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ table: "students", rowId: rowEditing.id, fields }),
+        });
+        if (!res.ok && res.status !== 404) {
+          const j = await res.json().catch(()=>({}));
+          alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+          setRowSaving(false);
+          return;
         }
-        return s;
+      }
+      // 2) JSONB 동기화 (모든 학생 케이스 — DB row가 있어도 다른 페이지 호환 위해, 없어도 유일한 저장처)
+      const arr = (data?.students || []).map((s: any, i: number) => {
+        const matchesById = rowEditing.id && s.id === rowEditing.id;
+        const matchesByIdx = rowEditing.idx !== null && rowEditing.idx === i;
+        if (!matchesById && !matchesByIdx) return s;
+        return {
+          ...s,
+          ...fields,
+          // legacy field 동기화
+          korName: fields.name_kr || s.korName || "",
+          engName: fields.name_en || s.engName || "",
+          grade: fields.level === "kinder" ? "킨더" : fields.level === "junior" ? "주니어" : (s.grade || ""),
+          academyStart: fields.academy_start || s.academyStart || "",
+          academyEnd: fields.academy_end || s.academyEnd || "",
+          photo: fields.photo_allowed === false ? "X" : "O",
+        };
       });
-      await fetch(`/api/bookings/${id}/update-row`, {
+      const putRes = await fetch(`/api/bookings/${id}/update-row`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentsJsonb: arr }),
       });
+      if (!putRes.ok) {
+        const j = await putRes.json().catch(()=>({}));
+        alert("JSONB 저장 실패: " + (j.error || "알 수 없는 오류"));
+        setRowSaving(false);
+        return;
+      }
+    } else {
+      // pickup_requests / shuttle_requests: 일반 PATCH
+      if (!rowEditing.id) { setRowSaving(false); alert("row id 없음"); return; }
+      const res = await fetch(`/api/bookings/${id}/update-row`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: rowEditing.table, rowId: rowEditing.id, fields }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(()=>({}));
+        alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+        setRowSaving(false);
+        return;
+      }
     }
     setRowSaving(false);
     setRowEditing(null);
@@ -423,17 +449,16 @@ export default function BookingDetailPage() {
           </div>
           {students.length === 0 ? <div className="empty">등록된 학생이 없습니다<br/>손님이 /booking 폼에서 등록하거나 어드민이 직접 추가할 수 있습니다</div> :
             students.map((s: any, i: number) => {
-              const isEditing = rowEditing?.table === "students" && rowEditing.id === s.id;
-              const canEdit = !!s.id && s._source !== "booking_json";
+              // idx 기반 매칭 (booking_json 학생은 s.id 없음 → idx로 식별)
+              const isEditing = rowEditing?.table === "students" && rowEditing.idx === i;
               return (
-              <div key={s.id || i} className="stu-card" style={{ flexWrap: "wrap" }}>
+              <div key={s.id || `idx-${i}`} className="stu-card" style={{ flexWrap: "wrap" }}>
                 <div className="stu-av">{i + 1}</div>
                 <div className="stu-info" style={{ width: "100%" }}>
                   {!isEditing ? (<>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div className="nm" style={{flex:1}}>{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
-                      {canEdit && <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s)}>✏️ 수정</button>}
-                      {!canEdit && <span style={{fontSize:10,color:"#94a3b8"}}>JSON 학생 (편집 불가)</span>}
+                      <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s, i)}>✏️ 수정</button>
                     </div>
                     <div className="sub">
                       {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
