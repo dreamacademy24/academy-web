@@ -294,6 +294,23 @@ export default function AdminBookingsPage(){
         method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
         body:JSON.stringify(stuRows),
       });
+      // bookings.students JSONB도 동기화 (리스트/학생관리 탭이 이 컬럼 참조)
+      const studentsJsonb=students23.filter(s=>s.name_kr.trim()).map(s=>({
+        korName:s.name_kr.trim(),
+        engName:s.name_en.trim()||"",
+        age:s.birth_date||"",
+        grade:"",
+        academyStart:newForm.check_in||"",
+        academyEnd:"",
+        academyWeeks:"",
+        photo:"",
+        level:s.level||"",
+        birth_date:s.birth_date||"",
+      }));
+      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,{
+        method:"PATCH",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
+        body:JSON.stringify({students:studentsJsonb}),
+      });
     }
     setSavingNew(false);setShowNewBooking(false);
     setNewForm({booker_name:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
@@ -771,7 +788,8 @@ export default function AdminBookingsPage(){
         </div>
       </div>
 
-      {/* 동적 필드 */}
+      {/* 동적 필드 — 통학형은 숙소 정보 없음 */}
+      {bType!=="commute"&&(
       <div style={{marginBottom:16,padding:14,background:"#f8fafc",borderRadius:10}}>
         <div style={{fontSize:13,fontWeight:700,color:"#475569",marginBottom:10}}>숙소 상세</div>
         {(bType==="dreamhouse"||bType==="dreamhouse_jaypark"||bType==="dreamhouse_cubenine")&&(
@@ -819,9 +837,6 @@ export default function AdminBookingsPage(){
             </select>
           </div>
         )}
-        {bType==="commute"&&(
-          <div style={{fontSize:12,color:"#6b7c93",padding:"4px 0"}}>통학형: 숙소 정보 없이 학원만 이용</div>
-        )}
         {bType==="room_only"&&(<>
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
             <label style={{fontSize:13,minWidth:90}}>숙소</label>
@@ -839,6 +854,7 @@ export default function AdminBookingsPage(){
           </div>
         </>)}
       </div>
+      )}
 
       {/* 기본 정보 */}
       {[
