@@ -26,7 +26,12 @@ const SC:Record<string,{bg:string;color:string}>={
 };
 
 function stuNames(s:any):string{
-  try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return "";return a.map((x:any)=>x.korName).filter(Boolean).join(", ");}catch{return "";}
+  try{
+    const a=typeof s==="string"?JSON.parse(s):s;
+    if(!Array.isArray(a)||a.length===0)return "";
+    // 학생 객체의 이름 필드 체인: korName(legacy JSONB) → name_kr(students 테이블/신규) → koreanName → name
+    return a.map((x:any)=>x?.korName||x?.name_kr||x?.koreanName||x?.name||"").filter(Boolean).join(", ");
+  }catch{return "";}
 }
 function stuWeeks(s:any):string{
   try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return "";return a.map((x:any)=>x.weeks?x.weeks+"주":"").filter(Boolean).join(", ");}catch{return "";}
@@ -562,7 +567,7 @@ export default function AdminBookingsPage(){
             <td>{b.booker_name}</td>
             <td>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            <td>{b.accom_type||"미정"}</td>
+            <td title={b.accom_type||"미정"}>{b.accom_type||"미정"}</td>
             <td>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
