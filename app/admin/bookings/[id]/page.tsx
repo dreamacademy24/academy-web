@@ -61,6 +61,11 @@ export default function BookingDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [posting, setPosting] = useState(false);
 
+  // 기본정보 편집 모드
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (isAdminAuthed()) {
       setAuthed(true);
@@ -102,6 +107,53 @@ export default function BookingDetailPage() {
     if (res.ok) setData(await res.json());
     setLoading(false);
   }, [id]);
+
+  function startEdit(b: Record<string, any>) {
+    setEditForm({
+      booker_name: b.booker_name || "",
+      booker_phone: b.booker_phone || "",
+      checkin_date: b.check_in || b.checkin_date || "",
+      checkout_date: b.check_out || b.checkout_date || "",
+      accom_weeks: String(b.accom_weeks || ""),
+      accom_type: b.accom_type || "",
+      agency: b.agency || "",
+      flight_in: b.flight_in || "",
+      flight_out: b.flight_out || "",
+      pickup_place: b.pickup_place || "",
+      drop_off: b.drop_place || b.drop_off || "",
+    });
+    setEditing(true);
+  }
+  async function saveEdit() {
+    setSaving(true);
+    const payload: Record<string, any> = {
+      booker_name: (editForm.booker_name || "").trim() || null,
+      booker_phone: (editForm.booker_phone || "").trim() || null,
+      checkin_date: editForm.checkin_date || null,
+      checkout_date: editForm.checkout_date || null,
+      accom_weeks: Number(editForm.accom_weeks) || null,
+      accom_type: editForm.accom_type || null,
+      agency: (editForm.agency || "").trim() || null,
+      flight_in: (editForm.flight_in || "").trim() || null,
+      flight_out: (editForm.flight_out || "").trim() || null,
+      pickup_place: (editForm.pickup_place || "").trim() || null,
+      drop_off: (editForm.drop_off || "").trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    const res = await fetch(`/api/bookings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+      return;
+    }
+    setEditing(false);
+    load();
+  }
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
@@ -158,6 +210,9 @@ export default function BookingDetailPage() {
 .btn-sm{padding:6px 14px;font-size:12px}
 .btn-gray{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}.btn-gray:hover{background:#e2e8f0}
 .empty{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
+.ed-inp{width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:#fff;color:#1a1a2e;font-weight:600}.ed-inp:focus{border-color:#1a6fc4;box-shadow:0 0 0 2px rgba(26,111,196,0.1)}
+.ed-bar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px}
+.ed-note{font-size:11px;color:#94a3b8;margin-top:4px}
 @media(max-width:600px){.mv-w{padding:20px 12px}.grid{grid-template-columns:1fr}.mv-head{flex-direction:column;align-items:stretch}}
     `}</style>
     <div className="mv-w">
@@ -182,33 +237,100 @@ export default function BookingDetailPage() {
 
       {/* 탭1: 기본정보 */}
       {tab === "info" && (<>
+        <div className="ed-bar">
+          {!editing ? (
+            <button className="btn btn-sm btn-blue" onClick={()=>startEdit(b)}>✏️ 수정</button>
+          ) : (<>
+            <button className="btn btn-sm btn-gray" onClick={()=>setEditing(false)} disabled={saving}>취소</button>
+            <button className="btn btn-sm btn-blue" onClick={saveEdit} disabled={saving}>{saving?"저장 중...":"💾 저장"}</button>
+          </>)}
+        </div>
         <div className="sec">
           <h2>예약 정보</h2>
           <div className="grid">
-            <div className="item"><div className="lbl">예약자</div><div className="val">{b.booker_name || "-"}</div></div>
-            <div className="item"><div className="lbl">연락처</div><div className="val">{b.booker_phone || "-"}</div></div>
+            <div className="item"><div className="lbl">예약자</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.booker_name||""} onChange={e=>setEditForm({...editForm,booker_name:e.target.value})}/>
+                : <div className="val">{b.booker_name || "-"}</div>}
+            </div>
+            <div className="item"><div className="lbl">연락처</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.booker_phone||""} onChange={e=>setEditForm({...editForm,booker_phone:e.target.value})} placeholder="010-0000-0000"/>
+                : <div className="val">{b.booker_phone || "-"}</div>}
+            </div>
             {(b.booking_type === "commute" || b.accom_type === "통학형") ? (<>
-              <div className="item"><div className="lbl">수업시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
-              <div className="item"><div className="lbl">수업종료</div><div className="val">{fDate(b.checkout_date || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+              <div className="item"><div className="lbl">수업시작</div>
+                {editing
+                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
+                  : <div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div>}
+              </div>
+              <div className="item"><div className="lbl">수업종료</div>
+                {editing
+                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
+                  : <div className="val">{fDate(b.checkout_date || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div>}
+              </div>
             </>) : (<>
-              <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
-              <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
+              <div className="item"><div className="lbl">체크인</div>
+                {editing
+                  ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
+                  : <div className="val">{fDate(b.check_in || b.checkin_date)}</div>}
+              </div>
+              <div className="item"><div className="lbl">체크아웃</div>
+                {editing
+                  ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
+                  : <div className="val">{fDate(b.check_out || b.checkout_date)}</div>}
+              </div>
+              <div className="item"><div className="lbl">기간(주)</div>
+                {editing
+                  ? <><input className="ed-inp" type="number" min="1" max="12" value={editForm.accom_weeks||""} onChange={e=>setEditForm({...editForm,accom_weeks:e.target.value})}/><div className="ed-note">아카데미 시작/종료는 체크인 + 기간으로 자동 계산</div></>
+                  : <div className="val">{b.accom_weeks ? b.accom_weeks+"주" : "-"}</div>}
+              </div>
               <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
               <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
             </>)}
-            <div className="item"><div className="lbl">예약유형</div><div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div></div>
-            <div className="item"><div className="lbl">유학원</div><div className="val">{b.agency || "-"}</div></div>
+            <div className="item"><div className="lbl">예약유형</div>
+              {editing
+                ? <select className="ed-inp" value={editForm.accom_type||""} onChange={e=>setEditForm({...editForm,accom_type:e.target.value})}>
+                    <option value="">선택</option>
+                    <option value="드림하우스">드림하우스 단독</option>
+                    <option value="드림하우스+제이파크">드하 + 제이파크</option>
+                    <option value="드림하우스+큐브나인">드하 + 큐브나인</option>
+                    <option value="제이파크 단독">제이파크 단독</option>
+                    <option value="큐브나인 단독">큐브나인 단독</option>
+                    <option value="통학형">통학형</option>
+                  </select>
+                : <div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div>}
+            </div>
+            <div className="item"><div className="lbl">유학원</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/>
+                : <div className="val">{b.agency || "-"}</div>}
+            </div>
           </div>
         </div>
         <div className="sec">
           <h2>항공편</h2>
           <div className="grid">
-            <div className="item"><div className="lbl">입국 항공편</div><div className="val">{b.flight_in_airline || b.flight_in || "-"}</div></div>
-            <div className="item"><div className="lbl">입국 날짜/시간</div><div className="val">{fDate(b.flight_in_date)} {b.flight_in_time || ""}</div></div>
-            <div className="item"><div className="lbl">출국 항공편</div><div className="val">{b.flight_out_airline || b.flight_out || "-"}</div></div>
-            <div className="item"><div className="lbl">출국 날짜/시간</div><div className="val">{fDate(b.flight_out_date)} {b.flight_out_time || ""}</div></div>
-            <div className="item"><div className="lbl">픽업장소</div><div className="val">{b.pickup_place || "-"}</div></div>
-            <div className="item"><div className="lbl">드랍장소</div><div className="val">{b.drop_place || b.drop_off || "-"}</div></div>
+            <div className="item"><div className="lbl">입국 항공편</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.flight_in||""} onChange={e=>setEditForm({...editForm,flight_in:e.target.value})} placeholder="예: KE123 5/9 14:30"/>
+                : <div className="val">{b.flight_in_airline || b.flight_in || "-"}{b.flight_in_date ? ` / ${fDate(b.flight_in_date)} ${b.flight_in_time||""}` : ""}</div>}
+            </div>
+            <div className="item"><div className="lbl">출국 항공편</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.flight_out||""} onChange={e=>setEditForm({...editForm,flight_out:e.target.value})} placeholder="예: KE124 6/5 17:00"/>
+                : <div className="val">{b.flight_out_airline || b.flight_out || "-"}{b.flight_out_date ? ` / ${fDate(b.flight_out_date)} ${b.flight_out_time||""}` : ""}</div>}
+            </div>
+            <div className="item"><div className="lbl">픽업장소</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.pickup_place||""} onChange={e=>setEditForm({...editForm,pickup_place:e.target.value})} placeholder="예: 막탄공항"/>
+                : <div className="val">{b.pickup_place || "-"}</div>}
+            </div>
+            <div className="item"><div className="lbl">드랍장소</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.drop_off||""} onChange={e=>setEditForm({...editForm,drop_off:e.target.value})} placeholder="예: 막탄공항"/>
+                : <div className="val">{b.drop_place || b.drop_off || "-"}</div>}
+            </div>
           </div>
         </div>
         <div className="sec">
@@ -269,7 +391,14 @@ export default function BookingDetailPage() {
       {/* 탭3: 픽업/체크인 */}
       {tab === "pickup" && (<>
         <div className="sec">
-          <h2>픽업/드랍 ({pickups.length}건)</h2>
+          <h2>기본 픽업/드랍 정보 <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(예약 등록 시 입력)</span></h2>
+          <div className="grid">
+            <div className="item"><div className="lbl">픽업장소</div><div className="val">{b.pickup_place || "-"}</div></div>
+            <div className="item"><div className="lbl">드랍장소</div><div className="val">{b.drop_place || b.drop_off || "-"}</div></div>
+          </div>
+        </div>
+        <div className="sec">
+          <h2>픽업/드랍 신청 ({pickups.length}건) <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(손님 포털 신청)</span></h2>
           {pickups.length === 0 ? <div className="empty">픽업 일정이 없습니다</div> :
             pickups.map((p: any) => (
               <div key={p.id} className={`pk-card${p.request_type === "dropoff" ? " drop" : ""}`}>

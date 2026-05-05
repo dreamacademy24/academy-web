@@ -80,3 +80,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     shuttle_requests: shuttleReqs.data ?? [],
   })
 }
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const body = await req.json()
+  // bookings_new 우선, 없으면 bookings (live 테이블)
+  const newRow = await supabase.from('bookings_new').update(body).eq('id', id).select().maybeSingle()
+  if (newRow.data) return NextResponse.json({ booking: newRow.data, source: 'new' })
+  // bookings_new에 없거나 row 없음 → bookings 시도
+  const oldRow = await supabase.from('bookings').update(body).eq('id', id).select().maybeSingle()
+  if (oldRow.error) return NextResponse.json({ error: oldRow.error.message }, { status: 400 })
+  if (!oldRow.data) return NextResponse.json({ error: 'not found' }, { status: 404 })
+  return NextResponse.json({ booking: oldRow.data, source: 'old' })
+}
