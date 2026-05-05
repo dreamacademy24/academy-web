@@ -208,6 +208,9 @@ export default function AdminBookingsPage(){
   async function saveNewBooking(){
     if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
     setSavingNew(true);
+    // 예약번호 생성 (booking/invoice 페이지와 동일 포맷: DA-YYYYMMDD-NNNNNN)
+    const todayCompact=new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const rno="DA-"+todayCompact+"-"+Math.floor(Math.random()*900000+100000);
     const accomDetail:Record<string,unknown>={booking_type:bType};
     if(bType==="dreamhouse"){accomDetail.dh_weeks=newForm.dh_weeks;}
     else if(bType==="dreamhouse_jaypark"){accomDetail.dh_weeks=newForm.dh_weeks;accomDetail.jp_weeks=newForm.jp_weeks;}
@@ -234,6 +237,7 @@ export default function AdminBookingsPage(){
     const flightOutStr=flightOut.undecided?"미정":[flightOut.airline,flightOut.flight_no,flightOut.date,flightOut.time].filter(Boolean).join(" ");
     // Insert into bookings via API (옛 테이블, KO 라벨 사용)
     const body:Record<string,unknown>={
+      reservation_no:rno,
       accom_type:BTYPE_KO[bType]||bType,
       booker_name:newForm.booker_name.trim(),
       booker_phone:newForm.booker_phone.trim()||null,
@@ -290,11 +294,15 @@ export default function AdminBookingsPage(){
       age:s.birth_date||null,level:s.level||null,
     }));
     if(stuRows.length>0&&bookingId){
-      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/students`,{
+      const stuR=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/students`,{
         method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
         body:JSON.stringify(stuRows),
       });
-      // bookings.students JSONB도 동기화 (리스트/학생관리 탭이 이 컬럼 참조)
+      if(!stuR.ok){console.error("students INSERT failed:",await stuR.text());}
+    }
+    // bookings.students JSONB도 동기화 (리스트/학생관리 탭이 이 컬럼 참조)
+    // /booking·/invoice와 동일하게 JSON.stringify 형태로 저장 (text/jsonb 양쪽 호환)
+    if(bookingId){
       const studentsJsonb=students23.filter(s=>s.name_kr.trim()).map(s=>({
         korName:s.name_kr.trim(),
         engName:s.name_en.trim()||"",
@@ -307,10 +315,11 @@ export default function AdminBookingsPage(){
         level:s.level||"",
         birth_date:s.birth_date||"",
       }));
-      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,{
+      const patchR=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,{
         method:"PATCH",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
-        body:JSON.stringify({students:studentsJsonb}),
+        body:JSON.stringify({students:JSON.stringify(studentsJsonb)}),
       });
+      if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);alert("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
     }
     setSavingNew(false);setShowNewBooking(false);
     setNewForm({booker_name:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
