@@ -161,6 +161,8 @@ export default function AdminBookingsPage(){
   const [stuMonthNum,setStuMonthNum]=useState<string>(String(_now.getMonth()+1).padStart(2,"0")); // "" = 전체, "01"~"12"
   const [stuSpecialPopup,setStuSpecialPopup]=useState<{booking_id:string;current:string}|null>(null);
   const [stuSpecialEdit,setStuSpecialEdit]=useState("");
+  // 확정예약 탭 특이사항 펼침 토글 (booking id Set)
+  const [expandedSr,setExpandedSr]=useState<Set<string>>(new Set());
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   // ⚠️ 종료일/기간: stored s.academyEnd는 stale 가능 (예: 8주짜리가 4/17로 잘못 저장됨)
@@ -736,7 +738,9 @@ export default function AdminBookingsPage(){
               <td>{b.agency||"-"}</td>
               <td>{b.balance_date||"-"}</td>
               <td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
-              <td className="wrap">{b.special_request||"-"}</td>
+              <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
+                {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
+              </td>
               <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
                 <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
                   const v=e.target.checked;
@@ -905,8 +909,8 @@ export default function AdminBookingsPage(){
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
-                                {startList.map(s=>(<div key={`s${s.key}`} className="cal-stu-in">+ {s.korName}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
-                                {endList.map(s=>(<div key={`e${s.key}`} className="cal-stu-out">- {s.korName}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
+                                {startList.map(s=>(<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()}>+ {s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
+                                {endList.map(s=>(<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()}>- {s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
                               </td>
                             );
                           })}
