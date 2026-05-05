@@ -53,12 +53,19 @@ function ReceiptPageInner(){
           const locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
           const deposit=1000000;
           const balance=Math.max(0,(row.final_price||0)-deposit);
+          // 인원 구성: 보호자 + 아이 합산. 양쪽 모두 0보다 크면 분리 표기, 아니면 단순 합계 숫자
+          const adultCount=Number(row.adults)||0;
+          const childCount=Number(row.children??row.kids??row.child_count)||0;
+          const totalPeople=adultCount+childCount;
+          const peopleDisplay=(adultCount>0&&childCount>0)
+            ?`보호자 ${adultCount} + 아이 ${childCount}`
+            :totalPeople>0?String(totalPeople):"";
           setData({
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
             checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
-            people:row.adults!=null?String(row.adults):"", houseNo:"미정",
+            people:peopleDisplay, houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
             packageType:items.map((i:BillItem)=>i.label).join(" + "),
