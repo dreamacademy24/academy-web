@@ -35,7 +35,11 @@ function getDaysInMonth(year: number, month: number) {
 }
 
 function toDateStr(date: Date) {
-  return date.toISOString().split('T')[0]
+  // 로컬 타임존 기준 YYYY-MM-DD (toISOString은 UTC로 변환되어 KST/PHT에서 하루 밀림)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export default function DreamhouseRooms() {
@@ -82,11 +86,10 @@ export default function DreamhouseRooms() {
     ROOMS.forEach(r => { cellMap[dateStr][r] = [] })
   })
   bookings.forEach(b => {
-    const cin = new Date(b.checkin_date)
-    const cout = new Date(b.checkout_date)
+    // 문자열 직접 비교 (YYYY-MM-DD는 lexicographic 정렬이 시간순과 동일, timezone 영향 없음)
+    // 체크인 당일 ~ 체크아웃 당일까지 inclusive 블록
     dates.forEach(({dateStr}) => {
-      const d = new Date(dateStr)
-      if (d >= cin && d < cout) {
+      if (dateStr >= b.checkin_date && dateStr <= b.checkout_date) {
         if (cellMap[dateStr][b.accom_room]) {
           cellMap[dateStr][b.accom_room].push(b)
         }
@@ -188,7 +191,7 @@ export default function DreamhouseRooms() {
                       const isDouble = cellBookings.length > 1
                       const isConflict = conflictSet.has(`${dateStr}_${room}`)
                       const isCheckin = cellBookings.some(b => b.checkin_date === dateStr)
-                      const isCheckout = cellBookings.some(b => b.checkout_date === toDateStr(new Date(new Date(dateStr).getTime() + 86400000)))
+                      const isCheckout = cellBookings.some(b => b.checkout_date === dateStr)
 
                       let cellBg = 'transparent'
                       let cellBorder = '1px solid #e2e8f0'
