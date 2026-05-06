@@ -2,6 +2,84 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
+// ── 셔틀 자동 생성 헬퍼 ────────────────────────────────────────
+const SHUTTLE_HOLIDAYS = new Set([
+  '2026-05-01','2026-05-29',
+  '2026-06-12',
+  '2026-08-09',
+  '2026-10-30','2026-10-31',
+  '2026-11-01','2026-11-27',
+  '2026-12-24','2026-12-25','2026-12-31',
+]);
+
+const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
+  '2026-08-09': '⚠️ 아이언맨 도로통제로 투어셔틀 불가',
+};
+
+interface ShSlot { time: string; name: string; detail: string; fee?: string; }
+
+function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
+
+function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
+  if (SHUTTLE_HOLIDAYS.has(dateStr)) return 'holiday';
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  const odd = nthWeekday(d) % 2 === 1;
+  const hmart: ShSlot[] = [{ time: '10:00am', name: 'H-Mart 쇼핑', detail: '11:00 H마트 → 드림하우스' }];
+  if (dow===1||dow===3||dow===5) return hmart;
+  if (dow===2) return odd
+    ? [{ time:'4:40pm',  name:'파롤라 (Parola)',       detail:'방문 후 복귀' }]
+    : [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail:'쇼핑 후 복귀' }];
+  if (dow===4) return odd
+    ? [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail:'쇼핑 후 복귀' }]
+    : [{ time:'5:30pm',  name:'막탄 쉬라인',            detail:'방문 후 복귀' }];
+  if (dow===6) return odd
+    ? [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' }]
+    : [{ time:'2:00pm',  name:'펀파크 (Fun Park)',      detail:'방문 후 복귀' },
+       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail:'방문 후 복귀' }];
+  if (dow===0) return odd
+    ? [{ time:'1:00pm',  name:'안조 월드 (Anjo World)', detail:'방문 후 복귀' },
+       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail:'방문 후 복귀' }]
+    : [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' },
+       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail:'2시간 30분 후 복귀' }];
+  return [];
+}
+
+function slotSlug(name: string): string {
+  if (name.startsWith('H-Mart')) return 'hmart';
+  if (name.startsWith('파롤라')) return 'parola';
+  if (name.startsWith('SM')) return 'smseaside';
+  if (name.startsWith('막탄')) return 'shrine';
+  if (name.startsWith('세부')) return 'safari';
+  if (name.startsWith('펀파크')) return 'funpark';
+  if (name.startsWith('란타우')) return 'lantaw';
+  if (name.startsWith('안조')) return 'anjo';
+  if (name.startsWith('일콜소')) return 'ilcorso';
+  return 'shuttle';
+}
+
+const DAY_KR = ['일','월','화','수','목','금','토'];
+
+function buildShWeeks(year: number, month: number) {
+  const days = new Date(year, month, 0).getDate();
+  const weeks: { label: string; items: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] }[] = [];
+  let week: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] = [];
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(year, month-1, d);
+    const dow = date.getDay();
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    week.push({ dateStr, dayLabel:`${month}/${d} (${DAY_KR[dow]})`, slots: getShSlots(dateStr), special: SHUTTLE_SPECIAL_MSG[dateStr] });
+    if (dow===6 || d===days) {
+      const wn = weeks.length+1;
+      weeks.push({ label:`${wn}주차 ${week[0].dayLabel.split(' ')[0]} – ${week[week.length-1].dayLabel.split(' ')[0]}`, items: week });
+      week = [];
+    }
+  }
+  return weeks;
+}
+
+const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
+
 export default function ShuttlePage() {
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
@@ -67,7 +145,16 @@ export default function ShuttlePage() {
         checkbox.checked = false;
       }
     });
-  }, []);
+  }, [activeMonth, accordionState]);
+
+  // 월 변경 시 1주차 자동 펼침 (이미 사용자가 토글한 키는 유지)
+  useEffect(() => {
+    setAccordionState(prev => {
+      const key = `${activeMonth}-1`;
+      if (prev[key] !== undefined) return prev;
+      return { ...prev, [key]: true };
+    });
+  }, [activeMonth]);
 
   const closeModal = useCallback((noShow: boolean) => {
     if (noShow) {
@@ -385,10 +472,53 @@ export default function ShuttlePage() {
                 <div className="field">
                   <p className="label-main">셔틀 스케쥴에서 선택<span className="required">*</span></p>
                   <p className="label-sub">이용하실 날짜와 장소를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 주말 일정입니다.</p>
-                  <div className="month-toggle"></div>
+                  <div className="month-toggle">
+                    {ACTIVE_MONTHS.map(m => (
+                      <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m}월</button>
+                    ))}
+                  </div>
                   <div className="month-schedules">
-
-
+                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10)).map((wk, wi) => {
+                      const key = `${activeMonth}-${wi+1}`;
+                      const isOpen = !!accordionState[key];
+                      const m = parseInt(activeMonth, 10);
+                      return (
+                        <div key={key} className="week-accordion">
+                          <button type="button" className="week-accordion-btn" data-open={isOpen ? "true" : "false"} onClick={() => toggleAccordion(key)}>
+                            <span className="week-acc-title">{wi+1}주차 <em>{wk.label.replace(/^\d+주차\s*/, '')}</em></span>
+                            <span className="week-acc-arrow">▾</span>
+                          </button>
+                          <div className="week-accordion-body" data-open={isOpen ? "true" : "false"}>
+                            <div className="schedule-grid">
+                              {wk.items.flatMap((item, ii) => {
+                                if (item.slots === 'holiday') {
+                                  return [(
+                                    <div key={`h-${ii}`} className="schedule-item" style={{background:'#fef2f2',border:'1px solid #fecaca',opacity:0.85,cursor:'default'}}>
+                                      <div>
+                                        <div style={{fontWeight:700,color:'#dc2626',fontSize:13}}>{item.dayLabel} · 🚫 휴무</div>
+                                        {item.special && <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>{item.special}</div>}
+                                        <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>셔틀 미운영 · 식사 정상 제공</div>
+                                      </div>
+                                    </div>
+                                  )];
+                                }
+                                const d = parseInt(item.dateStr.slice(8,10), 10);
+                                const isWeekend = item.dayLabel.includes('(토)') || item.dayLabel.includes('(일)');
+                                return item.slots.map((sl, si) => (
+                                  <label key={`${item.dateStr}-${si}`} className={`schedule-item${isWeekend ? ' weekend' : ''}`}>
+                                    <input type="checkbox" name="schedule" value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
+                                    <div className="schedule-label">
+                                      <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
+                                      <span className="schedule-sub">{sl.time} · {sl.detail}{sl.fee ? ` · 인당 ${sl.fee}페소` : ''}</span>
+                                    </div>
+                                  </label>
+                                ));
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   <p className="month-hint">※ 자세한 일정과 변경 사항은 드림센터 공지 및 현지 안내를 기준으로 합니다.</p>
                 </div>
