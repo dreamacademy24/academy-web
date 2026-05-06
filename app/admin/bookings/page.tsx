@@ -624,7 +624,7 @@ export default function AdminBookingsPage(){
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
-            <td>{b.booker_name}</td>
+            <td>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
             <td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td title={b.accom_type||"미정"}>{b.accom_type||"미정"}</td>
@@ -803,7 +803,7 @@ export default function AdminBookingsPage(){
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td>{b.assignee||"-"}</td>
               <td>
-                <div style={{fontWeight:600}}>{b.booker_name}</div>
+                <div style={{fontWeight:600}}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</div>
                 <div style={{color:"#6b7c93",fontSize:10}}>{stuNames(b.students)}</div>
               </td>
               <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
