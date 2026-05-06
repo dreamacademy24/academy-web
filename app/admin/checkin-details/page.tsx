@@ -62,12 +62,18 @@ function CheckinDetailsInner() {
   const selectBooking = useCallback(async (id: string) => {
     setSelId(id);
     setMsg("");
-    const b = bookings.find(x => x.id === id) || null;
-    setBooking(b);
-    const res = await fetch(`/api/admin/checkin-details?booking_id=${id}`);
+    // 우선 list에서 booking 표시 (응답 대기 중에도 헤더 노출)
+    const fromList = bookings.find(x => x.id === id) || null;
+    if (fromList) setBooking(fromList);
+    const res = await fetch(`/api/admin/checkin-details?bookingId=${id}`);
     if (res.ok) {
       const d = await res.json();
-      setDetail(d.detail);
+      if (d.booking) setBooking(d.booking);
+      if (d.detail) setDetail(d.detail);
+      if (d.error) setMsg("저장 경고: " + d.error);
+    } else {
+      const j = await res.json().catch(()=>({}));
+      setMsg("로드 실패: " + (j.error || "알 수 없는 오류"));
     }
   }, [bookings]);
 

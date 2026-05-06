@@ -11,10 +11,11 @@ function genToken(): string {
   return randomBytes(8).toString('hex') // 16 hex chars
 }
 
-// GET: booking_id 없으면 bookings 목록 / 있으면 checkin_details 조회 (없으면 자동 생성)
+// GET: bookingId 없으면 bookings 목록 / 있으면 {booking, detail} 반환 (detail 없으면 자동 생성)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const bookingId = searchParams.get('booking_id')
+  // bookingId(camelCase) 우선, 호환성 위해 booking_id(snake_case)도 허용
+  const bookingId = searchParams.get('bookingId') || searchParams.get('booking_id')
 
   if (!bookingId) {
     const { data, error } = await supabase
@@ -25,22 +26,24 @@ export async function GET(req: Request) {
     return NextResponse.json({ bookings: data })
   }
 
+  // booking 기본정보 fetch
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, adults, children, special_request, students, reservation_no')
+    .eq('id', bookingId)
+    .maybeSingle()
+  if (!booking) return NextResponse.json({ error: 'booking not found' }, { status: 404 })
+
+  // detail 조회
   const { data: existing } = await supabase
     .from('checkin_details')
     .select('*')
     .eq('booking_id', bookingId)
     .maybeSingle()
 
-  if (existing) return NextResponse.json({ detail: existing })
+  if (existing) return NextResponse.json({ booking, detail: existing })
 
-  // 없으면 booking 정보로 자동 생성
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select('id, booker_name, checkin_date, students')
-    .eq('id', bookingId)
-    .maybeSingle()
-  if (!booking) return NextResponse.json({ error: 'booking not found' }, { status: 404 })
-
+  // 없으면 자동 생성 (public_token 부여)
   let guestNames = ''
   try {
     const arr = typeof booking.students === 'string' ? JSON.parse(booking.students) : booking.students
@@ -66,8 +69,11 @@ export async function GET(req: Request) {
     .insert(newDetail)
     .select()
     .single()
-  if (iErr) return NextResponse.json({ error: iErr.message, detail: newDetail }, { status: 200 })
-  return NextResponse.json({ detail: inserted })
+  if (iErr) {
+    // INSERT 실패해도 폼은 열 수 있게 newDetail을 반환 (token은 still 클라이언트가 사용 가능)
+    return NextResponse.json({ booking, detail: newDetail, error: iErr.message }, { status: 200 })
+  }
+  return NextResponse.json({ booking, detail: inserted })
 }
 
 // POST: upsert 7 필드 (어드민 저장)
