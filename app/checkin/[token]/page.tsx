@@ -139,7 +139,43 @@ export default function CheckinFormPage() {
         <div className="q">
           <div className="q-title"><span className="q-num">4</span>유심 대여 신청 (GB 수량)</div>
           <div className="q-hint">대여를 원하시면 인원 수와 GB 수량을 작성해 주세요. (필요 없으시면 비워두세요)</div>
-          <input className="fi" value={form.q4} onChange={e=>up("q4",e.target.value)} placeholder="예: 2명, 5GB / 1명, 10GB"/>
+
+          <div style={{background:"#f8f9fa",border:"1px solid #e2e8f0",borderRadius:8,padding:16,marginBottom:12,fontSize:12.5,lineHeight:1.7,color:"#374151"}}>
+            <div style={{fontWeight:800,fontSize:14,marginBottom:8,color:"#1a1a2e"}}>📱 유심 대여 서비스</div>
+
+            <div style={{fontWeight:700,color:"#1a6fc4",marginTop:6,marginBottom:4}}>#기본 안내</div>
+            <ul style={{paddingLeft:18,margin:0}}>
+              <li>제공 요금제 → <b>Smart 올데이터+ 요금제</b></li>
+              <li>통신사 관계 없이 <b>무제한 통화</b> <span style={{color:"#6b7c93"}}>(※ 유선전화 제외)</span></li>
+              <li>데이터 포함</li>
+              <li>이용 가능 요금제 기간: <b>3일 / 7일 / 30일</b> → 요금제: 유료
+                <div style={{paddingLeft:8,color:"#475569",marginTop:2}}>→ 원하시는 기간(GB)을 선택해 알려주시면 해당 요금제로 세팅된 유심을 제공해드립니다.</div>
+              </li>
+            </ul>
+
+            <div style={{fontWeight:700,marginTop:10,marginBottom:4,color:"#1a1a2e"}}>요금 (30일 기준)</div>
+            <ul style={{paddingLeft:18,margin:0}}>
+              <li>24GB → <b>P499</b></li>
+              <li>36GB → <b>P599</b></li>
+              <li>48GB → <b>P699</b></li>
+            </ul>
+
+            <div style={{fontWeight:700,color:"#dc2626",marginTop:10,marginBottom:4}}>#유의사항</div>
+            <ul style={{paddingLeft:18,margin:0,color:"#475569"}}>
+              <li>통신사 <b>smart</b> 유심만 제공합니다</li>
+              <li>제공되는 유심은 투숙객의 편의를 위한 무상 서비스입니다</li>
+              <li>기타 요금제, 국제전화 사용 등에 대한 안내는 지원하지 않습니다</li>
+              <li>통신불량 관련 문의는 <b>Smart 고객센터 또는 대리점</b>에 직접 문의해 주세요</li>
+            </ul>
+
+            <div style={{marginTop:10,padding:"8px 10px",background:"#fef3c7",border:"1px solid #fde68a",borderRadius:6,fontSize:12,color:"#92400e",fontWeight:600}}>
+              ⚠️ 유심 반납 안내: 퇴실 시, 지급된 유심은 <b>반드시 반납</b>해 주세요.
+            </div>
+
+            <div style={{marginTop:8,fontSize:11.5,color:"#6b7c93"}}>예시 입력) <b>24gb, 2개</b></div>
+          </div>
+
+          <input className="fi" value={form.q4} onChange={e=>up("q4",e.target.value)} placeholder="예: 24gb, 2개"/>
         </div>
 
         <div className="q">
