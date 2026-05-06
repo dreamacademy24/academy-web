@@ -565,6 +565,27 @@ export default function AdminBookingsPage(){
 .cal-stu-in{color:#16a34a;font-size:10px;line-height:1.4;}
 .cal-stu-out{color:#dc2626;font-size:10px;line-height:1.4;}
 @media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
+@media print{
+  @page{size:A4 landscape;margin:8mm;}
+  body{background:#fff !important;font-size:9px !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  /* 헤더·탭·필터·검색·토글버튼·이전다음달 버튼 모두 숨김 */
+  .ah,.main-tabs,.cf-search,.sub-tabs,.no-print{display:none !important;}
+  /* 페이지 컨테이너 padding/max-width 제거 */
+  .aw{padding:0 !important;max-width:none !important;}
+  /* 달력 컨테이너 — 그림자/보더 제거 */
+  .cal-wrap{box-shadow:none !important;border:none !important;padding:0 !important;overflow:visible !important;}
+  /* 7열이 A4 가로에 꽉 차도록 min-width 해제 */
+  .cal-tbl{min-width:0 !important;width:100% !important;table-layout:fixed !important;}
+  .cal-tbl th{font-size:9px !important;padding:4px 3px !important;}
+  .cal-tbl td{font-size:8px !important;padding:3px !important;height:auto !important;min-height:60px;}
+  .cal-side{width:80px !important;}
+  .cal-cell .cal-d{font-size:9px !important;margin-bottom:2px !important;}
+  .cal-newin,.cal-out{font-size:7px !important;padding:1px 3px !important;margin-bottom:2px !important;}
+  .cal-stu-in,.cal-stu-out{font-size:8px !important;line-height:1.25 !important;}
+  /* 월 타이틀 가운데 정렬 */
+  .cal-title{text-align:center !important;width:100%;font-size:14px !important;margin-bottom:6mm !important;}
+}
   `}</style>
 
   <div className="aw">
@@ -869,6 +890,7 @@ export default function AdminBookingsPage(){
           </div>
           <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
+          {stuView==="cal"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄 (A4 가로)</button>}
         </div>
         <div className="sub-tabs" style={{marginBottom:8}}>
           <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>년도:</span>
@@ -917,13 +939,13 @@ export default function AdminBookingsPage(){
             return (
               <div className="cal-wrap">
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <button className="sub-tab" onClick={()=>{
+                  <button className="sub-tab no-print" onClick={()=>{
                     let y=calYear,m=calMonth-1;
                     if(m<1){y-=1;m=12;}
                     setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));
                   }}>← 이전달</button>
-                  <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>{calYear}년 {calMonth}월</div>
-                  <button className="sub-tab" onClick={()=>{
+                  <div className="cal-title" style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>{calYear}년 {calMonth}월 학생 캘린더</div>
+                  <button className="sub-tab no-print" onClick={()=>{
                     let y=calYear,m=calMonth+1;
                     if(m>12){y+=1;m=1;}
                     setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));
