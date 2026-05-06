@@ -585,7 +585,7 @@ export default function BookingDetailPage() {
         <div className="sec">
           <h2>체크인 디테일</h2>
           {!checkin ? (
-            <div className="empty">체크인 디테일이 아직 생성되지 않았습니다<br/><button className="btn btn-sm btn-blue" style={{ marginTop: 12 }} onClick={() => router.push("/admin/checkin-details")}>체크인 디테일 페이지로 이동</button></div>
+            <div className="empty">체크인 디테일이 아직 생성되지 않았습니다<br/><button className="btn btn-sm btn-blue" style={{ marginTop: 12 }} onClick={() => router.push(`/admin/checkin-details?bookingId=${b.id}`)}>체크인 디테일 페이지로 이동</button></div>
           ) : (<div className="grid">
             <div className="item"><div className="lbl">침대세팅</div><div className="val">Master {checkin.bed_setting?.master_2f || 0} / Small {checkin.bed_setting?.small_2f || 0} / 1F {checkin.bed_setting?.floor_1f || 0}</div></div>
             <div className="item"><div className="lbl">USIM</div><div className="val">SIM {checkin.usim?.sim || 0} / LOAD {checkin.usim?.load || 0}</div></div>

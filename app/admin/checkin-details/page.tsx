@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
 interface Booking {
@@ -29,7 +29,14 @@ function fDate(d: string | null) {
 }
 
 export default function CheckinDetailsPage() {
+  return <Suspense fallback={null}><CheckinDetailsInner/></Suspense>;
+}
+
+function CheckinDetailsInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialBookingId = searchParams.get("bookingId");
+  const autoSelectedRef = useRef(false);
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selId, setSelId] = useState<string | null>(null);
@@ -45,6 +52,16 @@ export default function CheckinDetailsPage() {
 
   useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
   useEffect(() => { if (authed) loadBookings(); }, [authed, loadBookings]);
+
+  // URL의 ?bookingId=... 가 있으면 bookings 로드 후 자동 선택 (한 번만)
+  useEffect(() => {
+    if (autoSelectedRef.current || !authed || !initialBookingId || bookings.length === 0) return;
+    if (bookings.find(b => b.id === initialBookingId)) {
+      autoSelectedRef.current = true;
+      selectBooking(initialBookingId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, bookings, initialBookingId]);
 
   async function selectBooking(id: string) {
     setSelId(id);
