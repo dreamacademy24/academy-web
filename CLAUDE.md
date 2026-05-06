@@ -1216,3 +1216,44 @@ special_request, ssp
 2. [P4] 신규예약 모달 6가지 유형
 3. 체크인 디테일 Step 2~4 (공개 URL, 손님 폼, 인보이스 연동)
 4. Supabase checkin_details 테이블 SQL 실행 필요
+
+## 2026-05-06 오후 세션 (체크인 시스템 + 픽드랍 + UX 수정)
+
+### 체크인 피켓 카드 (app/admin/checkin-card/page.tsx) 신규
+- URL: /admin/checkin-card?bookingId={uuid}
+- 예약자 한글이름(120px)/영문이름/Dream House/B17 L14/MAY-15/KE601 표시
+- @media print A4 landscape
+- 예약상세 픽업/체크인 탭 🪧 체크인 카드 버튼 연결
+
+### 체크인 디테일 시스템 (Step 1~4)
+- Supabase checkin_details 테이블 생성 + 컬럼 추가
+- /admin/checkin-details?bookingId={id} 자동 선택 (Step 1)
+- 어드민 폼 7개 필드 + 💾저장 + 🔗손님폼링크복사 (Step 2)
+- 손님 공개 폼 /checkin/[token] — 6가지 질문, prefill, 제출완료 메시지 (Step 3)
+- API /api/checkin/[token] GET/POST (Step 4)
+- 유심 질문 아래 Smart 유심 요금제 안내 박스 추가
+- 예약상세 픽업/체크인 탭: 체크인 디테일 데이터 있어도 항상 버튼 표시
+
+### 인보이스 버그 수정 (app/invoice/page.tsx)
+- Room No. B17L10 하드코딩 4곳 → house_no||accom_room 정규화 (DH 접두어 제거)
+- 이미지 저장 버튼 추가 (📷, html2canvas, guest/admin 인보이스 모두)
+- 영문이름 폴백: booker_english 없으면 checkin_details.guest_names_en 첫 이름
+
+### 픽드랍 관리 (app/admin/pickups)
+- bookings_new → bookings 테이블 오류 수정
+- 예약에서 자동 추출 54건 (공항 패턴 매칭)
+- 리스트 뷰: ✈️IN/OUT 뱃지, 항공편, 🪧 체크인카드 버튼
+- 달력 뷰 추가: ✈️IN 초록/✈️OUT 빨강 배지, 날짜 클릭 상세 패널
+
+### 학생관리 달력
+- A4 가로 인쇄 (@media print + 🖨️ 버튼)
+- 킨더 학생 이름 앞 검정 굵은 K 표시
+
+### 견적 탭 (P5 완료)
+- 발행일 new Date() 자동갱신
+- 체크인/체크아웃 날짜 출력물 표시
+
+### 현재 미완료
+- P3: 인보이스 킨더 재료비 자동화
+- P4: 신규예약 모달 6가지 유형
+- 체크인 디테일 인보이스 완전 자동화
