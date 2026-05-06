@@ -124,19 +124,25 @@ function acaStart(b:any):string{
 }
 function acaEnd(b:any):string{
   const start=acaStart(b);if(start==="-"||!start)return"-";
-  // 통학형: checkout_date 우선
+  // 통학형: checkout_date 그대로
   const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
   if(isCommute&&b.checkout_date)return b.checkout_date;
-  // booking.accom_weeks 우선, 없으면 students[0].academyWeeks 폴백
-  let weeks=Number(b.accom_weeks)||0;
-  if(!weeks){
-    try{
-      const a=typeof b.students==="string"?JSON.parse(b.students):b.students;
-      if(Array.isArray(a)&&a[0]?.academyWeeks)weeks=Number(a[0].academyWeeks)||0;
-    }catch{}
-  }
-  if(!weeks)return"-";
-  return calcAcademyEnd(start,weeks)||"-";
+  // 비통학형 우선순위:
+  //   1) students[0].academyEnd (직접 저장된 날짜)
+  //   2) students[0].academyWeeks 로 calcAcademyEnd
+  //   3) b.accom_weeks 로 calcAcademyEnd (마지막 폴백 — booking-level이 stale일 수 있음)
+  try{
+    const a=typeof b.students==="string"?JSON.parse(b.students):b.students;
+    if(Array.isArray(a)&&a[0]){
+      const s0=a[0];
+      if(s0.academyEnd)return s0.academyEnd;
+      const sWeeks=Number(s0.academyWeeks)||0;
+      if(sWeeks>0)return calcAcademyEnd(start,sWeeks)||"-";
+    }
+  }catch{}
+  const bWeeks=Number(b.accom_weeks)||0;
+  if(bWeeks>0)return calcAcademyEnd(start,bWeeks)||"-";
+  return "-";
 }
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
