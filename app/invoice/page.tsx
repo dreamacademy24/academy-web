@@ -534,7 +534,20 @@ function InvoicePageInner(){
     if(!bookingId) return;
     supabase.from("bookings").select("*").eq("id",bookingId).single().then(async({data})=>{
       if(!data) return;
-      setBooker({name:data.booker_name,englishName:data.booker_english||"",balanceDate:data.balance_date||""});
+      // 영문이름 폴백: booker_english > checkin_details.guest_names_en 첫 이름
+      let englishName=data.booker_english||"";
+      if(!englishName){
+        try{
+          const cd=await supabase.from("checkin_details").select("guest_names_en").eq("booking_id",bookingId).maybeSingle();
+          const raw=cd.data?.guest_names_en||"";
+          if(raw){
+            // 첫 번째 이름 추출 (구분자: / , · 줄바꿈)
+            const first=raw.split(/[/,·\n]/)[0]?.trim()||"";
+            if(first) englishName=first;
+          }
+        }catch{}
+      }
+      setBooker({name:data.booker_name,englishName,balanceDate:data.balance_date||""});
       setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
       if(data.checkout_date) setDbCheckout(data.checkout_date);
       let sts:any[]=[];
@@ -865,12 +878,12 @@ function InvoicePageInner(){
   }
 
   /* ── 이미지 저장 ── */
-  async function saveAsImage(){
-    const el=document.getElementById("invoice-content");
+  async function saveAsImage(elementId:string="invoice-content"){
+    const el=document.getElementById(elementId);
     if(!el) return;
     const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
     const link=document.createElement("a");
-    link.download="인보이스_"+(booker.name||"draft")+".png";
+    link.download="인보이스_"+(booker.name||reservationNo||"draft")+".png";
     link.href=canvas.toDataURL("image/png");
     link.click();
   }
@@ -1095,6 +1108,7 @@ function InvoicePageInner(){
       </div>
       <div className="pb no-print">
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+        <button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("guest-invoice")}>📷 이미지 저장</button>
         <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
       </div>
     </div>
@@ -1231,7 +1245,7 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={saveAsImage}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
   </div>)}
   </>)}
   </>);
