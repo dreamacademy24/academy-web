@@ -549,8 +549,21 @@ export default function EstimateCalc(){
   function setItem(idx:number,field:"extras"|"discounts",itemId:number,patch:Partial<ExtraItem>){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:p[field].map(it=>it.id===itemId?{...it,...patch}:it)}:p));
   }
-  const todayFmt=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
-  const todayFile=new Date().toISOString().slice(0,10).replace(/-/g,"");
+  // '발행일' / 파일명용 — mount 후 자정을 넘어가도 화면 포커스/인터벌로 자동 갱신
+  const [now,setNow]=useState<Date>(()=>new Date());
+  useEffect(()=>{
+    const update=()=>setNow(new Date());
+    document.addEventListener("visibilitychange",update);
+    window.addEventListener("focus",update);
+    const id=setInterval(update,60_000);
+    return()=>{
+      document.removeEventListener("visibilitychange",update);
+      window.removeEventListener("focus",update);
+      clearInterval(id);
+    };
+  },[]);
+  const todayFmt=now.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
+  const todayFile=now.toISOString().slice(0,10).replace(/-/g,"");
 
   function planName(p:PlanState){return accomLabel[p.accom]+(p.roomType?` ${p.roomType}`:"");}
   function fmtDate(d:string){if(!d)return"";const dt=new Date(d);return `${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;}
@@ -559,7 +572,10 @@ export default function EstimateCalc(){
     const d=new Date(checkin);
     if(isNaN(d.getTime())) return "";
     d.setDate(d.getDate()+weeks*7);
-    return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${dd}`;
   }
 
   async function saveImage(){
@@ -690,7 +706,10 @@ export default function EstimateCalc(){
         {/* 카드 헤더 */}
         <div style={{textAlign:"center",marginBottom:16,paddingBottom:14,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
-          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · {plan.weeks}주{plan.checkin?` · ${fmtDate(plan.checkin)}`:""}</div>
+          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · {plan.weeks}주</div>
+          {plan.checkin && (
+            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>체크인: {plan.checkin} / 체크아웃: {calcCheckout(plan.checkin,plan.weeks)}</div>
+          )}
           <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
           <div style={{fontSize:12,color:"#6b7c93"}}>보호자 {plan.parents}명 + 아이 {plan.kids}명</div>
         </div>

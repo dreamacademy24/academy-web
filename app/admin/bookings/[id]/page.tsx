@@ -461,7 +461,11 @@ export default function BookingDetailPage() {
                       <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s, i)}>✏️ 수정</button>
                     </div>
                     <div className="sub">
-                      {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
+                      {[
+                        s.age || null,
+                        s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : null,
+                        s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : null,
+                      ].filter(Boolean).join(" · ")}
                       {(() => {
                         const ast = s.academy_start || deriveAcademyStart(b.check_in || b.checkin_date);
                         const aen = s.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks);
