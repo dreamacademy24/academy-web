@@ -16,18 +16,18 @@ export interface BookingTypeDef {
   icon: string;
 }
 
-// 손님 페이지 6종 (어드민도 동일 6종 사용)
+// 손님 페이지 5종 (통학형은 /booking2로 이동)
 export const PUBLIC_BOOKING_TYPES: BookingTypeDef[] = [
   { value: "dreamhouse",          icon: "🏠", label: "드림하우스 단독",  desc: "드림하우스 패키지" },
   { value: "dreamhouse_jaypark",  icon: "🏨", label: "드하 + 제이파크", desc: "드림하우스 + 제이파크 조합" },
   { value: "dreamhouse_cubenine", icon: "🏢", label: "드하 + 큐브나인", desc: "드림하우스 + 큐브나인 조합" },
   { value: "jaypark",             icon: "🏨", label: "제이파크 단독",    desc: "제이파크 패키지" },
   { value: "cubenine",            icon: "🏢", label: "큐브나인 단독",    desc: "큐브나인 패키지" },
-  { value: "commute",             icon: "🚶", label: "통학형",           desc: "숙소 없이 학원만" },
 ];
 
-// 어드민 전용 추가 옵션
+// 어드민 전용 추가 옵션 (통학형 + 숙소만)
 export const ADMIN_ONLY_BOOKING_TYPES: BookingTypeDef[] = [
+  { value: "commute",             icon: "🚶", label: "통학형",           desc: "숙소 없이 학원만" },
   { value: "room_only",           icon: "🛏️", label: "숙소만",           desc: "숙소만 (어드민 전용)" },
 ];
 

@@ -173,6 +173,8 @@ export default function AdminBookingsPage(){
 
   /* ── STEP 22: 예약 유형 선택 모달 ── */
   const [showNewBooking,setShowNewBooking]=useState(false);
+  const [modalTab,setModalTab]=useState<'allInOne'|'nonPackage'>('allInOne');
+  const [npType,setNpType]=useState<'dh_only'|'jp_only'|'cn_only'|'commute'>('dh_only');
   const [bType,setBType]=useState<BookingTypeValue>("dreamhouse");
   const [newForm,setNewForm]=useState({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",
     dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,
@@ -181,6 +183,12 @@ export default function AdminBookingsPage(){
 
   const CN_PERIODS=["1주","2주","4주","6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
+  const NP_TYPES=[
+    {v:'dh_only' as const, label:'드림하우스', desc:'숙소만 이용'},
+    {v:'jp_only' as const, label:'제이파크',   desc:'숙소만 이용'},
+    {v:'cn_only' as const, label:'큐브나인',   desc:'숙소만 이용'},
+    {v:'commute' as const, label:'통학형',     desc:'숙소 없이 학원만'},
+  ];
 
   /* ── STEP 23: 항공권 + 학생 ── */
   const emptyFlight={airline:"",flight_no:"",date:"",time:"",place:""};
@@ -466,6 +474,62 @@ export default function AdminBookingsPage(){
     setPayForm({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
     await load(); // 리스트 새로고침
     alert("새 예약이 등록되었습니다!");
+  }
+
+  async function saveNewNonPackage(){
+    if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
+    if(!newForm.check_in){alert(npType==='commute'?"수업시작 날짜를 입력하세요.":"체크인 날짜를 입력하세요.");return;}
+    if(!newForm.check_out){alert(npType==='commute'?"수업종료 날짜를 입력하세요.":"체크아웃 날짜를 입력하세요.");return;}
+    setSavingNew(true);
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const reservationNo=`DA-${today}-${Math.floor(Math.random()*900000+100000)}`;
+    const accomTypeMap:Record<string,string>={dh_only:"드림하우스 단독",jp_only:"제이파크 단독",cn_only:"큐브나인 단독",commute:"통학형"};
+    const accomType=accomTypeMap[npType];
+    const isCommuteNP=npType==='commute';
+    const payload:any={
+      reservation_no:reservationNo,status:"접수",
+      booker_name:newForm.booker_name.trim(),
+      booker_english:newForm.booker_english.trim()||null,
+      booker_phone:newForm.booker_phone.trim()||null,
+      checkin_date:newForm.check_in||null,
+      checkout_date:newForm.check_out||null,
+      accom_type:accomType,
+      accom_weeks:0,
+      pickup_place:isCommuteNP?null:(newForm.pickup_place.trim()||null),
+      drop_off:isCommuteNP?null:(newForm.drop_place.trim()||null),
+      agency:newForm.agency.trim()||null,
+      special_request:newForm.special_request.trim()||null,
+    };
+    if(isCommuteNP)payload.booking_type='commute';
+    const {data:inserted,error}=await supabase.from("bookings").insert(payload).select();
+    if(error){alert("저장 실패: "+error.message);setSavingNew(false);return;}
+    const bookingId=inserted?.[0]?.id;
+    if(bookingId){
+      const studentRows=students23.filter(s=>s.name_kr.trim()).map(s=>({
+        booking_id:bookingId,name_kr:s.name_kr.trim(),name_en:s.name_en.trim()||null,
+        age:s.birth_date||null,
+        level:s.level==="kinder"?"kinder":(s.level==="junior"?"junior":null),
+        academy_start:newForm.check_in||null,
+        academy_end:newForm.check_out||null,
+      }));
+      if(studentRows.length>0)await supabase.from("students").insert(studentRows);
+      const studentsJsonb=students23.filter(s=>s.name_kr.trim()).map(s=>({
+        korName:s.name_kr.trim(),engName:s.name_en.trim()||"",
+        academyStart:newForm.check_in||"",academyEnd:newForm.check_out||"",
+        academyWeeks:"",photo:"",level:s.level||"",birth_date:s.birth_date||"",
+      }));
+      if(studentsJsonb.length>0){
+        await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`,{
+          method:"PATCH",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},
+          body:JSON.stringify({students:studentsJsonb}),
+        });
+      }
+    }
+    setSavingNew(false);setShowNewBooking(false);
+    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
+    setNpType('dh_only');setStudents23([{...emptyStudent}]);
+    await load();
+    alert("비패키지 예약이 등록되었습니다!");
   }
 
   useEffect(()=>{
@@ -1041,7 +1105,15 @@ export default function AdminBookingsPage(){
   {/* ── STEP 22: 예약 유형 선택 모달 ── */}
   {showNewBooking&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setShowNewBooking(false)}>
     <div style={{background:"#fff",borderRadius:16,padding:28,width:"100%",maxWidth:540,maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.2)"}} onClick={e=>e.stopPropagation()}>
-      <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>신규 예약 등록</h2>
+      <h2 style={{fontSize:20,fontWeight:800,marginBottom:14}}>신규 예약 등록</h2>
+
+      {/* 탭 분리 */}
+      <div style={{display:"flex",gap:6,marginBottom:18,borderBottom:"2px solid #e2e8f0"}}>
+        <button onClick={()=>setModalTab('allInOne')} style={{flex:1,padding:"10px 12px",background:"none",border:"none",borderBottom:modalTab==='allInOne'?"3px solid #7c3aed":"3px solid transparent",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:modalTab==='allInOne'?"#7c3aed":"#6b7c93",marginBottom:-2}}>🌟 올인원 패키지</button>
+        <button onClick={()=>setModalTab('nonPackage')} style={{flex:1,padding:"10px 12px",background:"none",border:"none",borderBottom:modalTab==='nonPackage'?"3px solid #7c3aed":"3px solid transparent",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:modalTab==='nonPackage'?"#7c3aed":"#6b7c93",marginBottom:-2}}>📋 비패키지</button>
+      </div>
+
+      {modalTab==='allInOne'&&(<>
 
       {/* 유형 선택 */}
       <div style={{marginBottom:20}}>
@@ -1235,10 +1307,96 @@ export default function AdminBookingsPage(){
           style={{width:"100%",padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
       </div>
 
+      </>)}
+
+      {modalTab==='nonPackage'&&(<>
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#475569",marginBottom:8}}>예약 유형</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {NP_TYPES.map(t=>(
+              <div key={t.v} onClick={()=>setNpType(t.v)} style={{
+                border:npType===t.v?"2px solid #7c3aed":"2px solid #e2e8f0",
+                borderRadius:12,padding:"12px 14px",cursor:"pointer",
+                background:npType===t.v?"#f5f3ff":"#fff",
+              }}>
+                <div style={{fontSize:14,fontWeight:700,color:npType===t.v?"#7c3aed":"#1a1a2e"}}>{t.label}</div>
+                <div style={{fontSize:11,color:"#6b7c93",marginTop:2}}>{t.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{marginBottom:14,padding:14,background:"#f8fafc",borderRadius:10}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#475569",marginBottom:10}}>{npType==='commute'?"수업 일정":"체크인 · 체크아웃"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>{npType==='commute'?"수업시작 *":"체크인 *"}</label>
+              <input type="date" value={newForm.check_in} onChange={e=>setNewForm({...newForm,check_in:e.target.value})}
+                style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>{npType==='commute'?"수업종료 *":"체크아웃 *"}</label>
+              <input type="date" value={newForm.check_out} onChange={e=>setNewForm({...newForm,check_out:e.target.value})}
+                style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+          </div>
+        </div>
+
+        {[
+          {label:"예약자명 *",key:"booker_name",type:"text",ph:"홍길동"},
+          {label:"보호자 영문이름",key:"booker_english",type:"text",ph:"HONG GILDONG"},
+          {label:"연락처",key:"booker_phone",type:"text",ph:"010-0000-0000"},
+          ...(npType!=='commute'?[
+            {label:"픽업장소",key:"pickup_place",type:"text",ph:"공항"},
+            {label:"드랍장소",key:"drop_place",type:"text",ph:"공항"},
+          ]:[]),
+          {label:"유학원",key:"agency",type:"text",ph:""},
+        ].map(f=>(
+          <div key={f.key} style={{marginBottom:10}}>
+            <label style={{fontSize:12,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>{f.label}</label>
+            <input type={f.type} placeholder={f.ph} value={(newForm as Record<string,any>)[f.key]}
+              onChange={e=>setNewForm({...newForm,[f.key]:e.target.value})}
+              style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+        ))}
+
+        <div style={{marginBottom:16,padding:14,background:"#fefce8",borderRadius:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#854d0e"}}>학생 정보</span>
+            <span style={{fontSize:11,color:"#a16207"}}>{students23.length}/5명</span>
+            {students23.length<5&&<button onClick={addStudent} style={{marginLeft:"auto",padding:"4px 12px",border:"1px solid #e2e8f0",borderRadius:6,background:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ 학생 추가</button>}
+          </div>
+          {students23.map((s,i)=>(
+            <div key={i} style={{padding:10,background:"#fff",borderRadius:8,marginBottom:8,border:"1px solid #e2e8f0"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
+                <span style={{fontSize:12,fontWeight:700,color:"#475569"}}>학생 {i+1}</span>
+                {students23.length>1&&<button onClick={()=>removeStudent(i)} style={{marginLeft:"auto",padding:"2px 8px",border:"none",background:"#fef2f2",color:"#dc2626",borderRadius:4,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>삭제</button>}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                <input placeholder="한글 이름 *" value={s.name_kr} onChange={e=>updateStudent(i,"name_kr",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                <input placeholder="영어 이름" value={s.name_en} onChange={e=>updateStudent(i,"name_en",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                <input placeholder="생년월일/나이" value={s.birth_date} onChange={e=>updateStudent(i,"birth_date",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
+                <select value={s.level} onChange={e=>updateStudent(i,"level",e.target.value)} style={{padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff"}}>
+                  <option value="">킨더/주니어 선택</option>
+                  <option value="kinder">킨더 (Kinder)</option>
+                  <option value="junior">주니어 (Junior)</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:12,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>특이사항</label>
+          <textarea value={newForm.special_request} onChange={e=>setNewForm({...newForm,special_request:e.target.value})}
+            style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:50}}/>
+        </div>
+      </>)}
+
       <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
         <button onClick={()=>setShowNewBooking(false)}
           style={{padding:"10px 20px",border:"1px solid #e2e8f0",borderRadius:8,background:"#f1f5f9",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-        <button onClick={saveNewBooking} disabled={savingNew}
+        <button onClick={modalTab==='allInOne'?saveNewBooking:saveNewNonPackage} disabled={savingNew}
           style={{padding:"10px 24px",border:"none",borderRadius:8,background:"#7c3aed",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
           {savingNew?"저장 중...":"예약 등록"}
         </button>
