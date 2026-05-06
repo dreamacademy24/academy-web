@@ -75,26 +75,17 @@ export default function PortalDashboard() {
   if (!session && !authUser) return null;
 
   const cards = [
-    { icon: "📋", title: "내 예약 정보", desc: "숙소, 기간, 인원 확인", ready: true, href: "/portal/my-booking" },
-    { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: true, href: "/portal/flight" },
-    { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: true, href: "/portal/payment" },
-    { icon: "🚐", title: "셔틀 신청", desc: "SM/Ayala/IT Park 셔틀", ready: true, href: "/portal/shuttle" },
-    { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
-    { icon: "👩‍🏫", title: "튜터 수업", desc: "원어민 1:1 수업 신청", ready: true, href: "/portal/tutor" },
-    { icon: "🏨", title: "체크인 정보 입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
+    { icon: "📋", title: "내 예약현황", desc: "예약·학생·결제 정보 확인", ready: true, href: "/portal/my-booking" },
+    { icon: "🏨", title: "체크인 정보입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
+    { icon: "✈️", title: "항공편 · 픽드랍", desc: "항공편 등록 및 공항 픽드랍 신청", ready: true, href: "/portal/flight" },
+    { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
+    { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
+    { icon: "👩‍🏫", title: "튜터 수업", desc: "방문 튜터 수업 신청", ready: true, href: "/portal/tutor" },
+    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: false, href: "/portal/online-class" },
+    { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-requests" },
   ];
 
-  const memberCards = authUser ? [
-    { icon: "📋", title: "내 예약 현황", desc: "예약 상태 및 상세 확인", ready: true, href: "/portal/my-booking" },
-    { icon: "📝", title: "내 신청 내역", desc: "셔틀/픽업/튜터 신청 확인", ready: true, href: "/portal/my-requests" },
-    { icon: "✈️", title: "항공편 등록", desc: "입출국 항공편 정보 입력", ready: true, href: "/portal/flight" },
-    { icon: "🚐", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/shuttle" },
-    { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
-    { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
-    { icon: "👩‍🏫", title: "튜터 수업", desc: "화상영어 스케줄 & 남은 회차", ready: true, href: "/portal/online-class" },
-    { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: true, href: "/portal/payment" },
-    { icon: "🏨", title: "체크인 정보 입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
-  ] : cards;
+  const memberCards = authUser ? cards : cards;
 
   const displayName = bookingInfo?.booker_name || (session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]));
 
@@ -180,8 +171,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       <div className="db-grid">
         {(authUser ? memberCards : cards).map((c, i) => (
-          <div key={i} className="db-card" style={c.ready ? { cursor: "pointer" } : {}}
-            onClick={() => { if (c.ready && c.href) router.push(c.href); }}>
+          <div key={i} className="db-card" style={{ cursor: "pointer" }}
+            onClick={() => {
+              if (c.ready === false) { alert('곧 오픈 예정입니다 😊'); return; }
+              if (c.href) router.push(c.href);
+            }}>
             {!c.ready && <span className="coming">준비 중</span>}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>
