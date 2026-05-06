@@ -1170,3 +1170,49 @@ special_request, ssp
 3. [P3] 인보이스 현지 지불 자동화 (킨더 재료비 자동 채움까지 미완 — 부분 완료)
 4. [P4] 신규예약 모달 6가지 유형 정비
 5. [P5] 견적서 체크아웃 날짜 자동 표시
+
+## 2026-05-06 오후 세션 (UX 스캔 + 다수 버그 수정)
+
+### UX 스캔 완료 (Part 1~2)
+- /booking: P1/P2 이미 완료 확인 (포함/불포함 박스, 동의 체크박스)
+- 부킹리스트: 숙소 컬럼 title 툴팁 / 정혜영 학생이름 stuNames 폴백 수정
+- 인보이스/영수증/부킹리스트: 학생이름 maxWidth:200 truncate + hover title
+- 확정예약: acaEnd .weeks→.academyWeeks 버그 수정 (아카데미종료 24건 전부 정상화)
+- 확정예약: acaEnd 우선순위 students[0].academyEnd → academyWeeks → accom_weeks
+- 학생관리 리스트: YYYYMMDD→연도(4자리) 정규화, 만N세→달력 나이 숫자 표시
+- 견적 탭 Task A: 발행일 new Date() 자동갱신 (visibilitychange + focus + 1분 인터벌)
+- 견적 탭 Task B (P5): 체크인/체크아웃 날짜 견적서 출력물 표시 (미입력 시 숨김)
+- 예약상세 학생 탭 Task C: 세 번째 항목 빈값("-") filter(Boolean) 숨김
+- 학생관리 달력: A4 가로 인쇄 기능 (@media print + 🖨️ 인쇄 버튼)
+- 학생관리 달력: 킨더 학생 이름 앞 검정 굵은 K 표시
+
+### 인보이스 룸 번호 버그 수정 (app/invoice/page.tsx)
+- B17L10 하드코딩 4곳 → "TBA"/"미정"으로 교체
+- house_no || accom_room 폴백 + DH 접두어 제거 + 대문자 정규화
+- DB accom_room = "b17L14" → 인보이스 "B17L14" 정상 표시
+
+### 체크인 피켓 카드 신규 (app/admin/checkin-card/page.tsx)
+- URL: /admin/checkin-card?bookingId={uuid}
+- 예약자 한글이름(160px) / 영문이름 / Dream House / B17 L14 / MAY-15 / KE601 23:30
+- @media print A4 landscape (가로 출력)
+- 예약상세 픽업/체크인 탭에 🪧 체크인 카드 버튼 연결
+
+### 체크인 디테일 Step 1 (app/admin/checkin-details/page.tsx)
+- 픽업/체크인 탭 버튼 → /admin/checkin-details?bookingId={uuid}
+- bookingId searchParams 자동 선택 로직 (useRef 1회 보장)
+- Supabase checkin_details 테이블 SQL 제공 (수동 실행 필요)
+
+### 픽드랍 관리 페이지 개선 (app/admin/pickups + API)
+- bookings_new → bookings 전환 (테이블 오류 해결)
+- 자동 추출: AIRPORT_PATTERN(공항/막탄/airport/cebu/MCIA) 매칭 + 취소 예약 제외
+- 리스트 행마다 🪧 체크인 카드 버튼 (새 탭)
+- 📋리스트 / 📅달력 토글
+  · 달력 셀: ✈️IN N(초록) / ✈️OUT N(빨강) 카운트 배지
+  · 셀 클릭 시 해당일 픽드랍 상세 패널 (예약자/시간/항공편/장소)
+  · 이전달/다음달 네비
+
+### 현재 우선순위 (미완료)
+1. [P3] 인보이스 킨더 재료비 자동화 (SSP/교재비는 완료, 킨더 재료비 잔여)
+2. [P4] 신규예약 모달 6가지 유형
+3. 체크인 디테일 Step 2~4 (공개 URL, 손님 폼, 인보이스 연동)
+4. Supabase checkin_details 테이블 SQL 실행 필요

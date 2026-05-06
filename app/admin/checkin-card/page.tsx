@@ -100,7 +100,7 @@ function CheckinCardInner() {
       <style>{`
         body { background: #fff; font-family: 'Noto Sans KR', sans-serif; margin: 0; }
         @media print {
-          @page { size: A4 portrait; margin: 0; }
+          @page { size: A4 landscape; margin: 0; }
           .no-print { display: none !important; }
           body { background: #fff !important; }
         }
@@ -110,13 +110,13 @@ function CheckinCardInner() {
         <button onClick={()=>window.print()} style={{padding:"10px 24px",fontSize:14,fontWeight:700,background:"#1a6fc4",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>🖨️ 인쇄</button>
       </div>
       <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#fff",padding:40,textAlign:"center"}}>
-        <div style={{fontSize:120,fontWeight:900,color:"#1a1a2e",lineHeight:1.1,marginBottom:24,wordBreak:"keep-all"}}>
+        <div style={{fontSize:160,fontWeight:900,color:"#1a1a2e",lineHeight:1.05,marginBottom:28,wordBreak:"keep-all"}}>
           {korName} <span style={{fontWeight:400}}>님</span>
         </div>
-        {engName && <div style={{fontSize:48,color:"#475569",marginBottom:40}}>{engName}</div>}
-        {accom && <div style={{fontSize:40,color:"#1a6fc4",fontWeight:700,marginBottom:8}}>{accom}</div>}
-        {room && <div style={{fontSize:40,color:"#1a6fc4",fontWeight:700,marginBottom:40}}>{room}</div>}
-        {flightLine && <div style={{fontSize:32,color:"#1a1a2e",fontWeight:600}}>{flightLine}</div>}
+        {engName && <div style={{fontSize:56,color:"#475569",marginBottom:48}}>{engName}</div>}
+        {accom && <div style={{fontSize:48,color:"#1a6fc4",fontWeight:700,marginBottom:8}}>{accom}</div>}
+        {room && <div style={{fontSize:48,color:"#1a6fc4",fontWeight:700,marginBottom:44}}>{room}</div>}
+        {flightLine && <div style={{fontSize:40,color:"#1a1a2e",fontWeight:600}}>{flightLine}</div>}
       </div>
     </>
   );
