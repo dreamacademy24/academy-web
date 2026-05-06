@@ -15,6 +15,7 @@ interface Booking {
   pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
   billing_items?:any; locals?:any; confirmed?:boolean;
   booking_type?:string; accom_weeks?:number;
+  is_all_in_one?:boolean;
 }
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -477,7 +478,13 @@ export default function AdminBookingsPage(){
     setLoading(true);
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
     if(error){console.error(error);alert("데이터 로드 실패");}
-    if(data)setBookings(data as Booking[]);
+    if(data){
+      const allInOnes=(data as any[]).filter(b=>b.is_all_in_one).map(b=>({name:b.booker_name,id:b.id,val:b.is_all_in_one}));
+      console.log('[load] total:',data.length,'/ is_all_in_one truthy:',allInOnes.length,allInOnes);
+      const sample=data[0] as any;
+      console.log('[load] sample[0] keys:',sample?Object.keys(sample).filter(k=>k.includes('all')||k.includes('portal')):'none');
+      setBookings(data as Booking[]);
+    }
     setLoading(false);
   },[]);
 
