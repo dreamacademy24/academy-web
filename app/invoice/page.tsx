@@ -555,7 +555,10 @@ function InvoicePageInner(){
         }
       }
       if(sts.length>0) setStudents(sts.map((s:any,i:number)=>({...s,id:i+1,academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"2",photo:s.photo||"O"})));
-      setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:data.house_no||"",specialRequest:data.special_request||""}));
+      // 룸 번호: house_no 우선, 없으면 accom_room 폴백. DH 접두어 제거 + 공백 제거 + 대문자
+      const rawRoom=(data.house_no||data.accom_room||"").toString();
+      const normalizedRoom=rawRoom.replace(/^dh/i,"").replace(/\s+/g,"").toUpperCase();
+      setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:normalizedRoom,specialRequest:data.special_request||""}));
       setAdminOnly({agency:data.agency||"개인",ssp:data.ssp||"O"});
       if(data.checkin_date) setA1CI(data.checkin_date);
       // accom_type 매핑 (booking → calculator)
@@ -950,7 +953,7 @@ function InvoicePageInner(){
         <div className="is"><div className="ist">Stay Details</div>
           <table className="tb"><tbody>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO||"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
             <tr><td className="lb">Adults</td><td>{cP}</td><td className="lb">Children</td><td>{cK}</td></tr>
           </tbody></table>
         </div>
@@ -967,7 +970,7 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">Pickup</td><td>{checkin.pickup==="O"?"Yes":"No"}</td><td className="lb">Drop-off</td><td>{checkin.drop==="O"?"Yes":"No"}</td></tr>
             <tr><td className="lb">Flight In</td><td>{checkin.flightIn||"TBA"}</td><td className="lb">Flight Out</td><td>{checkin.flightOut||"TBA"}</td></tr>
-            <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
+            <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||"TBA"}</td></tr>
           </tbody></table>
         </div>
 
@@ -1007,7 +1010,7 @@ function InvoicePageInner(){
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} 12noon`):"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"TBA")}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
           </tbody></table>
         </div>
 
@@ -1220,7 +1223,7 @@ function InvoicePageInner(){
 
       <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
-        <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||(a1T==="dreamhouse"?"B17L10":"미정")}</td></tr>
+        <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
         <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
         {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
       </tbody></table>
