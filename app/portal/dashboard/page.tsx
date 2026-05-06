@@ -64,6 +64,7 @@ export default function PortalDashboard() {
     { icon: "🚐", title: "셔틀 신청", desc: "SM/Ayala/IT Park 셔틀", ready: true, href: "/portal/shuttle" },
     { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "원어민 1:1 수업 신청", ready: true, href: "/portal/tutor" },
+    { icon: "🏨", title: "체크인 정보 입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
   ];
 
   const memberCards = authUser ? [
@@ -75,6 +76,7 @@ export default function PortalDashboard() {
     { icon: "🛬", title: "추가 픽드랍", desc: "공항/외부 픽업 신청", ready: true, href: "/portal/pickup" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "화상영어 스케줄 & 남은 회차", ready: true, href: "/portal/online-class" },
     { icon: "💳", title: "결제 안내", desc: "결제 상태, 잔금 확인", ready: true, href: "/portal/payment" },
+    { icon: "🏨", title: "체크인 정보 입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
   ] : cards;
 
   const displayName = session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]);
