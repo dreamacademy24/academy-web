@@ -525,6 +525,9 @@ export default function BookingDetailPage() {
 
       {/* 탭3: 픽업/체크인 */}
       {tab === "pickup" && (<>
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+          <button className="btn btn-sm btn-blue" onClick={()=>window.open(`/admin/checkin-card?bookingId=${b.id}`,"_blank")}>🪧 체크인 카드</button>
+        </div>
         <div className="sec">
           <h2>기본 픽업/드랍 정보 <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(예약 등록 시 입력)</span></h2>
           <div className="grid">
