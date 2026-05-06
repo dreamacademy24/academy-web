@@ -29,18 +29,21 @@ export default function PortalPage() {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.');
       setLoading(false); return;
     }
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('id, reservation_no, booker_name, check_in, status')
-      .eq('portal_user_id', data.user.id)
-      .maybeSingle();
-    if (typeof window !== 'undefined' && booking) {
+    const bookingRes = await fetch('/api/portal/find-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: data.user.id })
+    });
+    const bookingData = bookingRes.ok ? await bookingRes.json() : null;
+    const booking = bookingData?.booking;
+
+    if (typeof window !== 'undefined') {
       localStorage.setItem('portalSession', JSON.stringify({
-        booking_id: booking.id,
-        booking_number: booking.reservation_no,
-        guest_name: booking.booker_name,
-        check_in_date: booking.check_in,
-        status: booking.status,
+        booking_id: booking?.id || '',
+        booking_number: booking?.reservation_no || '',
+        guest_name: booking?.booker_name || portalId,
+        check_in_date: booking?.check_in || '',
+        status: booking?.status || '',
         auth_type: 'supabase',
         expires: Date.now() + 24 * 60 * 60 * 1000
       }));

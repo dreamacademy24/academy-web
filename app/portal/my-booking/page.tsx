@@ -1,6 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface Session { booking_id: string; booking_number: string; guest_name: string; check_in_date: string; expires: number }
 
@@ -21,13 +27,37 @@ export default function MyBookingPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (!raw) { router.replace("/portal"); return; }
-      const s: Session = JSON.parse(raw);
-      if (s.expires < Date.now()) { localStorage.removeItem("portalSession"); router.replace("/portal"); return; }
-      setSession(s);
-    } catch { router.replace("/portal"); }
+    (async () => {
+      try {
+        const raw = localStorage.getItem("portalSession");
+        if (!raw) {
+          const { data: { session: authSession } } = await supabase.auth.getSession();
+          if (!authSession) { router.replace("/portal"); return; }
+          const res = await fetch('/api/portal/find-booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: authSession.user.id })
+          });
+          const d = res.ok ? await res.json() : null;
+          const bk = d?.booking;
+          if (bk) {
+            setSession({
+              booking_id: bk.id,
+              booking_number: bk.reservation_no || '',
+              guest_name: bk.booker_name || '',
+              check_in_date: bk.check_in || '',
+              expires: Date.now() + 24 * 60 * 60 * 1000
+            });
+          } else {
+            router.replace("/portal/dashboard");
+          }
+          return;
+        }
+        const s: Session = JSON.parse(raw);
+        if (s.expires < Date.now()) { localStorage.removeItem("portalSession"); router.replace("/portal"); return; }
+        setSession(s);
+      } catch { router.replace("/portal"); }
+    })();
   }, [router]);
 
   useEffect(() => {
