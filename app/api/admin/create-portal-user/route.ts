@@ -35,20 +35,21 @@ export async function POST(req: NextRequest) {
   }
 
   // bookings 테이블 업데이트
-  const { error: dbError } = await supabaseAdmin
+  const { data: updated, error: dbError } = await supabaseAdmin
     .from('bookings')
     .update({
       portal_username: username,
       portal_user_id: authData.user.id,
       portal_temp_pw: password
     })
-    .eq('id', bookingId);
+    .eq('id', bookingId)
+    .select('id, portal_username, portal_user_id');
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, username, userId: authData.user.id });
+  return NextResponse.json({ success: true, username, userId: authData.user.id, updated });
 }
 
 // 비번 재설정

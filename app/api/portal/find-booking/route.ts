@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   const { data: booking, error } = await supabase
     .from('bookings')
-    .select('id, reservation_no, booker_name, checkin_date, checkout_date, status, accom_type')
+    .select('id, reservation_no, booker_name, status, accom_type')
     .eq('portal_user_id', userId)
     .maybeSingle();
 
