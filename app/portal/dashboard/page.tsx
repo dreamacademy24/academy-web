@@ -18,6 +18,7 @@ export default function PortalDashboard() {
   const [session, setSession] = useState<Session | null>(null);
   const [authUser, setAuthUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [bookingInfo, setBookingInfo] = useState<any>(null);
 
   useEffect(() => {
     async function init() {
@@ -49,6 +50,22 @@ export default function PortalDashboard() {
     init();
   }, [router]);
 
+  // portalSession.booking_id로 예약/학생 정보 fetch
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem("portalSession");
+    if (!raw) return;
+    try {
+      const s = JSON.parse(raw);
+      if (s.booking_id) {
+        fetch(`/api/bookings/${s.booking_id}`)
+          .then(r => r.json())
+          .then(d => setBookingInfo(d?.booking || d))
+          .catch(() => {});
+      }
+    } catch {}
+  }, []);
+
   async function logout() {
     if (typeof window !== "undefined") localStorage.removeItem("portalSession");
     await supabase.auth.signOut();
@@ -79,7 +96,7 @@ export default function PortalDashboard() {
     { icon: "🏨", title: "체크인 정보 입력", desc: "입실 전 필요한 정보 사전 등록", ready: true, href: "/portal/checkin-detail" },
   ] : cards;
 
-  const displayName = session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]);
+  const displayName = bookingInfo?.booker_name || (session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]));
 
   return (<>
     <style>{`
@@ -114,16 +131,50 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       <div className="db-welcome">
         <h1>안녕하세요, {displayName}님!</h1>
-        {session ? (
-          <div className="db-info">
-            <div className="db-item"><div className="lbl">예약번호</div><div className="val">{session.booking_number}</div></div>
-            <div className="db-item"><div className="lbl">체크인</div><div className="val">{session.check_in_date || "미정"}</div></div>
-          </div>
+        {bookingInfo ? (
+          <>
+            <div style={{display:'flex', gap:8, marginBottom:8}}>
+              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크인</div>
+                <div style={{fontWeight:700, fontSize:14}}>
+                  {bookingInfo.check_in || bookingInfo.checkin_date || bookingInfo.academy_start || '-'}
+                </div>
+              </div>
+              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크아웃</div>
+                <div style={{fontWeight:700, fontSize:14}}>
+                  {bookingInfo.check_out || bookingInfo.checkout_date || bookingInfo.academy_end || '-'}
+                </div>
+              </div>
+            </div>
+            {(() => {
+              const students = Array.isArray(bookingInfo.students)
+                ? bookingInfo.students
+                : (typeof bookingInfo.students === 'string'
+                    ? (() => { try { return JSON.parse(bookingInfo.students || '[]'); } catch { return []; } })()
+                    : []);
+              const names = students.map((s: any) => s.name_kr || s.korName || s.name_en || s.engName || s.name).filter(Boolean);
+              return names.length > 0 ? (
+                <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px', marginBottom:8}}>
+                  <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>👧 학생</div>
+                  <div style={{fontWeight:600, fontSize:13}}>{names.join(' · ')}</div>
+                </div>
+              ) : null;
+            })()}
+            {bookingInfo.accom_type && (
+              <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>🏠 숙소</div>
+                <div style={{fontWeight:600, fontSize:13}}>{bookingInfo.accom_type}</div>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="db-info">
-            <div className="db-item"><div className="lbl">이메일</div><div className="val" style={{fontSize:13}}>{authUser?.email}</div></div>
-            <div className="db-item"><div className="lbl">회원 포털</div><div className="val">내 신청 관리</div></div>
-          </div>
+          authUser?.email && !authUser.email.includes('@dreamacademyph.com') ? (
+            <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+              <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>이메일</div>
+              <div style={{fontWeight:600, fontSize:13}}>{authUser.email}</div>
+            </div>
+          ) : null
         )}
       </div>
 
