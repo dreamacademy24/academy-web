@@ -991,8 +991,8 @@ export default function AdminBookingsPage(){
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
-                                {startList.map(s=>(<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()}>+ {s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
-                                {endList.map(s=>(<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()}>- {s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>))}
+                                {startList.map(s=>{const isKinder=s.grade==="킨더";return (<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>);})}
+                                {endList.map(s=>{const isKinder=s.grade==="킨더";return (<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName}{s.engName?` ${s.engName}`:""}{getStudentAge(s)?`(${getStudentAge(s)})`:""}</div>);})}
                               </td>
                             );
                           })}
