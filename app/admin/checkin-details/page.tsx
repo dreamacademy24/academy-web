@@ -115,6 +115,85 @@ function CheckinDetailsInner() {
     setTimeout(() => setMsg(""), 2500);
   }
 
+  function handlePrint() {
+    if (!booking) { alert("예약을 먼저 선택하세요."); return; }
+    const b = booking;
+    const d = detail || ({} as Partial<Detail>);
+    const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
+    const accomLine = `${dash(b.accom_type)} / ${dash(b.accom_room)}${b.house_no ? ` (${b.house_no})` : ""}`;
+    const blankLines = Array.from({length:10}).map(()=>'<div style="border-bottom:1px solid #aaa;height:28px;margin:4px 0;"></div>').join("");
+    const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Check-in Notice — ${dash(b.booker_name)}</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
+  h1, h2, p { margin: 0; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .header .co { font-size: 20px; font-weight: bold; }
+  .header .sub { font-size: 13px; color: #555; margin-top: 4px; }
+  hr { border: none; border-top: 1px solid #999; margin: 12px 0 18px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th { background: #eeeeee; text-align: left; padding: 7px 10px; font-size: 13px; border: 1px solid #ccc; }
+  td { padding: 7px 10px; border: 1px solid #ccc; vertical-align: top; }
+  td:first-child { width: 35%; color: #444; font-weight: bold; }
+  .notice-box { border: 1px solid #ccc; margin-bottom: 20px; }
+  .notice-box .title { background: #eeeeee; padding: 7px 10px; font-size: 13px; font-weight: bold; border-bottom: 1px solid #ccc; }
+  .notice-box .body { padding: 10px; }
+  .footer { text-align: center; font-size: 11px; color: #555; border-top: 1px solid #999; margin-top: 20px; padding-top: 10px; }
+  .footer .line { margin: 4px 0; }
+  @media print {
+    body { margin: 0; }
+    table, .notice-box { page-break-inside: avoid; }
+  }
+</style></head>
+<body>
+  <div class="header">
+    <div class="co">DREAM ACADEMY PHILIPPINES</div>
+    <div class="sub">CHECK-IN NOTICE SHEET</div>
+  </div>
+  <hr/>
+
+  <table>
+    <tr><th colspan="2">BOOKING INFORMATION</th></tr>
+    <tr><td>Guest Name</td><td>${dash(b.booker_name)}</td></tr>
+    <tr><td>English Name</td><td>${dash(b.booker_english)}</td></tr>
+    <tr><td>Accommodation</td><td>${accomLine}</td></tr>
+    <tr><td>Check-in</td><td>${dash(d.checkin_date)}</td></tr>
+    <tr><td>Check-in ~ Check-out</td><td>${dash(b.checkin_date)} ~ ${dash(b.checkout_date)}</td></tr>
+    <tr><td>Adults / Children</td><td>${dash(b.adults)} / ${dash(b.children)}</td></tr>
+    <tr><td>Pick-up / Drop-off</td><td>${dash(b.pickup_place)} / ${dash(b.drop_off)}</td></tr>
+    <tr><td>Flight IN</td><td>${dash(b.flight_in)}</td></tr>
+    <tr><td>Flight OUT</td><td>${dash(b.flight_out)}</td></tr>
+  </table>
+
+  <table>
+    <tr><th colspan="2">CHECK-IN DETAILS</th></tr>
+    <tr><td>All Guests (EN)</td><td>${dash(d.guest_names_en)}</td></tr>
+    <tr><td>Bed Setup</td><td>${dash(d.bed_setting)}</td></tr>
+    <tr><td>SIM Card (GB)</td><td>${dash(d.usim_request)}</td></tr>
+    <tr><td>After School / Field Trip</td><td>${dash(d.after_trip_request)}</td></tr>
+    <tr><td>Special Requests</td><td>${dash(d.extra_requests)}</td></tr>
+  </table>
+
+  <div class="notice-box">
+    <div class="title">NOTICE / MANAGER NOTES</div>
+    <div class="body">${blankLines}</div>
+  </div>
+
+  <div class="footer">
+    <div class="line">Received by: ________________________    Date: ________________</div>
+    <div class="line">Dream Academy Philippines  |  dreamacademyph.com</div>
+  </div>
+
+  <script>window.onload = function(){ window.print(); };</script>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("팝업이 차단되었습니다. 팝업을 허용해주세요."); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
   function copyPublicLink() {
     if (!detail?.public_token) { setMsg("토큰이 없습니다. 먼저 저장해주세요."); return; }
     const url = `${window.location.origin}/checkin/${detail.public_token}`;
@@ -155,6 +234,10 @@ function CheckinDetailsInner() {
       <div className="cd-top">
         <button className="cd-back" onClick={()=>router.push("/admin/hub")}>←</button>
         <h1>체크인 디테일</h1>
+        <button onClick={handlePrint} disabled={!booking}
+          style={{marginLeft:"auto",padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
+          🖨️ Print (EN)
+        </button>
       </div>
 
       <div className="sec">
