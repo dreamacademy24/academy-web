@@ -176,6 +176,7 @@ export default function BookingDetailPage() {
   }
 
   function startEdit(b: Record<string, any>) {
+    const studentsArr = Array.isArray(data?.students) ? data!.students : [];
     setEditForm({
       booker_name: b.booker_name || "",
       booker_phone: b.booker_phone || "",
@@ -188,6 +189,9 @@ export default function BookingDetailPage() {
       flight_out: b.flight_out || "",
       pickup_place: b.pickup_place || "",
       drop_off: b.drop_place || b.drop_off || "",
+      adults: String(b.adults ?? b.num_adults ?? ""),
+      children: String(b.children ?? b.num_children ?? (studentsArr.length || "")),
+      house_no: b.house_no || b.accom_room || b.room_no || b.room_number || "",
     });
     setEditing(true);
   }
@@ -286,6 +290,9 @@ export default function BookingDetailPage() {
       flight_out: (editForm.flight_out || "").trim() || null,
       pickup_place: (editForm.pickup_place || "").trim() || null,
       drop_off: (editForm.drop_off || "").trim() || null,
+      adults: editForm.adults !== undefined && editForm.adults !== "" ? Number(editForm.adults) : null,
+      children: editForm.children !== undefined && editForm.children !== "" ? Number(editForm.children) : null,
+      house_no: (editForm.house_no || "").trim() || null,
       updated_at: new Date().toISOString(),
     };
     const res = await fetch(`/api/bookings/${id}`, {
@@ -453,6 +460,28 @@ export default function BookingDetailPage() {
               {editing
                 ? <input className="ed-inp" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/>
                 : <div className="val">{b.agency || "-"}</div>}
+            </div>
+            <div className="item"><div className="lbl">전체 인원</div>
+              {editing
+                ? <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <span style={{fontSize:12,color:"#6b7c93"}}>보호자</span>
+                    <input className="ed-inp" type="number" min={0} value={editForm.adults||""} onChange={e=>setEditForm({...editForm,adults:e.target.value})} style={{width:60}}/>
+                    <span style={{fontSize:12,color:"#6b7c93"}}>아이</span>
+                    <input className="ed-inp" type="number" min={0} value={editForm.children||""} onChange={e=>setEditForm({...editForm,children:e.target.value})} style={{width:60}}/>
+                  </div>
+                : (() => {
+                    const adults = b.adults ?? b.num_adults ?? null;
+                    const stuLen = Array.isArray(data?.students) ? data!.students.length : 0;
+                    const children = stuLen > 0 ? stuLen : (b.children ?? b.num_children ?? null);
+                    return (adults === null && children === null)
+                      ? <div className="val">-</div>
+                      : <div className="val">보호자 {adults ?? "-"}명 + 아이 {children ?? "-"}명</div>;
+                  })()}
+            </div>
+            <div className="item"><div className="lbl">룸 번호</div>
+              {editing
+                ? <input className="ed-inp" value={editForm.house_no||""} onChange={e=>setEditForm({...editForm,house_no:e.target.value})} placeholder="예: B17L14"/>
+                : <div className="val">{b.house_no || b.accom_room || b.room_no || b.room_number || "-"}</div>}
             </div>
           </div>
         </div>
