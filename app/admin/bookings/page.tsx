@@ -16,6 +16,7 @@ interface Booking {
   billing_items?:any; locals?:any; confirmed?:boolean;
   booking_type?:string; accom_weeks?:number;
   is_all_in_one?:boolean;
+  academy_start?:string; academy_end?:string;
 }
 
 const SC:Record<string,{bg:string;color:string}>={
@@ -255,21 +256,23 @@ export default function AdminBookingsPage(){
     const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
     const checkoutDate=b.checkout_date||"";
     return arr.map((s,i)=>{
-      // 비통학형: 체크인 다음 월요일이 academy 시작. JSONB stale 가능 (예: 김희영 5/9 Sat 그대로 저장됨)
-      // 통학형: JSONB 값 우선 (사용자가 직접 입력한 수업시작일)
+      // 우선순위: booking 수동 academy_start → JSONB 학생값 → checkin 기반 derive
+      // 통학형은 사용자가 직접 입력한 수업시작일 우선
       const academyStart=isCommute
-        ?(s.academyStart||b.checkin_date||"")
-        :(b.checkin_date?getNextMonday(b.checkin_date):(s.academyStart||""));
+        ?(b.academy_start||s.academyStart||s.academy_start||b.checkin_date||"")
+        :(b.academy_start||s.academyStart||s.academy_start||(b.checkin_date?getNextMonday(b.checkin_date):""));
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
-      // 종료일: 통학형은 checkout_date, 그 외는 calc(start, weeks). 둘 다 안되면 stored
+      // 종료일 우선순위: booking.academy_end → 통학형 checkout → calc → JSONB stored
       let computedEnd:string;
-      if(isCommute&&checkoutDate){
+      if(b.academy_end){
+        computedEnd=b.academy_end;
+      }else if(isCommute&&checkoutDate){
         computedEnd=checkoutDate;
       }else if(academyStart&&weeks>0){
         computedEnd=calcAcademyEnd(academyStart,weeks);
       }else{
-        computedEnd=s.academyEnd||"";
+        computedEnd=s.academyEnd||s.academy_end||"";
       }
       const computedWeeks=weeks>0?String(weeks):(s.academyWeeks||"");
       return{
