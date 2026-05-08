@@ -192,6 +192,7 @@ export default function BookingDetailPage() {
       adults: String(b.adults ?? b.num_adults ?? ""),
       children: String(b.children ?? b.num_children ?? (studentsArr.length || "")),
       house_no: b.house_no || b.accom_room || b.room_no || b.room_number || "",
+      academy_start: b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date) || "",
     });
     setEditing(true);
   }
@@ -293,6 +294,8 @@ export default function BookingDetailPage() {
       adults: editForm.adults !== undefined && editForm.adults !== "" ? Number(editForm.adults) : null,
       children: editForm.children !== undefined && editForm.children !== "" ? Number(editForm.children) : null,
       house_no: (editForm.house_no || "").trim() || null,
+      academy_start: editForm.academy_start || null,
+      academy_end: deriveAcademyEnd(editForm.academy_start || editForm.checkin_date, editForm.accom_weeks) || null,
       updated_at: new Date().toISOString(),
     };
     const res = await fetch(`/api/bookings/${id}`, {
@@ -440,8 +443,16 @@ export default function BookingDetailPage() {
                   ? <><input className="ed-inp" type="number" min="1" max="12" value={editForm.accom_weeks||""} onChange={e=>setEditForm({...editForm,accom_weeks:e.target.value})}/><div className="ed-note">아카데미 시작/종료는 체크인 + 기간으로 자동 계산</div></>
                   : <div className="val">{b.accom_weeks ? b.accom_weeks+"주" : "-"}</div>}
               </div>
-              <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div></div>
-              <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div></div>
+              <div className="item"><div className="lbl">아카데미 시작</div>
+                {editing
+                  ? <input className="ed-inp" type="date" value={editForm.academy_start||""} onChange={e=>setEditForm({...editForm,academy_start:e.target.value})}/>
+                  : <div className="val">{fDate(b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date))}</div>}
+              </div>
+              <div className="item"><div className="lbl">아카데미 종료</div>
+                {editing
+                  ? <div className="val">{fDate(deriveAcademyEnd(editForm.academy_start || editForm.checkin_date || b.check_in || b.checkin_date, editForm.accom_weeks || b.accom_weeks))}</div>
+                  : <div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div>}
+              </div>
             </>)}
             <div className="item"><div className="lbl">예약유형</div>
               {editing
