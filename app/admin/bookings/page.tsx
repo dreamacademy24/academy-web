@@ -104,8 +104,8 @@ function getStudentAge(s:{age?:string}):string{
 }
 // 학생 총 등록 주수 — 수업시작~종료 날짜 기준 (academyWeeks 필드는 연장 미반영 가능, 폴백으로만 사용)
 function getStudentWeeks(s:any):number|null{
-  const endRaw=s.academyEnd??s.endDate??s.end_date??s.checkoutDate??s.checkout_date;
-  const startRaw=s.academyStart??s.startDate??s.start_date??s.checkinDate??s.checkin_date;
+  const endRaw=s.academyEnd??s.academy_end??s.endDate??s.end_date??s.checkoutDate??s.checkout_date;
+  const startRaw=s.academyStart??s.academy_start??s.startDate??s.start_date??s.checkinDate??s.checkin_date;
   if(endRaw&&startRaw){
     const end=new Date(String(endRaw).length===10?endRaw+'T00:00:00':endRaw);
     const start=new Date(String(startRaw).length===10?startRaw+'T00:00:00':startRaw);
