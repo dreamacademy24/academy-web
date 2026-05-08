@@ -1041,7 +1041,7 @@ export default function AdminBookingsPage(){
                   <thead>
                     <tr>
                       <th className="cal-side">주별 요약</th>
-                      <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+                      <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1065,7 +1065,7 @@ export default function AdminBookingsPage(){
                             <div>Junior-{jCount}</div>
                             <div className="cal-total">{jCount}/{kCount}</div>
                           </td>
-                          {week.map((day,di)=>{
+                          {week.slice(0,6).map((day,di)=>{
                             const dStr=calYmd(day);
                             const inMonth=day.getMonth()===calMonth-1;
                             const isMon=day.getDay()===1;
