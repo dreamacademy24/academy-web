@@ -680,7 +680,8 @@ export default function AdminBookingsPage(){
       <div className="ah-right">
         <a href="/admin" className="ah-home">← 관리자 홈</a>
         <a className="ah-new" href="/booking">+ 새 예약 접수</a>
-        <button className="ah-btn" style={{background:"#7c3aed",color:"#fff",border:"none"}} onClick={()=>setShowNewBooking(true)}>+ 신규 예약 (유형선택)</button>
+        <a className="ah-btn" href="/booking" target="_blank" rel="noopener noreferrer" style={{background:"#7c3aed",color:"#fff",border:"none",textDecoration:"none"}}>📋 패키지</a>
+        <a className="ah-btn" href="/booking2" target="_blank" rel="noopener noreferrer" style={{background:"#fff",color:"#475569",border:"1px solid #cbd5e1",textDecoration:"none"}}>📋 비패키지</a>
         <button className="ah-btn ah-ref" onClick={load} disabled={loading}>{loading?"로딩...":"새로고침"}</button>
       </div>
     </div>
