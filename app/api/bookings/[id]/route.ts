@@ -86,10 +86,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = await req.json()
   // bookings_new 우선, 없으면 bookings (live 테이블)
   const newRow = await supabase.from('bookings_new').update(body).eq('id', id).select().maybeSingle()
-  if (newRow.data) return NextResponse.json({ booking: newRow.data, source: 'new' })
-  // bookings_new에 없거나 row 없음 → bookings 시도
-  const oldRow = await supabase.from('bookings').update(body).eq('id', id).select().maybeSingle()
-  if (oldRow.error) return NextResponse.json({ error: oldRow.error.message }, { status: 400 })
-  if (!oldRow.data) return NextResponse.json({ error: 'not found' }, { status: 404 })
-  return NextResponse.json({ booking: oldRow.data, source: 'old' })
+  let updatedBooking: Record<string, unknown> | null = null
+  let source: 'new' | 'old' = 'new'
+  if (newRow.data) {
+    updatedBooking = newRow.data
+  } else {
+    const oldRow = await supabase.from('bookings').update(body).eq('id', id).select().maybeSingle()
+    if (oldRow.error) return NextResponse.json({ error: oldRow.error.message }, { status: 400 })
+    if (!oldRow.data) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    updatedBooking = oldRow.data
+    source = 'old'
+  }
+
+  // academy_start/end가 변경된 경우 — 연결된 students 행도 같이 동기화
+  if (body && (body.academy_start !== undefined || body.academy_end !== undefined)) {
+    const stuPatch: Record<string, unknown> = {}
+    if (body.academy_start !== undefined) stuPatch.academy_start = body.academy_start
+    if (body.academy_end !== undefined) stuPatch.academy_end = body.academy_end
+    if (Object.keys(stuPatch).length > 0) {
+      await supabase.from('students').update(stuPatch).eq('booking_id', id)
+    }
+  }
+
+  return NextResponse.json({ booking: updatedBooking, source })
 }
