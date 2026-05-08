@@ -102,6 +102,28 @@ function getStudentAge(s:{age?:string}):string{
   const num=parseInt(a,10);
   return isNaN(num)?"":String(num);
 }
+// 학생 총 등록 주수 — academyWeeks 우선, 없으면 자체 start/end 차이로 계산
+let __dbgStuLogged=false;
+function getStudentWeeks(s:any):number|null{
+  if(typeof window!=='undefined'&&!__dbgStuLogged){
+    __dbgStuLogged=true;
+    try{
+      console.log('Student fields:',JSON.stringify(Object.keys(s)));
+      console.log('Student sample:',JSON.stringify({academyWeeks:s.academyWeeks,academyStart:s.academyStart,academyEnd:s.academyEnd,startDate:s.startDate,endDate:s.endDate}));
+    }catch{}
+  }
+  const aw=Number(s.academyWeeks);
+  if(aw>0)return aw;
+  const endRaw=s.academyEnd||s.endDate||s.end_date||s.checkoutDate||s.checkout_date;
+  const startRaw=s.academyStart||s.startDate||s.start_date||s.checkinDate||s.checkin_date;
+  if(endRaw&&startRaw){
+    const end=new Date(String(endRaw).includes('T')?endRaw:endRaw+'T00:00:00');
+    const start=new Date(String(startRaw).includes('T')?startRaw:startRaw+'T00:00:00');
+    const diff=Math.round((end.getTime()-start.getTime())/(7*24*60*60*1000));
+    if(diff>0)return diff;
+  }
+  return null;
+}
 // 나이 셀 원본 표기 (리스트 뷰 — YYYYMMDD는 연도만, 그 외는 그대로)
 function fmtStudentAge(rawAge?:string):string{
   if(!rawAge)return"-";
@@ -1062,8 +1084,8 @@ export default function AdminBookingsPage(){
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
-                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkFromField=Number(s.academyWeeks)||0;const wkFromDates=(s.academyStart&&s.academyEnd)?Math.round((new Date(s.academyEnd+'T00:00:00').getTime()-new Date(s.academyStart+'T00:00:00').getTime())/(7*24*60*60*1000))+1:0;const totalW=wkFromField||wkFromDates;const wkStr=totalW>0?`${totalW}w`:"-w";return (<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
-                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkFromField=Number(s.academyWeeks)||0;const wkFromDates=(s.academyStart&&s.academyEnd)?Math.round((new Date(s.academyEnd+'T00:00:00').getTime()-new Date(s.academyStart+'T00:00:00').getTime())/(7*24*60*60*1000))+1:0;const totalW=wkFromField||wkFromDates;const wkStr=totalW>0?`${totalW}w`:"-w";return (<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
+                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const totalW=getStudentWeeks(s);const wkStr=totalW?`${totalW}w`:"-w";return (<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
+                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const totalW=getStudentWeeks(s);const wkStr=totalW?`${totalW}w`:"-w";return (<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
                               </td>
                             );
                           })}
