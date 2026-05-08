@@ -98,13 +98,40 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     source = 'old'
   }
 
-  // academy_start/end가 변경된 경우 — 연결된 students 행도 같이 동기화
+  // academy_start/end가 변경된 경우 — students 테이블 + bookings.students JSONB 양쪽 동기화
   if (body && (body.academy_start !== undefined || body.academy_end !== undefined)) {
+    // 1) students 테이블 (snake_case)
     const stuPatch: Record<string, unknown> = {}
     if (body.academy_start !== undefined) stuPatch.academy_start = body.academy_start
     if (body.academy_end !== undefined) stuPatch.academy_end = body.academy_end
     if (Object.keys(stuPatch).length > 0) {
-      await supabase.from('students').update(stuPatch).eq('booking_id', id)
+      const stuRes = await supabase.from('students').update(stuPatch).eq('booking_id', id).select()
+      console.log('[PATCH /api/bookings] students sync:', { booking_id: id, patch: stuPatch, rows: stuRes.data?.length ?? 0, error: stuRes.error?.message })
+    }
+
+    // 2) bookings.students JSONB (camelCase) — 학생관리 달력은 이쪽을 source로 읽음
+    const raw = (updatedBooking as any)?.students
+    let arr: Array<Record<string, unknown>> = []
+    try {
+      arr = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : [])
+    } catch { arr = [] }
+    if (Array.isArray(arr) && arr.length > 0) {
+      const patched = arr.map(s => {
+        const next = { ...s }
+        if (body.academy_start !== undefined) {
+          next.academyStart = body.academy_start
+          next.academy_start = body.academy_start
+        }
+        if (body.academy_end !== undefined) {
+          next.academyEnd = body.academy_end
+          next.academy_end = body.academy_end
+        }
+        return next
+      })
+      const tbl = source === 'new' ? 'bookings_new' : 'bookings'
+      const jsonbRes = await supabase.from(tbl).update({ students: patched }).eq('id', id).select().maybeSingle()
+      console.log('[PATCH /api/bookings] JSONB sync:', { table: tbl, items: patched.length, error: jsonbRes.error?.message })
+      if (jsonbRes.data) updatedBooking = jsonbRes.data
     }
   }
 
