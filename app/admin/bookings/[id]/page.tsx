@@ -295,7 +295,6 @@ export default function BookingDetailPage() {
       children: editForm.children !== undefined && editForm.children !== "" ? Number(editForm.children) : null,
       house_no: (editForm.house_no || "").trim() || null,
       academy_start: editForm.academy_start || null,
-      academy_end: deriveAcademyEnd(editForm.academy_start || editForm.checkin_date, editForm.accom_weeks) || null,
       updated_at: new Date().toISOString(),
     };
     const res = await fetch(`/api/bookings/${id}`, {
