@@ -256,11 +256,13 @@ export default function AdminBookingsPage(){
     const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
     const checkoutDate=b.checkout_date||"";
     return arr.map((s,i)=>{
-      // 우선순위: booking 수동 academy_start → JSONB 학생값 → checkin 기반 derive
-      // 통학형은 사용자가 직접 입력한 수업시작일 우선
+      // 우선순위:
+      //  - 통학형: booking 수동 academy_start → JSONB 학생값(수동 입력) → checkin
+      //  - 비통학형: booking 수동 academy_start → checkin 기반 다음 월요일 derive (stale JSONB 무시)
+      //    → JSONB는 derive 불가능할 때만 폴백
       const academyStart=isCommute
         ?(b.academy_start||s.academyStart||s.academy_start||b.checkin_date||"")
-        :(b.academy_start||s.academyStart||s.academy_start||(b.checkin_date?getNextMonday(b.checkin_date):""));
+        :(b.academy_start||(b.checkin_date?getNextMonday(b.checkin_date):"")||s.academyStart||s.academy_start||"");
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
       // 종료일 우선순위: booking.academy_end → 통학형 checkout → calc → JSONB stored
