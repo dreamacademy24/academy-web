@@ -295,9 +295,16 @@ export default function BookingDetailPage() {
       children: editForm.children !== undefined && editForm.children !== "" ? Number(editForm.children) : null,
       house_no: (editForm.house_no || "").trim() || null,
       academy_start: editForm.academy_start || null,
-      academy_end: editForm.academy_start
-        ? deriveAcademyEnd(editForm.academy_start, editForm.accom_weeks) || null
-        : null,
+      academy_end: (() => {
+        const isCommute = editForm.accom_type === "통학형" || editForm.booking_type === "commute";
+        if (isCommute) {
+          // 통학형: checkout_date를 academy_end로 사용 (source of truth)
+          return editForm.checkout_date || (editForm.academy_start ? deriveAcademyEnd(editForm.academy_start, editForm.accom_weeks) || null : null);
+        }
+        return editForm.academy_start
+          ? deriveAcademyEnd(editForm.academy_start, editForm.accom_weeks) || null
+          : null;
+      })(),
       updated_at: new Date().toISOString(),
     };
     const res = await fetch(`/api/bookings/${id}`, {

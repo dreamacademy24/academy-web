@@ -268,12 +268,13 @@ export default function AdminBookingsPage(){
         :(bAcademyStart||(b.checkin_date?getNextMonday(b.checkin_date):"")||s.academyStart||s.academy_start||"");
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
-      // 종료일 우선순위: booking.academy_end → 통학형 checkout → calc → JSONB stored
+      // 종료일 우선순위: 통학형 checkout → booking.academy_end → calc → JSONB stored
+      // (통학형은 수업종료 = checkout이 source of truth, academy_end 자동계산보다 우선)
       let computedEnd:string;
-      if(bAcademyEnd){
-        computedEnd=bAcademyEnd;
-      }else if(isCommute&&checkoutDate){
+      if(isCommute&&checkoutDate){
         computedEnd=checkoutDate;
+      }else if(bAcademyEnd){
+        computedEnd=bAcademyEnd;
       }else if(academyStart&&weeks>0){
         computedEnd=calcAcademyEnd(academyStart,weeks);
       }else{
