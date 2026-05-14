@@ -279,6 +279,9 @@ export default function AdminBookingsPage(){
       }else{
         computedEnd=s.academyEnd||s.academy_end||"";
       }
+      if(isCommute&&!bAcademyEnd&&!checkoutDate){
+        console.warn('[통학형 end fallback] booking:',b.id,'accom_weeks:',bookingWeeks,'academyStart:',academyStart);
+      }
       const computedWeeks=weeks>0?String(weeks):(s.academyWeeks||"");
       return{
         key:b.id+"_"+i,
@@ -296,8 +299,8 @@ export default function AdminBookingsPage(){
         flight_in:b.flight_in||"",
         flight_out:b.flight_out||"",
         special_request:b.special_request||"",
-        korName:s.korName||"",
-        engName:s.engName||"",
+        korName:s.korName||s.name||s.kor_name||s.korean_name||"",
+        engName:s.engName||s.eng_name||s.english_name||"",
         age:s.age||"",
         // grade: 한글 라벨로 정규화. s.grade(킨더/주니어) 우선, 없으면 s.level(kinder/junior) 변환
         grade:s.grade||(s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""),
@@ -1058,18 +1061,23 @@ export default function AdminBookingsPage(){
                       const wsStr=calYmd(week[0]);
                       const weStr=calYmd(week[6]);
                       // 주별 재학중인 학생 (start <= weekEnd && end >= weekStart)
-                      // 이름 없는 보호자 엔트리는 달력에서 제외
-                      const hasName=(s:StudentRow)=>!!(s.korName||s.engName);
+                      // guardian "-/-" 같은 placeholder 엔트리는 카운트/배지에서 제외
+                      const isRealStudent=(s:StudentRow)=>{
+                        const k=s.korName||""; const e=s.engName||"";
+                        if(!k&&!e) return false;          // 이름 필드 자체가 없는 경우 일단 표시 안함
+                        if(k==="-"&&(e==="-"||!e)) return false; // guardian "-/-" 항목만 숨김
+                        return true;
+                      };
                       const active=studentsList.filter(s=>{
-                        if(!hasName(s))return false;
+                        if(!isRealStudent(s))return false;
                         if(!s.academyStart)return false;
                         const aen=s.academyEnd||s.academyStart;
                         return s.academyStart<=weStr&&aen>=wsStr;
                       });
                       const kCount=active.filter(s=>s.grade==="킨더").length;
                       const jCount=active.filter(s=>s.grade==="주니어").length;
-                      const newIns=studentsList.filter(s=>hasName(s)&&s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
-                      const outs=studentsList.filter(s=>hasName(s)&&s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
+                      const newIns=studentsList.filter(s=>isRealStudent(s)&&s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
+                      const outs=studentsList.filter(s=>isRealStudent(s)&&s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
                       return (
                         <tr key={wi}>
                           <td className="cal-side">
@@ -1082,8 +1090,8 @@ export default function AdminBookingsPage(){
                             const inMonth=day.getMonth()===calMonth-1;
                             const isMon=day.getDay()===1;
                             const isFri=day.getDay()===5;
-                            const startList=studentsList.filter(s=>hasName(s)&&s.academyStart===dStr);
-                            const endList=studentsList.filter(s=>hasName(s)&&s.academyEnd===dStr);
+                            const startList=studentsList.filter(s=>s.academyStart===dStr);
+                            const endList=studentsList.filter(s=>s.academyEnd===dStr);
                             return (
                               <td key={di} className={`cal-cell${inMonth?"":" out-month"}`}>
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
