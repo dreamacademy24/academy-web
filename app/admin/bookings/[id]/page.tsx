@@ -199,7 +199,26 @@ export default function BookingDetailPage() {
   function startRowEdit(table: string, row: any, idx?: number) {
     const rowId = row.id && /^[0-9a-f-]{36}$/i.test(row.id) ? row.id : null;
     setRowEditing({ table, id: rowId, idx: idx ?? null });
-    setRowForm({ ...row });
+    if (table === "students") {
+      // 학생 편집 시 academy_start/end 자동 기본값 (booking 정보 기반)
+      const bk = data?.booking || {};
+      const isCommute = bk.accom_type === "통학형" || bk.booking_type === "commute";
+      const rawCheckin = (bk.check_in || bk.checkin_date || "").split("T")[0];
+      const rawCheckout = (bk.check_out || bk.checkout_date || "").split("T")[0];
+      const bStart = (bk.academy_start || "").split("T")[0]
+        || (isCommute ? rawCheckin : deriveAcademyStart(rawCheckin));
+      const bWeeks = Number(bk.accom_weeks) || 0;
+      const derivedEnd = isCommute
+        ? (rawCheckout || (bStart && bWeeks > 0 ? deriveAcademyEnd(rawCheckin, bWeeks) : ""))
+        : (bStart && bWeeks > 0 ? deriveAcademyEnd(rawCheckin, bWeeks) : (rawCheckout || ""));
+      setRowForm({
+        ...row,
+        academy_start: row.academy_start || row.academyStart || bStart || "",
+        academy_end:   row.academy_end   || row.academyEnd   || derivedEnd || "",
+      });
+    } else {
+      setRowForm({ ...row });
+    }
   }
   async function saveRowEdit() {
     if (!rowEditing) return;
