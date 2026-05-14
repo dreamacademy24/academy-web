@@ -300,8 +300,8 @@ export default function AdminBookingsPage(){
         flight_in:b.flight_in||"",
         flight_out:b.flight_out||"",
         special_request:b.special_request||"",
-        korName:s.korName||s.name||s.kor_name||s.korean_name||"",
-        engName:s.engName||s.eng_name||s.english_name||"",
+        korName:s.korName||s.name_kr||s.name||s.kor_name||s.korean_name||"",
+        engName:s.engName||s.name_en||s.eng_name||s.english_name||"",
         age:s.age||"",
         // grade: 한글 라벨로 정규화. s.grade(킨더/주니어) 우선, 없으면 s.level(kinder/junior) 변환
         grade:s.grade||(s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""),
