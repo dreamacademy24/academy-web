@@ -658,17 +658,22 @@ export default function BookingDetailPage() {
                       <div className="nm" style={{flex:1}}>{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
                       <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s, i)}>✏️ 수정</button>
                     </div>
+                    <div style={{
+                      display:"inline-flex", alignItems:"center", gap:6,
+                      background:"#e8f4fd", borderRadius:8, padding:"5px 12px",
+                      marginTop:6, marginBottom:8
+                    }}>
+                      <span style={{fontSize:12, color:"#1a6fc4", fontWeight:700}}>📅 수업기간</span>
+                      <span style={{fontSize:13, fontWeight:800, color:"#1a1a2e"}}>
+                        {(s.academyStart||s.academy_start||"-")} ~ {(s.academyEnd||s.academy_end||"-")}
+                      </span>
+                    </div>
                     <div className="sub">
                       {[
                         s.age || null,
                         s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : null,
                         s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : null,
                       ].filter(Boolean).join(" · ")}
-                      {(() => {
-                        const ast = s.academy_start || deriveAcademyStart(b.check_in || b.checkin_date);
-                        const aen = s.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks);
-                        return ast ? ` · ${ast} ~ ${aen || ""}` : "";
-                      })()}
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8, fontSize: 12 }}>
                       <div><span style={{ color: "#6b7c93", fontWeight: 700 }}>SSP:</span> {s.ssp ? "있음" : "없음"}</div>
