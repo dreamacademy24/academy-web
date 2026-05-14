@@ -254,21 +254,24 @@ export default function AdminBookingsPage(){
     if(arr.length===0) return [];
     const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
     const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
-    const checkoutDate=b.checkout_date||"";
+    // timestamp(예: "2026-05-22T00:00:00") 들어와도 dStr 매칭되도록 날짜만 추출
+    const checkoutDate=(b.checkout_date||"").split("T")[0];
+    const bAcademyStart=(b.academy_start||"").split("T")[0];
+    const bAcademyEnd=(b.academy_end||"").split("T")[0];
     return arr.map((s,i)=>{
       // 우선순위:
       //  - 통학형: booking 수동 academy_start → JSONB 학생값(수동 입력) → checkin
       //  - 비통학형: booking 수동 academy_start → checkin 기반 다음 월요일 derive (stale JSONB 무시)
       //    → JSONB는 derive 불가능할 때만 폴백
       const academyStart=isCommute
-        ?(b.academy_start||s.academyStart||s.academy_start||b.checkin_date||"")
-        :(b.academy_start||(b.checkin_date?getNextMonday(b.checkin_date):"")||s.academyStart||s.academy_start||"");
+        ?(bAcademyStart||s.academyStart||s.academy_start||b.checkin_date||"")
+        :(bAcademyStart||(b.checkin_date?getNextMonday(b.checkin_date):"")||s.academyStart||s.academy_start||"");
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
       // 종료일 우선순위: booking.academy_end → 통학형 checkout → calc → JSONB stored
       let computedEnd:string;
-      if(b.academy_end){
-        computedEnd=b.academy_end;
+      if(bAcademyEnd){
+        computedEnd=bAcademyEnd;
       }else if(isCommute&&checkoutDate){
         computedEnd=checkoutDate;
       }else if(academyStart&&weeks>0){
@@ -1055,15 +1058,18 @@ export default function AdminBookingsPage(){
                       const wsStr=calYmd(week[0]);
                       const weStr=calYmd(week[6]);
                       // 주별 재학중인 학생 (start <= weekEnd && end >= weekStart)
+                      // 이름 없는 보호자 엔트리는 달력에서 제외
+                      const hasName=(s:StudentRow)=>!!(s.korName||s.engName);
                       const active=studentsList.filter(s=>{
+                        if(!hasName(s))return false;
                         if(!s.academyStart)return false;
                         const aen=s.academyEnd||s.academyStart;
                         return s.academyStart<=weStr&&aen>=wsStr;
                       });
                       const kCount=active.filter(s=>s.grade==="킨더").length;
                       const jCount=active.filter(s=>s.grade==="주니어").length;
-                      const newIns=studentsList.filter(s=>s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
-                      const outs=studentsList.filter(s=>s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
+                      const newIns=studentsList.filter(s=>hasName(s)&&s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
+                      const outs=studentsList.filter(s=>hasName(s)&&s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
                       return (
                         <tr key={wi}>
                           <td className="cal-side">
@@ -1076,8 +1082,8 @@ export default function AdminBookingsPage(){
                             const inMonth=day.getMonth()===calMonth-1;
                             const isMon=day.getDay()===1;
                             const isFri=day.getDay()===5;
-                            const startList=studentsList.filter(s=>s.academyStart===dStr);
-                            const endList=studentsList.filter(s=>s.academyEnd===dStr);
+                            const startList=studentsList.filter(s=>hasName(s)&&s.academyStart===dStr);
+                            const endList=studentsList.filter(s=>hasName(s)&&s.academyEnd===dStr);
                             return (
                               <td key={di} className={`cal-cell${inMonth?"":" out-month"}`}>
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
