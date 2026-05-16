@@ -517,7 +517,7 @@ function InvoicePageInner(){
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [applied,setApplied]=useState(false);
-  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}] as LC[]});
+  const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
   const [isCommute,setIsCommute]=useState(false);
@@ -644,7 +644,7 @@ function InvoicePageInner(){
         const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
         const adds=typeof data.additions==="string"?JSON.parse(data.additions):(data.additions||[]);
         const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
-        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"SSP / SSP I card",amount:""},{id:2,name:"드림하우스 보증금",amount:""}]});
+        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"드림하우스 보증금",amount:""}]});
         setApplied(true);
         // calculator state 복원 (룸타입/주수/인원 — 신 포맷 items에만 존재. 옛 데이터는 undefined → no-op)
         if(items[0]){
@@ -735,12 +735,17 @@ function InvoicePageInner(){
     return items;
   },[cP,students]);
 
-  /* ── 최초 로드 시 billing.locals 비어있으면 autoLocals로 시드 (이후 사용자 편집/삭제 가능) ── */
+  /* ── 최초 로드 시 SSP 항목 없으면 autoLocals를 기존 locals에 append (드림하우스 보증금 등 유지) ── */
   useEffect(()=>{
-    if(billing.locals.filter(l=>l.name||l.amount).length===0 && autoLocals.length>0){
+    const hasSSP=billing.locals.some(l=>l.name?.includes('SSP'));
+    if(!hasSSP && autoLocals.length>0){
+      const base=Date.now();
       setBilling(prev=>({
         ...prev,
-        locals: autoLocals.map((item,i)=>({id:Date.now()+i,name:item.name,amount:String(item.amount)}))
+        locals:[
+          ...prev.locals,
+          ...autoLocals.map((item,i)=>({id:base+i,name:item.name,amount:String(item.amount)}))
+        ]
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -827,7 +832,17 @@ function InvoicePageInner(){
     if(kinderCount>0&&kinderAmount>0){
       newRows.push({id:base+3,name:`재료비 (킨더, ${kinderWeeks}주 기준)`,amount:String(kinderAmount)});
     }
-    setBilling(b=>({...b,locals:[...b.locals,...newRows]}));
+    setBilling(b=>({
+      ...b,
+      locals:[
+        ...b.locals.filter(l=>
+          !l.name?.includes('SSP') &&
+          !l.name?.includes('교재비') &&
+          !l.name?.includes('재료비')
+        ),
+        ...newRows
+      ]
+    }));
   }
 
   /* ── 학생 헬퍼 ── */
