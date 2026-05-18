@@ -493,6 +493,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .cal-event.ev-checkout{border-color:#0891b2;background:#ecfeff;color:#155e75;}
 .cal-event.ev-after   {border-color:#7c3aed;background:#f5f3ff;color:#5b21b6;}
 .cal-event.ev-field   {border-color:#ea580c;background:#fff7ed;color:#9a3412;}
+.cal-event.ev-shuttle {border-color:#0ea5e9;background:#f0f9ff;color:#0369a1;}
 .cal-more{font-size:10px;color:var(--text3);padding:1px 5px;}
 .cal-filter-wrap{display:flex;gap:6px;padding:12px 0 16px;flex-wrap:wrap;}
 .cal-filter-btn{
@@ -1301,6 +1302,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#0891b2"></span>학생 체크아웃</span>
           <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#7c3aed"></span>애프터스쿨</span>
           <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#ea580c"></span>필드트립</span>
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#0ea5e9"></span>투어셔틀</span>
         </div>
       </div>
 
@@ -4005,6 +4007,64 @@ const EXTRA_EVENTS=[
   {date:'2026-06-27',type:'field',title:'필드트립 마젤란십자가'},
 ];
 
+function isWeekA(date){
+  var ref=new Date('2026-05-04');
+  var d=new Date(date);
+  var day=d.getDay();
+  var monday=new Date(d);
+  monday.setDate(d.getDate()-(day===0?6:day-1));
+  monday.setHours(0,0,0,0);
+  ref.setHours(0,0,0,0);
+  var diffWeeks=Math.round((monday-ref)/(7*24*60*60*1000));
+  return diffWeeks%2===0;
+}
+
+function getShuttleEvents(year,month){
+  var holidays=['2026-05-01','2026-05-29','2026-06-12'];
+  var noShuttle=['2026-08-09'];
+  var evs=[];
+  var daysInMonth=new Date(year,month,0).getDate();
+  for(var d=1;d<=daysInMonth;d++){
+    var date=new Date(year,month-1,d);
+    var mm=String(month).padStart(2,'0');
+    var dd=String(d).padStart(2,'0');
+    var ds=year+'-'+mm+'-'+dd;
+    if(noShuttle.includes(ds)){
+      evs.push({date:ds,type:'shuttle',title:'⚠️ 아이언맨-셔틀없음'});
+      continue;
+    }
+    var dow=date.getDay();
+    var isA=isWeekA(date);
+    if(dow===1||dow===3||dow===5){
+      if(!holidays.includes(ds))evs.push({date:ds,type:'shuttle',title:'H-Mart 10:00'});
+      else evs.push({date:ds,type:'shuttle',title:'휴무 (셔틀없음)'});
+    }else if(dow===2){
+      if(isA)evs.push({date:ds,type:'shuttle',title:'파롤라 4:40pm'});
+      else evs.push({date:ds,type:'shuttle',title:'SM Seaside 10:30'});
+    }else if(dow===4){
+      if(isA)evs.push({date:ds,type:'shuttle',title:'SM Seaside 10:30'});
+      else evs.push({date:ds,type:'shuttle',title:'쉬라인 5:30pm'});
+    }else if(dow===6){
+      if(isA){
+        evs.push({date:ds,type:'shuttle',title:'Fun Park 2:00pm'});
+        evs.push({date:ds,type:'shuttle',title:'란타우 4:00pm'});
+      }else{
+        evs.push({date:ds,type:'shuttle',title:'사파리 8:30am'});
+        evs.push({date:ds,type:'shuttle',title:'IL Corso 4:00pm'});
+      }
+    }else if(dow===0){
+      if(isA){
+        evs.push({date:ds,type:'shuttle',title:'사파리 8:30am'});
+        evs.push({date:ds,type:'shuttle',title:'IL Corso 4:00pm'});
+      }else{
+        evs.push({date:ds,type:'shuttle',title:'안조월드 1:00pm'});
+        evs.push({date:ds,type:'shuttle',title:'란타우 4:00pm'});
+      }
+    }
+  }
+  return evs;
+}
+
 async function loadStudentEvents(year,month){
   try{
     const SB_URL2=typeof SB_URL!=='undefined'?SB_URL:(typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:null);
@@ -4044,8 +4104,15 @@ function _calIncludeType(type){
   if(_calFilter==='all')return true;
   if(_calFilter==='task')return type==='task';
   if(_calFilter==='student')return type==='checkin'||type==='checkout';
-  if(_calFilter==='extra')return type==='after'||type==='field';
+  if(_calFilter==='extra')return type==='after'||type==='field'||type==='shuttle';
   return true;
+}
+
+let _shuttleCache={key:'',events:[]};
+function _shuttleEventsForMonth(year,month){
+  const k=year+'-'+month;
+  if(_shuttleCache.key!==k){_shuttleCache={key:k,events:getShuttleEvents(year,month)};}
+  return _shuttleCache.events;
 }
 
 function _gatherEventsForDate(ds){
@@ -4061,6 +4128,13 @@ function _gatherEventsForDate(ds){
   EXTRA_EVENTS.filter(function(e){return e.date===ds;}).forEach(function(e){
     if(_calIncludeType(e.type))evs.push({type:e.type,title:e.title});
   });
+  if(_calIncludeType('shuttle')){
+    const parts=ds.split('-');
+    const y=parseInt(parts[0],10),m=parseInt(parts[1],10);
+    _shuttleEventsForMonth(y,m).filter(function(e){return e.date===ds;}).forEach(function(e){
+      evs.push({type:'shuttle',title:e.title});
+    });
+  }
   return evs;
 }
 
@@ -4081,7 +4155,7 @@ function _appendCalEvent(cell,ev){
     el.onclick=function(){openTaskCmt(t.id);};
     cell.appendChild(el);
   }else{
-    const cls=ev.type==='checkin'?'ev-checkin':ev.type==='checkout'?'ev-checkout':ev.type==='after'?'ev-after':'ev-field';
+    const cls=ev.type==='checkin'?'ev-checkin':ev.type==='checkout'?'ev-checkout':ev.type==='after'?'ev-after':ev.type==='shuttle'?'ev-shuttle':'ev-field';
     const el=document.createElement('div');el.className='cal-event '+cls;
     el.textContent=ev.title;el.title=ev.title;
     cell.appendChild(el);
