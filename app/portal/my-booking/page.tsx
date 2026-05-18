@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -65,6 +65,43 @@ export default function MyBookingPage() {
   const [flightEditing, setFlightEditing] = useState(false);
   const [flightForm, setFlightForm] = useState<FlightForm>(EMPTY_FLIGHT);
   const [flightSaving, setFlightSaving] = useState(false);
+  const flightFileRef = useRef<HTMLInputElement>(null);
+  const [flightOcrLoading, setFlightOcrLoading] = useState(false);
+  const [flightOcrMsg, setFlightOcrMsg] = useState("");
+
+  async function handleFlightOcr(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFlightOcrLoading(true);
+    setFlightOcrMsg("");
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch("/api/ocr/flight", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "failed");
+      const f = data.fields || {};
+      setFlightForm(p => ({
+        ...p,
+        flight_in_airline: f.in_airline || p.flight_in_airline,
+        flight_in_no: f.in_no || p.flight_in_no,
+        flight_in_date: f.in_date || p.flight_in_date,
+        flight_in_time: f.in_time || p.flight_in_time,
+        flight_in_origin: f.in_origin || p.flight_in_origin,
+        flight_out_airline: f.out_airline || p.flight_out_airline,
+        flight_out_no: f.out_no || p.flight_out_no,
+        flight_out_date: f.out_date || p.flight_out_date,
+        flight_out_time: f.out_time || p.flight_out_time,
+        flight_out_destination: f.out_destination || p.flight_out_destination,
+      }));
+      setFlightOcrMsg("✅ 자동입력 완료! 내용을 확인해주세요.");
+    } catch {
+      setFlightOcrMsg("❌ 인식 실패. 직접 입력해주세요.");
+    } finally {
+      setFlightOcrLoading(false);
+      if (e.target) e.target.value = "";
+    }
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -275,6 +312,14 @@ export default function MyBookingPage() {
 
             {flightEditing && (
               <div>
+                <div style={{ marginBottom: 12 }}>
+                  <input ref={flightFileRef} type="file" accept="image/*" onChange={handleFlightOcr} style={{ display: 'none' }} />
+                  <button type="button" onClick={() => flightFileRef.current?.click()} disabled={flightOcrLoading}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 14px', background: '#4f6ef7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: flightOcrLoading ? 'wait' : 'pointer', opacity: flightOcrLoading ? 0.7 : 1, fontFamily: 'inherit' }}>
+                    {flightOcrLoading ? '⏳ 분석 중...' : '📷 항공권 사진으로 자동입력'}
+                  </button>
+                  {flightOcrMsg && <div style={{ marginTop: 6, fontSize: 12, color: flightOcrMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>{flightOcrMsg}</div>}
+                </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#1a6fc4', margin: '8px 0' }}>🛬 입국편</div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 13 }}>
                   <input type="checkbox" checked={flightForm.flight_in_undecided} onChange={e => setFlightForm(p => ({ ...p, flight_in_undecided: e.target.checked }))} />
