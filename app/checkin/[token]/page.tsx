@@ -20,6 +20,10 @@ export default function CheckinFormPage() {
   const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
   const [extraPickups, setExtraPickups] = useState<{type:string;date:string;airline:string;flight:string;time:string}[]>([]);
+  const [flightForm, setFlightForm] = useState({
+    flight_in_airline:"", flight_in_no:"", flight_in_date:"", flight_in_time:"", flight_in_origin:"", flight_in_undecided:false,
+    flight_out_airline:"", flight_out_no:"", flight_out_date:"", flight_out_time:"", flight_out_destination:"", flight_out_undecided:false,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -59,6 +63,20 @@ export default function CheckinFormPage() {
           const ep = JSON.parse(det.extra_pickups || "[]");
           if (Array.isArray(ep)) setExtraPickups(ep);
         } catch {}
+        setFlightForm({
+          flight_in_airline: det.flight_in_airline || "",
+          flight_in_no: det.flight_in_no || "",
+          flight_in_date: (det.flight_in_date || "").split("T")[0] || "",
+          flight_in_time: det.flight_in_time || "",
+          flight_in_origin: det.flight_in_origin || "",
+          flight_in_undecided: !!det.flight_in_undecided,
+          flight_out_airline: det.flight_out_airline || "",
+          flight_out_no: det.flight_out_no || "",
+          flight_out_date: (det.flight_out_date || "").split("T")[0] || "",
+          flight_out_time: det.flight_out_time || "",
+          flight_out_destination: det.flight_out_destination || "",
+          flight_out_undecided: !!det.flight_out_undecided,
+        });
         setLoading(false);
       } catch {
         setError("네트워크 오류");
@@ -82,6 +100,7 @@ export default function CheckinFormPage() {
         usim_request: JSON.stringify(simCards),
         extra_pickups: JSON.stringify(extraPickups),
         extra_requests: form.q6,
+        ...flightForm,
       }),
     });
     setSubmitting(false);
@@ -116,7 +135,7 @@ export default function CheckinFormPage() {
       <div className="cf-h">
         <div className="brand">DREAM ACADEMY · DREAM HOUSE</div>
         <h1>드림하우스 체크인 사전 정보 수집 폼</h1>
-        <div className="desc">아래 6가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
+        <div className="desc">아래 7가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
       </div>
 
       {loading && <div className="notice">로딩 중...</div>}
@@ -259,7 +278,58 @@ export default function CheckinFormPage() {
         </div>
 
         <div className="q">
-          <div className="q-title"><span className="q-num">5</span>추가 픽드랍 신청</div>
+          <div className="q-title"><span className="q-num">5</span>항공편</div>
+          <div className="q-hint">입국·출국 항공편 정보를 입력해 주세요. 미정인 경우 체크박스를 선택해 주세요.</div>
+          {([
+            ['in','🛬 입국편','출발지','인천','flight_in'] as const,
+            ['out','🛫 출국편','도착지','인천','flight_out'] as const,
+          ]).map(([key,label,placeLabel,placeholder,prefix]) => {
+            const und = (flightForm as any)[prefix+'_undecided'] as boolean;
+            const get = (suffix:string) => (flightForm as any)[prefix+'_'+suffix] as string;
+            const set = (suffix:string, v:string|boolean) => setFlightForm(p=>({...p,[prefix+'_'+suffix]:v}));
+            return (
+              <div key={key} style={{border:"1px solid #e0e4ef",borderRadius:10,padding:14,marginBottom:10,background:"#fafafe"}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#334"}}>{label}</div>
+                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,marginBottom:10}}>
+                  <input type="checkbox" checked={und} onChange={e=>set('undecided',e.target.checked)}/>
+                  미정(추후 입력)
+                </label>
+                <fieldset disabled={und} style={{border:"none",padding:0,margin:0,opacity:und?0.4:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>항공사</div>
+                      <input type="text" value={get('airline')} onChange={e=>set('airline',e.target.value)} placeholder="예: 대한항공"
+                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>편명</div>
+                      <input type="text" value={get('no')} onChange={e=>set('no',e.target.value)} placeholder={key==='in'?'예: KE601':'예: KE602'}
+                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div>
+                      <input type="date" value={get('date')} onChange={e=>set('date',e.target.value)}
+                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div>
+                      <input type="time" value={get('time')} onChange={e=>set('time',e.target.value)}
+                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                    </div>
+                    <div style={{gridColumn:"1/3"}}>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>{placeLabel}</div>
+                      <input type="text" value={get(key==='in'?'origin':'destination')} onChange={e=>set(key==='in'?'origin':'destination',e.target.value)} placeholder={placeholder}
+                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="q">
+          <div className="q-title"><span className="q-num">6</span>추가 픽드랍 신청</div>
           <div className="q-hint">기본 픽업/드랍 외 추가 필요 시 작성해 주세요. (선택)</div>
           <div>
             {extraPickups.map((ep,i)=>(
@@ -314,7 +384,7 @@ export default function CheckinFormPage() {
         </div>
 
         <div className="q">
-          <div className="q-title"><span className="q-num">6</span>기타 요청사항</div>
+          <div className="q-title"><span className="q-num">7</span>기타 요청사항</div>
           <div className="q-hint">가족 추가 픽업, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
           <textarea className="ta" value={form.q6} onChange={e=>up("q6",e.target.value)} placeholder="자유롭게 작성"/>
         </div>

@@ -48,11 +48,23 @@ function deriveAcademyEndFB(b: Record<string, any>): string {
   return addDaysISO(start, w * 7 - 1);
 }
 
+interface FlightForm {
+  flight_in_airline: string; flight_in_no: string; flight_in_date: string; flight_in_time: string; flight_in_origin: string; flight_in_undecided: boolean;
+  flight_out_airline: string; flight_out_no: string; flight_out_date: string; flight_out_time: string; flight_out_destination: string; flight_out_undecided: boolean;
+}
+const EMPTY_FLIGHT: FlightForm = {
+  flight_in_airline: '', flight_in_no: '', flight_in_date: '', flight_in_time: '', flight_in_origin: '', flight_in_undecided: false,
+  flight_out_airline: '', flight_out_no: '', flight_out_date: '', flight_out_time: '', flight_out_destination: '', flight_out_undecided: false,
+};
+
 export default function MyBookingPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [data, setData] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [flightEditing, setFlightEditing] = useState(false);
+  const [flightForm, setFlightForm] = useState<FlightForm>(EMPTY_FLIGHT);
+  const [flightSaving, setFlightSaving] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -159,15 +171,149 @@ export default function MyBookingPage() {
         </div>
       </div>
 
-      <div className="sec">
-        <h2>항공편</h2>
-        <div className="grid">
-          <div className="item"><div className="lbl">입국 항공편</div><div className="val">{b.flight_in_airline || b.flight_in || "-"}</div></div>
-          <div className="item"><div className="lbl">입국 날짜/시간</div><div className="val">{fDate(b.flight_in_date)} {b.flight_in_time || ""}</div></div>
-          <div className="item"><div className="lbl">출국 항공편</div><div className="val">{b.flight_out_airline || b.flight_out || "-"}</div></div>
-          <div className="item"><div className="lbl">출국 날짜/시간</div><div className="val">{fDate(b.flight_out_date)} {b.flight_out_time || ""}</div></div>
-        </div>
-      </div>
+      {(() => {
+        const hasInbound = b.flight_in_airline || b.flight_in_no;
+        const hasOutbound = b.flight_out_airline || b.flight_out_no;
+        const hasAny = hasInbound || hasOutbound || b.flight_in_undecided || b.flight_out_undecided;
+
+        function startEditFlight() {
+          setFlightForm({
+            flight_in_airline: b.flight_in_airline || '',
+            flight_in_no: b.flight_in_no || '',
+            flight_in_date: (b.flight_in_date || '').split('T')[0] || '',
+            flight_in_time: b.flight_in_time || '',
+            flight_in_origin: b.flight_in_origin || '',
+            flight_in_undecided: !!b.flight_in_undecided,
+            flight_out_airline: b.flight_out_airline || '',
+            flight_out_no: b.flight_out_no || '',
+            flight_out_date: (b.flight_out_date || '').split('T')[0] || '',
+            flight_out_time: b.flight_out_time || '',
+            flight_out_destination: b.flight_out_destination || '',
+            flight_out_undecided: !!b.flight_out_undecided,
+          });
+          setFlightEditing(true);
+        }
+
+        async function saveFlight() {
+          if (!session) return;
+          setFlightSaving(true);
+          try {
+            const res = await fetch('/api/portal/flight', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ booking_id: session.booking_id, ...flightForm }),
+            });
+            if (!res.ok) {
+              const j = await res.json().catch(() => ({}));
+              alert('저장 실패: ' + (j.error || ''));
+              return;
+            }
+            const r = await fetch(`/api/portal/booking?booking_id=${session.booking_id}`);
+            if (r.ok) setData(await r.json());
+            setFlightEditing(false);
+          } finally { setFlightSaving(false); }
+        }
+
+        const fldRow = (label: string, input: React.ReactNode) => (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7c93', marginBottom: 4 }}>{label}</div>
+            {input}
+          </div>
+        );
+        const inp = (val: string, onCh: (v: string) => void, ph?: string, type = 'text') => (
+          <input type={type} value={val} placeholder={ph || ''} onChange={e => onCh(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, fontFamily: 'inherit', background: '#fff' }} />
+        );
+
+        return (
+          <div className="sec">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }}>
+              <h2 style={{ border: 'none', margin: 0, padding: 0 }}>항공편</h2>
+              {!flightEditing && hasAny && (
+                <button onClick={startEditFlight} style={{ padding: '5px 12px', background: '#fff', border: '1px solid #1a6fc4', color: '#1a6fc4', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>수정</button>
+              )}
+            </div>
+
+            {!flightEditing && !hasAny && (
+              <button onClick={startEditFlight} style={{ width: '100%', padding: 14, background: '#f0f7ff', border: '1.5px dashed #1a6fc4', borderRadius: 10, color: '#1a6fc4', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                ✈️ 항공편 추가하기
+              </button>
+            )}
+
+            {!flightEditing && hasAny && (
+              <div className="grid">
+                <div className="item">
+                  <div className="lbl">입국편</div>
+                  {b.flight_in_undecided
+                    ? <div className="val" style={{ color: '#94a3b8' }}>미정 (추후 입력)</div>
+                    : <div className="val">{[b.flight_in_airline, b.flight_in_no].filter(Boolean).join(' ') || b.flight_in || '-'}</div>}
+                </div>
+                <div className="item">
+                  <div className="lbl">입국 일시</div>
+                  <div className="val">{b.flight_in_undecided ? '-' : `${fDate(b.flight_in_date)} ${b.flight_in_time || ''}`}</div>
+                </div>
+                <div className="item">
+                  <div className="lbl">출발지</div>
+                  <div className="val">{b.flight_in_undecided ? '-' : (b.flight_in_origin || '-')}</div>
+                </div>
+                <div className="item">
+                  <div className="lbl">출국편</div>
+                  {b.flight_out_undecided
+                    ? <div className="val" style={{ color: '#94a3b8' }}>미정 (추후 입력)</div>
+                    : <div className="val">{[b.flight_out_airline, b.flight_out_no].filter(Boolean).join(' ') || b.flight_out || '-'}</div>}
+                </div>
+                <div className="item">
+                  <div className="lbl">출국 일시</div>
+                  <div className="val">{b.flight_out_undecided ? '-' : `${fDate(b.flight_out_date)} ${b.flight_out_time || ''}`}</div>
+                </div>
+                <div className="item">
+                  <div className="lbl">도착지</div>
+                  <div className="val">{b.flight_out_undecided ? '-' : (b.flight_out_destination || '-')}</div>
+                </div>
+              </div>
+            )}
+
+            {flightEditing && (
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1a6fc4', margin: '8px 0' }}>🛬 입국편</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 13 }}>
+                  <input type="checkbox" checked={flightForm.flight_in_undecided} onChange={e => setFlightForm(p => ({ ...p, flight_in_undecided: e.target.checked }))} />
+                  미정(추후 입력)
+                </label>
+                <fieldset disabled={flightForm.flight_in_undecided} style={{ border: 'none', padding: 0, margin: 0, opacity: flightForm.flight_in_undecided ? 0.4 : 1 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {fldRow('항공사', inp(flightForm.flight_in_airline, v => setFlightForm(p => ({ ...p, flight_in_airline: v })), '예: 대한항공'))}
+                    {fldRow('편명', inp(flightForm.flight_in_no, v => setFlightForm(p => ({ ...p, flight_in_no: v })), '예: KE601'))}
+                    {fldRow('날짜', inp(flightForm.flight_in_date, v => setFlightForm(p => ({ ...p, flight_in_date: v })), '', 'date'))}
+                    {fldRow('시간', inp(flightForm.flight_in_time, v => setFlightForm(p => ({ ...p, flight_in_time: v })), '', 'time'))}
+                  </div>
+                  {fldRow('출발지', inp(flightForm.flight_in_origin, v => setFlightForm(p => ({ ...p, flight_in_origin: v })), '인천'))}
+                </fieldset>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1a6fc4', margin: '16px 0 8px' }}>🛫 출국편</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, fontSize: 13 }}>
+                  <input type="checkbox" checked={flightForm.flight_out_undecided} onChange={e => setFlightForm(p => ({ ...p, flight_out_undecided: e.target.checked }))} />
+                  미정(추후 입력)
+                </label>
+                <fieldset disabled={flightForm.flight_out_undecided} style={{ border: 'none', padding: 0, margin: 0, opacity: flightForm.flight_out_undecided ? 0.4 : 1 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {fldRow('항공사', inp(flightForm.flight_out_airline, v => setFlightForm(p => ({ ...p, flight_out_airline: v })), '예: 대한항공'))}
+                    {fldRow('편명', inp(flightForm.flight_out_no, v => setFlightForm(p => ({ ...p, flight_out_no: v })), '예: KE602'))}
+                    {fldRow('날짜', inp(flightForm.flight_out_date, v => setFlightForm(p => ({ ...p, flight_out_date: v })), '', 'date'))}
+                    {fldRow('시간', inp(flightForm.flight_out_time, v => setFlightForm(p => ({ ...p, flight_out_time: v })), '', 'time'))}
+                  </div>
+                  {fldRow('도착지', inp(flightForm.flight_out_destination, v => setFlightForm(p => ({ ...p, flight_out_destination: v })), '인천'))}
+                </fieldset>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+                  <button onClick={() => setFlightEditing(false)} disabled={flightSaving} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #cbd5e1', color: '#475569', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>취소</button>
+                  <button onClick={saveFlight} disabled={flightSaving} style={{ padding: '8px 20px', background: '#1a6fc4', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{flightSaving ? '저장 중...' : '💾 저장'}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="sec">
         <h2>학생 ({students.length}명)</h2>

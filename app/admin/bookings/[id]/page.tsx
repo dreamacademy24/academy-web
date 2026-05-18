@@ -187,6 +187,18 @@ export default function BookingDetailPage() {
       agency: b.agency || "",
       flight_in: b.flight_in || "",
       flight_out: b.flight_out || "",
+      flight_in_airline: b.flight_in_airline || "",
+      flight_in_no: b.flight_in_no || "",
+      flight_in_date: (b.flight_in_date || "").split("T")[0] || "",
+      flight_in_time: b.flight_in_time || "",
+      flight_in_origin: b.flight_in_origin || "",
+      flight_in_undecided: b.flight_in_undecided ? "1" : "",
+      flight_out_airline: b.flight_out_airline || "",
+      flight_out_no: b.flight_out_no || "",
+      flight_out_date: (b.flight_out_date || "").split("T")[0] || "",
+      flight_out_time: b.flight_out_time || "",
+      flight_out_destination: b.flight_out_destination || "",
+      flight_out_undecided: b.flight_out_undecided ? "1" : "",
       pickup_place: b.pickup_place || "",
       drop_off: b.drop_place || b.drop_off || "",
       adults: String(b.adults ?? b.num_adults ?? ""),
@@ -308,6 +320,18 @@ export default function BookingDetailPage() {
       agency: (editForm.agency || "").trim() || null,
       flight_in: (editForm.flight_in || "").trim() || null,
       flight_out: (editForm.flight_out || "").trim() || null,
+      flight_in_airline: (editForm.flight_in_airline || "").trim() || null,
+      flight_in_no: (editForm.flight_in_no || "").trim() || null,
+      flight_in_date: editForm.flight_in_date || null,
+      flight_in_time: editForm.flight_in_time || null,
+      flight_in_origin: (editForm.flight_in_origin || "").trim() || null,
+      flight_in_undecided: !!editForm.flight_in_undecided,
+      flight_out_airline: (editForm.flight_out_airline || "").trim() || null,
+      flight_out_no: (editForm.flight_out_no || "").trim() || null,
+      flight_out_date: editForm.flight_out_date || null,
+      flight_out_time: editForm.flight_out_time || null,
+      flight_out_destination: (editForm.flight_out_destination || "").trim() || null,
+      flight_out_undecided: !!editForm.flight_out_undecided,
       pickup_place: (editForm.pickup_place || "").trim() || null,
       drop_off: (editForm.drop_off || "").trim() || null,
       adults: editForm.adults !== undefined && editForm.adults !== "" ? Number(editForm.adults) : null,
@@ -526,17 +550,54 @@ export default function BookingDetailPage() {
         </div>
         <div className="sec">
           <h2>항공편</h2>
-          <div className="grid">
-            <div className="item"><div className="lbl">입국 항공편</div>
-              {editing
-                ? <input className="ed-inp" value={editForm.flight_in||""} onChange={e=>setEditForm({...editForm,flight_in:e.target.value})} placeholder="예: KE123 5/9 14:30"/>
-                : <div className="val">{b.flight_in_airline || b.flight_in || "-"}{b.flight_in_date ? ` / ${fDate(b.flight_in_date)} ${b.flight_in_time||""}` : ""}</div>}
+          {editing ? (
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:"#1a6fc4",marginBottom:6}}>🛬 입국편</div>
+                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:8}}>
+                  <input type="checkbox" checked={!!editForm.flight_in_undecided} onChange={e=>setEditForm({...editForm,flight_in_undecided:e.target.checked?"1":""})}/>
+                  미정(추후 입력)
+                </label>
+                <fieldset disabled={!!editForm.flight_in_undecided} style={{border:"none",padding:0,margin:0,opacity:editForm.flight_in_undecided?0.4:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>항공사</div><input className="ed-inp" value={editForm.flight_in_airline||""} onChange={e=>setEditForm({...editForm,flight_in_airline:e.target.value})} placeholder="예: 대한항공"/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>편명</div><input className="ed-inp" value={editForm.flight_in_no||""} onChange={e=>setEditForm({...editForm,flight_in_no:e.target.value})} placeholder="예: KE601"/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>날짜</div><input className="ed-inp" type="date" value={editForm.flight_in_date||""} onChange={e=>setEditForm({...editForm,flight_in_date:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={editForm.flight_in_time||""} onChange={e=>setEditForm({...editForm,flight_in_time:e.target.value})}/></div>
+                    <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>출발지</div><input className="ed-inp" value={editForm.flight_in_origin||""} onChange={e=>setEditForm({...editForm,flight_in_origin:e.target.value})} placeholder="인천"/></div>
+                  </div>
+                </fieldset>
+              </div>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:"#1a6fc4",marginBottom:6}}>🛫 출국편</div>
+                <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:8}}>
+                  <input type="checkbox" checked={!!editForm.flight_out_undecided} onChange={e=>setEditForm({...editForm,flight_out_undecided:e.target.checked?"1":""})}/>
+                  미정(추후 입력)
+                </label>
+                <fieldset disabled={!!editForm.flight_out_undecided} style={{border:"none",padding:0,margin:0,opacity:editForm.flight_out_undecided?0.4:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>항공사</div><input className="ed-inp" value={editForm.flight_out_airline||""} onChange={e=>setEditForm({...editForm,flight_out_airline:e.target.value})} placeholder="예: 대한항공"/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>편명</div><input className="ed-inp" value={editForm.flight_out_no||""} onChange={e=>setEditForm({...editForm,flight_out_no:e.target.value})} placeholder="예: KE602"/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>날짜</div><input className="ed-inp" type="date" value={editForm.flight_out_date||""} onChange={e=>setEditForm({...editForm,flight_out_date:e.target.value})}/></div>
+                    <div><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={editForm.flight_out_time||""} onChange={e=>setEditForm({...editForm,flight_out_time:e.target.value})}/></div>
+                    <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,fontWeight:700,color:"#6b7c93",marginBottom:3}}>도착지</div><input className="ed-inp" value={editForm.flight_out_destination||""} onChange={e=>setEditForm({...editForm,flight_out_destination:e.target.value})} placeholder="인천"/></div>
+                  </div>
+                </fieldset>
+              </div>
             </div>
-            <div className="item"><div className="lbl">출국 항공편</div>
-              {editing
-                ? <input className="ed-inp" value={editForm.flight_out||""} onChange={e=>setEditForm({...editForm,flight_out:e.target.value})} placeholder="예: KE124 6/5 17:00"/>
-                : <div className="val">{b.flight_out_airline || b.flight_out || "-"}{b.flight_out_date ? ` / ${fDate(b.flight_out_date)} ${b.flight_out_time||""}` : ""}</div>}
+          ) : (<div className="grid">
+            <div className="item"><div className="lbl">입국편</div>
+              {b.flight_in_undecided
+                ? <div className="val" style={{color:"#94a3b8"}}>미정 (추후 입력)</div>
+                : <div className="val">{[b.flight_in_airline, b.flight_in_no].filter(Boolean).join(" ") || b.flight_in || "-"}{b.flight_in_date ? ` / ${fDate(b.flight_in_date)} ${b.flight_in_time||""}` : ""}{b.flight_in_origin ? ` · ${b.flight_in_origin}` : ""}</div>}
             </div>
+            <div className="item"><div className="lbl">출국편</div>
+              {b.flight_out_undecided
+                ? <div className="val" style={{color:"#94a3b8"}}>미정 (추후 입력)</div>
+                : <div className="val">{[b.flight_out_airline, b.flight_out_no].filter(Boolean).join(" ") || b.flight_out || "-"}{b.flight_out_date ? ` / ${fDate(b.flight_out_date)} ${b.flight_out_time||""}` : ""}{b.flight_out_destination ? ` · ${b.flight_out_destination}` : ""}</div>}
+            </div>
+          </div>)}
+          <div className="grid" style={{marginTop:14}}>
             <div className="item"><div className="lbl">픽업장소</div>
               {editing
                 ? <input className="ed-inp" value={editForm.pickup_place||""} onChange={e=>setEditForm({...editForm,pickup_place:e.target.value})} placeholder="예: 막탄공항"/>
