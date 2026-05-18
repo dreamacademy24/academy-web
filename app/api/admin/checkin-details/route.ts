@@ -60,6 +60,7 @@ export async function GET(req: Request) {
     bed_setting: '',
     usim_request: '',
     after_trip_request: '',
+    extra_pickups: '',
     extra_requests: '',
     public_token: genToken(),
     submitted_at: null,
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
   const { booking_id, ...fields } = body
   if (!booking_id) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
 
-  const allowed = ['booker_name', 'checkin_date', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_requests']
+  const allowed = ['booker_name', 'checkin_date', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_pickups', 'extra_requests']
   const update: Record<string, unknown> = {}
   for (const k of allowed) if (k in fields) update[k] = fields[k]
 

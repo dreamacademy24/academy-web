@@ -19,13 +19,25 @@ interface Detail {
   booker_name: string;
   checkin_date: string;
   guest_names_en: string;
-  bed_setting: string;
-  usim_request: string;
-  after_trip_request: string;
+  bed_setting: string;        // JSON string {room1,room2,room3}
+  usim_request: string;       // JSON string [{plan}]
+  extra_pickups: string;      // JSON array string [{type,date,airline,flight,time}]
   extra_requests: string;
   public_token: string;
   submitted_at?: string | null;
 }
+
+const SIM_PLANS = [
+  "2GB / 3일 / ₱75",
+  "6GB / 7일 / ₱149",
+  "24GB / 30일 / ₱499",
+  "36GB / 30일 / ₱599",
+  "48GB / 30일 / ₱699",
+];
+
+type BedConfig = { room1: string; room2: string; room3: string };
+type SimCard = { plan: string };
+type ExtraPickup = { type: string; date: string; airline: string; flight: string; time: string };
 
 function fDate(d: string | null) {
   if (!d) return "-";
@@ -48,6 +60,9 @@ function CheckinDetailsInner() {
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"});
+  const [simCards, setSimCards] = useState<SimCard[]>([]);
+  const [extraPickups, setExtraPickups] = useState<ExtraPickup[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -69,7 +84,12 @@ function CheckinDetailsInner() {
     if (res.ok) {
       const d = await res.json();
       if (d.booking) setBooking(d.booking);
-      if (d.detail) setDetail(d.detail);
+      if (d.detail) {
+        setDetail(d.detail);
+        try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"}); }
+        try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
+        try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
+      }
       if (d.error) setMsg("저장 경고: " + d.error);
     } else {
       const j = await res.json().catch(()=>({}));
@@ -101,9 +121,9 @@ function CheckinDetailsInner() {
         booker_name: detail.booker_name,
         checkin_date: detail.checkin_date,
         guest_names_en: detail.guest_names_en,
-        bed_setting: detail.bed_setting,
-        usim_request: detail.usim_request,
-        after_trip_request: detail.after_trip_request,
+        bed_setting: JSON.stringify(bedConfig),
+        usim_request: JSON.stringify(simCards),
+        extra_pickups: JSON.stringify(extraPickups),
         extra_requests: detail.extra_requests,
       }),
     });
@@ -121,6 +141,12 @@ function CheckinDetailsInner() {
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
     const accomLine = `${dash(b.accom_type)} / ${dash(b.accom_room)}${b.house_no ? ` (${b.house_no})` : ""}`;
+    let bedText = "";
+    try { const bs = JSON.parse(d.bed_setting || "{}"); bedText = [bs.room1 && `Room1: ${bs.room1}`, bs.room2 && `Room2: ${bs.room2}`, bs.room3 && `Room3: ${bs.room3}`].filter(Boolean).join(" / "); } catch { bedText = d.bed_setting || ""; }
+    let simText = "";
+    try { const arr = JSON.parse(d.usim_request || "[]"); simText = Array.isArray(arr) ? arr.map((s: { plan?: string }) => s.plan).filter(Boolean).join(" / ") : (d.usim_request || ""); } catch { simText = d.usim_request || ""; }
+    let extraPickupsText = "";
+    try { const arr = JSON.parse(d.extra_pickups || "[]"); extraPickupsText = Array.isArray(arr) ? arr.map((p: { type?:string;date?:string;time?:string;airline?:string;flight?:string }) => `[${p.type||""}] ${p.date||""} ${p.time||""} ${p.airline||""} ${p.flight||""}`.trim()).join(" / ") : ""; } catch { extraPickupsText = ""; }
     const blankLines = Array.from({length:10}).map(()=>'<div style="border-bottom:1px solid #aaa;height:28px;margin:4px 0;"></div>').join("");
     const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"/>
@@ -169,9 +195,9 @@ function CheckinDetailsInner() {
   <table>
     <tr><th colspan="2">CHECK-IN DETAILS</th></tr>
     <tr><td>All Guests (EN)</td><td>${dash(d.guest_names_en)}</td></tr>
-    <tr><td>Bed Setup</td><td>${dash(d.bed_setting)}</td></tr>
-    <tr><td>SIM Card (GB)</td><td>${dash(d.usim_request)}</td></tr>
-    <tr><td>After School / Field Trip</td><td>${dash(d.after_trip_request)}</td></tr>
+    <tr><td>Bed Setup</td><td>${dash(bedText)}</td></tr>
+    <tr><td>SIM Card</td><td>${dash(simText)}</td></tr>
+    <tr><td>Extra Pickups</td><td>${dash(extraPickupsText)}</td></tr>
     <tr><td>Special Requests</td><td>${dash(d.extra_requests)}</td></tr>
   </table>
 
@@ -272,10 +298,126 @@ function CheckinDetailsInner() {
             <div className="fg"><label className="fl">입실 일자</label><input className="fi" value={detail.checkin_date||""} onChange={e=>field("checkin_date",e.target.value)} placeholder="2026-05-09 또는 2026년 5월 9일"/></div>
           </div>
           <div className="fg" style={{marginBottom:10}}><label className="fl">투숙자 전체 영문이름</label><textarea className="ta" value={detail.guest_names_en||""} onChange={e=>field("guest_names_en",e.target.value)} placeholder="kim ooo / yoo ooo ooo / ..."/></div>
-          <div className="fg" style={{marginBottom:10}}><label className="fl">베드 세팅</label><textarea className="ta" value={detail.bed_setting||""} onChange={e=>field("bed_setting",e.target.value)} placeholder="2~3인: 마스터룸 베드2개 / 4인이상: 마스터룸 베드2개+작은방 베드1개"/></div>
-          <div className="fg" style={{marginBottom:10}}><label className="fl">유심 대여 (GB 수량)</label><textarea className="ta" value={detail.usim_request||""} onChange={e=>field("usim_request",e.target.value)} placeholder="예: 2명, 5GB / 1명, 10GB"/></div>
-          <div className="fg" style={{marginBottom:10}}><label className="fl">애프터스쿨 / 필드트립 사전신청</label><textarea className="ta" value={detail.after_trip_request||""} onChange={e=>field("after_trip_request",e.target.value)} placeholder="원하는 프로그램 및 날짜 작성"/></div>
-          <div className="fg" style={{marginBottom:10}}><label className="fl">기타 요청사항</label><textarea className="ta" value={detail.extra_requests||""} onChange={e=>field("extra_requests",e.target.value)} placeholder="추가 픽드랍, 가족 추가 픽업 등"/></div>
+
+          {/* ① 베드 세팅 — 룸별 카드 선택 */}
+          <div className="fg" style={{marginBottom:14}}>
+            <label className="fl" style={{marginBottom:8}}>🛏 베드 세팅</label>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#334"}}>룸 1 — 마스터룸 (큰방)</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {["더블베드 1개 (2인 스테이)","더블베드 2개 (3~4인 스테이)"].map(opt=>(
+                    <button key={opt} type="button"
+                      onClick={()=>setBedConfig(p=>({...p,room1:opt}))}
+                      style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12,cursor:"pointer",
+                        borderColor:bedConfig.room1===opt?"#5b6cf8":"#ccd",
+                        background:bedConfig.room1===opt?"#5b6cf8":"#fff",
+                        color:bedConfig.room1===opt?"#fff":"#556"}}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#334"}}>룸 2 — 2층방 (작은방)</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)"].map(opt=>(
+                    <button key={opt} type="button"
+                      onClick={()=>setBedConfig(p=>({...p,room2:opt}))}
+                      style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12,cursor:"pointer",
+                        borderColor:bedConfig.room2===opt?"#5b6cf8":"#ccd",
+                        background:bedConfig.room2===opt?"#5b6cf8":"#fff",
+                        color:bedConfig.room2===opt?"#fff":"#556"}}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px",background:"#f9f9fc"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:4,color:"#334"}}>룸 3 — 1층방</div>
+                <div style={{fontSize:12,color:"#778"}}>더블베드 1개 (1~2인 스테이) — 고정</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ② 유심 대여 — 구조화 */}
+          <div className="fg" style={{marginBottom:14}}>
+            <label className="fl" style={{marginBottom:8}}>📱 유심 대여</label>
+            <div style={{background:"#fff8e1",borderRadius:6,padding:"6px 12px",fontSize:12,color:"#856404",marginBottom:8}}>
+              💡 유심 비용은 보증금에서 차감됩니다. 퇴실 시 반납 필수.
+            </div>
+            {simCards.map((sim,i)=>(
+              <div key={i} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+                <span style={{fontSize:12,color:"#667",minWidth:40}}>유심 {i+1}</span>
+                <select value={sim.plan} onChange={e=>setSimCards(prev=>{const n=[...prev];n[i]={plan:e.target.value};return n;})}
+                  style={{flex:1,padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}>
+                  <option value="">— 요금제 선택 —</option>
+                  {SIM_PLANS.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+                <button type="button" onClick={()=>setSimCards(prev=>prev.filter((_,j)=>j!==i))}
+                  style={{padding:"4px 10px",borderRadius:6,border:"1px solid #fcc",background:"#fff5f5",color:"#e53",fontSize:12,cursor:"pointer"}}>삭제</button>
+              </div>
+            ))}
+            {simCards.length < 6 &&
+              <button type="button" onClick={()=>setSimCards(prev=>[...prev,{plan:""}])}
+                style={{padding:"6px 16px",borderRadius:6,border:"1.5px dashed #5b6cf8",background:"#f5f6ff",color:"#5b6cf8",fontSize:12,cursor:"pointer",marginTop:4}}>
+                + 유심 추가 (최대 6개)
+              </button>
+            }
+          </div>
+
+          {/* ③ 추가 픽드랍 */}
+          <div className="fg" style={{marginBottom:14}}>
+            <label className="fl" style={{marginBottom:8}}>🚗 추가 픽드랍 신청</label>
+            <div>
+              {extraPickups.map((ep,i)=>(
+                <div key={i} style={{border:"1px solid #dde",borderRadius:8,padding:10,marginBottom:8,background:"#fafafe"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{display:"flex",gap:6}}>
+                      {["픽업","드랍"].map(t=>(
+                        <button key={t} type="button"
+                          onClick={()=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],type:t};return n;})}
+                          style={{padding:"4px 12px",borderRadius:16,border:"1.5px solid",fontSize:12,cursor:"pointer",
+                            borderColor:ep.type===t?"#5b6cf8":"#ccd",
+                            background:ep.type===t?"#5b6cf8":"#fff",
+                            color:ep.type===t?"#fff":"#556"}}>{t}</button>
+                      ))}
+                    </div>
+                    <button type="button" onClick={()=>setExtraPickups(prev=>prev.filter((_,j)=>j!==i))}
+                      style={{fontSize:11,color:"#e53",background:"none",border:"none",cursor:"pointer"}}>✕ 삭제</button>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div>
+                      <input type="date" value={ep.date}
+                        onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],date:e.target.value};return n;})}
+                        style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #dde",fontSize:13}} />
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div>
+                      <input type="time" value={ep.time}
+                        onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],time:e.target.value};return n;})}
+                        style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #dde",fontSize:13}} />
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>항공사</div>
+                      <input type="text" value={ep.airline} placeholder="예: 대한항공"
+                        onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],airline:e.target.value};return n;})}
+                        style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #dde",fontSize:13}} />
+                    </div>
+                    <div>
+                      <div style={{fontSize:11,color:"#889",marginBottom:3}}>편명</div>
+                      <input type="text" value={ep.flight} placeholder="예: KE601"
+                        onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],flight:e.target.value};return n;})}
+                        style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #dde",fontSize:13}} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={()=>setExtraPickups(prev=>[...prev,{type:"픽업",date:"",airline:"",flight:"",time:""}])}
+                style={{padding:"6px 16px",borderRadius:6,border:"1.5px dashed #5b6cf8",background:"#f5f6ff",color:"#5b6cf8",fontSize:12,cursor:"pointer"}}>
+                + 픽드랍 추가
+              </button>
+            </div>
+          </div>
+
+          <div className="fg" style={{marginBottom:10}}><label className="fl">기타 요청사항</label><textarea className="ta" value={detail.extra_requests||""} onChange={e=>field("extra_requests",e.target.value)} placeholder="추가 요청사항"/></div>
 
           <div className="actions" style={{marginTop:14}}>
             <button className="btn btn-blue" onClick={save} disabled={saving}>{saving?"저장 중...":"💾 저장"}</button>

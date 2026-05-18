@@ -805,6 +805,32 @@ export default function BookingDetailPage() {
             })
           }
         </div>
+        {(() => {
+          const eps: { type?:string;date?:string;airline?:string;flight?:string;time?:string }[] = (() => {
+            try { const arr = JSON.parse(checkin?.extra_pickups || "[]"); return Array.isArray(arr) ? arr : []; } catch { return []; }
+          })();
+          if (eps.length === 0) return null;
+          return (
+            <div className="sec">
+              <h2>🚗 추가 픽드랍 <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(체크인 디테일 입력)</span>
+                <span style={{marginLeft:8,background:"#e8eaff",color:"#5b6cf8",borderRadius:12,padding:"2px 8px",fontSize:12}}>{eps.length}건</span>
+              </h2>
+              {eps.map((ep, i) => (
+                <div key={i} style={{borderLeft:`3px solid ${ep.type==="픽업"?"#5b6cf8":"#2ea"}`,paddingLeft:12,marginBottom:12}}>
+                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+                    <span style={{background:ep.type==="픽업"?"#5b6cf8":"#2ea",color:"#fff",borderRadius:12,padding:"2px 10px",fontSize:12,fontWeight:700}}>{ep.type||"-"}</span>
+                  </div>
+                  <div style={{fontSize:13,display:"grid",gridTemplateColumns:"60px 1fr",gap:"4px 0",color:"#445"}}>
+                    <span style={{color:"#889"}}>날짜</span><span>{ep.date||"-"}</span>
+                    <span style={{color:"#889"}}>시간</span><span>{ep.time||"-"}</span>
+                    <span style={{color:"#889"}}>항공사</span><span>{ep.airline||"-"}</span>
+                    <span style={{color:"#889"}}>편명</span><span>{ep.flight||"-"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <div className="sec">
           <h2>체크인 디테일</h2>
           {!checkin ? (
