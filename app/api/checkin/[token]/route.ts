@@ -55,5 +55,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!data) return NextResponse.json({ error: 'invalid token' }, { status: 404 })
+
+  const flightKeys = [
+    'flight_in_airline','flight_in_no','flight_in_date','flight_in_time','flight_in_origin','flight_in_undecided',
+    'flight_out_airline','flight_out_no','flight_out_date','flight_out_time','flight_out_destination','flight_out_undecided'
+  ]
+  const flightUpdate: Record<string, unknown> = {}
+  for (const k of flightKeys) if (k in body) flightUpdate[k] = body[k]
+  if (Object.keys(flightUpdate).length > 0 && data.booking_id) {
+    const { error: bErr } = await supabase
+      .from('bookings')
+      .update(flightUpdate)
+      .eq('id', data.booking_id)
+    if (bErr) console.error('[checkin] bookings flight sync failed:', bErr.message)
+  }
+
   return NextResponse.json({ ok: true, detail: data })
 }
