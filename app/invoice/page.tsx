@@ -982,14 +982,14 @@ function InvoicePageInner(){
           <div className="itr"><h1 style={{fontSize:22,letterSpacing:"0.05em"}}>RESERVATION<br/>CONFIRMATION</h1><p>Date: {new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p></div>
         </div>
 
-        <div className="is"><div className="ist">Guest Information</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Guest Information</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Reservation Date</td><td>{reservationDate}</td></tr>
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist">Stay Details</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Stay Details</div>
           <table className="tb"><tbody>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO||"-"}</td></tr>
             <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
@@ -997,7 +997,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist">Student Details</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Details</div>
           <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
             {students.map((s,i)=>(
               <tr key={s.id}><td>{i+1}</td><td>{s.engName||s.korName||"-"}</td><td>{s.age||"-"}</td><td>{s.grade==="킨더"?"Kinder":"Junior"}</td><td>{s.academyStart||"-"}</td><td>{s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks)||"-"}</td></tr>
@@ -1005,7 +1005,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist">Transportation</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Transportation</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Pickup</td><td>{checkin.pickup==="O"?"Yes":"No"}</td><td className="lb">Drop-off</td><td>{checkin.drop==="O"?"Yes":"No"}</td></tr>
             <tr><td className="lb">Flight In</td><td>{checkin.flightIn||"TBA"}</td><td className="lb">Flight Out</td><td>{checkin.flightOut||"TBA"}</td></tr>
@@ -1014,7 +1014,7 @@ function InvoicePageInner(){
         </div>
 
         {checkin.specialRequest&&(
-          <div className="is"><div className="ist">Special Requests</div>
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Special Requests</div>
             <div style={{padding:12,background:"#f8fafc",borderRadius:8,fontSize:13,lineHeight:1.6,whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</div>
           </div>
         )}
@@ -1044,7 +1044,7 @@ function InvoicePageInner(){
           <div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div>
         </div>
 
-        <div className="is"><div className="ist">Customer Information</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
@@ -1053,7 +1053,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist">Student Information</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div>
           <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
             {students.map((s,i)=>{
               const name=s.engName||s.name_en||s.korName||s.name_kr||"-";
@@ -1066,7 +1066,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist">Billing Details</div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>
           {billing.items.length>0&&(
             <table className="tb"><tbody>
               {billing.items.map((item,i)=>(
@@ -1086,14 +1086,14 @@ function InvoicePageInner(){
               )}
             </tbody></table>
           )}
-          <div style={{marginTop:14,padding:"16px 20px",background:"#92400e",color:"#fff",border:"1px solid #92400e",borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:16,fontWeight:800,letterSpacing:"0.02em",color:"#fff"}}>Total Amount Due</span>
-            <span style={{fontSize:24,fontWeight:900,color:"#fff"}}>{fmt(fp)}원</span>
+          <div style={{marginTop:14,background:"#5b4fff",color:"white",padding:"16px 24px",fontSize:"22px",fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center",borderRadius:10}}>
+            <span style={{color:"white"}}>Total Amount Due</span>
+            <span style={{color:"white"}}>{fmt(fp)}원</span>
           </div>
         </div>
 
         {fp>0&&(
-          <div className="is"><div className="ist">Payment Schedule</div>
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Payment Schedule</div>
             {effectiveFullPayment?(
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8}}>
                 <span style={{fontWeight:700,color:"#dc2626"}}>Full Payment (Booking Confirmation)</span>
@@ -1113,7 +1113,7 @@ function InvoicePageInner(){
         )}
 
         {billing.locals.filter(c=>c.name||c.amount).length>0&&(
-          <div className="is"><div className="ist">Local Payment <span style={{fontSize:10,color:"#94a3b8",fontWeight:400,marginLeft:6,letterSpacing:0,textTransform:"none"}}>Unit: PHP</span></div>
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Local Payment <span style={{fontSize:10,color:"#94a3b8",fontWeight:400,marginLeft:6,letterSpacing:0,textTransform:"none"}}>Unit: PHP</span></div>
             <table className="tb"><tbody>
               {billing.locals.filter(c=>c.name||c.amount).map((c,i)=>{
                 const raw=String(c.amount);
@@ -1235,7 +1235,7 @@ function InvoicePageInner(){
     <div className="iv" id="invoice-content">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
-      <div className="is"><div className="ist">Customer Information</div><table className="tb"><tbody>
+      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
         <tr><td className="lb">체크인</td><td>{overallCI&&<>{overallCI} <span style={{color:"#6b7280",fontSize:"0.85em"}}>15:00PM</span></>}</td><td className="lb">체크아웃</td><td>{overallCO&&<>{overallCO} <span style={{color:"#6b7280",fontSize:"0.85em"}}>12noon</span></>}</td></tr>
@@ -1243,22 +1243,22 @@ function InvoicePageInner(){
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
+      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
         {students.map((s,i)=>{const endVal=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks);return <tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(endVal)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>;})}
       </tbody></table></div>
 
-      <div className="is"><div className="ist">Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
         {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
         {ta>0&&<tr className="tr"><td>총 추가</td><td style={{textAlign:"right",color:"#16a34a"}}>+{fmt(ta)}원</td></tr>}
-        <tr className="fr"><td>전체 금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
+        <tr className="fr"><td style={{background:"#5b4fff",color:"white",fontWeight:700}}>전체 금액</td><td style={{background:"#5b4fff",color:"white",fontWeight:700,textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {fp>0&&(effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
       {billing.locals.filter(c=>c.name||c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name||c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
-      <div className="is"><div className="ist">Check-in Details</div><table className="tb"><tbody>
+      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
         <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
         <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
