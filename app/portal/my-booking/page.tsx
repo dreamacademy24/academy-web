@@ -19,6 +19,35 @@ const PAY: Record<string, { label: string; bg: string; color: string }> = {
 function fDate(d: string | null) { return d || "-"; }
 function fAmt(n: number | null) { return n ? n.toLocaleString() + "원" : "-"; }
 
+function addDaysISO(dateStr: string, n: number): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function getNextMonday(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  const day = d.getDay(); // 0=Sun..6=Sat
+  // 월요일이면 그대로, 아니면 다음 월요일
+  const offset = day === 1 ? 0 : (8 - day) % 7;
+  return addDaysISO(dateStr, offset);
+}
+function deriveAcademyStartFB(b: Record<string, any>): string {
+  if (b?.academy_start) return String(b.academy_start).split("T")[0];
+  const ci = b?.check_in || b?.checkin_date || "";
+  return getNextMonday(String(ci).split("T")[0]);
+}
+function deriveAcademyEndFB(b: Record<string, any>): string {
+  if (b?.academy_end) return String(b.academy_end).split("T")[0];
+  const start = deriveAcademyStartFB(b);
+  const w = Number(b?.accom_weeks);
+  if (!start || !w || w < 1) return "";
+  return addDaysISO(start, w * 7 - 1);
+}
+
 export default function MyBookingPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -123,8 +152,8 @@ export default function MyBookingPage() {
           <div className="item"><div className="lbl">예약유형</div><div className="val">{b.booking_type || b.accom_type || "-"}</div></div>
           <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
           <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
-          <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(b.academy_start)}</div></div>
-          <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(b.academy_end)}</div></div>
+          <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(deriveAcademyStartFB(b) || null)}</div></div>
+          <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(deriveAcademyEndFB(b) || null)}</div></div>
           <div className="item"><div className="lbl">픽업장소</div><div className="val">{b.pickup_place || "-"}</div></div>
           <div className="item"><div className="lbl">유학원</div><div className="val">{b.agency || "-"}</div></div>
         </div>
