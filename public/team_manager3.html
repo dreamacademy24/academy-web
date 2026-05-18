@@ -2063,9 +2063,261 @@ async function saveManualChapter() {
 
       <!-- GUIDE (안내문구) -->
       <div id="page-guide" class="hidden">
-        <div style="padding:40px;text-align:center;color:#94a3b8;font-size:14px;">
-          안내문구 준비 중입니다.
-        </div>
+<style>
+.guide-wrap { display:flex; height:calc(100vh - 100px); overflow:hidden; }
+.guide-cat { width:180px; min-width:180px; background:#f8fafc; border-right:1px solid #e2e8f0; overflow-y:auto; padding:12px 0; }
+.guide-cat-btn { display:block; width:100%; text-align:left; padding:10px 16px; border:none; background:none; cursor:pointer; font-size:13px; color:#475569; font-weight:400; }
+.guide-cat-btn:hover { background:#f1f5f9; color:#1e293b; }
+.guide-cat-btn.gc-active { background:#eff6ff; color:#2563eb; font-weight:600; border-right:3px solid #3b82f6; }
+.guide-cat-label { padding:8px 16px 4px; font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:0.8px; text-transform:uppercase; }
+.guide-main { flex:1; overflow-y:auto; padding:24px 28px; }
+.guide-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; }
+.guide-card { background:white; border:1px solid #e2e8f0; border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+.guide-card-title { font-size:13px; font-weight:700; color:#1e293b; }
+.guide-card-content { font-size:13px; color:#475569; line-height:1.7; white-space:pre-wrap; flex:1; }
+.guide-card-footer { display:flex; gap:6px; justify-content:flex-end; }
+.guide-copy-btn { padding:6px 14px; background:#3b82f6; color:white; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; }
+.guide-copy-btn:hover { background:#2563eb; }
+.guide-copy-btn.copied { background:#16a34a; }
+.guide-edit-btn { padding:6px 12px; background:white; color:#64748b; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; cursor:pointer; }
+.guide-edit-btn:hover { background:#f1f5f9; }
+.guide-add-card { background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:10px; padding:16px 18px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; font-size:13px; gap:6px; min-height:80px; }
+.guide-add-card:hover { background:#f1f5f9; color:#475569; border-color:#94a3b8; }
+.guide-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.guide-header h2 { font-size:16px; font-weight:700; color:#1e293b; margin:0; }
+</style>
+
+<div class="guide-wrap">
+  <div class="guide-cat" id="guideCatList"></div>
+  <div class="guide-main" id="guideMain">
+    <div style="text-align:center;padding:60px;color:#94a3b8;font-size:14px;">카테고리를 선택하세요</div>
+  </div>
+</div>
+
+<div id="guideMsgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:12px;width:520px;max-width:95vw;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:15px;font-weight:700;color:#1e293b;" id="guideMsgModalTitle">문구 추가</span>
+      <button onclick="closeGuideMsgModal()" style="border:none;background:none;cursor:pointer;font-size:20px;color:#94a3b8;">✕</button>
+    </div>
+    <input id="guideMsgTitleInput" type="text" placeholder="제목 (예: H마트 셔틀 안내)" style="width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box;margin-bottom:10px;">
+    <textarea id="guideMsgContentInput" placeholder="문구 내용을 입력하세요" style="width:100%;height:160px;padding:9px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;line-height:1.7;font-family:inherit;"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+      <button onclick="closeGuideMsgModal()" style="padding:8px 16px;border:1px solid #e2e8f0;background:white;border-radius:6px;cursor:pointer;font-size:13px;">취소</button>
+      <button onclick="saveGuideMsg()" style="padding:8px 20px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GUIDE_DATA = {
+  "체크인 안내": [
+    { id:'c1', title:'드림하우스 체크인 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\n드림하우스 체크인 안내 드립니다.\n\n체크인: 오후 3시 이후\n체크아웃: 오전 12시\n\nWIFI는 공유기 뒷면에서 ID·비밀번호 확인해주세요.\n헬퍼는 월~토 08:00~17:00 운영됩니다. 방충망 문(스크린도어)을 열어두셔야 헬퍼 출입이 가능합니다.\n\n식사 시간 안내:\n- 아침: 07:40~08:00\n- 점심: 11:45~12:00\n- 저녁: 17:40~18:00\n→ 문 앞에 배달됩니다.\n\n불편하신 사항은 채널로 연락 주세요! 😊' },
+    { id:'c2', title:'제이파크 체크인 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\n제이파크 체크인 안내 드립니다.\n\n체크인: 오후 3시 이후\n체크아웃: 오전 12시\n\n식사 시간 안내:\n- 아침: 07:50\n- 점심: 11:50~12:00\n- 저녁: 17:40~18:00\n\n중식·석식은 컨시어지에 보관됩니다.\n배달 요청: Hello, this is Room [번호]. May I have my meal delivered from concierge, please?\n\n레스토랑 30% 할인 가능합니다 (논끼, 스노우카페, J라운지, 풀바 제외).\n아발론 조식 50% 할인 (6세 미만 아동 2명까지 무료).\n\n불편하신 사항은 채널로 연락 주세요! 😊' },
+    { id:'c3', title:'큐브나인 체크인 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\n큐브나인 체크인 안내 드립니다.\n\n체크인: 오후 3시 이후\n체크아웃: 오전 12시\n\n조식은 더나인 레스토랑에서 직접 드실 수 있습니다.\n체크인 시 식사 바우처(1주 기준 팀당 10만원)를 전달드립니다.\n\n마사지&스파 20% 할인, 더나인 레스토랑 10% 할인 (아카데미 학생증 지참 시).\n\n카약·패들보드 리조트 시설 자유 이용 가능합니다.\n\n불편하신 사항은 채널로 연락 주세요! 😊' },
+    { id:'c4', title:'레이트 체크아웃 안내', content:'안녕하세요 😊\n\n레이트 체크아웃 안내 드립니다.\n\n드림하우스: 10시 30분까지 55,000원 추가 (숙소 상황에 따라 불가할 수 있습니다)\n제이파크: 오후 5:59 이전 1박 50% / 오후 6:00 이후 1박 전체 부과\n\n이용을 원하시면 미리 말씀해 주세요!' },
+  ],
+  "OT & 준비물": [
+    { id:'o1', title:'OT 참석 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\nOT 안내 드립니다.\n\n일시: [날짜] [시간]\n장소: 드림아카데미\n\nOT에서는 수업 커리큘럼, 생활 규칙, 셔틀 이용 방법, 애프터스쿨·필드트립 신청 방법 등을 안내해 드립니다.\n\n꼭 참석 부탁드립니다! 😊' },
+    { id:'o2', title:'준비물 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\n준비물 안내 드립니다.\n\n■ 공통\n- 여권 (유효기간 6개월 이상)\n- 해외여행자 보험 가입 (강력 권장)\n- 현지 사용 카드 또는 현금\n\n■ 학생\n- 필기도구, 노트\n- 편한 운동복 (애프터스쿨 활동용)\n- 수영복, 수영모 (수영장 이용 시)\n\n궁금하신 사항은 언제든지 문의주세요! 😊' },
+  ],
+  "애프터스쿨": [
+    { id:'a1', title:'애프터스쿨 신청 안내 (드림하우스)', content:'안녕하세요 😊\n\n애프터스쿨 신청 안내 드립니다.\n\n드림하우스 손님은 드림센터(B17L5) 방문 후 비치된 신청 종이에 직접 기록해 주세요.\n\n⚠️ 채널이나 현지직원을 통한 신청은 불가합니다.\n⚠️ 당일 신청 불가 (자리 여유가 있어도 미예약 시 수업 불가)\n⚠️ 다음 주 수업은 전주 금요일 오후 4:50까지 신청\n\n무단 취소 2회 누적 시 이후 신청이 불가합니다.\n\n감사합니다 😊' },
+    { id:'a2', title:'애프터스쿨 신청 안내 (제이파크·큐브나인)', content:'안녕하세요 😊\n\n애프터스쿨 신청 안내 드립니다.\n\n아래 네이버 폼으로 신청해 주세요.\n→ [네이버 폼 링크]\n\n작성 후 채널로 꼭 알림 주세요!\n\n⚠️ 당일 신청 불가\n⚠️ 다음 주 수업은 전주 금요일까지 신청\n⚠️ 무단 취소 2회 누적 시 이후 신청 불가\n\n감사합니다 😊' },
+    { id:'a3', title:'애프터스쿨 운영 시간', content:'애프터스쿨은 매주 월요일·수요일\n오후 4:20 ~ 5:20 운영됩니다.\n\n장소: 아카데미 / 클럽하우스\n\n현지 사정에 따라 일부 조정될 수 있습니다.' },
+  ],
+  "필드트립": [
+    { id:'f1', title:'필드트립 안내 (패키지)', content:'안녕하세요 😊\n\n필드트립 안내 드립니다.\n\n일시: [날짜] 오전 10:30 ~ 오후 4:30\n장소: [장소명]\n\n집 앞 픽업 후 선생님과 함께 이동합니다.\n패키지 고객분은 무료로 참여 가능합니다.\n\n참가를 원하시면 [신청 방법]으로 신청해 주세요!\n\n궁금하신 사항은 채널로 문의 주세요 😊' },
+    { id:'f2', title:'필드트립 안내 (통학형)', content:'안녕하세요 😊\n\n필드트립 안내 드립니다.\n\n일시: [날짜] 오전 10:30 ~ 오후 4:30\n장소: [장소명]\n참가비: 3,000페소\n\n집 앞 픽업 후 선생님과 함께 이동합니다.\n\n참가를 원하시면 [신청 방법]으로 신청해 주세요!\n\n감사합니다 😊' },
+    { id:'f3', title:'필드트립 미참가 안내', content:'안녕하세요 😊\n\n필드트립 미참가 학생은 당일 오전 정규 수업이 진행됩니다.\n\n오전 9:00까지 아카데미로 등원해 주세요.\n\n감사합니다 😊' },
+  ],
+  "투어셔틀": [
+    { id:'s1', title:'H마트 셔틀 안내', content:'H마트 셔틀 안내 드립니다 😊\n\n출발: 매주 월·수·금 오전 10:00\n집합 장소: 리조트 앞\n\n11:00에 H마트 출발하여 복귀합니다.\n장보기 후 바로 탑승해 주세요.\n복귀 셔틀 미이용 시 반드시 기사님께 미리 알려주세요.\n\n신청 마감: 탑승 전날 오후 4:50까지\n(월요일 셔틀은 금요일 4:50까지)' },
+    { id:'s2', title:'SM Seaside 셔틀 안내', content:'SM Seaside 셔틀 안내 드립니다 😊\n\n출발: 매주 화·목 오전 10:30\n집합 장소: 리조트 앞\n\n가는 편만 제공되며 귀환은 개별로 해주세요.\n\n신청 마감: 탑승 전날 오후 4:50까지' },
+    { id:'s3', title:'쉬라인 셔틀 안내', content:'막탄 쉬라인 셔틀 안내 드립니다 😊\n\n출발: 매주 수요일 오후 5:30\n집합 장소: 리조트 앞\n\n도착 후 약 40분 관람 후 출발합니다.\n\n신청 마감: 탑승 전날 오후 4:50까지' },
+    { id:'s4', title:'파롤라 레스토랑 셔틀 안내', content:'파롤라 레스토랑 셔틀 안내 드립니다 😊\n\n출발: 매주 목요일 오후 4:40\n집합 장소: 리조트 앞\n\n식사 종료 후 이동합니다.\n\n신청 마감: 탑승 전날 오후 4:50까지' },
+    { id:'s5', title:'IL CORSO 셔틀 안내', content:'IL CORSO 셔틀 안내 드립니다 😊\n\n출발: 매주 금요일 오후 4:00\n집합 장소: 리조트 앞\n\n도착 후 약 2시간 30분 후 출발합니다.\n\n신청 마감: 탑승 전날 오후 4:50까지' },
+    { id:'s6', title:'세부 사파리 셔틀 안내', content:'세부 사파리 셔틀 안내 드립니다 😊\n\n출발: 토·일 오전 8:30\n집합 장소: 리조트 앞\n\n오후 3:00 사파리 출발 복귀.\n입장료: 인당 200페소 (현장 지불)\n\n신청 마감: 탑승 전날 오후 4:50까지' },
+    { id:'s7', title:'안조월드 셔틀 안내', content:'안조월드(ANJO WORLD) 셔틀 안내 드립니다 😊\n\n출발: 매주 일요일 오후 1:00\n집합 장소: 리조트 앞\n\n오후 8:00 복귀. 무료 운행.\n\n신청 마감: 전날(토요일) 오후 4:50까지' },
+    { id:'s8', title:'셔틀 신청 방법 안내 (드림하우스)', content:'셔틀 신청 안내 드립니다 😊\n\n드림하우스 손님은 드림센터(B17L5) 방문 후\n신청 종이에 직접 기록해 주세요.\n\n⚠️ 채널이나 현지직원을 통한 신청은 불가합니다.\n⚠️ 당일 신청 불가\n⚠️ 탑승 전날 오후 4:50까지 (월요일 셔틀은 금요일 4:50까지)\n\n무단 취소 2회 누적 시 이후 신청이 불가합니다.' },
+    { id:'s9', title:'셔틀 신청 방법 안내 (제이파크·큐브나인)', content:'셔틀 신청 안내 드립니다 😊\n\n아래 네이버 폼으로 신청 후\n채널로 꼭 알림 주세요!\n→ [네이버 폼 링크]\n\n⚠️ 당일 신청 불가\n⚠️ 탑승 전날 오후 4:50까지\n⚠️ 무단 취소 2회 누적 시 이후 신청 불가' },
+  ],
+  "SSP 안내": [
+    { id:'sp1', title:'SSP 안내', content:'SSP(Special Study Permit) 안내 드립니다 😊\n\nSSP는 필리핀에서 어학원 수업을 받기 위해 필요한 특별 학습 허가증입니다.\n모든 학생에게 필수로 발급이 필요합니다.\n\n비용:\n- SSP: 7,000페소 (유효기간 6개월)\n- SSP-i Card: 4,000페소 (유효기간 1년)\n\n총 11,000페소는 현지에서 지불하시면 됩니다.\n\n발급 관련 안내는 현지 도착 후 별도로 안내드립니다 😊' },
+  ],
+  "환불·취소": [
+    { id:'r1', title:'환불 규정 안내', content:'환불 규정 안내 드립니다.\n\n취소 시점에 따라 아래와 같이 적용됩니다.\n\n📌 출국 6주 전 취소\n→ 예약금 제외, 잔금의 50% 환불 가능\n\n📌 출국 6주 이내 취소\n→ 환불 불가\n\n📌 입실 후 중도 퇴실\n→ 환불 불가 (개인 사정 사유)\n\n📌 일정 변경\n→ 1회 가능 (입실 2개월 전까지)\n\n자세한 사항은 채널로 문의 주세요.' },
+    { id:'r2', title:'잔금 납부 안내', content:'안녕하세요 😊\n\n잔금 납부 안내 드립니다.\n\n잔금 납부 기한: [날짜]까지\n납부 금액: [금액]\n\n기한 내 미납 시 자동 취소될 수 있으니\n꼭 기한 내에 납부 부탁드립니다!\n\n감사합니다 😊' },
+  ],
+};
+
+let _guideCat = null;
+let _guideEditId = null;
+
+function initGuide() {
+  const catList = document.getElementById('guideCatList');
+  if (!catList) return;
+  catList.innerHTML = '<div class="guide-cat-label">카테고리</div>';
+  Object.keys(GUIDE_DATA).forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'guide-cat-btn';
+    btn.textContent = cat;
+    btn.onclick = () => selectGuideCat(cat, btn);
+    catList.appendChild(btn);
+  });
+
+  const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
+  if (u === 'ceo' || u === 'jenna') {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'guide-cat-btn';
+    addBtn.style.color = '#94a3b8';
+    addBtn.style.marginTop = '8px';
+    addBtn.textContent = '+ 카테고리 추가';
+    addBtn.onclick = () => {
+      const name = prompt('새 카테고리 이름을 입력하세요:');
+      if (name && name.trim()) {
+        GUIDE_DATA[name.trim()] = [];
+        initGuide();
+        selectGuideCat(name.trim(), document.querySelector('.guide-cat-btn'));
+      }
+    };
+    catList.appendChild(addBtn);
+  }
+}
+
+function selectGuideCat(cat, btn) {
+  _guideCat = cat;
+  document.querySelectorAll('.guide-cat-btn').forEach(b => b.classList.remove('gc-active'));
+  btn.classList.add('gc-active');
+  renderGuideMsgs(cat);
+}
+
+function renderGuideMsgs(cat) {
+  const main = document.getElementById('guideMain');
+  const msgs = GUIDE_DATA[cat] || [];
+  const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
+  const isAdmin = u === 'ceo' || u === 'jenna';
+
+  let html = '<div class="guide-header">';
+  html += '<h2>' + cat + '</h2>';
+  if (isAdmin) html += '<button onclick="openGuideMsgModal()" style="padding:7px 14px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">+ 문구 추가</button>';
+  html += '</div>';
+  html += '<div class="guide-grid">';
+
+  msgs.forEach(msg => {
+    html += '<div class="guide-card">';
+    html += '<div class="guide-card-title">' + msg.title + '</div>';
+    html += '<div class="guide-card-content">' + msg.content + '</div>';
+    html += '<div class="guide-card-footer">';
+    if (isAdmin) {
+      html += '<button class="guide-edit-btn" onclick="editGuideMsg(\'' + msg.id + '\')">수정</button>';
+      html += '<button class="guide-edit-btn" style="color:#ef4444;border-color:#fecaca;" onclick="deleteGuideMsg(\'' + msg.id + '\')">삭제</button>';
+    }
+    html += '<button class="guide-copy-btn" id="copy-' + msg.id + '" onclick="copyGuideMsg(\'' + msg.id + '\')">복사</button>';
+    html += '</div></div>';
+  });
+
+  if (isAdmin) {
+    html += '<div class="guide-add-card" onclick="openGuideMsgModal()">+ 문구 추가</div>';
+  }
+
+  html += '</div>';
+  main.innerHTML = html;
+}
+
+function copyGuideMsg(id) {
+  const cat = _guideCat;
+  const msg = (GUIDE_DATA[cat] || []).find(m => m.id === id);
+  if (!msg) return;
+  navigator.clipboard.writeText(msg.content).then(() => {
+    const btn = document.getElementById('copy-' + id);
+    if (btn) {
+      btn.textContent = '✓ 복사됨';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+    }
+  });
+}
+
+function openGuideMsgModal(editId) {
+  _guideEditId = editId || null;
+  const modal = document.getElementById('guideMsgModal');
+  const titleEl = document.getElementById('guideMsgModalTitle');
+  const titleInput = document.getElementById('guideMsgTitleInput');
+  const contentInput = document.getElementById('guideMsgContentInput');
+
+  if (editId) {
+    const msg = (GUIDE_DATA[_guideCat] || []).find(m => m.id === editId);
+    if (msg) {
+      titleEl.textContent = '문구 수정';
+      titleInput.value = msg.title;
+      contentInput.value = msg.content;
+    }
+  } else {
+    titleEl.textContent = '문구 추가';
+    titleInput.value = '';
+    contentInput.value = '';
+  }
+  modal.style.display = 'flex';
+  titleInput.focus();
+}
+
+function editGuideMsg(id) { openGuideMsgModal(id); }
+
+function deleteGuideMsg(id) {
+  if (!confirm('이 문구를 삭제할까요?')) return;
+  GUIDE_DATA[_guideCat] = (GUIDE_DATA[_guideCat] || []).filter(m => m.id !== id);
+  renderGuideMsgs(_guideCat);
+  if (typeof SB_URL !== 'undefined') {
+    fetch(SB_URL + '/rest/v1/guide_messages?id=eq.' + id.replace('g',''), {
+      method:'DELETE',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+  }
+}
+
+function closeGuideMsgModal() {
+  document.getElementById('guideMsgModal').style.display = 'none';
+}
+
+async function saveGuideMsg() {
+  const title = document.getElementById('guideMsgTitleInput').value.trim();
+  const content = document.getElementById('guideMsgContentInput').value.trim();
+  if (!title || !content) { alert('제목과 내용을 모두 입력해주세요.'); return; }
+
+  const cat = _guideCat;
+  if (!GUIDE_DATA[cat]) GUIDE_DATA[cat] = [];
+
+  if (_guideEditId) {
+    const idx = GUIDE_DATA[cat].findIndex(m => m.id === _guideEditId);
+    if (idx >= 0) { GUIDE_DATA[cat][idx].title = title; GUIDE_DATA[cat][idx].content = content; }
+  } else {
+    const newId = 'g' + Date.now();
+    GUIDE_DATA[cat].push({ id: newId, title, content });
+  }
+
+  try {
+    const SB_URL2 = typeof SB_URL !== 'undefined' ? SB_URL : (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : null);
+    const SB_KEY2 = typeof SB_KEY !== 'undefined' ? SB_KEY : (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : null);
+    if (SB_URL2 && SB_KEY2) {
+      await fetch(SB_URL2 + '/rest/v1/guide_messages', {
+        method:'POST',
+        headers:{'apikey':SB_KEY2,'Authorization':'Bearer '+SB_KEY2,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+        body: JSON.stringify({ category: cat, title, content, sort_order: GUIDE_DATA[cat].length })
+      });
+    }
+  } catch(e) {}
+
+  closeGuideMsgModal();
+  renderGuideMsgs(cat);
+}
+
+(function waitGuide() {
+  const el = document.getElementById('guideCatList');
+  if (el) { initGuide(); }
+  else { setTimeout(waitGuide, 200); }
+})();
+</script>
       </div>
     </div>
   </div>
