@@ -123,106 +123,42 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       <div className="db-welcome">
         <h1>안녕하세요, {displayName}님!</h1>
         {bookingInfo ? (
-          (() => {
-            const b = bookingInfo;
-            const isCommute = b.accom_type === '통학형' || b.booking_type === 'commute';
-            const fDate = (d: any) => {
-              if (!d) return '-';
-              const s = String(d).split('T')[0];
-              const dt = new Date(s + 'T00:00:00');
-              if (isNaN(dt.getTime())) return s;
-              return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
-            };
-            const fAmt = (v: any) => {
-              const n = Number(v);
-              if (!n || isNaN(n)) return '-';
-              return n.toLocaleString() + '원';
-            };
-            const fFlight = (airline: any, base: any, date: any, time: any) => {
-              const main = airline || base;
-              if (!main) return '-';
-              const tail = date ? ` / ${fDate(date)}${time ? ' ' + time : ''}` : '';
-              return main + tail;
-            };
-            const PAY_STATUS: Record<string,{label:string;bg:string;color:string}> = {
-              pending: { label: '결제 대기', bg: '#fef3c7', color: '#92400e' },
-              partial: { label: '부분 결제', bg: '#dbeafe', color: '#1e40af' },
-              paid:    { label: '결제 완료', bg: '#dcfce7', color: '#166534' },
-              completed:{ label: '완료',     bg: '#dcfce7', color: '#166534' },
-            };
-            const ps = PAY_STATUS[b.payment_status || b.status] || PAY_STATUS.pending;
-            const students = Array.isArray(b.students)
-              ? b.students
-              : (typeof b.students === 'string'
-                  ? (() => { try { return JSON.parse(b.students || '[]'); } catch { return []; } })()
-                  : []);
-            const stuLen = students.length;
-            const adults = b.adults ?? b.num_adults ?? null;
-            const childCount = stuLen > 0 ? stuLen : (b.children ?? b.num_children ?? null);
-            const personnel = (adults === null && childCount === null)
-              ? '-' : `보호자 ${adults ?? '-'}명 + 아이 ${childCount ?? '-'}명`;
-            const roomNo = b.house_no || b.accom_room || b.room_no || b.room_number || '-';
-
-            const Section = ({ title, items }: { title: string; items: [string, string][] }) => (
-              <div style={{marginBottom:14}}>
-                <div style={{fontSize:12, fontWeight:700, opacity:0.85, marginBottom:8, letterSpacing:0.3}}>{title}</div>
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-                  {items.map(([lbl, val], i) => (
-                    <div key={i} style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 12px'}}>
-                      <div style={{fontSize:11, opacity:0.8, marginBottom:3}}>{lbl}</div>
-                      <div style={{fontWeight:700, fontSize:13, lineHeight:1.35, wordBreak:'break-word'}}>{val || '-'}</div>
-                    </div>
-                  ))}
+          <>
+            <div style={{display:'flex', gap:8, marginBottom:8}}>
+              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크인</div>
+                <div style={{fontWeight:700, fontSize:14}}>
+                  {bookingInfo.check_in || bookingInfo.checkin_date || bookingInfo.academy_start || '-'}
                 </div>
               </div>
-            );
-
-            const infoItems: [string,string][] = [
-              ['예약자', b.booker_name || '-'],
-              ['연락처', b.booker_phone || '-'],
-              ...(isCommute
-                ? [
-                    ['수업시작', fDate(b.academy_start || b.check_in || b.checkin_date)] as [string,string],
-                    ['수업종료', fDate(b.checkout_date || b.academy_end)] as [string,string],
-                  ]
-                : [
-                    ['체크인', fDate(b.check_in || b.checkin_date)] as [string,string],
-                    ['체크아웃', fDate(b.check_out || b.checkout_date)] as [string,string],
-                    ['기간', b.accom_weeks ? `${b.accom_weeks}주` : '-'] as [string,string],
-                    ['아카데미 시작', fDate(b.academy_start)] as [string,string],
-                    ['아카데미 종료', fDate(b.academy_end)] as [string,string],
-                  ]),
-              ['예약유형', b.accom_type || '-'],
-              ['유학원', b.agency || '-'],
-              ['전체 인원', personnel],
-              ['룸 번호', roomNo],
-            ];
-
-            const flightItems: [string,string][] = [
-              ['입국 항공편', fFlight(b.flight_in_airline, b.flight_in, b.flight_in_date, b.flight_in_time)],
-              ['출국 항공편', fFlight(b.flight_out_airline, b.flight_out, b.flight_out_date, b.flight_out_time)],
-              ['픽업장소', b.pickup_place || '-'],
-              ['드랍장소', b.drop_place || b.drop_off || '-'],
-            ];
-
-            return (<>
-              <Section title="📋 예약 정보" items={infoItems} />
-              <Section title="✈️ 항공편 · 픽드랍" items={flightItems} />
-              <div>
-                <div style={{fontSize:12, fontWeight:700, opacity:0.85, marginBottom:8, letterSpacing:0.3}}>💳 결제</div>
-                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-                  <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 12px'}}>
-                    <div style={{fontSize:11, opacity:0.8, marginBottom:3}}>결제상태</div>
-                    <span style={{display:'inline-block', padding:'3px 10px', borderRadius:99, background:ps.bg, color:ps.color, fontSize:12, fontWeight:700}}>{ps.label}</span>
-                  </div>
-                  <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 12px'}}>
-                    <div style={{fontSize:11, opacity:0.8, marginBottom:3}}>총 금액</div>
-                    <div style={{fontWeight:700, fontSize:13}}>{fAmt(b.total_amount || b.final_price || b.base_price)}</div>
-                  </div>
+              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크아웃</div>
+                <div style={{fontWeight:700, fontSize:14}}>
+                  {bookingInfo.check_out || bookingInfo.checkout_date || bookingInfo.academy_end || '-'}
                 </div>
               </div>
-            </>);
-          })()
+            </div>
+            {(() => {
+              const students = Array.isArray(bookingInfo.students)
+                ? bookingInfo.students
+                : (typeof bookingInfo.students === 'string'
+                    ? (() => { try { return JSON.parse(bookingInfo.students || '[]'); } catch { return []; } })()
+                    : []);
+              const names = students.map((s: any) => s.name_kr || s.korName || s.name_en || s.engName || s.name).filter(Boolean);
+              return names.length > 0 ? (
+                <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px', marginBottom:8}}>
+                  <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>👧 학생</div>
+                  <div style={{fontWeight:600, fontSize:13}}>{names.join(' · ')}</div>
+                </div>
+              ) : null;
+            })()}
+            {bookingInfo.accom_type && (
+              <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>🏠 숙소</div>
+                <div style={{fontWeight:600, fontSize:13}}>{bookingInfo.accom_type}</div>
+              </div>
+            )}
+          </>
         ) : (
           authUser?.email && !authUser.email.includes('@dreamacademyph.com') ? (
             <div style={{background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>

@@ -164,12 +164,6 @@ export default function MyBookingPage() {
         </div>
       </div>
 
-      {b.special_request && (
-        <div className="sec">
-          <h2>특이사항</h2>
-          <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{b.special_request}</div>
-        </div>
-      )}
     </div>
   </>);
 }
