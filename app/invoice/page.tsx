@@ -978,7 +978,7 @@ function InvoicePageInner(){
       </div>
       <div className="iv" id="resort-confirmation">
         <div className="it">
-          <div><div className="il">DREAM COMPANY</div><div className="ils">Cebu, Philippines</div></div>
+          <div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div>
           <div className="itr"><h1 style={{fontSize:22,letterSpacing:"0.05em"}}>RESERVATION<br/>CONFIRMATION</h1><p>Date: {new Date().toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}</p></div>
         </div>
 
@@ -1040,7 +1040,7 @@ function InvoicePageInner(){
       </div>
       <div className="iv" id="guest-invoice">
         <div className="it">
-          <div><div className="il">DREAM COMPANY</div><div className="ils">Cebu, Philippines</div></div>
+          <div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div>
           <div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div>
         </div>
 
@@ -1233,7 +1233,7 @@ function InvoicePageInner(){
   /* ── 인보이스 미리보기 ── */
   <div className="iw">
     <div className="iv" id="invoice-content">
-      <div className="it"><div><div className="il">DREAM COMPANY</div><div className="ils">Philippines</div></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
+      <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
       <div className="is"><div className="ist">Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
