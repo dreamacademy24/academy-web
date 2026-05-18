@@ -264,17 +264,41 @@ export default function AdminBookingsPage(){
       //  - 통학형: booking 수동 academy_start → checkin
       //  - 비통학형: booking 수동 academy_start → checkin 기반 다음 월요일 derive
       const sStart=s.academyStart||s.academy_start||"";
-      const academyStart=sStart||(isCommute
-        ?(bAcademyStart||b.checkin_date||"")
-        :(bAcademyStart||(b.checkin_date?getNextMonday(b.checkin_date):"")||""));
+      // 비통학형: sStart가 실제 월요일일 때만 신뢰 (옛 데이터에 체크인 그대로 들어간 케이스 필터링)
+      const sStartIsMonday=(()=>{
+        if(!sStart) return false;
+        const d=new Date(sStart+'T00:00:00');
+        return !isNaN(d.getTime())&&d.getDay()===1;
+      })();
+      const bStartIsMonday=(()=>{
+        if(!bAcademyStart) return false;
+        const d=new Date(bAcademyStart+'T00:00:00');
+        return !isNaN(d.getTime())&&d.getDay()===1;
+      })();
+      const academyStart=isCommute
+        ?(sStart||bAcademyStart||b.checkin_date||"")
+        :(sStartIsMonday
+            ?sStart
+            :(bStartIsMonday
+                ?bAcademyStart
+                :(b.checkin_date?getNextMonday(b.checkin_date):(bAcademyStart||sStart||""))));
       // booking-level accom_weeks 우선, 부재 시 student-level 폴백
       const weeks=bookingWeeks||Number(s.academyWeeks)||0;
       // 종료일 우선순위 (per-student JSONB 최우선 — 학생별 수동 입력값 보존):
       //  - 학생 JSONB academyEnd → 통학형 checkout → booking.academy_end → calc → 폴백
       const sEnd=s.academyEnd||s.academy_end||"";
+      // 비통학형: sEnd가 평일(Mon-Fri)일 때만 신뢰 (주말 = 체크아웃 날짜 stale 가능성)
+      const sEndIsValid=(()=>{
+        if(!sEnd) return false;
+        const d=new Date(sEnd+'T00:00:00');
+        if(isNaN(d.getTime())) return false;
+        const day=d.getDay();
+        return day>=1&&day<=5;
+      })();
+      const sEndToUse=isCommute?sEnd:(sEndIsValid?sEnd:"");
       let computedEnd:string;
-      if(sEnd){
-        computedEnd=sEnd;
+      if(sEndToUse){
+        computedEnd=sEndToUse;
       }else if(isCommute&&checkoutDate){
         computedEnd=checkoutDate;
       }else if(bAcademyEnd){
