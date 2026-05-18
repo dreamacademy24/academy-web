@@ -481,14 +481,30 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 }
 .cal-date{font-size:12px;font-weight:600;color:var(--text3);margin-bottom:4px;}
 .cal-cell.other-month .cal-date{color:#d1d5db;}
-.cal-chip{
-  font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:5px;
-  margin-bottom:2px;cursor:pointer;display:block;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .13s;
+.cal-event{
+  font-size:11px;padding:2px 6px 2px 8px;border-left:3px solid;border-radius:0 3px 3px 0;
+  margin-bottom:2px;display:block;background:#f8fafc;color:#334155;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:opacity .13s;
 }
-.cal-chip:hover{opacity:.75;}
-.cal-chip.done{opacity:.35;text-decoration:line-through;}
+.cal-event:hover{opacity:.75;}
+.cal-event.done{opacity:.35;text-decoration:line-through;}
+.cal-event.ev-task    {border-color:#3b82f6;background:#eff6ff;color:#1d4ed8;}
+.cal-event.ev-checkin {border-color:#16a34a;background:#f0fdf4;color:#166534;}
+.cal-event.ev-checkout{border-color:#0891b2;background:#ecfeff;color:#155e75;}
+.cal-event.ev-after   {border-color:#7c3aed;background:#f5f3ff;color:#5b21b6;}
+.cal-event.ev-field   {border-color:#ea580c;background:#fff7ed;color:#9a3412;}
 .cal-more{font-size:10px;color:var(--text3);padding:1px 5px;}
+.cal-filter-wrap{display:flex;gap:6px;padding:12px 0 16px;flex-wrap:wrap;}
+.cal-filter-btn{
+  padding:6px 14px;border-radius:6px;border:0.5px solid #e2e8f0;background:white;
+  font-size:13px;color:#475569;cursor:pointer;display:flex;align-items:center;gap:5px;
+  font-family:inherit;
+}
+.cal-filter-btn.cf-active{background:#1e293b;color:white;border-color:#1e293b;}
+.cal-filter-btn .cf-dot{width:8px;height:8px;border-radius:50%;}
+.cal-legend{display:flex;gap:16px;padding:12px 0;flex-wrap:wrap;font-size:12px;color:#64748b;}
+.cal-legend-item{display:flex;align-items:center;gap:4px;}
+.cal-legend-bar{width:3px;height:14px;border-radius:1px;display:inline-block;}
 
 /* WEEK VIEW */
 .week-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
@@ -1258,6 +1274,12 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- CALENDAR -->
       <div id="page-calendar" class="hidden">
+        <div class="cal-filter-wrap">
+          <button class="cal-filter-btn cf-active" data-filter="all" onclick="setCalFilter('all',this)">전체</button>
+          <button class="cal-filter-btn" data-filter="task" onclick="setCalFilter('task',this)"><span class="cf-dot" style="background:#3b82f6"></span>업무</button>
+          <button class="cal-filter-btn" data-filter="student" onclick="setCalFilter('student',this)"><span class="cf-dot" style="background:#16a34a"></span>학생 인·아웃</button>
+          <button class="cal-filter-btn" data-filter="extra" onclick="setCalFilter('extra',this)"><span class="cf-dot" style="background:#7c3aed"></span>부가일정</button>
+        </div>
         <div class="cal-toolbar">
           <div class="cal-nav">
             <div class="cal-title" id="calTitle"></div>
@@ -1273,6 +1295,13 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           </div>
         </div>
         <div id="calBody"></div>
+        <div class="cal-legend">
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#3b82f6"></span>업무</span>
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#16a34a"></span>학생 체크인</span>
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#0891b2"></span>학생 체크아웃</span>
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#7c3aed"></span>애프터스쿨</span>
+          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#ea580c"></span>필드트립</span>
+        </div>
       </div>
 
       <!-- EMP PAGE -->
@@ -3110,7 +3139,7 @@ function showPage(p){
   if(p==='home'){renderHome();markNotifsRead('all');}
   if(p==='announcements'){renderAnnouncementsPage();document.getElementById('btnTask').style.display='none';markNotifsRead('notice');}
   if(p==='board'){renderBoard();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
-  if(p==='calendar')renderCal();
+  if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
@@ -3946,14 +3975,119 @@ function renderBoardTask(f){
 }
 
 // ── CALENDAR ──
+let _calFilter='all';
+let _studentEvents=[];
+const EXTRA_EVENTS=[
+  // 5월 애프터스쿨
+  {date:'2026-05-04',type:'after',title:'애프터스쿨 종이접기·비행기'},
+  {date:'2026-05-06',type:'after',title:'애프터스쿨 간식잡기·장애물'},
+  {date:'2026-05-11',type:'after',title:'애프터스쿨 식물심기'},
+  {date:'2026-05-13',type:'after',title:'애프터스쿨 미니올림픽'},
+  {date:'2026-05-18',type:'after',title:'애프터스쿨 바람개비'},
+  {date:'2026-05-20',type:'after',title:'애프터스쿨 산책&미로'},
+  {date:'2026-05-25',type:'after',title:'애프터스쿨 물총놀이'},
+  {date:'2026-05-27',type:'after',title:'애프터스쿨 훌라후프'},
+  // 5월 필드트립
+  {date:'2026-05-09',type:'field',title:'필드트립 니모브류'},
+  {date:'2026-05-23',type:'field',title:'필드트립 SM스케이팅'},
+  // 6월 애프터스쿨
+  {date:'2026-06-01',type:'after',title:'애프터스쿨 꽃꽂이'},
+  {date:'2026-06-03',type:'after',title:'애프터스쿨 체육수업'},
+  {date:'2026-06-08',type:'after',title:'애프터스쿨 손야구'},
+  {date:'2026-06-10',type:'after',title:'애프터스쿨 신호등게임'},
+  {date:'2026-06-15',type:'after',title:'애프터스쿨 물총놀이'},
+  {date:'2026-06-17',type:'after',title:'애프터스쿨 미니올림픽'},
+  {date:'2026-06-22',type:'after',title:'애프터스쿨 자연미술'},
+  {date:'2026-06-24',type:'after',title:'애프터스쿨 산책&미로'},
+  {date:'2026-06-29',type:'after',title:'애프터스쿨 물총놀이'},
+  // 6월 필드트립
+  {date:'2026-06-13',type:'field',title:'필드트립 쉬라인투어'},
+  {date:'2026-06-27',type:'field',title:'필드트립 마젤란십자가'},
+];
+
+async function loadStudentEvents(year,month){
+  try{
+    const SB_URL2=typeof SB_URL!=='undefined'?SB_URL:(typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:null);
+    const SB_KEY2=typeof SB_KEY!=='undefined'?SB_KEY:(typeof SUPABASE_ANON_KEY!=='undefined'?SUPABASE_ANON_KEY:null);
+    if(!SB_URL2){_studentEvents=[];return;}
+    const startDate=year+'-'+String(month).padStart(2,'0')+'-01';
+    const endDate=year+'-'+String(month).padStart(2,'0')+'-31';
+    const hdr={'apikey':SB_KEY2,'Authorization':'Bearer '+SB_KEY2};
+    const [r1,r2]=await Promise.all([
+      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name&checkin_date=gte.'+startDate+'&checkin_date=lte.'+endDate+'&order=checkin_date',{headers:hdr}),
+      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name&checkout_date=gte.'+startDate+'&checkout_date=lte.'+endDate+'&order=checkout_date',{headers:hdr}),
+    ]);
+    const data=await r1.json();
+    const data2=await r2.json();
+    _studentEvents=[];
+    const extractNames=function(b){
+      const stus=Array.isArray(b.students)?b.students:[];
+      return stus.map(function(s){return s.kor_name||s.name_kr||s.name||'';}).filter(Boolean).join(', ')||b.booker_name||'';
+    };
+    (Array.isArray(data)?data:[]).forEach(function(b){
+      if(b.checkin_date)_studentEvents.push({date:String(b.checkin_date).slice(0,10),type:'checkin',title:'체크인 '+extractNames(b)});
+    });
+    (Array.isArray(data2)?data2:[]).forEach(function(b){
+      if(b.checkout_date)_studentEvents.push({date:String(b.checkout_date).slice(0,10),type:'checkout',title:'체크아웃 '+extractNames(b)});
+    });
+  }catch(e){console.log('student events load err',e);_studentEvents=[];}
+}
+
+function setCalFilter(filter,btn){
+  _calFilter=filter;
+  document.querySelectorAll('.cal-filter-btn').forEach(function(b){b.classList.remove('cf-active');});
+  if(btn)btn.classList.add('cf-active');
+  renderCal();
+}
+
+function _calIncludeType(type){
+  if(_calFilter==='all')return true;
+  if(_calFilter==='task')return type==='task';
+  if(_calFilter==='student')return type==='checkin'||type==='checkout';
+  if(_calFilter==='extra')return type==='after'||type==='field';
+  return true;
+}
+
+function _gatherEventsForDate(ds){
+  const evs=[];
+  if(_calIncludeType('task')){
+    calVis().filter(function(t){return t.due===ds;}).forEach(function(t){
+      evs.push({type:'task',task:t});
+    });
+  }
+  _studentEvents.filter(function(e){return e.date===ds;}).forEach(function(e){
+    if(_calIncludeType(e.type))evs.push({type:e.type,title:e.title});
+  });
+  EXTRA_EVENTS.filter(function(e){return e.date===ds;}).forEach(function(e){
+    if(_calIncludeType(e.type))evs.push({type:e.type,title:e.title});
+  });
+  return evs;
+}
+
 function calNav(dir){
   if(calView==='month'){if(dir===0)calDate=new Date();else calDate=new Date(calDate.getFullYear(),calDate.getMonth()+dir,1);}
   else{if(dir===0)calDate=new Date();else{calDate=new Date(calDate);calDate.setDate(calDate.getDate()+dir*7);}}
-  renderCal();
+  loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});
 }
 function setCV(v,el){calView=v;document.querySelectorAll('.cal-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderCal();}
 function renderCal(){calView==='month'?renderMonthCal():renderWeekCal();}
 function calVis(){return tasks.filter(t=>t.shared);}
+
+function _appendCalEvent(cell,ev){
+  if(ev.type==='task'){
+    const t=ev.task;
+    const el=document.createElement('div');el.className='cal-event ev-task'+(t.done?' done':'');
+    el.textContent=(t.idx?'('+t.idx+') ':'')+t.title;el.title=t.title;
+    el.onclick=function(){openTaskCmt(t.id);};
+    cell.appendChild(el);
+  }else{
+    const cls=ev.type==='checkin'?'ev-checkin':ev.type==='checkout'?'ev-checkout':ev.type==='after'?'ev-after':'ev-field';
+    const el=document.createElement('div');el.className='cal-event '+cls;
+    el.textContent=ev.title;el.title=ev.title;
+    cell.appendChild(el);
+  }
+}
+
 function renderMonthCal(){
   const y=calDate.getFullYear(),m=calDate.getMonth();
   document.getElementById('calTitle').textContent=y+'년 '+(m+1)+'월';
@@ -3962,20 +4096,14 @@ function renderMonthCal(){
   const g=document.createElement('div');g.className='cal-grid';
   ['일','월','화','수','목','금','토'].forEach(function(d){const el=document.createElement('div');el.className='cal-day-label';el.textContent=d;g.appendChild(el);});
   const first=new Date(y,m,1),last=new Date(y,m+1,0),today=new Date();today.setHours(0,0,0,0);
-  const vis=calVis();
   const mk=function(date,isCur){
     const ds=localDateStr(date);
     const cell=document.createElement('div');cell.className='cal-cell'+(!isCur?' other-month':'');
     if(date.getTime()===today.getTime())cell.classList.add('today');
     const dn=document.createElement('div');dn.className='cal-date';dn.textContent=date.getDate();cell.appendChild(dn);
-    vis.filter(t=>t.due===ds).slice(0,4).forEach(function(t){
-      const emp=getP(t.assignee),color=emp?emp.color:'#9ca3af';
-      const chip=document.createElement('div');chip.className='cal-chip'+(t.done?' done':'');
-      chip.style.cssText='background:'+color+'18;color:'+color;
-      chip.textContent=(t.idx?'('+t.idx+') ':'')+t.title;chip.title=t.title;
-      chip.onclick=function(){openTaskCmt(t.id);};cell.appendChild(chip);
-    });
-    const extra=vis.filter(t=>t.due===ds).length-4;
+    const evs=_gatherEventsForDate(ds);
+    evs.slice(0,4).forEach(function(ev){_appendCalEvent(cell,ev);});
+    const extra=evs.length-4;
     if(extra>0){const m2=document.createElement('div');m2.className='cal-more';m2.textContent='+'+extra+'개';cell.appendChild(m2);}
     g.appendChild(cell);
   };
@@ -4008,15 +4136,9 @@ function renderWeekCal(){
   days.forEach(function(d){
     const ds=localDateStr(d);
     const col=document.createElement('div');col.className='week-cell';
-    const dayT=vis.filter(t=>t.due===ds);
-    if(!dayT.length)col.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 2px">—</div>';
-    dayT.forEach(function(t){
-      const emp=getP(t.assignee),color=emp?emp.color:'#9ca3af',name=emp?emp.name:'미배정';
-      const chip=document.createElement('div');chip.className='week-chip'+(t.done?' done':'');
-      chip.style.cssText='background:'+color+'12;color:'+color+';border-color:'+color;
-      chip.textContent='* '+name+': '+t.title+(t.idx?' ('+t.idx+')':'');
-      chip.onclick=function(){openTaskCmt(t.id);};col.appendChild(chip);
-    });
+    const evs=_gatherEventsForDate(ds);
+    if(!evs.length)col.innerHTML='<div style="font-size:11px;color:var(--text3);padding:4px 2px">—</div>';
+    evs.forEach(function(ev){_appendCalEvent(col,ev);});
     bg.appendChild(col);
   });
   wrap.appendChild(bg);body.appendChild(wrap);
