@@ -113,8 +113,8 @@ export default function BookingPage() {
     if (bType === "dreamhouse") { accomType = "드림하우스"; accomWeeks = accom.dh_weeks; }
     else if (bType === "dreamhouse_jaypark") { accomType = "드림하우스+제이파크"; accomWeeks = accom.dh_weeks + accom.jp_weeks; }
     else if (bType === "dreamhouse_cubenine") { accomType = "드림하우스+큐브나인"; accomWeeks = accom.dh_weeks + (accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period)); }
-    else if (bType === "jaypark") { accomType = "제이파크 단독"; accomWeeks = accom.jp_weeks; }
-    else if (bType === "cubenine") { accomType = "큐브나인 단독"; accomWeeks = accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period); }
+    else if (bType === "jaypark") { accomType = "제이파크 패키지"; accomWeeks = accom.jp_weeks; }
+    else if (bType === "cubenine") { accomType = "큐브나인 패키지"; accomWeeks = accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period); }
     else { accomType = "통학형"; accomWeeks = 0; }
 
     const flightInStr = flightIn.undecided ? "미정" : [flightIn.airline, flightIn.flightNo, flightIn.date, flightIn.time].filter(Boolean).join(" ");
