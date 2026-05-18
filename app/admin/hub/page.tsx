@@ -41,8 +41,6 @@ export default function AdminHubPage() {
     { icon: "🎧", title: "Online Class",    desc: "튜터 출결 입력 · 주간 스케줄",        href: "/admin/online-class-attendance" },
     { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
     { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
-    { icon: "🏠", title: "올인원 예약접수",   desc: "올인원 패키지 손님용 링크",            href: "/booking",  external: true },
-    { icon: "📋", title: "비패키지 예약접수", desc: "숙소단독/통학형 손님용 링크",          href: "/booking2", external: true },
   ];
 
   return (<>
