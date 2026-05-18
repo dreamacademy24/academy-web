@@ -658,16 +658,33 @@ export default function BookingDetailPage() {
                       <div className="nm" style={{flex:1}}>{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
                       <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s, i)}>✏️ 수정</button>
                     </div>
-                    <div style={{
-                      display:"inline-flex", alignItems:"center", gap:6,
-                      background:"#e8f4fd", borderRadius:8, padding:"5px 12px",
-                      marginTop:6, marginBottom:8
-                    }}>
-                      <span style={{fontSize:12, color:"#1a6fc4", fontWeight:700}}>📅 수업기간</span>
-                      <span style={{fontSize:13, fontWeight:800, color:"#1a1a2e"}}>
-                        {(s.academyStart||s.academy_start||"-")} ~ {(s.academyEnd||s.academy_end||"-")}
-                      </span>
-                    </div>
+                    {(()=>{
+                      const isCommute = b?.accom_type==="통학형" || b?.booking_type==="commute";
+                      const bCheckin = b?.check_in || b?.checkin_date || "";
+                      const bStart = (b?.academy_start || "").split("T")[0];
+                      const cardStart = s.academyStart || s.academy_start
+                        || bStart
+                        || (bCheckin ? (isCommute ? bCheckin : deriveAcademyStart(bCheckin)) : "")
+                        || "-";
+                      const cardEnd = s.academyEnd || s.academy_end
+                        || (isCommute
+                            ? (b?.check_out || b?.checkout_date || "")
+                            : ((b?.academy_end || "").split("T")[0]
+                                || deriveAcademyEnd(bStart || (bCheckin ? deriveAcademyStart(bCheckin) : ""), b?.accom_weeks || 0)))
+                        || "-";
+                      return (
+                        <div style={{
+                          display:"inline-flex", alignItems:"center", gap:6,
+                          background:"#e8f4fd", borderRadius:8, padding:"5px 12px",
+                          marginTop:6, marginBottom:8
+                        }}>
+                          <span style={{fontSize:12, color:"#1a6fc4", fontWeight:700}}>📅 수업기간</span>
+                          <span style={{fontSize:13, fontWeight:800, color:"#1a1a2e"}}>
+                            {cardStart} ~ {cardEnd}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="sub">
                       {[
                         s.age || null,
