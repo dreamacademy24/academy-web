@@ -60,7 +60,7 @@ function CheckinDetailsInner() {
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"});
+  const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
   const [simCards, setSimCards] = useState<SimCard[]>([]);
   const [extraPickups, setExtraPickups] = useState<ExtraPickup[]>([]);
   const [saving, setSaving] = useState(false);
@@ -86,7 +86,7 @@ function CheckinDetailsInner() {
       if (d.booking) setBooking(d.booking);
       if (d.detail) {
         setDetail(d.detail);
-        try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"}); }
+        try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"}); }
         try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
         try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
       }
@@ -319,7 +319,7 @@ function CheckinDetailsInner() {
               <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px"}}>
                 <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#334"}}>룸 2 — 2층방 (작은방)</div>
                 <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)"].map(opt=>(
+                  {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)","사용하지 않음"].map(opt=>(
                     <button key={opt} type="button"
                       onClick={()=>setBedConfig(p=>({...p,room2:opt}))}
                       style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12,cursor:"pointer",
@@ -329,9 +329,18 @@ function CheckinDetailsInner() {
                   ))}
                 </div>
               </div>
-              <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px",background:"#f9f9fc"}}>
-                <div style={{fontWeight:700,fontSize:13,marginBottom:4,color:"#334"}}>룸 3 — 1층방</div>
-                <div style={{fontSize:12,color:"#778"}}>더블베드 1개 (1~2인 스테이) — 고정</div>
+              <div style={{border:"1px solid #dde",borderRadius:8,padding:"10px 14px"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:8,color:"#334"}}>룸 3 — 1층방</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {["더블베드 1개 (1~2인 스테이)","사용하지 않음"].map(opt=>(
+                    <button key={opt} type="button"
+                      onClick={()=>setBedConfig(p=>({...p,room3:opt}))}
+                      style={{padding:"6px 14px",borderRadius:20,border:"1.5px solid",fontSize:12,cursor:"pointer",
+                        borderColor:bedConfig.room3===opt?"#5b6cf8":"#ccd",
+                        background:bedConfig.room3===opt?"#5b6cf8":"#fff",
+                        color:bedConfig.room3===opt?"#fff":"#556"}}>{opt}</button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

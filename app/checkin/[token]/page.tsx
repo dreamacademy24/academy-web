@@ -17,7 +17,7 @@ export default function CheckinFormPage() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({ q1: "", q2: "", q6: "" });
-  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"});
+  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -48,7 +48,7 @@ export default function CheckinFormPage() {
         });
         try {
           const b = JSON.parse(det.bed_setting || "{}");
-          if (b.room1 || b.room2) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인)"});
+          if (b.room1 || b.room2) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"});
         } catch {}
         try {
           const s = JSON.parse(det.usim_request || "[]");
@@ -156,7 +156,7 @@ export default function CheckinFormPage() {
             <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
               <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#334"}}>룸 2 — 2층방 (작은방)</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)"].map(opt=>(
+                {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)","사용하지 않음"].map(opt=>(
                   <button key={opt} type="button"
                     onClick={()=>setBedConfig(p=>({...p,room2:opt}))}
                     style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
@@ -166,9 +166,20 @@ export default function CheckinFormPage() {
                 ))}
               </div>
             </div>
-            <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px",background:"#f8f9ff"}}>
-              <div style={{fontWeight:700,fontSize:14,color:"#334",marginBottom:4}}>룸 3 — 1층방</div>
-              <div style={{fontSize:13,color:"#778"}}>더블베드 1개 (1~2인 스테이) — 고정</div>
+            <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#334"}}>룸 3 — 1층방</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {["더블베드 1개 (1~2인 스테이)","사용하지 않음"].map(opt=>(
+                  <button key={opt} type="button"
+                    onClick={()=>setBedConfig(p=>({...p,room3:opt}))}
+                    style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
+                      borderColor:bedConfig.room3===opt?"#4f6ef7":"#dde3f0",
+                      background:bedConfig.room3===opt?"#4f6ef7":"#fff",
+                      color:bedConfig.room3===opt?"#fff":"#556"}}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
