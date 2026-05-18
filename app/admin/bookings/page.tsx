@@ -180,7 +180,7 @@ export default function AdminBookingsPage(){
   const [filter,setFilter]=useState("전체");
   const [confirmFilter,setConfirmFilter]=useState("전체");
   const [loading,setLoading]=useState(false);
-  const [mainTab,setMainTab]=useState<"list"|"invoice"|"receipt"|"confirm"|"estimate"|"students">("list");
+  const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const ASSIGNEES=["May","Jamin","Candice"];
@@ -612,7 +612,6 @@ export default function AdminBookingsPage(){
   if(!authed) return null;
 
   const filtered=filter==="전체"?bookings:bookings.filter(b=>b.status===filter);
-  const invList=bookings.filter(b=>["인보이스발행","영수증발행","완료"].includes(b.status));
   const rcpList=bookings.filter(b=>["영수증발행","완료"].includes(b.status));
   const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status));
   const confirmFiltered=confirmFilter==="전체"?confirmList:confirmList.filter(b=>b.status===confirmFilter);
@@ -727,14 +726,43 @@ export default function AdminBookingsPage(){
 
     <div className="main-tabs">
       <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적</button>
-      <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수").length;return n>0&&<span style={{background:"#16a34a",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4}}>{n}</span>;})()}</button>
-      <button className={`main-tab${mainTab==="invoice"?" ac":""}`} onClick={()=>setMainTab("invoice")}>📄 인보이스</button>
+      <button className={`main-tab${mainTab==="newlist"?" ac":""}`} onClick={()=>setMainTab("newlist")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수"||b.status==="접수중").length;return n>0&&<span style={{background:"#e85d35",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>{n}</span>;})()}</button>
+      <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 인보이스</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
       <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
       <button className={`main-tab${mainTab==="students"?" ac":""}`} onClick={()=>setMainTab("students")}>📚 학생관리</button>
     </div>
 
-    {/* ── 탭1: 부킹 리스트 ── */}
+    {/* ── 탭0: 신규 접수 예약 ── */}
+    {mainTab==="newlist"&&(()=>{
+      const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중");
+      return(<div>
+        <div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:14,fontWeight:700}}>📋 신규 접수 예약</span>
+          <span style={{background:"#e85d35",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{newBookings.length}건</span>
+        </div>
+        {newBookings.length===0?(
+          <div style={{textAlign:"center",padding:"60px 0",color:"#aaa",fontSize:14}}>신규 접수 예약이 없습니다</div>
+        ):(<div className="tbl-w"><table className="tbl"><thead><tr>
+          <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th><th>액션</th>
+        </tr></thead><tbody>
+          {newBookings.map(b=>(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
+            <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>
+            <td>{b.booker_name||"-"}</td>
+            <td style={{fontSize:12,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
+            <td>{b.checkin_date||"-"}</td>
+            <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
+            <td style={{fontSize:12,color:"#888"}}>{fDate(b.created_at)}</td>
+            <td onClick={e=>e.stopPropagation()} style={{display:"flex",gap:4}}>
+              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
+              <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
+            </td>
+          </tr>))}
+        </tbody></table></div>)}
+      </div>);
+    })()}
+
+    {/* ── 탭1: 인보이스 (전체 부킹 리스트) ── */}
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
@@ -788,45 +816,7 @@ export default function AdminBookingsPage(){
       </div>
     </>)}
 
-    {/* ── 탭2: 인보이스 ── */}
-    {mainTab==="invoice"&&(<>
-      <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>패키지금액</th><th>잔금일자</th><th></th>
-      </tr></thead><tbody>
-        {invList.length===0?<tr><td colSpan={9} className="empty">인보이스 발행 내역이 없습니다.</td></tr>:
-        invList.map(b=>{
-          const sc=SC[b.status]||SC["접수"];
-          return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
-            <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
-            <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
-            <td>{b.assignee||"-"}</td><td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
-            <td>{b.checkin_date||"미정"}</td>
-            <td style={{fontWeight:600}}>{fmt(b.base_price)}</td>
-            <td>{b.balance_date||"-"}</td>
-            <td onClick={e=>e.stopPropagation()}><button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button></td>
-          </tr>);
-        })}
-      </tbody></table></div>
-      <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
-        {invList.length===0?<div className="empty">인보이스 발행 내역이 없습니다.</div>:
-        invList.map(b=>{
-          const sc=SC[b.status]||SC["접수"];
-          return(<div key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
-              <span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span>
-            </div>
-            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name} / {stuNames(b.students)}</div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#6b7c93"}}>
-              <span>체크인: {b.checkin_date||"미정"}</span>
-              <span style={{fontWeight:700,color:"#1a1a2e"}}>{fmt(b.base_price)}</span>
-            </div>
-          </div>);
-        })}
-      </div>
-    </>)}
-
-    {/* ── 탭3: 영수증 ── */}
+    {/* ── 탭2: 영수증 ── */}
     {mainTab==="receipt"&&(<>
       <div className="tbl-w"><table className="tbl"><thead><tr>
         <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>최종금액</th>
