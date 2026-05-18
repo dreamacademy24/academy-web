@@ -1381,682 +1381,553 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <!-- MANUAL (업무자료) -->
       <div id="page-manual" class="hidden">
 <style>
-.manual-wrap { display:flex; height:calc(100vh - 100px); overflow:hidden; }
-.manual-sidebar { width:200px; min-width:200px; background:#f8fafc; border-right:1px solid #e2e8f0; overflow-y:auto; padding:16px 0; }
-.manual-sidebar button { display:block; width:100%; text-align:left; padding:10px 20px; border:none; background:none; cursor:pointer; font-size:13px; color:#475569; line-height:1.4; }
-.manual-sidebar button:hover { background:#f1f5f9; color:#1e293b; }
-.manual-sidebar button.m-active { background:#eff6ff; color:#2563eb; font-weight:600; border-right:3px solid #3b82f6; }
-.manual-content { flex:1; overflow-y:auto; padding:32px 40px; }
-.manual-content h2 { font-size:20px; font-weight:700; color:#1e293b; margin:0 0 20px; padding-bottom:12px; border-bottom:2px solid #e2e8f0; }
-.manual-content h3 { font-size:15px; font-weight:700; color:#334155; margin:28px 0 10px; }
-.manual-content p { font-size:14px; color:#475569; line-height:1.8; margin:0 0 10px; }
-.manual-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px 20px; margin:12px 0; font-size:14px; color:#334155; line-height:1.8; }
-.manual-box.blue { background:#eff6ff; border-color:#bfdbfe; }
-.manual-box.yellow { background:#fefce8; border-color:#fde68a; }
-.manual-box.green { background:#f0fdf4; border-color:#bbf7d0; }
-.manual-step { display:flex; gap:12px; align-items:flex-start; margin:10px 0; }
-.manual-step-num { min-width:24px; height:24px; background:#3b82f6; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
-.manual-step-text { font-size:14px; color:#334155; line-height:1.7; padding-top:2px; }
-.manual-table { width:100%; border-collapse:collapse; font-size:13px; margin:12px 0; }
-.manual-table th { background:#f1f5f9; color:#475569; font-weight:600; padding:8px 12px; text-align:left; border:1px solid #e2e8f0; }
-.manual-table td { padding:8px 12px; border:1px solid #e2e8f0; color:#334155; vertical-align:top; }
-.manual-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:600; margin:0 2px; }
-.badge-blue { background:#dbeafe; color:#1d4ed8; }
-.badge-green { background:#dcfce7; color:#166534; }
-.badge-orange { background:#ffedd5; color:#9a3412; }
-.badge-gray { background:#f1f5f9; color:#475569; }
+.manual-wrap{display:flex;height:calc(100vh - 100px);overflow:hidden;}
+.manual-sidebar{width:200px;min-width:200px;background:#f8fafc;border-right:1px solid #e2e8f0;overflow-y:auto;padding:8px 0;}
+.manual-cat-header{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;color:#1e293b;text-align:left;}
+.manual-cat-header:hover{background:#f1f5f9;}
+.manual-cat-header.mc-open{color:#2563eb;}
+.manual-cat-arrow{font-size:10px;transition:transform 0.2s;}
+.manual-cat-arrow.open{transform:rotate(90deg);}
+.manual-sub-list{overflow:hidden;transition:max-height 0.2s;max-height:0;}
+.manual-sub-list.open{max-height:600px;}
+.manual-sub-btn{display:block;width:100%;text-align:left;padding:8px 16px 8px 24px;border:none;background:none;cursor:pointer;font-size:13px;color:#475569;}
+.manual-sub-btn:hover{background:#f1f5f9;color:#1e293b;}
+.manual-sub-btn.ms-active{background:#eff6ff;color:#2563eb;font-weight:600;border-right:3px solid #3b82f6;}
+.manual-content{flex:1;overflow-y:auto;padding:32px 40px;}
+.manual-content h2{font-size:20px;font-weight:700;color:#1e293b;margin:0 0 20px;padding-bottom:12px;border-bottom:2px solid #e2e8f0;}
+.manual-content h3{font-size:15px;font-weight:700;color:#334155;margin:28px 0 10px;}
+.manual-content p{font-size:14px;color:#475569;line-height:1.8;margin:0 0 10px;}
+.manual-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin:12px 0;font-size:14px;color:#334155;line-height:1.8;}
+.manual-box.blue{background:#eff6ff;border-color:#bfdbfe;}
+.manual-box.yellow{background:#fefce8;border-color:#fde68a;}
+.manual-box.green{background:#f0fdf4;border-color:#bbf7d0;}
+.manual-step{display:flex;gap:12px;align-items:flex-start;margin:10px 0;}
+.manual-step-num{min-width:24px;height:24px;background:#3b82f6;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.manual-step-text{font-size:14px;color:#334155;line-height:1.7;padding-top:2px;}
+.manual-table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;}
+.manual-table th{background:#f1f5f9;color:#475569;font-weight:600;padding:8px 12px;text-align:left;border:1px solid #e2e8f0;}
+.manual-table td{padding:8px 12px;border:1px solid #e2e8f0;color:#334155;vertical-align:top;}
+.manual-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;margin:0 2px;}
+.badge-blue{background:#dbeafe;color:#1d4ed8;}
+.badge-green{background:#dcfce7;color:#166534;}
+.badge-orange{background:#ffedd5;color:#9a3412;}
+.badge-gray{background:#f1f5f9;color:#475569;}
+.manual-placeholder{background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;padding:40px;text-align:center;color:#94a3b8;font-size:14px;margin:20px 0;}
+.manual-edit-btn-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
 </style>
 
 <div class="manual-wrap">
-  <!-- 챕터 사이드바 -->
-  <div class="manual-sidebar">
-    <div style="padding:12px 20px 8px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px">CHAPTERS</div>
-    <button class="m-active" onclick="showManual(0,this)">1. 기본 안내</button>
-    <button onclick="showManual(1,this)">2. 상담 안내</button>
-    <button onclick="showManual(2,this)">3. 예약 처리</button>
-    <button onclick="showManual(3,this)">4. 입실 전 안내</button>
-    <button onclick="showManual(4,this)">5. 입실 후 운영</button>
-    <button onclick="showManual(5,this)">6. 수업 운영</button>
-    <button onclick="showManual(6,this)">7. 셔틀 & 투어</button>
-    <button onclick="showManual(7,this)">8. 비상연락 & 규정</button>
-  </div>
-
-  <!-- 콘텐츠 영역 -->
-  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
-    <div style="display:flex;justify-content:flex-end;padding:16px 40px 0;gap:8px;">
-      <button id="manualEditBtn" onclick="openManualEditor()"
-        style="display:none;align-items:center;gap:6px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
-        ✏️ 편집
-      </button>
+  <div class="manual-sidebar" id="manualSidebar"></div>
+  <div style="flex:1;overflow-y:auto;">
+    <div class="manual-edit-btn-wrap" style="padding:16px 40px 0;">
+      <button id="manualEditBtn" onclick="openManualEditor()" style="display:none;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">✏️ 편집</button>
     </div>
-    <div class="manual-content" id="manualContent" style="padding-top:12px;">
+    <div class="manual-content" id="manualContent">
+      <div style="text-align:center;padding:60px;color:#94a3b8;">항목을 선택하세요</div>
     </div>
   </div>
 </div>
 
 <script>
-const MANUAL_DATA = [
+const MANUAL_TREE = [
   {
-    title: '1. 우리가 하는 일',
-    html: `
-      <h2>📌 CH1. 우리가 하는 일 — 서비스 구조 · 예약 유형 · 시즌</h2>
-
-      <h3>1-1. 드림아카데미가 제공하는 서비스</h3>
-      <table class="manual-table">
-        <tr><th>서비스</th><th>내용</th><th>담당</th></tr>
-        <tr><td>영어 아카데미 수업</td><td>주니어(초등+) / 킨더(유치원) 과정 · 월~금 9:00~16:00</td><td>학원 운영팀</td></tr>
-        <tr><td>숙소 연결</td><td>드림하우스(독채) / 제이파크(리조트) / 큐브나인(리조트)</td><td>예약·운영팀</td></tr>
-        <tr><td>3식 식사 제공</td><td>한국인 조리사 · 숙소별 배달 방식 상이</td><td>조리팀</td></tr>
-        <tr><td>애프터스쿨</td><td>주 2~3회 방과후 활동 (패키지 손님 전용)</td><td>아카데미 선생님</td></tr>
-        <tr><td>필드트립</td><td>2주 1회 현장체험학습 (패키지 손님 전용)</td><td>인솔 담당</td></tr>
-        <tr><td>투어셔틀</td><td>요일별 정기 셔틀 운행 · 손님 신청제</td><td>셔틀팀</td></tr>
-        <tr><td>공항 픽드랍</td><td>도착 픽업 · 출국 드랍</td><td>픽드랍 담당</td></tr>
-        <tr><td>화상영어</td><td>연수 전·후 기간 무료 · 주 3회 25분</td><td>화상영어팀</td></tr>
-        <tr><td>플레이드림</td><td>가이사노 그랜드몰 2층 영어놀이센터 (별도 운영)</td><td>플레이드림팀</td></tr>
-      </table>
-
-      <h3>1-2. 예약 유형 6가지</h3>
-      <table class="manual-table">
-        <tr><th>#</th><th>예약 유형</th><th>특징</th><th>담당 챕터</th></tr>
-        <tr><td>①</td><td><span class="manual-badge badge-blue">드림하우스 단독</span></td><td>드림하우스만 이용 (헬퍼 있음, 독채)</td><td>CH 3</td></tr>
-        <tr><td>②</td><td><span class="manual-badge badge-blue">드하 + 제이파크 조합</span></td><td>드림하우스 N주 → 제이파크 M주</td><td>CH 3 + CH 4</td></tr>
-        <tr><td>③</td><td><span class="manual-badge badge-blue">드하 + 큐브나인 조합</span></td><td>드림하우스 N주 → 큐브나인 M주</td><td>CH 3 + CH 5</td></tr>
-        <tr><td>④</td><td><span class="manual-badge badge-blue">제이파크 단독</span></td><td>제이파크 리조트만 이용 (호텔)</td><td>CH 4</td></tr>
-        <tr><td>⑤</td><td><span class="manual-badge badge-blue">큐브나인 단독</span></td><td>큐브나인 리조트만 이용 (호텔)</td><td>CH 5</td></tr>
-        <tr><td>⑥</td><td><span class="manual-badge badge-gray">숙소만 (Room Only)</span></td><td>아카데미 수업 없이 숙소만</td><td>해당 숙소 챕터</td></tr>
-      </table>
-
-      <h3>1-3. 시즌 & 가격 구조</h3>
-      <table class="manual-table">
-        <tr><th>시즌</th><th>기간</th><th>할인율</th><th>등록 원칙</th></tr>
-        <tr><td><span class="manual-badge badge-orange">성수기</span></td><td>7/15~8/30, 12/15~2/29</td><td>정가 기준 10% 할인</td><td>3주 이상 원칙 (2월·8월 중간시점은 사전 상담 후 2주 가능)</td></tr>
-        <tr><td><span class="manual-badge badge-green">비수기</span></td><td>성수기 외 전 기간</td><td>정가 기준 20% 할인</td><td>2주 이상</td></tr>
-      </table>
-      <div class="manual-box">
-        • 가격 데이터 파일: <strong>public/price.xlsx</strong> (웹에서 자동 로드)<br>
-        • 수업 시작일: 반드시 <strong>매주 월요일</strong> (다른 요일 불가)<br>
-        • 최소 등록 기간: 전 숙소 <strong>2주 이상</strong><br>
-        • 재등록 혜택 (3주 이상): 패키지 고객 등록 인원 전원 <strong>100,000원 할인</strong>
-      </div>
-    `
+    cat: '1️⃣ 상품 안내',
+    items: [
+      { id:'p1', title:'패키지 한눈에 보기', html:`
+        <h2>📌 패키지 한눈에 보기</h2>
+        <div class="manual-box blue">수업+숙소+식사+픽업 전 기간 올인원 패키지 · 총 혜택 가치 100만원 이상</div>
+        <h3>올인원 패키지 공통 포함사항</h3>
+        <div class="manual-box green">
+          ✈️ 공항 픽·드랍 (도착 & 출국 무료)<br>
+          🍽️ 평일 3식 (아침/점심/저녁)<br>
+          🚌 투어 셔틀 (매일 월~일 운영)<br>
+          🎨 애프터스쿨 (매주 월·수 4:20~5:20)<br>
+          🗺️ 필드트립 (매월 2·4째 토요일)<br>
+          💻 화상영어 (출국 전/귀국 후 · 등록 기간만큼)
+        </div>
+        <h3>예약 유형 6가지</h3>
+        <table class="manual-table">
+          <tr><th>#</th><th>유형</th><th>특징</th></tr>
+          <tr><td>①</td><td><span class="manual-badge badge-blue">드림하우스 단독</span></td><td>독채, 헬퍼 포함, 최대 6인</td></tr>
+          <tr><td>②</td><td><span class="manual-badge badge-blue">드하 + 제이파크 조합</span></td><td>N주 드림하우스 → M주 제이파크</td></tr>
+          <tr><td>③</td><td><span class="manual-badge badge-blue">드하 + 큐브나인 조합</span></td><td>N주 드림하우스 → M주 큐브나인</td></tr>
+          <tr><td>④</td><td><span class="manual-badge badge-blue">제이파크 단독</span></td><td>5성급 리조트, 최대 4인</td></tr>
+          <tr><td>⑤</td><td><span class="manual-badge badge-blue">큐브나인 단독</span></td><td>오션뷰 리조트, 최대 4인</td></tr>
+          <tr><td>⑥</td><td><span class="manual-badge badge-gray">통학형(비패키지)</span></td><td>수업만, 비수기 전용</td></tr>
+        </table>
+        <h3>시즌 & 가격</h3>
+        <table class="manual-table">
+          <tr><th>시즌</th><th>기간</th><th>할인</th><th>조건</th></tr>
+          <tr><td><span class="manual-badge badge-orange">성수기</span></td><td>7/15~8/30, 12/15~2/29</td><td>정가 10% 할인</td><td>3주 이상 필수</td></tr>
+          <tr><td><span class="manual-badge badge-green">비수기</span></td><td>성수기 외</td><td>정가 20% 할인</td><td>2주 이상</td></tr>
+        </table>
+        <div class="manual-box yellow">⚠️ 수업 시작일: 반드시 매주 월요일만 가능 · 일요일 입실 권장<br>⚠️ 재등록 혜택: 3주 이상 시 전원 10만원 할인<br>⚠️ 학원 방학: 12/24~1/3</div>
+      `},
+      { id:'p2', title:'드림하우스', html:`
+        <h2>🏡 드림하우스 (독채)</h2>
+        <div class="manual-box blue">베이스워터 빌리지 내 단독 2층 주택 · 방3개·욕실2개·거실·뒷마당 · 최대 6인</div>
+        <h3>기본 정보</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>위치</td><td>베이스워터 빌리지 / 그랜드몰 5분 / 드림아카데미 5분 / 공항 20분</td></tr>
+          <tr><td>객실 수</td><td>15개 독채 (b13L10, b16L19, b17L4~b17L18)</td></tr>
+          <tr><td>체크인·아웃</td><td>체크인 오후 3시 / 체크아웃 오전 12시</td></tr>
+          <tr><td>보증금</td><td>채당 8,000페소 (전기세 차감 후 반환)</td></tr>
+          <tr><td>전기세</td><td>kW당 14페소 (실사용량)</td></tr>
+          <tr><td>헬퍼</td><td>월~토 08:00~17:00 (청소·빨래·식사준비)</td></tr>
+          <tr><td>레이트 체크아웃</td><td>10:30까지 55,000원 추가</td></tr>
+        </table>
+        <h3>베이스워터 부대시설</h3>
+        <div class="manual-box">수영장(8~18시) · 농구코트 · 테니스장 · 놀이터 · 미니마트 · Lin's Coffee Shop</div>
+        <h3>특이사항</h3>
+        <div class="manual-box yellow">⚠️ 드림하우스는 1월 4일 개강만 가능<br>⚠️ 수리 요청은 채널 '행복한드림하우스'로 (헬퍼 구두 전달 비권장)<br>⚠️ 일요일 외부 수리기사 출입 불가 → 월요일 처리</div>
+      `},
+      { id:'p3', title:'제이파크', html:`
+        <h2>🌊 제이파크 아일랜드 리조트</h2>
+        <div class="manual-box blue">5성급 리조트 · 820개 객실 · 워터파크 7개 · 전용 비치 · 상스몰 도보 1분</div>
+        <h3>기본 정보</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>주소</td><td>M.L. Quezon Highway, Barangay Maribago, Lapu Lapu City</td></tr>
+          <tr><td>객실</td><td>Deluxe(38㎡) / Premier(32㎡ 신축) / Mactan Suite(76㎡)</td></tr>
+          <tr><td>정원</td><td>최대 4인 (성인 최대 2인)</td></tr>
+          <tr><td>체크인·아웃</td><td>체크인 오후 3시 / 체크아웃 오전 12시</td></tr>
+          <tr><td>레이트 체크아웃</td><td>오후 5:59 이전 1박 50% / 오후 6:00 이후 1박 전체</td></tr>
+          <tr><td>보증금</td><td>없음</td></tr>
+        </table>
+        <h3>식사 안내</h3>
+        <div class="manual-box">아침 7:50 / 점심 11:50~12:00 / 저녁 17:40~18:00<br>중식·석식은 컨시어지 보관 → 전화로 배달 요청<br>배달 요청: "Hello, this is Room [번호]. May I have my meal delivered from concierge, please?"</div>
+        <h3>레스토랑 할인</h3>
+        <table class="manual-table">
+          <tr><th>레스토랑</th><th>할인</th></tr>
+          <tr><td>MARU(한식), CHING HAI(중식), GALO GRILL, CORAL(씨푸드)</td><td>30% 할인</td></tr>
+          <tr><td>The Abalone (조식 뷔페)</td><td>50% 할인 (6세 미만 아동 2명 무료)</td></tr>
+          <tr><td>논끼, 스노우카페, J라운지, 풀바</td><td>❌ 할인 없음</td></tr>
+        </table>
+      `},
+      { id:'p4', title:'큐브나인', html:`
+        <h2>🐬 큐브나인 리조트</h2>
+        <div class="manual-box blue">오션뷰 인피니티풀 · 세부 막탄 마리곤돈 · 상스몰 도보 10분</div>
+        <h3>기본 정보</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>객실</td><td>Deluxe Ocean(46㎡) / Deluxe Pool Access(44㎡)</td></tr>
+          <tr><td>정원</td><td>최대 4인 (성인 최대 2인)</td></tr>
+          <tr><td>체크인·아웃</td><td>체크인 오후 3시 / 체크아웃 오전 12시</td></tr>
+          <tr><td>보증금</td><td>없음</td></tr>
+          <tr><td>식사</td><td>조식 포함 (더나인 레스토랑) + 식사 바우처 (1주 팀당 10만원)</td></tr>
+          <tr><td>시설</td><td>인피니티풀 · 카약·패들보드 · 마사지&스파 · 더나인 레스토랑</td></tr>
+        </table>
+        <h3>할인 혜택</h3>
+        <div class="manual-box">마사지&스파 20% 할인 (아카데미 학생증 지참 시)<br>더나인 레스토랑 10% 할인 (바우처 사용 시 미적용)</div>
+        <div class="manual-box yellow">⚠️ 큐브나인은 헬퍼 서비스 없음. 도시락 배달 없음.</div>
+      `},
+      { id:'p5', title:'수업 과정', html:`
+        <h2>📚 수업 과정 — 주니어 & 킨더</h2>
+        <h3>🎒 주니어 (초1~중2)</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>대상</td><td>초1 ~ 중2</td></tr>
+          <tr><td>수업 시간</td><td>월~금 9:00~16:00</td></tr>
+          <tr><td>구성</td><td>1-on-1 · S-on-S(소그룹 최대 1:6) · F-class(창의)</td></tr>
+          <tr><td>S-on-S 주제</td><td>BTS(개인스킬) · Solomon(토론) · Trump(캠페인) · Dream(매거진)</td></tr>
+          <tr><td>교재비</td><td>350페소/권 (월 4~5권, 현지 지불)</td></tr>
+          <tr><td>평가</td><td>4주 2회 / 8주 4회 평가서 제공</td></tr>
+          <tr><td>결석</td><td>보강·환불 없음</td></tr>
+        </table>
+        <h3>🌱 킨더 (5세~7세)</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>대상</td><td>5세~7세 / 보호자와 분리 가능한 아동만</td></tr>
+          <tr><td>수업 시간</td><td>월~금 9:00~16:00 / 종일반만 운영</td></tr>
+          <tr><td>구성</td><td>1-on-1(파닉스·수학·읽기쓰기) · Group(뮤직·아트·쿠킹)</td></tr>
+          <tr><td>재료비</td><td>4주 2,500페소 / 2주 1,750페소 (현지 지불)</td></tr>
+          <tr><td>참관</td><td>불가 (오픈형 구조)</td></tr>
+        </table>
+        <div class="manual-box yellow">⚠️ 분리 불가 아동: 수업 당일 귀가 처리, 환불 없음<br>⚠️ 학원 내 부모님 대기·참관 불가</div>
+        <h3>튜터 목록</h3>
+        <div class="manual-box">T.Ann · T.Angel · T.Carla · T.Amelyn · T.Cristel</div>
+      `},
+      { id:'p6', title:'가격 & 시즌', html:`
+        <h2>💰 가격 & 시즌 안내</h2>
+        <div class="manual-box blue">가격 데이터: <strong>public/price.xlsx</strong> (웹에서 자동 로드)</div>
+        <h3>시즌 구분</h3>
+        <table class="manual-table">
+          <tr><th>시즌</th><th>기간</th><th>할인율</th><th>최소 기간</th></tr>
+          <tr><td><span class="manual-badge badge-orange">성수기</span></td><td>7/15~8/30, 12/15~2/29</td><td>정가 10% 할인</td><td>3주 이상</td></tr>
+          <tr><td><span class="manual-badge badge-green">비수기</span></td><td>성수기 외 전 기간</td><td>정가 20% 할인</td><td>2주 이상</td></tr>
+        </table>
+        <h3>현지 지불 항목</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>금액</th><th>대상</th></tr>
+          <tr><td>SSP</td><td>7,000페소 (유효 6개월)</td><td>전 학생 필수</td></tr>
+          <tr><td>SSP-i Card</td><td>4,000페소 (유효 1년)</td><td>전 학생 필수</td></tr>
+          <tr><td>주니어 교재비</td><td>350페소/권</td><td>주니어 학생</td></tr>
+          <tr><td>킨더 재료비</td><td>4주 2,500 / 2주 1,750페소</td><td>킨더 학생</td></tr>
+          <tr><td>드림하우스 보증금</td><td>8,000페소 (4주 기준)</td><td>드림하우스</td></tr>
+          <tr><td>전기세</td><td>14페소/kW</td><td>드림하우스</td></tr>
+        </table>
+        <h3>보호자 추가 인원 요금 (1인 1주 기준)</h3>
+        <table class="manual-table">
+          <tr><th>숙소</th><th>요금</th></tr>
+          <tr><td>드림하우스 / 제이파크</td><td>340,000원/주</td></tr>
+          <tr><td>큐브나인</td><td>250,000원/주</td></tr>
+        </table>
+        <h3>환불 규정</h3>
+        <table class="manual-table">
+          <tr><th>시점</th><th>환불</th></tr>
+          <tr><td>출국 6주 전 취소</td><td>예약금 제외, 잔금의 50% 환불</td></tr>
+          <tr><td>출국 6주 이내 취소</td><td>❌ 환불 불가</td></tr>
+          <tr><td>입실 후 중도 퇴실</td><td>❌ 환불 불가</td></tr>
+          <tr><td>일정 변경</td><td>1회 가능 (입실 2개월 전까지)</td></tr>
+        </table>
+      `},
+    ]
   },
   {
-    title: '2. 예약 처리 업무',
-    html: `
-      <h2>💻 CH2. 예약 처리 업무 — 어드민 사용법 · 처리 흐름 · 인보이스 · 견적</h2>
-
-      <h3>2-1. 어드민 접속 & 로그인</h3>
-      <div class="manual-box blue">
-        접속: <strong>dreamacademyph.com → 상단 '로그인' 클릭</strong><br>
-        아이디 형식: <strong>admin-[이름]</strong> (예: admin-jenna, admin-jamie, admin-ceo)<br>
-        로그인 후 admin 역할 → /admin/bookings 자동 이동<br>
-        로그아웃: 상단 이름 옆 로그아웃 버튼
-      </div>
-      <div class="manual-box yellow">⚠️ 비밀번호 분실 시 May (admin-ceo)에게 직접 연락. 타인에게 계정 공유 절대 금지.</div>
-
-      <h3>2-2. 예약이 들어왔을 때 — 처음부터 끝까지</h3>
-      <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text"><strong>어드민에서 새 예약 확인</strong><br>/admin/bookings → 예약 접수 현황 탭 → 🟡 접수 상태 확인<br>손님이 /booking 폼 제출 시 자동으로 나타남</div></div>
-      <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text"><strong>담당자 본인으로 지정</strong><br>예약 행의 담당자 드롭다운 클릭 → 본인 이름 선택 → 즉시 저장 (저장 버튼 없음)</div></div>
-      <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text"><strong>손님에게 연락</strong><br>카카오채널: 세부드림아카데미 → 일정·인원·숙소 최종 확인 상담</div></div>
-      <div class="manual-step"><div class="manual-step-num">4</div><div class="manual-step-text"><strong>견적서 작성 (필요 시)</strong><br>어드민 → 견적 탭 → 1안/2안 작성 → [📷 이미지 저장] → 카카오톡으로 전달</div></div>
-      <div class="manual-step"><div class="manual-step-num">5</div><div class="manual-step-text"><strong>인보이스 작성</strong><br>예약 행 클릭 → /invoice?id=xxx 자동 이동 → 정보 확인 후 금액 입력 → [저장하기]<br>→ 상태: 🔵 인보이스발행으로 자동 변경</div></div>
-      <div class="manual-step"><div class="manual-step-num">6</div><div class="manual-step-text"><strong>인보이스 손님 전달</strong><br>[이미지 저장] 또는 [PDF 저장/인쇄] → 카카오톡으로 전달</div></div>
-      <div class="manual-step"><div class="manual-step-num">7</div><div class="manual-step-text"><strong>예약금 입금 확인</strong><br>손님 입금 확인 → [구글 시트 기록] 버튼 → SHEET3 자동 기록</div></div>
-      <div class="manual-step"><div class="manual-step-num">8</div><div class="manual-step-text"><strong>영수증 발행</strong><br>인보이스 페이지 → [영수증 발행] → /receipt?id=xxx → 상태: 🟢 영수증발행으로 변경</div></div>
-      <div class="manual-step"><div class="manual-step-num">9</div><div class="manual-step-text"><strong>잔금 수령 후 완료 처리</strong><br>체크인 2개월 전 잔금 수령 확인 → 어드민에서 상태 '완료'로 변경</div></div>
-
-      <h3>예약 상태값</h3>
-      <table class="manual-table">
-        <tr><th>상태</th><th>색상</th><th>의미</th></tr>
-        <tr><td>접수</td><td>🟡 노란색</td><td>손님이 폼 제출 완료. 담당자 지정 필요</td></tr>
-        <tr><td>인보이스발행</td><td>🔵 파란색</td><td>인보이스 저장 완료. 손님 전달 필요</td></tr>
-        <tr><td>영수증발행</td><td>🟢 초록색</td><td>영수증 발행 완료. 결제 확인 중</td></tr>
-        <tr><td>완료</td><td>⚫ 회색</td><td>전체 프로세스 종료</td></tr>
-      </table>
-
-      <h3>2-3. 예약금 / 잔금 계산 원칙</h3>
-      <table class="manual-table">
-        <tr><th>경우</th><th>납부 구조</th><th>잔금일</th></tr>
-        <tr><td>체크인 2개월 이상 전</td><td>예약금 1,000,000원 + 잔금 (전체금액 - 100만원)</td><td>체크인 기준 -2개월 자동 계산</td></tr>
-        <tr><td>체크인 2개월 미만</td><td>전액 즉시 납부</td><td>즉시</td></tr>
-      </table>
-      <div class="manual-box yellow">📌 큐브나인 패키지 예약금은 총 금액의 50% 선입금 (일반 100만원 방식과 다름)</div>
-
-      <h3>2-4. 인보이스 자동 계산 항목</h3>
-      <div class="manual-box green">아래 항목은 코드에서 자동 계산됩니다. 직접 입력할 필요 없습니다.</div>
-      <table class="manual-table">
-        <tr><th>자동 계산 항목</th><th>계산 방식</th></tr>
-        <tr><td>잔금납부일</td><td>체크인 날짜 -2개월</td></tr>
-        <tr><td>드림하우스 보증금</td><td>주수 × 2,000페소</td></tr>
-        <tr><td>SSP·SSP-i card</td><td>학생 인원수 × (7,000 + 4,000페소) 자동 표시</td></tr>
-        <tr><td>주니어 교재비</td><td>학생 과정이 '주니어'이면 350페소 행 자동 추가</td></tr>
-        <tr><td>킨더 재료비</td><td>학생 과정이 '킨더'이면 4주 2,500P / 2주 1,750P 행 자동 추가</td></tr>
-        <tr><td>아카데미 시작일</td><td>체크인 기준 다음 월요일로 자동 계산</td></tr>
-        <tr><td>체크아웃 날짜</td><td>체크인 + (주수 × 7일)</td></tr>
-      </table>
-      <div class="manual-box yellow">⚠️ SHEET1, SHEET2는 절대 건드리지 않습니다. 새 예약 기록은 반드시 [구글 시트 기록] 버튼으로 SHEET3에만!</div>
-
-      <h3>2-5. 견적 탭 사용법</h3>
-      <table class="manual-table">
-        <tr><th>설정 항목</th><th>내용</th></tr>
-        <tr><td>숙소 선택</td><td>드림하우스 / 제이파크(디럭스·프리미어·막탄스위트) / 큐브나인(디럭스·풀억세스)</td></tr>
-        <tr><td>기간</td><td>2주 ~ 12주</td></tr>
-        <tr><td>시즌</td><td>비수기 / 성수기 선택 (체크인 날짜 입력 시 자동)</td></tr>
-        <tr><td>인원</td><td>보호자 1~3명 / 아이 1~5명</td></tr>
-        <tr><td>추가·할인 항목</td><td>[+추가] 버튼으로 자유롭게 추가 (1안/2안 각각 독립)</td></tr>
-        <tr><td>이미지 저장</td><td>[📷 이미지 저장] → PNG 다운로드 → 카카오톡으로 전달</td></tr>
-      </table>
-    `
+    cat: '2️⃣ 실제 업무',
+    items: [
+      { id:'w1', title:'픽드랍 & 항공 안내', html:`
+        <h2>✈️ 픽드랍 & 항공 안내</h2>
+        <h3>픽업 기본 흐름</h3>
+        <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text">손님으로부터 항공편 정보 수령 (편명, 도착 시간, 항공사)</div></div>
+        <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text">어드민 → 예약 상세 → 체크인 디테일 탭에 항공편 정보 입력</div></div>
+        <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text">드라이버 배정 확인</div></div>
+        <div class="manual-step"><div class="manual-step-num">4</div><div class="manual-step-text">픽업 전날 손님에게 드라이버 연락처 + 픽업 장소 안내 발송</div></div>
+        <h3>픽업 요금</h3>
+        <div class="manual-box">기본 픽업·드랍: 올인원 패키지 <strong>무료 포함</strong><br>추가 픽드랍: 픽업 1,000원 / 드랍 800원</div>
+        <h3>픽업 장소 안내</h3>
+        <table class="manual-table">
+          <tr><th>장소</th><th>안내 포인트</th></tr>
+          <tr><td>막탄 세부 국제공항</td><td>입국장 출구 앞 드라이버 대기</td></tr>
+          <tr><td>SM 몰 세부</td><td>1층 정문 앞</td></tr>
+        </table>
+        <div class="manual-box yellow">⚠️ 항공권 발권하면 채널로 캡처 전송 요청 → 더블체크 필수<br>⚠️ 새벽 도착 시 사전 조율 필요</div>
+      `},
+      { id:'w2', title:'체크인 디테일', html:`
+        <h2>🏠 체크인 디테일 입력</h2>
+        <h3>체크인 디테일이란?</h3>
+        <div class="manual-box blue">손님 입실 전 필요한 상세 정보를 어드민에서 미리 입력해두는 시스템.<br>어드민 → 예약 상세 → 체크인 디테일 탭에서 입력.</div>
+        <h3>입력 항목</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>베드세팅</td><td>룸1(마스터) / 룸2(2층) / 룸3(1층) 선택</td></tr>
+          <tr><td>유심 요금제</td><td>Smart 요금제 선택 (₱75/149/499/599/699)</td></tr>
+          <tr><td>추가 픽드랍</td><td>날짜/항공사/편명/시간 입력 (JSON 저장)</td></tr>
+          <tr><td>항공편 IN</td><td>도착 항공편 정보</td></tr>
+          <tr><td>항공편 OUT</td><td>출발 항공편 정보</td></tr>
+        </table>
+        <h3>손님 공개 폼 (/checkin/[token])</h3>
+        <div class="manual-box">손님이 직접 입력하는 영문 폼도 있음. 제출 후 /portal/dashboard로 리다이렉트.</div>
+        <div class="manual-box yellow">⚠️ 체크인 2일 전까지 룸 배정 및 체크인 디테일 입력 완료 필수<br>⚠️ 룸 번호 중복 예약 여부 반드시 확인</div>
+      `},
+      { id:'w3', title:'OT & 준비물 안내', html:`
+        <h2>📋 OT & 준비물 안내</h2>
+        <h3>OT (오리엔테이션)</h3>
+        <div class="manual-box blue">입실 후 진행. 수업 커리큘럼, 생활 규칙, 셔틀 이용법, 애프터스쿨·필드트립 신청 방법 안내.</div>
+        <h3>준비물 안내 (손님에게 전달)</h3>
+        <div class="manual-box">
+          ✔ 실내화 (슬리퍼보다 발 감싸는 실내화 권장 – 바닥이 대리석)<br>
+          ✔ 개인 물병 · 필기구<br>
+          ✔ 공책 2권 (킨더 1권) – 줄 공책 무관<br>
+          ✔ 편한 운동복 (애프터스쿨 활동용)<br>
+          ✔ 수영복·수영모 (수영장 이용 시)<br>
+          ✔ 여권 (유효기간 6개월 이상)<br>
+          ✔ 해외여행자 보험 가입 (강력 권장)<br>
+          ✔ 석회 걱정되면 샤워기 필터 지참 추천
+        </div>
+      `},
+      { id:'w4', title:'애프터스쿨 처리', html:`
+        <h2>🎨 애프터스쿨 처리</h2>
+        <div class="manual-box blue">매주 월·수 / 오후 4:20~5:20 / 패키지 손님 전용 무료</div>
+        <h3>드림하우스 신청 처리</h3>
+        <div class="manual-box">드림센터(B17L5) 방문 후 신청 종이에 직접 기록<br>⚠️ 채널·현지직원을 통한 신청 절대 불가</div>
+        <h3>제이파크·큐브나인 신청 처리</h3>
+        <div class="manual-box">네이버 폼 링크 전달 → 작성 후 채널로 알림 필수</div>
+        <h3>공통 규정</h3>
+        <table class="manual-table">
+          <tr><th>상황</th><th>처리</th></tr>
+          <tr><td>신청 마감</td><td>탑승 전날 오후 4:50 / 다음 주는 전주 금요일 4:50</td></tr>
+          <tr><td>당일 신청</td><td>불가 (자리 있어도 미예약 시 참여 불가)</td></tr>
+          <tr><td>무단 취소</td><td>이후 신청 불가 / 2회 누적 시 이후 신청 불가</td></tr>
+        </table>
+      `},
+      { id:'w5', title:'필드트립 처리', html:`
+        <h2>🗺️ 필드트립 처리</h2>
+        <div class="manual-box blue">매월 2·4째 토요일 / 10:30~4:30 / 집 앞 픽드랍 / 선생님 동행</div>
+        <h3>비용</h3>
+        <div class="manual-box">패키지 손님: 무료<br>통학형: 3,000페소</div>
+        <h3>픽업 안내 발송 (전날)</h3>
+        <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text">전날 저녁 손님에게 픽업 시간(10:15~20) + 장소 안내</div></div>
+        <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text">당일 10:30 현장 출발</div></div>
+        <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text">드랍 4:20~25 집 앞</div></div>
+        <h3>미참가 학생</h3>
+        <div class="manual-box yellow">⚠️ 미참가 학생은 당일 오전 정규 수업 진행. 오전 9:00까지 등원.</div>
+        <h3>필드트립 장소 6가지</h3>
+        <table class="manual-table">
+          <tr><th>장소</th><th>내용</th></tr>
+          <tr><td>Shrine Tour</td><td>막탄 역사 명소</td></tr>
+          <tr><td>Nimo Brew</td><td>파충류·식물 카페</td></tr>
+          <tr><td>SM Skating</td><td>아이스스케이트장</td></tr>
+          <tr><td>Magellan's Cross</td><td>필리핀 역사 명소</td></tr>
+          <tr><td>Crocolandia</td><td>악어·파충류 체험</td></tr>
+          <tr><td>Kids Cafe</td><td>어린이 전용 카페</td></tr>
+        </table>
+      `},
+      { id:'w6', title:'투어셔틀 처리', html:`
+        <h2>🚐 투어셔틀 처리</h2>
+        <h3>숙소별 신청 방법</h3>
+        <table class="manual-table">
+          <tr><th>숙소</th><th>방법</th><th>마감</th></tr>
+          <tr><td>드림하우스</td><td>드림센터(B17L5) 방문 → 신청 종이 직접 기록</td><td>전날 4:50 / 월요일은 금요일 4:50</td></tr>
+          <tr><td>제이파크·큐브나인</td><td>네이버 폼 → 채널 알림 필수</td><td>전날 4:50</td></tr>
+        </table>
+        <h3>규정 위반 처리</h3>
+        <table class="manual-table">
+          <tr><th>상황</th><th>처리</th></tr>
+          <tr><td>지정 장소 외 하차 요청</td><td>절대 불가 안내. 이행 거부.</td></tr>
+          <tr><td>당일 무단 취소</td><td>이후 신청 불가</td></tr>
+          <tr><td>2회 누적</td><td>이후 모든 셔틀 신청 불가</td></tr>
+          <tr><td>정원 초과 탑승</td><td>절대 불가. 이행 거부.</td></tr>
+        </table>
+        <div class="manual-box yellow">⚠️ 8월 9일 아이언맨 행사: 도로통제로 투어셔틀 전면 없음</div>
+      `},
+    ]
   },
   {
-    title: '3. 드림하우스 운영',
-    html: `
-      <h2>🏡 CH3. 드림하우스 손님 담당 업무</h2>
-
-      <h3>3-1. 드림하우스 기본 정보</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>위치</td><td>베이스워터 빌리지 / 그랜드몰 차량 5분 / 드림아카데미 차량 5분 / 제이파크 차량 10분 / 공항 차량 20분</td></tr>
-        <tr><td>객실 수</td><td>15개 독채 (b13L10, b16L19, b17L4~b17L18)</td></tr>
-        <tr><td>체크인·아웃</td><td>체크인 오후 3시 이후 / 체크아웃 오전 12시</td></tr>
-        <tr><td>레이트 체크아웃</td><td>10시 30분까지 이용 시 55,000원 추가 (숙소 상황에 따라 불가할 수 있음)</td></tr>
-        <tr><td>보증금</td><td>채당 8,000페소 (전기세·유료서비스 차감 후 퇴실 시 반환)</td></tr>
-        <tr><td>전기세</td><td>kW당 14페소 (체크인·아웃 시 미터기 실사용량 계산)</td></tr>
-        <tr><td>헬퍼</td><td>월~토 08:00~17:00 (청소·빨래·식사 준비)</td></tr>
-        <tr><td>채널</td><td>행복한드림하우스 (월~토 오전 8시~오후 6시)</td></tr>
-      </table>
-
-      <h3>3-2. 체크인 시 안내할 사항</h3>
-      <div class="manual-box">
-        • <strong>WIFI:</strong> 공유기 뒷면에서 ID·비밀번호 확인 (각 기기별 고유 ID 있음)<br>
-        • <strong>헬퍼:</strong> 월~토 08:00~17:00 / 방충망 문(스크린도어) 반드시 열어두어야 헬퍼 출입 가능<br>
-        • <strong>드림센터(B17L5):</strong> 월~토 08:00~17:00 / 도서·물놀이용품 대여, 애프터스쿨 신청 가능<br>
-        • <strong>식사 시간:</strong> 아침 07:40~08:00 / 점심 11:45~12:00 / 저녁 17:40~18:00 → 문 앞에 배달됨<br>
-        • <strong>베이스워터 시설:</strong> 수영장·테니스장·농구코트·놀이터 (숙박비 별도)<br>
-        • <strong>그랩 이용:</strong> 앱에서 집 주소 채팅으로 전송 (예: The exact address is B17 L5)<br>
-        • <strong>트라이시클:</strong> 가드하우스 전화 (예: B17 L5, tricycle please) / 약 80~100페소<br>
-        • <strong>귀중품:</strong> 큰 캐리어에 비밀번호 자물쇠 권장 (소형 금고 없음)
-      </div>
-      <div class="manual-box yellow">⚠️ 수리 필요 사항은 반드시 채널 '행복한드림하우스'로 연락. 헬퍼에게 구두 전달 시 빠른 대응 어려움.</div>
-
-      <h3>3-3. 셔틀 신청 처리</h3>
-      <div class="manual-box blue">드림하우스 손님의 셔틀 신청은 반드시 <strong>오피스(드림센터 B17L5) 방문 후 신청 종이에 직접 기록</strong>. 채널이나 현지직원을 통한 신청·변경은 절대 불가.</div>
-      <table class="manual-table">
-        <tr><th>상황</th><th>처리 방법</th></tr>
-        <tr><td>셔틀 신청하고 싶다고 연락 옴</td><td>드림센터(B17L5) 방문 후 신청 종이 작성 안내. 탑승 전날 오후 4:50까지 마감.</td></tr>
-        <tr><td>월요일 셔틀 신청</td><td>금요일 오후 4:50까지 드림센터 방문 신청 안내</td></tr>
-        <tr><td>당일 신청 요청</td><td>당일 신청 불가. 자리 여유가 있어도 미예약 시 탑승 불가 안내</td></tr>
-        <tr><td>중간에 다른 곳에서 내려달라고 함</td><td>절대 불가. 정해진 픽업·드롭 장소 외 중도 승·하차 없음 안내</td></tr>
-        <tr><td>당일 무단 취소</td><td>이후 셔틀 신청 불가 처리 / 2회 누적 시 이후 신청 불가</td></tr>
-      </table>
-
-      <h3>3-4. 자주 발생하는 상황</h3>
-      <table class="manual-table">
-        <tr><th>상황</th><th>처리 방법</th><th>연락처</th></tr>
-        <tr><td>시설 고장·불편</td><td>채널 '행복한드림하우스'로 연락 (헬퍼 구두 전달 비권장)</td><td>행복한드림하우스</td></tr>
-        <tr><td>일요일 수리 요청</td><td>베이스워터 규정: 외부 수리기사 일요일 출입 불가 → 월요일 처리 예정 안내</td><td>행복한드림하우스</td></tr>
-        <tr><td>보증금 문의</td><td>체크아웃 시 전기세 실사용량 차감 후 반환 (kW당 14페소)</td><td>담당자</td></tr>
-        <tr><td>그릇 파손</td><td>파손 시 배상 필수 (소 400P / 중 400P / 대 400P / 기타 500~650P)</td><td>담당자</td></tr>
-        <tr><td>응급상황</td><td>09292932991 (중대 응급만)</td><td>긴급 연락처</td></tr>
-      </table>
-    `
+    cat: '3️⃣ 홈페이지 활용',
+    items: [
+      { id:'h1', title:'예약 처리 흐름', html:`
+        <h2>💻 예약 처리 흐름 (9단계)</h2>
+        <div class="manual-box blue">접속: <strong>dreamacademyph.com/admin</strong></div>
+        <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text"><strong>새 예약 확인</strong> — /admin/bookings → 접수 현황 탭 → 🟡 접수 상태</div></div>
+        <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text"><strong>담당자 지정</strong> — 예약 행 담당자 드롭다운 → 본인 선택 → 즉시 저장</div></div>
+        <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text"><strong>손님 연락</strong> — 카카오채널 세부드림아카데미로 일정·인원·숙소 최종 확인</div></div>
+        <div class="manual-step"><div class="manual-step-num">4</div><div class="manual-step-text"><strong>견적서 작성</strong> — 어드민 → 견적 탭 → 1안/2안 → [📷 이미지 저장] → 카카오톡 전달</div></div>
+        <div class="manual-step"><div class="manual-step-num">5</div><div class="manual-step-text"><strong>인보이스 작성</strong> — 예약 행 클릭 → /invoice?id=xxx → 금액 확인 → [저장하기] → 🔵 인보이스발행</div></div>
+        <div class="manual-step"><div class="manual-step-num">6</div><div class="manual-step-text"><strong>인보이스 전달</strong> — [이미지 저장] 또는 [PDF 저장] → 카카오톡 전달</div></div>
+        <div class="manual-step"><div class="manual-step-num">7</div><div class="manual-step-text"><strong>예약금 확인</strong> — 입금 확인 → [구글 시트 기록] → SHEET3 자동 기록</div></div>
+        <div class="manual-step"><div class="manual-step-num">8</div><div class="manual-step-text"><strong>영수증 발행</strong> — [영수증 발행] → /receipt?id=xxx → 🟢 영수증발행</div></div>
+        <div class="manual-step"><div class="manual-step-num">9</div><div class="manual-step-text"><strong>잔금 완료</strong> — 체크인 2개월 전 잔금 수령 → 상태 '완료'로 변경</div></div>
+        <div class="manual-box yellow">⚠️ SHEET1, SHEET2는 절대 건드리지 않음. 기록은 반드시 SHEET3만!</div>
+      `},
+      { id:'h2', title:'인보이스 & 견적', html:`
+        <h2>📄 인보이스 & 견적 사용법</h2>
+        <h3>인보이스 자동 계산 항목</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>계산 방식</th></tr>
+          <tr><td>잔금납부일</td><td>체크인 날짜 -2개월</td></tr>
+          <tr><td>드림하우스 보증금</td><td>주수 × 2,000페소</td></tr>
+          <tr><td>SSP·SSP-i card</td><td>학생 인원 × 11,000페소 자동 표시</td></tr>
+          <tr><td>주니어 교재비</td><td>주니어 학생 있으면 350페소 자동 추가</td></tr>
+          <tr><td>킨더 재료비</td><td>킨더 학생 있으면 4주 2,500P / 2주 1,750P 자동 추가</td></tr>
+          <tr><td>아카데미 시작일</td><td>체크인 기준 다음 월요일 자동 계산</td></tr>
+          <tr><td>체크아웃 날짜</td><td>체크인 + (주수 × 7일)</td></tr>
+        </table>
+        <h3>견적 탭</h3>
+        <table class="manual-table">
+          <tr><th>설정</th><th>내용</th></tr>
+          <tr><td>숙소</td><td>드림하우스/제이파크(디럭스·프리미어·막탄스위트)/큐브나인(디럭스·풀억세스)</td></tr>
+          <tr><td>기간</td><td>2주~12주</td></tr>
+          <tr><td>시즌</td><td>비수기/성수기 (체크인 날짜 입력 시 자동)</td></tr>
+          <tr><td>저장</td><td>[📷 이미지 저장] → PNG → 카카오톡 전달</td></tr>
+        </table>
+      `},
+      { id:'h3', title:'자주 쓰는 기능', html:`
+        <h2>⚙️ 자주 쓰는 기능</h2>
+        <h3>학생 달력</h3>
+        <div class="manual-box">어드민 → 학생달력 탭. 형식: 한글/영어/나이/주수 (예: 이율비/lee yul bi/10y/4w)<br>월~토만 표시. 학원 시작일 기준 배치.</div>
+        <h3>체크인 디테일</h3>
+        <div class="manual-box">어드민 → 예약 상세 → 체크인 디테일 탭<br>베드세팅·유심·추가픽드랍 입력 → 예약 상세 픽업탭 자동 연동</div>
+        <h3>포털 계정</h3>
+        <div class="manual-box">자동 생성: 한국 이름 이니셜 + 예약번호 끝 4자리 (예: SJH0105)<br>손님이 포털에서 예약 확인, 체크인 정보 입력 가능</div>
+        <h3>계정 관리</h3>
+        <div class="manual-box">형식: admin-{이름} (예: admin-jenna, admin-eric)<br>비밀번호: {이름}2026!<br>⚠️ 퇴사 직원 계정은 즉시 대표에게 비활성화 요청</div>
+      `},
+    ]
   },
   {
-    title: '4. 제이파크 운영',
-    html: `
-      <h2>🏨 CH4. 제이파크 손님 담당 업무</h2>
-
-      <h3>4-1. 제이파크 기본 정보</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>주소</td><td>M.L. Quezon Highway, Barangay Maribago, Lapu Lapu City, Cebu 6015</td></tr>
-        <tr><td>주변 편의</td><td>드림아카데미 차량 10~13분 / 공항 차량 20분 / 상스몰 도보 2분 / 마사지샵 도보 1분 / 한인마트 도보 3분</td></tr>
-        <tr><td>룸타입</td><td>디럭스(38㎡) / 프리미어(32㎡, 신축) / 막탄스위트(76㎡)</td></tr>
-        <tr><td>체크인·아웃</td><td>체크인 오후 3시 이후 / 체크아웃 오전 12시</td></tr>
-        <tr><td>레이트 체크아웃</td><td>오후 5:59 이전: 1박 50% / 오후 6:00 이후: 1박 전체 부과</td></tr>
-        <tr><td>보증금</td><td>없음</td></tr>
-        <tr><td>채널</td><td>세부드림아카데미 (월~금 오전 8시~오후 5시)</td></tr>
-      </table>
-
-      <h3>4-2. 체크인 시 안내할 사항</h3>
-      <div class="manual-box">
-        • <strong>식사 시간:</strong> 아침 7:50 / 점심 11:50~12:00 / 저녁 17:40~18:00<br>
-        • 중식·석식은 <strong>컨시어지에 보관</strong> → 전화로 배달 요청 필수<br>
-        • 배달 요청 영어: <em>"Hello, this is Room [번호]. May I have my meal delivered from concierge, please?"</em><br>
-        • 수영장·로비에서 패키지 식사 불가 (룸에서만)<br>
-        • 외출 시 식사 취소 권장<br>
-        • 레스토랑 30% 할인 가능 (논끼, 스노우카페, J라운지, 풀바 제외)<br>
-        • The Abalone 조식 50% 할인 / 성인 요금 시 6세 미만 아동 2명까지 무료
-      </div>
-      <div class="manual-box yellow">⚠️ 제이파크는 헬퍼 서비스 없음. 수영장·로비에서 패키지 식사 불가.</div>
-
-      <h3>4-3. 레스토랑 할인 안내</h3>
-      <table class="manual-table">
-        <tr><th>레스토랑</th><th>종류</th><th>할인율</th></tr>
-        <tr><td>MARU</td><td>한식 (세부 리조트 유일 한식당)</td><td>30% 할인</td></tr>
-        <tr><td>CHING HAI</td><td>중식 / 딤섬 30종+</td><td>30% 할인</td></tr>
-        <tr><td>GALO GRILL & BAR</td><td>루프탑 다이닝 바</td><td>30% 할인</td></tr>
-        <tr><td>CORAL</td><td>씨사이드 씨푸드</td><td>30% 할인</td></tr>
-        <tr><td>The Abalone</td><td>뷔페 조식</td><td>50% 할인 (6세 미만 아동 최대 2명 무료)</td></tr>
-        <tr><td>논끼, 스노우카페, J라운지, 풀바</td><td>—</td><td>❌ 할인 없음</td></tr>
-      </table>
-
-      <h3>4-4. 셔틀 & 애프터스쿨 신청 처리</h3>
-      <div class="manual-box blue">제이파크·큐브나인 손님의 셔틀·애프터스쿨 신청은 <strong>전달받은 네이버 폼으로만</strong> 접수. 방문 신청 불가.</div>
-      <table class="manual-table">
-        <tr><th>상황</th><th>처리 방법</th></tr>
-        <tr><td>셔틀 신청 요청</td><td>네이버 폼 링크 전달. 작성 후 채널로 알림 필수. 탑승 전날 오후 4:50까지 마감.</td></tr>
-        <tr><td>애프터스쿨 신청 요청</td><td>네이버 폼 링크 전달. 작성 후 채널로 알림 필수. 다음 주 수업은 전주 금요일까지.</td></tr>
-        <tr><td>당일 무단 취소</td><td>이후 신청 불가 처리 / 2회 누적 시 이후 신청 불가</td></tr>
-        <tr><td>다른 장소에 내려달라고 함</td><td>절대 불가. 정해진 장소 외 중도 승·하차 없음 안내</td></tr>
-      </table>
-    `
+    cat: '4️⃣ 기타 업무',
+    items: [
+      { id:'x1', title:'화상영어', html:`
+        <h2>💻 화상영어 업무</h2>
+        <div class="manual-box blue">
+          <strong>운영 방식:</strong> Zoom(줌) · 주 3회 25분<br>
+          <strong>제공 기간:</strong> 연수 시작 전 + 연수 종료 후 (패키지 등록 기간만큼)<br>
+          <strong>성수기(7/15~8/31):</strong> 일시 중단 → 귀국 후 이어서 진행
+        </div>
+        <h3>기기 안내</h3>
+        <div class="manual-box">노트북·태블릿·스마트폰 모두 가능<br>소음 적은 독립 공간 권장<br>에코 방지용 헤드셋·이어폰 사용 권장<br>수업 시작 5분 전 미리 접속</div>
+        <h3>신청 처리</h3>
+        <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text">손님이 화상영어 신청 폼 작성</div></div>
+        <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text">어드민 → 온라인수업 탭에서 신청 내역 확인</div></div>
+        <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text">담당 튜터 배정</div></div>
+        <div class="manual-step"><div class="manual-step-num">4</div><div class="manual-step-text">수업 일정 확정 후 손님에게 줌 링크 발송</div></div>
+        <div class="manual-box yellow">⚠️ 성수기 기간 화상영어 일시 중단<br>⚠️ 수업 출결은 튜터가 어드민에서 직접 입력</div>
+      `},
+      { id:'x2', title:'튜터 관리', html:`
+        <h2>👩‍🏫 튜터 수업 관리</h2>
+        <div class="manual-box blue">
+          <strong>대상:</strong> 드림하우스 방문 1:1 수업 (하루 2타임, 총 1시간 40분)<br>
+          <strong>요금:</strong> 1:1 → 300페소 / 1:2 → 350페소 (수업 첫날 선생님께 현지 지불)<br>
+          <strong>성수기:</strong> 오후 4시 이후에만 가능
+        </div>
+        <h3>신청 처리 흐름</h3>
+        <div class="manual-step"><div class="manual-step-num">1</div><div class="manual-step-text">손님에게 튜터 신청 URL 전달</div></div>
+        <div class="manual-step"><div class="manual-step-num">2</div><div class="manual-step-text">손님 신청 폼 작성 → 어드민 튜터 탭으로 접수</div></div>
+        <div class="manual-step"><div class="manual-step-num">3</div><div class="manual-step-text">어드민에서 담당 튜터 배정</div></div>
+        <div class="manual-step"><div class="manual-step-num">4</div><div class="manual-step-text">인보이스 발행</div></div>
+        <h3>예약 규정</h3>
+        <table class="manual-table">
+          <tr><th>항목</th><th>내용</th></tr>
+          <tr><td>예약 기한</td><td>최소 2주 전 사전 예약 필수 (성수기 3주 전)</td></tr>
+          <tr><td>결제</td><td>확정 후 전액 선결제</td></tr>
+          <tr><td>취소 불가</td><td>당일 취소·노쇼 / 수업 시작 후 거부 / 3일 전 이내 취소</td></tr>
+        </table>
+        <h3>튜터 목록</h3>
+        <div class="manual-box">T.Ann · T.Angel · T.Carla · T.Amelyn · T.Cristel<br>계정: admin-{이름} / 비밀번호: {이름}2026!</div>
+      `},
+      { id:'x3', title:'식당 업무', html:`
+        <h2>🍱 식당 업무</h2>
+        <div class="manual-box blue">
+          <strong>운영:</strong> 전문 한국인 조리사 상주 · 한식 위주 + 일식/양식/퓨전 포함<br>
+          <strong>아침:</strong> 07:40~08:00 · <strong>점심:</strong> 11:45~12:00 · <strong>저녁:</strong> 17:40~18:00
+        </div>
+        <h3>숙소별 식사 방법</h3>
+        <table class="manual-table">
+          <tr><th>숙소</th><th>방식</th></tr>
+          <tr><td>드림하우스</td><td>문 앞 배달 (배달 시간에 맞춰 문 앞에 놓아둠)</td></tr>
+          <tr><td>제이파크</td><td>컨시어지 보관 → 객실에서 전화로 배달 요청</td></tr>
+          <tr><td>큐브나인</td><td>조식 포함 + 식사 바우처 (더나인 레스토랑 개별 식사)</td></tr>
+        </table>
+        <h3>식사 관련 안내</h3>
+        <div class="manual-box">
+          • 알레르기·특이식 요청: 체크인 전 미리 담당자에게 전달<br>
+          • 기호에 따른 식단 변경: 가능한 범위 내 조정<br>
+          • 외출 시 식사 취소 권장 (제이파크)<br>
+          • 주말 식사는 개별 식사 (패키지 미포함)
+        </div>
+        <div class="manual-placeholder">📝 상세 주간 식단표는 이곳에 직접 입력해 주세요.</div>
+      `},
+    ]
   },
   {
-    title: '5. 큐브나인 운영',
-    html: `
-      <h2>🌊 CH5. 큐브나인 손님 담당 업무</h2>
-
-      <h3>5-1. 큐브나인 기본 정보</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>위치</td><td>세부 막탄 마리곤돈 / 공항 차량 20~30분 / 샹스몰 차량 3분 / 드림아카데미 차량 10분</td></tr>
-        <tr><td>룸타입</td><td>디럭스 오션킹(46㎡) / 디럭스 오션트윈(46㎡) / 디럭스 풀억세스룸(44㎡) / 최대 4인(성인 최대 2인)</td></tr>
-        <tr><td>체크인·아웃</td><td>체크인 오후 3시 이후 / 체크아웃 오전 12시</td></tr>
-        <tr><td>보증금</td><td>없음</td></tr>
-        <tr><td>식사</td><td>조식 전 일정 포함 (더나인 레스토랑) + 1주 기준 팀당 10만원 식사 바우처</td></tr>
-        <tr><td>시설</td><td>야외 수영장(오션뷰) / 카약·패들보드 / 마사지&스파 / 더나인 레스토랑</td></tr>
-      </table>
-
-      <h3>5-2. 체크인 시 안내할 사항</h3>
-      <div class="manual-box">
-        • 식사: 드림하우스·제이파크처럼 도시락 배달 없음. <strong>조식은 더나인 레스토랑에서 직접</strong><br>
-        • <strong>식사 바우처:</strong> 체크인 시 1주 기준 팀당 10만원 지급 (더나인 레스토랑 사용)<br>
-        • 카약·패들보드: 리조트 시설 자유 이용<br>
-        • <strong>마사지&스파:</strong> 20% 할인 (아카데미 학생증 지참 시)<br>
-        • <strong>더나인 레스토랑:</strong> 10% 할인 (학생증 지참 시 / 바우처 사용 시 할인 미적용)
-      </div>
-      <div class="manual-box yellow">⚠️ 큐브나인은 헬퍼 서비스 없음. 평일 도시락 배달도 없음.</div>
-
-      <h3>5-3. 드림렌트카 요금</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>요금</th><th>비고</th></tr>
-        <tr><td>기본 2시간</td><td>1,000페소</td><td>최대 10명 / 투어 상담 미제공</td></tr>
-        <tr><td>추가 시간당</td><td>350페소</td><td>—</td></tr>
-        <tr><td>그랜드몰</td><td>100페소</td><td>편도</td></tr>
-        <tr><td>J-Park</td><td>300페소</td><td>편도</td></tr>
-        <tr><td>파크몰·SM Seaside</td><td>700페소</td><td>편도 (CCLEX 포함)</td></tr>
-        <tr><td>추가 픽업</td><td>1,000페소</td><td>기본 픽드랍 외 추가</td></tr>
-        <tr><td>추가 드랍</td><td>800페소</td><td>기본 픽드랍 외 추가</td></tr>
-      </table>
-
-      <h3>5-4. 튜터 서비스</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>운영</td><td>월~금 / 1타임 50분 / 1일 최대 2타임 / 마지막 수업 17:50 종료</td></tr>
-        <tr><td>요금</td><td>1:1 → 300페소 / 1:2 → 350페소</td></tr>
-        <tr><td>예약</td><td>최소 2주 전 사전 예약 필수 (성수기 3주 전) / 확정 후 전액 선결제</td></tr>
-        <tr><td>취소 불가</td><td>당일 취소·노쇼 / 수업 시작 후 거부 / 수업 3일 전 이내 취소</td></tr>
-      </table>
-    `
+    cat: '5️⃣ 자주 묻는 질문',
+    items: [
+      { id:'faq1', title:'패키지 & 가격', html:`
+        <h2>❓ 자주 묻는 질문 — 패키지 & 가격</h2>
+        <h3>Q1. 패키지에 어떤 것들이 포함되나요?</h3>
+        <div class="manual-box">네네 ^^ 저희 드림아카데미 패키지는 숙소 / 수업 / 평일 3식 도시락 / 주말 투어셔틀 / 애프터스쿨 / 필드트립 / 화상영어 / 주 6일 헬퍼 서비스(드림하우스만 해당)가 모두 포함된 올인원 패키지입니다 ^^ 주말 식사는 개별 식사이며, 항공권 및 비자 비용은 별도입니다.</div>
+        <h3>Q2. 비수기/성수기 가격이 궁금합니다.</h3>
+        <div class="manual-box">안녕하세요 ^^ 성수기 기간은 7월 15일~8월 31일 / 12월 15일~2월 29일이며, 그 외는 비수기입니다 ^^ 원하시는 기간·인원·숙소를 말씀 주시면 상세 견적 안내해 드릴게요 ^^</div>
+        <h3>Q3. 성수기/비수기 가격을 둘 다 알고 싶어요.</h3>
+        <div class="manual-box">네네 ^^ 인원과 기간 말씀 주시면 두 가지 모두 함께 안내드리겠습니다 😊 성수기가 비수기 대비 전반적으로 높으며, 비수기는 더 여유롭게 연수를 즐기실 수 있는 장점이 있답니다 ^^</div>
+        <h3>Q4. 재방문 할인이 있나요?</h3>
+        <div class="manual-box">네네 ^^ 재방문이신 경우 패키지 고객 기준 1인당 10만원 할인이 적용됩니다 😊 견적 안내 시 재방문 할인 적용해서 보내드릴게요 ^^</div>
+        <h3>Q5. 지인/소개 할인도 있나요?</h3>
+        <div class="manual-box">네네 ^^ 지인 소개로 예약해 주시는 경우에도 혜택을 드리고 있습니다 ^^ 자세한 내용은 문의 주시면 현재 운영 중인 혜택 안내드리겠습니다 😊</div>
+      `},
+      { id:'faq2', title:'숙소', html:`
+        <h2>❓ 자주 묻는 질문 — 숙소</h2>
+        <h3>Q6. 드림하우스/제이파크/큐브나인 차이가 뭔가요?</h3>
+        <div class="manual-box">안녕하세요 ^^ 드림하우스는 방 3개짜리 독채 숙소(최대 6인, 주 6일 헬퍼 포함), 제이파크·큐브나인은 리조트형 숙소(최대 4인, 성인 2인)입니다 ^^ 가족 구성에 따라 추천 숙소가 달라지니 인원 말씀 주시면 맞춤 안내 드릴게요 ^^</div>
+        <h3>Q7. 드림하우스를 아카데미 없이 숙소만 예약할 수 있나요?</h3>
+        <div class="manual-box">네에 ^^ 드림하우스 단독 예약은 비수기 기간에만 가능합니다! 단독 예약 시 투어셔틀·튜터 서비스 등은 이용 불가한 점 참고 부탁드립니다 😊 성수기에는 아카데미 패키지로만 예약받고 있습니다.</div>
+        <h3>Q8. 5인 가족인데 어떤 숙소가 좋을까요?</h3>
+        <div class="manual-box">안녕하세요 ^^ 제이파크·큐브나인은 최대 4인(성인 2인) 정원이라 5인은 어렵습니다 ㅠㅠ 5인 가족이시라면 드림하우스 독채가 훨씬 편하고 좋으실 거예요 ^^ 최대 6인까지 프라이빗하게 지낼 수 있어서 만족도가 정말 높답니다 😊</div>
+        <h3>Q9. 체크인/체크아웃 시간이 어떻게 되나요?</h3>
+        <div class="manual-box">네네 ^^ 체크인은 토요일 오후 3시, 체크아웃은 토요일 낮 12시로 고정되어 있습니다 ^^ 수업 시작은 월요일, 수료일은 금요일입니다. 밤 비행기 도착 시 체크인 전날 1박 추가도 가능합니다(+10만원).</div>
+        <h3>Q10. 체크아웃 후에도 머물 수 있나요? 짐 보관도 되나요?</h3>
+        <div class="manual-box">네네 ^^ 체크아웃 후 귀국 전까지 머물러 계시는 것 가능합니다 ^^ 짐 보관도 해드리고 있으니 여행 일정 있으시면 미리 말씀 주세요 😊</div>
+      `},
+      { id:'faq3', title:'수업 & 생활', html:`
+        <h2>❓ 자주 묻는 질문 — 수업 & 생활</h2>
+        <h3>Q11. 아이가 영어를 전혀 못 해도 괜찮을까요?</h3>
+        <div class="manual-box">네에 ^^ 걱정 안 하셔도 됩니다 😊 저희 킨더라인은 UCLA 출신 원장님이 직접 설계한 커리큘럼으로, 영어 노출이 없는 아이들도 즐겁게 적응할 수 있도록 운영하고 있어요 ^^ 입학 첫날 레벨테스트로 수준에 맞는 반에 배정됩니다.</div>
+        <h3>Q12. 교재는 어떤 걸 쓰나요?</h3>
+        <div class="manual-box">네네 ^^ UCLA 출신 원장님과 교재팀이 직접 만든 자체 교재를 사용하고 있습니다 ^^ 레벨테스트 결과를 바탕으로 각 아이 수준에 맞는 교재로 수업이 진행됩니다.</div>
+        <h3>Q13. 수업 시간표와 픽업/하원 시간?</h3>
+        <div class="manual-box">안녕하세요 ^^ 수업은 월~금요일 9:00~16:00 진행됩니다 ^^ 픽업 오전 8시 40분, 하원 오후 4시 10분~ 순차 드랍. 애프터스쿨은 월/수요일이며, 자세한 스케줄은 입국 4주 전에 안내드립니다 😊</div>
+        <h3>Q14. 수업 중 부모님이 참관할 수 있나요?</h3>
+        <div class="manual-box">네에 ^^ 아카데미 수업 중 부모님 참관은 어렵습니다 ㅠㅠ 수업의 원활한 진행과 아이들의 집중력을 위해 참관을 제한하고 있는 점 양해 부탁드립니다 🙏 대신 수업 사진을 구글 드라이브로 정기 공유해 드리고 있습니다.</div>
+        <h3>Q15. 준비물은 뭘 챙겨야 하나요?</h3>
+        <div class="manual-box">안녕하세요 ^^ 기본 준비물 안내드립니다 😊<br>✔ 실내화 (발 감싸는 실내화 권장 – 바닥이 대리석!)<br>✔ 개인 물병 · 필기구<br>✔ 공책 2권 (킨더 1권)<br>석회 걱정되시는 분들은 샤워기 필터 개별 지참 추천드려요 ^^</div>
+        <h3>Q16. 식사는 어떻게 제공되나요?</h3>
+        <div class="manual-box">네네 ^^ 평일 3식(아침/점심/저녁)은 도시락으로 제공됩니다 ^^ 제이파크는 조식 및 식사 바우처로 제공되며, 주말은 개별 식사입니다 😊</div>
+      `},
+      { id:'faq4', title:'예약 & 기타', html:`
+        <h2>❓ 자주 묻는 질문 — 예약 & 기타</h2>
+        <h3>Q17. 통학형(수업만)도 있나요?</h3>
+        <div class="manual-box">네네 ^^ 통학형 프로그램도 운영하고 있습니다 ^^ 다만 비수기 기간에만 운영되며, 성수기에는 패키지로만 예약받습니다. 차량비(1인 4주 5만원), 교재비(1권 350페소) 별도이며, 애프터스쿨 참여 불가, 필드트립 유료(1회 3,000페소)입니다.</div>
+        <h3>Q18. 예약 절차가 어떻게 되나요?</h3>
+        <div class="manual-box">안녕하세요 ^^ 예약 절차 안내드립니다 😊<br>① 상담(인원/기간/숙소) → ② 확정서 전송 → ③ 입금 → ④ 송금화면 캡처 전송 → ⑤ 입금확인 영수증 발송 & 최종 확정</div>
+        <h3>Q19. 예약 후 날짜 변경이나 취소가 되나요?</h3>
+        <div class="manual-box">네에 ^^ 예약 확정 후 일정 변경은 원칙적으로 어렵습니다 ㅠㅠ 취소, 기간 단축, 연도 이월 모두 불가합니다. 다만 상황에 따라 예외적으로 검토해 드릴 수 있으니 먼저 말씀해 주세요 ^^ 항공권 결제 전 반드시 예약 가능 여부 먼저 확인 부탁드립니다 😊</div>
+        <h3>Q20. 공항 픽업/드랍 서비스가 있나요?</h3>
+        <div class="manual-box">네네 ^^ 공항 픽드랍 서비스 제공하고 있습니다 ^^ 항공권 발권하시면 저희 채널로 캡처 전송 부탁드립니다! 드랍은 공항뿐 아니라 막탄 내 리조트로도 가능합니다 😊</div>
+        <h3>Q21. 비자 연장은 어떻게 하나요?</h3>
+        <div class="manual-box">안녕하세요 ^^ 비자 연장 대행 서비스를 제공하고 있습니다 ^^ 무비자 30일 초과 체류 시 필요하며, 비자 연장비 4,060페소 + 대행 수수료 500페소 = 총 1인당 4,560페소입니다.</div>
+        <h3>Q22. SSP 카드가 뭔가요?</h3>
+        <div class="manual-box">안녕하세요 ^^ SSP는 필리핀 어학연수 학습 허가증, SSP-I Card는 신분증 역할을 합니다 ^^ SSP 유효기간 6개월 / I-Card 1년이며, 사진은 여권 사진으로 대체 가능합니다 ^^ 발급 비용 및 절차는 입실 전 상세히 안내드리겠습니다 😊</div>
+        <h3>Q23. 아이가 아프거나 응급상황이 생기면?</h3>
+        <div class="manual-box">안녕하세요 ^^ 아이 건강 관련해서 저희가 현지에서 잘 챙기고 있습니다 ^^ 약 복용 중이거나 건강 이슈가 있으면 미리 채널로 말씀해 주시면 세심하게 케어해 드립니다 😊 응급 시에는 숙소 내부 비치된 안내문의 투숙자 전용 응급 연락처(09292932991)로 연락 부탁드립니다.</div>
+      `},
+    ]
   },
-  {
-    title: '6. 수업 프로그램',
-    html: `
-      <h2>📚 CH6. 수업 프로그램 운영 — 주니어 · 킨더 · 애프터스쿨 · 필드트립</h2>
-
-      <h3>6-1. 주니어 과정</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>대상</td><td>초등학생 이상</td></tr>
-        <tr><td>운영 시간</td><td>오전 9:00 ~ 오후 4:00 (총 7시간)</td></tr>
-        <tr><td>수업 구성</td><td>그룹 수업 4타임 (레벨별 소그룹 4인) + 1:1 수업 4타임</td></tr>
-        <tr><td>교재비</td><td>원장님 직접 제작 자체 교재 / 1권당 350페소 현지 지불 (월 4~5권)</td></tr>
-        <tr><td>평가</td><td>4주 2회 / 8주 4회 평가서 제공</td></tr>
-        <tr><td>결석</td><td>개인사유 결석: 보강·환불 전혀 없음</td></tr>
-      </table>
-      <table class="manual-table">
-        <tr><th>시간</th><th>프로그램</th><th>내용</th></tr>
-        <tr><td>09:00</td><td>등원·준비</td><td>출석 확인, 당일 수업 준비</td></tr>
-        <tr><td>09:10~10:30</td><td>그룹 수업 ①</td><td>레벨별 소그룹 / 발표·토론·스피치 중심</td></tr>
-        <tr><td>10:30~10:45</td><td>쉬는 시간</td><td>간식 및 휴식</td></tr>
-        <tr><td>10:45~12:05</td><td>1:1 수업 ①</td><td>개인 맞춤형 읽기·쓰기·말하기</td></tr>
-        <tr><td>12:05~12:30</td><td>점심 식사</td><td>도시락 배달 (11:45~12:00)</td></tr>
-        <tr><td>12:30~13:50</td><td>그룹 수업 ②</td><td>스토리리딩·발표·토론·롤플레이</td></tr>
-        <tr><td>14:05~15:25</td><td>1:1 수업 ②</td><td>심화 읽기·작문·스피치</td></tr>
-        <tr><td>15:25~16:00</td><td>마무리·하원</td><td>정리·피드백·하원 준비</td></tr>
-      </table>
-
-      <h3>6-2. 킨더 과정</h3>
-      <table class="manual-table">
-        <tr><th>항목</th><th>내용</th></tr>
-        <tr><td>대상</td><td>유치원생 / 보호자와 분리 가능한 아동만</td></tr>
-        <tr><td>운영</td><td>종일반만 운영 (2026년부터 오전반 폐지)</td></tr>
-        <tr><td>재료비</td><td>4주 2,500페소 / 2주 1,750페소 현지 지불</td></tr>
-        <tr><td>학부모 참관</td><td>불가 (오픈형 구조)</td></tr>
-      </table>
-      <div class="manual-box yellow">⚠️ 보호자와 분리 불가한 아동: 수업 당일 귀가 처리 및 환불 없음. 등록 전 반드시 사전 상담!</div>
-      <table class="manual-table">
-        <tr><th>시간</th><th>프로그램</th><th>내용</th></tr>
-        <tr><td>09:00</td><td>Circle Time</td><td>인사·날씨·날짜·감정 영어 표현, 노래와 율동</td></tr>
-        <tr><td>09:30~10:30</td><td>Story Book</td><td>원서 그림책 읽기 + 내용 이해 + 역할놀이</td></tr>
-        <tr><td>10:45~11:45</td><td>Art Class</td><td>테마별 미술 활동</td></tr>
-        <tr><td>11:45~12:30</td><td>점심 식사</td><td>도시락 식사</td></tr>
-        <tr><td>12:30~13:30</td><td>Cooking Class</td><td>간단한 요리·베이킹</td></tr>
-        <tr><td>14:00~15:30</td><td>1:1 수업</td><td>파닉스·영어 쓰기·읽기 기초</td></tr>
-      </table>
-
-      <h3>6-3. 애프터스쿨 (After School)</h3>
-      <div class="manual-box blue">
-        운영 횟수: 주 2~3회 (월요일·수요일 중심) · 오후 4:20~5:20<br>
-        대상: 패키지 이용 고객만 (통학형 불가) · 패키지 포함 무료 · 일정 2달 전 공개
-      </div>
-      <table class="manual-table">
-        <tr><th>프로그램 (영문)</th><th>한국어</th></tr>
-        <tr><td>Eco Planting and Herb</td><td>식물 심기</td></tr>
-        <tr><td>Gross motor</td><td>체육 중심 활동</td></tr>
-        <tr><td>Mini Olympics</td><td>미니 올림픽</td></tr>
-        <tr><td>Nature Walk</td><td>자연 관찰 산책</td></tr>
-        <tr><td>Water Gun Fun</td><td>물총 놀이</td></tr>
-        <tr><td>Balloon Tennis</td><td>풍선 테니스</td></tr>
-        <tr><td>Book Hunt & Puzzle</td><td>책 탐색 및 퍼즐 게임</td></tr>
-        <tr><td>Hand Baseball</td><td>손 야구 게임</td></tr>
-        <tr><td>Flower Arrangement</td><td>꽃꽂이</td></tr>
-        <tr><td>Traffic Light Game</td><td>신호등 게임</td></tr>
-        <tr><td>Snack Grabbing Game</td><td>간식 잡기 게임</td></tr>
-        <tr><td>Origami Activity</td><td>종이 접기</td></tr>
-        <tr><td>Plant Observation</td><td>식물 관찰</td></tr>
-        <tr><td>Hula Hoop & Jump Rope</td><td>훌라후프 & 줄넘기</td></tr>
-        <tr><td>Pinwheel Activity</td><td>바람개비 게임</td></tr>
-        <tr><td>Art Activity</td><td>미술 활동</td></tr>
-        <tr><td>Catching Ball</td><td>공 잡기 놀이</td></tr>
-      </table>
-
-      <h3>6-4. 필드트립 (Field Trip)</h3>
-      <div class="manual-box green">
-        운영: 2주에 1회 (격주) · 비용: 패키지 무료 / 통학형 3,000페소<br>
-        인솔: 한국인 인솔자 + 필리핀 선생님 동행
-      </div>
-      <table class="manual-table">
-        <tr><th>장소</th><th>한국어</th><th>내용</th></tr>
-        <tr><td>Shrine Tour</td><td>막탄 쉬라인 투어</td><td>막탄 역사 명소·역사 공부</td></tr>
-        <tr><td>Nimo Brew</td><td>니모 브류</td><td>파충류·식물 관찰 카페 체험</td></tr>
-        <tr><td>SM Skating</td><td>SM 스케이팅</td><td>아이스스케이트장 방문</td></tr>
-        <tr><td>Magellan's Cross</td><td>마젤란 십자가</td><td>필리핀 역사 공부</td></tr>
-        <tr><td>Crocolandia</td><td>크로코랜디아</td><td>악어·파충류 관찰 및 피딩 체험</td></tr>
-        <tr><td>Kids Cafe</td><td>키즈 카페</td><td>어린이 전용 카페 방문</td></tr>
-      </table>
-    `
-  },
-  {
-    title: '7. 투어셔틀 운영',
-    html: `
-      <h2>🚐 CH7. 투어셔틀 운영 관리</h2>
-
-      <h3>7-1. 숙소별 셔틀 신청 방법</h3>
-      <table class="manual-table">
-        <tr><th>숙소</th><th>신청 방법</th><th>신청 마감</th><th>변경·취소</th></tr>
-        <tr><td>드림하우스</td><td>드림센터(B17L5) 방문 → 신청 종이에 직접 기록 (채널 신청 불가)</td><td>탑승 전날 오후 4:50 / 월요일 셔틀은 금요일 4:50</td><td>오피스 방문 직접 수정</td></tr>
-        <tr><td>제이파크</td><td>네이버 폼 신청 → 작성 후 채널로 알림 필수</td><td>탑승 전날 오후 4:50 / 월요일 셔틀은 금요일 4:50</td><td>채널로 연락</td></tr>
-        <tr><td>큐브나인</td><td>네이버 폼 신청 → 작성 후 채널로 알림 필수</td><td>탑승 전날 오후 4:50 / 월요일 셔틀은 금요일 4:50</td><td>채널로 연락</td></tr>
-      </table>
-
-      <h3>7-2. 요일별 셔틀 스케줄</h3>
-      <table class="manual-table">
-        <tr><th>요일</th><th>목적지</th><th>출발 시간</th><th>복귀</th><th>비고</th></tr>
-        <tr><td>월</td><td>🛒 H-mart (한국 마트)</td><td>10:00 리조트 출발</td><td>11:00 H마트 출발 복귀</td><td>장보기 후 바로 탑승 / 복귀 미이용 시 기사님께 반드시 알림</td></tr>
-        <tr><td>화</td><td>🏬 SM Seaside</td><td>10:30 리조트 출발</td><td>없음 (개별 귀환)</td><td>가는 편만 제공</td></tr>
-        <tr><td>수</td><td>⛩️ Mactan Shrine</td><td>17:30 리조트 출발</td><td>도착 40분 후 출발</td><td>—</td></tr>
-        <tr><td>목</td><td>🌅 Parola 레스토랑</td><td>16:40 리조트 출발</td><td>식사 종료 후 이동</td><td>다른 하우스 일정 함께 확인</td></tr>
-        <tr><td>목</td><td>🌄 Lantaw 레스토랑</td><td>16:00 드림하우스 출발</td><td>도착 2시간 30분 후 출발</td><td>레스토랑 예약 대행 / 늦은 예약 시 마감</td></tr>
-        <tr><td>금</td><td>🌊 IL CORSO (쇼핑몰)</td><td>16:00 리조트 출발</td><td>도착 2시간 30분 후 출발</td><td>—</td></tr>
-        <tr><td>토</td><td>🦁 Cebu Safari (사파리)</td><td>8:30 리조트 출발</td><td>15:00 사파리 출발 복귀</td><td>유료 인당 200페소</td></tr>
-        <tr><td>토</td><td>🎠 Cebu Fun Park</td><td>14:00 리조트 출발</td><td>20:00 복귀</td><td>무료</td></tr>
-        <tr><td>일</td><td>🎡 ANJO WORLD</td><td>13:00 리조트 출발</td><td>20:00 복귀</td><td>무료</td></tr>
-      </table>
-      <div class="manual-box yellow">📌 샘플 스케줄. 시즌에 따라 추가·변경 가능. 8월 9일 아이언맨 행사: 도로통제로 투어셔틀 전면 없음.</div>
-
-      <h3>7-3. 규정 위반 시 처리</h3>
-      <table class="manual-table">
-        <tr><th>위반 상황</th><th>처리 방법</th></tr>
-        <tr><td>지정 장소 외 하차 요청</td><td>정해진 픽업·드롭 장소 외 중도 승·하차 절대 불가 안내. 이행 거부.</td></tr>
-        <tr><td>당일 무단 취소</td><td>이후 셔틀 신청 불가 처리</td></tr>
-        <tr><td>취소 2회 누적</td><td>이후 모든 셔틀 신청 불가 처리</td></tr>
-        <tr><td>타 숙소 투숙자 탑승 시도</td><td>탑승 거부. 자사 숙소 투숙자만 이용 가능.</td></tr>
-        <tr><td>정원 초과 탑승 요청</td><td>정원 외 추가 탑승 절대 불가. 이행 거부.</td></tr>
-      </table>
-    `
-  },
-  {
-    title: '8. 2026 일정 & 연락처',
-    html: `
-      <h2>📅 CH8. 2026 일정 & 연락처</h2>
-
-      <h3>애프터스쿨 & 필드트립 월별 일정</h3>
-      <div class="manual-box blue">🟢 After School (방과후 활동) &nbsp;│&nbsp; 🟡 Field Trip (현장 학습) &nbsp;│&nbsp; 🔴 휴무 (수업·셔틀 없음) &nbsp;│&nbsp; 현지 사정에 따라 조정 가능</div>
-
-      <h3>■ 1월 / January 2026</h3>
-      <table class="manual-table">
-        <tr><th>날짜·요일</th><th>프로그램</th><th>구분</th></tr>
-        <tr><td>1/4 (월)</td><td>Eco Planting — 식물 심기</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/6 (수)</td><td>Gross motor — 체육 중심 활동</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/9 (금)</td><td>Shrine Tour — 막탄 쉬라인 투어</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>1/11 (월)</td><td>Mini Olympics — 미니 올림픽</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/13 (수)</td><td>Nature Walk — 자연 관찰 산책</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/18 (월)</td><td>Water Gun Fun — 물총 놀이</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/20 (수)</td><td>Balloon Tennis — 풍선 테니스</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/23 (금)</td><td>Nimo Brew — 파충류·식물 카페 체험</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>1/25 (월)</td><td>Book Hunt & Puzzle — 책 탐색 퍼즐</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>1/27 (수)</td><td>Catching Ball — 공 잡기 놀이</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-      </table>
-
-      <h3>■ 2월 / February 2026</h3>
-      <table class="manual-table">
-        <tr><th>날짜·요일</th><th>프로그램</th><th>구분</th></tr>
-        <tr><td>2/1 (월)</td><td>Hand Baseball — 손 야구 게임</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/3 (수)</td><td>Badminton — 배드민턴</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/8 (월)</td><td>Water Gun Fun — 물총 놀이</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/10 (수)</td><td>Nature Walk — 자연 관찰 산책</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/14 (토)</td><td>SM Skating — 아이스스케이트장</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>2/15 (월)</td><td>Flower Arrangement — 꽃꽂이</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/17 (수)</td><td>Gross Motor — 체육 중심 활동</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/22 (월)</td><td>Traffic Light Game — 신호등 게임</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/24 (수)</td><td>Hula hoop & Jump Rope — 훌라후프·줄넘기</td><td><span class="manual-badge badge-green">AS</span></td></tr>
-        <tr><td>2/28 (토)</td><td>Magellan's Cross — 마젤란 십자가</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-      </table>
-
-      <h3>■ 3~6월 일정 요약</h3>
-      <table class="manual-table">
-        <tr><th>날짜</th><th>프로그램</th><th>구분</th></tr>
-        <tr><td>3/13 (금)</td><td>Nimo Brew</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>3/20 (금)</td><td>⛔ 공휴일 — 드림아카데미 휴무</td><td><span class="manual-badge badge-gray">휴무</span></td></tr>
-        <tr><td>3/27 (금)</td><td>Shrine Tour</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>4/2~4/3</td><td>⛔ 성주간 — 드림아카데미+드림센터 휴무</td><td><span class="manual-badge badge-gray">휴무</span></td></tr>
-        <tr><td>4/10 (금)</td><td>Crocolandia</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>4/24 (금)</td><td>Kids Cafe</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>5/1 (금)</td><td>⛔ 노동절 휴무</td><td><span class="manual-badge badge-gray">휴무</span></td></tr>
-        <tr><td>5/8 (금)</td><td>Nimo Brew</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>5/22 (금)</td><td>SM Skating</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-        <tr><td>5/29 (금)</td><td>⛔ 국경일 휴무</td><td><span class="manual-badge badge-gray">휴무</span></td></tr>
-        <tr><td>6/12 (금)</td><td>⛔ 독립기념일 휴무</td><td><span class="manual-badge badge-gray">휴무</span></td></tr>
-        <tr><td>6/26 (금)</td><td>Magellan's Cross</td><td><span class="manual-badge badge-orange">FT</span></td></tr>
-      </table>
-      <div class="manual-box yellow">📌 7월~12월 일정은 2달 전 공개됩니다.</div>
-
-      <h3>2026 전체 휴무 일정</h3>
-      <table class="manual-table">
-        <tr><th>날짜</th><th>드림아카데미</th><th>드림센터</th><th>비고</th></tr>
-        <tr><td>1/1~1/2</td><td>휴무</td><td>휴무</td><td>신정</td></tr>
-        <tr><td>3/20 (금)</td><td>휴무 (추가)</td><td>정상</td><td>필리핀 공휴일</td></tr>
-        <tr><td>4/2~4/3</td><td>휴무</td><td>휴무</td><td>성주간</td></tr>
-        <tr><td>4/4 (토)</td><td>정상</td><td>휴무 (추가)</td><td>성토요일</td></tr>
-        <tr><td>5/1 (금)</td><td>휴무</td><td>휴무</td><td>노동절</td></tr>
-        <tr><td>5/29 (금)</td><td>휴무</td><td>휴무</td><td>국경일</td></tr>
-        <tr><td>6/12 (금)</td><td>휴무</td><td>휴무</td><td>독립기념일</td></tr>
-        <tr><td>8/9 (월)</td><td>정상</td><td>휴무 (추가)</td><td>아이언맨 행사 — 투어셔틀 없음</td></tr>
-        <tr><td>10/30~10/31</td><td>휴무 / 정상</td><td>휴무</td><td>—</td></tr>
-        <tr><td>11/27 (목)</td><td>휴무</td><td>휴무</td><td>—</td></tr>
-        <tr><td>12/24~2027/1/3</td><td>휴무</td><td>휴무</td><td>연말·신년 방학</td></tr>
-      </table>
-      <div class="manual-box green">✅ 휴무일에도 식사는 정상 제공 / 별도 환불 없음</div>
-
-      <h3>카카오채널 & 연락처</h3>
-      <table class="manual-table">
-        <tr><th>채널명</th><th>대상·용도</th><th>상담 시간</th></tr>
-        <tr><td>세부드림아카데미</td><td>예약·수업 관련 일반 문의 / 손님 상담</td><td>월~금 오전 8시 ~ 오후 5시 (세부 현지 시간)</td></tr>
-        <tr><td>행복한드림하우스</td><td>드림하우스 투숙자 전용 / 하우스 불편·수리</td><td>월~토 오전 8시 ~ 오후 6시</td></tr>
-        <tr><td>세부플레이드림</td><td>플레이드림 예약·문의</td><td>월~일 한국어 8:30~17:00 / 영어 17:00~20:00</td></tr>
-      </table>
-      <div class="manual-box yellow">
-        🚨 <strong>응급 전화 (중대 응급만):</strong> 09292932991<br>
-        🌐 드림아카데미 공식 채널: dreamacademyph.com<br>
-        📧 이메일: info@dreamacademyph.com
-      </div>
-    `
-  }
 ];
 
-async function showManual(idx, btn) {
-  document.querySelectorAll('.manual-sidebar button').forEach(b => b.classList.remove('m-active'));
-  btn.classList.add('m-active');
-  window._manualCurrentIdx = idx;
+let _manualCat = null;
+let _manualItem = null;
 
-  // DB에서 로드 시도
-  let content = null;
-  try {
-    const res = await fetch(
-      SB_URL + '/rest/v1/manual_chapters?chapter_index=eq.' + idx + '&select=html_content,title',
-      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
-    );
-    const rows = await res.json();
-    if (rows && rows.length > 0) content = rows[0].html_content;
-  } catch(e) {}
-
-  // fallback: 하드코딩 데이터
-  if (!content) content = MANUAL_DATA[idx].html;
-
-  document.getElementById('manualContent').innerHTML = content;
-
-  // 편집 버튼 표시 (CEO, Jenna만)
-  const editBtn = document.getElementById('manualEditBtn');
-  if (editBtn) {
-    const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
-    editBtn.style.display = (u === 'ceo' || u === 'jenna') ? 'inline-flex' : 'none';
-  }
-}
-
-function openManualEditor() {
-  const modal = document.getElementById('manualEditorModal');
-  const body = document.getElementById('manualEditorBody');
-  body.innerHTML = document.getElementById('manualContent').innerHTML;
-  modal.style.display = 'flex';
-  body.focus();
-}
-
-function closeManualEditor() {
-  document.getElementById('manualEditorModal').style.display = 'none';
-  document.getElementById('manualSaveStatus').textContent = '';
-}
-
-function meFmt(cmd) {
-  document.getElementById('manualEditorBody').focus();
-  document.execCommand(cmd, false, null);
-}
-
-function meWrap(tag) {
-  document.getElementById('manualEditorBody').focus();
-  document.execCommand('formatBlock', false, tag);
-}
-
-function meBoxColor(color) {
-  const colorMap = {
-    blue: 'background:#eff6ff;border:1px solid #bfdbfe;',
-    yellow: 'background:#fefce8;border:1px solid #fde68a;',
-    green: 'background:#f0fdf4;border:1px solid #bbf7d0;',
-    gray: 'background:#f8fafc;border:1px solid #e2e8f0;'
-  };
-  const sel = window.getSelection();
-  if (sel && sel.toString().length > 0) {
-    const range = sel.getRangeAt(0);
-    const div = document.createElement('div');
-    div.className = 'manual-box';
-    div.style.cssText = colorMap[color] + 'border-radius:8px;padding:16px 20px;margin:12px 0;';
-    range.surroundContents(div);
-  } else {
-    const div = document.createElement('div');
-    div.className = 'manual-box';
-    div.style.cssText = colorMap[color] + 'border-radius:8px;padding:16px 20px;margin:12px 0;';
-    div.innerHTML = '내용을 여기에 입력하세요.';
-    document.execCommand('insertHTML', false, div.outerHTML);
-  }
-}
-
-function meInsertTable() {
-  const html = '<table class="manual-table" style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">' +
-    '<tr><th style="background:#f1f5f9;padding:8px 12px;border:1px solid #e2e8f0;">항목</th><th style="background:#f1f5f9;padding:8px 12px;border:1px solid #e2e8f0;">내용</th></tr>' +
-    '<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">행1</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">내용1</td></tr>' +
-    '</table>';
-  document.getElementById('manualEditorBody').focus();
-  document.execCommand('insertHTML', false, html);
-}
-
-async function saveManualChapter() {
-  const idx = window._manualCurrentIdx;
-  const html = document.getElementById('manualEditorBody').innerHTML;
-  const title = MANUAL_DATA[idx] ? MANUAL_DATA[idx].title : ('챕터 ' + (idx+1));
-  const statusEl = document.getElementById('manualSaveStatus');
-  statusEl.textContent = '저장 중...';
-
-  try {
-    const u = (typeof CU !== 'undefined' && CU) ? CU.id : 'unknown';
-    const res = await fetch(SB_URL + '/rest/v1/manual_chapters', {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': 'Bearer ' + SB_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({
-        chapter_index: idx,
-        title: title,
-        html_content: html,
-        updated_at: new Date().toISOString(),
-        updated_by: u
-      })
+function initManual() {
+  const sb = document.getElementById('manualSidebar');
+  if (!sb) return;
+  sb.innerHTML = '';
+  MANUAL_TREE.forEach((catObj, ci) => {
+    const hdr = document.createElement('button');
+    hdr.className = 'manual-cat-header';
+    hdr.innerHTML = catObj.cat + '<span class="manual-cat-arrow" id="mca-'+ci+'">▶</span>';
+    const subList = document.createElement('div');
+    subList.className = 'manual-sub-list';
+    subList.id = 'msl-' + ci;
+    catObj.items.forEach((item, ii) => {
+      const btn = document.createElement('button');
+      btn.className = 'manual-sub-btn';
+      btn.textContent = item.title;
+      btn.onclick = () => selectManualItem(ci, ii, btn);
+      subList.appendChild(btn);
     });
-
-    if (res.ok) {
-      statusEl.textContent = '✅ 저장됨';
-      document.getElementById('manualContent').innerHTML = html;
-      setTimeout(() => {
-        closeManualEditor();
-        statusEl.textContent = '';
-      }, 800);
-    } else {
-      const err = await res.text();
-      statusEl.textContent = '❌ 저장 실패: ' + err;
-    }
-  } catch(e) {
-    statusEl.textContent = '❌ 오류: ' + e.message;
-  }
+    hdr.onclick = () => {
+      const isOpen = subList.classList.contains('open');
+      document.querySelectorAll('.manual-sub-list').forEach(s => s.classList.remove('open'));
+      document.querySelectorAll('.manual-cat-arrow').forEach(a => a.classList.remove('open'));
+      document.querySelectorAll('.manual-cat-header').forEach(h => h.classList.remove('mc-open'));
+      if (!isOpen) {
+        subList.classList.add('open');
+        document.getElementById('mca-'+ci).classList.add('open');
+        hdr.classList.add('mc-open');
+      }
+    };
+    sb.appendChild(hdr);
+    sb.appendChild(subList);
+  });
 }
 
-// 초기 로드 (DB 우선, fallback 하드코딩)
-(async function initManualChapter0(){
-  try {
-    const res = await fetch(
-      SB_URL + '/rest/v1/manual_chapters?chapter_index=eq.0&select=html_content',
-      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
-    );
-    const rows = await res.json();
-    const el = document.getElementById('manualContent');
-    if (rows && rows.length > 0 && rows[0].html_content) el.innerHTML = rows[0].html_content;
-    else el.innerHTML = MANUAL_DATA[0].html;
-  } catch(e) {
-    document.getElementById('manualContent').innerHTML = MANUAL_DATA[0].html;
-  }
-  window._manualCurrentIdx = 0;
+function selectManualItem(ci, ii, btn) {
+  _manualCat = ci; _manualItem = ii;
+  document.querySelectorAll('.manual-sub-btn').forEach(b => b.classList.remove('ms-active'));
+  btn.classList.add('ms-active');
+  const item = MANUAL_TREE[ci].items[ii];
+  document.getElementById('manualContent').innerHTML = item.html;
+  const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
+  const editBtn = document.getElementById('manualEditBtn');
+  if (editBtn) editBtn.style.display = (u==='ceo'||u==='jenna') ? 'inline-flex' : 'none';
+  window._manualCurrentIdx = ci * 100 + ii;
+}
+
+(function waitManual() {
+  if (document.getElementById('manualSidebar')) initManual();
+  else setTimeout(waitManual, 200);
 })();
 </script>
       </div>
@@ -2122,34 +1993,36 @@ const GUIDE_DATA = {
     { id:'o2', title:'준비물 안내', content:'안녕하세요 😊 드림아카데미입니다!\n\n준비물 안내 드립니다.\n\n■ 공통\n- 여권 (유효기간 6개월 이상)\n- 해외여행자 보험 가입 (강력 권장)\n- 현지 사용 카드 또는 현금\n\n■ 학생\n- 필기도구, 노트\n- 편한 운동복 (애프터스쿨 활동용)\n- 수영복, 수영모 (수영장 이용 시)\n\n궁금하신 사항은 언제든지 문의주세요! 😊' },
   ],
   "애프터스쿨": [
-    { id:'m1', title:'5/4 (월) 종이접기·비행기', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 4일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n✈️ Origami & Paper Airplane — 종이접기 및 비행기 날리기 대회\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m2', title:'5/6 (수) 간식 잡기·장애물', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 6일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🍭 간식 잡기 게임 및 장애물 코스 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m3', title:'5/11 (월) 친환경 식물 심기', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 11일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n🌿 Eco Planting & Herb — 친환경 식물 심기 및 허브 심기\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m4', title:'5/13 (수) 미니 올림픽', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 13일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🏅 Mini Olympics — 미니 올림픽\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m5', title:'5/18 (월) 바람개비 게임', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 18일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n🌀 Pinwheel Activity — 바람개비 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m6', title:'5/20 (수) 산책 & 미로', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 20일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Dream House Office (B17 L5)\n🌳 Nature Walk & Jackfruit Maze — 베이스워터 내 산책 및 열대 과일 테마 미로\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m7', title:'5/25 (월) 물총놀이', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 25일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n💦 Water Gun Fun — 물총놀이\n\n📌 준비사항\n• 젖어도 되는 옷 & 신발 착용 (환복하지 않습니다)\n• 수건 지참 (등원 시 가방에)\n• ⚠️ 개인 물총 지참 불가\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'m8', title:'5/27 (수) 훌라후프·줄넘기', content:'안녕하세요 😊\n\n5월 애프터스쿨 안내 드립니다.\n\n📅 5월 27일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🏃 Hula Hoop & Jump Rope — 훌라후프 및 줄넘기 활동\n\n⚠️ 5월 29일(금)은 국경일로 휴무입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a1', title:'6/1 (월) 꽃꽂이', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 1일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n🎨 Flower Arrangement — 꽃꽂이 활동 수업\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a2', title:'6/3 (수) 체육 수업', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 3일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🏃 Gross Motor — 다양한 신체 활동을 하는 체육 중심 수업\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a3', title:'6/8 (월) 손 야구', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 8일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n⚾ Hand Baseball — 손 야구 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a4', title:'6/10 (수) 신호등 게임', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 10일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🚦 신호등 게임 및 보물 찾기\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a5', title:'6/15 (월) 물총놀이', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 15일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n💦 Water Gun Fun — 물총놀이\n\n📌 준비사항\n• 젖어도 되는 옷 & 신발 착용 (환복하지 않습니다)\n• 수건 지참 (등원 시 가방에)\n• ⚠️ 개인 물총 지참 불가\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a6', title:'6/17 (수) 미니 올림픽', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 17일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Club House in Bayswater\n🏅 Mini Olympics — 미니 올림픽\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a7', title:'6/22 (월) 자연 미술', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 22일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n🌿 나뭇잎, 풀, 꽃을 이용한 미술 활동\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a8', title:'6/24 (수) 산책 & 미로', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 24일 (수요일)\n⏰ 4:30 ~ 5:20pm\n📍 Dream House Office (B17 L5)\n🌳 Nature Walk & Jackfruit Maze\n베이스워터 내 산책 및 열대 과일 테마 미로\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a9', title:'6/29 (월) 물총놀이', content:'안녕하세요 😊\n\n6월 애프터스쿨 안내 드립니다.\n\n📅 6월 29일 (월요일)\n⏰ 4:20 ~ 5:10pm\n📍 아카데미\n💦 Water Gun Fun — 물총놀이\n\n📌 준비사항\n• 젖어도 되는 옷 & 신발 착용 (환복하지 않습니다)\n• 수건 지참 (등원 시 가방에)\n• ⚠️ 개인 물총 지참 불가\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'a10', title:'신청 안내 (드림하우스)', content:'애프터스쿨 신청 안내 드립니다 😊\n\n드림하우스 손님은 드림센터(B17L5) 방문 후\n비치된 신청 종이에 직접 기록해 주세요.\n\n⚠️ 채널이나 현지직원을 통한 신청은 불가합니다.\n⚠️ 당일 신청 불가\n⚠️ 다음 주 수업은 전주 금요일 오후 4:50까지 신청\n\n무단 취소 2회 누적 시 이후 신청이 불가합니다.' },
-    { id:'a11', title:'신청 안내 (제이파크·큐브나인)', content:'애프터스쿨 신청 안내 드립니다 😊\n\n아래 네이버 폼으로 신청 후 채널로 꼭 알림 주세요!\n→ [네이버 폼 링크]\n\n⚠️ 당일 신청 불가\n⚠️ 다음 주 수업은 전주 금요일까지 신청\n⚠️ 무단 취소 2회 누적 시 이후 신청 불가' },
+    { id:'as1', title:'물총놀이', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n💦 Water Gun Fun — 물총놀이\n\n📌 준비사항\n• 젖어도 되는 옷 & 신발 착용 (환복하지 않습니다)\n• 수건 지참 (등원 시 가방에)\n• ⚠️ 개인 물총 지참 불가\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as2', title:'미니 올림픽', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🏅 Mini Olympics — 미니 올림픽\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as3', title:'꽃꽂이', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🌸 Flower Arrangement — 꽃꽂이 활동 수업\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as4', title:'체육 수업 (Gross Motor)', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🏃 Gross Motor — 다양한 신체 활동을 하는 체육 중심 수업\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as5', title:'손 야구 (Hand Baseball)', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n⚾ Hand Baseball — 손 야구 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as6', title:'신호등 게임 + 보물찾기', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🚦 신호등 게임 및 팀 보물 찾기\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as7', title:'산책 & 열대 과일 미로', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Dream House Office (B17 L5)\n🌳 Nature Walk & Jackfruit Maze — 베이스워터 내 산책 및 열대 과일 테마 미로\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as8', title:'훌라후프·줄넘기', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🏃 Hula Hoop & Jump Rope — 훌라후프 및 줄넘기 활동\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as9', title:'풍선 테니스', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🎾 Balloon Tennis — 풍선 테니스\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as10', title:'바람개비', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🌀 Pinwheel Activity — 바람개비 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as11', title:'종이접기·비행기', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n✈️ Origami & Paper Airplane — 종이접기 및 비행기 날리기 대회\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as12', title:'간식 잡기·장애물 코스', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 Club House in Bayswater\n🍭 간식 잡기 게임 및 장애물 코스 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as13', title:'책 탐색·퍼즐', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n📚 Book Hunt & Puzzle — 책 탐색 활동 및 퍼즐 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as14', title:'식물 관찰', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🔬 Plant Observation — 직접 만든 색깔 확대경으로 식물 관찰\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as15', title:'친환경 식물 심기·허브', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🌿 Eco Planting & Herb — 친환경 식물 심기 및 허브 심기\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as16', title:'자연 미술 (나뭇잎·풀·꽃)', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🌺 Art Activity — 나뭇잎, 풀, 꽃을 이용한 미술 활동\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as17', title:'배드민턴·피구', content:'안녕하세요 😊\n\n애프터스쿨 안내 드립니다.\n\n📅 [날짜] ([요일])\n⏰ [시간]\n📍 아카데미\n🏸 Badminton & Dodgeball — 배드민턴 및 피구 게임\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'as18', title:'신청 안내 (드림하우스)', content:'애프터스쿨 신청 안내 드립니다 😊\n\n드림하우스 손님은 드림센터(B17L5) 방문 후\n비치된 신청 종이에 직접 기록해 주세요.\n\n⚠️ 채널이나 현지직원을 통한 신청은 불가합니다.\n⚠️ 당일 신청 불가\n⚠️ 다음 주 수업은 전주 금요일 오후 4:50까지\n\n무단 취소 2회 누적 시 이후 신청이 불가합니다.' },
+    { id:'as19', title:'신청 안내 (제이파크·큐브나인)', content:'애프터스쿨 신청 안내 드립니다 😊\n\n아래 네이버 폼으로 신청 후 채널로 꼭 알림 주세요!\n→ [네이버 폼 링크]\n\n⚠️ 당일 신청 불가\n⚠️ 다음 주 수업은 전주 금요일까지\n⚠️ 무단 취소 2회 누적 시 이후 신청 불가' },
   ],
   "필드트립": [
-    { id:'mf1', title:'5/9 (토) 니모 브류', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 5월 9일 (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 Nimo Brew (집 앞으로 픽드랍)\n🦎 Nimo Brew — 파충류 체험\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'mf2', title:'5/23 (토) SM 스케이팅', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 5월 23일 (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 SM Seaside — 아이스 스케이팅 (집 앞으로 픽드랍)\n⛸️ SM Skating — 아이스 스케이팅\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'f1', title:'6/13 (토) 쉬라인 투어', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 6월 13일 (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 막탄 쉬라인 (집 앞으로 픽드랍)\n🏛️ Shrine Tour — 막탄의 대표 명소 쉬라인 투어\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'f2', title:'6/27 (토) 마젤란 십자가', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 6월 27일 (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 마젤란 십자가 (집 앞으로 픽드랍)\n✝️ Magellan\'s Cross — 세부의 역사 마젤란 십자가\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
-    { id:'f3', title:'픽업 전날 안내 문구', content:'안녕하세요 😊\n\n내일 필드트립 픽업 안내 드립니다.\n\n📅 [날짜]\n🚐 픽업 시간: 10:15 ~ 10:20\n📍 픽업 장소: 집 앞\n\n준비물 및 복장은 편하게 준비해 주세요!\n궁금하신 점은 채널로 문의 주세요 😊' },
-    { id:'f4', title:'미참가 안내', content:'안녕하세요 😊\n\n필드트립 미참가 학생은\n당일 오전 정규 수업이 진행됩니다.\n\n오전 9:00까지 아카데미로 등원해 주세요.\n\n감사합니다 😊' },
-    { id:'f5', title:'통학형 필드트립 안내', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 [장소]\n\n참가비: 3,000페소\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n\n참가를 원하시면 신청해 주세요!\n감사합니다 😊' },
+    { id:'ft1', title:'쉬라인 투어', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 막탄 쉬라인 (집 앞으로 픽드랍)\n🏛️ Shrine Tour — 막탄의 대표 명소 쉬라인 투어\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft2', title:'니모 브류', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 Nimo Brew (집 앞으로 픽드랍)\n🦎 Nimo Brew — 파충류 및 식물 체험\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft3', title:'크로코랜디아', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 Crocolandia (집 앞으로 픽드랍)\n🐊 Crocolandia — 악어 및 파충류 관찰\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft4', title:'키즈 카페', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 키즈 카페 (집 앞으로 픽드랍)\n☕ Kids Cafe — 어린이 전용 카페\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft5', title:'SM 스케이팅', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 SM Seaside — 아이스 스케이팅 (집 앞으로 픽드랍)\n⛸️ SM Skating — 아이스 스케이팅\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft6', title:'마젤란 십자가', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 마젤란 십자가 (집 앞으로 픽드랍)\n✝️ Magellan\'s Cross — 세부의 역사 마젤란 십자가\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n📌 전날 픽업 안내 발송 예정입니다.\n\n* 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.' },
+    { id:'ft7', title:'픽업 전날 안내 문구', content:'안녕하세요 😊\n\n내일 필드트립 픽업 안내 드립니다.\n\n📅 [날짜]\n🚐 픽업 시간: 10:15 ~ 10:20\n📍 픽업 장소: 집 앞\n\n편한 복장으로 준비해 주세요!\n궁금하신 점은 채널로 문의 주세요 😊' },
+    { id:'ft8', title:'미참가 안내', content:'안녕하세요 😊\n\n필드트립 미참가 학생은\n당일 오전 정규 수업이 진행됩니다.\n\n오전 9:00까지 아카데미로 등원해 주세요.\n\n감사합니다 😊' },
+    { id:'ft9', title:'통학형 필드트립 안내', content:'안녕하세요 😊 필드트립 안내 드립니다!\n\n📅 [날짜] (토요일)\n⏰ 10:30 ~ 4:30pm\n📍 [장소]\n\n참가비: 3,000페소\n\n🚐 픽업: 10:15~20\n🚐 드랍: 4:20~25\n\n참가를 원하시면 신청해 주세요!\n감사합니다 😊' },
   ],
   "투어셔틀": [
     { id:'s1', title:'H마트 셔틀 안내', content:'H마트 셔틀 안내 드립니다 😊\n\n출발: 오전 10:00 드림하우스 → H마트\n복귀: 오전 11:00 H마트 → 드림하우스\n\n• 최대 출발시간 11시\n• 장보기 후 바로 탑승해 주세요\n• ⚠️ 돌아오는 편 이용하지 않을 시 기사님께 꼭 말씀해 주세요\n\n신청 마감: 탑승 전날 오후 4:50까지\n(월요일 셔틀은 금요일 4:50까지)' },
