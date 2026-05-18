@@ -1413,7 +1413,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   </div>
 
   <!-- 콘텐츠 영역 -->
-  <div class="manual-content" id="manualContent">
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="display:flex;justify-content:flex-end;padding:16px 40px 0;gap:8px;">
+      <button id="manualEditBtn" onclick="openManualEditor()"
+        style="display:none;align-items:center;gap:6px;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
+        ✏️ 편집
+      </button>
+    </div>
+    <div class="manual-content" id="manualContent" style="padding-top:12px;">
+    </div>
   </div>
 </div>
 
@@ -1899,14 +1907,148 @@ const MANUAL_DATA = [
   }
 ];
 
-function showManual(idx, btn) {
+async function showManual(idx, btn) {
   document.querySelectorAll('.manual-sidebar button').forEach(b => b.classList.remove('m-active'));
   btn.classList.add('m-active');
-  document.getElementById('manualContent').innerHTML = MANUAL_DATA[idx].html;
+  window._manualCurrentIdx = idx;
+
+  // DB에서 로드 시도
+  let content = null;
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/manual_chapters?chapter_index=eq.' + idx + '&select=html_content,title',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+    );
+    const rows = await res.json();
+    if (rows && rows.length > 0) content = rows[0].html_content;
+  } catch(e) {}
+
+  // fallback: 하드코딩 데이터
+  if (!content) content = MANUAL_DATA[idx].html;
+
+  document.getElementById('manualContent').innerHTML = content;
+
+  // 편집 버튼 표시 (CEO, Jenna만)
+  const editBtn = document.getElementById('manualEditBtn');
+  if (editBtn) {
+    const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
+    editBtn.style.display = (u === 'ceo' || u === 'jenna') ? 'inline-flex' : 'none';
+  }
 }
 
-// 초기 로드
-document.getElementById('manualContent').innerHTML = MANUAL_DATA[0].html;
+function openManualEditor() {
+  const modal = document.getElementById('manualEditorModal');
+  const body = document.getElementById('manualEditorBody');
+  body.innerHTML = document.getElementById('manualContent').innerHTML;
+  modal.style.display = 'flex';
+  body.focus();
+}
+
+function closeManualEditor() {
+  document.getElementById('manualEditorModal').style.display = 'none';
+  document.getElementById('manualSaveStatus').textContent = '';
+}
+
+function meFmt(cmd) {
+  document.getElementById('manualEditorBody').focus();
+  document.execCommand(cmd, false, null);
+}
+
+function meWrap(tag) {
+  document.getElementById('manualEditorBody').focus();
+  document.execCommand('formatBlock', false, tag);
+}
+
+function meBoxColor(color) {
+  const colorMap = {
+    blue: 'background:#eff6ff;border:1px solid #bfdbfe;',
+    yellow: 'background:#fefce8;border:1px solid #fde68a;',
+    green: 'background:#f0fdf4;border:1px solid #bbf7d0;',
+    gray: 'background:#f8fafc;border:1px solid #e2e8f0;'
+  };
+  const sel = window.getSelection();
+  if (sel && sel.toString().length > 0) {
+    const range = sel.getRangeAt(0);
+    const div = document.createElement('div');
+    div.className = 'manual-box';
+    div.style.cssText = colorMap[color] + 'border-radius:8px;padding:16px 20px;margin:12px 0;';
+    range.surroundContents(div);
+  } else {
+    const div = document.createElement('div');
+    div.className = 'manual-box';
+    div.style.cssText = colorMap[color] + 'border-radius:8px;padding:16px 20px;margin:12px 0;';
+    div.innerHTML = '내용을 여기에 입력하세요.';
+    document.execCommand('insertHTML', false, div.outerHTML);
+  }
+}
+
+function meInsertTable() {
+  const html = '<table class="manual-table" style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">' +
+    '<tr><th style="background:#f1f5f9;padding:8px 12px;border:1px solid #e2e8f0;">항목</th><th style="background:#f1f5f9;padding:8px 12px;border:1px solid #e2e8f0;">내용</th></tr>' +
+    '<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">행1</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">내용1</td></tr>' +
+    '</table>';
+  document.getElementById('manualEditorBody').focus();
+  document.execCommand('insertHTML', false, html);
+}
+
+async function saveManualChapter() {
+  const idx = window._manualCurrentIdx;
+  const html = document.getElementById('manualEditorBody').innerHTML;
+  const title = MANUAL_DATA[idx] ? MANUAL_DATA[idx].title : ('챕터 ' + (idx+1));
+  const statusEl = document.getElementById('manualSaveStatus');
+  statusEl.textContent = '저장 중...';
+
+  try {
+    const u = (typeof CU !== 'undefined' && CU) ? CU.id : 'unknown';
+    const res = await fetch(SB_URL + '/rest/v1/manual_chapters', {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        chapter_index: idx,
+        title: title,
+        html_content: html,
+        updated_at: new Date().toISOString(),
+        updated_by: u
+      })
+    });
+
+    if (res.ok) {
+      statusEl.textContent = '✅ 저장됨';
+      document.getElementById('manualContent').innerHTML = html;
+      setTimeout(() => {
+        closeManualEditor();
+        statusEl.textContent = '';
+      }, 800);
+    } else {
+      const err = await res.text();
+      statusEl.textContent = '❌ 저장 실패: ' + err;
+    }
+  } catch(e) {
+    statusEl.textContent = '❌ 오류: ' + e.message;
+  }
+}
+
+// 초기 로드 (DB 우선, fallback 하드코딩)
+(async function initManualChapter0(){
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/manual_chapters?chapter_index=eq.0&select=html_content',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+    );
+    const rows = await res.json();
+    const el = document.getElementById('manualContent');
+    if (rows && rows.length > 0 && rows[0].html_content) el.innerHTML = rows[0].html_content;
+    else el.innerHTML = MANUAL_DATA[0].html;
+  } catch(e) {
+    document.getElementById('manualContent').innerHTML = MANUAL_DATA[0].html;
+  }
+  window._manualCurrentIdx = 0;
+})();
 </script>
       </div>
     </div>
@@ -7166,5 +7308,37 @@ window.addEventListener('DOMContentLoaded', function(){
   buildLogin();
 });
 </script>
+
+<!-- MANUAL EDITOR MODAL -->
+<div id="manualEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:12px;width:900px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:16px;font-weight:700;color:#1e293b;">✏️ 업무자료 편집</span>
+      <button onclick="closeManualEditor()" style="border:none;background:none;cursor:pointer;font-size:20px;color:#94a3b8;">✕</button>
+    </div>
+    <div style="padding:8px 16px;border-bottom:1px solid #e2e8f0;display:flex;gap:4px;flex-wrap:wrap;background:#f8fafc;">
+      <button onclick="meFmt('bold')" title="굵게" style="width:32px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;font-weight:700;">B</button>
+      <button onclick="meFmt('italic')" title="기울임" style="width:32px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;font-style:italic;">I</button>
+      <button onclick="meWrap('h3')" title="소제목" style="padding:0 8px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">H3</button>
+      <button onclick="meWrap('p')" title="본문" style="padding:0 8px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;font-size:12px;">P</button>
+      <div style="width:1px;background:#e2e8f0;margin:4px 4px;"></div>
+      <button onclick="meFmt('insertUnorderedList')" title="목록" style="width:32px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;">≡</button>
+      <button onclick="meInsertTable()" title="표 삽입" style="padding:0 8px;height:32px;border:1px solid #e2e8f0;background:white;border-radius:4px;cursor:pointer;font-size:12px;">표+</button>
+      <div style="width:1px;background:#e2e8f0;margin:4px 4px;"></div>
+      <button onclick="meBoxColor('blue')" style="padding:0 8px;height:32px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:4px;cursor:pointer;font-size:12px;color:#1d4ed8;">📦 파랑</button>
+      <button onclick="meBoxColor('yellow')" style="padding:0 8px;height:32px;border:1px solid #fde68a;background:#fefce8;border-radius:4px;cursor:pointer;font-size:12px;color:#92400e;">📦 노랑</button>
+      <button onclick="meBoxColor('green')" style="padding:0 8px;height:32px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:4px;cursor:pointer;font-size:12px;color:#166534;">📦 초록</button>
+      <button onclick="meBoxColor('gray')" style="padding:0 8px;height:32px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:4px;cursor:pointer;font-size:12px;color:#475569;">📦 회색</button>
+    </div>
+    <div id="manualEditorBody" contenteditable="true"
+      style="flex:1;overflow-y:auto;padding:24px 32px;font-size:14px;line-height:1.8;color:#334155;outline:none;min-height:400px;">
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
+      <span id="manualSaveStatus" style="font-size:12px;color:#94a3b8;align-self:center;margin-right:8px;"></span>
+      <button onclick="closeManualEditor()" style="padding:8px 16px;border:1px solid #e2e8f0;background:white;border-radius:6px;cursor:pointer;font-size:13px;">취소</button>
+      <button onclick="saveManualChapter()" style="padding:8px 20px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">💾 저장</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
