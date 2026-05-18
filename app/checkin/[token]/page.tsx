@@ -5,11 +5,10 @@ import { useParams } from "next/navigation";
 interface FormState {
   q1: string; // 예약자 성함 + 입실 일자
   q2: string; // 투숙자 영문이름
-  q3: string; // 베드 세팅
-  q4: string; // 유심 대여
-  q5: string; // 애프터/필드트립
   q6: string; // 기타
 }
+
+const SIM_PLANS = ["2GB / 3일 / ₱75","6GB / 7일 / ₱149","24GB / 30일 / ₱499","36GB / 30일 / ₱599","48GB / 30일 / ₱699"];
 
 export default function CheckinFormPage() {
   const params = useParams();
@@ -17,7 +16,9 @@ export default function CheckinFormPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState<FormState>({ q1: "", q2: "", q3: "", q4: "", q5: "", q6: "" });
+  const [form, setForm] = useState<FormState>({ q1: "", q2: "", q6: "" });
+  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인)"});
+  const [simCards, setSimCards] = useState<{plan:string}[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -43,11 +44,16 @@ export default function CheckinFormPage() {
         setForm({
           q1: det.booker_name || "",
           q2: det.guest_names_en || "",
-          q3: det.bed_setting || "",
-          q4: det.usim_request || "",
-          q5: det.after_trip_request || "",
           q6: det.extra_requests || "",
         });
+        try {
+          const b = JSON.parse(det.bed_setting || "{}");
+          if (b.room1 || b.room2) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인)"});
+        } catch {}
+        try {
+          const s = JSON.parse(det.usim_request || "[]");
+          if (Array.isArray(s)) setSimCards(s);
+        } catch {}
         setLoading(false);
       } catch {
         setError("네트워크 오류");
@@ -67,9 +73,8 @@ export default function CheckinFormPage() {
       body: JSON.stringify({
         booker_name: form.q1,
         guest_names_en: form.q2,
-        bed_setting: form.q3,
-        usim_request: form.q4,
-        after_trip_request: form.q5,
+        bed_setting: JSON.stringify(bedConfig),
+        usim_request: JSON.stringify(simCards),
         extra_requests: form.q6,
       }),
     });
@@ -105,7 +110,7 @@ export default function CheckinFormPage() {
       <div className="cf-h">
         <div className="brand">DREAM ACADEMY · DREAM HOUSE</div>
         <h1>드림하우스 체크인 사전 정보 수집 폼</h1>
-        <div className="desc">아래 6가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
+        <div className="desc">아래 5가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
       </div>
 
       {loading && <div className="notice">로딩 중...</div>}
@@ -127,13 +132,45 @@ export default function CheckinFormPage() {
         <div className="q">
           <div className="q-title"><span className="q-num">2</span>투숙자 전체인원 영문이름</div>
           <div className="q-hint">예: <b>kim ooo / yoo ooo ooo</b> (가족 전원의 영문이름)</div>
+          <p style={{fontSize:12,color:"#888",marginBottom:6}}>※ 이전에 작성하신 경우 다시 작성하지 않아도 됩니다.</p>
           <input className="fi" value={form.q2} onChange={e=>up("q2",e.target.value)} placeholder="kim ooo / yoo ooo ooo"/>
         </div>
 
         <div className="q">
           <div className="q-title"><span className="q-num">3</span>원하시는 베드 세팅</div>
           <div className="q-hint">보통 <b>2~3인: 마스터룸 베드2개</b> / <b>4인 이상: 마스터룸 베드2개 + 작은방 베드1개</b></div>
-          <input className="fi" value={form.q3} onChange={e=>up("q3",e.target.value)} placeholder="원하시는 베드 구성을 작성해 주세요"/>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#334"}}>룸 1 — 마스터룸 (큰방)</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {["더블베드 1개 (2인 스테이)","더블베드 2개 (3~4인 스테이)"].map(opt=>(
+                  <button key={opt} type="button"
+                    onClick={()=>setBedConfig(p=>({...p,room1:opt}))}
+                    style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
+                      borderColor:bedConfig.room1===opt?"#4f6ef7":"#dde3f0",
+                      background:bedConfig.room1===opt?"#4f6ef7":"#fff",
+                      color:bedConfig.room1===opt?"#fff":"#556"}}>{opt}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#334"}}>룸 2 — 2층방 (작은방)</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)"].map(opt=>(
+                  <button key={opt} type="button"
+                    onClick={()=>setBedConfig(p=>({...p,room2:opt}))}
+                    style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
+                      borderColor:bedConfig.room2===opt?"#4f6ef7":"#dde3f0",
+                      background:bedConfig.room2===opt?"#4f6ef7":"#fff",
+                      color:bedConfig.room2===opt?"#fff":"#556"}}>{opt}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px",background:"#f8f9ff"}}>
+              <div style={{fontWeight:700,fontSize:14,color:"#334",marginBottom:4}}>룸 3 — 1층방</div>
+              <div style={{fontSize:13,color:"#778"}}>더블베드 1개 (1~2인 스테이) — 고정</div>
+            </div>
+          </div>
         </div>
 
         <div className="q">
@@ -172,20 +209,40 @@ export default function CheckinFormPage() {
               ⚠️ 유심 반납 안내: 퇴실 시, 지급된 유심은 <b>반드시 반납</b>해 주세요.
             </div>
 
-            <div style={{marginTop:8,fontSize:11.5,color:"#6b7c93"}}>예시 입력) <b>24gb, 2개</b></div>
           </div>
 
-          <input className="fi" value={form.q4} onChange={e=>up("q4",e.target.value)} placeholder="예: 24gb, 2개"/>
+          <div style={{marginTop:12}}>
+            <div style={{background:"#fff8e1",borderRadius:8,padding:"8px 14px",fontSize:13,color:"#856404",marginBottom:10}}>
+              💡 유심 비용은 보증금에서 차감됩니다. 퇴실 시 반드시 반납해 주세요.
+            </div>
+            {simCards.map((sim,i)=>(
+              <div key={i} style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+                <span style={{fontSize:13,color:"#667",minWidth:52,fontWeight:600}}>유심 {i+1}</span>
+                <select value={sim.plan}
+                  onChange={e=>setSimCards(prev=>{const n=[...prev];n[i]={plan:e.target.value};return n;})}
+                  style={{flex:1,padding:"8px 12px",borderRadius:8,border:"1.5px solid #dde3f0",fontSize:14}}>
+                  <option value="">— 요금제 선택 —</option>
+                  {SIM_PLANS.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+                <button type="button"
+                  onClick={()=>setSimCards(prev=>prev.filter((_,j)=>j!==i))}
+                  style={{padding:"6px 12px",borderRadius:8,border:"1px solid #fcc",background:"#fff5f5",color:"#e53",fontSize:13,cursor:"pointer"}}>
+                  삭제
+                </button>
+              </div>
+            ))}
+            {simCards.length<6 && (
+              <button type="button"
+                onClick={()=>setSimCards(prev=>[...prev,{plan:""}])}
+                style={{width:"100%",padding:"10px",borderRadius:8,border:"2px dashed #4f6ef7",background:"#f5f7ff",color:"#4f6ef7",fontSize:14,cursor:"pointer",marginTop:4}}>
+                + 유심 추가 (최대 6개)
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="q">
-          <div className="q-title"><span className="q-num">5</span>애프터스쿨 / 필드트립 사전 신청</div>
-          <div className="q-hint">원하시는 프로그램과 날짜를 자유롭게 작성해 주세요. (선택)</div>
-          <textarea className="ta" value={form.q5} onChange={e=>up("q5",e.target.value)} placeholder="예: 5/12 도자기 체험, 5/15 호핑투어 ..."/>
-        </div>
-
-        <div className="q">
-          <div className="q-title"><span className="q-num">6</span>기타 요청사항</div>
+          <div className="q-title"><span className="q-num">5</span>기타 요청사항</div>
           <div className="q-hint">추가 픽드랍, 가족 추가 픽업, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
           <textarea className="ta" value={form.q6} onChange={e=>up("q6",e.target.value)} placeholder="자유롭게 작성"/>
         </div>
