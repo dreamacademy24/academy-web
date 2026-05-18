@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 })
 
   const body = await req.json()
-  const allowed = ['booker_name', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_requests']
+  const allowed = ['booker_name', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_pickups', 'extra_requests']
   const update: Record<string, unknown> = {}
   for (const k of allowed) if (k in body) update[k] = body[k]
   update.submitted_at = new Date().toISOString()

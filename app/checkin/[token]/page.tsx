@@ -19,6 +19,7 @@ export default function CheckinFormPage() {
   const [form, setForm] = useState<FormState>({ q1: "", q2: "", q6: "" });
   const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
+  const [extraPickups, setExtraPickups] = useState<{type:string;date:string;airline:string;flight:string;time:string}[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -54,6 +55,10 @@ export default function CheckinFormPage() {
           const s = JSON.parse(det.usim_request || "[]");
           if (Array.isArray(s)) setSimCards(s);
         } catch {}
+        try {
+          const ep = JSON.parse(det.extra_pickups || "[]");
+          if (Array.isArray(ep)) setExtraPickups(ep);
+        } catch {}
         setLoading(false);
       } catch {
         setError("네트워크 오류");
@@ -75,6 +80,7 @@ export default function CheckinFormPage() {
         guest_names_en: form.q2,
         bed_setting: JSON.stringify(bedConfig),
         usim_request: JSON.stringify(simCards),
+        extra_pickups: JSON.stringify(extraPickups),
         extra_requests: form.q6,
       }),
     });
@@ -110,7 +116,7 @@ export default function CheckinFormPage() {
       <div className="cf-h">
         <div className="brand">DREAM ACADEMY · DREAM HOUSE</div>
         <h1>드림하우스 체크인 사전 정보 수집 폼</h1>
-        <div className="desc">아래 5가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
+        <div className="desc">아래 6가지 정보를 입력해 주세요. 입실 준비에 활용됩니다.</div>
       </div>
 
       {loading && <div className="notice">로딩 중...</div>}
@@ -253,8 +259,63 @@ export default function CheckinFormPage() {
         </div>
 
         <div className="q">
-          <div className="q-title"><span className="q-num">5</span>기타 요청사항</div>
-          <div className="q-hint">추가 픽드랍, 가족 추가 픽업, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
+          <div className="q-title"><span className="q-num">5</span>추가 픽드랍 신청</div>
+          <div className="q-hint">기본 픽업/드랍 외 추가 필요 시 작성해 주세요. (선택)</div>
+          <div>
+            {extraPickups.map((ep,i)=>(
+              <div key={i} style={{border:"1px solid #e0e4ef",borderRadius:10,padding:12,marginBottom:10,background:"#fafafe"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{display:"flex",gap:6}}>
+                    {["픽업","드랍"].map(t=>(
+                      <button key={t} type="button"
+                        onClick={()=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],type:t};return n;})}
+                        style={{padding:"6px 14px",borderRadius:18,border:"2px solid",fontSize:13,cursor:"pointer",
+                          borderColor:ep.type===t?"#4f6ef7":"#dde3f0",
+                          background:ep.type===t?"#4f6ef7":"#fff",
+                          color:ep.type===t?"#fff":"#556"}}>{t}</button>
+                    ))}
+                  </div>
+                  <button type="button" onClick={()=>setExtraPickups(prev=>prev.filter((_,j)=>j!==i))}
+                    style={{fontSize:12,color:"#e53",background:"none",border:"none",cursor:"pointer"}}>✕ 삭제</button>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div>
+                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div>
+                    <input type="date" value={ep.date}
+                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],date:e.target.value};return n;})}
+                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div>
+                    <input type="time" value={ep.time}
+                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],time:e.target.value};return n;})}
+                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>항공사</div>
+                    <input type="text" value={ep.airline} placeholder="예: 대한항공"
+                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],airline:e.target.value};return n;})}
+                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>편명</div>
+                    <input type="text" value={ep.flight} placeholder="예: KE601"
+                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],flight:e.target.value};return n;})}
+                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button type="button" onClick={()=>setExtraPickups(prev=>[...prev,{type:"픽업",date:"",airline:"",flight:"",time:""}])}
+              style={{width:"100%",padding:"10px",borderRadius:8,border:"2px dashed #4f6ef7",background:"#f5f7ff",color:"#4f6ef7",fontSize:14,cursor:"pointer"}}>
+              + 픽드랍 추가
+            </button>
+          </div>
+        </div>
+
+        <div className="q">
+          <div className="q-title"><span className="q-num">6</span>기타 요청사항</div>
+          <div className="q-hint">가족 추가 픽업, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
           <textarea className="ta" value={form.q6} onChange={e=>up("q6",e.target.value)} placeholder="자유롭게 작성"/>
         </div>
 
