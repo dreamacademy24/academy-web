@@ -1247,6 +1247,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="chat" onclick="showPage('chat')">채팅<span id="badge-chat" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재<span id="notif-dot-approval-tab" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
+      <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
     </div>
     <div class="th-right">
@@ -3498,7 +3499,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','guide'];
+const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -3531,6 +3532,14 @@ document.addEventListener('click',function(e){
   dd.classList.remove('open');
 });
 function showPage(p){
+  if(p==='mywork'){
+    if(!CU){return;}
+    showEmpPage(CU.id);
+    setNav('mywork',null);
+    var btnTaskMW=document.getElementById('btnTask');if(btnTaskMW)btnTaskMW.style.display='none';
+    var topTMW=document.getElementById('topT');if(topTMW)topTMW.textContent='내 업무';
+    return;
+  }
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
   var _pgEl=document.getElementById('page-'+p);if(_pgEl)_pgEl.classList.remove('hidden');
   curEmpId=null;curProjId=null;setNav(p,null);
