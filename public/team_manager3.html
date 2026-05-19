@@ -1245,6 +1245,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="projects" onclick="showPage('projects')">프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="opinions" onclick="showPage('opinions')">의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span><span id="badge-opinions" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="chat" onclick="showPage('chat')">채팅<span id="badge-chat" class="nav-badge">0</span></button>
+      <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재<span id="notif-dot-approval-tab" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
     </div>
@@ -1495,6 +1496,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <!-- CHAT -->
       <div id="page-chat" class="hidden">
         <div id="chatWrap" style="display:flex;height:calc(100vh - 140px);overflow:hidden"></div>
+      </div>
+
+      <!-- APPROVAL (결재) -->
+      <div id="page-approval" class="hidden">
+        <div id="apvStandaloneWrap" style="padding:0 4px"></div>
       </div>
 
       <!-- 하우스 보고: /admin/house-reports 로 이전됨 -->
@@ -3492,7 +3498,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','manual','guide'];
+const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','guide'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -3528,7 +3534,7 @@ function showPage(p){
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
   var _pgEl=document.getElementById('page-'+p);if(_pgEl)_pgEl.classList.remove('hidden');
   curEmpId=null;curProjId=null;setNav(p,null);
-  const tt={home:'홈',announcements:'📢 공지사항',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트'};
+  const tt={home:'홈',announcements:'📢 공지사항',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트',approval:'⚖️ 결재'};
   document.getElementById('topT').textContent=tt[p]||'';
   document.getElementById('topS').textContent='';
   document.getElementById('btnTask').textContent='+ 업무 추가';
@@ -3543,6 +3549,7 @@ function showPage(p){
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
   if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');_setNavBadge('badge-opinions',0);}
+  if(p==='approval'){renderApprovalStandalone();document.getElementById('btnTask').style.display='none';document.getElementById('topS').textContent='\uACB0\uC7AC \uC0C1\uC2E0 \u00B7 \uC2B9\uC778 \u00B7 \uBC18\uB824';markNotifsRead('approval');}
   if(p==='manual'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC';document.getElementById('topS').textContent='';}
   if(p==='guide'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uC548\uB0B4\uBB38\uAD6C';document.getElementById('topS').textContent='';}
   if(typeof updateNavBadges==='function')updateNavBadges();
@@ -5553,6 +5560,33 @@ function setEF(f,el){
 
 
 /* ──── 결재 시스템 ──── */
+function renderApprovalStandalone(){
+  var page=document.getElementById('apvStandaloneWrap');
+  if(!page||!CU)return;
+  page.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8">로딩 중...</div>';
+  var wrap=document.getElementById('empApprovalWrap');
+  if(!wrap){page.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444">결재 영역 초기화 실패</div>';return;}
+  wrap.style.display='block';
+  renderApprovalPage(CU.id);
+  var attempts=0;
+  var poll=setInterval(function(){
+    attempts++;
+    var html=wrap.innerHTML||'';
+    var loaded=html.indexOf('로딩 중')<0 && html.length>40;
+    if(loaded||attempts>40){
+      clearInterval(poll);
+      if(loaded){
+        page.innerHTML=wrap.innerHTML;
+        wrap.innerHTML='';
+        page.querySelectorAll('[id^="apvCmts_"]').forEach(function(el){
+          if(typeof _apvLoadCmts==='function')_apvLoadCmts(el.id.substring('apvCmts_'.length));
+        });
+      }else page.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
+      wrap.style.display='none';
+    }
+  },200);
+  if(typeof refreshApvPendingCount==='function')refreshApvPendingCount();
+}
 function renderApprovalPage(empId){
   var wrap=document.getElementById('empApprovalWrap');
   if(!wrap)return;
