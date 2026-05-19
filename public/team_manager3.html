@@ -3533,8 +3533,9 @@ document.addEventListener('click',function(e){
 });
 function showPage(p){
   if(p==='mywork'){
-    if(!CU){return;}
-    showEmpPage(CU.id);
+    if(typeof CU !== 'undefined' && CU && CU.id){
+      showEmpPage(CU.id);
+    }
     setNav('mywork',null);
     var btnTaskMW=document.getElementById('btnTask');if(btnTaskMW)btnTaskMW.style.display='none';
     var topTMW=document.getElementById('topT');if(topTMW)topTMW.textContent='내 업무';
