@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   const { b64, mediaType } = await fileToBase64(file)
 
   const body = {
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-5',
     max_tokens: 1024,
     system: SYSTEM_PROMPT,
     messages: [{
