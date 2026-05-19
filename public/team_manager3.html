@@ -449,81 +449,127 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .task-card.batch-selected,.task-list-row.batch-selected,.emp-task.batch-selected{border-color:var(--primary);background:var(--primary-l);opacity:1;}
 
 /* ══════════════════════════════════
-   CALENDAR
+   CALENDAR (Sage Green)
 ══════════════════════════════════ */
+#page-calendar{background:#f6faf7;padding:14px 16px;}
 .cal-toolbar{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
-  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:14px;
+  background:transparent;border:none;padding:4px 4px 12px;
+  display:flex;align-items:center;justify-content:space-between;margin-bottom:0;
 }
-.cal-nav{display:flex;align-items:center;gap:10px;}
-.cal-title{font-size:17px;font-weight:800;}
+.cal-toolbar-left{display:flex;flex-direction:column;gap:2px;}
+.cal-toolbar-right{display:flex;align-items:center;gap:10px;}
+.cal-nav-group{display:flex;align-items:center;gap:4px;}
+.cal-title{font-size:20px;font-weight:500;color:#1a2e1e;letter-spacing:-.01em;line-height:1.2;}
+.cal-subtitle{font-size:11px;color:#8aaa8e;font-weight:500;}
 .cal-nav-btn{
-  background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);
-  padding:6px 13px;cursor:pointer;font-size:14px;color:var(--text2);
-  transition:all .13s;font-family:'Pretendard',sans-serif;
+  background:#e8f5eb;border:none;border-radius:8px;
+  padding:6px 12px;cursor:pointer;font-size:13px;color:#4a7a54;font-weight:600;
+  transition:all .13s;font-family:'Pretendard',sans-serif;line-height:1;
 }
-.cal-nav-btn:hover{background:var(--primary-l);color:var(--primary);border-color:var(--primary-b);}
-.cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
-.cal-grid{
-  display:grid;grid-template-columns:72px repeat(7,1fr);
-  border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;font-size:12px;
+.cal-nav-btn:hover{background:#d4ebd9;}
+.cal-nav-btn.cal-nav-today{background:#2d7a44;color:#fff;}
+.cal-nav-btn.cal-nav-today:hover{background:#246636;}
+
+/* 월별 통계 요약 바 */
+.cal-stats-bar{display:flex;gap:8px;margin-bottom:10px;}
+.cal-stat-card{
+  flex:1;background:#fff;border-radius:9px;border:0.5px solid #d4e8d8;
+  padding:8px 10px;display:flex;align-items:center;gap:8px;
 }
-.cal-head{
-  background:#f8fafc;padding:8px 0;text-align:center;font-size:12px;font-weight:700;
-  color:#64748b;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;
-}
-.cal-head-week{
-  background:#f1f5f9;padding:8px 4px;text-align:center;font-size:11px;font-weight:700;
-  color:#475569;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;
-}
-.cal-day-label{
-  text-align:center;padding:10px 4px;font-size:11px;font-weight:700;
-  color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);
-}
-.cal-cell{
-  min-height:80px;padding:5px 6px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;vertical-align:top;
-}
-.cal-cell:nth-child(8n){border-right:none;}
-.cal-cell.other-month{background:#fafbfc;}
-.cal-cell.today .cal-date,.cal-date.today-mark{
-  background:#1e293b;color:#fff;width:20px;height:20px;
-  display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;
-}
-.cal-date{font-size:13px;font-weight:600;color:#1e293b;margin-bottom:3px;line-height:1;}
-.cal-cell.other-month .cal-date,.cal-date.dim-date{color:#cbd5e1;font-weight:400;}
-.cal-week-cell{
-  background:#f8fafc;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;
-  padding:6px 4px;text-align:center;font-size:10px;color:#64748b;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-}
-.cal-week-num{font-size:10px;font-weight:700;color:#94a3b8;}
-.cal-week-badge{font-size:11px;padding:1px 4px;border-radius:3px;font-weight:600;white-space:nowrap;}
-.cal-event{
-  font-size:12px;padding:1px 5px 1px 6px;border-left:2.5px solid;border-radius:0 2px 2px 0;
-  margin-bottom:1px;display:block;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;line-height:1.6;transition:opacity .13s;
-}
-.cal-event:hover{opacity:.75;}
-.cal-event.done{opacity:.35;text-decoration:line-through;}
-.cal-event.ev-task    {border-color:#3b82f6;background:#eff6ff;color:#1d4ed8;}
-.cal-event.ev-checkin {border-color:#16a34a;background:#f0fdf4;color:#166534;}
-.cal-event.ev-checkout{border-color:#0891b2;background:#ecfeff;color:#155e75;}
-.cal-event.ev-after   {border-color:#7c3aed;background:#f5f3ff;color:#5b21b6;}
-.cal-event.ev-field   {border-color:#ea580c;background:#fff7ed;color:#9a3412;}
-.cal-event.ev-shuttle {border-color:#0ea5e9;background:#f0f9ff;color:#0369a1;}
-.cal-more,.cal-more-events{font-size:11px;color:#94a3b8;cursor:pointer;padding:0 4px;}
-.cal-filter-wrap{display:flex;gap:6px;padding:12px 0 16px;flex-wrap:wrap;}
+.cal-stat-bar{width:6px;height:30px;border-radius:3px;flex-shrink:0;}
+.cal-stat-text{display:flex;flex-direction:column;gap:1px;line-height:1.1;}
+.cal-stat-num{font-size:15px;font-weight:700;color:#1a2e1e;}
+.cal-stat-label{font-size:9px;color:#7a9a7e;font-weight:500;}
+
+/* 범례 (필터) */
+.cal-filter-wrap{display:flex;gap:6px;padding:0 0 10px;flex-wrap:wrap;}
 .cal-filter-btn{
-  padding:5px 12px;border-radius:6px;border:0.5px solid #e2e8f0;background:white;
-  font-size:12px;color:#475569;cursor:pointer;display:flex;align-items:center;gap:5px;
-  font-family:inherit;
+  padding:5px 11px;border-radius:20px;border:0.5px solid #d4e8d8;background:#fff;
+  font-size:9.5px;font-weight:500;color:#4a6a4e;cursor:pointer;
+  display:flex;align-items:center;gap:5px;font-family:inherit;transition:all .13s;
 }
-.cal-filter-btn.cf-active{background:#1e293b;color:white;border-color:#1e293b;}
-.cal-filter-btn .cf-dot{width:8px;height:8px;border-radius:50%;}
-.cal-legend{display:flex;gap:16px;padding:12px 0;flex-wrap:wrap;font-size:12px;color:#64748b;}
-.cal-legend-item{display:flex;align-items:center;gap:4px;}
-.cal-legend-bar{width:3px;height:14px;border-radius:1px;display:inline-block;}
+.cal-filter-btn:hover{border-color:#b8d8bc;}
+.cal-filter-btn.cf-active{background:#2d7a44;color:#fff;border-color:#2d7a44;}
+.cal-filter-btn .cf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* 달력 외부 컨테이너 */
+.cal-wrap{
+  background:#f6faf7;border-radius:14px;border:0.5px solid #d4e8d8;
+  padding:10px;overflow:visible;
+}
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:3px;
+  border:none;border-radius:0;overflow:visible;font-size:11px;background:transparent;
+}
+/* 요일 헤더 */
+.cal-head{
+  background:transparent;padding:7px 0 9px;text-align:center;
+  font-size:9px;font-weight:600;letter-spacing:.07em;color:#7a9a7e;
+  border:none;text-transform:uppercase;
+}
+.cal-head.head-sun{color:#d06050;}
+.cal-head.head-sat{color:#2d7a44;}
+
+/* 날짜 셀 */
+.cal-cell{
+  position:relative;background:#fff;border-radius:9px;border:0.5px solid #dceedd;
+  min-height:90px;padding:5px 5px 4px;vertical-align:top;
+  transition:border-color .13s;overflow:hidden;
+}
+.cal-cell:hover{border-color:#b8d8bc;}
+.cal-cell.other-month{opacity:.5;}
+.cal-cell.today{background:#f0faf3;border:1.5px solid #2d7a44;}
+/* 상단 컬러 라인 */
+.cal-cell.has-field::before,
+.cal-cell.has-student::before,
+.cal-cell.has-checkinout::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.cal-cell.has-field::before{background:#7c5cbf;}
+.cal-cell.has-student::before{background:#2d7a44;}
+.cal-cell.has-checkinout::before{background:#e07880;}
+.cal-cell.has-field.has-checkinout::before{background:linear-gradient(90deg,#7c5cbf 50%,#e07880 50%);}
+
+/* 날짜 숫자 */
+.cal-date{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:21px;height:21px;border-radius:50%;
+  font-size:11px;font-weight:500;color:#2a3e2e;margin-bottom:3px;line-height:1;
+}
+.cal-date.sun{color:#d06050;}
+.cal-date.sat{color:#2d7a44;}
+.cal-cell.today .cal-date{background:#2d7a44;color:#fff!important;}
+
+/* 이벤트 칩 */
+.cal-event{
+  font-size:9px;font-weight:500;padding:2px 5px;border-radius:4px;
+  margin-bottom:2px;display:flex;align-items:center;gap:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;line-height:1.3;transition:opacity .13s;
+  border:none;
+}
+.cal-event::before{
+  content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0;display:inline-block;
+}
+.cal-event > .cal-event-txt{overflow:hidden;text-overflow:ellipsis;}
+.cal-event:hover{opacity:.78;}
+.cal-event.done{opacity:.4;text-decoration:line-through;}
+.cal-event.ev-task     {background:#e8f4ff;color:#1e4080;}
+.cal-event.ev-task::before     {background:#3b82f6;}
+.cal-event.ev-student  {background:#dcfce7;color:#166534;}
+.cal-event.ev-student::before  {background:#22c55e;}
+.cal-event.ev-field    {background:#f3e8ff;color:#6b21a8;}
+.cal-event.ev-field::before    {background:#a855f7;}
+.cal-event.ev-checkin  {background:#fce7f3;color:#9d174d;}
+.cal-event.ev-checkin::before  {background:#ec4899;}
+.cal-event.ev-checkout {background:#fff7ed;color:#9a3412;}
+.cal-event.ev-checkout::before {background:#f97316;}
+.cal-event.ev-extra    {background:#fefce8;color:#78350f;}
+.cal-event.ev-extra::before    {background:#eab308;}
+.cal-event.ev-after,.cal-event.ev-shuttle{background:#fefce8;color:#78350f;}
+.cal-event.ev-after::before,.cal-event.ev-shuttle::before{background:#eab308;}
+
+.cal-more,.cal-more-events{font-size:8px;color:#a8c8ac;cursor:pointer;padding:1px 4px;font-weight:500;}
 
 /* WEEK VIEW */
 .week-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
@@ -1293,35 +1339,39 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- CALENDAR -->
       <div id="page-calendar" class="hidden">
+        <!-- [1] 상단 헤더 -->
+        <div class="cal-toolbar">
+          <div class="cal-toolbar-left">
+            <div class="cal-title" id="calTitle"></div>
+            <div class="cal-subtitle">Dream Academy Cebu</div>
+          </div>
+          <div class="cal-toolbar-right">
+            <div class="cal-nav-group">
+              <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
+              <button class="cal-nav-btn cal-nav-today" onclick="calNav(0)">오늘</button>
+              <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+            </div>
+            <div class="view-toggle">
+              <button class="view-btn cal-vtb active" onclick="setCV('month',this)">월간</button>
+              <button class="view-btn cal-vtb" onclick="setCV('week',this)">주간</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- [2] 월별 통계 요약 바 -->
+        <div class="cal-stats-bar" id="calStatsBar"></div>
+
+        <!-- [3] 범례 (카테고리 필터) -->
         <div class="cal-filter-wrap">
           <button class="cal-filter-btn cf-active" data-filter="all" onclick="setCalFilter('all',this)">전체</button>
           <button class="cal-filter-btn" data-filter="task" onclick="setCalFilter('task',this)"><span class="cf-dot" style="background:#3b82f6"></span>업무</button>
-          <button class="cal-filter-btn" data-filter="student" onclick="setCalFilter('student',this)"><span class="cf-dot" style="background:#16a34a"></span>학생 인·아웃</button>
-          <button class="cal-filter-btn" data-filter="extra" onclick="setCalFilter('extra',this)"><span class="cf-dot" style="background:#7c3aed"></span>부가일정</button>
+          <button class="cal-filter-btn" data-filter="student" onclick="setCalFilter('student',this)"><span class="cf-dot" style="background:#22c55e"></span>학생 인·아웃</button>
+          <button class="cal-filter-btn" data-filter="field" onclick="setCalFilter('field',this)"><span class="cf-dot" style="background:#a855f7"></span>필드트립</button>
+          <button class="cal-filter-btn" data-filter="extra" onclick="setCalFilter('extra',this)"><span class="cf-dot" style="background:#eab308"></span>부가일정</button>
         </div>
-        <div class="cal-toolbar">
-          <div class="cal-nav">
-            <div class="cal-title" id="calTitle"></div>
-            <div style="display:flex;gap:4px;margin-left:12px">
-              <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-              <button class="cal-nav-btn" onclick="calNav(0)">오늘</button>
-              <button class="cal-nav-btn" onclick="calNav(1)">›</button>
-            </div>
-          </div>
-          <div class="view-toggle">
-            <button class="view-btn cal-vtb active" onclick="setCV('month',this)">월간</button>
-            <button class="view-btn cal-vtb" onclick="setCV('week',this)">주간</button>
-          </div>
-        </div>
+
+        <!-- 달력 본체 -->
         <div id="calBody"></div>
-        <div class="cal-legend">
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#3b82f6"></span>업무</span>
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#16a34a"></span>학생 체크인</span>
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#0891b2"></span>학생 체크아웃</span>
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#7c3aed"></span>애프터스쿨</span>
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#ea580c"></span>필드트립</span>
-          <span class="cal-legend-item"><span class="cal-legend-bar" style="background:#0ea5e9"></span>투어셔틀</span>
-        </div>
       </div>
 
       <!-- EMP PAGE -->
@@ -4423,7 +4473,8 @@ function _calIncludeType(type){
   if(_calFilter==='all')return true;
   if(_calFilter==='task')return type==='task';
   if(_calFilter==='student')return type==='checkin'||type==='checkout';
-  if(_calFilter==='extra')return type==='after'||type==='field'||type==='shuttle';
+  if(_calFilter==='field')return type==='field';
+  if(_calFilter==='extra')return type==='after'||type==='shuttle';
   return true;
 }
 
@@ -4470,15 +4521,64 @@ function _appendCalEvent(cell,ev){
   if(ev.type==='task'){
     const t=ev.task;
     const el=document.createElement('div');el.className='cal-event ev-task'+(t.done?' done':'');
-    el.textContent=(t.idx?'('+t.idx+') ':'')+t.title;el.title=t.title;
+    const txt=(t.idx?'('+t.idx+') ':'')+t.title;
+    const sp=document.createElement('span');sp.className='cal-event-txt';sp.textContent=txt;
+    el.appendChild(sp);el.title=t.title;
     el.onclick=function(){openTaskCmt(t.id);};
     cell.appendChild(el);
   }else{
     const cls=ev.type==='checkin'?'ev-checkin':ev.type==='checkout'?'ev-checkout':ev.type==='after'?'ev-after':ev.type==='shuttle'?'ev-shuttle':'ev-field';
     const el=document.createElement('div');el.className='cal-event '+cls;
-    el.textContent=ev.title;el.title=ev.title;
+    const sp=document.createElement('span');sp.className='cal-event-txt';sp.textContent=ev.title;
+    el.appendChild(sp);el.title=ev.title;
     cell.appendChild(el);
   }
+}
+
+// 월별 통계 계산 (현재 달의 모든 이벤트)
+function _computeMonthStats(year,month){
+  var stats={task:0,student:0,field:0,extra:0};
+  var daysInMonth=new Date(year,month,0).getDate();
+  var sharedTasks=tasks.filter(function(t){return t.shared;});
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=year+'-'+String(month).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    sharedTasks.forEach(function(t){if(t.due===ds)stats.task++;});
+    _studentEvents.forEach(function(e){
+      if(e.date===ds){
+        if(e.type==='checkin'||e.type==='checkout')stats.student++;
+      }
+    });
+    EXTRA_EVENTS.forEach(function(e){
+      if(e.date===ds){
+        if(e.type==='field')stats.field++;
+        else if(e.type==='after')stats.extra++;
+      }
+    });
+    var shuttleEvs=_shuttleEventsForMonth(year,month);
+    shuttleEvs.forEach(function(e){if(e.date===ds)stats.extra++;});
+  }
+  return stats;
+}
+
+function _renderCalStatsBar(year,month){
+  var bar=document.getElementById('calStatsBar');
+  if(!bar)return;
+  var s=_computeMonthStats(year,month);
+  var cards=[
+    {color:'#3b82f6',num:s.task,label:'업무'},
+    {color:'#22c55e',num:s.student,label:'학생 인·아웃'},
+    {color:'#a855f7',num:s.field,label:'필드트립'},
+    {color:'#eab308',num:s.extra,label:'부가일정'},
+  ];
+  bar.innerHTML=cards.map(function(c){
+    return '<div class="cal-stat-card">'+
+      '<div class="cal-stat-bar" style="background:'+c.color+'"></div>'+
+      '<div class="cal-stat-text">'+
+        '<div class="cal-stat-num">'+c.num+'</div>'+
+        '<div class="cal-stat-label">'+c.label+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
 function buildWeekSummaryCell(weekDates){
@@ -4501,37 +4601,53 @@ function buildWeekSummaryCell(weekDates){
 function renderMonthCal(){
   const y=calDate.getFullYear(),m=calDate.getMonth();
   document.getElementById('calTitle').textContent=y+'년 '+(m+1)+'월';
+  _renderCalStatsBar(y,m+1);
   const body=document.getElementById('calBody');body.innerHTML='';
   const wrap=document.createElement('div');wrap.className='cal-wrap';
   const g=document.createElement('div');g.className='cal-grid';
-  // 헤더: 빈 셀(주간요약) + 일~토
-  const wh=document.createElement('div');wh.className='cal-head-week';wh.textContent='주';g.appendChild(wh);
-  ['일','월','화','수','목','금','토'].forEach(function(d){const el=document.createElement('div');el.className='cal-head';el.textContent=d;g.appendChild(el);});
+  // 요일 헤더 (일~토, 일/토 색상 구분)
+  const dayLabels=['일','월','화','수','목','금','토'];
+  dayLabels.forEach(function(d,i){
+    const el=document.createElement('div');
+    el.className='cal-head'+(i===0?' head-sun':i===6?' head-sat':'');
+    el.textContent=d;g.appendChild(el);
+  });
   const first=new Date(y,m,1),last=new Date(y,m+1,0),today=new Date();today.setHours(0,0,0,0);
-  // 셀 모으기
+  // 셀 모으기 (다른 달 포함)
   const all=[];
   for(let i=0;i<first.getDay();i++)all.push({date:new Date(y,m,i-first.getDay()+1),cur:false});
   for(let d=1;d<=last.getDate();d++)all.push({date:new Date(y,m,d),cur:true});
   const rem=(7-(first.getDay()+last.getDate())%7)%7;
   for(let d=1;d<=rem;d++)all.push({date:new Date(y,m+1,d),cur:false});
-  // 주 단위로 렌더
-  for(let r=0;r<all.length;r+=7){
-    const weekSlice=all.slice(r,r+7);
-    const weekDs=weekSlice.map(function(x){return localDateStr(x.date);});
-    const ws=document.createElement('div');ws.innerHTML=buildWeekSummaryCell(weekDs);
-    g.appendChild(ws.firstChild);
-    weekSlice.forEach(function(item){
-      const date=item.date,isCur=item.cur,ds=localDateStr(date);
-      const cell=document.createElement('div');cell.className='cal-cell'+(!isCur?' other-month':'');
-      if(date.getTime()===today.getTime())cell.classList.add('today');
-      const dn=document.createElement('div');dn.className='cal-date';dn.textContent=date.getDate();cell.appendChild(dn);
-      const evs=_gatherEventsForDate(ds);
-      evs.slice(0,5).forEach(function(ev){_appendCalEvent(cell,ev);});
-      const extra=evs.length-5;
-      if(extra>0){const m2=document.createElement('div');m2.className='cal-more-events';m2.textContent='+'+extra+'개';cell.appendChild(m2);}
-      g.appendChild(cell);
+  // 7컬럼 그리드 (주 요약 컬럼 없음)
+  all.forEach(function(item){
+    const date=item.date,isCur=item.cur,ds=localDateStr(date),dow=date.getDay();
+    const cell=document.createElement('div');
+    cell.className='cal-cell'+(!isCur?' other-month':'');
+    if(date.getTime()===today.getTime())cell.classList.add('today');
+    // 날짜 숫자 (일/토 색상)
+    const dn=document.createElement('div');
+    dn.className='cal-date'+(dow===0?' sun':dow===6?' sat':'');
+    dn.textContent=date.getDate();cell.appendChild(dn);
+    // 이벤트
+    const evs=_gatherEventsForDate(ds);
+    // 상단 컬러 라인 클래스 (이벤트 유형별)
+    var hasField=false,hasCheckInOut=false,hasStudent=false;
+    evs.forEach(function(ev){
+      if(ev.type==='field')hasField=true;
+      else if(ev.type==='checkin'||ev.type==='checkout')hasCheckInOut=true;
     });
-  }
+    if(hasField)cell.classList.add('has-field');
+    if(hasCheckInOut)cell.classList.add('has-checkinout');
+    if(hasStudent&&!hasCheckInOut)cell.classList.add('has-student');
+    evs.slice(0,2).forEach(function(ev){_appendCalEvent(cell,ev);});
+    const extra=evs.length-2;
+    if(extra>0){
+      const m2=document.createElement('div');m2.className='cal-more-events';
+      m2.textContent='+'+extra+' 더';cell.appendChild(m2);
+    }
+    g.appendChild(cell);
+  });
   wrap.appendChild(g);body.appendChild(wrap);
 }
 function renderWeekCal(){
