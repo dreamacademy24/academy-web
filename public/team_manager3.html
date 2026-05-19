@@ -478,8 +478,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 }
 .cal-stat-bar{width:6px;height:30px;border-radius:3px;flex-shrink:0;}
 .cal-stat-text{display:flex;flex-direction:column;gap:1px;line-height:1.1;}
-.cal-stat-num{font-size:15px;font-weight:700;color:#1a2e1e;}
-.cal-stat-label{font-size:9px;color:#7a9a7e;font-weight:500;}
+.cal-stat-num{font-size:17px;font-weight:700;color:#1a2e1e;}
+.cal-stat-label{font-size:11px;color:#7a9a7e;font-weight:500;}
 
 /* 범례 (필터) */
 .cal-filter-wrap{display:flex;gap:6px;padding:0 0 10px;flex-wrap:wrap;}
@@ -504,7 +504,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 /* 요일 헤더 */
 .cal-head{
   background:transparent;padding:7px 0 9px;text-align:center;
-  font-size:9px;font-weight:600;letter-spacing:.07em;color:#7a9a7e;
+  font-size:12px;font-weight:600;letter-spacing:.07em;color:#7a9a7e;
   border:none;text-transform:uppercase;
 }
 .cal-head.head-sun{color:#d06050;}
@@ -533,8 +533,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 /* 날짜 숫자 */
 .cal-date{
   display:inline-flex;align-items:center;justify-content:center;
-  width:21px;height:21px;border-radius:50%;
-  font-size:11px;font-weight:500;color:#2a3e2e;margin-bottom:3px;line-height:1;
+  width:23px;height:23px;border-radius:50%;
+  font-size:13px;font-weight:500;color:#2a3e2e;margin-bottom:3px;line-height:1;
 }
 .cal-date.sun{color:#d06050;}
 .cal-date.sat{color:#2d7a44;}
@@ -542,14 +542,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
 /* 이벤트 칩 */
 .cal-event{
-  font-size:9px;font-weight:500;padding:2px 5px;border-radius:4px;
-  margin-bottom:2px;display:flex;align-items:center;gap:4px;
+  font-size:12px;font-weight:500;padding:3px 6px;border-radius:4px;
+  margin-bottom:2px;display:flex;align-items:center;gap:5px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   cursor:pointer;line-height:1.3;transition:opacity .13s;
   border:none;
 }
 .cal-event::before{
-  content:'';width:4px;height:4px;border-radius:50%;flex-shrink:0;display:inline-block;
+  content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0;display:inline-block;
 }
 .cal-event > .cal-event-txt{overflow:hidden;text-overflow:ellipsis;}
 .cal-event:hover{opacity:.78;}
@@ -569,7 +569,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .cal-event.ev-after,.cal-event.ev-shuttle{background:#fefce8;color:#78350f;}
 .cal-event.ev-after::before,.cal-event.ev-shuttle::before{background:#eab308;}
 
-.cal-more,.cal-more-events{font-size:8px;color:#a8c8ac;cursor:pointer;padding:1px 4px;font-weight:500;}
+.cal-more,.cal-more-events{font-size:11px;color:#a8c8ac;cursor:pointer;padding:1px 4px;font-weight:500;}
 
 /* WEEK VIEW */
 .week-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
@@ -1339,39 +1339,66 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- CALENDAR -->
       <div id="page-calendar" class="hidden">
-        <!-- [1] 상단 헤더 -->
-        <div class="cal-toolbar">
-          <div class="cal-toolbar-left">
-            <div class="cal-title" id="calTitle"></div>
-            <div class="cal-subtitle">Dream Academy Cebu</div>
+        <div style="display:flex;gap:16px;align-items:flex-start;">
+          <!-- 왼쪽 사이드패널 -->
+          <div id="calSidePanel" style="width:240px;min-width:240px;display:flex;flex-direction:column;gap:10px;position:sticky;top:70px;">
+            <!-- 월 통계 -->
+            <div style="background:white;border-radius:10px;border:0.5px solid #d4e8d8;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;color:#4a7a54;margin-bottom:10px;">📊 이번달 통계</div>
+              <div id="calSideStats" style="display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+            <!-- 휴무 일정 -->
+            <div style="background:white;border-radius:10px;border:0.5px solid #d4e8d8;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;color:#4a7a54;margin-bottom:10px;">🚫 이번달 휴무</div>
+              <div id="calSideHoliday" style="font-size:12px;color:#64748b;line-height:1.8;"></div>
+            </div>
+            <!-- 필드트립 -->
+            <div style="background:white;border-radius:10px;border:0.5px solid #d4e8d8;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;color:#4a7a54;margin-bottom:10px;">🗺️ 이번달 필드트립</div>
+              <div id="calSideFieldtrip" style="font-size:12px;color:#64748b;line-height:1.8;"></div>
+            </div>
+            <!-- 메모 -->
+            <div style="background:white;border-radius:10px;border:0.5px solid #d4e8d8;padding:14px 16px;">
+              <div style="font-size:11px;font-weight:700;color:#4a7a54;margin-bottom:8px;">📝 메모</div>
+              <div id="calSideMemos" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+              <button onclick="addCalMemo()" style="width:100%;padding:7px;background:#f0faf3;border:0.5px dashed #b8d8bc;border-radius:6px;font-size:11px;color:#4a7a54;cursor:pointer;">+ 메모 추가</button>
+            </div>
           </div>
-          <div class="cal-toolbar-right">
-            <div class="cal-nav-group">
-              <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-              <button class="cal-nav-btn cal-nav-today" onclick="calNav(0)">오늘</button>
-              <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+
+          <!-- 오른쪽 달력 본체 -->
+          <div style="flex:1;min-width:0;">
+            <!-- [1] 상단 헤더 -->
+            <div class="cal-toolbar">
+              <div class="cal-toolbar-left">
+                <div class="cal-title" id="calTitle"></div>
+                <div class="cal-subtitle">Dream Academy Cebu</div>
+              </div>
+              <div class="cal-toolbar-right">
+                <div class="cal-nav-group">
+                  <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
+                  <button class="cal-nav-btn cal-nav-today" onclick="calNav(0)">오늘</button>
+                  <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+                </div>
+                <div class="view-toggle">
+                  <button class="view-btn cal-vtb active" onclick="setCV('month',this)">월간</button>
+                  <button class="view-btn cal-vtb" onclick="setCV('week',this)">주간</button>
+                </div>
+              </div>
             </div>
-            <div class="view-toggle">
-              <button class="view-btn cal-vtb active" onclick="setCV('month',this)">월간</button>
-              <button class="view-btn cal-vtb" onclick="setCV('week',this)">주간</button>
+
+            <!-- [2] 범례 (카테고리 필터) -->
+            <div class="cal-filter-wrap">
+              <button class="cal-filter-btn cf-active" data-filter="all" onclick="setCalFilter('all',this)">전체</button>
+              <button class="cal-filter-btn" data-filter="task" onclick="setCalFilter('task',this)"><span class="cf-dot" style="background:#3b82f6"></span>업무</button>
+              <button class="cal-filter-btn" data-filter="student" onclick="setCalFilter('student',this)"><span class="cf-dot" style="background:#22c55e"></span>학생 인·아웃</button>
+              <button class="cal-filter-btn" data-filter="field" onclick="setCalFilter('field',this)"><span class="cf-dot" style="background:#a855f7"></span>필드트립</button>
+              <button class="cal-filter-btn" data-filter="extra" onclick="setCalFilter('extra',this)"><span class="cf-dot" style="background:#eab308"></span>부가일정</button>
             </div>
+
+            <!-- 달력 본체 -->
+            <div id="calBody"></div>
           </div>
         </div>
-
-        <!-- [2] 월별 통계 요약 바 -->
-        <div class="cal-stats-bar" id="calStatsBar"></div>
-
-        <!-- [3] 범례 (카테고리 필터) -->
-        <div class="cal-filter-wrap">
-          <button class="cal-filter-btn cf-active" data-filter="all" onclick="setCalFilter('all',this)">전체</button>
-          <button class="cal-filter-btn" data-filter="task" onclick="setCalFilter('task',this)"><span class="cf-dot" style="background:#3b82f6"></span>업무</button>
-          <button class="cal-filter-btn" data-filter="student" onclick="setCalFilter('student',this)"><span class="cf-dot" style="background:#22c55e"></span>학생 인·아웃</button>
-          <button class="cal-filter-btn" data-filter="field" onclick="setCalFilter('field',this)"><span class="cf-dot" style="background:#a855f7"></span>필드트립</button>
-          <button class="cal-filter-btn" data-filter="extra" onclick="setCalFilter('extra',this)"><span class="cf-dot" style="background:#eab308"></span>부가일정</button>
-        </div>
-
-        <!-- 달력 본체 -->
-        <div id="calBody"></div>
       </div>
 
       <!-- EMP PAGE -->
@@ -4561,24 +4588,115 @@ function _computeMonthStats(year,month){
 }
 
 function _renderCalStatsBar(year,month){
+  // 상단 통계바는 사이드패널로 이전됨 (호환 위해 빈 함수 유지)
   var bar=document.getElementById('calStatsBar');
-  if(!bar)return;
-  var s=_computeMonthStats(year,month);
-  var cards=[
-    {color:'#3b82f6',num:s.task,label:'업무'},
-    {color:'#22c55e',num:s.student,label:'학생 인·아웃'},
-    {color:'#a855f7',num:s.field,label:'필드트립'},
-    {color:'#eab308',num:s.extra,label:'부가일정'},
-  ];
-  bar.innerHTML=cards.map(function(c){
-    return '<div class="cal-stat-card">'+
-      '<div class="cal-stat-bar" style="background:'+c.color+'"></div>'+
-      '<div class="cal-stat-text">'+
-        '<div class="cal-stat-num">'+c.num+'</div>'+
-        '<div class="cal-stat-label">'+c.label+'</div>'+
-      '</div>'+
+  if(bar)bar.innerHTML='';
+}
+
+// 휴무 데이터 (이번달 휴무 사이드패널)
+const CAL_HOLIDAYS={
+  '2026-05-01':'노동절',
+  '2026-05-29':'국경일',
+  '2026-06-12':'독립기념일',
+  '2026-08-09':'아이언맨 (셔틀없음)',
+  '2026-10-30':'휴무',
+  '2026-11-27':'휴무',
+  '2026-12-24':'연말방학 시작',
+};
+
+// 메모 저장소 (localStorage)
+let _calMemos=[];
+try{_calMemos=JSON.parse(localStorage.getItem('cal_memos')||'[]');}catch(e){_calMemos=[];}
+
+function updateCalSidePanel(year,month){
+  const mm=String(month).padStart(2,'0');
+  const prefix=year+'-'+mm;
+
+  // 통계
+  const stats=document.getElementById('calSideStats');
+  if(stats){
+    const allEvs=[];
+    const daysInMonth=new Date(year,month,0).getDate();
+    for(let d=1;d<=daysInMonth;d++){
+      const ds=prefix+'-'+String(d).padStart(2,'0');
+      (typeof _gatherEventsForDate==='function'?_gatherEventsForDate(ds):[]).forEach(function(e){allEvs.push(e);});
+    }
+    const counts={task:0,checkin:0,checkout:0,field:0,after:0,shuttle:0};
+    allEvs.forEach(function(e){if(counts[e.type]!==undefined)counts[e.type]++;});
+    stats.innerHTML=[
+      {label:'업무',count:counts.task,color:'#3b82f6'},
+      {label:'체크인',count:counts.checkin,color:'#22c55e'},
+      {label:'체크아웃',count:counts.checkout,color:'#f97316'},
+      {label:'필드트립',count:counts.field,color:'#a855f7'},
+    ].map(function(s){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;">'+
+        '<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#475569;">'+
+          '<span style="width:8px;height:8px;border-radius:50%;background:'+s.color+';"></span>'+
+          s.label+
+        '</span>'+
+        '<span style="font-size:13px;font-weight:700;color:#1e293b;">'+s.count+'</span>'+
+      '</div>';
+    }).join('');
+  }
+
+  // 휴무
+  const holidayEl=document.getElementById('calSideHoliday');
+  if(holidayEl){
+    const thisMonthHolidays=Object.entries(CAL_HOLIDAYS)
+      .filter(function(e){return e[0].startsWith(prefix);})
+      .map(function(e){
+        const day=parseInt(e[0].split('-')[2],10);
+        return '<div style="display:flex;justify-content:space-between;">'+
+          '<span style="color:#ef4444;">'+month+'/'+day+'</span>'+
+          '<span>'+e[1]+'</span>'+
+        '</div>';
+      }).join('');
+    holidayEl.innerHTML=thisMonthHolidays||'<span style="color:#cbd5e1;">이번달 휴무 없음</span>';
+  }
+
+  // 필드트립
+  const ftEl=document.getElementById('calSideFieldtrip');
+  if(ftEl){
+    const ftEvents=(typeof EXTRA_EVENTS!=='undefined'?EXTRA_EVENTS:[])
+      .filter(function(e){return e.type==='field'&&e.date.startsWith(prefix);})
+      .map(function(e){
+        const day=parseInt(e.date.split('-')[2],10);
+        return '<div style="display:flex;justify-content:space-between;">'+
+          '<span style="color:#a855f7;">'+month+'/'+day+'</span>'+
+          '<span>'+e.title.replace('필드트립 ','')+'</span>'+
+        '</div>';
+      }).join('');
+    ftEl.innerHTML=ftEvents||'<span style="color:#cbd5e1;">이번달 필드트립 없음</span>';
+  }
+
+  // 메모
+  renderCalMemos();
+}
+
+function renderCalMemos(){
+  const el=document.getElementById('calSideMemos');
+  if(!el)return;
+  el.innerHTML=_calMemos.map(function(m,i){
+    return '<div style="background:#f8fafc;border-radius:6px;padding:7px 10px;font-size:12px;color:#334155;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">'+
+      '<span style="flex:1;line-height:1.5;word-break:break-word;">'+esc(m)+'</span>'+
+      '<button onclick="deleteCalMemo('+i+')" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;">×</button>'+
     '</div>';
   }).join('');
+}
+
+function addCalMemo(){
+  const text=prompt('메모를 입력하세요:');
+  if(text&&text.trim()){
+    _calMemos.push(text.trim());
+    localStorage.setItem('cal_memos',JSON.stringify(_calMemos));
+    renderCalMemos();
+  }
+}
+
+function deleteCalMemo(idx){
+  _calMemos.splice(idx,1);
+  localStorage.setItem('cal_memos',JSON.stringify(_calMemos));
+  renderCalMemos();
 }
 
 function buildWeekSummaryCell(weekDates){
@@ -4602,6 +4720,7 @@ function renderMonthCal(){
   const y=calDate.getFullYear(),m=calDate.getMonth();
   document.getElementById('calTitle').textContent=y+'년 '+(m+1)+'월';
   _renderCalStatsBar(y,m+1);
+  updateCalSidePanel(y,m+1);
   const body=document.getElementById('calBody');body.innerHTML='';
   const wrap=document.createElement('div');wrap.className='cal-wrap';
   const g=document.createElement('div');g.className='cal-grid';
@@ -4657,6 +4776,7 @@ function renderWeekCal(){
   const m1=days[0].getMonth()+1,m2=days[6].getMonth()+1,y=days[0].getFullYear();
   const calTitleText=m1===m2?y+'년 '+m1+'월 '+days[0].getDate()+'~'+days[6].getDate()+'일':y+'년 '+m1+'월 '+days[0].getDate()+'~'+m2+'월 '+days[6].getDate()+'일';
   document.getElementById('calTitle').textContent=calTitleText;
+  updateCalSidePanel(y,m1);
   const body=document.getElementById('calBody');body.innerHTML='';
   const today=new Date();today.setHours(0,0,0,0);const vis=calVis();
   const wrap=document.createElement('div');wrap.className='week-wrap';
