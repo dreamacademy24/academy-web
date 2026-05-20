@@ -74,6 +74,7 @@ export async function POST(req: Request) {
 
     // tutor_applications 에도 저장 — 어드민 튜터 수신함 유입용 (실패해도 포털 신청은 성공 처리)
     const appRow: Record<string, unknown> = {
+      booking_id: booking_id || null,
       house_or_reserver: body.house_number || guest_name || null,
       children_names: [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ') || null,
       children_ages: body.student_age || null,

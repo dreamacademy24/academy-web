@@ -22,6 +22,37 @@ const ST: Record<string, { label: string; bg: string; color: string }> = {
   cancelled: { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
 };
 
+interface InvSession { id: string; session_idx: number; session_date: string; session_time: string | null; status: string }
+interface InvLesson {
+  id: string;
+  student_names: string | null;
+  tutor_name: string | null;
+  class_type: string | null;
+  class_time: string | null;
+  confirmed_time: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  class_days: string[] | null;
+  total_sessions: number | null;
+  total_amount: number | null;
+  sessions: InvSession[];
+}
+
+const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
+const SESS_ST: Record<string, { label: string; bg: string; color: string }> = {
+  scheduled:            { label: "예정",    bg: "#f1f5f9", color: "#64748b" },
+  attended:             { label: "✅ 출석", bg: "#dcfce7", color: "#166534" },
+  no_show:              { label: "노쇼",    bg: "#fee2e2", color: "#b91c1c" },
+  cancelled:            { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
+  cancelled_by_student: { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
+  cancelled_by_tutor:   { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
+  rescheduled:          { label: "재조정",  bg: "#fef3c7", color: "#92400e" },
+};
+function daysKr(arr: string[] | null): string {
+  if (!Array.isArray(arr) || arr.length === 0) return "-";
+  return arr.map(d => DAY_KR[d] || d).join(", ");
+}
+
 const INIT_FORM = {
   house_number: "", student_name_kr: "", student_name_en: "", student_age: "",
   class_type: "", start_date: "", end_date: "",
@@ -40,6 +71,8 @@ export default function PortalTutorPage() {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
+  const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -57,8 +90,18 @@ export default function PortalTutorPage() {
     (async () => {
       const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
       if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
+      const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
+      if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
     })();
   }, [session]);
+
+  function toggleInv(id: string) {
+    setExpandedInv(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
 
   async function reload() {
     if (!session) return;
@@ -147,6 +190,57 @@ export default function PortalTutorPage() {
     <div className="tu-w">
       <button className="tu-back" onClick={() => router.push("/portal/dashboard")}>← 대시보드로</button>
       <div className="tu-head"><h1>👩‍🏫 튜터 수업 신청</h1><p>{session.guest_name}님 · 원어민 1:1 또는 1:2 수업</p></div>
+
+      {invLessons.length > 0 && (
+        <div className="sec">
+          <h2>✅ 확정된 수업 ({invLessons.length}건)</h2>
+          {invLessons.map(l => {
+            const expanded = expandedInv.has(l.id);
+            return (
+              <div key={l.id} className="card" style={{ background: "#fff", borderColor: "#bbf7d0" }}>
+                <div className="card-top">
+                  <div className="card-title">{l.student_names || "-"}</div>
+                  <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>확정</span>
+                </div>
+                <div className="info">
+                  <div><span className="k">담당 선생님:</span>{l.tutor_name || "미배정"}</div>
+                  <div><span className="k">수업 유형:</span>{l.class_type || "-"}</div>
+                  <div><span className="k">수업 시간:</span>{l.confirmed_time || l.class_time || "-"}</div>
+                  <div><span className="k">기간:</span>{l.start_date || "-"} ~ {l.end_date || "-"}</div>
+                  <div><span className="k">요일:</span>{daysKr(l.class_days)}</div>
+                  <div>
+                    <span className="k">총 회차:</span>{l.total_sessions != null ? `${l.total_sessions}회` : "-"}
+                    <span className="k" style={{ marginLeft: 10 }}>확정 금액:</span>
+                    {l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}
+                  </div>
+                </div>
+                {l.sessions.length > 0 && (
+                  <button
+                    className="cancel"
+                    style={{ marginTop: 8, background: "#eff6ff", borderColor: "#bfdbfe", color: "#1a6fc4" }}
+                    onClick={() => toggleInv(l.id)}
+                  >
+                    {expanded ? "세션 목록 접기 ▲" : `세션 목록 보기 (${l.sessions.length}) ▼`}
+                  </button>
+                )}
+                {expanded && (
+                  <div style={{ marginTop: 8, borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
+                    {l.sessions.map(s => {
+                      const st = SESS_ST[s.status] || SESS_ST.scheduled;
+                      return (
+                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 2px", fontSize: 12 }}>
+                          <span style={{ color: "#475569" }}>{s.session_idx}회차 · {s.session_date}{s.session_time ? ` ${s.session_time}` : ""}</span>
+                          <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {done ? (
         <div className="done-box">
