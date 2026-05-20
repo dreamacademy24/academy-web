@@ -64,6 +64,15 @@ function getNextMonday(dateStr:string):string{
   d.setDate(d.getDate()+offset);
   return d.toISOString().slice(0,10);
 }
+// 금요일 또는 직전 금요일 (checkout_date 기준 아카데미 종료일)
+function getLastFriday(dateStr:string):string{
+  if(!dateStr)return"";
+  const d=new Date(dateStr.split("T")[0]);
+  if(isNaN(d.getTime()))return"";
+  const dow=d.getDay(); // 0=일 ... 5=금 6=토
+  d.setDate(d.getDate()-((dow+2)%7)); // Fri→0, Sat→1, Sun→2, Mon→3, Tue→4, Wed→5, Thu→6
+  return d.toISOString().slice(0,10);
+}
 // 달력용 helper: timezone-safe YYYY-MM-DD
 function calYmd(d:Date):string{
   const y=d.getFullYear();
@@ -244,7 +253,7 @@ export default function AdminBookingsPage(){
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   // 수업 시작일 = student JSONB academyStart → 없으면 체크인 다음 월요일
-  // 수업 종료일 = 시작 월요일 + 주수*7-3 (금요일, 어드민 상세 calcAcademyEnd와 동일 공식)
+  // 수업 종료일 = checkout_date의 금요일 또는 직전 금요일 (주수 미사용)
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
     let arr:Record<string,string>[]=[];
     try{
@@ -255,10 +264,8 @@ export default function AdminBookingsPage(){
     return arr.map((s,i)=>{
       // 수업 시작일: student JSON academyStart → 없으면 체크인 다음 월요일
       const academyStart=s.academyStart||s.academy_start||getNextMonday(b.checkin_date||"");
-      // weeks: booking.accom_weeks → student.academyWeeks → student.accom_weeks → 기본 4
-      const weeks=Number(b.accom_weeks)||Number(s.academyWeeks)||Number(s.accom_weeks)||4;
-      // 수업 종료일 = 시작 + 주수*7-3 = 금요일 (calcAcademyEnd: start+(w-1)*7+4 와 동일)
-      const academyEnd=calcAcademyEnd(academyStart,weeks);
+      // 수업 종료일: checkout_date의 금요일 또는 직전 금요일
+      const academyEnd=getLastFriday(b.checkout_date||"");
       return{
         key:b.id+"_"+i,
         booking_id:b.id,
