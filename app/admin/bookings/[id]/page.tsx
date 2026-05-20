@@ -428,7 +428,7 @@ export default function BookingDetailPage() {
     <div className="mv-w">
       <button className="mv-back" onClick={() => router.push("/admin/bookings")}>← 예약 목록으로</button>
 
-      <div style={{ fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 4 }}>📋 예약 상세</div>
+      <div style={{ fontSize: 22, color: "#1a6fc4", fontWeight: 700, marginBottom: 8 }}>📋 예약 상세</div>
 
       <div className="mv-head">
         <h1>{b.booker_name || b.reservation_no || "예약 상세"}</h1>
