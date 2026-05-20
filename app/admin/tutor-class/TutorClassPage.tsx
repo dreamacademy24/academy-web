@@ -46,6 +46,12 @@ export default function TutorClassPage() {
         <button className="tc-back" onClick={() => router.push("/admin/hub")} aria-label="뒤로">←</button>
         <h1>🎓 튜터 수업 관리</h1>
         <span className="sub">드림하우스 방문 튜터 통합</span>
+        <button
+          onClick={() => router.push("/admin/tutor-my-schedule")}
+          style={{ padding: "7px 12px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}
+        >
+          👩‍🏫 My Schedule (Tutor View) →
+        </button>
       </div>
 
       <div className="tc-tabs" role="tablist">
