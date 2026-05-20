@@ -282,36 +282,26 @@ export default function AdminBookingsPage(){
             :(bStartIsMonday
                 ?bAcademyStart
                 :(b.checkin_date?getNextMonday(b.checkin_date):(bAcademyStart||sStart||""))));
-      // booking-level accom_weeks 우선, 부재 시 student-level 폴백
-      const weeks=bookingWeeks||Number(s.academyWeeks)||0;
-      // 종료일 우선순위 (per-student JSONB 최우선 — 학생별 수동 입력값 보존):
-      //  - 학생 JSONB academyEnd → 통학형 checkout → booking.academy_end → calc → 폴백
+      // weeks 우선순위: booking.accom_weeks → student.academyWeeks → 기본 4
+      const weeks=bookingWeeks||Number(s.academyWeeks)||4;
       const sEnd=s.academyEnd||s.academy_end||"";
-      // 비통학형: sEnd가 평일(Mon-Fri)일 때만 신뢰 (주말 = 체크아웃 날짜 stale 가능성)
-      const sEndIsValid=(()=>{
-        if(!sEnd) return false;
-        const d=new Date(sEnd+'T00:00:00');
-        if(isNaN(d.getTime())) return false;
-        const day=d.getDay();
-        return day>=1&&day<=5;
-      })();
-      const sEndToUse=isCommute?sEnd:(sEndIsValid?sEnd:"");
+      // 종료일 계산:
+      //  - 통학형: 수동 입력 종료일(학생/booking academy_end) 또는 체크아웃 신뢰
+      //  - 비통학형: 저장된 종료일은 stale 가능 → academyStart + weeks 로 항상 재계산
       let computedEnd:string;
-      if(sEndToUse){
-        computedEnd=sEndToUse;
-      }else if(isCommute&&checkoutDate){
-        computedEnd=checkoutDate;
-      }else if(bAcademyEnd){
-        computedEnd=bAcademyEnd;
-      }else if(academyStart&&weeks>0){
-        computedEnd=calcAcademyEnd(academyStart,weeks);
+      if(isCommute){
+        computedEnd=sEnd||bAcademyEnd||checkoutDate||"";
+        if(!sEnd&&!bAcademyEnd&&!checkoutDate){
+          console.warn('[통학형 end fallback] booking:',b.id,'accom_weeks:',bookingWeeks,'academyStart:',academyStart);
+        }
       }else{
-        computedEnd=s.academyEnd||s.academy_end||"";
+        computedEnd=academyStart?calcAcademyEnd(academyStart,weeks):(bAcademyEnd||sEnd||"");
       }
-      if(isCommute&&!bAcademyEnd&&!checkoutDate){
-        console.warn('[통학형 end fallback] booking:',b.id,'accom_weeks:',bookingWeeks,'academyStart:',academyStart);
+      const computedWeeks=String(weeks);
+      // 검증 로그 (임태양/임세아 케이스 확인용)
+      if((s.korName||"").includes("태양")||(s.korName||"").includes("세아")||(s.name||"").includes("태양")||(s.name||"").includes("세아")){
+        console.log("[달력 검증]",s.korName||s.name,{checkin:b.checkin_date,accom_weeks:b.accom_weeks,academyStart,academyEnd:computedEnd,weeks});
       }
-      const computedWeeks=weeks>0?String(weeks):(s.academyWeeks||"");
       return{
         key:b.id+"_"+i,
         booking_id:b.id,
