@@ -243,8 +243,8 @@ export default function AdminBookingsPage(){
   const [expandedSr,setExpandedSr]=useState<Set<string>>(new Set());
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
-  // ⚠️ 종료일/기간: stored s.academyEnd는 stale 가능 (예: 8주짜리가 4/17로 잘못 저장됨)
-  //    → calc(academyStart, booking.accom_weeks)를 우선 사용. 폴백은 calc 불가능할 때만.
+  // 수업 시작일 = student JSONB academyStart → 없으면 체크인 다음 월요일
+  // 수업 종료일 = booking.checkout_date (모든 예약 유형 동일)
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
     let arr:Record<string,string>[]=[];
     try{
@@ -252,56 +252,13 @@ export default function AdminBookingsPage(){
       if(Array.isArray(parsed)) arr=parsed;
     }catch{return[];}
     if(arr.length===0) return [];
-    const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
-    const bookingWeeks=Number(b.accom_weeks)||0;  // booking-level 신뢰 가능
     // timestamp(예: "2026-05-22T00:00:00") 들어와도 dStr 매칭되도록 날짜만 추출
     const checkoutDate=(b.checkout_date||"").split("T")[0];
-    const bAcademyStart=(b.academy_start||"").split("T")[0];
-    const bAcademyEnd=(b.academy_end||"").split("T")[0];
     return arr.map((s,i)=>{
-      // 우선순위 (per-student JSONB 최우선 — 학생별 수동 입력값 보존):
-      //  - 학생 JSONB academyStart/academy_start
-      //  - 통학형: booking 수동 academy_start → checkin
-      //  - 비통학형: booking 수동 academy_start → checkin 기반 다음 월요일 derive
-      const sStart=s.academyStart||s.academy_start||"";
-      // 비통학형: sStart가 실제 월요일일 때만 신뢰 (옛 데이터에 체크인 그대로 들어간 케이스 필터링)
-      const sStartIsMonday=(()=>{
-        if(!sStart) return false;
-        const d=new Date(sStart+'T00:00:00');
-        return !isNaN(d.getTime())&&d.getDay()===1;
-      })();
-      const bStartIsMonday=(()=>{
-        if(!bAcademyStart) return false;
-        const d=new Date(bAcademyStart+'T00:00:00');
-        return !isNaN(d.getTime())&&d.getDay()===1;
-      })();
-      const academyStart=isCommute
-        ?(sStart||bAcademyStart||b.checkin_date||"")
-        :(sStartIsMonday
-            ?sStart
-            :(bStartIsMonday
-                ?bAcademyStart
-                :(b.checkin_date?getNextMonday(b.checkin_date):(bAcademyStart||sStart||""))));
-      // weeks 우선순위: booking.accom_weeks → student.academyWeeks → 기본 4
-      const weeks=bookingWeeks||Number(s.academyWeeks)||4;
-      const sEnd=s.academyEnd||s.academy_end||"";
-      // 종료일 계산:
-      //  - 통학형: 수동 입력 종료일(학생/booking academy_end) 또는 체크아웃 신뢰
-      //  - 비통학형: 저장된 종료일은 stale 가능 → academyStart + weeks 로 항상 재계산
-      let computedEnd:string;
-      if(isCommute){
-        computedEnd=sEnd||bAcademyEnd||checkoutDate||"";
-        if(!sEnd&&!bAcademyEnd&&!checkoutDate){
-          console.warn('[통학형 end fallback] booking:',b.id,'accom_weeks:',bookingWeeks,'academyStart:',academyStart);
-        }
-      }else{
-        computedEnd=academyStart?calcAcademyEnd(academyStart,weeks):(bAcademyEnd||sEnd||"");
-      }
-      const computedWeeks=String(weeks);
-      // 검증 로그 (임태양/임세아 케이스 확인용)
-      if((s.korName||"").includes("태양")||(s.korName||"").includes("세아")||(s.name||"").includes("태양")||(s.name||"").includes("세아")){
-        console.log("[달력 검증]",s.korName||s.name,{checkin:b.checkin_date,accom_weeks:b.accom_weeks,academyStart,academyEnd:computedEnd,weeks});
-      }
+      // 수업 시작일: student JSON academyStart → 없으면 체크인 다음 월요일
+      const academyStart=s.academyStart||s.academy_start||getNextMonday(b.checkin_date||"");
+      // 수업 종료일: 무조건 checkout_date (모든 예약 유형 동일)
+      const academyEnd=checkoutDate;
       return{
         key:b.id+"_"+i,
         booking_id:b.id,
@@ -324,8 +281,8 @@ export default function AdminBookingsPage(){
         // grade: 한글 라벨로 정규화. s.grade(킨더/주니어) 우선, 없으면 s.level(kinder/junior) 변환
         grade:s.grade||(s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""),
         academyStart,
-        academyEnd:computedEnd,
-        academyWeeks:computedWeeks,
+        academyEnd,
+        academyWeeks:s.academyWeeks||"",
         photo:s.photo||"",
       };
     });
