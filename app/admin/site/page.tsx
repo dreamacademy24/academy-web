@@ -60,11 +60,22 @@ interface FieldtripApp {
   status: string;
 }
 
+interface StaffAccount {
+  id: string;
+  username: string;
+  role: string;
+  name: string;
+  is_active: boolean;
+  color: string;
+  initial: string;
+  created_at: string;
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [tab, setTab] = useState<"notices" | "shuttle" | "fieldtrip" | "members">("notices");
+  const [tab, setTab] = useState<"staff" | "notices" | "shuttle" | "fieldtrip" | "members">("notices");
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -90,6 +101,13 @@ export default function AdminPage() {
   // fieldtrip
   const [fieldtripApps, setFieldtripApps] = useState<FieldtripApp[]>([]);
   const [fieldtripLoading, setFieldtripLoading] = useState(false);
+
+  // staff accounts
+  const [staffList, setStaffList] = useState<StaffAccount[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [staffForm, setStaffForm] = useState({ name: "", username: "", password: "", role: "korean_admin", color: "#6366f1", initial: "" });
 
   async function fetchNotices() {
     setNoticeLoading(true);
@@ -125,6 +143,56 @@ export default function AdminPage() {
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", id);
     if (error) alert("상태 변경 실패: " + error.message);
     else await fetchFieldtripApps();
+  }
+
+  async function fetchStaff() {
+    setStaffLoading(true);
+    try {
+      const res = await fetch("/api/admin/staff-accounts");
+      if (res.ok) { const j = await res.json(); setStaffList(j.staff || []); }
+    } catch {}
+    setStaffLoading(false);
+  }
+
+  async function toggleStaffActive(s: StaffAccount) {
+    const res = await fetch("/api/admin/staff-accounts", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: s.username, action: s.is_active ? "deactivate" : "activate" }),
+    });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); alert("실패: " + (j.error || res.status)); return; }
+    await fetchStaff();
+  }
+
+  async function resetStaffPassword(s: StaffAccount) {
+    const newPassword = window.prompt(`${s.name} (${s.username})의 새 비밀번호를 입력하세요:`);
+    if (!newPassword || !newPassword.trim()) return;
+    const res = await fetch("/api/admin/staff-accounts", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: s.username, action: "reset_password", newPassword: newPassword.trim() }),
+    });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); alert("실패: " + (j.error || res.status)); return; }
+    alert("비밀번호가 재설정되었습니다.");
+  }
+
+  async function addStaff() {
+    if (!staffForm.name.trim() || !staffForm.username.trim() || !staffForm.password.trim()) {
+      alert("이름, username, 비밀번호는 필수입니다.");
+      return;
+    }
+    setStaffSaving(true);
+    const res = await fetch("/api/admin/staff-accounts", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(staffForm),
+    });
+    setStaffSaving(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      alert(res.status === 409 ? "이미 존재하는 username입니다." : "추가 실패: " + (j.error || res.status));
+      return;
+    }
+    setShowStaffModal(false);
+    setStaffForm({ name: "", username: "", password: "", role: "korean_admin", color: "#6366f1", initial: "" });
+    await fetchStaff();
   }
 
   async function fetchMembers() {
@@ -174,6 +242,7 @@ export default function AdminPage() {
       fetchMembers();
       fetchShuttleApps();
       fetchFieldtripApps();
+      fetchStaff();
     }
   }, [authed]);
 
@@ -377,6 +446,9 @@ export default function AdminPage() {
       <div className="admin-body">
         {/* TABS */}
         <div className="tabs">
+          <button className={`tab-btn${tab === "staff" ? " active" : ""}`} onClick={() => setTab("staff")}>
+            👥 직원 관리
+          </button>
           <button className={`tab-btn${tab === "notices" ? " active" : ""}`} onClick={() => setTab("notices")}>
             📋 공지사항 관리
           </button>
@@ -387,6 +459,93 @@ export default function AdminPage() {
             👥 회원
           </button>
         </div>
+
+        {/* STAFF TAB */}
+        {tab === "staff" && (
+          <>
+            <div className="list-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <h2 style={{ margin: 0 }}>👥 직원 계정 관리 ({staffList.length})</h2>
+                <button onClick={() => setShowStaffModal(true)} style={{ padding: "8px 16px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>+ 직원 추가</button>
+              </div>
+              {staffLoading ? (
+                <div className="loading-msg">불러오는 중...</div>
+              ) : (
+                [
+                  { role: "korean_admin", label: "한국인 직원" },
+                  { role: "local_teacher", label: "현지 티쳐" },
+                ].map((grp) => {
+                  const rows = staffList.filter((s) => s.role === grp.role);
+                  return (
+                    <div key={grp.role} style={{ marginBottom: 22 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#1a6fc4", marginBottom: 8 }}>{grp.label} ({rows.length})</div>
+                      {rows.length === 0 ? (
+                        <div className="empty-msg">해당 직원이 없습니다.</div>
+                      ) : rows.map((s) => (
+                        <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10, marginBottom: 6, opacity: s.is_active ? 1 : 0.45, background: s.is_active ? "#fff" : "#f8fafc", flexWrap: "wrap" }}>
+                          <div style={{ width: 34, height: 34, borderRadius: "50%", background: s.color || "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, flexShrink: 0 }}>{s.initial || "?"}</div>
+                          <div style={{ flex: 1, minWidth: 120 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{s.name}</div>
+                            <div style={{ fontSize: 12, color: "#94a3b8" }}>{s.username}</div>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: s.role === "korean_admin" ? "#eff6ff" : "#f0fdf4", color: s.role === "korean_admin" ? "#1a6fc4" : "#166534" }}>{grp.label}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: s.is_active ? "#dcfce7" : "#fee2e2", color: s.is_active ? "#166534" : "#b91c1c" }}>{s.is_active ? "활성" : "비활성"}</span>
+                          <button onClick={() => toggleStaffActive(s)} style={{ padding: "6px 10px", fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", borderRadius: 7, background: "#fff", cursor: "pointer", fontFamily: "inherit", color: s.is_active ? "#b91c1c" : "#166534" }}>{s.is_active ? "비활성화" : "활성화"}</button>
+                          <button onClick={() => resetStaffPassword(s)} style={{ padding: "6px 10px", fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", borderRadius: 7, background: "#fff", cursor: "pointer", fontFamily: "inherit", color: "#6b7280" }}>비번재설정</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            {showStaffModal && (
+              <div onClick={() => setShowStaffModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20 }}>
+                <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 28, maxWidth: 420, width: "100%", maxHeight: "85vh", overflowY: "auto" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>+ 직원 추가</h3>
+                    <button onClick={() => setShowStaffModal(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94a3b8" }}>×</button>
+                  </div>
+                  {([
+                    { k: "name", label: "이름", ph: "Jamie" },
+                    { k: "username", label: "username", ph: "admin-jamie" },
+                    { k: "password", label: "비밀번호", ph: "초기 비밀번호" },
+                    { k: "initial", label: "이니셜", ph: "JA" },
+                  ] as const).map((f) => (
+                    <div key={f.k} style={{ marginBottom: 10 }}>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 4 }}>{f.label}</label>
+                      <input
+                        value={staffForm[f.k]}
+                        onChange={(e) => setStaffForm({ ...staffForm, [f.k]: e.target.value })}
+                        placeholder={f.ph}
+                        style={{ width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 4 }}>역할</label>
+                    <select
+                      value={staffForm.role}
+                      onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", fontFamily: "inherit", background: "#fff" }}
+                    >
+                      <option value="korean_admin">한국인 직원</option>
+                      <option value="local_teacher">현지 티쳐</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 18 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#6b7280", marginBottom: 4 }}>색상</label>
+                    <input type="color" value={staffForm.color} onChange={(e) => setStaffForm({ ...staffForm, color: e.target.value })} style={{ width: 56, height: 36, border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", padding: 2 }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                    <button onClick={() => setShowStaffModal(false)} style={{ padding: "8px 18px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700, color: "#6b7280", fontFamily: "inherit" }}>취소</button>
+                    <button onClick={addStaff} disabled={staffSaving} style={{ padding: "8px 18px", background: staffSaving ? "#94a3b8" : "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, cursor: staffSaving ? "default" : "pointer", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>{staffSaving ? "추가 중..." : "추가"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* NOTICES TAB */}
         {tab === "notices" && (

@@ -3320,7 +3320,8 @@ function showSyncBadge(){
   setTimeout(function(){if(b.parentNode){b.style.transition='opacity 0.5s';b.style.opacity='0';setTimeout(function(){if(b.parentNode)b.remove();},500);}},3000);
 }
 
-const EMPS=[
+// 하드코딩 직원 명단 — staff_accounts API 동적 로딩 실패 시 폴백으로 사용
+let EMPS=[
   {id:'jamie',name:'Jamie', color:'#0ea5e9',initial:'JA'},
   {id:'hanny',name:'Hanny', color:'#f59e0b',initial:'H'},
   {id:'sage', name:'Sage',  color:'#10b981',initial:'S'},
@@ -3329,8 +3330,29 @@ const EMPS=[
   {id:'candice',name:'Candice', color:'#14b8a6',initial:'CA'},
   {id:'judy',name:'Judy', color:'#8b5cf6',initial:'JD'},
 ];
-const CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
-const ALL=[...EMPS,CEO];
+let CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
+let ALL=[...EMPS,CEO];
+// staff_accounts(korean_admin·활성) 동적 로딩 — username 'admin-' 제거해 id 생성, 실패 시 하드코딩 폴백
+function loadStaffAccounts(){
+  var timeout=new Promise(function(res){setTimeout(res,6000);});
+  var fetchP=fetch('/api/admin/staff-accounts?role=korean_admin&active=true')
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(d){
+      var staff=(d&&d.staff)||[];
+      if(!staff.length)throw new Error('staff empty');
+      var emps=[],ceo=null;
+      staff.forEach(function(s){
+        var id=String(s.username||'').replace(/^admin-/,'');
+        if(s.username==='admin-ceo')ceo={id:id,name:s.name,color:s.color||'#1e3a5f',initial:s.initial||'C',role:'대표'};
+        else emps.push({id:id,name:s.name,color:s.color||'#6366f1',initial:s.initial||'?'});
+      });
+      if(emps.length)EMPS=emps;
+      if(ceo)CEO=ceo;
+      ALL=EMPS.concat([CEO]);
+    })
+    .catch(function(e){console.warn('[staff-accounts] 동적 로딩 실패 — 하드코딩 폴백:',e&&e.message||e);});
+  return Promise.race([fetchP,timeout]);
+}
 function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='jamie');}
 function getP(id){return ALL.find(e=>e.id===id);}
 
@@ -8337,25 +8359,37 @@ window.addEventListener('DOMContentLoaded', function(){
     togSubtaskMode();
   });
 
-  // iframe 내부에서 ?user= 파라미터로 자동 로그인 (부모가 adminAuth 검증 완료)
-  var inIframe=false;try{inIframe=window.self!==window.top;}catch(e){inIframe=true;}
-  if(inIframe){
-    var params=new URLSearchParams(window.location.search);
-    var autoUser=params.get('user');
-    if(autoUser){
-      var au=ALL.find(function(e){return e.id===autoUser;});
-      if(au){doLogin(au);return;}
+  // 직원 계정 동적 로딩 화면 — fetch 완료 후 앱 초기화
+  var _ld=document.createElement('div');
+  _ld.id='_staffLoadingScreen';
+  _ld.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Pretendard,sans-serif;font-size:15px;font-weight:600;color:#64748b';
+  _ld.textContent='불러오는 중...';
+  document.body.appendChild(_ld);
+
+  function _bootApp(){
+    var le=document.getElementById('_staffLoadingScreen');if(le)le.remove();
+    // iframe 내부에서 ?user= 파라미터로 자동 로그인 (부모가 adminAuth 검증 완료)
+    var inIframe=false;try{inIframe=window.self!==window.top;}catch(e){inIframe=true;}
+    if(inIframe){
+      var params=new URLSearchParams(window.location.search);
+      var autoUser=params.get('user');
+      if(autoUser){
+        var au=ALL.find(function(e){return e.id===autoUser;});
+        if(au){doLogin(au);return;}
+      }
     }
+    // localStorage 세션 복원
+    try{
+      var saved=JSON.parse(localStorage.getItem('tm_session'));
+      if(saved&&saved.id){
+        var su=ALL.find(function(e){return e.id===saved.id;});
+        if(su){doLogin(su);return;}
+      }
+    }catch(e){localStorage.removeItem('tm_session');}
+    buildLogin();
   }
-  // localStorage 세션 복원
-  try{
-    var saved=JSON.parse(localStorage.getItem('tm_session'));
-    if(saved&&saved.id){
-      var su=ALL.find(function(e){return e.id===saved.id;});
-      if(su){doLogin(su);return;}
-    }
-  }catch(e){localStorage.removeItem('tm_session');}
-  buildLogin();
+
+  loadStaffAccounts().then(_bootApp, _bootApp);
 });
 </script>
 
