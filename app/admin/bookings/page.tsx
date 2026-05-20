@@ -244,7 +244,7 @@ export default function AdminBookingsPage(){
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   // 수업 시작일 = student JSONB academyStart → 없으면 체크인 다음 월요일
-  // 수업 종료일 = booking.checkout_date (모든 예약 유형 동일)
+  // 수업 종료일 = 시작 월요일 + 주수*7-3 (금요일, 어드민 상세 calcAcademyEnd와 동일 공식)
   const studentsList:StudentRow[]=bookings.flatMap(b=>{
     let arr:Record<string,string>[]=[];
     try{
@@ -252,13 +252,13 @@ export default function AdminBookingsPage(){
       if(Array.isArray(parsed)) arr=parsed;
     }catch{return[];}
     if(arr.length===0) return [];
-    // timestamp(예: "2026-05-22T00:00:00") 들어와도 dStr 매칭되도록 날짜만 추출
-    const checkoutDate=(b.checkout_date||"").split("T")[0];
     return arr.map((s,i)=>{
       // 수업 시작일: student JSON academyStart → 없으면 체크인 다음 월요일
       const academyStart=s.academyStart||s.academy_start||getNextMonday(b.checkin_date||"");
-      // 수업 종료일: 무조건 checkout_date (모든 예약 유형 동일)
-      const academyEnd=checkoutDate;
+      // weeks: booking.accom_weeks → student.academyWeeks → student.accom_weeks → 기본 4
+      const weeks=Number(b.accom_weeks)||Number(s.academyWeeks)||Number(s.accom_weeks)||4;
+      // 수업 종료일 = 시작 + 주수*7-3 = 금요일 (calcAcademyEnd: start+(w-1)*7+4 와 동일)
+      const academyEnd=calcAcademyEnd(academyStart,weeks);
       return{
         key:b.id+"_"+i,
         booking_id:b.id,
