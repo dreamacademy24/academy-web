@@ -55,10 +55,11 @@ function calcAcademyEnd(startStr:string,weeks:number|string):string{
   const d=new Date(startStr);d.setDate(d.getDate()+(w-1)*7+4);
   return d.toISOString().slice(0,10);
 }
-// 다음 월요일 (체크인이 월요일이면 그 날 그대로). academyStart 비통학형 기본 derive
+// 다음 월요일 (입력이 월요일이면 그 날 그대로). 저장값·체크인 무엇이든 월요일로 보정
 function getNextMonday(dateStr:string):string{
   if(!dateStr)return"";
-  const d=new Date(dateStr);
+  const d=new Date(dateStr.split("T")[0]);
+  if(isNaN(d.getTime()))return"";
   const day=d.getDay();
   const offset=(8-day)%7; // Mon→0, Tue→6, Wed→5, Thu→4, Fri→3, Sat→2, Sun→1
   d.setDate(d.getDate()+offset);
@@ -262,8 +263,8 @@ export default function AdminBookingsPage(){
     }catch{return[];}
     if(arr.length===0) return [];
     return arr.map((s,i)=>{
-      // 수업 시작일: student JSON academyStart → 없으면 체크인 다음 월요일
-      const academyStart=s.academyStart||s.academy_start||getNextMonday(b.checkin_date||"");
+      // 수업 시작일: 저장값/체크인 무엇이든 월요일로 보정 (월요일이면 그대로)
+      const academyStart=getNextMonday(s.academyStart||s.academy_start||b.checkin_date||"");
       // 수업 종료일: checkout_date의 금요일 또는 직전 금요일
       const academyEnd=getLastFriday(b.checkout_date||"");
       return{
