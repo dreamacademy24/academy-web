@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -59,6 +59,15 @@ function daysKr(arr: string[] | null): string {
   return arr.map(d => DAY_KR[d] || d).join(", ");
 }
 
+// 예약 students JSON 항목 → 폼용 이름/나이
+function studentName(s: any): { kr: string; en: string; age: string } {
+  return {
+    kr: s?.name_kr || s?.korName || "",
+    en: s?.name_en || s?.engName || "",
+    age: (s?.age || s?.birthYear) ? String(s?.birthYear || s?.age || "") : "",
+  };
+}
+
 const INIT_FORM = {
   house_number: "", student_name_kr: "", student_name_en: "", student_age: "",
   class_type: "", start_date: "", end_date: "",
@@ -79,6 +88,8 @@ export default function PortalTutorPage() {
   const [done, setDone] = useState(false);
   const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
+  const [bookingInfo, setBookingInfo] = useState<any>(null);
+  const [selStudent, setSelStudent] = useState<number>(0);
 
   useEffect(() => {
     async function init() {
@@ -117,8 +128,59 @@ export default function PortalTutorPage() {
       if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
       const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
+      if (session.booking_id) {
+        const bRes = await fetch(`/api/bookings/${session.booking_id}`);
+        if (bRes.ok) {
+          const bd = await bRes.json();
+          setBookingInfo(bd?.booking || bd);
+        }
+      }
     })();
   }, [session]);
+
+  // 예약 students JSON 파싱
+  const students = useMemo<any[]>(() => {
+    if (!bookingInfo) return [];
+    try {
+      return Array.isArray(bookingInfo.students)
+        ? bookingInfo.students
+        : JSON.parse(bookingInfo.students || "[]");
+    } catch { return []; }
+  }, [bookingInfo]);
+
+  // bookingInfo 로드되면 폼 자동완성 (첫 번째 학생 기준)
+  useEffect(() => {
+    if (!bookingInfo) return;
+
+    // 1번 필드: 하우스넘버 있으면 그대로, 없으면 예약자명
+    const houseVal = bookingInfo.house_no
+      ? bookingInfo.house_no
+      : (bookingInfo.booker_name || bookingInfo.guest_name || "");
+
+    const firstStudent = students[0];
+    const n = studentName(firstStudent);
+
+    setForm(f => ({
+      ...f,
+      house_number: f.house_number || houseVal,
+      student_name_kr: f.student_name_kr || n.kr,
+      student_name_en: f.student_name_en || n.en,
+      student_age: f.student_age || n.age,
+    }));
+  }, [bookingInfo, students]);
+
+  // 학생 선택 → 이름/나이 강제 자동완성 (idx=-1 은 전체 학생 합산)
+  function pickStudent(idx: number) {
+    setSelStudent(idx);
+    if (idx === -1) {
+      const join = (key: "kr" | "en" | "age") =>
+        students.map(s => studentName(s)[key]).filter(Boolean).join(" / ");
+      setForm(f => ({ ...f, student_name_kr: join("kr"), student_name_en: join("en"), student_age: join("age") }));
+    } else {
+      const n = studentName(students[idx]);
+      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: n.age }));
+    }
+  }
 
   function toggleInv(id: string) {
     setExpandedInv(prev => {
@@ -275,6 +337,20 @@ export default function PortalTutorPage() {
           <button onClick={() => setDone(false)} style={{ marginTop: 16, padding: "10px 20px", background: "#fff", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>추가 신청</button>
         </div>
       ) : (<>
+      {students.length >= 2 && (
+        <div className="sec">
+          <h2>학생 선택</h2>
+          <span className="q-hint" style={{ marginBottom: 8 }}>예약에 등록된 학생 정보를 폼에 자동으로 채웁니다.</span>
+          <div className="opts">
+            <button type="button" className={`opt${selStudent === -1 ? " on" : ""}`} onClick={() => pickStudent(-1)}>전체 학생</button>
+            {students.map((s: any, i: number) => (
+              <button key={i} type="button" className={`opt${selStudent === i ? " on" : ""}`} onClick={() => pickStudent(i)}>
+                {studentName(s).kr || studentName(s).en || `학생 ${i + 1}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="sec">
         <h2>기본 정보</h2>
         <div className="q">
