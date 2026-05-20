@@ -6,6 +6,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// 포털 한글 값 → tutor_applications 영문 코드 변환 맵
+const DAY_MAP: Record<string, string> = { '월': 'mon', '화': 'tue', '수': 'wed', '목': 'thu', '금': 'fri', '토': 'sat' }
+const OVERALL_LEVEL_MAP: Record<string, string> = { '제로베이스': 'zero', '비기너': 'beginner', '미디엄': 'intermediate', '어드밴스': 'advanced' }
+const SUB_LEVEL_MAP: Record<string, string> = { '제로베이스': 'zero', '비기너1': 'beginner1', '비기너2': 'beginner2', '미디엄1': 'intermediate1', '미디엄2': 'intermediate2', '어드밴스1': 'advanced1', '어드밴스2': 'advanced2' }
+const STYLE_MAP: Record<string, string> = { '놀이식': 'play', '학습식': 'study', '놀이+학습': 'combined' }
+const FOCUS_MAP: Record<string, string> = { '스피킹': 'speaking', '리딩': 'reading', '보카': 'vocabulary', '라이팅': 'writing', '파닉스': 'phonics', '액티비티': 'activity' }
+
 async function getBookerName(bookingId: string): Promise<string> {
   const { data: n } = await supabase.from('bookings_new').select('booker_name').eq('id', bookingId).maybeSingle()
   if (n) return n.booker_name
@@ -64,6 +71,37 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // tutor_applications 에도 저장 — 어드민 튜터 수신함 유입용 (실패해도 포털 신청은 성공 처리)
+    const appRow: Record<string, unknown> = {
+      house_or_reserver: body.house_number || guest_name || null,
+      children_names: [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ') || null,
+      children_ages: body.student_age || null,
+      class_type: body.class_type || null,
+      sessions_per_day: 1,
+      hourly_rate: body.class_type === '1:2' ? 350 : 300,
+      start_date: body.start_date || null,
+      end_date: body.end_date || null,
+      class_days: Array.isArray(body.preferred_days_arr) ? body.preferred_days_arr.map((d: string) => DAY_MAP[d] || d) : null,
+      excluded_dates: body.skip_dates || null,
+      class_time: body.preferred_time || null,
+      overall_level: OVERALL_LEVEL_MAP[body.level_english] || body.level_english || null,
+      speaking_level: SUB_LEVEL_MAP[body.level_speaking] || body.level_speaking || null,
+      reading_level: SUB_LEVEL_MAP[body.level_reading] || body.level_reading || null,
+      writing_level: SUB_LEVEL_MAP[body.level_writing] || body.level_writing || null,
+      textbook: body.textbook || null,
+      class_style: STYLE_MAP[body.class_style] || body.class_style || null,
+      class_focus: Array.isArray(body.class_focus_arr) ? body.class_focus_arr.map((f: string) => FOCUS_MAP[f] || f) : null,
+      child_notes: body.child_personality || null,
+      agreed_privacy: true,
+      agreed_tutor_rules: true,
+      agreed_tutor_rules_bool: true,
+      reserver_type: 'portal',
+      status: 'pending',
+      admin_memo: booking_id ? `포털 신청 (예약번호: ${booking_id})` : '포털 신청',
+    }
+    const { error: appErr } = await supabase.from('tutor_applications').insert(appRow)
+    if (appErr) console.error('[portal/tutor] tutor_applications insert 실패:', appErr.message)
 
     const bookerName = guest_name || await getBookerName(booking_id)
     const today = new Date().toISOString().slice(0, 10)
