@@ -1,8 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
-interface Session { booking_id: string; booking_number: string; guest_name: string; expires: number }
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+interface Session { booking_id: string; booking_number: string; guest_name: string; expires: number; check_in_date?: string; status?: string }
 interface TutorReq {
   id: string; student_name_kr: string | null; student_name_en: string | null;
   class_type: string | null; start_date: string | null; end_date: string | null;
@@ -75,14 +81,33 @@ export default function PortalTutorPage() {
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (!raw) { router.replace("/portal"); return; }
-      const s: Session = JSON.parse(raw);
-      if (s.expires < Date.now()) { localStorage.removeItem("portalSession"); router.replace("/portal"); return; }
-      setSession(s);
-    } catch { router.replace("/portal"); }
+    async function init() {
+      if (typeof window === "undefined") return;
+      // 1) portalSession 체크
+      try {
+        const raw = localStorage.getItem("portalSession");
+        if (raw) {
+          const s: Session = JSON.parse(raw);
+          if (s.expires > Date.now()) { setSession(s); return; }
+          localStorage.removeItem("portalSession");
+        }
+      } catch {}
+      // 2) Supabase Auth 체크
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // Supabase Auth 사용자는 booking_id가 없을 수 있음 — 임시 session 객체 생성
+        setSession({
+          booking_id: data.session.user.id,
+          booking_number: "",
+          guest_name: data.session.user.email?.split("@")[0] || "회원",
+          expires: Date.now() + 86400000,
+        });
+        return;
+      }
+      // 3) 둘 다 없으면 포털로
+      router.replace("/portal");
+    }
+    init();
   }, [router]);
 
   useEffect(() => {
