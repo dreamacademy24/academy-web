@@ -2577,6 +2577,7 @@ function renderGuideMsgs(cat) {
     html += '<button class="guide-copy-btn" id="copy-' + msg.id + '" onclick="copyGuideMsg(\'' + msg.id + '\')">복사</button>';
     if (msg.id === 'ft5') {
       html += '<button onclick="window.open(\'/admin/notices/fieldtrip/skating\', \'_blank\')" style="padding:4px 12px;background:#0a2540;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🖨️ 안내문</button>';
+      html += '<button onclick="window.open(\'/admin/notices/fieldtrip/skating/staff-guide\', \'_blank\')" style="padding:4px 12px;background:#1d6fa5;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">📋 준비가이드</button>';
     }
     html += '</div></div>';
   });
