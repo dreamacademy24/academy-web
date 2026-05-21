@@ -106,6 +106,7 @@ export default function SkatingNoticeEditor() {
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#0a2540", margin: 0 }}>스케이팅 필드트립 안내문 편집</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => window.open("/admin/notices/fieldtrip/skating/preview", "_blank")} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 700, background: "#fff", color: "#0a2540", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>미리보기</button>
+          <button onClick={() => window.open("/admin/notices/fieldtrip/skating/preview-en", "_blank")} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 700, background: "#1d6fa5", color: "#fff", border: "1px solid #1d6fa5", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>ENG</button>
           <button onClick={save} disabled={saving} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 700, background: saving ? "#94a3b8" : "#0a2540", color: "#fff", border: "none", borderRadius: 8, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}>{saving ? "저장 중..." : "저장"}</button>
         </div>
       </div>
@@ -183,6 +184,7 @@ export default function SkatingNoticeEditor() {
 
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 40 }}>
         <button onClick={() => window.open("/admin/notices/fieldtrip/skating/preview", "_blank")} style={{ padding: "10px 22px", fontSize: 13, fontWeight: 700, background: "#fff", color: "#0a2540", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>미리보기</button>
+        <button onClick={() => window.open("/admin/notices/fieldtrip/skating/preview-en", "_blank")} style={{ padding: "10px 22px", fontSize: 13, fontWeight: 700, background: "#1d6fa5", color: "#fff", border: "1px solid #1d6fa5", borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>ENG</button>
         <button onClick={save} disabled={saving} style={{ padding: "10px 22px", fontSize: 13, fontWeight: 700, background: saving ? "#94a3b8" : "#0a2540", color: "#fff", border: "none", borderRadius: 8, cursor: saving ? "default" : "pointer", fontFamily: "inherit" }}>{saving ? "저장 중..." : "저장"}</button>
       </div>
     </div>
