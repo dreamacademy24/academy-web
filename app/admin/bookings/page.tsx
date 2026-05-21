@@ -782,14 +782,16 @@ export default function AdminBookingsPage(){
     {/* ── 탭2: 영수증 ── */}
     {mainTab==="receipt"&&(<>
       <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>최종금액</th>
+        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>금액</th><th>최종금액</th>
       </tr></thead><tbody>
-        {rcpList.length===0?<tr><td colSpan={5} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
+        {rcpList.length===0?<tr><td colSpan={7} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
         rcpList.map(b=>(
           <tr key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
+            <td>{b.balance_date||"-"}</td>
+            <td>{fmt(b.base_price)}</td>
             <td style={{fontWeight:700}}>{fmt(b.final_price)}</td>
           </tr>
         ))}
@@ -835,8 +837,6 @@ export default function AdminBookingsPage(){
         {key:"aca_end",label:"아카데미종료",get:b=>acaEnd(b)},
         {key:"flight_in",label:"항공IN",get:b=>b.flight_in||"-"},
         {key:"flight_out",label:"항공OUT",get:b=>b.flight_out||"-"},
-        {key:"pickup_place",label:"픽업장소",get:b=>b.pickup_place||"-"},
-        {key:"drop_off",label:"드랍장소",get:b=>b.drop_off||"-"},
         {key:"agency",label:"유학원",get:b=>b.agency||"-"},
         {key:"balance_date",label:"잔금일",get:b=>b.balance_date||"-"},
         {key:"price",label:"금액",get:b=>b.final_price||b.base_price||0},
@@ -906,8 +906,6 @@ export default function AdminBookingsPage(){
               <td>{acaEnd(b)}</td>
               <td>{b.flight_in||"-"}</td>
               <td>{b.flight_out||"-"}</td>
-              <td>{b.pickup_place||"-"}</td>
-              <td>{b.drop_off||"-"}</td>
               <td>{b.agency||"-"}</td>
               <td>{b.balance_date||"-"}</td>
               <td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
