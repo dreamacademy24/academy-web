@@ -241,7 +241,7 @@ export default function AdminBookingsPage(){
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   // 수업 시작일 = student JSONB academyStart → 없으면 체크인 다음 월요일
   // 수업 종료일 = checkout_date의 금요일 또는 직전 금요일 (주수 미사용)
-  const studentsList:StudentRow[]=bookings.flatMap(b=>{
+  const studentsList:StudentRow[]=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status)).flatMap(b=>{
     let arr:Record<string,string>[]=[];
     try{
       const parsed=typeof b.students==="string"?JSON.parse(b.students):b.students;
@@ -827,8 +827,8 @@ export default function AdminBookingsPage(){
       });
       const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
-        {key:"assignee",label:"담당자",get:b=>b.assignee||"-"},
-        {key:"booker_name",label:"예약자/학생",get:b=>b.booker_name},
+        {key:"booker_name",label:"예약자",get:b=>b.booker_name},
+        {key:"students",label:"학생",get:b=>stuNames(b.students)},
         {key:"checkin_date",label:"체크인",get:b=>b.checkin_date||"-"},
         {key:"checkout_date",label:"체크아웃",get:b=>b.checkout_date||"-"},
         {key:"dday",label:"D-day",get:b=>{const d=getDday(b.checkin_date);return d?parseInt(d.label.replace(/[^-\d]/g,""))||0:9999;}},
@@ -858,6 +858,7 @@ export default function AdminBookingsPage(){
       return(<>
         <div className="sub-tabs">
           {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
+          <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)} style={{marginLeft:"auto",padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,width:260,outline:"none",fontFamily:"inherit"}}/>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",margin:"8px 0 4px"}}>
           <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>담당자</span>
@@ -866,7 +867,6 @@ export default function AdminBookingsPage(){
           {hasUnassigned&&<button className={`sub-tab${confirmAssignee==="미배정"?" ac":""}`} onClick={()=>setConfirmAssignee("미배정")}>미배정</button>}
         </div>
         <div className="cf-search">
-          <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)}/>
           <span className="cnt">{sorted.length}건</span>
           <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportConfirmXlsx(sorted)}>📥 엑셀 내보내기</button>
         </div>
@@ -893,11 +893,13 @@ export default function AdminBookingsPage(){
             const bdday=getBalanceDday(b.balance_date);
             return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
-              <td>{b.assignee||"-"}</td>
               <td>
-                <div style={{fontWeight:600}}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</div>
-                <div style={{color:"#6b7c93",fontSize:10}}>{stuNames(b.students)}</div>
+                <div style={{fontWeight:600}}>{b.booker_name}
+                  {b.assignee&&<span style={{display:"inline-block",marginLeft:4,fontSize:10,background:"#eff6ff",color:"#1a6fc4",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>{b.assignee}</span>}
+                  {(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}
+                </div>
               </td>
+              <td style={{color:"#475569",fontSize:11}}>{stuNames(b.students)}</td>
               <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
               <td>{b.checkout_date||"-"}</td>
               <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
