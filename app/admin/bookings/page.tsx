@@ -174,6 +174,7 @@ export default function AdminBookingsPage(){
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
   const [confirmFilter,setConfirmFilter]=useState("전체");
+  const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
@@ -811,7 +812,14 @@ export default function AdminBookingsPage(){
     {/* ── 탭4: 확정 예약 (스프레드시트) ── */}
     {mainTab==="confirm"&&(()=>{
       const q=confirmSearch.toLowerCase();
-      const searched=confirmFiltered.filter(b=>{
+      // 담당자 목록 자동 추출 (중복 제거)
+      const assigneeNames=Array.from(new Set(confirmList.map(b=>(b.assignee||"").trim()).filter(Boolean))).sort();
+      const hasUnassigned=confirmList.some(b=>!(b.assignee||"").trim());
+      // 담당자 필터 적용
+      const assigneeFiltered=confirmAssignee==="전체"?confirmFiltered
+        :confirmAssignee==="미배정"?confirmFiltered.filter(b=>!(b.assignee||"").trim())
+        :confirmFiltered.filter(b=>(b.assignee||"").trim()===confirmAssignee);
+      const searched=assigneeFiltered.filter(b=>{
         if(!q)return true;
         return [b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.agency,b.pickup_place,b.drop_off,b.special_request,b.accom_type,b.house_no].some(v=>v&&v.toLowerCase().includes(q));
       });
@@ -850,6 +858,12 @@ export default function AdminBookingsPage(){
       return(<>
         <div className="sub-tabs">
           {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",margin:"8px 0 4px"}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>담당자</span>
+          <button className={`sub-tab${confirmAssignee==="전체"?" ac":""}`} onClick={()=>setConfirmAssignee("전체")}>전체</button>
+          {assigneeNames.map(name=><button key={name} className={`sub-tab${confirmAssignee===name?" ac":""}`} onClick={()=>setConfirmAssignee(name)}>{name}</button>)}
+          {hasUnassigned&&<button className={`sub-tab${confirmAssignee==="미배정"?" ac":""}`} onClick={()=>setConfirmAssignee("미배정")}>미배정</button>}
         </div>
         <div className="cf-search">
           <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)}/>
