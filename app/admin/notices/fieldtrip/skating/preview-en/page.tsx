@@ -8,8 +8,6 @@ interface ProgramItem { num: string; label: string; name: string; desc: string; 
 interface Notice {
   event_date: string;
   event_day: string;
-  schedule: ScheduleItem[];
-  programs: ProgramItem[];
 }
 
 const FONT = "'Noto Sans KR',sans-serif";
@@ -21,6 +19,31 @@ const OUTFIT_TEXT = "If your child has long sleeves and long pants, please have 
 const SAFETY_TEXT = "Our teachers will be with the students at all times. A safety briefing will be held before skating begins, and staff will accompany students throughout all activities. 🍳 As lunch is served after 1:00 PM, please make sure your child has a hearty breakfast before departure!";
 const PICKUP_HTML = "Parents wishing to pick up their child at SM Seaside may do so at the designated exit only. Please contact us <span style='color:#dc2626;font-weight:600;'>in advance</span> so we can provide the exact time and gate location. We will notify you separately if there are any delays due to traffic.";
 const FOOTER_MSG = "We will do our best to ensure all children have a safe and memorable experience. Thank you! 😊";
+
+const SCHEDULE_EN: ScheduleItem[] = [
+  { time: "10:20", main: "Pickup begins", sub: "Depart from accommodation" },
+  { time: "11:00", main: "Arrive at SM Seaside", sub: "Prepare and enter the skating rink" },
+  { time: "13:00", main: "Skating ends", sub: "" },
+  { time: "13:20", main: "Lunch at Jollibee 🍔", sub: "Students order their own food in English" },
+  { time: "14:00", main: "Move to Mart", sub: "Students shop for snacks using their Money Mission earnings" },
+  { time: "14:40", main: "Depart for accommodation", sub: "" },
+  { time: "15:10~", main: "Expected arrival", sub: "Estimated between 15:10–15:20" },
+];
+
+const PROGRAMS_EN: ProgramItem[] = [
+  {
+    num: "01", label: "Skating", name: "Skating",
+    desc: "All Junior students will participate in skating. A professional skating instructor will be present, and Bear Skate Aids are available so even first-timers can join safely and confidently.",
+  },
+  {
+    num: "02", label: "Money Mission", name: "Money Mission",
+    desc: "While skating, students discover mission cards around the rink and complete simple challenges — like clapping or balancing. Each completed mission earns a reward, which becomes their snack shopping budget at the mart!",
+  },
+  {
+    num: "03", label: "English Ordering", name: "English Ordering",
+    desc: "At Jollibee, students practice ordering food entirely in English — a fun, real-world chance to use the expressions they've been learning in class!",
+  },
+];
 
 function SectionTitle({ title }: { title: string }) {
   return (
@@ -49,8 +72,6 @@ export default function SkatingNoticePreviewEn() {
       setNotice({
         event_date: row.event_date || "",
         event_day: row.event_day || "",
-        schedule: Array.isArray(row.schedule) ? row.schedule : [],
-        programs: Array.isArray(row.programs) ? row.programs : [],
       });
       setLoading(false);
     })();
@@ -112,8 +133,8 @@ export default function SkatingNoticePreviewEn() {
           <section>
             <SectionTitle title="Schedule" />
             <div>
-              {notice.schedule.map((s, i) => {
-                const isLast = i === notice.schedule.length - 1;
+              {SCHEDULE_EN.map((s, i) => {
+                const isLast = i === SCHEDULE_EN.length - 1;
                 const dotColor = isLast ? "#1d9e75" : "#0a2540";
                 return (
                   <div key={i} style={{ display: "flex", gap: 14 }}>
@@ -138,7 +159,7 @@ export default function SkatingNoticePreviewEn() {
           <section>
             <SectionTitle title="Programs" />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
-              {notice.programs.map((p, i) => (
+              {PROGRAMS_EN.map((p, i) => (
                 <div key={i} style={{ border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden" }}>
                   <div style={{ height: 3, background: BAR_COLORS[i % 3] }} />
                   <div style={{ padding: "14px 16px" }}>
