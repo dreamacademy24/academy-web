@@ -178,7 +178,7 @@ export default function AdminBookingsPage(){
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
-  const ASSIGNEES=["May","Jamin","Candice"];
+  const [assignees,setAssignees]=useState<string[]>([]);
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
   const confirmStatuses=["전체","영수증발행","결제완료","완료"];
 
@@ -544,6 +544,17 @@ export default function AdminBookingsPage(){
     else{window.location.href="/admin";}
   },[]);
 
+  // 담당자 목록 — staff_accounts(korean_admin·활성) 동적 로딩, 실패 시 폴백
+  useEffect(()=>{
+    fetch('/api/admin/staff-accounts?role=korean_admin&active=true')
+      .then(r=>r.json())
+      .then(data=>{
+        const names=(((data&&data.staff)||[]) as {name:string}[]).map(s=>s.name).filter(Boolean);
+        setAssignees(names.length?names:["May","Jamie","Candice"]);
+      })
+      .catch(()=>setAssignees(["May","Jamie","Candice"]));
+  },[]);
+
   const load=useCallback(async()=>{
     setLoading(true);
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
@@ -728,7 +739,7 @@ export default function AdminBookingsPage(){
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
-            <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{ASSIGNEES.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
+            <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
             <td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
