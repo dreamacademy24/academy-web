@@ -21,6 +21,12 @@ function fmtDate(d: string) {
   const dt = new Date(d);
   return `${dt.getMonth()+1}/${dt.getDate()}`;
 }
+function fmtSavedAt(iso: string) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ko-KR", { year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit" });
+}
 
 /* ── 요금 테이블 (100% 기존 유지) ── */
 type P3=[number,number,number];
@@ -522,6 +528,59 @@ function InvoicePageInner(){
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
   const [isCommute,setIsCommute]=useState(false);
 
+  /* ── 인보이스 스냅샷 (저장/불러오기) ── */
+  const [snapshotChecked,setSnapshotChecked]=useState(false); // 스냅샷 조회 완료 여부
+  const [hasSnapshot,setHasSnapshot]=useState(false);          // 저장된 스냅샷 존재 여부 (뷰 모드)
+  const [snapshotSavedAt,setSnapshotSavedAt]=useState<string>("");
+
+  // 현재 폼 상태 전체를 스냅샷 객체로 수집
+  function collectFormState(){
+    return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
+      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment};
+  }
+  // 스냅샷 saved_data → 폼 상태 복원
+  function applySnapshot(d:any){
+    if(!d) return;
+    if(d.cm!==undefined)setCm(d.cm);
+    if(d.a1T!==undefined)setA1T(d.a1T);
+    if(d.a1R!==undefined)setA1R(d.a1R);
+    if(d.a1W!==undefined)setA1W(d.a1W);
+    if(d.a1CI!==undefined)setA1CI(d.a1CI);
+    if(d.a2T!==undefined)setA2T(d.a2T);
+    if(d.a2R!==undefined)setA2R(d.a2R);
+    if(d.a2W!==undefined)setA2W(d.a2W);
+    if(d.cP!==undefined)setCP(d.cP);
+    if(d.cK!==undefined)setCK(d.cK);
+    if(d.ex1Cnt!==undefined)setEx1Cnt(d.ex1Cnt);
+    if(d.ex2Cnt!==undefined)setEx2Cnt(d.ex2Cnt);
+    if(d.dbCheckout!==undefined)setDbCheckout(d.dbCheckout);
+    if(d.reservationNo!==undefined)setReservationNo(d.reservationNo);
+    if(d.reservationDate!==undefined)setReservationDate(d.reservationDate);
+    if(d.booker!==undefined)setBooker(d.booker);
+    if(Array.isArray(d.students))setStudents(d.students);
+    if(d.applied!==undefined)setApplied(d.applied);
+    if(d.billing!==undefined)setBilling(d.billing);
+    if(d.checkin!==undefined)setCheckin(d.checkin);
+    if(d.adminOnly!==undefined)setAdminOnly(d.adminOnly);
+    if(d.isCommute!==undefined)setIsCommute(d.isCommute);
+    if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
+  }
+  // 스냅샷 저장 (인보이스 미리보기 클릭 시 자동 호출)
+  async function saveSnapshot(){
+    if(!bookingId) return;
+    try{
+      const res=await fetch("/api/invoice/snapshot",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({booking_id:bookingId,saved_data:collectFormState()}),
+      });
+      if(res.ok){
+        const j=await res.json();
+        setHasSnapshot(true);
+        setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
+      }
+    }catch{/* 테이블 미생성 등 — 미리보기 자체는 정상 동작 */}
+  }
+
   /* ── 학생 academyStart 자동동기화 (다음 월요일) — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
     if(!a1CI) return;
@@ -529,9 +588,30 @@ function InvoicePageInner(){
     setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyEnd||calcAcademyEnd(monday,s.academyWeeks)})));
   },[a1CI]);
 
-  /* ── DB에서 예약 로드 ── */
+  /* ── 스냅샷 우선 조회 — 있으면 뷰 모드, 없으면 예약 로드로 진행 ── */
   useEffect(()=>{
-    if(!bookingId) return;
+    if(!bookingId){setSnapshotChecked(true);return;}
+    let cancelled=false;
+    fetch("/api/invoice/snapshot?booking_id="+encodeURIComponent(bookingId))
+      .then(r=>r.ok?r.json():null)
+      .then(j=>{
+        if(cancelled)return;
+        const snap=j&&j.snapshot;
+        if(snap&&snap.saved_data){
+          applySnapshot(snap.saved_data);
+          setSnapshotSavedAt(snap.saved_at||"");
+          setHasSnapshot(true);
+          setPreview(true); // 저장된 데이터 기준 뷰 모드
+        }
+      })
+      .catch(()=>{})
+      .finally(()=>{if(!cancelled)setSnapshotChecked(true);});
+    return ()=>{cancelled=true;};
+  },[bookingId]);
+
+  /* ── DB에서 예약 로드 (스냅샷 없을 때만) ── */
+  useEffect(()=>{
+    if(!bookingId||!snapshotChecked||hasSnapshot) return;
     supabase.from("bookings").select("*").eq("id",bookingId).single().then(async({data})=>{
       if(!data) return;
       // 영문이름 폴백: booker_english > checkin_details.guest_names_en 첫 이름
@@ -665,7 +745,7 @@ function InvoicePageInner(){
       if(data.reservation_date) setReservationDate(data.reservation_date);
       setDbLoaded(true);
     });
-  },[bookingId]);
+  },[bookingId,snapshotChecked,hasSnapshot]);
 
   /* ── 담당자 DB 저장 ── */
   useEffect(()=>{
@@ -862,6 +942,7 @@ function InvoicePageInner(){
   function gen(){
     if(!booker.name){alert("예약자명을 입력해주세요.");return;}
     setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
+    saveSnapshot(); // 미리보기 시 현재 폼 데이터를 스냅샷으로 자동 저장
   }
 
   /* ── DB 저장 ── */
@@ -1232,6 +1313,12 @@ function InvoicePageInner(){
 
   /* ── 인보이스 미리보기 ── */
   <div className="iw">
+    {hasSnapshot&&(
+      <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8}}>
+        <span style={{fontSize:12,color:"#94a3b8"}}>💾 저장된 인보이스 · {fmtSavedAt(snapshotSavedAt)}</span>
+        <button onClick={()=>{setPreview(false);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);}} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+      </div>
+    )}
     <div className="iv" id="invoice-content">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
