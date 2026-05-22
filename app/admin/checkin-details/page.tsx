@@ -245,25 +245,9 @@ function CheckinDetailsInner() {
       }
     } catch {}
     const etc = d.extra_requests ? String(d.extra_requests) : "";
-
-    // 색상을 inline style로 강제 — 흑백 인쇄 방지 (print-color-adjust 양쪽 적용)
-    const PCA = "-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;";
-    const sLbl   = `background:#f1f5f9;color:#4f46e5;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;${PCA}`;
-    const sVal   = `background:#ffffff;color:#1e293b;font-size:13px;font-weight:600;${PCA}`;
-    const sBig   = `background:#ffffff;color:#1e293b;font-size:16px;font-weight:700;${PCA}`;
-    const sHouse = `background:#ffffff;color:#1e293b;font-size:19px;font-weight:800;text-align:center;${PCA}`;
-    const sBedHd = `background:#4f46e5;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;${PCA}`;
-    const sBedSub= `background:#e0e7ff;color:#3730a3;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:center;${PCA}`;
-    const sNum   = `background:#ffffff;color:#1e293b;font-size:22px;font-weight:700;text-align:center;${PCA}`;
-    const sSim   = `background:#ffffff;color:#1e293b;font-size:13px;font-weight:700;text-align:center;${PCA}`;
-    const sGLbl  = `background:#4f46e5;color:#ffffff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;${PCA}`;
-    const sEtcLb = `background:#1e293b;color:#ffffff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;vertical-align:top;${PCA}`;
-    const sEtc   = `background:#ffffff;height:120px;vertical-align:top;`;
-    const pkgBadge = isPackage(b.accom_type)
-      ? `<span style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:9px;font-weight:800;letter-spacing:0.05em;padding:3px 9px;border-radius:4px;margin-left:8px;vertical-align:middle;${PCA}">${L.pkg}</span>`
-      : "";
-    const etcLines = Array.from({ length: 5 }).map(() => `<div style="border-bottom:1px solid #cbd5e1;height:20px;"></div>`).join("");
-    const etcHtml = (etc ? `<div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px;">${etc}</div>` : "") + etcLines;
+    const pkgBadge = isPackage(b.accom_type) ? `<span class="pkg">${L.pkg}</span>` : "";
+    const etcLines = Array.from({ length: 5 }).map(() => `<div class="ln"></div>`).join("");
+    const etcHtml = (etc ? `<div class="etxt">${etc}</div>` : "") + etcLines;
 
     const html = `<!doctype html>
 <html lang="${isEn ? "en" : "ko"}"><head><meta charset="utf-8"/>
@@ -274,65 +258,91 @@ function CheckinDetailsInner() {
   .head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;}
   .head img{height:48px;width:auto;}
   .head .ti{font-size:28px;font-weight:800;color:#1e293b;letter-spacing:1px;}
+  /* 인디고 구분선 — 배경 대신 border로 (인쇄 보장) */
+  .rule{border-bottom:3px solid #4f46e5 !important;margin-bottom:14px;}
   .wrap{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
   table{width:100%;border-collapse:collapse;}
   td,th{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
-  @media print{ @page{size:A4;margin:11mm;} body{padding:0;} }
+  /* 배경색은 box-shadow inset 트릭 — 인쇄 시 배경 누락 방지 */
+  .lbl{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;color:#4f46e5;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
+  .val{color:#1e293b;font-size:13px;font-weight:600;}
+  .big{font-size:16px;font-weight:700;}
+  .house{color:#1e293b;font-size:19px;font-weight:800;text-align:center;}
+  .bedhd{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
+  .bedsub{box-shadow:inset 0 0 0 1000px #e0e7ff !important;color:#3730a3 !important;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:center;}
+  .num{color:#1e293b;font-size:22px;font-weight:700;text-align:center;}
+  .simval{color:#1e293b;font-size:13px;font-weight:700;text-align:center;}
+  .glbl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
+  .etclbl{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#ffffff !important;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;vertical-align:top;}
+  .etc{height:120px;vertical-align:top;}
+  .etxt{font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px;}
+  .ln{border-bottom:1px solid #cbd5e1;height:20px;}
+  .pkg{display:inline-block;box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:9px;font-weight:800;letter-spacing:0.05em;padding:3px 9px;border-radius:4px;margin-left:8px;vertical-align:middle;}
+  @media print{
+    @page{size:A4;margin:11mm;}
+    body{padding:0;}
+    .rule{border-bottom:3px solid #4f46e5 !important;}
+    .lbl{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;}
+    .bedhd,.glbl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;}
+    .bedsub{box-shadow:inset 0 0 0 1000px #e0e7ff !important;color:#3730a3 !important;}
+    .etclbl{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#ffffff !important;}
+    .pkg{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;}
+  }
 </style></head>
 <body>
   <div class="head">
     <img src="${logo}" onerror="this.style.display='none'"/>
     <div class="ti">${L.title}</div>
   </div>
-  <div style="height:3px;background:#4f46e5;margin-bottom:14px;${PCA}"></div>
+  <div class="rule"></div>
   <div class="wrap">
   <table>
     <tr>
-      <td style="width:11%;${sLbl}">${L.name}</td>
-      <td colspan="5" style="${sBig}">${nameLine}${pkgBadge}</td>
-      <td style="width:13%;${sLbl}">${L.house}</td>
-      <td colspan="3" style="${sHouse}">${houseNo}</td>
+      <td class="lbl" style="width:11%">${L.name}</td>
+      <td class="val big" colspan="5">${nameLine}${pkgBadge}</td>
+      <td class="lbl" style="width:13%">${L.house}</td>
+      <td class="house" colspan="3">${houseNo}</td>
     </tr>
     <tr>
-      <td style="${sLbl}">${L.cin}</td>
-      <td colspan="4" style="${sVal}">${checkIn}</td>
-      <td style="${sLbl}">${L.cout}</td>
-      <td colspan="4" style="${sVal}">${checkOut}</td>
+      <td class="lbl">${L.cin}</td>
+      <td class="val" colspan="4">${checkIn}</td>
+      <td class="lbl">${L.cout}</td>
+      <td class="val" colspan="4">${checkOut}</td>
     </tr>
     <tr>
-      <td style="${sLbl}">${L.pick}</td>
-      <td colspan="4" style="${sVal}">${pickFlight}</td>
-      <td style="${sLbl}">${L.drop}</td>
-      <td colspan="4" style="${sVal}">${dropFlight}</td>
+      <td class="lbl">${L.pick}</td>
+      <td class="val" colspan="4">${pickFlight}</td>
+      <td class="lbl">${L.drop}</td>
+      <td class="val" colspan="4">${dropFlight}</td>
     </tr>
     <tr>
-      <th colspan="6" style="${sBedHd}">${L.bed}</th>
-      <th colspan="2" rowspan="2" style="${sBedHd}">${L.sim}</th>
-      <th colspan="2" rowspan="2" style="${sBedHd}">${L.load}</th>
+      <th class="bedhd" colspan="6">${L.bed}</th>
+      <th class="bedhd" colspan="2" rowspan="2">${L.sim}</th>
+      <th class="bedhd" colspan="2" rowspan="2">${L.load}</th>
     </tr>
     <tr>
-      <th colspan="2" style="${sBedSub}">${L.master}</th>
-      <th colspan="2" style="${sBedSub}">${L.small}</th>
-      <th colspan="2" style="${sBedSub}">${L.first}</th>
+      <th class="bedsub" colspan="2">${L.master}</th>
+      <th class="bedsub" colspan="2">${L.small}</th>
+      <th class="bedsub" colspan="2">${L.first}</th>
     </tr>
     <tr>
-      <td colspan="2" style="${sNum}">${m1}</td>
-      <td colspan="2" style="${sNum}">${m2}</td>
-      <td colspan="2" style="${sNum}">${m3}</td>
-      <td colspan="2" style="${sSim}">${simText}</td>
-      <td colspan="2" style="${sNum}">${loadText}</td>
+      <td class="num" colspan="2">${m1}</td>
+      <td class="num" colspan="2">${m2}</td>
+      <td class="num" colspan="2">${m3}</td>
+      <td class="simval" colspan="2">${simText}</td>
+      <td class="num" colspan="2">${loadText}</td>
     </tr>
     <tr>
-      <td style="${sGLbl}">${L.guest}</td>
-      <td colspan="9" style="${sVal}">${guests}</td>
+      <td class="glbl">${L.guest}</td>
+      <td class="val" colspan="9">${guests}</td>
     </tr>
     <tr>
-      <td style="${sGLbl}">${L.add}</td>
-      <td colspan="9" style="${sVal}">${addText}</td>
+      <td class="glbl">${L.add}</td>
+      <td class="val" colspan="9">${addText}</td>
     </tr>
     <tr>
-      <td style="${sEtcLb}">${L.etc}</td>
-      <td colspan="9" style="${sEtc}">${etcHtml}</td>
+      <td class="etclbl">${L.etc}</td>
+      <td class="etc" colspan="9">${etcHtml}</td>
     </tr>
   </table>
   </div>
