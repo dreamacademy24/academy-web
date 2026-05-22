@@ -534,9 +534,11 @@ function InvoicePageInner(){
   const [snapshotSavedAt,setSnapshotSavedAt]=useState<string>("");
 
   // 현재 폼 상태 전체를 스냅샷 객체로 수집
-  function collectFormState(){
+  // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
+  function collectFormState(override?:Record<string,unknown>){
     return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
-      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment};
+      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,
+      ...(override||{})};
   }
   // 스냅샷 saved_data → 폼 상태 복원
   function applySnapshot(d:any){
@@ -558,20 +560,22 @@ function InvoicePageInner(){
     if(d.reservationDate!==undefined)setReservationDate(d.reservationDate);
     if(d.booker!==undefined)setBooker(d.booker);
     if(Array.isArray(d.students))setStudents(d.students);
-    if(d.applied!==undefined)setApplied(d.applied);
     if(d.billing!==undefined)setBilling(d.billing);
+    // billing(items/금액)이 있으면 applied=true 강제 — 미리보기 "견적 계산 후 적용" 문구 방지
+    const hasBilling=!!(d.billing&&((Array.isArray(d.billing.items)&&d.billing.items.length>0)||Number(d.billing.basePrice)>0));
+    setApplied(!!d.applied||hasBilling);
     if(d.checkin!==undefined)setCheckin(d.checkin);
     if(d.adminOnly!==undefined)setAdminOnly(d.adminOnly);
     if(d.isCommute!==undefined)setIsCommute(d.isCommute);
     if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
   }
   // 스냅샷 저장 (인보이스 미리보기 클릭 시 자동 호출)
-  async function saveSnapshot(){
+  async function saveSnapshot(override?:Record<string,unknown>){
     if(!bookingId) return;
     try{
       const res=await fetch("/api/invoice/snapshot",{
         method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({booking_id:bookingId,saved_data:collectFormState()}),
+        body:JSON.stringify({booking_id:bookingId,saved_data:collectFormState(override)}),
       });
       if(res.ok){
         const j=await res.json();
@@ -941,8 +945,16 @@ function InvoicePageInner(){
   /* ── 인보이스 생성 ── */
   function gen(){
     if(!booker.name){alert("예약자명을 입력해주세요.");return;}
+    // 견적이 계산됐는데 아직 "인보이스에 적용" 안 됐으면 자동 적용 — 스냅샷에 billing 포함 보장
+    let snapOverride:Record<string,unknown>|undefined;
+    if(est&&!applied){
+      const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season,accom:i.accom,roomType:i.roomType,weeks:i.weeks,parents:i.parents,kids:i.kids})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
+      setBilling(b=>({...b,basePrice:est.total,items:billItems}));
+      setApplied(true);
+      snapOverride={billing:{...billing,basePrice:est.total,items:billItems},applied:true};
+    }
     setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
-    saveSnapshot(); // 미리보기 시 현재 폼 데이터를 스냅샷으로 자동 저장
+    saveSnapshot(snapOverride); // 미리보기 시 현재 폼 데이터를 스냅샷으로 자동 저장 (billing 포함)
   }
 
   /* ── DB 저장 ── */

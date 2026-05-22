@@ -50,16 +50,10 @@ export async function POST(req: Request) {
   const savedData = body.saved_data ?? {}
   const savedAt = new Date().toISOString()
 
-  // 기존 스냅샷 제거 → booking_id당 1개만 유지
-  const { error: delErr } = await supabase
-    .from('invoice_snapshots')
-    .delete()
-    .eq('booking_id', bookingId)
-  if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
-
+  // booking_id 기준 upsert — 항상 최신 1개만 유지 (delete+insert 경쟁 구간 제거)
   const { data, error } = await supabase
     .from('invoice_snapshots')
-    .insert({ booking_id: bookingId, saved_data: savedData, saved_at: savedAt })
+    .upsert({ booking_id: bookingId, saved_data: savedData, saved_at: savedAt }, { onConflict: 'booking_id' })
     .select()
     .single()
 
