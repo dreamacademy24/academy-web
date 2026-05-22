@@ -24,7 +24,8 @@ interface Detail {
   extra_pickups: string;      // JSON array string [{type,date,airline,flight,time}]
   extra_requests: string;
   public_token: string;
-  submitted_at?: string | null;
+  submitted_at?: string | null;     // 손님 공개폼 제출 시각
+  admin_saved_at?: string | null;   // 어드민 저장 완료 시각
 }
 
 const SIM_PLANS = [
@@ -65,6 +66,8 @@ function CheckinDetailsInner() {
   const [extraPickups, setExtraPickups] = useState<ExtraPickup[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [editing, setEditing] = useState(true); // true=편집 폼, false=인쇄 미리보기 뷰
+  const [savedAt, setSavedAt] = useState("");    // 어드민 저장 완료 일시
 
   const loadBookings = useCallback(async () => {
     const res = await fetch("/api/admin/checkin-details");
@@ -89,6 +92,10 @@ function CheckinDetailsInner() {
         try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"}); }
         try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
         try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
+        // 저장 상태 판별: DB admin_saved_at 우선, 없으면 localStorage 폴백
+        const ts = d.detail.admin_saved_at || (typeof window!=="undefined" ? localStorage.getItem("checkin_saved_"+id) : "") || "";
+        setSavedAt(ts);
+        setEditing(!ts); // 저장된 적 있으면 인쇄 미리보기 뷰로
       }
       if (d.error) setMsg("저장 경고: " + d.error);
     } else {
@@ -131,6 +138,10 @@ function CheckinDetailsInner() {
     if (!res.ok) { const j = await res.json().catch(()=>({})); setMsg("저장 실패: " + (j.error || "")); return; }
     const d = await res.json();
     if (d.detail) setDetail(d.detail);
+    const ts = d.detail?.admin_saved_at || new Date().toISOString();
+    setSavedAt(ts);
+    if (typeof window!=="undefined" && selId) localStorage.setItem("checkin_saved_"+selId, ts);
+    setEditing(false); // 저장 완료 → 인쇄 미리보기 뷰로 전환
     setMsg("저장 완료!");
     setTimeout(() => setMsg(""), 2500);
   }
@@ -311,6 +322,12 @@ function CheckinDetailsInner() {
       </div>
 
       {detail && booking && (<>
+        {!editing && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:14,padding:"12px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10}}>
+            <span style={{fontSize:13,fontWeight:700,color:"#166534"}}>✅ 저장완료{savedAt?` · ${new Date(savedAt).toLocaleString("ko-KR")}`:""}</span>
+            <button onClick={()=>setEditing(true)} style={{padding:"7px 16px",background:"#fff",color:"#1a6fc4",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✏️ 수정하기</button>
+          </div>
+        )}
         <div className="sec">
           <h2>예약 정보</h2>
           <div className="row"><span className="lbl">예약자</span><span className="val">{booking.booker_name} {booking.booker_english ? `(${booking.booker_english})` : ""}</span></div>
@@ -321,7 +338,7 @@ function CheckinDetailsInner() {
           <div className="row"><span className="lbl">항공편 (IN/OUT)</span><span className="val">{booking.flight_in || "-"} / {booking.flight_out || "-"}</span></div>
         </div>
 
-        <div className="sec">
+        {editing && (<div className="sec">
           <h2>체크인 디테일 입력</h2>
           <div className="fr">
             <div className="fg"><label className="fl">예약자 성함</label><input className="fi" value={detail.booker_name||""} onChange={e=>field("booker_name",e.target.value)}/></div>
@@ -464,7 +481,25 @@ function CheckinDetailsInner() {
             {msg && <span className={`msg ${msg.includes("실패")?"msg-err":"msg-ok"}`}>{msg}</span>}
           </div>
           {detail.public_token && <div className="token-info">/checkin/{detail.public_token}{detail.submitted_at?` · 제출됨: ${new Date(detail.submitted_at).toLocaleString("ko-KR")}`:" · 손님 미제출"}</div>}
-        </div>
+        </div>)}
+
+        {!editing && (<div className="sec">
+          <h2>체크인 디테일 (저장 완료)</h2>
+          <div className="row"><span className="lbl">예약자 성함</span><span className="val">{detail.booker_name||"-"}</span></div>
+          <div className="row"><span className="lbl">입실 일자</span><span className="val">{detail.checkin_date||"-"}</span></div>
+          <div className="row"><span className="lbl">투숙자 전체 영문이름</span><span className="val" style={{textAlign:"right",maxWidth:"62%"}}>{detail.guest_names_en||"-"}</span></div>
+          <div className="row"><span className="lbl">베드 세팅</span><span className="val" style={{textAlign:"right",maxWidth:"62%"}}>{[bedConfig.room1&&`룸1: ${bedConfig.room1}`,bedConfig.room2&&`룸2: ${bedConfig.room2}`,bedConfig.room3&&`룸3: ${bedConfig.room3}`].filter(Boolean).join(" / ")||"-"}</span></div>
+          <div className="row"><span className="lbl">유심 대여</span><span className="val" style={{textAlign:"right",maxWidth:"62%"}}>{simCards.map(s=>s.plan).filter(Boolean).join(" / ")||"없음"}</span></div>
+          <div className="row"><span className="lbl">추가 픽드랍</span><span className="val" style={{textAlign:"right",maxWidth:"62%"}}>{extraPickups.length>0?extraPickups.map(p=>`[${p.type}] ${p.date} ${p.time} ${p.airline} ${p.flight}`.replace(/\s+/g," ").trim()).join(" / "):"없음"}</span></div>
+          <div className="row"><span className="lbl">기타 요청사항</span><span className="val" style={{textAlign:"right",maxWidth:"62%",whiteSpace:"pre-wrap"}}>{detail.extra_requests||"-"}</span></div>
+          {detail.public_token && <div className="token-info">/checkin/{detail.public_token}{detail.submitted_at?` · 손님 제출됨: ${new Date(detail.submitted_at).toLocaleString("ko-KR")}`:" · 손님 미제출"}</div>}
+          <div className="actions" style={{marginTop:14}}>
+            <button className="btn btn-blue" onClick={()=>handlePrint("en")}>🖨️ Print (EN)</button>
+            <button className="btn btn-gray" onClick={()=>handlePrint("kr")}>🖨️ 인쇄 (KR)</button>
+            {detail.public_token && <button className="btn btn-green" onClick={copyPublicLink}>🔗 손님 폼 링크 복사</button>}
+            {msg && <span className={`msg ${msg.includes("실패")?"msg-err":"msg-ok"}`}>{msg}</span>}
+          </div>
+        </div>)}
       </>)}
     </div>
   </>);

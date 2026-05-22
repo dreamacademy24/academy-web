@@ -11,6 +11,17 @@ function genToken(): string {
   return randomBytes(8).toString('hex') // 16 hex chars
 }
 
+// 어드민 저장 시각 스탬프 — admin_saved_at 컬럼이 없어도 저장 자체는 성공 처리
+async function stampSavedAt(id: string, fallback: Record<string, unknown>) {
+  const { data } = await supabase
+    .from('checkin_details')
+    .update({ admin_saved_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  return data || fallback
+}
+
 // GET: bookingId 없으면 bookings 목록 / 있으면 {booking, detail} 반환 (detail 없으면 자동 생성)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -91,10 +102,10 @@ export async function POST(req: Request) {
   if (existing) {
     const { data, error } = await supabase.from('checkin_details').update(update).eq('id', existing.id).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ detail: data })
+    return NextResponse.json({ detail: await stampSavedAt(existing.id, data) })
   }
   const insertRow = { booking_id, public_token: genToken(), ...update }
   const { data, error } = await supabase.from('checkin_details').insert(insertRow).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ detail: data })
+  return NextResponse.json({ detail: await stampSavedAt(data.id, data) })
 }

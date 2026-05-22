@@ -426,7 +426,7 @@ export default function BookingDetailPage() {
 @media(max-width:600px){.mv-w{padding:20px 12px}.grid{grid-template-columns:1fr}.mv-head{flex-direction:column;align-items:stretch}}
     `}</style>
     <div className="mv-w">
-      <button className="mv-back" onClick={() => router.push("/admin/bookings")}>← 예약 목록으로</button>
+      <button className="mv-back" onClick={() => router.push("/admin/bookings?tab=confirmed")}>← 예약 목록으로</button>
 
       <div style={{ fontSize: 22, color: "#1a6fc4", fontWeight: 700, marginBottom: 8 }}>📋 예약 상세</div>
 

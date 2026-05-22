@@ -545,6 +545,19 @@ export default function AdminBookingsPage(){
     else{window.location.href="/admin";}
   },[]);
 
+  // URL ?tab= 파라미터로 진입 탭 선택 (예: ?tab=confirmed → 확정 예약 탭)
+  useEffect(()=>{
+    if(typeof window==='undefined')return;
+    const tab=new URLSearchParams(window.location.search).get("tab");
+    if(!tab)return;
+    const map:Record<string,"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">={
+      confirmed:"confirm",confirm:"confirm",newlist:"newlist",list:"list",
+      receipt:"receipt",estimate:"estimate",students:"students",
+    };
+    const m=map[tab];
+    if(m)setMainTab(m);
+  },[]);
+
   // 담당자 목록 — staff_accounts(korean_admin·활성) 동적 로딩, 실패 시 폴백
   useEffect(()=>{
     fetch('/api/admin/staff-accounts?role=korean_admin&active=true')
