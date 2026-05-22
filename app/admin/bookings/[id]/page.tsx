@@ -205,6 +205,7 @@ export default function BookingDetailPage() {
       children: String(b.children ?? b.num_children ?? (studentsArr.length || "")),
       house_no: b.house_no || b.accom_room || b.room_no || b.room_number || "",
       academy_start: b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date) || "",
+      late_checkout: b.late_checkout ? "1" : "",
     });
     setEditing(true);
   }
@@ -315,6 +316,7 @@ export default function BookingDetailPage() {
       booker_phone: (editForm.booker_phone || "").trim() || null,
       checkin_date: editForm.checkin_date || null,
       checkout_date: editForm.checkout_date || null,
+      late_checkout: !!editForm.late_checkout,
       accom_weeks: Number(editForm.accom_weeks) || null,
       accom_type: editForm.accom_type || null,
       agency: (editForm.agency || "").trim() || null,
@@ -491,6 +493,11 @@ export default function BookingDetailPage() {
                 {editing
                   ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
                   : <div className="val">{fDate(b.check_out || b.checkout_date)}</div>}
+              </div>
+              <div className="item"><div className="lbl">Late Check-out</div>
+                {editing
+                  ? <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer"}}><input type="checkbox" checked={!!editForm.late_checkout} onChange={e=>setEditForm({...editForm,late_checkout:e.target.checked?"1":""})}/>레이트 체크아웃 (10:30PM)</label>
+                  : <div className="val">{b.late_checkout ? "예 (10:30PM)" : "아니오"}</div>}
               </div>
               <div className="item"><div className="lbl">기간(주)</div>
                 {editing
