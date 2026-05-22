@@ -47,6 +47,27 @@ function fDate(d: string | null) {
   return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,"0")}.${String(dt.getDate()).padStart(2,"0")}`;
 }
 
+// 베드 세팅 한글 → 침대 수 숫자 ("더블베드 2개"→2, "더블베드 1개"→1, "더블베드+싱글"→2, "사용하지 않음"→0)
+function bedNum(v: string): string {
+  const s = v || "";
+  if (!s || s.includes("사용하지 않음")) return "0";
+  let n = 0;
+  const m = s.match(/더블베드\s*(\d+)개/);
+  if (m) n += Number(m[1]);
+  else if (s.includes("더블베드")) n += 1;
+  if (s.includes("싱글")) n += 1;
+  return n > 0 ? String(n) : "-";
+}
+
+// 유심 요금제 "24GB / 30일 / ₱499" → 컴팩트 "24GB/30d"
+function simCompact(plan: string): string {
+  const parts = String(plan || "").split("/").map(x => x.trim());
+  const gb = parts.find(p => /GB/i.test(p)) || "";
+  const days = parts.find(p => /일|day/i.test(p)) || "";
+  const d = days.replace(/\s*일/, "d").replace(/\s*days?/i, "d");
+  return [gb, d].filter(Boolean).join("/");
+}
+
 export default function CheckinDetailsPage() {
   return <Suspense fallback={null}><CheckinDetailsInner/></Suspense>;
 }
@@ -164,9 +185,125 @@ function CheckinDetailsInner() {
       ["필요함", "Required"],
       ["불필요", "Not required"],
       ["미정", "TBD"],
+      ["픽업", "Pick-up"],
+      ["드랍", "Drop"],
     ];
     for (const [ko, en] of map) s = s.split(ko).join(en);
+    // 기간 "N일" → "N days" (날짜 문자열은 tr 미적용이므로 안전)
+    s = s.replace(/(\d+)\s*일/g, "$1 days");
     return s;
+  }
+
+  // 인쇄 팝업 열기
+  function openPrintWindow(html: string) {
+    const w = window.open("", "_blank");
+    if (!w) { alert("팝업이 차단되었습니다. 팝업을 허용해주세요."); return; }
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
+  // ── EN 인쇄: GUEST DETAILS 시트 (컴팩트 표, A4 1장) ──
+  function printGuestDetailsEN(b: Booking, d: Partial<Detail>, dash: (v: any) => string) {
+    const logo = (typeof window !== "undefined" ? window.location.origin : "") + "/dream-academy-logo.png";
+    const nameLine = `${dash(b.booker_name)}${b.booker_english ? ` (${b.booker_english})` : ""}`;
+    const houseNo = dash(b.house_no || b.accom_room);
+    const checkIn = dash(d.checkin_date || b.checkin_date);
+    const checkOut = dash(b.checkout_date);
+    const pickFlight = dash(b.flight_in);
+    const dropFlight = dash(b.flight_out);
+    const m1 = bedNum(bedConfig.room1), m2 = bedNum(bedConfig.room2), m3 = bedNum(bedConfig.room3);
+    const simList = simCards.map(s => simCompact(s.plan)).filter(Boolean);
+    const simText = simList.length ? simList.join(", ") : "-";
+    const loadText = simList.length ? String(simList.length) : "-";
+    const guests = dash(d.guest_names_en);
+    let addText = "-";
+    try {
+      const arr = JSON.parse(d.extra_pickups || "[]");
+      if (Array.isArray(arr) && arr.length > 0) {
+        addText = arr.map((p: { type?: string; date?: string; time?: string; airline?: string; flight?: string }) =>
+          enText(`[${p.type || ""}] ${p.date || ""} ${p.time || ""} ${p.airline || ""} ${p.flight || ""}`.replace(/\s+/g, " ").trim())
+        ).join("  |  ");
+      }
+    } catch {}
+    const etc = d.extra_requests ? String(d.extra_requests) : "";
+    const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Guest Details — ${dash(b.booker_name)}</title>
+<style>
+  *{box-sizing:border-box;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:16px;}
+  table{width:100%;border-collapse:collapse;}
+  td,th{border:1.2px solid #1a1a1a;padding:7px 9px;font-size:12px;vertical-align:middle;}
+  .hd td{border:none;padding:0 0 10px;}
+  .logo{height:46px;}
+  .ti{font-size:24px;font-weight:800;letter-spacing:2px;text-align:right;}
+  .lbl{background:#ebebeb;font-weight:700;font-size:9.5px;color:#333;white-space:nowrap;letter-spacing:0.4px;}
+  .val{font-size:13px;font-weight:600;}
+  .big{font-size:16px;font-weight:800;}
+  .sub{background:#f4f4f4;font-size:9px;font-weight:700;color:#555;text-align:center;letter-spacing:0.3px;}
+  .num{font-size:22px;font-weight:800;text-align:center;}
+  .ctr{text-align:center;}
+  .etc{height:104px;vertical-align:top;}
+  @media print{ @page{size:A4;margin:11mm;} body{padding:0;} }
+</style></head>
+<body>
+  <table class="hd"><tr>
+    <td style="width:50%"><img class="logo" src="${logo}" onerror="this.style.display='none'"/></td>
+    <td class="ti">GUEST DETAILS</td>
+  </tr></table>
+  <table>
+    <tr>
+      <td class="lbl" style="width:11%">NAME</td>
+      <td class="val big" colspan="5">${nameLine}</td>
+      <td class="lbl" style="width:13%">HOUSE NO</td>
+      <td class="val big ctr" colspan="3">${houseNo}</td>
+    </tr>
+    <tr>
+      <td class="lbl">CHECK IN</td>
+      <td class="val" colspan="4">${checkIn}</td>
+      <td class="lbl">CHECK OUT</td>
+      <td class="val" colspan="4">${checkOut}</td>
+    </tr>
+    <tr>
+      <td class="lbl">PICK UP</td>
+      <td class="val" colspan="4">${pickFlight}</td>
+      <td class="lbl">DROP</td>
+      <td class="val" colspan="4">${dropFlight}</td>
+    </tr>
+    <tr>
+      <th class="sub" colspan="6">BED SETTING</th>
+      <th class="sub" colspan="2" rowspan="2">SIM</th>
+      <th class="sub" colspan="2" rowspan="2">LOAD</th>
+    </tr>
+    <tr>
+      <th class="sub" colspan="2">2F MASTER</th>
+      <th class="sub" colspan="2">2F SMALL</th>
+      <th class="sub" colspan="2">1F</th>
+    </tr>
+    <tr>
+      <td class="num" colspan="2">${m1}</td>
+      <td class="num" colspan="2">${m2}</td>
+      <td class="num" colspan="2">${m3}</td>
+      <td class="val ctr" colspan="2">${simText}</td>
+      <td class="num" colspan="2">${loadText}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ALL GUEST</td>
+      <td class="val" colspan="9">${guests}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ADD</td>
+      <td class="val" colspan="9">${addText}</td>
+    </tr>
+    <tr>
+      <td class="lbl etc">ETC</td>
+      <td class="etc" colspan="9">${etc}</td>
+    </tr>
+  </table>
+  <script>window.onload=function(){window.print();};</script>
+</body></html>`;
+    openPrintWindow(html);
   }
 
   function handlePrint(lang: "en" | "kr" = "en") {
@@ -174,7 +311,11 @@ function CheckinDetailsInner() {
     const b = booking;
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
-    const tr = lang === "en" ? enText : (x: any) => x; // EN이면 영문 변환, KR이면 한글 그대로
+
+    if (lang === "en") { printGuestDetailsEN(b, d, dash); return; }
+
+    // ── KR: 기존 CHECK-IN NOTICE SHEET (변경 없음) ──
+    const tr = (x: any) => x;
     const accomLine = `${dash(tr(b.accom_type))} / ${dash(tr(b.accom_room))}${b.house_no ? ` (${b.house_no})` : ""}`;
     let bedText = "";
     try { const bs = JSON.parse(d.bed_setting || "{}"); bedText = [bs.room1 && `Room1: ${tr(bs.room1)}`, bs.room2 && `Room2: ${tr(bs.room2)}`, bs.room3 && `Room3: ${tr(bs.room3)}`].filter(Boolean).join(" / "); } catch { bedText = tr(d.bed_setting || ""); }
@@ -184,7 +325,7 @@ function CheckinDetailsInner() {
     try { const arr = JSON.parse(d.extra_pickups || "[]"); extraPickupsText = Array.isArray(arr) ? arr.map((p: { type?:string;date?:string;time?:string;airline?:string;flight?:string }) => tr(`[${p.type||""}] ${p.date||""} ${p.time||""} ${p.airline||""} ${p.flight||""}`.trim())).join(" / ") : ""; } catch { extraPickupsText = ""; }
     const blankLines = Array.from({length:10}).map(()=>'<div style="border-bottom:1px solid #aaa;height:28px;margin:4px 0;"></div>').join("");
     const html = `<!doctype html>
-<html lang="${lang === "en" ? "en" : "ko"}"><head><meta charset="utf-8"/>
+<html lang="ko"><head><meta charset="utf-8"/>
 <title>Check-in Notice — ${dash(b.booker_name)}</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
@@ -248,11 +389,7 @@ function CheckinDetailsInner() {
 
   <script>window.onload = function(){ window.print(); };</script>
 </body></html>`;
-    const w = window.open("", "_blank");
-    if (!w) { alert("팝업이 차단되었습니다. 팝업을 허용해주세요."); return; }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    openPrintWindow(html);
   }
 
   function copyPublicLink() {
