@@ -2557,7 +2557,8 @@ function renderGuideMsgs(cat) {
   const main = document.getElementById('guideMain');
   const msgs = GUIDE_DATA[cat] || [];
   const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
-  const isAdmin = u === 'ceo' || u === 'jenna';
+  // EMPS(staff_accounts 기반 한국인 직원)에 있으면 관리자 권한, CEO도 포함
+  const isAdmin = !!(EMPS.find(e => e.id === u)) || u === 'ceo';
 
   let html = '<div class="guide-header">';
   html += '<h2>' + cat + '</h2>';
