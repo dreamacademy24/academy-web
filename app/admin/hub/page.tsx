@@ -68,7 +68,7 @@ export default function AdminHubPage() {
     `}</style>
     <div className="hub-w">
       <div className="hub-h">
-        <h1>드림아카데미 관리자</h1>
+        <h1>관리자 홈</h1>
         <p>안녕하세요, {name}님{role === 'admin' ? ' (관리자)' : ' (스태프)'}</p>
       </div>
       <div className="hub-grid">

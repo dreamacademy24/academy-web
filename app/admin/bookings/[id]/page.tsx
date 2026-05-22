@@ -487,12 +487,12 @@ export default function BookingDetailPage() {
               <div className="item"><div className="lbl">체크인</div>
                 {editing
                   ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
-                  : <div className="val">{fDate(b.check_in || b.checkin_date)}</div>}
+                  : <div className="val">{(b.check_in||b.checkin_date)?<>{fDate(b.check_in||b.checkin_date)} <span style={{color:"#64748b",fontSize:12}}>15:00PM</span></>:"-"}</div>}
               </div>
               <div className="item"><div className="lbl">체크아웃</div>
                 {editing
                   ? <input className="ed-inp" type="date" value={editForm.checkout_date||""} onChange={e=>setEditForm({...editForm,checkout_date:e.target.value})}/>
-                  : <div className="val">{fDate(b.check_out || b.checkout_date)}</div>}
+                  : <div className="val">{(b.check_out||b.checkout_date)?<>{fDate(b.check_out||b.checkout_date)} <span style={{color:"#64748b",fontSize:12}}>{b.late_checkout?"22:30pm":"12noon"}</span></>:"-"}</div>}
               </div>
               <div className="item"><div className="lbl">Late Check-out</div>
                 {editing
