@@ -14,7 +14,7 @@ interface InvoicePayload {
   accom:string; checkInDate:string; checkOutDate:string; houseNo:string; people:string;
   pickup:string; drop:string; pickupPlace:string; flightIn:string; flightOut:string;
   packageType:string; basePrice:number; totalDiscount:number; finalPrice:number;
-  deposit:number; balance:number;
+  deposit:number; balance:number; lateCheckout?:boolean;
   students:StudentData[]; note:string; agency?:string; ssp?:string; assignee?:string;
   billingItems:BillItem[]; discounts:Disc[]; locals:LC[];
 }
@@ -63,7 +63,7 @@ function ReceiptPageInner(){
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
-            checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"",
+            checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"", lateCheckout:!!row.late_checkout,
             people:peopleDisplay, houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
@@ -253,7 +253,7 @@ function ReceiptPageInner(){
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
             <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">체크인 (오후 3시 입실)</td><td>{fmtFull(data.checkInDate)}</td><td className="lb">체크아웃 (정오 12시 퇴실)</td><td>{fmtFull(data.checkOutDate)}</td></tr>
+            <tr><td className="lb">체크인</td><td>{data.checkInDate?`${fmtFull(data.checkInDate)} 15:00PM`:""}</td><td className="lb">체크아웃</td><td>{data.checkOutDate?`${fmtFull(data.checkOutDate)} ${data.lateCheckout?"22:30pm":"12noon"}`:""}</td></tr>
             <tr><td className="lb">패키지</td><td>{data.packageType}</td><td className="lb">인원 구성</td><td>{peopleStr}</td></tr>
             <tr><td className="lb">잔금납부일</td><td colSpan={3}>{fmtFull(data.balanceDate)||"미정"}</td></tr>
             {data.note&&<tr><td className="lb">특이사항</td><td colSpan={3}>{data.note}</td></tr>}
