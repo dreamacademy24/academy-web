@@ -2576,7 +2576,7 @@ function renderGuideMsgs(cat) {
       html += '<button class="guide-edit-btn" style="color:#ef4444;border-color:#fecaca;" onclick="deleteGuideMsg(\'' + msg.id + '\')">삭제</button>';
     }
     html += '<button class="guide-copy-btn" id="copy-' + msg.id + '" onclick="copyGuideMsg(\'' + msg.id + '\')">복사</button>';
-    if (msg.id === 'ft5') {
+    if ((msg.title || '').includes('스케이팅')) {
       html += '<button onclick="window.open(\'/admin/notices/fieldtrip/skating\', \'_blank\')" style="padding:4px 12px;background:#0a2540;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🖨️ 안내문</button>';
       html += '<button onclick="window.open(\'/admin/notices/fieldtrip/skating/staff-guide\', \'_blank\')" style="padding:4px 12px;background:#1d6fa5;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">📋 준비가이드</button>';
     }
@@ -2593,7 +2593,7 @@ function renderGuideMsgs(cat) {
 
 function copyGuideMsg(id) {
   const cat = _guideCat;
-  const msg = (GUIDE_DATA[cat] || []).find(m => m.id === id);
+  const msg = (GUIDE_DATA[cat] || []).find(m => String(m.id) === String(id));
   if (!msg) return;
   navigator.clipboard.writeText(msg.content).then(() => {
     const btn = document.getElementById('copy-' + id);
@@ -2606,19 +2606,22 @@ function copyGuideMsg(id) {
 }
 
 function openGuideMsgModal(editId) {
-  _guideEditId = editId || null;
   const modal = document.getElementById('guideMsgModal');
   const titleEl = document.getElementById('guideMsgModalTitle');
   const titleInput = document.getElementById('guideMsgTitleInput');
   const contentInput = document.getElementById('guideMsgContentInput');
 
-  if (editId) {
-    const msg = (GUIDE_DATA[_guideCat] || []).find(m => m.id === editId);
-    if (msg) {
-      titleEl.textContent = '문구 수정';
-      titleInput.value = msg.title;
-      contentInput.value = msg.content;
-    }
+  // onclick은 id를 문자열로 넘기므로 String 비교로 찾고, 실제 id(정수/시드문자열)를 보관
+  let msg = null;
+  if (editId != null && editId !== '') {
+    msg = (GUIDE_DATA[_guideCat] || []).find(m => String(m.id) === String(editId));
+  }
+  _guideEditId = msg ? msg.id : null;
+
+  if (msg) {
+    titleEl.textContent = '문구 수정';
+    titleInput.value = msg.title;
+    contentInput.value = msg.content;
   } else {
     titleEl.textContent = '문구 추가';
     titleInput.value = '';
@@ -2630,20 +2633,54 @@ function openGuideMsgModal(editId) {
 
 function editGuideMsg(id) { openGuideMsgModal(id); }
 
-function deleteGuideMsg(id) {
+async function deleteGuideMsg(id) {
   if (!confirm('이 문구를 삭제할까요?')) return;
-  GUIDE_DATA[_guideCat] = (GUIDE_DATA[_guideCat] || []).filter(m => m.id !== id);
-  renderGuideMsgs(_guideCat);
-  if (typeof SB_URL !== 'undefined') {
-    fetch(SB_URL + '/rest/v1/guide_messages?id=eq.' + id.replace('g',''), {
-      method:'DELETE',
-      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
-    });
+  const cat = _guideCat;
+  const item = (GUIDE_DATA[cat] || []).find(m => String(m.id) === String(id));
+  // 메모리 아이템의 id가 숫자(DB integer)면 DB 삭제, 아니면(하드코딩 시드) DB 호출 생략
+  const dbId = item && typeof item.id === 'number' ? item.id : null;
+  GUIDE_DATA[cat] = (GUIDE_DATA[cat] || []).filter(m => String(m.id) !== String(id));
+  renderGuideMsgs(cat);
+  if (dbId != null) {
+    try { await sbDel('guide_messages', 'id=eq.' + dbId); }
+    catch(e) { console.warn('guide_messages 삭제 실패:', e); }
   }
 }
 
 function closeGuideMsgModal() {
   document.getElementById('guideMsgModal').style.display = 'none';
+}
+
+// guide_messages 테이블 로드 — DB 우선, 비어있으면 하드코딩 시드를 일괄 INSERT
+async function loadGuideMsgs() {
+  function fillFrom(rows) {
+    Object.keys(GUIDE_DATA).forEach(k => GUIDE_DATA[k] = []);
+    rows.forEach(row => {
+      const cat = row.category;
+      if (!GUIDE_DATA[cat]) GUIDE_DATA[cat] = [];
+      GUIDE_DATA[cat].push({ id: row.id, title: row.title, content: row.content, sort_order: row.sort_order || 0 });
+    });
+  }
+  try {
+    const rows = await sbGet('guide_messages', 'order=sort_order.asc');
+    if (rows && rows.length > 0) {
+      fillFrom(rows); // DB 데이터로 GUIDE_DATA 교체 (id = DB integer)
+      return;
+    }
+    // DB가 비어있음 → 현재 하드코딩 GUIDE_DATA를 시드로 일괄 INSERT 후 그 결과(정수 id)로 교체
+    const seeds = [];
+    Object.keys(GUIDE_DATA).forEach(cat => {
+      (GUIDE_DATA[cat] || []).forEach((m, i) => {
+        seeds.push({ category: cat, title: m.title, content: m.content, sort_order: (m.sort_order != null ? m.sort_order : i) });
+      });
+    });
+    if (seeds.length > 0) {
+      const inserted = await sbPost('guide_messages', seeds);
+      if (Array.isArray(inserted) && inserted.length > 0) fillFrom(inserted);
+    }
+  } catch(e) {
+    console.warn('guide_messages 로드 실패, 하드코딩 사용:', e);
+  }
 }
 
 async function saveGuideMsg() {
@@ -2653,26 +2690,27 @@ async function saveGuideMsg() {
 
   const cat = _guideCat;
   if (!GUIDE_DATA[cat]) GUIDE_DATA[cat] = [];
+  const isEdit = (_guideEditId != null && _guideEditId !== '');
 
-  if (_guideEditId) {
-    const idx = GUIDE_DATA[cat].findIndex(m => m.id === _guideEditId);
+  if (isEdit) {
+    // 메모리 갱신
+    const idx = GUIDE_DATA[cat].findIndex(m => String(m.id) === String(_guideEditId));
     if (idx >= 0) { GUIDE_DATA[cat][idx].title = title; GUIDE_DATA[cat][idx].content = content; }
-  } else {
-    const newId = 'g' + Date.now();
-    GUIDE_DATA[cat].push({ id: newId, title, content });
-  }
-
-  try {
-    const SB_URL2 = typeof SB_URL !== 'undefined' ? SB_URL : (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : null);
-    const SB_KEY2 = typeof SB_KEY !== 'undefined' ? SB_KEY : (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : null);
-    if (SB_URL2 && SB_KEY2) {
-      await fetch(SB_URL2 + '/rest/v1/guide_messages', {
-        method:'POST',
-        headers:{'apikey':SB_KEY2,'Authorization':'Bearer '+SB_KEY2,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-        body: JSON.stringify({ category: cat, title, content, sort_order: GUIDE_DATA[cat].length })
-      });
+    // DB integer id면 PATCH (시드 문자열 id면 DB 동기화 생략)
+    if (typeof _guideEditId === 'number') {
+      try { await sbPatch('guide_messages', 'id=eq.' + _guideEditId, { title, content }); }
+      catch(e) { console.warn('guide_messages 수정 실패:', e); }
     }
-  } catch(e) {}
+  } else {
+    // 신규 — 메모리에 먼저 추가 후 POST 응답의 DB integer id로 교체
+    const sortOrder = GUIDE_DATA[cat].length;
+    const item = { id: 'g' + Date.now(), title, content, sort_order: sortOrder };
+    GUIDE_DATA[cat].push(item);
+    try {
+      const inserted = await sbPost('guide_messages', { category: cat, title, content, sort_order: sortOrder });
+      if (Array.isArray(inserted) && inserted[0] && inserted[0].id != null) item.id = inserted[0].id;
+    } catch(e) { console.warn('guide_messages 추가 실패:', e); }
+  }
 
   closeGuideMsgModal();
   renderGuideMsgs(cat);
@@ -8391,7 +8429,7 @@ window.addEventListener('DOMContentLoaded', function(){
     buildLogin();
   }
 
-  loadStaffAccounts().then(_bootApp, _bootApp);
+  loadStaffAccounts().then(loadGuideMsgs, loadGuideMsgs).then(_bootApp, _bootApp);
 });
 </script>
 
