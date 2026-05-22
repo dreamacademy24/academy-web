@@ -703,7 +703,7 @@ export default function AdminBookingsPage(){
     <div className="main-tabs">
       <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적</button>
       <button className={`main-tab${mainTab==="newlist"?" ac":""}`} onClick={()=>setMainTab("newlist")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수"||b.status==="접수중").length;return n>0&&<span style={{background:"#e85d35",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>{n}</span>;})()}</button>
-      <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 인보이스</button>
+      <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 예약내역</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
       <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
       <button className={`main-tab${mainTab==="students"?" ac":""}`} onClick={()=>setMainTab("students")}>📚 학생관리</button>
@@ -738,7 +738,7 @@ export default function AdminBookingsPage(){
       </div>);
     })()}
 
-    {/* ── 탭1: 인보이스 (전체 부킹 리스트) ── */}
+    {/* ── 탭1: 예약내역 (전체 부킹 리스트) ── */}
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
