@@ -8,6 +8,7 @@ interface ProgramItem { num: string; label: string; name: string; desc: string; 
 interface Notice {
   event_date: string;
   event_day: string;
+  schedule: ScheduleItem[];
 }
 
 const FONT = "'Noto Sans KR',sans-serif";
@@ -20,14 +21,15 @@ const SAFETY_TEXT = "Our teachers will be with the students at all times. A safe
 const PICKUP_HTML = "Parents wishing to pick up their child at SM Seaside may do so at the designated exit only. Please contact us <span style='color:#dc2626;font-weight:600;'>in advance</span> so we can provide the exact time and gate location. We will notify you separately if there are any delays due to traffic.";
 const FOOTER_MSG = "We will do our best to ensure all children have a safe and memorable experience. Thank you! 😊";
 
-const SCHEDULE_EN: ScheduleItem[] = [
-  { time: "10:20", main: "Pickup begins", sub: "Depart from accommodation" },
-  { time: "11:00", main: "Arrive at SM Seaside", sub: "Prepare and enter the skating rink" },
-  { time: "13:00", main: "Skating ends", sub: "" },
-  { time: "13:20", main: "Lunch at Jollibee 🍔", sub: "Students order their own food in English" },
-  { time: "14:00", main: "Move to Mart", sub: "Students shop for snacks using their Money Mission earnings" },
-  { time: "14:40", main: "Depart for accommodation", sub: "" },
-  { time: "15:10~", main: "Expected arrival", sub: "Estimated between 15:10–15:20" },
+// 영어 텍스트만 고정 — 시간(time)은 DB notice.schedule[i].time 을 index 순서로 사용
+const SCHEDULE_EN_TEXT = [
+  { main: "Pickup begins", sub: "Depart from accommodation" },
+  { main: "Arrive at SM Seaside", sub: "Prepare and enter the skating rink" },
+  { main: "Skating ends", sub: "" },
+  { main: "Lunch at Jollibee 🍔", sub: "Students order their own food in English" },
+  { main: "Move to Mart", sub: "Students shop for snacks using their Money Mission earnings" },
+  { main: "Depart for accommodation", sub: "" },
+  { main: "Expected arrival", sub: "Estimated between 15:10–15:20" },
 ];
 
 const PROGRAMS_EN: ProgramItem[] = [
@@ -72,6 +74,7 @@ export default function SkatingNoticePreviewEn() {
       setNotice({
         event_date: row.event_date || "",
         event_day: row.event_day || "",
+        schedule: Array.isArray(row.schedule) ? row.schedule : [],
       });
       setLoading(false);
     })();
@@ -94,6 +97,13 @@ export default function SkatingNoticePreviewEn() {
   if (!notice) return <div style={{ padding: 40, fontFamily: FONT, color: "#dc2626" }}>{err || "No data"}</div>;
 
   const eventDay = (notice.event_day || "").replace("토요일", "Saturday");
+
+  // 시간은 DB(notice.schedule)에서 실시간 반영, 영어 텍스트는 SCHEDULE_EN_TEXT 고정 (index 매핑)
+  const scheduleEn: ScheduleItem[] = notice.schedule.map((item, i) => ({
+    time: item.time,
+    main: SCHEDULE_EN_TEXT[i]?.main ?? item.main,
+    sub: SCHEDULE_EN_TEXT[i]?.sub ?? item.sub,
+  }));
 
   return (
     <div className="preview-bg" style={{ background: "#e2e8f0", minHeight: "100vh", padding: "30px 20px", fontFamily: FONT }}>
@@ -133,8 +143,8 @@ export default function SkatingNoticePreviewEn() {
           <section>
             <SectionTitle title="Schedule" />
             <div>
-              {SCHEDULE_EN.map((s, i) => {
-                const isLast = i === SCHEDULE_EN.length - 1;
+              {scheduleEn.map((s, i) => {
+                const isLast = i === scheduleEn.length - 1;
                 const dotColor = isLast ? "#1d9e75" : "#0a2540";
                 return (
                   <div key={i} style={{ display: "flex", gap: 14 }}>
