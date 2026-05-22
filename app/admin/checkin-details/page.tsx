@@ -119,10 +119,12 @@ function CheckinDetailsInner() {
         try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"}); }
         try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
         try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
-        // 저장 상태 판별: admin_saved_at / submitted_at 우선, 없으면 localStorage 폴백
+        // 저장 상태 판별: 타임스탬프(admin_saved_at/submitted_at/localStorage) 또는
+        // 실제 저장 흔적(bed_setting/usim_request/extra_pickups는 저장 시에만 채워짐)
         const ts = d.detail.admin_saved_at || d.detail.submitted_at || (typeof window!=="undefined" ? localStorage.getItem("checkin_saved_"+id) : "") || "";
+        const hasSaved = !!ts || !!(d.detail.bed_setting || d.detail.usim_request || d.detail.extra_pickups);
         setSavedAt(ts);
-        setEditing(!ts); // 저장된 데이터 있으면 인쇄 미리보기 뷰로
+        setEditing(!hasSaved); // 저장된 데이터 있으면 인쇄 미리보기 뷰로
       }
       if (d.error) setMsg("저장 경고: " + d.error);
     } else {
@@ -209,8 +211,17 @@ function CheckinDetailsInner() {
     w.document.close();
   }
 
-  // ── EN 인쇄: GUEST DETAILS 시트 (컴팩트 표, A4 1장) ──
-  function printGuestDetailsEN(b: Booking, d: Partial<Detail>, dash: (v: any) => string) {
+  // ── GUEST DETAILS 인쇄 시트 (EN/KR 공용, 인보이스 스타일 컬러) ──
+  function printGuestDetails(lang: "en" | "kr", b: Booking, d: Partial<Detail>, dash: (v: any) => string) {
+    const isEn = lang === "en";
+    const L = isEn
+      ? { title:"GUEST DETAILS", name:"NAME", house:"HOUSE NO", cin:"CHECK IN", cout:"CHECK OUT",
+          pick:"PICK UP", drop:"DROP", bed:"BED SETTING", master:"2F MASTER", small:"2F SMALL", first:"1F",
+          sim:"SIM", load:"LOAD", guest:"ALL GUEST", add:"ADD", etc:"ETC / 정산", pkg:"ALL-INCLUSIVE PACKAGE" }
+      : { title:"투숙객 정보", name:"예약자", house:"하우스 번호", cin:"체크인", cout:"체크아웃",
+          pick:"픽업", drop:"드랍", bed:"베드 세팅", master:"2F 마스터", small:"2F 작은방", first:"1F",
+          sim:"유심", load:"로드", guest:"투숙객 전체", add:"추가 픽드랍", etc:"기타 / 정산", pkg:"올인원패키지" };
+
     const logo = (typeof window !== "undefined" ? window.location.origin : "") + "/dream-academy-logo.png";
     const nameLine = `${dash(b.booker_name)}${b.booker_english ? ` (${b.booker_english})` : ""}`;
     const houseNo = dash(b.house_no || b.accom_room);
@@ -227,98 +238,101 @@ function CheckinDetailsInner() {
     try {
       const arr = JSON.parse(d.extra_pickups || "[]");
       if (Array.isArray(arr) && arr.length > 0) {
-        addText = arr.map((p: { type?: string; date?: string; time?: string; airline?: string; flight?: string }) =>
-          enText(`[${p.type || ""}] ${p.date || ""} ${p.time || ""} ${p.airline || ""} ${p.flight || ""}`.replace(/\s+/g, " ").trim())
-        ).join("  |  ");
+        addText = arr.map((p: { type?: string; date?: string; time?: string; airline?: string; flight?: string }) => {
+          const line = `[${p.type || ""}] ${p.date || ""} ${p.time || ""} ${p.airline || ""} ${p.flight || ""}`.replace(/\s+/g, " ").trim();
+          return isEn ? enText(line) : line;
+        }).join("  |  ");
       }
     } catch {}
     const etc = d.extra_requests ? String(d.extra_requests) : "";
-    const pkgBadge = isPackage(b.accom_type) ? `<span class="pkg">ALL-INCLUSIVE PACKAGE</span>` : "";
-    const etcLines = Array.from({ length: 5 }).map(() => `<div class="ln"></div>`).join("");
-    const etcHtml = (etc ? `<div class="txt">${etc}</div>` : "") + etcLines;
+
+    // 색상을 inline style로 강제 — 흑백 인쇄 방지 (print-color-adjust 양쪽 적용)
+    const PCA = "-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;";
+    const sLbl   = `background:#f1f5f9;color:#4f46e5;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;${PCA}`;
+    const sVal   = `background:#ffffff;color:#1e293b;font-size:13px;font-weight:600;${PCA}`;
+    const sBig   = `background:#ffffff;color:#1e293b;font-size:16px;font-weight:700;${PCA}`;
+    const sHouse = `background:#ffffff;color:#1e293b;font-size:19px;font-weight:800;text-align:center;${PCA}`;
+    const sBedHd = `background:#4f46e5;color:#ffffff;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;${PCA}`;
+    const sBedSub= `background:#e0e7ff;color:#3730a3;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:center;${PCA}`;
+    const sNum   = `background:#ffffff;color:#1e293b;font-size:22px;font-weight:700;text-align:center;${PCA}`;
+    const sSim   = `background:#ffffff;color:#1e293b;font-size:13px;font-weight:700;text-align:center;${PCA}`;
+    const sGLbl  = `background:#4f46e5;color:#ffffff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;${PCA}`;
+    const sEtcLb = `background:#1e293b;color:#ffffff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;vertical-align:top;${PCA}`;
+    const sEtc   = `background:#ffffff;height:120px;vertical-align:top;`;
+    const pkgBadge = isPackage(b.accom_type)
+      ? `<span style="display:inline-block;background:#4f46e5;color:#ffffff;font-size:9px;font-weight:800;letter-spacing:0.05em;padding:3px 9px;border-radius:4px;margin-left:8px;vertical-align:middle;${PCA}">${L.pkg}</span>`
+      : "";
+    const etcLines = Array.from({ length: 5 }).map(() => `<div style="border-bottom:1px solid #cbd5e1;height:20px;"></div>`).join("");
+    const etcHtml = (etc ? `<div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px;">${etc}</div>` : "") + etcLines;
+
     const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"/>
-<title>Guest Details — ${dash(b.booker_name)}</title>
+<html lang="${isEn ? "en" : "ko"}"><head><meta charset="utf-8"/>
+<title>${L.title} — ${dash(b.booker_name)}</title>
 <style>
-  *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:20px;}
   .head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;}
   .head img{height:48px;width:auto;}
   .head .ti{font-size:28px;font-weight:800;color:#1e293b;letter-spacing:1px;}
-  .rule{height:3px;background:#4f46e5;margin-bottom:14px;}
   .wrap{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
   table{width:100%;border-collapse:collapse;}
   td,th{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
-  .lbl{background:#f1f5f9;color:#4f46e5;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
-  .val{background:#fff;color:#1e293b;font-size:13px;font-weight:600;}
-  .big{font-size:16px;font-weight:700;}
-  .house{background:#fff;color:#1e293b;font-size:19px;font-weight:800;text-align:center;}
-  .bedhd{background:#4f46e5;color:#fff;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
-  .bedsub{background:#e0e7ff;color:#3730a3;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:center;}
-  .num{background:#fff;color:#1e293b;font-size:22px;font-weight:700;text-align:center;}
-  .simval{background:#fff;color:#1e293b;font-size:13px;font-weight:700;text-align:center;}
-  .glbl{background:#4f46e5;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
-  .etclbl{background:#1e293b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;vertical-align:top;}
-  .etc{background:#fff;height:120px;vertical-align:top;}
-  .etc .txt{font-size:12px;font-weight:600;margin-bottom:8px;}
-  .etc .ln{border-bottom:1px solid #cbd5e1;height:20px;}
-  .pkg{display:inline-block;background:#4f46e5;color:#fff;font-size:9px;font-weight:800;letter-spacing:0.05em;padding:3px 9px;border-radius:4px;margin-left:8px;vertical-align:middle;}
   @media print{ @page{size:A4;margin:11mm;} body{padding:0;} }
 </style></head>
 <body>
   <div class="head">
     <img src="${logo}" onerror="this.style.display='none'"/>
-    <div class="ti">GUEST DETAILS</div>
+    <div class="ti">${L.title}</div>
   </div>
-  <div class="rule"></div>
+  <div style="height:3px;background:#4f46e5;margin-bottom:14px;${PCA}"></div>
   <div class="wrap">
   <table>
     <tr>
-      <td class="lbl" style="width:11%">NAME</td>
-      <td class="val big" colspan="5">${nameLine}${pkgBadge}</td>
-      <td class="lbl" style="width:13%">HOUSE NO</td>
-      <td class="house" colspan="3">${houseNo}</td>
+      <td style="width:11%;${sLbl}">${L.name}</td>
+      <td colspan="5" style="${sBig}">${nameLine}${pkgBadge}</td>
+      <td style="width:13%;${sLbl}">${L.house}</td>
+      <td colspan="3" style="${sHouse}">${houseNo}</td>
     </tr>
     <tr>
-      <td class="lbl">CHECK IN</td>
-      <td class="val" colspan="4">${checkIn}</td>
-      <td class="lbl">CHECK OUT</td>
-      <td class="val" colspan="4">${checkOut}</td>
+      <td style="${sLbl}">${L.cin}</td>
+      <td colspan="4" style="${sVal}">${checkIn}</td>
+      <td style="${sLbl}">${L.cout}</td>
+      <td colspan="4" style="${sVal}">${checkOut}</td>
     </tr>
     <tr>
-      <td class="lbl">PICK UP</td>
-      <td class="val" colspan="4">${pickFlight}</td>
-      <td class="lbl">DROP</td>
-      <td class="val" colspan="4">${dropFlight}</td>
+      <td style="${sLbl}">${L.pick}</td>
+      <td colspan="4" style="${sVal}">${pickFlight}</td>
+      <td style="${sLbl}">${L.drop}</td>
+      <td colspan="4" style="${sVal}">${dropFlight}</td>
     </tr>
     <tr>
-      <th class="bedhd" colspan="6">BED SETTING</th>
-      <th class="bedhd" colspan="2" rowspan="2">SIM</th>
-      <th class="bedhd" colspan="2" rowspan="2">LOAD</th>
+      <th colspan="6" style="${sBedHd}">${L.bed}</th>
+      <th colspan="2" rowspan="2" style="${sBedHd}">${L.sim}</th>
+      <th colspan="2" rowspan="2" style="${sBedHd}">${L.load}</th>
     </tr>
     <tr>
-      <th class="bedsub" colspan="2">2F MASTER</th>
-      <th class="bedsub" colspan="2">2F SMALL</th>
-      <th class="bedsub" colspan="2">1F</th>
+      <th colspan="2" style="${sBedSub}">${L.master}</th>
+      <th colspan="2" style="${sBedSub}">${L.small}</th>
+      <th colspan="2" style="${sBedSub}">${L.first}</th>
     </tr>
     <tr>
-      <td class="num" colspan="2">${m1}</td>
-      <td class="num" colspan="2">${m2}</td>
-      <td class="num" colspan="2">${m3}</td>
-      <td class="simval" colspan="2">${simText}</td>
-      <td class="num" colspan="2">${loadText}</td>
+      <td colspan="2" style="${sNum}">${m1}</td>
+      <td colspan="2" style="${sNum}">${m2}</td>
+      <td colspan="2" style="${sNum}">${m3}</td>
+      <td colspan="2" style="${sSim}">${simText}</td>
+      <td colspan="2" style="${sNum}">${loadText}</td>
     </tr>
     <tr>
-      <td class="glbl">ALL GUEST</td>
-      <td class="val" colspan="9">${guests}</td>
+      <td style="${sGLbl}">${L.guest}</td>
+      <td colspan="9" style="${sVal}">${guests}</td>
     </tr>
     <tr>
-      <td class="glbl">ADD</td>
-      <td class="val" colspan="9">${addText}</td>
+      <td style="${sGLbl}">${L.add}</td>
+      <td colspan="9" style="${sVal}">${addText}</td>
     </tr>
     <tr>
-      <td class="etclbl">ETC / 정산</td>
-      <td class="etc" colspan="9">${etcHtml}</td>
+      <td style="${sEtcLb}">${L.etc}</td>
+      <td colspan="9" style="${sEtc}">${etcHtml}</td>
     </tr>
   </table>
   </div>
@@ -329,91 +343,9 @@ function CheckinDetailsInner() {
 
   function handlePrint(lang: "en" | "kr" = "en") {
     if (!booking) { alert("예약을 먼저 선택하세요."); return; }
-    const b = booking;
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
-
-    if (lang === "en") { printGuestDetailsEN(b, d, dash); return; }
-
-    // ── KR: 기존 CHECK-IN NOTICE SHEET (올인원 배지만 추가) ──
-    const tr = (x: any) => x;
-    const pkgBadgeKR = isPackage(b.accom_type)
-      ? ` <span style="display:inline-block;background:#4f46e5;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">올인원패키지</span>`
-      : "";
-    const accomLine = `${dash(tr(b.accom_type))} / ${dash(tr(b.accom_room))}${b.house_no ? ` (${b.house_no})` : ""}${pkgBadgeKR}`;
-    let bedText = "";
-    try { const bs = JSON.parse(d.bed_setting || "{}"); bedText = [bs.room1 && `Room1: ${tr(bs.room1)}`, bs.room2 && `Room2: ${tr(bs.room2)}`, bs.room3 && `Room3: ${tr(bs.room3)}`].filter(Boolean).join(" / "); } catch { bedText = tr(d.bed_setting || ""); }
-    let simText = "";
-    try { const arr = JSON.parse(d.usim_request || "[]"); simText = Array.isArray(arr) ? arr.map((s: { plan?: string }) => tr(s.plan || "")).filter(Boolean).join(" / ") : tr(d.usim_request || ""); } catch { simText = tr(d.usim_request || ""); }
-    let extraPickupsText = "";
-    try { const arr = JSON.parse(d.extra_pickups || "[]"); extraPickupsText = Array.isArray(arr) ? arr.map((p: { type?:string;date?:string;time?:string;airline?:string;flight?:string }) => tr(`[${p.type||""}] ${p.date||""} ${p.time||""} ${p.airline||""} ${p.flight||""}`.trim())).join(" / ") : ""; } catch { extraPickupsText = ""; }
-    const blankLines = Array.from({length:10}).map(()=>'<div style="border-bottom:1px solid #aaa;height:28px;margin:4px 0;"></div>').join("");
-    const html = `<!doctype html>
-<html lang="ko"><head><meta charset="utf-8"/>
-<title>Check-in Notice — ${dash(b.booker_name)}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
-  h1, h2, p { margin: 0; }
-  .header { text-align: center; margin-bottom: 16px; }
-  .header .co { font-size: 20px; font-weight: bold; }
-  .header .sub { font-size: 13px; color: #555; margin-top: 4px; }
-  hr { border: none; border-top: 1px solid #999; margin: 12px 0 18px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-  th { background: #eeeeee; text-align: left; padding: 7px 10px; font-size: 13px; border: 1px solid #ccc; }
-  td { padding: 7px 10px; border: 1px solid #ccc; vertical-align: top; }
-  td:first-child { width: 35%; color: #444; font-weight: bold; }
-  .notice-box { border: 1px solid #ccc; margin-bottom: 20px; }
-  .notice-box .title { background: #eeeeee; padding: 7px 10px; font-size: 13px; font-weight: bold; border-bottom: 1px solid #ccc; }
-  .notice-box .body { padding: 10px; }
-  .footer { text-align: center; font-size: 11px; color: #555; border-top: 1px solid #999; margin-top: 20px; padding-top: 10px; }
-  .footer .line { margin: 4px 0; }
-  @media print {
-    body { margin: 0; }
-    table, .notice-box { page-break-inside: avoid; }
-  }
-</style></head>
-<body>
-  <div class="header">
-    <div class="co">DREAM ACADEMY PHILIPPINES</div>
-    <div class="sub">CHECK-IN NOTICE SHEET</div>
-  </div>
-  <hr/>
-
-  <table>
-    <tr><th colspan="2">BOOKING INFORMATION</th></tr>
-    <tr><td>Guest Name</td><td>${dash(b.booker_name)}</td></tr>
-    <tr><td>English Name</td><td>${dash(b.booker_english)}</td></tr>
-    <tr><td>Accommodation</td><td>${accomLine}</td></tr>
-    <tr><td>Check-in</td><td>${dash(d.checkin_date)}</td></tr>
-    <tr><td>Check-in ~ Check-out</td><td>${dash(b.checkin_date)} ~ ${dash(b.checkout_date)}</td></tr>
-    <tr><td>Adults / Children</td><td>${dash(b.adults)} / ${dash(b.children)}</td></tr>
-    <tr><td>Pick-up / Drop-off</td><td>${dash(tr(b.pickup_place))} / ${dash(tr(b.drop_off))}</td></tr>
-    <tr><td>Flight IN</td><td>${dash(b.flight_in)}</td></tr>
-    <tr><td>Flight OUT</td><td>${dash(b.flight_out)}</td></tr>
-  </table>
-
-  <table>
-    <tr><th colspan="2">CHECK-IN DETAILS</th></tr>
-    <tr><td>All Guests (EN)</td><td>${dash(d.guest_names_en)}</td></tr>
-    <tr><td>Bed Setup</td><td>${dash(bedText)}</td></tr>
-    <tr><td>SIM Card</td><td>${dash(simText)}</td></tr>
-    <tr><td>Extra Pickups</td><td>${dash(extraPickupsText)}</td></tr>
-    <tr><td>Special Requests</td><td>${dash(d.extra_requests)}</td></tr>
-  </table>
-
-  <div class="notice-box">
-    <div class="title">NOTICE / MANAGER NOTES</div>
-    <div class="body">${blankLines}</div>
-  </div>
-
-  <div class="footer">
-    <div class="line">Received by: ________________________    Date: ________________</div>
-    <div class="line">Dream Academy Philippines  |  dreamacademyph.com</div>
-  </div>
-
-  <script>window.onload = function(){ window.print(); };</script>
-</body></html>`;
-    openPrintWindow(html);
+    printGuestDetails(lang, booking, d, dash);
   }
 
   function copyPublicLink() {
