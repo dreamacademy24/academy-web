@@ -135,21 +135,45 @@ function CheckinDetailsInner() {
     setTimeout(() => setMsg(""), 2500);
   }
 
-  function handlePrint() {
+  // 한글 값 → 영문 변환 (EN 인쇄용). 미매핑 값은 원문 그대로 유지
+  function enText(v: any): string {
+    let s = (v === null || v === undefined) ? "" : String(v);
+    if (!s) return s;
+    const map: [string, string][] = [
+      // 베드 세팅 (긴 문자열 먼저)
+      ["더블베드 2개 (3~4인 스테이)", "Double Bed x2 (3-4 guests)"],
+      ["더블베드+싱글 (3인 스테이)", "Double+Single Bed (3 guests)"],
+      ["더블베드 1개 (1~2인 스테이)", "Double Bed x1 (1-2 guests)"],
+      ["더블베드 1개 (2인 스테이)", "Double Bed x1 (2 guests)"],
+      ["사용하지 않음", "Not in use"],
+      // 숙소/장소 ("막탄공항"을 "공항"보다 먼저)
+      ["드림하우스", "Dream House"],
+      ["막탄공항", "Mactan Airport"],
+      ["공항", "Airport"],
+      ["필요함", "Required"],
+      ["불필요", "Not required"],
+      ["미정", "TBD"],
+    ];
+    for (const [ko, en] of map) s = s.split(ko).join(en);
+    return s;
+  }
+
+  function handlePrint(lang: "en" | "kr" = "en") {
     if (!booking) { alert("예약을 먼저 선택하세요."); return; }
     const b = booking;
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
-    const accomLine = `${dash(b.accom_type)} / ${dash(b.accom_room)}${b.house_no ? ` (${b.house_no})` : ""}`;
+    const tr = lang === "en" ? enText : (x: any) => x; // EN이면 영문 변환, KR이면 한글 그대로
+    const accomLine = `${dash(tr(b.accom_type))} / ${dash(tr(b.accom_room))}${b.house_no ? ` (${b.house_no})` : ""}`;
     let bedText = "";
-    try { const bs = JSON.parse(d.bed_setting || "{}"); bedText = [bs.room1 && `Room1: ${bs.room1}`, bs.room2 && `Room2: ${bs.room2}`, bs.room3 && `Room3: ${bs.room3}`].filter(Boolean).join(" / "); } catch { bedText = d.bed_setting || ""; }
+    try { const bs = JSON.parse(d.bed_setting || "{}"); bedText = [bs.room1 && `Room1: ${tr(bs.room1)}`, bs.room2 && `Room2: ${tr(bs.room2)}`, bs.room3 && `Room3: ${tr(bs.room3)}`].filter(Boolean).join(" / "); } catch { bedText = tr(d.bed_setting || ""); }
     let simText = "";
-    try { const arr = JSON.parse(d.usim_request || "[]"); simText = Array.isArray(arr) ? arr.map((s: { plan?: string }) => s.plan).filter(Boolean).join(" / ") : (d.usim_request || ""); } catch { simText = d.usim_request || ""; }
+    try { const arr = JSON.parse(d.usim_request || "[]"); simText = Array.isArray(arr) ? arr.map((s: { plan?: string }) => tr(s.plan || "")).filter(Boolean).join(" / ") : tr(d.usim_request || ""); } catch { simText = tr(d.usim_request || ""); }
     let extraPickupsText = "";
-    try { const arr = JSON.parse(d.extra_pickups || "[]"); extraPickupsText = Array.isArray(arr) ? arr.map((p: { type?:string;date?:string;time?:string;airline?:string;flight?:string }) => `[${p.type||""}] ${p.date||""} ${p.time||""} ${p.airline||""} ${p.flight||""}`.trim()).join(" / ") : ""; } catch { extraPickupsText = ""; }
+    try { const arr = JSON.parse(d.extra_pickups || "[]"); extraPickupsText = Array.isArray(arr) ? arr.map((p: { type?:string;date?:string;time?:string;airline?:string;flight?:string }) => tr(`[${p.type||""}] ${p.date||""} ${p.time||""} ${p.airline||""} ${p.flight||""}`.trim())).join(" / ") : ""; } catch { extraPickupsText = ""; }
     const blankLines = Array.from({length:10}).map(()=>'<div style="border-bottom:1px solid #aaa;height:28px;margin:4px 0;"></div>').join("");
     const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"/>
+<html lang="${lang === "en" ? "en" : "ko"}"><head><meta charset="utf-8"/>
 <title>Check-in Notice — ${dash(b.booker_name)}</title>
 <style>
   body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; color: #111; }
@@ -187,7 +211,7 @@ function CheckinDetailsInner() {
     <tr><td>Check-in</td><td>${dash(d.checkin_date)}</td></tr>
     <tr><td>Check-in ~ Check-out</td><td>${dash(b.checkin_date)} ~ ${dash(b.checkout_date)}</td></tr>
     <tr><td>Adults / Children</td><td>${dash(b.adults)} / ${dash(b.children)}</td></tr>
-    <tr><td>Pick-up / Drop-off</td><td>${dash(b.pickup_place)} / ${dash(b.drop_off)}</td></tr>
+    <tr><td>Pick-up / Drop-off</td><td>${dash(tr(b.pickup_place))} / ${dash(tr(b.drop_off))}</td></tr>
     <tr><td>Flight IN</td><td>${dash(b.flight_in)}</td></tr>
     <tr><td>Flight OUT</td><td>${dash(b.flight_out)}</td></tr>
   </table>
@@ -260,10 +284,16 @@ function CheckinDetailsInner() {
       <div className="cd-top">
         <button className="cd-back" onClick={()=>router.push("/admin/hub")}>←</button>
         <h1>체크인 디테일</h1>
-        <button onClick={handlePrint} disabled={!booking}
-          style={{marginLeft:"auto",padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
-          🖨️ Print (EN)
-        </button>
+        <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+          <button onClick={()=>handlePrint("kr")} disabled={!booking}
+            style={{padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
+            🖨️ 인쇄 (KR)
+          </button>
+          <button onClick={()=>handlePrint("en")} disabled={!booking}
+            style={{padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
+            🖨️ Print (EN)
+          </button>
+        </div>
       </div>
 
       <div className="sec">
