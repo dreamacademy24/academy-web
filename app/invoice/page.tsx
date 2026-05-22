@@ -508,7 +508,7 @@ function InvoicePageInner(){
   const [ex1Cnt,setEx1Cnt]=useState(0);
   const [ex2Cnt,setEx2Cnt]=useState(0);
   const [dbCheckout,setDbCheckout]=useState<string>("");
-  const [lateCheckout,setLateCheckout]=useState(false); // 레이트 체크아웃 (12noon→10:30PM)
+  const [lateCheckout,setLateCheckout]=useState(false); // 레이트 체크아웃 (12noon→22:30pm)
 
   const a1CO=a1CI?addDays(a1CI,a1W*7):"";
   const a2CI=cm==="combo"?a1CO:"";
@@ -516,7 +516,7 @@ function InvoicePageInner(){
   const overallCI=a1CI;
   // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
   const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
-  const coTimeText=lateCheckout?"10:30PM":"12noon"; // 체크아웃 시간 표기
+  const coTimeText=lateCheckout?"22:30pm":"12noon"; // 체크아웃 시간 표기
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
@@ -1262,7 +1262,7 @@ function InvoicePageInner(){
   <div className="fs"><h2>예약자 정보</h2>
     <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input auto" value={reservationNo} readOnly/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value})}/></div></div>
-    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>setLateCheckout(e.target.checked)}/>Late Check-out (10:30PM)</label></div></div>
+    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>setLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
   </div>
 
   {/* ── 섹션3: 학생 정보 ── */}
@@ -1333,7 +1333,10 @@ function InvoicePageInner(){
     {hasSnapshot&&(
       <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8}}>
         <span style={{fontSize:12,color:"#94a3b8"}}>💾 저장된 인보이스 · {fmtSavedAt(snapshotSavedAt)}</span>
-        <button onClick={()=>{setPreview(false);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);}} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+          <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>{const v=e.target.checked;setLateCheckout(v);saveSnapshot({lateCheckout:v});}}/>Late Check-out (22:30pm)</label>
+          <button onClick={()=>{setPreview(false);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);}} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+        </div>
       </div>
     )}
     <div className="iv" id="invoice-content">
