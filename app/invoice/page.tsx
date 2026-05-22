@@ -508,13 +508,15 @@ function InvoicePageInner(){
   const [ex1Cnt,setEx1Cnt]=useState(0);
   const [ex2Cnt,setEx2Cnt]=useState(0);
   const [dbCheckout,setDbCheckout]=useState<string>("");
+  const [lateCheckout,setLateCheckout]=useState(false); // 레이트 체크아웃 (12noon→10:30PM)
 
   const a1CO=a1CI?addDays(a1CI,a1W*7):"";
   const a2CI=cm==="combo"?a1CO:"";
   const a2CO=a2CI?addDays(a2CI,a2W*7):"";
   const overallCI=a1CI;
-  // DB checkout_date 우선, 없으면 a1W*7(또는 콤보 시 a2CO)로 계산
+  // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
   const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
+  const coTimeText=lateCheckout?"10:30PM":"12noon"; // 체크아웃 시간 표기
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
@@ -537,7 +539,7 @@ function InvoicePageInner(){
   // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
   function collectFormState(override?:Record<string,unknown>){
     return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
-      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,
+      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,lateCheckout,
       ...(override||{})};
   }
   // 스냅샷 saved_data → 폼 상태 복원
@@ -568,6 +570,7 @@ function InvoicePageInner(){
     if(d.adminOnly!==undefined)setAdminOnly(d.adminOnly);
     if(d.isCommute!==undefined)setIsCommute(d.isCommute);
     if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
+    if(d.lateCheckout!==undefined)setLateCheckout(d.lateCheckout);
   }
   // 스냅샷 저장 (인보이스 미리보기 클릭 시 자동 호출)
   async function saveSnapshot(override?:Record<string,unknown>){
@@ -1141,7 +1144,7 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
-            <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} 12noon`):"-"}</td></tr>
+            <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
             <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
           </tbody></table>
         </div>
@@ -1259,7 +1262,7 @@ function InvoicePageInner(){
   <div className="fs"><h2>예약자 정보</h2>
     <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input auto" value={reservationNo} readOnly/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value})}/></div></div>
-    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"></div></div>
+    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>setLateCheckout(e.target.checked)}/>Late Check-out (10:30PM)</label></div></div>
   </div>
 
   {/* ── 섹션3: 학생 정보 ── */}
@@ -1337,7 +1340,7 @@ function InvoicePageInner(){
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-        <tr><td className="lb">체크인</td><td>{overallCI&&<>{overallCI} <span style={{color:"#6b7280",fontSize:"0.85em"}}>15:00PM</span></>}</td><td className="lb">체크아웃</td><td>{overallCO&&<>{overallCO} <span style={{color:"#6b7280",fontSize:"0.85em"}}>12noon</span></>}</td></tr>
+        <tr><td className="lb">체크인</td><td>{overallCI&&<>{overallCI} <span style={{color:"#6b7280",fontSize:"0.85em"}}>15:00PM</span></>}</td><td className="lb">체크아웃</td><td>{overallCO&&<>{overallCO} <span style={{color:"#6b7280",fontSize:"0.85em"}}>{coTimeText}</span></>}</td></tr>
         <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"수동입력"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>

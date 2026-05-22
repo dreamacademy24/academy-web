@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
@@ -21,6 +21,7 @@ export default function BookingNonPackagePage() {
   const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
   const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
+  const [weeks, setWeeks] = useState(4); // 비통학형 숙소 이용 기간(주)
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
   const [students, setStudents] = useState<Student[]>([{ id: 1, korName: "", engName: "", age: "", grade: "주니어", photo: "O" }]);
@@ -31,6 +32,14 @@ export default function BookingNonPackagePage() {
   const [agreed, setAgreed] = useState(false);
 
   const isCommute = bType === "commute";
+
+  // 비통학형: 체크인 + 기간(주) → 체크아웃 자동계산
+  useEffect(() => {
+    if (isCommute || !dates.checkIn) return;
+    const d = new Date(dates.checkIn);
+    d.setDate(d.getDate() + weeks * 7);
+    setDates(prev => ({ ...prev, checkOut: d.toISOString().slice(0, 10) }));
+  }, [isCommute, dates.checkIn, weeks]);
 
   function addStudent() { if (students.length < 5) setStudents([...students, { id: Date.now(), korName: "", engName: "", age: "", grade: "주니어", photo: "O" }]); }
   function rmStudent(id: number) { setStudents(students.filter(s => s.id !== id)); }
@@ -79,7 +88,7 @@ export default function BookingNonPackagePage() {
       children: childrenCount,
       students: JSON.stringify(enrichedStudents),
       accom_type: accomType,
-      accom_weeks: 0,
+      accom_weeks: isCommute ? 0 : weeks,
       checkin_date: dates.checkIn || null,
       checkout_date: dates.checkOut || null,
       pickup: isCommute ? "불필요함" : "필요함",
@@ -186,14 +195,24 @@ export default function BookingNonPackagePage() {
 
         <div className="bs">
           <h2>2️⃣ {isCommute ? "수업 일정" : "체크인 · 체크아웃"}</h2>
+          {!isCommute && (
+            <div className="fg" style={{ marginBottom: 10 }}>
+              <label className="fl">숙소 이용 기간<span className="req">*</span></label>
+              <select className="fsl" value={weeks} onChange={e => setWeeks(Number(e.target.value))}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(w => <option key={w} value={w}>{w}주</option>)}
+              </select>
+            </div>
+          )}
           <div className="fr">
             <div className="fg">
               <label className="fl">{isCommute ? "수업시작" : "체크인"}<span className="req">*</span></label>
               <input className="fi" type="date" value={dates.checkIn} onChange={e => setDates({ ...dates, checkIn: e.target.value })} />
             </div>
             <div className="fg">
-              <label className="fl">{isCommute ? "수업종료" : "체크아웃"}<span className="req">*</span></label>
-              <input className="fi" type="date" value={dates.checkOut} onChange={e => setDates({ ...dates, checkOut: e.target.value })} />
+              <label className="fl">{isCommute ? "수업종료" : "체크아웃 (자동)"}<span className="req">*</span></label>
+              {isCommute
+                ? <input className="fi" type="date" value={dates.checkOut} onChange={e => setDates({ ...dates, checkOut: e.target.value })} />
+                : <input className="fi" type="date" value={dates.checkOut} readOnly style={{ background: "#f3f4f6" }} />}
             </div>
           </div>
           {isCommute && <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 픽업/항공편이 없습니다.</div>}
