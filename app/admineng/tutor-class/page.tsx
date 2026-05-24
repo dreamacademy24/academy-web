@@ -47,7 +47,9 @@ function fmtDate(s: string) { return s ? s.slice(5).replace('-', '/') : '-'; }
 export default function EngTutorClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"inbox" | "mine" | "weekly">("inbox");
+  const [tab, setTab] = useState<"inbox" | "mine" | "classes" | "weekly" | "invoice">("inbox");
+  const [myLessons, setMyLessons] = useState<any[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(false);
   const [reqs, setReqs] = useState<TutorReq[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +100,26 @@ export default function EngTutorClassPage() {
   }, []);
 
   useEffect(() => { load(); loadTutors(); }, [load, loadTutors]);
+
+  // My Classes (tutor_lessons) 로드 — acting tutor id 필요
+  useEffect(() => {
+    const me = tutors.find(t => t.name === actingTutor);
+    if (!me) { setMyLessons([]); return; }
+    let cancelled = false;
+    (async () => {
+      setLoadingLessons(true);
+      const { data } = await supabase
+        .from("tutor_lessons")
+        .select("*")
+        .eq("tutor_id", me.id)
+        .order("created_at", { ascending: false });
+      if (!cancelled) {
+        setMyLessons(data || []);
+        setLoadingLessons(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [actingTutor, tutors]);
 
   async function loadComments(reqId: string) {
     const { data } = await supabase
@@ -201,7 +223,9 @@ export default function EngTutorClassPage() {
       <div className="etabs">
         <button className={`etab${tab==="inbox"?" ac":""}`} onClick={() => setTab("inbox")}>📬 Requests Inbox</button>
         <button className={`etab${tab==="mine"?" ac":""}`} onClick={() => setTab("mine")}>📅 My Schedule</button>
+        <button className={`etab${tab==="classes"?" ac":""}`} onClick={() => setTab("classes")}>🎓 My Classes</button>
         <button className={`etab${tab==="weekly"?" ac":""}`} onClick={() => setTab("weekly")}>🗓 Weekly View</button>
+        <button className={`etab${tab==="invoice"?" ac":""}`} onClick={() => setTab("invoice")}>💰 Invoice</button>
       </div>
 
       {tab === "inbox" && (
@@ -300,7 +324,90 @@ export default function EngTutorClassPage() {
           </div>
         );
       })()}
+      {tab === "classes" && (() => {
+        const me = tutors.find(t => t.name === actingTutor);
+        if (!actingTutor || !me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown.</div>;
+        }
+        if (loadingLessons) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Loading...</div>;
+        }
+        if (myLessons.length === 0) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No confirmed classes yet.</div>;
+        }
+        return (
+          <div className="tbl-w">
+            <table className="tbl">
+              <thead><tr>
+                <th style={{width:"15%"}}>Student</th>
+                <th style={{width:"5%"}}>Type</th>
+                <th style={{width:"6%"}}>Sessions/day</th>
+                <th style={{width:"10%"}}>Days</th>
+                <th style={{width:"10%"}}>Time</th>
+                <th style={{width:"14%"}}>Period</th>
+                <th style={{width:"7%"}}>Classes</th>
+                <th style={{width:"9%"}}>Amount</th>
+                <th style={{width:"8%"}}>Status</th>
+                <th style={{width:"16%",textAlign:"center"}}>Actions</th>
+              </tr></thead>
+              <tbody>
+                {myLessons.map((l: any) => {
+                  const statusLabel = l.status === "active" ? "In Progress" : l.status === "completed" ? "Completed" : (l.status || "-");
+                  const statusBg = l.status === "active" ? "#dcfce7" : l.status === "completed" ? "#dbeafe" : "#f1f5f9";
+                  const statusFg = l.status === "active" ? "#15803d" : l.status === "completed" ? "#1e40af" : "#475569";
+                  const daysStr = Array.isArray(l.class_days) ? l.class_days.join(", ") : (l.class_days || "-");
+                  return (
+                    <tr key={l.id}>
+                      <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
+                      <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
+                      <td style={{textAlign:"center"}}>{l.sessions_per_day || 1}</td>
+                      <td style={{fontSize:11}}>{daysStr}</td>
+                      <td style={{fontSize:11}}>{l.class_time || "-"}</td>
+                      <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
+                      <td style={{textAlign:"center"}}>{l.total_sessions ?? "-"}</td>
+                      <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
+                      <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
+                      <td style={{textAlign:"center"}}>
+                        <button className="ebtn" style={{padding:"5px 10px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4}} onClick={() => router.push("/admin/tutor-class?tab=students")}>Attendance</button>
+                        <button className="ebtn" style={{padding:"5px 10px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>Invoice</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       {tab === "weekly" && <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Weekly View — coming soon</div>}
+
+      {tab === "invoice" && (() => {
+        const me = tutors.find(t => t.name === actingTutor);
+        if (!actingTutor || !me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown to view invoices.</div>;
+        }
+        if (myLessons.length === 0) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No confirmed classes yet.</div>;
+        }
+        return (
+          <div style={{background:"#fff",borderRadius:12,padding:24,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+            <h2 style={{fontSize:14,fontWeight:800,color:"#1a6fc4",marginBottom:12,paddingBottom:6,borderBottom:"1px solid #e2e8f0"}}>💰 Select a class to view the invoice</h2>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {myLessons.map((l: any) => (
+                <button key={l.id} type="button"
+                  onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
+                  style={{padding:"12px 16px",border:"1px solid #e2e8f0",borderRadius:9,textAlign:"left",cursor:"pointer",fontFamily:"inherit",background:"#fff",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}
+                >
+                  <span style={{fontWeight:700,color:"#1a1a2e"}}>{l.student_names || "-"} <span style={{fontWeight:400,color:"#6b7c93",marginLeft:6}}>· {l.class_type || ""} · {fmtDate(l.start_date)}~{fmtDate(l.end_date)}</span></span>
+                  <span style={{color:"#16a34a",fontWeight:700}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : ""} →</span>
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>Calendar, print and image-save buttons are available on the admin invoice page.</div>
+          </div>
+        );
+      })()}
     </div>
 
     {detail && (
