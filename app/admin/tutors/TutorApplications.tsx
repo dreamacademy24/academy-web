@@ -568,7 +568,7 @@ export default function TutorApplications() {
 .ta-time-2{background:#dbeafe;color:#1e40af}
 .ta-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
 .ta-loading{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
-.ta-row-acts{display:flex;gap:4px}
+.ta-row-acts{display:flex;gap:4px;justify-content:center;flex-wrap:nowrap}
 .ta-warn-chip{display:inline-block;margin-left:4px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-size:10px;font-weight:700}
 
 .ta-modal{background:#fff;border-radius:16px;width:100%;max-width:960px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
@@ -664,20 +664,20 @@ export default function TutorApplications() {
           <div className="ta-empty">{apps.length === 0 ? "신청된 내역이 없습니다" : "필터 조건에 맞는 신청이 없습니다"}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="tbl">
+            <table className="tbl" style={{ tableLayout: 'fixed', width: '100%', minWidth: 900 }}>
               <thead>
                 <tr>
-                  <th>접수</th>
-                  <th>예약자</th>
-                  <th>수강자</th>
-                  <th>나이</th>
-                  <th>유형</th>
-                  <th>타임</th>
-                  <th>기간</th>
-                  <th>요일</th>
-                  <th>담당 튜터</th>
-                  <th>상태</th>
-                  <th style={{ textAlign: "center" }}>액션</th>
+                  <th style={{ width: 44 }}>접수</th>
+                  <th style={{ width: 120 }}>예약자</th>
+                  <th style={{ width: 200 }}>수강자</th>
+                  <th style={{ width: 80 }}>나이</th>
+                  <th style={{ width: 52 }}>유형</th>
+                  <th style={{ width: 44 }}>타임</th>
+                  <th style={{ width: 180 }}>기간</th>
+                  <th style={{ width: 60 }}>요일</th>
+                  <th style={{ width: 90 }}>담당 튜터</th>
+                  <th style={{ width: 62 }}>상태</th>
+                  <th style={{ width: 130, textAlign: "center" }}>액션</th>
                 </tr>
               </thead>
               <tbody>
@@ -687,8 +687,8 @@ export default function TutorApplications() {
                   return (
                     <tr key={a.id}>
                       <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(a.created_at)}</td>
-                      <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{a.house_or_reserver}</td>
-                      <td style={{ fontWeight: 600 }}>
+                      <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.house_or_reserver}>{a.house_or_reserver}</td>
+                      <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }} title={a.children_names}>
                         {a.children_names}
                         {isAsymmetric(a) && <span className="ta-warn-chip" title="레벨 편차 큼">⚠</span>}
                       </td>
@@ -699,9 +699,9 @@ export default function TutorApplications() {
                           {a.sessions_per_day === 2 ? "2T" : "1T"}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{a.start_date} ~ {a.end_date}</td>
-                      <td style={{ fontSize: 12 }}>{days || "-"}</td>
-                      <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{tutorNameById(a.assigned_tutor_id)}</td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${a.start_date} ~ ${a.end_date}`}>{a.start_date} ~ {a.end_date}</td>
+                      <td style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={days || "-"}>{days || "-"}</td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={tutorNameById(a.assigned_tutor_id) || ""}>{tutorNameById(a.assigned_tutor_id)}</td>
                       <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
                       <td>
                         <div className="ta-row-acts">
