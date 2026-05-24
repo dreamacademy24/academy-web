@@ -643,8 +643,8 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>수업 방향</h2>
         <div className="q">
-          <label className="q-label"><span className="num">13</span>사용 영어 교재</label>
-          <input className="inp" value={form.textbook} onChange={e => setForm({ ...form, textbook: e.target.value })} placeholder="예: Phonics Fun 1, Smart Reading" />
+          <label className="q-label"><span className="num">13</span>사용 영어교재 (따로 원하는 교재가 있을 시 기재해주세요)</label>
+          <input className="inp" value={form.textbook} onChange={e => setForm({ ...form, textbook: e.target.value })} placeholder="예 ) 브릭스 50, 리딩스트리트 2.1, 멀티플리딩스킬, 올어보드 4" />
         </div>
         <div className="q">
           <label className="q-label"><span className="num">14</span>수업 방향</label>
