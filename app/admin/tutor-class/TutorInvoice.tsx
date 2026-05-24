@@ -96,6 +96,10 @@ export default function TutorInvoice() {
   const urlLessonId = searchParams?.get("lesson_id") || "";
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedId, setSelectedId] = useState<string>(urlLessonId);
+
+  useEffect(() => {
+    if (urlLessonId) setSelectedId(urlLessonId);
+  }, [urlLessonId]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

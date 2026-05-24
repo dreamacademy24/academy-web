@@ -21,6 +21,14 @@ export default function TutorClassPage() {
     else if (typeof window !== "undefined") window.location.href = "/login";
   }, []);
 
+  // URL ?tab= 변경 시 탭 동기화 (같은 경로 router.push 후에도 반영)
+  useEffect(() => {
+    const t = searchParams?.get("tab");
+    if (t && ["applications","schedule","students","invoice"].includes(t)) {
+      setTab(t as Tab);
+    }
+  }, [searchParams]);
+
   if (!authed) return null;
 
   return (<>
