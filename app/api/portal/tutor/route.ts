@@ -111,7 +111,7 @@ export async function POST(req: Request) {
       assignee: 'all', due: today, done: false, shared: true,
       note: `학생: ${body.student_name_kr || ''} (${body.student_name_en || ''})\n나이: ${body.student_age || '-'}\n유형: ${body.class_type || '-'}\n기간: ${body.start_date || '-'} ~ ${body.end_date || '-'}\n요일: ${(body.preferred_days_arr || []).join(',')}\n시간: ${body.preferred_time || '-'}`,
     })
-    return NextResponse.json(data)
+    return NextResponse.json({ ...data, app_error: appErr?.message ?? null })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown'
     return NextResponse.json({ error: msg }, { status: 500 })
