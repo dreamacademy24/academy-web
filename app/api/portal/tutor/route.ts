@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     if (!booking_id) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
 
     // 필수 동의 체크
-    if (!body.privacy_agreed || !body.rules_agreed) {
+    if ((!body.privacy_agreed && !body.agreed_to_privacy) || (!body.rules_agreed && !body.agreed_to_policy)) {
       return NextResponse.json({ error: '개인정보 동의와 튜터 규정 동의는 필수입니다.' }, { status: 400 })
     }
 

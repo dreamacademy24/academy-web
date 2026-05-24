@@ -303,7 +303,8 @@ export default function PortalTutorPage() {
         student_name_en: finalEn,
         student_age: finalAge,
         ...levels,
-        rules_agreed: form.agreed_rules,
+        privacy_agreed: true,
+        rules_agreed: true,
       }),
     });
     setSaving(false);
