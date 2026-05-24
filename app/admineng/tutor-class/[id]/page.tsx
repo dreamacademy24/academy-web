@@ -148,6 +148,20 @@ export default function EngTutorRequestDetailPage() {
     setTimeout(() => setSavedToast(false), 1800);
   }
 
+  function paymentPayload() {
+    if (!row) return {};
+    const rate = computeRate(row.class_type, row.sessions_per_day);
+    const weeks = computeWeeks(row.start_date, row.end_date);
+    const dpw = countDays(row.preferred_days);
+    const totalClasses = weeks * dpw;
+    const totalAmount = totalClasses * rate;
+    return {
+      total_sessions: totalClasses || null,
+      total_amount: totalAmount || null,
+      price_per_session: rate || null,
+    };
+  }
+
   async function takeThisClass() {
     if (!row) return;
     if (!actingTutor) { alert("Please select your name first on the previous page (top right)."); return; }
@@ -155,7 +169,7 @@ export default function EngTutorRequestDetailPage() {
     if (!me) { alert(`Tutor "${actingTutor}" not found in active tutor list.`); return; }
     setTaking(true);
     const { error } = await supabase.from("tutor_requests")
-      .update({ assigned_tutor_id: me.id, status: "assigned" })
+      .update({ assigned_tutor_id: me.id, status: "assigned", ...paymentPayload() })
       .eq("id", row.id);
     setTaking(false);
     if (error) { alert("Failed: " + error.message); return; }
@@ -167,7 +181,7 @@ export default function EngTutorRequestDetailPage() {
     if (!row) return;
     setSavingAssign(true);
     const { error } = await supabase.from("tutor_requests")
-      .update({ assigned_tutor_id: managerTutorId || null, status: managerTutorId ? "assigned" : row.status })
+      .update({ assigned_tutor_id: managerTutorId || null, status: managerTutorId ? "assigned" : row.status, ...paymentPayload() })
       .eq("id", row.id);
     setSavingAssign(false);
     if (error) { alert("Failed: " + error.message); return; }
