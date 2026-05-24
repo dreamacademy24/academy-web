@@ -717,20 +717,20 @@ export default function TutorApplications() {
           <div className="ta-empty">{apps.length === 0 ? "신청된 내역이 없습니다" : "필터 조건에 맞는 신청이 없습니다"}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="tbl" style={{ tableLayout: 'fixed', width: 'auto', minWidth: 1080 }}>
+            <table className="tbl" style={{ tableLayout: 'fixed', width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ width: 44 }}>접수</th>
-                  <th style={{ width: 100 }}>예약자</th>
-                  <th style={{ width: 160 }}>수강자</th>
-                  <th style={{ width: 130 }}>나이</th>
-                  <th style={{ width: 52 }}>유형</th>
-                  <th style={{ width: 44 }}>타임</th>
-                  <th style={{ width: 170 }}>기간</th>
-                  <th style={{ width: 60 }}>요일</th>
-                  <th style={{ width: 90 }}>담당 튜터</th>
-                  <th style={{ width: 70 }}>상태</th>
-                  <th style={{ width: 160, textAlign: "center" }}>액션</th>
+                  <th style={{ width: '4%' }}>접수</th>
+                  <th style={{ width: '9%' }}>예약자</th>
+                  <th style={{ width: '15%' }}>수강자</th>
+                  <th style={{ width: '12%' }}>나이</th>
+                  <th style={{ width: '5%' }}>유형</th>
+                  <th style={{ width: '4%' }}>타임</th>
+                  <th style={{ width: '16%' }}>기간</th>
+                  <th style={{ width: '6%' }}>요일</th>
+                  <th style={{ width: '8%' }}>담당 튜터</th>
+                  <th style={{ width: '7%' }}>상태</th>
+                  <th style={{ width: '14%', textAlign: "center" }}>액션</th>
                 </tr>
               </thead>
               <tbody>
