@@ -2654,7 +2654,8 @@ function closeGuideMsgModal() {
 // guide_messages 테이블 로드 — DB 우선, 비어있으면 하드코딩 시드를 일괄 INSERT
 async function loadGuideMsgs() {
   function fillFrom(rows) {
-    Object.keys(GUIDE_DATA).forEach(k => GUIDE_DATA[k] = []);
+    const dbCategories = [...new Set(rows.map(r => r.category))];
+    dbCategories.forEach(cat => GUIDE_DATA[cat] = []);
     rows.forEach(row => {
       const cat = row.category;
       if (!GUIDE_DATA[cat]) GUIDE_DATA[cat] = [];
