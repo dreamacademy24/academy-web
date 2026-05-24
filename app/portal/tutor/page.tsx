@@ -790,23 +790,25 @@ export default function PortalTutorPage() {
       </>)}
 
       <div className="sec">
-        <h2>📋 내 튜터 신청내역 ({myApplications.length}건)</h2>
-        {myApplications.length === 0 ? <div className="empty">아직 신청 내역이 없습니다</div> :
-          myApplications.map(a => {
-            const meta = APP_STATUS_META[a.status] || APP_STATUS_META.pending;
+        <h2>📋 내 튜터 신청내역 ({requests.length}건)</h2>
+        {requests.length === 0 ? <div className="empty">아직 신청 내역이 없습니다</div> :
+          requests.map(r => {
+            const meta = APP_STATUS_META[r.status] || APP_STATUS_META.pending;
+            const studentName = [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-";
+            const daysVal = Array.isArray(r.preferred_days_arr)
+              ? r.preferred_days_arr.join(", ")
+              : ((r as any).preferred_days || "");
             return (
-              <div key={a.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <div key={r.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>{a.children_names || "-"}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>{studentName}</div>
                   <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.7 }}>
-                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>수업 유형:</span>{a.class_type || "-"}</div>
-                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>기간:</span>{a.start_date || "-"} ~ {a.end_date || "-"}</div>
-                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>신청일:</span>{a.created_at?.slice(0, 10) || "-"}</div>
-                  {a.status === "confirmed" && (
-                    <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>배정 선생님:</span>{a.assigned_tutor_name || "미배정"}</div>
-                  )}
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>수업 유형:</span>{r.class_type || "-"}</div>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>기간:</span>{r.start_date || "-"} ~ {r.end_date || "-"}</div>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>요일:</span>{daysVal || "-"}</div>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>시간:</span>{r.preferred_time || "-"}</div>
                 </div>
               </div>
             );

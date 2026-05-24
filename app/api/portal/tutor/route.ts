@@ -101,8 +101,11 @@ export async function POST(req: Request) {
       status: 'pending',
       admin_memo: booking_id ? `포털 신청 (예약번호: ${booking_id})` : '포털 신청',
     }
+    console.log('[portal/tutor] tutor_applications appRow:', JSON.stringify(appRow))
     const { error: appErr } = await supabase.from('tutor_applications').insert(appRow)
-    if (appErr) console.error('[portal/tutor] tutor_applications insert 실패:', appErr.message)
+    if (appErr) {
+      console.error('[portal/tutor] tutor_applications insert 실패:', appErr.message, appErr)
+    }
 
     const bookerName = guest_name || await getBookerName(booking_id)
     const today = new Date().toISOString().slice(0, 10)
