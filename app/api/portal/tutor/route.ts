@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       class_type: body.class_type || null,
       start_date: body.start_date || null,
       end_date: body.end_date || null,
-      preferred_days_arr: body.preferred_days_arr || null,
+      preferred_days: Array.isArray(body.preferred_days_arr) ? body.preferred_days_arr.join(',') : (body.preferred_days_arr || null),
       skip_dates: body.skip_dates || null,
       preferred_time: body.preferred_time || null,
       level_english: body.level_english || null,
