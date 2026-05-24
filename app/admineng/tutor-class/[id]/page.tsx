@@ -1,0 +1,306 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { isAdminAuthed } from "@/lib/adminAuth";
+
+interface TutorReq {
+  id: string;
+  created_at: string;
+  house_number: string | null;
+  guest_name: string | null;
+  student_name_kr: string | null;
+  student_name_en: string | null;
+  student_age: string | null;
+  class_type: string | null;
+  sessions_per_day: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  preferred_days: string | null;
+  preferred_time: string | null;
+  level_english: string | null;
+  level_speaking: string | null;
+  level_reading: string | null;
+  level_writing: string | null;
+  textbook: string | null;
+  class_style: string | null;
+  class_focus_arr: string[] | null;
+  child_personality: string | null;
+  status: string;
+  assigned_tutor_id: string | null;
+}
+
+interface Tutor { id: string; name: string }
+interface Comment { id: string; tutor_name: string; comment: string; created_at: string }
+
+const LEVEL_EN: Record<string, string> = {
+  zero: "Zero (Absolute Beginner)",
+  beginner1: "Beginner 1", beginner2: "Beginner 2",
+  intermediate1: "Intermediate 1", intermediate2: "Intermediate 2",
+  advanced1: "Advanced 1", advanced2: "Advanced 2",
+};
+const STYLE_EN: Record<string, string> = { play: "Play-based", study: "Study-focused", combined: "Play + Study" };
+const FOCUS_EN: Record<string, string> = {
+  speaking: "Speaking", reading: "Reading", writing: "Writing",
+  phonics: "Phonics", vocabulary: "Vocabulary", activity: "Activity",
+};
+const DAY_EN: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat" };
+
+export default function EngTutorRequestDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const [authed, setAuthed] = useState(false);
+  const [row, setRow] = useState<TutorReq | null>(null);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savedToast, setSavedToast] = useState(false);
+  const [actingTutor, setActingTutor] = useState<string>("");
+  const [taking, setTaking] = useState(false);
+  const [managerTutorId, setManagerTutorId] = useState<string>("");
+  const [savingAssign, setSavingAssign] = useState(false);
+  const [newComment, setNewComment] = useState<string>("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    if (!isAdminAuthed()) { window.location.href = "/login"; return; }
+    setAuthed(true);
+    if (typeof window !== "undefined") {
+      setActingTutor(localStorage.getItem("admineng_tutor_name") || "");
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    const [reqRes, tutorRes] = await Promise.all([
+      supabase.from("tutor_requests").select("*").eq("id", id).maybeSingle(),
+      supabase.from("tutors").select("id, name").eq("is_active", true).order("name"),
+    ]);
+    setLoading(false);
+    if (reqRes.error) { console.error("load failed:", reqRes.error); return; }
+    const r = reqRes.data as TutorReq | null;
+    setRow(r);
+    if (r?.assigned_tutor_id) setManagerTutorId(r.assigned_tutor_id);
+    setTutors((tutorRes.data || []) as Tutor[]);
+    loadComments();
+  }, [id]);
+
+  const loadComments = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("tutor_class_comments")
+      .select("id, tutor_name, comment, created_at")
+      .eq("request_id", id)
+      .order("created_at", { ascending: true });
+    setComments((data || []) as Comment[]);
+  }, [id]);
+
+  useEffect(() => { if (authed) load(); }, [authed, load]);
+
+  function showToast() {
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 1800);
+  }
+
+  async function takeThisClass() {
+    if (!row) return;
+    if (!actingTutor) { alert("Please select your name first on the previous page (top right)."); return; }
+    const me = tutors.find(t => t.name === actingTutor);
+    if (!me) { alert(`Tutor "${actingTutor}" not found in active tutor list.`); return; }
+    setTaking(true);
+    const { error } = await supabase.from("tutor_requests")
+      .update({ assigned_tutor_id: me.id, status: "assigned" })
+      .eq("id", row.id);
+    setTaking(false);
+    if (error) { alert("Failed: " + error.message); return; }
+    showToast();
+    load();
+  }
+
+  async function saveAssign() {
+    if (!row) return;
+    setSavingAssign(true);
+    const { error } = await supabase.from("tutor_requests")
+      .update({ assigned_tutor_id: managerTutorId || null, status: managerTutorId ? "assigned" : row.status })
+      .eq("id", row.id);
+    setSavingAssign(false);
+    if (error) { alert("Failed: " + error.message); return; }
+    showToast();
+    load();
+  }
+
+  async function postComment() {
+    if (!row) return;
+    if (!actingTutor) { alert("Please select your name first on the previous page (top right)."); return; }
+    if (!newComment.trim()) return;
+    setPosting(true);
+    const { error } = await supabase.from("tutor_class_comments").insert({
+      request_id: row.id,
+      tutor_name: actingTutor,
+      comment: newComment.trim(),
+    });
+    setPosting(false);
+    if (error) { alert("Failed to post: " + error.message); return; }
+    setNewComment("");
+    loadComments();
+  }
+
+  if (!authed) return null;
+
+  const daysFmt = row?.preferred_days
+    ? row.preferred_days.split(",").map(d => DAY_EN[d.trim()] || d.trim()).filter(Boolean).join(", ")
+    : "-";
+  const focusFmt = Array.isArray(row?.class_focus_arr) && row!.class_focus_arr!.length > 0
+    ? row!.class_focus_arr!.map(f => FOCUS_EN[f] || f).join(", ")
+    : "-";
+
+  return (<>
+    <style>{`
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
+.dw{max-width:900px;margin:0 auto;padding:24px 20px}
+.dtop{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.dback{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit}.dback:hover{border-color:#1a6fc4;color:#1a6fc4}
+.dtitle{font-size:20px;font-weight:800;flex:1}
+.dactor{font-size:11px;color:#6b7c93;background:#fff;padding:6px 12px;border:1px solid #e2e8f0;border-radius:999px;font-weight:600}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:760px){.dgrid{grid-template-columns:1fr}}
+.dcard{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.05)}
+.dcard h2{font-size:12px;font-weight:800;color:#1a6fc4;margin-bottom:12px;padding-bottom:5px;border-bottom:1.5px solid #e2e8f0;letter-spacing:0.04em;text-transform:uppercase}
+.drow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:12.5px;border-bottom:1px dashed #f1f5f9}
+.drow:last-child{border-bottom:none}
+.drow .k{color:#6b7c93;font-weight:600;flex-shrink:0}
+.drow .v{color:#1a1a2e;font-weight:500;text-align:right;word-break:break-word}
+.dpre{font-size:12px;line-height:1.6;background:#f8fafc;padding:8px 10px;border-radius:6px;color:#475569;white-space:pre-wrap;margin-top:4px}
+.daction{background:#fff;border-radius:14px;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.05);margin-bottom:14px}
+.daction h3{font-size:13px;font-weight:800;color:#1a1a2e;margin-bottom:10px}
+.daction .sub{font-size:11.5px;color:#94a3b8;margin-bottom:10px}
+.daction-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.daction-row select{flex:1;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff}
+.daction-row select:focus{border-color:#1a6fc4}
+.dbtn{padding:9px 18px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;background:#1a6fc4;color:#fff}
+.dbtn:hover{background:#155fa0}.dbtn:disabled{opacity:0.5;cursor:not-allowed}
+.dbtn-green{background:#16a34a}.dbtn-green:hover{background:#15803d}
+.dempty{padding:60px;text-align:center;color:#94a3b8;font-size:14px;background:#fff;border-radius:12px}
+.dcomments{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.05)}
+.dcomments h3{font-size:13px;font-weight:800;color:#1a6fc4;margin-bottom:10px;padding-bottom:5px;border-bottom:1.5px solid #e2e8f0;letter-spacing:0.04em;text-transform:uppercase}
+.dcmsg{background:#f8fafc;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12.5px}
+.dcmsg .who{font-weight:700;color:#1a6fc4;margin-right:8px;font-size:11.5px}
+.dcmsg .when{color:#94a3b8;font-size:10.5px;margin-left:6px}
+.dcmsg .text{color:#1a1a2e;margin-top:3px;line-height:1.5}
+.dcform{display:flex;gap:6px;margin-top:10px}
+.dcform input{flex:1;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none}
+.dcform input:focus{border-color:#1a6fc4}
+.toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 6px 20px rgba(22,163,74,0.35);z-index:9999}
+    `}</style>
+
+    <div className="dw">
+      <div className="dtop">
+        <button className="dback" onClick={() => router.push("/admineng/tutor-class")}>← Back</button>
+        <span className="dtitle">🎓 Request Detail</span>
+        <span className="dactor">{actingTutor ? `Acting as: ${actingTutor}` : "Name not set"}</span>
+      </div>
+
+      {loading ? (
+        <div className="dempty">Loading...</div>
+      ) : !row ? (
+        <div className="dempty">Request not found.</div>
+      ) : (<>
+        <div className="dgrid">
+          <div className="dcard">
+            <h2>Student Info</h2>
+            <div className="drow"><span className="k">House</span><span className="v" style={{ color: "#1a6fc4", fontWeight: 700 }}>{row.house_number || "-"}</span></div>
+            <div className="drow"><span className="k">Reserver</span><span className="v">{row.guest_name || "-"}</span></div>
+            <div className="drow"><span className="k">Student (KR)</span><span className="v">{row.student_name_kr || "-"}</span></div>
+            <div className="drow"><span className="k">Student (EN)</span><span className="v">{row.student_name_en || "-"}</span></div>
+            <div className="drow"><span className="k">Age</span><span className="v">{row.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "") || "-"}</span></div>
+          </div>
+
+          <div className="dcard">
+            <h2>Schedule</h2>
+            <div className="drow"><span className="k">Class Type</span><span className="v">{row.class_type || "-"}</span></div>
+            <div className="drow"><span className="k">Sessions/day</span><span className="v">{row.sessions_per_day === 2 ? "2 sessions (100 min)" : "1 session (50 min)"}</span></div>
+            <div className="drow"><span className="k">Period</span><span className="v">{row.start_date || "-"} ~ {row.end_date || "-"}</span></div>
+            <div className="drow"><span className="k">Days</span><span className="v">{daysFmt}</span></div>
+            <div className="drow"><span className="k">Preferred Time</span><span className="v">{row.preferred_time || "-"}</span></div>
+          </div>
+
+          <div className="dcard">
+            <h2>English Level</h2>
+            <div className="drow"><span className="k">Overall</span><span className="v">{LEVEL_EN[row.level_english || ""] || row.level_english || "-"}</span></div>
+            <div className="drow"><span className="k">Speaking</span><span className="v">{LEVEL_EN[row.level_speaking || ""] || row.level_speaking || "-"}</span></div>
+            <div className="drow"><span className="k">Reading</span><span className="v">{LEVEL_EN[row.level_reading || ""] || row.level_reading || "-"}</span></div>
+            <div className="drow"><span className="k">Writing</span><span className="v">{LEVEL_EN[row.level_writing || ""] || row.level_writing || "-"}</span></div>
+          </div>
+
+          <div className="dcard">
+            <h2>Class Direction</h2>
+            <div className="drow"><span className="k">Style</span><span className="v">{STYLE_EN[row.class_style || ""] || row.class_style || "-"}</span></div>
+            <div className="drow"><span className="k">Focus</span><span className="v">{focusFmt}</span></div>
+            <div className="drow"><span className="k">Textbook</span><span className="v">{row.textbook || "-"}</span></div>
+            <div className="drow" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+              <span className="k">Personality / Notes</span>
+              <div className="dpre">{row.child_personality || "-"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="daction">
+          <h3>🙋 Take This Class</h3>
+          {actingTutor ? (
+            <div className="sub">Assign this request to you ({actingTutor}). Status will become &ldquo;assigned&rdquo;.</div>
+          ) : (
+            <div className="sub" style={{ color: "#dc2626" }}>⚠️ Select your name first on the previous page (top right) to take a class.</div>
+          )}
+          <div className="daction-row">
+            <button className="dbtn dbtn-green" disabled={taking || !actingTutor} onClick={takeThisClass}>
+              {taking ? "Saving..." : "✋ I'll take this class"}
+            </button>
+          </div>
+        </div>
+
+        <div className="daction">
+          <h3>👤 Assign to Tutor (Manager)</h3>
+          <div className="sub">Manager can assign this request to any active tutor.</div>
+          <div className="daction-row">
+            <select value={managerTutorId} onChange={e => setManagerTutorId(e.target.value)}>
+              <option value="">— Not assigned —</option>
+              {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <button className="dbtn" disabled={savingAssign} onClick={saveAssign}>
+              {savingAssign ? "Saving..." : "💾 Save"}
+            </button>
+          </div>
+        </div>
+
+        <div className="dcomments">
+          <h3>💬 Comments ({comments.length})</h3>
+          {comments.length === 0 ? (
+            <div style={{ fontSize: 12, color: "#94a3b8", padding: "6px 2px" }}>No comments yet.</div>
+          ) : comments.map(c => (
+            <div className="dcmsg" key={c.id}>
+              <span className="who">{c.tutor_name}</span>
+              <span className="when">{new Date(c.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+              <div className="text">{c.comment}</div>
+            </div>
+          ))}
+          <div className="dcform">
+            <input
+              type="text"
+              placeholder={actingTutor ? `Comment as ${actingTutor}...` : "Select your name first (top right)"}
+              value={newComment}
+              onChange={e => setNewComment(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") postComment(); }}
+            />
+            <button className="dbtn" onClick={postComment} disabled={posting || !actingTutor || !newComment.trim()}>
+              {posting ? "..." : "Post"}
+            </button>
+          </div>
+        </div>
+      </>)}
+    </div>
+
+    {savedToast && <div className="toast">✅ Saved!</div>}
+  </>);
+}

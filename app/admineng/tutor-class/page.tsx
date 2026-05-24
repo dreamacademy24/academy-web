@@ -208,7 +208,7 @@ export default function EngTutorClassPage() {
                       <td style={{fontSize:11}}>{days(r) || "-"}</td>
                       <td style={{fontSize:11}}>{tutorName(r.assigned_tutor_id)}</td>
                       <td><span className="ebadge" style={{background:st.bg,color:st.color}}>{st.label}</span></td>
-                      <td style={{textAlign:"center"}}><button className="ebtn ebtn-blue" style={{padding:"5px 12px",fontSize:11}} onClick={e=>{e.stopPropagation();openDetail(r);}}>Detail</button></td>
+                      <td style={{textAlign:"center"}}><button className="ebtn ebtn-blue" style={{padding:"5px 12px",fontSize:11}} onClick={e=>{e.stopPropagation();router.push('/admineng/tutor-class/' + r.id);}}>Detail</button></td>
                     </tr>
                   );
                 })}
