@@ -664,7 +664,7 @@ export default function TutorApplications() {
           <div className="ta-empty">{apps.length === 0 ? "신청된 내역이 없습니다" : "필터 조건에 맞는 신청이 없습니다"}</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table className="tbl" style={{ tableLayout: 'fixed', width: 'auto', minWidth: 1200 }}>
+            <table className="tbl" style={{ tableLayout: 'fixed', width: 'auto', minWidth: 1080 }}>
               <thead>
                 <tr>
                   <th style={{ width: 44 }}>접수</th>
@@ -688,11 +688,11 @@ export default function TutorApplications() {
                     <tr key={a.id}>
                       <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(a.created_at)}</td>
                       <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.house_or_reserver}>{a.house_or_reserver}</td>
-                      <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 200 }} title={a.children_names}>
+                      <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.children_names}>
                         {a.children_names}
                         {isAsymmetric(a) && <span className="ta-warn-chip" title="레벨 편차 큼">⚠</span>}
                       </td>
-                      <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap" }}>{a.children_ages}</td>
+                      <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.children_ages}>{a.children_ages}</td>
                       <td><span className="ta-badge-type">{a.class_type}</span></td>
                       <td>
                         <span className={`ta-badge-time ${a.sessions_per_day === 2 ? "ta-time-2" : "ta-time-1"}`}>
