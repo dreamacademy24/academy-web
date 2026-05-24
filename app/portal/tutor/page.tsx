@@ -110,6 +110,17 @@ function studentName(s: any): { kr: string; en: string; age: string } {
   };
 }
 
+function isPeakSeason(dateStr: string): boolean {
+  if (!dateStr || dateStr.length < 10) return false;
+  const md = dateStr.slice(5, 10);
+  return md >= '07-15' && md <= '08-30';
+}
+function formatTimeRange(startHour: number, sessions: number): string {
+  const end = startHour + sessions;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(startHour)}:00 ~ ${pad(end)}:00 (${sessions}타임)`;
+}
+
 function formatBirthAge(birth: string): string {
   if (!birth) return "";
   const digits = birth.replace(/\D/g, "");
@@ -130,6 +141,7 @@ const INIT_FORM = {
   student2_name_kr: "", student2_name_en: "", student2_idx: -1,
   class_type: "", start_date: "", end_date: "",
   preferred_days_arr: [] as string[], skip_dates: "", preferred_time: "",
+  sessions_per_day: 1,
   is_enrolled: false,
   level_english: "", level_speaking: "", level_reading: "", level_writing: "",
   textbook: "", class_style: "", class_focus_arr: [] as string[],
@@ -152,6 +164,7 @@ export default function PortalTutorPage() {
   const [student2Age, setStudent2Age] = useState('');
   const [myApplications, setMyApplications] = useState<any[]>([]);
   const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -586,14 +599,28 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>수업 일정</h2>
         <div className="q">
+          <label className="q-label">원하는 타임 수<span className="req">*</span></label>
+          <div className="ct-row">
+            <button type="button" className={`ct-btn${form.sessions_per_day === 1 ? ' on' : ''}`} onClick={() => setForm({ ...form, sessions_per_day: 1, preferred_time: '' })}>
+              1타임<span className="price">50분</span>
+            </button>
+            <button type="button" className={`ct-btn${form.sessions_per_day === 2 ? ' on' : ''}`} onClick={() => setForm({ ...form, sessions_per_day: 2, preferred_time: '' })}>
+              2타임<span className="price">100분</span>
+            </button>
+          </div>
+        </div>
+        <div className="q">
           <label className="q-label"><span className="num">4</span>수업 시작일</label>
-          <input className="inp" type="date" value={form.start_date} onChange={e => {
-            const v = e.target.value;
-            setForm({ ...form, start_date: v });
-            if (v && new Date(v) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) {
-              window.alert("⚠️ 수업은 최소 2주 전 사전 신청이 필요합니다.\n선택하신 날짜는 신청이 불가할 수 있습니다.");
-            }
-          }} />
+          <input className="inp" type="date" value={form.start_date}
+            min={bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
+            max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
+            onChange={e => {
+              const v = e.target.value;
+              setForm({ ...form, start_date: v });
+              if (v && new Date(v) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) {
+                window.alert("⚠️ 수업은 최소 2주 전 사전 신청이 필요합니다.\n선택하신 날짜는 신청이 불가할 수 있습니다.");
+              }
+            }} />
           {form.start_date && new Date(form.start_date) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
             <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:13, color:'#92400e'}}>
               ⚠️ 수업은 최소 <strong>2주 전</strong> 사전 신청이 필요합니다. 선택하신 날짜는 신청이 불가할 수 있습니다.
@@ -602,15 +629,24 @@ export default function PortalTutorPage() {
         </div>
         <div className="q">
           <label className="q-label"><span className="num">5</span>수업 종료일</label>
-          <input className="inp" type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
+          <input className="inp" type="date" value={form.end_date}
+            min={form.start_date || bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
+            max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
+            onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
         <div className="q">
           <label className="q-label"><span className="num">6</span>원하는 수업 요일 (복수 선택)</label>
-          <div className="opts">
+          <div className="opts" style={{alignItems:'center'}}>
             {DAYS.map(d => (
               <button key={d} type="button" className={`opt${form.preferred_days_arr.includes(d) ? " on" : ""}`} onClick={() => toggleDay(d)}>{d}</button>
             ))}
+            <span style={{fontSize:11, color:'#92400e', marginLeft:4, fontWeight:600}}>※ 토요일은 매달 2·4주차만 가능</span>
           </div>
+          {form.preferred_days_arr.includes('토') && (
+            <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:12, color:'#92400e', lineHeight:1.5}}>
+              ⚠️ 토요일은 <strong>매달 둘째 주·넷째 주</strong>만 수업 가능합니다. 다른 토요일은 자동 제외됩니다.
+            </div>
+          )}
         </div>
         <div className="q">
           <label className="q-label"><span className="num">7</span>빠지는 날짜 / 변경 날짜</label>
@@ -618,7 +654,19 @@ export default function PortalTutorPage() {
         </div>
         <div className="q">
           <label className="q-label"><span className="num">8</span>원하는 수업 시간</label>
-          <input className="inp" value={form.preferred_time} onChange={e => setForm({ ...form, preferred_time: e.target.value })} placeholder="예: 오전10시~오후12시" />
+          {isPeakSeason(form.start_date) && (
+            <span className="q-hint" style={{color:'#92400e'}}>※ 성수기(7/15~8/30)는 17:00 이후만 가능합니다.</span>
+          )}
+          {form.preferred_time ? (
+            <div className="stu-pick">
+              <div className="sel-name">{form.preferred_time}</div>
+              <button type="button" className="change-btn" onClick={() => setTimePickerOpen(true)}>변경</button>
+            </div>
+          ) : (
+            <div className="stu-pick">
+              <button type="button" className="pick-btn" onClick={() => setTimePickerOpen(true)}>🕐 시간 선택하기</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -810,6 +858,40 @@ export default function PortalTutorPage() {
             </div>
           )}
           <button type="button" className="modal-close" onClick={() => setPickerSlot(null)}>닫기</button>
+        </div>
+      </div>
+    )}
+
+    {timePickerOpen && (
+      <div className="modal-bg" onClick={() => setTimePickerOpen(false)}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <h3>수업 시간 선택</h3>
+          <div className="modal-sub">
+            {form.sessions_per_day}타임 ({form.sessions_per_day * 50}분) 시작 시간을 선택하세요.
+            {isPeakSeason(form.start_date) && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8}}>
+            {[10,11,12,13,14,15,16,17,18,19,20].map(h => {
+              const peak = isPeakSeason(form.start_date);
+              const disabled = peak && h < 17;
+              return (
+                <button key={h} type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (disabled) return;
+                    setForm(f => ({ ...f, preferred_time: formatTimeRange(h, f.sessions_per_day) }));
+                    setTimePickerOpen(false);
+                  }}
+                  style={{padding:'14px 6px', border:'1.5px solid #e2e8f0', borderRadius:9, background:disabled?'#f1f5f9':'#fff', color:disabled?'#94a3b8':'#1a1a2e', cursor:disabled?'not-allowed':'pointer', fontFamily:'inherit', fontSize:14, fontWeight:700, lineHeight:1.3}}
+                  title={disabled?'성수기 불가':''}
+                >
+                  {String(h).padStart(2,'0')}:00
+                  {disabled && <span style={{display:'block',fontSize:10,color:'#dc2626',marginTop:3,fontWeight:600}}>성수기 불가</span>}
+                </button>
+              );
+            })}
+          </div>
+          <button type="button" className="modal-close" onClick={() => setTimePickerOpen(false)}>닫기</button>
         </div>
       </div>
     )}

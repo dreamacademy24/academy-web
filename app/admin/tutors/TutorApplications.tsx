@@ -670,7 +670,7 @@ export default function TutorApplications() {
                   <th style={{ width: 44 }}>접수</th>
                   <th style={{ width: 120 }}>예약자</th>
                   <th style={{ width: 200 }}>수강자</th>
-                  <th style={{ width: 80 }}>나이</th>
+                  <th style={{ width: 160 }}>나이</th>
                   <th style={{ width: 52 }}>유형</th>
                   <th style={{ width: 44 }}>타임</th>
                   <th style={{ width: 180 }}>기간</th>
