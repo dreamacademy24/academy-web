@@ -8,7 +8,7 @@ interface Tutor { id: string; name: string; phone: string; specialty: string; is
 interface TutorApp {
   id: string; created_at: string; updated_at?: string | null;
   reserver_type: string | null;
-  house_or_reserver: string; children_names: string; children_ages: string;
+  house_or_reserver: string; house_number: string; children_names: string; children_ages: string;
   class_type: string; sessions_per_day: number | null; hourly_rate: number;
   start_date: string; end_date: string;
   class_days: string[] | null; excluded_dates: string | null; class_time: string;
@@ -107,6 +107,7 @@ export default function TutorApplications() {
       updated_at: r.updated_at || null,
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
+      house_number: r.house_number || '',
       children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
       children_ages: r.student_age || '',
       class_type: r.class_type || '',
@@ -709,12 +710,13 @@ export default function TutorApplications() {
               <thead>
                 <tr>
                   <th style={{ width: '4%' }}>접수</th>
-                  <th style={{ width: '11%' }}>예약자</th>
-                  <th style={{ width: '14%' }}>수강자</th>
-                  <th style={{ width: '11%' }}>나이</th>
-                  <th style={{ width: '5%' }}>유형</th>
+                  <th style={{ width: '7%' }}>하우스</th>
+                  <th style={{ width: '9%' }}>예약자</th>
+                  <th style={{ width: '13%' }}>수강자</th>
+                  <th style={{ width: '6%' }}>나이</th>
+                  <th style={{ width: '4%' }}>유형</th>
                   <th style={{ width: '4%' }}>타임</th>
-                  <th style={{ width: '16%' }}>기간</th>
+                  <th style={{ width: '12%' }}>기간</th>
                   <th style={{ width: '6%' }}>요일</th>
                   <th style={{ width: '8%' }}>담당 튜터</th>
                   <th style={{ width: '7%' }}>상태</th>
@@ -728,19 +730,20 @@ export default function TutorApplications() {
                   return (
                     <tr key={a.id}>
                       <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(a.created_at)}</td>
+                      <td style={{ fontSize: 12, fontWeight: 700, color: "#1a6fc4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.house_number || "-"}</td>
                       <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.house_or_reserver}>{a.house_or_reserver}</td>
                       <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.children_names}>
                         {a.children_names}
                         {isAsymmetric(a) && <span className="ta-warn-chip" title="레벨 편차 큼">⚠</span>}
                       </td>
-                      <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.children_ages}>{a.children_ages}</td>
+                      <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.children_ages}>{a.children_ages?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, '')}</td>
                       <td><span className="ta-badge-type">{a.class_type}</span></td>
                       <td>
                         <span className={`ta-badge-time ${a.sessions_per_day === 2 ? "ta-time-2" : "ta-time-1"}`}>
                           {a.sessions_per_day === 2 ? "2T" : "1T"}
                         </span>
                       </td>
-                      <td style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${a.start_date} ~ ${a.end_date}`}>{a.start_date} ~ {a.end_date}</td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${a.start_date} ~ ${a.end_date}`}>{a.start_date?.slice(5).replace('-','/')}~{a.end_date?.slice(5).replace('-','/')}</td>
                       <td style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={days || "-"}>{days || "-"}</td>
                       <td style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={tutorNameById(a.assigned_tutor_id) || ""}>{tutorNameById(a.assigned_tutor_id)}</td>
                       <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
