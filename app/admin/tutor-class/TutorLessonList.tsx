@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Tutor { id: string; name: string }
@@ -71,6 +72,7 @@ function fmtRange(start: string, end: string): string {
 }
 
 export default function TutorLessonList() {
+  const router = useRouter();
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -359,8 +361,8 @@ export default function TutorLessonList() {
                     <button className="tll-act-btn primary" onClick={() => openAttendance(l)}>출결</button>
                     <button
                       className="tll-act-btn"
-                      disabled
-                      title="인보이스 기능은 다음 업데이트에 추가됩니다"
+                      onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
+                      title="인보이스 보기"
                     >
                       인보이스
                     </button>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import TutorApplications from "../tutors/TutorApplications";
 import TutorLessonList from "./TutorLessonList";
@@ -11,8 +11,10 @@ type Tab = "applications" | "schedule" | "students" | "invoice";
 
 export default function TutorClassPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams?.get("tab") as Tab) || "applications";
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<Tab>("applications");
+  const [tab, setTab] = useState<Tab>(["applications","schedule","students","invoice"].includes(initialTab) ? initialTab : "applications");
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);

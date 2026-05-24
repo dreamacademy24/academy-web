@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Lesson {
@@ -91,8 +92,10 @@ function filenameSafe(s: string): string {
 }
 
 export default function TutorInvoice() {
+  const searchParams = useSearchParams();
+  const urlLessonId = searchParams?.get("lesson_id") || "";
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string>(urlLessonId);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
