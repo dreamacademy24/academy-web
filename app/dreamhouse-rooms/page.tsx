@@ -52,6 +52,7 @@ export default function DreamhouseRooms() {
   const [tooltip, setTooltip] = useState<{x:number,y:number,booking:Booking}|null>(null)
   const [modal, setModal] = useState<Booking|null>(null)
   const [modalRoom, setModalRoom] = useState('')
+  const [notes, setNotes] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -62,6 +63,20 @@ export default function DreamhouseRooms() {
   useEffect(() => {
     fetchBookings()
   }, [year, month])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const key = `dh_notes_${year}_${month+1}`
+      setNotes(localStorage.getItem(key) || '')
+    }
+  }, [year, month])
+
+  function saveNotes(val: string) {
+    setNotes(val)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`dh_notes_${year}_${month+1}`, val)
+    }
+  }
 
   async function fetchBookings() {
     setLoading(true)
@@ -111,6 +126,27 @@ export default function DreamhouseRooms() {
     })
   })
 
+  // 사이드패널 통계 (같은 월 데이터 기반)
+  const monthFirstDay = `${year}-${String(month+1).padStart(2,'0')}-01`
+  const monthLastDay = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`
+  const monthlyCheckins = bookings.filter(b => b.checkin_date >= monthFirstDay && b.checkin_date <= monthLastDay).length
+  const monthlyCheckouts = bookings.filter(b => b.checkout_date >= monthFirstDay && b.checkout_date <= monthLastDay).length
+
+  const duplicates: {date:string,room:string,count:number}[] = []
+  Object.entries(cellMap).forEach(([date, rooms]) => {
+    Object.entries(rooms).forEach(([room, bs]) => {
+      if (bs.length > 1) duplicates.push({date, room, count: bs.length})
+    })
+  })
+
+  const conflicts: {date:string,room:string}[] = []
+  conflictSet.forEach(key => {
+    const idx = key.indexOf('_')
+    conflicts.push({date: key.slice(0,idx), room: key.slice(idx+1)})
+  })
+
+  const emptyRooms = ROOMS.filter(r => !bookings.some(b => b.accom_room === r))
+
   const prevMonth = () => {
     if (month === 0) { setYear(y=>y-1); setMonth(11) }
     else setMonth(m=>m-1)
@@ -124,34 +160,100 @@ export default function DreamhouseRooms() {
   const DOW_KO = ['일','월','화','수','목','금','토']
 
   return (
-    <div style={{minHeight:'100vh',background:'#f8fafc',color:'#1e293b',fontFamily:'sans-serif'}}>
-      {/* 헤더 */}
-      <div style={{background:'#1e40af',padding:'20px 24px',borderBottom:'1px solid #1e3a8a',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
-        <div style={{display:'flex',alignItems:'center',gap:16}}>
-          <button onClick={()=>router.push('/admin')} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#dbeafe',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>← 어드민</button>
-          <h1 style={{margin:0,fontSize:20,fontWeight:700,color:'#ffffff'}}>🏠 Dream House 예약현황</h1>
+    <div style={{minHeight:'100vh',background:'#f8fafc',color:'#1e293b',fontFamily:'sans-serif',display:'flex'}}>
+      {/* 사이드패널 */}
+      <aside style={{width:260,flexShrink:0,background:'#f8fafc',borderRight:'1px solid #e2e8f0',padding:16,height:'100vh',position:'sticky',top:0,overflowY:'auto'}}>
+        {/* 헤더 */}
+        <div style={{marginBottom:16}}>
+          <button onClick={()=>router.push('/admin')} style={{background:'transparent',border:'1px solid #cbd5e1',color:'#475569',padding:'6px 10px',borderRadius:6,cursor:'pointer',fontSize:12,marginBottom:10}}>← 어드민</button>
+          <h1 style={{margin:0,fontSize:17,fontWeight:700,color:'#1e293b'}}>🏠 Dream House 예약현황</h1>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <button onClick={prevMonth} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#ffffff',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>‹</button>
-          <span style={{fontSize:18,fontWeight:700,color:'#ffffff',minWidth:80,textAlign:'center'}}>{year}년 {MONTH_KO[month]}</span>
-          <button onClick={nextMonth} style={{background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.3)',color:'#ffffff',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:16}}>›</button>
-          <button onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}} style={{background:'#2563eb',border:'1px solid #3b82f6',color:'white',padding:'8px 14px',borderRadius:8,cursor:'pointer',fontSize:13}}>오늘</button>
+
+        {/* 범례 */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,padding:'10px 12px',marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#64748b',marginBottom:8,letterSpacing:0.5}}>범례</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#3b82f6'}}></div><span style={{fontSize:11,color:'#475569'}}>예약 있음</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:11,color:'#475569'}}>중복 예약</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:11,color:'#475569'}}>⚠️ 시간 충돌</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#f1f5f9',border:'1px solid #cbd5e1'}}></div><span style={{fontSize:11,color:'#475569'}}>빈 날</span></div>
+          </div>
         </div>
-      </div>
 
-      {/* 범례 */}
-      <div style={{padding:'12px 24px',display:'flex',gap:20,flexWrap:'wrap',borderBottom:'1px solid #e2e8f0',background:'#ffffff'}}>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#3b82f6'}}></div><span style={{fontSize:12,color:'#475569'}}>예약 있음</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:12,color:'#475569'}}>중복 예약</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:12,color:'#475569'}}>⚠️ 시간 충돌 주의 (레이트체크아웃/새벽체크인)</span></div>
-        <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:14,height:14,borderRadius:3,background:'#f1f5f9',border:'1px solid #cbd5e1'}}></div><span style={{fontSize:12,color:'#475569'}}>빈 날</span></div>
-      </div>
+        {/* 이번 달 요약 */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#1e293b',marginBottom:10}}>📋 이번 달 요약</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}><span style={{color:'#64748b'}}>총 예약</span><span style={{fontWeight:700,color:'#1e40af'}}>{bookings.length}건</span></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}><span style={{color:'#64748b'}}>체크인 예정</span><span style={{fontWeight:700,color:'#16a34a'}}>{monthlyCheckins}건</span></div>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}><span style={{color:'#64748b'}}>체크아웃 예정</span><span style={{fontWeight:700,color:'#ea580c'}}>{monthlyCheckouts}건</span></div>
+          </div>
+        </div>
 
-      {loading ? (
-        <div style={{textAlign:'center',padding:60,color:'#3b82f6',fontSize:18}}>불러오는 중...</div>
-      ) : (
-        <div style={{overflowX:'auto'}}>
-          <table style={{borderCollapse:'collapse',minWidth:'100%'}}>
+        {/* 확인 필요 */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#1e293b',marginBottom:10}}>⚠️ 확인 필요</div>
+          {duplicates.length === 0 && conflicts.length === 0 ? (
+            <div style={{fontSize:11,color:'#94a3b8'}}>이상 없음</div>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {duplicates.map((d,i)=>(
+                <div key={`dup-${i}`} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+                  <span style={{background:'#dc2626',color:'#fff',padding:'2px 6px',borderRadius:4,fontWeight:700,fontSize:10,flexShrink:0}}>중복</span>
+                  <span style={{color:'#475569'}}>{d.date} · {d.room}</span>
+                </div>
+              ))}
+              {conflicts.map((c,i)=>(
+                <div key={`con-${i}`} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
+                  <span style={{background:'#f59e0b',color:'#fff',padding:'2px 6px',borderRadius:4,fontWeight:700,fontSize:10,flexShrink:0}}>충돌</span>
+                  <span style={{color:'#475569'}}>{c.date} · {c.room}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 빈 방 현황 */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#1e293b',marginBottom:10}}>🏠 이번 달 빈 방</div>
+          {emptyRooms.length === 0 ? (
+            <div style={{fontSize:11,color:'#94a3b8'}}>모든 룸 예약 있음</div>
+          ) : (
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {emptyRooms.map(r=>(
+                <span key={r} style={{background:'#f1f5f9',color:'#475569',padding:'3px 8px',borderRadius:4,fontSize:11,fontWeight:600}}>{r}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 이달 메모 */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:8,padding:'12px 14px',marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#1e293b',marginBottom:8}}>📝 이달 메모</div>
+          <textarea
+            value={notes}
+            onChange={e=>saveNotes(e.target.value)}
+            placeholder="메모를 입력하세요..."
+            style={{width:'100%',minHeight:100,padding:8,border:'1px solid #e2e8f0',borderRadius:6,fontSize:12,resize:'vertical',fontFamily:'inherit',color:'#1e293b',boxSizing:'border-box',outline:'none'}}
+          />
+        </div>
+      </aside>
+
+      {/* 캘린더 영역 */}
+      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+        {/* 월 네비게이션 */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'14px 24px',borderBottom:'1px solid #e2e8f0',background:'#ffffff'}}>
+          <button onClick={prevMonth} style={{background:'#f1f5f9',border:'1px solid #cbd5e1',color:'#475569',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:14}}>‹</button>
+          <span style={{fontSize:16,fontWeight:700,color:'#1e293b',minWidth:130,textAlign:'center'}}>{year}년 {MONTH_KO[month]}</span>
+          <button onClick={nextMonth} style={{background:'#f1f5f9',border:'1px solid #cbd5e1',color:'#475569',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:14}}>›</button>
+          <button onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}} style={{background:'#1e40af',border:'1px solid #1e3a8a',color:'#fff',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600,marginLeft:8}}>오늘</button>
+        </div>
+
+        {loading ? (
+          <div style={{textAlign:'center',padding:60,color:'#3b82f6',fontSize:18}}>불러오는 중...</div>
+        ) : (
+          <div style={{overflowX:'auto',flex:1}}>
+            <table style={{borderCollapse:'collapse',minWidth:'100%'}}>
             <thead>
               <tr>
                 <th style={{position:'sticky',left:0,zIndex:10,background:'#1e3a8a',padding:'10px 8px',fontSize:12,color:'#dbeafe',borderRight:'2px solid #1e40af',borderBottom:'2px solid #1e40af',minWidth:70,textAlign:'center'}}>날짜</th>
@@ -260,6 +362,7 @@ export default function DreamhouseRooms() {
           </table>
         </div>
       )}
+      </div>
 
       {/* 모달 */}
       {modal && (
