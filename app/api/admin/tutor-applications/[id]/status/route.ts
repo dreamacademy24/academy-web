@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!status) return NextResponse.json({ error: 'status required' }, { status: 400 })
 
   const { error } = await supabase
-    .from('tutor_applications')
+    .from('tutor_requests')
     .update({ status })
     .eq('id', id)
 

@@ -35,7 +35,11 @@ interface TutorRow {
   rules_agreed: boolean | null;
   status: string;
   tutor_id: string | null;
+  assigned_tutor_id: string | null;
   notes: string | null;
+  admin_memo: string | null;
+  total_sessions: number | null;
+  total_amount: number | null;
 }
 
 interface Tutor { id: string; name: string }
@@ -64,6 +68,9 @@ export default function TutorRequestDetailPage() {
   const [status, setStatus] = useState<string>("pending");
   const [tutorId, setTutorId] = useState<string>("");
   const [memo, setMemo] = useState<string>("");
+  const [totalSessions, setTotalSessions] = useState<string>("");
+  const [totalAmount, setTotalAmount] = useState<string>("");
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -78,8 +85,10 @@ export default function TutorRequestDetailPage() {
     if (!r) { setMsg("신청 정보를 찾을 수 없습니다."); return; }
     setRow(r);
     setStatus(r.status || "pending");
-    setTutorId(r.tutor_id || "");
-    setMemo(r.notes || "");
+    setTutorId(r.assigned_tutor_id || r.tutor_id || "");
+    setMemo(r.admin_memo || r.notes || "");
+    setTotalSessions(r.total_sessions != null ? String(r.total_sessions) : "");
+    setTotalAmount(r.total_amount != null ? String(r.total_amount) : "");
     setTutors((tutorRes.data || []) as Tutor[]);
   }, [id]);
 
@@ -88,13 +97,31 @@ export default function TutorRequestDetailPage() {
   async function save() {
     if (!row) return;
     setSaving(true); setMsg("");
+    const payload: Record<string, unknown> = {
+      status,
+      assigned_tutor_id: tutorId || null,
+      tutor_id: tutorId || null,
+      admin_memo: memo || null,
+      total_sessions: totalSessions ? parseInt(totalSessions) : null,
+      total_amount: totalAmount ? parseFloat(totalAmount) : null,
+    };
     const { error } = await supabase.from("tutor_requests")
-      .update({ status, tutor_id: tutorId || null, notes: memo || null })
+      .update(payload)
       .eq("id", row.id);
     setSaving(false);
     if (error) { setMsg("저장 실패: " + error.message); return; }
     setMsg("저장되었습니다.");
     load();
+  }
+
+  async function remove() {
+    if (!row) return;
+    if (!confirm(`${row.guest_name || ""}님의 신청을 삭제하시겠습니까?\n되돌릴 수 없습니다.`)) return;
+    setDeleting(true); setMsg("");
+    const { error } = await supabase.from("tutor_requests").delete().eq("id", row.id);
+    setDeleting(false);
+    if (error) { setMsg("삭제 실패: " + error.message); return; }
+    router.push("/admin/tutor-class");
   }
 
   if (!id) return null;
@@ -199,11 +226,24 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label className="dt-lbl">총 회차</label>
+                <input className="dt-inp" type="number" min={0} value={totalSessions} onChange={e => setTotalSessions(e.target.value)} placeholder="예: 8" />
+              </div>
+              <div>
+                <label className="dt-lbl">총 금액 (₱)</label>
+                <input className="dt-inp" type="number" min={0} value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="예: 4800" />
+              </div>
+            </div>
             <div>
-              <label className="dt-lbl">메모 (notes)</label>
+              <label className="dt-lbl">어드민 메모</label>
               <textarea className="dt-area" value={memo} onChange={e => setMemo(e.target.value)} placeholder="어드민 메모..." />
             </div>
-            <button className="dt-btn" onClick={save} disabled={saving}>{saving ? "저장 중..." : "💾 저장"}</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="dt-btn" style={{ flex: 1 }} onClick={save} disabled={saving}>{saving ? "저장 중..." : "💾 저장"}</button>
+              <button className="dt-btn" style={{ background: "#dc2626" }} onClick={remove} disabled={deleting}>{deleting ? "삭제 중..." : "🗑 삭제"}</button>
+            </div>
             {msg && <div className={`dt-msg ${msg.includes("실패") ? "err" : "ok"}`}>{msg}</div>}
           </div>
         </div>

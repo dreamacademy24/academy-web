@@ -72,41 +72,6 @@ export async function POST(req: Request) {
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    // tutor_applications 에도 저장 — 어드민 튜터 수신함 유입용 (실패해도 포털 신청은 성공 처리)
-    const appRow: Record<string, unknown> = {
-      booking_id: booking_id || null,
-      house_or_reserver: guest_name || null,
-      children_names: [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ') || null,
-      children_ages: body.student_age || null,
-      class_type: body.class_type || null,
-      sessions_per_day: 1,
-      hourly_rate: body.class_type === '1:2' ? 350 : 300,
-      start_date: body.start_date || null,
-      end_date: body.end_date || null,
-      class_days: Array.isArray(body.preferred_days_arr) ? body.preferred_days_arr.map((d: string) => DAY_MAP[d] || d) : null,
-      excluded_dates: body.skip_dates || null,
-      class_time: body.preferred_time || null,
-      overall_level: OVERALL_LEVEL_MAP[body.level_english] || body.level_english || null,
-      speaking_level: SUB_LEVEL_MAP[body.level_speaking] || body.level_speaking || null,
-      reading_level: SUB_LEVEL_MAP[body.level_reading] || body.level_reading || null,
-      writing_level: SUB_LEVEL_MAP[body.level_writing] || body.level_writing || null,
-      textbook: body.textbook || null,
-      class_style: STYLE_MAP[body.class_style] || body.class_style || null,
-      class_focus: Array.isArray(body.class_focus_arr) ? body.class_focus_arr.map((f: string) => FOCUS_MAP[f] || f) : null,
-      child_notes: body.child_personality || null,
-      agreed_privacy: true,
-      agreed_tutor_rules: true,
-      agreed_tutor_rules_bool: true,
-      reserver_type: 'portal',
-      status: 'pending',
-      admin_memo: booking_id ? `포털 신청 (예약번호: ${booking_id})` : '포털 신청',
-    }
-    console.log('[portal/tutor] tutor_applications appRow:', JSON.stringify(appRow))
-    const { error: appErr } = await supabase.from('tutor_applications').insert(appRow)
-    if (appErr) {
-      console.error('[portal/tutor] tutor_applications insert 실패:', appErr.message, appErr)
-    }
-
     const bookerName = guest_name || await getBookerName(booking_id)
     const today = new Date().toISOString().slice(0, 10)
     await supabase.from('staff_tasks').insert({
@@ -114,7 +79,7 @@ export async function POST(req: Request) {
       assignee: 'all', due: today, done: false, shared: true,
       note: `학생: ${body.student_name_kr || ''} (${body.student_name_en || ''})\n나이: ${body.student_age || '-'}\n유형: ${body.class_type || '-'}\n기간: ${body.start_date || '-'} ~ ${body.end_date || '-'}\n요일: ${(body.preferred_days_arr || []).join(',')}\n시간: ${body.preferred_time || '-'}`,
     })
-    return NextResponse.json({ ...data, app_error: appErr?.message ?? null })
+    return NextResponse.json(data)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown'
     return NextResponse.json({ error: msg }, { status: 500 })

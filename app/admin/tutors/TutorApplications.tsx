@@ -95,18 +95,16 @@ export default function TutorApplications() {
 
   const loadApps = useCallback(async () => {
     setLoading(true);
-    const [appsRes, reqRes] = await Promise.all([
-      supabase.from("tutor_applications").select("*").order("created_at", { ascending: false }),
-      supabase.from("tutor_requests").select("*").order("created_at", { ascending: false }),
-    ]);
+    const { data, error } = await supabase
+      .from("tutor_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
     setLoading(false);
-    if (appsRes.error) console.error("tutor_applications 로드 실패:", appsRes.error);
-    if (reqRes.error) console.error("tutor_requests 로드 실패:", reqRes.error);
-
-    const reqs: TutorApp[] = (reqRes.data || []).map((r: any) => ({
+    if (error) { console.error("tutor_requests 로드 실패:", error); return; }
+    const mapped: TutorApp[] = (data || []).map((r: any) => ({
       id: r.id,
       created_at: r.created_at,
-      updated_at: null,
+      updated_at: r.updated_at || null,
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
       children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
@@ -132,26 +130,12 @@ export default function TutorApplications() {
       agreed_privacy: r.privacy_agreed ?? true,
       agreed_tutor_rules: r.rules_agreed ?? true,
       status: r.status || 'pending',
-      assigned_tutor_id: r.tutor_id || r.assigned_tutor_id || null,
-      total_sessions: null,
-      total_amount: null,
-      admin_memo: '(포털 신청)',
+      assigned_tutor_id: r.assigned_tutor_id || r.tutor_id || null,
+      total_sessions: r.total_sessions ?? null,
+      total_amount: r.total_amount ?? null,
+      admin_memo: r.admin_memo ?? null,
     }));
-
-    // dedup key: booking_id + student_name_kr + start_date  → tutor_requests 우선
-    const reqKeys = new Set(
-      (reqRes.data || []).map((r: any) => `${r.booking_id || ''}__${r.student_name_kr || ''}__${r.start_date || ''}`)
-    );
-    const filteredApps = ((appsRes.data || []) as TutorApp[]).filter(a => {
-      const krFromChildren = (a.children_names || '').split(' / ')[0] || '';
-      const key = `${(a as any).booking_id || ''}__${krFromChildren}__${a.start_date || ''}`;
-      return !reqKeys.has(key);
-    });
-
-    const merged = [...reqs, ...filteredApps].sort((a, b) =>
-      (b.created_at || '').localeCompare(a.created_at || '')
-    );
-    setApps(merged);
+    setApps(mapped);
   }, []);
   const loadTutors = useCallback(async () => {
     const { data, error } = await supabase.from("tutors").select("*").eq("is_active", true).order("name");
@@ -211,7 +195,7 @@ export default function TutorApplications() {
       total_amount: parsedAmount,
       admin_memo: adminForm.admin_memo.trim() || null,
     };
-    const { error } = await supabase.from("tutor_applications").update(payload).eq("id", detail.id).select();
+    const { error } = await supabase.from("tutor_requests").update(payload).eq("id", detail.id).select();
     if (error) {
       setSaving(false);
       console.error("신청 저장 실패:", error, "payload:", payload);
@@ -358,10 +342,7 @@ export default function TutorApplications() {
     if (!detail) return;
     setDeleting(true);
     setModalError("");
-    // 출처 구분: admin_memo='(포털 신청)' 이면 tutor_requests, 그 외는 tutor_applications
-    const fromRequests = detail.admin_memo === '(포털 신청)';
-    const table = fromRequests ? "tutor_requests" : "tutor_applications";
-    const { error } = await supabase.from(table).delete().eq("id", detail.id);
+    const { error } = await supabase.from("tutor_requests").delete().eq("id", detail.id);
     setDeleting(false);
     if (error) {
       console.error("신청 삭제 실패:", error);
@@ -420,12 +401,8 @@ export default function TutorApplications() {
     setDownloading(true);
     try {
       // 필터 무시, 전체 재조회
-      const { data, error } = await supabase
-        .from("tutor_applications")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      const rows = (data || []) as TutorApp[];
+      // tutor_requests 사용 — 이미 로드된 apps state 활용 (중복 fetch 방지)
+      const rows = apps;
 
       const pad = (n: number) => String(n).padStart(2, "0");
       const fmtDT = (iso: string) => {
