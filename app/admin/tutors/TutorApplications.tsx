@@ -93,10 +93,63 @@ export default function TutorApplications() {
 
   const loadApps = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("tutor_applications").select("*").order("created_at", { ascending: false });
+    const [appsRes, reqRes] = await Promise.all([
+      supabase.from("tutor_applications").select("*").order("created_at", { ascending: false }),
+      supabase.from("tutor_requests").select("*").order("created_at", { ascending: false }),
+    ]);
     setLoading(false);
-    if (error) { console.error("신청 목록 로드 실패:", error); return; }
-    if (data) setApps(data as TutorApp[]);
+    if (appsRes.error) console.error("tutor_applications 로드 실패:", appsRes.error);
+    if (reqRes.error) console.error("tutor_requests 로드 실패:", reqRes.error);
+
+    const reqs: TutorApp[] = (reqRes.data || []).map((r: any) => ({
+      id: r.id,
+      created_at: r.created_at,
+      updated_at: null,
+      reserver_type: 'portal',
+      house_or_reserver: r.guest_name || r.house_number || '',
+      children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
+      children_ages: r.student_age || '',
+      class_type: r.class_type || '',
+      sessions_per_day: r.sessions_per_day || 1,
+      hourly_rate: r.class_type === '1:2' ? 350 : 300,
+      start_date: r.start_date || '',
+      end_date: r.end_date || '',
+      class_days: r.preferred_days
+        ? String(r.preferred_days).split(',').map((s: string) => s.trim()).filter(Boolean)
+        : (Array.isArray(r.preferred_days_arr) ? r.preferred_days_arr : null),
+      excluded_dates: r.skip_dates || null,
+      class_time: r.preferred_time || '',
+      overall_level: r.level_english || '',
+      speaking_level: r.level_speaking || '',
+      reading_level: r.level_reading || '',
+      writing_level: r.level_writing || '',
+      textbook: r.textbook || null,
+      class_style: r.class_style || '',
+      class_focus: Array.isArray(r.class_focus_arr) ? r.class_focus_arr : null,
+      child_notes: r.child_personality || null,
+      agreed_privacy: r.privacy_agreed ?? true,
+      agreed_tutor_rules: r.rules_agreed ?? true,
+      status: r.status || 'pending',
+      assigned_tutor_id: r.tutor_id || r.assigned_tutor_id || null,
+      total_sessions: null,
+      total_amount: null,
+      admin_memo: '(포털 신청)',
+    }));
+
+    // dedup key: booking_id + student_name_kr + start_date  → tutor_requests 우선
+    const reqKeys = new Set(
+      (reqRes.data || []).map((r: any) => `${r.booking_id || ''}__${r.student_name_kr || ''}__${r.start_date || ''}`)
+    );
+    const filteredApps = ((appsRes.data || []) as TutorApp[]).filter(a => {
+      const krFromChildren = (a.children_names || '').split(' / ')[0] || '';
+      const key = `${(a as any).booking_id || ''}__${krFromChildren}__${a.start_date || ''}`;
+      return !reqKeys.has(key);
+    });
+
+    const merged = [...reqs, ...filteredApps].sort((a, b) =>
+      (b.created_at || '').localeCompare(a.created_at || '')
+    );
+    setApps(merged);
   }, []);
   const loadTutors = useCallback(async () => {
     const { data, error } = await supabase.from("tutors").select("*").eq("is_active", true).order("name");
