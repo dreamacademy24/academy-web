@@ -101,13 +101,26 @@ export default function TutorApplications() {
       .order("created_at", { ascending: false });
     setLoading(false);
     if (error) { console.error("tutor_requests 로드 실패:", error); return; }
+
+    // booking_id 기준 bookings 일괄 조회 (FK 의존 없이 in() 으로)
+    const bookingIds = Array.from(new Set((data || []).map((r: any) => r.booking_id).filter(Boolean)));
+    const bookingMap: Record<string, { house_no?: string; accom_room?: string }> = {};
+    if (bookingIds.length > 0) {
+      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room").in("id", bookingIds);
+      (bs || []).forEach((b: any) => { bookingMap[b.id] = { house_no: b.house_no, accom_room: b.accom_room }; });
+    }
+
     const mapped: TutorApp[] = (data || []).map((r: any) => ({
       id: r.id,
       created_at: r.created_at,
       updated_at: r.updated_at || null,
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
-      house_number: r.house_number || '',
+      house_number: (() => {
+        const b = bookingMap[r.booking_id] || {};
+        const combined = [b.house_no, b.accom_room].filter(Boolean).join('');
+        return combined || r.house_number || '';
+      })(),
       children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
       children_ages: r.student_age || '',
       class_type: r.class_type || '',
