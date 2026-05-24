@@ -329,6 +329,7 @@ export default function PortalTutorPage() {
             <li>한타임당 50분 수업 / 오전 10시 ~ 오후 8시 운영</li>
             <li>1일 최대 2타임 수업 가능 (3타임 불가)</li>
             <li>외부 활동 및 놀이터 등 외출은 불가</li>
+            <li><span style={{color:'#dc2626', fontWeight:700}}>성수기의 경우 오후 5시부터 수업 가능</span></li>
           </ul>
         </div>
         <div className="grp">
@@ -336,7 +337,7 @@ export default function PortalTutorPage() {
           <ul>
             <li>기본 워크지 등 학습 자료는 튜터가 준비</li>
             <li>별도로 원하는 교재가 있다면 직접 지참 필요 (단, 수업에 대한 개별적 피드백은 미제공)</li>
-            <li>어린 아이의 경우 색종이, 보드게임, 플래시카드 등 추천</li>
+            <li>어린 아이의 경우 색종이, 보드게임, 플래시카드 등 추천 (직접 준비 필요)</li>
           </ul>
         </div>
         <div className="grp">
