@@ -136,9 +136,10 @@ export default function TutorRequestDetailPage() {
       .eq("id", row.id);
     if (error) { setSaving(false); setMsg("저장 실패: " + error.message); return; }
 
-    // tutor_lessons UPSERT — assigned/confirmed/수업중/active 상태이고 튜터 배정됐을 때
-    const ACTIVE_STATES = ["assigned", "confirmed", "수업중", "active"];
-    if (tutorId && ACTIVE_STATES.includes(status)) {
+    // tutor_lessons UPSERT — 튜터가 배정되면 status 와 무관하게 실행
+    console.log("[save] status:", status, "| tutorId:", tutorId, "| row.id:", row.id);
+    let lessonMsg = "";
+    if (tutorId) {
       const lessonPayload: Record<string, unknown> = {
         application_id: row.id,
         tutor_id: tutorId,
@@ -161,22 +162,28 @@ export default function TutorRequestDetailPage() {
         class_focus: (row as any).class_focus || (Array.isArray(row.class_focus_arr) ? row.class_focus_arr.join(",") : null),
         status: "active",
       };
-      const { data: existing } = await supabase
+      console.log("[save] tutor_lessons payload:", lessonPayload);
+      const { data: existing, error: selErr } = await supabase
         .from("tutor_lessons")
         .select("id")
         .eq("application_id", row.id)
         .maybeSingle();
+      if (selErr) console.error("[save] tutor_lessons SELECT 실패:", selErr);
       if (existing?.id) {
         const { error: upErr } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
-        if (upErr) console.error("tutor_lessons UPDATE 실패:", upErr);
+        if (upErr) { console.error("[save] tutor_lessons UPDATE 실패:", upErr); lessonMsg = " (수업 동기화 실패: " + upErr.message + ")"; }
+        else console.log("[save] tutor_lessons UPDATED id=", existing.id);
       } else {
-        const { error: insErr } = await supabase.from("tutor_lessons").insert(lessonPayload);
-        if (insErr) console.error("tutor_lessons INSERT 실패:", insErr);
+        const { data: ins, error: insErr } = await supabase.from("tutor_lessons").insert(lessonPayload).select().single();
+        if (insErr) { console.error("[save] tutor_lessons INSERT 실패:", insErr); lessonMsg = " (수업 생성 실패: " + insErr.message + ")"; }
+        else console.log("[save] tutor_lessons INSERTED id=", ins?.id);
       }
+    } else {
+      console.log("[save] 튜터 미배정 → tutor_lessons 동기화 스킵");
     }
 
     setSaving(false);
-    setMsg("저장되었습니다.");
+    setMsg("저장되었습니다." + lessonMsg);
     load();
   }
 
