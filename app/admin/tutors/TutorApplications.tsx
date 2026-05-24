@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 
@@ -63,6 +64,7 @@ function isAsymmetric(a: TutorApp): boolean {
 const ADMIN_FORM_INIT = { status: "pending", assigned_tutor_id: "", total_sessions: "", total_amount: "", admin_memo: "" };
 
 export default function TutorApplications() {
+  const router = useRouter();
   const [apps, setApps] = useState<TutorApp[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -356,7 +358,10 @@ export default function TutorApplications() {
     if (!detail) return;
     setDeleting(true);
     setModalError("");
-    const { error } = await supabase.from("tutor_applications").delete().eq("id", detail.id);
+    // 출처 구분: admin_memo='(포털 신청)' 이면 tutor_requests, 그 외는 tutor_applications
+    const fromRequests = detail.admin_memo === '(포털 신청)';
+    const table = fromRequests ? "tutor_requests" : "tutor_applications";
+    const { error } = await supabase.from(table).delete().eq("id", detail.id);
     setDeleting(false);
     if (error) {
       console.error("신청 삭제 실패:", error);
@@ -364,9 +369,10 @@ export default function TutorApplications() {
       setShowDeleteConfirm(false);
       return;
     }
+    const deletedId = detail.id;
+    setApps(prev => prev.filter(x => x.id !== deletedId));
     closeDetail();
     showToast("삭제되었습니다");
-    await loadApps();
   }
 
   // Estimate helpers (for placeholders/hints only — not saved)
@@ -721,9 +727,9 @@ export default function TutorApplications() {
               <thead>
                 <tr>
                   <th style={{ width: '4%' }}>접수</th>
-                  <th style={{ width: '9%' }}>예약자</th>
-                  <th style={{ width: '15%' }}>수강자</th>
-                  <th style={{ width: '12%' }}>나이</th>
+                  <th style={{ width: '11%' }}>예약자</th>
+                  <th style={{ width: '14%' }}>수강자</th>
+                  <th style={{ width: '11%' }}>나이</th>
                   <th style={{ width: '5%' }}>유형</th>
                   <th style={{ width: '4%' }}>타임</th>
                   <th style={{ width: '16%' }}>기간</th>
@@ -758,7 +764,7 @@ export default function TutorApplications() {
                       <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
                       <td>
                         <div className="ta-row-acts">
-                          <button className="btn btn-sm btn-gray" onClick={() => openDetail(a)}>상세</button>
+                          <button className="btn btn-sm btn-gray" onClick={() => router.push('/admin/tutor-class/' + a.id)}>상세</button>
                           {a.status === 'pending' && (
                             <button
                               className="btn btn-sm"

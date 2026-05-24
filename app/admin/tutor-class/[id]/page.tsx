@@ -1,0 +1,213 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+interface TutorRow {
+  id: string;
+  created_at: string;
+  booking_id: string | null;
+  guest_name: string | null;
+  house_number: string | null;
+  student_name_kr: string | null;
+  student_name_en: string | null;
+  student_age: string | null;
+  student2_name: string | null;
+  student2_eng_name: string | null;
+  student2_age: string | null;
+  class_type: string | null;
+  sessions_per_day: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  preferred_days: string | null;
+  preferred_time: string | null;
+  skip_dates: string | null;
+  level_english: string | null;
+  level_speaking: string | null;
+  level_reading: string | null;
+  level_writing: string | null;
+  textbook: string | null;
+  class_style: string | null;
+  class_focus: string | null;
+  class_focus_arr: string[] | null;
+  child_personality: string | null;
+  privacy_agreed: boolean | null;
+  rules_agreed: boolean | null;
+  status: string;
+  tutor_id: string | null;
+  notes: string | null;
+}
+
+interface Tutor { id: string; name: string }
+
+const STATUS_OPTIONS = [
+  { v: "pending",   label: "대기중" },
+  { v: "reviewing", label: "검토중" },
+  { v: "assigned",  label: "배정됨" },
+  { v: "confirmed", label: "확정" },
+  { v: "completed", label: "완료" },
+  { v: "cancelled", label: "취소" },
+];
+
+function fmt(v: string | null | undefined) { return v && String(v).trim() !== "" ? v : "-"; }
+
+export default function TutorRequestDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const [row, setRow] = useState<TutorRow | null>(null);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const [status, setStatus] = useState<string>("pending");
+  const [tutorId, setTutorId] = useState<string>("");
+  const [memo, setMemo] = useState<string>("");
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    const [reqRes, tutorRes] = await Promise.all([
+      supabase.from("tutor_requests").select("*").eq("id", id).maybeSingle(),
+      supabase.from("tutors").select("id, name").eq("is_active", true).order("name"),
+    ]);
+    setLoading(false);
+    if (reqRes.error) { setMsg("불러오기 실패: " + reqRes.error.message); return; }
+    const r = reqRes.data as TutorRow | null;
+    if (!r) { setMsg("신청 정보를 찾을 수 없습니다."); return; }
+    setRow(r);
+    setStatus(r.status || "pending");
+    setTutorId(r.tutor_id || "");
+    setMemo(r.notes || "");
+    setTutors((tutorRes.data || []) as Tutor[]);
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!row) return;
+    setSaving(true); setMsg("");
+    const { error } = await supabase.from("tutor_requests")
+      .update({ status, tutor_id: tutorId || null, notes: memo || null })
+      .eq("id", row.id);
+    setSaving(false);
+    if (error) { setMsg("저장 실패: " + error.message); return; }
+    setMsg("저장되었습니다.");
+    load();
+  }
+
+  if (!id) return null;
+
+  return (<>
+    <style>{`
+*{box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
+.dt-w{max-width:980px;margin:0 auto;padding:24px}
+.dt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.dt-back{background:#fff;border:1px solid #cbd5e1;color:#475569;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:600}.dt-back:hover{color:#1a6fc4}
+.dt-title{font-size:20px;font-weight:800;color:#1a1a2e}
+.dt-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.dt-grid{grid-template-columns:1fr}}
+.dt-card{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(0,0,0,0.05)}
+.dt-card h2{font-size:14px;font-weight:800;color:#1a6fc4;margin:0 0 12px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+.dt-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:13px;border-bottom:1px dashed #f1f5f9}
+.dt-row:last-child{border-bottom:none}
+.dt-k{color:#6b7c93;font-weight:600;flex-shrink:0}
+.dt-v{color:#1a1a2e;font-weight:500;text-align:right;word-break:break-word}
+.dt-pre{white-space:pre-wrap;text-align:left;flex:1;font-size:12px;line-height:1.6;background:#f8fafc;padding:8px 10px;border-radius:6px;color:#475569}
+.dt-actions{display:flex;flex-direction:column;gap:10px}
+.dt-inp,.dt-sel,.dt-area{width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff}
+.dt-area{min-height:80px;resize:vertical}
+.dt-btn{padding:11px 16px;background:#1a6fc4;color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}.dt-btn:hover{background:#155a9e}.dt-btn:disabled{opacity:0.6}
+.dt-lbl{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px}
+.dt-msg{margin-top:8px;padding:9px 12px;border-radius:8px;font-size:12px;font-weight:600;text-align:center}
+.dt-msg.ok{background:#dcfce7;color:#166534}
+.dt-msg.err{background:#fef2f2;color:#dc2626}
+.dt-empty{padding:40px;text-align:center;color:#94a3b8;font-size:14px;background:#fff;border-radius:12px}
+    `}</style>
+    <div className="dt-w">
+      <div className="dt-head">
+        <button className="dt-back" onClick={() => router.push("/admin/tutor-class")}>← 목록으로</button>
+        <span className="dt-title">👩‍🏫 튜터 신청 상세</span>
+        <div style={{ width: 80 }} />
+      </div>
+
+      {loading ? (
+        <div className="dt-empty">불러오는 중...</div>
+      ) : !row ? (
+        <div className="dt-empty">{msg || "신청 정보를 찾을 수 없습니다."}</div>
+      ) : (<>
+        <div className="dt-grid">
+          <div className="dt-card">
+            <h2>기본 정보</h2>
+            <div className="dt-row"><span className="dt-k">접수일</span><span className="dt-v">{row.created_at?.slice(0,10) || "-"}</span></div>
+            <div className="dt-row"><span className="dt-k">예약자</span><span className="dt-v">{fmt(row.guest_name || row.house_number)}</span></div>
+            <div className="dt-row"><span className="dt-k">학생 (한)</span><span className="dt-v">{fmt(row.student_name_kr)}</span></div>
+            <div className="dt-row"><span className="dt-k">학생 (영)</span><span className="dt-v">{fmt(row.student_name_en)}</span></div>
+            <div className="dt-row"><span className="dt-k">나이</span><span className="dt-v">{fmt(row.student_age)}</span></div>
+            {(row.student2_name || row.student2_eng_name) && (<>
+              <div className="dt-row"><span className="dt-k">학생2 (한)</span><span className="dt-v">{fmt(row.student2_name)}</span></div>
+              <div className="dt-row"><span className="dt-k">학생2 (영)</span><span className="dt-v">{fmt(row.student2_eng_name)}</span></div>
+              <div className="dt-row"><span className="dt-k">학생2 나이</span><span className="dt-v">{fmt(row.student2_age)}</span></div>
+            </>)}
+          </div>
+
+          <div className="dt-card">
+            <h2>수업 유형 · 일정</h2>
+            <div className="dt-row"><span className="dt-k">수업 유형</span><span className="dt-v">{fmt(row.class_type)}</span></div>
+            <div className="dt-row"><span className="dt-k">타임</span><span className="dt-v">{row.sessions_per_day === 2 ? "2타임 (100분)" : "1타임 (50분)"}</span></div>
+            <div className="dt-row"><span className="dt-k">기간</span><span className="dt-v">{fmt(row.start_date)} ~ {fmt(row.end_date)}</span></div>
+            <div className="dt-row"><span className="dt-k">요일</span><span className="dt-v">{fmt(row.preferred_days)}</span></div>
+            <div className="dt-row"><span className="dt-k">시간</span><span className="dt-v">{fmt(row.preferred_time)}</span></div>
+            <div className="dt-row"><span className="dt-k">빠지는 날</span><span className="dt-v">{fmt(row.skip_dates)}</span></div>
+          </div>
+
+          <div className="dt-card">
+            <h2>영어 레벨</h2>
+            <div className="dt-row"><span className="dt-k">전체</span><span className="dt-v">{fmt(row.level_english)}</span></div>
+            <div className="dt-row"><span className="dt-k">스피킹</span><span className="dt-v">{fmt(row.level_speaking)}</span></div>
+            <div className="dt-row"><span className="dt-k">리딩</span><span className="dt-v">{fmt(row.level_reading)}</span></div>
+            <div className="dt-row"><span className="dt-k">라이팅</span><span className="dt-v">{fmt(row.level_writing)}</span></div>
+          </div>
+
+          <div className="dt-card">
+            <h2>수업 방향</h2>
+            <div className="dt-row"><span className="dt-k">교재</span><span className="dt-v">{fmt(row.textbook)}</span></div>
+            <div className="dt-row"><span className="dt-k">수업 방향</span><span className="dt-v">{fmt(row.class_style)}</span></div>
+            <div className="dt-row"><span className="dt-k">상세</span><span className="dt-v">{Array.isArray(row.class_focus_arr) && row.class_focus_arr.length > 0 ? row.class_focus_arr.join(", ") : fmt(row.class_focus)}</span></div>
+            <div className="dt-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+              <span className="dt-k">아이 성향 / 요청 사항</span>
+              <div className="dt-pre">{row.child_personality || "-"}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="dt-card" style={{ marginTop: 14 }}>
+          <h2>어드민 처리</h2>
+          <div className="dt-actions">
+            <div>
+              <label className="dt-lbl">상태</label>
+              <select className="dt-sel" value={status} onChange={e => setStatus(e.target.value)}>
+                {STATUS_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="dt-lbl">담당 튜터</label>
+              <select className="dt-sel" value={tutorId} onChange={e => setTutorId(e.target.value)}>
+                <option value="">-- 미배정 --</option>
+                {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="dt-lbl">메모 (notes)</label>
+              <textarea className="dt-area" value={memo} onChange={e => setMemo(e.target.value)} placeholder="어드민 메모..." />
+            </div>
+            <button className="dt-btn" onClick={save} disabled={saving}>{saving ? "저장 중..." : "💾 저장"}</button>
+            {msg && <div className={`dt-msg ${msg.includes("실패") ? "err" : "ok"}`}>{msg}</div>}
+          </div>
+        </div>
+      </>)}
+    </div>
+  </>);
+}
