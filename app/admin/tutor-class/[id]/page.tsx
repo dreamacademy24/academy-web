@@ -140,13 +140,18 @@ export default function TutorRequestDetailPage() {
     console.log("[save] status:", status, "| tutorId:", tutorId, "| row.id:", row.id);
     let lessonMsg = "";
     if (tutorId) {
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const tutorUuid = UUID_RE.test(tutorId) ? tutorId : null;
+      const classDaysArr = row.preferred_days
+        ? row.preferred_days.split(",").map(d => d.trim()).filter(Boolean)
+        : null;
       const lessonPayload: Record<string, unknown> = {
         application_id: row.id,
-        tutor_id: tutorId,
+        tutor_id: tutorUuid,
         start_date: row.start_date,
         end_date: row.end_date,
         sessions_per_day: row.sessions_per_day || 1,
-        class_days: row.preferred_days,
+        class_days: classDaysArr,
         class_time: row.preferred_time,
         class_type: row.class_type,
         house_or_reserver: row.guest_name,
