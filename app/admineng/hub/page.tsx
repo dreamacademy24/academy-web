@@ -15,6 +15,7 @@ export default function EngHubPage() {
   function logout() { clearAdminAuth(); router.push("/login"); }
 
   const cards = [
+    { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
     { icon: "🎓", title: "Tutor Classes", desc: "Requests · My Schedule · Weekly", href: "/admineng/tutor-class" },
   ];
 

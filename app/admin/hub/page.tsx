@@ -41,7 +41,6 @@ export default function AdminHubPage() {
     { icon: "🔗", title: "페이지 관리",       desc: "공개 URL 목록 · 링크 모음",            href: "/admin/pages" },
     { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
     { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
-    { icon: "🎧", title: "Online Class",    desc: "튜터 출결 입력 · 주간 스케줄",        href: "/admin/online-class-attendance" },
     { icon: "🌐", title: "Local Staff Hub",  desc: "현지직원 · 튜터 전용 페이지",            href: "/admineng/hub" },
   ];
 
