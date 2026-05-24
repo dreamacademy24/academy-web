@@ -19,6 +19,7 @@ export default function PortalDashboard() {
   const [authUser, setAuthUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [bookingInfo, setBookingInfo] = useState<any>(null);
+  const [shuttleApps, setShuttleApps] = useState<any[]>([]);
 
   useEffect(() => {
     async function init() {
@@ -62,6 +63,12 @@ export default function PortalDashboard() {
           .then(r => r.json())
           .then(d => setBookingInfo(d?.booking || d))
           .catch(() => {});
+        supabase
+          .from("shuttle_applications")
+          .select("id,tour_name,date,num_people,status,created_at")
+          .eq("booking_id", s.booking_id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => setShuttleApps(data || []));
       }
     } catch {}
   }, []);
@@ -183,6 +190,31 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           </div>
         ))}
       </div>
+
+      {shuttleApps.length > 0 && (
+        <div style={{ background: "#fff", borderRadius: 16, padding: 20, marginTop: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: "#1a1a2e", marginBottom: 12 }}>🚌 셔틀 신청 내역 ({shuttleApps.length}건)</h3>
+          {shuttleApps.map(s => {
+            const meta = s.status === "confirmed"
+              ? { label: "확정", bg: "#dcfce7", color: "#166534" }
+              : s.status === "cancelled"
+              ? { label: "취소", bg: "#fef2f2", color: "#dc2626" }
+              : { label: "대기중", bg: "#fef3c7", color: "#92400e" };
+            return (
+              <div key={s.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 8, background: "#f8fafc" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>{s.tour_name}</div>
+                  <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
+                  <span style={{ marginRight: 12 }}>📅 {s.date}</span>
+                  <span>👥 {s.num_people}명</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="db-footer">
         <p>문의사항이 있으시면 카카오톡 또는 이메일로 연락주세요.</p>
