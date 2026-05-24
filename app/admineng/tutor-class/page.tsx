@@ -58,10 +58,20 @@ export default function EngTutorClassPage() {
   const [savingComment, setSavingComment] = useState(false);
   const [comments, setComments] = useState<{id:string;tutor_name:string;comment:string;created_at:string}[]>([]);
 
+  const [actingTutor, setActingTutor] = useState<string>("");
+
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
     else window.location.href = "/login";
+    if (typeof window !== "undefined") {
+      setActingTutor(localStorage.getItem("admineng_tutor_name") || "");
+    }
   }, []);
+
+  function pickActing(name: string) {
+    setActingTutor(name);
+    if (typeof window !== "undefined") localStorage.setItem("admineng_tutor_name", name);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,6 +176,14 @@ export default function EngTutorClassPage() {
       <div className="etop">
         <button className="eback" onClick={() => router.push("/admineng/hub")}>← Hub</button>
         <h1>🎓 Tutor Classes</h1>
+        <select
+          value={actingTutor}
+          onChange={e => pickActing(e.target.value)}
+          style={{ padding: "7px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12.5, fontFamily: "inherit", background: "#fff", fontWeight: 600, color: "#1a6fc4" }}
+        >
+          <option value="">-- Select your name --</option>
+          {tutors.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+        </select>
       </div>
 
       <div className="etabs">
@@ -218,7 +236,55 @@ export default function EngTutorClassPage() {
         </div>
       )}
 
-      {tab === "mine" && <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>My Schedule — coming soon</div>}
+      {tab === "mine" && (() => {
+        const me = tutors.find(t => t.name === actingTutor);
+        if (!actingTutor || !me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown.</div>;
+        }
+        const mine = reqs.filter(r => r.assigned_tutor_id === me.id);
+        if (mine.length === 0) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No requests assigned to you yet.</div>;
+        }
+        return (
+          <div className="tbl-w">
+            <table className="tbl">
+              <thead><tr>
+                <th style={{width:"5%"}}>Date</th>
+                <th style={{width:"8%"}}>House</th>
+                <th style={{width:"11%"}}>Reserver</th>
+                <th style={{width:"15%"}}>Student</th>
+                <th style={{width:"7%"}}>Age</th>
+                <th style={{width:"6%"}}>Type</th>
+                <th style={{width:"5%"}}>Time</th>
+                <th style={{width:"14%"}}>Period</th>
+                <th style={{width:"8%"}}>Days</th>
+                <th style={{width:"10%"}}>Status</th>
+                <th style={{width:"11%",textAlign:"center"}}>Action</th>
+              </tr></thead>
+              <tbody>
+                {mine.map(r => {
+                  const st = STATUS_META[r.status] || STATUS_META.pending;
+                  return (
+                    <tr key={r.id} onClick={() => router.push('/admineng/tutor-class/' + r.id)}>
+                      <td style={{color:"#6b7c93",fontSize:11}}>{fmtDate(r.created_at)}</td>
+                      <td style={{color:"#1a6fc4",fontWeight:700}}>{r.house_number || "-"}</td>
+                      <td>{r.guest_name || "-"}</td>
+                      <td style={{fontWeight:600}}>{[r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ")}</td>
+                      <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</td>
+                      <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
+                      <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T":"1T"}</span></td>
+                      <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>
+                      <td style={{fontSize:11}}>{days(r) || "-"}</td>
+                      <td><span className="ebadge" style={{background:st.bg,color:st.color}}>{st.label}</span></td>
+                      <td style={{textAlign:"center"}}><button className="ebtn ebtn-blue" style={{padding:"5px 12px",fontSize:11}} onClick={e=>{e.stopPropagation();router.push('/admineng/tutor-class/' + r.id);}}>Detail</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
       {tab === "weekly" && <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Weekly View — coming soon</div>}
     </div>
 
