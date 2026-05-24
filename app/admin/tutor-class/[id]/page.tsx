@@ -134,8 +134,48 @@ export default function TutorRequestDetailPage() {
     const { error } = await supabase.from("tutor_requests")
       .update(payload)
       .eq("id", row.id);
+    if (error) { setSaving(false); setMsg("저장 실패: " + error.message); return; }
+
+    // tutor_lessons UPSERT — assigned/confirmed/수업중/active 상태이고 튜터 배정됐을 때
+    const ACTIVE_STATES = ["assigned", "confirmed", "수업중", "active"];
+    if (tutorId && ACTIVE_STATES.includes(status)) {
+      const lessonPayload: Record<string, unknown> = {
+        application_id: row.id,
+        tutor_id: tutorId,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        sessions_per_day: row.sessions_per_day || 1,
+        class_days: row.preferred_days,
+        class_time: row.preferred_time,
+        class_type: row.class_type,
+        house_or_reserver: row.guest_name,
+        student_names: row.student_name_kr || (row as any).student_name || "",
+        student_ages: row.student_age,
+        total_sessions: computedSessions || null,
+        total_amount: computedAmount || null,
+        overall_level: row.level_english,
+        speaking_level: row.level_speaking,
+        reading_level: row.level_reading,
+        writing_level: row.level_writing,
+        class_style: row.class_style,
+        class_focus: (row as any).class_focus || (Array.isArray(row.class_focus_arr) ? row.class_focus_arr.join(",") : null),
+        status: "active",
+      };
+      const { data: existing } = await supabase
+        .from("tutor_lessons")
+        .select("id")
+        .eq("application_id", row.id)
+        .maybeSingle();
+      if (existing?.id) {
+        const { error: upErr } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
+        if (upErr) console.error("tutor_lessons UPDATE 실패:", upErr);
+      } else {
+        const { error: insErr } = await supabase.from("tutor_lessons").insert(lessonPayload);
+        if (insErr) console.error("tutor_lessons INSERT 실패:", insErr);
+      }
+    }
+
     setSaving(false);
-    if (error) { setMsg("저장 실패: " + error.message); return; }
     setMsg("저장되었습니다.");
     load();
   }
