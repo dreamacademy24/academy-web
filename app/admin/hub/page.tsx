@@ -34,7 +34,6 @@ export default function AdminHubPage() {
     { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management" },
     { icon: "🚌", title: "투어셔틀 관리",     desc: "셔틀 신청 목록 및 상태 관리",           href: "/admin/tour-shuttle" },
     { icon: "🛬", title: "픽드랍 관리",     desc: "픽업 · 드랍 일정 · 기사 배정",       href: "/admin/pickups" },
-    { icon: "👩‍🏫", title: "튜터 관리",       desc: "목록 · 스케줄 · 인보이스",             href: "/admin/tutors" },
     { icon: "🎓", title: "튜터 수업 관리",   desc: "신청 수신함 · 주간 스케줄 · 수강생",      href: "/admin/tutor-class" },
     { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
     { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
