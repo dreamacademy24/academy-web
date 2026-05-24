@@ -223,7 +223,7 @@ export default function EngTutorRequestDetailPage() {
             <div className="drow"><span className="k">Sessions/day</span><span className="v">{row.sessions_per_day === 2 ? "2 sessions (100 min)" : "1 session (50 min)"}</span></div>
             <div className="drow"><span className="k">Period</span><span className="v">{row.start_date || "-"} ~ {row.end_date || "-"}</span></div>
             <div className="drow"><span className="k">Days</span><span className="v">{daysFmt}</span></div>
-            <div className="drow"><span className="k">Preferred Time</span><span className="v">{row.preferred_time || "-"}</span></div>
+            <div className="drow"><span className="k">Preferred Time</span><span className="v">{(row.preferred_time || "-").replace(/\(1타임\)/g, "(1 session)").replace(/\(2타임\)/g, "(2 sessions)")}</span></div>
           </div>
 
           <div className="dcard">
