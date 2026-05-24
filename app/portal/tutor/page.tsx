@@ -386,6 +386,7 @@ export default function PortalTutorPage() {
             <li>한타임당 50분 수업 / 오전 10시 ~ 오후 8시 운영</li>
             <li>1일 최대 2타임 수업 가능 (3타임 불가)</li>
             <li>외부 활동 및 놀이터 등 외출은 불가</li>
+            <li><span style={{color:'#b45309', fontWeight:600}}>수업은 최소 2주 전 사전 신청 필수 (성수기는 3주 전)</span></li>
             <li><span style={{color:'#dc2626', fontWeight:700}}>성수기의 경우 오후 5시부터 수업 가능</span></li>
           </ul>
         </div>
@@ -560,6 +561,11 @@ export default function PortalTutorPage() {
         <div className="q">
           <label className="q-label"><span className="num">4</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+          {form.start_date && new Date(form.start_date) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
+            <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:13, color:'#92400e'}}>
+              ⚠️ 수업은 최소 <strong>2주 전</strong> 사전 신청이 필요합니다. 선택하신 날짜는 신청이 불가할 수 있습니다.
+            </div>
+          )}
         </div>
         <div className="q">
           <label className="q-label"><span className="num">5</span>수업 종료일</label>
