@@ -39,11 +39,46 @@ const LEVEL_EN: Record<string, string> = {
   intermediate1: "Intermediate 1", intermediate2: "Intermediate 2",
   advanced1: "Advanced 1", advanced2: "Advanced 2",
 };
-const STYLE_EN: Record<string, string> = { play: "Play-based", study: "Study-focused", combined: "Play + Study" };
+const STYLE_EN: Record<string, string> = {
+  play: "Play-based", study: "Textbook-based", combined: "Mixed",
+  "놀이식": "Play-based", "학습식": "Textbook-based", "교과서식": "Textbook-based",
+  "혼합": "Mixed", "놀이+학습": "Mixed",
+};
 const FOCUS_EN: Record<string, string> = {
   speaking: "Speaking", reading: "Reading", writing: "Writing",
   phonics: "Phonics", vocabulary: "Vocabulary", activity: "Activity",
+  listening: "Listening", comprehensive: "Comprehensive",
+  "스피킹": "Speaking", "리딩": "Reading", "라이팅": "Writing",
+  "리스닝": "Listening", "보카": "Vocabulary", "파닉스": "Phonics",
+  "액티비티": "Activity", "종합": "Comprehensive",
 };
+function fmtAgeEn(s: string | null | undefined): string {
+  if (!s) return "-";
+  const cleaned = s.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "");
+  const m = cleaned.match(/만\s*(\d+)\s*세/);
+  if (m) return `${m[1]} years old`;
+  return cleaned || "-";
+}
+function computeRate(classType: string | null | undefined, sessionsPerDay: number | null | undefined): number {
+  const is2 = classType === "1:2";
+  const isDouble = sessionsPerDay === 2;
+  if (is2 && isDouble) return 700;
+  if (is2) return 350;
+  if (isDouble) return 600;
+  return 300;
+}
+function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
+  if (!start || !end) return 0;
+  const s = new Date(start), e = new Date(end);
+  const diff = e.getTime() - s.getTime();
+  if (isNaN(diff) || diff < 0) return 0;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(0, Math.ceil(days / 7));
+}
+function countDays(preferredDays: string | null | undefined): number {
+  if (!preferredDays) return 0;
+  return preferredDays.split(",").map(s => s.trim()).filter(Boolean).length;
+}
 const DAY_EN: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat" };
 
 export default function EngTutorRequestDetailPage() {
@@ -81,6 +116,15 @@ export default function EngTutorRequestDetailPage() {
     setLoading(false);
     if (reqRes.error) { console.error("load failed:", reqRes.error); return; }
     const r = reqRes.data as TutorReq | null;
+    if (r && (r as any).booking_id) {
+      const { data: bs } = await supabase
+        .from("bookings")
+        .select("house_no, accom_room")
+        .eq("id", (r as any).booking_id)
+        .maybeSingle();
+      const combined = [bs?.house_no, bs?.accom_room].filter(Boolean).join("");
+      if (combined) (r as any).house_number = combined;
+    }
     setRow(r);
     if (r?.assigned_tutor_id) setManagerTutorId(r.assigned_tutor_id);
     setTutors((tutorRes.data || []) as Tutor[]);
@@ -214,7 +258,7 @@ export default function EngTutorRequestDetailPage() {
             <div className="drow"><span className="k">Reserver</span><span className="v">{row.guest_name || "-"}</span></div>
             <div className="drow"><span className="k">Student (KR)</span><span className="v">{row.student_name_kr || "-"}</span></div>
             <div className="drow"><span className="k">Student (EN)</span><span className="v">{row.student_name_en || "-"}</span></div>
-            <div className="drow"><span className="k">Age</span><span className="v">{row.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "") || "-"}</span></div>
+            <div className="drow"><span className="k">Age</span><span className="v">{fmtAgeEn(row.student_age)}</span></div>
           </div>
 
           <div className="dcard">
@@ -245,6 +289,39 @@ export default function EngTutorRequestDetailPage() {
             </div>
           </div>
         </div>
+
+        {(() => {
+          const rate = computeRate(row.class_type, row.sessions_per_day);
+          const weeks = computeWeeks(row.start_date, row.end_date);
+          const dpw = countDays(row.preferred_days);
+          const totalClasses = weeks * dpw;
+          const totalAmount = totalClasses * rate;
+          return (
+            <div style={{ background: "#fff", border: "2px solid #16a34a", borderRadius: 14, padding: "18px 20px", marginBottom: 14, boxShadow: "0 4px 16px rgba(22,163,74,0.12)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>💰</span>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: "#15803d", letterSpacing: 0.3 }}>PAYMENT (collect directly from student)</h3>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#6b7c93", fontWeight: 700, marginBottom: 4 }}>Rate (₱/class)</div>
+                  <input type="number" value={rate} readOnly style={{ width: "100%", padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, fontWeight: 700, background: "#f1f5f9", color: "#1a1a2e", fontFamily: "inherit" }} />
+                  <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>{row.class_type || "1:1"} · {row.sessions_per_day === 2 ? "2 sessions" : "1 session"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#6b7c93", fontWeight: 700, marginBottom: 4 }}>Total Classes</div>
+                  <input type="number" value={totalClasses} readOnly style={{ width: "100%", padding: "9px 12px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, fontWeight: 700, background: "#f1f5f9", color: "#1a1a2e", fontFamily: "inherit" }} />
+                  <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>{weeks} weeks × {dpw} day(s)/week</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#6b7c93", fontWeight: 700, marginBottom: 4 }}>Total Amount (₱)</div>
+                  <input type="number" value={totalAmount} readOnly style={{ width: "100%", padding: "9px 12px", border: "2px solid #16a34a", borderRadius: 8, fontSize: 16, fontWeight: 800, background: "#f0fdf4", color: "#15803d", fontFamily: "inherit" }} />
+                  <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>= {totalClasses} × ₱{rate}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="daction">
           <h3>🙋 Take This Class</h3>

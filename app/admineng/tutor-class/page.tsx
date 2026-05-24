@@ -76,7 +76,19 @@ export default function EngTutorClassPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from("tutor_requests").select("*").order("created_at", { ascending: false });
-    setReqs((data || []) as TutorReq[]);
+    const list = (data || []) as any[];
+    const bookingIds = Array.from(new Set(list.map(r => r.booking_id).filter(Boolean)));
+    if (bookingIds.length > 0) {
+      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room").in("id", bookingIds);
+      const bm: Record<string, { house_no?: string; accom_room?: string }> = {};
+      (bs || []).forEach((b: any) => { bm[b.id] = { house_no: b.house_no, accom_room: b.accom_room }; });
+      list.forEach(r => {
+        const b = bm[r.booking_id] || {};
+        const combined = [b.house_no, b.accom_room].filter(Boolean).join('');
+        if (combined) r.house_number = combined;
+      });
+    }
+    setReqs(list as TutorReq[]);
     setLoading(false);
   }, []);
 
