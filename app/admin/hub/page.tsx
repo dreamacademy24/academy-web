@@ -41,6 +41,7 @@ export default function AdminHubPage() {
     { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
     { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
     { icon: "🔗", title: "페이지 관리",       desc: "공개 URL 목록 · 링크 모음",            href: "/admin/pages" },
+    { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
   ];
 
   return (<>
