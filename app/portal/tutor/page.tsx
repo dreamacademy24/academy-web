@@ -104,8 +104,11 @@ function studentName(s: any): { kr: string; en: string; age: string } {
 
 const INIT_FORM = {
   student_name_kr: "", student_name_en: "", student_age: "",
+  student1_name_kr: "", student1_name_en: "", student1_idx: -1,
+  student2_name_kr: "", student2_name_en: "", student2_idx: -1,
   class_type: "", start_date: "", end_date: "",
   preferred_days_arr: [] as string[], skip_dates: "", preferred_time: "",
+  is_enrolled: false,
   level_english: "", level_speaking: "", level_reading: "", level_writing: "",
   textbook: "", class_style: "", class_focus_arr: [] as string[],
   child_personality: "",
@@ -123,7 +126,7 @@ export default function PortalTutorPage() {
   const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
   const [bookingInfo, setBookingInfo] = useState<any>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
 
   useEffect(() => {
     async function init() {
@@ -179,8 +182,14 @@ export default function PortalTutorPage() {
 
   function pickStudentFromModal(idx: number) {
     const n = studentName(students[idx]);
-    setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: n.age || f.student_age }));
-    setPickerOpen(false);
+    if (pickerSlot === 'single') {
+      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: n.age || f.student_age }));
+    } else if (pickerSlot === '1') {
+      setForm(f => ({ ...f, student1_name_kr: n.kr, student1_name_en: n.en, student1_idx: idx }));
+    } else if (pickerSlot === '2') {
+      setForm(f => ({ ...f, student2_name_kr: n.kr, student2_name_en: n.en, student2_idx: idx }));
+    }
+    setPickerSlot(null);
   }
 
   function toggleInv(id: string) {
@@ -211,16 +220,37 @@ export default function PortalTutorPage() {
 
   async function submit() {
     if (!session) return;
-    if (!form.student_name_kr.trim() && !form.student_name_en.trim()) { setMsg("학생을 선택해주세요."); return; }
     if (!form.class_type) { setMsg("수업 유형을 선택해주세요."); return; }
+    if (form.class_type === '1:1') {
+      if (!form.student_name_kr.trim() && !form.student_name_en.trim()) { setMsg("학생을 선택해주세요."); return; }
+    } else if (form.class_type === '1:2') {
+      if (!form.student1_name_kr.trim() && !form.student1_name_en.trim()) { setMsg("학생 1을 선택해주세요."); return; }
+      if (!form.student2_name_kr.trim() && !form.student2_name_en.trim()) { setMsg("학생 2를 선택해주세요."); return; }
+    }
     if (!form.privacy_agreed || !form.agreed_rules) { setMsg("개인정보 동의와 튜터 규정 동의를 체크해주세요."); return; }
     setSaving(true); setMsg("");
+
+    const isFor2 = form.class_type === '1:2';
+    const finalKr = isFor2
+      ? [form.student1_name_kr, form.student2_name_kr].filter(Boolean).join(', ')
+      : form.student_name_kr;
+    const finalEn = isFor2
+      ? [form.student1_name_en, form.student2_name_en].filter(Boolean).join(', ')
+      : form.student_name_en;
+
+    const levels = form.is_enrolled
+      ? { level_english: 'enrolled', level_speaking: 'enrolled', level_reading: 'enrolled', level_writing: 'enrolled' }
+      : { level_english: form.level_english, level_speaking: form.level_speaking, level_reading: form.level_reading, level_writing: form.level_writing };
+
     const res = await fetch("/api/portal/tutor", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         booking_id: session.booking_id,
         guest_name: session.guest_name,
         ...form,
+        student_name_kr: finalKr,
+        student_name_en: finalEn,
+        ...levels,
         rules_agreed: form.agreed_rules,
       }),
     });
@@ -312,7 +342,20 @@ export default function PortalTutorPage() {
 .rules-box .rh{font-weight:800;color:#1a1a2e;font-size:13px;margin:2px 0 8px;text-align:center;padding-bottom:6px;border-bottom:1px solid #e5e7eb}
 .rules-box ul{margin:0 0 10px;padding-left:18px}.rules-box li{margin-bottom:3px}
 .rules-box .warn-t{color:#b45309;font-weight:800;margin:12px 0 5px;display:block}
-@media(max-width:500px){.tu-w{padding:20px 16px}.row2{grid-template-columns:1fr}.stu-pick .pick-btn{width:100%}}
+.ct-row{display:flex;gap:10px}
+.ct-btn{flex:1;padding:18px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;color:#475569;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1.4;transition:all 0.15s;text-align:center}
+.ct-btn:hover{border-color:#94a3b8}
+.ct-btn.on{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
+.ct-btn .price{display:block;font-size:12px;opacity:0.9;margin-top:4px;font-weight:600}
+.stu-row2{display:flex;flex-direction:column;gap:10px}
+.stu-row2 .slot-label{font-size:12px;font-weight:700;color:#475569;margin-bottom:4px;display:block}
+.enr-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;color:#475569;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;margin-bottom:12px}
+.enr-btn:hover{border-color:#94a3b8}
+.enr-btn.on{background:#16a34a;color:#fff;border-color:#16a34a}
+.enr-info{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:14px 16px;font-size:13px;color:#166534;font-weight:600;text-align:center;line-height:1.5}
+.modal-btn:disabled{opacity:0.45;cursor:not-allowed;background:#f8fafc;color:#94a3b8;border-color:#e2e8f0}
+.modal-btn:disabled:hover{border-color:#e2e8f0;background:#f8fafc;color:#94a3b8}
+@media(max-width:500px){.tu-w{padding:20px 16px}.row2{grid-template-columns:1fr}.stu-pick .pick-btn{width:100%}.ct-row{flex-direction:column}}
     `}</style>
     <div className="tu-w">
       <button className="tu-back" onClick={() => router.push("/portal/dashboard")}>← 대시보드로</button>
@@ -411,42 +454,95 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>기본 정보</h2>
         <div className="q">
-          <label className="q-label"><span className="num">1</span>학생 선택<span className="req">*</span></label>
-          <span className="q-hint">예약자: {session.guest_name}님의 학생을 선택해주세요.</span>
-          {hasStudent ? (
-            <div className="stu-pick">
-              <div className="sel-name">
-                {form.student_name_kr}{form.student_name_en ? ` / ${form.student_name_en}` : ""}
-              </div>
-              <button type="button" className="change-btn" onClick={() => setPickerOpen(true)}>변경</button>
-            </div>
-          ) : students.length > 0 ? (
-            <div className="stu-pick">
-              <button type="button" className="pick-btn" onClick={() => setPickerOpen(true)}>👥 학생 선택하기</button>
-            </div>
-          ) : (
-            <div className="row2">
-              <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
-              <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
-            </div>
-          )}
+          <label className="q-label"><span className="num">1</span>수업 유형<span className="req">*</span></label>
+          <div className="ct-row">
+            <button type="button" className={`ct-btn${form.class_type === "1:1" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:1" })}>
+              1:1 수업<span className="price">₱300 / 타임</span>
+            </button>
+            <button type="button" className={`ct-btn${form.class_type === "1:2" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:2" })}>
+              1:2 수업<span className="price">₱350 / 타임</span>
+            </button>
+          </div>
         </div>
+
+        {form.class_type === '1:1' && (
+          <div className="q">
+            <label className="q-label"><span className="num">2</span>학생 선택<span className="req">*</span></label>
+            <span className="q-hint">예약자: {session.guest_name}님의 학생을 선택해주세요.</span>
+            {hasStudent ? (
+              <div className="stu-pick">
+                <div className="sel-name">
+                  {form.student_name_kr}{form.student_name_en ? ` / ${form.student_name_en}` : ""}
+                </div>
+                <button type="button" className="change-btn" onClick={() => setPickerSlot('single')}>변경</button>
+              </div>
+            ) : students.length > 0 ? (
+              <div className="stu-pick">
+                <button type="button" className="pick-btn" onClick={() => setPickerSlot('single')}>👥 학생 선택하기</button>
+              </div>
+            ) : (
+              <div className="row2">
+                <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
+                <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {form.class_type === '1:2' && (
+          <div className="q">
+            <label className="q-label"><span className="num">2</span>학생 선택 (2명)<span className="req">*</span></label>
+            <span className="q-hint">예약자: {session.guest_name}님의 학생을 2명 선택해주세요.</span>
+            <div className="stu-row2">
+              <div>
+                <span className="slot-label">학생 1</span>
+                {(form.student1_name_kr || form.student1_name_en) ? (
+                  <div className="stu-pick">
+                    <div className="sel-name">{form.student1_name_kr}{form.student1_name_en ? ` / ${form.student1_name_en}` : ""}</div>
+                    <button type="button" className="change-btn" onClick={() => setPickerSlot('1')}>변경</button>
+                  </div>
+                ) : students.length > 0 ? (
+                  <div className="stu-pick">
+                    <button type="button" className="pick-btn" onClick={() => setPickerSlot('1')}>👥 학생 1 선택하기</button>
+                  </div>
+                ) : (
+                  <div className="row2">
+                    <input className="inp" value={form.student1_name_kr} onChange={e => setForm({ ...form, student1_name_kr: e.target.value })} placeholder="한글이름" />
+                    <input className="inp" value={form.student1_name_en} onChange={e => setForm({ ...form, student1_name_en: e.target.value })} placeholder="영문이름" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <span className="slot-label">학생 2</span>
+                {(form.student2_name_kr || form.student2_name_en) ? (
+                  <div className="stu-pick">
+                    <div className="sel-name">{form.student2_name_kr}{form.student2_name_en ? ` / ${form.student2_name_en}` : ""}</div>
+                    <button type="button" className="change-btn" onClick={() => setPickerSlot('2')}>변경</button>
+                  </div>
+                ) : students.length > 0 ? (
+                  <div className="stu-pick">
+                    <button type="button" className="pick-btn" onClick={() => setPickerSlot('2')}>👥 학생 2 선택하기</button>
+                  </div>
+                ) : (
+                  <div className="row2">
+                    <input className="inp" value={form.student2_name_kr} onChange={e => setForm({ ...form, student2_name_kr: e.target.value })} placeholder="한글이름" />
+                    <input className="inp" value={form.student2_name_en} onChange={e => setForm({ ...form, student2_name_en: e.target.value })} placeholder="영문이름" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="q">
-          <label className="q-label"><span className="num">2</span>학생 나이</label>
+          <label className="q-label"><span className="num">3</span>학생 나이</label>
           <span className="q-hint">예: 2019.09.03 만5세</span>
           <input className="inp" value={form.student_age} onChange={e => setForm({ ...form, student_age: e.target.value })} />
         </div>
       </div>
 
       <div className="sec">
-        <h2>수업 유형 및 일정</h2>
-        <div className="q">
-          <label className="q-label"><span className="num">3</span>수업 유형<span className="req">*</span></label>
-          <div className="opts">
-            <button type="button" className={`opt${form.class_type === "1:1" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:1" })}>1:1 (₱300/타임)</button>
-            <button type="button" className={`opt${form.class_type === "1:2" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:2" })}>1:2 (₱350/타임)</button>
-          </div>
-        </div>
+        <h2>수업 일정</h2>
         <div className="q">
           <label className="q-label"><span className="num">4</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
@@ -475,46 +571,53 @@ export default function PortalTutorPage() {
 
       <div className="sec">
         <h2>학생 레벨</h2>
-        <div className="q">
-          <label className="q-label"><span className="num">9</span>영어 레벨</label>
-          <div className="opts-v">
-            {LEVELS_ENGLISH.map(l => (
-              <button key={l.value} type="button" className={`opt-card${form.level_english === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_english: l.value })}>
-                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
-              </button>
-            ))}
+        <button type="button" className={`enr-btn${form.is_enrolled ? " on" : ""}`} onClick={() => setForm({ ...form, is_enrolled: !form.is_enrolled })}>
+          🏫 현재 드림아카데미 재학중{form.is_enrolled ? " ✓" : ""}
+        </button>
+        {form.is_enrolled ? (
+          <div className="enr-info">✅ 재학생의 경우 담당 선생님이 레벨을 확인합니다.</div>
+        ) : (<>
+          <div className="q">
+            <label className="q-label"><span className="num">9</span>영어 레벨</label>
+            <div className="opts-v">
+              {LEVELS_ENGLISH.map(l => (
+                <button key={l.value} type="button" className={`opt-card${form.level_english === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_english: l.value })}>
+                  <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="q">
-          <label className="q-label"><span className="num">10</span>스피킹 레벨</label>
-          <div className="opts-v">
-            {LEVELS_SPEAKING.map(l => (
-              <button key={l.value} type="button" className={`opt-card${form.level_speaking === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_speaking: l.value })}>
-                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
-              </button>
-            ))}
+          <div className="q">
+            <label className="q-label"><span className="num">10</span>스피킹 레벨</label>
+            <div className="opts-v">
+              {LEVELS_SPEAKING.map(l => (
+                <button key={l.value} type="button" className={`opt-card${form.level_speaking === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_speaking: l.value })}>
+                  <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="q">
-          <label className="q-label"><span className="num">11</span>리딩 레벨</label>
-          <div className="opts-v">
-            {LEVELS_READING.map(l => (
-              <button key={l.value} type="button" className={`opt-card${form.level_reading === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_reading: l.value })}>
-                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
-              </button>
-            ))}
+          <div className="q">
+            <label className="q-label"><span className="num">11</span>리딩 레벨</label>
+            <div className="opts-v">
+              {LEVELS_READING.map(l => (
+                <button key={l.value} type="button" className={`opt-card${form.level_reading === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_reading: l.value })}>
+                  <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="q">
-          <label className="q-label"><span className="num">12</span>라이팅 레벨</label>
-          <div className="opts-v">
-            {LEVELS_WRITING.map(l => (
-              <button key={l.value} type="button" className={`opt-card${form.level_writing === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_writing: l.value })}>
-                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
-              </button>
-            ))}
+          <div className="q">
+            <label className="q-label"><span className="num">12</span>라이팅 레벨</label>
+            <div className="opts-v">
+              {LEVELS_WRITING.map(l => (
+                <button key={l.value} type="button" className={`opt-card${form.level_writing === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_writing: l.value })}>
+                  <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>)}
       </div>
 
       <div className="sec">
@@ -611,30 +714,44 @@ export default function PortalTutorPage() {
       </div>
     </div>
 
-    {pickerOpen && (
-      <div className="modal-bg" onClick={() => setPickerOpen(false)}>
+    {pickerSlot !== null && (
+      <div className="modal-bg" onClick={() => setPickerSlot(null)}>
         <div className="modal" onClick={e => e.stopPropagation()}>
-          <h3>학생 선택</h3>
+          <h3>학생 선택{pickerSlot === '1' ? ' — 학생 1' : pickerSlot === '2' ? ' — 학생 2' : ''}</h3>
           <div className="modal-sub">예약자: {session.guest_name}님의 학생 목록</div>
           {students.length > 0 ? (
             <div className="modal-list">
               {students.map((s: any, i: number) => {
                 const n = studentName(s);
                 const label = `${n.kr || "-"}${n.en ? ` / ${n.en}` : ""}`;
+                const otherIdx = pickerSlot === '1' ? form.student2_idx : pickerSlot === '2' ? form.student1_idx : -1;
+                const disabled = i === otherIdx;
                 return (
-                  <button key={i} type="button" className="modal-btn" onClick={() => pickStudentFromModal(i)}>{label}</button>
+                  <button key={i} type="button" className="modal-btn" disabled={disabled} onClick={() => !disabled && pickStudentFromModal(i)}>
+                    {label}{disabled ? ' (선택됨)' : ''}
+                  </button>
                 );
               })}
             </div>
           ) : (
             <div className="modal-inp">
               <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>등록된 학생이 없어 직접 입력해주세요.</div>
-              <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
-              <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
-              <button type="button" className="pick-btn" style={{ width: "100%", marginTop: 6, padding: 11, background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setPickerOpen(false)}>확인</button>
+              {pickerSlot === 'single' && (<>
+                <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
+                <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
+              </>)}
+              {pickerSlot === '1' && (<>
+                <input className="inp" value={form.student1_name_kr} onChange={e => setForm({ ...form, student1_name_kr: e.target.value })} placeholder="학생 1 한글이름" />
+                <input className="inp" value={form.student1_name_en} onChange={e => setForm({ ...form, student1_name_en: e.target.value })} placeholder="학생 1 영문이름" />
+              </>)}
+              {pickerSlot === '2' && (<>
+                <input className="inp" value={form.student2_name_kr} onChange={e => setForm({ ...form, student2_name_kr: e.target.value })} placeholder="학생 2 한글이름" />
+                <input className="inp" value={form.student2_name_en} onChange={e => setForm({ ...form, student2_name_en: e.target.value })} placeholder="학생 2 영문이름" />
+              </>)}
+              <button type="button" className="pick-btn" style={{ width: "100%", marginTop: 6, padding: 11, background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setPickerSlot(null)}>확인</button>
             </div>
           )}
-          <button type="button" className="modal-close" onClick={() => setPickerOpen(false)}>닫기</button>
+          <button type="button" className="modal-close" onClick={() => setPickerSlot(null)}>닫기</button>
         </div>
       </div>
     )}
