@@ -744,20 +744,20 @@ export default function AdminBookingsPage(){
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
         <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(filtered)}>📥 엑셀</button>
       </div>
-      <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>상태</th><th>담당자</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th><th>액션</th>
+      <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
+        <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
       </tr></thead><tbody>
         {filtered.length===0?<tr><td colSpan={9} className="empty">예약이 없습니다.</td></tr>:
         filtered.map(b=>{
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
-            <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
+            <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
-            <td>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
-            <td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            <td title={b.accom_type||"미정"}>{b.accom_type||"미정"}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.accom_type||"미정"}>{b.accom_type||"미정"}</td>
             <td>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
