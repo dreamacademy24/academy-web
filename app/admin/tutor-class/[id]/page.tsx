@@ -68,9 +68,24 @@ export default function TutorRequestDetailPage() {
   const [status, setStatus] = useState<string>("pending");
   const [tutorId, setTutorId] = useState<string>("");
   const [memo, setMemo] = useState<string>("");
-  const [totalSessions, setTotalSessions] = useState<string>("");
-  const [totalAmount, setTotalAmount] = useState<string>("");
+  const [price, setPrice] = useState<string>("");
   const [deleting, setDeleting] = useState(false);
+
+  function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
+    if (!start || !end) return 0;
+    const s = new Date(start), e = new Date(end);
+    const diff = e.getTime() - s.getTime();
+    if (isNaN(diff) || diff < 0) return 0;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(0, Math.ceil(days / 7));
+  }
+  function countDays(preferred_days: string | null | undefined): number {
+    if (!preferred_days) return 0;
+    return preferred_days.split(',').map(s => s.trim()).filter(Boolean).length;
+  }
+  function defaultPrice(classType: string | null | undefined): number {
+    return classType === '1:2' ? 350 : 300;
+  }
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -87,8 +102,8 @@ export default function TutorRequestDetailPage() {
     setStatus(r.status || "pending");
     setTutorId(r.assigned_tutor_id || r.tutor_id || "");
     setMemo(r.admin_memo || r.notes || "");
-    setTotalSessions(r.total_sessions != null ? String(r.total_sessions) : "");
-    setTotalAmount(r.total_amount != null ? String(r.total_amount) : "");
+    const existingPrice = (r as any).price_per_session;
+    setPrice(existingPrice != null ? String(existingPrice) : String(defaultPrice(r.class_type)));
     setTutors((tutorRes.data || []) as Tutor[]);
   }, [id]);
 
@@ -97,13 +112,19 @@ export default function TutorRequestDetailPage() {
   async function save() {
     if (!row) return;
     setSaving(true); setMsg("");
+    const weeks = computeWeeks(row.start_date, row.end_date);
+    const daysPerWeek = countDays(row.preferred_days);
+    const spd = row.sessions_per_day || 1;
+    const computedSessions = weeks * daysPerWeek * spd;
+    const priceNum = parseFloat(price) || 0;
+    const computedAmount = computedSessions * priceNum;
     const payload: Record<string, unknown> = {
       status,
       assigned_tutor_id: tutorId || null,
       tutor_id: tutorId || null,
       admin_memo: memo || null,
-      total_sessions: totalSessions ? parseInt(totalSessions) : null,
-      total_amount: totalAmount ? parseFloat(totalAmount) : null,
+      total_sessions: computedSessions || null,
+      total_amount: computedAmount || null,
     };
     const { error } = await supabase.from("tutor_requests")
       .update(payload)
@@ -226,16 +247,33 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div>
-                <label className="dt-lbl">총 회차</label>
-                <input className="dt-inp" type="number" min={0} value={totalSessions} onChange={e => setTotalSessions(e.target.value)} placeholder="예: 8" />
-              </div>
-              <div>
-                <label className="dt-lbl">총 금액 (₱)</label>
-                <input className="dt-inp" type="number" min={0} value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="예: 4800" />
-              </div>
-            </div>
+            {(() => {
+              const weeks = computeWeeks(row.start_date, row.end_date);
+              const daysPerWeek = countDays(row.preferred_days);
+              const spd = row.sessions_per_day || 1;
+              const computedSessions = weeks * daysPerWeek * spd;
+              const priceNum = parseFloat(price) || 0;
+              const computedAmount = computedSessions * priceNum;
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label className="dt-lbl">단가 (₱/회)</label>
+                    <input className="dt-inp" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder="예: 300" />
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>기본 {row.class_type === '1:2' ? '350' : '300'} ({row.class_type || '1:1'})</div>
+                  </div>
+                  <div>
+                    <label className="dt-lbl">총 회차 (자동)</label>
+                    <input className="dt-inp" type="number" value={computedSessions} readOnly style={{ background: "#f1f5f9", color: "#1a1a2e" }} />
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>{weeks}주 × {daysPerWeek}일 × {spd}타임</div>
+                  </div>
+                  <div>
+                    <label className="dt-lbl">총 금액 ₱ (자동)</label>
+                    <input className="dt-inp" type="number" value={computedAmount} readOnly style={{ background: "#f1f5f9", color: "#16a34a", fontWeight: 700 }} />
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>= {computedSessions}회 × ₱{priceNum}</div>
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <label className="dt-lbl">어드민 메모</label>
               <textarea className="dt-area" value={memo} onChange={e => setMemo(e.target.value)} placeholder="어드민 메모..." />
