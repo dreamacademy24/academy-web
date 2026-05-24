@@ -38,6 +38,13 @@ const LEVEL_EN: Record<string, string> = {
   beginner1: "Beginner 1", beginner2: "Beginner 2",
   intermediate1: "Intermediate 1", intermediate2: "Intermediate 2",
   advanced1: "Advanced 1", advanced2: "Advanced 2",
+  enrolled: "Not assessed (enrolled student)",
+  "비기너": "Beginner",
+  "비기너1": "Beginner 1", "비기너2": "Beginner 2", "비기너3": "Beginner 3",
+  "미디엄": "Medium",
+  "미디엄1": "Medium 1", "미디엄2": "Medium 2", "미디엄3": "Medium 3",
+  "어드밴스": "Advanced",
+  "어드밴스1": "Advanced 1", "어드밴스2": "Advanced 2", "어드밴스3": "Advanced 3",
 };
 const STYLE_EN: Record<string, string> = {
   play: "Play-based", study: "Textbook-based", combined: "Mixed",
@@ -54,10 +61,29 @@ const FOCUS_EN: Record<string, string> = {
 };
 function fmtAgeEn(s: string | null | undefined): string {
   if (!s) return "-";
-  const cleaned = s.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "");
-  const m = cleaned.match(/만\s*(\d+)\s*세/);
-  if (m) return `${m[1]} years old`;
-  return cleaned || "-";
+  const today = new Date();
+  const parts = s.split(",").map(p => p.trim()).filter(Boolean);
+  const out = parts.map(p => {
+    // YYYYMMDD 형식 (8자리 숫자)
+    const dm = p.match(/^\d{8}$/);
+    if (dm) {
+      const y = parseInt(p.substring(0, 4));
+      const m = parseInt(p.substring(4, 6));
+      const d = parseInt(p.substring(6, 8));
+      let age = today.getFullYear() - y;
+      if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+      return `${age} years old`;
+    }
+    // 만N세 패턴
+    const km = p.match(/만\s*(\d+)\s*세/);
+    if (km) return `${km[1]} years old`;
+    // YYYY.MM.DD 만N세 패턴
+    const cleaned = p.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "");
+    const km2 = cleaned.match(/만\s*(\d+)\s*세/);
+    if (km2) return `${km2[1]} years old`;
+    return cleaned || p;
+  });
+  return out.join(", ");
 }
 function computeRate(classType: string | null | undefined, sessionsPerDay: number | null | undefined): number {
   const is2 = classType === "1:2";
@@ -79,7 +105,10 @@ function countDays(preferredDays: string | null | undefined): number {
   if (!preferredDays) return 0;
   return preferredDays.split(",").map(s => s.trim()).filter(Boolean).length;
 }
-const DAY_EN: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat" };
+const DAY_EN: Record<string, string> = {
+  mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
+  "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat", "일": "Sun",
+};
 
 export default function EngTutorRequestDetailPage() {
   const router = useRouter();

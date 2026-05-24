@@ -54,6 +54,11 @@ const STATUS_OPTIONS = [
 ];
 
 function fmt(v: string | null | undefined) { return v && String(v).trim() !== "" ? v : "-"; }
+function fmtLevel(v: string | null | undefined) {
+  if (!v || String(v).trim() === "") return "-";
+  if (v === "enrolled") return "재학생 (레벨 미배정)";
+  return v;
+}
 
 export default function TutorRequestDetailPage() {
   const router = useRouter();
@@ -213,10 +218,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
           <div className="dt-card">
             <h2>영어 레벨</h2>
-            <div className="dt-row"><span className="dt-k">전체</span><span className="dt-v">{fmt(row.level_english)}</span></div>
-            <div className="dt-row"><span className="dt-k">스피킹</span><span className="dt-v">{fmt(row.level_speaking)}</span></div>
-            <div className="dt-row"><span className="dt-k">리딩</span><span className="dt-v">{fmt(row.level_reading)}</span></div>
-            <div className="dt-row"><span className="dt-k">라이팅</span><span className="dt-v">{fmt(row.level_writing)}</span></div>
+            <div className="dt-row"><span className="dt-k">전체</span><span className="dt-v">{fmtLevel(row.level_english)}</span></div>
+            <div className="dt-row"><span className="dt-k">스피킹</span><span className="dt-v">{fmtLevel(row.level_speaking)}</span></div>
+            <div className="dt-row"><span className="dt-k">리딩</span><span className="dt-v">{fmtLevel(row.level_reading)}</span></div>
+            <div className="dt-row"><span className="dt-k">라이팅</span><span className="dt-v">{fmtLevel(row.level_writing)}</span></div>
           </div>
 
           <div className="dt-card">
