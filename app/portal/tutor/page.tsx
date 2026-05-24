@@ -110,6 +110,20 @@ function studentName(s: any): { kr: string; en: string; age: string } {
   };
 }
 
+function formatBirthAge(birth: string): string {
+  if (!birth) return "";
+  const digits = birth.replace(/\D/g, "");
+  if (digits.length < 8) return birth;
+  const y = parseInt(digits.substring(0, 4));
+  const m = parseInt(digits.substring(4, 6));
+  const d = parseInt(digits.substring(6, 8));
+  if (!y || !m || !d) return birth;
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+  return `${y}.${String(m).padStart(2,'0')}.${String(d).padStart(2,'0')} 만${age}세`;
+}
+
 const INIT_FORM = {
   student_name_kr: "", student_name_en: "", student_age: "",
   student1_name_kr: "", student1_name_en: "", student1_idx: -1,
@@ -197,17 +211,31 @@ export default function PortalTutorPage() {
     } catch { return []; }
   }, [bookingStudents, bookingInfo]);
 
+  // 모달 표시용 — 보호자(예약자) + 자녀
+  const modalStudents = useMemo<any[]>(() => {
+    const list: any[] = [];
+    if (bookingInfo) {
+      const krG = bookingInfo.booker_name || bookingInfo.booker_kr || "";
+      const enG = bookingInfo.booker_english || bookingInfo.booker_en || "";
+      const ageG = bookingInfo.booker_birth || bookingInfo.booker_birthdate || "";
+      if (krG || enG) list.push({ name_kr: krG, name_en: enG, age: ageG, _isGuardian: true });
+    }
+    list.push(...students);
+    return list;
+  }, [bookingInfo, students]);
+
   function pickStudentFromModal(idx: number) {
-    const s = students[idx];
+    const s = modalStudents[idx];
     const n = studentName(s);
-    const age = n.age || s?.age || s?.birthYear || '';
+    const rawAge = n.age || s?.age || s?.birthYear || '';
+    const age = formatBirthAge(String(rawAge));
     if (pickerSlot === 'single') {
-      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: String(age) || f.student_age }));
+      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: age }));
     } else if (pickerSlot === '1') {
-      setForm(f => ({ ...f, student1_name_kr: n.kr, student1_name_en: n.en, student1_idx: idx, student_age: String(age) || f.student_age }));
+      setForm(f => ({ ...f, student1_name_kr: n.kr, student1_name_en: n.en, student1_idx: idx, student_age: age }));
     } else if (pickerSlot === '2') {
       setForm(f => ({ ...f, student2_name_kr: n.kr, student2_name_en: n.en, student2_idx: idx }));
-      setStudent2Age(String(age));
+      setStudent2Age(age);
     }
     setPickerSlot(null);
   }
@@ -504,14 +532,9 @@ export default function PortalTutorPage() {
                 </div>
                 <button type="button" className="change-btn" onClick={() => setPickerSlot('single')}>변경</button>
               </div>
-            ) : students.length > 0 ? (
+            ) : (
               <div className="stu-pick">
                 <button type="button" className="pick-btn" onClick={() => setPickerSlot('single')}>👥 학생 선택하기</button>
-              </div>
-            ) : (
-              <div className="row2">
-                <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
-                <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
               </div>
             )}
           </div>
@@ -529,14 +552,9 @@ export default function PortalTutorPage() {
                     <div className="sel-name">{form.student1_name_kr}{form.student1_name_en ? ` / ${form.student1_name_en}` : ""}{form.student_age ? ` (${form.student_age})` : ""}</div>
                     <button type="button" className="change-btn" onClick={() => setPickerSlot('1')}>변경</button>
                   </div>
-                ) : students.length > 0 ? (
+                ) : (
                   <div className="stu-pick">
                     <button type="button" className="pick-btn" onClick={() => setPickerSlot('1')}>👥 학생 1 선택하기</button>
-                  </div>
-                ) : (
-                  <div className="row2">
-                    <input className="inp" value={form.student1_name_kr} onChange={e => setForm({ ...form, student1_name_kr: e.target.value })} placeholder="한글이름" />
-                    <input className="inp" value={form.student1_name_en} onChange={e => setForm({ ...form, student1_name_en: e.target.value })} placeholder="영문이름" />
                   </div>
                 )}
               </div>
@@ -547,14 +565,9 @@ export default function PortalTutorPage() {
                     <div className="sel-name">{form.student2_name_kr}{form.student2_name_en ? ` / ${form.student2_name_en}` : ""}{student2Age ? ` (${student2Age})` : ""}</div>
                     <button type="button" className="change-btn" onClick={() => setPickerSlot('2')}>변경</button>
                   </div>
-                ) : students.length > 0 ? (
+                ) : (
                   <div className="stu-pick">
                     <button type="button" className="pick-btn" onClick={() => setPickerSlot('2')}>👥 학생 2 선택하기</button>
-                  </div>
-                ) : (
-                  <div className="row2">
-                    <input className="inp" value={form.student2_name_kr} onChange={e => setForm({ ...form, student2_name_kr: e.target.value })} placeholder="한글이름" />
-                    <input className="inp" value={form.student2_name_en} onChange={e => setForm({ ...form, student2_name_en: e.target.value })} placeholder="영문이름" />
                   </div>
                 )}
               </div>
@@ -573,7 +586,13 @@ export default function PortalTutorPage() {
         <h2>수업 일정</h2>
         <div className="q">
           <label className="q-label"><span className="num">4</span>수업 시작일</label>
-          <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
+          <input className="inp" type="date" value={form.start_date} onChange={e => {
+            const v = e.target.value;
+            setForm({ ...form, start_date: v });
+            if (v && new Date(v) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) {
+              window.alert("⚠️ 수업은 최소 2주 전 사전 신청이 필요합니다.\n선택하신 날짜는 신청이 불가할 수 있습니다.");
+            }
+          }} />
           {form.start_date && new Date(form.start_date) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
             <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:13, color:'#92400e'}}>
               ⚠️ 수업은 최소 <strong>2주 전</strong> 사전 신청이 필요합니다. 선택하신 날짜는 신청이 불가할 수 있습니다.
@@ -752,12 +771,16 @@ export default function PortalTutorPage() {
         <div className="modal" onClick={e => e.stopPropagation()}>
           <h3>학생 선택{pickerSlot === '1' ? ' — 학생 1' : pickerSlot === '2' ? ' — 학생 2' : ''}</h3>
           <div className="modal-sub">예약자: {session.guest_name}님의 학생 목록</div>
-          {students.length > 0 ? (
+          {!bookingInfo ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>학생 정보를 불러오는 중...</div>
+          ) : modalStudents.length > 0 ? (
             <div className="modal-list">
-              {students.map((s: any, i: number) => {
+              {modalStudents.map((s: any, i: number) => {
                 const n = studentName(s);
-                const age = n.age || s?.age || s?.birthYear || '';
-                const label = `${n.kr || "-"}${n.en ? ` / ${n.en}` : ""}${age ? ` (${age})` : ""}`;
+                const rawAge = n.age || s?.age || s?.birthYear || '';
+                const ageDisplay = formatBirthAge(String(rawAge));
+                const isGuard = !!s?._isGuardian;
+                const label = `${isGuard ? '👩 (보호자) ' : ''}${n.kr || '-'}${n.en ? ` / ${n.en}` : ''}${ageDisplay ? ` (${ageDisplay})` : ''}`;
                 const otherIdx = pickerSlot === '1' ? form.student2_idx : pickerSlot === '2' ? form.student1_idx : -1;
                 const disabled = i === otherIdx;
                 return (
