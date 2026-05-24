@@ -75,7 +75,7 @@ export default function EngTutorClassPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const [reqRes, tutorRes] = await Promise.all([
-      supabase.from("tutor_requests").select("*").order("created_at", { ascending: false }),
+      supabase.from("tutor_requests").select("*, bookings(house_no, accom_room)").order("created_at", { ascending: false }),
       supabase.from("tutors").select("id, name").eq("is_active", true).order("name"),
     ]);
     setLoading(false);
@@ -203,7 +203,7 @@ export default function EngTutorClassPage() {
           <div key={r.id} className="tc-card" onClick={() => toggleExpand(r.id)}>
             <div className="tc-card-head">
               <div className="tc-card-title">
-                {r.house_number ? <span style={{ color: "#1a6fc4", marginRight: 6 }}>[{r.house_number}]</span> : null}
+                {(() => { const h = r.house_number || (r as any).bookings?.house_no || (r as any).bookings?.accom_room; return h ? <span style={{ color: "#1a6fc4", marginRight: 6 }}>[{h}]</span> : null; })()}
                 {studentName}
               </div>
               <span className="tc-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>

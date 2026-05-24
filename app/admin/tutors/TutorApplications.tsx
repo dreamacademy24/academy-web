@@ -97,7 +97,7 @@ export default function TutorApplications() {
     setLoading(true);
     const { data, error } = await supabase
       .from("tutor_requests")
-      .select("*")
+      .select("*, bookings(house_no, accom_room)")
       .order("created_at", { ascending: false });
     setLoading(false);
     if (error) { console.error("tutor_requests 로드 실패:", error); return; }
@@ -107,7 +107,7 @@ export default function TutorApplications() {
       updated_at: r.updated_at || null,
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
-      house_number: r.house_number || '',
+      house_number: r.house_number || r.bookings?.house_no || r.bookings?.accom_room || '',
       children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
       children_ages: r.student_age || '',
       class_type: r.class_type || '',
