@@ -695,7 +695,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">16</span>아이 성향 / 흥미</label>
+          <label className="q-label"><span className="num">16</span>아이 성향/흥미 / 원하시는 요청 사항</label>
           <textarea className="area" value={form.child_personality} onChange={e => setForm({ ...form, child_personality: e.target.value })} placeholder="예: 활발하고 말이 많음, 스포츠/공룡 좋아함" />
         </div>
       </div>
