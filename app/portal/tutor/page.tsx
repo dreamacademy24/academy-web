@@ -17,8 +17,43 @@ interface TutorReq {
 }
 
 const DAYS = ["월","화","수","목","금","토"];
-const LEVELS_ER = ["제로베이스","비기너","미디엄","어드밴스"];
-const LEVELS_7 = ["제로베이스","비기너1","비기너2","미디엄1","미디엄2","어드밴스1","어드밴스2"];
+
+interface LevelOpt { value: string; kr: string; en: string }
+
+const LEVELS_ENGLISH: LevelOpt[] = [
+  { value: "제로베이스", kr: "제로베이스(기초) - 영어를 처음 접함", en: "Zero-Based - New to English" },
+  { value: "비기너",     kr: "비기너 - 알파벳, 파닉스, 단어를 알고있음", en: "Beginner - Knows alphabet, phonics, basic words" },
+  { value: "미디엄",     kr: "미디엄 - 문장을 이용한 원활한 영어 소통이 가능함", en: "Intermediate - Communicate smoothly in English by using sentences" },
+  { value: "어드밴스",   kr: "어드밴스 - 원서 리딩 독해 토론 등 심화 수업이 가능함", en: "Advanced - In-depth reading and discussion sessions are available" },
+];
+const LEVELS_SPEAKING: LevelOpt[] = [
+  { value: "제로베이스", kr: "제로 베이스(기초) - 영어를 처음 접함", en: "Zero-Based - New to English" },
+  { value: "비기너1",   kr: "비기너1(초급1) - 알파벳을 말할 수 있음", en: "Beginner 1 - Able to recite the alphabet" },
+  { value: "비기너2",   kr: "비기너2(초급2) - 파닉스 및 기본적인 단어를 말할 수 있음", en: "Beginner 2 - Able to pronounce phonics and basic words" },
+  { value: "미디엄1",   kr: "미디엄1(중급1) - 자기소개 및 짧게 영어 문장으로 말할 수 있음", en: "Intermediate 1 - Able to speak in complete sentences" },
+  { value: "미디엄2",   kr: "미디엄2(중급2) - 스피킹, 리스닝이 원활한 팀 티쳐와 원활하게 영어로 소통이 가능함", en: "Intermediate 2 - Able to communicate smoothly in English with the teacher" },
+  { value: "어드밴스1", kr: "어드밴스1(고급) - 원서 리딩이 가능함. 주제를 가지고 프리토킹이 가능함", en: "Advanced 1 - Able to engage in free conversation on a given subject" },
+  { value: "어드밴스2", kr: "어드밴스2(심화) - 토론수업에 참여하여 자신의 의견을 명확하게 표현 및 전달이 가능함", en: "Advanced 2 - Able to participate in discussion classes, clearly expressing and communicating their opinions" },
+];
+const LEVELS_READING: LevelOpt[] = [
+  { value: "제로베이스", kr: "제로 베이스 - 영어를 처음 접함", en: "Zero-Based - New to English" },
+  { value: "비기너1",   kr: "비기너1(초급1) - 알파벳을 읽을 수 있음", en: "Beginner 1 - Able to read the alphabet" },
+  { value: "비기너2",   kr: "비기너2(초급2) - 기본적인 단어를 읽을 수 있음 / 단모음 리딩이 가능함 (예: can, fan)", en: "Beginner 2 - Able to read basic words (CVC, short vowels)" },
+  { value: "미디엄1",   kr: "미디엄1(중급1) - 짧은 영어 문장을 읽을 수 있음 / 이중모음 리딩이 가능함 (예: cane, rain)", en: "Intermediate 1 - Able to read short English sentences" },
+  { value: "미디엄2",   kr: "미디엄2(중급2) - 긴 문장을 읽을 수 있음 (예: I can walk with a cane)", en: "Intermediate 2 - Able to read longer English sentences (double vowels)" },
+  { value: "어드밴스1", kr: "어드밴스1(고급) - 원서 리딩이 가능함", en: "Advanced 1 - Able to read English-written books" },
+  { value: "어드밴스2", kr: "어드밴스2(심화) - 원서 리딩, 독해 및 심화 문제풀이가 가능함", en: "Advanced 2 - Able to read English-written books and also answer in-depth Q&As" },
+];
+const LEVELS_WRITING: LevelOpt[] = [
+  { value: "제로베이스", kr: "제로 베이스 - 영어를 처음 접함", en: "Zero-Based - New to English" },
+  { value: "비기너1",   kr: "비기너1(초급1) - 알파벳을 쓸 수 있음", en: "Beginner 1 - Able to write the alphabet" },
+  { value: "비기너2",   kr: "비기너2(초급2) - 기본적인 단어를 쓸 수 있음", en: "Beginner 2 - Able to write basic words (CVC words)" },
+  { value: "미디엄1",   kr: "미디엄1(중급1) - 짧은 영어 문장을 쓸 수 있음", en: "Intermediate 1 - Able to write short English sentences" },
+  { value: "미디엄2",   kr: "미디엄2(중급2) - 긴 문장을 쓸 수 있음", en: "Intermediate 2 - Able to write longer English sentences" },
+  { value: "어드밴스1", kr: "어드밴스1(고급) - 기본적인 원서 롸이팅이 가능함", en: "Advanced 1 - Able to write basic English-written books" },
+  { value: "어드밴스2", kr: "어드밴스2(심화) - 심화된 원서 롸이팅이 가능함", en: "Advanced 2 - Able to write in-depth English-written books" },
+];
+
 const STYLES = ["놀이식","학습식","놀이+학습"];
 const FOCUS = ["스피킹","리딩","보카","라이팅","파닉스","액티비티"];
 
@@ -59,7 +94,6 @@ function daysKr(arr: string[] | null): string {
   return arr.map(d => DAY_KR[d] || d).join(", ");
 }
 
-// 예약 students JSON 항목 → 폼용 이름/나이
 function studentName(s: any): { kr: string; en: string; age: string } {
   return {
     kr: s?.name_kr || s?.korName || "",
@@ -69,13 +103,13 @@ function studentName(s: any): { kr: string; en: string; age: string } {
 }
 
 const INIT_FORM = {
-  house_number: "", student_name_kr: "", student_name_en: "", student_age: "",
+  student_name_kr: "", student_name_en: "", student_age: "",
   class_type: "", start_date: "", end_date: "",
   preferred_days_arr: [] as string[], skip_dates: "", preferred_time: "",
   level_english: "", level_speaking: "", level_reading: "", level_writing: "",
   textbook: "", class_style: "", class_focus_arr: [] as string[],
   child_personality: "",
-  privacy_agreed: false, rules_agreed: false,
+  privacy_agreed: false, agreed_rules: false,
 };
 
 export default function PortalTutorPage() {
@@ -89,12 +123,11 @@ export default function PortalTutorPage() {
   const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
   const [bookingInfo, setBookingInfo] = useState<any>(null);
-  const [selStudent, setSelStudent] = useState<number>(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     async function init() {
       if (typeof window === "undefined") return;
-      // 1) portalSession 체크
       try {
         const raw = localStorage.getItem("portalSession");
         if (raw) {
@@ -103,10 +136,8 @@ export default function PortalTutorPage() {
           localStorage.removeItem("portalSession");
         }
       } catch {}
-      // 2) Supabase Auth 체크
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        // Supabase Auth 사용자는 booking_id가 없을 수 있음 — 임시 session 객체 생성
         setSession({
           booking_id: data.session.user.id,
           booking_number: "",
@@ -115,7 +146,6 @@ export default function PortalTutorPage() {
         });
         return;
       }
-      // 3) 둘 다 없으면 포털로
       router.replace("/portal");
     }
     init();
@@ -138,7 +168,6 @@ export default function PortalTutorPage() {
     })();
   }, [session]);
 
-  // 예약 students JSON 파싱
   const students = useMemo<any[]>(() => {
     if (!bookingInfo) return [];
     try {
@@ -148,38 +177,10 @@ export default function PortalTutorPage() {
     } catch { return []; }
   }, [bookingInfo]);
 
-  // bookingInfo 로드되면 폼 자동완성 (첫 번째 학생 기준)
-  useEffect(() => {
-    if (!bookingInfo) return;
-
-    // 1번 필드: 하우스넘버 있으면 그대로, 없으면 예약자명
-    const houseVal = bookingInfo.house_no
-      ? bookingInfo.house_no
-      : (bookingInfo.booker_name || bookingInfo.guest_name || "");
-
-    const firstStudent = students[0];
-    const n = studentName(firstStudent);
-
-    setForm(f => ({
-      ...f,
-      house_number: f.house_number || houseVal,
-      student_name_kr: f.student_name_kr || n.kr,
-      student_name_en: f.student_name_en || n.en,
-      student_age: f.student_age || n.age,
-    }));
-  }, [bookingInfo, students]);
-
-  // 학생 선택 → 이름/나이 강제 자동완성 (idx=-1 은 전체 학생 합산)
-  function pickStudent(idx: number) {
-    setSelStudent(idx);
-    if (idx === -1) {
-      const join = (key: "kr" | "en" | "age") =>
-        students.map(s => studentName(s)[key]).filter(Boolean).join(" / ");
-      setForm(f => ({ ...f, student_name_kr: join("kr"), student_name_en: join("en"), student_age: join("age") }));
-    } else {
-      const n = studentName(students[idx]);
-      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: n.age }));
-    }
+  function pickStudentFromModal(idx: number) {
+    const n = studentName(students[idx]);
+    setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: n.age || f.student_age }));
+    setPickerOpen(false);
   }
 
   function toggleInv(id: string) {
@@ -210,13 +211,18 @@ export default function PortalTutorPage() {
 
   async function submit() {
     if (!session) return;
-    if (!form.student_name_kr.trim()) { setMsg("학생 이름을 입력해주세요."); return; }
+    if (!form.student_name_kr.trim() && !form.student_name_en.trim()) { setMsg("학생을 선택해주세요."); return; }
     if (!form.class_type) { setMsg("수업 유형을 선택해주세요."); return; }
-    if (!form.privacy_agreed || !form.rules_agreed) { setMsg("개인정보 동의와 튜터 규정 동의를 체크해주세요."); return; }
+    if (!form.privacy_agreed || !form.agreed_rules) { setMsg("개인정보 동의와 튜터 규정 동의를 체크해주세요."); return; }
     setSaving(true); setMsg("");
     const res = await fetch("/api/portal/tutor", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: session.booking_id, guest_name: session.guest_name, ...form }),
+      body: JSON.stringify({
+        booking_id: session.booking_id,
+        guest_name: session.guest_name,
+        ...form,
+        rules_agreed: form.agreed_rules,
+      }),
     });
     setSaving(false);
     if (!res.ok) { const r = await res.json(); setMsg(r.error || "신청 실패"); return; }
@@ -234,24 +240,38 @@ export default function PortalTutorPage() {
 
   if (!session) return null;
 
+  const hasStudent = !!(form.student_name_kr || form.student_name_en);
+
   return (<>
     <style>{`
 .tu-w{max-width:720px;margin:0 auto;padding:16px 20px 40px}
 .tu-back{display:inline-flex;align-items:center;gap:4px;background:none;border:none;font-size:13px;color:#6b7c93;cursor:pointer;font-family:inherit;font-weight:600;margin-bottom:12px}.tu-back:hover{color:#1a6fc4}
-.tu-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:12px}
+.tu-head{background:linear-gradient(135deg,#1a6fc4,#7c3aed);border-radius:16px;padding:20px;color:#fff;margin-bottom:10px}
 .tu-head h1{font-size:19px;font-weight:800;margin-bottom:2px}.tu-head p{font-size:12px;opacity:0.8}
+.notice{background:#fffbeb;border:1.5px solid #fbbf24;border-radius:12px;padding:16px 18px;margin-bottom:10px;line-height:1.65;color:#78350f}
+.notice .ttl{font-size:14px;font-weight:800;color:#92400e;margin-bottom:12px}
+.notice .grp{margin-bottom:10px}.notice .grp:last-child{margin-bottom:0}
+.notice .grp-t{font-weight:800;color:#92400e;margin-bottom:4px;display:block;font-size:12.5px}
+.notice ul{margin:0;padding-left:18px;font-size:12px}.notice li{margin-bottom:3px}
 .sec{background:#fff;border-radius:12px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,0.04);margin-bottom:10px}
 .sec h2{font-size:14px;font-weight:800;color:#1a6fc4;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
 .q{margin-bottom:16px}
 .q-label{display:block;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:6px}
 .q-label .req{color:#dc2626;margin-left:3px}
 .q-hint{display:block;font-size:11px;color:#94a3b8;margin-bottom:6px}
-.inp,.sel,.area{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff}.inp:focus,.sel:focus,.area:focus{border-color:#1a6fc4}
+.inp,.sel,.area{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;box-sizing:border-box}.inp:focus,.sel:focus,.area:focus{border-color:#1a6fc4}
 .area{resize:vertical;min-height:60px}
 .opts{display:flex;flex-wrap:wrap;gap:6px}
 .opt{padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;font-family:inherit;font-weight:500;user-select:none}
 .opt:hover{border-color:#94a3b8}
 .opt.on{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
+.opts-v{display:flex;flex-direction:column;gap:6px}
+.opt-card{display:block;width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;text-align:left;cursor:pointer;background:#fff;font-family:inherit;line-height:1.45;transition:all 0.15s;box-sizing:border-box}
+.opt-card:hover{border-color:#94a3b8}
+.opt-card.on{border-color:#1a6fc4;background:#eff6ff;border-width:2px;padding:10px 13px}
+.opt-card .ko{font-size:13px;font-weight:700;color:#1a1a2e;display:block;margin-bottom:2px}
+.opt-card .en{font-size:11px;color:#6b7c93;display:block}
+.opt-card.on .ko{color:#1a6fc4}
 .agree{margin-bottom:12px}
 .agree label{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:13px;line-height:1.5}
 .agree input{width:18px;height:18px;margin-top:1px;accent-color:#1a6fc4;flex-shrink:0}
@@ -272,11 +292,61 @@ export default function PortalTutorPage() {
 .cancel{margin-top:8px;padding:6px 14px;font-size:12px;font-weight:600;border:1px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:7px;cursor:pointer;font-family:inherit}.cancel:hover{background:#fee2e2}
 .empty{text-align:center;padding:24px;color:#94a3b8;font-size:13px}
 .num{display:inline-block;width:20px;height:20px;border-radius:50%;background:#1a6fc4;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:20px;margin-right:6px}
-@media(max-width:500px){.tu-w{padding:20px 16px}.row2{grid-template-columns:1fr}}
+.stu-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stu-pick .pick-btn{padding:11px 20px;background:#1a6fc4;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.stu-pick .pick-btn:hover{background:#155a9e}
+.stu-pick .sel-name{flex:1;min-width:0;padding:11px 14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:9px;font-size:13px;font-weight:700;color:#0c4a6e}
+.stu-pick .change-btn{padding:8px 14px;background:#fff;color:#1a6fc4;border:1.5px solid #1a6fc4;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.stu-pick .change-btn:hover{background:#eff6ff}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;padding:22px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,0.2)}
+.modal h3{font-size:15px;font-weight:800;color:#1a1a2e;margin-bottom:5px}
+.modal-sub{font-size:12px;color:#6b7c93;margin-bottom:14px}
+.modal-list{display:flex;flex-direction:column;gap:8px}
+.modal-btn{padding:14px 16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;text-align:left;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:#1a1a2e;transition:all 0.15s}
+.modal-btn:hover{border-color:#1a6fc4;background:#eff6ff;color:#1a6fc4}
+.modal-close{margin-top:14px;width:100%;padding:10px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#475569;font-family:inherit}
+.modal-close:hover{background:#e2e8f0}
+.modal-inp{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.rules-box{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;max-height:300px;overflow-y:auto;font-size:12px;line-height:1.75;color:#475569;margin-bottom:10px}
+.rules-box .rh{font-weight:800;color:#1a1a2e;font-size:13px;margin:2px 0 8px;text-align:center;padding-bottom:6px;border-bottom:1px solid #e5e7eb}
+.rules-box ul{margin:0 0 10px;padding-left:18px}.rules-box li{margin-bottom:3px}
+.rules-box .warn-t{color:#b45309;font-weight:800;margin:12px 0 5px;display:block}
+@media(max-width:500px){.tu-w{padding:20px 16px}.row2{grid-template-columns:1fr}.stu-pick .pick-btn{width:100%}}
     `}</style>
     <div className="tu-w">
       <button className="tu-back" onClick={() => router.push("/portal/dashboard")}>← 대시보드로</button>
       <div className="tu-head"><h1>👩‍🏫 튜터 수업 신청</h1><p>{session.guest_name}님 · 원어민 1:1 또는 1:2 수업</p></div>
+
+      {/* 📋 수업 전 안내사항 */}
+      <div className="notice">
+        <div className="ttl">📋 수업 전 안내사항</div>
+        <div className="grp">
+          <span className="grp-t">✅ 기본 안내</span>
+          <ul>
+            <li>플레이드림 / 드림아카데미 티쳐가 숙소로 방문하여 수업 진행</li>
+            <li>한타임 당 최대 튜터 선생님 2명까지 신청 가능</li>
+            <li>한타임당 50분 수업 / 오전 10시 ~ 오후 8시 운영</li>
+            <li>1일 최대 2타임 수업 가능 (3타임 불가)</li>
+            <li>외부 활동 및 놀이터 등 외출은 불가</li>
+          </ul>
+        </div>
+        <div className="grp">
+          <span className="grp-t">📦 준비물 안내</span>
+          <ul>
+            <li>기본 워크지 등 학습 자료는 튜터가 준비</li>
+            <li>별도로 원하는 교재가 있다면 직접 지참 필요 (단, 수업에 대한 개별적 피드백은 미제공)</li>
+            <li>어린 아이의 경우 색종이, 보드게임, 플래시카드 등 추천</li>
+          </ul>
+        </div>
+        <div className="grp">
+          <span className="grp-t">💰 비용 안내</span>
+          <ul>
+            <li>1:1 수업 ₱300 / 1:2 수업 ₱350 (1타임 기준)</li>
+            <li>수업 확정 후 전액 선결제 필수</li>
+          </ul>
+        </div>
+      </div>
 
       {invLessons.length > 0 && (
         <div className="sec">
@@ -337,35 +407,31 @@ export default function PortalTutorPage() {
           <button onClick={() => setDone(false)} style={{ marginTop: 16, padding: "10px 20px", background: "#fff", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>추가 신청</button>
         </div>
       ) : (<>
-      {students.length >= 2 && (
-        <div className="sec">
-          <h2>학생 선택</h2>
-          <span className="q-hint" style={{ marginBottom: 8 }}>예약에 등록된 학생 정보를 폼에 자동으로 채웁니다.</span>
-          <div className="opts">
-            <button type="button" className={`opt${selStudent === -1 ? " on" : ""}`} onClick={() => pickStudent(-1)}>전체 학생</button>
-            {students.map((s: any, i: number) => (
-              <button key={i} type="button" className={`opt${selStudent === i ? " on" : ""}`} onClick={() => pickStudent(i)}>
-                {studentName(s).kr || studentName(s).en || `학생 ${i + 1}`}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       <div className="sec">
         <h2>기본 정보</h2>
         <div className="q">
-          <label className="q-label"><span className="num">1</span>드림하우스 넘버 또는 예약자 성함</label>
-          <input className="inp" value={form.house_number} onChange={e => setForm({ ...form, house_number: e.target.value })} placeholder="예: B17 L4 / 김갑현" />
+          <label className="q-label"><span className="num">1</span>학생 선택<span className="req">*</span></label>
+          <span className="q-hint">예약자: {session.guest_name}님의 학생을 선택해주세요.</span>
+          {hasStudent ? (
+            <div className="stu-pick">
+              <div className="sel-name">
+                {form.student_name_kr}{form.student_name_en ? ` / ${form.student_name_en}` : ""}
+              </div>
+              <button type="button" className="change-btn" onClick={() => setPickerOpen(true)}>변경</button>
+            </div>
+          ) : students.length > 0 ? (
+            <div className="stu-pick">
+              <button type="button" className="pick-btn" onClick={() => setPickerOpen(true)}>👥 학생 선택하기</button>
+            </div>
+          ) : (
+            <div className="row2">
+              <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
+              <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
+            </div>
+          )}
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">2</span>학생 이름 (한글 + 영문)<span className="req">*</span></label>
-          <div className="row2">
-            <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="김사랑" />
-            <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="kim sa rang" />
-          </div>
-        </div>
-        <div className="q">
-          <label className="q-label"><span className="num">3</span>학생 나이</label>
+          <label className="q-label"><span className="num">2</span>학생 나이</label>
           <span className="q-hint">예: 2019.09.03 만5세</span>
           <input className="inp" value={form.student_age} onChange={e => setForm({ ...form, student_age: e.target.value })} />
         </div>
@@ -374,22 +440,22 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>수업 유형 및 일정</h2>
         <div className="q">
-          <label className="q-label"><span className="num">4</span>수업 유형<span className="req">*</span></label>
+          <label className="q-label"><span className="num">3</span>수업 유형<span className="req">*</span></label>
           <div className="opts">
-            <button type="button" className={`opt${form.class_type === "1:1" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:1" })}>1:1 (₱300/시간)</button>
-            <button type="button" className={`opt${form.class_type === "1:2" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:2" })}>1:2 (₱350/시간)</button>
+            <button type="button" className={`opt${form.class_type === "1:1" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:1" })}>1:1 (₱300/타임)</button>
+            <button type="button" className={`opt${form.class_type === "1:2" ? " on" : ""}`} onClick={() => setForm({ ...form, class_type: "1:2" })}>1:2 (₱350/타임)</button>
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">5</span>수업 시작일</label>
+          <label className="q-label"><span className="num">4</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">6</span>수업 종료일</label>
+          <label className="q-label"><span className="num">5</span>수업 종료일</label>
           <input className="inp" type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">7</span>원하는 수업 요일 (복수 선택)</label>
+          <label className="q-label"><span className="num">6</span>원하는 수업 요일 (복수 선택)</label>
           <div className="opts">
             {DAYS.map(d => (
               <button key={d} type="button" className={`opt${form.preferred_days_arr.includes(d) ? " on" : ""}`} onClick={() => toggleDay(d)}>{d}</button>
@@ -397,11 +463,11 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">8</span>빠지는 날짜 / 변경 날짜</label>
+          <label className="q-label"><span className="num">7</span>빠지는 날짜 / 변경 날짜</label>
           <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/15 결석, 4/17 오전→오후 변경" />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">9</span>원하는 수업 시간</label>
+          <label className="q-label"><span className="num">8</span>원하는 수업 시간</label>
           <input className="inp" value={form.preferred_time} onChange={e => setForm({ ...form, preferred_time: e.target.value })} placeholder="예: 오전10시~오후12시" />
         </div>
       </div>
@@ -409,37 +475,55 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>학생 레벨</h2>
         <div className="q">
-          <label className="q-label"><span className="num">10</span>영어 레벨</label>
-          <div className="opts">
-            {LEVELS_ER.map(l => (
-              <button key={l} type="button" className={`opt${form.level_english === l ? " on" : ""}`} onClick={() => setForm({ ...form, level_english: l })}>{l}</button>
+          <label className="q-label"><span className="num">9</span>영어 레벨</label>
+          <div className="opts-v">
+            {LEVELS_ENGLISH.map(l => (
+              <button key={l.value} type="button" className={`opt-card${form.level_english === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_english: l.value })}>
+                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+              </button>
             ))}
           </div>
         </div>
-        {[
-          { key: "level_speaking", num: 11, label: "스피킹 레벨" },
-          { key: "level_reading",  num: 12, label: "리딩 레벨" },
-          { key: "level_writing",  num: 13, label: "라이팅 레벨" },
-        ].map(f => (
-          <div key={f.key} className="q">
-            <label className="q-label"><span className="num">{f.num}</span>{f.label}</label>
-            <div className="opts">
-              {LEVELS_7.map(l => (
-                <button key={l} type="button" className={`opt${(form as any)[f.key] === l ? " on" : ""}`} onClick={() => setForm({ ...form, [f.key]: l })}>{l}</button>
-              ))}
-            </div>
+        <div className="q">
+          <label className="q-label"><span className="num">10</span>스피킹 레벨</label>
+          <div className="opts-v">
+            {LEVELS_SPEAKING.map(l => (
+              <button key={l.value} type="button" className={`opt-card${form.level_speaking === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_speaking: l.value })}>
+                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+              </button>
+            ))}
           </div>
-        ))}
+        </div>
+        <div className="q">
+          <label className="q-label"><span className="num">11</span>리딩 레벨</label>
+          <div className="opts-v">
+            {LEVELS_READING.map(l => (
+              <button key={l.value} type="button" className={`opt-card${form.level_reading === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_reading: l.value })}>
+                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="q">
+          <label className="q-label"><span className="num">12</span>라이팅 레벨</label>
+          <div className="opts-v">
+            {LEVELS_WRITING.map(l => (
+              <button key={l.value} type="button" className={`opt-card${form.level_writing === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_writing: l.value })}>
+                <span className="ko">{l.kr}</span><span className="en">{l.en}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="sec">
         <h2>수업 방향</h2>
         <div className="q">
-          <label className="q-label"><span className="num">14</span>사용 영어 교재</label>
+          <label className="q-label"><span className="num">13</span>사용 영어 교재</label>
           <input className="inp" value={form.textbook} onChange={e => setForm({ ...form, textbook: e.target.value })} placeholder="예: Phonics Fun 1, Smart Reading" />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">15</span>수업 방향</label>
+          <label className="q-label"><span className="num">14</span>수업 방향</label>
           <div className="opts">
             {STYLES.map(s => (
               <button key={s} type="button" className={`opt${form.class_style === s ? " on" : ""}`} onClick={() => setForm({ ...form, class_style: s })}>{s}</button>
@@ -447,7 +531,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">16</span>수업 방향 상세 (최대 2개)</label>
+          <label className="q-label"><span className="num">15</span>수업 방향 상세 (최대 2개)</label>
           <div className="opts">
             {FOCUS.map(f => (
               <button key={f} type="button" className={`opt${form.class_focus_arr.includes(f) ? " on" : ""}`} onClick={() => toggleFocus(f)}>{f}</button>
@@ -455,7 +539,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">17</span>아이 성향 / 흥미</label>
+          <label className="q-label"><span className="num">16</span>아이 성향 / 흥미</label>
           <textarea className="area" value={form.child_personality} onChange={e => setForm({ ...form, child_personality: e.target.value })} placeholder="예: 활발하고 말이 많음, 스포츠/공룡 좋아함" />
         </div>
       </div>
@@ -465,16 +549,37 @@ export default function PortalTutorPage() {
         <div className="agree">
           <label>
             <input type="checkbox" checked={form.privacy_agreed} onChange={e => setForm({ ...form, privacy_agreed: e.target.checked })} />
-            <span><b>18-1. 개인정보 수집 및 이용 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>수업 매칭 및 튜터 배정 목적으로 수집한 정보를 활용합니다.</span></span>
+            <span><b>17. 개인정보 수집 및 이용 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>수업 매칭 및 튜터 배정 목적으로 수집한 정보를 활용합니다.</span></span>
           </label>
         </div>
-        <div className="agree">
-          <label>
-            <input type="checkbox" checked={form.rules_agreed} onChange={e => setForm({ ...form, rules_agreed: e.target.checked })} />
-            <span><b>18-2. 튜터 규정 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>신청 후 4일 이내만 취소 가능, 결제는 수업 완료 후 월별 정산.</span></span>
-          </label>
+
+        <div className="q" style={{ marginBottom: 8 }}>
+          <label className="q-label"><span className="num">18</span>튜터 변경 및 환불 규정 동의<span className="req">*</span></label>
+          <div className="rules-box">
+            <div className="rh">🔖 튜터 변경 및 환불규정</div>
+            <ul>
+              <li>최소 2주 전 사전 예약 필수 (성수기는 3주 전)</li>
+              <li>성수기 기간 오후 5시 이후 수업 가능</li>
+              <li>변경은 수업일 4일 전까지만 가능</li>
+            </ul>
+            <span className="warn-t">⚠️ 아래 경우 변경 및 환불 불가</span>
+            <ul>
+              <li>당일 취소 및 일정 변경</li>
+              <li>수업 시작 후 학생의 거부로 취소 요청</li>
+              <li>수업 3일 전 이내 취소 시</li>
+              <li>당일 2회 이상 변경 시</li>
+              <li>당일 노쇼(무단 결석): 모든 수업 자동 취소, 환불 불가, 이후 재신청도 불가</li>
+            </ul>
+          </div>
+          <div className="agree" style={{ marginBottom: 0 }}>
+            <label>
+              <input type="checkbox" checked={form.agreed_rules} onChange={e => setForm({ ...form, agreed_rules: e.target.checked })} />
+              <span><b>위 튜터 규정을 모두 확인하였으며 동의합니다.</b></span>
+            </label>
+          </div>
         </div>
-        <button className="btn" onClick={submit} disabled={saving}>{saving ? "신청 중..." : "튜터 수업 신청하기"}</button>
+
+        <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules}>{saving ? "신청 중..." : "튜터 수업 신청하기"}</button>
         {msg && <div className={`msg ${msg.includes("완료") ? "msg-ok" : "msg-err"}`}>{msg}</div>}
       </div>
       </>)}
@@ -504,5 +609,33 @@ export default function PortalTutorPage() {
         }
       </div>
     </div>
+
+    {pickerOpen && (
+      <div className="modal-bg" onClick={() => setPickerOpen(false)}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <h3>학생 선택</h3>
+          <div className="modal-sub">예약자: {session.guest_name}님의 학생 목록</div>
+          {students.length > 0 ? (
+            <div className="modal-list">
+              {students.map((s: any, i: number) => {
+                const n = studentName(s);
+                const label = `${n.kr || "-"}${n.en ? ` / ${n.en}` : ""}`;
+                return (
+                  <button key={i} type="button" className="modal-btn" onClick={() => pickStudentFromModal(i)}>{label}</button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="modal-inp">
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>등록된 학생이 없어 직접 입력해주세요.</div>
+              <input className="inp" value={form.student_name_kr} onChange={e => setForm({ ...form, student_name_kr: e.target.value })} placeholder="한글이름 (예: 김사랑)" />
+              <input className="inp" value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} placeholder="영문이름 (예: kim sa rang)" />
+              <button type="button" className="pick-btn" style={{ width: "100%", marginTop: 6, padding: 11, background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setPickerOpen(false)}>확인</button>
+            </div>
+          )}
+          <button type="button" className="modal-close" onClick={() => setPickerOpen(false)}>닫기</button>
+        </div>
+      </div>
+    )}
   </>);
 }
