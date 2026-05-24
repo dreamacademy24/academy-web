@@ -39,12 +39,13 @@ const CLASS_FOCUS_KR: Record<string, string> = {
 };
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
   pending:   { label: "대기중",  bg: "#f1f5f9", color: "#475569" },
+  reviewing: { label: "검토중",  bg: "#fef3c7", color: "#92400e" },
   assigned:  { label: "배정됨",  bg: "#dbeafe", color: "#1e40af" },
   confirmed: { label: "확정",    bg: "#dcfce7", color: "#166534" },
   completed: { label: "완료",    bg: "#d1fae5", color: "#065f46" },
   cancelled: { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
 };
-const STATUS_ORDER = ["pending", "assigned", "confirmed", "completed", "cancelled"];
+const STATUS_ORDER = ["pending", "reviewing", "assigned", "confirmed", "completed", "cancelled"];
 
 const LEVEL_RANK: Record<string, number> = {
   zero: 0,
@@ -705,6 +706,20 @@ export default function TutorApplications() {
                       <td>
                         <div className="ta-row-acts">
                           <button className="btn btn-sm btn-gray" onClick={() => openDetail(a)}>상세</button>
+                          {a.status === 'pending' && (
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: '#f59e0b', color: '#fff', border: 'none' }}
+                              onClick={async () => {
+                                const res = await fetch(`/api/admin/tutor-applications/${a.id}/status`, {
+                                  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ status: 'reviewing' }),
+                                });
+                                if (!res.ok) { const r = await res.json().catch(() => ({})); alert(r.error || '상태 변경 실패'); return; }
+                                await loadApps();
+                              }}
+                            >검토중</button>
+                          )}
                           <button className="btn btn-sm btn-blue" onClick={() => openDetail(a, true)}>배정</button>
                         </div>
                       </td>

@@ -62,6 +62,14 @@ const ST: Record<string, { label: string; bg: string; color: string }> = {
   confirmed: { label: "확정",   bg: "#dcfce7", color: "#166534" },
   cancelled: { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
 };
+const APP_STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
+  pending:   { label: "📋 신청완료", bg: "#dbeafe", color: "#1d4ed8" },
+  reviewing: { label: "🔍 검토중",   bg: "#fef3c7", color: "#92400e" },
+  assigned:  { label: "🔍 검토중",   bg: "#fef3c7", color: "#92400e" },
+  confirmed: { label: "✅ 신청승인", bg: "#dcfce7", color: "#15803d" },
+  completed: { label: "✅ 완료",     bg: "#d1fae5", color: "#065f46" },
+  cancelled: { label: "❌ 취소",     bg: "#fee2e2", color: "#dc2626" },
+};
 
 interface InvSession { id: string; session_idx: number; session_date: string; session_time: string | null; status: string }
 interface InvLesson {
@@ -128,6 +136,7 @@ export default function PortalTutorPage() {
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [bookingStudents, setBookingStudents] = useState<any[]>([]);
   const [student2Age, setStudent2Age] = useState('');
+  const [myApplications, setMyApplications] = useState<any[]>([]);
   const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
 
   useEffect(() => {
@@ -163,6 +172,8 @@ export default function PortalTutorPage() {
       if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
       const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
+      const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
+      if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
       if (session.booking_id) {
         const bRes = await fetch(`/api/bookings/${session.booking_id}`);
         if (bRes.ok) {
@@ -273,6 +284,8 @@ export default function PortalTutorPage() {
     setForm(INIT_FORM);
     setStudent2Age('');
     reload();
+    const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
+    if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
   }
 
   async function cancel(id: string) {
@@ -709,24 +722,24 @@ export default function PortalTutorPage() {
       </>)}
 
       <div className="sec">
-        <h2>신청 내역 ({requests.length}건)</h2>
-        {requests.length === 0 ? <div className="empty">아직 신청 내역이 없습니다</div> :
-          requests.map(r => {
-            const st = ST[r.status] || ST.pending;
+        <h2>📋 내 튜터 신청내역 ({myApplications.length}건)</h2>
+        {myApplications.length === 0 ? <div className="empty">아직 신청 내역이 없습니다</div> :
+          myApplications.map(a => {
+            const meta = APP_STATUS_META[a.status] || APP_STATUS_META.pending;
             return (
-              <div key={r.id} className={`card${r.status === "cancelled" ? " cancelled" : ""}`}>
-                <div className="card-top">
-                  <div className="card-title">{r.student_name_kr || "-"} {r.student_name_en ? `(${r.student_name_en})` : ""}</div>
-                  <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+              <div key={a.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>{a.children_names || "-"}</div>
+                  <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
-                <div className="info">
-                  <div><span className="k">유형:</span>{r.class_type || "-"}</div>
-                  <div><span className="k">기간:</span>{r.start_date || "-"} ~ {r.end_date || "-"}</div>
-                  <div><span className="k">요일:</span>{(r.preferred_days_arr || []).join(",") || "-"}</div>
-                  <div><span className="k">시간:</span>{r.preferred_time || "-"}</div>
-                  <div><span className="k">신청일:</span>{r.created_at?.slice(0, 10)}</div>
+                <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.7 }}>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>수업 유형:</span>{a.class_type || "-"}</div>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>기간:</span>{a.start_date || "-"} ~ {a.end_date || "-"}</div>
+                  <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>신청일:</span>{a.created_at?.slice(0, 10) || "-"}</div>
+                  {a.status === "confirmed" && (
+                    <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>배정 선생님:</span>{a.assigned_tutor_name || "미배정"}</div>
+                  )}
                 </div>
-                {r.status === "pending" && <button className="cancel" onClick={() => cancel(r.id)}>신청 취소</button>}
               </div>
             );
           })
