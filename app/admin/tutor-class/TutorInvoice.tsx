@@ -362,10 +362,18 @@ export default function TutorInvoice() {
                 <tr className="content-row">
                   {week.map((date, di) => {
                     const s = date ? sessionByDate.get(date) : null;
+                    const DAY_CODE: Record<string, number> = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6, "일":0, "월":1, "화":2, "수":3, "목":4, "금":5, "토":6 };
+                    let scheduled = false;
+                    if (date && !s && Array.isArray(lesson.class_days) && lesson.class_days.length > 0) {
+                      const dow = new Date(date + "T00:00:00").getDay();
+                      scheduled = lesson.class_days.some(d => DAY_CODE[String(d).trim()] === dow);
+                    }
+                    const show = !!s || scheduled;
+                    const blockBg = lesson.class_type === "1:2" ? "#ede9fe" : "#dbeafe";
                     return (
                       <td key={`c-${wi}-${di}`}>
-                        {s ? (
-                          <div className="ti-wsess" title={`${date} · ${s.session_idx}회차 · ${s.status}`}>
+                        {show ? (
+                          <div className="ti-wsess" style={{ background: blockBg }} title={s ? `${date} · ${s.session_idx}회차 · ${s.status}` : `${date} · 예정`}>
                             <div className="ct">{lesson.class_type} tutor</div>
                             <div className="tm">{sessionTime}</div>
                           </div>

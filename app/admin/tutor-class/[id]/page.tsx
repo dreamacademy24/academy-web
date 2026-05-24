@@ -145,8 +145,9 @@ export default function TutorRequestDetailPage() {
       const classDaysArr = row.preferred_days
         ? row.preferred_days.split(",").map(d => d.trim()).filter(Boolean)
         : null;
+      const requestRefMemo = `request_id: ${row.id}`;
+      const memoCombined = memo ? `${memo}\n${requestRefMemo}` : requestRefMemo;
       const lessonPayload: Record<string, unknown> = {
-        application_id: row.id,
         tutor_id: tutorUuid,
         start_date: row.start_date,
         end_date: row.end_date,
@@ -166,13 +167,15 @@ export default function TutorRequestDetailPage() {
         class_style: row.class_style,
         class_focus: (row as any).class_focus || (Array.isArray(row.class_focus_arr) ? row.class_focus_arr.join(",") : null),
         status: "active",
+        admin_memo: memoCombined,
       };
       console.log("[save] tutor_lessons payload:", lessonPayload);
-      const { data: existing, error: selErr } = await supabase
+      const { data: existingRows, error: selErr } = await supabase
         .from("tutor_lessons")
         .select("id")
-        .eq("application_id", row.id)
-        .maybeSingle();
+        .ilike("admin_memo", `%request_id: ${row.id}%`)
+        .limit(1);
+      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
       if (selErr) console.error("[save] tutor_lessons SELECT 실패:", selErr);
       if (existing?.id) {
         const { error: upErr } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
