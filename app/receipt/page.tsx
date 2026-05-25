@@ -253,7 +253,7 @@ function ReceiptPageInner(){
           <table className="rt"><tbody>
             <tr><td className="lb">예약자명</td><td>{data.name}</td><td className="lb">영문이름</td><td>{data.englishName}</td></tr>
             <tr><td className="lb">예약번호</td><td>{data.reservationNo}</td><td className="lb">예약일</td><td>{fmtFull(data.reservationDate)}</td></tr>
-            <tr><td className="lb">체크인</td><td>{data.checkInDate?`${fmtFull(data.checkInDate)} 15:00PM`:""}</td><td className="lb">체크아웃</td><td>{data.checkOutDate?`${fmtFull(data.checkOutDate)} ${data.lateCheckout?"22:30pm":"12noon"}`:""}</td></tr>
+            <tr><td className="lb">체크인 (오후 3시 입실)</td><td>{data.checkInDate ? fmtFull(data.checkInDate) : ""}</td><td className="lb">{data.lateCheckout ? "체크아웃 (22:30pm 퇴실)" : "체크아웃 (정오 12시 퇴실)"}</td><td>{data.checkOutDate ? fmtFull(data.checkOutDate) : ""}</td></tr>
             <tr><td className="lb">패키지</td><td>{data.packageType}</td><td className="lb">인원 구성</td><td>{peopleStr}</td></tr>
             <tr><td className="lb">잔금납부일</td><td colSpan={3}>{fmtFull(data.balanceDate)||"미정"}</td></tr>
             {data.note&&<tr><td className="lb">특이사항</td><td colSpan={3}>{data.note}</td></tr>}
