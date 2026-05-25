@@ -287,34 +287,28 @@ export default function DreamhouseRooms() {
                 const isSun = dow === 0
                 const isSat = dow === 6
                 const rowBg = isToday ? '#eff6ff' : day % 2 === 0 ? '#f1f5f9' : '#ffffff'
+                const isNewMonth = !!monthLabel
+                const monthPrefix = isNewMonth ? monthLabel!.replace(/\d+년 /, '') : ''
                 return (
                   <Fragment key={dateStr}>
-                  {monthLabel && (
-                    <tr key={`sep-${dateStr}`}>
-                      <td colSpan={ROOMS.length + 1} style={{
-                        background:'#1e3a8a', color:'#dbeafe',
-                        padding:'10px 16px', fontSize:14, fontWeight:700,
-                        textAlign:'center', position:'sticky', left:0
-                      }}>
-                        📅 {monthLabel}
-                      </td>
-                    </tr>
-                  )}
                   <tr style={{background:rowBg}}>
                     <td style={{
                       position:'sticky',left:0,zIndex:5,
-                      background: isToday ? '#dbeafe' : rowBg,
+                      background: isNewMonth ? '#1e3a8a' : (isToday ? '#dbeafe' : rowBg),
                       padding:'6px 8px',
                       borderRight:'2px solid #cbd5e1',
                       borderBottom:'1px solid #e2e8f0',
                       textAlign:'center',
                       fontSize:12,
-                      fontWeight: isToday ? 800 : 400,
-                      color: isToday ? '#1e40af' : isSun ? '#dc2626' : isSat ? '#2563eb' : '#475569',
+                      fontWeight: isNewMonth ? 700 : (isToday ? 800 : 400),
+                      color: isNewMonth ? '#dbeafe' : (isToday ? '#1e40af' : isSun ? '#dc2626' : isSat ? '#2563eb' : '#475569'),
                       whiteSpace:'nowrap'
                     }}>
                       {isToday && <span style={{fontSize:9,color:'#1e40af',display:'block'}}>TODAY</span>}
-                      {day}일 {DOW_KO[dow]}
+                      {isNewMonth
+                        ? <>{monthPrefix}<br/>{day}일 {DOW_KO[dow]}</>
+                        : <>{day}일 {DOW_KO[dow]}</>
+                      }
                     </td>
                     {ROOMS.map((room, ri) => {
                       const cellBookings = cellMap[dateStr][room] || []
