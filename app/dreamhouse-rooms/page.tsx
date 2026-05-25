@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { isAdminAuthed } from '@/lib/adminAuth'
@@ -81,7 +81,11 @@ export default function DreamhouseRooms() {
   async function fetchBookings() {
     setLoading(true)
     const firstDay = `${year}-${String(month+1).padStart(2,'0')}-01`
-    const lastDay = `${year}-${String(month+1).padStart(2,'0')}-${getDaysInMonth(year,month)}`
+    // 마지막달(현재 +2개월)의 말일까지 조회
+    const lastMonthDate = new Date(year, month + 2, 1)
+    const ly = lastMonthDate.getFullYear()
+    const lm = lastMonthDate.getMonth()
+    const lastDay = `${ly}-${String(lm+1).padStart(2,'0')}-${getDaysInMonth(ly, lm)}`
     const res = await fetch(`/api/dreamhouse?firstDay=${firstDay}&lastDay=${lastDay}`)
     const data = await res.json()
     setBookings(Array.isArray(data) ? data : [])
@@ -89,10 +93,23 @@ export default function DreamhouseRooms() {
   }
 
   const daysInMonth = getDaysInMonth(year, month)
-  const dates = Array.from({length: daysInMonth}, (_,i) => {
-    const d = new Date(year, month, i+1)
-    return { dateStr: toDateStr(d), day: i+1, dow: d.getDay() }
-  })
+  // 현재 월 + 다음 2개월 (총 3개월치) 날짜 연속 생성
+  const dates: { dateStr: string; day: number; dow: number; monthLabel: string | null }[] = []
+  for (let mOffset = 0; mOffset < 3; mOffset++) {
+    const md = new Date(year, month + mOffset, 1)
+    const my = md.getFullYear()
+    const mm = md.getMonth()
+    const mDays = getDaysInMonth(my, mm)
+    for (let i = 0; i < mDays; i++) {
+      const date = new Date(my, mm, i+1)
+      dates.push({
+        dateStr: toDateStr(date),
+        day: i+1,
+        dow: date.getDay(),
+        monthLabel: (mOffset > 0 && i === 0) ? `${my}년 ${mm + 1}월` : null,
+      })
+    }
+  }
 
   // 날짜별 룸별 예약 매핑
   const cellMap: Record<string, Record<string, Booking[]>> = {}
@@ -265,13 +282,25 @@ export default function DreamhouseRooms() {
               </tr>
             </thead>
             <tbody>
-              {dates.map(({dateStr, day, dow}) => {
+              {dates.map(({dateStr, day, dow, monthLabel}) => {
                 const isToday = dateStr === toDateStr(today)
                 const isSun = dow === 0
                 const isSat = dow === 6
                 const rowBg = isToday ? '#eff6ff' : day % 2 === 0 ? '#f1f5f9' : '#ffffff'
                 return (
-                  <tr key={dateStr} style={{background:rowBg}}>
+                  <Fragment key={dateStr}>
+                  {monthLabel && (
+                    <tr key={`sep-${dateStr}`}>
+                      <td colSpan={ROOMS.length + 1} style={{
+                        background:'#1e3a8a', color:'#dbeafe',
+                        padding:'10px 16px', fontSize:14, fontWeight:700,
+                        textAlign:'center', position:'sticky', left:0
+                      }}>
+                        📅 {monthLabel}
+                      </td>
+                    </tr>
+                  )}
+                  <tr style={{background:rowBg}}>
                     <td style={{
                       position:'sticky',left:0,zIndex:5,
                       background: isToday ? '#dbeafe' : rowBg,
@@ -356,6 +385,7 @@ export default function DreamhouseRooms() {
                       )
                     })}
                   </tr>
+                  </Fragment>
                 )
               })}
             </tbody>
