@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import ScheduleDeploy from "./ScheduleDeploy";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,7 @@ export default function TourShuttleAdminPage() {
   const [apps, setApps] = useState<ShuttleApp[]>([]);
   const [bookingNumbers, setBookingNumbers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -103,6 +105,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <div style={{ width: 100 }} />
       </div>
 
+      <div style={{display:"flex",gap:6,background:"#fff",padding:4,borderRadius:12,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+        <button
+          onClick={() => setMainTab("list")}
+          style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"transparent",color:mainTab==="list"?"#fff":"#6b7c93"}}
+        >📋 신청목록</button>
+        <button
+          onClick={() => setMainTab("deploy")}
+          style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"transparent",color:mainTab==="deploy"?"#fff":"#6b7c93"}}
+        >📅 전체신청배포</button>
+      </div>
+
+      {mainTab === "deploy" ? (
+        <ScheduleDeploy />
+      ) : (
       <div className="ts-card">
         {loading ? (
           <div className="ts-loading">불러오는 중...</div>
@@ -155,6 +171,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           </table>
         )}
       </div>
+      )}
     </div>
   </>);
 }
