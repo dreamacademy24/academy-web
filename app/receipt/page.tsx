@@ -48,11 +48,35 @@ function ReceiptPageInner(){
         const {data:row}=await supabase.from("bookings").select("*").eq("id",bookingId).single();
         if(row){
           const sts:StudentData[]=typeof row.students==="string"?JSON.parse(row.students):(row.students||[]);
-          const items:BillItem[]=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
-          const discs:Disc[]=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
-          const locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
+          let items:BillItem[]=typeof row.billing_items==="string"?JSON.parse(row.billing_items):(row.billing_items||[]);
+          let discs:Disc[]=typeof row.discounts==="string"?JSON.parse(row.discounts):(row.discounts||[]);
+          let locs:LC[]=typeof row.locals==="string"?JSON.parse(row.locals):(row.locals||[]);
+          let basePrice=row.base_price;
+          let finalPrice=row.final_price;
+          let totalDiscount=row.total_discount;
+          let snapshotLateCheckout:boolean|null=null;
+          // invoice_snapshots 우선 (인보이스에서 저장한 최신 상태 그대로 사용)
+          try{
+            const sres=await fetch(`/api/invoice/snapshot?booking_id=${bookingId}`);
+            if(sres.ok){
+              const sj=await sres.json();
+              const sd=sj?.snapshot?.saved_data;
+              if(sd&&sd.billing){
+                if(Array.isArray(sd.billing.items)) items=sd.billing.items;
+                if(Array.isArray(sd.billing.discounts)) discs=sd.billing.discounts;
+                if(Array.isArray(sd.billing.locals)) locs=sd.billing.locals;
+                if(typeof sd.billing.basePrice==="number") basePrice=sd.billing.basePrice;
+                // finalPrice 재계산: basePrice - 할인 + 추가
+                const sumDisc=(sd.billing.discounts||[]).reduce((s:number,d:any)=>s+(Number(d.amount)||0),0);
+                const sumAdd=(sd.billing.additions||[]).reduce((s:number,d:any)=>s+(Number(d.amount)||0),0);
+                totalDiscount=sumDisc;
+                finalPrice=(Number(basePrice)||0)-sumDisc+sumAdd;
+              }
+              if(sd&&typeof sd.lateCheckout==="boolean") snapshotLateCheckout=sd.lateCheckout;
+            }
+          }catch(e){console.warn("snapshot fetch 실패",e);}
           const deposit=1000000;
-          const balance=Math.max(0,(row.final_price||0)-deposit);
+          const balance=Math.max(0,(finalPrice||0)-deposit);
           // 인원 구성: 보호자 + 아이 합산. 양쪽 모두 0보다 크면 분리 표기, 아니면 단순 합계 숫자
           const adultCnt=row.adults||0;
           const childCnt=row.children||row.kids||0;
@@ -63,12 +87,12 @@ function ReceiptPageInner(){
             name:row.booker_name, englishName:row.booker_english||"",
             reservationNo:row.reservation_no, reservationDate:row.reservation_date,
             balanceDate:row.balance_date||"", accom:row.accom_type||"",
-            checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"", lateCheckout:!!row.late_checkout,
+            checkInDate:row.checkin_date||"", checkOutDate:row.checkout_date||"", lateCheckout: snapshotLateCheckout !== null ? snapshotLateCheckout : !!row.late_checkout,
             people:peopleDisplay, houseNo:"미정",
             pickup:row.pickup||"O", drop:row.drop_off||"O", pickupPlace:row.pickup_place||"",
             flightIn:row.flight_in||"", flightOut:row.flight_out||"",
             packageType:items.map((i:BillItem)=>i.label).join(" + "),
-            basePrice:row.base_price, totalDiscount:row.total_discount, finalPrice:row.final_price,
+            basePrice, totalDiscount, finalPrice,
             deposit, balance,
             students:sts, note:row.special_request||"",
             agency:row.agency||"", ssp:row.ssp||"", assignee:row.assignee||"",
