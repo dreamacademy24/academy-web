@@ -503,6 +503,16 @@ interface PlanState{
   accom:AccomLocal; roomType:string; weeks:number; checkin:string; season:Season;
   parents:number; kids:number;
   extras:ExtraItem[]; discounts:ExtraItem[];
+  // 콤보 (드하+JP / 드하+C9) 전용
+  dhRoom:string; dhWeeks:number;
+  subRoom:string; subWeeks:number;
+}
+
+function isCombo(a:AccomLocal):boolean{
+  return a==="dreamhouse_jaypark"||a==="dreamhouse_cubenine";
+}
+function totalWeeks(p:PlanState):number{
+  return isCombo(p.accom)?(p.dhWeeks+p.subWeeks):p.weeks;
 }
 
 const defaultPlan=(accom:AccomLocal="dreamhouse"):PlanState=>({
@@ -510,15 +520,53 @@ const defaultPlan=(accom:AccomLocal="dreamhouse"):PlanState=>({
   roomType:(accom==="dreamhouse"||accom==="commute")?"":"디럭스",
   weeks:4, checkin:"", season:"list",
   parents:1, kids:2, extras:[], discounts:[],
+  dhRoom:"디럭스", dhWeeks:2,
+  subRoom:"디럭스", subWeeks:2,
 });
 
-function calcPlan(p:PlanState){
+interface ComboBreakdown{
+  weeks:number; weekly:number; price:number; label:string; room:string;
+}
+interface CalcResult{
+  listPrice:number; seasonPrice:number; extraSum:number; discountSum:number;
+  finalPrice:number; saving:number;
+  breakdown?:{ dh:ComboBreakdown; sub:ComboBreakdown };
+}
+
+function calcPlan(p:PlanState):CalcResult|null{
+  const extraSum=p.extras.reduce((s,x)=>s+(x.amount||0),0);
+  const discountSum=p.discounts.reduce((s,x)=>s+(x.amount||0),0);
+
+  if(isCombo(p.accom)){
+    const subType:AccomLocal = p.accom==="dreamhouse_jaypark"?"jpark":"cubenine";
+    const subLabel = subType==="jpark"?"제이파크":"큐브나인";
+    const dhFour = lookup("dreamhouse","",4,p.parents,p.kids);
+    const subFour = lookup(subType,p.subRoom,4,p.parents,p.kids);
+    if(!dhFour||!subFour) return null;
+    const sIdx = p.season==="off"?1:p.season==="peak"?2:0;
+    const dhWeekly = Math.round(dhFour[sIdx]/4);
+    const subWeekly = Math.round(subFour[sIdx]/4);
+    const dhWeeklyList = Math.round(dhFour[0]/4);
+    const subWeeklyList = Math.round(subFour[0]/4);
+    const dhPrice = dhWeekly*p.dhWeeks;
+    const subPrice = subWeekly*p.subWeeks;
+    const seasonPrice = dhPrice+subPrice;
+    const listPrice = dhWeeklyList*p.dhWeeks + subWeeklyList*p.subWeeks;
+    const finalPrice = seasonPrice+extraSum-discountSum;
+    return {
+      listPrice, seasonPrice, extraSum, discountSum, finalPrice,
+      saving:listPrice-finalPrice,
+      breakdown:{
+        dh:{weeks:p.dhWeeks,weekly:dhWeekly,price:dhPrice,label:"드림하우스",room:p.dhRoom},
+        sub:{weeks:p.subWeeks,weekly:subWeekly,price:subPrice,label:subLabel,room:p.subRoom},
+      },
+    };
+  }
+
   const e=lookup(p.accom,p.roomType,p.weeks,p.parents,p.kids);
   if(!e) return null;
   const listPrice=e[0];
   const seasonPrice=pickPrice(e,p.season);
-  const extraSum=p.extras.reduce((s,x)=>s+(x.amount||0),0);
-  const discountSum=p.discounts.reduce((s,x)=>s+(x.amount||0),0);
   const finalPrice=seasonPrice+extraSum-discountSum;
   return {listPrice,seasonPrice,extraSum,discountSum,finalPrice,saving:listPrice-finalPrice};
 }
@@ -533,7 +581,12 @@ export default function EstimateCalc(){
     setPlans(prev=>prev.map((p,i)=>{
       if(i!==idx) return p;
       const next={...p,...patch};
-      if(patch.accom){ next.roomType=(patch.accom==="dreamhouse"||patch.accom==="commute")?"":"디럭스"; next.parents=1; next.kids=2; next.weeks=4; }
+      if(patch.accom){
+        next.roomType=(patch.accom==="dreamhouse"||patch.accom==="commute")?"":"디럭스";
+        next.parents=1; next.kids=2; next.weeks=4;
+        next.dhRoom="디럭스"; next.dhWeeks=2;
+        next.subRoom="디럭스"; next.subWeeks=2;
+      }
       return next;
     }));
   }
@@ -565,7 +618,13 @@ export default function EstimateCalc(){
   const todayFmt=now.toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
   const todayFile=now.toISOString().slice(0,10).replace(/-/g,"");
 
-  function planName(p:PlanState){return accomLabel[p.accom]+(p.roomType?` ${p.roomType}`:"");}
+  function planName(p:PlanState){
+    if(isCombo(p.accom)){
+      const subLabel = p.accom==="dreamhouse_jaypark"?"제이파크":"큐브나인";
+      return `드림하우스 ${p.dhRoom} ${p.dhWeeks}주 + ${subLabel} ${p.subRoom} ${p.subWeeks}주`;
+    }
+    return accomLabel[p.accom]+(p.roomType?` ${p.roomType}`:"");
+  }
   function fmtDate(d:string){if(!d)return"";const dt=new Date(d);return `${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;}
   function calcCheckout(checkin:string, weeks:number){
     if(!checkin) return "";
@@ -604,7 +663,7 @@ export default function EstimateCalc(){
     return(
       <div style={{flex:1,minWidth:300,background:"#fff",borderRadius:12,padding:20,border:"1px solid #e2e8f0"}}>
         <div style={{fontWeight:700,fontSize:14,color:"#1a6fc4",marginBottom:14,paddingBottom:8,borderBottom:"2px solid #1a6fc4"}}>{label}</div>
-        {/* 숙소 / 룸타입 */}
+        {/* 숙소 */}
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <label style={{flex:1}}><span style={lbl}>숙소</span>
             <select style={sel} value={plan.accom} onChange={e=>up(idx,{accom:e.target.value as AccomLocal})}>
@@ -615,24 +674,68 @@ export default function EstimateCalc(){
               <option value="cubenine">큐브나인 단독</option>
               <option value="commute">통학형</option>
             </select></label>
-          {(plan.accom==="jpark"||plan.accom==="jaypark"||plan.accom==="dreamhouse_jaypark")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
+          {/* 단독: 룸타입 한 칸 */}
+          {(plan.accom==="jpark"||plan.accom==="jaypark")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
             </select></label>}
-          {(plan.accom==="cubenine"||plan.accom==="dreamhouse_cubenine")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
+          {plan.accom==="cubenine"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
               <option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option>
             </select></label>}
         </div>
-        {/* 기간 / 체크인 */}
+
+        {/* 콤보: 각 숙소별 룸타입 + 기간 */}
+        {isCombo(plan.accom) && (
+          <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:12,marginBottom:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1a6fc4",marginBottom:8,letterSpacing:"0.02em"}}>🏨 숙소별 룸타입 · 기간</div>
+            {/* 드림하우스 */}
+            <div style={{display:"flex",gap:8,marginBottom:8,alignItems:"flex-end"}}>
+              <div style={{minWidth:70,fontSize:12,fontWeight:700,color:"#475569",padding:"9px 0"}}>드림하우스</div>
+              <label style={{flex:1}}><span style={lbl}>룸타입</span>
+                <select style={sel} value={plan.dhRoom} onChange={e=>up(idx,{dhRoom:e.target.value})}>
+                  <option value="디럭스">디럭스</option>
+                  <option value="슈페리어">슈페리어</option>
+                </select></label>
+              <label style={{flex:1}}><span style={lbl}>기간</span>
+                <select style={sel} value={plan.dhWeeks} onChange={e=>up(idx,{dhWeeks:Number(e.target.value)})}>
+                  {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
+                </select></label>
+            </div>
+            {/* 제이파크 or 큐브나인 */}
+            <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+              <div style={{minWidth:70,fontSize:12,fontWeight:700,color:"#475569",padding:"9px 0"}}>{plan.accom==="dreamhouse_jaypark"?"제이파크":"큐브나인"}</div>
+              <label style={{flex:1}}><span style={lbl}>룸타입</span>
+                <select style={sel} value={plan.subRoom} onChange={e=>up(idx,{subRoom:e.target.value})}>
+                  {plan.accom==="dreamhouse_jaypark" ? (<>
+                    <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
+                  </>) : (<>
+                    <option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option>
+                  </>)}
+                </select></label>
+              <label style={{flex:1}}><span style={lbl}>기간</span>
+                <select style={sel} value={plan.subWeeks} onChange={e=>up(idx,{subWeeks:Number(e.target.value)})}>
+                  {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
+                </select></label>
+            </div>
+            <div style={{marginTop:8,paddingTop:8,borderTop:"1px dashed #cbd5e1",fontSize:12,fontWeight:700,color:"#1a1a2e",textAlign:"right"}}>
+              총 기간: <span style={{color:"#1a6fc4"}}>{plan.dhWeeks+plan.subWeeks}주</span>
+              <span style={{color:"#94a3b8",fontWeight:500,marginLeft:6}}>(드하 {plan.dhWeeks}주 + {plan.accom==="dreamhouse_jaypark"?"JP":"C9"} {plan.subWeeks}주)</span>
+            </div>
+          </div>
+        )}
+
+        {/* 기간 (단독) / 체크인 */}
         <div style={{display:"flex",gap:8,marginBottom:8}}>
-          <label style={{flex:1}}><span style={lbl}>기간</span>
-            <select style={sel} value={plan.weeks} onChange={e=>up(idx,{weeks:Number(e.target.value)})}>
-              {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
-            </select></label>
+          {!isCombo(plan.accom) && (
+            <label style={{flex:1}}><span style={lbl}>기간</span>
+              <select style={sel} value={plan.weeks} onChange={e=>up(idx,{weeks:Number(e.target.value)})}>
+                {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
+              </select></label>
+          )}
           <label style={{flex:1}}><span style={lbl}>체크인 날짜</span>
             <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/>
-            {plan.checkin&&<div style={{marginTop:4,fontSize:12,color:"#6b7280"}}>체크아웃: {calcCheckout(plan.checkin,plan.weeks)}</div>}
+            {plan.checkin&&<div style={{marginTop:4,fontSize:12,color:"#6b7280"}}>체크아웃: {calcCheckout(plan.checkin,totalWeeks(plan))}</div>}
           </label>
         </div>
         {/* 자동판별 + 시즌 수동선택 */}
@@ -706,13 +809,34 @@ export default function EstimateCalc(){
         {/* 카드 헤더 */}
         <div style={{textAlign:"center",marginBottom:16,paddingBottom:14,borderBottom:"2px solid #1a6fc4"}}>
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
-          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · {plan.weeks}주</div>
+          <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
           {plan.checkin && (
-            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>체크인: {plan.checkin} / 체크아웃: {calcCheckout(plan.checkin,plan.weeks)}</div>
+            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>체크인: {plan.checkin} / 체크아웃: {calcCheckout(plan.checkin,totalWeeks(plan))}</div>
           )}
           <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
           <div style={{fontSize:12,color:"#6b7c93"}}>보호자 {plan.parents}명 + 아이 {plan.kids}명</div>
         </div>
+
+        {/* 콤보 숙소별 내역 */}
+        {r.breakdown && (
+          <div style={{background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
+              <span style={{color:"#374151"}}>
+                {r.breakdown.dh.label} {r.breakdown.dh.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.dh.weeks}주</span>
+              </span>
+              <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.dh.price)}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
+              <span style={{color:"#374151"}}>
+                {r.breakdown.sub.label} {r.breakdown.sub.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.sub.weeks}주</span>
+              </span>
+              <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.sub.price)}</span>
+            </div>
+            <div style={{marginTop:4,fontSize:10.5,color:"#94a3b8",textAlign:"right"}}>
+              주당 단가 = 해당 숙소 4주 금액 ÷ 4
+            </div>
+          </div>
+        )}
 
         {/* 정가 취소선 */}
         {showStrike&&(
