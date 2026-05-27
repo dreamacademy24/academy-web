@@ -489,34 +489,34 @@ export default function EngTutorClassPage() {
       .update({ tutor_memo: memoDraft[lessonId] ?? null })
       .eq("id", lessonId);
     setSavingLessonId("");
-    if (error) { alert("코멘트 저장 실패: " + error.message); return; }
+    if (error) { alert("Save failed: " + error.message); return; }
     await loadMyLessons();
     await loadAllLessons();
-    alert("✅ 코멘트가 저장되었습니다.");
+    alert("✅ Notes saved.");
   }
 
   async function cancelOneDate(lesson: any) {
     const d = (cancelDate[lesson.id] || "").trim();
-    if (!d) { alert("취소할 날짜를 선택해주세요."); return; }
+    if (!d) { alert("Please select a date to cancel."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    if (current.includes(d)) { alert("이미 취소된 날짜입니다."); return; }
+    if (current.includes(d)) { alert("This date is already cancelled."); return; }
     setSavingLessonId(lesson.id);
     const { error } = await supabase.from("tutor_lessons")
       .update({ skip_dates: [...current, d] })
       .eq("id", lesson.id);
     setSavingLessonId("");
-    if (error) { alert("취소 실패: " + error.message); return; }
+    if (error) { alert("Cancel failed: " + error.message); return; }
     setCancelDate(prev => ({ ...prev, [lesson.id]: "" }));
     await loadMyLessons();
     await loadAllLessons();
-    alert(`✅ ${d} 수업이 취소 처리되었습니다.`);
+    alert(`✅ ${d} class cancelled.`);
   }
 
   async function rescheduleDate(lesson: any) {
     const oldD = (changeOld[lesson.id] || "").trim();
     const newD = (changeNew[lesson.id] || "").trim();
-    if (!oldD || !newD) { alert("기존 날짜와 새 날짜를 모두 선택해주세요."); return; }
-    if (oldD === newD) { alert("기존 날짜와 새 날짜가 같습니다."); return; }
+    if (!oldD || !newD) { alert("Please select both the original date and the new date."); return; }
+    if (oldD === newD) { alert("Original date and new date are the same."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
     const nextSkips = current.includes(oldD) ? current : [...current, oldD];
     const note = `변경: ${oldD}→${newD}`;
@@ -526,12 +526,12 @@ export default function EngTutorClassPage() {
       .update({ skip_dates: nextSkips, tutor_memo: nextMemo })
       .eq("id", lesson.id);
     setSavingLessonId("");
-    if (error) { alert("변경 실패: " + error.message); return; }
+    if (error) { alert("Reschedule failed: " + error.message); return; }
     setChangeOld(prev => ({ ...prev, [lesson.id]: "" }));
     setChangeNew(prev => ({ ...prev, [lesson.id]: "" }));
     await loadMyLessons();
     await loadAllLessons();
-    alert(`✅ ${oldD} → ${newD} 으로 변경 기록되었습니다.`);
+    alert(`✅ Rescheduled: ${oldD} → ${newD}`);
   }
 
   async function saveAssign() {
@@ -843,7 +843,7 @@ export default function EngTutorClassPage() {
                 <th style={{width:"9%"}}>Days</th>
                 <th style={{width:"9%"}}>Time</th>
                 <th style={{width:"12%"}}>Period</th>
-                <th style={{width:"8%",textAlign:"center"}}>Remaining/Total</th>
+                <th style={{width:"8%",textAlign:"center"}}>Rem/Total</th>
                 <th style={{width:"8%"}}>Amount</th>
                 <th style={{width:"8%"}}>Status</th>
                 <th style={{width:"22%",textAlign:"center"}}>Actions</th>
