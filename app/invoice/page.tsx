@@ -650,7 +650,8 @@ function InvoicePageInner(){
       .then(r=>r.ok?r.json():null)
       .then(j=>{
         if(cancelled)return;
-        const snap=j&&j.snapshot;
+        // route가 {snapshot:{...}} wrapper로 반환할 수도, 루트로 반환할 수도 있어 폴백 처리
+        const snap=j&&(j.snapshot??j);
         if(snap&&snap.saved_data){
           applySnapshot(snap.saved_data);
           setSnapshotSavedAt(snap.saved_at||"");
