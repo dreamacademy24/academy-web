@@ -599,7 +599,12 @@ export default function TutorApplications() {
 .tbl{width:100%;border-collapse:collapse;}
 .tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:12px 12px;text-align:left;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
 .tbl td{font-size:13px;padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#1a1a2e;}
-.tbl tbody tr:hover td{background:#f8fafc;}
+.tbl tbody tr:hover td{background:#eff6ff;}
+.ta-icon-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:#fff;transition:all 120ms;line-height:1;padding:0}
+.ta-icon-btn.view{border:1.5px solid #1a6fc4;color:#1a6fc4}.ta-icon-btn.view:hover{background:#1a6fc4;color:#fff}
+.ta-icon-btn.review{border:1.5px solid #f59e0b;color:#f59e0b}.ta-icon-btn.review:hover{background:#f59e0b;color:#fff}
+.ta-icon-btn.assign{border:1.5px solid #16a34a;color:#16a34a}.ta-icon-btn.assign:hover{background:#16a34a;color:#fff}
+.ta-icon-btn:disabled{opacity:0.4;cursor:not-allowed}
 .ta-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .ta-filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ta-chip{padding:7px 13px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 120ms}
@@ -733,7 +738,7 @@ export default function TutorApplications() {
                   <th style={{ width: '6%' }}>요일</th>
                   <th style={{ width: '8%' }}>담당 튜터</th>
                   <th style={{ width: '7%' }}>상태</th>
-                  <th style={{ width: '14%', textAlign: "center" }}>액션</th>
+                  <th style={{ width: '11%', minWidth: 130, textAlign: "center" }}>액션</th>
                 </tr>
               </thead>
               <tbody>
@@ -762,11 +767,17 @@ export default function TutorApplications() {
                       <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
                       <td>
                         <div className="ta-row-acts">
-                          <button className="btn btn-sm btn-gray" onClick={() => router.push('/admin/tutor-class/' + a.id)}>상세</button>
+                          {/* 👁 상세 — 항상 표시 */}
+                          <button
+                            className="ta-icon-btn view"
+                            onClick={() => router.push('/admin/tutor-class/' + a.id)}
+                            title="상세 보기"
+                            aria-label="상세 보기"
+                          >👁</button>
+                          {/* ✅ 검토중 — 대기중 상태에서만 */}
                           {a.status === 'pending' && (
                             <button
-                              className="btn btn-sm"
-                              style={{ background: '#f59e0b', color: '#fff', border: 'none' }}
+                              className="ta-icon-btn review"
                               onClick={async () => {
                                 const res = await fetch(`/api/admin/tutor-applications/${a.id}/status`, {
                                   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -775,9 +786,19 @@ export default function TutorApplications() {
                                 if (!res.ok) { const r = await res.json().catch(() => ({})); alert(r.error || '상태 변경 실패'); return; }
                                 await loadApps();
                               }}
-                            >검토중</button>
+                              title="검토중으로 변경"
+                              aria-label="검토중으로 변경"
+                            >✅</button>
                           )}
-                          <button className="btn btn-sm btn-blue" onClick={() => openDetail(a, true)}>배정</button>
+                          {/* 👤 배정 — 확정/완료/취소가 아닐 때 */}
+                          {!['confirmed','completed','cancelled'].includes(a.status) && (
+                            <button
+                              className="ta-icon-btn assign"
+                              onClick={() => openDetail(a, true)}
+                              title={a.assigned_tutor_id ? "튜터 재배정" : "튜터 배정"}
+                              aria-label="튜터 배정"
+                            >👤</button>
+                          )}
                         </div>
                       </td>
                     </tr>
