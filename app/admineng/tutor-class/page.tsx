@@ -44,6 +44,23 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 
 function fmtDate(s: string) { return s ? s.slice(5).replace('-', '/') : '-'; }
 
+// Lesson 자동생성용 헬퍼 (admin/tutor-class/[id]/save 와 동일 로직)
+function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
+  if (!start || !end) return 0;
+  const s = new Date(start), e = new Date(end);
+  const diff = e.getTime() - s.getTime();
+  if (isNaN(diff) || diff < 0) return 0;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+  return Math.max(0, Math.ceil(days / 7));
+}
+function countDays(preferred_days: string | null | undefined): number {
+  if (!preferred_days) return 0;
+  return preferred_days.split(',').map(s => s.trim()).filter(Boolean).length;
+}
+function defaultPrice(classType: string | null | undefined): number {
+  return classType === '1:2' ? 350 : 300;
+}
+
 const TUTOR_PALETTE = [
   "#ec4899", "#a855f7", "#3b82f6", "#22c55e", "#eab308",
   "#f97316", "#ef4444", "#06b6d4", "#84cc16", "#6366f1",
@@ -127,6 +144,7 @@ export default function EngTutorClassPage() {
   const [mineWeekOffset, setMineWeekOffset] = useState(0);
   const [allLessons, setAllLessons] = useState<any[]>([]);
   const [loadingAllLessons, setLoadingAllLessons] = useState(false);
+  const [takingId, setTakingId] = useState<string>("");
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -302,6 +320,83 @@ export default function EngTutorClassPage() {
     loadComments(r.id);
   }
 
+  // 튜터가 직접 자기 자신을 배정 — 요청 update + tutor_lessons UPSERT (admin save() 동일 로직)
+  async function takeClass(r: TutorReq) {
+    if (!me) {
+      alert("Cannot identify your tutor account. Select your name from the top-right dropdown first.");
+      return;
+    }
+    const studentLabel = [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "(no name)";
+    if (!confirm(`Take this class?\n\n${studentLabel}\n${r.start_date} ~ ${r.end_date}\n${r.preferred_days || "-"} · ${r.preferred_time || "-"}\n\nIt will appear in your My Schedule.`)) return;
+    setTakingId(r.id);
+    try {
+      const weeks = computeWeeks(r.start_date, r.end_date);
+      const daysPerWeek = countDays(r.preferred_days);
+      const spd = r.sessions_per_day || 1;
+      const computedSessions = weeks * daysPerWeek * spd;
+      const priceNum = defaultPrice(r.class_type);
+      const computedAmount = computedSessions * priceNum;
+
+      // 1) tutor_requests 업데이트
+      const { error: upErr } = await supabase.from("tutor_requests").update({
+        assigned_tutor_id: me.id,
+        tutor_id: me.id,
+        status: "confirmed",
+        total_sessions: computedSessions || null,
+        total_amount: computedAmount || null,
+      }).eq("id", r.id);
+      if (upErr) { alert("Failed to take: " + upErr.message); setTakingId(""); return; }
+
+      // 2) tutor_lessons UPSERT
+      const classDaysArr = r.preferred_days
+        ? r.preferred_days.split(",").map(d => d.trim()).filter(Boolean)
+        : null;
+      const lessonPayload: Record<string, unknown> = {
+        tutor_id: me.id,
+        start_date: r.start_date,
+        end_date: r.end_date,
+        sessions_per_day: r.sessions_per_day || 1,
+        class_days: classDaysArr,
+        class_time: r.preferred_time,
+        class_type: r.class_type,
+        house_or_reserver: r.guest_name,
+        student_names: r.student_name_kr || (r as any).student_name || "",
+        student_ages: r.student_age,
+        total_sessions: computedSessions || null,
+        total_amount: computedAmount || null,
+        overall_level: r.level_english,
+        speaking_level: r.level_speaking,
+        reading_level: r.level_reading,
+        writing_level: r.level_writing,
+        class_style: r.class_style,
+        class_focus: Array.isArray(r.class_focus_arr) ? r.class_focus_arr.join(",") : null,
+        status: "active",
+        admin_memo: `request_id: ${r.id}`,
+      };
+      const { data: existingRows } = await supabase
+        .from("tutor_lessons")
+        .select("id")
+        .ilike("admin_memo", `%request_id: ${r.id}%`)
+        .limit(1);
+      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+      if (existing?.id) {
+        const { error: e2 } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
+        if (e2) console.warn("[takeClass] lesson UPDATE failed:", e2);
+      } else {
+        const { error: e3 } = await supabase.from("tutor_lessons").insert(lessonPayload);
+        if (e3) console.warn("[takeClass] lesson INSERT failed:", e3);
+      }
+
+      alert(`✅ Taken!\n"${studentLabel}" is now in your My Schedule.`);
+      setTakingId("");
+      load(); // reqs 재로드 → me-based filters/myLessons useEffect도 재계산
+    } catch (e: any) {
+      console.error("[takeClass] failed:", e);
+      alert("Failed: " + (e?.message || e));
+      setTakingId("");
+    }
+  }
+
   async function saveAssign() {
     if (!detail) return;
     setAssigning(true);
@@ -409,7 +504,7 @@ export default function EngTutorClassPage() {
                 <th style={{width:"7%"}}>Days</th>
                 <th style={{width:"10%"}}>Tutor</th>
                 <th style={{width:"8%"}}>Status</th>
-                <th style={{width:"9%",textAlign:"center"}}>Action</th>
+                <th style={{width:"14%",textAlign:"center"}}>Action</th>
               </tr></thead>
               <tbody>
                 {reqs.map(r => {
@@ -427,7 +522,18 @@ export default function EngTutorClassPage() {
                       <td style={{fontSize:11}}>{days(r) || "-"}</td>
                       <td style={{fontSize:11}}>{tutorName(r.assigned_tutor_id)}</td>
                       <td><span className="ebadge" style={{background:st.bg,color:st.color}}>{st.label}</span></td>
-                      <td style={{textAlign:"center"}}><button className="ebtn ebtn-blue" style={{padding:"5px 12px",fontSize:11}} onClick={e=>{e.stopPropagation();router.push('/admineng/tutor-class/' + r.id);}}>Detail</button></td>
+                      <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+                        <button className="ebtn ebtn-blue" style={{padding:"5px 10px",fontSize:11,marginRight:4}} onClick={()=>router.push('/admineng/tutor-class/' + r.id)}>Detail</button>
+                        {me && !r.assigned_tutor_id && (
+                          <button
+                            className="ebtn"
+                            disabled={takingId===r.id}
+                            onClick={()=>takeClass(r)}
+                            style={{padding:"5px 10px",fontSize:11,background:"#16a34a",color:"#fff",border:"none",borderRadius:6,cursor:takingId===r.id?"not-allowed":"pointer",fontWeight:700,opacity:takingId===r.id?0.6:1}}
+                            title="Self-assign this class to your account"
+                          >{takingId===r.id?"Taking...":"✋ Take"}</button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
