@@ -504,8 +504,11 @@ export default function PortalCheckinDetailPage() {
           <div className="q">
             <div className="q-title">🛫 출국 드랍 신청</div>
             <div className="q-hint">출국편 항공권 정보를 기준으로 숙소에서 출발할 시간만 선택해 주세요.</div>
-            <div style={{padding:"10px 12px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12,color:"#1e40af",lineHeight:1.6,marginBottom:12}}>
-              공항까지 약 20~30분 소요됩니다. 국제선은 통상 2시간 전 공항 도착을 권장하나, 사전 좌석 예약 상황에 따라 다를 수 있으니 직접 출발 시간을 선택해 주세요.
+            <div style={{padding:"12px 14px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12.5,color:"#1e40af",lineHeight:1.7,marginBottom:12}}>
+              <div style={{fontWeight:700,marginBottom:4}}>🕐 숙소 출발 시간을 선택해주세요.</div>
+              공항까지 약 20~30분 소요됩니다.<br/>
+              국제선은 통상 출발 2시간 전 공항 도착을 권장하나,<br/>
+              사전 좌석 예약 상황에 따라 다를 수 있으니 직접 출발 시간을 선택해 주세요.
             </div>
             <div style={{maxWidth:200}}>
               <div style={{fontSize:11,color:"#889",marginBottom:3}}>숙소 출발 희망 시간</div>
@@ -530,8 +533,11 @@ export default function PortalCheckinDetailPage() {
           {tab === "extra" && (<>
           {/* ── 추가 픽업 신청 (extra_pickup) ── */}
           <div className="q">
-            <div className="q-title">🛬 추가 픽업 신청</div>
-            <div className="q-hint">숙소 외 장소에서의 추가 픽업이 필요한 경우 신청해주세요.</div>
+            <div className="q-title">✈️ 추가 픽업 신청 <span style={{fontSize:12,fontWeight:700,color:"#dc2626",marginLeft:6}}>— ₱1,000/회</span></div>
+            <div style={{padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e",lineHeight:1.7,marginBottom:12}}>
+              공항 픽업 또는 막탄 내 픽업만 가능합니다. 막탄 외 지역은 신청이 어렵습니다.<br/>
+              <span style={{color:"#dc2626",fontWeight:700}}>⚠️ 패키지에 포함된 기본 드랍을 추가 픽업으로 변경하는 것은 불가합니다.</span>
+            </div>
 
             {pickups.filter(p=>p.request_type==="extra_pickup").length > 0 && (
               <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
@@ -586,8 +592,10 @@ export default function PortalCheckinDetailPage() {
 
           {/* ── 추가 드랍 신청 (extra_drop) ── */}
           <div className="q">
-            <div className="q-title">🛫 추가 드랍 신청</div>
-            <div className="q-hint">기본 출국 드랍 외 추가 이동이 필요한 경우 신청해주세요.</div>
+            <div className="q-title">🚐 추가 드랍 신청 <span style={{fontSize:12,fontWeight:700,color:"#dc2626",marginLeft:6}}>— ₱800/회</span></div>
+            <div style={{padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e",lineHeight:1.7,marginBottom:12}}>
+              숙소에서 출발하는 드랍만 신청 가능합니다.
+            </div>
 
             {pickups.filter(p=>p.request_type==="extra_drop").length > 0 && (
               <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
