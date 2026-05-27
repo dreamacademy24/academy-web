@@ -372,7 +372,7 @@ export default function TutorInvoice() {
               </tr>
               <tr>
                 <td className="k">class session</td>
-                <td className="v">{classSession}</td>
+                <td className="v">{classSession === 2 ? "2 sessions (100 min)" : "1 session (50 min)"}</td>
               </tr>
               <tr>
                 <td className="k">days</td>

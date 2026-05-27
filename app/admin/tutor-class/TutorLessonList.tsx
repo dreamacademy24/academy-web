@@ -454,7 +454,7 @@ export default function TutorLessonList() {
                     <td><span className={`tll-badge-type ${isType11 ? "tll-type-11" : "tll-type-12"}`}>{typeBase}</span></td>
                     <td>
                       <span className={`tll-badge-time ${l.sessions_per_day === 2 ? "tll-time-2" : "tll-time-1"}`}>
-                        {l.sessions_per_day === 2 ? "2T" : "1T"}
+                        {l.sessions_per_day === 2 ? "2T (100m)" : "1T (50m)"}
                       </span>
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>{daysStr || "-"}</td>

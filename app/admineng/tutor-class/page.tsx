@@ -654,7 +654,7 @@ export default function EngTutorClassPage() {
                       <td style={{fontWeight:600}}>{[r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ")}</td>
                       <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</td>
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
-                      <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T":"1T"}</span></td>
+                      <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T (100m)":"1T (50m)"}</span></td>
                       <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>
                       <td style={{fontSize:11}}>{days(r) || "-"}</td>
                       <td style={{fontSize:11}}>{tutorName(r.assigned_tutor_id)}</td>
@@ -863,14 +863,14 @@ export default function EngTutorClassPage() {
                       <tr>
                         <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
                         <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
-                        <td style={{textAlign:"center"}}>{l.sessions_per_day || 1}</td>
+                        <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>{l.sessions_per_day === 2 ? "2 (100m)" : "1 (50m)"}</td>
                         <td style={{fontSize:11}}>{daysStr}</td>
                         <td style={{fontSize:11}}>{l.class_time || "-"}</td>
                         <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
                         <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
                           <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
                           <span style={{color:"#94a3b8"}}> / {total || "-"}</span>
-                          {skips.length>0 && <div style={{fontSize:10,color:"#dc2626",fontWeight:600}}>취소 {skips.length}</div>}
+                          {skips.length>0 && <div style={{fontSize:10,color:"#dc2626",fontWeight:600}}>Cancelled {skips.length}</div>}
                         </td>
                         <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
                         <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
@@ -889,46 +889,47 @@ export default function EngTutorClassPage() {
                       </tr>
                       {expanded && (
                         <tr>
-                          <td colSpan={10} style={{background:"#f8fafc",padding:"14px 16px",overflowX:"auto"}}>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:14,alignItems:"stretch"}}>
-                              {/* Tutor Notes */}
-                              <div style={{flex:"1 1 280px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:8}}>🗒 Tutor Notes</div>
+                          <td colSpan={10} style={{background:"#f8fafc",padding:16,borderTop:"1px solid #e5e7eb"}}>
+                            <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
+                              {/* Notes */}
+                              <div style={{flex:"2 1 260px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:6}}>🗒 Notes</div>
                                 <textarea
                                   value={memoDraft[l.id] ?? (l.tutor_memo || "")}
                                   onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  placeholder="Add notes about this class..."
-                                  style={{width:"100%",minHeight:80,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none",resize:"vertical",flex:1}}
+                                  placeholder="Class notes..."
+                                  rows={3}
+                                  style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",flex:1,minHeight:60}}
                                 />
                                 <button
                                   onClick={() => saveMemo(l.id)}
                                   disabled={savingLessonId === l.id}
-                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit",alignSelf:"flex-start"}}
-                                >💾 {savingLessonId===l.id ? "Saving..." : "Save Notes"}</button>
+                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:13,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit",alignSelf:"flex-start"}}
+                                >{savingLessonId===l.id ? "Saving..." : "Save"}</button>
                               </div>
 
-                              {/* Cancel a Day */}
-                              <div style={{flex:"1 1 280px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:8}}>❌ Cancel a Day</div>
+                              {/* Cancel Day */}
+                              <div style={{flex:"1 1 180px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:6}}>❌ Cancel Day</div>
                                 <input
                                   type="date"
                                   value={cancelDate[l.id] || ""}
                                   min={l.start_date || undefined}
                                   max={l.end_date || undefined}
                                   onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{width:"100%",padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
+                                  style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
                                 />
                                 <button
                                   onClick={() => cancelOneDate(l)}
                                   disabled={savingLessonId === l.id || !cancelDate[l.id]}
-                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1,alignSelf:"flex-start"}}
+                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1,alignSelf:"flex-start"}}
                                 >Cancel</button>
                                 {skips.length > 0 && (
-                                  <div style={{marginTop:10,fontSize:11,color:"#475569"}}>
+                                  <div style={{marginTop:8,fontSize:11,color:"#475569"}}>
                                     <div style={{fontWeight:700,marginBottom:3}}>Cancelled ({skips.length})</div>
-                                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                                    <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
                                       {skips.map((d: string) => (
-                                        <span key={d} style={{padding:"2px 7px",borderRadius:5,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700}}>{d}</span>
+                                        <span key={d} style={{padding:"2px 6px",borderRadius:4,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700}}>{d}</span>
                                       ))}
                                     </div>
                                   </div>
@@ -936,37 +937,29 @@ export default function EngTutorClassPage() {
                               </div>
 
                               {/* Reschedule */}
-                              <div style={{flex:"2 1 320px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>🔄 Reschedule</div>
-                                <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3,minWidth:130}}>
-                                    Original Date
-                                    <input
-                                      type="date"
-                                      value={changeOld[l.id] || ""}
-                                      min={l.start_date || undefined}
-                                      max={l.end_date || undefined}
-                                      onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                      style={{padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
-                                    />
-                                  </label>
-                                  <span style={{fontSize:18,color:"#94a3b8",paddingBottom:6}}>→</span>
-                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3,minWidth:130}}>
-                                    New Date
-                                    <input
-                                      type="date"
-                                      value={changeNew[l.id] || ""}
-                                      onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                      style={{padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
-                                    />
-                                  </label>
-                                  <button
-                                    onClick={() => rescheduleDate(l)}
-                                    disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
-                                    style={{padding:"8px 14px",border:"none",borderRadius:7,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1}}
-                                  >Save Change</button>
-                                </div>
-                                <div style={{marginTop:8,fontSize:10.5,color:"#94a3b8"}}>※ Original date is added to skip_dates; tutor_memo appends &quot;변경: original→new&quot;.</div>
+                              <div style={{flex:"1 1 220px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:6}}>🔄 Reschedule</div>
+                                <label style={{fontSize:11,fontWeight:600,color:"#6b7280",marginBottom:3}}>From</label>
+                                <input
+                                  type="date"
+                                  value={changeOld[l.id] || ""}
+                                  min={l.start_date || undefined}
+                                  max={l.end_date || undefined}
+                                  onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",marginBottom:6}}
+                                />
+                                <label style={{fontSize:11,fontWeight:600,color:"#6b7280",marginBottom:3}}>To</label>
+                                <input
+                                  type="date"
+                                  value={changeNew[l.id] || ""}
+                                  onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
+                                />
+                                <button
+                                  onClick={() => rescheduleDate(l)}
+                                  disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
+                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1,alignSelf:"flex-start"}}
+                                >Save</button>
                               </div>
                             </div>
                           </td>
@@ -1123,7 +1116,7 @@ export default function EngTutorClassPage() {
             <div className="esec">
               <h4>CLASS INFO</h4>
               <div className="ekv">
-                <span className="k">Type</span><span className="v">{detail.class_type} · {detail.sessions_per_day===2?"2 sessions/day":"1 session/day"}</span>
+                <span className="k">Type</span><span className="v">{detail.class_type} · {detail.sessions_per_day===2?"2 sessions/day (100 min)":"1 session/day (50 min)"}</span>
                 <span className="k">Period</span><span className="v">{detail.start_date} ~ {detail.end_date}</span>
                 <span className="k">Days</span><span className="v">{days(detail) || "-"}</span>
                 <span className="k">Preferred Time</span><span className="v">{detail.preferred_time || "-"}</span>

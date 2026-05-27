@@ -602,14 +602,11 @@ export default function TutorApplications() {
 .tbl td{font-size:13px;padding:14px 16px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;}
 .tbl tbody tr:last-child td{border-bottom:none}
 .tbl tbody tr:hover td{background:#eff6ff;}
-.ta-act-btn{display:inline-flex;align-items:center;justify-content:center;height:30px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 120ms;line-height:1;white-space:nowrap;padding:0}
-.ta-act-btn.view{width:52px;background:#fff;color:#475569;border:1px solid #cbd5e1}.ta-act-btn.view:hover{background:#f8fafc;border-color:#94a3b8;color:#1a1a2e}
-.ta-act-btn.review{width:62px;background:#f59e0b;color:#fff;border:none}.ta-act-btn.review:hover{background:#d97706}
-.ta-act-btn.assign{width:52px;background:#16a34a;color:#fff;border:none}.ta-act-btn.assign:hover{background:#15803d}
+.ta-act-btn{display:inline-flex;align-items:center;justify-content:center;height:28px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 120ms;line-height:1;white-space:nowrap;padding:0 8px}
+.ta-act-btn.view{background:#fff;color:#475569;border:1px solid #cbd5e1}.ta-act-btn.view:hover{background:#f8fafc;border-color:#94a3b8;color:#1a1a2e}
+.ta-act-btn.review{background:#f59e0b;color:#fff;border:none}.ta-act-btn.review:hover{background:#d97706}
+.ta-act-btn.assign{background:#16a34a;color:#fff;border:none}.ta-act-btn.assign:hover{background:#15803d}
 .ta-act-btn:disabled{opacity:0.4;cursor:not-allowed}
-.ta-act-spacer{display:inline-block;height:30px}
-.ta-act-spacer.w52{width:52px}
-.ta-act-spacer.w62{width:62px}
 .ta-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .ta-filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ta-chip{padding:7px 13px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 120ms}
@@ -633,7 +630,7 @@ export default function TutorApplications() {
 .ta-time-2{background:#dbeafe;color:#1e40af}
 .ta-empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
 .ta-loading{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
-.ta-row-acts{display:flex;gap:4px;justify-content:flex-start;align-items:center;flex-wrap:nowrap}
+.ta-row-acts{display:flex;gap:3px;justify-content:flex-start;align-items:center;flex-wrap:nowrap}
 .ta-warn-chip{display:inline-block;margin-left:4px;padding:1px 6px;background:#fef3c7;color:#92400e;border-radius:4px;font-size:10px;font-weight:700}
 
 .ta-modal{background:#fff;border-radius:16px;width:100%;max-width:960px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
@@ -737,14 +734,14 @@ export default function TutorApplications() {
                   <th style={{ width: '9%' }}>하우스</th>
                   <th style={{ width: '10%' }}>예약자</th>
                   <th style={{ width: '18%' }}>수강자</th>
-                  <th style={{ width: '8%' }}>나이</th>
-                  <th style={{ width: '6%' }}>유형</th>
-                  <th style={{ width: '6%' }}>타임</th>
+                  <th style={{ width: '6%' }}>나이</th>
+                  <th style={{ width: '5%' }}>유형</th>
+                  <th style={{ width: '5%' }}>타임</th>
                   <th style={{ width: '12%' }}>기간</th>
                   <th style={{ width: '9%' }}>요일</th>
                   <th style={{ width: '9%' }}>담당 튜터</th>
-                  <th style={{ width: '8%' }}>상태</th>
-                  <th style={{ width: '10%', minWidth: 180 }}>액션</th>
+                  <th style={{ width: '7%' }}>상태</th>
+                  <th style={{ width: '14%', minWidth: 200 }}>액션</th>
                 </tr>
               </thead>
               <tbody>
@@ -780,7 +777,7 @@ export default function TutorApplications() {
                             title="상세 보기"
                           >상세</button>
                           {/* 검토중 — pending에서만 */}
-                          {a.status === 'pending' ? (
+                          {a.status === 'pending' && (
                             <button
                               className="ta-act-btn review"
                               onClick={async () => {
@@ -793,18 +790,14 @@ export default function TutorApplications() {
                               }}
                               title="검토중으로 변경"
                             >검토중</button>
-                          ) : (
-                            <span className="ta-act-spacer w62" aria-hidden />
                           )}
                           {/* 배정 — 확정/완료/취소가 아닐 때 */}
-                          {!['confirmed','completed','cancelled'].includes(a.status) ? (
+                          {!['confirmed','completed','cancelled'].includes(a.status) && (
                             <button
                               className="ta-act-btn assign"
                               onClick={() => openDetail(a, true)}
                               title={a.assigned_tutor_id ? "튜터 재배정" : "튜터 배정"}
                             >배정</button>
-                          ) : (
-                            <span className="ta-act-spacer w52" aria-hidden />
                           )}
                         </div>
                       </td>

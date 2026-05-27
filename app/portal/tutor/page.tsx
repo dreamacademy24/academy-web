@@ -116,7 +116,7 @@ function isPeakSeason(dateStr: string): boolean {
   const md = dateStr.slice(5, 10);
   return md >= '07-15' && md <= '08-30';
 }
-// 시작 시각을 "HH:MM" 형식으로 받아 종료 시각 계산 (1타임 = 1시간으로 표시)
+// 시작 시각을 "HH:MM" 형식으로 받아 종료 시각 계산 (1타임 = 50분)
 function formatTimeRange(start: string | number, sessions: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   let hh = 0, mm = 0;
@@ -126,10 +126,11 @@ function formatTimeRange(start: string | number, sessions: number): string {
     hh = parseInt(hStr, 10) || 0;
     mm = parseInt(mStr || "0", 10) || 0;
   }
-  const total = hh * 60 + mm + sessions * 60;
+  const duration = sessions * 50; // 1타임 = 50분
+  const total = hh * 60 + mm + duration;
   const endH = Math.floor(total / 60);
   const endM = total % 60;
-  return `${pad(hh)}:${pad(mm)} ~ ${pad(endH)}:${pad(endM)} (${sessions}타임)`;
+  return `${pad(hh)}:${pad(mm)} ~ ${pad(endH)}:${pad(endM)} (${sessions}타임, ${duration}분)`;
 }
 
 function formatBirthAge(birth: string): string {
