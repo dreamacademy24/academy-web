@@ -1543,7 +1543,7 @@ function InvoicePageInner(){
             <table className="tb"><tbody>
               <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
               <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-              <tr><td className="lb">{isCommute?"수업시작":"체크인 (오후 3시 입실)"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"수업종료":(lateCheckout?"체크아웃 (22:30pm)":"체크아웃 (정오 12시 퇴실)")}</td><td>{overallCO||"-"}</td></tr>
+              <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${lateCheckout?"22:30pm":"12noon"}`):"-"}</td></tr>
               <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"-"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
               <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
               {checkin.specialRequest&&<tr><td className="lb">특이사항</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
