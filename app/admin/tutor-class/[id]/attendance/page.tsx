@@ -19,6 +19,7 @@ interface Lesson {
   skip_dates: string[] | null;
   tutor_memo: string | null;
   attendance_log: Record<string, "○" | "✕" | "△"> | null;
+  notes_log: Record<string, string> | null;
 }
 
 const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -71,6 +72,7 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<Record<string, "○" | "✕" | "△" | "">>({});
   const [notes, setNotes] = useState("");
+  const [notesLog, setNotesLog] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState("");
   const [cancelDateVal, setCancelDateVal] = useState("");
   const [changeOldVal, setChangeOldVal] = useState("");
@@ -98,6 +100,7 @@ export default function AttendancePage() {
     const l = data as Lesson;
     setLesson(l);
     setNotes(l.tutor_memo || "");
+    setNotesLog(l.notes_log || {});
     setDraft({ ...(l.attendance_log || {}) });
     if (l.tutor_id) {
       const { data: t } = await supabase.from("tutors").select("name").eq("id", l.tutor_id).maybeSingle();
@@ -146,7 +149,7 @@ export default function AttendancePage() {
     }
     const { error } = await supabase
       .from("tutor_lessons")
-      .update({ attendance_log: log, tutor_memo: notes || null, total_sessions: total })
+      .update({ attendance_log: log, tutor_memo: notes || null, total_sessions: total, notes_log: notesLog })
       .eq("id", lesson.id);
     setSaving(false);
     if (error) { alert("Save failed: " + error.message); return; }
@@ -348,6 +351,44 @@ export default function AttendancePage() {
         )}
       </div>
 
+      {dates.length > 0 && (
+        <div className="at-card">
+          <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:12}}>
+            📝 Date Notes
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {dates.map((d, i) => {
+              const dt = new Date(d + "T00:00:00");
+              const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
+              const dw = WEEKDAYS_KR[dt.getDay()];
+              const mark = draft[d] || "";
+              const markColor = mark === "○" ? "#15803d" : mark === "✕" ? "#b91c1c" : mark === "△" ? "#92400e" : "#94a3b8";
+              const note = notesLog[d] || "";
+              if (!mark && !note) return null;
+              return (
+                <div key={d} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid #f3f4f6"}}>
+                  <span style={{fontSize:11,fontWeight:700,color:"#6b7280",minWidth:28}}>#{i+1}</span>
+                  <span style={{fontSize:12,fontWeight:800,color:"#374151",minWidth:60}}>{md} ({dw})</span>
+                  <span style={{fontSize:16,fontWeight:900,color:markColor,minWidth:20,textAlign:"center"}}>{mark || ""}</span>
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={e => setNotesLog(prev => ({ ...prev, [d]: e.target.value }))}
+                    placeholder="메모 입력..."
+                    style={{flex:1,padding:"5px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                  />
+                </div>
+              );
+            })}
+            {dates.every(d => !draft[d] && !notesLog[d]) && (
+              <div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:"12px 0"}}>
+                출결을 입력하면 날짜별 메모를 추가할 수 있습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="at-card">
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
 
@@ -431,15 +472,6 @@ export default function AttendancePage() {
           </div>
 
         </div>
-      </div>
-
-      <div className="at-card at-notes-card">
-        <label>Notes</label>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          placeholder="Add notes only when something needs to be recorded"
-        />
       </div>
 
       <div className="at-foot">
