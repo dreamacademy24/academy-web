@@ -107,17 +107,54 @@ export default function TutorInvoice() {
 
   const loadLessons = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("tutor_lessons")
-      .select("*")
-      .in("status", ["active", "completed"])
-      .order("created_at", { ascending: false });
+    // 1) tutor_lessons + 2) lesson 미생성된 confirmed tutor_requests 합성 → 함께 표시
+    const [lRes, rRes] = await Promise.all([
+      supabase.from("tutor_lessons").select("*")
+        .in("status", ["active", "completed"])
+        .order("created_at", { ascending: false }),
+      supabase.from("tutor_requests").select("*")
+        .eq("status", "confirmed")
+        .not("assigned_tutor_id", "is", null)
+        .order("created_at", { ascending: false }),
+    ]);
     setLoading(false);
-    if (error) {
-      console.error("수업 목록 로드 실패:", error);
-      return;
+    if (lRes.error) console.error("수업 목록 로드 실패:", lRes.error);
+    if (rRes.error) console.error("confirmed 신청 로드 실패:", rRes.error);
+
+    const lessonList = (lRes.data || []) as Lesson[];
+    const reqList = (rRes.data || []) as any[];
+
+    // lesson과 이미 연결된 request_id 추출 (admin_memo의 "request_id: XXX" 패턴)
+    const linkedReqIds = new Set<string>();
+    for (const l of lessonList) {
+      const m = /request_id:\s*([a-f0-9-]+)/i.exec((l as any).admin_memo || "");
+      if (m) linkedReqIds.add(m[1]);
     }
-    const list = (data || []) as Lesson[];
+    // 연결 안 된 confirmed 신청을 합성 Lesson으로 변환
+    const synthetic: Lesson[] = reqList
+      .filter(r => !linkedReqIds.has(r.id))
+      .map(r => ({
+        id: `req:${r.id}`,
+        created_at: r.created_at,
+        house_or_reserver: r.guest_name || "",
+        student_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "",
+        student_ages: r.student_age || null,
+        tutor_id: r.assigned_tutor_id || null,
+        class_type: r.class_type || "",
+        sessions_per_day: r.sessions_per_day || 1,
+        hourly_rate: (r as any).price_per_session || ((r.class_type || "").includes("1:2") ? 350 : 300),
+        start_date: r.start_date || "",
+        end_date: r.end_date || "",
+        class_days: (r.preferred_days || "").split(",").map((s: string) => s.trim()).filter(Boolean),
+        class_time: r.preferred_time || null,
+        confirmed_time: null,
+        overall_level: r.level_english || null,
+        total_sessions: r.total_sessions || null,
+        total_amount: r.total_amount || null,
+        status: "active",
+      })) as Lesson[];
+
+    const list: Lesson[] = [...lessonList, ...synthetic];
     setLessons(list);
     if (list.length > 0 && !selectedId) setSelectedId(list[0].id);
   }, [selectedId]);
@@ -126,6 +163,8 @@ export default function TutorInvoice() {
 
   useEffect(() => {
     if (!selectedId) { setSessions([]); return; }
+    // 합성 lesson (req:UUID) 은 tutor_lesson_sessions 행이 없음 → 조회 스킵
+    if (selectedId.startsWith("req:")) { setSessions([]); return; }
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
@@ -168,7 +207,9 @@ export default function TutorInvoice() {
     const typeMatch = (l.class_type || "").match(/1\s*[:：]\s*[12]/);
     const typeBase = typeMatch ? typeMatch[0].replace(/\s+/g, "") : (l.class_type || "-");
     const t = l.sessions_per_day === 2 ? "2T" : "1T";
-    return `${l.house_or_reserver} · ${l.student_names} (${typeBase} ${t}, ${fmtMD(l.start_date)}~${fmtMD(l.end_date)})`;
+    const isSynthetic = String(l.id).startsWith("req:");
+    const tag = isSynthetic ? " · 신청서 기반" : "";
+    return `${l.house_or_reserver} · ${l.student_names} (${typeBase} ${t}, ${fmtMD(l.start_date)}~${fmtMD(l.end_date)})${tag}`;
   };
 
   async function saveAsImage() {

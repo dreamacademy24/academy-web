@@ -209,7 +209,8 @@ export default function EngTutorClassPage() {
   const loadMyLessons = useCallback(async () => {
     if (!me) { setMyLessons([]); return; }
     setLoadingLessons(true);
-    const myReqIds = reqs.filter(r => r.assigned_tutor_id === me.id).map(r => r.id);
+    const myMatched = reqs.filter(r => r.assigned_tutor_id === me.id);
+    const myReqIds = myMatched.map(r => r.id);
     const [{ data: direct }, { data: nullRows }] = await Promise.all([
       supabase
         .from("tutor_lessons")
@@ -229,6 +230,49 @@ export default function EngTutorClassPage() {
     );
     const map = new Map<string, any>();
     [...(direct || []), ...matchedNull].forEach(l => map.set(l.id, l));
+
+    // 추가 소스: lesson 미생성 상태인 confirmed/assigned tutor_requests를 합성 lesson으로 추가
+    // (admin이 status='assigned'로만 저장하고 takeClass/save를 누르지 않은 케이스 대응)
+    const linkedReqIds = new Set<string>();
+    for (const l of map.values()) {
+      const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
+      if (m) linkedReqIds.add(m[1]);
+    }
+    const unlinked = myMatched.filter(r =>
+      ["confirmed", "assigned"].includes(r.status || "") && !linkedReqIds.has(r.id)
+    );
+    for (const r of unlinked) {
+      map.set(`req:${r.id}`, {
+        id: `req:${r.id}`,
+        _source: "request",
+        request_id: r.id,
+        tutor_id: me.id,
+        house_or_reserver: r.guest_name || "",
+        student_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "",
+        student_ages: r.student_age || null,
+        class_type: r.class_type || "",
+        sessions_per_day: r.sessions_per_day || 1,
+        start_date: r.start_date || "",
+        end_date: r.end_date || "",
+        class_days: (r.preferred_days || "").split(",").map(s => s.trim()).filter(Boolean),
+        class_time: r.preferred_time || "",
+        confirmed_time: null,
+        overall_level: r.level_english || null,
+        speaking_level: r.level_speaking || null,
+        reading_level: r.level_reading || null,
+        writing_level: r.level_writing || null,
+        class_style: r.class_style || null,
+        class_focus: Array.isArray(r.class_focus_arr) ? r.class_focus_arr.join(",") : null,
+        total_sessions: null,
+        total_amount: null,
+        status: "active",
+        admin_memo: `request_id: ${r.id}`,
+        created_at: r.created_at,
+        skip_dates: [],
+        tutor_memo: null,
+      });
+    }
+
     const merged = Array.from(map.values()).sort((a, b) =>
       (b.created_at || "").localeCompare(a.created_at || "")
     );

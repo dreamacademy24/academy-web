@@ -595,16 +595,17 @@ export default function TutorApplications() {
   return (
     <>
       <style>{`
-.tbl-w{width:100%;background:#fff;border-radius:14px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #f3f4f6;}
+.tbl-w{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 1px 4px rgba(0,0,0,0.08);border:1px solid #f3f4f6;}
 .tbl{width:100%;border-collapse:collapse;}
-.tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:12px 12px;text-align:left;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
-.tbl td{font-size:13px;padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#1a1a2e;}
+.tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:12px 12px;text-align:left;background:#f9fafb;border-bottom:1px solid #e5e7eb;white-space:nowrap;}
+.tbl td{font-size:13px;padding:10px 12px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;}
+.tbl tbody tr td{border-bottom:1px solid #f3f4f6}
 .tbl tbody tr:hover td{background:#eff6ff;}
-.ta-icon-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:#fff;transition:all 120ms;line-height:1;padding:0}
-.ta-icon-btn.view{border:1.5px solid #1a6fc4;color:#1a6fc4}.ta-icon-btn.view:hover{background:#1a6fc4;color:#fff}
-.ta-icon-btn.review{border:1.5px solid #f59e0b;color:#f59e0b}.ta-icon-btn.review:hover{background:#f59e0b;color:#fff}
-.ta-icon-btn.assign{border:1.5px solid #16a34a;color:#16a34a}.ta-icon-btn.assign:hover{background:#16a34a;color:#fff}
-.ta-icon-btn:disabled{opacity:0.4;cursor:not-allowed}
+.ta-act-btn{padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 120ms;line-height:1.2;white-space:nowrap}
+.ta-act-btn.view{background:#fff;color:#475569;border:1px solid #cbd5e1}.ta-act-btn.view:hover{background:#f8fafc;border-color:#94a3b8;color:#1a1a2e}
+.ta-act-btn.review{background:#f59e0b;color:#fff;border:none}.ta-act-btn.review:hover{background:#d97706}
+.ta-act-btn.assign{background:#16a34a;color:#fff;border:none}.ta-act-btn.assign:hover{background:#15803d}
+.ta-act-btn:disabled{opacity:0.4;cursor:not-allowed}
 .ta-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .ta-filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ta-chip{padding:7px 13px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 120ms}
@@ -767,17 +768,16 @@ export default function TutorApplications() {
                       <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
                       <td>
                         <div className="ta-row-acts">
-                          {/* 👁 상세 — 항상 표시 */}
+                          {/* 상세 — 항상 */}
                           <button
-                            className="ta-icon-btn view"
+                            className="ta-act-btn view"
                             onClick={() => router.push('/admin/tutor-class/' + a.id)}
                             title="상세 보기"
-                            aria-label="상세 보기"
-                          >👁</button>
-                          {/* ✅ 검토중 — 대기중 상태에서만 */}
+                          >상세</button>
+                          {/* 검토중 — pending에서만 */}
                           {a.status === 'pending' && (
                             <button
-                              className="ta-icon-btn review"
+                              className="ta-act-btn review"
                               onClick={async () => {
                                 const res = await fetch(`/api/admin/tutor-applications/${a.id}/status`, {
                                   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -787,17 +787,15 @@ export default function TutorApplications() {
                                 await loadApps();
                               }}
                               title="검토중으로 변경"
-                              aria-label="검토중으로 변경"
-                            >✅</button>
+                            >검토중</button>
                           )}
-                          {/* 👤 배정 — 확정/완료/취소가 아닐 때 */}
+                          {/* 배정 — 확정/완료/취소가 아닐 때 */}
                           {!['confirmed','completed','cancelled'].includes(a.status) && (
                             <button
-                              className="ta-icon-btn assign"
+                              className="ta-act-btn assign"
                               onClick={() => openDetail(a, true)}
                               title={a.assigned_tutor_id ? "튜터 재배정" : "튜터 배정"}
-                              aria-label="튜터 배정"
-                            >👤</button>
+                            >배정</button>
                           )}
                         </div>
                       </td>
