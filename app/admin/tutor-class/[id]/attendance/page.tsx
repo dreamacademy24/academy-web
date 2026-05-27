@@ -23,7 +23,14 @@ interface Lesson {
 
 const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
-const CODE_TO_IDX: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+const DAY_EN_LABEL: Record<string, string> = {
+  sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
+  "일": "Sun", "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat",
+};
+const CODE_TO_IDX: Record<string, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
+};
 
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
@@ -77,7 +84,7 @@ export default function AttendancePage() {
       .maybeSingle();
     if (error || !data) {
       setLoading(false);
-      setErrorMsg(error?.message || "수업을 찾을 수 없습니다 / Lesson not found");
+      setErrorMsg(error?.message || "Lesson not found");
       return;
     }
     const l = data as Lesson;
@@ -134,24 +141,24 @@ export default function AttendancePage() {
       .update({ attendance_log: log, tutor_memo: notes || null })
       .eq("id", lesson.id);
     setSaving(false);
-    if (error) { alert("저장 실패 / Save failed: " + error.message); return; }
-    alert("✅ 저장되었습니다 / Saved");
+    if (error) { alert("Save failed: " + error.message); return; }
+    alert("✅ Saved");
     router.back();
   }
 
   if (loading) {
-    return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14 }}>로딩 중... / Loading...</div>;
+    return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14 }}>Loading...</div>;
   }
   if (errorMsg || !lesson) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
-        <div style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{errorMsg || "수업 없음 / No lesson"}</div>
-        <button onClick={() => router.back()} style={{ padding: "8px 16px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>← 뒤로 / Back</button>
+        <div style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{errorMsg || "No lesson"}</div>
+        <button onClick={() => router.back()} style={{ padding: "8px 16px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>← Back</button>
       </div>
     );
   }
 
-  const daysLabel = (lesson.class_days || []).map(d => DAY_KR[d] || d).join(", ");
+  const daysLabel = (lesson.class_days || []).map(d => DAY_EN_LABEL[d] || DAY_EN_LABEL[d.toLowerCase()] || d).join(", ");
   const timeLabel = lesson.confirmed_time || lesson.class_time || "-";
 
   return (<>
@@ -215,37 +222,39 @@ export default function AttendancePage() {
 
     <div className="at-w">
       <div className="at-top">
-        <button className="at-back" onClick={() => router.back()}>← 뒤로 / Back</button>
+        <button className="at-back" onClick={() => router.back()}>← Back</button>
         <div className="at-title">
-          <h1>📋 출결 관리 / Attendance · {lesson.house_or_reserver} · {lesson.student_names}</h1>
+          <h1>📋 Attendance · {lesson.house_or_reserver} · {(() => {
+            const p = (lesson.student_names || "").split("/").map(s => s.trim()).filter(Boolean);
+            return p.length >= 2 ? [...p].reverse().join(" / ") : lesson.student_names;
+          })()}</h1>
           <div className="sub">
             <span className="tag">{lesson.class_type}</span>
-            <span><b style={{ color: "#374151" }}>요일/Days:</b> {daysLabel || "-"}</span>
-            <span><b style={{ color: "#374151" }}>시간/Time:</b> {timeLabel}</span>
-            <span><b style={{ color: "#374151" }}>기간/Period:</b> {fmtMD(lesson.start_date)}~{fmtMD(lesson.end_date)}</span>
-            {tutorName && <span><b style={{ color: "#374151" }}>튜터/Tutor:</b> {tutorName}</span>}
+            <span><b style={{ color: "#374151" }}>Days:</b> {daysLabel || "-"}</span>
+            <span><b style={{ color: "#374151" }}>Time:</b> {timeLabel}</span>
+            <span><b style={{ color: "#374151" }}>Period:</b> {fmtMD(lesson.start_date)}~{fmtMD(lesson.end_date)}</span>
+            {tutorName && <span><b style={{ color: "#374151" }}>Tutor:</b> {tutorName}</span>}
           </div>
         </div>
       </div>
 
       <div className="at-card">
         <div className="at-sum">
-          <div className="s"><span className="lbl">총 / Total</span><b>{total}회</b></div>
-          <div className="s attend"><span className="lbl">○ 출석 / Attended</span><b>{counts.O}</b></div>
-          <div className="s miss"><span className="lbl">✕ 결석 / Absent</span><b>{counts.X}</b></div>
-          <div className="s makeup"><span className="lbl">△ 메이크업 / Makeup</span><b>{counts.T}</b></div>
-          <div className="s remain"><span className="lbl">남은 / Remaining</span><b>{remaining}회</b></div>
+          <div className="s"><span className="lbl">Total</span><b>{total}</b></div>
+          <div className="s attend"><span className="lbl">Attended</span><b>{counts.O}</b></div>
+          <div className="s miss"><span className="lbl">Absent</span><b>{counts.X}</b></div>
+          <div className="s makeup"><span className="lbl">Makeup</span><b>{counts.T}</b></div>
+          <div className="s remain"><span className="lbl">Remaining</span><b>{remaining}</b></div>
         </div>
       </div>
 
       <div className="at-card">
         <div className="at-help">
-          박스를 클릭해 출결을 순환 입력하세요 — <b>빈칸 → ○ 출석 → ✕ 결석 → △ 메이크업 → 빈칸</b>.<br />
-          Click each box to cycle: <b>blank → ○ attended → ✕ absent → △ makeup → blank</b>. △는 총 회차를 +1 연장합니다 (Makeup extends total by +1).
+          Click each box to cycle: <b>blank → ○ attended → ✕ absent → △ makeup → blank</b>. △ (Makeup) extends total session count by +1.
         </div>
         {dates.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 13 }}>
-            생성할 수업일이 없습니다 (시작일/종료일/요일 확인) / No class dates available
+            No class dates available (check start/end date and days)
           </div>
         ) : (
           <div className="at-grid">
@@ -266,7 +275,7 @@ export default function AttendancePage() {
                   onClick={() => cycle(d)}
                   title={`${d} (${dw}) — ${v || "blank"}`}
                 >
-                  <span className="idx">{i + 1}회 · #{i + 1}</span>
+                  <span className="idx">#{i + 1}</span>
                   <span className="dt">{md}<span className="dw">({dw})</span></span>
                   <span className="mark">{v || ""}</span>
                 </button>
@@ -277,17 +286,17 @@ export default function AttendancePage() {
       </div>
 
       <div className="at-card at-notes-card">
-        <label>특이사항 메모 <span className="en">/ Notes</span></label>
+        <label>Notes</label>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="특이사항이 있을 때만 입력하세요 / Add notes only when something needs to be recorded"
+          placeholder="Add notes only when something needs to be recorded"
         />
       </div>
 
       <div className="at-foot">
-        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>취소 / Cancel</button>
-        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? "저장중... / Saving..." : "💾 저장 / Save"}</button>
+        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>Cancel</button>
+        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? "Saving..." : "💾 Save"}</button>
       </div>
     </div>
   </>);
