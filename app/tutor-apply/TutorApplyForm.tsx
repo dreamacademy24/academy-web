@@ -222,11 +222,15 @@ export default function TutorApplyForm() {
       agreed_privacy: form.agreed_privacy,
       agreed_tutor_rules_bool: form.agreed_tutor_rules,
     };
-    const { error } = await supabase.from("tutor_applications").insert(payload).select();
+    const res = await fetch("/api/tutor-apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     setSubmitting(false);
-    if (error) {
-      console.error("튜터 신청 저장 실패:", error, "payload:", payload);
-      setTopError("신청 제출에 실패했습니다: " + error.message + (error.details ? " (" + error.details + ")" : ""));
+    if (!res.ok) {
+      const r = await res.json().catch(() => ({}));
+      setTopError("신청 제출에 실패했습니다: " + (r.error || "알 수 없는 오류"));
       topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }

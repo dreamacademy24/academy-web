@@ -336,8 +336,6 @@ export default function PortalTutorPage() {
     setForm(INIT_FORM);
     setStudent2Age('');
     reload();
-    const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
-    if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
   }
 
   async function cancel(id: string) {
