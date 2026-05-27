@@ -534,6 +534,14 @@ function InvoicePageInner(){
   const [snapshotChecked,setSnapshotChecked]=useState(false); // 스냅샷 조회 완료 여부
   const [hasSnapshot,setHasSnapshot]=useState(false);          // 저장된 스냅샷 존재 여부 (뷰 모드)
   const [snapshotSavedAt,setSnapshotSavedAt]=useState<string>("");
+  const [confirmedAt,setConfirmedAt]=useState<string>("");      // 확정 시각 (있으면 🔒)
+
+  /* ── 인보이스/영수증 서브탭 ── */
+  const initialTab=(searchParams.get("tab")==="receipt")?"receipt":"invoice";
+  const [tab,setTab]=useState<"invoice"|"receipt">(initialTab);
+  const [receiptPayments,setReceiptPayments]=useState<{id:number;type:string;date:string;amount:string}[]>([
+    {id:1,type:"예약금",date:todayStr,amount:"1,000,000"}
+  ]);
 
   // 현재 폼 상태 전체를 스냅샷 객체로 수집
   // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
@@ -572,6 +580,40 @@ function InvoicePageInner(){
     if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
     if(d.lateCheckout!==undefined)setLateCheckout(d.lateCheckout);
   }
+  /* ── 인보이스 확정/해제 (PATCH confirmed_at) ── */
+  async function confirmInvoice(){
+    if(!bookingId){alert("예약 ID가 없어 확정할 수 없습니다.");return;}
+    if(!hasSnapshot){alert("먼저 인보이스를 저장해 주세요.");return;}
+    try{
+      const res=await fetch("/api/invoice/snapshot",{
+        method:"PATCH",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({booking_id:bookingId}),
+      });
+      if(!res.ok){alert("확정 실패");return;}
+      const j=await res.json();
+      setConfirmedAt(j?.snapshot?.confirmed_at||new Date().toISOString());
+      alert("✅ 인보이스가 확정되었습니다.");
+    }catch(e){console.error(e);alert("확정 실패");}
+  }
+  // "수정하기" 진입 — 확정 상태면 경고 후 confirmed_at = null로 풀고 편집 모드 진입
+  async function requestEdit(){
+    if(confirmedAt){
+      const ok=confirm("확정된 인보이스를 수정하면 재확정이 필요합니다. 계속할까요?");
+      if(!ok) return;
+      if(bookingId){
+        try{
+          await fetch("/api/invoice/snapshot",{
+            method:"PATCH",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({booking_id:bookingId,confirmed_at:null}),
+          });
+        }catch{}
+      }
+      setConfirmedAt("");
+    }
+    setPreview(false);
+    setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
+  }
+
   // 스냅샷 저장 (인보이스 미리보기 클릭 시 자동 호출)
   async function saveSnapshot(override?:Record<string,unknown>){
     if(!bookingId) return;
@@ -607,6 +649,7 @@ function InvoicePageInner(){
         if(snap&&snap.saved_data){
           applySnapshot(snap.saved_data);
           setSnapshotSavedAt(snap.saved_at||"");
+          setConfirmedAt(snap.confirmed_at||"");
           setHasSnapshot(true);
           setPreview(true); // 저장된 데이터 기준 뷰 모드
         }
@@ -1233,6 +1276,15 @@ function InvoicePageInner(){
     </div>
   ):(<>
 
+  {/* ── 서브탭: 인보이스 / 영수증 ── */}
+  <div className="iw no-print" style={{paddingTop:24,paddingBottom:0}}>
+    <div className="mt" style={{maxWidth:480,margin:"0 auto 8px"}}>
+      <button className={`mb${tab==="invoice"?" ac":""}`} onClick={()=>setTab("invoice")}>📄 인보이스</button>
+      <button className={`mb${tab==="receipt"?" ac":""}`} onClick={()=>setTab("receipt")}>🧾 영수증</button>
+    </div>
+  </div>
+
+  {tab==="invoice"?(<>
   {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
@@ -1331,11 +1383,19 @@ function InvoicePageInner(){
   /* ── 인보이스 미리보기 ── */
   <div className="iw">
     {hasSnapshot&&(
-      <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:8}}>
-        <span style={{fontSize:12,color:"#94a3b8"}}>💾 저장된 인보이스 · {fmtSavedAt(snapshotSavedAt)}</span>
-        <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+      <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:confirmedAt?"#ecfdf5":"#f8fafc",border:"1px solid "+(confirmedAt?"#a7f3d0":"#e2e8f0"),borderRadius:8}}>
+        <span style={{fontSize:12.5,color:confirmedAt?"#065f46":"#475569",fontWeight:700}}>
+          {confirmedAt
+            ?<>🔒 확정된 인보이스 · <span style={{color:"#047857"}}>{fmtSavedAt(confirmedAt)}</span></>
+            :<>💾 저장된 인보이스 · <span style={{color:"#94a3b8",fontWeight:500}}>{fmtSavedAt(snapshotSavedAt)}</span></>
+          }
+        </span>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>{const v=e.target.checked;setLateCheckout(v);saveSnapshot({lateCheckout:v});}}/>Late Check-out (22:30pm)</label>
-          <button onClick={()=>{setPreview(false);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);}} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+          <button onClick={requestEdit} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+          {!confirmedAt&&(
+            <button onClick={confirmInvoice} style={{padding:"7px 16px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✅ 인보이스 확정</button>
+          )}
         </div>
       </div>
     )}
@@ -1375,8 +1435,151 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={openReceipt}>영수증 발행</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={()=>setPreview(false)}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
   </div>)}
+  </>):(
+    /* ── 영수증 탭 ── */
+    <div className="iw">
+      {!confirmedAt?(
+        <div style={{background:"#fff",borderRadius:14,padding:"60px 24px",textAlign:"center",boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+          <div style={{fontSize:48,marginBottom:14}}>🔒</div>
+          <div style={{fontSize:17,fontWeight:800,color:"#1a1a2e",marginBottom:8}}>인보이스를 먼저 확정해주세요</div>
+          <div style={{fontSize:13,color:"#6b7c93",marginBottom:24,lineHeight:1.6}}>
+            영수증은 확정된 인보이스 데이터를 기준으로 발행됩니다.<br/>
+            인보이스 탭에서 미리보기 → 확정 후 다시 시도해주세요.
+          </div>
+          <button onClick={()=>setTab("invoice")} style={{padding:"11px 24px",background:"#1a6fc4",color:"#fff",border:"none",borderRadius:10,fontSize:13.5,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>📄 인보이스 탭으로</button>
+        </div>
+      ):(<>
+        {/* 확정 배너 */}
+        <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:8}}>
+          <span style={{fontSize:12.5,color:"#065f46",fontWeight:700}}>🔒 확정된 인보이스 기준 · <span style={{color:"#047857"}}>{fmtSavedAt(confirmedAt)}</span></span>
+          <button onClick={()=>setTab("invoice")} style={{padding:"7px 14px",background:"#fff",color:"#1a6fc4",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>📄 인보이스 탭으로</button>
+        </div>
+
+        {/* 지불내역 에디터 */}
+        <div className="no-print" style={{background:"#fff",padding:"18px 22px",boxShadow:"0 2px 12px rgba(0,0,0,0.05)",borderRadius:12,marginBottom:16,borderLeft:"4px solid #1a6fc4"}}>
+          <div style={{fontSize:15,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>💰 지불내역 입력</div>
+          <div style={{fontSize:12,color:"#6b7c93",marginBottom:14}}>입금받은 내역을 입력하세요. 영수증 하단에 자동으로 표시됩니다.</div>
+          <div style={{display:"grid",gridTemplateColumns:"130px 160px 1fr auto",gap:8,marginBottom:6,fontSize:11,color:"#6b7c93",fontWeight:600}}>
+            <span>구분</span><span>날짜</span><span>금액 (원)</span><span></span>
+          </div>
+          {receiptPayments.map(p=>(
+            <div key={p.id} style={{display:"grid",gridTemplateColumns:"130px 160px 1fr auto",gap:8,alignItems:"center",marginBottom:8}}>
+              <select value={p.type} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,type:e.target.value,amount:(x.amount||"").trim()===""?(e.target.value==="예약금"?"1,000,000":e.target.value==="잔금"&&fp>1000000?(fp-1000000).toLocaleString("ko-KR"):x.amount):x.amount}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none",background:"#fff",cursor:"pointer"}}>
+                <option value="예약금">예약금</option>
+                <option value="잔금">잔금</option>
+                <option value="추가입금">추가입금</option>
+                <option value="현지결제">현지결제</option>
+              </select>
+              <input type="date" value={p.date} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,date:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
+              <input type="text" placeholder="예: 1,000,000" value={p.amount} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,amount:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
+              <button onClick={()=>setReceiptPayments(prev=>prev.length>1?prev.filter(x=>x.id!==p.id):prev)} disabled={receiptPayments.length===1} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"8px 12px",cursor:receiptPayments.length===1?"not-allowed":"pointer",fontSize:14,opacity:receiptPayments.length===1?0.5:1}}>✕</button>
+            </div>
+          ))}
+          <button onClick={()=>{const auto=fp>1000000?(fp-1000000).toLocaleString("ko-KR"):"";setReceiptPayments(prev=>[...prev,{id:Date.now(),type:"잔금",date:todayStr,amount:auto}]);}} style={{width:"100%",background:"#f0f9ff",color:"#1a6fc4",border:"1px dashed #93c5fd",borderRadius:8,padding:"9px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",marginTop:4}}>+ 입금 항목 추가</button>
+        </div>
+
+        {/* 영수증 본문 */}
+        <div className="iv" id="receipt-content">
+          <div className="it">
+            <div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div>
+            <div className="itr"><h1>RECEIPT</h1><p>No. R-{reservationNo}</p></div>
+          </div>
+
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div>
+            <table className="tb"><tbody>
+              <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
+              <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
+              <tr><td className="lb">{isCommute?"수업시작":"체크인 (오후 3시 입실)"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"수업종료":(lateCheckout?"체크아웃 (22:30pm)":"체크아웃 (정오 12시 퇴실)")}</td><td>{overallCO||"-"}</td></tr>
+              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"-"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+              <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
+              {checkin.specialRequest&&<tr><td className="lb">특이사항</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
+            </tbody></table>
+          </div>
+
+          {students.length>0&&(
+            <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div>
+              <table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
+                {students.map((s,i)=>{const endVal=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks);return <tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(endVal)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>;})}
+              </tbody></table>
+            </div>
+          )}
+
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>
+            <table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+              {billing.items.length>0
+                ?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>)
+                :<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
+              {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={`d${i}`}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
+              {td>0&&<tr><td style={{fontWeight:600}}>총 할인</td><td style={{textAlign:"right",color:"#dc2626",fontWeight:600}}>-{fmt(td)}원</td></tr>}
+              {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
+              <tr className="fr"><td>총 청구금액</td><td style={{textAlign:"right"}}>{fmt(fp)}원</td></tr>
+              {effectiveFullPayment?(
+                <tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:13,textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원 즉시 납부</td></tr>
+              ):(<>
+                <tr style={{background:"#f0fdf4"}}>
+                  <td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td>
+                  <td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td>
+                </tr>
+                <tr style={{background:"#fff7ed"}}>
+                  <td style={{padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>잔금 <span style={{fontSize:11,fontWeight:400}}>{booker.balanceDate?`(납부일: ${booker.balanceDate})`:""}</span></td>
+                  <td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>{fmt(Math.max(0,fp-1000000))}원</td>
+                </tr>
+              </>)}
+            </tbody></table>
+          </div>
+
+          {billing.locals.filter(c=>c.name||c.amount).length>0&&(
+            <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Local Payment <span style={{fontSize:10,color:"#94a3b8",fontWeight:400,marginLeft:6,letterSpacing:0,textTransform:"none"}}>Unit: PHP</span></div>
+              <table className="tb"><tbody>
+                {billing.locals.filter(c=>c.name||c.amount).map((c,i)=>{
+                  const raw=String(c.amount);
+                  const cleaned=raw.replace(/페소|pesos?/gi,"PHP").trim();
+                  const display=/PHP/i.test(cleaned)?cleaned:`${cleaned} PHP`;
+                  return <tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{display}</td></tr>;
+                })}
+              </tbody></table>
+            </div>
+          )}
+
+          <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>지불내역</div>
+            <table className="tb"><thead><tr><th style={{width:"25%"}}>구분</th><th style={{width:"35%"}}>결제일</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
+              {receiptPayments.filter(p=>p.amount.trim()!=="").length>0
+                ?receiptPayments.filter(p=>p.amount.trim()!=="").map(p=>(
+                  <tr key={p.id}><td style={{fontWeight:700}}>{p.type}</td><td>{p.date}</td><td style={{textAlign:"right",fontWeight:700,color:"#1a6fc4"}}>{p.amount}원</td></tr>
+                ))
+                :<tr><td colSpan={3} style={{textAlign:"center",color:"#94a3b8",fontSize:12,padding:16}}>위 입력란에서 지불내역을 입력해주세요</td></tr>
+              }
+            </tbody></table>
+          </div>
+
+          <div style={{marginTop:32,textAlign:"center",padding:24}}>
+            <p style={{fontSize:14,fontWeight:600,color:"#374151",marginBottom:16}}>위 금액을 정히 영수합니다.</p>
+            <div style={{display:"inline-flex",width:110,height:110,border:"3px solid #dc2626",borderRadius:"50%",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#dc2626",transform:"rotate(-8deg)",opacity:0.85}}>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:10,fontWeight:900,letterSpacing:"0.08em"}}>DREAM ACADEMY</div>
+              <div style={{fontSize:9,opacity:0.7,marginTop:1}}>Philippines</div>
+              <div style={{fontSize:8,fontWeight:600,marginTop:4}}>Official Receipt</div>
+            </div>
+            <div style={{fontSize:12,color:"#6b7c93",lineHeight:1.9,marginTop:20}}>
+              안내받으신 종합안내 이용금액 및 환불 규정을 꼭 확인해주세요<br/>
+              미확인으로 인한 문제는 책임 지지않습니다<br/>
+              드림하우스 숙박료등 전체 결제하였음을 증명합니다<br/>
+              해당영수증에 대한 문의사항이 있으시면 드림하우스로 문의주세요<br/>
+              감사합니다
+            </div>
+          </div>
+        </div>
+
+        {/* 영수증 버튼 */}
+        <div className="pb no-print">
+          <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
+          <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
+          <button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("receipt-content")}>📷 이미지 저장</button>
+        </div>
+      </>)}
+    </div>
+  )}
   </>)}
   </>);
 }

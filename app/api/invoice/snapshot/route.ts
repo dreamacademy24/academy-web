@@ -14,9 +14,11 @@ const supabase = createClient(
  *   booking_id text NOT NULL,
  *   saved_data jsonb NOT NULL DEFAULT '{}',
  *   saved_at timestamptz DEFAULT now(),
+ *   confirmed_at timestamptz,
  *   created_at timestamptz DEFAULT now()
  * );
  * CREATE UNIQUE INDEX IF NOT EXISTS invoice_snapshots_booking_id_key ON invoice_snapshots(booking_id);
+ * ALTER TABLE invoice_snapshots ADD COLUMN IF NOT EXISTS confirmed_at timestamptz;
  * ALTER TABLE invoice_snapshots ENABLE ROW LEVEL SECURITY;
  * CREATE POLICY "all" ON invoice_snapshots FOR ALL USING (true) WITH CHECK (true);
  */
@@ -56,6 +58,31 @@ export async function POST(req: Request) {
     .upsert({ booking_id: bookingId, saved_data: savedData, saved_at: savedAt }, { onConflict: 'booking_id' })
     .select()
     .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true, snapshot: data })
+}
+
+// PATCH /api/invoice/snapshot — { booking_id, confirmed_at } 확정/해제
+// confirmed_at === null  → 확정 해제
+// confirmed_at === undefined 또는 미지정 → 서버 now()로 확정
+export async function PATCH(req: Request) {
+  const body = await req.json().catch(() => null)
+  if (!body || !body.booking_id) {
+    return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
+  }
+  const bookingId = String(body.booking_id)
+  const confirmedAt =
+    body.confirmed_at === null
+      ? null
+      : (body.confirmed_at || new Date().toISOString())
+
+  const { data, error } = await supabase
+    .from('invoice_snapshots')
+    .update({ confirmed_at: confirmedAt })
+    .eq('booking_id', bookingId)
+    .select()
+    .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, snapshot: data })

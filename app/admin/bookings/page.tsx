@@ -761,7 +761,7 @@ export default function AdminBookingsPage(){
             <td>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
-              <button className="act act-g" onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act act-g" onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
               <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);alert("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
               <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </td>
@@ -784,7 +784,7 @@ export default function AdminBookingsPage(){
             </div>
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
-              <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>영수증</button>
+              <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
               <button className="act act-r" style={{flex:1,minHeight:40}} onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </div>
           </div>);
@@ -799,7 +799,7 @@ export default function AdminBookingsPage(){
       </tr></thead><tbody>
         {rcpList.length===0?<tr><td colSpan={7} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
         rcpList.map(b=>(
-          <tr key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")}>
+          <tr key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
@@ -812,7 +812,7 @@ export default function AdminBookingsPage(){
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
         {rcpList.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
         rcpList.map(b=>(
-          <div key={b.id} onClick={()=>window.open("/receipt?id="+b.id,"_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
+          <div key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
               <span style={{fontWeight:700}}>{fmt(b.final_price)}</span>
