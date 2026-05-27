@@ -237,23 +237,22 @@ export default function EngTutorClassPage() {
   }, [me, reqs]);
 
   // Weekly View — 모든 active 수업 로드 (탭 진입 시)
+  // 전체 active 수업 로드 — Weekly/Invoice 탭 진입 시 + takeClass 후 수동 재호출
+  const loadAllLessons = useCallback(async () => {
+    setLoadingAllLessons(true);
+    const { data } = await supabase
+      .from("tutor_lessons")
+      .select("*")
+      .eq("status", "active")
+      .order("class_time", { ascending: true });
+    setAllLessons(data || []);
+    setLoadingAllLessons(false);
+  }, []);
+
   useEffect(() => {
     if (tab !== "weekly" && tab !== "invoice") return;
-    let cancelled = false;
-    (async () => {
-      setLoadingAllLessons(true);
-      const { data } = await supabase
-        .from("tutor_lessons")
-        .select("*")
-        .eq("status", "active")
-        .order("class_time", { ascending: true });
-      if (!cancelled) {
-        setAllLessons(data || []);
-        setLoadingAllLessons(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [tab]);
+    loadAllLessons();
+  }, [tab, loadAllLessons]);
 
   const week = useMemo(() => sundayWeek(weekOffset), [weekOffset]);
 
@@ -389,7 +388,9 @@ export default function EngTutorClassPage() {
 
       alert(`✅ Taken!\n"${studentLabel}" is now in your My Schedule.`);
       setTakingId("");
-      load(); // reqs 재로드 → me-based filters/myLessons useEffect도 재계산
+      // reqs(My Schedule/Classes) + allLessons(Weekly/Invoice) 모두 재로드
+      load();
+      loadAllLessons();
     } catch (e: any) {
       console.error("[takeClass] failed:", e);
       alert("Failed: " + (e?.message || e));
