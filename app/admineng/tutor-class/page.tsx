@@ -282,15 +282,52 @@ export default function EngTutorClassPage() {
   useEffect(() => { loadMyLessons(); }, [loadMyLessons]);
 
   // Weekly View — 모든 active 수업 로드 (탭 진입 시)
-  // 전체 active 수업 로드 — Weekly/Invoice 탭 진입 시 + takeClass 후 수동 재호출
+  // 전체 active 수업 로드 + lesson 미생성 confirmed tutor_requests 합성 — Weekly/Invoice 탭 진입 시
   const loadAllLessons = useCallback(async () => {
     setLoadingAllLessons(true);
-    const { data } = await supabase
-      .from("tutor_lessons")
-      .select("*")
-      .eq("status", "active")
-      .order("class_time", { ascending: true });
-    setAllLessons(data || []);
+    const [lRes, rRes] = await Promise.all([
+      supabase.from("tutor_lessons").select("*")
+        .eq("status", "active")
+        .order("class_time", { ascending: true }),
+      supabase.from("tutor_requests").select("*")
+        .eq("status", "confirmed")
+        .not("assigned_tutor_id", "is", null)
+        .order("created_at", { ascending: false }),
+    ]);
+    const lessonList = (lRes.data || []) as any[];
+    const reqList = (rRes.data || []) as any[];
+    const linkedReqIds = new Set<string>();
+    for (const l of lessonList) {
+      const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
+      if (m) linkedReqIds.add(m[1]);
+    }
+    const synthetic = reqList
+      .filter(r => !linkedReqIds.has(r.id))
+      .map(r => ({
+        id: `req:${r.id}`,
+        _source: "request",
+        request_id: r.id,
+        tutor_id: r.assigned_tutor_id,
+        house_or_reserver: r.guest_name || "",
+        student_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "",
+        student_ages: r.student_age || null,
+        class_type: r.class_type || "",
+        sessions_per_day: r.sessions_per_day || 1,
+        hourly_rate: r.price_per_session || ((r.class_type || "").includes("1:2") ? 350 : 300),
+        start_date: r.start_date || "",
+        end_date: r.end_date || "",
+        class_days: (r.preferred_days || "").split(",").map((s: string) => s.trim()).filter(Boolean),
+        class_time: r.preferred_time || null,
+        confirmed_time: null,
+        overall_level: r.level_english || null,
+        total_sessions: r.total_sessions || null,
+        total_amount: r.total_amount || null,
+        status: "active",
+        admin_memo: `request_id: ${r.id}`,
+        created_at: r.created_at,
+        skip_dates: [],
+      }));
+    setAllLessons([...lessonList, ...synthetic]);
     setLoadingAllLessons(false);
   }, []);
 
@@ -806,7 +843,7 @@ export default function EngTutorClassPage() {
                 <th style={{width:"9%"}}>Days</th>
                 <th style={{width:"9%"}}>Time</th>
                 <th style={{width:"12%"}}>Period</th>
-                <th style={{width:"8%",textAlign:"center"}}>잔여/총</th>
+                <th style={{width:"8%",textAlign:"center"}}>Remaining/Total</th>
                 <th style={{width:"8%"}}>Amount</th>
                 <th style={{width:"8%"}}>Status</th>
                 <th style={{width:"22%",textAlign:"center"}}>Actions</th>
@@ -845,34 +882,34 @@ export default function EngTutorClassPage() {
                               setExpandedLessonId(expanded ? "" : l.id);
                               if (!expanded) setMemoDraft(prev => ({ ...prev, [l.id]: l.tutor_memo || "" }));
                             }}
-                            title="코멘트/취소/변경 펼치기"
-                          >{expanded ? "▲ 닫기" : "🗒 관리"}</button>
+                            title="Notes / Cancel / Reschedule"
+                          >{expanded ? "▲ Close" : "🗒 Manage"}</button>
                           <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
                         </td>
                       </tr>
                       {expanded && (
                         <tr>
-                          <td colSpan={10} style={{background:"#f8fafc",padding:"14px 16px"}}>
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                              {/* 코멘트 */}
-                              <div style={{background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:8}}>🗒 튜터 코멘트</div>
+                          <td colSpan={10} style={{background:"#f8fafc",padding:"14px 16px",overflowX:"auto"}}>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:14,alignItems:"stretch"}}>
+                              {/* Tutor Notes */}
+                              <div style={{flex:"1 1 280px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:8}}>🗒 Tutor Notes</div>
                                 <textarea
                                   value={memoDraft[l.id] ?? (l.tutor_memo || "")}
                                   onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  placeholder="수업 진행 관련 메모를 입력하세요..."
-                                  style={{width:"100%",minHeight:80,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none",resize:"vertical"}}
+                                  placeholder="Add notes about this class..."
+                                  style={{width:"100%",minHeight:80,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none",resize:"vertical",flex:1}}
                                 />
                                 <button
                                   onClick={() => saveMemo(l.id)}
                                   disabled={savingLessonId === l.id}
-                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit"}}
-                                >💾 {savingLessonId===l.id ? "저장중..." : "코멘트 저장"}</button>
+                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit",alignSelf:"flex-start"}}
+                                >💾 {savingLessonId===l.id ? "Saving..." : "Save Notes"}</button>
                               </div>
 
-                              {/* 하루 취소 */}
-                              <div style={{background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:8}}>❌ 하루 취소</div>
+                              {/* Cancel a Day */}
+                              <div style={{flex:"1 1 280px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:8}}>❌ Cancel a Day</div>
                                 <input
                                   type="date"
                                   value={cancelDate[l.id] || ""}
@@ -884,11 +921,11 @@ export default function EngTutorClassPage() {
                                 <button
                                   onClick={() => cancelOneDate(l)}
                                   disabled={savingLessonId === l.id || !cancelDate[l.id]}
-                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1}}
-                                >취소 처리</button>
+                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1,alignSelf:"flex-start"}}
+                                >Cancel</button>
                                 {skips.length > 0 && (
                                   <div style={{marginTop:10,fontSize:11,color:"#475569"}}>
-                                    <div style={{fontWeight:700,marginBottom:3}}>취소된 날짜 ({skips.length})</div>
+                                    <div style={{fontWeight:700,marginBottom:3}}>Cancelled ({skips.length})</div>
                                     <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
                                       {skips.map((d: string) => (
                                         <span key={d} style={{padding:"2px 7px",borderRadius:5,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700}}>{d}</span>
@@ -898,12 +935,12 @@ export default function EngTutorClassPage() {
                                 )}
                               </div>
 
-                              {/* 날짜 변경 */}
-                              <div style={{gridColumn:"1 / span 2",background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>🔄 날짜 변경 (취소 + 코멘트 기록)</div>
-                                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3}}>
-                                    원래 날짜
+                              {/* Reschedule */}
+                              <div style={{flex:"2 1 320px",minWidth:280,background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0",display:"flex",flexDirection:"column"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>🔄 Reschedule</div>
+                                <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3,minWidth:130}}>
+                                    Original Date
                                     <input
                                       type="date"
                                       value={changeOld[l.id] || ""}
@@ -913,9 +950,9 @@ export default function EngTutorClassPage() {
                                       style={{padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
                                     />
                                   </label>
-                                  <span style={{fontSize:18,color:"#94a3b8",alignSelf:"flex-end",marginBottom:6}}>→</span>
-                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3}}>
-                                    새 날짜
+                                  <span style={{fontSize:18,color:"#94a3b8",paddingBottom:6}}>→</span>
+                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3,minWidth:130}}>
+                                    New Date
                                     <input
                                       type="date"
                                       value={changeNew[l.id] || ""}
@@ -926,10 +963,10 @@ export default function EngTutorClassPage() {
                                   <button
                                     onClick={() => rescheduleDate(l)}
                                     disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
-                                    style={{padding:"8px 14px",border:"none",borderRadius:7,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1,alignSelf:"flex-end",marginBottom:0}}
-                                  >변경 기록</button>
+                                    style={{padding:"8px 14px",border:"none",borderRadius:7,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1}}
+                                  >Save Change</button>
                                 </div>
-                                <div style={{marginTop:8,fontSize:10.5,color:"#94a3b8"}}>※ 원래 날짜는 skip_dates에 추가되고, tutor_memo에 “변경: 원래→새” 한 줄이 기록됩니다.</div>
+                                <div style={{marginTop:8,fontSize:10.5,color:"#94a3b8"}}>※ Original date is added to skip_dates; tutor_memo appends &quot;변경: original→new&quot;.</div>
                               </div>
                             </div>
                           </td>

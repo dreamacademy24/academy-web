@@ -14,6 +14,7 @@ interface Lesson {
   total_sessions: number | null; total_amount: number | null;
   status: string;
   skip_dates: string[] | null; tutor_memo: string | null;
+  attendance_log: Record<string, "O" | "X" | "△"> | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -87,6 +88,10 @@ export default function TutorLessonList() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [savingSessionId, setSavingSessionId] = useState<string | null>(null);
 
+  // 출결 OX△ 입력 상태
+  const [attendanceDraft, setAttendanceDraft] = useState<Record<string, "O" | "X" | "△" | "">>({});
+  const [attendanceSaving, setAttendanceSaving] = useState(false);
+
   // 인라인 관리 패널 상태 (코멘트 / 하루취소 / 날짜변경)
   const [expandedId, setExpandedId] = useState<string>("");
   const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
@@ -150,24 +155,70 @@ export default function TutorLessonList() {
     return true;
   });
 
+  // class_days(요일 array) + start/end + skip_dates 로 자연 수업일 목록 생성
+  function generateLessonDates(lesson: LessonRow): string[] {
+    if (!lesson.start_date || !lesson.end_date) return [];
+    const dayCodes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
+    if (dayCodes.length === 0) return [];
+    const codeToIdx: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+    const wanted = new Set(dayCodes.map(c => codeToIdx[c]).filter(i => i !== undefined));
+    const skips = new Set(Array.isArray(lesson.skip_dates) ? lesson.skip_dates : []);
+    const out: string[] = [];
+    const d = new Date(lesson.start_date + "T00:00:00");
+    const end = new Date(lesson.end_date + "T00:00:00");
+    while (d <= end) {
+      if (wanted.has(d.getDay())) {
+        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        if (!skips.has(ds)) out.push(ds);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
   async function openAttendance(lesson: LessonRow) {
     setSelectedLesson(lesson);
     setSessions([]);
-    setSessionsLoading(true);
-    const { data, error } = await supabase
-      .from("tutor_lesson_sessions")
-      .select("*")
-      .eq("lesson_id", lesson.id)
-      .order("session_idx", { ascending: true });
-    setSessionsLoading(false);
-    if (error) {
-      console.error("회차 로드 실패:", error);
-      showToast("회차 로드 실패: " + error.message);
-      return;
-    }
-    setSessions((data || []) as SessionRow[]);
+    // 저장된 attendance_log → draft 시드
+    const log = (lesson.attendance_log || {}) as Record<string, "O" | "X" | "△">;
+    setAttendanceDraft({ ...log });
   }
-  function closeAttendance() { setSelectedLesson(null); setSessions([]); }
+  function closeAttendance() {
+    setSelectedLesson(null);
+    setSessions([]);
+    setAttendanceDraft({});
+  }
+
+  function cycleAttendance(date: string) {
+    setAttendanceDraft(prev => {
+      const cur = prev[date] || "";
+      const next: "O" | "X" | "△" | "" =
+        cur === "" ? "O" :
+        cur === "O" ? "X" :
+        cur === "X" ? "△" :
+        "";
+      return { ...prev, [date]: next };
+    });
+  }
+
+  async function saveAttendance() {
+    if (!selectedLesson) return;
+    // 빈 문자열은 제거, OX△만 저장
+    const log: Record<string, "O" | "X" | "△"> = {};
+    for (const [k, v] of Object.entries(attendanceDraft)) {
+      if (v === "O" || v === "X" || v === "△") log[k] = v;
+    }
+    setAttendanceSaving(true);
+    const { error } = await supabase
+      .from("tutor_lessons")
+      .update({ attendance_log: log })
+      .eq("id", selectedLesson.id);
+    setAttendanceSaving(false);
+    if (error) { showToast("출결 저장 실패: " + error.message); return; }
+    setLessons(ls => ls.map(l => l.id === selectedLesson.id ? { ...l, attendance_log: log } : l));
+    setSelectedLesson(sl => sl ? { ...sl, attendance_log: log } : sl);
+    showToast("✅ 출결이 저장되었습니다");
+  }
 
   async function refreshLessonCounts(lessonId: string) {
     const { data, error } = await supabase
@@ -534,70 +585,100 @@ export default function TutorLessonList() {
       )}
     </div>
 
-    {selectedLesson && (
-      <div className="tll-overlay" onClick={closeAttendance}>
-        <div className="tll-m" onClick={e => e.stopPropagation()}>
-          <div className="tll-m-head">
-            <h3>
-              📋 {selectedLesson.house_or_reserver} · {selectedLesson.student_names}
-              <span className="sub">{selectedLesson.tutor_name || "(미배정)"}</span>
-            </h3>
-            <button className="tll-close" onClick={closeAttendance} aria-label="닫기">✕</button>
-          </div>
+    {selectedLesson && (() => {
+      const dates = generateLessonDates(selectedLesson);
+      const counts = { O: 0, X: 0, T: 0 }; // T = △
+      for (const d of dates) {
+        const v = attendanceDraft[d];
+        if (v === "O") counts.O++;
+        else if (v === "X") counts.X++;
+        else if (v === "△") counts.T++;
+      }
+      const baseTotal = dates.length;
+      const total = baseTotal + counts.T; // △는 총회차 +1 연장
+      const remaining = total - counts.O - counts.X - counts.T;
+      return (
+        <div className="tll-overlay" onClick={closeAttendance}>
+          <div className="tll-m" onClick={e => e.stopPropagation()}>
+            <div className="tll-m-head">
+              <h3>
+                📋 {selectedLesson.house_or_reserver} · {selectedLesson.student_names}
+                <span className="sub">{selectedLesson.tutor_name || "(미배정)"}</span>
+              </h3>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={saveAttendance}
+                  disabled={attendanceSaving}
+                  style={{ padding: "8px 16px", border: "none", borderRadius: 7, background: "#1a6fc4", color: "#fff", fontSize: 13, fontWeight: 700, cursor: attendanceSaving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: attendanceSaving ? 0.6 : 1 }}
+                >💾 {attendanceSaving ? "저장중..." : "저장"}</button>
+                <button className="tll-close" onClick={closeAttendance} aria-label="닫기">✕</button>
+              </div>
+            </div>
 
-          <div className="tll-m-sum">
-            <div className="s">총 <b>{selectedLesson.counts.total || selectedLesson.total_sessions || 0}회</b></div>
-            <div className="s">출석 <b style={{ color: "#166534" }}>{selectedLesson.counts.attended}</b></div>
-            <div className="s">노쇼 <b style={{ color: "#dc2626" }}>{selectedLesson.counts.no_show}</b></div>
-            <div className="s">취소 <b style={{ color: "#b91c1c" }}>{selectedLesson.counts.cancelled}</b></div>
-            <div className="s">재조정 <b style={{ color: "#92400e" }}>{selectedLesson.counts.rescheduled}</b></div>
-            <div className="s">남은 <b style={{ color: "#1a6fc4" }}>{selectedLesson.counts.scheduled}회</b></div>
-          </div>
+            <div className="tll-m-sum">
+              <div className="s">총 <b>{total}회</b></div>
+              <div className="s">O 출석 <b style={{ color: "#166534" }}>{counts.O}</b></div>
+              <div className="s">X 결석 <b style={{ color: "#dc2626" }}>{counts.X}</b></div>
+              <div className="s">△ 메이크업 <b style={{ color: "#c2410c" }}>{counts.T}</b></div>
+              <div className="s">남은 <b style={{ color: "#1a6fc4" }}>{remaining}회</b></div>
+            </div>
 
-          <div className="tll-m-body">
-            {sessionsLoading ? (
-              <div className="tll-loading">회차 로딩 중...</div>
-            ) : sessions.length === 0 ? (
-              <div className="tll-empty">회차가 없습니다</div>
-            ) : (
-              sessions.map(s => {
-                const dt = new Date(s.session_date + "T00:00:00");
-                const dayStr = isNaN(dt.getTime()) ? "" : WEEKDAYS_KR[dt.getDay()];
-                const timeDisplay = s.session_time || selectedLesson.confirmed_time || selectedLesson.class_time || "-";
-                return (
-                  <div className="tll-srow" key={s.id}>
-                    <div className="idx">{s.session_idx}회</div>
-                    <div className="dt">{s.session_date}{dayStr ? ` (${dayStr})` : ""}</div>
-                    <div className="tm">{timeDisplay}</div>
-                    <select
-                      value={s.status}
-                      onChange={e => updateSessionStatus(s.id, e.target.value)}
-                      disabled={savingSessionId === s.id}
-                      aria-label={`${s.session_idx}회 상태`}
-                    >
-                      {SESSION_STATUS_ORDER.map(k => (
-                        <option key={k} value={k}>{SESSION_STATUS_LABEL[k]}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      defaultValue={s.session_note || ""}
-                      placeholder="세션 노트 (선택)"
-                      aria-label={`${s.session_idx}회 노트`}
-                      onBlur={e => {
-                        const v = e.target.value.trim();
-                        const cur = (s.session_note || "").trim();
-                        if (v !== cur) updateSessionNote(s.id, v);
-                      }}
-                    />
+            <div className="tll-m-body" style={{ padding: "14px 22px" }}>
+              {dates.length === 0 ? (
+                <div className="tll-empty">생성할 수업일이 없습니다 (start/end + class_days 확인)</div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 11.5, color: "#6b7c93", marginBottom: 10, lineHeight: 1.6 }}>
+                    박스 클릭으로 출결 순환: <b style={{ color: "#94a3b8" }}>빈칸</b> → <b style={{ color: "#166534" }}>O 출석</b> → <b style={{ color: "#dc2626" }}>X 결석</b> → <b style={{ color: "#c2410c" }}>△ 메이크업</b> → 빈칸
+                    <br />
+                    <span style={{ fontSize: 10.5, color: "#94a3b8" }}>△ 표시는 총 회차를 +1 연장합니다. 저장 버튼으로 일괄 DB 업데이트.</span>
                   </div>
-                );
-              })
-            )}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(86px, 1fr))", gap: 8 }}>
+                    {dates.map((d, i) => {
+                      const dt = new Date(d + "T00:00:00");
+                      const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
+                      const dayStr = WEEKDAYS_KR[dt.getDay()];
+                      const v = attendanceDraft[d] || "";
+                      const cfg =
+                        v === "O" ? { bg: "#dcfce7", color: "#15803d", border: "#86efac" } :
+                        v === "X" ? { bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5" } :
+                        v === "△" ? { bg: "#fff7ed", color: "#c2410c", border: "#fdba74" } :
+                        { bg: "#fff", color: "#94a3b8", border: "#e2e8f0" };
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => cycleAttendance(d)}
+                          title={`${d} (${dayStr}) — ${v || "빈칸"}`}
+                          style={{
+                            padding: "10px 6px",
+                            background: cfg.bg,
+                            color: cfg.color,
+                            border: `1.5px solid ${cfg.border}`,
+                            borderRadius: 9,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 3,
+                            transition: "all 120ms",
+                          }}
+                        >
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7c93" }}>{i + 1}회</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 800 }}>{md}<span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", marginLeft: 3 }}>({dayStr})</span></span>
+                          <span style={{ fontSize: 20, fontWeight: 900, lineHeight: 1, minHeight: 22 }}>{v || ""}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      );
+    })()}
 
     {toast && <div className="tll-toast" role="status" aria-live="polite">{toast}</div>}
   </>);
