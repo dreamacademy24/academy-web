@@ -884,6 +884,10 @@ export default function EngTutorClassPage() {
                             }}
                             title="Notes / Cancel / Reschedule"
                           >{expanded ? "▲ Close" : "🗒 Manage"}</button>
+                          <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4}} onClick={() => {
+                            if (String(l.id).startsWith("req:")) { alert("Lesson not generated yet — please confirm in the request detail first."); return; }
+                            router.push(`/admin/tutor-class/${l.id}/attendance`);
+                          }}>📋 Attendance</button>
                           <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
                         </td>
                       </tr>

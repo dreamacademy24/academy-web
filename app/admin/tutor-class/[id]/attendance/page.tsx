@@ -1,0 +1,294 @@
+"use client";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+interface Lesson {
+  id: string;
+  house_or_reserver: string;
+  student_names: string;
+  tutor_id: string | null;
+  class_type: string;
+  sessions_per_day: number | null;
+  start_date: string;
+  end_date: string;
+  class_days: string[] | null;
+  class_time: string | null;
+  confirmed_time: string | null;
+  total_sessions: number | null;
+  skip_dates: string[] | null;
+  tutor_memo: string | null;
+  attendance_log: Record<string, "○" | "✕" | "△"> | null;
+}
+
+const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
+const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
+const CODE_TO_IDX: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+function pad2(n: number) { return String(n).padStart(2, "0"); }
+function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function fmtMD(iso: string) {
+  if (!iso) return "";
+  const dt = new Date(iso + "T00:00:00");
+  if (isNaN(dt.getTime())) return iso;
+  return `${dt.getMonth() + 1}/${dt.getDate()}`;
+}
+
+function generateDates(lesson: Lesson): string[] {
+  if (!lesson.start_date || !lesson.end_date) return [];
+  const codes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
+  if (codes.length === 0) return [];
+  const wanted = new Set(codes.map(c => CODE_TO_IDX[c]).filter(i => i !== undefined));
+  const skips = new Set(Array.isArray(lesson.skip_dates) ? lesson.skip_dates : []);
+  const out: string[] = [];
+  const d = new Date(lesson.start_date + "T00:00:00");
+  const end = new Date(lesson.end_date + "T00:00:00");
+  while (d <= end) {
+    if (wanted.has(d.getDay())) {
+      const ds = ymd(d);
+      if (!skips.has(ds)) out.push(ds);
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+export default function AttendancePage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const lessonId = params?.id || "";
+
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [tutorName, setTutorName] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<Record<string, "○" | "✕" | "△" | "">>({});
+  const [notes, setNotes] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const load = useCallback(async () => {
+    if (!lessonId) return;
+    setLoading(true);
+    setErrorMsg("");
+    const { data, error } = await supabase
+      .from("tutor_lessons")
+      .select("*")
+      .eq("id", lessonId)
+      .maybeSingle();
+    if (error || !data) {
+      setLoading(false);
+      setErrorMsg(error?.message || "수업을 찾을 수 없습니다 / Lesson not found");
+      return;
+    }
+    const l = data as Lesson;
+    setLesson(l);
+    setNotes(l.tutor_memo || "");
+    setDraft({ ...(l.attendance_log || {}) });
+    if (l.tutor_id) {
+      const { data: t } = await supabase.from("tutors").select("name").eq("id", l.tutor_id).maybeSingle();
+      if (t) setTutorName((t as { name: string }).name || "");
+    }
+    setLoading(false);
+  }, [lessonId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const dates = useMemo(() => lesson ? generateDates(lesson) : [], [lesson]);
+
+  const counts = useMemo(() => {
+    const c = { O: 0, X: 0, T: 0 };
+    for (const d of dates) {
+      const v = draft[d];
+      if (v === "○") c.O++;
+      else if (v === "✕") c.X++;
+      else if (v === "△") c.T++;
+    }
+    return c;
+  }, [dates, draft]);
+
+  const baseTotal = dates.length;
+  const total = baseTotal + counts.T;
+  const remaining = total - counts.O - counts.X - counts.T;
+
+  function cycle(date: string) {
+    setDraft(prev => {
+      const cur = prev[date] || "";
+      const next: "○" | "✕" | "△" | "" =
+        cur === "" ? "○" :
+        cur === "○" ? "✕" :
+        cur === "✕" ? "△" :
+        "";
+      return { ...prev, [date]: next };
+    });
+  }
+
+  async function save() {
+    if (!lesson) return;
+    setSaving(true);
+    const log: Record<string, "○" | "✕" | "△"> = {};
+    for (const [k, v] of Object.entries(draft)) {
+      if (v === "○" || v === "✕" || v === "△") log[k] = v;
+    }
+    const { error } = await supabase
+      .from("tutor_lessons")
+      .update({ attendance_log: log, tutor_memo: notes || null })
+      .eq("id", lesson.id);
+    setSaving(false);
+    if (error) { alert("저장 실패 / Save failed: " + error.message); return; }
+    alert("✅ 저장되었습니다 / Saved");
+    router.back();
+  }
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14 }}>로딩 중... / Loading...</div>;
+  }
+  if (errorMsg || !lesson) {
+    return (
+      <div style={{ padding: 40, textAlign: "center" }}>
+        <div style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{errorMsg || "수업 없음 / No lesson"}</div>
+        <button onClick={() => router.back()} style={{ padding: "8px 16px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>← 뒤로 / Back</button>
+      </div>
+    );
+  }
+
+  const daysLabel = (lesson.class_days || []).map(d => DAY_KR[d] || d).join(", ");
+  const timeLabel = lesson.confirmed_time || lesson.class_time || "-";
+
+  return (<>
+    <style>{`
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f9fafb;color:#111827}
+.at-w{max-width:1100px;margin:0 auto;padding:24px 20px}
+.at-top{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.at-back{padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;color:#475569;cursor:pointer;font-family:inherit}
+.at-back:hover{background:#f1f5f9;color:#1a6fc4;border-color:#cbd5e1}
+.at-title{flex:1;min-width:0}
+.at-title h1{font-size:19px;font-weight:800;color:#111827;line-height:1.4;word-break:keep-all}
+.at-title .sub{font-size:12.5px;color:#6b7280;font-weight:500;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
+.at-title .sub span{display:inline-block}
+.at-title .sub .tag{padding:2px 8px;background:#eff6ff;color:#1a6fc4;border-radius:5px;font-weight:700;font-size:11.5px}
+
+.at-card{background:#fff;border-radius:12px;border:1px solid #f3f4f6;box-shadow:0 1px 4px rgba(0,0,0,0.05);padding:18px 20px;margin-bottom:16px}
+
+.at-sum{display:flex;flex-wrap:wrap;gap:10px}
+.at-sum .s{padding:10px 14px;background:#f9fafb;border-radius:9px;font-size:12.5px;color:#475569;font-weight:600;display:flex;align-items:baseline;gap:6px;border:1px solid #f3f4f6}
+.at-sum .s .lbl{font-size:11px;color:#9ca3af}
+.at-sum .s b{font-size:15px;color:#111827;font-weight:800}
+.at-sum .s.attend b{color:#15803d}
+.at-sum .s.miss b{color:#dc2626}
+.at-sum .s.makeup b{color:#c2410c}
+.at-sum .s.remain b{color:#1a6fc4}
+
+.at-help{font-size:12px;color:#6b7280;line-height:1.7;background:#f9fafb;border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px dashed #e5e7eb}
+.at-help b{color:#374151}
+
+.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.at-box{padding:11px 6px;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid;transition:all 120ms;user-select:none}
+.at-box .idx{font-size:10.5px;font-weight:700;color:#6b7280}
+.at-box .dt{font-size:12.5px;font-weight:800}
+.at-box .dw{font-size:10px;font-weight:600;color:#9ca3af;margin-left:2px}
+.at-box .mark{font-size:22px;font-weight:900;line-height:1;min-height:24px;margin-top:2px}
+.at-box.s-blank{background:#fff;color:#94a3b8;border-color:#e5e7eb}
+.at-box.s-blank:hover{border-color:#cbd5e1;background:#f9fafb}
+.at-box.s-o{background:#eaf3de;color:#3b6d11;border-color:#bce085}
+.at-box.s-x{background:#fcebeb;color:#a32d2d;border-color:#fca5a5}
+.at-box.s-t{background:#faeeda;color:#854f0b;border-color:#fdba74}
+
+.at-notes-card label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px}
+.at-notes-card label .en{font-weight:500;color:#6b7280;font-size:12px;margin-left:6px}
+.at-notes-card textarea{width:100%;min-height:96px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical}
+.at-notes-card textarea:focus{border-color:#1a6fc4}
+
+.at-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.at-btn{height:40px;padding:0 22px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.at-btn.secondary{background:#fff;border:1px solid #e5e7eb;color:#475569}
+.at-btn.secondary:hover{background:#f9fafb;border-color:#cbd5e1;color:#111827}
+.at-btn.primary{background:#1a6fc4;border:none;color:#fff}
+.at-btn.primary:hover:not(:disabled){background:#155aa0}
+.at-btn:disabled{opacity:0.6;cursor:not-allowed}
+
+@media(max-width:600px){
+  .at-w{padding:16px 12px}
+  .at-sum .s{flex:1 1 calc(50% - 5px);min-width:0}
+  .at-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+}
+    `}</style>
+
+    <div className="at-w">
+      <div className="at-top">
+        <button className="at-back" onClick={() => router.back()}>← 뒤로 / Back</button>
+        <div className="at-title">
+          <h1>📋 출결 관리 / Attendance · {lesson.house_or_reserver} · {lesson.student_names}</h1>
+          <div className="sub">
+            <span className="tag">{lesson.class_type}</span>
+            <span><b style={{ color: "#374151" }}>요일/Days:</b> {daysLabel || "-"}</span>
+            <span><b style={{ color: "#374151" }}>시간/Time:</b> {timeLabel}</span>
+            <span><b style={{ color: "#374151" }}>기간/Period:</b> {fmtMD(lesson.start_date)}~{fmtMD(lesson.end_date)}</span>
+            {tutorName && <span><b style={{ color: "#374151" }}>튜터/Tutor:</b> {tutorName}</span>}
+          </div>
+        </div>
+      </div>
+
+      <div className="at-card">
+        <div className="at-sum">
+          <div className="s"><span className="lbl">총 / Total</span><b>{total}회</b></div>
+          <div className="s attend"><span className="lbl">○ 출석 / Attended</span><b>{counts.O}</b></div>
+          <div className="s miss"><span className="lbl">✕ 결석 / Absent</span><b>{counts.X}</b></div>
+          <div className="s makeup"><span className="lbl">△ 메이크업 / Makeup</span><b>{counts.T}</b></div>
+          <div className="s remain"><span className="lbl">남은 / Remaining</span><b>{remaining}회</b></div>
+        </div>
+      </div>
+
+      <div className="at-card">
+        <div className="at-help">
+          박스를 클릭해 출결을 순환 입력하세요 — <b>빈칸 → ○ 출석 → ✕ 결석 → △ 메이크업 → 빈칸</b>.<br />
+          Click each box to cycle: <b>blank → ○ attended → ✕ absent → △ makeup → blank</b>. △는 총 회차를 +1 연장합니다 (Makeup extends total by +1).
+        </div>
+        {dates.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 13 }}>
+            생성할 수업일이 없습니다 (시작일/종료일/요일 확인) / No class dates available
+          </div>
+        ) : (
+          <div className="at-grid">
+            {dates.map((d, i) => {
+              const dt = new Date(d + "T00:00:00");
+              const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
+              const dw = WEEKDAYS_KR[dt.getDay()];
+              const v = draft[d] || "";
+              const cls =
+                v === "○" ? "s-o" :
+                v === "✕" ? "s-x" :
+                v === "△" ? "s-t" : "s-blank";
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  className={`at-box ${cls}`}
+                  onClick={() => cycle(d)}
+                  title={`${d} (${dw}) — ${v || "blank"}`}
+                >
+                  <span className="idx">{i + 1}회 · #{i + 1}</span>
+                  <span className="dt">{md}<span className="dw">({dw})</span></span>
+                  <span className="mark">{v || ""}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="at-card at-notes-card">
+        <label>특이사항 메모 <span className="en">/ Notes</span></label>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="특이사항이 있을 때만 입력하세요 / Add notes only when something needs to be recorded"
+        />
+      </div>
+
+      <div className="at-foot">
+        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>취소 / Cancel</button>
+        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? "저장중... / Saving..." : "💾 저장 / Save"}</button>
+      </div>
+    </div>
+  </>);
+}

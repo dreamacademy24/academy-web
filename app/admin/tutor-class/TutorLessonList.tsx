@@ -471,7 +471,7 @@ export default function TutorLessonList() {
                     </td>
                     <td><span className="tll-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
                     <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                      <button className="tll-act-btn primary" onClick={() => openAttendance(l)}>출결</button>
+                      <button className="tll-act-btn primary" onClick={() => router.push(`/admin/tutor-class/${l.id}/attendance`)}>출결</button>
                       <button
                         className="tll-act-btn"
                         onClick={() => {
