@@ -57,6 +57,29 @@ function tutorColor(tutorId: string | null | undefined): string {
 }
 
 const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+// 한글/영문/약어 요일 → 표준 키(sun..sat) 매핑.
+// DB에는 ["월","수","금"] 같은 한글 또는 ["mon","wed","fri"] 영문이 섞여 있어 둘 다 처리.
+function normalizeWeekday(input: string): string {
+  if (!input) return "";
+  const s = String(input).toLowerCase().trim();
+  switch (s) {
+    case "일": case "일요일": return "sun";
+    case "월": case "월요일": return "mon";
+    case "화": case "화요일": return "tue";
+    case "수": case "수요일": return "wed";
+    case "목": case "목요일": return "thu";
+    case "금": case "금요일": return "fri";
+    case "토": case "토요일": return "sat";
+  }
+  if (s.startsWith("sun")) return "sun";
+  if (s.startsWith("mon")) return "mon";
+  if (s.startsWith("tue")) return "tue";
+  if (s.startsWith("wed")) return "wed";
+  if (s.startsWith("thu")) return "thu";
+  if (s.startsWith("fri")) return "fri";
+  if (s.startsWith("sat")) return "sat";
+  return s;
+}
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 function pad2(n: number) { return String(n).padStart(2, "0"); }
@@ -223,11 +246,12 @@ export default function EngTutorClassPage() {
     for (const l of allLessons) {
       const start = l.start_date || "";
       const end = l.end_date || "";
-      const days: string[] = Array.isArray(l.class_days)
-        ? l.class_days.map((d: string) => (d || "").toLowerCase().trim())
+      const rawDays: string[] = Array.isArray(l.class_days)
+        ? l.class_days
         : typeof l.class_days === "string"
-          ? l.class_days.split(",").map((d: string) => d.toLowerCase().trim())
+          ? l.class_days.split(",")
           : [];
+      const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
       for (let i = 0; i < week.dates.length; i++) {
         const ds = week.dates[i];
         if (start && ds < start) continue;
@@ -431,11 +455,12 @@ export default function EngTutorClassPage() {
         const entries: ScheduleEntry[] = [];
         const seenReqIds = new Set<string>();
         for (const l of myLessons) {
-          const days = Array.isArray(l.class_days)
-            ? l.class_days.map((d: string) => (d || "").toLowerCase().trim())
+          const rawDays = Array.isArray(l.class_days)
+            ? l.class_days
             : typeof l.class_days === "string"
-              ? l.class_days.split(",").map((d: string) => d.toLowerCase().trim())
+              ? l.class_days.split(",")
               : [];
+          const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
           // admin_memo에서 request_id 추출 (있다면 dedupe용)
           const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
           if (m) seenReqIds.add(m[1]);
@@ -454,7 +479,7 @@ export default function EngTutorClassPage() {
         const confirmedReqs = reqs.filter(r => r.assigned_tutor_id === me.id && r.status === "confirmed");
         for (const r of confirmedReqs) {
           if (seenReqIds.has(r.id)) continue; // lesson 쪽에서 이미 표시
-          const days = (r.preferred_days || "").split(",").map((d: string) => d.toLowerCase().trim()).filter(Boolean);
+          const days = (r.preferred_days || "").split(",").map((d: string) => normalizeWeekday(d)).filter(Boolean);
           entries.push({
             id: "R:" + r.id,
             source: "request",
