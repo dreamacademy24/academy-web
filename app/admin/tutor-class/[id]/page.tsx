@@ -123,10 +123,30 @@ export default function TutorRequestDetailPage() {
     const computedSessions = weeks * daysPerWeek * spd;
     const priceNum = parseFloat(price) || 0;
     const computedAmount = computedSessions * priceNum;
+
+    // tutorId 정규화 — UUID면 그대로, 이름(또는 잘못된 값)이면 tutors 테이블에서 name 매칭 후 id로 변환
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let resolvedTutorId: string | null = null;
+    if (tutorId) {
+      if (UUID_RE.test(tutorId)) {
+        resolvedTutorId = tutorId;
+      } else {
+        const want = String(tutorId).trim();
+        const match = tutors.find(t => t.name === want)
+          || tutors.find(t => (t.name || "").toLowerCase() === want.toLowerCase());
+        if (match) {
+          resolvedTutorId = match.id;
+          console.log("[save] tutorId(name) → uuid 변환:", want, "→", match.id);
+        } else {
+          console.warn("[save] tutorId가 UUID도 아니고 tutors에서 name 매칭도 실패:", tutorId);
+        }
+      }
+    }
+
     const payload: Record<string, unknown> = {
       status,
-      assigned_tutor_id: tutorId || null,
-      tutor_id: tutorId || null,
+      assigned_tutor_id: resolvedTutorId,
+      tutor_id: resolvedTutorId,
       admin_memo: memo || null,
       total_sessions: computedSessions || null,
       total_amount: computedAmount || null,
@@ -137,11 +157,10 @@ export default function TutorRequestDetailPage() {
     if (error) { setSaving(false); setMsg("저장 실패: " + error.message); return; }
 
     // tutor_lessons UPSERT — 튜터가 배정되면 status 와 무관하게 실행
-    console.log("[save] status:", status, "| tutorId:", tutorId, "| row.id:", row.id);
+    console.log("[save] status:", status, "| resolvedTutorId:", resolvedTutorId, "| row.id:", row.id);
     let lessonMsg = "";
-    if (tutorId) {
-      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const tutorUuid = UUID_RE.test(tutorId) ? tutorId : null;
+    if (resolvedTutorId) {
+      const tutorUuid = resolvedTutorId;
       const classDaysArr = row.preferred_days
         ? row.preferred_days.split(",").map(d => d.trim()).filter(Boolean)
         : null;
@@ -186,6 +205,10 @@ export default function TutorRequestDetailPage() {
         if (insErr) { console.error("[save] tutor_lessons INSERT 실패:", insErr); lessonMsg = " (수업 생성 실패: " + insErr.message + ")"; }
         else console.log("[save] tutor_lessons INSERTED id=", ins?.id);
       }
+    } else if (tutorId) {
+      // 튜터를 선택했는데 UUID/이름 매칭에 실패한 케이스 — null 저장 방지 + 경고
+      console.warn("[save] tutorId 해석 실패로 tutor_lessons 동기화 스킵:", tutorId);
+      lessonMsg = " (수업 동기화 스킵: 튜터 ID 해석 실패 — 이름이 tutors 테이블에 존재하는지 확인)";
     } else {
       console.log("[save] 튜터 미배정 → tutor_lessons 동기화 스킵");
     }

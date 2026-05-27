@@ -220,7 +220,7 @@ export default function EngTutorClassPage() {
 
   // Weekly View — 모든 active 수업 로드 (탭 진입 시)
   useEffect(() => {
-    if (tab !== "weekly") return;
+    if (tab !== "weekly" && tab !== "invoice") return;
     let cancelled = false;
     (async () => {
       setLoadingAllLessons(true);
@@ -711,25 +711,41 @@ export default function EngTutorClassPage() {
       )}
 
       {tab === "invoice" && (() => {
-        if (!me) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
+        // 본인 담당 수업이 없어도 모든 tutor_lessons 표시 — 어드민은 어느 수업이든 인보이스 출력 가능
+        if (loadingAllLessons) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Loading...</div>;
         }
-        if (myLessons.length === 0) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
+        if (allLessons.length === 0) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No lessons yet</div>;
         }
+        // 본인 담당 우선 정렬 → 그 다음 created_at desc
+        const sorted = [...allLessons].sort((a, b) => {
+          const aMine = me && a.tutor_id === me.id ? 0 : 1;
+          const bMine = me && b.tutor_id === me.id ? 0 : 1;
+          if (aMine !== bMine) return aMine - bMine;
+          return (b.created_at || "").localeCompare(a.created_at || "");
+        });
         return (
           <div style={{background:"#fff",borderRadius:12,padding:24,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
-            <h2 style={{fontSize:14,fontWeight:800,color:"#1a6fc4",marginBottom:12,paddingBottom:6,borderBottom:"1px solid #e2e8f0"}}>💰 Select a class to view the invoice</h2>
+            <h2 style={{fontSize:14,fontWeight:800,color:"#1a6fc4",marginBottom:12,paddingBottom:6,borderBottom:"1px solid #e2e8f0"}}>💰 Select a class to view the invoice <span style={{fontWeight:500,color:"#94a3b8",marginLeft:6}}>({sorted.length} total)</span></h2>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {myLessons.map((l: any) => (
-                <button key={l.id} type="button"
-                  onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
-                  style={{padding:"12px 16px",border:"1px solid #e2e8f0",borderRadius:9,textAlign:"left",cursor:"pointer",fontFamily:"inherit",background:"#fff",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}
-                >
-                  <span style={{fontWeight:700,color:"#1a1a2e"}}>{l.student_names || "-"} <span style={{fontWeight:400,color:"#6b7c93",marginLeft:6}}>· {l.class_type || ""} · {fmtDate(l.start_date)}~{fmtDate(l.end_date)}</span></span>
-                  <span style={{color:"#16a34a",fontWeight:700}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : ""} →</span>
-                </button>
-              ))}
+              {sorted.map((l: any) => {
+                const tName = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
+                const isMine = me && l.tutor_id === me.id;
+                return (
+                  <button key={l.id} type="button"
+                    onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
+                    style={{padding:"12px 16px",border:"1px solid "+(isMine?"#bfdbfe":"#e2e8f0"),borderRadius:9,textAlign:"left",cursor:"pointer",fontFamily:"inherit",background:isMine?"#eff6ff":"#fff",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}
+                  >
+                    <span style={{flex:1,minWidth:0}}>
+                      <span style={{fontWeight:700,color:isMine?"#1a6fc4":"#475569",marginRight:8}}>{tName}{isMine?" (me)":""}</span>
+                      <span style={{fontWeight:700,color:"#1a1a2e"}}>{l.student_names || "-"}</span>
+                      <span style={{fontWeight:400,color:"#6b7c93",marginLeft:6}}>· {l.class_type || ""} · {fmtDate(l.start_date)}~{fmtDate(l.end_date)}</span>
+                    </span>
+                    <span style={{color:"#16a34a",fontWeight:700,whiteSpace:"nowrap"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : ""} →</span>
+                  </button>
+                );
+              })}
             </div>
             <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>Calendar, print and image-save buttons are available on the admin invoice page.</div>
           </div>
