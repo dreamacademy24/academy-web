@@ -72,6 +72,10 @@ export default function AttendancePage() {
   const [draft, setDraft] = useState<Record<string, "○" | "✕" | "△" | "">>({});
   const [notes, setNotes] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [cancelDateVal, setCancelDateVal] = useState("");
+  const [changeOldVal, setChangeOldVal] = useState("");
+  const [changeNewVal, setChangeNewVal] = useState("");
+  const [savingManage, setSavingManage] = useState(false);
 
   const load = useCallback(async () => {
     if (!lessonId) return;
@@ -144,6 +148,46 @@ export default function AttendancePage() {
     if (error) { alert("Save failed: " + error.message); return; }
     alert("✅ Saved");
     router.back();
+  }
+
+  async function cancelOneDate() {
+    if (!lesson) return;
+    const d = cancelDateVal.trim();
+    if (!d) { alert("Please select a date to cancel."); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    if (current.includes(d)) { alert("This date is already cancelled."); return; }
+    setSavingManage(true);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: [...current, d] })
+      .eq("id", lesson.id);
+    setSavingManage(false);
+    if (error) { alert("Cancel failed: " + error.message); return; }
+    setCancelDateVal("");
+    alert(`✅ ${d} class cancelled.`);
+    load();
+  }
+
+  async function rescheduleDate() {
+    if (!lesson) return;
+    const oldD = changeOldVal.trim();
+    const newD = changeNewVal.trim();
+    if (!oldD || !newD) { alert("Please select both the original date and the new date."); return; }
+    if (oldD === newD) { alert("Original date and new date are the same."); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = current.includes(oldD) ? current : [...current, oldD];
+    const note = `Rescheduled: ${oldD} → ${newD}`;
+    const nextNotes = notes ? `${notes}\n${note}` : note;
+    setSavingManage(true);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: nextSkips, tutor_memo: nextNotes })
+      .eq("id", lesson.id);
+    setSavingManage(false);
+    if (error) { alert("Reschedule failed: " + error.message); return; }
+    setChangeOldVal("");
+    setChangeNewVal("");
+    setNotes(nextNotes);
+    alert(`✅ Rescheduled: ${oldD} → ${newD}`);
+    load();
   }
 
   if (loading) {
@@ -283,6 +327,64 @@ export default function AttendancePage() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="at-card">
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
+
+          {/* Cancel Day */}
+          <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:2}}>❌ Cancel Day</div>
+            <input
+              type="date"
+              value={cancelDateVal}
+              min={lesson.start_date || undefined}
+              max={lesson.end_date || undefined}
+              onChange={e => setCancelDateVal(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            {(lesson.skip_dates || []).length > 0 && (
+              <div style={{fontSize:11,color:"#475569"}}>
+                <span style={{fontWeight:700}}>Cancelled ({(lesson.skip_dates||[]).length}): </span>
+                {(lesson.skip_dates||[]).map((d:string) => (
+                  <span key={d} style={{display:"inline-block",padding:"1px 6px",borderRadius:4,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700,marginRight:3}}>{d}</span>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={cancelOneDate}
+              disabled={savingManage || !cancelDateVal}
+              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!cancelDateVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!cancelDateVal)?0.6:1,alignSelf:"flex-start"}}
+            >{savingManage ? "Saving..." : "Cancel Day"}</button>
+          </div>
+
+          {/* Reschedule */}
+          <div style={{flex:"1 1 240px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:2}}>🔄 Reschedule</div>
+            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>From</label>
+            <input
+              type="date"
+              value={changeOldVal}
+              min={lesson.start_date || undefined}
+              max={lesson.end_date || undefined}
+              onChange={e => setChangeOldVal(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>To</label>
+            <input
+              type="date"
+              value={changeNewVal}
+              onChange={e => setChangeNewVal(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            <button
+              onClick={rescheduleDate}
+              disabled={savingManage || !changeOldVal || !changeNewVal}
+              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!changeOldVal||!changeNewVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!changeOldVal||!changeNewVal)?0.6:1,alignSelf:"flex-start"}}
+            >{savingManage ? "Saving..." : "Reschedule"}</button>
+          </div>
+
+        </div>
       </div>
 
       <div className="at-card at-notes-card">
