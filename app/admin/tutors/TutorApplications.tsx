@@ -356,6 +356,10 @@ export default function TutorApplications() {
     if (!detail) return;
     setDeleting(true);
     setModalError("");
+    // 연결된 tutor_lessons 정리
+    await supabase.from("tutor_lessons")
+      .delete()
+      .ilike("admin_memo", `%request_id: ${detail.id}%`);
     const { error } = await supabase.from("tutor_requests").delete().eq("id", detail.id);
     setDeleting(false);
     if (error) {
