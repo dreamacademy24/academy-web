@@ -518,15 +518,18 @@ export default function EngTutorClassPage() {
         router.push(`/admin/tutor-class/${existing[0].id}/attendance`);
         return;
       }
-      const classDaysArr = Array.isArray(lesson.class_days)
-        ? lesson.class_days
-        : (typeof lesson.class_days === "string" ? lesson.class_days.split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+      // class_days null/undefined 안전 처리: 빈 값이면 []로 시작
+      const classDaysArr: string[] = Array.isArray(lesson.class_days)
+        ? lesson.class_days.filter(Boolean)
+        : (typeof lesson.class_days === "string" && lesson.class_days
+            ? lesson.class_days.split(",").map((s: string) => s.trim()).filter(Boolean)
+            : []);
       const payload: Record<string, unknown> = {
         tutor_id: lesson.tutor_id || (me ? me.id : null),
         start_date: lesson.start_date || null,
         end_date: lesson.end_date || null,
         sessions_per_day: lesson.sessions_per_day || 1,
-        class_days: classDaysArr.length > 0 ? classDaysArr : null,
+        class_days: classDaysArr,
         class_time: lesson.class_time || null,
         class_type: lesson.class_type || null,
         house_or_reserver: lesson.house_or_reserver || "",
