@@ -147,7 +147,7 @@ function formatBirthAge(birth: string): string {
 }
 
 const INIT_FORM = {
-  student_name_kr: "", student_name_en: "", student_age: "",
+  student_name_kr: "", student_name_en: "",
   student1_name_kr: "", student1_name_en: "", student1_idx: -1,
   student2_name_kr: "", student2_name_en: "", student2_idx: -1,
   class_type: "", start_date: "", end_date: "",
@@ -254,13 +254,15 @@ export default function PortalTutorPage() {
     const rawAge = n.age || s?.age || s?.birthYear || '';
     const age = formatBirthAge(String(rawAge));
     if (pickerSlot === 'single') {
-      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en, student_age: age }));
+      setForm(f => ({ ...f, student_name_kr: n.kr, student_name_en: n.en }));
     } else if (pickerSlot === '1') {
-      setForm(f => ({ ...f, student1_name_kr: n.kr, student1_name_en: n.en, student1_idx: idx, student_age: age }));
+      setForm(f => ({ ...f, student1_name_kr: n.kr, student1_name_en: n.en, student1_idx: idx }));
     } else if (pickerSlot === '2') {
       setForm(f => ({ ...f, student2_name_kr: n.kr, student2_name_en: n.en, student2_idx: idx }));
       setStudent2Age(age);
     }
+    // age는 booking 데이터로부터 자동 인식 (form 저장 불필요)
+    void age;
     setPickerSlot(null);
   }
 
@@ -309,9 +311,6 @@ export default function PortalTutorPage() {
     const finalEn = isFor2
       ? [form.student1_name_en, form.student2_name_en].filter(Boolean).join(', ')
       : form.student_name_en;
-    const finalAge = isFor2
-      ? [form.student_age, student2Age].filter(Boolean).join(', ')
-      : form.student_age;
 
     const levels = form.is_enrolled
       ? { level_english: 'enrolled', level_speaking: 'enrolled', level_reading: 'enrolled', level_writing: 'enrolled' }
@@ -325,7 +324,6 @@ export default function PortalTutorPage() {
         ...form,
         student_name_kr: finalKr,
         student_name_en: finalEn,
-        student_age: finalAge,
         ...levels,
         privacy_agreed: true,
         rules_agreed: true,
@@ -553,7 +551,7 @@ export default function PortalTutorPage() {
             {hasStudent ? (
               <div className="stu-pick">
                 <div className="sel-name">
-                  {form.student_name_kr}{form.student_name_en ? ` / ${form.student_name_en}` : ""}{form.student_age ? ` (${form.student_age})` : ""}
+                  {form.student_name_kr}{form.student_name_en ? ` / ${form.student_name_en}` : ""}
                 </div>
                 <button type="button" className="change-btn" onClick={() => setPickerSlot('single')}>변경</button>
               </div>
@@ -574,7 +572,7 @@ export default function PortalTutorPage() {
                 <span className="slot-label">학생 1</span>
                 {(form.student1_name_kr || form.student1_name_en) ? (
                   <div className="stu-pick">
-                    <div className="sel-name">{form.student1_name_kr}{form.student1_name_en ? ` / ${form.student1_name_en}` : ""}{form.student_age ? ` (${form.student_age})` : ""}</div>
+                    <div className="sel-name">{form.student1_name_kr}{form.student1_name_en ? ` / ${form.student1_name_en}` : ""}</div>
                     <button type="button" className="change-btn" onClick={() => setPickerSlot('1')}>변경</button>
                   </div>
                 ) : (
@@ -600,11 +598,6 @@ export default function PortalTutorPage() {
           </div>
         )}
 
-        <div className="q">
-          <label className="q-label"><span className="num">3</span>학생 나이</label>
-          <span className="q-hint">예: 2019.09.03 만5세</span>
-          <input className="inp" value={form.student_age} onChange={e => setForm({ ...form, student_age: e.target.value })} />
-        </div>
       </div>
 
       <div className="sec">
@@ -621,7 +614,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">4</span>수업 시작일</label>
+          <label className="q-label"><span className="num">3</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date}
             min={bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
             max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
@@ -639,14 +632,31 @@ export default function PortalTutorPage() {
           )}
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">5</span>수업 종료일</label>
+          <label className="q-label"><span className="num">4</span>수업 종료일</label>
           <input className="inp" type="date" value={form.end_date}
             min={form.start_date || bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
             max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
             onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
+
+        {/* 예약 기간 외 수업일 차단 안내 */}
+        {(() => {
+          const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
+          const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
+          const sBefore = !!form.start_date && !!bs && form.start_date < bs;
+          const eAfter  = !!form.end_date   && !!be && form.end_date   > be;
+          if (!sBefore && !eAfter) return null;
+          const fmtMD = (iso: string) => iso ? iso.slice(5).replace('-', '/') : '-';
+          return (
+            <div style={{marginTop:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderLeft:'4px solid #ef4444',borderRadius:8,fontSize:13,color:'#991b1b',fontWeight:600,lineHeight:1.5}}>
+              ⚠️ 예약 기간({fmtMD(bs)} ~ {fmtMD(be)}) 내 날짜만 신청 가능합니다.
+              {sBefore && <div style={{marginTop:4,fontWeight:500}}>· 수업 시작일이 체크인보다 빠릅니다.</div>}
+              {eAfter && <div style={{marginTop:4,fontWeight:500}}>· 수업 종료일이 체크아웃 이후입니다.</div>}
+            </div>
+          );
+        })()}
         <div className="q">
-          <label className="q-label"><span className="num">6</span>원하는 수업 요일 (복수 선택)</label>
+          <label className="q-label"><span className="num">5</span>원하는 수업 요일 (복수 선택)</label>
           <div className="opts" style={{alignItems:'center'}}>
             {DAYS.map(d => (
               <button key={d} type="button" className={`opt${form.preferred_days_arr.includes(d) ? " on" : ""}`} onClick={() => toggleDay(d)}>{d}</button>
@@ -660,11 +670,11 @@ export default function PortalTutorPage() {
           )}
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">7</span>빠지는 날짜 / 변경 날짜</label>
+          <label className="q-label"><span className="num">6</span>빠지는 날짜 / 변경 날짜</label>
           <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/15 결석, 4/17 오전→오후 변경" />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">8</span>원하는 수업 시간</label>
+          <label className="q-label"><span className="num">7</span>원하는 수업 시간</label>
           {isPeakSeason(form.start_date) && (
             <span className="q-hint" style={{color:'#92400e'}}>※ 성수기(7/15~8/30)는 17:00 이후만 가능합니다.</span>
           )}
@@ -690,7 +700,7 @@ export default function PortalTutorPage() {
           <div className="enr-info">✅ 재학생의 경우 담당 선생님이 레벨을 확인합니다.</div>
         ) : (<>
           <div className="q">
-            <label className="q-label"><span className="num">9</span>영어 레벨</label>
+            <label className="q-label"><span className="num">8</span>영어 레벨</label>
             <div className="opts-v">
               {LEVELS_ENGLISH.map(l => (
                 <button key={l.value} type="button" className={`opt-card${form.level_english === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_english: l.value })}>
@@ -700,7 +710,7 @@ export default function PortalTutorPage() {
             </div>
           </div>
           <div className="q">
-            <label className="q-label"><span className="num">10</span>스피킹 레벨</label>
+            <label className="q-label"><span className="num">9</span>스피킹 레벨</label>
             <div className="opts-v">
               {LEVELS_SPEAKING.map(l => (
                 <button key={l.value} type="button" className={`opt-card${form.level_speaking === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_speaking: l.value })}>
@@ -710,7 +720,7 @@ export default function PortalTutorPage() {
             </div>
           </div>
           <div className="q">
-            <label className="q-label"><span className="num">11</span>리딩 레벨</label>
+            <label className="q-label"><span className="num">10</span>리딩 레벨</label>
             <div className="opts-v">
               {LEVELS_READING.map(l => (
                 <button key={l.value} type="button" className={`opt-card${form.level_reading === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_reading: l.value })}>
@@ -720,7 +730,7 @@ export default function PortalTutorPage() {
             </div>
           </div>
           <div className="q">
-            <label className="q-label"><span className="num">12</span>라이팅 레벨</label>
+            <label className="q-label"><span className="num">11</span>라이팅 레벨</label>
             <div className="opts-v">
               {LEVELS_WRITING.map(l => (
                 <button key={l.value} type="button" className={`opt-card${form.level_writing === l.value ? " on" : ""}`} onClick={() => setForm({ ...form, level_writing: l.value })}>
@@ -735,11 +745,11 @@ export default function PortalTutorPage() {
       <div className="sec">
         <h2>수업 방향</h2>
         <div className="q">
-          <label className="q-label"><span className="num">13</span>사용 영어교재 (따로 원하는 교재가 있을 시 기재해주세요)</label>
+          <label className="q-label"><span className="num">12</span>사용 영어교재 (따로 원하는 교재가 있을 시 기재해주세요)</label>
           <input className="inp" value={form.textbook} onChange={e => setForm({ ...form, textbook: e.target.value })} placeholder="예 ) 브릭스 50, 리딩스트리트 2.1, 멀티플리딩스킬, 올어보드 4" />
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">14</span>수업 방향</label>
+          <label className="q-label"><span className="num">13</span>수업 방향</label>
           <div className="opts">
             {STYLES.map(s => (
               <button key={s} type="button" className={`opt${form.class_style === s ? " on" : ""}`} onClick={() => setForm({ ...form, class_style: s })}>{s}</button>
@@ -747,7 +757,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">15</span>수업 방향 상세 (최대 2개)</label>
+          <label className="q-label"><span className="num">14</span>수업 방향 상세 (최대 2개)</label>
           <div className="opts">
             {FOCUS.map(f => (
               <button key={f} type="button" className={`opt${form.class_focus_arr.includes(f) ? " on" : ""}`} onClick={() => toggleFocus(f)}>{f}</button>
@@ -755,7 +765,7 @@ export default function PortalTutorPage() {
           </div>
         </div>
         <div className="q">
-          <label className="q-label"><span className="num">16</span>아이 성향/흥미 / 원하시는 요청 사항</label>
+          <label className="q-label"><span className="num">15</span>아이 성향/흥미 / 원하시는 요청 사항</label>
           <textarea className="area" value={form.child_personality} onChange={e => setForm({ ...form, child_personality: e.target.value })} placeholder="예: 활발하고 말이 많음, 스포츠/공룡 좋아함" />
         </div>
       </div>
@@ -765,12 +775,12 @@ export default function PortalTutorPage() {
         <div className="agree">
           <label>
             <input type="checkbox" checked={form.privacy_agreed} onChange={e => setForm({ ...form, privacy_agreed: e.target.checked })} />
-            <span><b>17. 개인정보 수집 및 이용 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>수업 매칭 및 튜터 배정 목적으로 수집한 정보를 활용합니다.</span></span>
+            <span><b>16. 개인정보 수집 및 이용 동의</b><br/><span style={{ fontSize: 11, color: "#6b7c93" }}>수업 매칭 및 튜터 배정 목적으로 수집한 정보를 활용합니다.</span></span>
           </label>
         </div>
 
         <div className="q" style={{ marginBottom: 8 }}>
-          <label className="q-label"><span className="num">18</span>튜터 변경 및 환불 규정 동의<span className="req">*</span></label>
+          <label className="q-label"><span className="num">17</span>튜터 변경 및 환불 규정 동의<span className="req">*</span></label>
           <div className="rules-box">
             <div className="rh">🔖 튜터 변경 및 환불규정</div>
             <ul>
@@ -795,7 +805,18 @@ export default function PortalTutorPage() {
           </div>
         </div>
 
-        <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules}>{saving ? "신청 중..." : "튜터 수업 신청하기"}</button>
+        {(() => {
+          const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
+          const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
+          const outOfRange =
+            (!!form.start_date && !!bs && form.start_date < bs) ||
+            (!!form.end_date   && !!be && form.end_date   > be);
+          return (
+            <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
+              {saving ? "신청 중..." : outOfRange ? "예약 기간을 벗어났습니다" : "튜터 수업 신청하기"}
+            </button>
+          );
+        })()}
         {msg && <div className={`msg ${msg.includes("완료") ? "msg-ok" : "msg-err"}`}>{msg}</div>}
       </div>
       </>)}
