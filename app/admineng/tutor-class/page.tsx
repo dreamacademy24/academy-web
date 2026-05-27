@@ -524,6 +524,13 @@ export default function EngTutorClassPage() {
         : (typeof lesson.class_days === "string" && lesson.class_days
             ? lesson.class_days.split(",").map((s: string) => s.trim()).filter(Boolean)
             : []);
+      const _weeks = computeWeeks(lesson.start_date, lesson.end_date);
+      const _daysCount = Array.isArray(lesson.class_days)
+        ? lesson.class_days.filter(Boolean).length
+        : countDays(lesson.class_days);
+      const _spd = lesson.sessions_per_day || 1;
+      const _computedSessions = _weeks * _daysCount * _spd;
+      const _hourlyRate = lesson.hourly_rate || ((lesson.class_type || "").includes("1:2") ? 350 : 300);
       const payload: Record<string, unknown> = {
         tutor_id: lesson.tutor_id || (me ? me.id : null),
         start_date: lesson.start_date || null,
@@ -535,9 +542,9 @@ export default function EngTutorClassPage() {
         house_or_reserver: lesson.house_or_reserver || "",
         student_names: lesson.student_names || "",
         student_ages: lesson.student_ages || null,
-        total_sessions: lesson.total_sessions || null,
-        total_amount: lesson.total_amount || null,
-        hourly_rate: lesson.hourly_rate || ((lesson.class_type || "").includes("1:2") ? 350 : 300),
+        total_sessions: lesson.total_sessions || _computedSessions || 0,
+        total_amount: lesson.total_amount || ((lesson.total_sessions || _computedSessions || 0) * _hourlyRate),
+        hourly_rate: _hourlyRate,
         status: "active",
         admin_memo: `request_id: ${reqId}`,
       };
