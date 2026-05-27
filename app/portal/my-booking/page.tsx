@@ -208,7 +208,8 @@ export default function MyBookingPage() {
         </div>
       </div>
 
-      {(() => {
+      {/* 항공편 UI는 /checkin/[token] 페이지의 항공권등록 탭으로 이동됨 — 여기서는 표시하지 않음 */}
+      {false && (() => {
         const hasInbound = b.flight_in_airline || b.flight_in_no;
         const hasOutbound = b.flight_out_airline || b.flight_out_no;
         const hasAny = hasInbound || hasOutbound || b.flight_in_undecided || b.flight_out_undecided;
