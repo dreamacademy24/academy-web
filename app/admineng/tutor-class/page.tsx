@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
 interface Tutor { id: string; name: string; }
@@ -44,6 +44,45 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 
 function fmtDate(s: string) { return s ? s.slice(5).replace('-', '/') : '-'; }
 
+const TUTOR_PALETTE = [
+  "#ec4899", "#a855f7", "#3b82f6", "#22c55e", "#eab308",
+  "#f97316", "#ef4444", "#06b6d4", "#84cc16", "#6366f1",
+];
+const UNASSIGNED_COLOR = "#94a3b8";
+function tutorColor(tutorId: string | null | undefined): string {
+  if (!tutorId) return UNASSIGNED_COLOR;
+  let hash = 0;
+  for (let i = 0; i < tutorId.length; i++) hash = (hash * 31 + tutorId.charCodeAt(i)) >>> 0;
+  return TUTOR_PALETTE[hash % TUTOR_PALETTE.length];
+}
+
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+function pad2(n: number) { return String(n).padStart(2, "0"); }
+function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+function sundayWeek(offset = 0): { dates: string[]; startDate: Date; endDate: Date } {
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun..6=Sat
+  const sun = new Date(now);
+  sun.setDate(now.getDate() - dow);
+  sun.setHours(0, 0, 0, 0);
+  sun.setDate(sun.getDate() + offset * 7);
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sun);
+    d.setDate(sun.getDate() + i);
+    dates.push(ymd(d));
+  }
+  const sat = new Date(sun);
+  sat.setDate(sun.getDate() + 6);
+  return { dates, startDate: sun, endDate: sat };
+}
+function fmtRange(s: Date, e: Date) {
+  const opt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${s.toLocaleDateString("en-US", opt)} – ${e.toLocaleDateString("en-US", opt)}, ${e.getFullYear()}`;
+}
+
 export default function EngTutorClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -61,12 +100,18 @@ export default function EngTutorClassPage() {
   const [comments, setComments] = useState<{id:string;tutor_name:string;comment:string;created_at:string}[]>([]);
 
   const [actingTutor, setActingTutor] = useState<string>("");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [mineWeekOffset, setMineWeekOffset] = useState(0);
+  const [allLessons, setAllLessons] = useState<any[]>([]);
+  const [loadingAllLessons, setLoadingAllLessons] = useState(false);
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
     else window.location.href = "/login";
     if (typeof window !== "undefined") {
-      setActingTutor(localStorage.getItem("admineng_tutor_name") || "");
+      const saved = localStorage.getItem("admineng_tutor_name") || "";
+      const info = getAdminInfo();
+      setActingTutor(saved || (info?.name || ""));
     }
   }, []);
 
@@ -101,25 +146,121 @@ export default function EngTutorClassPage() {
 
   useEffect(() => { load(); loadTutors(); }, [load, loadTutors]);
 
-  // My Classes (tutor_lessons) 로드 — acting tutor id 필요
+  // Resolve "me" — first try exact match on actingTutor, then case-insensitive against admin name
+  const me = useMemo(() => {
+    if (!tutors.length) return null;
+    const want = (actingTutor || "").trim();
+    if (!want) return null;
+    return (
+      tutors.find(t => t.name === want) ||
+      tutors.find(t => (t.name || "").toLowerCase() === want.toLowerCase()) ||
+      null
+    );
+  }, [actingTutor, tutors]);
+
+  // My Classes (tutor_lessons) 로드 — tutor_id 매칭 + 미배정(null) 중 tutor_requests로 연결된 수업도 포함
   useEffect(() => {
-    const me = tutors.find(t => t.name === actingTutor);
     if (!me) { setMyLessons([]); return; }
     let cancelled = false;
     (async () => {
       setLoadingLessons(true);
-      const { data } = await supabase
-        .from("tutor_lessons")
-        .select("*")
-        .eq("tutor_id", me.id)
-        .order("created_at", { ascending: false });
+      const myReqIds = reqs.filter(r => r.assigned_tutor_id === me.id).map(r => r.id);
+      const [{ data: direct }, { data: nullRows }] = await Promise.all([
+        supabase
+          .from("tutor_lessons")
+          .select("*")
+          .eq("tutor_id", me.id)
+          .order("created_at", { ascending: false }),
+        myReqIds.length > 0
+          ? supabase
+              .from("tutor_lessons")
+              .select("*")
+              .is("tutor_id", null)
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] as any[] } as any),
+      ]);
+      const matchedNull = (nullRows || []).filter((l: any) =>
+        myReqIds.some(rid => (l.admin_memo || "").includes(`request_id: ${rid}`))
+      );
+      const map = new Map<string, any>();
+      [...(direct || []), ...matchedNull].forEach(l => map.set(l.id, l));
+      const merged = Array.from(map.values()).sort((a, b) =>
+        (b.created_at || "").localeCompare(a.created_at || "")
+      );
       if (!cancelled) {
-        setMyLessons(data || []);
+        setMyLessons(merged);
         setLoadingLessons(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [actingTutor, tutors]);
+  }, [me, reqs]);
+
+  // Weekly View — 모든 active 수업 로드 (탭 진입 시)
+  useEffect(() => {
+    if (tab !== "weekly") return;
+    let cancelled = false;
+    (async () => {
+      setLoadingAllLessons(true);
+      const { data } = await supabase
+        .from("tutor_lessons")
+        .select("*")
+        .eq("status", "active")
+        .order("class_time", { ascending: true });
+      if (!cancelled) {
+        setAllLessons(data || []);
+        setLoadingAllLessons(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tab]);
+
+  const week = useMemo(() => sundayWeek(weekOffset), [weekOffset]);
+
+  // Map: dateStr → lessons that occur on that day (filtered by date range overlap + class_days)
+  const weekLessonsByDate = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const d of week.dates) map.set(d, []);
+    for (const l of allLessons) {
+      const start = l.start_date || "";
+      const end = l.end_date || "";
+      const days: string[] = Array.isArray(l.class_days)
+        ? l.class_days.map((d: string) => (d || "").toLowerCase().trim())
+        : typeof l.class_days === "string"
+          ? l.class_days.split(",").map((d: string) => d.toLowerCase().trim())
+          : [];
+      for (let i = 0; i < week.dates.length; i++) {
+        const ds = week.dates[i];
+        if (start && ds < start) continue;
+        if (end && ds > end) continue;
+        const key = WEEKDAY_KEYS[i];
+        if (days.length === 0 || days.includes(key)) {
+          map.get(ds)!.push(l);
+        }
+      }
+    }
+    return map;
+  }, [allLessons, week.dates]);
+
+  const weekTutorLegend = useMemo(() => {
+    const seen = new Map<string, { id: string; name: string; color: string }>();
+    for (const arr of weekLessonsByDate.values()) {
+      for (const l of arr) {
+        const id = l.tutor_id;
+        if (!id) continue;
+        if (seen.has(id)) continue;
+        const name = tutors.find(t => t.id === id)?.name || "(unknown)";
+        seen.set(id, { id, name, color: tutorColor(id) });
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [weekLessonsByDate, tutors]);
+
+  const weekHasUnassigned = useMemo(() => {
+    for (const arr of weekLessonsByDate.values()) {
+      if (arr.some(l => !l.tutor_id)) return true;
+    }
+    return false;
+  }, [weekLessonsByDate]);
 
   async function loadComments(reqId: string) {
     const { data } = await supabase
@@ -273,67 +414,152 @@ export default function EngTutorClassPage() {
       )}
 
       {tab === "mine" && (() => {
-        const me = tutors.find(t => t.name === actingTutor);
-        if (!actingTutor || !me) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown.</div>;
+        if (!me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
-        const mine = reqs.filter(r => r.assigned_tutor_id === me.id);
-        if (mine.length === 0) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No requests assigned to you yet.</div>;
+        if (loadingLessons) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Loading...</div>;
         }
+        // 데이터 소스 병합: tutor_requests(confirmed, 내 assignment) + myLessons(tutor_lessons 직접/null+memo)
+        // myLessons는 useEffect에서 이미 병합된 상태. 추가로 tutor_requests에서 confirmed인데 lesson이 없는 건도 포함.
+        type ScheduleEntry = {
+          id: string; source: "lesson" | "request";
+          start: string; end: string; days: string[];
+          time: string; student: string; classType: string;
+          rowId: string;
+        };
+        const entries: ScheduleEntry[] = [];
+        const seenReqIds = new Set<string>();
+        for (const l of myLessons) {
+          const days = Array.isArray(l.class_days)
+            ? l.class_days.map((d: string) => (d || "").toLowerCase().trim())
+            : typeof l.class_days === "string"
+              ? l.class_days.split(",").map((d: string) => d.toLowerCase().trim())
+              : [];
+          // admin_memo에서 request_id 추출 (있다면 dedupe용)
+          const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
+          if (m) seenReqIds.add(m[1]);
+          entries.push({
+            id: "L:" + l.id,
+            source: "lesson",
+            start: l.start_date || "",
+            end: l.end_date || "",
+            days,
+            time: l.confirmed_time || l.class_time || "",
+            student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
+            classType: l.class_type || "",
+            rowId: l.id,
+          });
+        }
+        const confirmedReqs = reqs.filter(r => r.assigned_tutor_id === me.id && r.status === "confirmed");
+        for (const r of confirmedReqs) {
+          if (seenReqIds.has(r.id)) continue; // lesson 쪽에서 이미 표시
+          const days = (r.preferred_days || "").split(",").map((d: string) => d.toLowerCase().trim()).filter(Boolean);
+          entries.push({
+            id: "R:" + r.id,
+            source: "request",
+            start: r.start_date || "",
+            end: r.end_date || "",
+            days,
+            time: r.preferred_time || "",
+            student: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-",
+            classType: r.class_type || "",
+            rowId: r.id,
+          });
+        }
+
+        if (entries.length === 0) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
+        }
+
+        const wk = sundayWeek(mineWeekOffset);
+        const cellMap = new Map<string, ScheduleEntry[]>();
+        for (const d of wk.dates) cellMap.set(d, []);
+        for (const e of entries) {
+          for (let i = 0; i < wk.dates.length; i++) {
+            const ds = wk.dates[i];
+            if (e.start && ds < e.start) continue;
+            if (e.end && ds > e.end) continue;
+            const key = WEEKDAY_KEYS[i];
+            if (e.days.length === 0 || e.days.includes(key)) {
+              cellMap.get(ds)!.push(e);
+            }
+          }
+        }
+
+        const todayIso = ymd(new Date());
+        const myColor = tutorColor(me.id);
+
         return (
-          <div className="tbl-w">
-            <table className="tbl">
-              <thead><tr>
-                <th style={{width:"5%"}}>Date</th>
-                <th style={{width:"8%"}}>House</th>
-                <th style={{width:"11%"}}>Reserver</th>
-                <th style={{width:"15%"}}>Student</th>
-                <th style={{width:"7%"}}>Age</th>
-                <th style={{width:"6%"}}>Type</th>
-                <th style={{width:"5%"}}>Time</th>
-                <th style={{width:"14%"}}>Period</th>
-                <th style={{width:"8%"}}>Days</th>
-                <th style={{width:"10%"}}>Status</th>
-                <th style={{width:"11%",textAlign:"center"}}>Action</th>
-              </tr></thead>
-              <tbody>
-                {mine.map(r => {
-                  const st = STATUS_META[r.status] || STATUS_META.pending;
-                  return (
-                    <tr key={r.id} onClick={() => router.push('/admineng/tutor-class/' + r.id)}>
-                      <td style={{color:"#6b7c93",fontSize:11}}>{fmtDate(r.created_at)}</td>
-                      <td style={{color:"#1a6fc4",fontWeight:700}}>{r.house_number || "-"}</td>
-                      <td>{r.guest_name || "-"}</td>
-                      <td style={{fontWeight:600}}>{[r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ")}</td>
-                      <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</td>
-                      <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
-                      <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T":"1T"}</span></td>
-                      <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>
-                      <td style={{fontSize:11}}>{days(r) || "-"}</td>
-                      <td><span className="ebadge" style={{background:st.bg,color:st.color}}>{st.label}</span></td>
-                      <td style={{textAlign:"center"}}>
-                        <button className="ebtn ebtn-blue" style={{padding:"5px 10px",fontSize:11,marginRight:4}} onClick={e=>{e.stopPropagation();router.push('/admineng/tutor-class/' + r.id);}}>Detail</button>
-                        <button className="ebtn" style={{padding:"5px 10px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={e=>{e.stopPropagation();router.push('/admin/tutor-class?tab=invoice');}}>💰 Invoice</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div style={{background:"#fff",borderRadius:12,padding:16,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:12}}>
+              <div style={{display:"flex",gap:4,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:3}}>
+                <button onClick={() => setMineWeekOffset(o => o - 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>◀ Prev</button>
+                <button onClick={() => setMineWeekOffset(0)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mineWeekOffset===0?"#1a6fc4":"transparent",color:mineWeekOffset===0?"#fff":"#475569"}}>This Week</button>
+                <button onClick={() => setMineWeekOffset(o => o + 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>Next ▶</button>
+              </div>
+              <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",padding:"7px 12px",background:"#eff6ff",borderRadius:8}}>
+                {fmtRange(wk.startDate, wk.endDate)}
+              </div>
+              <div style={{flex:1}} />
+              <div style={{fontSize:12,color:"#6b7c93",fontWeight:600}}>
+                {me.name} · {entries.length} {entries.length === 1 ? "class" : "classes"}
+              </div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
+              {wk.dates.map((date, i) => {
+                const dt = new Date(date + "T00:00:00");
+                const dayNum = dt.getDate();
+                const isToday = date === todayIso;
+                const isWeekend = i === 0 || i === 6;
+                const list = cellMap.get(date) || [];
+                return (
+                  <div key={date} style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:280,display:"flex",flexDirection:"column"}}>
+                    <div style={{textAlign:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #e2e8f0"}}>
+                      <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:isWeekend?"#dc2626":(isToday?"#1a6fc4":"#94a3b8"),marginBottom:3}}>{WEEKDAY_LABELS[i]}</div>
+                      <div style={{fontSize:14,fontWeight:800,color:"#1a1a2e"}}>
+                        {isToday
+                          ? <span style={{display:"inline-block",background:"#1a6fc4",color:"#fff",borderRadius:999,width:26,height:26,lineHeight:"26px"}}>{dayNum}</span>
+                          : dayNum
+                        }
+                      </div>
+                    </div>
+                    {list.length === 0 ? (
+                      <div style={{textAlign:"center",color:"#cbd5e1",fontSize:11,padding:"20px 4px",fontWeight:600}}>No class</div>
+                    ) : (
+                      list.map(e => (
+                        <div
+                          key={e.id + ":" + date}
+                          onClick={() => router.push('/admineng/tutor-class/' + (e.source === "request" ? e.rowId : ""))}
+                          style={{borderLeft:`4px solid ${myColor}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",cursor:e.source==="request"?"pointer":"default"}}
+                        >
+                          <div style={{fontSize:12.5,fontWeight:700,color:"#1a1a2e",lineHeight:1.3,wordBreak:"keep-all"}}>{e.student}</div>
+                          {e.time && <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{e.time}</div>}
+                          {e.classType && <div style={{fontSize:10,color:myColor,fontWeight:700,marginTop:2}}>{e.classType}{e.source==="request"?" · pending":""}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>
+              Sources: tutor_lessons (assigned to you) + tutor_requests (confirmed assignments)
+            </div>
           </div>
         );
       })()}
       {tab === "classes" && (() => {
-        const me = tutors.find(t => t.name === actingTutor);
-        if (!actingTutor || !me) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown.</div>;
+        if (!me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
         if (loadingLessons) {
           return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Loading...</div>;
         }
         if (myLessons.length === 0) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No confirmed classes yet.</div>;
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
         return (
           <div className="tbl-w">
@@ -380,15 +606,91 @@ export default function EngTutorClassPage() {
         );
       })()}
 
-      {tab === "weekly" && <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Weekly View — coming soon</div>}
+      {tab === "weekly" && (
+        <div style={{background:"#fff",borderRadius:12,padding:16,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:12}}>
+            <div style={{display:"flex",gap:4,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:3}}>
+              <button onClick={() => setWeekOffset(o => o - 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>◀ Prev</button>
+              <button onClick={() => setWeekOffset(0)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:weekOffset===0?"#1a6fc4":"transparent",color:weekOffset===0?"#fff":"#475569"}}>This Week</button>
+              <button onClick={() => setWeekOffset(o => o + 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>Next ▶</button>
+            </div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",padding:"7px 12px",background:"#eff6ff",borderRadius:8}}>
+              {fmtRange(week.startDate, week.endDate)}
+            </div>
+            <div style={{flex:1}} />
+            <div style={{fontSize:12,color:"#6b7c93",fontWeight:600}}>
+              {loadingAllLessons ? "Loading..." : `${allLessons.length} active lessons`}
+            </div>
+          </div>
+
+          {(weekTutorLegend.length > 0 || weekHasUnassigned) && (
+            <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12,fontSize:11.5,color:"#475569",fontWeight:700,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+              {weekTutorLegend.map(t => (
+                <span key={t.id} style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                  <span style={{width:10,height:10,borderRadius:"50%",background:t.color,display:"inline-block"}} />
+                  {t.name}
+                </span>
+              ))}
+              {weekHasUnassigned && (
+                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                  <span style={{width:10,height:10,borderRadius:"50%",background:UNASSIGNED_COLOR,display:"inline-block"}} />
+                  Unassigned
+                </span>
+              )}
+            </div>
+          )}
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
+            {week.dates.map((date, i) => {
+              const dt = new Date(date + "T00:00:00");
+              const dayNum = dt.getDate();
+              const isToday = date === ymd(new Date());
+              const isWeekend = i === 0 || i === 6;
+              const list = weekLessonsByDate.get(date) || [];
+              return (
+                <div key={date} style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:380,display:"flex",flexDirection:"column"}}>
+                  <div style={{textAlign:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #e2e8f0"}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:isWeekend?"#dc2626":(isToday?"#1a6fc4":"#94a3b8"),marginBottom:3}}>{WEEKDAY_LABELS[i]}</div>
+                    <div style={{fontSize:14,fontWeight:800,color:"#1a1a2e"}}>
+                      {isToday
+                        ? <span style={{display:"inline-block",background:"#1a6fc4",color:"#fff",borderRadius:999,width:26,height:26,lineHeight:"26px"}}>{dayNum}</span>
+                        : dayNum
+                      }
+                    </div>
+                  </div>
+                  {list.length === 0 ? (
+                    <div style={{textAlign:"center",color:"#cbd5e1",fontSize:11,padding:"30px 4px",fontWeight:600}}>No class</div>
+                  ) : (
+                    list.map((l: any) => {
+                      const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
+                      const color = tutorColor(l.tutor_id);
+                      const sname = (l.student_names || "-").split(/[\/,]/)[0].trim() || "-";
+                      const time = l.confirmed_time || l.class_time || "--:--";
+                      return (
+                        <div
+                          key={l.id}
+                          style={{borderLeft:`4px solid ${color}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)"}}
+                        >
+                          <div style={{fontSize:11.5,fontWeight:800,color:l.tutor_id?color:"#dc2626",lineHeight:1.3}}>{tname}</div>
+                          <div style={{fontSize:12.5,fontWeight:700,color:"#1a1a2e",marginTop:2,lineHeight:1.3,wordBreak:"keep-all"}}>{sname}</div>
+                          <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{time}</div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {tab === "invoice" && (() => {
-        const me = tutors.find(t => t.name === actingTutor);
-        if (!actingTutor || !me) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Please select your name from the top right dropdown to view invoices.</div>;
+        if (!me) {
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
         if (myLessons.length === 0) {
-          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No confirmed classes yet.</div>;
+          return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
         return (
           <div style={{background:"#fff",borderRadius:12,padding:24,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
