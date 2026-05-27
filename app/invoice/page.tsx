@@ -542,12 +542,15 @@ function InvoicePageInner(){
   const [receiptPayments,setReceiptPayments]=useState<{id:number;type:string;date:string;amount:string}[]>([
     {id:1,type:"예약금",date:todayStr,amount:"1,000,000"}
   ]);
+  const [dhRegistered,setDhRegistered]=useState(false);
+  const [savingReceipt,setSavingReceipt]=useState(false);
 
   // 현재 폼 상태 전체를 스냅샷 객체로 수집
   // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
   function collectFormState(override?:Record<string,unknown>){
     return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
       reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,lateCheckout,
+      receiptPayments,
       ...(override||{})};
   }
   // 스냅샷 saved_data → 폼 상태 복원
@@ -579,21 +582,23 @@ function InvoicePageInner(){
     if(d.isCommute!==undefined)setIsCommute(d.isCommute);
     if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
     if(d.lateCheckout!==undefined)setLateCheckout(d.lateCheckout);
+    if(Array.isArray(d.receiptPayments)&&d.receiptPayments.length>0)setReceiptPayments(d.receiptPayments);
   }
-  /* ── 인보이스 확정/해제 (PATCH confirmed_at) ── */
+  /* ── 인보이스 확정/해제 (PATCH confirmed_at + saved_data 함께 저장) ── */
   async function confirmInvoice(){
     if(!bookingId){alert("예약 ID가 없어 확정할 수 없습니다.");return;}
-    if(!hasSnapshot){alert("먼저 인보이스를 저장해 주세요.");return;}
     try{
       const res=await fetch("/api/invoice/snapshot",{
         method:"PATCH",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({booking_id:bookingId}),
+        body:JSON.stringify({booking_id:bookingId,saved_data:collectFormState()}),
       });
-      if(!res.ok){alert("확정 실패");return;}
-      const j=await res.json();
+      const j=await res.json().catch(()=>null);
+      if(!res.ok){alert("확정 실패: "+(j?.error||res.status));return;}
       setConfirmedAt(j?.snapshot?.confirmed_at||new Date().toISOString());
+      setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
+      setHasSnapshot(true);
       alert("✅ 인보이스가 확정되었습니다.");
-    }catch(e){console.error(e);alert("확정 실패");}
+    }catch(e){console.error(e);alert("확정 실패 — 네트워크/서버 확인");}
   }
   // "수정하기" 진입 — 확정 상태면 경고 후 confirmed_at = null로 풀고 편집 모드 진입
   async function requestEdit(){
@@ -604,7 +609,7 @@ function InvoicePageInner(){
         try{
           await fetch("/api/invoice/snapshot",{
             method:"PATCH",headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({booking_id:bookingId,confirmed_at:null}),
+            body:JSON.stringify({booking_id:bookingId,confirmed_at:null,saved_data:collectFormState()}),
           });
         }catch{}
       }
@@ -928,6 +933,12 @@ function InvoicePageInner(){
   const td=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
   const ta=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
   const fp=billing.basePrice+ta-td;
+  const receiptPaidTotal=useMemo(()=>receiptPayments
+    .filter(p=>(p.amount||"").trim()!=="")
+    .reduce((s,p)=>s+(Number(String(p.amount).replace(/[,\s]/g,""))||0),0),
+    [receiptPayments]);
+  const hasReceiptPayments=receiptPaidTotal>0;
+  const additionalDue=Math.max(0,fp-receiptPaidTotal);
   const daysUntilCheckin=a1CI?Math.floor((new Date(a1CI).getTime()-Date.now())/86400000):999;
   const isFullPayment=daysUntilCheckin<60;
   const [forceFullPayment, setForceFullPayment] = useState(false);
@@ -1051,6 +1062,46 @@ function InvoicePageInner(){
     link.download="인보이스_"+(booker.name||reservationNo||"draft")+".png";
     link.href=canvas.toDataURL("image/png");
     link.click();
+  }
+
+  /* ── 영수증 탭: 드림하우스 룸 자동 배정 ── */
+  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
+  async function registerDreamhouse(){
+    if(!bookingId){alert("예약 ID가 없습니다.");return;}
+    const ci=overallCI?.trim()||null;
+    const co=overallCO?.trim()||null;
+    if(!ci||!co){alert("⚠️ 체크인/체크아웃 날짜가 필요합니다.");return;}
+    const {data:ov}=await supabase.from("bookings").select("accom_room")
+      .neq("id",bookingId).not("accom_room","is",null).neq("accom_room","")
+      .lt("checkin_date",co).gt("checkout_date",ci);
+    const occ=(ov||[]).map((b:any)=>b.accom_room);
+    const avail=DH_ROOMS.filter(r=>!occ.includes(r));
+    if(!avail.length){alert("⚠️ 가용 룸이 없습니다!");return;}
+    const assigned=avail[Math.floor(Math.random()*avail.length)];
+    const {error}=await supabase.from("bookings").update({
+      accom_room:assigned,checkin_date:ci,checkout_date:co,status:"영수증발행",
+    }).eq("id",bookingId);
+    if(error){alert("등록 실패: "+error.message);return;}
+    setDhRegistered(true);
+    setCheckin(c=>({...c,houseNo:assigned}));
+    alert("✅ 드림하우스 예약 완료!\n배정 룸: "+assigned);
+  }
+
+  /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) ── */
+  async function saveReceiptPayments(){
+    if(!bookingId){alert("예약 ID가 없습니다.");return;}
+    setSavingReceipt(true);
+    try{
+      const res=await fetch("/api/invoice/snapshot",{
+        method:"PATCH",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({booking_id:bookingId,saved_data:collectFormState(),confirmed_at:"keep"}),
+      });
+      const j=await res.json().catch(()=>null);
+      if(!res.ok){alert("저장 실패: "+(j?.error||res.status));setSavingReceipt(false);return;}
+      setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
+      alert("✅ 지불내역이 저장되었습니다.");
+    }catch{alert("저장 실패");}
+    setSavingReceipt(false);
   }
 
   /* ── 영수증 발행 ── */
@@ -1515,7 +1566,22 @@ function InvoicePageInner(){
               {td>0&&<tr><td style={{fontWeight:600}}>총 할인</td><td style={{textAlign:"right",color:"#dc2626",fontWeight:600}}>-{fmt(td)}원</td></tr>}
               {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
               <tr className="fr"><td style={{background:"#5b4fff",color:"#fff",fontWeight:800,boxShadow:"inset 0 0 0 1000px #5b4fff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>총 청구금액</td><td style={{background:"#5b4fff",color:"#fff",fontWeight:800,textAlign:"right",boxShadow:"inset 0 0 0 1000px #5b4fff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(fp)}원</td></tr>
-              {effectiveFullPayment?(
+              {hasReceiptPayments?(<>
+                <tr style={{background:"#ecfdf5"}}>
+                  <td style={{padding:"10px 12px",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>✅ 납부 완료 <span style={{fontSize:11,fontWeight:500}}>(누적 {receiptPayments.filter(p=>(p.amount||"").trim()!=="").length}건)</span></td>
+                  <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(receiptPaidTotal)}원</td>
+                </tr>
+                {additionalDue>0?(
+                  <tr style={{background:"#fff7ed"}}>
+                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 추가 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(추가금 = 새 총액 − 기납부액)</span></td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
+                  </tr>
+                ):(
+                  <tr style={{background:"#f0fdf4"}}>
+                    <td colSpan={2} style={{padding:"10px 12px",fontWeight:800,color:"#15803d",textAlign:"center",boxShadow:"inset 0 0 0 1000px #f0fdf4",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>🎉 전액 납부 완료</td>
+                  </tr>
+                )}
+              </>):effectiveFullPayment?(
                 <tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:13,textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원 즉시 납부</td></tr>
               ):(<>
                 <tr style={{background:"#f0fdf4"}}>
@@ -1574,8 +1640,10 @@ function InvoicePageInner(){
         {/* 영수증 버튼 */}
         <div className="pb no-print">
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
+          <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
+          <button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?"✅ 등록 완료":"🏠 드림하우스 등록"}</button>
           <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
-          <button style={{padding:"12px 32px",background:"#7c3aed",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("receipt-content")}>📷 이미지 저장</button>
+          <button style={{padding:"12px 24px",background:"#7c3aed",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("receipt-content")}>📷 이미지 저장</button>
         </div>
       </>)}
     </div>
