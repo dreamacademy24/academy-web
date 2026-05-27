@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
@@ -165,7 +165,6 @@ export default function EngTutorClassPage() {
   const [loadingAllLessons, setLoadingAllLessons] = useState(false);
   const [takingId, setTakingId] = useState<string>("");
   const [creatingLessonForId, setCreatingLessonForId] = useState<string>("");
-  const [expandedLessonId, setExpandedLessonId] = useState<string>("");
   const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
   const [savingLessonId, setSavingLessonId] = useState<string>("");
   const [cancelDate, setCancelDate] = useState<Record<string, string>>({});
@@ -949,127 +948,37 @@ export default function EngTutorClassPage() {
                   const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
                   const total = Number(l.total_sessions || 0);
                   const remaining = Math.max(0, total - skips.length);
-                  const expanded = expandedLessonId === l.id;
                   return (
-                    <Fragment key={l.id}>
-                      <tr>
-                        <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
-                        <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
-                        <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>{l.sessions_per_day === 2 ? "2 (100m)" : "1 (50m)"}</td>
-                        <td style={{fontSize:11}}>{daysStr}</td>
-                        <td style={{fontSize:11}}>{l.class_time || "-"}</td>
-                        <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
-                        <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
-                          <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
-                          <span style={{color:"#94a3b8"}}> / {total || "-"}</span>
-                          {skips.length>0 && <div style={{fontSize:10,color:"#dc2626",fontWeight:600}}>Cancelled {skips.length}</div>}
-                        </td>
-                        <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
-                        <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
-                        <td style={{textAlign:"center"}}>
-                          <button
-                            className="ebtn"
-                            style={{padding:"5px 8px",fontSize:11,background:expanded?"#1a6fc4":"#fff",color:expanded?"#fff":"#1a6fc4",border:"1px solid #1a6fc4",marginRight:4}}
-                            onClick={() => {
-                              setExpandedLessonId(expanded ? "" : l.id);
-                              if (!expanded) setMemoDraft(prev => ({ ...prev, [l.id]: l.tutor_memo || "" }));
-                            }}
-                            title="Notes / Cancel / Reschedule"
-                          >{expanded ? "▲ Close" : "🗒 Manage"}</button>
-                          <button
-                            className="ebtn"
-                            disabled={creatingLessonForId === l.id}
-                            style={{padding:"5px 8px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4,opacity:creatingLessonForId===l.id?0.6:1,cursor:creatingLessonForId===l.id?"not-allowed":"pointer"}}
-                            onClick={() => {
-                              if (String(l.id).startsWith("req:") || l._source === "request") {
-                                createLessonAndOpenAttendance(l);
-                                return;
-                              }
-                              router.push(`/admin/tutor-class/${l.id}/attendance`);
-                            }}
-                          >{creatingLessonForId===l.id ? "Creating..." : "📋 Attendance"}</button>
-                          <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
-                        </td>
-                      </tr>
-                      {expanded && (
-                        <tr>
-                          <td colSpan={10} style={{background:"#f8fafc",padding:16,borderTop:"1px solid #e5e7eb"}}>
-                            <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
-                              {/* Notes */}
-                              <div style={{flex:"2 1 260px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:6}}>🗒 Notes</div>
-                                <textarea
-                                  value={memoDraft[l.id] ?? (l.tutor_memo || "")}
-                                  onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  placeholder="Class notes..."
-                                  rows={3}
-                                  style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",flex:1,minHeight:60}}
-                                />
-                                <button
-                                  onClick={() => saveMemo(l.id)}
-                                  disabled={savingLessonId === l.id}
-                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:13,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit",alignSelf:"flex-start"}}
-                                >{savingLessonId===l.id ? "Saving..." : "Save"}</button>
-                              </div>
-
-                              {/* Cancel Day */}
-                              <div style={{flex:"1 1 180px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:6}}>❌ Cancel Day</div>
-                                <input
-                                  type="date"
-                                  value={cancelDate[l.id] || ""}
-                                  min={l.start_date || undefined}
-                                  max={l.end_date || undefined}
-                                  onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-                                />
-                                <button
-                                  onClick={() => cancelOneDate(l)}
-                                  disabled={savingLessonId === l.id || !cancelDate[l.id]}
-                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1,alignSelf:"flex-start"}}
-                                >Cancel</button>
-                                {skips.length > 0 && (
-                                  <div style={{marginTop:8,fontSize:11,color:"#475569"}}>
-                                    <div style={{fontWeight:700,marginBottom:3}}>Cancelled ({skips.length})</div>
-                                    <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                                      {skips.map((d: string) => (
-                                        <span key={d} style={{padding:"2px 6px",borderRadius:4,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700}}>{d}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Reschedule */}
-                              <div style={{flex:"1 1 220px",background:"#fff",borderRadius:8,padding:12,display:"flex",flexDirection:"column"}}>
-                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:6}}>🔄 Reschedule</div>
-                                <label style={{fontSize:11,fontWeight:600,color:"#6b7280",marginBottom:3}}>From</label>
-                                <input
-                                  type="date"
-                                  value={changeOld[l.id] || ""}
-                                  min={l.start_date || undefined}
-                                  max={l.end_date || undefined}
-                                  onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none",marginBottom:6}}
-                                />
-                                <label style={{fontSize:11,fontWeight:600,color:"#6b7280",marginBottom:3}}>To</label>
-                                <input
-                                  type="date"
-                                  value={changeNew[l.id] || ""}
-                                  onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-                                />
-                                <button
-                                  onClick={() => rescheduleDate(l)}
-                                  disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
-                                  style={{marginTop:8,height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1,alignSelf:"flex-start"}}
-                                >Save</button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
+                    <tr key={l.id}>
+                      <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
+                      <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
+                      <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>{l.sessions_per_day === 2 ? "2 (100m)" : "1 (50m)"}</td>
+                      <td style={{fontSize:11}}>{daysStr}</td>
+                      <td style={{fontSize:11}}>{l.class_time || "-"}</td>
+                      <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
+                      <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
+                        <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
+                        <span style={{color:"#94a3b8"}}> / {total || "-"}</span>
+                        {skips.length>0 && <div style={{fontSize:10,color:"#dc2626",fontWeight:600}}>Cancelled {skips.length}</div>}
+                      </td>
+                      <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
+                      <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
+                      <td style={{textAlign:"center"}}>
+                        <button
+                          className="ebtn"
+                          disabled={creatingLessonForId === l.id}
+                          style={{padding:"5px 8px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4,opacity:creatingLessonForId===l.id?0.6:1,cursor:creatingLessonForId===l.id?"not-allowed":"pointer"}}
+                          onClick={() => {
+                            if (String(l.id).startsWith("req:") || l._source === "request") {
+                              createLessonAndOpenAttendance(l);
+                              return;
+                            }
+                            router.push(`/admin/tutor-class/${l.id}/attendance`);
+                          }}
+                        >{creatingLessonForId===l.id ? "Creating..." : "📋 Attendance"}</button>
+                        <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -1181,7 +1090,7 @@ export default function EngTutorClassPage() {
                 const isMine = me && l.tutor_id === me.id;
                 return (
                   <button key={l.id} type="button"
-                    onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
+                    onClick={() => window.open("/admin/tutor-class?tab=invoice&lesson_id=" + l.id, "_blank")}
                     style={{padding:"12px 16px",border:"1px solid "+(isMine?"#bfdbfe":"#e2e8f0"),borderRadius:9,textAlign:"left",cursor:"pointer",fontFamily:"inherit",background:isMine?"#eff6ff":"#fff",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}
                   >
                     <span style={{flex:1,minWidth:0}}>
@@ -1194,7 +1103,7 @@ export default function EngTutorClassPage() {
                 );
               })}
             </div>
-            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>Calendar, print and image-save buttons are available on the admin invoice page.</div>
+            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>🖨️ Opens in a new tab — print and image-save available there.</div>
           </div>
         );
       })()}
