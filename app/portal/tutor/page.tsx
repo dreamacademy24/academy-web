@@ -16,6 +16,7 @@ interface TutorReq {
   status: string; created_at: string;
 }
 
+// 일요일은 의도적으로 제외 — 튜터 수업 불가
 const DAYS = ["월","화","수","목","금","토"];
 
 interface LevelOpt { value: string; kr: string; en: string }
@@ -115,10 +116,20 @@ function isPeakSeason(dateStr: string): boolean {
   const md = dateStr.slice(5, 10);
   return md >= '07-15' && md <= '08-30';
 }
-function formatTimeRange(startHour: number, sessions: number): string {
-  const end = startHour + sessions;
+// 시작 시각을 "HH:MM" 형식으로 받아 종료 시각 계산 (1타임 = 1시간으로 표시)
+function formatTimeRange(start: string | number, sessions: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(startHour)}:00 ~ ${pad(end)}:00 (${sessions}타임)`;
+  let hh = 0, mm = 0;
+  if (typeof start === "number") { hh = start; mm = 0; }
+  else {
+    const [hStr, mStr] = String(start).split(":");
+    hh = parseInt(hStr, 10) || 0;
+    mm = parseInt(mStr || "0", 10) || 0;
+  }
+  const total = hh * 60 + mm + sessions * 60;
+  const endH = Math.floor(total / 60);
+  const endM = total % 60;
+  return `${pad(hh)}:${pad(mm)} ~ ${pad(endH)}:${pad(endM)} (${sessions}타임)`;
 }
 
 function formatBirthAge(birth: string): string {
@@ -864,38 +875,69 @@ export default function PortalTutorPage() {
       </div>
     )}
 
-    {timePickerOpen && (
-      <div className="modal-bg" onClick={() => setTimePickerOpen(false)}>
-        <div className="modal" onClick={e => e.stopPropagation()}>
-          <h3>수업 시간 선택</h3>
-          <div className="modal-sub">
-            {form.sessions_per_day}타임 ({form.sessions_per_day * 50}분) 시작 시간을 선택하세요.
-            {isPeakSeason(form.start_date) && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
+    {timePickerOpen && (() => {
+      const peak = isPeakSeason(form.start_date);
+      // 기존 preferred_time 에서 시작 시각 파싱, 없으면 기본값
+      const m = (form.preferred_time || "").match(/^(\d{1,2}):(\d{2})/);
+      const initial = m ? `${m[1].padStart(2,"0")}:${m[2]}` : (peak ? "17:00" : "10:00");
+      return (
+        <div className="modal-bg" onClick={() => setTimePickerOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>수업 시간 선택</h3>
+            <div className="modal-sub">
+              {form.sessions_per_day}타임 ({form.sessions_per_day * 50}분) 시작 시간을 입력하세요. (10:00 ~ 20:00)
+              {peak && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
+            </div>
+            <input
+              id="tutor-time-input"
+              type="time"
+              min="10:00"
+              max="20:00"
+              step={600}
+              defaultValue={initial}
+              style={{width:"100%",padding:"14px 16px",border:"1.5px solid #e2e8f0",borderRadius:10,fontSize:18,fontWeight:700,fontFamily:"inherit",color:"#1a1a2e",outline:"none",textAlign:"center"}}
+            />
+            <div style={{marginTop:12,fontSize:11,color:"#6b7c93",fontWeight:600}}>빠른 선택</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginTop:6}}>
+              {["10:00","13:00","14:00","15:30","17:00","17:30","18:00","19:00"].map(t => {
+                const [h] = t.split(":").map(Number);
+                const disabled = peak && h < 17;
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => { const el = document.getElementById("tutor-time-input") as HTMLInputElement | null; if (el) el.value = t; }}
+                    style={{padding:"9px 4px",border:"1px solid #e2e8f0",borderRadius:8,background:disabled?"#f1f5f9":"#fff",color:disabled?"#94a3b8":"#1a1a2e",cursor:disabled?"not-allowed":"pointer",fontFamily:"inherit",fontSize:12.5,fontWeight:700}}
+                    title={disabled?"성수기 불가":""}
+                  >{t}</button>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button
+                type="button"
+                onClick={() => setTimePickerOpen(false)}
+                style={{flex:1,padding:"12px",border:"1px solid #e2e8f0",borderRadius:10,background:"#fff",color:"#6b7c93",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:700}}
+              >취소</button>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById("tutor-time-input") as HTMLInputElement | null;
+                  const v = (el?.value || "").trim();
+                  if (!/^\d{2}:\d{2}$/.test(v)) { alert("시간 형식이 올바르지 않습니다 (예: 14:30)"); return; }
+                  const [hh, mm] = v.split(":").map(Number);
+                  if (hh < 10 || hh > 20 || (hh === 20 && mm > 0)) { alert("시작 시간은 10:00 ~ 20:00 범위 내여야 합니다."); return; }
+                  if (peak && hh < 17) { alert("성수기에는 17:00 이후 시작만 가능합니다."); return; }
+                  setForm(f => ({ ...f, preferred_time: formatTimeRange(v, f.sessions_per_day) }));
+                  setTimePickerOpen(false);
+                }}
+                style={{flex:1,padding:"12px",border:"none",borderRadius:10,background:"#1a6fc4",color:"#fff",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:700}}
+              >적용</button>
+            </div>
           </div>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8}}>
-            {[10,11,12,13,14,15,16,17,18,19,20].map(h => {
-              const peak = isPeakSeason(form.start_date);
-              const disabled = peak && h < 17;
-              return (
-                <button key={h} type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    if (disabled) return;
-                    setForm(f => ({ ...f, preferred_time: formatTimeRange(h, f.sessions_per_day) }));
-                    setTimePickerOpen(false);
-                  }}
-                  style={{padding:'14px 6px', border:'1.5px solid #e2e8f0', borderRadius:9, background:disabled?'#f1f5f9':'#fff', color:disabled?'#94a3b8':'#1a1a2e', cursor:disabled?'not-allowed':'pointer', fontFamily:'inherit', fontSize:14, fontWeight:700, lineHeight:1.3}}
-                  title={disabled?'성수기 불가':''}
-                >
-                  {String(h).padStart(2,'0')}:00
-                  {disabled && <span style={{display:'block',fontSize:10,color:'#dc2626',marginTop:3,fontWeight:600}}>성수기 불가</span>}
-                </button>
-              );
-            })}
-          </div>
-          <button type="button" className="modal-close" onClick={() => setTimePickerOpen(false)}>닫기</button>
         </div>
-      </div>
-    )}
+      );
+    })()}
   </>);
 }
