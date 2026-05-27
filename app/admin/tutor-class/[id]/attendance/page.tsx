@@ -146,7 +146,7 @@ export default function AttendancePage() {
     }
     const { error } = await supabase
       .from("tutor_lessons")
-      .update({ attendance_log: log, tutor_memo: notes || null })
+      .update({ attendance_log: log, tutor_memo: notes || null, total_sessions: total })
       .eq("id", lesson.id);
     setSaving(false);
     if (error) { alert("Save failed: " + error.message); return; }
