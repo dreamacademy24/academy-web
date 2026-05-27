@@ -84,7 +84,6 @@ export default function PortalDashboard() {
   const cards = [
     { icon: "📋", title: "내 예약현황", desc: "예약·학생·결제 정보 확인", ready: true, href: "/portal/my-booking" },
     { icon: "🏨", title: "체크인 정보입력", desc: "입실 전 필요한 정보 사전 등록", subDesc: "항공권 · 체크인 · 픽드랍신청", ready: true, href: "/portal/checkin-detail" },
-    { icon: "✈️", title: "항공편 · 픽드랍", desc: "항공편 등록 및 공항 픽드랍 신청", ready: true, href: "/portal/flight" },
     { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "방문 튜터 수업 신청", ready: true, href: "/portal/tutor" },

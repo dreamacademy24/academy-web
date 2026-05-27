@@ -28,6 +28,65 @@ export default function PortalCheckinDetailPage() {
   const [flightOcrLoading, setFlightOcrLoading] = useState(false);
   const [flightOcrMsg, setFlightOcrMsg] = useState("");
 
+  // 탭 + 픽드랍 신청 상태
+  const [tab, setTab] = useState<"flight" | "checkin" | "extra">("checkin");
+  type PR = { id?: string; request_type: "arrival" | "departure" | "extra"; request_date: string; request_time: string | null; location: string | null; destination: string | null; num_people: number | null; flight_info: string | null; notes: string | null; status: string };
+  const [pickups, setPickups] = useState<PR[]>([]);
+  const [arrPickup, setArrPickup] = useState<PR>({ request_type: "arrival", request_date: "", request_time: "", location: "", destination: "", num_people: 1, flight_info: "", notes: "", status: "pending" });
+  const [depPickup, setDepPickup] = useState<PR>({ request_type: "departure", request_date: "", request_time: "", location: "", destination: "", num_people: 1, flight_info: "", notes: "", status: "pending" });
+  const [savingArr, setSavingArr] = useState(false);
+  const [savingDep, setSavingDep] = useState(false);
+  const [showExtraForm, setShowExtraForm] = useState(false);
+  const [extraForm, setExtraForm] = useState<PR>({ request_type: "extra", request_date: "", request_time: "", location: "", destination: "", num_people: 1, flight_info: "", notes: "", status: "pending" });
+  const [savingExtra, setSavingExtra] = useState(false);
+
+  async function loadPickups(bid: string) {
+    if (!bid) return;
+    try {
+      const res = await fetch(`/api/portal/pickup-request?booking_id=${encodeURIComponent(bid)}`);
+      if (!res.ok) return;
+      const j = await res.json();
+      const list = (j.requests || []) as PR[];
+      setPickups(list);
+      const arr = list.find(p => p.request_type === "arrival");
+      if (arr) setArrPickup({ ...arr });
+      const dep = list.find(p => p.request_type === "departure");
+      if (dep) setDepPickup({ ...dep });
+    } catch {/* noop */}
+  }
+
+  async function savePickup(type: "arrival" | "departure" | "extra") {
+    if (!bookingId) { alert("예약 정보를 불러오는 중입니다."); return; }
+    const src = type === "arrival" ? arrPickup : type === "departure" ? depPickup : extraForm;
+    if (!src.request_date) { alert("날짜를 입력해 주세요."); return; }
+    const setSaving = type === "arrival" ? setSavingArr : type === "departure" ? setSavingDep : setSavingExtra;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/portal/pickup-request", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          request_type: type,
+          request_date: src.request_date,
+          request_time: src.request_time || null,
+          location: src.location || null,
+          destination: src.destination || null,
+          num_people: src.num_people || 1,
+          flight_info: src.flight_info || null,
+          notes: src.notes || null,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok) { alert("저장 실패: " + (j.error || "")); setSaving(false); return; }
+      await loadPickups(bookingId);
+      if (type === "extra") {
+        setShowExtraForm(false);
+        setExtraForm({ request_type: "extra", request_date: "", request_time: "", location: "", destination: "", num_people: 1, flight_info: "", notes: "", status: "pending" });
+      }
+      alert("✅ 신청이 저장되었습니다.");
+    } finally { setSaving(false); }
+  }
+
   async function handleFlightOcr(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -72,6 +131,7 @@ export default function PortalCheckinDetailPage() {
     }
     const bid = session.booking_id;
     setBookingId(bid);
+    loadPickups(bid);
 
     fetch(`/api/checkin-portal?bookingId=${bid}`)
       .then(r => r.json())
@@ -188,6 +248,15 @@ export default function PortalCheckinDetailPage() {
       {!loading && !error && !done && (
         <>
           {alreadySubmitted && <div style={{height:12}}/>}
+
+          {/* ── 탭 ── */}
+          <div style={{display:"flex",gap:6,marginBottom:14,background:"#fff",borderRadius:12,padding:5,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+            <button onClick={()=>setTab("flight")} style={{flex:1,padding:"10px 8px",border:"none",borderRadius:8,fontSize:12.5,fontWeight:800,cursor:"pointer",fontFamily:"inherit",background:tab==="flight"?"#1a6fc4":"transparent",color:tab==="flight"?"#fff":"#6b7c93",lineHeight:1.4}}>✈️ 항공권등록<br/><span style={{fontSize:10,fontWeight:600,opacity:0.85}}>(입실 픽드랍)</span></button>
+            <button onClick={()=>setTab("checkin")} style={{flex:1,padding:"10px 8px",border:"none",borderRadius:8,fontSize:12.5,fontWeight:800,cursor:"pointer",fontFamily:"inherit",background:tab==="checkin"?"#1a6fc4":"transparent",color:tab==="checkin"?"#fff":"#6b7c93",lineHeight:1.4}}>🏨 체크인디테일</button>
+            <button onClick={()=>setTab("extra")} style={{flex:1,padding:"10px 8px",border:"none",borderRadius:8,fontSize:12.5,fontWeight:800,cursor:"pointer",fontFamily:"inherit",background:tab==="extra"?"#1a6fc4":"transparent",color:tab==="extra"?"#fff":"#6b7c93",lineHeight:1.4}}>🚐 추가픽드랍<br/><span style={{fontSize:10,fontWeight:600,opacity:0.85}}>신청</span></button>
+          </div>
+
+          {tab === "checkin" && (<>
           <div className="q">
             <div className="q-title"><span className="q-num">1</span>예약자 대표 성함과 입실 일자</div>
             <div className="q-hint">예: <b>홍길동, 2026년 5월 9일</b></div>
@@ -301,9 +370,11 @@ export default function PortalCheckinDetailPage() {
             </div>
           </div>
 
-          {/* ③ 추가 픽드랍 */}
+          </>)}
+
+          {tab === "flight" && (<>
           <div className="q">
-            <div className="q-title"><span className="q-num">5</span>항공편</div>
+            <div className="q-title">✈️ 항공편 등록</div>
             <div className="q-hint">입국·출국 항공편 정보를 입력해 주세요. 미정인 경우 체크박스를 선택해 주세요.</div>
             <div style={{marginBottom:12}}>
               <input ref={flightFileRef} type="file" accept="image/*" onChange={handleFlightOcr} style={{display:"none"}}/>
@@ -361,6 +432,90 @@ export default function PortalCheckinDetailPage() {
             })}
           </div>
 
+          {/* 입국 픽업 / 출국 드랍 — pickup_requests */}
+          <div className="q">
+            <div className="q-title">🛬 입국 픽업 신청</div>
+            <div className="q-hint">기본 픽업 외 별도 일정으로 입국 픽업을 원하시면 작성해 주세요.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div><input type="date" value={arrPickup.request_date} onChange={e=>setArrPickup(p=>({...p,request_date:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div><input type="time" value={arrPickup.request_time||""} onChange={e=>setArrPickup(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>출발지(픽업장소)</div><input type="text" value={arrPickup.location||""} onChange={e=>setArrPickup(p=>({...p,location:e.target.value}))} placeholder="막탄공항 도착 게이트" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>도착지</div><input type="text" value={arrPickup.destination||""} onChange={e=>setArrPickup(p=>({...p,destination:e.target.value}))} placeholder="드림하우스" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>인원수</div><input type="number" min={1} value={arrPickup.num_people||1} onChange={e=>setArrPickup(p=>({...p,num_people:Number(e.target.value)||1}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>항공편 정보</div><input type="text" value={arrPickup.flight_info||""} onChange={e=>setArrPickup(p=>({...p,flight_info:e.target.value}))} placeholder="예: KE601" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#889",marginBottom:3}}>요청사항</div><input type="text" value={arrPickup.notes||""} onChange={e=>setArrPickup(p=>({...p,notes:e.target.value}))} placeholder="추가 안내사항 (선택)" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+            </div>
+            <button type="button" onClick={()=>savePickup("arrival")} disabled={savingArr||!bookingId} style={{marginTop:10,padding:"9px 18px",background:"#1a6fc4",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(savingArr||!bookingId)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingArr||!bookingId)?0.6:1}}>💾 {savingArr?"저장중...":"입국 픽업 저장"}</button>
+          </div>
+
+          <div className="q">
+            <div className="q-title">🛫 출국 드랍 신청</div>
+            <div className="q-hint">출국 시 공항 드랍 일정을 신청해 주세요.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div><input type="date" value={depPickup.request_date} onChange={e=>setDepPickup(p=>({...p,request_date:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div><input type="time" value={depPickup.request_time||""} onChange={e=>setDepPickup(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>출발지</div><input type="text" value={depPickup.location||""} onChange={e=>setDepPickup(p=>({...p,location:e.target.value}))} placeholder="드림하우스" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>도착지(공항)</div><input type="text" value={depPickup.destination||""} onChange={e=>setDepPickup(p=>({...p,destination:e.target.value}))} placeholder="막탄공항" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>인원수</div><input type="number" min={1} value={depPickup.num_people||1} onChange={e=>setDepPickup(p=>({...p,num_people:Number(e.target.value)||1}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>항공편 정보</div><input type="text" value={depPickup.flight_info||""} onChange={e=>setDepPickup(p=>({...p,flight_info:e.target.value}))} placeholder="예: KE602" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+              <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#889",marginBottom:3}}>요청사항</div><input type="text" value={depPickup.notes||""} onChange={e=>setDepPickup(p=>({...p,notes:e.target.value}))} placeholder="추가 안내사항 (선택)" style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+            </div>
+            <button type="button" onClick={()=>savePickup("departure")} disabled={savingDep||!bookingId} style={{marginTop:10,padding:"9px 18px",background:"#1a6fc4",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(savingDep||!bookingId)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingDep||!bookingId)?0.6:1}}>💾 {savingDep?"저장중...":"출국 드랍 저장"}</button>
+          </div>
+          </>)}
+
+          {tab === "extra" && (<>
+          {/* 추가 픽드랍 신청 — pickup_requests (extra) */}
+          <div className="q">
+            <div className="q-title">🚐 추가 픽드랍 신청 내역</div>
+            <div className="q-hint">기본 입실 픽업 외 추가로 필요한 픽드랍 일정입니다.</div>
+            {pickups.filter(p=>p.request_type==="extra").length === 0 ? (
+              <div style={{padding:"16px 0",fontSize:13,color:"#94a3b8",textAlign:"center"}}>등록된 추가 픽드랍 신청이 없습니다.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {pickups.filter(p=>p.request_type==="extra").map((p,i)=>{
+                  const meta = p.status==="confirmed"?{label:"확정",bg:"#dcfce7",color:"#15803d"}:p.status==="cancelled"?{label:"취소",bg:"#fef2f2",color:"#dc2626"}:{label:"대기",bg:"#fef3c7",color:"#92400e"};
+                  return (
+                    <div key={p.id||i} style={{border:"1px solid #e2e8f0",borderRadius:9,padding:12,background:"#fafafe"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                        <span style={{fontWeight:700,fontSize:13,color:"#1a1a2e"}}>{p.request_date} {p.request_time||""}</span>
+                        <span style={{display:"inline-block",padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:700,background:meta.bg,color:meta.color}}>{meta.label}</span>
+                      </div>
+                      <div style={{fontSize:12.5,color:"#475569",lineHeight:1.7}}>
+                        <div>📍 {p.location||"-"} → {p.destination||"-"}</div>
+                        <div>👥 {p.num_people||1}명{p.flight_info?` · ✈ ${p.flight_info}`:""}</div>
+                        {p.notes && <div style={{color:"#6b7280",marginTop:2}}>📝 {p.notes}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{marginTop:10,padding:"8px 12px",background:"#fef3c7",border:"1px solid #fde68a",borderRadius:8,fontSize:11.5,color:"#92400e",fontWeight:600}}>
+              ℹ️ 취소는 스탭에게 문의해주세요.
+            </div>
+            {!showExtraForm && (
+              <button type="button" onClick={()=>setShowExtraForm(true)} style={{marginTop:10,width:"100%",padding:"10px",borderRadius:8,border:"2px dashed #4f6ef7",background:"#f5f7ff",color:"#4f6ef7",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ 추가신청</button>
+            )}
+            {showExtraForm && (
+              <div style={{marginTop:12,border:"1px solid #cbd5e1",borderRadius:9,padding:12,background:"#fff"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div><input type="date" value={extraForm.request_date} onChange={e=>setExtraForm(p=>({...p,request_date:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+                  <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div><input type="time" value={extraForm.request_time||""} onChange={e=>setExtraForm(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+                  <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>출발지</div><input type="text" value={extraForm.location||""} onChange={e=>setExtraForm(p=>({...p,location:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+                  <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>목적지</div><input type="text" value={extraForm.destination||""} onChange={e=>setExtraForm(p=>({...p,destination:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+                  <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>인원수</div><input type="number" min={1} value={extraForm.num_people||1} onChange={e=>setExtraForm(p=>({...p,num_people:Number(e.target.value)||1}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
+                  <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#889",marginBottom:3}}>메모</div><textarea value={extraForm.notes||""} onChange={e=>setExtraForm(p=>({...p,notes:e.target.value}))} placeholder="요청사항 (선택)" style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13,minHeight:60,fontFamily:"inherit",resize:"vertical"}}/></div>
+                </div>
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:10}}>
+                  <button type="button" onClick={()=>setShowExtraForm(false)} style={{padding:"8px 16px",background:"#fff",color:"#475569",border:"1px solid #cbd5e1",borderRadius:7,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                  <button type="button" onClick={()=>savePickup("extra")} disabled={savingExtra||!bookingId} style={{padding:"8px 18px",background:"#1a6fc4",color:"#fff",border:"none",borderRadius:7,fontSize:13,fontWeight:700,cursor:(savingExtra||!bookingId)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingExtra||!bookingId)?0.6:1}}>{savingExtra?"저장중...":"💾 신청"}</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 기존 JSON 기반 Q6 — 호환 유지 */}
           <div className="q">
             <div className="q-title"><span className="q-num">6</span>추가 픽드랍 신청</div>
             <div className="q-hint">기본 픽업/드랍 외 추가 필요 시 작성해 주세요. (선택)</div>
@@ -415,13 +570,18 @@ export default function PortalCheckinDetailPage() {
               </button>
             </div>
           </div>
+          </>)}
+
+          {tab === "checkin" && (<>
           <div className="q">
             <div className="q-title"><span className="q-num">7</span>기타 요청사항</div>
             <div className="q-hint">추가 픽드랍, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
             <textarea className="ta" value={form.q6} onChange={e=>up('q6',e.target.value)} placeholder="자유롭게 작성"/>
           </div>
+          </>)}
+
           <button className="btn-submit" onClick={submit} disabled={submitting}>
-            {submitting ? '제출 중...' : alreadySubmitted ? '수정 내용 저장하기' : '제출하기'}
+            {submitting ? '제출 중...' : alreadySubmitted ? '수정 내용 저장하기' : '체크인 정보 제출하기'}
           </button>
         </>
       )}
