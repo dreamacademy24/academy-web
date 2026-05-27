@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
@@ -145,6 +145,12 @@ export default function EngTutorClassPage() {
   const [allLessons, setAllLessons] = useState<any[]>([]);
   const [loadingAllLessons, setLoadingAllLessons] = useState(false);
   const [takingId, setTakingId] = useState<string>("");
+  const [expandedLessonId, setExpandedLessonId] = useState<string>("");
+  const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
+  const [savingLessonId, setSavingLessonId] = useState<string>("");
+  const [cancelDate, setCancelDate] = useState<Record<string, string>>({});
+  const [changeOld, setChangeOld] = useState<Record<string, string>>({});
+  const [changeNew, setChangeNew] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -200,41 +206,36 @@ export default function EngTutorClassPage() {
   }, [actingTutor, tutors]);
 
   // My Classes (tutor_lessons) 로드 — tutor_id 매칭 + 미배정(null) 중 tutor_requests로 연결된 수업도 포함
-  useEffect(() => {
+  const loadMyLessons = useCallback(async () => {
     if (!me) { setMyLessons([]); return; }
-    let cancelled = false;
-    (async () => {
-      setLoadingLessons(true);
-      const myReqIds = reqs.filter(r => r.assigned_tutor_id === me.id).map(r => r.id);
-      const [{ data: direct }, { data: nullRows }] = await Promise.all([
-        supabase
-          .from("tutor_lessons")
-          .select("*")
-          .eq("tutor_id", me.id)
-          .order("created_at", { ascending: false }),
-        myReqIds.length > 0
-          ? supabase
-              .from("tutor_lessons")
-              .select("*")
-              .is("tutor_id", null)
-              .order("created_at", { ascending: false })
-          : Promise.resolve({ data: [] as any[] } as any),
-      ]);
-      const matchedNull = (nullRows || []).filter((l: any) =>
-        myReqIds.some(rid => (l.admin_memo || "").includes(`request_id: ${rid}`))
-      );
-      const map = new Map<string, any>();
-      [...(direct || []), ...matchedNull].forEach(l => map.set(l.id, l));
-      const merged = Array.from(map.values()).sort((a, b) =>
-        (b.created_at || "").localeCompare(a.created_at || "")
-      );
-      if (!cancelled) {
-        setMyLessons(merged);
-        setLoadingLessons(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setLoadingLessons(true);
+    const myReqIds = reqs.filter(r => r.assigned_tutor_id === me.id).map(r => r.id);
+    const [{ data: direct }, { data: nullRows }] = await Promise.all([
+      supabase
+        .from("tutor_lessons")
+        .select("*")
+        .eq("tutor_id", me.id)
+        .order("created_at", { ascending: false }),
+      myReqIds.length > 0
+        ? supabase
+            .from("tutor_lessons")
+            .select("*")
+            .is("tutor_id", null)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as any[] } as any),
+    ]);
+    const matchedNull = (nullRows || []).filter((l: any) =>
+      myReqIds.some(rid => (l.admin_memo || "").includes(`request_id: ${rid}`))
+    );
+    const map = new Map<string, any>();
+    [...(direct || []), ...matchedNull].forEach(l => map.set(l.id, l));
+    const merged = Array.from(map.values()).sort((a, b) =>
+      (b.created_at || "").localeCompare(a.created_at || "")
+    );
+    setMyLessons(merged);
+    setLoadingLessons(false);
   }, [me, reqs]);
+  useEffect(() => { loadMyLessons(); }, [loadMyLessons]);
 
   // Weekly View — 모든 active 수업 로드 (탭 진입 시)
   // 전체 active 수업 로드 — Weekly/Invoice 탭 진입 시 + takeClass 후 수동 재호출
@@ -269,10 +270,12 @@ export default function EngTutorClassPage() {
           ? l.class_days.split(",")
           : [];
       const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
+      const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
       for (let i = 0; i < week.dates.length; i++) {
         const ds = week.dates[i];
         if (start && ds < start) continue;
         if (end && ds > end) continue;
+        if (skips.includes(ds)) continue; // 취소된 날짜는 캘린더에서 제외
         const key = WEEKDAY_KEYS[i];
         if (days.length === 0 || days.includes(key)) {
           map.get(ds)!.push(l);
@@ -396,6 +399,58 @@ export default function EngTutorClassPage() {
       alert("Failed: " + (e?.message || e));
       setTakingId("");
     }
+  }
+
+  // ── My Classes 액션: 코멘트 / 하루 취소 / 날짜 변경 ──
+  async function saveMemo(lessonId: string) {
+    setSavingLessonId(lessonId);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ tutor_memo: memoDraft[lessonId] ?? null })
+      .eq("id", lessonId);
+    setSavingLessonId("");
+    if (error) { alert("코멘트 저장 실패: " + error.message); return; }
+    await loadMyLessons();
+    await loadAllLessons();
+    alert("✅ 코멘트가 저장되었습니다.");
+  }
+
+  async function cancelOneDate(lesson: any) {
+    const d = (cancelDate[lesson.id] || "").trim();
+    if (!d) { alert("취소할 날짜를 선택해주세요."); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    if (current.includes(d)) { alert("이미 취소된 날짜입니다."); return; }
+    setSavingLessonId(lesson.id);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: [...current, d] })
+      .eq("id", lesson.id);
+    setSavingLessonId("");
+    if (error) { alert("취소 실패: " + error.message); return; }
+    setCancelDate(prev => ({ ...prev, [lesson.id]: "" }));
+    await loadMyLessons();
+    await loadAllLessons();
+    alert(`✅ ${d} 수업이 취소 처리되었습니다.`);
+  }
+
+  async function rescheduleDate(lesson: any) {
+    const oldD = (changeOld[lesson.id] || "").trim();
+    const newD = (changeNew[lesson.id] || "").trim();
+    if (!oldD || !newD) { alert("기존 날짜와 새 날짜를 모두 선택해주세요."); return; }
+    if (oldD === newD) { alert("기존 날짜와 새 날짜가 같습니다."); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = current.includes(oldD) ? current : [...current, oldD];
+    const note = `변경: ${oldD}→${newD}`;
+    const nextMemo = lesson.tutor_memo ? `${lesson.tutor_memo}\n${note}` : note;
+    setSavingLessonId(lesson.id);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: nextSkips, tutor_memo: nextMemo })
+      .eq("id", lesson.id);
+    setSavingLessonId("");
+    if (error) { alert("변경 실패: " + error.message); return; }
+    setChangeOld(prev => ({ ...prev, [lesson.id]: "" }));
+    setChangeNew(prev => ({ ...prev, [lesson.id]: "" }));
+    await loadMyLessons();
+    await loadAllLessons();
+    alert(`✅ ${oldD} → ${newD} 으로 변경 기록되었습니다.`);
   }
 
   async function saveAssign() {
@@ -555,7 +610,7 @@ export default function EngTutorClassPage() {
         // myLessons는 useEffect에서 이미 병합된 상태. 추가로 tutor_requests에서 confirmed인데 lesson이 없는 건도 포함.
         type ScheduleEntry = {
           id: string; source: "lesson" | "request";
-          start: string; end: string; days: string[];
+          start: string; end: string; days: string[]; skips?: string[];
           time: string; student: string; classType: string;
           rowId: string;
         };
@@ -568,6 +623,8 @@ export default function EngTutorClassPage() {
               ? l.class_days.split(",")
               : [];
           const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
+          // 취소된 날짜는 entry로 만들지 않음 (cellMap 단계에서 추가 필터)
+          const skipsArr: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
           // admin_memo에서 request_id 추출 (있다면 dedupe용)
           const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
           if (m) seenReqIds.add(m[1]);
@@ -577,6 +634,7 @@ export default function EngTutorClassPage() {
             start: l.start_date || "",
             end: l.end_date || "",
             days,
+            skips: skipsArr,
             time: l.confirmed_time || l.class_time || "",
             student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
             classType: l.class_type || "",
@@ -612,6 +670,7 @@ export default function EngTutorClassPage() {
             const ds = wk.dates[i];
             if (e.start && ds < e.start) continue;
             if (e.end && ds > e.end) continue;
+            if (e.skips && e.skips.includes(ds)) continue; // 취소 날짜 제외
             const key = WEEKDAY_KEYS[i];
             if (e.days.length === 0 || e.days.includes(key)) {
               cellMap.get(ds)!.push(e);
@@ -697,16 +756,16 @@ export default function EngTutorClassPage() {
           <div className="tbl-w">
             <table className="tbl">
               <thead><tr>
-                <th style={{width:"15%"}}>Student</th>
+                <th style={{width:"14%"}}>Student</th>
                 <th style={{width:"5%"}}>Type</th>
-                <th style={{width:"6%"}}>Sessions/day</th>
-                <th style={{width:"10%"}}>Days</th>
-                <th style={{width:"10%"}}>Time</th>
-                <th style={{width:"14%"}}>Period</th>
-                <th style={{width:"7%"}}>Classes</th>
-                <th style={{width:"9%"}}>Amount</th>
+                <th style={{width:"5%"}}>SPD</th>
+                <th style={{width:"9%"}}>Days</th>
+                <th style={{width:"9%"}}>Time</th>
+                <th style={{width:"12%"}}>Period</th>
+                <th style={{width:"8%",textAlign:"center"}}>잔여/총</th>
+                <th style={{width:"8%"}}>Amount</th>
                 <th style={{width:"8%"}}>Status</th>
-                <th style={{width:"16%",textAlign:"center"}}>Actions</th>
+                <th style={{width:"22%",textAlign:"center"}}>Actions</th>
               </tr></thead>
               <tbody>
                 {myLessons.map((l: any) => {
@@ -714,22 +773,125 @@ export default function EngTutorClassPage() {
                   const statusBg = l.status === "active" ? "#dcfce7" : l.status === "completed" ? "#dbeafe" : "#f1f5f9";
                   const statusFg = l.status === "active" ? "#15803d" : l.status === "completed" ? "#1e40af" : "#475569";
                   const daysStr = Array.isArray(l.class_days) ? l.class_days.join(", ") : (l.class_days || "-");
+                  const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
+                  const total = Number(l.total_sessions || 0);
+                  const remaining = Math.max(0, total - skips.length);
+                  const expanded = expandedLessonId === l.id;
                   return (
-                    <tr key={l.id}>
-                      <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
-                      <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
-                      <td style={{textAlign:"center"}}>{l.sessions_per_day || 1}</td>
-                      <td style={{fontSize:11}}>{daysStr}</td>
-                      <td style={{fontSize:11}}>{l.class_time || "-"}</td>
-                      <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
-                      <td style={{textAlign:"center"}}>{l.total_sessions ?? "-"}</td>
-                      <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
-                      <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
-                      <td style={{textAlign:"center"}}>
-                        <button className="ebtn" style={{padding:"5px 10px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4}} onClick={() => router.push("/admin/tutor-class?tab=students")}>Attendance</button>
-                        <button className="ebtn" style={{padding:"5px 10px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>Invoice</button>
-                      </td>
-                    </tr>
+                    <Fragment key={l.id}>
+                      <tr>
+                        <td style={{fontWeight:600}}>{l.student_names || "-"}</td>
+                        <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
+                        <td style={{textAlign:"center"}}>{l.sessions_per_day || 1}</td>
+                        <td style={{fontSize:11}}>{daysStr}</td>
+                        <td style={{fontSize:11}}>{l.class_time || "-"}</td>
+                        <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
+                        <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
+                          <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
+                          <span style={{color:"#94a3b8"}}> / {total || "-"}</span>
+                          {skips.length>0 && <div style={{fontSize:10,color:"#dc2626",fontWeight:600}}>취소 {skips.length}</div>}
+                        </td>
+                        <td style={{fontWeight:700,color:"#15803d"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : "-"}</td>
+                        <td><span className="ebadge" style={{background:statusBg,color:statusFg}}>{statusLabel}</span></td>
+                        <td style={{textAlign:"center"}}>
+                          <button
+                            className="ebtn"
+                            style={{padding:"5px 8px",fontSize:11,background:expanded?"#1a6fc4":"#fff",color:expanded?"#fff":"#1a6fc4",border:"1px solid #1a6fc4",marginRight:4}}
+                            onClick={() => {
+                              setExpandedLessonId(expanded ? "" : l.id);
+                              if (!expanded) setMemoDraft(prev => ({ ...prev, [l.id]: l.tutor_memo || "" }));
+                            }}
+                            title="코멘트/취소/변경 펼치기"
+                          >{expanded ? "▲ 닫기" : "🗒 관리"}</button>
+                          <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr>
+                          <td colSpan={10} style={{background:"#f8fafc",padding:"14px 16px"}}>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                              {/* 코멘트 */}
+                              <div style={{background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:8}}>🗒 튜터 코멘트</div>
+                                <textarea
+                                  value={memoDraft[l.id] ?? (l.tutor_memo || "")}
+                                  onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  placeholder="수업 진행 관련 메모를 입력하세요..."
+                                  style={{width:"100%",minHeight:80,padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none",resize:"vertical"}}
+                                />
+                                <button
+                                  onClick={() => saveMemo(l.id)}
+                                  disabled={savingLessonId === l.id}
+                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingLessonId===l.id?"not-allowed":"pointer",fontFamily:"inherit"}}
+                                >💾 {savingLessonId===l.id ? "저장중..." : "코멘트 저장"}</button>
+                              </div>
+
+                              {/* 하루 취소 */}
+                              <div style={{background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:8}}>❌ 하루 취소</div>
+                                <input
+                                  type="date"
+                                  value={cancelDate[l.id] || ""}
+                                  min={l.start_date || undefined}
+                                  max={l.end_date || undefined}
+                                  onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{width:"100%",padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
+                                />
+                                <button
+                                  onClick={() => cancelOneDate(l)}
+                                  disabled={savingLessonId === l.id || !cancelDate[l.id]}
+                                  style={{marginTop:8,padding:"7px 14px",border:"none",borderRadius:7,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!cancelDate[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!cancelDate[l.id])?0.6:1}}
+                                >취소 처리</button>
+                                {skips.length > 0 && (
+                                  <div style={{marginTop:10,fontSize:11,color:"#475569"}}>
+                                    <div style={{fontWeight:700,marginBottom:3}}>취소된 날짜 ({skips.length})</div>
+                                    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                                      {skips.map((d: string) => (
+                                        <span key={d} style={{padding:"2px 7px",borderRadius:5,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700}}>{d}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 날짜 변경 */}
+                              <div style={{gridColumn:"1 / span 2",background:"#fff",borderRadius:9,padding:"12px 14px",border:"1px solid #e2e8f0"}}>
+                                <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:8}}>🔄 날짜 변경 (취소 + 코멘트 기록)</div>
+                                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3}}>
+                                    원래 날짜
+                                    <input
+                                      type="date"
+                                      value={changeOld[l.id] || ""}
+                                      min={l.start_date || undefined}
+                                      max={l.end_date || undefined}
+                                      onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                      style={{padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
+                                    />
+                                  </label>
+                                  <span style={{fontSize:18,color:"#94a3b8",alignSelf:"flex-end",marginBottom:6}}>→</span>
+                                  <label style={{fontSize:11,fontWeight:600,color:"#475569",display:"flex",flexDirection:"column",gap:3}}>
+                                    새 날짜
+                                    <input
+                                      type="date"
+                                      value={changeNew[l.id] || ""}
+                                      onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                      style={{padding:"8px 11px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12.5,fontFamily:"inherit",outline:"none"}}
+                                    />
+                                  </label>
+                                  <button
+                                    onClick={() => rescheduleDate(l)}
+                                    disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
+                                    style={{padding:"8px 14px",border:"none",borderRadius:7,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:12,cursor:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingLessonId===l.id||!changeOld[l.id]||!changeNew[l.id])?0.6:1,alignSelf:"flex-end",marginBottom:0}}
+                                  >변경 기록</button>
+                                </div>
+                                <div style={{marginTop:8,fontSize:10.5,color:"#94a3b8"}}>※ 원래 날짜는 skip_dates에 추가되고, tutor_memo에 “변경: 원래→새” 한 줄이 기록됩니다.</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
