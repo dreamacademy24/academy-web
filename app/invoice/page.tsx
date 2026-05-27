@@ -1457,7 +1457,7 @@ function InvoicePageInner(){
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-        <tr><td className="lb">체크인</td><td>{overallCI&&<>{overallCI} <span style={{color:"#6b7280",fontSize:"0.85em"}}>15:00PM</span></>}</td><td className="lb">체크아웃</td><td>{overallCO&&<>{overallCO} <span style={{color:"#6b7280",fontSize:"0.85em"}}>{coTimeText}</span></>}</td></tr>
+        <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
         <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"수동입력"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
