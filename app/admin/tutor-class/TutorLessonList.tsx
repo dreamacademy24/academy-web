@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -13,6 +13,7 @@ interface Lesson {
   class_days: string[] | null; class_time: string | null; confirmed_time: string | null;
   total_sessions: number | null; total_amount: number | null;
   status: string;
+  skip_dates: string[] | null; tutor_memo: string | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -85,6 +86,14 @@ export default function TutorLessonList() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [savingSessionId, setSavingSessionId] = useState<string | null>(null);
+
+  // 인라인 관리 패널 상태 (코멘트 / 하루취소 / 날짜변경)
+  const [expandedId, setExpandedId] = useState<string>("");
+  const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
+  const [savingLessonId, setSavingLessonId] = useState<string>("");
+  const [cancelDate, setCancelDate] = useState<Record<string, string>>({});
+  const [changeOld, setChangeOld] = useState<Record<string, string>>({});
+  const [changeNew, setChangeNew] = useState<Record<string, string>>({});
 
   const showToast = useCallback((m: string) => {
     setToast(m);
@@ -187,6 +196,52 @@ export default function TutorLessonList() {
     if (selectedLesson) await refreshLessonCounts(selectedLesson.id);
   }
 
+  // ── 인라인 관리 액션 ──
+  async function saveMemo(lessonId: string) {
+    setSavingLessonId(lessonId);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ tutor_memo: memoDraft[lessonId] ?? null })
+      .eq("id", lessonId);
+    setSavingLessonId("");
+    if (error) { showToast("코멘트 저장 실패: " + error.message); return; }
+    setLessons(ls => ls.map(l => l.id === lessonId ? { ...l, tutor_memo: memoDraft[lessonId] ?? null } : l));
+    showToast("✅ 코멘트가 저장되었습니다");
+  }
+  async function cancelOneDate(lesson: LessonRow) {
+    const d = (cancelDate[lesson.id] || "").trim();
+    if (!d) { showToast("취소할 날짜를 선택해주세요"); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    if (current.includes(d)) { showToast("이미 취소된 날짜입니다"); return; }
+    setSavingLessonId(lesson.id);
+    const nextSkips = [...current, d];
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: nextSkips }).eq("id", lesson.id);
+    setSavingLessonId("");
+    if (error) { showToast("취소 실패: " + error.message); return; }
+    setCancelDate(prev => ({ ...prev, [lesson.id]: "" }));
+    setLessons(ls => ls.map(l => l.id === lesson.id ? { ...l, skip_dates: nextSkips } : l));
+    showToast(`✅ ${d} 수업이 취소되었습니다`);
+  }
+  async function rescheduleDate(lesson: LessonRow) {
+    const oldD = (changeOld[lesson.id] || "").trim();
+    const newD = (changeNew[lesson.id] || "").trim();
+    if (!oldD || !newD) { showToast("기존/새 날짜를 모두 선택해주세요"); return; }
+    if (oldD === newD) { showToast("기존 날짜와 새 날짜가 같습니다"); return; }
+    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = current.includes(oldD) ? current : [...current, oldD];
+    const note = `변경: ${oldD}→${newD}`;
+    const nextMemo = lesson.tutor_memo ? `${lesson.tutor_memo}\n${note}` : note;
+    setSavingLessonId(lesson.id);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ skip_dates: nextSkips, tutor_memo: nextMemo }).eq("id", lesson.id);
+    setSavingLessonId("");
+    if (error) { showToast("변경 실패: " + error.message); return; }
+    setChangeOld(prev => ({ ...prev, [lesson.id]: "" }));
+    setChangeNew(prev => ({ ...prev, [lesson.id]: "" }));
+    setLessons(ls => ls.map(l => l.id === lesson.id ? { ...l, skip_dates: nextSkips, tutor_memo: nextMemo } : l));
+    showToast(`✅ ${oldD} → ${newD} 변경 기록`);
+  }
+
   async function updateSessionNote(sessionId: string, note: string) {
     setSavingSessionId(sessionId);
     const { error } = await supabase.from("tutor_lesson_sessions").update({ session_note: note || null }).eq("id", sessionId);
@@ -208,11 +263,11 @@ export default function TutorLessonList() {
 .tll-toolbar select{min-width:150px}
 .tll-toolbar .cnt{margin-left:auto;font-size:12.5px;color:#475569;font-weight:700;padding:6px 10px;background:#eff6ff;border-radius:8px}
 
-.tll-card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow-x:auto}
+.tll-card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow-x:auto;border:1px solid #f3f4f6}
 .tll-tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:1100px}
 .tll-tbl th{background:#f8fafc;padding:10px 10px;text-align:left;font-weight:700;font-size:11.5px;color:#6b7c93;border-bottom:2px solid #e2e8f0;white-space:nowrap}
 .tll-tbl td{padding:10px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
-.tll-tbl tr:hover td{background:#f8fafc}
+.tll-tbl tr:hover td{background:#eff6ff}
 
 .tll-badge-type{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700}
 .tll-type-11{background:#1a6fc4;color:#fff}
@@ -331,43 +386,147 @@ export default function TutorLessonList() {
               const isType11 = typeBase.includes("1:1");
               const daysStr = (l.class_days || []).map(d => DAY_KR[d] || d).join("/");
               const totalDisplay = l.total_sessions ?? l.counts.total;
+              const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
+              const totalNum = Number(l.total_sessions || l.counts.total || 0);
+              // skip_dates 기준 잔여 (총회차 - 취소된 날짜 수). 0 미만 방지.
+              const remaining = totalNum > 0 ? Math.max(0, totalNum - skips.length) : l.counts.scheduled;
+              const expanded = expandedId === l.id;
               return (
-                <tr key={l.id}>
-                  <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(l.created_at)}</td>
-                  <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{l.house_or_reserver}</td>
-                  <td style={{ fontWeight: 700 }}>{l.student_names}</td>
-                  <td style={{ whiteSpace: "nowrap" }}>
-                    {l.tutor_name ? l.tutor_name : <span className="tll-muted">(미배정)</span>}
-                  </td>
-                  <td><span className={`tll-badge-type ${isType11 ? "tll-type-11" : "tll-type-12"}`}>{typeBase}</span></td>
-                  <td>
-                    <span className={`tll-badge-time ${l.sessions_per_day === 2 ? "tll-time-2" : "tll-time-1"}`}>
-                      {l.sessions_per_day === 2 ? "2T" : "1T"}
-                    </span>
-                  </td>
-                  <td style={{ whiteSpace: "nowrap" }}>{daysStr || "-"}</td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>
-                    {l.confirmed_time
-                      ? l.confirmed_time
-                      : (l.class_time ? <span className="tll-muted">{l.class_time}</span> : "-")}
-                  </td>
-                  <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{fmtRange(l.start_date, l.end_date)}</td>
-                  <td style={{ textAlign: "center", fontWeight: 700 }}>{totalDisplay}</td>
-                  <td style={{ textAlign: "center" }}>
-                    <span className="tll-chip-remain">{l.counts.scheduled}</span>
-                  </td>
-                  <td><span className="tll-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
-                  <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
-                    <button className="tll-act-btn primary" onClick={() => openAttendance(l)}>출결</button>
-                    <button
-                      className="tll-act-btn"
-                      onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
-                      title="인보이스 보기"
-                    >
-                      인보이스
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={l.id}>
+                  <tr>
+                    <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(l.created_at)}</td>
+                    <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{l.house_or_reserver}</td>
+                    <td style={{ fontWeight: 700 }}>{l.student_names}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {l.tutor_name ? l.tutor_name : <span className="tll-muted">(미배정)</span>}
+                    </td>
+                    <td><span className={`tll-badge-type ${isType11 ? "tll-type-11" : "tll-type-12"}`}>{typeBase}</span></td>
+                    <td>
+                      <span className={`tll-badge-time ${l.sessions_per_day === 2 ? "tll-time-2" : "tll-time-1"}`}>
+                        {l.sessions_per_day === 2 ? "2T" : "1T"}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>{daysStr || "-"}</td>
+                    <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>
+                      {l.confirmed_time
+                        ? l.confirmed_time
+                        : (l.class_time ? <span className="tll-muted">{l.class_time}</span> : "-")}
+                    </td>
+                    <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{fmtRange(l.start_date, l.end_date)}</td>
+                    <td style={{ textAlign: "center", fontWeight: 700 }}>{totalDisplay}</td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className="tll-chip-remain" title={skips.length > 0 ? `취소 ${skips.length}건 제외` : ""}>{remaining}</span>
+                      {skips.length > 0 && <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 700, marginTop: 2 }}>취소 {skips.length}</div>}
+                    </td>
+                    <td><span className="tll-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
+                    <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+                      <button className="tll-act-btn primary" onClick={() => openAttendance(l)}>출결</button>
+                      <button
+                        className="tll-act-btn"
+                        onClick={() => {
+                          setExpandedId(expanded ? "" : l.id);
+                          if (!expanded) setMemoDraft(prev => ({ ...prev, [l.id]: l.tutor_memo || "" }));
+                        }}
+                        title="코멘트 / 하루 취소 / 날짜 변경"
+                        style={expanded ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : undefined}
+                      >
+                        {expanded ? "▲ 닫기" : "🗒 관리"}
+                      </button>
+                      <button
+                        className="tll-act-btn"
+                        onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
+                        title="인보이스 보기"
+                      >
+                        인보이스
+                      </button>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr>
+                      <td colSpan={13} style={{ background: "#f8fafc", padding: "14px 16px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                          {/* 코멘트 */}
+                          <div style={{ background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#1a6fc4", marginBottom: 8 }}>🗒 튜터 코멘트 (tutor_memo)</div>
+                            <textarea
+                              value={memoDraft[l.id] ?? (l.tutor_memo || "")}
+                              onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
+                              placeholder="수업 진행 관련 메모..."
+                              style={{ width: "100%", minHeight: 80, padding: "9px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", resize: "vertical" }}
+                            />
+                            <button
+                              onClick={() => saveMemo(l.id)}
+                              disabled={savingLessonId === l.id}
+                              style={{ marginTop: 8, padding: "7px 14px", border: "none", borderRadius: 7, background: "#1a6fc4", color: "#fff", fontWeight: 700, fontSize: 12, cursor: savingLessonId === l.id ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                            >💾 {savingLessonId === l.id ? "저장중..." : "코멘트 저장"}</button>
+                          </div>
+
+                          {/* 하루 취소 */}
+                          <div style={{ background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#dc2626", marginBottom: 8 }}>❌ 하루 취소 (skip_dates 추가)</div>
+                            <input
+                              type="date"
+                              value={cancelDate[l.id] || ""}
+                              min={l.start_date || undefined}
+                              max={l.end_date || undefined}
+                              onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
+                              style={{ width: "100%", padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
+                            />
+                            <button
+                              onClick={() => cancelOneDate(l)}
+                              disabled={savingLessonId === l.id || !cancelDate[l.id]}
+                              style={{ marginTop: 8, padding: "7px 14px", border: "none", borderRadius: 7, background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !cancelDate[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !cancelDate[l.id]) ? 0.6 : 1 }}
+                            >취소 처리</button>
+                            {skips.length > 0 && (
+                              <div style={{ marginTop: 10, fontSize: 11, color: "#475569" }}>
+                                <div style={{ fontWeight: 700, marginBottom: 3 }}>취소된 날짜 ({skips.length})</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                  {skips.map(d => (
+                                    <span key={d} style={{ padding: "2px 7px", borderRadius: 5, background: "#fef2f2", color: "#b91c1c", fontSize: 10.5, fontWeight: 700 }}>{d}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 날짜 변경 */}
+                          <div style={{ gridColumn: "1 / span 2", background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#92400e", marginBottom: 8 }}>🔄 날짜 변경 (skip_dates + tutor_memo 기록)</div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
+                                원래 날짜
+                                <input
+                                  type="date"
+                                  value={changeOld[l.id] || ""}
+                                  min={l.start_date || undefined}
+                                  max={l.end_date || undefined}
+                                  onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
+                                />
+                              </label>
+                              <span style={{ fontSize: 18, color: "#94a3b8", paddingBottom: 6 }}>→</span>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
+                                새 날짜
+                                <input
+                                  type="date"
+                                  value={changeNew[l.id] || ""}
+                                  onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
+                                />
+                              </label>
+                              <button
+                                onClick={() => rescheduleDate(l)}
+                                disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
+                                style={{ padding: "8px 14px", border: "none", borderRadius: 7, background: "#f59e0b", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]) ? 0.6 : 1 }}
+                              >변경 기록</button>
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8" }}>※ 원래 날짜는 skip_dates에 추가되고, tutor_memo에 “변경: 원래→새” 한 줄이 append됩니다.</div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               );
             })}
           </tbody>

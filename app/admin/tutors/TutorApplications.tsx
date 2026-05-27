@@ -595,7 +595,7 @@ export default function TutorApplications() {
   return (
     <>
       <style>{`
-.tbl-w{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.tbl-w{width:100%;background:#fff;border-radius:14px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #f3f4f6;}
 .tbl{width:100%;border-collapse:collapse;}
 .tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:12px 12px;text-align:left;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;}
 .tbl td{font-size:13px;padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#1a1a2e;}

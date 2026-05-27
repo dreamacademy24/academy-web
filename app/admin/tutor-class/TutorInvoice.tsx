@@ -210,9 +210,9 @@ export default function TutorInvoice() {
 .ti-btn-img:hover:not(:disabled){background:#155aa0}
 .ti-btn-img:disabled{background:#cbd5e1;cursor:not-allowed}
 
-.ti-empty{background:#fff;border-radius:14px;padding:56px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.05);text-align:center;color:#94a3b8;font-size:14px;line-height:1.8}
+.ti-empty{background:#fff;border-radius:14px;padding:56px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #f3f4f6;text-align:center;color:#94a3b8;font-size:14px;line-height:1.8}
 
-.tutor-info-container{background:#fff;border-radius:14px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,0.05);max-width:960px;margin:0 auto;color:#1a1a2e}
+.tutor-info-container{background:#fff;border-radius:14px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,0.05);border:1px solid #f3f4f6;max-width:960px;margin:0 auto;color:#1a1a2e}
 
 .ti-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px}
 .ti-logo{display:flex;flex-direction:column;line-height:1}
