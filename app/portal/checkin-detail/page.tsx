@@ -533,10 +533,11 @@ export default function PortalCheckinDetailPage() {
           {tab === "extra" && (<>
           {/* ── 추가 픽업 신청 (extra_pickup) ── */}
           <div className="q">
-            <div className="q-title">✈️ 추가 픽업 신청 <span style={{fontSize:12,fontWeight:700,color:"#dc2626",marginLeft:6}}>— ₱1,000/회</span></div>
-            <div style={{padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e",lineHeight:1.7,marginBottom:12}}>
-              공항 픽업 또는 막탄 내 픽업만 가능합니다. 막탄 외 지역은 신청이 어렵습니다.<br/>
-              <span style={{color:"#dc2626",fontWeight:700}}>⚠️ 패키지에 포함된 기본 드랍을 추가 픽업으로 변경하는 것은 불가합니다.</span>
+            <div className="q-title">🛬 추가 픽업 신청</div>
+            <div style={{padding:"12px 14px",background:"#fefce8",border:"1px solid #fde68a",borderRadius:8,fontSize:13,color:"#92400e",lineHeight:1.8,marginBottom:12}}>
+              <div style={{fontWeight:700,color:"#b45309"}}>💰 추가 픽업 요금: <span style={{color:"#dc2626"}}>₱1,000/회</span></div>
+              <div>📍 공항 픽업 또는 막탄 내 픽업만 가능합니다. 막탄 외 지역은 신청이 어렵습니다.</div>
+              <div style={{color:"#b91c1c",fontWeight:600}}>⚠️ 패키지에 포함된 기본 드랍을 추가 픽업으로 변경하는 것은 불가합니다.</div>
             </div>
 
             {pickups.filter(p=>p.request_type==="extra_pickup").length > 0 && (
@@ -592,9 +593,10 @@ export default function PortalCheckinDetailPage() {
 
           {/* ── 추가 드랍 신청 (extra_drop) ── */}
           <div className="q">
-            <div className="q-title">🚐 추가 드랍 신청 <span style={{fontSize:12,fontWeight:700,color:"#dc2626",marginLeft:6}}>— ₱800/회</span></div>
-            <div style={{padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e",lineHeight:1.7,marginBottom:12}}>
-              숙소에서 출발하는 드랍만 신청 가능합니다.
+            <div className="q-title">🚐 추가 드랍 신청</div>
+            <div style={{padding:"12px 14px",background:"#fefce8",border:"1px solid #fde68a",borderRadius:8,fontSize:13,color:"#92400e",lineHeight:1.8,marginBottom:12}}>
+              <div style={{fontWeight:700,color:"#b45309"}}>💰 추가 드랍 요금: <span style={{color:"#dc2626"}}>₱800/회</span></div>
+              <div>🏠 숙소에서 출발하는 드랍만 신청 가능합니다.</div>
             </div>
 
             {pickups.filter(p=>p.request_type==="extra_drop").length > 0 && (
