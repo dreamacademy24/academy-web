@@ -267,7 +267,7 @@ export default function EngTutorClassPage() {
         request_id: r.id,
         tutor_id: me.id,
         house_or_reserver: r.guest_name || "",
-        student_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "",
+        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
         student_ages: r.student_age || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
@@ -328,7 +328,7 @@ export default function EngTutorClassPage() {
         request_id: r.id,
         tutor_id: r.assigned_tutor_id,
         house_or_reserver: r.guest_name || "",
-        student_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "",
+        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
         student_ages: r.student_age || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
@@ -444,8 +444,8 @@ export default function EngTutorClassPage() {
         assigned_tutor_id: me.id,
         tutor_id: me.id,
         status: "confirmed",
-        total_sessions: computedSessions || null,
-        total_amount: computedAmount || null,
+        total_sessions: computedSessions || 0,
+        total_amount: computedAmount || 0,
       }).eq("id", r.id);
       if (upErr) { alert("Failed to take: " + upErr.message); setTakingId(""); return; }
 
@@ -462,10 +462,10 @@ export default function EngTutorClassPage() {
         class_time: r.preferred_time,
         class_type: r.class_type,
         house_or_reserver: r.guest_name,
-        student_names: r.student_name_kr || (r as any).student_name || "",
+        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
         student_ages: r.student_age,
-        total_sessions: computedSessions || null,
-        total_amount: computedAmount || null,
+        total_sessions: computedSessions || 0,
+        total_amount: computedAmount || 0,
         overall_level: r.level_english,
         speaking_level: r.level_speaking,
         reading_level: r.level_reading,
@@ -737,7 +737,7 @@ export default function EngTutorClassPage() {
                       <td style={{color:"#6b7c93",fontSize:11}}>{fmtDate(r.created_at)}</td>
                       <td style={{color:"#1a6fc4",fontWeight:700}}>{r.house_number || "-"}</td>
                       <td>{r.guest_name || "-"}</td>
-                      <td style={{fontWeight:600}}>{[r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ")}</td>
+                      <td style={{fontWeight:600}}>{[r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ")}</td>
                       <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</td>
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
                       <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T (100m)":"1T (50m)"}</span></td>
