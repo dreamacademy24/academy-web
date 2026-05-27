@@ -76,6 +76,10 @@ export default function AttendancePage() {
   const [changeOldVal, setChangeOldVal] = useState("");
   const [changeNewVal, setChangeNewVal] = useState("");
   const [savingManage, setSavingManage] = useState(false);
+  const [draftDays, setDraftDays] = useState<string[]>([]);
+  useEffect(() => {
+    if (lesson) setDraftDays(lesson.class_days || []);
+  }, [lesson]);
 
   const load = useCallback(async () => {
     if (!lessonId) return;
@@ -187,6 +191,17 @@ export default function AttendancePage() {
     setChangeNewVal("");
     setNotes(nextNotes);
     alert(`✅ Rescheduled: ${oldD} → ${newD}`);
+    load();
+  }
+
+  async function saveClassDays() {
+    if (!lesson) return;
+    setSavingManage(true);
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ class_days: draftDays }).eq("id", lesson.id);
+    setSavingManage(false);
+    if (error) { alert("Save failed: " + error.message); return; }
+    alert("✅ Class days saved.");
     load();
   }
 
@@ -330,7 +345,34 @@ export default function AttendancePage() {
       </div>
 
       <div className="at-card">
-        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+
+          {/* Class Days */}
+          <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 Class Days</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {["mon","tue","wed","thu","fri","sat","sun"].map(day => {
+                const labelMap: Record<string,string> = {mon:"Mon",tue:"Tue",wed:"Wed",thu:"Thu",fri:"Fri",sat:"Sat",sun:"Sun"};
+                const krMap: Record<string,string> = {mon:"월",tue:"화",wed:"수",thu:"목",fri:"금",sat:"토",sun:"일"};
+                const checked = draftDays.some(d => d === day || d === krMap[day]);
+                return (
+                  <label key={day} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:6,border:`1.5px solid ${checked?"#7c3aed":"#e5e7eb"}`,background:checked?"#f5f3ff":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:checked?"#7c3aed":"#6b7280"}}>
+                    <input type="checkbox" checked={checked}
+                      onChange={e => setDraftDays(prev =>
+                        e.target.checked ? [...prev.filter(d => d!==day && d!==krMap[day]), day]
+                        : prev.filter(d => d!==day && d!==krMap[day])
+                      )}
+                      style={{display:"none"}}
+                    />
+                    {labelMap[day]}
+                  </label>
+                );
+              })}
+            </div>
+            <button onClick={saveClassDays} disabled={savingManage}
+              style={{height:30,padding:"0 14px",border:"none",borderRadius:6,background:"#7c3aed",color:"#fff",fontWeight:700,fontSize:12,cursor:savingManage?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingManage?0.6:1,alignSelf:"flex-start",marginTop:2}}
+            >{savingManage?"Saving...":"Save Days"}</button>
+          </div>
 
           {/* Cancel Day */}
           <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
