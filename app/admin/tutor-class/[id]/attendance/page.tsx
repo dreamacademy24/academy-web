@@ -21,7 +21,7 @@ interface Lesson {
   attendance_log: Record<string, "○" | "✕" | "△"> | null;
 }
 
-const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
+const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
 const DAY_EN_LABEL: Record<string, string> = {
   sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
@@ -247,17 +247,21 @@ export default function AttendancePage() {
 .at-help{font-size:12px;color:#6b7280;line-height:1.7;background:#f9fafb;border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px dashed #e5e7eb}
 .at-help b{color:#374151}
 
-.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.at-box{padding:11px 6px;border-radius:10px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid;transition:all 120ms;user-select:none}
-.at-box .idx{font-size:10.5px;font-weight:700;color:#6b7280}
-.at-box .dt{font-size:12.5px;font-weight:800}
-.at-box .dw{font-size:10px;font-weight:600;color:#9ca3af;margin-left:2px}
-.at-box .mark{font-size:22px;font-weight:900;line-height:1;min-height:24px;margin-top:2px}
-.at-box.s-blank{background:#fff;color:#94a3b8;border-color:#e5e7eb}
-.at-box.s-blank:hover{border-color:#cbd5e1;background:#f9fafb}
-.at-box.s-o{background:#eaf3de;color:#3b6d11;border-color:#bce085}
-.at-box.s-x{background:#fcebeb;color:#a32d2d;border-color:#fca5a5}
-.at-box.s-t{background:#faeeda;color:#854f0b;border-color:#fdba74}
+.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
+.at-box{padding:12px 6px 10px;border-radius:12px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid;transition:all 120ms;user-select:none;min-height:96px;justify-content:space-between}
+.at-box .idx{font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.02em}
+.at-box .dt{font-size:13px;font-weight:800;color:inherit}
+.at-box .dw{font-size:10.5px;font-weight:600;color:inherit;opacity:0.65;margin-left:2px}
+.at-box .mark{font-size:36px;font-weight:900;line-height:1;min-height:38px;display:flex;align-items:center;justify-content:center;width:100%}
+.at-box.s-blank{background:#f9fafb;color:#64748b;border-color:#e2e8f0}
+.at-box.s-blank:hover{border-color:#94a3b8;background:#f1f5f9}
+.at-box.s-blank .idx{color:#94a3b8}
+.at-box.s-o{background:#dcfce7;color:#15803d;border-color:#86efac}
+.at-box.s-o .idx{color:#16a34a;opacity:0.8}
+.at-box.s-x{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
+.at-box.s-x .idx{color:#dc2626;opacity:0.8}
+.at-box.s-t{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+.at-box.s-t .idx{color:#b45309;opacity:0.8}
 
 .at-notes-card label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px}
 .at-notes-card label .en{font-weight:500;color:#6b7280;font-size:12px;margin-left:6px}
