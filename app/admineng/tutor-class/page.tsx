@@ -76,6 +76,25 @@ function tutorColor(tutorId: string | null | undefined): string {
 const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 // 한글/영문/약어 요일 → 표준 키(sun..sat) 매핑.
 // DB에는 ["월","수","금"] 같은 한글 또는 ["mon","wed","fri"] 영문이 섞여 있어 둘 다 처리.
+// 한글/영문 요일 → 영문 약어 (Mon, Tue, ...) — 표시용
+function dayLabelEn(input: string): string {
+  if (!input) return "";
+  const s = String(input).trim().toLowerCase();
+  const map: Record<string, string> = {
+    "일": "Sun", "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat",
+    "일요일": "Sun", "월요일": "Mon", "화요일": "Tue", "수요일": "Wed", "목요일": "Thu", "금요일": "Fri", "토요일": "Sat",
+  };
+  if (map[input.trim()]) return map[input.trim()];
+  if (s.startsWith("sun")) return "Sun";
+  if (s.startsWith("mon")) return "Mon";
+  if (s.startsWith("tue")) return "Tue";
+  if (s.startsWith("wed")) return "Wed";
+  if (s.startsWith("thu")) return "Thu";
+  if (s.startsWith("fri")) return "Fri";
+  if (s.startsWith("sat")) return "Sat";
+  return input;
+}
+
 function normalizeWeekday(input: string): string {
   if (!input) return "";
   const s = String(input).toLowerCase().trim();
@@ -145,6 +164,7 @@ export default function EngTutorClassPage() {
   const [allLessons, setAllLessons] = useState<any[]>([]);
   const [loadingAllLessons, setLoadingAllLessons] = useState(false);
   const [takingId, setTakingId] = useState<string>("");
+  const [creatingLessonForId, setCreatingLessonForId] = useState<string>("");
   const [expandedLessonId, setExpandedLessonId] = useState<string>("");
   const [memoDraft, setMemoDraft] = useState<Record<string, string>>({});
   const [savingLessonId, setSavingLessonId] = useState<string>("");
@@ -479,6 +499,63 @@ export default function EngTutorClassPage() {
       console.error("[takeClass] failed:", e);
       alert("Failed: " + (e?.message || e));
       setTakingId("");
+    }
+  }
+
+  // ── 합성 lesson을 실제 tutor_lessons 행으로 생성 → Attendance 이동 ──
+  async function createLessonAndOpenAttendance(lesson: any) {
+    const reqId = String(lesson.request_id || lesson.id || "").replace(/^req:/, "");
+    if (!reqId) { alert("Cannot resolve request id."); return; }
+    setCreatingLessonForId(lesson.id);
+    try {
+      // 이미 동일 request_id로 생성된 lesson이 있을 수 있으므로 우선 조회
+      const { data: existing } = await supabase
+        .from("tutor_lessons")
+        .select("id")
+        .ilike("admin_memo", `%request_id: ${reqId}%`)
+        .limit(1);
+      if (existing && existing.length > 0 && existing[0].id) {
+        router.push(`/admin/tutor-class/${existing[0].id}/attendance`);
+        return;
+      }
+      const classDaysArr = Array.isArray(lesson.class_days)
+        ? lesson.class_days
+        : (typeof lesson.class_days === "string" ? lesson.class_days.split(",").map((s: string) => s.trim()).filter(Boolean) : []);
+      const payload: Record<string, unknown> = {
+        tutor_id: lesson.tutor_id || (me ? me.id : null),
+        start_date: lesson.start_date || null,
+        end_date: lesson.end_date || null,
+        sessions_per_day: lesson.sessions_per_day || 1,
+        class_days: classDaysArr.length > 0 ? classDaysArr : null,
+        class_time: lesson.class_time || null,
+        class_type: lesson.class_type || null,
+        house_or_reserver: lesson.house_or_reserver || "",
+        student_names: lesson.student_names || "",
+        student_ages: lesson.student_ages || null,
+        total_sessions: lesson.total_sessions || null,
+        total_amount: lesson.total_amount || null,
+        hourly_rate: lesson.hourly_rate || ((lesson.class_type || "").includes("1:2") ? 350 : 300),
+        status: "active",
+        admin_memo: `request_id: ${reqId}`,
+      };
+      const { data, error } = await supabase
+        .from("tutor_lessons")
+        .insert(payload)
+        .select()
+        .single();
+      if (error || !data) {
+        alert("Failed to create lesson: " + (error?.message || "unknown"));
+        setCreatingLessonForId("");
+        return;
+      }
+      // 백그라운드 데이터 새로고침 후 이동
+      loadMyLessons();
+      loadAllLessons();
+      router.push(`/admin/tutor-class/${data.id}/attendance`);
+    } catch (e: any) {
+      alert("Failed: " + (e?.message || e));
+    } finally {
+      setCreatingLessonForId("");
     }
   }
 
@@ -853,7 +930,12 @@ export default function EngTutorClassPage() {
                   const statusLabel = l.status === "active" ? "In Progress" : l.status === "completed" ? "Completed" : (l.status || "-");
                   const statusBg = l.status === "active" ? "#dcfce7" : l.status === "completed" ? "#dbeafe" : "#f1f5f9";
                   const statusFg = l.status === "active" ? "#15803d" : l.status === "completed" ? "#1e40af" : "#475569";
-                  const daysStr = Array.isArray(l.class_days) ? l.class_days.join(", ") : (l.class_days || "-");
+                  const rawDaysList = Array.isArray(l.class_days)
+                    ? l.class_days
+                    : (typeof l.class_days === "string" ? l.class_days.split(",") : []);
+                  const daysStr = rawDaysList.length > 0
+                    ? rawDaysList.map((d: string) => dayLabelEn(d)).filter(Boolean).join(", ")
+                    : "-";
                   const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
                   const total = Number(l.total_sessions || 0);
                   const remaining = Math.max(0, total - skips.length);
@@ -884,10 +966,18 @@ export default function EngTutorClassPage() {
                             }}
                             title="Notes / Cancel / Reschedule"
                           >{expanded ? "▲ Close" : "🗒 Manage"}</button>
-                          <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4}} onClick={() => {
-                            if (String(l.id).startsWith("req:")) { alert("Lesson not generated yet — please confirm in the request detail first."); return; }
-                            router.push(`/admin/tutor-class/${l.id}/attendance`);
-                          }}>📋 Attendance</button>
+                          <button
+                            className="ebtn"
+                            disabled={creatingLessonForId === l.id}
+                            style={{padding:"5px 8px",fontSize:11,background:"#3b82f6",color:"#fff",marginRight:4,opacity:creatingLessonForId===l.id?0.6:1,cursor:creatingLessonForId===l.id?"not-allowed":"pointer"}}
+                            onClick={() => {
+                              if (String(l.id).startsWith("req:") || l._source === "request") {
+                                createLessonAndOpenAttendance(l);
+                                return;
+                              }
+                              router.push(`/admin/tutor-class/${l.id}/attendance`);
+                            }}
+                          >{creatingLessonForId===l.id ? "Creating..." : "📋 Attendance"}</button>
                           <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
                         </td>
                       </tr>
