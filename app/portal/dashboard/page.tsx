@@ -93,7 +93,17 @@ export default function PortalDashboard() {
 
   const memberCards = authUser ? cards : cards;
 
-  const displayName = bookingInfo?.booker_name || (session ? session.guest_name : (profile?.name || profile?.full_name || authUser?.email?.split('@')[0]));
+  // 우선순위: portalSession.booker_name/name → session.guest_name → bookingInfo.booker_name/name → profile → email prefix
+  const sessAny = session as unknown as Record<string, string | undefined> | null;
+  const displayName =
+    sessAny?.booker_name ||
+    sessAny?.name ||
+    session?.guest_name ||
+    bookingInfo?.booker_name ||
+    bookingInfo?.name ||
+    profile?.name ||
+    profile?.full_name ||
+    authUser?.email?.split('@')[0];
 
   return (<>
     <style>{`
