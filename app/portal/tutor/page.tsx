@@ -165,6 +165,7 @@ export default function PortalTutorPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [requests, setRequests] = useState<TutorReq[]>([]);
+  const [lessonMap, setLessonMap] = useState<Record<string, any>>({});
   const [form, setForm] = useState(INIT_FORM);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -208,7 +209,7 @@ export default function PortalTutorPage() {
     if (!session) return;
     (async () => {
       const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
-      if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
+      if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); }
       const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
       const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
@@ -277,7 +278,7 @@ export default function PortalTutorPage() {
   async function reload() {
     if (!session) return;
     const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
-    if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
+    if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); }
   }
 
   function toggleDay(d: string) {
@@ -840,6 +841,46 @@ export default function PortalTutorPage() {
                   <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>요일:</span>{daysVal || "-"}</div>
                   <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>시간:</span>{r.preferred_time || "-"}</div>
                 </div>
+                {r.status === 'confirmed' && lessonMap[r.id] && (() => {
+                  const l = lessonMap[r.id];
+                  const days = Array.isArray(l.class_days)
+                    ? l.class_days.join(', ')
+                    : (l.class_days || '-');
+                  return (
+                    <div style={{
+                      marginTop:10, padding:"12px 14px",
+                      background:"linear-gradient(135deg,#f0fdf4,#dcfce7)",
+                      borderRadius:10, border:"1.5px solid #86efac"
+                    }}>
+                      <div style={{fontSize:12,fontWeight:800,color:"#15803d",marginBottom:8}}>
+                        ✅ 수업 확정 인보이스
+                      </div>
+                      <div style={{fontSize:12,color:"#166534",lineHeight:1.9}}>
+                        {l.tutor_name && <div>👩‍🏫 <b>담당 튜터:</b> {l.tutor_name}</div>}
+                        {l.confirmed_time && <div>🕐 <b>확정 시간:</b> {l.confirmed_time}</div>}
+                        {days && days !== '-' && <div>📅 <b>수업 요일:</b> {days}</div>}
+                        <div style={{
+                          marginTop:8, paddingTop:8,
+                          borderTop:"1px solid #bbf7d0",
+                          display:"flex", gap:16
+                        }}>
+                          {l.total_sessions != null && (
+                            <div style={{textAlign:"center"}}>
+                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>{l.total_sessions}회</div>
+                              <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>총 수업</div>
+                            </div>
+                          )}
+                          {l.total_amount != null && l.total_amount > 0 && (
+                            <div style={{textAlign:"center"}}>
+                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>₱{l.total_amount.toLocaleString()}</div>
+                              <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>총 금액</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })

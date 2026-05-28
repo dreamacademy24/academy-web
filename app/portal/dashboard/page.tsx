@@ -20,6 +20,7 @@ export default function PortalDashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [shuttleApps, setShuttleApps] = useState<any[]>([]);
+  const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -69,6 +70,14 @@ export default function PortalDashboard() {
           .eq("booking_id", s.booking_id)
           .order("created_at", { ascending: false })
           .then(({ data }) => setShuttleApps(data || []));
+        fetch(`/api/portal/tutor?booking_id=${s.booking_id}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (d?.requests?.some((r: any) => r.status === 'confirmed')) {
+              setHasConfirmedTutor(true);
+            }
+          })
+          .catch(() => {});
       }
     } catch {}
   }, []);
@@ -184,6 +193,31 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           ) : null
         )}
       </div>
+
+      {hasConfirmedTutor && (
+        <a href="/portal/tutor" style={{display:"block",textDecoration:"none",marginBottom:16}}>
+          <div style={{
+            background:"linear-gradient(135deg,#dcfce7,#bbf7d0)",
+            border:"2px solid #86efac",
+            borderRadius:16,
+            padding:"16px 20px",
+            display:"flex",
+            alignItems:"center",
+            gap:14,
+            cursor:"pointer",
+          }}>
+            <div style={{fontSize:32}}>📋</div>
+            <div>
+              <div style={{fontSize:14,fontWeight:800,color:"#15803d",marginBottom:3}}>
+                튜터 수업이 확정되었습니다!
+              </div>
+              <div style={{fontSize:12,color:"#166534"}}>
+                예약 확정 인보이스를 확인하세요 →
+              </div>
+            </div>
+          </div>
+        </a>
+      )}
 
       <div className="db-grid">
         {(authUser ? memberCards : cards).map((c, i) => (
