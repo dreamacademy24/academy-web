@@ -309,8 +309,7 @@ export default function EngTutorClassPage() {
         .eq("status", "active")
         .order("class_time", { ascending: true }),
       supabase.from("tutor_requests").select("*")
-        .eq("status", "confirmed")
-        .not("assigned_tutor_id", "is", null)
+        .in("status", ["confirmed", "assigned"])
         .order("created_at", { ascending: false }),
     ]);
     const lessonList = (lRes.data || []) as any[];
@@ -1093,7 +1092,9 @@ export default function EngTutorClassPage() {
           return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No lessons yet</div>;
         }
         // 본인 담당 우선 정렬 → 그 다음 created_at desc
-        const sorted = [...allLessons].sort((a, b) => {
+        const sorted = [...allLessons]
+          .filter((l: any) => !!l.tutor_id)  // 튜터 미배정 제외
+          .sort((a, b) => {
           const aMine = me && a.tutor_id === me.id ? 0 : 1;
           const bMine = me && b.tutor_id === me.id ? 0 : 1;
           if (aMine !== bMine) return aMine - bMine;

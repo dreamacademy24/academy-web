@@ -13,6 +13,10 @@ interface Lesson {
   overall_level: string | null;
   total_sessions: number | null; total_amount: number | null;
   status: string;
+  skip_dates: string[] | null;
+  child_personality: string | null;
+  class_focus_arr: string[] | null;
+  class_style: string | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -21,6 +25,11 @@ interface SessionRow {
 }
 
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
+
+const DAY_SHORT: Record<string, string> = {
+  mon:"M", tue:"T", wed:"W", thu:"Th", fri:"F", sat:"Sa", sun:"Su",
+  "월":"M", "화":"T", "수":"W", "목":"Th", "금":"F", "토":"Sa", "일":"Su",
+};
 
 const LEVEL_LABELS: Record<string, { ko: string; en: string }> = {
   zero:         { ko: "제로 베이스(기초) - 영어를 처음 접함", en: "Zero-Based - New to English" },
@@ -101,6 +110,7 @@ export default function TutorInvoice() {
     if (urlLessonId) setSelectedId(urlLessonId);
   }, [urlLessonId]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [tutorReq, setTutorReq] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -162,26 +172,43 @@ export default function TutorInvoice() {
   useEffect(() => { loadLessons(); }, [loadLessons]);
 
   useEffect(() => {
-    if (!selectedId) { setSessions([]); return; }
-    // 합성 lesson (req:UUID) 은 tutor_lesson_sessions 행이 없음 → 조회 스킵
-    if (selectedId.startsWith("req:")) { setSessions([]); return; }
+    if (!selectedId) { setSessions([]); setTutorReq(null); return; }
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
-        .from("tutor_lesson_sessions")
-        .select("*")
-        .eq("lesson_id", selectedId)
-        .order("session_date", { ascending: true });
-      if (cancelled) return;
-      if (error) {
-        console.error("회차 로드 실패:", error);
+      // 합성 lesson (req:UUID) 은 tutor_lesson_sessions 행이 없음 → 조회 스킵
+      if (selectedId.startsWith("req:")) {
         setSessions([]);
-        return;
+      } else {
+        const { data, error } = await supabase
+          .from("tutor_lesson_sessions")
+          .select("*")
+          .eq("lesson_id", selectedId)
+          .order("session_date", { ascending: true });
+        if (cancelled) return;
+        if (error) {
+          console.error("회차 로드 실패:", error);
+          setSessions([]);
+        } else {
+          setSessions((data || []) as SessionRow[]);
+        }
       }
-      setSessions((data || []) as SessionRow[]);
+      // 연결된 tutor_request 조회 (엄마 요청사항용)
+      const currentLesson = lessons.find(l => l.id === selectedId);
+      const reqId = selectedId.startsWith("req:")
+        ? selectedId.replace("req:", "")
+        : (() => {
+            const m = /request_id:\s*([a-f0-9-]+)/i.exec((currentLesson as any)?.admin_memo || "");
+            return m ? m[1] : null;
+          })();
+      if (reqId) {
+        const { data: rq } = await supabase.from("tutor_requests").select("*").eq("id", reqId).maybeSingle();
+        if (!cancelled) setTutorReq(rq || null);
+      } else {
+        if (!cancelled) setTutorReq(null);
+      }
     })();
     return () => { cancelled = true; };
-  }, [selectedId]);
+  }, [selectedId, lessons]);
 
   const lesson = useMemo(() => lessons.find(l => l.id === selectedId) || null, [lessons, selectedId]);
 
@@ -196,9 +223,37 @@ export default function TutorInvoice() {
     [lesson],
   );
 
-  const days = sessions.length;
+  const skipDates = useMemo(
+    () => Array.isArray((lesson as any)?.skip_dates) ? (lesson as any).skip_dates as string[] : [],
+    [lesson]
+  );
+
+  const DAY_CODE_INV: Record<string, number> = {
+    sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6,
+    "일":0, "월":1, "화":2, "수":3, "목":4, "금":5, "토":6,
+  };
+
   const classSession = lesson?.sessions_per_day || 1;
   const classFee = lesson?.hourly_rate || 0;
+
+  const days = (() => {
+    // 실제 출결 세션이 있으면 그 수 사용
+    if (sessions.length > 0) return sessions.length;
+    // 없으면 class_days 기반으로 계산 (skip_dates 제외)
+    let count = 0;
+    for (const week of weeks) {
+      for (const date of week) {
+        if (!date) continue;
+        if (skipDates.includes(date)) continue;
+        const dow = new Date(date + "T00:00:00").getDay();
+        if (Array.isArray(lesson?.class_days) && lesson.class_days.some(
+          (d: string) => DAY_CODE_INV[String(d).trim()] === dow
+        )) count++;
+      }
+    }
+    return count || lesson?.total_sessions || 0;
+  })();
+
   const total = classFee * classSession * days;
   const levelInfo = lesson?.overall_level ? LEVEL_LABELS[lesson.overall_level] : null;
   const sessionTime = parseSessionTime(lesson?.confirmed_time || lesson?.class_time);
@@ -376,7 +431,19 @@ export default function TutorInvoice() {
               </tr>
               <tr>
                 <td className="k">days</td>
-                <td className="v">{days}</td>
+                <td className="v">
+                  {days}
+                  {Array.isArray(lesson?.class_days) && lesson.class_days.length > 0 && (
+                    <span style={{marginLeft:6,fontSize:11,color:"#6b7280"}}>
+                      ({lesson.class_days.map((d:string) => DAY_SHORT[d] || DAY_SHORT[d.toLowerCase()] || d).join("/")})
+                    </span>
+                  )}
+                  {skipDates.length > 0 && (
+                    <span style={{marginLeft:6,fontSize:11,color:"#dc2626"}}>
+                      (-{skipDates.length} cancelled)
+                    </span>
+                  )}
+                </td>
               </tr>
               <tr>
                 <td className="k">Total</td>
@@ -409,11 +476,16 @@ export default function TutorInvoice() {
                       const dow = new Date(date + "T00:00:00").getDay();
                       scheduled = lesson.class_days.some(d => DAY_CODE[String(d).trim()] === dow);
                     }
-                    const show = !!s || scheduled;
+                    const isSkipped = date ? skipDates.includes(date) : false;
+                    const show = (!!s || scheduled) && !isSkipped;
                     const blockBg = lesson.class_type === "1:2" ? "#ede9fe" : "#dbeafe";
                     return (
                       <td key={`c-${wi}-${di}`}>
-                        {show ? (
+                        {isSkipped ? (
+                          <div className="ti-wsess" style={{background:"#fee2e2",opacity:0.7}}>
+                            <div className="ct" style={{textDecoration:"line-through",color:"#dc2626"}}>취소</div>
+                          </div>
+                        ) : show ? (
                           <div className="ti-wsess" style={{ background: blockBg }} title={s ? `${date} · ${s.session_idx}회차 · ${s.status}` : `${date} · 예정`}>
                             <div className="ct">{lesson.class_type} tutor</div>
                             <div className="tm">{sessionTime}</div>
@@ -427,6 +499,22 @@ export default function TutorInvoice() {
             ))}
           </tbody>
         </table>
+
+        {tutorReq && (tutorReq.child_personality || tutorReq.class_style || (tutorReq.class_focus_arr || []).length > 0) && (
+          <table className="ti-info" style={{marginTop:12}}>
+            <tbody>
+              {tutorReq.class_style && (
+                <tr><td className="k">Class Style</td><td className="v">{tutorReq.class_style}</td></tr>
+              )}
+              {(tutorReq.class_focus_arr || []).length > 0 && (
+                <tr><td className="k">Focus</td><td className="v">{(tutorReq.class_focus_arr || []).join(", ")}</td></tr>
+              )}
+              {tutorReq.child_personality && (
+                <tr><td className="k">Notes</td><td className="v">{tutorReq.child_personality}</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
 
         <div className="ti-rules">
           <p className="title">★ 튜터수업 규정 안내 ★</p>
