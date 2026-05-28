@@ -83,6 +83,8 @@ const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
 
 interface PortalSession { booking_id: string; guest_name: string; expires: number }
 
+type ShuttleApp = { id: string; created_at: string; date: string | null; request: string | null; tour_name?: string | null; people_count: number | null; status: string };
+
 export default function PortalShuttlePage() {
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
@@ -91,7 +93,21 @@ export default function PortalShuttlePage() {
   const [activeMonth, setActiveMonth] = useState("5");
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [myApps, setMyApps] = useState<ShuttleApp[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const loadMyApps = useCallback(async (bookingId: string) => {
+    if (!bookingId) return;
+    const { data } = await supabase.from("shuttle_applications")
+      .select("id, created_at, date, request, tour_name, people_count, status")
+      .eq("booking_id", bookingId)
+      .order("created_at", { ascending: false });
+    setMyApps((data || []) as ShuttleApp[]);
+  }, []);
+
+  useEffect(() => {
+    if (session?.booking_id) loadMyApps(session.booking_id);
+  }, [session, loadMyApps]);
 
   const STORAGE_KEY = "shuttle_rules_confirmed";
   const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbwqK13BTYKhX4HqJHxJCotHP2X2lbtdRptQkW-j9A6-ZffkRtt1B8v1IKwIZ6uMBM4/exec";
@@ -228,7 +244,9 @@ export default function PortalShuttlePage() {
       }).then(() => {});
 
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
-      router.push("/portal/dashboard");
+      // 같은 페이지에서 내 신청 내역 즉시 갱신
+      if (formRef.current) formRef.current.reset();
+      loadMyApps(session.booking_id);
     } catch (err) {
       console.error(err);
       alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
@@ -613,6 +631,44 @@ export default function PortalShuttlePage() {
                 <p className="tagline">자세한 셔틀 시간표는 드림센터 내부 공지를 기준으로 합니다.</p>
               </div>
             </aside>
+          </div>
+
+          {/* ── 내 신청 내역 ── */}
+          <div style={{ marginTop: 32, background: "#fff", borderRadius: 14, padding: 22, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1px solid #f3f4f6" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
+              📑 내 신청 내역 <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>({myApps.length}건)</span>
+            </div>
+            {myApps.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 28, color: "#9ca3af", fontSize: 13, background: "#f9fafb", borderRadius: 10, border: "1px dashed #e5e7eb" }}>
+                신청 내역이 없습니다.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {myApps.map(a => {
+                  const v = String(a.status || "").toLowerCase();
+                  const meta = (v === "confirmed" || v === "확정")
+                    ? { label: "확정", bg: "#dcfce7", color: "#15803d" }
+                    : (v === "cancelled" || v === "cancel")
+                      ? { label: "취소", bg: "#fee2e2", color: "#b91c1c" }
+                      : { label: "대기중", bg: "#fef3c7", color: "#92400e" };
+                  const title = a.tour_name || a.request || "투어 셔틀";
+                  const created = a.created_at ? a.created_at.slice(0, 10) : "-";
+                  return (
+                    <div key={a.id} style={{ border: "1px solid #f3f4f6", borderRadius: 10, padding: "12px 14px", background: "#fafbfc" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11.5, color: "#6b7280", fontWeight: 600 }}>신청일 {created}</span>
+                        <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
+                      </div>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", marginBottom: 4, lineHeight: 1.4, wordBreak: "keep-all" }}>{title}</div>
+                      <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.7 }}>
+                        <b style={{ color: "#1a1a2e" }}>📅 날짜:</b> {a.date || "-"}{" "}
+                        <b style={{ color: "#1a1a2e", marginLeft: 8 }}>👥 인원:</b> {a.people_count ?? "-"}명
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       </main>

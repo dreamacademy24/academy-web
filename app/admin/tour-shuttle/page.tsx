@@ -40,6 +40,33 @@ export default function TourShuttleAdminPage() {
   const [bookingNumbers, setBookingNumbers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ tour_name: "", date: "", people_count: 1, name: "", reservation_no: "", request: "" });
+  const [addSaving, setAddSaving] = useState(false);
+
+  async function saveAddManual() {
+    if (!addForm.tour_name.trim() || !addForm.date || !addForm.name.trim()) {
+      alert("투어명, 날짜, 신청자명은 필수입니다.");
+      return;
+    }
+    setAddSaving(true);
+    const { error } = await supabase.from("shuttle_applications").insert({
+      tour_name: addForm.tour_name.trim(),
+      date: addForm.date,
+      people_count: Number(addForm.people_count) || 1,
+      name: addForm.name.trim(),
+      portal_name: addForm.name.trim(),
+      request: addForm.request.trim() || null,
+      message: addForm.request.trim() || null,
+      status: "confirmed",
+      ...(addForm.reservation_no.trim() ? { reservation_no: addForm.reservation_no.trim() } : {}),
+    });
+    setAddSaving(false);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    setAddOpen(false);
+    setAddForm({ tour_name: "", date: "", people_count: 1, name: "", reservation_no: "", request: "" });
+    load();
+  }
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -102,7 +129,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <span className="ts-title">🚌 투어셔틀 관리</span>
           <span className="ts-sub">총 {apps.length}건</span>
         </div>
-        <div style={{ width: 100 }} />
+        <button
+          onClick={() => setAddOpen(true)}
+          style={{ padding: "8px 14px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+        >+ 항목 직접 추가</button>
       </div>
 
       <div style={{display:"flex",gap:6,background:"#fff",padding:4,borderRadius:12,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
@@ -173,5 +203,46 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       </div>
       )}
     </div>
+
+    {addOpen && (
+      <div onClick={() => setAddOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 480, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>🚌 항목 직접 추가</h3>
+            <button onClick={() => setAddOpen(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <label style={{ gridColumn: "1 / 3", fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              투어명 <span style={{ color: "#dc2626" }}>*</span>
+              <input type="text" value={addForm.tour_name} onChange={e => setAddForm(p => ({ ...p, tour_name: e.target.value }))} placeholder="예: 막탄 시티 투어" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              날짜 <span style={{ color: "#dc2626" }}>*</span>
+              <input type="date" value={addForm.date} onChange={e => setAddForm(p => ({ ...p, date: e.target.value }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              인원
+              <input type="number" min={1} value={addForm.people_count} onChange={e => setAddForm(p => ({ ...p, people_count: Number(e.target.value) || 1 }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              신청자명 <span style={{ color: "#dc2626" }}>*</span>
+              <input type="text" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} placeholder="홍길동" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              예약번호 (선택)
+              <input type="text" value={addForm.reservation_no} onChange={e => setAddForm(p => ({ ...p, reservation_no: e.target.value }))} placeholder="DA-..." style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ gridColumn: "1 / 3", fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              요청사항
+              <textarea value={addForm.request} onChange={e => setAddForm(p => ({ ...p, request: e.target.value }))} placeholder="기타 요청사항 (선택)" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none", minHeight: 70, resize: "vertical" }} />
+            </label>
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+            <button onClick={() => setAddOpen(false)} disabled={addSaving} style={{ padding: "9px 16px", border: "1px solid #cbd5e1", borderRadius: 7, background: "#fff", color: "#475569", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>취소</button>
+            <button onClick={saveAddManual} disabled={addSaving} style={{ padding: "9px 18px", border: "none", borderRadius: 7, background: "#1a6fc4", color: "#fff", fontSize: 13, fontWeight: 700, cursor: addSaving ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: addSaving ? 0.6 : 1 }}>{addSaving ? "저장중..." : "💾 저장"}</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }
