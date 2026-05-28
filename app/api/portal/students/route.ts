@@ -19,15 +19,31 @@ export async function GET(req: Request) {
     .order("name_kr");
 
   if (students && students.length > 0) {
-    return NextResponse.json({ students });
+    let bkName = "", bkEn = "";
+    const { data: bk1 } = await supabase
+      .from("bookings").select("booker_name, booker_english").eq("id", bookingId).maybeSingle();
+    if (bk1?.booker_name) {
+      bkName = bk1.booker_name; bkEn = bk1.booker_english || "";
+    } else {
+      const { data: bk2 } = await supabase
+        .from("bookings_new").select("booker_name, booker_english").eq("id", bookingId).maybeSingle();
+      bkName = bk2?.booker_name || ""; bkEn = bk2?.booker_english || "";
+    }
+    return NextResponse.json({
+      students,
+      booker: { name_kr: bkName, name_en: bkEn, age: "" }
+    });
   }
 
   // 2) bookings 테이블 students JSON 폴백
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("students")
-    .eq("id", bookingId)
-    .maybeSingle();
+  let booking: any = null;
+  const { data: b1 } = await supabase
+    .from("bookings").select("students, booker_name, booker_english").eq("id", bookingId).maybeSingle();
+  if (b1) { booking = b1; } else {
+    const { data: b2 } = await supabase
+      .from("bookings_new").select("students, booker_name, booker_english").eq("id", bookingId).maybeSingle();
+    booking = b2;
+  }
 
   if (booking?.students) {
     try {
@@ -41,7 +57,10 @@ export async function GET(req: Request) {
         age: s.age ?? null,
         level: s.level ?? "junior",
       })).filter((s: any) => s.name_kr);
-      return NextResponse.json({ students: parsed });
+      return NextResponse.json({
+        students: parsed,
+        booker: { name_kr: booking.booker_name || "", name_en: booking.booker_english || "", age: "" }
+      });
     } catch {
       return NextResponse.json({ students: [] });
     }

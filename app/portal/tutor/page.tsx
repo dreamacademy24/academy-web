@@ -161,6 +161,23 @@ const INIT_FORM = {
   privacy_agreed: false, agreed_rules: false,
 };
 
+const INIT_FORM2 = {
+  class_type: "" as string,
+  student_name_kr: "", student_name_en: "",
+  student1_name_kr: "", student1_name_en: "", student1_idx: -1,
+  student2_name_kr: "", student2_name_en: "", student2_idx: -1,
+  sessions_per_day: 1,
+  start_date: "", end_date: "", preferred_days_arr: [] as string[],
+  preferred_time: "", skip_dates: "",
+};
+
+const SCHED2_INIT = {
+  sessions_per_day: 1,
+  start_date: "", end_date: "",
+  preferred_days_arr: [] as string[],
+  preferred_time: "", skip_dates: "",
+};
+
 export default function PortalTutorPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
@@ -174,6 +191,10 @@ export default function PortalTutorPage() {
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [bookingStudents, setBookingStudents] = useState<any[]>([]);
+  const [bookerInfo, setBookerInfo] = useState<{ name_kr: string; name_en: string; age: string } | null>(null);
+  const [form2, setForm2] = useState<typeof INIT_FORM2 | null>(null);
+  const [sched2, setSched2] = useState<typeof SCHED2_INIT | null>(null);
+  const [student2Age2, setStudent2Age2] = useState('');
   const [student2Age, setStudent2Age] = useState('');
   const [myApplications, setMyApplications] = useState<any[]>([]);
   const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
@@ -219,6 +240,7 @@ export default function PortalTutorPage() {
         if (sRes.ok) {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
+          if (sd.booker) setBookerInfo(sd.booker);
           setBookingInfo({ _loaded: true }); // 모달 로딩 상태 해제용
         }
       }
@@ -239,15 +261,12 @@ export default function PortalTutorPage() {
   // 모달 표시용 — 보호자(예약자) + 자녀
   const modalStudents = useMemo<any[]>(() => {
     const list: any[] = [];
-    if (bookingInfo) {
-      const krG = bookingInfo.booker_name || bookingInfo.booker_kr || "";
-      const enG = bookingInfo.booker_english || bookingInfo.booker_en || "";
-      const ageG = bookingInfo.booker_birth || bookingInfo.booker_birthdate || "";
-      if (krG || enG) list.push({ name_kr: krG, name_en: enG, age: ageG, _isGuardian: true });
+    if (bookerInfo && (bookerInfo.name_kr || bookerInfo.name_en)) {
+      list.push({ name_kr: bookerInfo.name_kr, name_en: bookerInfo.name_en, age: bookerInfo.age, _isGuardian: true });
     }
     list.push(...students);
     return list;
-  }, [bookingInfo, students]);
+  }, [bookerInfo, students]);
 
   function pickStudentFromModal(idx: number) {
     const s = modalStudents[idx];
@@ -261,6 +280,8 @@ export default function PortalTutorPage() {
     } else if (pickerSlot === '2') {
       setForm(f => ({ ...f, student2_name_kr: n.kr, student2_name_en: n.en, student2_idx: idx }));
       setStudent2Age(age);
+    } else if (pickerSlot === ('single2' as any)) {
+      setForm2(f => f ? { ...f, student_name_kr: n.kr, student_name_en: n.en } : f);
     }
     // age는 booking 데이터로부터 자동 인식 (form 저장 불필요)
     void age;
@@ -328,13 +349,75 @@ export default function PortalTutorPage() {
         ...levels,
         privacy_agreed: true,
         rules_agreed: true,
+        slot_label: sched2 ? "신청 1" : null,
       }),
     });
     setSaving(false);
     if (!res.ok) { const r = await res.json(); setMsg(r.error || "신청 실패"); return; }
-    setDone(true);
-    setForm(INIT_FORM);
+    setForm({ ...INIT_FORM });
     setStudent2Age('');
+
+    // 신청 2 있으면 연속 제출
+    if (form2) {
+      const isFor2b = form2.class_type === '1:2';
+      if (form2.class_type && (form2.student_name_kr || form2.student1_name_kr)) {
+        const row2: Record<string, unknown> = {
+          booking_id: session.booking_id,
+          guest_name: session.guest_name,
+          class_type: form2.class_type,
+          student_name_kr: isFor2b ? form2.student1_name_kr : form2.student_name_kr,
+          student_name_en: isFor2b ? form2.student1_name_en : form2.student_name_en,
+          sessions_per_day: form2.sessions_per_day,
+          start_date: form2.start_date || null,
+          end_date: form2.end_date || null,
+          preferred_days_arr: form2.preferred_days_arr,
+          preferred_time: form2.preferred_time || null,
+          skip_dates: form2.skip_dates || null,
+          privacy_agreed: true, rules_agreed: true,
+        };
+        if (isFor2b) {
+          row2.student2_name_kr = form2.student2_name_kr;
+          row2.student2_name_en = form2.student2_name_en;
+        }
+        await fetch('/api/portal/tutor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row2),
+        });
+      }
+      setForm2(null);
+      setStudent2Age2('');
+    }
+
+    if (sched2) {
+      await fetch('/api/portal/tutor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: session.booking_id,
+          guest_name: session.guest_name,
+          class_type: form.class_type,
+          student_name_kr: form.class_type === '1:2' ? form.student1_name_kr : form.student_name_kr,
+          student_name_en: form.class_type === '1:2' ? form.student1_name_en : form.student_name_en,
+          student2_name_kr: form.class_type === '1:2' ? form.student2_name_kr : undefined,
+          student2_name_en: form.class_type === '1:2' ? form.student2_name_en : undefined,
+          sessions_per_day: sched2.sessions_per_day,
+          start_date: sched2.start_date || null,
+          end_date: sched2.end_date || null,
+          preferred_days_arr: sched2.preferred_days_arr,
+          preferred_time: sched2.preferred_time || null,
+          skip_dates: sched2.skip_dates || null,
+          level_english: form.level_english, level_speaking: form.level_speaking,
+          level_reading: form.level_reading, level_writing: form.level_writing,
+          class_style: form.class_style, class_focus_arr: form.class_focus_arr,
+          child_personality: form.child_personality,
+          privacy_agreed: true, rules_agreed: true,
+          slot_label: "신청 2",
+        }),
+      });
+      setSched2(null);
+    }
+    setDone(true);
     reload();
   }
 
@@ -529,6 +612,7 @@ export default function PortalTutorPage() {
           <button onClick={() => setDone(false)} style={{ marginTop: 16, padding: "10px 20px", background: "#fff", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>추가 신청</button>
         </div>
       ) : (<>
+      <div style={{fontSize:13,fontWeight:800,color:"#7c3aed",marginBottom:8,padding:"4px 12px",background:"#f5f3ff",borderRadius:8,display:"inline-block"}}>📋 신청 1</div>
       <div className="sec">
         <h2>기본 정보</h2>
         <div className="q">
@@ -600,7 +684,7 @@ export default function PortalTutorPage() {
       </div>
 
       <div className="sec">
-        <h2>수업 일정</h2>
+        <h2>수업 일정{sched2 ? " 1" : ""}</h2>
         <div className="q">
           <label className="q-label">원하는 타임 수<span className="req">*</span></label>
           <div className="ct-row">
@@ -690,6 +774,104 @@ export default function PortalTutorPage() {
         </div>
       </div>
 
+      {/* 수업 일정 2 추가 버튼 */}
+      {!sched2 && (
+        <div style={{textAlign:"center", margin:"8px 0 16px"}}>
+          <button type="button"
+            onClick={() => setSched2({...SCHED2_INIT})}
+            style={{padding:"10px 24px", border:"2px dashed #7c3aed", borderRadius:10,
+              background:"#f5f3ff", color:"#7c3aed", fontWeight:700, fontSize:13,
+              cursor:"pointer", fontFamily:"inherit"}}>
+            ➕ 수업 일정 2 추가 (다른 시간대/요일)
+          </button>
+        </div>
+      )}
+
+      {sched2 !== null && (
+        <div style={{margin:"8px 0 16px", padding:16, background:"#f5f3ff",
+          borderRadius:14, border:"2px solid #c4b5fd"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <h2 style={{fontSize:15,fontWeight:800,color:"#7c3aed",margin:0}}>수업 일정 2</h2>
+            <button type="button" onClick={() => setSched2(null)}
+              style={{background:"none",border:"none",color:"#9ca3af",fontSize:20,cursor:"pointer"}}>✕</button>
+          </div>
+
+          {/* 원하는 타임 수 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>원하는 타임 수</div>
+            <div style={{display:"flex",gap:8}}>
+              {[{v:1,label:"1타임",sub:"50분"},{v:2,label:"2타임",sub:"100분"}].map(t => (
+                <button key={t.v} type="button"
+                  onClick={() => setSched2(s => s ? {...s, sessions_per_day: t.v, preferred_time: ""} : s)}
+                  style={{flex:1,padding:"12px 8px",border:`2px solid ${sched2.sessions_per_day===t.v?"#7c3aed":"#e5e7eb"}`,
+                    borderRadius:10,background:sched2.sessions_per_day===t.v?"#ede9fe":"#fff",
+                    color:sched2.sessions_per_day===t.v?"#7c3aed":"#374151",
+                    fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",textAlign:"center"}}>
+                  <div>{t.label}</div><div style={{fontSize:11,opacity:0.7}}>{t.sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 수업 시작일/종료일 */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>수업 시작일</div>
+              <input type="date" value={sched2.start_date}
+                onChange={e => setSched2(s => s ? {...s, start_date: e.target.value} : s)}
+                style={{width:"100%",padding:"9px 10px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>수업 종료일</div>
+              <input type="date" value={sched2.end_date}
+                onChange={e => setSched2(s => s ? {...s, end_date: e.target.value} : s)}
+                style={{width:"100%",padding:"9px 10px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+          </div>
+
+          {/* 원하는 수업 요일 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>원하는 수업 요일</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["월","화","수","목","금","토"].map(d => {
+                const on = sched2.preferred_days_arr.includes(d);
+                return (
+                  <button key={d} type="button"
+                    onClick={() => setSched2(s => s ? {...s, preferred_days_arr: on
+                      ? s.preferred_days_arr.filter(x => x !== d)
+                      : [...s.preferred_days_arr, d]} : s)}
+                    style={{padding:"8px 14px",border:`2px solid ${on?"#7c3aed":"#e5e7eb"}`,
+                      borderRadius:8,background:on?"#ede9fe":"#fff",
+                      color:on?"#7c3aed":"#374151",fontWeight:700,fontSize:13,
+                      cursor:"pointer",fontFamily:"inherit"}}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 빠지는 날짜 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>빠지는 날짜 / 변경 날짜 (선택)</div>
+            <textarea value={sched2.skip_dates}
+              onChange={e => setSched2(s => s ? {...s, skip_dates: e.target.value} : s)}
+              placeholder="예: 4/15 결석, 4/17 오전→오후 변경"
+              style={{width:"100%",padding:"9px 12px",border:"1px solid #e5e7eb",borderRadius:8,
+                fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:60}}/>
+          </div>
+
+          {/* 원하는 수업 시간 */}
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>원하는 수업 시간</div>
+            <input type="text" placeholder="예: 10:00" value={sched2.preferred_time}
+              onChange={e => setSched2(s => s ? {...s, preferred_time: e.target.value} : s)}
+              style={{width:"100%",padding:"9px 12px",border:"1px solid #e5e7eb",borderRadius:8,
+                fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+        </div>
+      )}
+
       <div className="sec">
         <h2>학생 레벨</h2>
         <button type="button" className={`enr-btn${form.is_enrolled ? " on" : ""}`} onClick={() => setForm({ ...form, is_enrolled: !form.is_enrolled })}>
@@ -768,6 +950,100 @@ export default function PortalTutorPage() {
           <textarea className="area" value={form.child_personality} onChange={e => setForm({ ...form, child_personality: e.target.value })} placeholder="예: 활발하고 말이 많음, 스포츠/공룡 좋아함" />
         </div>
       </div>
+
+      {/* 신청 2 추가 버튼 */}
+      {!form2 && (
+        <div style={{textAlign:"center",margin:"16px 0"}}>
+          <button type="button" onClick={() => setForm2({ ...INIT_FORM2 })}
+            style={{padding:"10px 24px",border:"2px dashed #7c3aed",borderRadius:10,background:"#f5f3ff",color:"#7c3aed",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            ➕ 신청 2 추가 (다른 시간대/요일)
+          </button>
+        </div>
+      )}
+
+      {form2 !== null && (
+        <div style={{marginTop:8,padding:"16px",background:"#f5f3ff",borderRadius:14,border:"2px solid #c4b5fd"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <span style={{fontSize:13,fontWeight:800,color:"#7c3aed"}}>📋 신청 2</span>
+            <button type="button" onClick={() => setForm2(null)}
+              style={{background:"none",border:"none",color:"#9ca3af",fontSize:18,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+          </div>
+
+          {/* 수업 유형 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>수업 유형</div>
+            <div style={{display:"flex",gap:8}}>
+              {["1:1","1:2"].map(t => (
+                <button key={t} type="button"
+                  onClick={() => setForm2(f => f ? {...f, class_type: t} : f)}
+                  style={{flex:1,padding:"10px",border:`2px solid ${form2.class_type===t?"#7c3aed":"#e5e7eb"}`,borderRadius:8,background:form2.class_type===t?"#ede9fe":"#fff",color:form2.class_type===t?"#7c3aed":"#374151",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  {t} 수업
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 학생 선택 — 기존 학생 목록 재사용 */}
+          {form2.class_type === '1:1' && (
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>학생 선택</div>
+              {form2.student_name_kr ? (
+                <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#ede9fe",borderRadius:8}}>
+                  <span style={{fontSize:13,fontWeight:700,color:"#7c3aed"}}>{form2.student_name_kr}{form2.student_name_en ? ` / ${form2.student_name_en}` : ''}</span>
+                  <button type="button" onClick={() => setPickerSlot('single2' as any)}
+                    style={{marginLeft:"auto",padding:"4px 10px",border:"1px solid #7c3aed",borderRadius:6,background:"#fff",color:"#7c3aed",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>변경</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setPickerSlot('single2' as any)}
+                  style={{padding:"10px 16px",border:"2px dashed #c4b5fd",borderRadius:8,background:"#fff",color:"#7c3aed",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  👨‍👩‍👧 학생 선택하기
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* 원하는 요일 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>원하는 수업 요일</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {["월","화","수","목","금","토"].map(d => {
+                const on = form2.preferred_days_arr.includes(d);
+                return (
+                  <button key={d} type="button"
+                    onClick={() => setForm2(f => f ? {...f, preferred_days_arr: on ? f.preferred_days_arr.filter(x=>x!==d) : [...f.preferred_days_arr, d]} : f)}
+                    style={{padding:"7px 14px",border:`2px solid ${on?"#7c3aed":"#e5e7eb"}`,borderRadius:8,background:on?"#ede9fe":"#fff",color:on?"#7c3aed":"#374151",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 원하는 시간 */}
+          <div style={{marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:6}}>원하는 시간</div>
+            <input type="text" placeholder="예: 10:00" value={form2.preferred_time}
+              onChange={e => setForm2(f => f ? {...f, preferred_time: e.target.value} : f)}
+              style={{width:"100%",padding:"9px 12px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+          </div>
+
+          {/* 시작일/종료일 */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>수업 시작일</div>
+              <input type="date" value={form2.start_date}
+                onChange={e => setForm2(f => f ? {...f, start_date: e.target.value} : f)}
+                style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:"#6b7280",marginBottom:4}}>수업 종료일</div>
+              <input type="date" value={form2.end_date}
+                onChange={e => setForm2(f => f ? {...f, end_date: e.target.value} : f)}
+                style={{width:"100%",padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="sec">
         <h2>동의<span style={{ color: "#dc2626", marginLeft: 4 }}>*</span></h2>

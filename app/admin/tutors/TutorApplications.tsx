@@ -759,6 +759,13 @@ export default function TutorApplications() {
                       <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.house_or_reserver}>{a.house_or_reserver}</td>
                       <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.children_names}>
                         {a.children_names}
+                        {(a as any).slot_label && (
+                          <span style={{
+                            display:"inline-block",padding:"2px 8px",
+                            background:"#ede9fe",color:"#7c3aed",
+                            borderRadius:6,fontSize:11,fontWeight:800,marginLeft:6
+                          }}>{(a as any).slot_label}</span>
+                        )}
                         {isAsymmetric(a) && <span className="ta-warn-chip" title="레벨 편차 큼">⚠</span>}
                       </td>
                       <td style={{ fontSize: 12, color: "#475569", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.children_ages}>{a.children_ages?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, '')}</td>
