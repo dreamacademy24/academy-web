@@ -95,6 +95,7 @@ function CheckinDetailsInner() {
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(true); // true=편집 폼, false=인쇄 미리보기 뷰
   const [savedAt, setSavedAt] = useState("");    // 어드민 저장 완료 일시
+  const [localItems, setLocalItems] = useState<{name:string;amount:string}[]>([]);
 
   const loadBookings = useCallback(async () => {
     const res = await fetch("/api/admin/checkin-details");
@@ -116,6 +117,17 @@ function CheckinDetailsInner() {
       if (d.booking) setBooking(d.booking);
       if (d.detail) {
         setDetail(d.detail);
+        // invoice_snapshot에서 현지지불 항목 로드
+        fetch(`/api/admin/invoice-snapshot?bookingId=${id}`)
+          .then(r=>r.ok?r.json():null)
+          .then(snap=>{
+            if(snap?.saved_data){
+              try{
+                const data = typeof snap.saved_data==="string"?JSON.parse(snap.saved_data):snap.saved_data;
+                setLocalItems((data.billing?.locals||[]).filter((l:{name?:string;amount?:string})=>l.name&&l.amount));
+              }catch{}
+            }
+          });
         try { const b = JSON.parse(d.detail.bed_setting || "{}"); setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"}); } catch { setBedConfig({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"}); }
         try { const arr = JSON.parse(d.detail.usim_request || "[]"); setSimCards(Array.isArray(arr) ? arr : []); } catch { setSimCards([]); }
         try { const arr = JSON.parse(d.detail.extra_pickups || "[]"); setExtraPickups(Array.isArray(arr) ? arr : []); } catch { setExtraPickups([]); }
@@ -217,10 +229,14 @@ function CheckinDetailsInner() {
     const L = isEn
       ? { title:"GUEST DETAILS", name:"NAME", house:"HOUSE NO", cin:"CHECK IN", cout:"CHECK OUT",
           pick:"PICK UP", drop:"DROP", bed:"BED SETTING", master:"2F MASTER", small:"2F SMALL", first:"1F",
-          sim:"SIM", load:"LOAD", guest:"ALL GUEST", add:"ADD", etc:"ETC / 정산", pkg:"ALL-INCLUSIVE PACKAGE" }
-      : { title:"투숙객 정보", name:"예약자", house:"하우스 번호", cin:"체크인", cout:"체크아웃",
+          sim:"SIM", load:"LOAD", guest:"ALL GUEST", add:"ADD PICKUP", memo:"MEMO", settle:"SETTLEMENT",
+          deposit:"DEPOSIT", date:"DATE", item:"ITEM", amount:"AMOUNT", note:"NOTE",
+          deduct:"TOTAL DEDUCTION", refund:"REFUND AMOUNT", pkg:"ALL-INCLUSIVE PACKAGE" }
+      : { title:"GUEST DETAILS", name:"예약자", house:"하우스번호", cin:"체크인", cout:"체크아웃",
           pick:"픽업", drop:"드랍", bed:"베드 세팅", master:"2F 마스터", small:"2F 작은방", first:"1F",
-          sim:"유심", load:"로드", guest:"투숙객 전체", add:"추가 픽드랍", etc:"기타 / 정산", pkg:"올인원패키지" };
+          sim:"유심", load:"수량", guest:"투숙객 전체", add:"추가 픽드랍", memo:"메모", settle:"정산",
+          deposit:"보증금", date:"날짜", item:"항목", amount:"금액", note:"비고",
+          deduct:"차감 합계", refund:"환불 금액", pkg:"올인원 패키지" };
 
     const logo = (typeof window !== "undefined" ? window.location.origin : "") + "/dream-academy-logo.png";
     const nameLine = `${dash(b.booker_name)}${b.booker_english ? ` (${b.booker_english})` : ""}`;
@@ -245,106 +261,185 @@ function CheckinDetailsInner() {
       }
     } catch {}
     const etc = d.extra_requests ? String(d.extra_requests) : "";
-    const pkgBadge = isPackage(b.accom_type) ? `<span class="pkg">${L.pkg}</span>` : "";
-    const etcLines = Array.from({ length: 5 }).map(() => `<div class="ln"></div>`).join("");
-    const etcHtml = (etc ? `<div class="etxt">${etc}</div>` : "") + etcLines;
+    const isPkg = isPackage(b.accom_type);
+    const pkgBadge = isPkg ? `<span class="pkg">${L.pkg}</span>` : "";
+    const memoLines = Array.from({length:4}).map(()=>`<div class="mline"></div>`).join("");
+    const memoHtml = (etc ? `<div class="metxt">${etc}</div>` : "") + memoLines;
+
+    // 정산 섹션 - 보증금 항목 찾기
+    const depositItem = localItems.find(l => l.name?.includes("보증금") || l.name?.toLowerCase().includes("deposit"));
+    const depositAmt = depositItem ? `${depositItem.amount} PHP` : "_______ PHP";
+    const otherLocals = localItems.filter(l => !l.name?.includes("보증금") && !l.name?.toLowerCase().includes("deposit"));
+    const blankRows = 5;
+    const settleRows = Array.from({length:blankRows}).map(()=>
+      `<tr><td class="sdate"></td><td class="sitem"></td><td class="samt"></td><td class="snote"></td></tr>`
+    ).join("");
 
     const html = `<!doctype html>
 <html lang="${isEn ? "en" : "ko"}"><head><meta charset="utf-8"/>
 <title>${L.title} — ${dash(b.booker_name)}</title>
 <style>
   *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;margin:0;padding:20px;}
-  .head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;}
-  .head img{height:48px;width:auto;}
-  .head .ti{font-size:28px;font-weight:800;color:#1e293b;letter-spacing:1px;}
-  /* 인디고 구분선 — 배경 대신 border로 (인쇄 보장) */
-  .rule{border-bottom:3px solid #4f46e5 !important;margin-bottom:14px;}
-  .wrap{border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
-  table{width:100%;border-collapse:collapse;}
-  td,th{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
-  /* 배경색은 box-shadow inset 트릭 — 인쇄 시 배경 누락 방지 */
-  .lbl{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;color:#4f46e5;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
-  .val{color:#1e293b;font-size:13px;font-weight:600;}
-  .big{font-size:16px;font-weight:700;}
-  .house{color:#1e293b;font-size:19px;font-weight:800;text-align:center;}
-  .bedhd{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
-  .bedsub{box-shadow:inset 0 0 0 1000px #e0e7ff !important;color:#3730a3 !important;font-size:9px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:center;}
-  .num{color:#1e293b;font-size:22px;font-weight:700;text-align:center;}
-  .simval{color:#1e293b;font-size:13px;font-weight:700;text-align:center;}
-  .glbl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
-  .etclbl{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#ffffff !important;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;vertical-align:top;}
-  .etc{height:120px;vertical-align:top;}
-  .etxt{font-size:12px;font-weight:600;color:#1e293b;margin-bottom:8px;}
-  .ln{border-bottom:1px solid #cbd5e1;height:20px;}
-  .pkg{display:inline-block;box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;font-size:9px;font-weight:800;letter-spacing:0.05em;padding:3px 9px;border-radius:4px;margin-left:8px;vertical-align:middle;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:18px 22px;background:#fff;}
+
+  /* ── HEADER ── */
+  .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .hd img{height:44px;width:auto;}
+  .hd-right{text-align:right;}
+  .hd-title{font-size:26px;font-weight:900;color:#0f172a;letter-spacing:1.5px;}
+  .pkg-badge{display:inline-block;box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:10px;font-weight:800;letter-spacing:0.06em;padding:3px 10px;border-radius:20px;margin-top:4px;}
+  .rule{height:3px;box-shadow:inset 0 0 0 1000px #4f46e5 !important;border-radius:2px;margin-bottom:16px;}
+
+  /* ── INFO TABLE ── */
+  .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .info-tbl td{padding:7px 10px;border:1px solid #e2e8f0;font-size:12px;vertical-align:middle;}
+  .il{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#6366f1;font-size:9px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;width:90px;}
+  .iv{color:#0f172a;font-size:13px;font-weight:600;}
+  .iv-name{font-size:15px;font-weight:800;}
+  .iv-house{font-size:20px;font-weight:900;text-align:center;color:#4f46e5;letter-spacing:1px;}
+
+  /* ── BED / SIM ── */
+  .bed-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .bed-tbl td,.bed-tbl th{border:1px solid #e2e8f0;padding:6px 8px;text-align:center;vertical-align:middle;}
+  .bhd{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;}
+  .bsub{box-shadow:inset 0 0 0 1000px #ede9fe !important;color:#4338ca !important;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
+  .bnum{font-size:24px;font-weight:900;color:#0f172a;}
+  .bsim{font-size:12px;font-weight:800;color:#0f172a;}
+
+  /* ── GUEST / PICKUP ── */
+  .row-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .row-tbl td{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
+  .rl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;}
+  .rv{color:#0f172a;font-size:12px;font-weight:600;}
+
+  /* ── MEMO ── */
+  .memo-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  .memo-tbl td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:top;}
+  .ml{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;}
+  .mc{min-height:80px;}
+  .metxt{font-size:11px;color:#1e293b;margin-bottom:6px;font-weight:600;}
+  .mline{border-bottom:1px dashed #cbd5e1;height:18px;margin-bottom:2px;}
+
+  /* ── SETTLEMENT ── */
+  .settle-hd{box-shadow:inset 0 0 0 1000px #0f172a !important;color:#fff !important;font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;padding:7px 12px;border-radius:6px 6px 0 0;}
+  .settle-wrap{border:2px solid #0f172a;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;}
+  .settle-tbl{width:100%;border-collapse:collapse;}
+  .settle-tbl td,.settle-tbl th{border:1px solid #e2e8f0;padding:7px 10px;font-size:11px;vertical-align:middle;}
+  .dep-lbl{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;width:120px;}
+  .dep-val{font-size:14px;font-weight:900;color:#0f172a;}
+  .sh{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;color:#475569 !important;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
+  .sdate{width:80px;}
+  .sitem{width:40%;}
+  .samt{width:18%;text-align:right;}
+  .snote{width:20%;}
+  .stotal{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;font-size:11px;font-weight:700;color:#475569;text-align:right;}
+  .srefund{box-shadow:inset 0 0 0 1000px #dcfce7 !important;font-size:12px;font-weight:900;color:#166534 !important;text-align:right;}
+
   @media print{
-    @page{size:A4;margin:11mm;}
+    @page{size:A4;margin:10mm 12mm;}
     body{padding:0;}
-    .rule{border-bottom:3px solid #4f46e5 !important;}
-    .lbl{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;}
-    .bedhd,.glbl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;}
-    .bedsub{box-shadow:inset 0 0 0 1000px #e0e7ff !important;color:#3730a3 !important;}
-    .etclbl{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#ffffff !important;}
-    .pkg{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#ffffff !important;}
+    .rule,.bhd,.rl,.ml,.settle-hd{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   }
 </style></head>
 <body>
-  <div class="head">
+  <div class="hd">
     <img src="${logo}" onerror="this.style.display='none'"/>
-    <div class="ti">${L.title}</div>
+    <div class="hd-right">
+      <div class="hd-title">${L.title}</div>
+      ${isPkg ? `<div><span class="pkg-badge">${L.pkg}</span></div>` : ""}
+    </div>
   </div>
   <div class="rule"></div>
-  <div class="wrap">
-  <table>
+
+  <!-- INFO -->
+  <table class="info-tbl">
     <tr>
-      <td class="lbl" style="width:11%">${L.name}</td>
-      <td class="val big" colspan="5">${nameLine}${pkgBadge}</td>
-      <td class="lbl" style="width:13%">${L.house}</td>
-      <td class="house" colspan="3">${houseNo}</td>
+      <td class="il">${L.name}</td>
+      <td class="iv iv-name" colspan="3">${nameLine}</td>
+      <td class="il" style="width:80px">${L.house}</td>
+      <td class="iv iv-house" style="width:110px">${houseNo}</td>
     </tr>
     <tr>
-      <td class="lbl">${L.cin}</td>
-      <td class="val" colspan="4">${checkIn}</td>
-      <td class="lbl">${L.cout}</td>
-      <td class="val" colspan="4">${checkOut}</td>
+      <td class="il">${L.cin}</td>
+      <td class="iv" style="width:160px">${checkIn}</td>
+      <td class="il" style="width:80px">${L.cout}</td>
+      <td class="iv" style="width:160px">${checkOut}</td>
+      <td class="il">${L.pick}</td>
+      <td class="iv">${pickFlight}</td>
     </tr>
     <tr>
-      <td class="lbl">${L.pick}</td>
-      <td class="val" colspan="4">${pickFlight}</td>
-      <td class="lbl">${L.drop}</td>
-      <td class="val" colspan="4">${dropFlight}</td>
-    </tr>
-    <tr>
-      <th class="bedhd" colspan="6">${L.bed}</th>
-      <th class="bedhd" colspan="2" rowspan="2">${L.sim}</th>
-      <th class="bedhd" colspan="2" rowspan="2">${L.load}</th>
-    </tr>
-    <tr>
-      <th class="bedsub" colspan="2">${L.master}</th>
-      <th class="bedsub" colspan="2">${L.small}</th>
-      <th class="bedsub" colspan="2">${L.first}</th>
-    </tr>
-    <tr>
-      <td class="num" colspan="2">${m1}</td>
-      <td class="num" colspan="2">${m2}</td>
-      <td class="num" colspan="2">${m3}</td>
-      <td class="simval" colspan="2">${simText}</td>
-      <td class="num" colspan="2">${loadText}</td>
-    </tr>
-    <tr>
-      <td class="glbl">${L.guest}</td>
-      <td class="val" colspan="9">${guests}</td>
-    </tr>
-    <tr>
-      <td class="glbl">${L.add}</td>
-      <td class="val" colspan="9">${addText}</td>
-    </tr>
-    <tr>
-      <td class="etclbl">${L.etc}</td>
-      <td class="etc" colspan="9">${etcHtml}</td>
+      <td class="il">${L.drop}</td>
+      <td class="iv" colspan="5">${dropFlight}</td>
     </tr>
   </table>
+
+  <!-- BED / SIM -->
+  <table class="bed-tbl">
+    <tr>
+      <th class="bhd" colspan="3">${L.bed}</th>
+      <th class="bhd" rowspan="2">${L.sim}</th>
+      <th class="bhd" rowspan="2">${L.load}</th>
+    </tr>
+    <tr>
+      <th class="bsub">${L.master}</th>
+      <th class="bsub">${L.small}</th>
+      <th class="bsub">${L.first}</th>
+    </tr>
+    <tr>
+      <td class="bnum">${m1}</td>
+      <td class="bnum">${m2}</td>
+      <td class="bnum">${m3}</td>
+      <td class="bsim">${simText}</td>
+      <td class="bnum">${loadText}</td>
+    </tr>
+  </table>
+
+  <!-- GUESTS / ADD -->
+  <table class="row-tbl">
+    <tr>
+      <td class="rl">${L.guest}</td>
+      <td class="rv">${guests}</td>
+    </tr>
+    <tr>
+      <td class="rl">${L.add}</td>
+      <td class="rv">${addText}</td>
+    </tr>
+  </table>
+
+  <!-- MEMO -->
+  <table class="memo-tbl">
+    <tr>
+      <td class="ml">${L.memo}</td>
+      <td class="mc">${memoHtml}</td>
+    </tr>
+  </table>
+
+  <!-- SETTLEMENT -->
+  <div class="settle-hd">🔐 ${L.settle}</div>
+  <div class="settle-wrap">
+    <table class="settle-tbl">
+      <tr>
+        <td class="dep-lbl">${L.deposit}</td>
+        <td class="dep-val" colspan="3">${depositAmt}</td>
+      </tr>
+      <tr>
+        <th class="sh sdate">${L.date}</th>
+        <th class="sh sitem">${L.item}</th>
+        <th class="sh samt">${L.amount}</th>
+        <th class="sh snote">${L.note}</th>
+      </tr>
+      ${settleRows}
+      <tr>
+        <td class="stotal" colspan="2">${L.deduct}</td>
+        <td class="stotal samt"></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td class="srefund" colspan="2">${L.refund}</td>
+        <td class="srefund samt"></td>
+        <td></td>
+      </tr>
+    </table>
   </div>
   <script>window.onload=function(){window.print();};</script>
 </body></html>`;
