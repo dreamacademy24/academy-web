@@ -333,7 +333,7 @@ function CheckinDetailsInner() {
   .ml{background:#fff !important;color:#475569 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #cbd5e1 !important;}
   .mc{min-height:140px;}
   .metxt{font-size:11px;color:#1e293b;margin-bottom:6px;font-weight:600;}
-  .mline{border-bottom:1px dashed #cbd5e1;height:18px;margin-bottom:2px;}
+  .mline{border-bottom:1.5px solid #d1d5db;height:32px;margin-bottom:0;}
 
   /* ── SETTLEMENT ── */
   .settle-hd{background:#fff !important;color:#0f172a !important;font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;padding:7px 12px;border-radius:6px 6px 0 0;border-bottom:2px solid #0f172a !important;}
@@ -343,7 +343,7 @@ function CheckinDetailsInner() {
   .dep-lbl{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;width:120px;}
   .dep-val{font-size:14px;font-weight:900;color:#0f172a;}
   .sh{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;color:#475569 !important;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
-  .sdate{width:80px;}
+  .sdate{width:80px;height:38px;}
   .sitem{width:40%;}
   .samt{width:18%;text-align:right;}
   .snote{width:20%;}
