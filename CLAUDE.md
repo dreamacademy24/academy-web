@@ -1257,3 +1257,43 @@ special_request, ssp
 - P3: 인보이스 킨더 재료비 자동화
 - P4: 신규예약 모달 6가지 유형
 - 체크인 디테일 인보이스 완전 자동화
+
+## 2026-05-28 세션 (튜터 시스템 버그 수정 + 출결 기능 완성)
+
+### 버그 수정 6건
+
+**Bug 1** — 외부 신청폼(/tutor-apply)이 tutor_applications 테이블에 저장 → 어드민 수신함 미표시
+- 신규 app/api/tutor-apply/route.ts 생성 → tutor_requests 테이블로 통합, reserver_type:'external'
+
+**Bug 2** — takeClass() total_sessions null → NOT NULL 위반
+- admineng/tutor-class/page.tsx takeClass() 함수 4곳: computedSessions || null → || 0
+
+**Bug 3** — 메이크업(△) 저장 후 DB total_sessions 미반영
+- attendance/page.tsx save()에 total_sessions: total (baseTotal + counts.T) 추가
+
+**Bug 4** — 포털 submit() 후 tutor_applications 잘못된 재조회
+- portal/tutor/page.tsx submit() 끝 2줄 삭제
+
+**Bug 5** — 신청 삭제 시 tutor_lessons 고아 데이터
+- TutorApplications.tsx deleteApp()에 tutor_lessons 선행 삭제 추가
+
+**Bug 6** — My Classes 학생 이름 KR 먼저
+- admineng 4곳 [KR,EN] → [EN,KR] 순서 변경
+
+### 출결 시스템 완성
+
+- WEEKDAYS_KR 영문화 ["Sun".."Sat"]
+- 날짜 박스 스타일 개선 (min-height:96px, mark 36px, 컬러 강화)
+- UI 전면 영문화
+- Manage 기능 attendance 페이지로 통합 (Class Days / Cancel Day / Reschedule)
+- admineng My Classes Manage 버튼 제거
+- 날짜별 메모(notes_log) 기능 추가 — Supabase: ALTER TABLE tutor_lessons ADD COLUMN IF NOT EXISTS notes_log jsonb DEFAULT '{}'::jsonb;
+- Save 시 attendance_log + total_sessions + notes_log 동시 저장
+- Invoice 탭 새탭 열기 (window.open)
+
+### 다음 세션 작업
+
+1. [번역기능] /api/translate(haiku) + portal/tutor notes_log 표시 + "🇰🇷 번역" 버튼 + dashboard "📝 새 메모" 배지
+2. [튜터 확정 알림] confirmed 시 포털에 인보이스 카드 표시
+3. P1~P5 기존 미완료 항목들
+4. 룸번호 중복(Supabase 직접 수정), OCR API 키 등록
