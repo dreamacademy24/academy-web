@@ -324,20 +324,20 @@ function CheckinDetailsInner() {
   /* ── GUEST / PICKUP ── */
   .row-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
   .row-tbl td{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
-  .rl{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;}
+  .rl{background:#fff !important;color:#4f46e5 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #4f46e5 !important;}
   .rv{color:#0f172a;font-size:12px;font-weight:600;}
 
   /* ── MEMO ── */
   .memo-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;}
   .memo-tbl td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:top;}
-  .ml{box-shadow:inset 0 0 0 1000px #1e293b !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;}
+  .ml{background:#fff !important;color:#475569 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #cbd5e1 !important;}
   .mc{min-height:80px;}
   .metxt{font-size:11px;color:#1e293b;margin-bottom:6px;font-weight:600;}
   .mline{border-bottom:1px dashed #cbd5e1;height:18px;margin-bottom:2px;}
 
   /* ── SETTLEMENT ── */
-  .settle-hd{box-shadow:inset 0 0 0 1000px #0f172a !important;color:#fff !important;font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;padding:7px 12px;border-radius:6px 6px 0 0;}
-  .settle-wrap{border:2px solid #0f172a;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;}
+  .settle-hd{background:#fff !important;color:#0f172a !important;font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;padding:7px 12px;border-radius:6px 6px 0 0;border-bottom:2px solid #0f172a !important;}
+  .settle-wrap{border:1.5px solid #e2e8f0;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;}
   .settle-tbl{width:100%;border-collapse:collapse;}
   .settle-tbl td,.settle-tbl th{border:1px solid #e2e8f0;padding:7px 10px;font-size:11px;vertical-align:middle;}
   .dep-lbl{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;width:120px;}
@@ -353,7 +353,7 @@ function CheckinDetailsInner() {
   @media print{
     @page{size:A4;margin:10mm 12mm;}
     body{padding:0;}
-    .rule,.bhd,.rl,.ml,.settle-hd{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+    .rule,.bhd,.rl,.ml,.settle-hd,.srefund,.dep-lbl{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   }
 </style></head>
 <body>
