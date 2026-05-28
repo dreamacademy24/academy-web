@@ -29,7 +29,24 @@ export async function GET(req: Request) {
     .eq('booking_id', bookingId)
     .order('created_at', { ascending: false })
 
-  return NextResponse.json({ requests: requests ?? [] })
+  const reqList = requests ?? []
+
+  // confirmed 요청에 연결된 tutor_lessons 상세 조회
+  const confirmedIds = reqList
+    .filter((r: any) => r.status === 'confirmed')
+    .map((r: any) => r.id)
+
+  const lessonMap: Record<string, any> = {}
+  for (const rid of confirmedIds) {
+    const { data: lesson } = await supabase
+      .from('tutor_lessons')
+      .select('id, tutor_name, total_sessions, total_amount, confirmed_time, class_days, start_date, end_date')
+      .ilike('admin_memo', `%request_id: ${rid}%`)
+      .maybeSingle()
+    if (lesson) lessonMap[rid] = lesson
+  }
+
+  return NextResponse.json({ requests: reqList, lessonMap })
 }
 
 export async function POST(req: Request) {
