@@ -244,8 +244,8 @@ function CheckinDetailsInner() {
     const houseNo = dash(b.house_no || b.accom_room);
     const checkIn = dash(d.checkin_date || b.checkin_date);
     const checkOut = dash(b.checkout_date);
-    const pickFlight = dash(b.flight_in);
-    const dropFlight = dash(b.flight_out);
+    const pickFlight = dash(b.pickup_place);
+    const dropFlight = dash(b.drop_off);
     const m1 = bedNum(bedConfig.room1), m2 = bedNum(bedConfig.room2), m3 = bedNum(bedConfig.room3);
     const simList = simCards.map(s => simCompact(s.plan)).filter(Boolean);
     const simText = simList.length ? simList.join(", ") : "-";
@@ -269,7 +269,21 @@ function CheckinDetailsInner() {
 
     // 정산 섹션 - 보증금 항목 찾기
     const depositItem = localItems.find(l => l.name?.includes("보증금") || l.name?.toLowerCase().includes("deposit"));
-    const depositAmt = depositItem ? `${depositItem.amount} PHP` : "_______ PHP";
+    let depositAmt = "_______ PHP";
+    if(depositItem && depositItem.amount){
+      depositAmt = `${Number(String(depositItem.amount).replace(/[,\s]/g,"")).toLocaleString()} PHP`;
+    } else {
+      // 체크인~체크아웃 주수로 자동 계산 (Dream House 기준: 4주=8000, 3주=6000, 2주=4000)
+      const cin = new Date(b.checkin_date||""); const cout = new Date(b.checkout_date||"");
+      if(!isNaN(cin.getTime()) && !isNaN(cout.getTime())){
+        const days = Math.round((cout.getTime()-cin.getTime())/(1000*60*60*24));
+        const weeks = Math.round(days/7);
+        const depMap:{[k:number]:number} = {2:4000,3:6000,4:8000};
+        if(depMap[weeks]) depositAmt = `${depMap[weeks].toLocaleString()} PHP`;
+        else if(weeks>4) depositAmt = `8,000 PHP`;
+        else if(weeks>=1) depositAmt = `${weeks*2000} PHP`;
+      }
+    }
     const otherLocals = localItems.filter(l => !l.name?.includes("보증금") && !l.name?.toLowerCase().includes("deposit"));
     const blankRows = 5;
     const settleRows = Array.from({length:blankRows}).map(()=>
