@@ -1524,7 +1524,10 @@ function InvoicePageInner(){
         {/* 지불내역 에디터 */}
         <div className="no-print" style={{background:"#fff",padding:"18px 22px",boxShadow:"0 2px 12px rgba(0,0,0,0.05)",borderRadius:12,marginBottom:16,borderLeft:"4px solid #1a6fc4"}}>
           <div style={{fontSize:15,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>💰 지불내역 입력</div>
-          <div style={{fontSize:12,color:"#6b7c93",marginBottom:14}}>입금받은 내역을 입력하세요. 영수증 하단에 자동으로 표시됩니다.</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+            <span style={{fontSize:12,color:"#6b7c93"}}>입금받은 내역을 입력하세요. 영수증 하단에 자동으로 표시됩니다.</span>
+            <span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>✏️ 금액·날짜·구분 직접 수정 가능 | ✕ 로 삭제</span>
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"130px 160px 1fr auto",gap:8,marginBottom:6,fontSize:11,color:"#6b7c93",fontWeight:600}}>
             <span>구분</span><span>날짜</span><span>금액 (원)</span><span></span>
           </div>
@@ -1538,7 +1541,7 @@ function InvoicePageInner(){
               </select>
               <input type="date" value={p.date} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,date:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
               <input type="text" placeholder="예: 1,000,000" value={p.amount} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,amount:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
-              <button onClick={()=>setReceiptPayments(prev=>prev.length>1?prev.filter(x=>x.id!==p.id):prev)} disabled={receiptPayments.length===1} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"8px 12px",cursor:receiptPayments.length===1?"not-allowed":"pointer",fontSize:14,opacity:receiptPayments.length===1?0.5:1}}>✕</button>
+              <button onClick={()=>setReceiptPayments(prev=>{const next=prev.filter(x=>x.id!==p.id);return next.length>0?next:[{id:Date.now(),type:"예약금",date:todayStr,amount:""}];})} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"8px 12px",cursor:"pointer",fontSize:14}}>✕</button>
             </div>
           ))}
           <button onClick={()=>{const auto=fp>1000000?(fp-1000000).toLocaleString("ko-KR"):"";setReceiptPayments(prev=>[...prev,{id:Date.now(),type:"잔금",date:todayStr,amount:auto}]);}} style={{width:"100%",background:"#f0f9ff",color:"#1a6fc4",border:"1px dashed #93c5fd",borderRadius:8,padding:"9px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",marginTop:4}}>+ 입금 항목 추가</button>
