@@ -245,7 +245,16 @@ export default function CheckinFormPage() {
       {loading && <div className="notice">로딩 중...</div>}
       {!loading && error && <div className="notice err">{error}</div>}
       {!loading && !error && submitted && (
-        <div className="notice ok">이미 제출하셨습니다. 감사합니다! 🙏</div>
+        <div className="notice ok" style={{textAlign:"center"}}>
+          <div style={{marginBottom:12}}>✅ 이미 작성된 설문입니다. 감사합니다! 🙏</div>
+          <button
+            onClick={()=>setSubmitted(false)}
+            style={{padding:"10px 24px",background:"#fff",color:"#1a6fc4",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}
+          >
+            ✏️ 재작성하기
+          </button>
+          <div style={{fontSize:11,color:"#94a3b8",marginTop:8}}>※ 재작성 후 다시 제출하시면 최신 내용으로 업데이트됩니다.</div>
+        </div>
       )}
       {!loading && !error && done && (
         <div className="notice ok">설문에 참여해 주셔서 감사합니다 ^^<br/>곧 세부에서 만나요 ^^</div>
