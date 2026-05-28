@@ -218,6 +218,7 @@ export default function PortalTutorPage() {
         if (sRes.ok) {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
+          setBookingInfo({ _loaded: true }); // 모달 로딩 상태 해제용
         }
       }
     })();
