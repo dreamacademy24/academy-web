@@ -264,7 +264,7 @@ function CheckinDetailsInner() {
     const etc = d.extra_requests ? String(d.extra_requests) : "";
     const isPkg = isPackage(b.accom_type);
     const pkgBadge = isPkg ? `<span class="pkg">${L.pkg}</span>` : "";
-    const memoLines = Array.from({length:4}).map(()=>`<div class="mline"></div>`).join("");
+    const memoLines = Array.from({length:8}).map(()=>`<div class="mline"></div>`).join("");
     const memoHtml = (etc ? `<div class="metxt">${etc}</div>` : "") + memoLines;
 
     // 정산 섹션 - 보증금 항목 찾기
@@ -285,7 +285,7 @@ function CheckinDetailsInner() {
       }
     }
     const otherLocals = localItems.filter(l => !l.name?.includes("보증금") && !l.name?.toLowerCase().includes("deposit"));
-    const blankRows = 5;
+    const blankRows = 9;
     const settleRows = Array.from({length:blankRows}).map(()=>
       `<tr><td class="sdate"></td><td class="sitem"></td><td class="samt"></td><td class="snote"></td></tr>`
     ).join("");
@@ -295,7 +295,7 @@ function CheckinDetailsInner() {
 <title>${L.title} — ${dash(b.booker_name)}</title>
 <style>
   *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:18px 22px;background:#fff;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:18px 22px;background:#fff;min-height:257mm;display:flex;flex-direction:column;}
 
   /* ── HEADER ── */
   .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -328,10 +328,10 @@ function CheckinDetailsInner() {
   .rv{color:#0f172a;font-size:12px;font-weight:600;}
 
   /* ── MEMO ── */
-  .memo-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  .memo-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;flex:1;}
   .memo-tbl td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:top;}
   .ml{background:#fff !important;color:#475569 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #cbd5e1 !important;}
-  .mc{min-height:80px;}
+  .mc{min-height:140px;}
   .metxt{font-size:11px;color:#1e293b;margin-bottom:6px;font-weight:600;}
   .mline{border-bottom:1px dashed #cbd5e1;height:18px;margin-bottom:2px;}
 
@@ -430,7 +430,7 @@ function CheckinDetailsInner() {
   </table>
 
   <!-- SETTLEMENT -->
-  <div class="settle-hd">🔐 ${L.settle}</div>
+  <div style="flex:1"></div><div class="settle-hd">🔐 ${L.settle}</div>
   <div class="settle-wrap">
     <table class="settle-tbl">
       <tr>
