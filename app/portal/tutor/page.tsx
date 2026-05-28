@@ -214,12 +214,10 @@ export default function PortalTutorPage() {
       const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
       if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
       if (session.booking_id) {
-        const bRes = await fetch(`/api/bookings/${session.booking_id}`);
-        if (bRes.ok) {
-          const bd = await bRes.json();
-          setBookingInfo(bd?.booking || bd);
-          const rawStudents = bd?.students || [];
-          setBookingStudents(Array.isArray(rawStudents) ? rawStudents : []);
+        const sRes = await fetch(`/api/portal/students?booking_id=${session.booking_id}`);
+        if (sRes.ok) {
+          const sd = await sRes.json();
+          setBookingStudents(sd.students || []);
         }
       }
     })();
