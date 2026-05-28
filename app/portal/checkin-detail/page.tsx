@@ -487,8 +487,8 @@ export default function PortalCheckinDetailPage() {
 
           {/* 입국 픽업 / 출국 드랍 — pickup_requests */}
           <div className="q">
-            <div className="q-title">🛬 입국 픽업 신청</div>
-            <div className="q-hint">기본 픽업 외 별도 일정으로 입국 픽업을 원하시면 작성해 주세요.</div>
+            <div className="q-title">🛬 공항 외 픽업 신청</div>
+            <div className="q-hint">공항 외 별도 일정으로 픽업이 필요한 경우 신청해주세요.</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div><input type="date" value={arrPickup.request_date} onChange={e=>setArrPickup(p=>({...p,request_date:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
               <div><div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div><input type="time" value={arrPickup.request_time||""} onChange={e=>setArrPickup(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/></div>
@@ -503,23 +503,37 @@ export default function PortalCheckinDetailPage() {
 
           <div className="q">
             <div className="q-title">🛫 출국 드랍 신청</div>
-            <div className="q-hint">출국편 항공권 정보를 기준으로 숙소에서 출발할 시간만 선택해 주세요.</div>
+            <div className="q-hint">숙소에서 공항까지 드랍 일정을 신청해주세요.</div>
             <div style={{padding:"12px 14px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12.5,color:"#1e40af",lineHeight:1.7,marginBottom:12}}>
               <div style={{fontWeight:700,marginBottom:4}}>🕐 숙소 출발 시간을 선택해주세요.</div>
               공항까지 약 20~30분 소요됩니다.<br/>
-              국제선은 통상 출발 2시간 전 공항 도착을 권장하나,<br/>
-              사전 좌석 예약 상황에 따라 다를 수 있으니 직접 출발 시간을 선택해 주세요.
+              국제선은 통상 출발 2시간 전 공항 도착을 권장합니다.<br/>
+              예) 항공편 출발 09:00 → 공항 도착 07:00 → 숙소 출발 06:30~06:40
             </div>
-            <div style={{maxWidth:200}}>
-              <div style={{fontSize:11,color:"#889",marginBottom:3}}>숙소 출발 희망 시간</div>
-              <input type="time" value={depPickup.request_time||""} onChange={e=>setDepPickup(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:14}}/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div>
+                <div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div>
+                <input type="date" value={depPickup.request_date} onChange={e=>setDepPickup(p=>({...p,request_date:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13,fontFamily:"inherit"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"#889",marginBottom:3}}>숙소 출발 희망 시간</div>
+                <input type="time" value={depPickup.request_time||""} onChange={e=>setDepPickup(p=>({...p,request_time:e.target.value}))} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13,fontFamily:"inherit"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"#889",marginBottom:3}}>인원수</div>
+                <input type="number" min={1} value={depPickup.num_people||1} onChange={e=>setDepPickup(p=>({...p,num_people:Number(e.target.value)||1}))} style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13,fontFamily:"inherit"}}/>
+              </div>
+              <div style={{gridColumn:"1/3"}}>
+                <div style={{fontSize:11,color:"#889",marginBottom:3}}>요청사항</div>
+                <input type="text" value={depPickup.notes||""} onChange={e=>setDepPickup(p=>({...p,notes:e.target.value}))} placeholder="추가 안내사항 (선택)" style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13,fontFamily:"inherit"}}/>
+              </div>
             </div>
             <button
               type="button"
               onClick={()=>{
-                // 날짜는 항공편 OUT 날짜 자동 채움
-                const outDate = flightForm.flight_out_date || depPickup.request_date;
-                if (!outDate) { alert("출국편 날짜를 먼저 입력해주세요."); return; }
+                // 날짜는 사용자 입력 우선, 비어있으면 항공편 OUT 날짜 자동 채움
+                const outDate = depPickup.request_date || flightForm.flight_out_date;
+                if (!outDate) { alert("드랍 날짜를 입력해주세요."); return; }
                 setDepPickup(p=>({...p,request_date:outDate,location:p.location||"드림하우스",destination:p.destination||"막탄공항"}));
                 // 다음 마이크로태스크에서 save 호출 (state 반영 후)
                 setTimeout(()=>savePickup("departure"), 0);
