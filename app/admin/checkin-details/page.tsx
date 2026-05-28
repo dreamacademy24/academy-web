@@ -95,6 +95,7 @@ function CheckinDetailsInner() {
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(true); // true=편집 폼, false=인쇄 미리보기 뷰
   const [savedAt, setSavedAt] = useState("");    // 어드민 저장 완료 일시
+  const [printHtml, setPrintHtml] = useState("");
   const [localItems, setLocalItems] = useState<{name:string;amount:string}[]>([]);
 
   const loadBookings = useCallback(async () => {
@@ -443,7 +444,8 @@ function CheckinDetailsInner() {
   </div>
   <script>window.onload=function(){window.print();};</script>
 </body></html>`;
-    openPrintWindow(html);
+    // <script>autoprint 제거 후 state에 저장 → 오버레이 iframe으로 표시
+    setPrintHtml(html.replace(/<script>window\.onload[^<]*<\/script>/g, ""));
   }
 
   function handlePrint(lang: "en" | "kr" = "en") {
@@ -463,6 +465,17 @@ function CheckinDetailsInner() {
   }
 
   if (!authed) return null;
+
+  if (printHtml) return (
+    <div style={{position:"fixed",inset:0,zIndex:9999,display:"flex",flexDirection:"column",background:"#334155"}}>
+      <div style={{padding:"10px 16px",background:"#1e293b",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+        <button onClick={()=>setPrintHtml("")} style={{padding:"7px 16px",background:"#475569",color:"#fff",border:"none",borderRadius:7,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✕ 닫기</button>
+        <span style={{color:"#94a3b8",fontSize:13,flex:1}}>GUEST DETAILS 미리보기 — 내용 확인 후 인쇄하세요</span>
+        <button onClick={()=>{(document.getElementById("gd-iframe") as HTMLIFrameElement)?.contentWindow?.print();}} style={{padding:"7px 20px",background:"#4f46e5",color:"#fff",border:"none",borderRadius:7,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>🖨 인쇄 / PDF</button>
+      </div>
+      <iframe id="gd-iframe" srcDoc={printHtml} style={{flex:1,border:"none",background:"#fff"}} title="Guest Details Print Preview" />
+    </div>
+  );
 
   return (<>
     <style>{`
