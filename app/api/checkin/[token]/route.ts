@@ -39,9 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 })
 
   const body = await req.json()
-  const allowed = ['booker_name', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_pickups', 'extra_requests',
-    'flight_in_airline','flight_in_no','flight_in_date','flight_in_time','flight_in_origin','flight_in_undecided',
-    'flight_out_airline','flight_out_no','flight_out_date','flight_out_time','flight_out_destination','flight_out_undecided']
+  const allowed = ['booker_name', 'guest_names_en', 'bed_setting', 'usim_request', 'after_trip_request', 'extra_pickups', 'extra_requests']
   const update: Record<string, unknown> = {}
   for (const k of allowed) if (k in body) update[k] = body[k]
   update.submitted_at = new Date().toISOString()
