@@ -39,6 +39,9 @@ function fmtDate(s: string | null | undefined): string {
   return String(s).slice(0, 10);
 }
 
+// 일요일 제외 — 튜터 수업 불가
+const EDIT_DAYS = ["월","화","수","목","금","토"];
+
 export default function MyApplicationsPage() {
   const router = useRouter();
   const [bookingId, setBookingId] = useState("");
@@ -49,6 +52,9 @@ export default function MyApplicationsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSaving, setCancelSaving] = useState(false);
   const [toast, setToast] = useState("");
+  const [editId, setEditId] = useState<string>("");
+  const [editForm, setEditForm] = useState({ class_type: "", preferred_days: [] as string[], preferred_time: "", start_date: "", end_date: "", notes: "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(async (bid: string) => {
     if (!bid) return;
@@ -108,6 +114,52 @@ export default function MyApplicationsPage() {
     closeCancel();
     if (bookingId) load(bookingId);
     setToast("취소 요청이 접수되었습니다.");
+    setTimeout(() => setToast(""), 2500);
+  }
+
+  function openEdit(r: AnyRow) {
+    const rawDays = r.preferred_days_arr ?? r.preferred_days;
+    const daysArr = Array.isArray(rawDays)
+      ? rawDays.map(String)
+      : (typeof rawDays === "string" ? rawDays.split(",").map(s => s.trim()).filter(Boolean) : []);
+    setEditForm({
+      class_type: String(r.class_type || ""),
+      preferred_days: daysArr,
+      preferred_time: String(r.preferred_time || ""),
+      start_date: String(r.start_date || "").slice(0, 10),
+      end_date: String(r.end_date || "").slice(0, 10),
+      notes: String(r.notes || ""),
+    });
+    setEditId(String(r.id || ""));
+  }
+  function toggleEditDay(d: string) {
+    setEditForm(f => ({ ...f, preferred_days: f.preferred_days.includes(d) ? f.preferred_days.filter(x => x !== d) : [...f.preferred_days, d] }));
+  }
+  async function submitEdit() {
+    if (!editId) return;
+    setEditSaving(true);
+    const res = await fetch("/api/portal/tutor-edit", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editId,
+        class_type: editForm.class_type,
+        preferred_days: editForm.preferred_days.join(","),
+        preferred_time: editForm.preferred_time,
+        start_date: editForm.start_date,
+        end_date: editForm.end_date,
+        notes: editForm.notes,
+      }),
+    });
+    setEditSaving(false);
+    if (!res.ok) {
+      const r = await res.json().catch(() => ({}));
+      alert("수정 실패: " + (r.error || ""));
+      return;
+    }
+    setEditId("");
+    if (bookingId) load(bookingId);
+    setToast("수정이 완료되었습니다.");
     setTimeout(() => setToast(""), 2500);
   }
 
@@ -257,7 +309,7 @@ export default function MyApplicationsPage() {
                   <div className="ma-actions" style={{ gap: 6 }}>
                     {String(r.status || "") === "pending" && (
                       <button
-                        onClick={() => router.push("/portal/tutor")}
+                        onClick={() => openEdit(r)}
                         style={{ padding:"6px 12px", background:"#eff6ff", color:"#1d4ed8", border:"1px solid #bfdbfe", borderRadius:7, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
                       >✏️ 수정</button>
                     )}
@@ -311,6 +363,79 @@ export default function MyApplicationsPage() {
         </div>
       )}
     </div>
+
+    {editId && (
+      <div className="ma-modal-bg" onClick={() => !editSaving && setEditId("")}>
+        <div className="ma-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
+          <h3>✏️ 신청 수정</h3>
+          <div className="desc">대기중 상태에서만 수정 가능합니다.</div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>수업 유형</label>
+            <div style={{ display:"flex", gap:6 }}>
+              {["1:1","1:2"].map(v => (
+                <button key={v} type="button" onClick={() => setEditForm(f => ({ ...f, class_type: v }))}
+                  style={{ flex:1, padding:"10px", border:"1.5px solid "+(editForm.class_type===v?"#1a6fc4":"#e2e8f0"), borderRadius:8, background:editForm.class_type===v?"#eff6ff":"#fff", color:editForm.class_type===v?"#1a6fc4":"#475569", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                >{v}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>희망 요일</label>
+            <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+              {EDIT_DAYS.map(d => (
+                <button key={d} type="button" onClick={() => toggleEditDay(d)}
+                  style={{ flex:"1 1 auto", minWidth:42, padding:"8px 6px", border:"1.5px solid "+(editForm.preferred_days.includes(d)?"#1a6fc4":"#e2e8f0"), borderRadius:8, background:editForm.preferred_days.includes(d)?"#eff6ff":"#fff", color:editForm.preferred_days.includes(d)?"#1a6fc4":"#475569", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                >{d}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>희망 시간</label>
+            <input type="text" value={editForm.preferred_time}
+              onChange={e => setEditForm(f => ({ ...f, preferred_time: e.target.value }))}
+              placeholder="예: 14:00 ~ 14:50"
+              style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
+            />
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop: 14 }}>
+            <div>
+              <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>시작일</label>
+              <input type="date" value={editForm.start_date}
+                onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))}
+                style={{ width:"100%", padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
+              />
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>종료일</label>
+              <input type="date" value={editForm.end_date}
+                onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))}
+                style={{ width:"100%", padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>요청사항</label>
+            <textarea value={editForm.notes}
+              onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+              placeholder="요청사항을 입력해주세요"
+              style={{ width:"100%", minHeight:70, padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical" }}
+            />
+          </div>
+
+          <div className="btns">
+            <button className="btn-cl" onClick={() => setEditId("")} disabled={editSaving}>닫기</button>
+            <button onClick={submitEdit} disabled={editSaving}
+              style={{ padding:"9px 18px", background:"#1a6fc4", color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:editSaving?0.6:1 }}
+            >{editSaving ? "저장 중..." : "수정 저장"}</button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {cancelModal.open && (
       <div className="ma-modal-bg" onClick={closeCancel}>
