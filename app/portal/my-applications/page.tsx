@@ -1,6 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 type Tab = "shuttle" | "fieldtrip" | "tutor" | "pickup";
 type AnyRow = Record<string, unknown>;
@@ -74,19 +80,29 @@ export default function MyApplicationsPage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = localStorage.getItem("portalSession");
-    if (!raw) { router.replace("/portal"); return; }
-    try {
-      const session = JSON.parse(raw);
-      if (!session.booking_id || Date.now() > session.expires) {
-        router.replace("/portal"); return;
+    async function init() {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = localStorage.getItem("portalSession");
+        if (raw) {
+          const session = JSON.parse(raw);
+          if (session.booking_id && Date.now() < session.expires) {
+            setBookingId(session.booking_id);
+            load(session.booking_id);
+            return;
+          }
+          localStorage.removeItem("portalSession");
+        }
+      } catch {}
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setBookingId(data.session.user.id);
+        load(data.session.user.id);
+        return;
       }
-      setBookingId(session.booking_id);
-      load(session.booking_id);
-    } catch {
       router.replace("/portal");
     }
+    init();
   }, [router, load]);
 
   function openCancel(table: CancelModalState["table"], id: string, title: string) {
