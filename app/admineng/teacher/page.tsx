@@ -66,7 +66,7 @@ export default function TeacherHubPage() {
       <div style={{ minHeight: "100vh", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Noto Sans KR', Arial, sans-serif" }}>
         <form onSubmit={handleLogin} style={{ width: "100%", maxWidth: 380, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "32px 28px", boxShadow: "0 4px 24px rgba(0,0,0,0.04)" }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#3b5bdb", letterSpacing: "0.1em", marginBottom: 6 }}>DREAM ACADEMY</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#3b5bdb", marginBottom: 6 }}>Dream Academy</div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", margin: 0 }}>Teacher Hub</h1>
             <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>Welcome! Please sign in to continue.</p>
           </div>
@@ -124,7 +124,7 @@ export default function TeacherHubPage() {
             <div style={{ fontSize: 11, color: "#6b7280" }}>{staff.username}</div>
           </div>
           <button onClick={logout} style={{ padding: "7px 14px", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 12, fontWeight: 700, color: "#dc2626", cursor: "pointer", fontFamily: "inherit" }}>
-            Logout
+            Sign Out
           </button>
         </div>
       </div>
@@ -144,20 +144,17 @@ export default function TeacherHubPage() {
             </a>
           </div>
 
-          {/* Card 2: Class Requests (Coming Soon) */}
+          {/* Card 2: Class Requests */}
           <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "22px 22px 20px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div style={{ fontSize: 28 }}>📋</div>
-              <span style={{ padding: "3px 9px", background: "#fef3c7", color: "#92400e", borderRadius: 999, fontSize: 10, fontWeight: 800, letterSpacing: "0.05em" }}>COMING SOON</span>
-            </div>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>📋</div>
             <h2 style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e", marginBottom: 6 }}>Class Requests</h2>
             <p style={{ fontSize: 12.5, color: "#6b7280", marginBottom: 16, lineHeight: 1.5 }}>View your submitted class requests</p>
-            <button
-              disabled
-              style={{ padding: "9px 18px", background: "#e5e7eb", color: "#9ca3af", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "not-allowed", fontFamily: "inherit" }}
+            <a
+              href="/portal/tutor"
+              style={{ display: "inline-block", padding: "9px 18px", background: "#3b5bdb", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}
             >
               View Requests
-            </button>
+            </a>
           </div>
         </div>
 
