@@ -143,6 +143,13 @@ function fmtRange(s: Date, e: Date) {
   return `${s.toLocaleDateString("en-US", opt)} – ${e.toLocaleDateString("en-US", opt)}, ${e.getFullYear()}`;
 }
 
+type ScheduleEntry = {
+  id: string; source: "lesson" | "request";
+  start: string; end: string; days: string[]; skips?: string[];
+  time: string; student: string; classType: string;
+  rowId: string;
+};
+
 export default function EngTutorClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -424,6 +431,92 @@ export default function EngTutorClassPage() {
     }
     return false;
   }, [weekLessonsByDate]);
+
+  // "mine" 탭 — 본인 담당 lesson + confirmed request 합본
+  const mineEntries = useMemo<ScheduleEntry[]>(() => {
+    if (!me) return [];
+    const entries: ScheduleEntry[] = [];
+    const seenReqIds = new Set<string>();
+    for (const l of myLessons) {
+      const rawDays = Array.isArray(l.class_days)
+        ? l.class_days
+        : typeof l.class_days === "string"
+          ? l.class_days.split(",")
+          : [];
+      const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
+      const skipsArr: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
+      const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
+      if (m) seenReqIds.add(m[1]);
+      entries.push({
+        id: "L:" + l.id,
+        source: "lesson",
+        start: l.start_date || "",
+        end: l.end_date || "",
+        days,
+        skips: skipsArr,
+        time: l.confirmed_time || l.class_time || "",
+        student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
+        classType: l.class_type || "",
+        rowId: l.id,
+      });
+    }
+    const confirmedReqs = reqs.filter(r => r.assigned_tutor_id === me.id && r.status === "confirmed");
+    for (const r of confirmedReqs) {
+      if (seenReqIds.has(r.id)) continue;
+      const days = (r.preferred_days || "").split(",").map((d: string) => normalizeWeekday(d)).filter(Boolean);
+      entries.push({
+        id: "R:" + r.id,
+        source: "request",
+        start: r.start_date || "",
+        end: r.end_date || "",
+        days,
+        time: r.preferred_time || "",
+        student: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-",
+        classType: r.class_type || "",
+        rowId: r.id,
+      });
+    }
+    return entries;
+  }, [myLessons, reqs, me]);
+
+  const mineWeek = useMemo(() => sundayWeek(mineWeekOffset), [mineWeekOffset]);
+
+  const mineCellMap = useMemo(() => {
+    const map = new Map<string, ScheduleEntry[]>();
+    for (const d of mineWeek.dates) map.set(d, []);
+    for (const e of mineEntries) {
+      for (let i = 0; i < mineWeek.dates.length; i++) {
+        const ds = mineWeek.dates[i];
+        if (e.start && ds < e.start) continue;
+        if (e.end && ds > e.end) continue;
+        if (e.skips && e.skips.includes(ds)) continue;
+        const key = WEEKDAY_KEYS[i];
+        if (e.days.length === 0 || e.days.includes(key)) {
+          map.get(ds)!.push(e);
+        }
+      }
+    }
+    return map;
+  }, [mineEntries, mineWeek]);
+
+  // "classes" 탭 — 행별 파생 값 미리 계산
+  const classesRows = useMemo(() => {
+    return myLessons.map((l: any) => {
+      const statusLabel = l.status === "active" ? "In Progress" : l.status === "completed" ? "Completed" : (l.status || "-");
+      const statusBg = l.status === "active" ? "#dcfce7" : l.status === "completed" ? "#dbeafe" : "#f1f5f9";
+      const statusFg = l.status === "active" ? "#15803d" : l.status === "completed" ? "#1e40af" : "#475569";
+      const rawDaysList = Array.isArray(l.class_days)
+        ? l.class_days
+        : (typeof l.class_days === "string" ? l.class_days.split(",") : []);
+      const daysStr = rawDaysList.length > 0
+        ? rawDaysList.map((d: string) => dayLabelEn(d)).filter(Boolean).join(", ")
+        : "-";
+      const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
+      const total = Number(l.total_sessions || 0);
+      const remaining = Math.max(0, total - skips.length);
+      return { l, statusLabel, statusBg, statusFg, daysStr, skips, total, remaining };
+    });
+  }, [myLessons]);
 
   async function loadComments(reqId: string) {
     const { data } = await supabase
@@ -813,78 +906,12 @@ export default function EngTutorClassPage() {
         if (loadingLessons) {
           return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>Loading...</div>;
         }
-        // 데이터 소스 병합: tutor_requests(confirmed, 내 assignment) + myLessons(tutor_lessons 직접/null+memo)
-        // myLessons는 useEffect에서 이미 병합된 상태. 추가로 tutor_requests에서 confirmed인데 lesson이 없는 건도 포함.
-        type ScheduleEntry = {
-          id: string; source: "lesson" | "request";
-          start: string; end: string; days: string[]; skips?: string[];
-          time: string; student: string; classType: string;
-          rowId: string;
-        };
-        const entries: ScheduleEntry[] = [];
-        const seenReqIds = new Set<string>();
-        for (const l of myLessons) {
-          const rawDays = Array.isArray(l.class_days)
-            ? l.class_days
-            : typeof l.class_days === "string"
-              ? l.class_days.split(",")
-              : [];
-          const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
-          // 취소된 날짜는 entry로 만들지 않음 (cellMap 단계에서 추가 필터)
-          const skipsArr: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
-          // admin_memo에서 request_id 추출 (있다면 dedupe용)
-          const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
-          if (m) seenReqIds.add(m[1]);
-          entries.push({
-            id: "L:" + l.id,
-            source: "lesson",
-            start: l.start_date || "",
-            end: l.end_date || "",
-            days,
-            skips: skipsArr,
-            time: l.confirmed_time || l.class_time || "",
-            student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
-            classType: l.class_type || "",
-            rowId: l.id,
-          });
-        }
-        const confirmedReqs = reqs.filter(r => r.assigned_tutor_id === me.id && r.status === "confirmed");
-        for (const r of confirmedReqs) {
-          if (seenReqIds.has(r.id)) continue; // lesson 쪽에서 이미 표시
-          const days = (r.preferred_days || "").split(",").map((d: string) => normalizeWeekday(d)).filter(Boolean);
-          entries.push({
-            id: "R:" + r.id,
-            source: "request",
-            start: r.start_date || "",
-            end: r.end_date || "",
-            days,
-            time: r.preferred_time || "",
-            student: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-",
-            classType: r.class_type || "",
-            rowId: r.id,
-          });
-        }
-
+        const entries = mineEntries;
         if (entries.length === 0) {
           return <div className="eempty" style={{background:"#fff",borderRadius:12,marginTop:8}}>No classes assigned yet</div>;
         }
-
-        const wk = sundayWeek(mineWeekOffset);
-        const cellMap = new Map<string, ScheduleEntry[]>();
-        for (const d of wk.dates) cellMap.set(d, []);
-        for (const e of entries) {
-          for (let i = 0; i < wk.dates.length; i++) {
-            const ds = wk.dates[i];
-            if (e.start && ds < e.start) continue;
-            if (e.end && ds > e.end) continue;
-            if (e.skips && e.skips.includes(ds)) continue; // 취소 날짜 제외
-            const key = WEEKDAY_KEYS[i];
-            if (e.days.length === 0 || e.days.includes(key)) {
-              cellMap.get(ds)!.push(e);
-            }
-          }
-        }
-
+        const wk = mineWeek;
+        const cellMap = mineCellMap;
         const todayIso = ymd(new Date());
         const myColor = tutorColor(me.id);
 
@@ -975,19 +1002,7 @@ export default function EngTutorClassPage() {
                 <th style={{width:"22%",textAlign:"center"}}>Actions</th>
               </tr></thead>
               <tbody>
-                {myLessons.map((l: any) => {
-                  const statusLabel = l.status === "active" ? "In Progress" : l.status === "completed" ? "Completed" : (l.status || "-");
-                  const statusBg = l.status === "active" ? "#dcfce7" : l.status === "completed" ? "#dbeafe" : "#f1f5f9";
-                  const statusFg = l.status === "active" ? "#15803d" : l.status === "completed" ? "#1e40af" : "#475569";
-                  const rawDaysList = Array.isArray(l.class_days)
-                    ? l.class_days
-                    : (typeof l.class_days === "string" ? l.class_days.split(",") : []);
-                  const daysStr = rawDaysList.length > 0
-                    ? rawDaysList.map((d: string) => dayLabelEn(d)).filter(Boolean).join(", ")
-                    : "-";
-                  const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
-                  const total = Number(l.total_sessions || 0);
-                  const remaining = Math.max(0, total - skips.length);
+                {classesRows.map(({ l, statusLabel, statusBg, statusFg, daysStr, skips, total, remaining }) => {
                   return (
                     <tr key={l.id}>
                       <td style={{fontWeight:600}}>
