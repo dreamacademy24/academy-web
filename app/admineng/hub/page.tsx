@@ -1,18 +1,69 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed, clearAdminAuth } from "@/lib/adminAuth";
+
+type Staff = {
+  username: string;
+  name: string;
+  role: string;
+  color: string;
+  initial: string;
+};
 
 export default function EngHubPage() {
   const router = useRouter();
-  const [authed, setAuthed] = useState(false);
+  const [staff, setStaff] = useState<Staff | null>(null);
+  const [ready, setReady] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
-    else window.location.href = "/login";
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("teacherSession");
+      if (raw) setStaff(JSON.parse(raw));
+    } catch {}
+    setReady(true);
   }, []);
 
-  function logout() { clearAdminAuth(); router.push("/login"); }
+  async function handleLogin(e: FormEvent) {
+    e.preventDefault();
+    setErr("");
+    if (!username.trim() || !password.trim()) {
+      setErr("Please enter both username and password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admineng/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErr(data.message || "Login failed.");
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem("teacherSession", JSON.stringify(data.staff));
+      setStaff(data.staff);
+      setPassword("");
+    } catch {
+      setErr("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem("teacherSession");
+    setStaff(null);
+    setUsername("");
+    setPassword("");
+  }
 
   const cards = [
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
@@ -20,16 +71,69 @@ export default function EngHubPage() {
     { icon: "📅", title: "Student Calendar", desc: "Weekly schedule · New in · Graduation", href: "/admineng/student-calendar" },
   ];
 
-  if (!authed) return null;
+  if (!ready) return null;
+
+  if (!staff) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'Noto Sans KR', Arial, sans-serif" }}>
+        <form onSubmit={handleLogin} style={{ width: "100%", maxWidth: 380, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 14, padding: "32px 28px", boxShadow: "0 4px 24px rgba(0,0,0,0.04)" }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#3b5bdb", marginBottom: 6 }}>Dream Academy</div>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", margin: 0 }}>Teacher Hub</h1>
+            <p style={{ fontSize: 13, color: "#6b7280", marginTop: 8 }}>Welcome! Please sign in to continue.</p>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="e.g. admin-angel"
+              autoComplete="username"
+              style={{ width: "100%", padding: "11px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              style={{ width: "100%", padding: "11px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" }}
+            />
+          </div>
+
+          {err && (
+            <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, padding: "9px 12px", fontSize: 12, fontWeight: 600, marginBottom: 14 }}>
+              {err}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ width: "100%", padding: "12px 16px", background: loading ? "#94a3b8" : "#3b5bdb", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .hub-w{max-width:900px;margin:0 auto;padding:32px 20px}
-.hub-top{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.hub-top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .hub-top h1{font-size:22px;font-weight:800;flex:1}
-.hub-back{padding:7px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit}
-.hub-back:hover{border-color:#1a6fc4;color:#1a6fc4}
+.hub-who{display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:20px}
+.hub-who .avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px}
+.hub-who .nm{flex:1;font-size:14px;font-weight:800}
+.hub-who .un{font-size:11px;color:#6b7280;margin-top:2px}
 .hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:28px}
 .hub-card{border-radius:12px;padding:16px 18px;cursor:pointer;border:1px solid #e2e8f0;transition:all 180ms;display:flex;align-items:center;gap:12px;background:#fff;color:#1a1a2e;box-shadow:0 2px 12px rgba(0,0,0,0.05)}
 .hub-card:hover{border-color:#1a6fc4;transform:translateY(-2px);box-shadow:0 4px 20px rgba(26,111,196,0.1)}
@@ -43,9 +147,17 @@ export default function EngHubPage() {
     `}</style>
     <div className="hub-w">
       <div className="hub-top">
-        <h1>🌐 Local Staff Hub</h1>
+        <h1>🌐 Teacher Hub</h1>
         <p style={{ fontSize: 13, color: "#6b7c93" }}>Welcome! Choose a section below.</p>
-        <button className="hub-back" onClick={() => router.push("/admin/hub")}>← Admin Hub</button>
+      </div>
+
+      <div className="hub-who">
+        <div className="avatar" style={{ background: staff.color || "#6366f1" }}>{staff.initial || staff.name?.slice(0, 1) || "?"}</div>
+        <div style={{ flex: 1 }}>
+          <div className="nm">Hello, {staff.name}! 👋</div>
+          <div className="un">{staff.username}</div>
+        </div>
+        <button className="hub-logout" onClick={logout}>Sign Out</button>
       </div>
 
       <div className="hub-grid">
@@ -63,7 +175,6 @@ export default function EngHubPage() {
       <div className="hub-foot">
         <a className="hub-link" href="/guide">Staff Guide</a>
         <a className="hub-link" href="/">Home</a>
-        <button className="hub-logout" onClick={logout}>Logout</button>
       </div>
     </div>
   </>);
