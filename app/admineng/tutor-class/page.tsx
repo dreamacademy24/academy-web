@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
 interface TutorReq {
@@ -169,6 +170,7 @@ export default function EngTutorClassPage() {
   const [cancelDate, setCancelDate] = useState<Record<string, string>>({});
   const [changeOld, setChangeOld] = useState<Record<string, string>>({});
   const [changeNew, setChangeNew] = useState<Record<string, string>>({});
+  const [selectedInvoiceLessonId, setSelectedInvoiceLessonId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -324,13 +326,19 @@ export default function EngTutorClassPage() {
     ]);
     const lessonList = (lRes.data || []) as any[];
     const reqList = (rRes.data || []) as any[];
-    const linkedReqIds = new Set<string>();
-    for (const l of lessonList) {
-      const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
-      if (m) linkedReqIds.add(m[1]);
-    }
+    const linkedReqIds = new Set<string>([
+      ...lessonList.map((l: any) => {
+        const m = /request_id:\s*([a-f0-9-]+)/i.exec(l.admin_memo || "");
+        return m ? m[1] : null;
+      }).filter(Boolean) as string[],
+      // tutor_lessons의 student_names + period 기준 중복도 제거
+      ...lessonList.map((l: any) => `${l.student_names}|${l.start_date}|${l.end_date}`),
+    ]);
     const synthetic = reqList
-      .filter(r => !linkedReqIds.has(r.id))
+      .filter(r => {
+        const lessonKey = `${r.student_name_kr || ""}${r.student_name_en || ""}|${r.start_date}|${r.end_date}`;
+        return !linkedReqIds.has(r.id) && !linkedReqIds.has(lessonKey);
+      })
       .map(r => ({
         id: `req:${r.id}`,
         _source: "request",
@@ -341,7 +349,10 @@ export default function EngTutorClassPage() {
         student_ages: r.student_age || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
-        hourly_rate: r.price_per_session || ((r.class_type || "").includes("1:2") ? 350 : 300),
+        hourly_rate: r.price_per_session
+          || (r.total_amount && r.total_sessions
+              ? Math.round(r.total_amount / r.total_sessions)
+              : ((r.class_type || "").includes("1:2") ? 350 : 300)),
         start_date: r.start_date || "",
         end_date: r.end_date || "",
         class_days: (r.preferred_days || "").split(",").map((s: string) => s.trim()).filter(Boolean),
@@ -1119,7 +1130,7 @@ export default function EngTutorClassPage() {
                 const isMine = me && l.tutor_id === me.id;
                 return (
                   <button key={l.id} type="button"
-                    onClick={() => window.open("/admin/tutor-class?tab=invoice&lesson_id=" + l.id, "_blank")}
+                    onClick={() => setSelectedInvoiceLessonId(prev => prev === l.id ? null : l.id)}
                     style={{padding:"12px 16px",border:"1px solid "+(isMine?"#bfdbfe":"#e2e8f0"),borderRadius:9,textAlign:"left",cursor:"pointer",fontFamily:"inherit",background:isMine?"#eff6ff":"#fff",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}
                   >
                     <span style={{flex:1,minWidth:0}}>
@@ -1132,7 +1143,17 @@ export default function EngTutorClassPage() {
                 );
               })}
             </div>
-            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>🖨️ Opens in a new tab — print and image-save available there.</div>
+            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>🖨️ 항목 클릭 시 인보이스 표시 · 인쇄/이미지 저장 가능</div>
+            {selectedInvoiceLessonId && (
+              <div style={{marginTop:16}}>
+                <button onClick={() => setSelectedInvoiceLessonId(null)}
+                  style={{marginBottom:12,padding:"6px 16px",border:"1px solid #e5e7eb",borderRadius:8,
+                    background:"#fff",color:"#6b7280",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  ← 목록으로
+                </button>
+                <TutorInvoice lessonId={selectedInvoiceLessonId} />
+              </div>
+            )}
           </div>
         );
       })()}

@@ -100,9 +100,9 @@ function filenameSafe(s: string): string {
   return (s || "lesson").replace(/[\\/:"*?<>|]+/g, "_").replace(/\s+/g, "_").slice(0, 80);
 }
 
-export default function TutorInvoice() {
+export default function TutorInvoice({ lessonId }: { lessonId?: string } = {}) {
   const searchParams = useSearchParams();
-  const urlLessonId = searchParams?.get("lesson_id") || "";
+  const urlLessonId = lessonId || searchParams?.get("lesson_id") || "";
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedId, setSelectedId] = useState<string>(urlLessonId);
 
