@@ -1121,7 +1121,18 @@ export default function EngTutorClassPage() {
           if (aMine !== bMine) return aMine - bMine;
           return (b.created_at || "").localeCompare(a.created_at || "");
         });
-        return (
+        return selectedInvoiceLessonId ? (
+          <div>
+            <button onClick={() => setSelectedInvoiceLessonId(null)}
+              style={{marginBottom:16,padding:"8px 20px",border:"1px solid #e5e7eb",
+                borderRadius:8,background:"#fff",color:"#374151",fontWeight:600,
+                fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",
+                alignItems:"center",gap:6}}>
+              ← Back to list
+            </button>
+            <TutorInvoice lessonId={selectedInvoiceLessonId} englishMode={true} />
+          </div>
+        ) : (
           <div style={{background:"#fff",borderRadius:12,padding:24,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
             <h2 style={{fontSize:14,fontWeight:800,color:"#1a6fc4",marginBottom:12,paddingBottom:6,borderBottom:"1px solid #e2e8f0"}}>💰 Select a class to view the invoice <span style={{fontWeight:500,color:"#94a3b8",marginLeft:6}}>({sorted.length} total)</span></h2>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1143,17 +1154,7 @@ export default function EngTutorClassPage() {
                 );
               })}
             </div>
-            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>🖨️ 항목 클릭 시 인보이스 표시 · 인쇄/이미지 저장 가능</div>
-            {selectedInvoiceLessonId && (
-              <div style={{marginTop:16}}>
-                <button onClick={() => setSelectedInvoiceLessonId(null)}
-                  style={{marginBottom:12,padding:"6px 16px",border:"1px solid #e5e7eb",borderRadius:8,
-                    background:"#fff",color:"#6b7280",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                  ← 목록으로
-                </button>
-                <TutorInvoice lessonId={selectedInvoiceLessonId} />
-              </div>
-            )}
+            <div style={{marginTop:14,fontSize:11.5,color:"#94a3b8"}}>🖨️ Click a class to view the invoice · Print or save as image</div>
           </div>
         );
       })()}

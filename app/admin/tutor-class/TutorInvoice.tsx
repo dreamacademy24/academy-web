@@ -100,9 +100,9 @@ function filenameSafe(s: string): string {
   return (s || "lesson").replace(/[\\/:"*?<>|]+/g, "_").replace(/\s+/g, "_").slice(0, 80);
 }
 
-export default function TutorInvoice({ lessonId }: { lessonId?: string } = {}) {
+export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { lessonId?: string; englishMode?: boolean } = {}) {
   const searchParams = useSearchParams();
-  const urlLessonId = lessonId || searchParams?.get("lesson_id") || "";
+  const urlLessonId = propLessonId || searchParams?.get("lesson_id") || "";
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedId, setSelectedId] = useState<string>(urlLessonId);
 
@@ -263,7 +263,10 @@ export default function TutorInvoice({ lessonId }: { lessonId?: string } = {}) {
     const typeBase = typeMatch ? typeMatch[0].replace(/\s+/g, "") : (l.class_type || "-");
     const t = l.sessions_per_day === 2 ? "2T" : "1T";
     const isSynthetic = String(l.id).startsWith("req:");
-    const tag = isSynthetic ? " · 신청서 기반" : "";
+    const tag = isSynthetic ? (englishMode ? " · Request-based" : " · 신청서 기반") : "";
+    if (englishMode) {
+      return `${l.student_names.split("/").reverse().join("/ ").trim()} · ${l.class_type} · ${l.start_date?.slice(5)}~${l.end_date?.slice(5)}${tag}`;
+    }
     return `${l.house_or_reserver} · ${l.student_names} (${typeBase} ${t}, ${fmtMD(l.start_date)}~${fmtMD(l.end_date)})${tag}`;
   };
 
@@ -372,10 +375,10 @@ export default function TutorInvoice({ lessonId }: { lessonId?: string } = {}) {
         )}
       </select>
       <button className="ti-btn ti-btn-print" onClick={() => window.print()} disabled={!lesson}>
-        📄 인쇄/PDF
+        📄 {englishMode ? "Print/PDF" : "인쇄/PDF"}
       </button>
       <button className="ti-btn ti-btn-img" onClick={saveAsImage} disabled={!lesson || saving}>
-        {saving ? "저장 중..." : "🖼️ 이미지 저장"}
+        {saving ? (englishMode ? "Saving..." : "저장 중...") : `🖼️ ${englishMode ? "Save Image" : "이미지 저장"}`}
       </button>
     </div>
 
@@ -517,13 +520,26 @@ export default function TutorInvoice({ lessonId }: { lessonId?: string } = {}) {
         )}
 
         <div className="ti-rules">
-          <p className="title">★ 튜터수업 규정 안내 ★</p>
-          <p className="warn">규정 미 확인으로 인한 불이익은 센터에서 책임지지 않습니다. 꼭 !! 확인 해주세요.</p>
-          <p className="red">최소 4일 전 인폼 시 변경 및 취소 가능 / 그 외의 변경 및 취소는 회차 차감, 변경 및 환불 불가</p>
-          <p>* 당일 노쇼 및 당일 변경 2회 이상 시 튜터수업 불가</p>
-          <p style={{ marginTop: 10 }}>* 튜터 변경 및 취소 문의는 5시 이전 가능</p>
-          <p className="gray">(예시) 금요일 수업 취소 원할 시, 월요일 5시 이전: 변경 및 취소 가능 / 월요일 5시 이후: 변경 및 취소 불가</p>
-          <p className="gray">5시 이후 문의시, 3일 전으로 적용되어, 변경 및 취소 불가</p>
+          <p className="title">★ {englishMode ? "Tutor Class Rules" : "튜터수업 규정 안내"} ★</p>
+          {englishMode ? (
+            <>
+              <p className="warn">Please read the rules carefully. Any violations are the sole responsibility of the guest.</p>
+              <p className="red">Changes/cancellations allowed 4+ days before class. After that, no refunds or changes.</p>
+              <p>* Same-day no-show and 2+ same-day changes: class forfeited</p>
+              <p style={{ marginTop: 10 }}>* Tutor change requests must be made before 5PM</p>
+              <p className="gray">(e.g.) For Friday class cancellation: before Monday 5PM = possible / after Monday 5PM = not possible</p>
+              <p className="gray">5PM-after requests apply from 3 days later; changes after 5PM not applicable</p>
+            </>
+          ) : (
+            <>
+              <p className="warn">규정 미 확인으로 인한 불이익은 센터에서 책임지지 않습니다. 꼭 !! 확인 해주세요.</p>
+              <p className="red">최소 4일 전 인폼 시 변경 및 취소 가능 / 그 외의 변경 및 취소는 회차 차감, 변경 및 환불 불가</p>
+              <p>* 당일 노쇼 및 당일 변경 2회 이상 시 튜터수업 불가</p>
+              <p style={{ marginTop: 10 }}>* 튜터 변경 및 취소 문의는 5시 이전 가능</p>
+              <p className="gray">(예시) 금요일 수업 취소 원할 시, 월요일 5시 이전: 변경 및 취소 가능 / 월요일 5시 이후: 변경 및 취소 불가</p>
+              <p className="gray">5시 이후 문의시, 3일 전으로 적용되어, 변경 및 취소 불가</p>
+            </>
+          )}
         </div>
       </div>
     )}
