@@ -1297,3 +1297,60 @@ special_request, ssp
 2. [튜터 확정 알림] confirmed 시 포털에 인보이스 카드 표시
 3. P1~P5 기존 미완료 항목들
 4. 룸번호 중복(Supabase 직접 수정), OCR API 키 등록
+
+## 2026-05-30 세션 (튜터 시스템 완성 + 가독성 개선)
+
+### Teacher Hub 시스템 (840414f → 249c6cc)
+- /admineng/teacher 페이지 삭제 (login 게이트 통합)
+- /admineng/hub teacherSession 기반 로그인 게이트 (포털처럼 모달 진입)
+- /api/admineng/login: staff_accounts + crypt() password 검증 (verify_teacher_login SECURITY DEFINER RPC, Supabase SQL 사전 등록)
+- 3개 admineng 페이지(hub, tutor-class, tutor-class/[id], student-calendar)에서 isAdminAuthed/getAdminInfo 의존 제거 → teacherSession 직접 확인
+- 어드민 권한 없이 staff_accounts 계정만으로 진입 가능
+
+### Portal Dashboard 이름/예약정보 fix (0477234 → 123ffde)
+- 증상: Supabase Auth 사용자에게 portal ID만 표시, 예약정보 배너 미표시
+- 원인: bookingInfo fetch가 portalSession에만 의존, authUser 상태 변화 race
+- 수정: useEffect deps [authUser] → [] 변경 + 내부에서 supabase.auth.getUser() 직접 호출 → user_metadata.booking_id 추출 → /api/bookings/[id] 호출
+- cancelled 플래그로 cleanup 처리 (StrictMode dedup 대응)
+
+### TutorInvoice englishMode + 인라인 인보이스 (3b04031 → 2e127e7)
+- /admineng/tutor-class 인보이스 탭: 새탭 열기 제거, 항목 클릭 시 인라인 표시 + "Back to list" 토글
+- TutorInvoice 컴포넌트 englishMode prop 추가 (옵션) + lessonId prop 추가
+  · 드롭다운 라벨 영문화 (학생명 역순 + class_type + MM-DD 범위)
+  · "신청서 기반" / "Request-based" 토글
+  · 버튼 영문화 (Print/PDF, Save Image, Saving...)
+  · 규정 안내 섹션 영문 전문 (6줄, 한글 원문 보존)
+- synthetic lesson 중복 제거 강화: linkedReqIds에 student_names|period 키 추가
+- synthetic hourly_rate fallback: total_amount/total_sessions 역산 → 1:1/1:2 디폴트
+
+### Portal Tutor 시스템 (5c4dc40 → 4557423)
+
+**API 정비:**
+- /api/portal/my-applications: tutor 쿼리를 student_id 경유 → booking_id 직접 (student_id 컬럼 모두 NULL이라 옛 쿼리는 항상 빈 결과)
+- pickup_requests 필터: ['extra_pickup','extra_drop'] → ['pickup','dropoff','extra_pickup','extra_drop'] (DB 실제값 매칭)
+- /api/portal/tutor-edit (신규): PATCH endpoint, status=pending 가드, service-role
+- /api/portal/tutor POST: slot_label 컬럼 저장 추가
+
+**페이지 UX:**
+- /portal/tutor: 신청 수정 모달 (pending만), 취소요청 모달 (pending/confirmed), 카드 상단 status 배지 (검토중/배정완료/✅확정/취소됨)
+- /portal/my-applications: 튜터 탭에 ✏️수정 + 취소요청 버튼 추가 + 인라인 수정 모달 (페이지 이동 없이 처리)
+- /portal/tutor submit() form2 연속 제출 블록 삭제 (잘못된 재조회 패턴)
+
+### 튜터 출결/Inbox 가독성 개선 (f833a71 → 8fecfa8)
+- attendance: 전면 영문화 (안내문, 메모 placeholder), Cancel Day / Reschedule 인풋 lang="en" + placeholder="YYYY-MM-DD" → 브라우저 native "연도-월-일" → "yyyy-mm-dd" 강제 전환
+- admineng/tutor-class Inbox:
+  · 컬럼 너비 재배분 (Date 5 / House 10 / Reserver 9 / Student 16 / Age 4 / Type 4 / Time 4 / Period 11 / Days 8 / Tutor 8 / Status 8 / Action 13)
+  · House: whiteSpace:nowrap (줄바꿈 방지)
+  · Time: "2T (100m)" → "2T", title 툴팁으로 시간 보존
+  · Age: 생년월일 8자리 → 만 나이 자동 계산
+  · Days: 한글(월화수목금토일) → 영문 약어(M/T/W/Th/F/Sa/Su)
+- loadMyLessons 성능: 전체 null tutor_id 로드 + 정규식 필터 → application_id IN (myReqIds) 직접 쿼리
+
+### TutorApplications.tsx (4557423)
+- lesson insert 시 admin_memo 앞에 `request_id: ${detail.id}` 자동 prepend (My Classes 매칭 + tutor_lessons.application_id 폴백 역할)
+
+### 핵심 학습 포인트
+- **Supabase Auth user_metadata 접근:** React state 의존 X. useEffect 내부에서 supabase.auth.getUser() 직접 호출 → race 없음
+- **HTML date input placeholder:** placeholder 속성 X. lang="en" 속성으로 브라우저 native locale 렌더링 강제
+- **tutor_requests 매칭 패턴:** student_id NULL이 많아 booking_id 직접 매칭이 정석. portal/tutor와 my-applications API 동일 패턴으로 통일
+- **admin_memo request_id 패턴:** synthetic lesson dedup + application_id 폴백을 동시에 지원하는 anchor
