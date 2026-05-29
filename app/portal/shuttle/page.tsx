@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { resolvePortalSession } from "@/lib/portalSession";
 
 // ── 셔틀 자동 생성 헬퍼 (public/shuttle 와 동일) ────────────────────
 const SHUTTLE_HOLIDAYS = new Set([
@@ -114,18 +115,11 @@ export default function PortalShuttlePage() {
 
   // 포털 세션 체크
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (!raw) { router.replace("/portal"); return; }
-      const s: PortalSession = JSON.parse(raw);
-      if (!s.booking_id || s.expires < Date.now()) {
-        localStorage.removeItem("portalSession");
-        router.replace("/portal");
-        return;
-      }
-      setSession(s);
-    } catch { router.replace("/portal"); }
+    (async () => {
+      const s = await resolvePortalSession();
+      if (!s) { router.replace("/portal"); return; }
+      setSession(s as PortalSession);
+    })();
   }, [router]);
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { resolvePortalSession } from "@/lib/portalSession";
 
 interface FormState {
   q1: string; q2: string; q6: string;
@@ -175,14 +176,10 @@ export default function PortalCheckinDetailPage() {
   }
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const raw = localStorage.getItem('portalSession');
-    if (!raw) { router.replace('/portal'); return; }
-    const session = JSON.parse(raw);
-    if (!session.booking_id || Date.now() > session.expires) {
-      router.replace('/portal'); return;
-    }
-    const bid = session.booking_id;
+    (async () => {
+    const s = await resolvePortalSession();
+    if (!s) { router.replace('/portal'); return; }
+    const bid = s.booking_id;
     setBookingId(bid);
     loadPickups(bid);
 
@@ -227,6 +224,7 @@ export default function PortalCheckinDetailPage() {
         setLoading(false);
       })
       .catch(() => { setError('불러오기 실패'); setLoading(false); });
+    })();
   }, [router]);
 
   function up<K extends keyof FormState>(k: K, v: string) {

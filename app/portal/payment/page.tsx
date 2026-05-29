@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { resolvePortalSession } from "@/lib/portalSession";
 
 interface Session { booking_id: string; booking_number: string; guest_name: string; expires: number }
 interface PayData {
@@ -28,14 +29,11 @@ export default function PortalPaymentPage() {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (!raw) { router.replace("/portal"); return; }
-      const s: Session = JSON.parse(raw);
-      if (s.expires < Date.now()) { localStorage.removeItem("portalSession"); router.replace("/portal"); return; }
-      setSession(s);
-    } catch { router.replace("/portal"); }
+    (async () => {
+      const s = await resolvePortalSession();
+      if (!s) { router.replace("/portal"); return; }
+      setSession(s as Session);
+    })();
   }, [router]);
 
   useEffect(() => {
