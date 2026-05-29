@@ -382,7 +382,7 @@ export default function AttendancePage() {
             })}
             {dates.every(d => !draft[d] && !notesLog[d]) && (
               <div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:"12px 0"}}>
-                출결을 입력하면 날짜별 메모를 추가할 수 있습니다.
+                Click a date box to add attendance notes.
               </div>
             )}
           </div>
@@ -424,6 +424,8 @@ export default function AttendancePage() {
             <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:2}}>❌ Cancel Day</div>
             <input
               type="date"
+              lang="en"
+              placeholder="YYYY-MM-DD"
               value={cancelDateVal}
               min={lesson.start_date || undefined}
               max={lesson.end_date || undefined}
@@ -451,6 +453,8 @@ export default function AttendancePage() {
             <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>From</label>
             <input
               type="date"
+              lang="en"
+              placeholder="YYYY-MM-DD"
               value={changeOldVal}
               min={lesson.start_date || undefined}
               max={lesson.end_date || undefined}
@@ -460,6 +464,8 @@ export default function AttendancePage() {
             <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>To</label>
             <input
               type="date"
+              lang="en"
+              placeholder="YYYY-MM-DD"
               value={changeNewVal}
               onChange={e => setChangeNewVal(e.target.value)}
               style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}

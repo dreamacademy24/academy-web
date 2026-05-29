@@ -740,7 +740,7 @@ export default function EngTutorClassPage() {
             <table className="tbl">
               <thead><tr>
                 <th style={{width:"5%"}}>Date</th>
-                <th style={{width:"8%"}}>House</th>
+                <th style={{minWidth:120,whiteSpace:"nowrap"}}>House</th>
                 <th style={{width:"10%"}}>Reserver</th>
                 <th style={{width:"14%"}}>Student</th>
                 <th style={{width:"6%"}}>Age</th>
@@ -758,7 +758,7 @@ export default function EngTutorClassPage() {
                   return (
                     <tr key={r.id} onClick={() => openDetail(r)}>
                       <td style={{color:"#6b7c93",fontSize:11}}>{fmtDate(r.created_at)}</td>
-                      <td style={{color:"#1a6fc4",fontWeight:700}}>{r.house_number || "-"}</td>
+                      <td style={{color:"#1a6fc4",fontWeight:700,whiteSpace:"nowrap"}}>{r.house_number || "-"}</td>
                       <td>{r.guest_name || "-"}</td>
                       <td style={{fontWeight:600}}>
                         {[r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ")}
@@ -770,9 +770,9 @@ export default function EngTutorClassPage() {
                           }}>{(r as any).slot_label}</span>
                         )}
                       </td>
-                      <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</td>
+                      <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || (r as any).age || "-"}</td>
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
-                      <td><span className="ebadge" style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T (100m)":"1T (50m)"}</span></td>
+                      <td><span className="ebadge" title={r.sessions_per_day===2?"100 min":"50 min"} style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T":"1T"}</span></td>
                       <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>
                       <td style={{fontSize:11}}>{days(r) || "-"}</td>
                       <td style={{fontSize:11}}>{tutorName(r.assigned_tutor_id)}</td>
