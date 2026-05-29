@@ -84,6 +84,7 @@ export async function POST(req: Request) {
       privacy_agreed: true,
       rules_agreed: true,
       status: 'pending',
+      slot_label: body.slot_label || null,
     }
 
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
