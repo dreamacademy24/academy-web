@@ -19,13 +19,6 @@ export async function GET(req: Request) {
     .maybeSingle();
   const roomNumber = booking?.house_no || booking?.accom_room || "";
 
-  // 학생 id (tutor_requests 매칭용)
-  const { data: students } = await supabase
-    .from("students")
-    .select("id")
-    .eq("booking_id", bookingId);
-  const studentIds = (students || []).map((s: { id: string }) => s.id);
-
   const [shuttleRes, fieldtripRes, tutorRes, pickupRes] = await Promise.all([
     supabase.from("shuttle_applications").select("*")
       .eq("booking_id", bookingId)
@@ -35,11 +28,11 @@ export async function GET(req: Request) {
           .eq("room_number", roomNumber)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null } as { data: Array<Record<string, unknown>>; error: null }),
-    studentIds.length > 0
-      ? supabase.from("tutor_requests").select("*")
-          .in("student_id", studentIds)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null } as { data: Array<Record<string, unknown>>; error: null }),
+    // /portal/tutor와 동일하게 booking_id로 직접 조회 (student_id 경유 X)
+    supabase.from("tutor_requests")
+      .select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, cancel_reason, created_at")
+      .eq("booking_id", bookingId)
+      .order("created_at", { ascending: false }),
     supabase.from("pickup_requests").select("*")
       .eq("booking_id", bookingId)
       .in("request_type", ["extra_pickup", "extra_drop"])

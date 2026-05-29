@@ -187,6 +187,10 @@ export default function PortalTutorPage() {
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [cancelReqId, setCancelReqId] = useState<string>("");
+  const [cancelReqReason, setCancelReqReason] = useState("");
+  const [cancelReqSaving, setCancelReqSaving] = useState(false);
+  const [tutorToast, setTutorToast] = useState("");
   const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
   const [bookingInfo, setBookingInfo] = useState<any>(null);
@@ -425,6 +429,27 @@ export default function PortalTutorPage() {
     if (!confirm("신청을 취소하시겠습니까?")) return;
     const res = await fetch(`/api/portal/tutor?id=${id}`, { method: "DELETE" });
     if (!res.ok) { const r = await res.json(); alert(r.error || "취소 실패"); return; }
+    reload();
+  }
+
+  async function submitCancelReq() {
+    if (!cancelReqId) return;
+    setCancelReqSaving(true);
+    const res = await fetch("/api/portal/cancel-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason }),
+    });
+    setCancelReqSaving(false);
+    if (!res.ok) {
+      const r = await res.json().catch(() => ({}));
+      alert("취소 요청 실패: " + (r.error || ""));
+      return;
+    }
+    setCancelReqId("");
+    setCancelReqReason("");
+    setTutorToast("취소 요청이 접수되었습니다.");
+    setTimeout(() => setTutorToast(""), 2500);
     reload();
   }
 
@@ -1019,6 +1044,15 @@ export default function PortalTutorPage() {
                   <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>요일:</span>{daysVal || "-"}</div>
                   <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>시간:</span>{r.preferred_time || "-"}</div>
                 </div>
+                {(r.status === 'pending' || r.status === 'confirmed') && (
+                  <div style={{ display:"flex", justifyContent:"flex-end", marginTop:10 }}>
+                    <button
+                      type="button"
+                      onClick={() => { setCancelReqId(r.id); setCancelReqReason(""); }}
+                      style={{ padding:"6px 14px", background:"#fef2f2", color:"#b91c1c", border:"1px solid #fecaca", borderRadius:7, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                    >취소요청</button>
+                  </div>
+                )}
                 {r.status === 'confirmed' && lessonMap[r.id] && (() => {
                   const l = lessonMap[r.id];
                   const days = Array.isArray(l.class_days)
@@ -1177,5 +1211,41 @@ export default function PortalTutorPage() {
         </div>
       );
     })()}
+
+    {cancelReqId && (
+      <div className="modal-bg" onClick={() => !cancelReqSaving && setCancelReqId("")}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <h3>취소 요청</h3>
+          <div className="modal-sub">취소 요청 후에는 스탭이 확인 후 처리합니다.</div>
+          <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#374151", margin:"8px 0 6px" }}>사유 (선택)</label>
+          <textarea
+            value={cancelReqReason}
+            onChange={e => setCancelReqReason(e.target.value)}
+            placeholder="취소 사유를 입력해주세요"
+            style={{ width:"100%", minHeight:80, padding:"9px 11px", border:"1px solid #e5e7eb", borderRadius:7, fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical" }}
+          />
+          <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:14 }}>
+            <button
+              type="button"
+              onClick={() => setCancelReqId("")}
+              disabled={cancelReqSaving}
+              style={{ padding:"9px 14px", background:"#fff", color:"#475569", border:"1px solid #cbd5e1", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+            >닫기</button>
+            <button
+              type="button"
+              onClick={submitCancelReq}
+              disabled={cancelReqSaving}
+              style={{ padding:"9px 18px", background:"#dc2626", color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:cancelReqSaving?0.6:1 }}
+            >{cancelReqSaving ? "처리 중..." : "취소요청 확인"}</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {tutorToast && (
+      <div role="status" aria-live="polite" style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1a2e", color:"#fff", padding:"12px 22px", borderRadius:10, fontSize:13.5, fontWeight:700, boxShadow:"0 10px 30px rgba(0,0,0,0.2)", zIndex:200 }}>
+        {tutorToast}
+      </div>
+    )}
   </>);
 }
