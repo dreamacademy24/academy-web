@@ -191,9 +191,7 @@ export default function PortalTutorPage() {
   const [cancelReqReason, setCancelReqReason] = useState("");
   const [cancelReqSaving, setCancelReqSaving] = useState(false);
   const [tutorToast, setTutorToast] = useState("");
-  const [editId, setEditId] = useState<string>("");
-  const [editForm, setEditForm] = useState({ class_type: "", preferred_days: [] as string[], preferred_time: "", start_date: "", end_date: "", notes: "" });
-  const [editSaving, setEditSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string>("");
   const [invLessons, setInvLessons] = useState<InvLesson[]>([]);
   const [expandedInv, setExpandedInv] = useState<Set<string>>(new Set());
   const [bookingInfo, setBookingInfo] = useState<any>(null);
@@ -345,6 +343,37 @@ export default function PortalTutorPage() {
       ? { level_english: 'enrolled', level_speaking: 'enrolled', level_reading: 'enrolled', level_writing: 'enrolled' }
       : { level_english: form.level_english, level_speaking: form.level_speaking, level_reading: form.level_reading, level_writing: form.level_writing };
 
+    if (editingId) {
+      const res = await fetch("/api/portal/tutor-edit", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingId,
+          student_name_kr: finalKr,
+          student_name_en: finalEn,
+          class_type: form.class_type,
+          start_date: form.start_date || null,
+          end_date: form.end_date || null,
+          preferred_days: form.preferred_days_arr,
+          skip_dates: form.skip_dates || null,
+          preferred_time: form.preferred_time || null,
+          ...levels,
+          textbook: form.textbook || null,
+          class_style: form.class_style || null,
+          class_focus_arr: form.class_focus_arr || null,
+          child_personality: form.child_personality || null,
+        }),
+      });
+      setSaving(false);
+      if (!res.ok) { const r = await res.json().catch(() => ({})); setMsg(r.error || "수정 실패"); return; }
+      setEditingId("");
+      setForm({ ...INIT_FORM });
+      setTutorToast("수정이 완료되었습니다.");
+      setTimeout(() => setTutorToast(""), 2500);
+      reload();
+      return;
+    }
+
     const res = await fetch("/api/portal/tutor", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -407,45 +436,38 @@ export default function PortalTutorPage() {
     const daysArr = Array.isArray(r.preferred_days_arr)
       ? r.preferred_days_arr
       : ((r as any).preferred_days ? String((r as any).preferred_days).split(",").map(s => s.trim()).filter(Boolean) : []);
-    setEditForm({
-      class_type: r.class_type || "",
-      preferred_days: daysArr,
-      preferred_time: r.preferred_time || "",
-      start_date: r.start_date || "",
-      end_date: r.end_date || "",
-      notes: String((r as any).notes || ""),
+    const enrolled = (r as any).level_english === 'enrolled';
+    const is12 = r.class_type === '1:2';
+    const krNames = String(r.student_name_kr || '').split(',').map(s => s.trim());
+    const enNames = String(r.student_name_en || '').split(',').map(s => s.trim());
+    setForm({
+      ...INIT_FORM,
+      student_name_kr: is12 ? '' : (r.student_name_kr || ''),
+      student_name_en: is12 ? '' : (r.student_name_en || ''),
+      student1_name_kr: is12 ? (krNames[0] || '') : '',
+      student1_name_en: is12 ? (enNames[0] || '') : '',
+      student2_name_kr: is12 ? (krNames[1] || '') : '',
+      student2_name_en: is12 ? (enNames[1] || '') : '',
+      class_type: r.class_type || '',
+      start_date: r.start_date || '',
+      end_date: r.end_date || '',
+      preferred_days_arr: daysArr,
+      skip_dates: (r as any).skip_dates || '',
+      preferred_time: r.preferred_time || '',
+      is_enrolled: enrolled,
+      level_english: enrolled ? '' : ((r as any).level_english || ''),
+      level_speaking: enrolled ? '' : ((r as any).level_speaking || ''),
+      level_reading:  enrolled ? '' : ((r as any).level_reading || ''),
+      level_writing:  enrolled ? '' : ((r as any).level_writing || ''),
+      textbook: (r as any).textbook || '',
+      class_style: (r as any).class_style || '',
+      class_focus_arr: Array.isArray((r as any).class_focus_arr) ? (r as any).class_focus_arr : [],
+      child_personality: (r as any).child_personality || '',
+      privacy_agreed: true,
+      agreed_rules: true,
     });
-    setEditId(r.id);
-  }
-  function toggleEditDay(d: string) {
-    setEditForm(f => ({ ...f, preferred_days: f.preferred_days.includes(d) ? f.preferred_days.filter(x => x !== d) : [...f.preferred_days, d] }));
-  }
-  async function submitEdit() {
-    if (!editId) return;
-    setEditSaving(true);
-    const res = await fetch("/api/portal/tutor-edit", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: editId,
-        class_type: editForm.class_type,
-        preferred_days: editForm.preferred_days,
-        preferred_time: editForm.preferred_time,
-        start_date: editForm.start_date,
-        end_date: editForm.end_date,
-        notes: editForm.notes,
-      }),
-    });
-    setEditSaving(false);
-    if (!res.ok) {
-      const r = await res.json().catch(() => ({}));
-      alert("수정 실패: " + (r.error || ""));
-      return;
-    }
-    setEditId("");
-    setTutorToast("수정이 완료되었습니다.");
-    setTimeout(() => setTutorToast(""), 2500);
-    reload();
+    setEditingId(r.id);
+    setTimeout(() => document.getElementById('tutor-apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
   async function submitCancelReq() {
@@ -653,6 +675,8 @@ export default function PortalTutorPage() {
           <button onClick={() => setDone(false)} style={{ marginTop: 16, padding: "10px 20px", background: "#fff", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 8, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>추가 신청</button>
         </div>
       ) : (<>
+      <div id="tutor-apply-form" />
+      {editingId && <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:10,padding:'12px 16px',marginBottom:14,fontSize:13,fontWeight:700,color:'#1d4ed8'}}>✏️ 신청 수정 중 — 기존 신청 내용이 채워졌습니다. 바꿀 부분(레벨 포함)만 수정 후 아래 &quot;수정 저장&quot;을 눌러주세요.</div>}
       <div style={{fontSize:13,fontWeight:800,color:"#7c3aed",marginBottom:8,padding:"4px 12px",background:"#f5f3ff",borderRadius:8,display:"inline-block"}}>📋 신청 1</div>
       <div className="sec">
         <h2>기본 정보</h2>
@@ -1029,11 +1053,12 @@ export default function PortalTutorPage() {
           const outOfRange =
             (!!form.start_date && !!bs && form.start_date < bs) ||
             (!!form.end_date   && !!be && form.end_date   > be);
-          return (
+          return (<>
             <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
-              {saving ? "신청 중..." : outOfRange ? "예약 기간을 벗어났습니다" : "튜터 수업 신청하기"}
+              {saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "예약 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
             </button>
-          );
+            {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); }}>수정 취소</button>}
+          </>);
         })()}
         {msg && <div className={`msg ${msg.includes("완료") ? "msg-ok" : "msg-err"}`}>{msg}</div>}
       </div>
@@ -1255,81 +1280,6 @@ export default function PortalTutorPage() {
         </div>
       );
     })()}
-
-    {editId && (
-      <div className="modal-bg" onClick={() => !editSaving && setEditId("")}>
-        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
-          <h3>✏️ 신청 수정</h3>
-          <div className="modal-sub">대기중 상태에서만 수정 가능합니다.</div>
-
-          <div style={{ marginTop: 14 }}>
-            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>수업 유형</label>
-            <div style={{ display:"flex", gap:6 }}>
-              {["1:1","1:2"].map(v => (
-                <button key={v} type="button" onClick={() => setEditForm(f => ({ ...f, class_type: v }))}
-                  style={{ flex:1, padding:"10px", border:"1.5px solid "+(editForm.class_type===v?"#1a6fc4":"#e2e8f0"), borderRadius:8, background:editForm.class_type===v?"#eff6ff":"#fff", color:editForm.class_type===v?"#1a6fc4":"#475569", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
-                >{v}</button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>희망 요일</label>
-            <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-              {DAYS.map(d => (
-                <button key={d} type="button" onClick={() => toggleEditDay(d)}
-                  style={{ flex:"1 1 auto", minWidth:42, padding:"8px 6px", border:"1.5px solid "+(editForm.preferred_days.includes(d)?"#1a6fc4":"#e2e8f0"), borderRadius:8, background:editForm.preferred_days.includes(d)?"#eff6ff":"#fff", color:editForm.preferred_days.includes(d)?"#1a6fc4":"#475569", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
-                >{d}</button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>희망 시간</label>
-            <input type="text" value={editForm.preferred_time}
-              onChange={e => setEditForm(f => ({ ...f, preferred_time: e.target.value }))}
-              placeholder="예: 14:00 ~ 14:50"
-              style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
-            />
-          </div>
-
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginTop: 14 }}>
-            <div>
-              <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>시작일</label>
-              <input type="date" value={editForm.start_date}
-                onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))}
-                style={{ width:"100%", padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
-              />
-            </div>
-            <div>
-              <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>종료일</label>
-              <input type="date" value={editForm.end_date}
-                onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))}
-                style={{ width:"100%", padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none" }}
-              />
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14 }}>
-            <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>요청사항</label>
-            <textarea value={editForm.notes}
-              onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="요청사항을 입력해주세요"
-              style={{ width:"100%", minHeight:70, padding:"9px 11px", border:"1px solid #e2e8f0", borderRadius:8, fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical" }}
-            />
-          </div>
-
-          <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:16 }}>
-            <button type="button" onClick={() => setEditId("")} disabled={editSaving}
-              style={{ padding:"9px 14px", background:"#fff", color:"#475569", border:"1px solid #cbd5e1", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
-            >닫기</button>
-            <button type="button" onClick={submitEdit} disabled={editSaving}
-              style={{ padding:"9px 18px", background:"#1a6fc4", color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:editSaving?0.6:1 }}
-            >{editSaving ? "저장 중..." : "수정 저장"}</button>
-          </div>
-        </div>
-      </div>
-    )}
 
     {cancelReqId && (
       <div className="modal-bg" onClick={() => !cancelReqSaving && setCancelReqId("")}>

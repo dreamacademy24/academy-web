@@ -9,7 +9,13 @@ const supabase = createClient(
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
-    const { id, class_type, preferred_days, preferred_time, start_date, end_date, notes } = body || {};
+    const {
+      id,
+      class_type, preferred_days, preferred_time, start_date, end_date, notes,
+      student_name_kr, student_name_en, skip_dates,
+      level_english, level_speaking, level_reading, level_writing,
+      textbook, class_style, class_focus_arr, child_personality,
+    } = body || {};
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
     // status가 pending인 경우에만 수정 허용
@@ -33,6 +39,17 @@ export async function PATCH(req: Request) {
     if (start_date !== undefined) update.start_date = start_date;
     if (end_date !== undefined) update.end_date = end_date;
     if (notes !== undefined) update.notes = notes;
+    if (student_name_kr !== undefined) update.student_name_kr = student_name_kr;
+    if (student_name_en !== undefined) update.student_name_en = student_name_en;
+    if (skip_dates !== undefined) update.skip_dates = skip_dates;
+    if (level_english !== undefined) update.level_english = level_english;
+    if (level_speaking !== undefined) update.level_speaking = level_speaking;
+    if (level_reading !== undefined) update.level_reading = level_reading;
+    if (level_writing !== undefined) update.level_writing = level_writing;
+    if (textbook !== undefined) update.textbook = textbook;
+    if (class_style !== undefined) update.class_style = class_style;
+    if (class_focus_arr !== undefined) update.class_focus_arr = class_focus_arr;
+    if (child_personality !== undefined) update.child_personality = child_personality;
 
     const { error } = await supabase.from("tutor_requests").update(update).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
