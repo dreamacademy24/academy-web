@@ -96,8 +96,9 @@ export default function MyApplicationsPage() {
       } catch {}
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        setBookingId(data.session.user.id);
-        load(data.session.user.id);
+        const bid = data.session.user.user_metadata?.booking_id || data.session.user.id;
+        setBookingId(bid);
+        load(bid);
         return;
       }
       router.replace("/portal");

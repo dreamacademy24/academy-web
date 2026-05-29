@@ -219,7 +219,7 @@ export default function PortalTutorPage() {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         setSession({
-          booking_id: data.session.user.id,
+          booking_id: data.session.user.user_metadata?.booking_id || data.session.user.id,
           booking_number: "",
           guest_name: data.session.user.email?.split("@")[0] || "회원",
           expires: Date.now() + 86400000,
