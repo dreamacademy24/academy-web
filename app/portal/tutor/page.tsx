@@ -364,38 +364,6 @@ export default function PortalTutorPage() {
     setForm({ ...INIT_FORM });
     setStudent2Age('');
 
-    // 신청 2 있으면 연속 제출
-    if (form2) {
-      const isFor2b = form2.class_type === '1:2';
-      if (form2.class_type && (form2.student_name_kr || form2.student1_name_kr)) {
-        const row2: Record<string, unknown> = {
-          booking_id: session.booking_id,
-          guest_name: session.guest_name,
-          class_type: form2.class_type,
-          student_name_kr: isFor2b ? form2.student1_name_kr : form2.student_name_kr,
-          student_name_en: isFor2b ? form2.student1_name_en : form2.student_name_en,
-          sessions_per_day: form2.sessions_per_day,
-          start_date: form2.start_date || null,
-          end_date: form2.end_date || null,
-          preferred_days_arr: form2.preferred_days_arr,
-          preferred_time: form2.preferred_time || null,
-          skip_dates: form2.skip_dates || null,
-          privacy_agreed: true, rules_agreed: true,
-        };
-        if (isFor2b) {
-          row2.student2_name_kr = form2.student2_name_kr;
-          row2.student2_name_en = form2.student2_name_en;
-        }
-        await fetch('/api/portal/tutor', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(row2),
-        });
-      }
-      setForm2(null);
-      setStudent2Age2('');
-    }
-
     if (sched2) {
       await fetch('/api/portal/tutor', {
         method: 'POST',

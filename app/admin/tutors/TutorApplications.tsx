@@ -315,7 +315,7 @@ export default function TutorApplications() {
             total_sessions: computedTotalSessions,
             total_amount: computedTotalAmount,
             status: "active",
-            admin_memo: adminForm.admin_memo.trim() || null,
+            admin_memo: `request_id: ${detail.id}${adminForm.admin_memo.trim() ? '\n' + adminForm.admin_memo.trim() : ''}`,
           })
           .select()
           .single();

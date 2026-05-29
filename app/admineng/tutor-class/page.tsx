@@ -33,6 +33,7 @@ const FOCUS_EN: Record<string, string> = {
   phonics: "Phonics", vocabulary: "Vocabulary", activity: "Activity",
 };
 const DAY_EN: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat" };
+const dayToEn: Record<string, string> = { '월':'M','화':'T','수':'W','목':'Th','금':'F','토':'Sa','일':'Su' };
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
   pending:   { label: "Pending",   bg: "#f1f5f9", color: "#475569" },
   reviewing: { label: "Reviewing", bg: "#fef3c7", color: "#92400e" },
@@ -668,7 +669,9 @@ export default function EngTutorClassPage() {
 
   if (!authed) return null;
 
-  const days = (r: TutorReq) => (r.preferred_days || "").split(",").map(d => DAY_EN[d.trim()] || d.trim()).filter(Boolean).join("/");
+  const days = (r: TutorReq) => r.preferred_days
+    ? r.preferred_days.split(',').map(d => dayToEn[d.trim()] || d.trim()).join('/')
+    : '-';
   const tutorName = (id: string | null) => tutors.find(t => t.id === id)?.name || "-";
 
   return (<>
