@@ -254,7 +254,13 @@ export default function MyApplicationsPage() {
                   <b>📅 기간:</b> {fmtDate(String(r.start_date || ""))} ~ {fmtDate(String(r.end_date || ""))}
                 </div>
                 {canCancel(String(r.status || "")) && (
-                  <div className="ma-actions">
+                  <div className="ma-actions" style={{ gap: 6 }}>
+                    {String(r.status || "") === "pending" && (
+                      <button
+                        onClick={() => router.push("/portal/tutor")}
+                        style={{ padding:"6px 12px", background:"#eff6ff", color:"#1d4ed8", border:"1px solid #bfdbfe", borderRadius:7, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+                      >✏️ 수정</button>
+                    )}
                     <button className="ma-cancel-btn" onClick={() => openCancel("tutor_requests", id, `${studentName} 튜터 수업`)}>취소요청</button>
                   </div>
                 )}
