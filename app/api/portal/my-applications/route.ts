@@ -33,9 +33,10 @@ export async function GET(req: Request) {
       .select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, cancel_reason, created_at")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
+    // pickup_requests.request_type 실제값: 'pickup' | 'dropoff' (구버전 'extra_pickup'/'extra_drop' 호환)
     supabase.from("pickup_requests").select("*")
       .eq("booking_id", bookingId)
-      .in("request_type", ["extra_pickup", "extra_drop"])
+      .in("request_type", ["pickup", "dropoff", "extra_pickup", "extra_drop"])
       .order("created_at", { ascending: false }),
   ]);
 

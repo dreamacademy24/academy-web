@@ -273,9 +273,15 @@ export default function MyApplicationsPage() {
             const meta = statusMeta(String(r.status || ""));
             const id = String(r.id || "");
             const reqType = String(r.request_type || "");
-            const typeLabel = reqType === "extra_pickup" ? "추가픽업" : reqType === "extra_drop" ? "추가드랍" : reqType;
-            const typeBg = reqType === "extra_pickup" ? "#dbeafe" : "#fef3c7";
-            const typeFg = reqType === "extra_pickup" ? "#1d4ed8" : "#92400e";
+            const isPickup = reqType === "pickup" || reqType === "extra_pickup";
+            const isDrop = reqType === "dropoff" || reqType === "extra_drop";
+            const typeLabel = reqType === "extra_pickup" ? "추가픽업"
+              : reqType === "extra_drop" ? "추가드랍"
+              : reqType === "pickup" ? "픽업"
+              : reqType === "dropoff" ? "드랍"
+              : reqType;
+            const typeBg = isPickup ? "#dbeafe" : isDrop ? "#fef3c7" : "#f1f5f9";
+            const typeFg = isPickup ? "#1d4ed8" : isDrop ? "#92400e" : "#475569";
             return (
               <div key={id} className="ma-card">
                 <div className="ma-row1">
