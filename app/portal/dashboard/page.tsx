@@ -53,40 +53,45 @@ export default function PortalDashboard() {
   }, [router]);
 
   // booking_id 기반 예약/학생/셔틀/튜터 정보 fetch
-  // 우선순위: portalSession.booking_id → authUser.user_metadata.booking_id
+  // 우선순위: portalSession.booking_id → supabase.auth.getUser().user_metadata.booking_id
   useEffect(() => {
     if (typeof window === "undefined") return;
-    let bookingId: string | null = null;
-    try {
-      const raw = localStorage.getItem("portalSession");
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s?.booking_id) bookingId = s.booking_id;
-      }
-    } catch {}
-    if (!bookingId && authUser?.user_metadata?.booking_id) {
-      bookingId = authUser.user_metadata.booking_id;
-    }
-    if (!bookingId) return;
-    fetch(`/api/bookings/${bookingId}`)
-      .then(r => r.json())
-      .then(d => setBookingInfo(d?.booking || d))
-      .catch(() => {});
-    supabase
-      .from("shuttle_applications")
-      .select("id,tour_name,date,num_people,status,created_at")
-      .eq("booking_id", bookingId)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setShuttleApps(data || []));
-    fetch(`/api/portal/tutor?booking_id=${bookingId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.requests?.some((r: any) => r.status === 'confirmed')) {
-          setHasConfirmedTutor(true);
+    let cancelled = false;
+    (async () => {
+      let bookingId: string | null = null;
+      try {
+        const raw = localStorage.getItem("portalSession");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s?.booking_id) bookingId = s.booking_id;
         }
-      })
-      .catch(() => {});
-  }, [authUser]);
+      } catch {}
+      if (!bookingId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id;
+      }
+      if (!bookingId || cancelled) return;
+      fetch(`/api/bookings/${bookingId}`)
+        .then(r => r.json())
+        .then(d => { if (!cancelled) setBookingInfo(d?.booking || d); })
+        .catch(() => {});
+      supabase
+        .from("shuttle_applications")
+        .select("id,tour_name,date,num_people,status,created_at")
+        .eq("booking_id", bookingId)
+        .order("created_at", { ascending: false })
+        .then(({ data }) => { if (!cancelled) setShuttleApps(data || []); });
+      fetch(`/api/portal/tutor?booking_id=${bookingId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!cancelled && d?.requests?.some((r: any) => r.status === 'confirmed')) {
+            setHasConfirmedTutor(true);
+          }
+        })
+        .catch(() => {});
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   async function logout() {
     if (typeof window !== "undefined") localStorage.removeItem("portalSession");
