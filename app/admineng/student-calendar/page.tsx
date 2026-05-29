@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
 interface Booking {
@@ -96,8 +95,12 @@ export default function EngStudentCalendarPage() {
   const [listLevel, setListLevel] = useState<"all" | "kinder" | "junior">("all");
 
   useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
-    else window.location.href = "/login";
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("teacherSession");
+      if (raw && JSON.parse(raw)?.username) { setAuthed(true); return; }
+    } catch {}
+    window.location.href = "/admineng/hub";
   }, []);
 
   const load = useCallback(async () => {

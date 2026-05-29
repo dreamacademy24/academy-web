@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
 interface Tutor { id: string; name: string; }
@@ -172,13 +171,24 @@ export default function EngTutorClassPage() {
   const [changeNew, setChangeNew] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
-    else window.location.href = "/login";
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("admineng_tutor_name") || "";
-      const info = getAdminInfo();
-      setActingTutor(saved || (info?.name || ""));
+    if (typeof window === "undefined") return;
+    let staffName = "";
+    try {
+      const raw = localStorage.getItem("teacherSession");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.username) {
+          setAuthed(true);
+          staffName = s.name || "";
+        }
+      }
+    } catch {}
+    if (!staffName && !localStorage.getItem("teacherSession")) {
+      window.location.href = "/admineng/hub";
+      return;
     }
+    const saved = localStorage.getItem("admineng_tutor_name") || "";
+    setActingTutor(saved || staffName);
   }, []);
 
   function pickActing(name: string) {

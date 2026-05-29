@@ -2,7 +2,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { isAdminAuthed } from "@/lib/adminAuth";
 
 interface TutorReq {
   id: string;
@@ -128,11 +127,20 @@ export default function EngTutorRequestDetailPage() {
   const [posting, setPosting] = useState(false);
 
   useEffect(() => {
-    if (!isAdminAuthed()) { window.location.href = "/login"; return; }
-    setAuthed(true);
-    if (typeof window !== "undefined") {
-      setActingTutor(localStorage.getItem("admineng_tutor_name") || "");
+    if (typeof window === "undefined") return;
+    let staffName = "";
+    try {
+      const raw = localStorage.getItem("teacherSession");
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s?.username) { setAuthed(true); staffName = s.name || ""; }
+      }
+    } catch {}
+    if (!staffName && !localStorage.getItem("teacherSession")) {
+      window.location.href = "/admineng/hub";
+      return;
     }
+    setActingTutor(localStorage.getItem("admineng_tutor_name") || staffName);
   }, []);
 
   const load = useCallback(async () => {
