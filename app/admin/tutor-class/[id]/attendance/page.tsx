@@ -374,7 +374,7 @@ export default function AttendancePage() {
                     type="text"
                     value={note}
                     onChange={e => setNotesLog(prev => ({ ...prev, [d]: e.target.value }))}
-                    placeholder="메모 입력..."
+                    placeholder="Add note..."
                     style={{flex:1,padding:"5px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
                   />
                 </div>
@@ -382,7 +382,7 @@ export default function AttendancePage() {
             })}
             {dates.every(d => !draft[d] && !notesLog[d]) && (
               <div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:"12px 0"}}>
-                Click a date box to add attendance notes.
+                Click a date box then type a note above.
               </div>
             )}
           </div>

@@ -243,7 +243,7 @@ export default function EngTutorClassPage() {
     setLoadingLessons(true);
     const myMatched = reqs.filter(r => r.assigned_tutor_id === me.id);
     const myReqIds = myMatched.map(r => r.id);
-    const [{ data: direct }, { data: nullRows }] = await Promise.all([
+    const [{ data: direct }, { data: byAppId }] = await Promise.all([
       supabase
         .from("tutor_lessons")
         .select("*")
@@ -253,13 +253,11 @@ export default function EngTutorClassPage() {
         ? supabase
             .from("tutor_lessons")
             .select("*")
-            .is("tutor_id", null)
+            .in("application_id", myReqIds)
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as any[] } as any),
     ]);
-    const matchedNull = (nullRows || []).filter((l: any) =>
-      myReqIds.some(rid => (l.admin_memo || "").includes(`request_id: ${rid}`))
-    );
+    const matchedNull = (byAppId || []);
     const map = new Map<string, any>();
     [...(direct || []), ...matchedNull].forEach(l => map.set(l.id, l));
 
@@ -740,17 +738,17 @@ export default function EngTutorClassPage() {
             <table className="tbl">
               <thead><tr>
                 <th style={{width:"5%"}}>Date</th>
-                <th style={{minWidth:120,whiteSpace:"nowrap"}}>House</th>
-                <th style={{width:"10%"}}>Reserver</th>
-                <th style={{width:"14%"}}>Student</th>
-                <th style={{width:"6%"}}>Age</th>
-                <th style={{width:"5%"}}>Type</th>
-                <th style={{width:"5%"}}>Time</th>
-                <th style={{width:"13%"}}>Period</th>
-                <th style={{width:"7%"}}>Days</th>
-                <th style={{width:"10%"}}>Tutor</th>
+                <th style={{width:"10%",whiteSpace:"nowrap"}}>House</th>
+                <th style={{width:"9%"}}>Reserver</th>
+                <th style={{width:"16%"}}>Student</th>
+                <th style={{width:"4%"}}>Age</th>
+                <th style={{width:"4%"}}>Type</th>
+                <th style={{width:"4%"}}>Time</th>
+                <th style={{width:"11%"}}>Period</th>
+                <th style={{width:"8%"}}>Days</th>
+                <th style={{width:"8%"}}>Tutor</th>
                 <th style={{width:"8%"}}>Status</th>
-                <th style={{width:"14%",textAlign:"center"}}>Action</th>
+                <th style={{width:"13%",textAlign:"center"}}>Action</th>
               </tr></thead>
               <tbody>
                 {reqs.map(r => {
@@ -770,7 +768,17 @@ export default function EngTutorClassPage() {
                           }}>{(r as any).slot_label}</span>
                         )}
                       </td>
-                      <td style={{color:"#475569"}}>{r.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || (r as any).age || "-"}</td>
+                      <td style={{color:"#475569"}}>{(() => {
+                        const b = (r.student_age || "").replace(/\D/g, "");
+                        if (b.length < 8) return r.student_age || "-";
+                        const y = parseInt(b.slice(0, 4));
+                        const m = parseInt(b.slice(4, 6));
+                        const d = parseInt(b.slice(6, 8));
+                        const today = new Date();
+                        let age = today.getFullYear() - y;
+                        if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) age--;
+                        return age > 0 ? `${age}` : (r.student_age || "-");
+                      })()}</td>
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{r.class_type}</span></td>
                       <td><span className="ebadge" title={r.sessions_per_day===2?"100 min":"50 min"} style={{background:r.sessions_per_day===2?"#dbeafe":"#f1f5f9",color:r.sessions_per_day===2?"#1e40af":"#475569"}}>{r.sessions_per_day===2?"2T":"1T"}</span></td>
                       <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>

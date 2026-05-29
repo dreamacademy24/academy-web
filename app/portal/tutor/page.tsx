@@ -1051,7 +1051,28 @@ export default function PortalTutorPage() {
             return (
               <div key={r.id} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>{studentName}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e" }}>
+                    {studentName}
+                    {(() => {
+                      const s = r.status;
+                      const cfg: Record<string, {label:string;bg:string;color:string}> = {
+                        pending:   {label:"검토중",  bg:"#f1f5f9", color:"#475569"},
+                        reviewing: {label:"검토중",  bg:"#f1f5f9", color:"#475569"},
+                        assigned:  {label:"배정완료", bg:"#dbeafe", color:"#1e40af"},
+                        confirmed: {label:"✅ 확정", bg:"#dcfce7", color:"#166534"},
+                        cancelled: {label:"취소됨",  bg:"#fee2e2", color:"#dc2626"},
+                      };
+                      const c = cfg[s] || {label:s, bg:"#f1f5f9", color:"#475569"};
+                      return (
+                        <span style={{
+                          display:"inline-block", padding:"2px 10px",
+                          background:c.bg, color:c.color,
+                          borderRadius:20, fontSize:11, fontWeight:700,
+                          marginLeft:8
+                        }}>{c.label}</span>
+                      );
+                    })()}
+                  </div>
                   <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.7 }}>
