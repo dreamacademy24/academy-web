@@ -246,7 +246,7 @@ export default function PortalTutorPage() {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
           if (sd.booker) setBookerInfo(sd.booker);
-          setBookingInfo({ _loaded: true }); // 모달 로딩 상태 해제용
+          setBookingInfo({ _loaded: true, checkin_date: sd.checkin_date, checkout_date: sd.checkout_date }); // 모달 로딩 상태 해제 + 날짜 input min/max 바인딩
         }
       }
     })();
