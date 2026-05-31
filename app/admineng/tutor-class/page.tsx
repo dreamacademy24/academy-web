@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -19,6 +20,7 @@ interface TutorReq {
   child_personality: string | null;
   status: string; assigned_tutor_id: string | null;
   admin_memo: string | null;
+  schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
 
 const LEVEL_EN: Record<string, string> = {
@@ -597,7 +599,11 @@ export default function EngTutorClassPage() {
         const { error: e2 } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
         if (e2) console.warn("[takeClass] lesson UPDATE failed:", e2);
       } else {
-        const { error: e3 } = await supabase.from("tutor_lessons").insert(lessonPayload);
+        const _to = blocksToTimeOverrides(r.schedule_blocks);
+        const insertPayload = Object.keys(_to).length > 0
+          ? { ...lessonPayload, time_overrides: _to }
+          : lessonPayload;
+        const { error: e3 } = await supabase.from("tutor_lessons").insert(insertPayload);
         if (e3) console.warn("[takeClass] lesson INSERT failed:", e3);
       }
 

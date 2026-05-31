@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
 
 interface TutorRow {
   id: string;
@@ -202,7 +203,11 @@ export default function TutorRequestDetailPage() {
         if (upErr) { console.error("[save] tutor_lessons UPDATE 실패:", upErr); lessonMsg = " (수업 동기화 실패: " + upErr.message + ")"; }
         else console.log("[save] tutor_lessons UPDATED id=", existing.id);
       } else {
-        const { data: ins, error: insErr } = await supabase.from("tutor_lessons").insert(lessonPayload).select().single();
+        const to = blocksToTimeOverrides(row.schedule_blocks);
+        const insertPayload = Object.keys(to).length > 0
+          ? { ...lessonPayload, time_overrides: to }
+          : lessonPayload;
+        const { data: ins, error: insErr } = await supabase.from("tutor_lessons").insert(insertPayload).select().single();
         if (insErr) { console.error("[save] tutor_lessons INSERT 실패:", insErr); lessonMsg = " (수업 생성 실패: " + insErr.message + ")"; }
         else console.log("[save] tutor_lessons INSERTED id=", ins?.id);
       }

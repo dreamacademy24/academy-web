@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
 import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
@@ -290,34 +291,37 @@ export default function TutorApplications() {
         const sessionsPerDay = detail.sessions_per_day || 1;
         const computedTotalAmount = parsedAmount ?? (computedTotalSessions * sessionsPerDay * (detail.hourly_rate || 0));
 
+        const _to = blocksToTimeOverrides(detail.schedule_blocks);
+        const lessonInsertPayload: Record<string, unknown> = {
+          application_id: detail.id,
+          house_or_reserver: detail.house_or_reserver,
+          student_names: detail.children_names,
+          student_ages: detail.children_ages,
+          tutor_id: adminForm.assigned_tutor_id || null,
+          class_type: detail.class_type,
+          sessions_per_day: sessionsPerDay,
+          hourly_rate: detail.hourly_rate,
+          start_date: detail.start_date,
+          end_date: detail.end_date,
+          class_days: detail.class_days,
+          class_time: detail.class_time,
+          confirmed_time: null,
+          overall_level: detail.overall_level,
+          speaking_level: detail.speaking_level,
+          reading_level: detail.reading_level,
+          writing_level: detail.writing_level,
+          textbook: detail.textbook,
+          class_style: detail.class_style,
+          class_focus: detail.class_focus,
+          total_sessions: computedTotalSessions,
+          total_amount: computedTotalAmount,
+          status: "active",
+          admin_memo: `request_id: ${detail.id}${adminForm.admin_memo.trim() ? '\n' + adminForm.admin_memo.trim() : ''}`,
+        };
+        if (Object.keys(_to).length > 0) lessonInsertPayload.time_overrides = _to;
         const { data: lesson, error: e2 } = await supabase
           .from("tutor_lessons")
-          .insert({
-            application_id: detail.id,
-            house_or_reserver: detail.house_or_reserver,
-            student_names: detail.children_names,
-            student_ages: detail.children_ages,
-            tutor_id: adminForm.assigned_tutor_id || null,
-            class_type: detail.class_type,
-            sessions_per_day: sessionsPerDay,
-            hourly_rate: detail.hourly_rate,
-            start_date: detail.start_date,
-            end_date: detail.end_date,
-            class_days: detail.class_days,
-            class_time: detail.class_time,
-            confirmed_time: null,
-            overall_level: detail.overall_level,
-            speaking_level: detail.speaking_level,
-            reading_level: detail.reading_level,
-            writing_level: detail.writing_level,
-            textbook: detail.textbook,
-            class_style: detail.class_style,
-            class_focus: detail.class_focus,
-            total_sessions: computedTotalSessions,
-            total_amount: computedTotalAmount,
-            status: "active",
-            admin_memo: `request_id: ${detail.id}${adminForm.admin_memo.trim() ? '\n' + adminForm.admin_memo.trim() : ''}`,
-          })
+          .insert(lessonInsertPayload)
           .select()
           .single();
 
