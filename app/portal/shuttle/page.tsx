@@ -27,24 +27,34 @@ function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
   const d = new Date(dateStr + 'T00:00:00');
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
-  const hmart: ShSlot[] = [{ time: '10:00am', name: 'H-Mart 쇼핑', detail: '11:00 H마트 → 드림하우스' }];
+  const D_HMART = '10:00 드림하우스→H마트 · 11:00 H마트→드림하우스 · 최대 출발 11시, 장보기 후 바로 탑승 · ⚠️ 돌아오는 편 미탑승 시 기사님께 꼭 말씀해 주세요';
+  const D_ILCORSO = '16:00 드림하우스 출발 · 도착 후 2시간 30분 후 복귀';
+  const D_ANJO = '13:00 드림하우스 출발 · 20:00 복귀';
+  const D_FUNPARK = '14:00 드림하우스 출발 · 20:00 복귀';
+  const D_SAFARI = '8:30 드림하우스 출발 · 15:00 복귀 · 유료 인당 200페소';
+  const D_SHRINE = '17:30 드림하우스 출발 · 도착 후 40분 후 복귀';
+  const D_LANTAW = '16:00 드림하우스 출발 · 도착 후 2시간 30분 후 복귀 · 레스토랑 예약 대행, 늦은 예약 시 마감될 수 있음';
+  const D_PAROLA = '16:40 드림하우스 출발 · 식사 종료 후 함께 이동 · ⚠️ 별도 출발 시간 없음, 다른 하우스 일정 함께 확인 부탁드립니다';
+  const D_SMSEASIDE = '10:30 드림하우스 출발 · 가는 셔틀만 제공, 개별 복귀';
+
+  const hmart: ShSlot[] = [{ time: '10:00am', name: 'H-Mart 쇼핑', detail: D_HMART }];
   if (dow===1||dow===3||dow===5) return hmart;
   if (dow===2) return odd
-    ? [{ time:'4:40pm',  name:'파롤라 (Parola)',       detail:'방문 후 복귀' }]
-    : [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail:'쇼핑 후 복귀' }];
+    ? [{ time:'4:40pm',  name:'파롤라 (Parola)',       detail: D_PAROLA }]
+    : [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail: D_SMSEASIDE }];
   if (dow===4) return odd
-    ? [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail:'쇼핑 후 복귀' }]
-    : [{ time:'5:30pm',  name:'막탄 쉬라인',            detail:'방문 후 복귀' }];
+    ? [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail: D_SMSEASIDE }]
+    : [{ time:'5:30pm',  name:'막탄 쉬라인',            detail: D_SHRINE }];
   if (dow===6) return odd
-    ? [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' },
-       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail:'2시간 30분 후 복귀' }]
-    : [{ time:'2:00pm',  name:'펀파크 (Fun Park)',      detail:'방문 후 복귀' },
-       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail:'방문 후 복귀' }];
+    ? [{ time:'8:30am',  name:'세부 사파리',            detail: D_SAFARI },
+       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail: D_ILCORSO }]
+    : [{ time:'2:00pm',  name:'펀파크 (Fun Park)',      detail: D_FUNPARK },
+       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail: D_LANTAW }];
   if (dow===0) return odd
-    ? [{ time:'1:00pm',  name:'안조 월드 (Anjo World)', detail:'방문 후 복귀' },
-       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail:'방문 후 복귀' }]
-    : [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' },
-       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail:'2시간 30분 후 복귀' }];
+    ? [{ time:'1:00pm',  name:'안조 월드 (Anjo World)', detail: D_ANJO },
+       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail: D_LANTAW }]
+    : [{ time:'8:30am',  name:'세부 사파리',            detail: D_SAFARI },
+       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail: D_ILCORSO }];
   return [];
 }
 
@@ -504,13 +514,14 @@ export default function PortalShuttlePage() {
               </ul>
               <h3>🚗 탑승 중 유의사항</h3>
               <ul>
-                <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가능합니다.</li>
+                <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가합니다.</li>
                 <li>가는 차량을 탑승하지 않고 돌아오는 차량만 탑승하는 것은 불가합니다.</li>
                 <li>가는 차량만 탑승하는 것은 가능합니다.</li>
                 <li>최대 정원 내에서만 베이비시터 동반 탑승이 가능합니다.</li>
                 <li>투어 셔틀은 <strong>투숙객 전용 서비스</strong>로, 외부인은 탑승이 불가합니다.</li>
                 <li>정원 외 탑승은 안전상 절대 허용되지 않습니다.</li>
               </ul>
+              <p style={{fontSize:12, color:"var(--muted)", marginTop:12}}>자세한 셔틀 시간표는 드림센터 내부 공지를 기준으로 합니다.</p>
             </div>
             <div className="modal-footer">
               <label className="modal-no-show">
@@ -677,7 +688,7 @@ export default function PortalShuttlePage() {
               <div className="rules-section">
                 <h2>탑승 중 유의사항</h2>
                 <ul>
-                  <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가능합니다.</li>
+                  <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가합니다.</li>
                   <li>가는 차량을 탑승하지 않고 돌아오는 차량만 탑승하는 것은 불가합니다.</li>
                   <li>가는 차량만 탑승하는 것은 가능합니다.</li>
                   <li>최대 정원 내에서만 베이비시터 동반 탑승이 가능합니다.</li>
