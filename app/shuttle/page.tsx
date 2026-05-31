@@ -60,20 +60,28 @@ function slotSlug(name: string): string {
 
 const DAY_KR = ['일','월','화','수','목','금','토'];
 
+// 주차 단위: 화요일 시작 ~ 다음주 월요일 종료
 function buildShWeeks(year: number, month: number) {
+  type Item = { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string };
   const days = new Date(year, month, 0).getDate();
-  const weeks: { label: string; items: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] }[] = [];
-  let week: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] = [];
+  const weeks: { label: string; items: Item[] }[] = [];
+  let week: Item[] = [];
+  const flush = () => {
+    if (week.length === 0) return;
+    const first = week[0], last = week[week.length-1];
+    const fD = new Date(first.dateStr + 'T00:00:00');
+    const lD = new Date(last.dateStr + 'T00:00:00');
+    const label = `${fD.getMonth()+1}/${fD.getDate()} ${DAY_KR[fD.getDay()]} ~ ${lD.getMonth()+1}/${lD.getDate()} ${DAY_KR[lD.getDay()]}`;
+    weeks.push({ label, items: week });
+    week = [];
+  };
   for (let d = 1; d <= days; d++) {
     const date = new Date(year, month-1, d);
     const dow = date.getDay();
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if (dow === 2 && week.length > 0) flush();
     week.push({ dateStr, dayLabel:`${month}/${d} (${DAY_KR[dow]})`, slots: getShSlots(dateStr), special: SHUTTLE_SPECIAL_MSG[dateStr] });
-    if (dow===6 || d===days) {
-      const wn = weeks.length+1;
-      weeks.push({ label:`${wn}주차 ${week[0].dayLabel.split(' ')[0]} – ${week[week.length-1].dayLabel.split(' ')[0]}`, items: week });
-      week = [];
-    }
+    if (d === days) flush();
   }
   return weeks;
 }
@@ -485,7 +493,7 @@ export default function ShuttlePage() {
                       return (
                         <div key={key} className="week-accordion">
                           <button type="button" className="week-accordion-btn" data-open={isOpen ? "true" : "false"} onClick={() => toggleAccordion(key)}>
-                            <span className="week-acc-title">{wi+1}주차 <em>{wk.label.replace(/^\d+주차\s*/, '')}</em></span>
+                            <span className="week-acc-title">{wk.label}</span>
                             <span className="week-acc-arrow">▾</span>
                           </button>
                           <div className="week-accordion-body" data-open={isOpen ? "true" : "false"}>

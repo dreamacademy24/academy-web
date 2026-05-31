@@ -62,25 +62,36 @@ function slotSlug(name: string): string {
 
 const DAY_KR = ['일','월','화','수','목','금','토'];
 
-function buildShWeeks(year: number, month: number) {
+// 주차 단위: 화요일 시작 ~ 다음주 월요일 종료. rangeStart/End 안에서만 포함.
+function buildShWeeks(year: number, month: number, rangeStart?: string, rangeEnd?: string) {
+  type Item = { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string };
   const days = new Date(year, month, 0).getDate();
-  const weeks: { label: string; items: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] }[] = [];
-  let week: { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string }[] = [];
+  const weeks: { label: string; items: Item[] }[] = [];
+  let week: Item[] = [];
+  const flush = () => {
+    if (week.length === 0) return;
+    const first = week[0], last = week[week.length-1];
+    const fD = new Date(first.dateStr + 'T00:00:00');
+    const lD = new Date(last.dateStr + 'T00:00:00');
+    const label = `${fD.getMonth()+1}/${fD.getDate()} ${DAY_KR[fD.getDay()]} ~ ${lD.getMonth()+1}/${lD.getDate()} ${DAY_KR[lD.getDay()]}`;
+    weeks.push({ label, items: week });
+    week = [];
+  };
   for (let d = 1; d <= days; d++) {
     const date = new Date(year, month-1, d);
     const dow = date.getDay();
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if (rangeStart && dateStr < rangeStart) continue;
+    if (rangeEnd && dateStr > rangeEnd) continue;
+    // 화요일(=2)에 도달하면 직전 주차 마감
+    if (dow === 2 && week.length > 0) flush();
     week.push({ dateStr, dayLabel:`${month}/${d} (${DAY_KR[dow]})`, slots: getShSlots(dateStr), special: SHUTTLE_SPECIAL_MSG[dateStr] });
-    if (dow===6 || d===days) {
-      const wn = weeks.length+1;
-      weeks.push({ label:`${wn}주차 ${week[0].dayLabel.split(' ')[0]} – ${week[week.length-1].dayLabel.split(' ')[0]}`, items: week });
-      week = [];
-    }
+    if (d === days) flush();
   }
   return weeks;
 }
 
-const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
+const ALL_MONTHS = ['5','6','7','8','9','10','11','12'];
 
 interface PortalSession { booking_id: string; guest_name: string; expires: number }
 
@@ -89,9 +100,10 @@ type ShuttleApp = { id: string; created_at: string; date: string | null; request
 export default function PortalShuttlePage() {
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string } | null>(null);
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
-  const [activeMonth, setActiveMonth] = useState("5");
+  const [activeMonth, setActiveMonth] = useState("");
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [myApps, setMyApps] = useState<ShuttleApp[]>([]);
@@ -109,6 +121,44 @@ export default function PortalShuttlePage() {
   useEffect(() => {
     if (session?.booking_id) loadMyApps(session.booking_id);
   }, [session, loadMyApps]);
+
+  // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
+  useEffect(() => {
+    if (!session?.booking_id) return;
+    fetch(`/api/bookings/${session.booking_id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const b = d?.booking || d;
+        if (!b) return;
+        const ci = String(b.check_in || b.checkin_date || '').slice(0, 10);
+        const co = String(b.check_out || b.checkout_date || '').slice(0, 10);
+        const room = String(b.house_no || b.accom_room || b.accom_type || '').trim();
+        setBookingMeta({ checkin: ci, checkout: co, room });
+      })
+      .catch(() => {});
+  }, [session]);
+
+  // 예약 기간 내 월만 노출 + 첫 월 기본 선택
+  const visibleMonths = (() => {
+    if (!bookingMeta?.checkin || !bookingMeta?.checkout) return ALL_MONTHS;
+    const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
+    const eM = parseInt(bookingMeta.checkout.slice(5, 7), 10);
+    const sY = parseInt(bookingMeta.checkin.slice(0, 4), 10);
+    const eY = parseInt(bookingMeta.checkout.slice(0, 4), 10);
+    return ALL_MONTHS.filter(m => {
+      const mi = parseInt(m, 10);
+      const inS = sY < 2026 || (sY === 2026 && mi >= sM);
+      const inE = eY > 2026 || (eY === 2026 && mi <= eM);
+      return inS && inE;
+    });
+  })();
+
+  useEffect(() => {
+    if (visibleMonths.length === 0) return;
+    if (!activeMonth || !visibleMonths.includes(activeMonth)) {
+      setActiveMonth(visibleMonths[0]);
+    }
+  }, [visibleMonths.join(','), activeMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const STORAGE_KEY = "shuttle_rules_confirmed";
   const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbwqK13BTYKhX4HqJHxJCotHP2X2lbtdRptQkW-j9A6-ZffkRtt1B8v1IKwIZ6uMBM4/exec";
@@ -233,7 +283,7 @@ export default function PortalShuttlePage() {
         date: scheduleString,
         people_count: Number(formData.get("people")) || 1,
         message: formData.get("memo") as string,
-        room_number: formData.get("room") as string,
+        room_number: bookingMeta?.room || "",
         request: formData.get("memo") as string,
       }).then(() => {});
 
@@ -493,32 +543,23 @@ export default function PortalShuttlePage() {
               </header>
               <form id="shuttle-form" ref={formRef} onSubmit={handleSubmit}>
                 <div className="field">
-                  <p className="label-main">픽업 기준 숙소<span className="required">*</span></p>
-                  <p className="label-sub">드림하우스, 제이파크, 큐브나인 중 한 곳을 선택해 주세요.</p>
-                  <div className="radio-group">
-                    <label className="radio-pill"><input type="radio" name="baseHouse" value="dreamhouse" required /><span className="bullet"></span><span className="text">드림하우스</span></label>
-                    <label className="radio-pill"><input type="radio" name="baseHouse" value="jpark" /><span className="bullet"></span><span className="text">제이파크</span></label>
-                    <label className="radio-pill"><input type="radio" name="baseHouse" value="cube9" /><span className="bullet"></span><span className="text">큐브나인</span></label>
-                  </div>
-                  <p className="helper">확정/변경 안내는 드림센터 및 아카데미 공식 채널을 통해 전달됩니다.</p>
-                </div>
-                <div className="field">
                   <p className="label-main">셔틀 스케쥴에서 선택<span className="required">*</span></p>
                   <p className="label-sub">이용하실 날짜와 장소를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 주말 일정입니다.</p>
                   <div className="month-toggle">
-                    {ACTIVE_MONTHS.map(m => (
+                    {visibleMonths.map(m => (
                       <button key={m} type="button" data-active={activeMonth === m ? "true" : "false"} onClick={() => setActiveMonth(m)}>{m}월</button>
                     ))}
                   </div>
                   <div className="month-schedules">
-                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10)).map((wk, wi) => {
+                    {visibleMonths.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), bookingMeta?.checkin, bookingMeta?.checkout).map((wk, wi) => {
                       const key = `${activeMonth}-${wi+1}`;
                       const isOpen = !!accordionState[key];
                       const m = parseInt(activeMonth, 10);
+                      if (wk.items.length === 0) return null;
                       return (
                         <div key={key} className="week-accordion">
                           <button type="button" className="week-accordion-btn" data-open={isOpen ? "true" : "false"} onClick={() => toggleAccordion(key)}>
-                            <span className="week-acc-title">{wi+1}주차 <em>{wk.label.replace(/^\d+주차\s*/, '')}</em></span>
+                            <span className="week-acc-title">{wk.label}</span>
                             <span className="week-acc-arrow">▾</span>
                           </button>
                           <div className="week-accordion-body" data-open={isOpen ? "true" : "false"}>
@@ -556,15 +597,9 @@ export default function PortalShuttlePage() {
                   <p className="month-hint">※ 자세한 일정과 변경 사항은 드림센터 공지 및 현지 안내를 기준으로 합니다.</p>
                 </div>
 
-                <div className="field-row">
-                  <div className="field">
-                    <label className="label-main" htmlFor="people">탑승 인원<span className="required">*</span></label>
-                    <input id="people" name="people" type="number" min={1} required placeholder="예) 2" />
-                  </div>
-                  <div className="field">
-                    <label className="label-main" htmlFor="room">방 번호<span className="required">*</span></label>
-                    <input id="room" name="room" type="text" required placeholder="예) 드하 5호 / C755 / 입실전" />
-                  </div>
+                <div className="field">
+                  <label className="label-main" htmlFor="people">탑승 인원<span className="required">*</span></label>
+                  <input id="people" name="people" type="number" min={1} required placeholder="예) 2" />
                 </div>
 
                 <div className="field">
