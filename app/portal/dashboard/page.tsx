@@ -21,6 +21,7 @@ export default function PortalDashboard() {
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [shuttleApps, setShuttleApps] = useState<any[]>([]);
   const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
+  const [hasNewNotes, setHasNewNotes] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -87,6 +88,9 @@ export default function PortalDashboard() {
           if (!cancelled && d?.requests?.some((r: any) => r.status === 'confirmed')) {
             setHasConfirmedTutor(true);
           }
+          const anyNotes = d?.notesMap && Object.values(d.notesMap)
+            .some((a: any) => Array.isArray(a) && a.length > 0);
+          if (!cancelled && anyNotes) setHasNewNotes(true);
         })
         .catch(() => {});
     })();
@@ -224,6 +228,31 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               </div>
               <div style={{fontSize:12,color:"#166534"}}>
                 예약 확정 인보이스를 확인하세요 →
+              </div>
+            </div>
+          </div>
+        </a>
+      )}
+
+      {hasNewNotes && (
+        <a href="/portal/tutor" style={{display:"block",textDecoration:"none",marginBottom:16}}>
+          <div style={{
+            background:"linear-gradient(135deg,#fee2e2,#fecaca)",
+            border:"2px solid #fca5a5",
+            borderRadius:16,
+            padding:"16px 20px",
+            display:"flex",
+            alignItems:"center",
+            gap:14,
+            cursor:"pointer",
+          }}>
+            <div style={{fontSize:32}}>📝</div>
+            <div>
+              <div style={{fontSize:14,fontWeight:800,color:"#b91c1c",marginBottom:3}}>
+                새 데일리 노트가 도착했습니다!
+              </div>
+              <div style={{fontSize:12,color:"#991b1b"}}>
+                튜터 수업 노트를 확인하세요 →
               </div>
             </div>
           </div>
