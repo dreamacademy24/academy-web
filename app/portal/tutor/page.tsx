@@ -199,6 +199,7 @@ export default function PortalTutorPage() {
   const [form2, setForm2] = useState<typeof INIT_FORM2 | null>(null);
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([{ ...INIT_BLOCK }]);
   const [timeBlockIdx, setTimeBlockIdx] = useState<number>(0);
+  const [scheduleMode, setScheduleMode] = useState<'same' | 'byday'>('same');
   const [student2Age2, setStudent2Age2] = useState('');
   const [student2Age, setStudent2Age] = useState('');
   const [myApplications, setMyApplications] = useState<any[]>([]);
@@ -487,12 +488,14 @@ export default function PortalTutorPage() {
         time: String(b.time || ''),
         sessions_per_day: (b.sessions_per_day === 2 ? 2 : 1) as 1 | 2,
       })));
+      setScheduleMode(rawBlocks.length > 1 ? 'byday' : 'same');
     } else {
       setBlocks([{
         days: daysArr,
         time: r.preferred_time || '',
         sessions_per_day: ((r as any).sessions_per_day === 2 ? 2 : 1) as 1 | 2,
       }]);
+      setScheduleMode('same');
     }
     setEditingId(r.id);
     setTimeout(() => document.getElementById('tutor-apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -821,7 +824,45 @@ export default function PortalTutorPage() {
           );
         })()}
         <div className="q">
-          <label className="q-label"><span className="num">5</span>수업 일정 (요일 + 시간)</label>
+          <label className="q-label">
+            <span className="num">5</span>수업 일정 (요일 + 시간)
+            {(() => {
+              const ci = bookingInfo?.check_in || bookingInfo?.checkin_date;
+              const co = bookingInfo?.check_out || bookingInfo?.checkout_date;
+              if (!ci || !co) return null;
+              return (
+                <span style={{marginLeft:8, fontSize:11, fontWeight:700, color:'#1d4ed8', background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:6, padding:'2px 8px', display:'inline-block'}}>
+                  🔒 예약 기간 {ci} ~ {co}
+                </span>
+              );
+            })()}
+          </label>
+
+          <div style={{display:'flex', gap:6, marginBottom:10, flexWrap:'wrap'}}>
+            {([
+              { v:'same' as const, label:'매주 같아요' },
+              { v:'byday' as const, label:'요일마다 시간 달라요' },
+            ]).map(p => {
+              const on = scheduleMode === p.v;
+              return (
+                <button key={p.v} type="button"
+                  onClick={() => {
+                    if (p.v === 'same' && scheduleMode !== 'same') {
+                      setBlocks(prev => prev.length > 0 ? [prev[0]] : [{ ...INIT_BLOCK }]);
+                    }
+                    setScheduleMode(p.v);
+                  }}
+                  style={{padding:'6px 14px', border:`1.5px solid ${on?'#1a6fc4':'#e2e8f0'}`, borderRadius:999, background:on?'#eff6ff':'#fff', color:on?'#1a6fc4':'#475569', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit'}}>
+                  {p.label}
+                </button>
+              );
+            })}
+            <button type="button" disabled
+              style={{padding:'6px 14px', border:'1.5px solid #e5e7eb', borderRadius:999, background:'#f9fafb', color:'#9ca3af', fontSize:12, fontWeight:700, cursor:'not-allowed', fontFamily:'inherit'}}>
+              주마다 달라요 (곧)
+            </button>
+          </div>
+
           {blocks.map((b, idx) => (
             <div key={idx} style={{padding:14, border:'1.5px solid #e2e8f0', borderRadius:10, marginBottom:10, background:'#f8fafc'}}>
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10}}>
@@ -884,11 +925,68 @@ export default function PortalTutorPage() {
               </div>
             </div>
           ))}
-          <button type="button" onClick={() => setBlocks(prev => [...prev, { ...INIT_BLOCK }])}
-            style={{padding:'10px 24px', border:'2px dashed #1a6fc4', borderRadius:10, background:'#eff6ff', color:'#1a6fc4', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', width:'100%'}}>
-            ➕ 다른 시간/요일 추가
-          </button>
+          {scheduleMode === 'byday' && (
+            <button type="button" onClick={() => setBlocks(prev => [...prev, { ...INIT_BLOCK }])}
+              style={{padding:'10px 24px', border:'2px dashed #1a6fc4', borderRadius:10, background:'#eff6ff', color:'#1a6fc4', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', width:'100%'}}>
+              ➕ 다른 시간/요일 추가
+            </button>
+          )}
         </div>
+
+        {(() => {
+          const validBlocks = blocks.filter(b => b.days.length > 0 && (b.time || '').trim() !== '');
+          if (validBlocks.length === 0 || !form.start_date || !form.end_date) return null;
+          const KR_TO_IDX: Record<string, number> = {'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+          const occInRange = (days: string[]) => {
+            const s = new Date(form.start_date + 'T00:00:00');
+            const e = new Date(form.end_date + 'T00:00:00');
+            if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return 0;
+            const idxSet = new Set(days.map(d => KR_TO_IDX[d]).filter(i => i !== undefined));
+            let cnt = 0;
+            const d = new Date(s);
+            while (d <= e) {
+              if (idxSet.has(d.getDay())) cnt++;
+              d.setDate(d.getDate() + 1);
+            }
+            return cnt;
+          };
+          const N = validBlocks.reduce((s, b) => s + b.days.length * b.sessions_per_day, 0);
+          const K = validBlocks.reduce((s, b) => s + occInRange(b.days) * b.sessions_per_day, 0);
+          const ms = new Date(form.end_date + 'T00:00:00').getTime() - new Date(form.start_date + 'T00:00:00').getTime();
+          const days = Math.floor(ms / 86400000) + 1;
+          const M = Math.max(1, Math.ceil(days / 7));
+          const unit = form.class_type === '1:2' ? 350 : 300;
+          const amount = K * unit;
+          const DAY_ORDER = ['월','화','수','목','금','토','일'];
+          return (
+            <div className="q" style={{padding:14, border:'1.5px solid #bfdbfe', borderRadius:10, background:'#eff6ff'}}>
+              <div style={{fontSize:13, fontWeight:800, color:'#1d4ed8', marginBottom:10}}>📅 미리보기</div>
+              <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:4, marginBottom:12}}>
+                {DAY_ORDER.map(d => {
+                  const times = validBlocks.filter(b => b.days.includes(d)).map(b => b.time);
+                  const isWeekend = d === '토' || d === '일';
+                  return (
+                    <div key={d} style={{padding:'8px 4px', background:'#fff', borderRadius:6, textAlign:'center', minHeight:60, display:'flex', flexDirection:'column', justifyContent:'center', border:'1px solid #e2e8f0'}}>
+                      <div style={{fontSize:11, fontWeight:800, color: isWeekend ? '#dc2626' : '#475569'}}>{d}</div>
+                      {times.length > 0
+                        ? times.map((t, i) => <div key={i} style={{fontSize:10, fontWeight:700, color:'#1d4ed8', marginTop:2, lineHeight:1.2, wordBreak:'keep-all'}}>{t}</div>)
+                        : <div style={{fontSize:14, color:'#cbd5e1', marginTop:2}}>—</div>}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:'flex', flexWrap:'wrap', gap:10, fontSize:12.5, color:'#374151', alignItems:'center'}}>
+                <span style={{fontWeight:800, color:'#1d4ed8'}}>주 {N}회</span>
+                <span style={{color:'#94a3b8'}}>·</span>
+                <span>전체 {M}주</span>
+                <span style={{flex:1}} />
+                <span style={{fontWeight:800, color:'#1a6fc4'}}>총 {K}회</span>
+                <span style={{fontWeight:800, color:'#16a34a'}}>₱{amount.toLocaleString()}</span>
+              </div>
+            </div>
+          );
+        })()}
+
         <div className="q">
           <label className="q-label"><span className="num">6</span>빠지는 날짜 / 변경 날짜</label>
           <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/15 결석, 4/17 오전→오후 변경" />
@@ -979,7 +1077,7 @@ export default function PortalTutorPage() {
         <div style={{textAlign:"center",margin:"16px 0"}}>
           <button type="button" onClick={() => setForm2({ ...INIT_FORM2 })}
             style={{padding:"10px 24px",border:"2px dashed #7c3aed",borderRadius:10,background:"#f5f3ff",color:"#7c3aed",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            ➕ 신청 2 추가 (다른 시간대/요일)
+            ➕ 다른 학생 추가
           </button>
         </div>
       )}
