@@ -34,7 +34,8 @@ function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
     ? [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail:'쇼핑 후 복귀' }]
     : [{ time:'5:30pm',  name:'막탄 쉬라인',            detail:'방문 후 복귀' }];
   if (dow===6) return odd
-    ? [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' }]
+    ? [{ time:'8:30am',  name:'세부 사파리',            detail:'인당 200페소', fee:'200' },
+       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail:'2시간 30분 후 복귀' }]
     : [{ time:'2:00pm',  name:'펀파크 (Fun Park)',      detail:'방문 후 복귀' },
        { time:'4:00pm',  name:'란타우 (Lantaw)',         detail:'방문 후 복귀' }];
   if (dow===0) return odd
