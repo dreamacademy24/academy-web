@@ -131,9 +131,7 @@ export default function PortalShuttlePage() {
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [myApps, setMyApps] = useState<ShuttleApp[]>([]);
-  const [peopleEdit, setPeopleEdit] = useState<Record<string, number>>({});
-  const [nameEdit, setNameEdit] = useState<Record<string, string>>({});
-  const [savingPeople, setSavingPeople] = useState<Record<string, boolean>>({});
+  const [numPeople, setNumPeople] = useState<number>(1);
   const formRef = useRef<HTMLFormElement>(null);
 
   const loadMyApps = useCallback(async (bookingId: string) => {
@@ -148,33 +146,6 @@ export default function PortalShuttlePage() {
   useEffect(() => {
     if (session?.booking_id) loadMyApps(session.booking_id);
   }, [session, loadMyApps]);
-
-  // myApps 변경 시 인원/이름 input 기본값 동기화
-  useEffect(() => {
-    setPeopleEdit(prev => {
-      const next: Record<string, number> = {};
-      for (const a of myApps) next[a.id] = prev[a.id] ?? (a.people_count ?? 1);
-      return next;
-    });
-    setNameEdit(prev => {
-      const next: Record<string, string> = {};
-      for (const a of myApps) next[a.id] = prev[a.id] ?? (a.name || "");
-      return next;
-    });
-  }, [myApps]);
-
-  async function saveApp(id: string) {
-    const n = peopleEdit[id];
-    const nm = (nameEdit[id] || "").trim();
-    if (!n || n < 1 || n > 6) { alert("인원은 1~6 사이여야 합니다."); return; }
-    setSavingPeople(prev => ({ ...prev, [id]: true }));
-    const { error } = await supabase.from("shuttle_applications")
-      .update({ people_count: n, name: nm })
-      .eq("id", id);
-    setSavingPeople(prev => ({ ...prev, [id]: false }));
-    if (error) { alert("저장 실패: " + error.message); return; }
-    if (session?.booking_id) loadMyApps(session.booking_id);
-  }
 
   // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
   useEffect(() => {
@@ -346,7 +317,7 @@ export default function PortalShuttlePage() {
           name: session.guest_name,
           date: dateStr,
           tour_name: tourName,
-          people_count: 1,
+          people_count: numPeople,
           message: memo,
           room_number: bookingMeta?.room || "",
           request: memo,
@@ -714,6 +685,19 @@ export default function PortalShuttlePage() {
                 </div>
 
                 <div className="field">
+                  <label className="label-main" htmlFor="numPeople">탑승 인원<span className="required">*</span></label>
+                  <input
+                    id="numPeople"
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={numPeople}
+                    onChange={e => setNumPeople(Math.max(1, Math.min(6, Number(e.target.value) || 1)))}
+                    style={{ width:120 }}
+                  />
+                </div>
+
+                <div className="field">
                   <div className="agree">
                     <input id="agree" name="agree" type="checkbox" required />
                     <label htmlFor="agree">셔틀 신청 및 이용 규정을 모두 읽고 이해했으며, 위 내용에 동의합니다.<span className="required">*</span></label>
@@ -782,38 +766,18 @@ export default function PortalShuttlePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {myApps.map(a => {
                   const title = a.tour_name || a.request || "투어 셔틀";
-                  const nameVal = nameEdit[a.id] ?? (a.name || "");
-                  const peopleVal = peopleEdit[a.id] ?? (a.people_count ?? 1);
-                  const changed = nameVal !== (a.name || "") || peopleVal !== (a.people_count ?? 1);
-                  const saving = !!savingPeople[a.id];
+                  const v = String(a.status || "").toLowerCase();
+                  const meta = (v === "confirmed" || v === "확정")
+                    ? { label: "확정", bg: "#dcfce7", color: "#15803d" }
+                    : (v === "cancelled" || v === "cancel")
+                      ? { label: "취소", bg: "#fee2e2", color: "#b91c1c" }
+                      : { label: "대기중", bg: "#fef3c7", color: "#92400e" };
                   return (
-                    <div key={a.id} style={{ border: "1px solid #f3f4f6", borderRadius: 10, padding: "12px 14px", background: "#fafbfc" }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", marginBottom: 8, lineHeight: 1.4, wordBreak: "keep-all" }}>
+                    <div key={a.id} style={{ border: "1px solid #f3f4f6", borderRadius: 10, padding: "12px 14px", background: "#fafbfc", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", lineHeight: 1.4, wordBreak: "keep-all" }}>
                         {title} <span style={{ color: "#6b7280", fontWeight: 500, fontSize: 12.5, marginLeft: 4 }}>· {a.date || "-"}</span>
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 100px auto", gap: 6, alignItems: "center" }}>
-                        <input
-                          type="text"
-                          placeholder="탑승자 이름 (예) 김지아, 김지우)"
-                          value={nameVal}
-                          onChange={e => setNameEdit(prev => ({ ...prev, [a.id]: e.target.value }))}
-                          style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12.5, fontFamily: "inherit", background: "#fff", outline: "none" }}
-                        />
-                        <input
-                          type="number"
-                          min={1}
-                          max={6}
-                          value={peopleVal}
-                          onChange={e => setPeopleEdit(prev => ({ ...prev, [a.id]: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))}
-                          style={{ padding: "6px 9px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12.5, fontFamily: "inherit", background: "#fff", outline: "none", textAlign: "center" }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => saveApp(a.id)}
-                          disabled={saving || !changed}
-                          style={{ padding: "6px 14px", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: (saving || !changed) ? "not-allowed" : "pointer", fontFamily: "inherit", background: "#2563eb", color: "#fff", opacity: (saving || !changed) ? 0.5 : 1 }}
-                        >{saving ? "저장중..." : "저장"}</button>
-                      </div>
+                      <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: meta.bg, color: meta.color, flexShrink: 0 }}>{meta.label}</span>
                     </div>
                   );
                 })}
