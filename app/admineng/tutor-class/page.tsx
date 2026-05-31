@@ -43,7 +43,7 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
   cancelled: { label: "Cancelled", bg: "#fef2f2", color: "#dc2626" },
 };
 
-function fmtDate(s: string) { return s ? s.slice(5).replace('-', '/') : '-'; }
+function fmtDate(s: string) { return s ? s.slice(5, 10).replace('-', '/') : '-'; }
 
 // Lesson 자동생성용 헬퍼 (admin/tutor-class/[id]/save 와 동일 로직)
 function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
@@ -1017,8 +1017,8 @@ export default function EngTutorClassPage() {
                       </td>
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
                       <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>{l.sessions_per_day === 2 ? "2 (100m)" : "1 (50m)"}</td>
-                      <td style={{fontSize:11}}>{daysStr}</td>
-                      <td style={{fontSize:11}}>{l.class_time || "-"}</td>
+                      <td style={{fontSize:11, whiteSpace:"normal", lineHeight:1.3}}>{daysStr}</td>
+                      <td style={{fontSize:11, whiteSpace:"normal", lineHeight:1.3}}>{l.class_time || "-"}</td>
                       <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
                       <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
                         <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
