@@ -171,12 +171,8 @@ const INIT_FORM2 = {
   preferred_time: "", skip_dates: "",
 };
 
-const SCHED2_INIT = {
-  sessions_per_day: 1,
-  start_date: "", end_date: "",
-  preferred_days_arr: [] as string[],
-  preferred_time: "", skip_dates: "",
-};
+type ScheduleBlock = { days: string[]; time: string; sessions_per_day: 1 | 2 };
+const INIT_BLOCK: ScheduleBlock = { days: [], time: "", sessions_per_day: 1 };
 
 export default function PortalTutorPage() {
   const router = useRouter();
@@ -201,7 +197,8 @@ export default function PortalTutorPage() {
   const [bookingStudents, setBookingStudents] = useState<any[]>([]);
   const [bookerInfo, setBookerInfo] = useState<{ name_kr: string; name_en: string; age: string } | null>(null);
   const [form2, setForm2] = useState<typeof INIT_FORM2 | null>(null);
-  const [sched2, setSched2] = useState<typeof SCHED2_INIT | null>(null);
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([{ ...INIT_BLOCK }]);
+  const [timeBlockIdx, setTimeBlockIdx] = useState<number>(0);
   const [student2Age2, setStudent2Age2] = useState('');
   const [student2Age, setStudent2Age] = useState('');
   const [myApplications, setMyApplications] = useState<any[]>([]);
@@ -356,6 +353,11 @@ export default function PortalTutorPage() {
       if (!form.student2_name_kr.trim() && !form.student2_name_en.trim()) { setMsg("학생 2를 선택해주세요."); return; }
     }
     if (!form.privacy_agreed || !form.agreed_rules) { setMsg("개인정보 동의와 튜터 규정 동의를 체크해주세요."); return; }
+
+    // schedule_blocks 검증: 최소 1블록에 요일≥1 + 시간 있어야
+    const validBlocks = blocks.filter(b => Array.isArray(b.days) && b.days.length > 0 && (b.time || "").trim() !== "");
+    if (validBlocks.length === 0) { setMsg("수업 일정에 요일과 시간을 최소 1개 입력해주세요."); return; }
+
     setSaving(true); setMsg("");
 
     const isFor2 = form.class_type === '1:2';
@@ -370,6 +372,11 @@ export default function PortalTutorPage() {
       ? { level_english: 'enrolled', level_speaking: 'enrolled', level_reading: 'enrolled', level_writing: 'enrolled' }
       : { level_english: form.level_english, level_speaking: form.level_speaking, level_reading: form.level_reading, level_writing: form.level_writing };
 
+    // 하위호환: blocks → 기존 단일 필드
+    const allDays = Array.from(new Set(validBlocks.flatMap(b => b.days)));
+    const compatPreferredTime = validBlocks[0].time;
+    const compatSessions = validBlocks[0].sessions_per_day;
+
     if (editingId) {
       const res = await fetch("/api/portal/tutor-edit", {
         method: "PATCH",
@@ -381,9 +388,11 @@ export default function PortalTutorPage() {
           class_type: form.class_type,
           start_date: form.start_date || null,
           end_date: form.end_date || null,
-          preferred_days: form.preferred_days_arr,
+          preferred_days: allDays,
           skip_dates: form.skip_dates || null,
-          preferred_time: form.preferred_time || null,
+          preferred_time: compatPreferredTime || null,
+          sessions_per_day: compatSessions,
+          schedule_blocks: validBlocks,
           ...levels,
           textbook: form.textbook || null,
           class_style: form.class_style || null,
@@ -395,6 +404,7 @@ export default function PortalTutorPage() {
       if (!res.ok) { const r = await res.json().catch(() => ({})); setMsg(r.error || "수정 실패"); return; }
       setEditingId("");
       setForm({ ...INIT_FORM });
+      setBlocks([{ ...INIT_BLOCK }]);
       setTutorToast("수정이 완료되었습니다.");
       setTimeout(() => setTutorToast(""), 2500);
       reload();
@@ -410,44 +420,20 @@ export default function PortalTutorPage() {
         student_name_kr: finalKr,
         student_name_en: finalEn,
         ...levels,
+        preferred_days_arr: allDays,
+        preferred_time: compatPreferredTime,
+        sessions_per_day: compatSessions,
+        schedule_blocks: validBlocks,
         privacy_agreed: true,
         rules_agreed: true,
-        slot_label: sched2 ? "신청 1" : null,
+        slot_label: null,
       }),
     });
     setSaving(false);
     if (!res.ok) { const r = await res.json(); setMsg(r.error || "신청 실패"); return; }
     setForm({ ...INIT_FORM });
+    setBlocks([{ ...INIT_BLOCK }]);
     setStudent2Age('');
-
-    if (sched2) {
-      await fetch('/api/portal/tutor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          booking_id: session.booking_id,
-          guest_name: session.guest_name,
-          class_type: form.class_type,
-          student_name_kr: form.class_type === '1:2' ? form.student1_name_kr : form.student_name_kr,
-          student_name_en: form.class_type === '1:2' ? form.student1_name_en : form.student_name_en,
-          student2_name_kr: form.class_type === '1:2' ? form.student2_name_kr : undefined,
-          student2_name_en: form.class_type === '1:2' ? form.student2_name_en : undefined,
-          sessions_per_day: sched2.sessions_per_day,
-          start_date: sched2.start_date || null,
-          end_date: sched2.end_date || null,
-          preferred_days_arr: sched2.preferred_days_arr,
-          preferred_time: sched2.preferred_time || null,
-          skip_dates: sched2.skip_dates || null,
-          level_english: form.level_english, level_speaking: form.level_speaking,
-          level_reading: form.level_reading, level_writing: form.level_writing,
-          class_style: form.class_style, class_focus_arr: form.class_focus_arr,
-          child_personality: form.child_personality,
-          privacy_agreed: true, rules_agreed: true,
-          slot_label: "신청 2",
-        }),
-      });
-      setSched2(null);
-    }
     setDone(true);
     reload();
   }
@@ -493,6 +479,21 @@ export default function PortalTutorPage() {
       privacy_agreed: true,
       agreed_rules: true,
     });
+    // schedule_blocks 복원: 우선 r.schedule_blocks 그대로, 없으면 단일 블록으로 구성
+    const rawBlocks = (r as any).schedule_blocks;
+    if (Array.isArray(rawBlocks) && rawBlocks.length > 0) {
+      setBlocks(rawBlocks.map((b: any) => ({
+        days: Array.isArray(b.days) ? b.days : [],
+        time: String(b.time || ''),
+        sessions_per_day: (b.sessions_per_day === 2 ? 2 : 1) as 1 | 2,
+      })));
+    } else {
+      setBlocks([{
+        days: daysArr,
+        time: r.preferred_time || '',
+        sessions_per_day: ((r as any).sessions_per_day === 2 ? 2 : 1) as 1 | 2,
+      }]);
+    }
     setEditingId(r.id);
     setTimeout(() => document.getElementById('tutor-apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
@@ -776,18 +777,7 @@ export default function PortalTutorPage() {
       </div>
 
       <div className="sec">
-        <h2>수업 일정{sched2 ? " 1" : ""}</h2>
-        <div className="q">
-          <label className="q-label">원하는 타임 수<span className="req">*</span></label>
-          <div className="ct-row">
-            <button type="button" className={`ct-btn${form.sessions_per_day === 1 ? ' on' : ''}`} onClick={() => setForm({ ...form, sessions_per_day: 1, preferred_time: '' })}>
-              1타임<span className="price">50분</span>
-            </button>
-            <button type="button" className={`ct-btn${form.sessions_per_day === 2 ? ' on' : ''}`} onClick={() => setForm({ ...form, sessions_per_day: 2, preferred_time: '' })}>
-              2타임<span className="price">100분</span>
-            </button>
-          </div>
-        </div>
+        <h2>수업 일정</h2>
         <div className="q">
           <label className="q-label"><span className="num">3</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date}
@@ -831,38 +821,77 @@ export default function PortalTutorPage() {
           );
         })()}
         <div className="q">
-          <label className="q-label"><span className="num">5</span>원하는 수업 요일 (복수 선택)</label>
-          <div className="opts" style={{alignItems:'center'}}>
-            {DAYS.map(d => (
-              <button key={d} type="button" className={`opt${form.preferred_days_arr.includes(d) ? " on" : ""}`} onClick={() => toggleDay(d)}>{d}</button>
-            ))}
-            <span style={{fontSize:11, color:'#92400e', marginLeft:4, fontWeight:600}}>※ 토요일은 매달 2·4주차만 가능</span>
-          </div>
-          {form.preferred_days_arr.includes('토') && (
-            <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:12, color:'#92400e', lineHeight:1.5}}>
-              ⚠️ 토요일은 <strong>매달 둘째 주·넷째 주</strong>만 수업 가능합니다. 다른 토요일은 자동 제외됩니다.
+          <label className="q-label"><span className="num">5</span>수업 일정 (요일 + 시간)</label>
+          {blocks.map((b, idx) => (
+            <div key={idx} style={{padding:14, border:'1.5px solid #e2e8f0', borderRadius:10, marginBottom:10, background:'#f8fafc'}}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10}}>
+                <span style={{fontSize:12, fontWeight:800, color:'#1a6fc4'}}>일정 {idx+1}</span>
+                {blocks.length > 1 && (
+                  <button type="button" onClick={() => setBlocks(prev => prev.filter((_,i) => i !== idx))}
+                    style={{background:'none', border:'none', color:'#94a3b8', fontSize:18, cursor:'pointer', fontFamily:'inherit'}}>✕</button>
+                )}
+              </div>
+
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:12, fontWeight:700, color:'#475569', marginBottom:6}}>원하는 타임 수</div>
+                <div className="ct-row">
+                  <button type="button" className={`ct-btn${b.sessions_per_day === 1 ? ' on' : ''}`}
+                    onClick={() => setBlocks(prev => prev.map((x,i) => i===idx ? {...x, sessions_per_day: 1, time: ''} : x))}>
+                    1타임<span className="price">50분</span>
+                  </button>
+                  <button type="button" className={`ct-btn${b.sessions_per_day === 2 ? ' on' : ''}`}
+                    onClick={() => setBlocks(prev => prev.map((x,i) => i===idx ? {...x, sessions_per_day: 2, time: ''} : x))}>
+                    2타임<span className="price">100분</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:12, fontWeight:700, color:'#475569', marginBottom:6}}>요일 (복수 선택)</div>
+                <div className="opts" style={{alignItems:'center'}}>
+                  {DAYS.map(d => {
+                    const on = b.days.includes(d);
+                    return (
+                      <button key={d} type="button" className={`opt${on ? " on" : ""}`}
+                        onClick={() => setBlocks(prev => prev.map((x,i) => i===idx ? {...x, days: on ? x.days.filter(y=>y!==d) : [...x.days, d]} : x))}>{d}</button>
+                    );
+                  })}
+                  <span style={{fontSize:11, color:'#92400e', marginLeft:4, fontWeight:600}}>※ 토요일은 매달 2·4주차만 가능</span>
+                </div>
+                {b.days.includes('토') && (
+                  <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:12, color:'#92400e', lineHeight:1.5}}>
+                    ⚠️ 토요일은 <strong>매달 둘째 주·넷째 주</strong>만 수업 가능합니다. 다른 토요일은 자동 제외됩니다.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{fontSize:12, fontWeight:700, color:'#475569', marginBottom:6}}>원하는 수업 시간
+                  {isPeakSeason(form.start_date) && (
+                    <span style={{color:'#92400e', marginLeft:6, fontSize:11, fontWeight:600}}>※ 성수기(7/15~8/30)는 17:00 이후만 가능합니다.</span>
+                  )}
+                </div>
+                {b.time ? (
+                  <div className="stu-pick">
+                    <div className="sel-name">{b.time}</div>
+                    <button type="button" className="change-btn" onClick={() => { setTimeBlockIdx(idx); setTimePickerOpen(true); }}>변경</button>
+                  </div>
+                ) : (
+                  <div className="stu-pick">
+                    <button type="button" className="pick-btn" onClick={() => { setTimeBlockIdx(idx); setTimePickerOpen(true); }}>🕐 시간 선택하기</button>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          ))}
+          <button type="button" onClick={() => setBlocks(prev => [...prev, { ...INIT_BLOCK }])}
+            style={{padding:'10px 24px', border:'2px dashed #1a6fc4', borderRadius:10, background:'#eff6ff', color:'#1a6fc4', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', width:'100%'}}>
+            ➕ 다른 시간/요일 추가
+          </button>
         </div>
         <div className="q">
           <label className="q-label"><span className="num">6</span>빠지는 날짜 / 변경 날짜</label>
           <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/15 결석, 4/17 오전→오후 변경" />
-        </div>
-        <div className="q">
-          <label className="q-label"><span className="num">7</span>원하는 수업 시간</label>
-          {isPeakSeason(form.start_date) && (
-            <span className="q-hint" style={{color:'#92400e'}}>※ 성수기(7/15~8/30)는 17:00 이후만 가능합니다.</span>
-          )}
-          {form.preferred_time ? (
-            <div className="stu-pick">
-              <div className="sel-name">{form.preferred_time}</div>
-              <button type="button" className="change-btn" onClick={() => setTimePickerOpen(true)}>변경</button>
-            </div>
-          ) : (
-            <div className="stu-pick">
-              <button type="button" className="pick-btn" onClick={() => setTimePickerOpen(true)}>🕐 시간 선택하기</button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -1084,7 +1113,7 @@ export default function PortalTutorPage() {
             <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
               {saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "예약 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
             </button>
-            {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); }}>수정 취소</button>}
+            {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); setBlocks([{ ...INIT_BLOCK }]); }}>수정 취소</button>}
           </>);
         })()}
         {msg && <div className={`msg ${msg.includes("완료") ? "msg-ok" : "msg-err"}`}>{msg}</div>}
@@ -1282,15 +1311,17 @@ export default function PortalTutorPage() {
 
     {timePickerOpen && (() => {
       const peak = isPeakSeason(form.start_date);
-      // 기존 preferred_time 에서 시작 시각 파싱, 없으면 기본값
-      const m = (form.preferred_time || "").match(/^(\d{1,2}):(\d{2})/);
+      const curBlock = blocks[timeBlockIdx] || INIT_BLOCK;
+      const curSessions = curBlock.sessions_per_day;
+      // 현재 블록 time에서 시작 시각 파싱, 없으면 기본값
+      const m = (curBlock.time || "").match(/^(\d{1,2}):(\d{2})/);
       const initial = m ? `${m[1].padStart(2,"0")}:${m[2]}` : (peak ? "17:00" : "10:00");
       return (
         <div className="modal-bg" onClick={() => setTimePickerOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>수업 시간 선택</h3>
             <div className="modal-sub">
-              {form.sessions_per_day}타임 ({form.sessions_per_day * 50}분) 시작 시간을 입력하세요. (10:00 ~ 20:00)
+              {curSessions}타임 ({curSessions * 50}분) 시작 시간을 입력하세요. (10:00 ~ 20:00)
               {peak && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
             </div>
             <input
@@ -1334,7 +1365,7 @@ export default function PortalTutorPage() {
                   const [hh, mm] = v.split(":").map(Number);
                   if (hh < 10 || hh > 20 || (hh === 20 && mm > 0)) { alert("시작 시간은 10:00 ~ 20:00 범위 내여야 합니다."); return; }
                   if (peak && hh < 17) { alert("성수기에는 17:00 이후 시작만 가능합니다."); return; }
-                  setForm(f => ({ ...f, preferred_time: formatTimeRange(v, f.sessions_per_day) }));
+                  setBlocks(prev => prev.map((x, i) => i === timeBlockIdx ? { ...x, time: formatTimeRange(v, x.sessions_per_day) } : x));
                   setTimePickerOpen(false);
                 }}
                 style={{flex:1,padding:"12px",border:"none",borderRadius:10,background:"#1a6fc4",color:"#fff",cursor:"pointer",fontFamily:"inherit",fontSize:13.5,fontWeight:700}}

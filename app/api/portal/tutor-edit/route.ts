@@ -15,6 +15,7 @@ export async function PATCH(req: Request) {
       student_name_kr, student_name_en, skip_dates,
       level_english, level_speaking, level_reading, level_writing,
       textbook, class_style, class_focus_arr, child_personality,
+      sessions_per_day, schedule_blocks,
     } = body || {};
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -50,6 +51,8 @@ export async function PATCH(req: Request) {
     if (class_style !== undefined) update.class_style = class_style;
     if (class_focus_arr !== undefined) update.class_focus_arr = class_focus_arr;
     if (child_personality !== undefined) update.child_personality = child_personality;
+    if (sessions_per_day !== undefined) update.sessions_per_day = sessions_per_day;
+    if (schedule_blocks !== undefined) update.schedule_blocks = schedule_blocks;
 
     const { error } = await supabase.from("tutor_requests").update(update).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -94,6 +94,8 @@ export async function POST(req: Request) {
       preferred_days: Array.isArray(body.preferred_days_arr) ? body.preferred_days_arr.join(',') : (body.preferred_days_arr || null),
       skip_dates: body.skip_dates || null,
       preferred_time: body.preferred_time || null,
+      sessions_per_day: typeof body.sessions_per_day === 'number' ? body.sessions_per_day : null,
+      schedule_blocks: Array.isArray(body.schedule_blocks) ? body.schedule_blocks : null,
       level_english: body.level_english || null,
       level_speaking: body.level_speaking || null,
       level_reading: body.level_reading || null,
