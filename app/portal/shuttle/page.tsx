@@ -18,7 +18,7 @@ const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
   '2026-08-09': '⚠️ 아이언맨 도로통제로 투어셔틀 불가',
 };
 
-interface ShSlot { time: string; name: string; detail: string; fee?: string; }
+interface ShSlot { time: string; name: string; detail: string; }
 
 function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 
@@ -620,7 +620,7 @@ export default function PortalShuttlePage() {
                                     />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
-                                      <span className="schedule-sub">{sl.time} · {sl.detail}{sl.fee ? ` · 인당 ${sl.fee}페소` : ''}</span>
+                                      <span className="schedule-sub">{sl.time} · {sl.detail}</span>
                                     </div>
                                   </label>
                                 ));
