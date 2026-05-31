@@ -41,6 +41,7 @@ export default function AdminHubPage() {
     { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
     { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
     { icon: "🌐", title: "Local Staff Hub",  desc: "현지직원 · 튜터 전용 페이지",            href: "/admineng/hub" },
+    { icon: "🚐", title: "Shuttle Schedule", desc: "Pick up · Drop off · Daily",            href: "/ashuttle" },
   ];
 
   return (<>
@@ -86,7 +87,6 @@ export default function AdminHubPage() {
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
         <a className="hub-link" href="/">홈으로</a>
-        <a href="/ashuttle" style={{display:"inline-block",padding:"10px 16px",background:"#2563eb",color:"#fff",borderRadius:8,textDecoration:"none",fontWeight:600}}>🚐 Shuttle Schedule</a>
       </div>
       <button className="logout" onClick={logout}>로그아웃</button>
     </div>

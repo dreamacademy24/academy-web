@@ -69,6 +69,7 @@ export default function EngHubPage() {
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
     { icon: "🎓", title: "Tutor Classes", desc: "Requests · My Schedule · Weekly", href: "/admineng/tutor-class" },
     { icon: "📅", title: "Student Calendar", desc: "Weekly schedule · New in · Graduation", href: "/admineng/student-calendar" },
+    { icon: "🚐", title: "Shuttle Schedule", desc: "Pick up · Drop off · Daily", href: "/ashuttle" },
   ];
 
   if (!ready) return null;
@@ -175,7 +176,6 @@ export default function EngHubPage() {
       <div className="hub-foot">
         <a className="hub-link" href="/guide">Staff Guide</a>
         <a className="hub-link" href="/">Home</a>
-        <a href="/ashuttle" style={{display:"inline-block",padding:"10px 16px",background:"#2563eb",color:"#fff",borderRadius:8,textDecoration:"none",fontWeight:600}}>🚐 Shuttle Schedule</a>
       </div>
     </div>
   </>);
