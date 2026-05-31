@@ -570,16 +570,26 @@ export default function PortalShuttlePage() {
           <div className="greeting">안녕하세요, {session.guest_name}님 👋</div>
           <div className="layout">
             <section className="card">
-              <header className="card-header">
-                <div>
-                  <p className="card-title">신청 정보 입력</p>
-                  <p className="notice"><strong>월–금 오후 4시 50분까지</strong> 접수된 신청만 확인 가능하며, <strong>당일 신청은 불가</strong>합니다.</p>
+              <div style={{
+                display:"flex",
+                alignItems:"center",
+                gap:14,
+                padding:"14px 16px",
+                background:"#eff6ff",
+                border:"1px solid #bfdbfe",
+                borderRadius:14,
+                marginBottom:18,
+              }}>
+                <div style={{fontSize:24, lineHeight:1}}>📋</div>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontSize:14, fontWeight:700, color:"#1e3a8a", marginBottom:3, lineHeight:1.3}}>월~금 오후 4시 50분까지 신청 가능</div>
+                  <div style={{fontSize:12, color:"#475569", lineHeight:1.4}}>토·일 및 당일 신청 불가 · 탑승 전날 16:50까지</div>
                 </div>
-                <div className="chip">● 사전 예약제</div>
-              </header>
+                <div className="chip" style={{flexShrink:0}}>● 사전 예약제</div>
+              </div>
               <form id="shuttle-form" ref={formRef} onSubmit={handleSubmit}>
                 <div className="field">
-                  <p className="label-main">셔틀 스케쥴에서 선택<span className="required">*</span></p>
+                  <p className="label-main" style={{fontSize:16, fontWeight:600}}>셔틀 스케쥴에서 선택<span className="required">*</span></p>
                   <p className="label-sub">이용하실 날짜와 장소를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 주말 일정입니다.</p>
                   <div className="month-toggle">
                     {visibleMonths.map(m => (
