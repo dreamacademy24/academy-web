@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr, formatLessonTime } from "@/lib/scheduleBlocks";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -460,7 +460,8 @@ export default function EngTutorClassPage() {
         student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
         classType: l.class_type || "",
         rowId: l.id,
-      });
+        overrides: l.time_overrides || null,
+      } as any);
     }
     const confirmedReqs = reqs.filter(r => r.assigned_tutor_id === me.id && r.status === "confirmed");
     for (const r of confirmedReqs) {
@@ -960,17 +961,23 @@ export default function EngTutorClassPage() {
                     {list.length === 0 ? (
                       <div style={{textAlign:"center",color:"#cbd5e1",fontSize:11,padding:"20px 4px",fontWeight:600}}>No class</div>
                     ) : (
-                      list.map(e => (
+                      list.map(e => {
+                        const _krKeys = ['일','월','화','수','목','금','토'];
+                        const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
+                        const _ov = (e as any).overrides as Record<string,string> | undefined;
+                        const _time = (_ov && _ov[_kr]) || e.time;
+                        return (
                         <div
                           key={e.id + ":" + date}
                           onClick={() => router.push('/admineng/tutor-class/' + (e.source === "request" ? e.rowId : ""))}
                           style={{borderLeft:`4px solid ${myColor}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",cursor:e.source==="request"?"pointer":"default"}}
                         >
                           <div style={{fontSize:12.5,fontWeight:700,color:"#1a1a2e",lineHeight:1.3,wordBreak:"keep-all"}}>{e.student}</div>
-                          {e.time && <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{e.time}</div>}
+                          {_time && <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{_time}</div>}
                           {e.classType && <div style={{fontSize:10,color:myColor,fontWeight:700,marginTop:2}}>{e.classType}{e.source==="request"?" · pending":""}</div>}
                         </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 );
@@ -1025,7 +1032,7 @@ export default function EngTutorClassPage() {
                       <td><span className="ebadge" style={{background:"#eff6ff",color:"#1a6fc4"}}>{l.class_type || "-"}</span></td>
                       <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>{l.sessions_per_day === 2 ? "2 (100m)" : "1 (50m)"}</td>
                       <td style={{fontSize:11, whiteSpace:"normal", lineHeight:1.3}}>{daysStr}</td>
-                      <td style={{fontSize:11, whiteSpace:"normal", lineHeight:1.3}}>{l.class_time || "-"}</td>
+                      <td style={{fontSize:11, whiteSpace:"normal", lineHeight:1.3}}>{formatLessonTime(l.confirmed_time || l.class_time, l.time_overrides, l.class_days, 'en')}</td>
                       <td style={{fontSize:11}}>{fmtDate(l.start_date)}~{fmtDate(l.end_date)}</td>
                       <td style={{textAlign:"center",fontSize:11,fontWeight:700}}>
                         <span style={{color:skips.length>0?"#dc2626":"#15803d"}}>{remaining}</span>
@@ -1117,7 +1124,10 @@ export default function EngTutorClassPage() {
                       const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
                       const color = tutorColor(l.tutor_id);
                       const sname = (l.student_names || "-").split(/[\/,]/)[0].trim() || "-";
-                      const time = l.confirmed_time || l.class_time || "--:--";
+                      const _krKeys = ['일','월','화','수','목','금','토'];
+                      const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
+                      const _ov = l.time_overrides as Record<string,string> | undefined;
+                      const time = (_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "--:--";
                       return (
                         <div
                           key={l.id}

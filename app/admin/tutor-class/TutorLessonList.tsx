@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { formatLessonTime } from "@/lib/scheduleBlocks";
 
 interface Tutor { id: string; name: string }
 interface Lesson {
@@ -15,6 +16,7 @@ interface Lesson {
   status: string;
   skip_dates: string[] | null; tutor_memo: string | null;
   attendance_log: Record<string, "O" | "X" | "△"> | null;
+  time_overrides?: Record<string, string> | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -458,10 +460,17 @@ export default function TutorLessonList() {
                       </span>
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>{daysStr || "-"}</td>
-                    <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>
-                      {l.confirmed_time
-                        ? l.confirmed_time
-                        : (l.class_time ? <span className="tll-muted">{l.class_time}</span> : "-")}
+                    <td style={{ fontSize: 12, lineHeight: 1.3 }}>
+                      {(() => {
+                        const formatted = formatLessonTime(l.confirmed_time || l.class_time, l.time_overrides, l.class_days, 'ko');
+                        const isFallback = !l.confirmed_time;
+                        if (formatted === '-' || formatted === (l.confirmed_time || l.class_time)) {
+                          return l.confirmed_time
+                            ? l.confirmed_time
+                            : (l.class_time ? <span className="tll-muted">{l.class_time}</span> : "-");
+                        }
+                        return <span className={isFallback ? "tll-muted" : ""}>{formatted}</span>;
+                      })()}
                     </td>
                     <td style={{ whiteSpace: "nowrap", fontSize: 12 }}>{fmtRange(l.start_date, l.end_date)}</td>
                     <td style={{ textAlign: "center", fontWeight: 700 }}>{totalDisplay}</td>
