@@ -40,6 +40,7 @@ interface TutorRow {
   admin_memo: string | null;
   total_sessions: number | null;
   total_amount: number | null;
+  schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
 
 interface Tutor { id: string; name: string }
@@ -287,10 +288,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <div className="dt-card">
             <h2>수업 유형 · 일정</h2>
             <div className="dt-row"><span className="dt-k">수업 유형</span><span className="dt-v">{fmt(row.class_type)}</span></div>
-            <div className="dt-row"><span className="dt-k">타임</span><span className="dt-v">{row.sessions_per_day === 2 ? "2타임 (100분)" : "1타임 (50분)"}</span></div>
             <div className="dt-row"><span className="dt-k">기간</span><span className="dt-v">{fmt(row.start_date)} ~ {fmt(row.end_date)}</span></div>
-            <div className="dt-row"><span className="dt-k">요일</span><span className="dt-v">{fmt(row.preferred_days)}</span></div>
-            <div className="dt-row"><span className="dt-k">시간</span><span className="dt-v">{fmt(row.preferred_time)}</span></div>
+            {Array.isArray(row.schedule_blocks) && row.schedule_blocks.length > 0 ? (
+              row.schedule_blocks.map((b, i) => {
+                const daysStr = Array.isArray(b.days) ? b.days.join('·') : '';
+                const spd = Number(b.sessions_per_day) === 2 ? '2타임' : '1타임';
+                return (
+                  <div key={i} className="dt-row">
+                    <span className="dt-k">일정 {i+1}</span>
+                    <span className="dt-v">{daysStr || '-'} — {b.time || '-'} ({spd})</span>
+                  </div>
+                );
+              })
+            ) : (
+              <>
+                <div className="dt-row"><span className="dt-k">타임</span><span className="dt-v">{row.sessions_per_day === 2 ? "2타임 (100분)" : "1타임 (50분)"}</span></div>
+                <div className="dt-row"><span className="dt-k">요일</span><span className="dt-v">{fmt(row.preferred_days)}</span></div>
+                <div className="dt-row"><span className="dt-k">시간</span><span className="dt-v">{fmt(row.preferred_time)}</span></div>
+              </>
+            )}
             <div className="dt-row"><span className="dt-k">빠지는 날</span><span className="dt-v">{fmt(row.skip_dates)}</span></div>
           </div>
 

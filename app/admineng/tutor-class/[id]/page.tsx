@@ -27,6 +27,7 @@ interface TutorReq {
   child_personality: string | null;
   status: string;
   assigned_tutor_id: string | null;
+  schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
 
 interface Tutor { id: string; name: string }
@@ -315,10 +316,28 @@ export default function EngTutorRequestDetailPage() {
           <div className="dcard">
             <h2>Schedule</h2>
             <div className="drow"><span className="k">Class Type</span><span className="v">{row.class_type || "-"}</span></div>
-            <div className="drow"><span className="k">Sessions/day</span><span className="v">{row.sessions_per_day === 2 ? "2 sessions (100 min)" : "1 session (50 min)"}</span></div>
             <div className="drow"><span className="k">Period</span><span className="v">{row.start_date || "-"} ~ {row.end_date || "-"}</span></div>
-            <div className="drow"><span className="k">Days</span><span className="v">{daysFmt}</span></div>
-            <div className="drow"><span className="k">Preferred Time</span><span className="v">{(row.preferred_time || "-").replace(/\(1타임\)/g, "(1 session)").replace(/\(2타임\)/g, "(2 sessions)")}</span></div>
+            {Array.isArray(row.schedule_blocks) && row.schedule_blocks.length > 0 ? (
+              row.schedule_blocks.map((b, i) => {
+                const daysStr = Array.isArray(b.days)
+                  ? b.days.map(d => DAY_EN[d.trim()] || DAY_EN[d.trim().toLowerCase()] || d.trim()).filter(Boolean).join('·')
+                  : '';
+                const timeStr = (b.time || '-').replace(/\(1타임\)/g, '(1 session)').replace(/\(2타임\)/g, '(2 sessions)');
+                const spd = Number(b.sessions_per_day) === 2 ? '2 sessions' : '1 session';
+                return (
+                  <div key={i} className="drow">
+                    <span className="k">Block {i+1}</span>
+                    <span className="v">{daysStr || '-'} — {timeStr} ({spd})</span>
+                  </div>
+                );
+              })
+            ) : (
+              <>
+                <div className="drow"><span className="k">Sessions/day</span><span className="v">{row.sessions_per_day === 2 ? "2 sessions (100 min)" : "1 session (50 min)"}</span></div>
+                <div className="drow"><span className="k">Days</span><span className="v">{daysFmt}</span></div>
+                <div className="drow"><span className="k">Preferred Time</span><span className="v">{(row.preferred_time || "-").replace(/\(1타임\)/g, "(1 session)").replace(/\(2타임\)/g, "(2 sessions)")}</span></div>
+              </>
+            )}
           </div>
 
           <div className="dcard">

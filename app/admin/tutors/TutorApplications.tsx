@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
@@ -17,6 +17,7 @@ interface TutorApp {
   agreed_privacy: boolean; agreed_tutor_rules?: boolean; agreed_tutor_rules_bool?: boolean;
   status: string; assigned_tutor_id: string | null;
   total_sessions: number | null; total_amount: number | null; admin_memo: string | null;
+  schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
 
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토" };
@@ -871,6 +872,12 @@ export default function TutorApplications() {
                     <span className="k">종료일</span><span className="v">{detail.end_date}</span>
                     <span className="k">요일</span><span className="v">{(detail.class_days || []).map(d => DAY_KR[d] || d).join(", ") || "-"}</span>
                     <span className="k">시간 희망</span><span className="v">{detail.class_time}</span>
+                    {Array.isArray(detail.schedule_blocks) && detail.schedule_blocks.length > 0 && detail.schedule_blocks.map((b, i) => (
+                      <Fragment key={`sb${i}`}>
+                        <span className="k">일정 {i+1}</span>
+                        <span className="v">{(Array.isArray(b.days) ? b.days.map(d => DAY_KR[d] || d) : []).join('·') || '-'} — {b.time || '-'} ({Number(b.sessions_per_day) === 2 ? '2타임' : '1타임'})</span>
+                      </Fragment>
+                    ))}
                     <span className="k">빠지는 날</span><span className="v">{detail.excluded_dates || "-"}</span>
                   </div>
                 </div>
