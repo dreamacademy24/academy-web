@@ -20,6 +20,7 @@ interface Lesson {
   tutor_memo: string | null;
   attendance_log: Record<string, "○" | "✕" | "△"> | null;
   notes_log: Record<string, string> | null;
+  time_overrides?: Record<string, string> | null;
 }
 
 const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -40,6 +41,21 @@ function fmtMD(iso: string) {
   const dt = new Date(iso + "T00:00:00");
   if (isNaN(dt.getTime())) return iso;
   return `${dt.getMonth() + 1}/${dt.getDate()}`;
+}
+
+const WEEKDAY_KR_KEYS = ['일','월','화','수','목','금','토'];
+
+function resolveTime(dateStr: string, lesson: Lesson): string {
+  const dow = new Date(dateStr + 'T00:00:00').getDay();
+  const krKey = WEEKDAY_KR_KEYS[dow];
+  return lesson.time_overrides?.[dateStr]
+    || lesson.time_overrides?.[krKey]
+    || lesson.confirmed_time || lesson.class_time || '-';
+}
+
+function normalizeDayKR(d: string): string {
+  const lower = (d || "").toLowerCase().trim();
+  return DAY_KR[lower] || d;
 }
 
 function generateDates(lesson: Lesson): string[] {
@@ -79,8 +95,27 @@ export default function AttendancePage() {
   const [changeNewVal, setChangeNewVal] = useState("");
   const [savingManage, setSavingManage] = useState(false);
   const [draftDays, setDraftDays] = useState<string[]>([]);
+  const [draftConfirmedTime, setDraftConfirmedTime] = useState<string>("");
+  const [draftDayOverrides, setDraftDayOverrides] = useState<Record<string, string>>({});
+  const [draftDateOverrides, setDraftDateOverrides] = useState<Record<string, string>>({});
+  const [newOverrideDate, setNewOverrideDate] = useState("");
+  const [newOverrideTime, setNewOverrideTime] = useState("");
+  const [savingTimes, setSavingTimes] = useState(false);
   useEffect(() => {
     if (lesson) setDraftDays(lesson.class_days || []);
+  }, [lesson]);
+  useEffect(() => {
+    if (!lesson) return;
+    setDraftConfirmedTime(lesson.confirmed_time || lesson.class_time || "");
+    const ov = lesson.time_overrides || {};
+    const days: Record<string, string> = {};
+    const dates: Record<string, string> = {};
+    for (const [k, v] of Object.entries(ov)) {
+      if (WEEKDAY_KR_KEYS.includes(k)) days[k] = String(v);
+      else dates[k] = String(v);
+    }
+    setDraftDayOverrides(days);
+    setDraftDateOverrides(dates);
   }, [lesson]);
 
   const load = useCallback(async () => {
@@ -208,6 +243,27 @@ export default function AttendancePage() {
     load();
   }
 
+  async function saveTimeOverrides() {
+    if (!lesson) return;
+    setSavingTimes(true);
+    const merged: Record<string, string> = {};
+    for (const [k, v] of Object.entries(draftDayOverrides)) {
+      const t = String(v || "").trim();
+      if (t) merged[k] = t;
+    }
+    for (const [k, v] of Object.entries(draftDateOverrides)) {
+      const t = String(v || "").trim();
+      if (t) merged[k] = t;
+    }
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ confirmed_time: draftConfirmedTime || null, time_overrides: merged })
+      .eq("id", lesson.id);
+    setSavingTimes(false);
+    if (error) { alert("Time save failed: " + error.message); return; }
+    alert("✅ Class times saved.");
+    load();
+  }
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14 }}>Loading...</div>;
   }
@@ -329,6 +385,7 @@ export default function AttendancePage() {
               const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
               const dw = WEEKDAYS_KR[dt.getDay()];
               const v = draft[d] || "";
+              const tm = resolveTime(d, lesson);
               const cls =
                 v === "○" ? "s-o" :
                 v === "✕" ? "s-x" :
@@ -339,10 +396,11 @@ export default function AttendancePage() {
                   type="button"
                   className={`at-box ${cls}`}
                   onClick={() => cycle(d)}
-                  title={`${d} (${dw}) — ${v || "blank"}`}
+                  title={`${d} (${dw}) ${tm} — ${v || "blank"}`}
                 >
                   <span className="idx">#{i + 1}</span>
                   <span className="dt">{md}<span className="dw">({dw})</span></span>
+                  <span style={{fontSize:10.5,fontWeight:700,opacity:0.75,letterSpacing:"0.02em"}}>{tm}</span>
                   <span className="mark">{v || ""}</span>
                 </button>
               );
@@ -477,6 +535,112 @@ export default function AttendancePage() {
             >{savingManage ? "Saving..." : "Reschedule"}</button>
           </div>
 
+        </div>
+      </div>
+
+      <div className="at-card">
+        <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:12}}>⏰ Class Time Overrides</div>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+
+          {/* 전체 시간 */}
+          <div style={{flex:"1 1 180px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:2}}>⏰ 전체 시간</div>
+            <input
+              type="time"
+              lang="en"
+              value={draftConfirmedTime}
+              onChange={e => setDraftConfirmedTime(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
+            />
+            <div style={{fontSize:11,color:"#6b7280"}}>모든 날의 기본 수업 시간</div>
+          </div>
+
+          {/* 요일별 시간 */}
+          <div style={{flex:"1 1 260px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 요일별 시간</div>
+            {(lesson.class_days || []).length === 0 && (
+              <div style={{fontSize:11,color:"#9ca3af"}}>설정된 요일이 없습니다.</div>
+            )}
+            {(lesson.class_days || []).map((rawDay, i) => {
+              const kr = normalizeDayKR(rawDay);
+              const val = draftDayOverrides[kr] || "";
+              return (
+                <div key={`${rawDay}-${i}`} style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"#7c3aed",minWidth:24}}>{kr}</span>
+                  <input
+                    type="time"
+                    lang="en"
+                    value={val}
+                    onChange={e => setDraftDayOverrides(prev => ({ ...prev, [kr]: e.target.value }))}
+                    style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                  />
+                  {val && (
+                    <button type="button"
+                      onClick={() => setDraftDayOverrides(prev => { const n = { ...prev }; delete n[kr]; return n; })}
+                      style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}
+                    >✕</button>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{fontSize:11,color:"#6b7280"}}>비우면 전체 시간 사용</div>
+          </div>
+
+          {/* 특정 날짜 시간 */}
+          <div style={{flex:"1 1 280px",display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#0369a1",marginBottom:2}}>🗓 특정 날짜 시간</div>
+            {Object.entries(draftDateOverrides).sort(([a],[b]) => a.localeCompare(b)).map(([dt, tm]) => (
+              <div key={dt} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,fontWeight:700,color:"#0369a1",minWidth:78}}>{dt}</span>
+                <input
+                  type="time"
+                  lang="en"
+                  value={tm}
+                  onChange={e => setDraftDateOverrides(prev => ({ ...prev, [dt]: e.target.value }))}
+                  style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
+                />
+                <button type="button"
+                  onClick={() => setDraftDateOverrides(prev => { const n = { ...prev }; delete n[dt]; return n; })}
+                  style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}
+                >✕</button>
+              </div>
+            ))}
+            <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:4,borderTop:"1px dashed #e5e7eb",marginTop:2}}>
+              <input
+                type="date"
+                lang="en"
+                placeholder="YYYY-MM-DD"
+                value={newOverrideDate}
+                min={lesson.start_date || undefined}
+                max={lesson.end_date || undefined}
+                onChange={e => setNewOverrideDate(e.target.value)}
+                style={{flex:"1 1 110px",padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
+              />
+              <input
+                type="time"
+                lang="en"
+                value={newOverrideTime}
+                onChange={e => setNewOverrideTime(e.target.value)}
+                style={{flex:"1 1 90px",padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
+              />
+              <button type="button"
+                disabled={!newOverrideDate || !newOverrideTime}
+                onClick={() => {
+                  if (!newOverrideDate || !newOverrideTime) return;
+                  setDraftDateOverrides(prev => ({ ...prev, [newOverrideDate]: newOverrideTime }));
+                  setNewOverrideDate("");
+                  setNewOverrideTime("");
+                }}
+                style={{padding:"6px 10px",background:"#0369a1",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:(!newOverrideDate||!newOverrideTime)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(!newOverrideDate||!newOverrideTime)?0.5:1}}
+              >+ Add</button>
+            </div>
+          </div>
+
+        </div>
+        <div style={{marginTop:14}}>
+          <button onClick={saveTimeOverrides} disabled={savingTimes}
+            style={{height:34,padding:"0 18px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:13,cursor:savingTimes?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingTimes?0.6:1}}
+          >{savingTimes ? "Saving..." : "Save Times"}</button>
         </div>
       </div>
 
