@@ -580,9 +580,33 @@ export default function PortalShuttlePage() {
                                 }
                                 const d = parseInt(item.dateStr.slice(8,10), 10);
                                 const isWeekend = item.dayLabel.includes('(토)') || item.dayLabel.includes('(일)');
+                                const isMulti = item.slots.length > 1;
                                 return item.slots.map((sl, si) => (
                                   <label key={`${item.dateStr}-${si}`} className={`schedule-item${isWeekend ? ' weekend' : ''}`}>
-                                    <input type="checkbox" name="schedule" value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
+                                    <input
+                                      type="checkbox"
+                                      name="schedule"
+                                      value={`${m}-${d}-${si}-${slotSlug(sl.name)}`}
+                                      onChange={(e) => {
+                                        if (!isMulti) return;
+                                        const target = e.currentTarget;
+                                        const grid = target.closest('.schedule-grid');
+                                        if (!grid) return;
+                                        const siblings = grid.querySelectorAll<HTMLInputElement>(`input[name="schedule"][value^="${m}-${d}-"]`);
+                                        siblings.forEach(cb => {
+                                          if (cb === target) return;
+                                          if (target.checked) {
+                                            if (!cb.disabled) {
+                                              cb.disabled = true;
+                                              cb.dataset.lockedBySibling = '1';
+                                            }
+                                          } else if (cb.dataset.lockedBySibling === '1') {
+                                            cb.disabled = false;
+                                            delete cb.dataset.lockedBySibling;
+                                          }
+                                        });
+                                      }}
+                                    />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
                                       <span className="schedule-sub">{sl.time} · {sl.detail}{sl.fee ? ` · 인당 ${sl.fee}페소` : ''}</span>
