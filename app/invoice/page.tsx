@@ -540,7 +540,7 @@ function InvoicePageInner(){
   const initialTab=(searchParams.get("tab")==="receipt")?"receipt":"invoice";
   const [tab,setTab]=useState<"invoice"|"receipt">(initialTab);
   const [receiptPayments,setReceiptPayments]=useState<{id:number;type:string;date:string;amount:string}[]>([
-    {id:1,type:"예약금",date:todayStr,amount:"1,000,000"}
+    {id:1,type:"예약금",date:todayStr,amount:""}
   ]);
   const [dhRegistered,setDhRegistered]=useState(false);
   const [savingReceipt,setSavingReceipt]=useState(false);
@@ -1485,7 +1485,7 @@ function InvoicePageInner(){
             <tr style={{background:"#e0f2fe"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>기납부 합계</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>−{fmt(receiptPaidTotal)}원</td></tr>
             <tr style={{background:additionalDue===0?"#f0fdf4":"#fff7ed"}}><td style={{padding:"12px",fontWeight:800,color:additionalDue===0?"#166534":"#c2410c",fontSize:14}}>이번 청구 금액</td><td style={{textAlign:"right",padding:"12px",fontWeight:800,color:additionalDue===0?"#166534":"#c2410c",fontSize:14}}>{fmt(additionalDue)}원</td></tr>
           </>
-        ):effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 (입금 시 예약 확정)</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>1,000,000원</td></tr><tr><td style={{padding:"10px 12px",fontSize:"13px",color:"#374151"}}>잔금 (납부일: {booker.balanceDate||"입실 2달 전"})</td><td style={{textAlign:"right",padding:"10px 12px",fontSize:"13px",fontWeight:600}}>{fmt(fp>1000000?fp-1000000:0)}원</td></tr><tr><td colSpan={2} style={{padding:"8px 12px",fontSize:"11px",color:"#6b7c93",background:"#f8fafc"}}>※ 예약금 1,000,000원 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
+        ):effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr><td colSpan={2} style={{padding:"10px 12px",color:"#94a3b8",fontSize:13,textAlign:"center"}}>납부 내역 없음 (영수증 탭에서 납부 확정 시 반영)</td></tr><tr style={{background:"#e0f2fe"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>기납부 합계</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>−0원</td></tr><tr style={{background:"#fff7ed"}}><td style={{padding:"12px",fontWeight:800,color:"#c2410c",fontSize:14}}>이번 청구 금액</td><td style={{textAlign:"right",padding:"12px",fontWeight:800,color:"#c2410c",fontSize:14}}>{fmt(fp)}원</td></tr></>)}
       </tbody></table>
       {billing.locals.filter(c=>c.name||c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name||c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
