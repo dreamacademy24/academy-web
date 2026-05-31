@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 
 interface Lesson {
   id: string;
@@ -48,9 +49,10 @@ const WEEKDAY_KR_KEYS = ['일','월','화','수','목','금','토'];
 function resolveTime(dateStr: string, lesson: Lesson): string {
   const dow = new Date(dateStr + 'T00:00:00').getDay();
   const krKey = WEEKDAY_KR_KEYS[dow];
-  return lesson.time_overrides?.[dateStr]
+  const raw = lesson.time_overrides?.[dateStr]
     || lesson.time_overrides?.[krKey]
-    || lesson.confirmed_time || lesson.class_time || '-';
+    || lesson.confirmed_time || lesson.class_time || '';
+  return stripTimeSuffix(raw) || '-';
 }
 
 function normalizeDayKR(d: string): string {
@@ -277,7 +279,7 @@ export default function AttendancePage() {
   }
 
   const daysLabel = (lesson.class_days || []).map(d => DAY_EN_LABEL[d] || DAY_EN_LABEL[d.toLowerCase()] || d).join(", ");
-  const timeLabel = lesson.confirmed_time || lesson.class_time || "-";
+  const timeLabel = stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "-";
 
   return (<>
     <style>{`
@@ -542,9 +544,9 @@ export default function AttendancePage() {
         <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:12}}>⏰ Class Time Overrides</div>
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
 
-          {/* 전체 시간 */}
+          {/* Default Time */}
           <div style={{flex:"1 1 180px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:2}}>⏰ 전체 시간</div>
+            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:2}}>⏰ Default Time</div>
             <input
               type="time"
               lang="en"
@@ -552,21 +554,22 @@ export default function AttendancePage() {
               onChange={e => setDraftConfirmedTime(e.target.value)}
               style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
             />
-            <div style={{fontSize:11,color:"#6b7280"}}>모든 날의 기본 수업 시간</div>
+            <div style={{fontSize:11,color:"#6b7280"}}>Default class time for all days</div>
           </div>
 
-          {/* 요일별 시간 */}
+          {/* Time by Day */}
           <div style={{flex:"1 1 260px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 요일별 시간</div>
+            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 Time by Day</div>
             {(lesson.class_days || []).length === 0 && (
-              <div style={{fontSize:11,color:"#9ca3af"}}>설정된 요일이 없습니다.</div>
+              <div style={{fontSize:11,color:"#9ca3af"}}>No days set.</div>
             )}
             {(lesson.class_days || []).map((rawDay, i) => {
               const kr = normalizeDayKR(rawDay);
+              const en = ({'월':'Mon','화':'Tue','수':'Wed','목':'Thu','금':'Fri','토':'Sat','일':'Sun'} as Record<string,string>)[kr] || kr;
               const val = draftDayOverrides[kr] || "";
               return (
                 <div key={`${rawDay}-${i}`} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:12,fontWeight:700,color:"#7c3aed",minWidth:24}}>{kr}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#7c3aed",minWidth:32}}>{en}</span>
                   <input
                     type="time"
                     lang="en"
@@ -583,12 +586,12 @@ export default function AttendancePage() {
                 </div>
               );
             })}
-            <div style={{fontSize:11,color:"#6b7280"}}>비우면 전체 시간 사용</div>
+            <div style={{fontSize:11,color:"#6b7280"}}>Leave blank to use default time</div>
           </div>
 
-          {/* 특정 날짜 시간 */}
+          {/* Specific Date Time */}
           <div style={{flex:"1 1 280px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#0369a1",marginBottom:2}}>🗓 특정 날짜 시간</div>
+            <div style={{fontSize:12,fontWeight:800,color:"#0369a1",marginBottom:2}}>🗓 Specific Date Time</div>
             {Object.entries(draftDateOverrides).sort(([a],[b]) => a.localeCompare(b)).map(([dt, tm]) => (
               <div key={dt} style={{display:"flex",alignItems:"center",gap:6}}>
                 <span style={{fontSize:11,fontWeight:700,color:"#0369a1",minWidth:78}}>{dt}</span>

@@ -21,6 +21,10 @@ export function toDateArr(v: unknown): string[] {
   return [];
 }
 
+// 한글 "(1타임, 50분)" 류 접미사만 제거. 다른 괄호는 보존.
+export const stripTimeSuffix = (s: string | null | undefined = '') =>
+  String(s || '').replace(/\s*\([^)]*타임[^)]*\)\s*$/, '').trim();
+
 // 요일별 시간이 다르면 그룹화 표시. 단일이거나 빈 overrides면 classTime 그대로.
 const _KR_DAY_ORDER = ['월','화','수','목','금','토','일'];
 const _DAY_EN_MAP: Record<string, string> = { '월':'Mon','화':'Tue','수':'Wed','목':'Thu','금':'Fri','토':'Sat','일':'Sun' };
@@ -36,7 +40,7 @@ export function formatLessonTime(
   classDays: string[] | string | null | undefined,
   lang: 'ko' | 'en' = 'ko'
 ): string {
-  const fallback = (classTime && String(classTime).trim()) || '-';
+  const fallback = stripTimeSuffix(classTime) || '-';
   const daysArr = Array.isArray(classDays)
     ? classDays
     : (typeof classDays === 'string' ? classDays.split(',') : []);
@@ -62,7 +66,7 @@ export function formatLessonTime(
     arr.push(day);
     byTime.set(time, arr);
   }
-  const stripSuffix = (t: string) => t.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const stripSuffix = stripTimeSuffix;
   const groups = Array.from(byTime.entries()).sort((a, b) =>
     Math.min(...a[1].map(d => _KR_DAY_ORDER.indexOf(d))) -
     Math.min(...b[1].map(d => _KR_DAY_ORDER.indexOf(d)))
