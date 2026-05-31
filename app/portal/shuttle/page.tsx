@@ -329,26 +329,17 @@ export default function PortalShuttlePage() {
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
 
-      // Supabase 동시 저장 — 체크된 투어 1개당 row 1개씩 INSERT
+      // Supabase 동시 저장 — 체크된 투어 1개당 row 1개씩 INSERT (value 파싱)
       const memo = formData.get("memo") as string;
       const rows = Array.from(checked).map(cb => {
-        const el = cb as HTMLInputElement;
-        // 1순위: data-* 속성 사용
-        let dateStr = el.dataset.date || "";
-        let tourName = el.dataset.tourName || "";
-        // 2순위(폴백): value 파싱 — value 형식 "${m}-${d}-${si}-${slug}"
-        if (!dateStr || !tourName) {
-          const parts = el.value.split("-");
-          if (parts.length >= 4) {
-            const mPart = parts[0];
-            const dPart = parts[1];
-            const slug = parts.slice(3).join("-");
-            if (!dateStr && mPart && dPart) {
-              dateStr = `2026-${mPart.padStart(2, "0")}-${dPart.padStart(2, "0")}`;
-            }
-            if (!tourName) tourName = SLUG_TO_NAME[slug] || slug;
-          }
-        }
+        const val = (cb as HTMLInputElement).value;
+        // value 형식: "${m}-${d}-${si}-${slug}"  예: "9-5-0-safari"
+        const parts = val.split("-");
+        const mPart = parts[0] || "";
+        const dPart = parts[1] || "";
+        const slug = parts.slice(3).join("-");
+        const dateStr = mPart && dPart ? `2026-${mPart.padStart(2, "0")}-${dPart.padStart(2, "0")}` : "";
+        const tourName = SLUG_TO_NAME[slug] || slug;
         return {
           booking_id: session.booking_id,
           portal_name: session.guest_name,

@@ -154,9 +154,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       ) : loading ? (
         <div className="ts-card"><div className="ts-loading">불러오는 중...</div></div>
       ) : (() => {
-        // 투어명+날짜 둘 다 존재하는 신청만
+        // 투어명+날짜 둘 다 존재 → 정상 그룹 / 둘 중 하나 없으면 → 미분류
         const valid = apps.filter(a => (a.tour_name || "").trim() && (a.date || "").trim());
-        // 그룹핑: key = `${date}|${tour_name}`
+        const legacy = apps.filter(a => !((a.tour_name || "").trim() && (a.date || "").trim()));
         const groupMap = new Map<string, ShuttleApp[]>();
         for (const a of valid) {
           const key = `${a.date}|${a.tour_name}`;
@@ -164,13 +164,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           arr.push(a);
           groupMap.set(key, arr);
         }
-        // 날짜 오름차순 정렬
         const groups = Array.from(groupMap.entries()).sort((a, b) => {
           const da = a[0].split("|")[0];
           const db = b[0].split("|")[0];
           return da.localeCompare(db);
         });
-        if (groups.length === 0) {
+        if (groups.length === 0 && legacy.length === 0) {
           return <div className="ts-card"><div className="ts-empty">신청 내역이 없습니다.</div></div>;
         }
         const KR_DOW = ["일","월","화","수","목","금","토"];
@@ -236,6 +235,55 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 </div>
               );
             })}
+
+            {legacy.length > 0 && (
+              <div className="ts-card">
+                <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#f1f5f9", borderBottom:"1px solid #cbd5e1"}}>
+                  <div style={{fontSize:15, fontWeight:800, color:"#475569"}}>📦 미분류 (구형 데이터)</div>
+                  <div style={{fontSize:13, fontWeight:700, color:"#475569", background:"#fff", border:"1px solid #cbd5e1", padding:"4px 12px", borderRadius:999}}>총 {legacy.length}건</div>
+                </div>
+                <table className="ts-tbl">
+                  <thead>
+                    <tr>
+                      <th style={{width:130}}>신청자</th>
+                      <th style={{width:140}}>집주소</th>
+                      <th style={{width:80, textAlign:"center"}}>인원</th>
+                      <th style={{width:120}}>날짜/투어</th>
+                      <th>요청사항</th>
+                      <th style={{width:130}}>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {legacy.map(a => {
+                      const meta = STATUS_META[a.status] || STATUS_META.pending;
+                      const req = a.request || a.message || "";
+                      const dt = (a.tour_name || "").trim() || (a.date || "").trim() || "-";
+                      return (
+                        <tr key={a.id}>
+                          <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
+                          <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
+                          <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
+                          <td style={{color:"#475569", fontSize:12}}>{dt}</td>
+                          <td className="ts-notes" title={req}>{req || "-"}</td>
+                          <td>
+                            <select
+                              className="ts-sel"
+                              style={{background:meta.bg, color:meta.color, borderColor:meta.bg}}
+                              value={a.status}
+                              onChange={e => changeStatus(a.id, e.target.value)}
+                            >
+                              <option value="pending">대기중</option>
+                              <option value="confirmed">확정</option>
+                              <option value="cancelled">취소</option>
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       })()}
