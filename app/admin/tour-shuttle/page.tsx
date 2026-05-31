@@ -18,7 +18,9 @@ interface ShuttleApp {
   name: string | null;
   room_number: string | null;
   tour_name: string | null;
-  date: string | null;
+  tour_date: string | null;
+  depart_time: string | null;
+  riders: string | null;
   people_count: number | null;
   request: string | null;
   message: string | null;
@@ -44,30 +46,32 @@ export default function TourShuttleAdminPage() {
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
   const [addOpen, setAddOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ tour_name: "", date: "", people_count: 1, name: "", reservation_no: "", request: "" });
+  const [addForm, setAddForm] = useState({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [addSaving, setAddSaving] = useState(false);
 
   async function saveAddManual() {
-    if (!addForm.tour_name.trim() || !addForm.date || !addForm.name.trim()) {
-      alert("투어명, 날짜, 신청자명은 필수입니다.");
+    if (!addForm.tour_name.trim() || !addForm.tour_date || !addForm.portal_name.trim()) {
+      alert("투어명, 날짜, 예약자명은 필수입니다.");
       return;
     }
     setAddSaving(true);
     const { error } = await supabase.from("shuttle_applications").insert({
       tour_name: addForm.tour_name.trim(),
-      date: addForm.date,
+      tour_date: addForm.tour_date,
+      depart_time: addForm.depart_time.trim() || null,
+      portal_name: addForm.portal_name.trim(),
+      name: addForm.portal_name.trim(),
+      room_number: addForm.room_number.trim() || null,
+      riders: addForm.riders.trim() || null,
       people_count: Number(addForm.people_count) || 1,
-      name: addForm.name.trim(),
-      portal_name: addForm.name.trim(),
       request: addForm.request.trim() || null,
       message: addForm.request.trim() || null,
       status: "confirmed",
-      ...(addForm.reservation_no.trim() ? { reservation_no: addForm.reservation_no.trim() } : {}),
     });
     setAddSaving(false);
     if (error) { alert("저장 실패: " + error.message); return; }
     setAddOpen(false);
-    setAddForm({ tour_name: "", date: "", people_count: 1, name: "", reservation_no: "", request: "" });
+    setAddForm({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
     load();
   }
 
@@ -154,12 +158,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       ) : loading ? (
         <div className="ts-card"><div className="ts-loading">불러오는 중...</div></div>
       ) : (() => {
-        // 투어명+날짜 둘 다 존재 → 정상 그룹 / 둘 중 하나 없으면 → 미분류
-        const valid = apps.filter(a => (a.tour_name || "").trim() && (a.date || "").trim());
-        const legacy = apps.filter(a => !((a.tour_name || "").trim() && (a.date || "").trim()));
+        // 투어명+tour_date 둘 다 존재 → 정상 그룹 / 둘 중 하나 없으면 → 미분류
+        const valid = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim());
+        const legacy = apps.filter(a => !((a.tour_name || "").trim() && (a.tour_date || "").trim()));
         const groupMap = new Map<string, ShuttleApp[]>();
         for (const a of valid) {
-          const key = `${a.date}|${a.tour_name}`;
+          const key = `${a.tour_date}|${a.tour_name}`;
           const arr = groupMap.get(key) || [];
           arr.push(a);
           groupMap.set(key, arr);
@@ -185,11 +189,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               const date = key.split("|")[0];
               const tour = key.split("|").slice(1).join("|");
               const total = list.reduce((s, a) => s + (a.people_count || 0), 0);
+              const depart = list.find(a => (a.depart_time || "").trim())?.depart_time || "";
               return (
                 <div key={key} className="ts-card">
                   <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#eff6ff", borderBottom:"1px solid #bfdbfe"}}>
                     <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e"}}>
-                      📅 {fmtDateKR(date)} · {tour}
+                      📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:8}}>· 출발 {depart}</span>}
                     </div>
                     <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#fff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>
                       총 {total}명
@@ -198,11 +203,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                   <table className="ts-tbl">
                     <thead>
                       <tr>
-                        <th style={{width:130}}>신청자</th>
-                        <th style={{width:140}}>집주소</th>
-                        <th style={{width:80, textAlign:"center"}}>인원</th>
+                        <th style={{width:120}}>예약자</th>
+                        <th style={{width:120}}>픽업장소</th>
+                        <th style={{width:150}}>탑승자</th>
+                        <th style={{width:70, textAlign:"center"}}>인원</th>
                         <th>요청사항</th>
-                        <th style={{width:130}}>상태</th>
+                        <th style={{width:120}}>상태</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -213,6 +219,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                           <tr key={a.id}>
                             <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
                             <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
+                            <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                             <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
                             <td className="ts-notes" title={req}>{req || "-"}</td>
                             <td>
@@ -245,23 +252,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 <table className="ts-tbl">
                   <thead>
                     <tr>
-                      <th style={{width:130}}>신청자</th>
-                      <th style={{width:140}}>집주소</th>
-                      <th style={{width:80, textAlign:"center"}}>인원</th>
-                      <th style={{width:120}}>날짜/투어</th>
+                      <th style={{width:120}}>예약자</th>
+                      <th style={{width:120}}>픽업장소</th>
+                      <th style={{width:150}}>탑승자</th>
+                      <th style={{width:70, textAlign:"center"}}>인원</th>
+                      <th style={{width:130}}>날짜/투어</th>
                       <th>요청사항</th>
-                      <th style={{width:130}}>상태</th>
+                      <th style={{width:120}}>상태</th>
                     </tr>
                   </thead>
                   <tbody>
                     {legacy.map(a => {
                       const meta = STATUS_META[a.status] || STATUS_META.pending;
                       const req = a.request || a.message || "";
-                      const dt = (a.tour_name || "").trim() || (a.date || "").trim() || "-";
+                      const dt = (a.tour_name || "").trim() || (a.tour_date || "").trim() || "-";
                       return (
                         <tr key={a.id}>
                           <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
                           <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
+                          <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                           <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
                           <td style={{color:"#475569", fontSize:12}}>{dt}</td>
                           <td className="ts-notes" title={req}>{req || "-"}</td>
@@ -299,23 +308,31 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <label style={{ gridColumn: "1 / 3", fontSize: 12, fontWeight: 700, color: "#374151" }}>
               투어명 <span style={{ color: "#dc2626" }}>*</span>
-              <input type="text" value={addForm.tour_name} onChange={e => setAddForm(p => ({ ...p, tour_name: e.target.value }))} placeholder="예: 막탄 시티 투어" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              <input type="text" value={addForm.tour_name} onChange={e => setAddForm(p => ({ ...p, tour_name: e.target.value }))} placeholder="예: 세부 사파리" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </label>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
               날짜 <span style={{ color: "#dc2626" }}>*</span>
-              <input type="date" value={addForm.date} onChange={e => setAddForm(p => ({ ...p, date: e.target.value }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              <input type="date" value={addForm.tour_date} onChange={e => setAddForm(p => ({ ...p, tour_date: e.target.value }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              출발 시간
+              <input type="text" value={addForm.depart_time} onChange={e => setAddForm(p => ({ ...p, depart_time: e.target.value }))} placeholder="예: 8:30am" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              예약자 <span style={{ color: "#dc2626" }}>*</span>
+              <input type="text" value={addForm.portal_name} onChange={e => setAddForm(p => ({ ...p, portal_name: e.target.value }))} placeholder="홍길동" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              픽업장소
+              <input type="text" value={addForm.room_number} onChange={e => setAddForm(p => ({ ...p, room_number: e.target.value }))} placeholder="예: 드림하우스 B16 L19" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            </label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+              탑승자
+              <input type="text" value={addForm.riders} onChange={e => setAddForm(p => ({ ...p, riders: e.target.value }))} placeholder="예: 김지아, 김지우" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </label>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
               인원
-              <input type="number" min={1} value={addForm.people_count} onChange={e => setAddForm(p => ({ ...p, people_count: Number(e.target.value) || 1 }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-            </label>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
-              신청자명 <span style={{ color: "#dc2626" }}>*</span>
-              <input type="text" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} placeholder="홍길동" style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-            </label>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
-              예약번호 (선택)
-              <input type="text" value={addForm.reservation_no} onChange={e => setAddForm(p => ({ ...p, reservation_no: e.target.value }))} placeholder="DA-..." style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              <input type="number" min={1} max={6} value={addForm.people_count} onChange={e => setAddForm(p => ({ ...p, people_count: Number(e.target.value) || 1 }))} style={{ width: "100%", marginTop: 4, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </label>
             <label style={{ gridColumn: "1 / 3", fontSize: 12, fontWeight: 700, color: "#374151" }}>
               요청사항

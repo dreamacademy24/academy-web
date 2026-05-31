@@ -245,24 +245,30 @@ export default function MyApplicationsPage() {
           )}
           {data.shuttle.length === 0 ? (
             <div className="ma-empty">신청 내역이 없습니다.</div>
-          ) : data.shuttle.map((r: AnyRow) => {
+          ) : [...data.shuttle].sort((a: AnyRow, b: AnyRow) => String(a.tour_date || a.date || "").localeCompare(String(b.tour_date || b.date || ""))).map((r: AnyRow) => {
             const meta = statusMeta(String(r.status || ""));
             const id = String(r.id || "");
-            const title = String(r.request || r.tour_name || "투어 셔틀");
+            const tourName = String(r.tour_name || r.request || "투어 셔틀");
+            const tDate = String(r.tour_date || r.date || "");
+            const dt = new Date(tDate + "T00:00:00");
+            const md = (!tDate || isNaN(dt.getTime())) ? (tDate || "-") : `${dt.getMonth()+1}/${dt.getDate()} (${["일","월","화","수","목","금","토"][dt.getDay()]})`;
+            const depart = String(r.depart_time || "");
+            const ppl = r.people_count ?? r.num_people ?? "-";
+            const room = String(r.room_number || "-");
             return (
               <div key={id} className="ma-card">
                 <div className="ma-row1">
-                  <span className="ma-date">신청일 {fmtDate(String(r.created_at || ""))}</span>
+                  <span className="ma-title-line" style={{margin:0, flex:1}}>{md} · {tourName}</span>
                   <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
-                <div className="ma-title-line">{title}</div>
                 <div className="ma-meta">
-                  <b>📅 날짜:</b> {fmtDate(String(r.date || ""))}{" "}
-                  <b style={{ marginLeft: 8 }}>👥 인원:</b> {String(r.people_count ?? r.num_people ?? "-")}명
+                  {depart && <><b>🕐 출발:</b> {depart}{" "}</>}
+                  <b style={{ marginLeft: depart ? 8 : 0 }}>👥 인원:</b> {String(ppl)}명{" "}
+                  <b style={{ marginLeft: 8 }}>📍 픽업:</b> {room}
                 </div>
                 {canCancel(String(r.status || "")) && (
                   <div className="ma-actions">
-                    <button className="ma-cancel-btn" onClick={() => openCancel("shuttle_applications", id, title)}>취소요청</button>
+                    <button className="ma-cancel-btn" onClick={() => openCancel("shuttle_applications", id, `${md} · ${tourName}`)}>취소요청</button>
                   </div>
                 )}
               </div>

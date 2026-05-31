@@ -119,7 +119,7 @@ const ALL_MONTHS = ['5','6','7','8','9','10','11','12'];
 
 interface PortalSession { booking_id: string; guest_name: string; expires: number }
 
-type ShuttleApp = { id: string; created_at: string; date: string | null; request: string | null; tour_name?: string | null; people_count: number | null; status: string; name?: string | null };
+type SelectedTour = { value: string; tourName: string; date: string; departTime: string; people: number };
 
 export default function PortalShuttlePage() {
   const router = useRouter();
@@ -130,22 +130,9 @@ export default function PortalShuttlePage() {
   const [activeMonth, setActiveMonth] = useState("");
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [myApps, setMyApps] = useState<ShuttleApp[]>([]);
-  const [numPeople, setNumPeople] = useState<number>(1);
+  const [selectedTours, setSelectedTours] = useState<SelectedTour[]>([]);
+  const [riders, setRiders] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
-
-  const loadMyApps = useCallback(async (bookingId: string) => {
-    if (!bookingId) return;
-    const { data } = await supabase.from("shuttle_applications")
-      .select("id, created_at, date, request, tour_name, people_count, status, name")
-      .eq("booking_id", bookingId)
-      .order("created_at", { ascending: false });
-    setMyApps((data || []) as ShuttleApp[]);
-  }, []);
-
-  useEffect(() => {
-    if (session?.booking_id) loadMyApps(session.booking_id);
-  }, [session, loadMyApps]);
 
   // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
   useEffect(() => {
@@ -284,9 +271,8 @@ export default function PortalShuttlePage() {
     if (!form) return;
     if (!form.reportValidity()) return;
 
-    const checked = form.querySelectorAll('input[name="schedule"]:checked');
-    if (checked.length === 0) {
-      alert("날짜를 최소 1개 이상 선택해 주세요.");
+    if (selectedTours.length === 0) {
+      alert("투어를 최소 1개 이상 선택해 주세요.");
       return;
     }
 
@@ -294,46 +280,37 @@ export default function PortalShuttlePage() {
     try {
       const formData = new FormData(form);
       formData.delete("schedule");
-      const scheduleString = Array.from(checked).map((cb) => (cb as HTMLInputElement).value).join(", ");
+      const scheduleString = selectedTours.map(t => t.value).join(", ");
       formData.append("schedule", scheduleString);
       formData.set("guestName", session.guest_name);
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
 
-      // Supabase 동시 저장 — 체크된 투어 1개당 row 1개씩 INSERT (value 파싱)
-      const memo = formData.get("memo") as string;
-      const rows = Array.from(checked).map(cb => {
-        const val = (cb as HTMLInputElement).value;
-        // value 형식: "${m}-${d}-${si}-${slug}"  예: "9-5-0-safari"
-        const parts = val.split("-");
-        const mPart = parts[0] || "";
-        const dPart = parts[1] || "";
-        const slug = parts.slice(3).join("-");
-        const dateStr = mPart && dPart ? `2026-${mPart.padStart(2, "0")}-${dPart.padStart(2, "0")}` : "";
-        const tourName = SLUG_TO_NAME[slug] || slug;
-        return {
-          booking_id: session.booking_id,
-          portal_name: session.guest_name,
-          name: session.guest_name,
-          date: dateStr,
-          tour_name: tourName,
-          people_count: numPeople,
-          message: memo,
-          room_number: bookingMeta?.room || "",
-          request: memo,
-        };
-      });
+      // Supabase 동시 저장 — selectedTours 1개당 row 1개씩 INSERT
+      const memo = (formData.get("memo") as string) || "";
+      const ridersVal = riders.trim();
+      const rows = selectedTours.map(t => ({
+        booking_id: session.booking_id,
+        portal_name: session.guest_name,
+        name: session.guest_name,
+        tour_name: t.tourName,
+        tour_date: t.date,
+        depart_time: t.departTime,
+        people_count: t.people,
+        riders: ridersVal,
+        room_number: bookingMeta?.room || "",
+        message: memo,
+        request: memo,
+        status: "pending",
+      }));
       console.log("[shuttle insert] rows:", rows);
       const { error: insErr } = await supabase.from("shuttle_applications").insert(rows);
       if (insErr) console.warn("[shuttle insert] failed:", insErr);
 
-      alert("신청이 완료되었습니다! 아래 내 신청 내역에서 인원을 수정할 수 있습니다.");
-      // alert 닫힌 직후 폼 리셋 + 내 신청 내역 갱신 + 스크롤
+      alert("신청 완료! 예약현황에서 확인하세요.");
       if (formRef.current) formRef.current.reset();
-      await loadMyApps(session.booking_id);
-      setTimeout(() => {
-        document.getElementById("my-apps")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
+      setSelectedTours([]);
+      setRiders("");
     } catch (err) {
       console.error(err);
       alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
@@ -643,8 +620,22 @@ export default function PortalShuttlePage() {
                                       data-tour-name={sl.name}
                                       data-date={item.dateStr}
                                       onChange={(e) => {
-                                        if (!isMulti) return;
                                         const target = e.currentTarget;
+                                        const myValue = target.value;
+                                        // selectedTours 업데이트
+                                        if (target.checked) {
+                                          setSelectedTours(prev => prev.some(t => t.value === myValue) ? prev : [...prev, {
+                                            value: myValue,
+                                            tourName: sl.name,
+                                            date: item.dateStr,
+                                            departTime: sl.time,
+                                            people: 1,
+                                          }]);
+                                        } else {
+                                          setSelectedTours(prev => prev.filter(t => t.value !== myValue));
+                                        }
+                                        // 같은 날짜 sibling 잠금 (multi-slot 날짜만)
+                                        if (!isMulti) return;
                                         const grid = target.closest('.schedule-grid');
                                         if (!grid) return;
                                         const siblings = grid.querySelectorAll<HTMLInputElement>(`input[name="schedule"][value^="${m}-${d}-"]`);
@@ -680,21 +671,54 @@ export default function PortalShuttlePage() {
                 </div>
 
                 <div className="field">
-                  <label className="label-main" htmlFor="memo">추가 요청 / 메모</label>
-                  <textarea id="memo" name="memo" placeholder="같이 가는 아이 이름, 유모차/카시트 지참 여부, 기타 요청 사항을 적어주세요."></textarea>
+                  <label className="label-main" style={{fontSize:16, fontWeight:600}}>선택한 투어<span className="required">*</span></label>
+                  {selectedTours.length === 0 ? (
+                    <div style={{padding:"14px 16px", background:"#f9fafb", border:"1px dashed #cbd5e1", borderRadius:10, fontSize:13, color:"#94a3b8", textAlign:"center"}}>위에서 투어를 선택해주세요</div>
+                  ) : (
+                    <div style={{display:"flex", flexDirection:"column", gap:8}}>
+                      {selectedTours.map(t => {
+                        const dt = new Date(t.date + "T00:00:00");
+                        const dow = isNaN(dt.getTime()) ? "" : ["일","월","화","수","목","금","토"][dt.getDay()];
+                        const md = isNaN(dt.getTime()) ? t.date : `${dt.getMonth()+1}/${dt.getDate()}`;
+                        return (
+                          <div key={t.value} style={{display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10}}>
+                            <div style={{flex:1, minWidth:0}}>
+                              <div style={{fontSize:13, fontWeight:700, color:"#1a1a2e"}}>{md}{dow && ` (${dow})`} · {t.tourName}</div>
+                              <div style={{fontSize:11, color:"#6b7280", marginTop:2}}>출발 {t.departTime.replace(/(am|pm)$/i, '')}</div>
+                            </div>
+                            <input
+                              type="number"
+                              min={1}
+                              max={6}
+                              value={t.people}
+                              onChange={e => {
+                                const n = Math.max(1, Math.min(6, Number(e.target.value) || 1));
+                                setSelectedTours(prev => prev.map(x => x.value === t.value ? { ...x, people: n } : x));
+                              }}
+                              style={{ width:60, padding:"6px 8px", border:"1px solid #cbd5e1", borderRadius:6, fontSize:13, fontFamily:"inherit", textAlign:"center", outline:"none" }}
+                            />
+                            <span style={{fontSize:12, color:"#475569", fontWeight:600}}>명</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="field">
-                  <label className="label-main" htmlFor="numPeople">탑승 인원<span className="required">*</span></label>
+                  <label className="label-main" htmlFor="riders">탑승자 이름</label>
                   <input
-                    id="numPeople"
-                    type="number"
-                    min={1}
-                    max={6}
-                    value={numPeople}
-                    onChange={e => setNumPeople(Math.max(1, Math.min(6, Number(e.target.value) || 1)))}
-                    style={{ width:120 }}
+                    id="riders"
+                    type="text"
+                    value={riders}
+                    onChange={e => setRiders(e.target.value)}
+                    placeholder="예) 김지아, 김지우"
                   />
+                </div>
+
+                <div className="field">
+                  <label className="label-main" htmlFor="memo">추가 요청 / 메모</label>
+                  <textarea id="memo" name="memo" placeholder="유모차/카시트 지참 여부, 기타 요청 사항을 적어주세요."></textarea>
                 </div>
 
                 <div className="field">
@@ -751,38 +775,6 @@ export default function PortalShuttlePage() {
                 <p className="tagline">자세한 셔틀 시간표는 드림센터 내부 공지를 기준으로 합니다.</p>
               </div>
             </aside>
-          </div>
-
-          {/* ── 내 신청 내역 ── */}
-          <div id="my-apps" style={{ marginTop: 32, background: "#fff", borderRadius: 14, padding: 22, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1px solid #f3f4f6", scrollMarginTop: 16 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
-              📑 내 신청 내역 <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>({myApps.length}건)</span>
-            </div>
-            {myApps.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 28, color: "#9ca3af", fontSize: 13, background: "#f9fafb", borderRadius: 10, border: "1px dashed #e5e7eb" }}>
-                신청 내역이 없습니다.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {myApps.map(a => {
-                  const title = a.tour_name || a.request || "투어 셔틀";
-                  const v = String(a.status || "").toLowerCase();
-                  const meta = (v === "confirmed" || v === "확정")
-                    ? { label: "확정", bg: "#dcfce7", color: "#15803d" }
-                    : (v === "cancelled" || v === "cancel")
-                      ? { label: "취소", bg: "#fee2e2", color: "#b91c1c" }
-                      : { label: "대기중", bg: "#fef3c7", color: "#92400e" };
-                  return (
-                    <div key={a.id} style={{ border: "1px solid #f3f4f6", borderRadius: 10, padding: "12px 14px", background: "#fafbfc", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", lineHeight: 1.4, wordBreak: "keep-all" }}>
-                        {title} <span style={{ color: "#6b7280", fontWeight: 500, fontSize: 12.5, marginLeft: 4 }}>· {a.date || "-"}</span>
-                      </div>
-                      <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: meta.bg, color: meta.color, flexShrink: 0 }}>{meta.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </section>
       </main>
