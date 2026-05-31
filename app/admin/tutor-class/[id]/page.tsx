@@ -176,6 +176,7 @@ export default function TutorRequestDetailPage() {
         class_days: classDaysArr,
         class_time: row.preferred_time,
         class_type: row.class_type,
+        hourly_rate: Number(priceNum) || 0,
         house_or_reserver: row.guest_name,
         student_names: row.student_name_kr || (row as any).student_name || "",
         student_ages: row.student_age,

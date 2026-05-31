@@ -575,6 +575,7 @@ export default function EngTutorClassPage() {
         class_days: classDaysArr,
         class_time: r.preferred_time,
         class_type: r.class_type,
+        hourly_rate: Number(priceNum) || 0,
         house_or_reserver: r.guest_name,
         student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
         student_ages: r.student_age,
