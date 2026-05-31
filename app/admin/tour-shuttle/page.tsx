@@ -151,59 +151,94 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       {mainTab === "deploy" ? (
         <ScheduleDeploy />
-      ) : (
-      <div className="ts-card">
-        {loading ? (
-          <div className="ts-loading">불러오는 중...</div>
-        ) : apps.length === 0 ? (
-          <div className="ts-empty">신청 내역이 없습니다.</div>
-        ) : (
-          <table className="ts-tbl">
-            <thead>
-              <tr>
-                <th style={{ width: 110 }}>신청일</th>
-                <th style={{ width: 110 }}>신청자</th>
-                <th style={{ width: 110 }}>집주소</th>
-                <th style={{ width: 180 }}>투어명</th>
-                <th style={{ width: 110 }}>날짜</th>
-                <th style={{ width: 60 }}>인원</th>
-                <th>요청사항</th>
-                <th style={{ width: 130 }}>상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apps.map(a => {
-                const meta = STATUS_META[a.status] || STATUS_META.pending;
-                const req = a.request || a.message || "";
-                return (
-                  <tr key={a.id}>
-                    <td style={{ fontSize: 12, color: "#6b7c93", whiteSpace: "nowrap" }}>{fmtDate(a.created_at)}</td>
-                    <td style={{ fontWeight: 600 }}>{a.portal_name || a.name || "-"}</td>
-                    <td style={{ fontSize: 12, color: "#475569" }}>{a.room_number || "-"}</td>
-                    <td>{a.tour_name || "-"}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{a.date || "-"}</td>
-                    <td style={{ textAlign: "center" }}>{a.people_count ?? "-"}</td>
-                    <td className="ts-notes" title={req}>{req || "-"}</td>
-                    <td>
-                      <select
-                        className="ts-sel"
-                        style={{ background: meta.bg, color: meta.color, borderColor: meta.bg }}
-                        value={a.status}
-                        onChange={e => changeStatus(a.id, e.target.value)}
-                      >
-                        <option value="pending">대기중</option>
-                        <option value="confirmed">확정</option>
-                        <option value="cancelled">취소</option>
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-      )}
+      ) : loading ? (
+        <div className="ts-card"><div className="ts-loading">불러오는 중...</div></div>
+      ) : (() => {
+        // 투어명+날짜 둘 다 존재하는 신청만
+        const valid = apps.filter(a => (a.tour_name || "").trim() && (a.date || "").trim());
+        // 그룹핑: key = `${date}|${tour_name}`
+        const groupMap = new Map<string, ShuttleApp[]>();
+        for (const a of valid) {
+          const key = `${a.date}|${a.tour_name}`;
+          const arr = groupMap.get(key) || [];
+          arr.push(a);
+          groupMap.set(key, arr);
+        }
+        // 날짜 오름차순 정렬
+        const groups = Array.from(groupMap.entries()).sort((a, b) => {
+          const da = a[0].split("|")[0];
+          const db = b[0].split("|")[0];
+          return da.localeCompare(db);
+        });
+        if (groups.length === 0) {
+          return <div className="ts-card"><div className="ts-empty">신청 내역이 없습니다.</div></div>;
+        }
+        const KR_DOW = ["일","월","화","수","목","금","토"];
+        const fmtDateKR = (s: string) => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          const dt = new Date(s + "T00:00:00");
+          if (isNaN(dt.getTime())) return s;
+          return `${dt.getMonth()+1}/${dt.getDate()} (${KR_DOW[dt.getDay()]})`;
+        };
+        return (
+          <div style={{display:"flex", flexDirection:"column", gap:14}}>
+            {groups.map(([key, list]) => {
+              const date = key.split("|")[0];
+              const tour = key.split("|").slice(1).join("|");
+              const total = list.reduce((s, a) => s + (a.people_count || 0), 0);
+              return (
+                <div key={key} className="ts-card">
+                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#eff6ff", borderBottom:"1px solid #bfdbfe"}}>
+                    <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e"}}>
+                      📅 {fmtDateKR(date)} · {tour}
+                    </div>
+                    <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#fff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>
+                      총 {total}명
+                    </div>
+                  </div>
+                  <table className="ts-tbl">
+                    <thead>
+                      <tr>
+                        <th style={{width:130}}>신청자</th>
+                        <th style={{width:140}}>집주소</th>
+                        <th style={{width:80, textAlign:"center"}}>인원</th>
+                        <th>요청사항</th>
+                        <th style={{width:130}}>상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {list.map(a => {
+                        const meta = STATUS_META[a.status] || STATUS_META.pending;
+                        const req = a.request || a.message || "";
+                        return (
+                          <tr key={a.id}>
+                            <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
+                            <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
+                            <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
+                            <td className="ts-notes" title={req}>{req || "-"}</td>
+                            <td>
+                              <select
+                                className="ts-sel"
+                                style={{background:meta.bg, color:meta.color, borderColor:meta.bg}}
+                                value={a.status}
+                                onChange={e => changeStatus(a.id, e.target.value)}
+                              >
+                                <option value="pending">대기중</option>
+                                <option value="confirmed">확정</option>
+                                <option value="cancelled">취소</option>
+                              </select>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
 
     {addOpen && (
