@@ -15,10 +15,13 @@ interface ShuttleApp {
   created_at: string;
   booking_id: string | null;
   portal_name: string | null;
+  name: string | null;
+  room_number: string | null;
   tour_name: string | null;
   date: string | null;
-  num_people: number | null;
-  notes: string | null;
+  people_count: number | null;
+  request: string | null;
+  message: string | null;
   status: string;
 }
 
@@ -160,7 +163,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               <tr>
                 <th style={{ width: 110 }}>신청일</th>
                 <th style={{ width: 110 }}>신청자</th>
-                <th style={{ width: 120 }}>예약번호</th>
+                <th style={{ width: 110 }}>집주소</th>
                 <th style={{ width: 180 }}>투어명</th>
                 <th style={{ width: 110 }}>날짜</th>
                 <th style={{ width: 60 }}>인원</th>
@@ -171,17 +174,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             <tbody>
               {apps.map(a => {
                 const meta = STATUS_META[a.status] || STATUS_META.pending;
+                const req = a.request || a.message || "";
                 return (
                   <tr key={a.id}>
                     <td style={{ fontSize: 12, color: "#6b7c93", whiteSpace: "nowrap" }}>{fmtDate(a.created_at)}</td>
-                    <td style={{ fontWeight: 600 }}>{a.portal_name || "-"}</td>
-                    <td style={{ fontSize: 12, fontFamily: "monospace", color: "#475569" }}>
-                      {a.booking_id ? (bookingNumbers[a.booking_id] || a.booking_id.slice(0, 8)) : "-"}
-                    </td>
+                    <td style={{ fontWeight: 600 }}>{a.portal_name || a.name || "-"}</td>
+                    <td style={{ fontSize: 12, color: "#475569" }}>{a.room_number || "-"}</td>
                     <td>{a.tour_name || "-"}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{fmtDate(a.date)}</td>
-                    <td style={{ textAlign: "center" }}>{a.num_people || "-"}</td>
-                    <td className="ts-notes" title={a.notes || ""}>{a.notes || "-"}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{a.date || "-"}</td>
+                    <td style={{ textAlign: "center" }}>{a.people_count ?? "-"}</td>
+                    <td className="ts-notes" title={req}>{req || "-"}</td>
                     <td>
                       <select
                         className="ts-sel"
