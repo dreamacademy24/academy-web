@@ -27,15 +27,15 @@ function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
   const d = new Date(dateStr + 'T00:00:00');
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
-  const D_HMART = '10:00 드림하우스→H마트 · 11:00 H마트→드림하우스 · 최대 출발 11시, 장보기 후 바로 탑승 · ⚠️ 돌아오는 편 미탑승 시 기사님께 꼭 말씀해 주세요';
-  const D_ILCORSO = '16:00 드림하우스 출발 · 도착 후 2시간 30분 후 복귀';
-  const D_ANJO = '13:00 드림하우스 출발 · 20:00 복귀';
-  const D_FUNPARK = '14:00 드림하우스 출발 · 20:00 복귀';
-  const D_SAFARI = '8:30 드림하우스 출발 · 15:00 복귀 · 유료 인당 200페소';
-  const D_SHRINE = '17:30 드림하우스 출발 · 도착 후 40분 후 복귀';
-  const D_LANTAW = '16:00 드림하우스 출발 · 도착 후 2시간 30분 후 복귀 · 레스토랑 예약 대행, 늦은 예약 시 마감될 수 있음';
-  const D_PAROLA = '16:40 드림하우스 출발 · 식사 종료 후 함께 이동 · ⚠️ 별도 출발 시간 없음, 다른 하우스 일정 함께 확인 부탁드립니다';
-  const D_SMSEASIDE = '10:30 드림하우스 출발 · 가는 셔틀만 제공, 개별 복귀';
+  const D_HMART = '10:00 출발 · 11:00 복귀';
+  const D_ILCORSO = '16:00 출발 · 2시간 30분 후 복귀';
+  const D_ANJO = '13:00 출발 · 20:00 복귀';
+  const D_FUNPARK = '14:00 출발 · 20:00 복귀';
+  const D_SAFARI = '8:30 출발 · 15:00 복귀 · 유료 200페소';
+  const D_SHRINE = '17:30 출발 · 40분 후 복귀';
+  const D_LANTAW = '16:00 출발 · 2시간 30분 후 복귀';
+  const D_PAROLA = '16:40 출발 · 식사 후 복귀';
+  const D_SMSEASIDE = '10:30 출발 · 개별 복귀';
 
   const hmart: ShSlot[] = [{ time: '10:00am', name: 'H-Mart 쇼핑', detail: D_HMART }];
   if (dow===1||dow===3||dow===5) return hmart;
@@ -118,6 +118,8 @@ export default function PortalShuttlePage() {
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [myApps, setMyApps] = useState<ShuttleApp[]>([]);
+  const [peopleEdit, setPeopleEdit] = useState<Record<string, number>>({});
+  const [savingPeople, setSavingPeople] = useState<Record<string, boolean>>({});
   const formRef = useRef<HTMLFormElement>(null);
 
   const loadMyApps = useCallback(async (bookingId: string) => {
@@ -132,6 +134,27 @@ export default function PortalShuttlePage() {
   useEffect(() => {
     if (session?.booking_id) loadMyApps(session.booking_id);
   }, [session, loadMyApps]);
+
+  // myApps 변경 시 인원 수정 input 기본값 동기화
+  useEffect(() => {
+    setPeopleEdit(prev => {
+      const next: Record<string, number> = {};
+      for (const a of myApps) next[a.id] = prev[a.id] ?? (a.people_count ?? 1);
+      return next;
+    });
+  }, [myApps]);
+
+  async function savePeople(id: string) {
+    const n = peopleEdit[id];
+    if (!n || n < 1 || n > 6) { alert("인원은 1~6 사이여야 합니다."); return; }
+    setSavingPeople(prev => ({ ...prev, [id]: true }));
+    const { error } = await supabase.from("shuttle_applications")
+      .update({ people_count: n })
+      .eq("id", id);
+    setSavingPeople(prev => ({ ...prev, [id]: false }));
+    if (error) { alert("저장 실패: " + error.message); return; }
+    if (session?.booking_id) loadMyApps(session.booking_id);
+  }
 
   // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
   useEffect(() => {
@@ -292,7 +315,7 @@ export default function PortalShuttlePage() {
         portal_name: session.guest_name,
         name: session.guest_name,
         date: scheduleString,
-        people_count: Number(formData.get("people")) || 1,
+        people_count: 1,
         message: formData.get("memo") as string,
         room_number: bookingMeta?.room || "",
         request: formData.get("memo") as string,
@@ -635,11 +658,6 @@ export default function PortalShuttlePage() {
                 </div>
 
                 <div className="field">
-                  <label className="label-main" htmlFor="people">탑승 인원<span className="required">*</span></label>
-                  <input id="people" name="people" type="number" min={1} required placeholder="예) 2" />
-                </div>
-
-                <div className="field">
                   <label className="label-main" htmlFor="memo">추가 요청 / 메모</label>
                   <textarea id="memo" name="memo" placeholder="같이 가는 아이 이름, 유모차/카시트 지참 여부, 기타 요청 사항을 적어주세요."></textarea>
                 </div>
@@ -728,9 +746,38 @@ export default function PortalShuttlePage() {
                       </div>
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: "#1a1a2e", marginBottom: 4, lineHeight: 1.4, wordBreak: "keep-all" }}>{title}</div>
                       <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.7 }}>
-                        <b style={{ color: "#1a1a2e" }}>📅 날짜:</b> {a.date || "-"}{" "}
-                        <b style={{ color: "#1a1a2e", marginLeft: 8 }}>👥 인원:</b> {a.people_count ?? "-"}명
+                        <b style={{ color: "#1a1a2e" }}>📅 날짜:</b> {a.date || "-"}
                       </div>
+                      {(() => {
+                        const locked = v === "confirmed" || v === "확정";
+                        const val = peopleEdit[a.id] ?? (a.people_count ?? 1);
+                        const changed = val !== (a.people_count ?? 1);
+                        const saving = !!savingPeople[a.id];
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontSize: 12.5, color: "#475569" }}>
+                            <b style={{ color: "#1a1a2e" }}>👥 인원:</b>
+                            <input
+                              type="number"
+                              min={1}
+                              max={6}
+                              value={val}
+                              disabled={locked}
+                              onChange={e => setPeopleEdit(prev => ({ ...prev, [a.id]: Math.max(1, Math.min(6, Number(e.target.value) || 1)) }))}
+                              style={{ width: 64, padding: "5px 8px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 13, fontFamily: "inherit", background: locked ? "#f1f5f9" : "#fff", color: locked ? "#94a3b8" : "#1a1a2e", outline: "none" }}
+                            />
+                            <span style={{ color: "#6b7280" }}>명</span>
+                            {!locked && (
+                              <button
+                                type="button"
+                                onClick={() => savePeople(a.id)}
+                                disabled={saving || !changed}
+                                style={{ padding: "5px 12px", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: (saving || !changed) ? "not-allowed" : "pointer", fontFamily: "inherit", background: "#2563eb", color: "#fff", opacity: (saving || !changed) ? 0.5 : 1 }}
+                              >{saving ? "저장중..." : "저장"}</button>
+                            )}
+                            {locked && <span style={{ fontSize: 11, color: "#94a3b8" }}>확정된 신청은 수정 불가</span>}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
