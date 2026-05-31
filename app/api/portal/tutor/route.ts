@@ -46,7 +46,28 @@ export async function GET(req: Request) {
     if (lesson) lessonMap[rid] = lesson
   }
 
-  return NextResponse.json({ requests: reqList, lessonMap })
+  // confirmed 요청별 lesson session notes 수집 (각 lesson_id로 조회)
+  const notesMap: Record<string, Array<{ date: string; note: string; status: string }>> = {}
+  for (const rid of confirmedIds) {
+    const lesson = lessonMap[rid]
+    if (!lesson?.id) continue
+    const { data: sessions } = await supabase
+      .from('tutor_lesson_sessions')
+      .select('session_date, session_note, status')
+      .eq('lesson_id', lesson.id)
+      .not('session_note', 'is', null)
+      .neq('session_note', '')
+      .order('session_date', { ascending: true })
+    if (sessions && sessions.length > 0) {
+      notesMap[rid] = sessions.map((s: any) => ({
+        date: s.session_date,
+        note: s.session_note,
+        status: s.status,
+      }))
+    }
+  }
+
+  return NextResponse.json({ requests: reqList, lessonMap, notesMap })
 }
 
 export async function POST(req: Request) {

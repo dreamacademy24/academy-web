@@ -183,6 +183,9 @@ export default function PortalTutorPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [requests, setRequests] = useState<TutorReq[]>([]);
   const [lessonMap, setLessonMap] = useState<Record<string, any>>({});
+  const [notesMap, setNotesMap] = useState<Record<string, Array<{ date: string; note: string; status: string }>>>({});
+  const [noteTranslations, setNoteTranslations] = useState<Record<string, string>>({});
+  const [translatingKey, setTranslatingKey] = useState<string>("");
   const [form, setForm] = useState(INIT_FORM);
   const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
@@ -235,7 +238,7 @@ export default function PortalTutorPage() {
     if (!session) return;
     (async () => {
       const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
-      if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); }
+      if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); setNotesMap(d.notesMap || {}); }
       const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
       const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
@@ -304,7 +307,31 @@ export default function PortalTutorPage() {
   async function reload() {
     if (!session) return;
     const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
-    if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); }
+    if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); setNotesMap(d.notesMap || {}); }
+  }
+
+  async function translateNote(reqId: string, date: string, note: string) {
+    const key = `${reqId}:${date}`;
+    if (noteTranslations[key]) return; // 캐시 사용
+    if (translatingKey === key) return; // 중복 호출 방지
+    setTranslatingKey(key);
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: note }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.translated) {
+        setNoteTranslations(prev => ({ ...prev, [key]: d.translated }));
+      } else {
+        alert("번역 실패: " + (d.error || "알 수 없는 오류"));
+      }
+    } catch (e) {
+      alert("번역 실패: " + (e instanceof Error ? e.message : "네트워크 오류"));
+    } finally {
+      setTranslatingKey("");
+    }
   }
 
   function toggleDay(d: string) {
@@ -1162,6 +1189,43 @@ export default function PortalTutorPage() {
                     </div>
                   );
                 })()}
+                {r.status === 'confirmed' && Array.isArray(notesMap[r.id]) && notesMap[r.id].length > 0 && (
+                  <div style={{
+                    marginTop:10, padding:"12px 14px",
+                    background:"#f8fafc", borderRadius:10, border:"1px solid #e2e8f0"
+                  }}>
+                    <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:8}}>
+                      📝 데일리 노트 ({notesMap[r.id].length}건)
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                      {notesMap[r.id].map((n) => {
+                        const md = n.date ? `${n.date.slice(5,7)}/${n.date.slice(8,10)}` : '-';
+                        const key = `${r.id}:${n.date}`;
+                        const tr = noteTranslations[key];
+                        const isTranslating = translatingKey === key;
+                        return (
+                          <div key={key} style={{padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                            <div style={{fontSize:12,color:"#475569",lineHeight:1.5}}>
+                              <b style={{color:"#1a6fc4",marginRight:6}}>{md}:</b>{n.note}
+                            </div>
+                            {tr ? (
+                              <div style={{marginTop:6,padding:"6px 8px",background:"#eff6ff",borderRadius:6,fontSize:12,color:"#1e3a8a",lineHeight:1.5}}>
+                                🇰🇷 {tr}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => translateNote(r.id, n.date, n.note)}
+                                disabled={isTranslating}
+                                style={{marginTop:6,padding:"4px 10px",background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",borderRadius:6,fontSize:11,fontWeight:700,cursor:isTranslating?"not-allowed":"pointer",fontFamily:"inherit",opacity:isTranslating?0.6:1}}
+                              >{isTranslating ? "번역 중..." : "🇰🇷 한국어로 번역"}</button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
