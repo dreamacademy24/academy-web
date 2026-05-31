@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
 import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
@@ -312,7 +312,7 @@ export default function TutorApplications() {
           writing_level: detail.writing_level,
           textbook: detail.textbook,
           class_style: detail.class_style,
-          class_focus: detail.class_focus,
+          class_focus: toFocusArr(detail.class_focus),
           total_sessions: computedTotalSessions,
           total_amount: computedTotalAmount,
           status: "active",

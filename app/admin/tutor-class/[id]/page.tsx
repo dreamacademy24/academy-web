@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
 
 interface TutorRow {
   id: string;
@@ -186,7 +186,7 @@ export default function TutorRequestDetailPage() {
         reading_level: row.level_reading,
         writing_level: row.level_writing,
         class_style: row.class_style,
-        class_focus: (row as any).class_focus || (Array.isArray(row.class_focus_arr) ? row.class_focus_arr.join(",") : null),
+        class_focus: toFocusArr(row.class_focus_arr ?? (row as any).class_focus),
         status: "active",
         admin_memo: memoCombined,
       };

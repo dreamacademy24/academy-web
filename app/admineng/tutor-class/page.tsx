@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -585,7 +585,7 @@ export default function EngTutorClassPage() {
         reading_level: r.level_reading,
         writing_level: r.level_writing,
         class_style: r.class_style,
-        class_focus: Array.isArray(r.class_focus_arr) ? r.class_focus_arr.join(",") : null,
+        class_focus: toFocusArr(r.class_focus_arr),
         status: "active",
         admin_memo: `request_id: ${r.id}`,
       };
