@@ -18,6 +18,34 @@ interface TutorReq {
 
 // 일요일은 의도적으로 제외 — 튜터 수업 불가
 const DAYS = ["월","화","수","목","금","토"];
+const KR_DAY_LIST = ['일','월','화','수','목','금','토'];
+
+// 기간 + 유효 블록 → 수업일 목록 [{date, day, time, spd}]
+function generateClassDates(
+  blocks: { days: string[]; time: string; sessions_per_day: 1 | 2 }[],
+  startStr: string,
+  endStr: string,
+): Array<{ date: string; day: string; time: string; spd: number }> {
+  if (!startStr || !endStr) return [];
+  const s = new Date(startStr + 'T00:00:00');
+  const e = new Date(endStr + 'T00:00:00');
+  if (isNaN(s.getTime()) || isNaN(e.getTime()) || s > e) return [];
+  const KR_TO_IDX: Record<string, number> = {'일':0,'월':1,'화':2,'수':3,'목':4,'금':5,'토':6};
+  const valid = blocks.filter(b => Array.isArray(b.days) && b.days.length > 0 && (b.time || '').trim() !== '');
+  const out: Array<{ date: string; day: string; time: string; spd: number }> = [];
+  for (const b of valid) {
+    const idxSet = new Set(b.days.map(d => KR_TO_IDX[d]).filter(i => i !== undefined));
+    const d = new Date(s);
+    while (d <= e) {
+      if (idxSet.has(d.getDay())) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        out.push({ date: dateStr, day: KR_DAY_LIST[d.getDay()], time: b.time, spd: b.sessions_per_day });
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
 
 interface LevelOpt { value: string; kr: string; en: string }
 
@@ -200,6 +228,7 @@ export default function PortalTutorPage() {
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([{ ...INIT_BLOCK }]);
   const [timeBlockIdx, setTimeBlockIdx] = useState<number>(0);
   const [scheduleMode, setScheduleMode] = useState<'same' | 'byday'>('same');
+  const [skipDates, setSkipDates] = useState<string[]>([]);
   const [student2Age2, setStudent2Age2] = useState('');
   const [student2Age, setStudent2Age] = useState('');
   const [myApplications, setMyApplications] = useState<any[]>([]);
@@ -378,6 +407,13 @@ export default function PortalTutorPage() {
     const compatPreferredTime = validBlocks[0].time;
     const compatSessions = validBlocks[0].sessions_per_day;
 
+    // 총 회차/금액 = 생성수업일 − skipDates (블록별 sessions_per_day 가중)
+    const _generated = generateClassDates(validBlocks, form.start_date || '', form.end_date || '');
+    const _sortedSkips = [...skipDates].filter(d => _generated.some(o => o.date === d)).sort();
+    const _totalSessions = _generated.filter(o => !_sortedSkips.includes(o.date)).reduce((s, o) => s + o.spd, 0);
+    const _unitPrice = form.class_type === '1:2' ? 350 : 300;
+    const _totalAmount = _totalSessions * _unitPrice;
+
     if (editingId) {
       const res = await fetch("/api/portal/tutor-edit", {
         method: "PATCH",
@@ -390,10 +426,13 @@ export default function PortalTutorPage() {
           start_date: form.start_date || null,
           end_date: form.end_date || null,
           preferred_days: allDays,
-          skip_dates: form.skip_dates || null,
+          skip_dates: _sortedSkips,
+          change_notes: form.skip_dates || null,
           preferred_time: compatPreferredTime || null,
           sessions_per_day: compatSessions,
           schedule_blocks: validBlocks,
+          total_sessions: _totalSessions,
+          total_amount: _totalAmount,
           ...levels,
           textbook: form.textbook || null,
           class_style: form.class_style || null,
@@ -406,6 +445,7 @@ export default function PortalTutorPage() {
       setEditingId("");
       setForm({ ...INIT_FORM });
       setBlocks([{ ...INIT_BLOCK }]);
+      setSkipDates([]);
       setTutorToast("수정이 완료되었습니다.");
       setTimeout(() => setTutorToast(""), 2500);
       reload();
@@ -425,6 +465,10 @@ export default function PortalTutorPage() {
         preferred_time: compatPreferredTime,
         sessions_per_day: compatSessions,
         schedule_blocks: validBlocks,
+        skip_dates: _sortedSkips,
+        change_notes: form.skip_dates || null,
+        total_sessions: _totalSessions,
+        total_amount: _totalAmount,
         privacy_agreed: true,
         rules_agreed: true,
         slot_label: null,
@@ -434,6 +478,7 @@ export default function PortalTutorPage() {
     if (!res.ok) { const r = await res.json(); setMsg(r.error || "신청 실패"); return; }
     setForm({ ...INIT_FORM });
     setBlocks([{ ...INIT_BLOCK }]);
+    setSkipDates([]);
     setStudent2Age('');
     setDone(true);
     reload();
@@ -466,7 +511,7 @@ export default function PortalTutorPage() {
       start_date: r.start_date || '',
       end_date: r.end_date || '',
       preferred_days_arr: daysArr,
-      skip_dates: (r as any).skip_dates || '',
+      skip_dates: (r as any).change_notes || (typeof (r as any).skip_dates === 'string' ? (r as any).skip_dates : '') || '',
       preferred_time: r.preferred_time || '',
       is_enrolled: enrolled,
       level_english: enrolled ? '' : ((r as any).level_english || ''),
@@ -497,6 +542,9 @@ export default function PortalTutorPage() {
       }]);
       setScheduleMode('same');
     }
+    // skip_dates 배열 복원 (text[] 마이그레이션 후 array, 옛 text 값은 제외)
+    const rawSkip = (r as any).skip_dates;
+    setSkipDates(Array.isArray(rawSkip) ? rawSkip.filter((x: any) => /^\d{4}-\d{2}-\d{2}$/.test(String(x))) : []);
     setEditingId(r.id);
     setTimeout(() => document.getElementById('tutor-apply-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
@@ -951,7 +999,12 @@ export default function PortalTutorPage() {
             return cnt;
           };
           const N = validBlocks.reduce((s, b) => s + b.days.length * b.sessions_per_day, 0);
-          const K = validBlocks.reduce((s, b) => s + occInRange(b.days) * b.sessions_per_day, 0);
+          const K_gross = validBlocks.reduce((s, b) => s + occInRange(b.days) * b.sessions_per_day, 0);
+          // skipDates 차감: 빠지는 날짜 1건당 해당 블록의 sessions_per_day 차감
+          const _gen = generateClassDates(validBlocks, form.start_date, form.end_date);
+          const skipDeduct = _gen.filter(o => skipDates.includes(o.date)).reduce((s, o) => s + o.spd, 0);
+          const K = Math.max(0, K_gross - skipDeduct);
+          const skippedDays = skipDates.filter(d => _gen.some(o => o.date === d)).length;
           const ms = new Date(form.end_date + 'T00:00:00').getTime() - new Date(form.start_date + 'T00:00:00').getTime();
           const days = Math.floor(ms / 86400000) + 1;
           const M = Math.max(1, Math.ceil(days / 7));
@@ -979,6 +1032,7 @@ export default function PortalTutorPage() {
                 <span style={{fontWeight:800, color:'#1d4ed8'}}>주 {N}회</span>
                 <span style={{color:'#94a3b8'}}>·</span>
                 <span>전체 {M}주</span>
+                {skippedDays > 0 && (<><span style={{color:'#94a3b8'}}>·</span><span style={{color:'#dc2626', fontWeight:700}}>빠짐 {skippedDays}일</span></>)}
                 <span style={{flex:1}} />
                 <span style={{fontWeight:800, color:'#1a6fc4'}}>총 {K}회</span>
                 <span style={{fontWeight:800, color:'#16a34a'}}>₱{amount.toLocaleString()}</span>
@@ -988,8 +1042,51 @@ export default function PortalTutorPage() {
         })()}
 
         <div className="q">
-          <label className="q-label"><span className="num">6</span>빠지는 날짜 / 변경 날짜</label>
-          <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/15 결석, 4/17 오전→오후 변경" />
+          <label className="q-label"><span className="num">6</span>빠지는 날짜 (결석)</label>
+          {(() => {
+            const generated = generateClassDates(blocks, form.start_date, form.end_date);
+            const available = generated.filter(o => !skipDates.includes(o.date));
+            if (generated.length === 0) {
+              return <div style={{fontSize:12, color:'#94a3b8', padding:'8px 0'}}>먼저 위에서 요일·시간·기간을 입력하면 빠지는 날짜를 고를 수 있어요.</div>;
+            }
+            return (
+              <>
+                <select
+                  className="inp"
+                  value=""
+                  onChange={e => { const v = e.target.value; if (v) setSkipDates(prev => [...prev, v].sort()); }}
+                >
+                  <option value="">{available.length === 0 ? "(모든 수업일이 선택됨)" : "+ 빠질 날짜 선택"}</option>
+                  {available.map(o => {
+                    const mm = o.date.slice(5,7).replace(/^0/, '');
+                    const dd = o.date.slice(8,10).replace(/^0/, '');
+                    return <option key={o.date + o.time} value={o.date}>{mm}/{dd}({o.day}) {o.time.replace(/\s*\([^)]*\)\s*$/,'')}</option>;
+                  })}
+                </select>
+                {skipDates.length > 0 && (
+                  <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:8}}>
+                    {skipDates.map(d => {
+                      const found = generated.find(o => o.date === d);
+                      const dw = found?.day || '';
+                      const mm = d.slice(5,7).replace(/^0/, '');
+                      const dd = d.slice(8,10).replace(/^0/, '');
+                      return (
+                        <span key={d} style={{display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', background:'#fef2f2', color:'#b91c1c', border:'1px solid #fecaca', borderRadius:999, fontSize:12, fontWeight:700}}>
+                          {mm}/{dd}{dw ? `(${dw})` : ''}
+                          <button type="button" onClick={() => setSkipDates(prev => prev.filter(x => x !== d))}
+                            style={{background:'none', border:'none', color:'#b91c1c', cursor:'pointer', padding:0, marginLeft:4, fontSize:14, lineHeight:1, fontFamily:'inherit'}}>✕</button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+        <div className="q">
+          <label className="q-label">변경·요청 사항 (선택)</label>
+          <textarea className="area" value={form.skip_dates} onChange={e => setForm({ ...form, skip_dates: e.target.value })} placeholder="예: 4/17 오전→오후 변경 요청, 6/12 휴일 보강 요청 등" />
         </div>
       </div>
 
@@ -1211,7 +1308,7 @@ export default function PortalTutorPage() {
             <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
               {saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "예약 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
             </button>
-            {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); setBlocks([{ ...INIT_BLOCK }]); }}>수정 취소</button>}
+            {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); setBlocks([{ ...INIT_BLOCK }]); setSkipDates([]); }}>수정 취소</button>}
           </>);
         })()}
         {msg && <div className={`msg ${msg.includes("완료") ? "msg-ok" : "msg-err"}`}>{msg}</div>}

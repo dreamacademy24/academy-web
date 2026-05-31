@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
 
 interface TutorRow {
   id: string;
@@ -122,7 +122,8 @@ export default function TutorRequestDetailPage() {
     const weeks = computeWeeks(row.start_date, row.end_date);
     const daysPerWeek = countDays(row.preferred_days);
     const spd = row.sessions_per_day || 1;
-    const computedSessions = weeks * daysPerWeek * spd;
+    const _skipCount = toDateArr((row as any).skip_dates).length;
+    const computedSessions = Math.max(0, weeks * daysPerWeek * spd - _skipCount * spd);
     const priceNum = parseFloat(price) || 0;
     const computedAmount = computedSessions * priceNum;
 
@@ -205,9 +206,10 @@ export default function TutorRequestDetailPage() {
         else console.log("[save] tutor_lessons UPDATED id=", existing.id);
       } else {
         const to = blocksToTimeOverrides(row.schedule_blocks);
-        const insertPayload = Object.keys(to).length > 0
-          ? { ...lessonPayload, time_overrides: to }
-          : lessonPayload;
+        const skipArr = toDateArr((row as any).skip_dates);
+        let insertPayload: Record<string, unknown> = lessonPayload;
+        if (Object.keys(to).length > 0) insertPayload = { ...insertPayload, time_overrides: to };
+        if (skipArr.length > 0) insertPayload = { ...insertPayload, skip_dates: skipArr };
         const { data: ins, error: insErr } = await supabase.from("tutor_lessons").insert(insertPayload).select().single();
         if (insErr) { console.error("[save] tutor_lessons INSERT 실패:", insErr); lessonMsg = " (수업 생성 실패: " + insErr.message + ")"; }
         else console.log("[save] tutor_lessons INSERTED id=", ins?.id);

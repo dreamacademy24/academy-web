@@ -12,10 +12,11 @@ export async function PATCH(req: Request) {
     const {
       id,
       class_type, preferred_days, preferred_time, start_date, end_date, notes,
-      student_name_kr, student_name_en, skip_dates,
+      student_name_kr, student_name_en, skip_dates, change_notes,
       level_english, level_speaking, level_reading, level_writing,
       textbook, class_style, class_focus_arr, child_personality,
       sessions_per_day, schedule_blocks,
+      total_sessions, total_amount,
     } = body || {};
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -42,7 +43,10 @@ export async function PATCH(req: Request) {
     if (notes !== undefined) update.notes = notes;
     if (student_name_kr !== undefined) update.student_name_kr = student_name_kr;
     if (student_name_en !== undefined) update.student_name_en = student_name_en;
-    if (skip_dates !== undefined) update.skip_dates = skip_dates;
+    if (skip_dates !== undefined) {
+      update.skip_dates = Array.isArray(skip_dates) ? skip_dates : (typeof skip_dates === 'string' && skip_dates ? [skip_dates] : []);
+    }
+    if (change_notes !== undefined) update.change_notes = change_notes;
     if (level_english !== undefined) update.level_english = level_english;
     if (level_speaking !== undefined) update.level_speaking = level_speaking;
     if (level_reading !== undefined) update.level_reading = level_reading;
@@ -53,6 +57,8 @@ export async function PATCH(req: Request) {
     if (child_personality !== undefined) update.child_personality = child_personality;
     if (sessions_per_day !== undefined) update.sessions_per_day = sessions_per_day;
     if (schedule_blocks !== undefined) update.schedule_blocks = schedule_blocks;
+    if (total_sessions !== undefined) update.total_sessions = total_sessions;
+    if (total_amount !== undefined) update.total_amount = total_amount;
 
     const { error } = await supabase.from("tutor_requests").update(update).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

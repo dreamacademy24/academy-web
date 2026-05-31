@@ -15,6 +15,12 @@ export function toFocusArr(v: unknown): string[] {
   return [];
 }
 
+// skip_dates 등 YYYY-MM-DD 배열 정규화 (text[] 컬럼용)
+export function toDateArr(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(x => String(x).trim()).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x));
+  return [];
+}
+
 // 요일별 시간이 다르면 그룹화 표시. 단일이거나 빈 overrides면 classTime 그대로.
 const _KR_DAY_ORDER = ['월','화','수','목','금','토','일'];
 const _DAY_EN_MAP: Record<string, string> = { '월':'Mon','화':'Tue','수':'Wed','목':'Thu','금':'Fri','토':'Sat','일':'Sun' };

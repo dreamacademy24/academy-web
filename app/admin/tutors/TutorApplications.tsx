@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides, toFocusArr } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
 import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
@@ -274,6 +274,7 @@ export default function TutorApplications() {
           const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
           return `${y}-${m}-${dd}`;
         };
+        const _skipSet = new Set(toDateArr((detail as any).skip_dates));
         const sessions: { session_date: string; session_idx: number; status: string }[] = [];
         if (detail.start_date && detail.end_date && targetDays.length > 0) {
           const cur = new Date(detail.start_date + "T00:00:00");
@@ -281,7 +282,8 @@ export default function TutorApplications() {
           let idx = 1;
           while (cur <= end) {
             if (targetDays.includes(cur.getDay())) {
-              sessions.push({ session_date: localStr(cur), session_idx: idx++, status: "scheduled" });
+              const ds = localStr(cur);
+              if (!_skipSet.has(ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
             }
             cur.setDate(cur.getDate() + 1);
           }
@@ -292,6 +294,7 @@ export default function TutorApplications() {
         const computedTotalAmount = parsedAmount ?? (computedTotalSessions * sessionsPerDay * (detail.hourly_rate || 0));
 
         const _to = blocksToTimeOverrides(detail.schedule_blocks);
+        const _skipArr = toDateArr((detail as any).skip_dates);
         const lessonInsertPayload: Record<string, unknown> = {
           application_id: detail.id,
           house_or_reserver: detail.house_or_reserver,
@@ -319,6 +322,7 @@ export default function TutorApplications() {
           admin_memo: `request_id: ${detail.id}${adminForm.admin_memo.trim() ? '\n' + adminForm.admin_memo.trim() : ''}`,
         };
         if (Object.keys(_to).length > 0) lessonInsertPayload.time_overrides = _to;
+        if (_skipArr.length > 0) lessonInsertPayload.skip_dates = _skipArr;
         const { data: lesson, error: e2 } = await supabase
           .from("tutor_lessons")
           .insert(lessonInsertPayload)

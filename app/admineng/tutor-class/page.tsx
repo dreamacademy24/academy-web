@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides, toFocusArr, formatLessonTime } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -550,7 +550,8 @@ export default function EngTutorClassPage() {
       const weeks = computeWeeks(r.start_date, r.end_date);
       const daysPerWeek = countDays(r.preferred_days);
       const spd = r.sessions_per_day || 1;
-      const computedSessions = weeks * daysPerWeek * spd;
+      const _skipCount = toDateArr((r as any).skip_dates).length;
+      const computedSessions = Math.max(0, weeks * daysPerWeek * spd - _skipCount * spd);
       const priceNum = defaultPrice(r.class_type);
       const computedAmount = computedSessions * priceNum;
 
@@ -602,9 +603,10 @@ export default function EngTutorClassPage() {
         if (e2) console.warn("[takeClass] lesson UPDATE failed:", e2);
       } else {
         const _to = blocksToTimeOverrides(r.schedule_blocks);
-        const insertPayload = Object.keys(_to).length > 0
-          ? { ...lessonPayload, time_overrides: _to }
-          : lessonPayload;
+        const _skipArr = toDateArr((r as any).skip_dates);
+        let insertPayload: Record<string, unknown> = lessonPayload;
+        if (Object.keys(_to).length > 0) insertPayload = { ...insertPayload, time_overrides: _to };
+        if (_skipArr.length > 0) insertPayload = { ...insertPayload, skip_dates: _skipArr };
         const { error: e3 } = await supabase.from("tutor_lessons").insert(insertPayload);
         if (e3) console.warn("[takeClass] lesson INSERT failed:", e3);
       }
