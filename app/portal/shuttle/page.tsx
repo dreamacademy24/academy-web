@@ -18,7 +18,7 @@ const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
   '2026-08-09': '⚠️ 아이언맨 도로통제로 투어셔틀 불가',
 };
 
-interface ShSlot { time: string; name: string; detail: string; }
+interface ShSlot { time: string; name: string; return: string; note?: string; }
 
 function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 
@@ -27,34 +27,34 @@ function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
   const d = new Date(dateStr + 'T00:00:00');
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
-  const D_HMART = '10:00 출발 · 11:00 복귀';
-  const D_ILCORSO = '16:00 출발 · 2시간 30분 후 복귀';
-  const D_ANJO = '13:00 출발 · 20:00 복귀';
-  const D_FUNPARK = '14:00 출발 · 20:00 복귀';
-  const D_SAFARI = '8:30 출발 · 15:00 복귀 · 유료 200페소';
-  const D_SHRINE = '17:30 출발 · 40분 후 복귀';
-  const D_LANTAW = '16:00 출발 · 2시간 30분 후 복귀';
-  const D_PAROLA = '16:40 출발 · 식사 후 복귀';
-  const D_SMSEASIDE = '10:30 출발 · 개별 복귀';
+  const S_HMART    = { time:'10:00am', return:'11:00',          note:'' };
+  const S_ILCORSO  = { time:'4:00pm',  return:'2시간 30분 후',   note:'' };
+  const S_ANJO     = { time:'1:00pm',  return:'20:00',           note:'' };
+  const S_FUNPARK  = { time:'2:00pm',  return:'20:00',           note:'' };
+  const S_SAFARI   = { time:'8:30am',  return:'15:00',           note:'유료 200페소' };
+  const S_SHRINE   = { time:'5:30pm',  return:'40분 후',         note:'' };
+  const S_LANTAW   = { time:'4:00pm',  return:'2시간 30분 후',   note:'' };
+  const S_PAROLA   = { time:'4:40pm',  return:'식사 후',         note:'별도 출발시간 없음' };
+  const S_SMSEASIDE= { time:'10:30am', return:'-',               note:'개별 복귀' };
 
-  const hmart: ShSlot[] = [{ time: '10:00am', name: 'H-Mart 쇼핑', detail: D_HMART }];
+  const hmart: ShSlot[] = [{ name:'H-Mart 쇼핑', ...S_HMART }];
   if (dow===1||dow===3||dow===5) return hmart;
   if (dow===2) return odd
-    ? [{ time:'4:40pm',  name:'파롤라 (Parola)',       detail: D_PAROLA }]
-    : [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail: D_SMSEASIDE }];
+    ? [{ name:'파롤라 (Parola)',       ...S_PAROLA }]
+    : [{ name:'SM 씨사이드 쇼핑',      ...S_SMSEASIDE }];
   if (dow===4) return odd
-    ? [{ time:'10:30am', name:'SM 씨사이드 쇼핑',      detail: D_SMSEASIDE }]
-    : [{ time:'5:30pm',  name:'막탄 쉬라인',            detail: D_SHRINE }];
+    ? [{ name:'SM 씨사이드 쇼핑',      ...S_SMSEASIDE }]
+    : [{ name:'막탄 쉬라인',           ...S_SHRINE }];
   if (dow===6) return odd
-    ? [{ time:'8:30am',  name:'세부 사파리',            detail: D_SAFARI },
-       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail: D_ILCORSO }]
-    : [{ time:'2:00pm',  name:'펀파크 (Fun Park)',      detail: D_FUNPARK },
-       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail: D_LANTAW }];
+    ? [{ name:'세부 사파리',           ...S_SAFARI },
+       { name:'일콜소 (Il Corso)',     ...S_ILCORSO }]
+    : [{ name:'펀파크 (Fun Park)',     ...S_FUNPARK },
+       { name:'란타우 (Lantaw)',       ...S_LANTAW }];
   if (dow===0) return odd
-    ? [{ time:'1:00pm',  name:'안조 월드 (Anjo World)', detail: D_ANJO },
-       { time:'4:00pm',  name:'란타우 (Lantaw)',         detail: D_LANTAW }]
-    : [{ time:'8:30am',  name:'세부 사파리',            detail: D_SAFARI },
-       { time:'4:00pm',  name:'일콜소 (Il Corso)',      detail: D_ILCORSO }];
+    ? [{ name:'안조 월드 (Anjo World)',...S_ANJO },
+       { name:'란타우 (Lantaw)',       ...S_LANTAW }]
+    : [{ name:'세부 사파리',           ...S_SAFARI },
+       { name:'일콜소 (Il Corso)',     ...S_ILCORSO }];
   return [];
 }
 
@@ -653,7 +653,8 @@ export default function PortalShuttlePage() {
                                     />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
-                                      <span className="schedule-sub">{sl.time} · {sl.detail}</span>
+                                      <span className="schedule-sub">출발 {sl.time.replace(/(am|pm)$/i, '')} · 복귀 {sl.return}</span>
+                                      {sl.note && <span style={{color:'#dc2626', fontSize:11, fontWeight:600, marginTop:2}}>❗ {sl.note}</span>}
                                     </div>
                                   </label>
                                 ));
