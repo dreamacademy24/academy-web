@@ -71,6 +71,19 @@ function slotSlug(name: string): string {
   return 'shuttle';
 }
 
+// slug → 투어명 역매핑 (data-* 폴백용)
+const SLUG_TO_NAME: Record<string, string> = {
+  hmart: 'H-Mart 쇼핑',
+  parola: '파롤라 (Parola)',
+  smseaside: 'SM 씨사이드 쇼핑',
+  shrine: '막탄 쉬라인',
+  safari: '세부 사파리',
+  funpark: '펀파크 (Fun Park)',
+  lantaw: '란타우 (Lantaw)',
+  anjo: '안조 월드 (Anjo World)',
+  ilcorso: '일콜소 (Il Corso)',
+};
+
 const DAY_KR = ['일','월','화','수','목','금','토'];
 
 // 주차 단위: 화요일 시작 ~ 다음주 월요일 종료. rangeStart/End 안에서만 포함.
@@ -320,18 +333,35 @@ export default function PortalShuttlePage() {
       const memo = formData.get("memo") as string;
       const rows = Array.from(checked).map(cb => {
         const el = cb as HTMLInputElement;
+        // 1순위: data-* 속성 사용
+        let dateStr = el.dataset.date || "";
+        let tourName = el.dataset.tourName || "";
+        // 2순위(폴백): value 파싱 — value 형식 "${m}-${d}-${si}-${slug}"
+        if (!dateStr || !tourName) {
+          const parts = el.value.split("-");
+          if (parts.length >= 4) {
+            const mPart = parts[0];
+            const dPart = parts[1];
+            const slug = parts.slice(3).join("-");
+            if (!dateStr && mPart && dPart) {
+              dateStr = `2026-${mPart.padStart(2, "0")}-${dPart.padStart(2, "0")}`;
+            }
+            if (!tourName) tourName = SLUG_TO_NAME[slug] || slug;
+          }
+        }
         return {
           booking_id: session.booking_id,
           portal_name: session.guest_name,
           name: session.guest_name,
-          date: el.dataset.date || "",
-          tour_name: el.dataset.tourName || "",
+          date: dateStr,
+          tour_name: tourName,
           people_count: 1,
           message: memo,
           room_number: bookingMeta?.room || "",
           request: memo,
         };
       });
+      console.log("[shuttle insert] rows:", rows);
       const { error: insErr } = await supabase.from("shuttle_applications").insert(rows);
       if (insErr) console.warn("[shuttle insert] failed:", insErr);
 
