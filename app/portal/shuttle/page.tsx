@@ -309,8 +309,8 @@ export default function PortalShuttlePage() {
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
 
-      // Supabase 동시 저장 — booking_id, portal_name 포함
-      await supabase.from("shuttle_applications").insert({
+      // Supabase 동시 저장 — booking_id, portal_name 포함 (await으로 커밋 보장)
+      const { error: insErr } = await supabase.from("shuttle_applications").insert({
         booking_id: session.booking_id,
         portal_name: session.guest_name,
         name: session.guest_name,
@@ -319,12 +319,16 @@ export default function PortalShuttlePage() {
         message: formData.get("memo") as string,
         room_number: bookingMeta?.room || "",
         request: formData.get("memo") as string,
-      }).then(() => {});
+      });
+      if (insErr) console.warn("[shuttle insert] failed:", insErr);
 
-      alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
-      // 같은 페이지에서 내 신청 내역 즉시 갱신
+      alert("신청이 완료되었습니다! 아래 내 신청 내역에서 인원을 수정할 수 있습니다.");
+      // alert 닫힌 직후 폼 리셋 + 내 신청 내역 갱신 + 스크롤
       if (formRef.current) formRef.current.reset();
-      loadMyApps(session.booking_id);
+      await loadMyApps(session.booking_id);
+      setTimeout(() => {
+        document.getElementById("my-apps")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
     } catch (err) {
       console.error(err);
       alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
@@ -730,7 +734,7 @@ export default function PortalShuttlePage() {
           </div>
 
           {/* ── 내 신청 내역 ── */}
-          <div style={{ marginTop: 32, background: "#fff", borderRadius: 14, padding: 22, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1px solid #f3f4f6" }}>
+          <div id="my-apps" style={{ marginTop: 32, background: "#fff", borderRadius: 14, padding: 22, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", border: "1px solid #f3f4f6", scrollMarginTop: 16 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1a2e", marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>
               📑 내 신청 내역 <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>({myApps.length}건)</span>
             </div>
