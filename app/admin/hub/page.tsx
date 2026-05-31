@@ -86,6 +86,7 @@ export default function AdminHubPage() {
       <div className="hub-footer">
         <a className="hub-link" href="/guide">직원 가이드</a>
         <a className="hub-link" href="/">홈으로</a>
+        <a href="/ashuttle" style={{display:"inline-block",padding:"10px 16px",background:"#2563eb",color:"#fff",borderRadius:8,textDecoration:"none",fontWeight:600}}>🚐 Shuttle Schedule</a>
       </div>
       <button className="logout" onClick={logout}>로그아웃</button>
     </div>

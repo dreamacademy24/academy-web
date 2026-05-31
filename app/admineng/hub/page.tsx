@@ -175,6 +175,7 @@ export default function EngHubPage() {
       <div className="hub-foot">
         <a className="hub-link" href="/guide">Staff Guide</a>
         <a className="hub-link" href="/">Home</a>
+        <a href="/ashuttle" style={{display:"inline-block",padding:"10px 16px",background:"#2563eb",color:"#fff",borderRadius:8,textDecoration:"none",fontWeight:600}}>🚐 Shuttle Schedule</a>
       </div>
     </div>
   </>);
