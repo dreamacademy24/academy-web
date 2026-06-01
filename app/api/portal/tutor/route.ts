@@ -14,8 +14,6 @@ const STYLE_MAP: Record<string, string> = { '놀이식': 'play', '학습식': 's
 const FOCUS_MAP: Record<string, string> = { '스피킹': 'speaking', '리딩': 'reading', '보카': 'vocabulary', '라이팅': 'writing', '파닉스': 'phonics', '액티비티': 'activity' }
 
 async function getBookerName(bookingId: string): Promise<string | null> {
-  const { data: n } = await supabase.from('bookings_new').select('booker_name').eq('id', bookingId).maybeSingle()
-  if (n?.booker_name) return n.booker_name
   const { data: o } = await supabase.from('bookings').select('booker_name').eq('id', bookingId).maybeSingle()
   return o?.booker_name || null
 }
@@ -81,10 +79,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '개인정보 동의와 튜터 규정 동의는 필수입니다.' }, { status: 400 })
     }
 
+    // 예약자명: 실제 booking.booker_name 우선, 포털 guest_name(=로그인 ID) 폴백
+    const bookerName = (await getBookerName(booking_id)) || guest_name || '손님'
+
     const row: Record<string, unknown> = {
       booking_id,
-      guest_name: guest_name || null,
-      house_number: guest_name || null,
+      guest_name: bookerName,
+      house_number: bookerName,
       student_name_kr: body.student_name_kr || null,
       student_name_en: body.student_name_en || null,
       student_age: body.student_age || null,
@@ -116,7 +117,6 @@ export async function POST(req: Request) {
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const bookerName = (await getBookerName(booking_id)) || guest_name || '손님'
     const today = new Date().toISOString().slice(0, 10)
     await supabase.from('staff_tasks').insert({
       title: `👩‍🏫 ${bookerName}님이 튜터 수업을 신청했습니다`,
