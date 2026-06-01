@@ -18,6 +18,7 @@ interface Lesson {
   child_personality: string | null;
   class_focus_arr: string[] | null;
   class_style: string | null;
+  time_overrides?: Record<string, string> | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -258,6 +259,17 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   const total = classFee * classSession * days;
   const levelInfo = lesson?.overall_level ? LEVEL_LABELS[lesson.overall_level] : null;
   const sessionTime = parseSessionTime(stripTimeSuffix(lesson?.confirmed_time || lesson?.class_time));
+
+  // 출결(attendance) 페이지와 동일 우선순위: 날짜 override → 요일 override → 기본
+  const _KR_DOW = ['일','월','화','수','목','금','토'];
+  const resolveTimeForDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr || !lesson) return sessionTime;
+    const ov = lesson.time_overrides || undefined;
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    const krKey = _KR_DOW[dow];
+    const raw = (ov && (ov[dateStr] || ov[krKey])) || lesson.confirmed_time || lesson.class_time || '';
+    return parseSessionTime(stripTimeSuffix(raw));
+  };
 
   const optionLabel = (l: Lesson) => {
     const typeMatch = (l.class_type || "").match(/1\s*[:：]\s*[12]/);
@@ -540,7 +552,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
                         ) : show ? (
                           <div className="ti-wsess" style={{ background: blockBg }} title={s ? `${date} · ${s.session_idx}회차 · ${s.status}` : `${date} · 예정`}>
                             <div className="ct">{lesson.class_type} tutor</div>
-                            <div className="tm">{sessionTime}</div>
+                            <div className="tm">{resolveTimeForDate(date)}</div>
                           </div>
                         ) : null}
                       </td>
