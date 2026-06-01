@@ -125,8 +125,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         .in("status", ["active", "completed"])
         .order("created_at", { ascending: false }),
       supabase.from("tutor_requests").select("*")
-        .eq("status", "confirmed")
-        .not("assigned_tutor_id", "is", null)
+        .neq("status", "cancelled")
         .order("created_at", { ascending: false }),
     ]);
     setLoading(false);
