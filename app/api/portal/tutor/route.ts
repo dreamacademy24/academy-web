@@ -13,11 +13,11 @@ const SUB_LEVEL_MAP: Record<string, string> = { '제로베이스': 'zero', '비�
 const STYLE_MAP: Record<string, string> = { '놀이식': 'play', '학습식': 'study', '놀이+학습': 'combined' }
 const FOCUS_MAP: Record<string, string> = { '스피킹': 'speaking', '리딩': 'reading', '보카': 'vocabulary', '라이팅': 'writing', '파닉스': 'phonics', '액티비티': 'activity' }
 
-async function getBookerName(bookingId: string): Promise<string> {
+async function getBookerName(bookingId: string): Promise<string | null> {
   const { data: n } = await supabase.from('bookings_new').select('booker_name').eq('id', bookingId).maybeSingle()
-  if (n) return n.booker_name
+  if (n?.booker_name) return n.booker_name
   const { data: o } = await supabase.from('bookings').select('booker_name').eq('id', bookingId).maybeSingle()
-  return o?.booker_name || '손님'
+  return o?.booker_name || null
 }
 
 export async function GET(req: Request) {
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const bookerName = guest_name || await getBookerName(booking_id)
+    const bookerName = (await getBookerName(booking_id)) || guest_name || '손님'
     const today = new Date().toISOString().slice(0, 10)
     await supabase.from('staff_tasks').insert({
       title: `👩‍🏫 ${bookerName}님이 튜터 수업을 신청했습니다`,
