@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 
 interface Lesson {
   id: string; created_at: string;
@@ -256,7 +257,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
 
   const total = classFee * classSession * days;
   const levelInfo = lesson?.overall_level ? LEVEL_LABELS[lesson.overall_level] : null;
-  const sessionTime = parseSessionTime(lesson?.confirmed_time || lesson?.class_time);
+  const sessionTime = parseSessionTime(stripTimeSuffix(lesson?.confirmed_time || lesson?.class_time));
 
   const optionLabel = (l: Lesson) => {
     const typeMatch = (l.class_type || "").match(/1\s*[:：]\s*[12]/);
@@ -269,6 +270,35 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     }
     return `${l.house_or_reserver} · ${l.student_names} (${typeBase} ${t}, ${fmtMD(l.start_date)}~${fmtMD(l.end_date)})${tag}`;
   };
+
+  // A4 1페이지에 맞춰 scale-to-fit 적용 후 인쇄
+  function handlePrint() {
+    const el = invoiceRef.current;
+    if (!el) { window.print(); return; }
+    const usableH = 1040; // A4 portrait, 8mm 여백 기준 가용 높이(px) 근사
+    const naturalH = el.scrollHeight;
+    const naturalW = el.offsetWidth;
+    const s = Math.min(1, usableH / Math.max(1, naturalH));
+    const prevTransform = el.style.transform;
+    const prevOrigin = el.style.transformOrigin;
+    const prevWidth = el.style.width;
+    if (s < 1) {
+      el.style.transformOrigin = "top left";
+      el.style.transform = `scale(${s})`;
+      // 가로 폭 보정 — scale 축소만큼 width를 늘려서 페이지 가로 채움
+      el.style.width = `${Math.round(naturalW / s)}px`;
+    }
+    const restore = () => {
+      el.style.transform = prevTransform;
+      el.style.transformOrigin = prevOrigin;
+      el.style.width = prevWidth;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    // 안전망: 일부 브라우저는 afterprint 늦거나 미발화
+    setTimeout(restore, 4000);
+    window.print();
+  }
 
   async function saveAsImage() {
     if (!invoiceRef.current || !lesson) return;
@@ -345,10 +375,29 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
 .ti-rules p{margin:0 0 6px}
 
 @media print{
+  @page { size: A4 portrait; margin: 8mm; }
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   body{background:#fff!important;margin:0}
   .no-print{display:none!important}
-  .tutor-info-container{box-shadow:none;padding:20px;max-width:100%;border-radius:0}
+  .tutor-info-container{box-shadow:none!important;padding:0!important;max-width:100%;border-radius:0;border:none}
   .tc-tabs,.tc-top{display:none!important}
+  /* 페이지 분할 방지 */
+  .tutor-info-container, table, tr { break-inside: avoid; page-break-inside: avoid; }
+  /* 컴팩트화 */
+  .ti-title{font-size:18px}
+  .ti-head{margin-bottom:14px}
+  .ti-info{margin-bottom:14px}
+  .ti-info table td{padding:3px 6px;font-size:11px}
+  .ti-wtable{font-size:9px;margin-bottom:14px}
+  .ti-wtable th{padding:3px 2px}
+  .ti-wtable td{padding:2px}
+  .ti-wtable tr.date-row td{height:18px;font-size:9px}
+  .ti-wtable tr.content-row td{height:38px;padding:2px}
+  .ti-wsess{font-size:8px;padding:2px;line-height:1.2}
+  .ti-wsess .tm{font-size:8px;margin-top:1px}
+  .ti-rules{font-size:10px;line-height:1.45}
+  .ti-rules .title{font-size:12px;margin:0 0 4px}
+  .ti-rules p{margin:0 0 3px}
 }
 @media(max-width:700px){
   .tutor-info-container{padding:20px}
@@ -374,7 +423,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
           ))
         )}
       </select>
-      <button className="ti-btn ti-btn-print" onClick={() => window.print()} disabled={!lesson}>
+      <button className="ti-btn ti-btn-print" onClick={handlePrint} disabled={!lesson}>
         📄 {englishMode ? "Print/PDF" : "인쇄/PDF"}
       </button>
       <button className="ti-btn ti-btn-img" onClick={saveAsImage} disabled={!lesson || saving}>
