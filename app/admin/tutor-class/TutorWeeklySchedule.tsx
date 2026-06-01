@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
+import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 
 interface Tutor { id: string; name: string }
 interface Lesson {
@@ -8,21 +9,71 @@ interface Lesson {
   house_or_reserver: string; student_names: string;
   class_type: string; sessions_per_day: number | null; hourly_rate: number;
   class_time: string | null; confirmed_time: string | null;
+  start_date: string | null; end_date: string | null;
+  class_days: string[] | null;
+  skip_dates: string[] | null;
+  time_overrides: Record<string, string> | null;
+  attendance_log: Record<string, "○" | "✕" | "△"> | null;
+  notes_log: Record<string, string> | null;
   total_sessions: number | null;
   tutor_id: string | null;
   status: string;
 }
-interface SessionRow {
-  id: string; lesson_id: string;
-  session_date: string; session_idx: number;
-  status: string;
-  session_time: string | null;
-  session_note: string | null;
-}
-interface Enriched extends SessionRow {
+interface Enriched {
+  id: string;            // virtual: `${lesson.id}@${date}`
+  lesson_id: string;
+  session_date: string;
+  session_idx: number;
+  status: string;        // mapped from attendance_log
+  session_time: string;
+  session_note: string;
   lesson: Lesson;
   tutor_name: string | null;
   tutor_color: string;
+}
+
+// class_days(한/영 혼용) → JS getDay() 인덱스
+const CODE_TO_IDX: Record<string, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+  "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
+};
+const WEEKDAY_KR_KEYS = ['일','월','화','수','목','금','토'];
+
+// attendance_log ↔ session status 매핑
+const ATT_TO_STATUS: Record<string, string> = { "○": "attended", "✕": "no_show", "△": "rescheduled" };
+const STATUS_TO_ATT: Record<string, "○" | "✕" | "△" | ""> = {
+  attended: "○", no_show: "✕", rescheduled: "△", scheduled: "",
+};
+
+function resolveTimeForDate(date: string, lesson: Lesson): string {
+  const dow = new Date(date + "T00:00:00").getDay();
+  const krKey = WEEKDAY_KR_KEYS[dow];
+  const raw = (lesson.time_overrides && (lesson.time_overrides[date] || lesson.time_overrides[krKey]))
+    || lesson.confirmed_time || lesson.class_time || "";
+  return stripTimeSuffix(raw) || "--:--";
+}
+
+// 레슨 전체 회차 날짜 목록 (start~end, class_days 매칭, skip 제외)
+function lessonAllDates(lesson: Lesson): string[] {
+  if (!lesson.start_date || !lesson.end_date) return [];
+  const wanted = new Set(
+    (lesson.class_days || [])
+      .map(d => CODE_TO_IDX[(d || "").toLowerCase().trim()] ?? CODE_TO_IDX[d])
+      .filter(i => i !== undefined)
+  );
+  if (wanted.size === 0) return [];
+  const skips = new Set(Array.isArray(lesson.skip_dates) ? lesson.skip_dates : []);
+  const out: string[] = [];
+  const d = new Date(lesson.start_date + "T00:00:00");
+  const end = new Date(lesson.end_date + "T00:00:00");
+  while (d <= end) {
+    if (wanted.has(d.getDay())) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      if (!skips.has(ds)) out.push(ds);
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
 }
 
 const TUTOR_PALETTE = [
@@ -80,23 +131,18 @@ function formatWeekRange(start: Date, end: Date) {
 }
 
 const SESSION_STATUS_ORDER = [
-  "scheduled", "attended", "no_show",
-  "cancelled_by_student", "cancelled_by_tutor", "rescheduled",
+  "scheduled", "attended", "no_show", "rescheduled",
 ] as const;
 const SESSION_STATUS_LABEL: Record<string, string> = {
   scheduled: "예정",
   attended: "출석",
   no_show: "노쇼",
-  cancelled_by_student: "학생취소",
-  cancelled_by_tutor: "튜터취소",
   rescheduled: "재조정",
 };
 const STATUS_BADGE: Record<string, { label: string; bg: string; color: string; strike?: boolean }> = {
   scheduled:  { label: "예정",  bg: "#f1f5f9", color: "#64748b" },
   attended:   { label: "출석",  bg: "#dcfce7", color: "#166534" },
   no_show:    { label: "노쇼",  bg: "#fee2e2", color: "#b91c1c" },
-  cancelled_by_student: { label: "취소", bg: "#e2e8f0", color: "#64748b", strike: true },
-  cancelled_by_tutor:   { label: "취소", bg: "#e2e8f0", color: "#64748b", strike: true },
   rescheduled: { label: "재조정", bg: "#fef3c7", color: "#92400e" },
 };
 
@@ -140,44 +186,45 @@ export default function TutorWeeklySchedule() {
 
   const loadWeek = useCallback(async () => {
     setLoading(true);
-    const { start, end } = week;
-    const { data: sessRows, error: sErr } = await supabase
-      .from("tutor_lesson_sessions")
+    const { start, end, dates } = week;
+    // 주(월~일)와 기간이 겹치는 active/completed 레슨만 로드
+    const { data: lRows, error: lErr } = await supabase
+      .from("tutor_lessons")
       .select("*")
-      .gte("session_date", start)
-      .lte("session_date", end)
-      .order("session_date", { ascending: true });
-    if (sErr) {
-      console.error("세션 로드 실패:", sErr);
+      .in("status", ["active", "completed"])
+      .lte("start_date", end)
+      .gte("end_date", start);
+    if (lErr) {
+      console.error("수업 로드 실패:", lErr);
       setSessions([]); setLoading(false);
       return;
     }
-    const rawSessions = (sessRows || []) as SessionRow[];
-    const lessonIds = Array.from(new Set(rawSessions.map(s => s.lesson_id)));
-    let lessonMap = new Map<string, Lesson>();
-    if (lessonIds.length > 0) {
-      const { data: lRows, error: lErr } = await supabase
-        .from("tutor_lessons")
-        .select("*")
-        .in("id", lessonIds)
-        .in("status", ["active", "completed"]);
-      if (lErr) console.error("수업 로드 실패:", lErr);
-      const lessons = (lRows || []) as Lesson[];
-      lessonMap = new Map(lessons.map(l => [l.id, l]));
-    }
+    const lessons = (lRows || []) as Lesson[];
+    const weekDateSet = new Set(dates);
     const enriched: Enriched[] = [];
-    for (const s of rawSessions) {
-      const lesson = lessonMap.get(s.lesson_id);
-      if (!lesson) continue; // skip if parent lesson is cancelled/suspended or missing
+    for (const lesson of lessons) {
+      const allDates = lessonAllDates(lesson);
+      const log = lesson.attendance_log || {};
+      const notes = lesson.notes_log || {};
       const tutorName = lesson.tutor_id ? (tutors.find(t => t.id === lesson.tutor_id)?.name || null) : null;
-      enriched.push({
-        ...s,
-        lesson,
-        tutor_name: tutorName,
-        tutor_color: getTutorColor(lesson.tutor_id),
+      const color = getTutorColor(lesson.tutor_id);
+      allDates.forEach((d, idx) => {
+        if (!weekDateSet.has(d)) return;
+        const mark = log[d];
+        enriched.push({
+          id: `${lesson.id}@${d}`,
+          lesson_id: lesson.id,
+          session_date: d,
+          session_idx: idx + 1,
+          status: ATT_TO_STATUS[mark || ""] || "scheduled",
+          session_time: resolveTimeForDate(d, lesson),
+          session_note: notes[d] || "",
+          lesson,
+          tutor_name: tutorName,
+          tutor_color: color,
+        });
       });
     }
-    // secondary sort by time
     enriched.sort((a, b) => {
       if (a.session_date !== b.session_date) return a.session_date.localeCompare(b.session_date);
       return (a.session_time || "99:99").localeCompare(b.session_time || "99:99");
@@ -224,25 +271,37 @@ export default function TutorWeeklySchedule() {
 
   const hasUnassigned = useMemo(() => sessions.some(s => !s.lesson.tutor_id), [sessions]);
 
-  async function updateSessionStatus(sessionId: string, newStatus: string) {
-    setSavingId(sessionId);
+  async function updateSessionStatus(virtualId: string, newStatus: string) {
+    const target = sessions.find(s => s.id === virtualId);
+    if (!target) return;
+    setSavingId(virtualId);
+    const mark = STATUS_TO_ATT[newStatus] ?? "";
+    const nextLog = { ...(target.lesson.attendance_log || {}) };
+    if (mark === "") delete nextLog[target.session_date];
+    else nextLog[target.session_date] = mark;
     const { error } = await supabase
-      .from("tutor_lesson_sessions")
-      .update({ status: newStatus })
-      .eq("id", sessionId);
+      .from("tutor_lessons")
+      .update({ attendance_log: nextLog })
+      .eq("id", target.lesson_id);
     setSavingId(null);
     if (error) {
       console.error("상태 변경 실패:", error);
       showToast("변경 실패: " + error.message);
       return;
     }
-    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
-    setSelected(sel => sel && sel.id === sessionId ? { ...sel, status: newStatus } : sel);
+    setSessions(prev => prev.map(s => {
+      if (s.lesson_id !== target.lesson_id) return s;
+      if (s.id === virtualId) {
+        return { ...s, status: newStatus, lesson: { ...s.lesson, attendance_log: nextLog } };
+      }
+      return { ...s, lesson: { ...s.lesson, attendance_log: nextLog } };
+    }));
+    setSelected(sel => sel && sel.id === virtualId ? { ...sel, status: newStatus, lesson: { ...sel.lesson, attendance_log: nextLog } } : sel);
     showToast("상태가 변경되었습니다");
   }
 
   function resolveTime(s: Enriched): string {
-    return s.session_time || s.lesson.confirmed_time || s.lesson.class_time || "--:--";
+    return s.session_time || "--:--";
   }
 
   return (<>

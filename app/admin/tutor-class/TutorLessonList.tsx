@@ -295,6 +295,17 @@ export default function TutorLessonList() {
     showToast(`✅ ${oldD} → ${newD} 변경 기록`);
   }
 
+  async function deleteLesson(lessonId: string) {
+    if (!confirm("이 수업을 삭제할까요? 되돌릴 수 없습니다")) return;
+    setSavingLessonId(lessonId);
+    const { error } = await supabase.from("tutor_lessons").delete().eq("id", lessonId);
+    setSavingLessonId("");
+    if (error) { alert("삭제 실패: " + error.message); return; }
+    setLessons(ls => ls.filter(l => l.id !== lessonId));
+    if (expandedId === lessonId) setExpandedId("");
+    showToast("🗑 수업이 삭제되었습니다");
+  }
+
   async function updateSessionNote(sessionId: string, note: string) {
     setSavingSessionId(sessionId);
     const { error } = await supabase.from("tutor_lesson_sessions").update({ session_note: note || null }).eq("id", sessionId);
@@ -498,6 +509,15 @@ export default function TutorLessonList() {
                         title="인보이스 보기"
                       >
                         인보이스
+                      </button>
+                      <button
+                        className="tll-act-btn"
+                        onClick={() => deleteLesson(l.id)}
+                        disabled={savingLessonId === l.id}
+                        title="이 수업 행 삭제 (되돌릴 수 없음)"
+                        style={{ background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" }}
+                      >
+                        삭제
                       </button>
                     </td>
                   </tr>
