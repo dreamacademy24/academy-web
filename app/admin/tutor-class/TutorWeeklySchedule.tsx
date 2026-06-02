@@ -373,19 +373,20 @@ export default function TutorWeeklySchedule() {
 
 .tws-print-btn{padding:7px 14px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#1a1a2e}
 .tws-print-btn:hover{background:#f1f5f9}
-.tws-print-title{display:none}
+.tws-print-title,.tws-print-footer{display:none}
 @media print{
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:A4 landscape;margin:22mm 10mm 14mm 10mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  body{background:#fff!important;margin:0}
+  html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #tws-weekly-print, #tws-weekly-print *{visibility:visible}
-  #tws-weekly-print{position:absolute;left:0;top:0;width:100%}
+  #tws-weekly-print{background:#fff!important}
   .tws-ctrl,.tws-legend,.tws-overlay,.tws-toast{display:none!important}
-  .tws-print-title{display:block!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;visibility:visible!important;z-index:10}
-  .tws-grid{margin-top:28px;grid-template-columns:repeat(7,1fr)!important}
+  .tws-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
+  .tws-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
+  .tws-grid{grid-template-columns:repeat(7,1fr)!important}
   .tws-col{break-inside:avoid;page-break-inside:avoid;min-height:auto!important}
-  .tws-sess{break-inside:avoid;page-break-inside:avoid}
+  .tws-sess{break-inside:avoid!important;page-break-inside:avoid!important}
 }
     `}</style>
 
@@ -552,5 +553,6 @@ export default function TutorWeeklySchedule() {
     )}
 
     {toast && <div className="tws-toast" role="status" aria-live="polite">{toast}</div>}
+    <div className="tws-print-footer">드림아카데미 · 주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
   </div>);
 }

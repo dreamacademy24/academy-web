@@ -829,18 +829,19 @@ export default function EngTutorClassPage() {
 .ecinput{display:flex;gap:8px;margin-top:4px}
 .ecinput textarea{flex:1;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;height:64px}.ecinput textarea:focus{border-color:#1a6fc4}
 .eempty{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
-.ee-print-title{display:none}
+.ee-print-title,.ee-print-footer{display:none}
 @media print{
-  @page{size:A4 landscape;margin:10mm}
+  @page{size:A4 landscape;margin:22mm 10mm 14mm 10mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  body{background:#fff!important;margin:0}
+  html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #ee-weekly-print, #ee-weekly-print *{visibility:visible}
-  #ee-weekly-print{position:absolute;left:0;top:0;width:100%;box-shadow:none!important;padding:0!important;background:#fff!important}
+  #ee-weekly-print{box-shadow:none!important;padding:0!important;background:#fff!important}
   .ee-weekly-ctrl{display:none!important}
-  .ee-print-title{display:block!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;visibility:visible!important;z-index:10}
-  #ee-weekly-print > div:last-child{margin-top:28px}
-  .ee-sess-card{break-inside:avoid;page-break-inside:avoid}
+  .ee-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
+  .ee-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
+  .ee-day-col{break-inside:avoid;page-break-inside:avoid}
+  .ee-sess-card{break-inside:avoid!important;page-break-inside:avoid!important}
 }
     `}</style>
     <div className="ew">
@@ -1141,7 +1142,7 @@ export default function EngTutorClassPage() {
               const isWeekend = i === 0 || i === 6;
               const list = weekLessonsByDate.get(date) || [];
               return (
-                <div key={date} style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:380,display:"flex",flexDirection:"column"}}>
+                <div key={date} className="ee-day-col" style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:380,display:"flex",flexDirection:"column"}}>
                   <div style={{textAlign:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #e2e8f0"}}>
                     <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:isWeekend?"#dc2626":(isToday?"#1a6fc4":"#94a3b8"),marginBottom:3}}>{WEEKDAY_LABELS[i]}</div>
                     <div style={{fontSize:14,fontWeight:800,color:"#1a1a2e"}}>
@@ -1179,6 +1180,7 @@ export default function EngTutorClassPage() {
               );
             })}
           </div>
+          <div className="ee-print-footer">Dream Academy · Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
         </div>
       )}
 
