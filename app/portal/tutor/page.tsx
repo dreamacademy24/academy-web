@@ -388,6 +388,17 @@ export default function PortalTutorPage() {
     const validBlocks = blocks.filter(b => Array.isArray(b.days) && b.days.length > 0 && (b.time || "").trim() !== "");
     if (validBlocks.length === 0) { setMsg("수업 일정에 요일과 시간을 최소 1개 입력해주세요."); return; }
 
+    // 예약(투숙) 기간 + 종료일<시작일 가드
+    {
+      const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
+      const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
+      if (!form.start_date || !form.end_date) { setMsg("수업 시작일과 종료일을 모두 선택해주세요."); return; }
+      if (form.end_date < form.start_date) { setMsg("종료일은 시작일 이후여야 해요."); return; }
+      if ((bs && form.start_date < bs) || (be && form.end_date > be)) {
+        setMsg("예약(투숙) 기간 안에서만 선택할 수 있어요."); return;
+      }
+    }
+
     setSaving(true); setMsg("");
 
     const isFor2 = form.class_type === '1:2';
@@ -413,6 +424,18 @@ export default function PortalTutorPage() {
     const _totalSessions = _generated.filter(o => !_sortedSkips.includes(o.date)).reduce((s, o) => s + o.spd, 0);
     const _unitPrice = form.class_type === '1:2' ? 350 : 300;
     const _totalAmount = _totalSessions * _unitPrice;
+
+    // 학생 나이(원본값) — 첫째 학생만. modalStudents에서 이름 매칭으로 lookup
+    const _targetKr = isFor2 ? form.student1_name_kr : form.student_name_kr;
+    const _targetEn = isFor2 ? form.student1_name_en : form.student_name_en;
+    let _studentAge = '';
+    for (const s of modalStudents) {
+      const n = studentName(s);
+      if ((n.kr || '') === (_targetKr || '') && (n.en || '') === (_targetEn || '')) {
+        _studentAge = n.age || String(s?.age || s?.birthYear || '');
+        break;
+      }
+    }
 
     if (editingId) {
       const res = await fetch("/api/portal/tutor-edit", {
@@ -460,6 +483,7 @@ export default function PortalTutorPage() {
         ...form,
         student_name_kr: finalKr,
         student_name_en: finalEn,
+        student_age: _studentAge || null,
         ...levels,
         preferred_days_arr: allDays,
         preferred_time: compatPreferredTime,
@@ -855,19 +879,21 @@ export default function PortalTutorPage() {
             onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
 
-        {/* 예약 기간 외 수업일 차단 안내 */}
+        {/* 예약 기간 외 / 종료일 < 시작일 차단 안내 */}
         {(() => {
           const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
           const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
           const sBefore = !!form.start_date && !!bs && form.start_date < bs;
           const eAfter  = !!form.end_date   && !!be && form.end_date   > be;
-          if (!sBefore && !eAfter) return null;
+          const eBeforeS = !!form.start_date && !!form.end_date && form.end_date < form.start_date;
+          if (!sBefore && !eAfter && !eBeforeS) return null;
           const fmtMD = (iso: string) => iso ? iso.slice(5).replace('-', '/') : '-';
           return (
             <div style={{marginTop:8,padding:'10px 14px',background:'#fef2f2',border:'1px solid #fca5a5',borderLeft:'4px solid #ef4444',borderRadius:8,fontSize:13,color:'#991b1b',fontWeight:600,lineHeight:1.5}}>
-              ⚠️ 예약 기간({fmtMD(bs)} ~ {fmtMD(be)}) 내 날짜만 신청 가능합니다.
+              {(sBefore || eAfter) && <>⚠️ 예약(투숙) 기간 안에서만 선택할 수 있어요 ({fmtMD(bs)} ~ {fmtMD(be)}).</>}
               {sBefore && <div style={{marginTop:4,fontWeight:500}}>· 수업 시작일이 체크인보다 빠릅니다.</div>}
               {eAfter && <div style={{marginTop:4,fontWeight:500}}>· 수업 종료일이 체크아웃 이후입니다.</div>}
+              {eBeforeS && <div style={{marginTop:(sBefore||eAfter)?4:0}}>⚠️ 종료일은 시작일 이후여야 해요.</div>}
             </div>
           );
         })()}
@@ -1303,7 +1329,8 @@ export default function PortalTutorPage() {
           const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
           const outOfRange =
             (!!form.start_date && !!bs && form.start_date < bs) ||
-            (!!form.end_date   && !!be && form.end_date   > be);
+            (!!form.end_date   && !!be && form.end_date   > be) ||
+            (!!form.start_date && !!form.end_date && form.end_date < form.start_date);
           return (<>
             <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
               {saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "예약 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
