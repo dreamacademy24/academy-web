@@ -374,9 +374,9 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
 .ti-wtable td{border:1px solid #000;padding:4px;text-align:center;vertical-align:middle;width:14.285%}
 .ti-wtable tr.date-row td{height:26px;font-size:10.5px;color:#475569;font-weight:600}
 .ti-wtable tr.content-row td{height:56px;padding:3px}
-.ti-wsess{background:#dbeafe;padding:6px 3px;border-radius:5px;font-size:10.5px;line-height:1.35;color:#1e3a8a;font-weight:700}
-.ti-wsess .ct{font-weight:800}
-.ti-wsess .tm{color:#1e40af;margin-top:2px;font-size:10px;font-weight:600}
+.ti-wsess{background:#dbeafe;padding:3px 2px;border-radius:4px;font-size:9.5px;line-height:1.2;color:#1e3a8a;font-weight:700}
+.ti-wsess .ct{font-weight:800;font-size:9.5px}
+.ti-wsess .tm{color:#1e40af;margin-top:1px;font-size:8.5px;font-weight:600}
 
 .ti-rules{font-size:13px;line-height:1.65;color:#1a1a2e}
 .ti-rules .title{font-size:15px;font-weight:800;margin:0 0 8px;text-align:center}
@@ -404,8 +404,9 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   .ti-wtable td{padding:2px}
   .ti-wtable tr.date-row td{height:18px;font-size:9px}
   .ti-wtable tr.content-row td{height:38px;padding:2px}
-  .ti-wsess{font-size:8px;padding:2px;line-height:1.2}
-  .ti-wsess .tm{font-size:8px;margin-top:1px}
+  .ti-wsess{font-size:7px;padding:1px 1px;line-height:1.1}
+  .ti-wsess .ct{font-size:7px}
+  .ti-wsess .tm{font-size:6.5px;margin-top:1px}
   .ti-rules{font-size:10px;line-height:1.45}
   .ti-rules .title{font-size:12px;margin:0 0 4px}
   .ti-rules p{margin:0 0 3px}
