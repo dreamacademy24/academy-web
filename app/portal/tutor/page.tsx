@@ -425,7 +425,7 @@ export default function PortalTutorPage() {
     const _unitPrice = form.class_type === '1:2' ? 350 : 300;
     const _totalAmount = _totalSessions * _unitPrice;
 
-    // 학생 나이(원본값) — 첫째 학생만. modalStudents에서 이름 매칭으로 lookup
+    // 학생 나이(원본값) — modalStudents에서 이름 매칭으로 lookup
     const _targetKr = isFor2 ? form.student1_name_kr : form.student_name_kr;
     const _targetEn = isFor2 ? form.student1_name_en : form.student_name_en;
     let _studentAge = '';
@@ -434,6 +434,19 @@ export default function PortalTutorPage() {
       if ((n.kr || '') === (_targetKr || '') && (n.en || '') === (_targetEn || '')) {
         _studentAge = n.age || String(s?.age || s?.birthYear || '');
         break;
+      }
+    }
+    // 둘째 학생 나이 — 1:2일 때만
+    let _student2Age = '';
+    if (isFor2) {
+      const _t2Kr = form.student2_name_kr;
+      const _t2En = form.student2_name_en;
+      for (const s of modalStudents) {
+        const n = studentName(s);
+        if ((n.kr || '') === (_t2Kr || '') && (n.en || '') === (_t2En || '')) {
+          _student2Age = n.age || String(s?.age || s?.birthYear || '');
+          break;
+        }
       }
     }
 
@@ -484,6 +497,7 @@ export default function PortalTutorPage() {
         student_name_kr: finalKr,
         student_name_en: finalEn,
         student_age: _studentAge || null,
+        student2_age: _student2Age || null,
         ...levels,
         preferred_days_arr: allDays,
         preferred_time: compatPreferredTime,

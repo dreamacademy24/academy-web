@@ -89,6 +89,7 @@ export async function POST(req: Request) {
       student_name_kr: body.student_name_kr || null,
       student_name_en: body.student_name_en || null,
       student_age: body.student_age || null,
+      student2_age: body.student2_age || null,
       class_type: body.class_type || null,
       start_date: body.start_date || null,
       end_date: body.end_date || null,
