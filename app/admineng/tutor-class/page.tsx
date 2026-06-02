@@ -47,6 +47,23 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 
 function fmtDate(s: string) { return s ? s.slice(5, 10).replace('-', '/') : '-'; }
 
+// Weekly View 학생명: 영문 우선 → student_names 라틴 토큰 → 한글 폴백 (최대 2명 join)
+function pickEnFirst(l: any): string {
+  const direct = String(l?.student_name_en || l?.student_eng_name || "").trim();
+  if (direct) {
+    const parts = direct.split(/[,]/).map((s: string) => s.trim()).filter(Boolean);
+    return parts.slice(0, 2).join(" / ") || direct;
+  }
+  const raw = String(l?.student_names || "");
+  const tokens: string[] = [];
+  for (const g of raw.split("/").map(s => s.trim()).filter(Boolean)) {
+    for (const t of g.split(",").map(s => s.trim()).filter(Boolean)) tokens.push(t);
+  }
+  const latin = tokens.filter(t => /[A-Za-z]/.test(t));
+  if (latin.length > 0) return latin.slice(0, 2).join(" / ");
+  return tokens[0] || "-";
+}
+
 // Lesson 자동생성용 헬퍼 (admin/tutor-class/[id]/save 와 동일 로직)
 function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
   if (!start || !end) return 0;
@@ -457,7 +474,7 @@ export default function EngTutorClassPage() {
         days,
         skips: skipsArr,
         time: l.confirmed_time || l.class_time || "",
-        student: (l.student_names || "").split(/[\/,]/)[0].trim() || "-",
+        student: pickEnFirst(l),
         classType: l.class_type || "",
         rowId: l.id,
         overrides: l.time_overrides || null,
@@ -474,7 +491,7 @@ export default function EngTutorClassPage() {
         end: r.end_date || "",
         days,
         time: r.preferred_time || "",
-        student: [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-",
+        student: pickEnFirst({ student_name_en: r.student_name_en, student_name_kr: r.student_name_kr }),
         classType: r.class_type || "",
         rowId: r.id,
       });
@@ -812,6 +829,19 @@ export default function EngTutorClassPage() {
 .ecinput{display:flex;gap:8px;margin-top:4px}
 .ecinput textarea{flex:1;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;height:64px}.ecinput textarea:focus{border-color:#1a6fc4}
 .eempty{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
+.ee-print-title{display:none}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff!important;margin:0}
+  body *{visibility:hidden}
+  #ee-weekly-print, #ee-weekly-print *{visibility:visible}
+  #ee-weekly-print{position:absolute;left:0;top:0;width:100%;box-shadow:none!important;padding:0!important;background:#fff!important}
+  .ee-weekly-ctrl{display:none!important}
+  .ee-print-title{display:block!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;visibility:visible!important;z-index:10}
+  #ee-weekly-print > div:last-child{margin-top:28px}
+  .ee-sess-card{break-inside:avoid;page-break-inside:avoid}
+}
     `}</style>
     <div className="ew">
       <div className="etop">
@@ -1068,13 +1098,15 @@ export default function EngTutorClassPage() {
       })()}
 
       {tab === "weekly" && (
-        <div style={{background:"#fff",borderRadius:12,padding:16,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
-          <div style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:12}}>
+        <div id="ee-weekly-print" className="ee-weekly-print" style={{background:"#fff",borderRadius:12,padding:16,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+          <div className="ee-print-title">Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
+          <div className="ee-weekly-ctrl" style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",gap:4,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:3}}>
               <button onClick={() => setWeekOffset(o => o - 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>◀ Prev</button>
               <button onClick={() => setWeekOffset(0)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:weekOffset===0?"#1a6fc4":"transparent",color:weekOffset===0?"#fff":"#475569"}}>This Week</button>
               <button onClick={() => setWeekOffset(o => o + 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>Next ▶</button>
             </div>
+            <button onClick={() => window.print()} style={{padding:"7px 14px",background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#1a1a2e"}}>🖨 Print</button>
             <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",padding:"7px 12px",background:"#eff6ff",borderRadius:8}}>
               {fmtRange(week.startDate, week.endDate)}
             </div>
@@ -1125,7 +1157,7 @@ export default function EngTutorClassPage() {
                     list.map((l: any) => {
                       const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
                       const color = tutorColor(l.tutor_id);
-                      const sname = (l.student_names || "-").split(/[\/,]/)[0].trim() || "-";
+                      const sname = pickEnFirst(l);
                       const _krKeys = ['일','월','화','수','목','금','토'];
                       const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                       const _ov = l.time_overrides as Record<string,string> | undefined;
@@ -1133,6 +1165,7 @@ export default function EngTutorClassPage() {
                       return (
                         <div
                           key={l.id}
+                          className="ee-sess-card"
                           style={{borderLeft:`4px solid ${color}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)"}}
                         >
                           <div style={{fontSize:11.5,fontWeight:800,color:l.tutor_id?color:"#dc2626",lineHeight:1.3}}>{tname}</div>

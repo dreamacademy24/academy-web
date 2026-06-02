@@ -304,7 +304,7 @@ export default function TutorWeeklySchedule() {
     return s.session_time || "--:--";
   }
 
-  return (<>
+  return (<div className="tws-print-area" id="tws-weekly-print">
     <style>{`
 .tws-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
 .tws-nav{display:flex;gap:4px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:3px}
@@ -370,7 +370,26 @@ export default function TutorWeeklySchedule() {
 
 @media(max-width:1100px){.tws-grid{grid-template-columns:repeat(7,minmax(120px,1fr))}}
 @media(max-width:800px){.tws-grid{grid-template-columns:repeat(7,140px)}}
+
+.tws-print-btn{padding:7px 14px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#1a1a2e}
+.tws-print-btn:hover{background:#f1f5f9}
+.tws-print-title{display:none}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff!important;margin:0}
+  body *{visibility:hidden}
+  #tws-weekly-print, #tws-weekly-print *{visibility:visible}
+  #tws-weekly-print{position:absolute;left:0;top:0;width:100%}
+  .tws-ctrl,.tws-legend,.tws-overlay,.tws-toast{display:none!important}
+  .tws-print-title{display:block!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;visibility:visible!important;z-index:10}
+  .tws-grid{margin-top:28px;grid-template-columns:repeat(7,1fr)!important}
+  .tws-col{break-inside:avoid;page-break-inside:avoid;min-height:auto!important}
+  .tws-sess{break-inside:avoid;page-break-inside:avoid}
+}
     `}</style>
+
+    <div className="tws-print-title">주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
 
     <div className="tws-ctrl">
       <div className="tws-nav" role="group" aria-label="주 네비게이션">
@@ -378,6 +397,7 @@ export default function TutorWeeklySchedule() {
         <button className={weekOffset === 0 ? "ac" : ""} onClick={() => setWeekOffset(0)}>이번 주</button>
         <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
       </div>
+      <button className="tws-print-btn" onClick={() => window.print()} title="현재 보는 주만 인쇄">🖨 출력</button>
       <div className="tws-label">
         {weekLabelKR(weekOffset)}
         <span className="sub">{formatWeekRange(week.startDate, week.endDate)}</span>
@@ -532,5 +552,5 @@ export default function TutorWeeklySchedule() {
     )}
 
     {toast && <div className="tws-toast" role="status" aria-live="polite">{toast}</div>}
-  </>);
+  </div>);
 }
