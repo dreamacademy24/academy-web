@@ -226,6 +226,8 @@ export default function AdminBookingsPage(){
     // from students jsonb
     korName:string; engName:string; age:string; grade:string;
     academyStart:string; academyEnd:string; academyWeeks:string; calWeeks:string; photo:string;
+    // SSOT 검증 (예약 상세 공식과 비교)
+    mismatch:boolean; refStart:string; refEnd:string;
   }
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
@@ -240,7 +242,10 @@ export default function AdminBookingsPage(){
 
   // 모든 예약(bookings)의 students JSONB를 평탄화 + academyStart 빠른순(오름차순)
   // 수업 시작일 = student JSONB academyStart → 없으면 체크인 다음 월요일
-  // 수업 종료일 = checkout_date의 금요일 또는 직전 금요일 (주수 미사용)
+  // 수업 종료일 (비통학형) = SSOT 공식: getNextMonday(checkin) + (weeks-1)*7 + 4 (월~금)
+  // 수업 종료일 (통학형)  = checkout_date 직전 금요일 (기존 로직)
+  // [DIAG] 학생관리 탭에서 사용되는 booking_type 분포 한 번만 확인
+  console.log("[stu booking_type values]", Array.from(new Set(bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status)).map(b=>String((b as any).booking_type)+"|"+String(b.accom_type)))));
   const studentsList:StudentRow[]=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status)).flatMap(b=>{
     let arr:Record<string,string>[]=[];
     try{
@@ -248,17 +253,23 @@ export default function AdminBookingsPage(){
       if(Array.isArray(parsed)) arr=parsed;
     }catch{return[];}
     if(arr.length===0) return [];
+    const isCommute=(b as any).booking_type==="commute"||b.accom_type==="통학형";
     return arr.map((s,i)=>{
+      const weeks=Number(s.academyWeeks||b.accom_weeks||0);
       // 수업 시작일: 저장값/체크인 무엇이든 월요일로 보정 (월요일이면 그대로)
-      const academyStart=getNextMonday(s.academyStart||s.academy_start||b.checkin_date||"");
-      // 수업 종료일: checkout_date의 금요일 또는 직전 금요일
-      const academyEnd=getLastFriday(b.checkout_date||"");
+      const calStart=getNextMonday(s.academyStart||s.academy_start||b.checkin_date||"");
+      // 수업 종료일: 비통학형은 SSOT 공식, 통학형은 기존 로직 유지
+      const calEnd=isCommute?getLastFriday(b.checkout_date||""):(weeks>0?calcAcademyEnd(calStart,weeks):"");
+      // SSOT 검증: 예약 상세와 동일한 공식 (체크인 → 다음 월요일 → +(weeks-1)*7+4)
+      const refStart=getNextMonday(b.checkin_date||"");
+      const refEnd=weeks>0?calcAcademyEnd(refStart,weeks):"";
+      const mismatch=(!isCommute)&&weeks>0&&(calStart!==refStart||calEnd!==refEnd);
       // 달력 표시용 주수: student JSON → booking accom_weeks → start/end 역산 → "?"
       const calWeeks=(()=>{
         if(s.academyWeeks)return String(s.academyWeeks);
         if(b.accom_weeks)return String(b.accom_weeks);
-        if(academyStart&&academyEnd){
-          const w=Math.round((new Date(academyEnd).getTime()-new Date(academyStart).getTime()+3*86400000)/(7*86400000));
+        if(calStart&&calEnd){
+          const w=Math.round((new Date(calEnd).getTime()-new Date(calStart).getTime()+3*86400000)/(7*86400000));
           if(w>0)return String(w);
         }
         return"?";
@@ -284,11 +295,12 @@ export default function AdminBookingsPage(){
         age:s.age||"",
         // grade: 한글 라벨로 정규화. s.grade(킨더/주니어) 우선, 없으면 s.level(kinder/junior) 변환
         grade:s.grade||(s.level==="kinder"?"킨더":s.level==="junior"?"주니어":""),
-        academyStart,
-        academyEnd,
+        academyStart:calStart,
+        academyEnd:calEnd,
         academyWeeks:s.academyWeeks||"",
         calWeeks,
         photo:s.photo||"",
+        mismatch,refStart,refEnd,
       };
     });
   }).sort((a,b)=>new Date(a.academyStart||"9999").getTime()-new Date(b.academyStart||"9999").getTime());
@@ -986,6 +998,7 @@ export default function AdminBookingsPage(){
       const toggleStuSort=(k:string)=>setStuSort(p=>p.key===k?{key:k,asc:!p.asc}:{key:k,asc:true});
       const arr=(k:string)=>stuSort.key===k?(stuSort.asc?"▲":"▼"):"⇅";
       const arrCls=(k:string)=>stuSort.key===k?"arr ac":"arr";
+      const mismatchCount=sorted.filter(s=>s.mismatch).length;
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
@@ -997,6 +1010,11 @@ export default function AdminBookingsPage(){
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
           {stuView==="cal"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄 (A4 가로)</button>}
         </div>
+        {mismatchCount>0&&(
+          <div style={{margin:"6px 0 10px",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #dc2626",borderRadius:8,fontSize:13,color:"#991b1b",fontWeight:700}}>
+            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약 상세의 아카데미 시작/종료와 달력 값이 다릅니다
+          </div>
+        )}
         <div className="sub-tabs" style={{marginBottom:8}}>
           <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>년도:</span>
           {["",String(_now.getFullYear()-1),String(_now.getFullYear()),String(_now.getFullYear()+1)].map(y=>(
@@ -1022,7 +1040,7 @@ export default function AdminBookingsPage(){
               <td>{s.academyEnd||"-"}</td>
               <td>{s.academyWeeks?s.academyWeeks+"주":"-"}</td>
               <td>{s.grade||"-"}</td>
-              <td style={{fontWeight:700}}>{s.korName||"-"}</td>
+              <td style={{fontWeight:700}}>{s.korName||"-"}{s.mismatch&&<span title={`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`} style={{marginLeft:4,cursor:"help"}}>🔴❗</span>}</td>
               <td>{s.engName||"-"}</td>
               <td>{fmtStudentAge(s.age)}</td>
               <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
@@ -1104,8 +1122,8 @@ export default function AdminBookingsPage(){
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
-                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;return (<div key={`s${s.key}`} className="cal-stu-in" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
-                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;return (<div key={`e${s.key}`} className="cal-stu-out" title={`${s.korName||""} ${s.engName||""}`.trim()} style={{fontSize:11}}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}</div>);})}
+                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`s${s.key}`} className="cal-stu-in" title={mmTitle} style={{fontSize:11}}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}{s.mismatch&&<span style={{marginLeft:3}}>🔴❗</span>}</div>);})}
+                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`e${s.key}`} className="cal-stu-out" title={mmTitle} style={{fontSize:11}}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}{s.mismatch&&<span style={{marginLeft:3}}>🔴❗</span>}</div>);})}
                               </td>
                             );
                           })}
