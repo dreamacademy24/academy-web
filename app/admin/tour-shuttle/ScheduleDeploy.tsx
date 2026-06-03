@@ -143,6 +143,31 @@ export default function ScheduleDeploy() {
   const [editDesc, setEditDesc] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // 장소 직접 추가 모달 상태
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const [placeForm, setPlaceForm] = useState({ date: "", title: "", desc: "" });
+  const [placeSaving, setPlaceSaving] = useState(false);
+
+  async function saveAddPlace() {
+    if (!placeForm.date || !placeForm.title.trim()) { alert("날짜와 장소명은 필수입니다."); return; }
+    setPlaceSaving(true);
+    const dm = placeForm.date.slice(0, 7); // YYYY-MM
+    const { error } = await supabase.from("schedule_items").insert({
+      type: "shuttle",
+      date: placeForm.date,
+      title: placeForm.title.trim(),
+      description: placeForm.desc.trim() || null,
+      is_deployed: true,
+      deploy_month: dm,
+    });
+    setPlaceSaving(false);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    setPlaceOpen(false);
+    setPlaceForm({ date: "", title: "", desc: "" });
+    if (dm !== month) setMonth(dm); // 다른 달이면 그 달로 이동 (load는 useEffect가 처리)
+    else await load();
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -264,6 +289,11 @@ export default function ScheduleDeploy() {
             style={{padding:"9px 14px",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:busy?"not-allowed":"pointer",fontFamily:"inherit",background:"#f59e0b",color:"#fff",opacity:busy?0.6:1}}
           >⚡ {busy==="generate" ? "생성중..." : "자동생성"}</button>
 
+          <button
+            onClick={() => { setPlaceForm({ date: "", title: "", desc: "" }); setPlaceOpen(true); }}
+            style={{padding:"9px 14px",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"#1a6fc4",color:"#fff"}}
+          >+ 장소 직접 추가</button>
+
           <span
             style={{
               padding:"6px 12px",
@@ -355,6 +385,60 @@ export default function ScheduleDeploy() {
           총 {items.length}건 · A/B주 패턴은 2026-05-04(월) 기준 · 매주 월/수/금 H-Mart 자동 포함
         </div>
       </div>
+
+      {/* 장소 직접 추가 모달 */}
+      {placeOpen && (
+        <div
+          onClick={() => setPlaceOpen(false)}
+          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:20}}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{background:"#fff",borderRadius:14,width:"100%",maxWidth:420,padding:20,boxShadow:"0 20px 60px rgba(0,0,0,0.18)"}}
+          >
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <h3 style={{fontSize:15,fontWeight:800,margin:0}}>📍 장소 직접 추가</h3>
+              <button onClick={() => setPlaceOpen(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#6b7c93"}}>✕</button>
+            </div>
+            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>날짜 <span style={{color:"#dc2626"}}>*</span></label>
+            <input
+              type="date"
+              value={placeForm.date}
+              onChange={e => setPlaceForm(p => ({ ...p, date: e.target.value }))}
+              style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:12,outline:"none"}}
+            />
+            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>장소명 <span style={{color:"#dc2626"}}>*</span></label>
+            <input
+              value={placeForm.title}
+              onChange={e => setPlaceForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="예: 세부 사파리"
+              style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:12,outline:"none"}}
+            />
+            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>출발시간 / 설명</label>
+            <input
+              value={placeForm.desc}
+              onChange={e => setPlaceForm(p => ({ ...p, desc: e.target.value }))}
+              placeholder="예: 08:30am"
+              style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:16,outline:"none"}}
+            />
+            <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+              <button
+                onClick={() => setPlaceOpen(false)}
+                disabled={placeSaving}
+                style={{padding:"9px 14px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontWeight:700,cursor:placeSaving?"not-allowed":"pointer",fontFamily:"inherit",background:"#fff",color:"#475569"}}
+              >취소</button>
+              <button
+                onClick={saveAddPlace}
+                disabled={placeSaving || !placeForm.date || !placeForm.title.trim()}
+                style={{padding:"9px 18px",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:(placeSaving||!placeForm.date||!placeForm.title.trim())?"not-allowed":"pointer",fontFamily:"inherit",background:"#1a6fc4",color:"#fff",opacity:(placeSaving||!placeForm.date||!placeForm.title.trim())?0.6:1}}
+              >{placeSaving ? "저장중..." : "💾 저장"}</button>
+            </div>
+            <div style={{marginTop:12,fontSize:11,color:"#94a3b8",lineHeight:1.5}}>
+              추가된 장소는 즉시 <b>배포됨</b> 상태로 셔틀 캘린더에 표시됩니다.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 편집 모달 */}
       {editing && (

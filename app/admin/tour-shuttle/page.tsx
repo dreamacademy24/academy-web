@@ -136,10 +136,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <span className="ts-title">🚌 투어셔틀 관리</span>
           <span className="ts-sub">총 {apps.length}건</span>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          style={{ padding: "8px 14px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-        >+ 항목 직접 추가</button>
+        <div style={{ width: 100 }} />
       </div>
 
       <div style={{display:"flex",gap:6,background:"#fff",padding:4,borderRadius:12,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
@@ -155,7 +152,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       {mainTab === "deploy" ? (
         <ScheduleDeploy />
-      ) : loading ? (
+      ) : (
+      <>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <button
+          onClick={() => setAddOpen(true)}
+          style={{ padding: "8px 14px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+        >+ 신청 직접 추가</button>
+      </div>
+      {loading ? (
         <div className="ts-card"><div className="ts-loading">불러오는 중...</div></div>
       ) : (() => {
         // 투어명+tour_date 둘 다 존재 → 정상 그룹 / 둘 중 하나 없으면 → 미분류
@@ -296,13 +301,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           </div>
         );
       })()}
+      </>
+      )}
     </div>
 
     {addOpen && (
       <div onClick={() => setAddOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
         <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 480, padding: 22, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>🚌 항목 직접 추가</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>🚌 신청 직접 추가</h3>
             <button onClick={() => setAddOpen(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#6b7280" }}>✕</button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
