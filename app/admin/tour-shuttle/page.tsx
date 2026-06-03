@@ -51,11 +51,21 @@ export default function TourShuttleAdminPage() {
   const [addSaving, setAddSaving] = useState(false);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
+  const [collapsedWeeks, setCollapsedWeeks] = useState<Set<string>>(new Set());
 
   function toggleMonth(m: string) {
     setExpandedMonths(prev => {
       const next = new Set(prev);
       if (next.has(m)) next.delete(m); else next.add(m);
+      return next;
+    });
+  }
+
+  // 주차는 기본 펼침 → 접힌 주차만 추적
+  function toggleWeek(key: string) {
+    setCollapsedWeeks(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -266,8 +276,42 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                     <div style={{fontSize:13, fontWeight:700, color:"#1a6fc4", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
                   </div>
                   {open && (
-                  <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:12}}>
-            {mGroups.map(([key, list]) => {
+                  <div style={{display:"flex", flexDirection:"column", gap:12, marginTop:12}}>
+            {(() => {
+              const weekMap = new Map<number, [string, ShuttleApp[]][]>();
+              for (const g of mGroups) {
+                const d = Number(g[0].split("|")[0].slice(8, 10));
+                const wn = Math.min(4, Math.floor((d - 1) / 7) + 1);
+                const arr = weekMap.get(wn) || [];
+                arr.push(g);
+                weekMap.set(wn, arr);
+              }
+              const weeks = Array.from(weekMap.entries()).sort((a, b) => a[0] - b[0]);
+              const [yy, mn] = ym.split("-").map(Number);
+              const lastDay = new Date(yy, mn, 0).getDate();
+              const weekRange = (wn: number) => {
+                const startD = (wn - 1) * 7 + 1;
+                const endD = wn === 4 ? lastDay : wn * 7;
+                return `${mn}/${startD}~${mn}/${endD}`;
+              };
+              return weeks.map(([wn, weekGroups]) => {
+                const weekKey = `${ym}-w${wn}`;
+                const weekOpen = !collapsedWeeks.has(weekKey);
+                const wPeople = weekGroups.reduce((s, [, l]) => s + l.reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
+                return (
+                  <div key={weekKey}>
+                    <div
+                      onClick={() => toggleWeek(weekKey)}
+                      style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:"#dbeafe", color:"#1e40af", borderRadius:10, cursor:"pointer"}}
+                    >
+                      <div style={{fontSize:14, fontWeight:800, display:"flex", alignItems:"center", gap:8}}>
+                        <span style={{fontSize:12}}>{weekOpen ? "▼" : "▶"}</span>{wn}주차 <span style={{fontWeight:600, opacity:0.8}}>({weekRange(wn)})</span>
+                      </div>
+                      <div style={{fontSize:12.5, fontWeight:700, color:"#1e40af", background:"#fff", padding:"3px 12px", borderRadius:999}}>총 {wPeople}명</div>
+                    </div>
+                    {weekOpen && (
+                    <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:10}}>
+            {weekGroups.map(([key, list]) => {
               const date = key.split("|")[0];
               const tour = key.split("|").slice(1).join("|");
               const total = list.reduce((s, a) => s + (a.people_count || 0), 0);
@@ -324,6 +368,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 </div>
               );
             })}
+                    </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
                   </div>
                   )}
                 </div>
