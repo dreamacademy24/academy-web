@@ -145,25 +145,32 @@ export default function ScheduleDeploy() {
 
   // 장소 직접 추가 모달 상태
   const [placeOpen, setPlaceOpen] = useState(false);
-  const [placeForm, setPlaceForm] = useState({ date: "", title: "", desc: "" });
+  const [placeForm, setPlaceForm] = useState({ date: "", title: "", desc: "", back: "" });
   const [placeSaving, setPlaceSaving] = useState(false);
 
   async function saveAddPlace() {
     if (!placeForm.date || !placeForm.title.trim()) { alert("날짜와 장소명은 필수입니다."); return; }
     setPlaceSaving(true);
     const dm = placeForm.date.slice(0, 7); // YYYY-MM
+    const depart = placeForm.desc.trim();
+    const back = placeForm.back.trim();
+    // desc 컬럼에 출발/복귀를 함께 저장 (예: "출발 08:30am · 복귀 15:00")
+    let description: string | null = null;
+    if (depart && back) description = `출발 ${depart} · 복귀 ${back}`;
+    else if (depart) description = depart;
+    else if (back) description = `복귀 ${back}`;
     const { error } = await supabase.from("schedule_items").insert({
       type: "shuttle",
       date: placeForm.date,
       title: placeForm.title.trim(),
-      description: placeForm.desc.trim() || null,
+      description,
       is_deployed: true,
       deploy_month: dm,
     });
     setPlaceSaving(false);
     if (error) { alert("저장 실패: " + error.message); return; }
     setPlaceOpen(false);
-    setPlaceForm({ date: "", title: "", desc: "" });
+    setPlaceForm({ date: "", title: "", desc: "", back: "" });
     if (dm !== month) setMonth(dm); // 다른 달이면 그 달로 이동 (load는 useEffect가 처리)
     else await load();
   }
@@ -290,7 +297,7 @@ export default function ScheduleDeploy() {
           >⚡ {busy==="generate" ? "생성중..." : "자동생성"}</button>
 
           <button
-            onClick={() => { setPlaceForm({ date: "", title: "", desc: "" }); setPlaceOpen(true); }}
+            onClick={() => { setPlaceForm({ date: "", title: "", desc: "", back: "" }); setPlaceOpen(true); }}
             style={{padding:"9px 14px",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"#1a6fc4",color:"#fff"}}
           >+ 장소 직접 추가</button>
 
@@ -419,6 +426,13 @@ export default function ScheduleDeploy() {
               value={placeForm.desc}
               onChange={e => setPlaceForm(p => ({ ...p, desc: e.target.value }))}
               placeholder="예: 08:30am"
+              style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:12,outline:"none"}}
+            />
+            <label style={{display:"block",fontSize:11.5,fontWeight:700,color:"#475569",marginBottom:5}}>돌아오는 시간 / 복귀</label>
+            <input
+              value={placeForm.back}
+              onChange={e => setPlaceForm(p => ({ ...p, back: e.target.value }))}
+              placeholder='예: "15:00" 또는 "2시간 30분 후"'
               style={{width:"100%",padding:"9px 11px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",marginBottom:16,outline:"none"}}
             />
             <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>

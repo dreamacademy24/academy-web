@@ -48,6 +48,23 @@ export default function TourShuttleAdminPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [addSaving, setAddSaving] = useState(false);
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [monthsInitDone, setMonthsInitDone] = useState(false);
+
+  function toggleMonth(m: string) {
+    setExpandedMonths(prev => {
+      const next = new Set(prev);
+      if (next.has(m)) next.delete(m); else next.add(m);
+      return next;
+    });
+  }
+
+  async function deleteApp(id: string) {
+    if (!window.confirm("이 신청 내역을 삭제할까요?")) return;
+    const { error } = await supabase.from("shuttle_applications").delete().eq("id", id);
+    if (error) { alert("삭제 실패: " + error.message); return; }
+    load();
+  }
 
   async function saveAddManual() {
     if (!addForm.tour_name.trim() || !addForm.tour_date || !addForm.portal_name.trim()) {
@@ -100,6 +117,19 @@ export default function TourShuttleAdminPage() {
   }, []);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
+
+  // 월 챕터 기본 펼침 초기화 (현재 월 또는 가장 가까운 미래 월)
+  useEffect(() => {
+    if (monthsInitDone) return;
+    const valid = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim());
+    if (valid.length === 0) return;
+    const months = Array.from(new Set(valid.map(a => (a.tour_date as string).slice(0, 7)))).sort();
+    const now = new Date();
+    const curM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const pick = months.find(m => m === curM) || months.find(m => m > curM) || months[months.length - 1];
+    setExpandedMonths(new Set(pick ? [pick] : []));
+    setMonthsInitDone(true);
+  }, [apps, monthsInitDone]);
 
   async function changeStatus(id: string, status: string) {
     const prev = apps;
@@ -188,9 +218,39 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           if (isNaN(dt.getTime())) return s;
           return `${dt.getMonth()+1}/${dt.getDate()} (${KR_DOW[dt.getDay()]})`;
         };
+        const monthLabelKR = (ym: string) => {
+          const [y, mm] = ym.split("-");
+          const curY = new Date().getFullYear();
+          return Number(y) === curY ? `${Number(mm)}월` : `${y}년 ${Number(mm)}월`;
+        };
+        const monthMap = new Map<string, [string, ShuttleApp[]][]>();
+        for (const g of groups) {
+          const m = g[0].split("|")[0].slice(0, 7);
+          const arr = monthMap.get(m) || [];
+          arr.push(g);
+          monthMap.set(m, arr);
+        }
+        const monthChapters = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
         return (
           <div style={{display:"flex", flexDirection:"column", gap:14}}>
-            {groups.map(([key, list]) => {
+            {monthChapters.map(([ym, mGroups]) => {
+              const open = expandedMonths.has(ym);
+              const mPeople = mGroups.reduce((s, [, l]) => s + l.reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
+              const mCount = mGroups.reduce((s, [, l]) => s + l.length, 0);
+              return (
+                <div key={ym}>
+                  <div
+                    onClick={() => toggleMonth(ym)}
+                    style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#1a6fc4", color:"#fff", borderRadius:12, cursor:"pointer", boxShadow:"0 2px 8px rgba(26,111,196,0.18)"}}
+                  >
+                    <div style={{fontSize:16, fontWeight:800, display:"flex", alignItems:"center", gap:8}}>
+                      <span style={{fontSize:13}}>{open ? "▼" : "▶"}</span>📅 {monthLabelKR(ym)} <span style={{fontWeight:600, opacity:0.85}}>({mCount}건)</span>
+                    </div>
+                    <div style={{fontSize:13, fontWeight:700, color:"#1a6fc4", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
+                  </div>
+                  {open && (
+                  <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:12}}>
+            {mGroups.map(([key, list]) => {
               const date = key.split("|")[0];
               const tour = key.split("|").slice(1).join("|");
               const total = list.reduce((s, a) => s + (a.people_count || 0), 0);
@@ -247,6 +307,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 </div>
               );
             })}
+                  </div>
+                  )}
+                </div>
+              );
+            })}
 
             {legacy.length > 0 && (
               <div className="ts-card">
@@ -264,6 +329,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                       <th style={{width:130}}>날짜/투어</th>
                       <th>요청사항</th>
                       <th style={{width:120}}>상태</th>
+                      <th style={{width:70, textAlign:"center"}}>삭제</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -290,6 +356,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                               <option value="confirmed">확정</option>
                               <option value="cancelled">취소</option>
                             </select>
+                          </td>
+                          <td style={{textAlign:"center"}}>
+                            <button
+                              onClick={() => deleteApp(a.id)}
+                              title="삭제"
+                              style={{padding:"5px 10px", border:"none", borderRadius:6, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"#fef2f2", color:"#dc2626"}}
+                            >🗑️ 삭제</button>
                           </td>
                         </tr>
                       );
