@@ -55,6 +55,30 @@ export default function AfterSchoolFieldtripPage() {
       .catch(() => {});
   }, [session]);
 
+  // 예약 기간 내 월만 노출 (shuttle 폼과 동일 컨셉, 스케줄은 2026년 5·6월)
+  const ALL_MONTHS = ["5", "6"];
+  const visibleMonths = (() => {
+    if (!bookingMeta?.checkin || !bookingMeta?.checkout) return ALL_MONTHS;
+    const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
+    const eM = parseInt(bookingMeta.checkout.slice(5, 7), 10);
+    const sY = parseInt(bookingMeta.checkin.slice(0, 4), 10);
+    const eY = parseInt(bookingMeta.checkout.slice(0, 4), 10);
+    return ALL_MONTHS.filter(m => {
+      const mi = parseInt(m, 10);
+      const inS = sY < 2026 || (sY === 2026 && mi >= sM);
+      const inE = eY > 2026 || (eY === 2026 && mi <= eM);
+      return inS && inE;
+    });
+  })();
+
+  // activeMonth가 visibleMonths에 없으면 첫 월로 자동 설정
+  useEffect(() => {
+    if (visibleMonths.length === 0) return;
+    if (!activeMonth || !visibleMonths.includes(activeMonth)) {
+      setActiveMonth(visibleMonths[0]);
+    }
+  }, [visibleMonths.join(','), activeMonth]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const STORAGE_KEY = "afterschool_rules_confirmed";
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -65,7 +89,8 @@ export default function AfterSchoolFieldtripPage() {
 
   useEffect(() => {
     disableExpiredSchedules();
-  }, [activeMonth]);
+    restrictScheduleRange();
+  }, [activeMonth, bookingMeta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getPHTNow() {
     const now = new Date();
@@ -102,6 +127,38 @@ export default function AfterSchoolFieldtripPage() {
         (item as HTMLElement).title = "신청 마감된 일정입니다";
         cb.checked = false;
       }
+    });
+  }
+
+  // 예약 기간(checkin~checkout) 밖 날짜는 숨김 + 전부 숨겨진 주차도 숨김
+  function restrictScheduleRange() {
+    const ci = bookingMeta?.checkin;
+    const co = bookingMeta?.checkout;
+    document.querySelectorAll(".schedule-item").forEach((item) => {
+      const el = item as HTMLElement;
+      const cb = item.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+      if (!cb) return;
+      // 예약정보 없으면 전체 노출
+      if (!ci || !co) { el.style.display = ""; return; }
+      const parts = cb.value.split("-");
+      if (parts.length < 2) return;
+      const month = parseInt(parts[0], 10);
+      const day = parseInt(parts[1], 10);
+      // 스케줄은 2026년 (visibleMonths와 동일 피벗)
+      const ymd = `2026-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (ymd >= ci && ymd <= co) {
+        el.style.display = "";
+      } else {
+        el.style.display = "none";
+        cb.checked = false;
+      }
+    });
+    // 항목이 전부 숨겨진 주차 아코디언도 숨김
+    document.querySelectorAll(".week-accordion").forEach((wk) => {
+      const items = wk.querySelectorAll(".schedule-item");
+      let anyVisible = false;
+      items.forEach((it) => { if ((it as HTMLElement).style.display !== "none") anyVisible = true; });
+      (wk as HTMLElement).style.display = (items.length > 0 && !anyVisible) ? "none" : "";
     });
   }
 
@@ -436,22 +493,26 @@ export default function AfterSchoolFieldtripPage() {
                   <p className="label-sub">참여하실 날짜를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 토요일 필드트립입니다.</p>
 
                   <div className="month-toggle">
-                    <button
-                      type="button"
-                      data-month="5"
-                      data-active={activeMonth === "5" ? "true" : "false"}
-                      onClick={() => setActiveMonth("5")}
-                    >
-                      5월
-                    </button>
-                    <button
-                      type="button"
-                      data-month="6"
-                      data-active={activeMonth === "6" ? "true" : "false"}
-                      onClick={() => setActiveMonth("6")}
-                    >
-                      6월
-                    </button>
+                    {visibleMonths.includes("5") && (
+                      <button
+                        type="button"
+                        data-month="5"
+                        data-active={activeMonth === "5" ? "true" : "false"}
+                        onClick={() => setActiveMonth("5")}
+                      >
+                        5월
+                      </button>
+                    )}
+                    {visibleMonths.includes("6") && (
+                      <button
+                        type="button"
+                        data-month="6"
+                        data-active={activeMonth === "6" ? "true" : "false"}
+                        onClick={() => setActiveMonth("6")}
+                      >
+                        6월
+                      </button>
+                    )}
                   </div>
 
                   <div className="month-schedules">
