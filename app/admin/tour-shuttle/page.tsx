@@ -43,6 +43,7 @@ export default function TourShuttleAdminPage() {
   const [authed, setAuthed] = useState(false);
   const [apps, setApps] = useState<ShuttleApp[]>([]);
   const [bookingNumbers, setBookingNumbers] = useState<Record<string, string>>({});
+  const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
   const [addOpen, setAddOpen] = useState(false);
@@ -107,10 +108,26 @@ export default function TourShuttleAdminPage() {
       setApps(data as ShuttleApp[]);
       const ids = Array.from(new Set(data.map(d => d.booking_id).filter(Boolean) as string[]));
       if (ids.length > 0) {
-        const { data: bs } = await supabase.from("bookings").select("id, reservation_no, booker_name").in("id", ids);
-        const map: Record<string, string> = {};
-        (bs || []).forEach((b: any) => { map[b.id] = b.reservation_no || ""; });
-        setBookingNumbers(map);
+        const { data: bs } = await supabase.from("bookings").select("id, reservation_no, booker_name, students").in("id", ids);
+        const numMap: Record<string, string> = {};
+        const nameMap: Record<string, string> = {};
+        (bs || []).forEach((b: any) => {
+          numMap[b.id] = b.reservation_no || "";
+          // 예약자 이름: booker_name 우선, 없으면 students JSONB 대표자명 폴백
+          let nm = (b.booker_name || "").trim();
+          if (!nm && b.students) {
+            try {
+              const arr = typeof b.students === "string" ? JSON.parse(b.students) : b.students;
+              if (Array.isArray(arr) && arr.length > 0) {
+                const s0 = arr[0] || {};
+                nm = (s0.korName || s0.name_kr || s0.name || s0.engName || s0.name_en || "").trim();
+              }
+            } catch { /* ignore parse error */ }
+          }
+          if (nm) nameMap[b.id] = nm;
+        });
+        setBookingNumbers(numMap);
+        setBookingNames(nameMap);
       }
     }
     setLoading(false);
@@ -282,7 +299,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                         const req = a.request || a.message || "";
                         return (
                           <tr key={a.id}>
-                            <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
+                            <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
                             <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
                             <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                             <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
@@ -339,7 +356,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                       const dt = (a.tour_name || "").trim() || (a.tour_date || "").trim() || "-";
                       return (
                         <tr key={a.id}>
-                          <td style={{fontWeight:600}}>{a.portal_name || a.name || "-"}</td>
+                          <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
                           <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
                           <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                           <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
