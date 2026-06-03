@@ -131,7 +131,6 @@ export default function PortalShuttlePage() {
   const [accordionState, setAccordionState] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [selectedTours, setSelectedTours] = useState<SelectedTour[]>([]);
-  const [riders, setRiders] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
 
   // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
@@ -288,7 +287,6 @@ export default function PortalShuttlePage() {
 
       // Supabase 동시 저장 — selectedTours 1개당 row 1개씩 INSERT
       const memo = (formData.get("memo") as string) || "";
-      const ridersVal = riders.trim();
       const rows = selectedTours.map(t => ({
         booking_id: session.booking_id,
         portal_name: session.guest_name,
@@ -297,7 +295,6 @@ export default function PortalShuttlePage() {
         tour_date: t.date,
         depart_time: t.departTime,
         people_count: t.people,
-        riders: ridersVal,
         room_number: bookingMeta?.room || "",
         message: memo,
         request: memo,
@@ -310,7 +307,6 @@ export default function PortalShuttlePage() {
       alert("신청 완료! 예약현황에서 확인하세요.");
       if (formRef.current) formRef.current.reset();
       setSelectedTours([]);
-      setRiders("");
     } catch (err) {
       console.error(err);
       alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
@@ -703,17 +699,6 @@ export default function PortalShuttlePage() {
                       })}
                     </div>
                   )}
-                </div>
-
-                <div className="field">
-                  <label className="label-main" htmlFor="riders">탑승자 이름</label>
-                  <input
-                    id="riders"
-                    type="text"
-                    value={riders}
-                    onChange={e => setRiders(e.target.value)}
-                    placeholder="예) 김지아, 김지우"
-                  />
                 </div>
 
                 <div className="field">
