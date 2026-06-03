@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { resolvePortalSession } from "@/lib/portalSession";
 
 export default function AfterSchoolFieldtripPage() {
   const [activeMonth, setActiveMonth] = useState("5");
@@ -20,6 +22,38 @@ export default function AfterSchoolFieldtripPage() {
   const [modalHiding, setModalHiding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+  const [session, setSession] = useState<{ booking_id: string } | null>(null);
+  const [children, setChildren] = useState<string[]>([]);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string } | null>(null);
+
+  // 포털 세션 체크 (shuttle 폼과 동일 패턴)
+  useEffect(() => {
+    (async () => {
+      const s = await resolvePortalSession();
+      if (!s) { router.replace("/portal"); return; }
+      setSession(s as { booking_id: string });
+    })();
+  }, [router]);
+
+  // 예약 정보 로드 — 자녀 목록(students.name_kr) + 체크인/체크아웃(STEP 2에서 사용)
+  useEffect(() => {
+    if (!session?.booking_id) return;
+    fetch(`/api/bookings/${session.booking_id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        const b = d.booking || d;
+        const kids = Array.isArray(d.students)
+          ? d.students.map((s: { name_kr?: string }) => String(s?.name_kr || "").trim()).filter(Boolean)
+          : [];
+        setChildren(kids);
+        const ci = String(b.check_in || b.checkin_date || "").slice(0, 10);
+        const co = String(b.check_out || b.checkout_date || "").slice(0, 10);
+        setBookingMeta({ checkin: ci, checkout: co });
+      })
+      .catch(() => {});
+  }, [session]);
 
   useEffect(() => {
     const STORAGE_KEY = "afterschool_rules_confirmed";
@@ -123,7 +157,6 @@ export default function AfterSchoolFieldtripPage() {
         name: formData.get("childName") as string,
         date: formData.get("schedule") as string,
         message: formData.get("memo") as string,
-        room_number: formData.get("room") as string,
         request: formData.get("memo") as string,
       }).then(() => {});
 
@@ -176,13 +209,13 @@ export default function AfterSchoolFieldtripPage() {
       .label-main { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
       .label-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
 
-      input[type="text"], input[type="number"], textarea {
+      input[type="text"], input[type="number"], textarea, select {
         width: 100%; padding: 9px 11px; border-radius: 11px;
         border: 1px solid rgba(148,163,184,0.6); background: #f9fafb;
         font-size: 13px; font-family: inherit;
         transition: border-color 120ms, box-shadow 120ms, background 120ms;
       }
-      input[type="text"]:focus-visible, textarea:focus-visible {
+      input[type="text"]:focus-visible, textarea:focus-visible, select:focus-visible {
         outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus); background: #fff;
       }
       textarea { min-height: 70px; resize: vertical; }
@@ -378,7 +411,23 @@ export default function AfterSchoolFieldtripPage() {
                 {/* Child name */}
                 <div className="field">
                   <label className="label-main" htmlFor="child-name">아이 이름<span className="required">*</span></label>
-                  <input id="child-name" name="childName" type="text" required placeholder="예) 김드림" />
+                  <select key={children.join("|")} id="child-name" name="childName" required defaultValue={children.length === 1 ? children[0] : ""}>
+                    {children.length === 0 ? (
+                      <option value="" disabled>예약에 등록된 아이가 없습니다</option>
+                    ) : (
+                      <>
+                        {children.length > 1 && <option value="" disabled>아이를 선택해 주세요</option>}
+                        {children.map((c, i) => (
+                          <option key={i} value={c}>{c}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  {children.length === 0 && (
+                    <p className="label-sub" style={{ color: "var(--danger)", marginTop: 6 }}>
+                      예약에 등록된 아이가 없습니다.
+                    </p>
+                  )}
                 </div>
 
                 {/* Schedule selection */}
@@ -630,12 +679,6 @@ export default function AfterSchoolFieldtripPage() {
 
                   </div>
                   <p className="month-hint">※ 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.</p>
-                </div>
-
-                {/* Room number */}
-                <div className="field">
-                  <label className="label-main" htmlFor="room">방 번호<span className="required">*</span></label>
-                  <input id="room" name="room" type="text" required placeholder="예) 드하 5호 / C755 / 입실전" />
                 </div>
 
                 {/* Memo */}
