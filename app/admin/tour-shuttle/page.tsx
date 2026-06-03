@@ -150,7 +150,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <button
           onClick={() => setMainTab("deploy")}
           style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"transparent",color:mainTab==="deploy"?"#fff":"#6b7c93"}}
-        >📅 전체신청배포</button>
+        >📅 배포</button>
       </div>
 
       {mainTab === "deploy" ? (
