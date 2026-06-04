@@ -378,7 +378,7 @@ function GuideInner() {
                 <ul>
                   <li>인보이스 페이지에서 <strong>[💳 결제링크]</strong> 버튼</li>
                   <li>링크 복사 후 손님에게 전달</li>
-                  <li>손님이 PayPal로 결제</li>
+                  <li>손님이 포트원(카드)으로 결제</li>
                 </ul>
               </div>
             </div>

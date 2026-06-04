@@ -43,19 +43,50 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { booking_id, paypal_order_id, captured_amount_usd, amount_krw } = body
-    if (!booking_id || !paypal_order_id) {
-      return NextResponse.json({ error: 'booking_id, paypal_order_id required' }, { status: 400 })
+    const { booking_id, payment_id } = body
+    if (!booking_id || !payment_id) {
+      return NextResponse.json({ error: 'booking_id, payment_id required' }, { status: 400 })
     }
 
     const result = await loadBooking(booking_id)
     if (!result) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-    const bookerName = result.booking.booker_name || '손님'
-    const prevPaid = result.booking.paid_amount || 0
-    const newPaid = prevPaid + (amount_krw || 0)
-    const total = result.booking.total_amount || result.booking.final_price || result.booking.base_price || 0
+    // 서버에서 잔액 재계산 (클라이언트가 보낸 금액은 신뢰하지 않음)
+    const b = result.booking
+    const total = b.total_amount || b.final_price || b.base_price || 0
+    const prevPaid = b.paid_amount || 0
+    const balance = total - prevPaid
+
+    // 포트원 단건조회로 실제 결제 검증
+    const verifyRes = await fetch(`https://api.portone.io/payments/${encodeURIComponent(payment_id)}`, {
+      headers: { Authorization: `PortOne ${process.env.PORTONE_API_SECRET}` },
+    })
+    if (!verifyRes.ok) {
+      return NextResponse.json({ error: '결제 조회에 실패했습니다.' }, { status: 400 })
+    }
+    const payment = await verifyRes.json()
+
+    if (payment.status !== 'PAID') {
+      return NextResponse.json({ error: '결제가 완료되지 않았습니다.' }, { status: 400 })
+    }
+    const paidAmount = payment.amount?.total
+    if (typeof paidAmount !== 'number' || paidAmount !== balance) {
+      return NextResponse.json({ error: '결제 금액이 일치하지 않습니다.' }, { status: 400 })
+    }
+
+    const bookerName = b.booker_name || '손님'
+    const newPaid = prevPaid + paidAmount
     const newStatus = newPaid >= total && total > 0 ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid'
+
+    // 결제 이력 기록 (전용 테이블)
+    await supabase.from('payments').insert({
+      booking_id,
+      provider: 'portone',
+      payment_id,
+      amount_krw: paidAmount,
+      status: payment.status,
+      raw: payment,
+    })
 
     if (result.source === 'new') {
       await supabase.from('bookings_new').update({
@@ -71,12 +102,12 @@ export async function POST(req: Request) {
     // 어드민 알림 태스크
     const today = new Date().toISOString().slice(0, 10)
     await supabase.from('staff_tasks').insert({
-      title: `💳 ${bookerName}님이 PayPal로 결제했습니다`,
+      title: `💳 ${bookerName}님이 포트원으로 결제했습니다`,
       assignee: 'all',
       due: today,
       done: false,
       shared: true,
-      note: `예약 ID: ${booking_id}\nPayPal Order: ${paypal_order_id}\n결제 금액(USD): $${captured_amount_usd}\n결제 금액(KRW): ₩${(amount_krw || 0).toLocaleString()}\n납입 합계: ₩${newPaid.toLocaleString()}`,
+      note: `예약 ID: ${booking_id}\n포트원 결제번호: ${payment_id}\n결제 금액(KRW): ₩${paidAmount.toLocaleString()}\n납입 합계: ₩${newPaid.toLocaleString()}`,
     })
 
     return NextResponse.json({ ok: true, new_paid: newPaid, new_status: newStatus })

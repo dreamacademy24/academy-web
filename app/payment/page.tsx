@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import * as PortOne from "@portone/browser-sdk/v2";
 
 interface BookingInfo {
   id: string;
@@ -25,8 +25,10 @@ function PaymentContent() {
   const sp = useSearchParams();
   const bookingId = sp.get("id");
   const [booking, setBooking] = useState<BookingInfo | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [paid, setPaid] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -38,15 +40,59 @@ function PaymentContent() {
         else { setBooking(data as BookingInfo); if (data.status === "결제완료") setPaid(true); }
         setLoading(false);
       });
+    // 서버에서 권위 있는 잔액 조회 (결제 금액 = 이 값으로 고정)
+    fetch(`/api/portal/payment?booking_id=${bookingId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.balance === "number") setBalance(d.balance); })
+      .catch(() => {});
   }, [bookingId]);
 
-  const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
+  const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+  const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+  const portoneReady = !!(storeId && channelKey);
+
+  async function handlePay(b: BookingInfo, amount: number) {
+    if (!storeId || !channelKey) return;
+    setError("");
+    setPaying(true);
+    try {
+      const paymentId = `payment-${b.id}-${Date.now()}`;
+      const res = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId,
+        orderName: `Dream Academy - ${b.reservation_no}`,
+        totalAmount: amount,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
+      });
+      if (!res || res.code !== undefined) {
+        setError(res?.message || "결제가 취소되었습니다.");
+        return;
+      }
+      const verify = await fetch("/api/portal/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: b.id, payment_id: paymentId }),
+      });
+      if (!verify.ok) {
+        const r = await verify.json().catch(() => ({}));
+        setError(r.error || "결제 검증에 실패했습니다. 관리자에게 문의하세요.");
+        return;
+      }
+      setPaid(true);
+    } catch {
+      setError("결제 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } finally {
+      setPaying(false);
+    }
+  }
 
   if (loading) return (<div style={wrap}><div style={card}><p style={{ textAlign: "center", color: "#6b7c93" }}>로딩 중...</p></div></div>);
-  if (error) return (<div style={wrap}><div style={card}><p style={{ textAlign: "center", color: "#dc2626" }}>{error}</p></div></div>);
+  if (error && !booking) return (<div style={wrap}><div style={card}><p style={{ textAlign: "center", color: "#dc2626" }}>{error}</p></div></div>);
   if (!booking) return null;
 
-  const usdAmount = (booking.final_price / 1400).toFixed(2);
+  const payAmount = balance ?? booking.final_price;
 
   return (
     <div style={wrap}>
@@ -67,8 +113,7 @@ function PaymentContent() {
 
         <div style={{ background: "#eff6ff", borderRadius: 12, padding: 20, marginBottom: 24, textAlign: "center" }}>
           <div style={{ fontSize: 13, color: "#6b7c93", marginBottom: 4 }}>결제 금액</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: "#1a6fc4" }}>{fmt(booking.final_price)}</div>
-          <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>≈ USD ${usdAmount}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: "#1a6fc4" }}>{fmt(payAmount)}</div>
         </div>
 
         {paid ? (
@@ -77,38 +122,22 @@ function PaymentContent() {
             <div style={{ fontSize: 18, fontWeight: 700, color: "#166534" }}>결제가 완료되었습니다</div>
             <div style={{ fontSize: 13, color: "#4a5568", marginTop: 8 }}>감사합니다. 드림아카데미에서 곧 연락드리겠습니다.</div>
           </div>
-        ) : (
+        ) : portoneReady ? (
           <>
-            <PayPalScriptProvider options={{ clientId, currency: "USD" }}>
-              <PayPalButtons
-                style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                createOrder={(_data, actions) => {
-                  return actions.order.create({
-                    intent: "CAPTURE",
-                    purchase_units: [{
-                      description: `Dream Academy - ${booking.reservation_no}`,
-                      amount: { currency_code: "USD", value: usdAmount },
-                    }],
-                  });
-                }}
-                onApprove={async (_data, actions) => {
-                  const details = await actions.order!.capture();
-                  const capturedAmount = details.purchase_units?.[0]?.payments?.captures?.[0]?.amount;
-                  if (!capturedAmount || capturedAmount.value !== usdAmount || capturedAmount.currency_code !== "USD") {
-                    setError("결제 금액이 일치하지 않습니다. 관리자에게 문의하세요.");
-                    console.error("Amount mismatch", { expected: usdAmount, captured: capturedAmount });
-                    return;
-                  }
-                  await supabase.from("bookings").update({ status: "결제완료" }).eq("id", booking.id);
-                  setPaid(true);
-                }}
-                onError={(err) => { console.error(err); setError("결제 중 오류가 발생했습니다. 다시 시도해주세요."); }}
-              />
-            </PayPalScriptProvider>
+            <button
+              onClick={() => handlePay(booking, payAmount)}
+              disabled={paying || payAmount <= 0}
+              style={{ width: "100%", padding: 14, border: "none", borderRadius: 10, background: "linear-gradient(135deg,#1a6fc4,#7c3aed)", color: "#fff", fontSize: 15, fontWeight: 800, cursor: paying ? "not-allowed" : "pointer", opacity: paying || payAmount <= 0 ? 0.6 : 1, fontFamily: "inherit" }}
+            >
+              {paying ? "결제 진행 중..." : `${fmt(payAmount)} 결제하기`}
+            </button>
+            {error && <p style={{ textAlign: "center", fontSize: 13, color: "#dc2626", marginTop: 12 }}>{error}</p>}
             <p style={{ textAlign: "center", fontSize: 12, color: "#94a3b8", marginTop: 16 }}>
-              PayPal 계정 또는 신용카드로 결제할 수 있습니다.
+              신용카드로 원화(KRW) 결제가 진행됩니다.
             </p>
           </>
+        ) : (
+          <p style={{ textAlign: "center", fontSize: 13, color: "#dc2626" }}>결제 설정이 준비되지 않았습니다. 관리자에게 문의하세요.</p>
         )}
       </div>
       <div style={{ textAlign: "center", marginTop: 16 }}>

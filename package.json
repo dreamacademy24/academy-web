@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@paypal/react-paypal-js": "^9.1.0",
+    "@portone/browser-sdk": "^0.1.8",
     "@supabase/supabase-js": "^2.99.3",
     "googleapis": "^171.4.0",
     "html2canvas": "^1.4.1",
