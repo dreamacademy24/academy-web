@@ -304,6 +304,24 @@ export default function PortalShuttlePage() {
       const { error: insErr } = await supabase.from("shuttle_applications").insert(rows);
       if (insErr) console.warn("[shuttle insert] failed:", insErr);
 
+      // 텔레그램 그룹 알림 (저장 성공 시에만, best-effort — 실패해도 신청에 영향 없음)
+      if (!insErr) {
+        try {
+          await fetch("/api/notify/telegram", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "shuttle",
+              payload: {
+                booking_id: session.booking_id,
+                name: session.guest_name,
+                tours: selectedTours.map((t) => ({ tourName: t.tourName, date: t.date, departTime: t.departTime, people: t.people })),
+              },
+            }),
+          });
+        } catch { /* 알림 실패 무시 */ }
+      }
+
       alert("신청 완료! 예약현황에서 확인하세요.");
       if (formRef.current) formRef.current.reset();
       setSelectedTours([]);

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { sendTelegram, escapeHtml, localTimeLine } from '@/lib/telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,6 +87,17 @@ export async function PATCH(req: Request) {
       note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${f.flight_in_airline || ''} ${f.flight_in_no || ''} ${f.flight_in_date || ''} ${f.flight_in_time || ''}\n출국: ${f.flight_out_airline || ''} ${f.flight_out_no || ''} ${f.flight_out_date || ''} ${f.flight_out_time || ''}`,
     })
 
+    // 텔레그램 그룹 알림 (best-effort)
+    {
+      const inLine = [f.flight_in_airline, f.flight_in_no, f.flight_in_date, f.flight_in_time].filter(Boolean).join(' ')
+      const outLine = [f.flight_out_airline, f.flight_out_no, f.flight_out_date, f.flight_out_time].filter(Boolean).join(' ')
+      const lines = [`🔔 <b>항공권 등록/수정</b>`, `예약자: ${escapeHtml(bookerName)}`]
+      if (inLine) lines.push(`입국: ${escapeHtml(inLine)}`)
+      if (outLine) lines.push(`출국: ${escapeHtml(outLine)}`)
+      const tl = localTimeLine(); if (tl) lines.push(tl)
+      await sendTelegram(lines.join('\n'))
+    }
+
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown'
@@ -141,6 +153,17 @@ export async function PUT(req: Request) {
       shared: true,
       note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${flight_in?.airline || ''} ${flight_in?.date || ''} ${flight_in?.time || ''}\n출국: ${flight_out?.airline || ''} ${flight_out?.date || ''} ${flight_out?.time || ''}`,
     })
+
+    // 텔레그램 그룹 알림 (best-effort)
+    {
+      const inLine = [flight_in?.airline, flight_in?.date, flight_in?.time].filter(Boolean).join(' ')
+      const outLine = [flight_out?.airline, flight_out?.date, flight_out?.time].filter(Boolean).join(' ')
+      const lines = [`🔔 <b>항공권 등록/수정</b>`, `예약자: ${escapeHtml(bookerName)}`]
+      if (inLine) lines.push(`입국: ${escapeHtml(inLine)}`)
+      if (outLine) lines.push(`출국: ${escapeHtml(outLine)}`)
+      const tl = localTimeLine(); if (tl) lines.push(tl)
+      await sendTelegram(lines.join('\n'))
+    }
 
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {

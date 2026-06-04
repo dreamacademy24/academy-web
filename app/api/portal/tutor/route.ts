@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { sendTelegram, escapeHtml, localTimeLine } from '@/lib/telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -124,6 +125,21 @@ export async function POST(req: Request) {
       assignee: 'all', due: today, done: false, shared: true,
       note: `학생: ${body.student_name_kr || ''} (${body.student_name_en || ''})\n나이: ${body.student_age || '-'}\n유형: ${body.class_type || '-'}\n기간: ${body.start_date || '-'} ~ ${body.end_date || '-'}\n요일: ${(body.preferred_days_arr || []).join(',')}\n시간: ${body.preferred_time || '-'}`,
     })
+
+    // 텔레그램 그룹 알림 (best-effort)
+    {
+      const studentName = [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ')
+      const lines = [`🔔 <b>튜터 수업 신청</b>`, `예약자: ${escapeHtml(bookerName)}`]
+      if (studentName || body.class_type) {
+        lines.push(`학생: ${escapeHtml(studentName || '-')}${body.class_type ? ` · ${escapeHtml(body.class_type)}` : ''}`)
+      }
+      if (body.start_date || body.end_date) {
+        lines.push(`기간: ${escapeHtml(body.start_date || '-')}~${escapeHtml(body.end_date || '-')}`)
+      }
+      const tl = localTimeLine(); if (tl) lines.push(tl)
+      await sendTelegram(lines.join('\n'))
+    }
+
     return NextResponse.json(data)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown'
