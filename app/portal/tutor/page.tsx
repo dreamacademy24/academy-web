@@ -1209,16 +1209,6 @@ export default function PortalTutorPage() {
         </div>
       </div>
 
-      {/* 신청 2 추가 버튼 */}
-      {!form2 && (
-        <div style={{textAlign:"center",margin:"16px 0"}}>
-          <button type="button" onClick={() => setForm2({ ...INIT_FORM2 })}
-            style={{padding:"10px 24px",border:"2px dashed #7c3aed",borderRadius:10,background:"#f5f3ff",color:"#7c3aed",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-            ➕ 다른 학생 추가
-          </button>
-        </div>
-      )}
-
       {form2 !== null && (
         <div style={{marginTop:8,padding:"16px",background:"#f5f3ff",borderRadius:14,border:"2px solid #c4b5fd"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
