@@ -52,6 +52,9 @@ export default function TourShuttleAdminPage() {
   const [addSaving, setAddSaving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [monthsInitDone, setMonthsInitDone] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "week">("list");
+  const [weekStart, setWeekStart] = useState<string>("");
+  const [selectedDay, setSelectedDay] = useState<string>("");
 
   async function deleteApp(id: string) {
     if (!window.confirm("이 신청 내역을 삭제할까요?")) return;
@@ -248,8 +251,67 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         const selGroups: [string, ShuttleApp[]][] = selChapter ? selChapter[1] : [];
         const mPeople = selGroups.reduce((s, [, l]) => s + l.filter(isActive).reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
         const mCount = selGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
+        const renderTourCard = ([key, list]: [string, ShuttleApp[]]) => {
+          const date = key.split("|")[0];
+          const tour = key.split("|").slice(1).join("|");
+          const depart = list.find(a => (a.depart_time || "").trim())?.depart_time || "";
+          const activeList = list.filter(isActive);
+          const reqList = list.filter(isReq);
+          const cancList = list.filter(isCanc);
+          const tourTotal = activeList.reduce((s, a) => s + (a.people_count || 0), 0);
+          return (
+            <div key={key} className="ts-card">
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0"}}>
+                <div style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:6}}>· 출발 {depart}</span>}</div>
+                <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>총 {tourTotal}명</div>
+              </div>
+              {activeList.map(a => {
+                const req = a.request || a.message || "";
+                return (
+                  <div key={a.id} style={{display:"flex", alignItems:"center", gap:14, padding:"10px 16px", borderTop:"1px solid #f1f5f9", fontSize:14}}>
+                    <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {a.room_number || "-"}</span>
+                    <span style={{width:50, color:"#475569", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                    <span style={{flex:1, color: req ? "#475569" : "#94a3b8"}}>{req ? `📝 ${req}` : "—"}</span>
+                  </div>
+                );
+              })}
+              {reqList.map(a => (
+                <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderTop:"1px solid #f1f5f9", background:"#fffbeb", fontSize:14}}>
+                  <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {a.room_number || "-"}</span>
+                  <span style={{width:50, color:"#92400e", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                  <span style={{flex:1, color:"#92400e", fontSize:13}}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
+                  <button onClick={() => changeStatus(a.id, "cancelled")} style={{fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#1a1a2e", fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>취소 확정</button>
+                </div>
+              ))}
+              {cancList.map(a => (
+                <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 16px", borderTop:"1px solid #f1f5f9", fontSize:13, color:"#94a3b8"}}>
+                  <span style={{width:90, textDecoration:"line-through"}}>{a.room_number || "-"}</span>
+                  <span style={{width:50, textDecoration:"line-through"}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                  <span style={{flex:1}}>취소됨</span>
+                  <button onClick={() => changeStatus(a.id, "confirmed")} style={{fontSize:12, padding:"5px 10px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>되돌리기</button>
+                </div>
+              ))}
+            </div>
+          );
+        };
+        const addDays = (ymd: string, n: number) => { const dt = new Date(ymd + "T00:00:00"); dt.setDate(dt.getDate() + n); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; };
+        const fmtMD = (ymd: string) => { const dt = new Date(ymd + "T00:00:00"); return `${dt.getMonth()+1}/${dt.getDate()}`; };
+        const todayYmd = (() => { const x = new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; })();
+        const todayMon = (() => { const x = new Date(); const dow = (x.getDay()+6)%7; x.setDate(x.getDate()-dow); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`; })();
+        const wkStart = weekStart || todayMon;
+        const weekDays = Array.from({length:7}, (_, i) => addDays(wkStart, i));
+        const DOW_MON = ["월","화","수","목","금","토","일"];
+        const byDate = new Map<string, [string, ShuttleApp[]][]>();
+        for (const g of groups) { const d = g[0].split("|")[0]; const arr = byDate.get(d) || []; arr.push(g); byDate.set(d, arr); }
+        const dayDetail: [string, ShuttleApp[]][] = selectedDay ? (byDate.get(selectedDay) || []) : [];
         return (
           <div style={{display:"flex", flexDirection:"column", gap:14}}>
+            <div style={{display:"flex", gap:6, background:"#fff", padding:4, borderRadius:12, boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <button onClick={() => setViewMode("list")} style={{flex:1, padding:"9px 14px", border:"none", borderRadius:9, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="list" ? "#1a6fc4" : "transparent", color: viewMode==="list" ? "#fff" : "#6b7c93"}}>📋 일자목록</button>
+              <button onClick={() => setViewMode("week")} style={{flex:1, padding:"9px 14px", border:"none", borderRadius:9, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="week" ? "#1a6fc4" : "transparent", color: viewMode==="week" ? "#fff" : "#6b7c93"}}>📅 주간보드</button>
+            </div>
+            {viewMode === "list" ? (
+            <>
             <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
               {monthChapters.map(([ym, mGroups]) => {
                 const tabCount = mGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
@@ -267,49 +329,46 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             </div>
             {selGroups.length === 0 ? (
               <div className="ts-card"><div className="ts-empty">이 달은 신청 내역이 없습니다.</div></div>
-            ) : selGroups.map(([key, list]) => {
-              const date = key.split("|")[0];
-              const tour = key.split("|").slice(1).join("|");
-              const depart = list.find(a => (a.depart_time || "").trim())?.depart_time || "";
-              const activeList = list.filter(isActive);
-              const reqList = list.filter(isReq);
-              const cancList = list.filter(isCanc);
-              const tourTotal = activeList.reduce((s, a) => s + (a.people_count || 0), 0);
-              return (
-                <div key={key} className="ts-card">
-                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0"}}>
-                    <div style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:6}}>· 출발 {depart}</span>}</div>
-                    <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>총 {tourTotal}명</div>
+            ) : selGroups.map(renderTourCard)}
+            </>
+            ) : (
+            <>
+            <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:16, padding:"8px 0"}}>
+              <button onClick={() => { setWeekStart(addDays(wkStart, -7)); setSelectedDay(""); }} style={{padding:"6px 14px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#475569", fontSize:15, fontWeight:800, cursor:"pointer", fontFamily:"inherit"}}>◀</button>
+              <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e", minWidth:130, textAlign:"center"}}>{fmtMD(wkStart)} ~ {fmtMD(addDays(wkStart, 6))}</div>
+              <button onClick={() => { setWeekStart(addDays(wkStart, 7)); setSelectedDay(""); }} style={{padding:"6px 14px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#475569", fontSize:15, fontWeight:800, cursor:"pointer", fontFamily:"inherit"}}>▶</button>
+            </div>
+            <div style={{display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:6}}>
+              {weekDays.map((day, i) => {
+                const dt = new Date(day + "T00:00:00");
+                const dayGroups = byDate.get(day) || [];
+                const isToday = day === todayYmd;
+                const isSel = day === selectedDay;
+                return (
+                  <div key={day} onClick={() => setSelectedDay(isSel ? "" : day)} style={{minHeight:92, border: isSel ? "2px solid #1a6fc4" : (isToday ? "1px solid #1a6fc4" : "1px solid #e2e8f0"), borderRadius:10, padding:6, background: dayGroups.length ? "#fff" : "#f8fafc", cursor:"pointer"}}>
+                    <div style={{fontSize:11, fontWeight:700, color: isToday ? "#1a6fc4" : "#94a3b8", textAlign:"center", marginBottom:4}}>{DOW_MON[i]} {dt.getDate()}</div>
+                    {dayGroups.map(([key, list]) => {
+                      const tour = key.split("|").slice(1).join("|");
+                      const t = list.filter(isActive).reduce((ss, a) => ss + (a.people_count || 0), 0);
+                      return (
+                        <div key={key} style={{fontSize:11, lineHeight:1.3, marginBottom:3, padding:"3px 4px", background:"#eff6ff", borderRadius:5}}>
+                          <div style={{fontWeight:700, color:"#1d4ed8", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{tour}</div>
+                          <div style={{color:"#1a6fc4"}}>{t}명</div>
+                        </div>
+                      );
+                    })}
+                    {dayGroups.length === 0 && <div style={{fontSize:11, color:"#cbd5e1", textAlign:"center"}}>·</div>}
                   </div>
-                  {activeList.map(a => {
-                    const req = a.request || a.message || "";
-                    return (
-                      <div key={a.id} style={{display:"flex", alignItems:"center", gap:14, padding:"10px 16px", borderTop:"1px solid #f1f5f9", fontSize:14}}>
-                        <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {a.room_number || "-"}</span>
-                        <span style={{width:50, color:"#475569", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                        <span style={{flex:1, color: req ? "#475569" : "#94a3b8"}}>{req ? `📝 ${req}` : "—"}</span>
-                      </div>
-                    );
-                  })}
-                  {reqList.map(a => (
-                    <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderTop:"1px solid #f1f5f9", background:"#fffbeb", fontSize:14}}>
-                      <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {a.room_number || "-"}</span>
-                      <span style={{width:50, color:"#92400e", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                      <span style={{flex:1, color:"#92400e", fontSize:13}}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
-                      <button onClick={() => changeStatus(a.id, "cancelled")} style={{fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#1a1a2e", fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>취소 확정</button>
-                    </div>
-                  ))}
-                  {cancList.map(a => (
-                    <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 16px", borderTop:"1px solid #f1f5f9", fontSize:13, color:"#94a3b8"}}>
-                      <span style={{width:90, textDecoration:"line-through"}}>{a.room_number || "-"}</span>
-                      <span style={{width:50, textDecoration:"line-through"}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                      <span style={{flex:1}}>취소됨</span>
-                      <button onClick={() => changeStatus(a.id, "confirmed")} style={{fontSize:12, padding:"5px 10px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>되돌리기</button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            {selectedDay && (
+              dayDetail.length > 0
+                ? <div style={{display:"flex", flexDirection:"column", gap:12}}>{dayDetail.map(renderTourCard)}</div>
+                : <div className="ts-card"><div className="ts-empty">{fmtMD(selectedDay)} 신청 내역이 없습니다.</div></div>
+            )}
+            </>
+            )}
 
             {legacy.length > 0 && (
               <div className="ts-card">
