@@ -25,6 +25,7 @@ interface ShuttleApp {
   request: string | null;
   message: string | null;
   status: string;
+  cancel_reason: string | null;
 }
 
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
@@ -49,26 +50,8 @@ export default function TourShuttleAdminPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [addSaving, setAddSaving] = useState(false);
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [monthsInitDone, setMonthsInitDone] = useState(false);
-  const [collapsedWeeks, setCollapsedWeeks] = useState<Set<string>>(new Set());
-
-  function toggleMonth(m: string) {
-    setExpandedMonths(prev => {
-      const next = new Set(prev);
-      if (next.has(m)) next.delete(m); else next.add(m);
-      return next;
-    });
-  }
-
-  // 주차는 기본 펼침 → 접힌 주차만 추적
-  function toggleWeek(key: string) {
-    setCollapsedWeeks(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
 
   async function deleteApp(id: string) {
     if (!window.confirm("이 신청 내역을 삭제할까요?")) return;
@@ -145,12 +128,12 @@ export default function TourShuttleAdminPage() {
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
-  // 월 챕터 기본 펼침 초기화 (현재 월 자동 펼침)
+  // 월 탭 기본 선택 (현재 월)
   useEffect(() => {
     if (monthsInitDone) return;
     const now = new Date();
     const curM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    setExpandedMonths(new Set([curM]));
+    setSelectedMonth(curM);
     setMonthsInitDone(true);
   }, [monthsInitDone]);
 
@@ -257,124 +240,73 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         const monthChapters: [string, [string, ShuttleApp[]][]][] = allMonthKeys
           .sort((a, b) => a.localeCompare(b))
           .map(ym => [ym, monthMap.get(ym) || []] as [string, [string, ShuttleApp[]][]]);
+        const selKey = monthChapters.some(([ym]) => ym === selectedMonth) ? selectedMonth : (monthChapters[0]?.[0] || "");
+        const isActive = (a: ShuttleApp) => { const v = String(a.status || "").toLowerCase(); return v !== "cancelled" && v !== "cancel" && v !== "cancel_requested"; };
+        const isReq = (a: ShuttleApp) => String(a.status || "").toLowerCase() === "cancel_requested";
+        const isCanc = (a: ShuttleApp) => { const v = String(a.status || "").toLowerCase(); return v === "cancelled" || v === "cancel"; };
+        const selChapter = monthChapters.find(([ym]) => ym === selKey);
+        const selGroups: [string, ShuttleApp[]][] = selChapter ? selChapter[1] : [];
+        const mPeople = selGroups.reduce((s, [, l]) => s + l.filter(isActive).reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
+        const mCount = selGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
         return (
           <div style={{display:"flex", flexDirection:"column", gap:14}}>
-            {monthChapters.map(([ym, mGroups]) => {
-              const open = expandedMonths.has(ym);
-              const mPeople = mGroups.reduce((s, [, l]) => s + l.reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
-              const mCount = mGroups.reduce((s, [, l]) => s + l.length, 0);
-              return (
-                <div key={ym}>
-                  <div
-                    onClick={() => toggleMonth(ym)}
-                    style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#1a6fc4", color:"#fff", borderRadius:12, cursor:"pointer", boxShadow:"0 2px 8px rgba(26,111,196,0.18)"}}
-                  >
-                    <div style={{fontSize:16, fontWeight:800, display:"flex", alignItems:"center", gap:8}}>
-                      <span style={{fontSize:13}}>{open ? "▼" : "▶"}</span>📅 {monthLabelKR(ym)} <span style={{fontWeight:600, opacity:0.85}}>({mCount}건)</span>
-                    </div>
-                    <div style={{fontSize:13, fontWeight:700, color:"#1a6fc4", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
-                  </div>
-                  {open && (
-                  <div style={{display:"flex", flexDirection:"column", gap:12, marginTop:12}}>
-            {mGroups.length === 0 ? (
-              <div className="ts-card"><div className="ts-empty">이 달은 신청 내역이 없습니다.</div></div>
-            ) : (() => {
-              const weekMap = new Map<number, [string, ShuttleApp[]][]>();
-              for (const g of mGroups) {
-                const d = Number(g[0].split("|")[0].slice(8, 10));
-                const wn = Math.min(4, Math.floor((d - 1) / 7) + 1);
-                const arr = weekMap.get(wn) || [];
-                arr.push(g);
-                weekMap.set(wn, arr);
-              }
-              const weeks = Array.from(weekMap.entries()).sort((a, b) => a[0] - b[0]);
-              const [yy, mn] = ym.split("-").map(Number);
-              const lastDay = new Date(yy, mn, 0).getDate();
-              const weekRange = (wn: number) => {
-                const startD = (wn - 1) * 7 + 1;
-                const endD = wn === 4 ? lastDay : wn * 7;
-                return `${mn}/${startD}~${mn}/${endD}`;
-              };
-              return weeks.map(([wn, weekGroups]) => {
-                const weekKey = `${ym}-w${wn}`;
-                const weekOpen = !collapsedWeeks.has(weekKey);
-                const wPeople = weekGroups.reduce((s, [, l]) => s + l.reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
+            <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+              {monthChapters.map(([ym, mGroups]) => {
+                const tabCount = mGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
+                const active = ym === selKey;
                 return (
-                  <div key={weekKey}>
-                    <div
-                      onClick={() => toggleWeek(weekKey)}
-                      style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:"#dbeafe", color:"#1e40af", borderRadius:10, cursor:"pointer"}}
-                    >
-                      <div style={{fontSize:14, fontWeight:800, display:"flex", alignItems:"center", gap:8}}>
-                        <span style={{fontSize:12}}>{weekOpen ? "▼" : "▶"}</span>{wn}주차 <span style={{fontWeight:600, opacity:0.8}}>({weekRange(wn)})</span>
-                      </div>
-                      <div style={{fontSize:12.5, fontWeight:700, color:"#1e40af", background:"#fff", padding:"3px 12px", borderRadius:999}}>총 {wPeople}명</div>
-                    </div>
-                    {weekOpen && (
-                    <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:10}}>
-            {weekGroups.map(([key, list]) => {
+                  <button key={ym} onClick={() => setSelectedMonth(ym)} style={{padding:"10px 16px", borderRadius:10, border: active ? "none" : "1px solid #cbd5e1", background: active ? "#1a6fc4" : "#fff", color: active ? "#fff" : "#475569", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow: active ? "0 2px 8px rgba(26,111,196,0.25)" : "none"}}>
+                    {monthLabelKR(ym)} <span style={{fontWeight:600, opacity:0.85, fontSize:12}}>({tabCount})</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#1a6fc4", color:"#fff", borderRadius:12, boxShadow:"0 2px 8px rgba(26,111,196,0.18)"}}>
+              <div style={{fontSize:16, fontWeight:800}}>📅 {monthLabelKR(selKey)} <span style={{fontWeight:600, opacity:0.85}}>({mCount}건)</span></div>
+              <div style={{fontSize:13, fontWeight:700, color:"#1a6fc4", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
+            </div>
+            {selGroups.length === 0 ? (
+              <div className="ts-card"><div className="ts-empty">이 달은 신청 내역이 없습니다.</div></div>
+            ) : selGroups.map(([key, list]) => {
               const date = key.split("|")[0];
               const tour = key.split("|").slice(1).join("|");
-              const total = list.reduce((s, a) => s + (a.people_count || 0), 0);
               const depart = list.find(a => (a.depart_time || "").trim())?.depart_time || "";
+              const activeList = list.filter(isActive);
+              const reqList = list.filter(isReq);
+              const cancList = list.filter(isCanc);
+              const tourTotal = activeList.reduce((s, a) => s + (a.people_count || 0), 0);
               return (
                 <div key={key} className="ts-card">
-                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#eff6ff", borderBottom:"1px solid #bfdbfe"}}>
-                    <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e"}}>
-                      📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:8}}>· 출발 {depart}</span>}
-                    </div>
-                    <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#fff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>
-                      총 {total}명
-                    </div>
+                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0"}}>
+                    <div style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:6}}>· 출발 {depart}</span>}</div>
+                    <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>총 {tourTotal}명</div>
                   </div>
-                  <table className="ts-tbl">
-                    <thead>
-                      <tr>
-                        <th style={{width:120}}>예약자</th>
-                        <th style={{width:120}}>신청 집</th>
-                        <th style={{width:70, textAlign:"center"}}>인원</th>
-                        <th>요청사항</th>
-                        <th style={{width:120}}>상태</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {list.map(a => {
-                        const meta = STATUS_META[a.status] || STATUS_META.pending;
-                        const req = a.request || a.message || "";
-                        return (
-                          <tr key={a.id}>
-                            <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
-                            <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
-                            <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
-                            <td className="ts-notes" title={req}>{req || "-"}</td>
-                            <td>
-                              <select
-                                className="ts-sel"
-                                style={{background:meta.bg, color:meta.color, borderColor:meta.bg}}
-                                value={a.status}
-                                onChange={e => changeStatus(a.id, e.target.value)}
-                              >
-                                <option value="pending">대기중</option>
-                                <option value="confirmed">확정</option>
-                                <option value="cancelled">취소</option>
-                              </select>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+                  {activeList.map(a => {
+                    const req = a.request || a.message || "";
+                    return (
+                      <div key={a.id} style={{display:"flex", alignItems:"center", gap:14, padding:"10px 16px", borderTop:"1px solid #f1f5f9", fontSize:14}}>
+                        <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {a.room_number || "-"}</span>
+                        <span style={{width:50, color:"#475569", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                        <span style={{flex:1, color: req ? "#475569" : "#94a3b8"}}>{req ? `📝 ${req}` : "—"}</span>
+                      </div>
+                    );
+                  })}
+                  {reqList.map(a => (
+                    <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderTop:"1px solid #f1f5f9", background:"#fffbeb", fontSize:14}}>
+                      <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {a.room_number || "-"}</span>
+                      <span style={{width:50, color:"#92400e", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                      <span style={{flex:1, color:"#92400e", fontSize:13}}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
+                      <button onClick={() => changeStatus(a.id, "cancelled")} style={{fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#1a1a2e", fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>취소 확정</button>
                     </div>
-                    )}
-                  </div>
-                );
-              });
-            })()}
-                  </div>
-                  )}
+                  ))}
+                  {cancList.map(a => (
+                    <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 16px", borderTop:"1px solid #f1f5f9", fontSize:13, color:"#94a3b8"}}>
+                      <span style={{width:90, textDecoration:"line-through"}}>{a.room_number || "-"}</span>
+                      <span style={{width:50, textDecoration:"line-through"}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
+                      <span style={{flex:1}}>취소됨</span>
+                      <button onClick={() => changeStatus(a.id, "confirmed")} style={{fontSize:12, padding:"5px 10px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>되돌리기</button>
+                    </div>
+                  ))}
                 </div>
               );
             })}
