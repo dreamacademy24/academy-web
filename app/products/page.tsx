@@ -8,6 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import * as PortOne from "@portone/browser-sdk/v2";
 import {
   INCLUSIONS_DH,
   INCLUSIONS_JP,
@@ -97,6 +98,7 @@ function parseWorkbook(wb: XLSX.WorkBook): PriceBook {
 interface SectionConfig {
   id: "dreamhouse" | "jpark" | "cubenine";
   title: string;
+  shortLabel: string;
   tagline: string;
   inclusions: PkgItem[];
 }
@@ -123,6 +125,64 @@ function AccomSection({ cfg, data }: { cfg: SectionConfig; data: ParsedAccom }) 
 
   const selected = lookupPrice(data, room, weeks, parents, kids);
   const listPrice = selected ? selected[0] : null; // 정가 기준
+
+  // 결제 (PG 카드심사용)
+  const [showForm, setShowForm] = useState(false);
+  const [buyer, setBuyer] = useState({ fullName: "", phoneNumber: "", email: "" });
+  const [paying, setPaying] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
+
+  const orderName = `${cfg.shortLabel}${hasRoom ? ` ${room}` : ""} ${weeks}주 보호자${parents}+아이${kids}`;
+
+  async function pay() {
+    if (!listPrice) return;
+    if (!buyer.fullName.trim() || !buyer.phoneNumber.trim() || !buyer.email.trim()) {
+      setFeedback({ type: "err", msg: "이름·연락처·이메일을 모두 입력해주세요." });
+      return;
+    }
+    const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+    const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+    if (!storeId || !channelKey) {
+      setFeedback({ type: "err", msg: "결제 설정이 준비되지 않았습니다. 관리자에게 문의하세요." });
+      return;
+    }
+    setPaying(true);
+    setFeedback(null);
+    try {
+      const paymentId = `product-${Date.now()}`;
+      const res = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId,
+        orderName,
+        totalAmount: listPrice,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
+        customer: { fullName: buyer.fullName, phoneNumber: buyer.phoneNumber, email: buyer.email },
+      });
+      if (!res || res.code !== undefined) {
+        setFeedback({ type: "err", msg: res?.message || "결제가 취소되었습니다." });
+        return;
+      }
+      // 서버 검증 (포트원 단건조회 + 정가 재계산)
+      const verify = await fetch("/api/products/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment_id: paymentId, accom: cfg.id, roomType: room, weeks, parents, kids, buyer }),
+      });
+      if (!verify.ok) {
+        const r = await verify.json().catch(() => ({}));
+        setFeedback({ type: "err", msg: r.error || "결제 검증에 실패했습니다. 관리자에게 문의하세요." });
+        return;
+      }
+      setFeedback({ type: "ok", msg: "결제가 완료되었습니다. 감사합니다." });
+      setShowForm(false);
+    } catch {
+      setFeedback({ type: "err", msg: "결제 중 오류가 발생했습니다. 다시 시도해주세요." });
+    } finally {
+      setPaying(false);
+    }
+  }
 
   return (
     <section className="accom">
@@ -180,6 +240,30 @@ function AccomSection({ cfg, data }: { cfg: SectionConfig; data: ParsedAccom }) 
           <p className="picker-foot">※ 표시 가격은 정가(원화) 기준이며, 체크인 시즌(비수기/성수기)에 따라 달라질 수 있습니다. 최종 금액은 상담·견적 후 확정됩니다.</p>
         </div>
 
+        {/* 결제 (PG 카드심사용) */}
+        {listPrice && (
+          <div className="paybox">
+            {!showForm ? (
+              <button className="pay-open" onClick={() => { setShowForm(true); setFeedback(null); }}>
+                이 구성으로 결제하기 ({won(listPrice)})
+              </button>
+            ) : (
+              <div className="payform">
+                <div className="pf-title">결제자 정보 입력</div>
+                <div className="pf-sum">{orderName} · <b>{won(listPrice)}</b></div>
+                <input placeholder="이름" value={buyer.fullName} onChange={(e) => setBuyer({ ...buyer, fullName: e.target.value })} />
+                <input placeholder="연락처 (예: 01012345678)" value={buyer.phoneNumber} onChange={(e) => setBuyer({ ...buyer, phoneNumber: e.target.value })} />
+                <input placeholder="이메일" type="email" value={buyer.email} onChange={(e) => setBuyer({ ...buyer, email: e.target.value })} />
+                <div className="pf-btns">
+                  <button className="pf-cancel" onClick={() => setShowForm(false)} disabled={paying}>취소</button>
+                  <button className="pf-pay" onClick={pay} disabled={paying}>{paying ? "결제 진행 중..." : "결제 진행"}</button>
+                </div>
+              </div>
+            )}
+            {feedback && <div className={`pf-fb ${feedback.type}`}>{feedback.type === "ok" ? "✅ " : "⚠️ "}{feedback.msg}</div>}
+          </div>
+        )}
+
         {/* 포함 / 불포함 */}
         <div className="incl">
           <div className="incl-col">
@@ -234,6 +318,21 @@ function AccomSection({ cfg, data }: { cfg: SectionConfig; data: ParsedAccom }) 
         .incl li .ic { font-size: 16px; line-height: 1.4; flex-shrink: 0; }
         .incl li b { display: block; font-size: 13.5px; color: #1a1a2e; font-weight: 700; }
         .incl li em { display: block; font-size: 12px; color: #6b7c93; font-style: normal; margin-top: 1px; }
+        .paybox { margin-bottom: 22px; }
+        .pay-open { width: 100%; padding: 13px; border: none; border-radius: 10px; background: #0ea5e9; color: #fff; font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 160ms; }
+        .pay-open:hover { background: #0284c7; }
+        .payform { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 16px; }
+        .pf-title { font-size: 13px; font-weight: 700; color: #0369a1; margin-bottom: 4px; }
+        .pf-sum { font-size: 13px; color: #475569; margin-bottom: 12px; }
+        .pf-sum b { color: #1a6fc4; }
+        .payform input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; font-family: inherit; margin-bottom: 8px; box-sizing: border-box; }
+        .pf-btns { display: flex; gap: 8px; margin-top: 4px; }
+        .pf-cancel { flex: 0 0 auto; padding: 11px 18px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #64748b; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .pf-pay { flex: 1; padding: 11px; border: none; border-radius: 8px; background: #1a6fc4; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .pf-pay:disabled, .pf-cancel:disabled { opacity: 0.6; cursor: not-allowed; }
+        .pf-fb { margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+        .pf-fb.ok { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .pf-fb.err { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .apply-btn { display: block; text-align: center; background: #1a6fc4; color: #fff; font-size: 15px; font-weight: 700; padding: 14px; border-radius: 10px; transition: background 160ms; }
         .apply-btn:hover { background: #155a9e; color: #fff; }
       `}</style>
@@ -260,9 +359,9 @@ export default function ProductsPage() {
   }, []);
 
   const sections: SectionConfig[] = [
-    { id: "dreamhouse", title: "드림하우스 (독채 빌리지)", tagline: "단독 하우스 + 수영장 자유 이용 · 드림아카데미 정규 수업 올인원", inclusions: INCLUSIONS_DH },
-    { id: "jpark", title: "제이파크 리조트", tagline: "워터파크 & 비치 리조트 + 정규 수업 결합 패키지", inclusions: INCLUSIONS_JP },
-    { id: "cubenine", title: "큐브나인 리조트", tagline: "인피니티 풀 리조트 + 조식 포함 + 정규 수업 결합 패키지", inclusions: INCLUSIONS_C9 },
+    { id: "dreamhouse", title: "드림하우스 (독채 빌리지)", shortLabel: "드림하우스", tagline: "단독 하우스 + 수영장 자유 이용 · 드림아카데미 정규 수업 올인원", inclusions: INCLUSIONS_DH },
+    { id: "jpark", title: "제이파크 리조트", shortLabel: "제이파크", tagline: "워터파크 & 비치 리조트 + 정규 수업 결합 패키지", inclusions: INCLUSIONS_JP },
+    { id: "cubenine", title: "큐브나인 리조트", shortLabel: "큐브나인", tagline: "인피니티 풀 리조트 + 조식 포함 + 정규 수업 결합 패키지", inclusions: INCLUSIONS_C9 },
   ];
 
   return (
