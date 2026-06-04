@@ -343,6 +343,7 @@ function AccomSection({ cfg, data }: { cfg: SectionConfig; data: ParsedAccom }) 
 export default function ProductsPage() {
   const [book, setBook] = useState<PriceBook | null>(null);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<SectionConfig["id"]>("dreamhouse");
 
   useEffect(() => {
     (async () => {
@@ -381,8 +382,27 @@ export default function ProductsPage() {
         {error && <div className="perr">⚠️ {error}</div>}
         {!book && !error && <div className="ploading">가격 정보를 불러오는 중...</div>}
 
+        {book && (
+          <div className="ptabs" role="tablist">
+            {sections.map((cfg) => (
+              <button
+                key={cfg.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === cfg.id}
+                className={`ptab ${activeTab === cfg.id ? "active" : ""}`}
+                onClick={() => setActiveTab(cfg.id)}
+              >
+                {cfg.shortLabel}
+              </button>
+            ))}
+          </div>
+        )}
+
         {book && sections.map((cfg) => (
-          <AccomSection key={cfg.id} cfg={cfg} data={book[cfg.id]} />
+          <div key={cfg.id} style={{ display: activeTab === cfg.id ? "block" : "none" }}>
+            <AccomSection cfg={cfg} data={book[cfg.id]} />
+          </div>
         ))}
 
         {/* 이용약관 / 환불정책 */}
@@ -437,6 +457,10 @@ export default function ProductsPage() {
         .phero h1 { font-size: 28px; font-weight: 800; margin: 0 0 10px; }
         .phero p { font-size: 14px; color: #6b7c93; margin: 0; line-height: 1.6; }
         .pmain { max-width: 880px; margin: 0 auto; padding: 12px 20px 40px; }
+        .ptabs { display: flex; gap: 8px; margin-bottom: 18px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .ptab { flex: 1; padding: 12px 8px; border: none; border-radius: 8px; background: transparent; color: #64748b; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 160ms, color 160ms; }
+        .ptab:hover { color: #1a6fc4; }
+        .ptab.active { background: linear-gradient(135deg, #1a6fc4, #2563eb); color: #fff; }
         .perr { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 10px; padding: 16px; font-size: 14px; font-weight: 600; text-align: center; }
         .ploading { text-align: center; color: #94a3b8; padding: 60px 0; font-size: 14px; }
         .terms { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; margin-top: 8px; }
