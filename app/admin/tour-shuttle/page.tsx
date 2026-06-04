@@ -145,18 +145,14 @@ export default function TourShuttleAdminPage() {
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
-  // 월 챕터 기본 펼침 초기화 (현재 월 또는 가장 가까운 미래 월)
+  // 월 챕터 기본 펼침 초기화 (현재 월 자동 펼침)
   useEffect(() => {
     if (monthsInitDone) return;
-    const valid = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim());
-    if (valid.length === 0) return;
-    const months = Array.from(new Set(valid.map(a => (a.tour_date as string).slice(0, 7)))).sort();
     const now = new Date();
     const curM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const pick = months.find(m => m === curM) || months.find(m => m > curM) || months[months.length - 1];
-    setExpandedMonths(new Set(pick ? [pick] : []));
+    setExpandedMonths(new Set([curM]));
     setMonthsInitDone(true);
-  }, [apps, monthsInitDone]);
+  }, [monthsInitDone]);
 
   async function changeStatus(id: string, status: string) {
     const prev = apps;
@@ -235,9 +231,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           const db = b[0].split("|")[0];
           return da.localeCompare(db);
         });
-        if (groups.length === 0 && legacy.length === 0) {
-          return <div className="ts-card"><div className="ts-empty">신청 내역이 없습니다.</div></div>;
-        }
         const KR_DOW = ["일","월","화","수","목","금","토"];
         const fmtDateKR = (s: string) => {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -257,7 +250,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           arr.push(g);
           monthMap.set(m, arr);
         }
-        const monthChapters = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+        const curYear = new Date().getFullYear();
+        const fixedMonths: string[] = [];
+        for (let mo = 6; mo <= 12; mo++) fixedMonths.push(`${curYear}-${String(mo).padStart(2, "0")}`);
+        const allMonthKeys = Array.from(new Set([...fixedMonths, ...monthMap.keys()]));
+        const monthChapters: [string, [string, ShuttleApp[]][]][] = allMonthKeys
+          .sort((a, b) => a.localeCompare(b))
+          .map(ym => [ym, monthMap.get(ym) || []] as [string, [string, ShuttleApp[]][]]);
         return (
           <div style={{display:"flex", flexDirection:"column", gap:14}}>
             {monthChapters.map(([ym, mGroups]) => {
@@ -277,7 +276,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                   </div>
                   {open && (
                   <div style={{display:"flex", flexDirection:"column", gap:12, marginTop:12}}>
-            {(() => {
+            {mGroups.length === 0 ? (
+              <div className="ts-card"><div className="ts-empty">이 달은 신청 내역이 없습니다.</div></div>
+            ) : (() => {
               const weekMap = new Map<number, [string, ShuttleApp[]][]>();
               for (const g of mGroups) {
                 const d = Number(g[0].split("|")[0].slice(8, 10));
@@ -330,8 +331,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                     <thead>
                       <tr>
                         <th style={{width:120}}>예약자</th>
-                        <th style={{width:120}}>픽업장소</th>
-                        <th style={{width:150}}>탑승자</th>
+                        <th style={{width:120}}>신청 집</th>
                         <th style={{width:70, textAlign:"center"}}>인원</th>
                         <th>요청사항</th>
                         <th style={{width:120}}>상태</th>
@@ -345,7 +345,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                           <tr key={a.id}>
                             <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
                             <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
-                            <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                             <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
                             <td className="ts-notes" title={req}>{req || "-"}</td>
                             <td>
@@ -390,8 +389,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                   <thead>
                     <tr>
                       <th style={{width:120}}>예약자</th>
-                      <th style={{width:120}}>픽업장소</th>
-                      <th style={{width:150}}>탑승자</th>
+                      <th style={{width:120}}>신청 집</th>
                       <th style={{width:70, textAlign:"center"}}>인원</th>
                       <th style={{width:130}}>날짜/투어</th>
                       <th>요청사항</th>
@@ -408,7 +406,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                         <tr key={a.id}>
                           <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
                           <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
-                          <td style={{color:"#475569"}}>{a.riders || "-"}</td>
                           <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
                           <td style={{color:"#475569", fontSize:12}}>{dt}</td>
                           <td className="ts-notes" title={req}>{req || "-"}</td>
