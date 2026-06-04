@@ -1384,3 +1384,23 @@ special_request, ssp
 ### 다음 챕터 대기
 4. **애프터스쿨 손님폼 재구성**: `/after-school-fieldtrip` → 셔틀 폼 구조로 (방번호 제거+세션자동, 월챕터+주차, 선택프로그램 인원칸, 투어별 INSERT)
 - 참고: 현재 손님폼은 Google Apps Script(FORM_ENDPOINT) + Supabase fieldtrip_applications 동시 저장. 재구성 시 셔틀(/portal/shuttle) 패턴 차용
+
+## 2026-06-04 세션 (투어셔틀 현황 정리 + 다음 챕터)
+
+### 투어셔틀 — 완료/검증됨
+- `shuttle_applications`: 투어 1개=1행. 컬럼: booking_id, portal_name, room_number, tour_name, tour_date, depart_time, people_count, riders, request, status
+- 신청(`/portal/shuttle`): 주차 아코디언 선택 → "선택한 투어" 하단 리스트에 투어별 인원칸(1~6) → 투어별 INSERT
+- 예약현황(`/portal/my-applications`): 투어별 카드(날짜·투어·출발·인원·픽업·상태)
+- 어드민(`/admin/tour-shuttle`): 신청목록(월 접이식 챕터→투어 그룹: 예약자/픽업장소/탑승자/인원/요청/상태) + 배포(셔틀만). 신청목록탭 "신청 직접 추가", 배포탭 "장소 직접 추가"(출발+복귀). 미분류 구형데이터 삭제버튼
+- 어드민 분리: `/admin/tour-shuttle`(드림하우스), `/admin/afterschool-fieldtrip`(아카데미, 신청목록 placeholder + 배포[애프터스쿨·필드트립/휴일])
+
+### 핵심 교훈
+- INSERT는 응답코드 201 확인 필수 (alert는 400에도 뜸)
+- PGRST204 "column not found in schema cache" = 컬럼 누락 → ALTER TABLE ADD COLUMN + NOTIFY pgrst 'reload schema'
+- MCP: 동의 체크박스는 `<label for="agree">` 클릭(input setter는 React에 안 먹힘); alert는 제출 전 window.alert 가로채기; 새 탭은 세션 풀림(ECHTST30/Dream6912!)
+
+### 다음 챕터 대기 — 순서대로
+1. **투어셔틀 신청목록 월+주차 2단 그룹핑**: `/admin/tour-shuttle` 신청목록을 월 챕터 안에 주차(1~7일/8~14일/15~21일/22~말일) 하위 그룹 추가 (프롬프트 이미 전달, 배포 확인 필요)
+2. **예약자 이름 버그**: 어드민 신청목록 예약자가 아이디(portal_name) 표시 → bookings 조회해서 실제 이름으로
+3. **애프터스쿨 신청목록 연동**: `/admin/afterschool-fieldtrip` 신청목록 → fieldtrip_applications (셔틀처럼 월챕터+그룹핑)
+4. **애프터스쿨 손님폼 재구성**: `/after-school-fieldtrip` → 셔틀 폼 구조로 (방번호 제거+세션자동, 월챕터+주차, 선택프로그램 인원칸, 투어별 INSERT)
