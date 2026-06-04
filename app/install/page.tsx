@@ -1,13 +1,88 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 type Tab = "android" | "ios" | "pc";
+type AppKey = "guest" | "admin" | "staff";
 
-export default function InstallPage() {
+interface AppConfig {
+  key: AppKey;
+  name: string;
+  startUrl: string;
+  manifest: string;
+  desc: string;
+}
+
+const APPS: Record<AppKey, AppConfig> = {
+  guest: { key: "guest", name: "드림게스트", startUrl: "/portal", manifest: "/manifest-guest.webmanifest", desc: "예약 조회 · 결제 · 셔틀/픽업/튜터 신청" },
+  admin: { key: "admin", name: "드림 관리자", startUrl: "/admin/hub", manifest: "/manifest-admin.webmanifest", desc: "관리자 허브" },
+  staff: { key: "staff", name: "Dream Staff", startUrl: "/admineng/hub", manifest: "/manifest-staff.webmanifest", desc: "현지 직원 / 튜터" },
+};
+
+function InstallInner() {
+  const sp = useSearchParams();
+  const raw = sp.get("app");
+  const appKey: AppKey = raw === "admin" ? "admin" : raw === "staff" ? "staff" : "guest";
+  const cfg = APPS[appKey];
+
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installed, setInstalled] = useState(false);
   const [tab, setTab] = useState<Tab>("android");
+
+  // ── 앱별 메타/매니페스트 주입 (iOS Safari는 manifest name을 무시하고 title·apple 메타를 따름) ──
+  useEffect(() => {
+    document.title = cfg.name;
+
+    // apple-mobile-web-app-title → 홈 화면 추가 시 아이콘 이름
+    let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement | null;
+    const createdAppleTitle = !appleTitle;
+    if (!appleTitle) {
+      appleTitle = document.createElement("meta");
+      appleTitle.setAttribute("name", "apple-mobile-web-app-title");
+      document.head.appendChild(appleTitle);
+    }
+    appleTitle.setAttribute("content", cfg.name);
+
+    // apple-mobile-web-app-capable 보장
+    if (!document.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
+      const capable = document.createElement("meta");
+      capable.setAttribute("name", "apple-mobile-web-app-capable");
+      capable.setAttribute("content", "yes");
+      document.head.appendChild(capable);
+    }
+
+    // apple-touch-icon 보장 (기존 로고 공유)
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+      const ati = document.createElement("link");
+      ati.setAttribute("rel", "apple-touch-icon");
+      ati.setAttribute("href", "/icons/apple-touch-icon.png");
+      document.head.appendChild(ati);
+    }
+
+    // manifest 분기 (안드로이드 Chrome 설치용) — 전역 manifest href를 이 페이지에서만 교체
+    let manifest = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+    const createdManifest = !manifest;
+    if (!manifest) {
+      manifest = document.createElement("link");
+      manifest.setAttribute("rel", "manifest");
+      document.head.appendChild(manifest);
+    }
+    const prevManifest = manifest.getAttribute("href");
+    manifest.setAttribute("href", cfg.manifest);
+
+    // 이탈 시 원복 → 다른 페이지/PWA 영향 방지
+    return () => {
+      if (manifest) {
+        if (createdManifest) manifest.remove();
+        else if (prevManifest) manifest.setAttribute("href", prevManifest);
+      }
+      if (appleTitle) {
+        if (createdAppleTitle) appleTitle.remove();
+        else appleTitle.setAttribute("content", "드림아카데미");
+      }
+    };
+  }, [cfg]);
 
   useEffect(() => {
     const ua = navigator.userAgent;
@@ -59,6 +134,7 @@ export default function InstallPage() {
         .logo-wrap img{width:72px;height:72px;object-fit:contain;}
         .title{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
         .subtitle{font-size:14px;opacity:0.9;font-weight:400;}
+        .app-badge{display:inline-block;margin-top:10px;padding:5px 14px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);border-radius:999px;font-size:12.5px;font-weight:600;}
         .card{background:#fff;border-radius:18px;padding:24px 20px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,0.08);}
         .auto-card{text-align:center;}
         .auto-card h2{font-size:16px;font-weight:700;margin-bottom:8px;color:#1a1a2e;}
@@ -92,10 +168,11 @@ export default function InstallPage() {
       <div className="container">
         <div className="header">
           <div className="logo-wrap">
-            <Image src="/logo.png" alt="드림아카데미" width={72} height={72} priority />
+            <Image src="/logo.png" alt={cfg.name} width={72} height={72} priority />
           </div>
-          <h1 className="title">앱 설치하기</h1>
-          <p className="subtitle">드림아카데미를 홈 화면에 추가하고 앱처럼 사용하세요</p>
+          <h1 className="title">{cfg.name} 설치하기</h1>
+          <p className="subtitle">{cfg.name} 앱을 홈 화면에 추가하고 앱처럼 사용하세요</p>
+          <div className="app-badge">설치 후 시작 화면: {cfg.desc}</div>
         </div>
 
         <div className="card auto-card">
@@ -105,7 +182,7 @@ export default function InstallPage() {
             <div className="installed-badge">✅ 이미 설치되어 있습니다</div>
           ) : deferredPrompt ? (
             <button className="install-btn" onClick={handleInstall}>
-              📲 앱 설치하기
+              📲 {cfg.name} 설치하기
             </button>
           ) : (
             <div className="no-auto">
@@ -124,36 +201,44 @@ export default function InstallPage() {
 
           {tab === "android" && (
             <div className="steps">
-              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬 브라우저</strong>에서 dreamacademyph.com 접속</span></div>
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬 브라우저</strong>에서 이 페이지(설치 안내)를 여세요</span></div>
               <div className="step"><span className="step-num">2</span><span className="step-text">우측 상단 <span className="step-icon">⋮</span> 메뉴 버튼을 누르세요</span></div>
               <div className="step"><span className="step-num">3</span><span className="step-text"><strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong> 선택</span></div>
-              <div className="step"><span className="step-num">4</span><span className="step-text"><strong>설치</strong> 버튼을 눌러 완료하세요</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text"><strong>설치</strong> 버튼을 누르면 <strong>{cfg.name}</strong> 아이콘이 추가됩니다</span></div>
             </div>
           )}
 
           {tab === "ios" && (
             <div className="steps">
-              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>Safari 브라우저</strong>에서 dreamacademyph.com 접속</span></div>
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>Safari 브라우저</strong>에서 이 페이지(설치 안내)를 여세요</span></div>
               <div className="step"><span className="step-num">2</span><span className="step-text">하단 <span className="step-icon">􀈂</span> 공유 버튼을 누르세요</span></div>
               <div className="step"><span className="step-num">3</span><span className="step-text">목록에서 <strong>홈 화면에 추가</strong>를 선택</span></div>
-              <div className="step"><span className="step-num">4</span><span className="step-text">우측 상단 <strong>추가</strong> 버튼을 눌러 완료하세요</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text">이름이 <strong>{cfg.name}</strong>인지 확인 후 우측 상단 <strong>추가</strong>를 누르세요</span></div>
             </div>
           )}
 
           {tab === "pc" && (
             <div className="steps">
-              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬</strong> 또는 <strong>엣지</strong> 브라우저에서 dreamacademyph.com 접속</span></div>
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬</strong> 또는 <strong>엣지</strong> 브라우저에서 이 페이지를 여세요</span></div>
               <div className="step"><span className="step-num">2</span><span className="step-text">주소창 오른쪽 끝의 <span className="step-icon">⊕</span> 설치 아이콘 클릭</span></div>
               <div className="step"><span className="step-num">3</span><span className="step-text">팝업에서 <strong>설치</strong> 버튼 클릭</span></div>
-              <div className="step"><span className="step-num">4</span><span className="step-text">바탕화면 또는 시작메뉴에서 실행할 수 있어요</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text">바탕화면 또는 시작메뉴에서 <strong>{cfg.name}</strong>을 실행할 수 있어요</span></div>
             </div>
           )}
         </div>
 
         <div className="footer">
-          <a href="https://dreamacademyph.com" className="footer-link">설치 없이 바로 사용하기 →</a>
+          <a href={cfg.startUrl} className="footer-link">설치 없이 바로 사용하기 →</a>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function InstallPage() {
+  return (
+    <Suspense fallback={null}>
+      <InstallInner />
+    </Suspense>
   );
 }
