@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { isLessonDateAllowed } from "@/lib/lessonDates";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +40,8 @@ function generateClassDates(
     while (d <= e) {
       if (idxSet.has(d.getDay())) {
         const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        out.push({ date: dateStr, day: KR_DAY_LIST[d.getDay()], time: b.time, spd: b.sessions_per_day });
+        // 휴일(6/12)·1·3·5번째 토요일 제외 → 회차/금액에서 자동 제외
+        if (isLessonDateAllowed(d, dateStr)) out.push({ date: dateStr, day: KR_DAY_LIST[d.getDay()], time: b.time, spd: b.sessions_per_day });
       }
       d.setDate(d.getDate() + 1);
     }
@@ -794,6 +796,7 @@ export default function PortalTutorPage() {
       ) : (<>
       <div id="tutor-apply-form" />
       {editingId && <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:10,padding:'12px 16px',marginBottom:14,fontSize:13,fontWeight:700,color:'#1d4ed8'}}>✏️ 신청 수정 중 — 기존 신청 내용이 채워졌습니다. 바꿀 부분(레벨 포함)만 수정 후 아래 &quot;수정 저장&quot;을 눌러주세요.</div>}
+      {editingId && <div style={{background:'#fef3c7',border:'1px solid #f59e0b',borderLeft:'4px solid #f59e0b',borderRadius:10,padding:'10px 14px',marginBottom:14,fontSize:12.5,fontWeight:700,color:'#92400e',lineHeight:1.5}}>⚠️ 인보이스가 발행되고 수정하시는 경우에는 반영이 불가할 수 있습니다.</div>}
       <div style={{fontSize:13,fontWeight:800,color:"#7c3aed",marginBottom:8,padding:"4px 12px",background:"#f5f3ff",borderRadius:8,display:"inline-block"}}>📋 신청 1</div>
       <div className="sec">
         <h2>기본 정보</h2>
@@ -989,7 +992,7 @@ export default function PortalTutorPage() {
                 </div>
                 {b.days.includes('토') && (
                   <div style={{marginTop:8, padding:'10px 14px', background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:8, fontSize:12, color:'#92400e', lineHeight:1.5}}>
-                    ⚠️ 토요일은 <strong>매달 둘째 주·넷째 주</strong>만 수업 가능합니다. 다른 토요일은 자동 제외됩니다.
+                    ⚠️ 토요일은 <strong>필드트립이 있는 주에만 가능합니다 (매월 둘째·넷째 주 토요일)</strong>. 다른 토요일은 자동 제외됩니다.
                   </div>
                 )}
               </div>

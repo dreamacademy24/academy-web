@@ -240,6 +240,9 @@ export default function MyApplicationsPage() {
       {/* 투어셔틀 */}
       {tab === "shuttle" && (
         <div>
+          {data.shuttle.length > 0 && (
+            <div className="ma-warn">⚠️ 인보이스가 발행되고 수정·변경하시는 경우에는 반영이 불가할 수 있습니다.</div>
+          )}
           {shuttleCancelled >= 2 && (
             <div className="ma-warn">⚠️ 투어셔틀 취소가 2회 이상 발생했습니다. 신규 예약이 제한될 수 있습니다.</div>
           )}
@@ -392,6 +395,7 @@ export default function MyApplicationsPage() {
         <div className="ma-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, maxHeight: "90vh", overflowY: "auto" }}>
           <h3>✏️ 신청 수정</h3>
           <div className="desc">대기중 상태에서만 수정 가능합니다.</div>
+          <div className="ma-warn">⚠️ 인보이스가 발행되고 수정하시는 경우에는 반영이 불가할 수 있습니다.</div>
 
           <div style={{ marginTop: 14 }}>
             <label style={{ display:"block", fontSize:12.5, fontWeight:700, color:"#374151", marginBottom:6 }}>수업 유형</label>

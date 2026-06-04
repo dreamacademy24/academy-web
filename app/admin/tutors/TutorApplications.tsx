@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "rea
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
+import { isLessonDateAllowed } from "@/lib/lessonDates";
 import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
@@ -283,7 +284,8 @@ export default function TutorApplications() {
           while (cur <= end) {
             if (targetDays.includes(cur.getDay())) {
               const ds = localStr(cur);
-              if (!_skipSet.has(ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
+              // 휴일(6/12)·1·3·5번째 토요일 제외 → 세션 미생성 (회차·금액도 자동 일치)
+              if (!_skipSet.has(ds) && isLessonDateAllowed(cur, ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
             }
             cur.setDate(cur.getDate() + 1);
           }

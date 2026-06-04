@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { formatLessonTime } from "@/lib/scheduleBlocks";
+import { isLessonDateAllowed } from "@/lib/lessonDates";
 
 interface Tutor { id: string; name: string }
 interface Lesson {
@@ -171,7 +172,7 @@ export default function TutorLessonList() {
     while (d <= end) {
       if (wanted.has(d.getDay())) {
         const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-        if (!skips.has(ds)) out.push(ds);
+        if (!skips.has(ds) && isLessonDateAllowed(d, ds)) out.push(ds);
       }
       d.setDate(d.getDate() + 1);
     }
