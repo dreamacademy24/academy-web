@@ -121,3 +121,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { id, ...fields } = body
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type']
+    const updates: Record<string, unknown> = {}
+    for (const k of allowed) { if (k in fields) updates[k] = fields[k] }
+    const { error } = await supabase.from('online_enrollments').update(updates).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
+  }
+}

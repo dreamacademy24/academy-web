@@ -59,6 +59,9 @@ export default function OnlineClassPage() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<{ session: Session; daysBefore: number } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [editTarget, setEditTarget] = useState<Enrollment | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, unknown>>({});
+  const [editSaving, setEditSaving] = useState(false);
 
   // register tab
   const [form, setForm] = useState({
@@ -152,6 +155,52 @@ export default function OnlineClassPage() {
     }
   }
 
+  function openEditModal(e: Enrollment) {
+    setEditTarget(e);
+    setEditForm({
+      student_name: e.student_name,
+      student_name_en: e.student_name_en || "",
+      student_birth_year: e.student_birth_year || "",
+      tutor_id: e.tutor?.id || "",
+      days_of_week: [...(e.days_of_week || [])],
+      class_time_kr: e.class_time_kr || "",
+      class_time_ph: e.class_time_ph || "",
+      start_date: e.start_date || "",
+      end_date: e.end_date || "",
+      duration_weeks: e.duration_weeks ?? "",
+      class_duration_weeks: e.class_duration_weeks ?? "",
+      pre_sessions: e.pre_sessions ?? 0,
+      post_sessions: e.post_sessions ?? 0,
+      total_sessions: e.total_sessions ?? 0,
+      sessions_per_week: e.sessions_per_week ?? 3,
+      status: e.status || "active",
+      notes: e.notes || "",
+    });
+  }
+  function toggleEditDay(d: string) {
+    setEditForm(f => {
+      const days = (f.days_of_week as string[]) || [];
+      return { ...f, days_of_week: days.includes(d) ? days.filter(x => x !== d) : [...days, d] };
+    });
+  }
+  async function saveEdit() {
+    if (!editTarget) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch("/api/online-class/enrollments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editTarget.id, ...editForm }),
+      });
+      const r = await res.json();
+      if (!res.ok) { alert(r.error || "저장 실패"); return; }
+      alert("수정 완료 ✅");
+      setEditTarget(null);
+      await loadEnrollments();
+    } catch (e) {
+      alert("저장 실패: " + (e instanceof Error ? e.message : "unknown"));
+    } finally { setEditSaving(false); }
+  }
   function toggleDay(d: string) {
     setForm(f => ({
       ...f,
@@ -327,6 +376,8 @@ export default function OnlineClassPage() {
                       <td style={{ whiteSpace: "nowrap" }}>
                         <button className="btn-sm" onClick={() => loadSessions(e.id)}>{isOpen ? "접기" : "출결"}</button>
                         {" "}
+                        <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
+                        {" "}
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
                       </td>
                     </tr>
@@ -488,6 +539,64 @@ export default function OnlineClassPage() {
         <button className="submit-btn" onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
       </div>}
     </div>
+
+    {editTarget && (
+      <div className="modal-bg" onClick={() => !editSaving && setEditTarget(null)}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+          <h3>✏️ 수강 정보 수정</h3>
+          <p style={{ marginBottom: 16, fontSize: 13, color: "#64748b" }}>{editTarget.student_name}</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <div><label className="form-label" style={{ fontSize: 11 }}>학생명</label><input className="form-input" value={String(editForm.student_name ?? "")} onChange={e => setEditForm(f => ({ ...f, student_name: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>영문명</label><input className="form-input" value={String(editForm.student_name_en ?? "")} onChange={e => setEditForm(f => ({ ...f, student_name_en: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>출생연도</label><input className="form-input" value={String(editForm.student_birth_year ?? "")} onChange={e => setEditForm(f => ({ ...f, student_birth_year: e.target.value }))} /></div>
+            <div>
+              <label className="form-label" style={{ fontSize: 11 }}>담당 튜터</label>
+              <select className="form-input" value={String(editForm.tutor_id ?? "")} onChange={e => setEditForm(f => ({ ...f, tutor_id: e.target.value }))}>
+                <option value="">미지정</option>
+                {tutors.map(t => <option key={t.id} value={t.id}>{t.name_display}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>수강 요일</label>
+            <div className="day-chips">
+              {DAYS.map(d => (
+                <button key={d} className={`day-chip${((editForm.days_of_week as string[]) || []).includes(d) ? " on" : ""}`} onClick={() => toggleEditDay(d)}>{d}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <div><label className="form-label" style={{ fontSize: 11 }}>한국 시간</label><input className="form-input" value={String(editForm.class_time_kr ?? "")} onChange={e => setEditForm(f => ({ ...f, class_time_kr: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>필리핀 시간</label><input className="form-input" value={String(editForm.class_time_ph ?? "")} onChange={e => setEditForm(f => ({ ...f, class_time_ph: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>시작일</label><input type="date" className="form-input" value={String(editForm.start_date ?? "")} onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>종료일</label><input type="date" className="form-input" value={String(editForm.end_date ?? "")} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>연수 기간 (주)</label><input type="number" className="form-input" value={String(editForm.duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, duration_weeks: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>화상수업 기간 (주)</label><input type="number" className="form-input" value={String(editForm.class_duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, class_duration_weeks: e.target.value }))} /></div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+            <div><label className="form-label" style={{ fontSize: 11 }}>수업 전 회차</label><input type="number" className="form-input" value={String(editForm.pre_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, pre_sessions: Number(e.target.value) }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>수업 후 회차</label><input type="number" className="form-input" value={String(editForm.post_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, post_sessions: Number(e.target.value) }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>총 회차</label><input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value) }))} /></div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>상태</label>
+            <select className="form-input" value={String(editForm.status ?? "active")} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}>
+              <option value="active">수업중</option>
+              <option value="completed">완료</option>
+              <option value="paused">일시중지</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>특이사항</label>
+            <textarea className="form-input" value={String(editForm.notes ?? "")} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: "vertical", minHeight: 60 }} />
+          </div>
+          <div className="btns">
+            <button className="btn cancel" disabled={editSaving} onClick={() => setEditTarget(null)}>취소</button>
+            <button className="btn confirm" disabled={editSaving} onClick={saveEdit}>{editSaving ? "저장 중..." : "저장"}</button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {cancelTarget && (() => {
       const { session, daysBefore } = cancelTarget;
