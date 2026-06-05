@@ -35,6 +35,27 @@ function pad2(n: number) { return n < 10 ? "0" + n : "" + n }
 function localStr(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}` }
 function parseLocal(s: string): Date { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d) }
 
+function buildCalendarWeeks(sessionList: Session[]): Array<Array<{ date: Date; dateStr: string; inRange: boolean }>> {
+  if (sessionList.length === 0) return [];
+  const sorted = [...sessionList].sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  const start = parseLocal(sorted[0].scheduled_date);
+  const end = parseLocal(sorted[sorted.length-1].scheduled_date);
+  const calStart = new Date(start); calStart.setDate(calStart.getDate() - calStart.getDay());
+  const calEnd = new Date(end); calEnd.setDate(calEnd.getDate() + (6 - calEnd.getDay()));
+  const out: Array<Array<{ date: Date; dateStr: string; inRange: boolean }>> = [];
+  const cur = new Date(calStart);
+  while (cur <= calEnd) {
+    const week: Array<{ date: Date; dateStr: string; inRange: boolean }> = [];
+    for (let i = 0; i < 7; i++) {
+      const dt = new Date(cur);
+      week.push({ date: dt, dateStr: localStr(dt), inRange: dt >= start && dt <= end });
+      cur.setDate(cur.getDate() + 1);
+    }
+    out.push(week);
+  }
+  return out;
+}
+
 function parseTimeKr(timeStr: string | null): { h: number; m: number } | null {
   if (!timeStr) return null;
   const m = timeStr.match(/(\d{1,2})[:시](\d{2})/);
@@ -63,6 +84,49 @@ function fmtClassTime(timeKr: string | null, lengthMin = 25): string {
 
 function fmtDayLabel(d: Date): string {
   return `${pad2(d.getDate())}-${MONTH_ABBR[d.getMonth()]}`;
+}
+
+function renderCalendar(
+  weeks: Array<Array<{ date: Date; dateStr: string; inRange: boolean }>>,
+  sessionMap: Record<string, Session>,
+  enrollment: Enrollment
+) {
+  return (
+    <table className="cal-tbl">
+      <thead>
+        <tr>
+          {WEEKDAYS.map((w, i) => (
+            <th key={w} className={i === 0 ? "sun" : i === 6 ? "sat" : ""}>{w}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {weeks.map((week, wi) => (
+          <tr key={wi}>
+            {week.map(cell => {
+              const s = sessionMap[cell.dateStr];
+              const classes: string[] = [];
+              if (!cell.inRange) classes.push("out");
+              let timeLabel = "";
+              if (s) {
+                if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
+                else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
+                else if (s.status === "attended") { classes.push("attended"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
+                else if (s.status === "absent" || s.status === "no_show") { classes.push("holiday"); timeLabel = "결석"; }
+                else { timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
+              }
+              return (
+                <td key={cell.dateStr} className={classes.join(" ")}>
+                  <div className="d">{cell.inRange ? fmtDayLabel(cell.date) : cell.date.getDate()}</div>
+                  {timeLabel && <div className="t">{timeLabel}</div>}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export default function OnlineInvoicePage() {
@@ -110,32 +174,19 @@ function OnlineInvoiceInner() {
     return map;
   }, [sessions]);
 
-  const weeks = useMemo(() => {
-    if (!enrollment) return [];
-    const start = parseLocal(enrollment.start_date);
-    const endStr = enrollment.end_date || (() => {
-      const last = [...sessions].sort((a,b) => b.scheduled_date.localeCompare(a.scheduled_date))[0];
-      return last ? last.scheduled_date : enrollment.start_date;
-    })();
-    const end = parseLocal(endStr);
-
-    const calStart = new Date(start); calStart.setDate(calStart.getDate() - calStart.getDay());
-    const calEnd = new Date(end); calEnd.setDate(calEnd.getDate() + (6 - calEnd.getDay()));
-
-    const out: Array<Array<{ date: Date; dateStr: string; inRange: boolean }>> = [];
-    const cur = new Date(calStart);
-    while (cur <= calEnd) {
-      const week: Array<{ date: Date; dateStr: string; inRange: boolean }> = [];
-      for (let i = 0; i < 7; i++) {
-        const dt = new Date(cur);
-        const inRange = dt >= start && dt <= end;
-        week.push({ date: dt, dateStr: localStr(dt), inRange });
-        cur.setDate(cur.getDate() + 1);
-      }
-      out.push(week);
+  const { preSessions, postSessions } = useMemo(() => {
+    if (!enrollment) return { preSessions: sessions, postSessions: [] };
+    if (enrollment.class_period === "both") {
+      const sorted = [...sessions].sort((a,b) => a.session_number - b.session_number);
+      const preCount = enrollment.pre_sessions || 0;
+      return { preSessions: sorted.slice(0, preCount), postSessions: sorted.slice(preCount) };
     }
-    return out;
+    return { preSessions: sessions, postSessions: [] };
   }, [enrollment, sessions]);
+
+  const preWeeks = useMemo(() => buildCalendarWeeks(preSessions), [preSessions]);
+  const postWeeks = useMemo(() => buildCalendarWeeks(postSessions), [postSessions]);
+  const allWeeks = useMemo(() => buildCalendarWeeks(sessions), [sessions]);
 
   async function savePdf() {
     if (typeof window !== "undefined") window.print();
@@ -256,6 +307,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;marg
               <div className="row"><div className="k">연수 등록 기간</div><div className="v">{periodLine}</div></div>
               <div className="row"><div className="k">수업 가능 기간</div><div className="v">{periodLine}</div></div>
               <div className="row"><div className="k">화상영어 가능 횟수</div><div className="v">총 {enrollment.total_sessions}회 / 잔여 {availableCount}회</div></div>
+              {enrollment.class_period === "both" && enrollment.pre_sessions > 0 && enrollment.post_sessions > 0 && (
+                <div className="row"><div className="k">연수 전 / 후</div><div className="v">전 {enrollment.pre_sessions}회 / 후 {enrollment.post_sessions}회</div></div>
+              )}
             </td>
           </tr>
         </tbody>
@@ -278,41 +332,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;marg
         </tbody>
       </table>
 
-      <div className="section-title">{periodTitle}</div>
-      <table className="cal-tbl">
-        <thead>
-          <tr>
-            {WEEKDAYS.map((w, i) => (
-              <th key={w} className={i === 0 ? "sun" : i === 6 ? "sat" : ""}>{w}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {weeks.map((week, wi) => (
-            <tr key={wi}>
-              {week.map(cell => {
-                const s = sessionMap[cell.dateStr];
-                const classes: string[] = [];
-                if (!cell.inRange) classes.push("out");
-                let timeLabel = "";
-                if (s) {
-                  if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
-                  else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
-                  else if (s.status === "attended") { classes.push("attended"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
-                  else if (s.status === "absent" || s.status === "no_show") { classes.push("holiday"); timeLabel = "결석"; }
-                  else { timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
-                }
-                return (
-                  <td key={cell.dateStr} className={classes.join(" ")}>
-                    <div className="d">{cell.inRange ? fmtDayLabel(cell.date) : cell.date.getDate()}</div>
-                    {timeLabel && <div className="t">{timeLabel}</div>}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {enrollment.class_period === "both" ? (<>
+        {preSessions.length > 0 && (<>
+          <div className="section-title">연수 전</div>
+          {renderCalendar(preWeeks, sessionMap, enrollment)}
+        </>)}
+        {postSessions.length > 0 && (<>
+          <div className="section-title" style={{ marginTop: 20 }}>연수 종료 후</div>
+          {renderCalendar(postWeeks, sessionMap, enrollment)}
+        </>)}
+      </>) : (<>
+        <div className="section-title">{periodTitle}</div>
+        {renderCalendar(allWeeks, sessionMap, enrollment)}
+      </>)}
 
       <div className="rules">
         <div className="title">★ 화상 영어 수업 규정 안내 ★</div>
