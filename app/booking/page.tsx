@@ -55,7 +55,7 @@ export default function BookingPage() {
   const [bType, setBType] = useState<BookingType>("dreamhouse");
   const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
   const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
-  const [accom, setAccom] = useState({ dh_weeks: 4, jp_weeks: 2, cn_period: "1주" });
+  const [accom, setAccom] = useState({ dh_weeks: 4, jp_weeks: 2, cn_period: "1주", jp_room_type: "디럭스", cn_room_type: "디럭스" });
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
@@ -149,6 +149,8 @@ export default function BookingPage() {
       dh_weeks: usesDH ? accom.dh_weeks : null,
       jp_weeks: usesJP ? accom.jp_weeks : null,
       cn_period: usesCN ? accom.cn_period : null,
+      jp_room_type: usesJP ? accom.jp_room_type : null,
+      cn_room_type: usesCN ? accom.cn_room_type : null,
       checkin_date: dates.checkIn || null,
       checkout_date: dates.checkOut || null,
       pickup: bType === "commute" ? "불필요함" : "필요함",
@@ -282,11 +284,27 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
+              {(bType === "dreamhouse_jaypark" || bType === "jaypark") && (
+                <div className="fg">
+                  <label className="fl">제이파크 룸타입</label>
+                  <select className="fsl" value={accom.jp_room_type} onChange={e => setAccom({ ...accom, jp_room_type: e.target.value })}>
+                    {["디럭스", "프리미어", "막탄스윗"].map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+              )}
               {(bType === "dreamhouse_cubenine" || bType === "cubenine") && (
                 <div className="fg">
                   <label className="fl">큐브나인 기간</label>
                   <select className="fsl" value={accom.cn_period} onChange={e => setAccom({ ...accom, cn_period: e.target.value })}>
                     {CN_PERIODS.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              )}
+              {(bType === "dreamhouse_cubenine" || bType === "cubenine") && (
+                <div className="fg">
+                  <label className="fl">큐브나인 룸타입</label>
+                  <select className="fsl" value={accom.cn_room_type} onChange={e => setAccom({ ...accom, cn_room_type: e.target.value })}>
+                    {["디럭스", "풀억세스룸"].map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
               )}
