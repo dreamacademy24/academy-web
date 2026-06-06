@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>드림하우스 한국인 매니저 통합 핸드북</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1f3a5f; --navy-deep:#16293f; --cream:#f7f1e6; --cream-soft:#fbf7ef;
+    --gold:#b88a2f; --gold-soft:#e9d9b5; --ink:#2a2a26; --muted:#7a7468;
+    --line:#e6ddcb; --good:#2f7d5b; --white:#fff; --shadow:0 6px 24px rgba(31,58,95,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--ink);line-height:1.65;-webkit-font-smoothing:antialiased;}
+
+  /* header */
+  header{background:radial-gradient(120% 140% at 85% -20%, rgba(184,138,47,.22), transparent 55%),linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%);color:var(--cream-soft);padding:42px 22px 30px;position:relative;overflow:hidden;}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--gold-soft),var(--gold));}
+  .hw{max-width:920px;margin:0 auto;position:relative;z-index:2;}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--gold-soft);font-weight:700;margin-bottom:12px;}
+  header h1{font-family:'Noto Serif KR',serif;font-weight:700;font-size:clamp(24px,5vw,38px);line-height:1.25;letter-spacing:-.01em;}
+  header p.lede{margin-top:14px;max-width:680px;color:#d8e0ea;font-size:14.5px;}
+
+  /* tabs */
+  nav.tabs{position:sticky;top:0;z-index:50;background:var(--cream-soft);border-bottom:1px solid var(--line);box-shadow:0 2px 12px rgba(31,58,95,.05);}
+  .tabs-inner{max-width:920px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:8px 14px;scrollbar-width:none;}
+  .tabs-inner::-webkit-scrollbar{display:none;}
+  .tab{flex:0 0 auto;border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:13.5px;font-weight:700;padding:9px 14px;border-radius:10px;cursor:pointer;white-space:nowrap;transition:all .16s;}
+  .tab:hover{color:var(--navy);background:rgba(31,58,95,.05);}
+  .tab.active{background:var(--navy);color:var(--cream-soft);}
+
+  main{max-width:920px;margin:0 auto;padding:26px 22px 80px;}
+  section.panel{display:none;animation:fade .3s ease;}
+  section.panel.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  h2.sec{font-family:'Noto Serif KR',serif;font-size:22px;color:var(--navy);font-weight:700;margin-bottom:6px;}
+  .sec-desc{color:var(--muted);font-size:14px;margin-bottom:22px;}
+
+  /* cards / boxes */
+  .box{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px;}
+  .box h3{font-family:'Noto Serif KR',serif;font-size:17px;color:var(--navy);font-weight:700;margin-bottom:12px;}
+  .box ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+  .box li{display:flex;gap:10px;font-size:14px;line-height:1.6;}
+  .box li::before{content:"•";color:var(--gold);font-weight:700;flex-shrink:0;}
+
+  /* principle cards */
+  .principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px;}
+  .pr{background:linear-gradient(165deg,var(--navy),var(--navy-deep));color:var(--cream-soft);border-radius:16px;padding:20px;}
+  .pr .n{font-family:'Noto Serif KR',serif;color:var(--gold-soft);font-size:28px;font-weight:700;line-height:1;}
+  .pr h4{font-size:15px;margin:10px 0 7px;color:#fff;}
+  .pr p{font-size:13px;color:#c9d3df;line-height:1.55;}
+
+  /* progress */
+  .progress-card{background:var(--white);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:15px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;}
+  .progress-card .label{font-weight:700;color:var(--navy);font-size:13.5px;white-space:nowrap;}
+  .track{flex:1;min-width:140px;height:9px;background:var(--cream);border-radius:99px;overflow:hidden;}
+  .fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#d8b25e);border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+  .count{font-weight:700;color:var(--gold);font-size:13.5px;white-space:nowrap;}
+
+  /* part filter chips */
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;}
+  .chip{border:1px solid var(--line);background:var(--white);color:var(--muted);padding:8px 15px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;transition:all .16s;font-family:inherit;}
+  .chip:hover{border-color:var(--gold);color:var(--navy);}
+  .chip.active{background:var(--navy);color:var(--cream-soft);border-color:var(--navy);}
+
+  /* part block */
+  .part-head{display:flex;align-items:center;gap:12px;margin:30px 0 14px;}
+  .part-head .ic{font-size:26px;}
+  .part-head h3{font-family:'Noto Serif KR',serif;font-size:21px;color:var(--navy);font-weight:700;}
+
+  .handover{background:var(--cream-soft);border:1px solid var(--gold-soft);border-radius:16px;padding:18px 20px;margin-bottom:18px;}
+  .handover .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--gold);background:rgba(184,138,47,.12);padding:4px 12px;border-radius:7px;margin-bottom:14px;}
+  .ho-intro{font-size:13.5px;line-height:1.72;color:#5a5240;background:rgba(184,138,47,.07);border-radius:11px;padding:14px 16px;margin-bottom:16px;border:1px solid rgba(184,138,47,.18);}
+  .script-block{background:var(--white);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+  .script-block h4{font-family:'Noto Serif KR',serif;font-size:16px;color:var(--navy);font-weight:700;padding:16px 18px 0;}
+  .script-block ul{list-style:none;display:flex;flex-direction:column;gap:8px;padding:12px 18px 18px;}
+  .script-block li{display:flex;gap:9px;font-size:13.5px;line-height:1.6;}
+  .script-block li::before{content:"–";color:var(--gold);font-weight:700;flex-shrink:0;}
+  .stepnum{counter-reset:step;}
+  .ho-group{margin-bottom:14px;}
+  .ho-group:last-child{margin-bottom:0;}
+  .ho-label{font-size:12.5px;font-weight:700;color:var(--navy);margin-bottom:7px;letter-spacing:.02em;}
+  .ho-group ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
+  .ho-group li{display:flex;gap:9px;font-size:13.5px;line-height:1.58;color:var(--ink);}
+  .ho-check li::before{content:"☑";color:var(--good);flex-shrink:0;}
+  .ho-fix li::before{content:"→";color:var(--gold);font-weight:700;flex-shrink:0;}
+  .ho-note{background:rgba(184,138,47,.07);border-radius:10px;padding:12px 14px;}
+  .ho-note li{font-size:13px;color:#6b5d3f;}
+  .ho-note li::before{content:"!";color:var(--gold);font-weight:700;flex-shrink:0;}
+
+  .prac-label{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--navy);background:rgba(31,58,95,.07);padding:4px 12px;border-radius:7px;margin:6px 0 12px;}
+
+  /* scenario card */
+  .card{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden;border-left:4px solid var(--line);transition:border-color .25s;}
+  .card.done{border-left-color:var(--good);}
+  .card-head{padding:18px 20px 0;}
+  .card h4{font-family:'Noto Serif KR',serif;font-weight:700;font-size:16px;color:var(--navy);line-height:1.4;}
+  .situation{padding:14px 20px 4px;}
+  .who{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+  .who .dot{width:22px;height:22px;border-radius:50%;background:var(--gold-soft);color:var(--navy);display:grid;place-items:center;font-size:11px;}
+  .bubble{background:var(--cream);border:1px solid var(--line);border-radius:4px 16px 16px 16px;padding:13px 17px;font-size:14.5px;color:var(--ink);position:relative;}
+  .practice{padding:16px 20px 0;}
+  .practice label{font-size:13px;font-weight:700;color:var(--navy);display:block;margin-bottom:8px;}
+  textarea{width:100%;min-height:70px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--cream-soft);transition:border-color .16s;}
+  textarea:focus{outline:none;border-color:var(--gold);background:var(--white);}
+  .actions{padding:13px 20px 20px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
+  button.btn{font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border-radius:10px;padding:10px 17px;border:1px solid var(--navy);background:var(--navy);color:var(--cream-soft);transition:all .16s;}
+  button.btn:hover{background:var(--navy-deep);}
+  button.btn.ghost{background:transparent;color:var(--navy);border-color:var(--line);}
+  button.btn.ghost:hover{border-color:var(--gold);color:var(--gold);}
+  .done-toggle{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none;}
+  .done-toggle input{width:18px;height:18px;accent-color:var(--good);cursor:pointer;}
+  .answer{display:none;padding:0 20px 20px;}
+  .answer.show{display:block;animation:fade .35s ease;}
+  .answer-box{background:linear-gradient(165deg,var(--navy),var(--navy-deep));color:var(--cream-soft);border-radius:14px;padding:17px 19px;}
+  .answer-box .ans-label{font-size:11px;letter-spacing:.16em;color:var(--gold-soft);font-weight:700;margin-bottom:11px;text-transform:uppercase;}
+  .answer-box p{font-size:14.5px;line-height:1.72;margin-bottom:11px;}
+  .answer-box p:last-child{margin-bottom:0;}
+  .points{margin-top:14px;background:var(--cream-soft);border:1px solid var(--line);border-radius:12px;padding:15px 17px;}
+  .points .p-label{font-size:11px;letter-spacing:.12em;color:var(--gold);font-weight:700;margin-bottom:10px;text-transform:uppercase;}
+  .points ul{list-style:none;display:flex;flex-direction:column;gap:8px;}
+  .points li{display:flex;gap:9px;font-size:13px;color:var(--ink);line-height:1.5;}
+  .points li::before{content:"✓";color:var(--good);font-weight:700;flex-shrink:0;}
+
+  /* template card */
+  .tpl{background:var(--white);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden;}
+  .tpl-head{padding:15px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;}
+  .tpl-head h4{font-size:15px;color:var(--navy);font-weight:700;}
+  .tpl-head .when{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .tpl-body{display:none;padding:0 18px 18px;}
+  .tpl-body.show{display:block;}
+  .tpl-text{background:var(--cream-soft);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:13.5px;line-height:1.7;color:var(--ink);white-space:pre-wrap;}
+  .copy-btn{margin-top:10px;font-size:12px;font-weight:700;color:var(--gold);background:transparent;border:1px solid var(--gold-soft);border-radius:8px;padding:7px 14px;cursor:pointer;font-family:inherit;}
+  .copy-btn:hover{background:rgba(184,138,47,.08);}
+  .chev{color:var(--gold);font-size:13px;}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55;}
+  table tr td:first-child{font-weight:700;color:var(--navy);white-space:nowrap;width:38%;}
+  .atte-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+  .atte{background:var(--cream-soft);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:13px;}
+  .atte b{color:var(--navy);font-family:'Noto Serif KR',serif;}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:680px){.twocol{grid-template-columns:1fr;}}
+
+  footer{text-align:center;padding:30px 22px 50px;color:var(--muted);font-size:12px;}
+  footer .line{width:40px;height:2px;background:var(--gold-soft);margin:0 auto 14px;}
+
+  @media(max-width:540px){
+    header{padding:34px 18px 26px;}
+    .actions{flex-direction:column;align-items:stretch;}
+    .done-toggle{margin-left:0;justify-content:center;border-top:1px solid var(--line);padding-top:12px;}
+    button.btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hw">
+    <div class="eyebrow">Dream House · Manager Handbook</div>
+    <h1>드림하우스 한국인 매니저 통합 핸드북</h1>
+    <p class="lede">파트별 <b style="color:#fff">인수인계 안내</b>와 실제 어머님 응대 <b style="color:#fff">모범답안 연습</b>을 한 곳에. 처음 오신 분도 이 자료 하나로 드림하우스 업무를 다 파악할 수 있도록 정리했습니다.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tabs-inner" id="tabs"></div>
+</nav>
+
+<main id="main"></main>
+
+<footer>
+  <div class="line"></div>
+  Dream House 한국인 매니저 통합 핸드북 · 내용은 계속 업데이트됩니다
+</footer>
+
+<script>
+/* ===========================================================
+   드림하우스 한국인 매니저 통합 핸드북 - 데이터
+   파트별 [인수인계 안내] + [응대 연습 모범답안(실제 톤)]
+   =========================================================== */
+
+const PARTS = [
+  /* ---------------- 에어컨 ---------------- */
+  {
+    id: "aircon", name: "에어컨", icon: "❄️",
+    handover: {
+      intro: "세부는 일 년 내내 덥고 습해서, 에어컨은 어머님들이 가장 중요하게 여기고 또 가장 자주 문제가 생기는 항목입니다. 컴플레인 1순위라고 보시면 됩니다. 핵심은 '리모컨 설정을 헷갈리신 것'인지 '기기 고장'인지를 먼저 구분하는 것입니다. ⚠️ 에어컨은 일반 수리기사(제리)가 못 보고, 반드시 에어컨 전담 기사 가리(Gari)를 불러야 합니다.",
+      check: [
+        "각 집 에어컨 리모컨이 어떤 종류인지 미리 기억해두기 — 집마다 리모컨이 달라서 냉방 표시가 'cool' 글자, 얼음(❄) 모양 등 제각각입니다",
+        "시원한지 직접 확인 — 리모컨 설정 문제인지 기기 고장인지 구분 (기본 세팅: 냉방 cool / 22도 / 팬 high)",
+        "장시간 비워둔 집은 시간을 두고 가동 후 다시 확인 (오래 안 쓰면 처음엔 덜 시원함)",
+        "물이 떨어지거나 냄새가 나는지, 작동 중 멋대로 꺼지는지 확인",
+        "리모컨 건전지 잔량 — 부족 알림 시 즉시 교체",
+      ],
+      fix: [
+        "① 가장 먼저 리모컨 세팅 확인 — 냉방('cool' 글자 또는 얼음 ❄ 모양)인지, 팬이 'high'인지, 온도 22도인지 ('fan'·선풍기 모양이면 찬바람이 아니라 바람만 나옵니다) → ② 장시간 미사용 집은 시간 두고 재확인 → ③ 그래도 안 되면 에어컨 기사 Gari 호출",
+        "냄새: 필터·에어컨 스프레이로 청소 → 2~3일 후 재발하면 기사 방문 (세부 고온다습 특성상 응축수 냄새가 날 수 있음)",
+        "반복 고장(꺼짐·물·온도): 테크니션이 보드·카파시터 점검·교체 → 그래도 안 되면 신품으로 교체",
+        "건전지·리모컨은 오피스에서 무료 교체",
+        "수리로 며칠 가동했을 경우, 전기세는 체크인 하루 전 아침 측정으로 대체해 어머님 부담을 덜어드림",
+      ],
+      note: [
+        "⚠️ 에어컨은 반드시 에어컨 기사 Gari. 수리기사 제리(Jerry)는 에어컨을 못 봅니다.",
+        "저녁 시간·토요일처럼 기사를 바로 부르기 어려운 때 '안 시원하다'고 하시면, 제일 먼저 리모컨 세팅(cool / 팬 high)부터 확인하도록 안내. 설정 문제로 해결되는 경우가 많습니다.",
+        "에어컨은 가장 컴플레인이 잦은 항목. 반복되면 '괜찮다'고 넘기지 말고 교체까지 빠르게 결정하는 게 신뢰에 좋습니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "에어컨",
+        title: "(저녁·주말) 에어컨이 안 시원해요",
+        mom: "방금 에어컨을 틀었는데 바람은 나오는데 시원하질 않아요. 지금 너무 더운데 어떡하죠? ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 더우신데 불편하시겠어요! 기사님 부르기 전에, 리모컨 설정부터 같이 한번 확인해볼게요~ 집마다 리모컨이 조금씩 달라서 설정 때문에 안 시원한 경우가 꽤 많거든요.",
+          "리모컨에서 'cool' 글자나 눈송이(❄) 얼음 모양으로 되어 있는지 봐주시겠어요? 선풍기 모양이나 'fan'으로 되어 있으면 찬바람이 아니라 그냥 바람만 나와요! 그리고 온도는 22도 정도로 낮추시고, 바람 세기(팬)를 'high'로 올려주시면 한결 시원해질 거예요.",
+          "이렇게 했는데도 계속 미지근하면 기기 문제일 수 있으니 바로 말씀 주세요! 제가 에어컨 기사 일정을 잡아 점검하도록 하겠습니다 😊",
+        ],
+        points: [
+          "기기 고장으로 단정하기 전에 리모컨 세팅부터 함께 확인 (집마다 리모컨이 다름 — 미리 기억해두기).",
+          "냉방 표시('cool' 글자 / ❄ 얼음 모양) 확인 + 22도 + 팬 'high'를 구체적으로 안내.",
+          "그래도 안 되면 기사 점검으로 연결 (특히 저녁·토요일엔 이 안내로 해결되는 경우가 많음).",
+        ],
+      },
+      {
+        cat: "에어컨",
+        title: "에어컨이 며칠째 안 시원하고 자꾸 꺼져요",
+        mom: "저희 집 에어컨이 3일 연속 말썽이에요… 한참 돌아가다 30분쯤 되면 꺼지고, 25도엔 더워서 잘 수가 없어요. 정말 불편하네요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 며칠째 에어컨 때문에 불편드려서 정말 죄송합니다. 잠도 제대로 못 주무셨을 텐데 너무 속상하시겠어요.",
+          "우선 테크니션 바로 부르겠습니다! 고치는 동안 더우실 테니, 혹시 괜찮으시면 저희가 잠자리를 1층 방으로 먼저 세팅해 드릴까요? 그동안 조금이라도 시원하게 주무시게요.",
+          "확인해보고 보드(기판)나 카파시터 문제면 바로 부품 교체하겠습니다. 부품을 시티에서 구해와야 하는 경우엔 시간이 조금 걸릴 수 있는데, 그래도 최대한 빨리 잡겠습니다. 만약 수리로도 자꾸 같은 증상이 반복되면 아예 새 에어컨으로 교체해 드릴게요!",
+          "그리고 수리하느라 에어컨을 오래 켜둔 부분은 전기세에 부담되지 않으시게, 체크인 하루 전 아침 측정으로 대체해 드리겠습니다. 다시 한번 불편드려 정말 죄송하고, 남은 기간은 꼭 편하게 지내시도록 미리 더 챙기겠습니다 🙏",
+        ],
+        points: [
+          "먼저 진심으로 사과하고 공감 (잠 못 주무신 점까지 헤아리기).",
+          "고치는 동안의 '임시 대안'(다른 방 세팅)을 먼저 제안해 불편을 줄인다.",
+          "조치 순서를 솔직히 설명: 점검 → 부품 교체 → 안 되면 신품 교체.",
+          "수리로 발생한 전기세는 측정 대체로 부담을 덜어드린다고 안내.",
+        ],
+      },
+      {
+        cat: "에어컨",
+        title: "리모컨이 안 돼요 — 건전지는 오피스 요청인가요, 개인 구매인가요?",
+        mom: "안녕하세요! 2층 에어컨 리모컨이 잘 안 되는데 건전지가 없는 것 같아요. 건전지는 오피스에 요청하면 되나요? 아니면 개인 구매인가요?^^",
+        answer: [
+          "안녕하세요 어머님^^ 건전지는 저희가 무료로 교체해 드려요! 따로 사실 필요 전혀 없으세요~",
+          "바로 들러서 새 건전지로 갈아드리겠습니다! 혹시 그 사이에 더 불편하신 점 있으시면 편하게 말씀 주세요 😊",
+        ],
+        points: [
+          "건전지·리모컨은 오피스 무료 제공임을 분명히 안내(개인 구매 아님).",
+          "'바로 들르겠다'는 즉시 조치로 안심시킨다.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 셔틀 & 드림카 ---------------- */
+  {
+    id: "shuttle", name: "셔틀 & 드림카", icon: "🚐",
+    handover: {
+      intro: "이동 수단은 두 가지입니다. ① 셔틀 — 패키지 고객에게 무료로 제공하는 '단체 차량'으로, 정해진 장소·시간에만 운행합니다(예: H마트는 월·수·금). ② 드림카 — 원하는 곳에 갈 수 있는 '유료 개별 차량'입니다(탑스힐·식당 픽드랍 등). ⚠️ 단, 드림카는 현재 유가 인상으로 운영을 잠시 중단한 상태입니다. 셔틀 신청은 '전날 마감'이 원칙이라 당일 요청을 거절해야 할 때가 많은데, 무작정 안 된다고 하기보다 '왜 안 되는지(기사 스케줄 사정)'를 따뜻하게 설명하는 것이 중요합니다.",
+      check: [
+        "셔틀 신청 리스트(오피스 비치) 확인 — 변경·취소 반영",
+        "당일/마감 후 신청 요청이 오는지 (규정상 불가)",
+        "드림카(유료 개별차량) 요청 — 미리 신청 필요",
+      ],
+      fix: [
+        "셔틀은 패키지 전용 무료 서비스. H마트는 매주 월·수·금. 씨사이드(SM Seaside)는 가는 편만 있고 돌아오는 차량 없음(미리 안내).",
+        "신청 마감: 전날 16:50 (월요일분은 금요일 16:50). 마감 후·당일 신청은 불가. 일요일·휴무일은 운행 없음.",
+        "드림카(유료 개별 차량)는 현재 유가 인상으로 운영 중단 상태. 개별 이동 문의가 오면 그랩(Grab) 또는 외부 렌트를 안내.",
+        "레스토랑 예약 대행 가능(란타우 등) — '드림하우스' 이름으로 예약됨.",
+      ],
+      note: [
+        "💰 추가 공항 드랍 800페소 · 추가 픽업 1,000페소",
+        "⚠️ 드림카는 현재 유가 인상으로 운영 중단 (재개 시: 시간제 2시간 1,000+시간당 350 / 픽드랍 600~)",
+        "셔틀 거절 시 핵심은 '기사 스케줄 사정'을 설명하는 것. 자리 유무로 받아주면 형평성이 무너집니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "셔틀",
+        title: "체크아웃 날 공항 갈 때 차량 되나요?",
+        mom: "체크아웃하고 공항 갈 때 차량 좀 부탁드릴 수 있나요? 비용은 얼마예요?",
+        answer: [
+          "어머님~ 네, 공항 드랍 차량 도와드릴 수 있어요! 추가 공항 드랍은 800페소예요. 비행기 시간 알려주시면 거기 맞춰 차량 잡아드릴게요.",
+          "보통 공항까지는 20~30분 정도 걸리고, 국제선은 2시간 전 도착으로 많이들 가세요. 유료 좌석 구매 등에 따라 다들 조금씩 다르게 정하시니, 출발 시간 고민되시면 편하게 말씀 주세요. 제가 맞춰드리겠습니다 \uD83D\uDE0A",
+        ],
+        points: [
+          "공항 추가 드랍 800페소를 명확히 안내.",
+          "비행기 시간 기준 출발 시간(공항 20~30분, 국제선 2시간 전)을 함께 안내.",
+          "손님이 출발 시간을 정하기 쉽게 도와준다.",
+        ],
+      },
+      {
+        cat: "셔틀",
+        title: "당일인데 셔틀/드림카 신청 안 될까요?",
+        mom: "안녕하세요~^^ 혹시 오늘 당일 셔틀이나 드림카 신청은 안 되겠죠? 갑자기 일정이 변경되어 혹시나 하고 여쭤봅니다!😊",
+        answer: [
+          "안녕하세요 어머님~^^ 셔틀은 전날 마감으로 배정이 픽스되어서 당일 추가는 어려워요 ㅠㅠ 저희가 마감 시간에 맞춰 기사 스케줄을 다 확정해두는데, 그 후에 추가가 들어가면 기사님 일정이 갑자기 바뀌게 되거든요. 다들 그렇잖아요~ 퇴근하셨는데 갑자기 출근하라고 하면 힘드시니까요 ㅠㅠ 그래서 양해 부탁드려요!",
+          "그리고 드림카(유료 개별 차량)는 요즘 유가가 워낙 올라서 현재는 운영을 잠시 쉬고 있어요 ㅠㅠ 급하게 이동하셔야 하면 그랩(Grab)을 이용하시는 게 가장 빠르고, 큰 차량이 필요하시면 제가 외부 렌트를 알아봐 드릴 수도 있어요! 다음부터 일요일이나 급한 일정은 미리 신청해 두시면 훨씬 안전하게 배정됩니다 😊",
+        ],
+        points: [
+          "당일 셔틀 불가의 이유를 '기사 스케줄 사정'으로 부드럽게 설명.",
+          "드림카는 현재 유가 문제로 미운영임을 알리고, 그랩·외부 렌트 대안을 제시.",
+          "다음을 위해 '미리 신청' 습관을 자연스럽게 안내.",
+        ],
+      },
+      {
+        cat: "셔틀",
+        title: "씨사이드 셔틀, 돌아오는 차는 없나요?",
+        mom: "내일 오전 10시에 SM 씨사이드 셔틀을 신청했는데, 집으로 돌아오는 차는 없다고 하시는 것 같아서요! 제가 잘 알아들은 게 맞나요?^^",
+        answer: [
+          "네 어머님^^ 맞으세요~ 씨사이드(SM Seaside)는 가시는 편만 운행하고, 돌아오시는 차량은 따로 없어요 ㅠㅠ 쇼핑·식사 마치시고 오실 때는 그랩(Grab) 타시면 편하게 오실 수 있어요!",
+          "각 셔틀지마다 돌아오는 차량이 있는 곳과 없는 곳이 정리된 안내가 있어서, 신청하실 때 참고하시면 좋아요 😊 헷갈리시면 언제든 다시 여쭤봐 주세요!",
+        ],
+        points: [
+          "씨사이드는 편도(복귀 차량 없음)임을 명확히.",
+          "대안(그랩) 안내로 불편을 줄인다.",
+          "셔틀지별 복귀 차량 유무 안내가 있다는 점을 알려준다.",
+        ],
+      },
+      {
+        cat: "셔틀",
+        title: "드림카로 탑스힐 가고 싶어요, 요금이 어떻게 되나요?",
+        mom: "안녕하세요 탑스힐 가려는데 드림카 얼마일까요?! 한 차에 10명 정도 탈 수 있나요?",
+        answer: [
+          "안녕하세요 어머님^^ 말씀 주셔서 감사해요! 그런데 안내드리기 조심스럽게도, 드림카가 요즘 유가가 워낙 많이 올라서 현재는 운영을 잠시 중단한 상태예요 ㅠㅠ",
+          "탑스힐처럼 단체로 이동하실 때는 그랩(Grab)을 여러 대 부르시는 방법이 있고, 한 번에 10명 정도 타는 큰 차량이 필요하시면 제가 외부 렌트 쪽으로 가능한 곳과 금액을 알아봐 드릴 수도 있어요! 원하시면 바로 알아보고 알려드릴게요 😊",
+        ],
+        points: [
+          "드림카는 현재 유가 인상으로 운영 중단 상태임을 솔직히 안내.",
+          "대안(그랩 여러 대 / 외부 렌트)을 구체적으로 제시.",
+          "'알아봐 드리겠다'는 적극적 자세로 마무리해 아쉬움을 줄인다.",
+        ],
+      },
+      {
+        cat: "셔틀",
+        title: "갑자기 아이가 아파서 셔틀을 당일 취소해야 해요",
+        mom: "내일 sm 셔틀 신청했는데, 아이가 병원을 한 번 더 가야 해서 아무래도 취소해야 할 것 같아요 ㅜㅜ 오늘 미처 취소를 못 했는데 당일 취소 될까요…?",
+        answer: [
+          "아이고 어머님, 아이가 또 병원을 가야 하는군요 ㅠㅠ 얼른 나아야 할 텐데 걱정되시겠어요. 취소는 제가 바로 처리해 드릴게요!",
+          "아이가 아프거나 불가피한 경우는 당연히 취소해 드리니 마음 쓰지 않으셔도 돼요. 다만 다음부터는, 다른 어머님들도 차에서 함께 기다리시는 경우가 있어서 가능하시면 전날 미리 연락 주시면 정말 감사하겠습니다 😊 아이 병원 잘 다녀오시고, 푹 쉬게 해주세요!",
+        ],
+        points: [
+          "아이 건강을 먼저 챙기는 공감으로 시작.",
+          "불가피한 사유는 예외로 인정해 즉시 취소 처리.",
+          "'다른 어머님 배려' 차원에서 다음엔 미리 연락을 부드럽게 부탁.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 수도 & 샤워 ---------------- */
+  {
+    id: "water", name: "수도 & 샤워", icon: "🚿",
+    handover: {
+      intro: "드림하우스가 있는 베이스워터 빌리지는 동네 전체가 구조적으로 수압이 약한 편입니다(특히 2층). 한국과 환경이 달라 어머님들이 당황하시는 부분이라, '원래 이런 곳'임을 미리 부드럽게 설명해드리는 것이 핵심입니다. 또 단순 수압 문제 외에, 샤워헤드가 석회로 막혀 더 졸졸 나오는 경우도 많습니다.",
+      check: [
+        "수압 — 베이스워터 빌리지 구조상 전체적으로 낮음(특히 2층). 같이 쓰면 2층은 잘 안 나옴",
+        "샤워호스·싱크 누수, 세면대 배수마개 작동, 온수기 정상 여부",
+        "단수·물 부족 여부 (태풍·배관 문제 시 빌리지 전체 영향)",
+      ],
+      fix: [
+        "수압 약함: 샤워헤드를 빼고 물을 틀어 석회로 막혔는지 확인 → 구연산으로 청소(식초보다 효과 좋음) → 직원 방문 점검",
+        "누수·배수마개 미작동: 즉시 교체 (여분 오피스 비치)",
+        "단수: 빌리지는 지하 물탱크 중앙급수(MCWD + 지하수 Deep Well) 방식. MCWD 중단 시 지하수만 공급되어 2층 수압이 더 낮아짐 → 상황을 설명하고 양해 요청",
+      ],
+      note: [
+        "비유로 설명하면 이해가 빠릅니다: '한국 오래된 주택처럼 기본 수압이 낮은 편'",
+        "샤워헤드 석회 청소: 구연산 3스푼 + 뜨거운 물 1L에 1시간 담갔다 칫솔로 닦기",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "수도",
+        title: "물이 졸졸 나와요 (수압이 약해요)",
+        mom: "샤워할 때 물이 졸졸 나와서 머리도 제대로 못 감겠어요 ㅠㅠ 수압 좀 어떻게 안 될까요?",
+        answer: [
+          "어머님 ㅠㅠ 불편하셨죠. 저희 집들이 한국 오래된 주택처럼 기본적으로 수압이 낮은 편이긴 해요~ 2층보다는 1층이 좀 더 낫고, 두 층을 같이 쓰면 2층은 물이 잘 안 나오기도 합니다 ㅠㅠ",
+          "그런데 원래 수압이 약한 것과 별개로, 석회로 샤워헤드가 막혀서 더 졸졸 나오는 경우도 많아요! 그래서 우선 샤워헤드를 한번 빼고 물을 틀어봐 주시겠어요? 헤드를 빼고 물줄기가 세지면 석회 때문이라, 저희가 청소해 드리면 한결 나아져요.",
+          "그리고 저희 직원도 방문해서 직접 확인해보도록 하겠습니다! 혹시 다른 층 상황도 같이 봐드릴게요 😊",
+        ],
+        points: [
+          "'한국 오래된 주택처럼'이라는 비유로 구조적 특성을 쉽게 설명.",
+          "1층·2층 차이, 동시 사용 시 2층이 약해지는 점까지 솔직히.",
+          "바로 해볼 자가조치(샤워헤드 빼고 틀어보기)를 구체적으로 안내.",
+          "직원 방문 점검 약속으로 마무리.",
+        ],
+      },
+      {
+        cat: "수도",
+        title: "2층 샤워기 물이 아예 안 나와요",
+        mom: "안녕하세요 2층 샤워기 물이 안 나와서 연락드립니다^^ 1층은 나와요!",
+        answer: [
+          "어머님 안녕하세요! 바로 확인하겠습니다 🙏",
+          "혹시 지금 빌리지 전체적으로 물 공급이 줄어든 상황일 수도 있어요. 베이스워터는 지하 물탱크에 물을 받아 각 집으로 펌프로 보내는 중앙급수 방식인데, 태풍이나 배관 문제로 MCWD(수도국) 공급이 끊기면 지하수만으로 돌리게 되어 특히 2층 수압이 많이 약해지거든요 ㅠㅠ",
+          "지금 바로 저희가 원인을 확인하고, 빌리지 수도 담당에도 확인해서 알려드리겠습니다. 그동안 급하시면 1층에서 사용하시고요, 빠르게 조치하겠습니다!",
+        ],
+        points: [
+          "즉시 확인 의지를 먼저 표현.",
+          "중앙급수 구조(MCWD+지하수)를 설명해 '우리 집만의 문제'가 아님을 안내.",
+          "임시 대안(1층 사용) + 빌리지 담당 확인까지 약속.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 화장실 ---------------- */
+  {
+    id: "toilet", name: "화장실", icon: "🚽",
+    handover: {
+      intro: "필리핀은 배관이 한국과 달라서 변기에 화장지를 버리면 막힙니다. 변기 막힘 민원의 대부분이 이 때문이라, 체크인 때 '휴지는 꼭 옆 휴지통에'를 강조하는 것이 가장 중요합니다.",
+      check: [
+        "변기물 정상 배수 여부 (단순 플러시 버튼 문제인 경우 많음)",
+        "변기에 화장지를 버리고 있지 않은지 — 막힘 주원인",
+        "하수구 냄새 여부 (바퀴 유입구와 연관될 수 있음)",
+      ],
+      fix: [
+        "변기 배수 불량: 플러시 버튼 확인 → 약품(세척제) 투입 → 그래도 막히면 정비",
+        "화장지 변기 투입 금지를 매번 강조 (필리핀 배관 특성)",
+        "하수구 냄새·유입구: 보수(시멘트로 틈 메우기) 요청",
+      ],
+      note: [
+        "한국과 달리 화장지를 변기에 버리면 막힙니다. 체크인 때 꼭 강조.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "화장실",
+        title: "변기물이 잘 안 내려가요",
+        mom: "안녕하세요 1층 2층 변기 다 응가가 잘 안 내려가요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 불편하셨겠어요, 바로 확인하겠습니다!",
+          "혹시 화장지를 변기에 함께 버리고 계셨을까요? 여기는 한국과 배관 구조가 달라서 화장지가 들어가면 잘 막히거든요 ㅠㅠ 휴지는 꼭 옆 휴지통에 버려 주시면 막힘을 많이 줄일 수 있어요!",
+          "우선 저희가 세척제로 뚫어보고, 그래도 안 내려가면 바로 정비하겠습니다. 금방 해결해 드릴게요 😊",
+        ],
+        points: [
+          "즉시 확인 + 공감.",
+          "원인(화장지)을 부드럽게 짚고, 휴지통 사용을 재안내.",
+          "조치 순서(세척제 → 정비)를 알려 안심시킨다.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 인터넷 & 와이파이 ---------------- */
+  {
+    id: "internet", name: "인터넷 · 와이파이", icon: "\uD83D\uDCF6",
+    handover: {
+      intro: "와이파이는 어머님들이 매일 쓰셔서 안 되면 바로 불편을 느끼시는 항목입니다. 다만 대부분은 우리 집만의 문제가 아니라 지역 전체(메인 허브 정전 등)나 일시적 속도 저하인 경우가 많습니다. 와이파이 이름·비밀번호는 객실마다 다르니, 체크인 때 정확히 전달하는 것이 중요합니다.",
+      check: [
+        "객실별 와이파이 이름·비밀번호를 정확히 전달했는지 (집마다 다름)",
+        "연결은 되는데 느린지, 아예 안 되는지 구분",
+        "단지·지역 전체 문제인지 (다른 집도 같은지 셀에게 확인)",
+      ],
+      fix: [
+        "연결 안 됨: 공유기(모뎀) 전원을 뽑았다 10초 후 다시 꽂아 재부팅 안내 → 그래도 안 되면 직원 방문·인터넷 회사 확인",
+        "전체 속도 저하: 메인 허브 정전 등 지역 문제인 경우가 많음 → 상황 설명 + 복구 확인",
+        "비밀번호 분실: 객실별 정보 확인해 다시 안내",
+      ],
+      note: [
+        "인터넷 문제는 '비응급'이라 가능하면 17시 전에 접수받아 처리.",
+        "복구가 통신사 영역일 때는 솔직히 설명하되, '계속 확인·요청하겠다'는 자세를 보이면 신뢰가 유지됩니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "인터넷",
+        title: "와이파이가 안 돼요 / 너무 느려요",
+        mom: "와이파이가 갑자기 안 되네요 ㅠㅠ 아이 화상수업 해야 하는데 연결이 자꾸 끊겨요.",
+        answer: [
+          "어머님 ㅠㅠ 화상수업 하셔야 하는데 끊기면 정말 답답하시죠. 우선 바로 도와드릴게요!",
+          "혹시 가능하시면 공유기(인터넷 모뎀) 전원을 한 번 뽑았다가 10초쯤 뒤에 다시 꽂아봐 주시겠어요? 이걸로 해결되는 경우가 많아요. 그래도 안 되면 제가 바로 확인하러 가겠습니다.",
+          "그리고 지금 단지 전체나 지역 인터넷이 느려진 상황일 수도 있어서, 다른 집들도 같은지 함께 확인해볼게요. 메인 허브 쪽 문제면 통신사에 바로 확인·요청하겠습니다. 빠르게 살펴보고 알려드릴게요!",
+        ],
+        points: [
+          "공감 후 바로 해볼 자가조치(모뎀 재부팅)를 먼저 안내.",
+          "우리 집만의 문제인지 지역 문제인지 구분해 확인.",
+          "통신사 영역이면 솔직히 설명하되 '확인·요청하겠다'는 자세로.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 벌레 & 방역 ---------------- */
+  {
+    id: "pest", name: "벌레 & 방역", icon: "🪳",
+    handover: {
+      intro: "세부는 열대 기후라 외부에서 벌레(특히 바퀴·개미)가 집 안으로 들어오는 일이 잦습니다. 어머님들이 가장 놀라고 예민해지시는 부분입니다. 핵심은 '집이 더러워서가 아니라 외부에서 유입되는 것'임을 충분히 설명하고, 방역·틈새 차단으로 최대한 줄여드리는 것입니다. 완벽 차단은 어렵다는 점도 솔직히 안내합니다.",
+      check: [
+        "바퀴벌레 — 외부 바퀴(큰 것)인지, 내부 바퀴(작은 것)인지",
+        "개미·지네·모기 출몰 빈도와 위치 (사진 받아두면 방역업체 전달에 좋음)",
+        "방충망·하수구 유입 틈새, 출입문 문지방 상태",
+      ],
+      fix: [
+        "방역업체 일정 확인 → 방문 전까지는 아떼가 받은 약을 구석구석 뿌리도록",
+        "출입문·틈새에 엔트초크(벌레 퇴치제) 도포, 하수구·방충망 유입구 점검·보수",
+        "고양이에게 먹이 주지 않도록 안내 (배설물·토사물로 개미가 몰림)",
+      ],
+      note: [
+        "⚠️ 비 온 뒤 외부 바퀴 유입이 늘어남. 손님이 가장 놀라는 부분이라 '청결 문제가 아님'을 충분히 설명하는 게 핵심.",
+        "하우스 변경은 어려움 — 대신 외부 방역·틈새 차단으로 최대한 조치.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "벌레",
+        title: "바퀴벌레가 나왔어요 / 방역 서비스 있나요?",
+        mom: "어제 바퀴벌레가 나왔는데 혹시 방역 서비스가 있을까요? 집이 더러운 것도 아닌데 자꾸 나와서 너무 놀랐어요 ㅠㅠ",
+        answer: [
+          "어머님 많이 놀라셨죠 ㅠㅠ 방역은 당연히 해드릴 수 있어요! 다만 어제 보신 바퀴는 집 안에 사는 바퀴가 아니라 외부에 살면서 유입되는 종류라, 먼저 설명을 좀 드릴게요.",
+          "우리나라에 서식하는, 집에 살면서 한 마리가 보이면 수백 마리가 있다고 하는 바퀴는 일본바퀴·독일바퀴로 작은 종류예요. 이건 집 안에 서식해서 방역으로 해결이 가능하구요. 반면 필리핀 바퀴는 미국바퀴·먹바퀴 종류로, 하수구나 외부에 살면서 사는 곳이 물에 잠기거나 먹을 것을 찾으러 내부로 들어오는 경우예요.",
+          "그래서 내부 방역을 하더라도 100% 해결이 되는 종류 자체가 아닙니다 (내부에 사는 애들이 아니기 때문에요). 외부에 살다가 비가 오거나 하면 안으로 들어오는데, 아주 작은 구멍이나 차단기 틈으로도 들어오는 애들이라 ㅠㅠ 그래서 저희가 외부 유입을 막으려고 문 하단을 막아두고 하수구 안에도 트랩을 모두 설치해둔 상황이에요. 그래도 간혹 나오기는 하지만, 늘 집 안에 서식하는 종류는 아니니 너무 걱정 마세요 ㅠㅠ",
+          "그래도 최대한 줄여드릴 수 있게, 외부에 약 잘 뿌려두고 아떼가 구석구석 약도 미리 칠해두도록 할게요! 혹시 어디에 얼마나 자주 나오는지 사진으로 남겨주시면 방역업체에 전달해서 더 꼼꼼히 봐드리겠습니다 😊",
+        ],
+        points: [
+          "한국 바퀴(일본·독일) vs 필리핀 바퀴(미국·먹바퀴)를 자세히 구분해 '청결 문제 아님'을 설명.",
+          "내부 방역으로 100% 해결이 안 되는 이유(외부 서식·틈새 유입)를 솔직하게.",
+          "문지방 설치 등 그동안의 노력과 한계를 공감(ㅠㅠ)과 함께 전달.",
+          "그래도 외부 방역·아떼 사전 도포·사진 요청으로 '최대한 줄이겠다'는 조치로 마무리.",
+        ],
+      },
+      {
+        cat: "벌레",
+        title: "개미가 너무 많이 나와요",
+        mom: "아침마다 마루랑 주방에 개미가 계속 나오네요… 서랍 열어도 개미, 노트북 열어도 개미예요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 개미 때문에 많이 불편하셨겠어요, 정말 죄송합니다. 바로 방역업체 일정 확인해서 가능한 빨리 방문드리도록 하겠습니다!",
+          "방역 오기 전까지는 아떼에게 구석구석 약을 뿌리도록 하고, 문 앞·틈새에는 엔트초크(개미 퇴치제)를 칠해둘게요. 개미는 단 것이나 부스러기를 따라오는 경우가 많아서, 음식은 밀폐해 두시면 도움이 돼요.",
+          "혹시 뒷베란다에 고양이가 오거나 하면 먹이는 주지 말아주세요~ 배설물이나 토사물 때문에 개미가 몰리는 경우가 있어서요 ㅠㅠ 빠르게 잡아드리겠습니다!",
+        ],
+        points: [
+          "공감·사과 후 방역 일정 즉시 확인.",
+          "방역 전까지의 임시 조치(약 도포, 엔트초크)를 구체적으로.",
+          "재발 방지 팁(음식 밀폐, 고양이 먹이 금지)을 함께 안내.",
+        ],
+      },
+      {
+        cat: "벌레",
+        title: "벌레 때문에 힘들어요, 집을 바꿔주실 수 있나요?",
+        mom: "저희 하우스에서 벌레가 자꾸 보이는데… 혹시 하우스를 변경하거나 어떤 조치를 해주실 수 있으실까요? 신랑도 없으니 벌레 나오는 게 너무 힘드네요 ㅜㅜ",
+        answer: [
+          "어머님 ㅠㅠ 혼자 아이 보시면서 벌레까지 나오면 정말 힘드시죠… 마음 충분히 이해돼요.",
+          "다만 하우스 변경은 현재 어려운 상황이라 ㅠㅠ 대신 저희가 할 수 있는 조치는 다 해드릴게요. 문 앞에 엔트초크(개미·벌레 퇴치제)를 칠해두고, 외부에 약도 잘 뿌려두겠습니다. 어제 비가 오면서 벌레들이 사는 곳이 잠겨 급하게 들어온 것 같기도 해요.",
+          "필리핀은 기후 특성상 외부에서 유입되는 벌레를 완전히 차단하는 데에는 한계가 있는 점 양해 부탁드리고요 ㅠㅠ 혹시 어떤 벌레가 어디에, 얼마나 자주 나오는지 알려주시면 거기 집중해서 더 꼼꼼히 막아드리겠습니다!",
+        ],
+        points: [
+          "혼자 육아 중인 상황을 먼저 공감.",
+          "하우스 변경은 어렵다는 점을 솔직히 하되, 가능한 조치를 구체적으로 약속.",
+          "기후·유입 특성상 완전 차단의 한계를 양해 구하고, 집중 조치를 위해 정보를 요청.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 아떼 & 청소 & 요리 ---------------- */
+  {
+    id: "atte", name: "아떼 · 청소 · 요리", icon: "🧹",
+    handover: {
+      intro: "아떼(Atte)는 각 하우스를 담당하는 가사도우미(헬퍼)입니다. 청소·빨래·설거지·쓰레기·밥(라이스쿠킹)이 기본 업무이고, 재료가 있으면 간단한 요리도 해드립니다. 호실마다 담당 아떼가 정해져 있으며(명단은 '연락처·요금·아떼' 탭), 아떼가 결근·조퇴하면 백업 아떼를 배치하는 것이 매니저의 일입니다. 어머님들은 '우리 집 아떼'에 대한 애착이 크셔서, 교체·변동은 꼭 미리 설명하고 양해를 구합니다.",
+      check: [
+        "호실별 아떼 배정 현황 (연락처·요금 탭의 명단 참고)",
+        "아떼 결근·조퇴 시 백업 아떼 배치 여부",
+        "기본 업무 수행: 빨래·청소·설거지·쓰레기·밥(라이스쿠킹)",
+      ],
+      fix: [
+        "아떼 부재·조퇴: 즉시 현지매니저(셀)와 백업 아떼 배치. 어머님께 시간(예: 1시부터) 안내",
+        "요리 요청: 재료가 준비되어 있어야 가능하고, 가능한 미리 말씀해 주시도록 안내 (당일 인력 부족할 수 있음)",
+        "외부 동행: 장보기에 한해 가능, 그 외 외출 동행은 불가",
+      ],
+      note: [
+        "장보기 부탁 중 아떼가 조퇴하는 등 엇갈림이 생기면, 어머님이 가장 답답해하십니다. 변동은 즉시·먼저 알려드리는 게 핵심.",
+        "'우리 집 아떼'에 대한 애착이 크십니다. 교체·백업은 충분히 설명하고 양해를 구하기.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "아떼",
+        title: "빨래를 색깔 구분 없이 같이 돌리신 것 같아요",
+        mom: "아떼가 흰 옷이랑 색깔 옷을 같이 빨아서 물이 좀 든 것 같아요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 속상하셨겠어요, 정말 죄송합니다. 바로 아떼에게 다시 안내하겠습니다.",
+          "앞으로는 흰옷·색깔옷을 꼭 구분하고, 손빨래가 필요한 건 따로 봐드리도록 전하겠습니다. 혹시 특별히 분리 세탁하거나 손빨래로 부탁하고 싶으신 옷이 있으시면 아떼에게 미리 말씀해 두시면 더 꼼꼼히 챙길 수 있어요. 다시 한번 죄송합니다 \uD83D\uDE4F",
+        ],
+        points: [
+          "사과·공감 후 아떼에게 즉시 재안내.",
+          "흰옷·색깔옷 구분, 손빨래 분리 원칙을 안내.",
+          "특별히 분리·손빨래할 옷은 미리 말씀해두시도록 안내.",
+        ],
+      },
+      {
+        cat: "아떼",
+        title: "아떼가 안 왔어요, 언제 오나요?",
+        mom: "장 보러 가야 하는데 아떼가 갑자기 안 보이네요. 다른 아떼는 언제 보내주시나요? 미리 말씀해 주셨으면 장보기를 부탁 안 했을 텐데요 🥲",
+        answer: [
+          "어머님 ㅠㅠ 정말 죄송합니다. 담당 아떼가 개인 사정으로 갑자기 조퇴를 하게 됐는데, 저희도 현지매니저에게 전달받고 바로 말씀드린다는 게 엇갈린 것 같아요. 불편하게 해드려 죄송합니다.",
+          "점심시간 이후 1시부터 다른 아떼가 바로 도움드릴 수 있도록 배치해 두겠습니다! 혹시 그 사이 급하게 필요하신 일(점심 준비 등) 있으시면 말씀해 주세요. 다른 아떼에게 바로 지시하겠습니다.",
+          "앞으로는 이런 변동이 생기면 가장 먼저 어머님께 알려드리도록 하겠습니다. 다시 한번 죄송합니다 🙏",
+        ],
+        points: [
+          "엇갈린 점을 솔직히 인정하고 사과.",
+          "백업 아떼 배치 시간을 구체적으로 안내(1시부터).",
+          "그 사이 급한 일도 챙기겠다 + 앞으로 변동은 먼저 알리겠다 약속.",
+        ],
+      },
+      {
+        cat: "아떼",
+        title: "아떼에게 ○○요리 좀 부탁해 주실 수 있나요?",
+        mom: "혹시 저희 아떼에게 어제 산 닭으로 삼계탕 끓여 놓으라고 전해주실 수 있나요?ㅠㅠ 애 아빠가 와서 신경이 쓰이네요, 이런 부탁 죄송합니다 🤣",
+        answer: [
+          "어머님~ 전혀 죄송하실 것 없어요 ㅎㅎ 네, 아떼에게 삼계탕 끓여두라고 바로 전해둘게요!",
+          "재료(닭)는 준비되어 있으시다니 바로 가능하고요, 혹시 몇 시쯤 시작하면 좋을지만 알려주시면 거기 맞춰 진행하라고 하겠습니다. 다음에도 요리 부탁하실 일 있으시면 재료만 미리 준비해 두시고 편하게 말씀 주세요 😊",
+        ],
+        points: [
+          "부탁을 부담스럽지 않게 받아주는 따뜻한 톤.",
+          "재료 준비 여부 확인 + 시작 시간만 조율.",
+          "다음을 위해 '재료 사전 준비 + 미리 요청'을 자연스럽게 안내.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 식사 & 식단 ---------------- */
+  {
+    id: "meal", name: "식사 & 식단", icon: "🍱",
+    handover: {
+      intro: "패키지 고객에게는 식사가 제공됩니다(식단표 비치). 가장 자주 생기는 일은 '외출하는데 식사를 어떻게 하느냐'입니다. 취소하지 않으면 문 앞에 두고 가는데, 외출 일정을 들으면 식사 취소 여부를 먼저 여쭤보는 게 좋습니다(음식 낭비 방지). 도시락은 패키지 상품이라 개별 신청은 안 됩니다.",
+      check: [
+        "패키지 식사 제공 여부 (식단표 비치 확인)",
+        "외출·레스토랑 일정 시 식사 취소 의사",
+        "보냉백 요청, 아침밥 배달 시간",
+      ],
+      fix: [
+        "외출(레스토랑 등) 시: 따로 취소 안 하면 문 앞에 두고 감 → 드시지 못하면 미리 취소 안내",
+        "도시락은 올인원 패키지 상품 — 개별 신청 불가",
+        "아침밥 지연 문의 시: 배달 순서상 늦어졌는지 바로 확인 (누락 아닌 경우 안심시키기)",
+      ],
+      note: [
+        "식사 취소는 '미리'가 핵심. 외출 일정 들으면 식사 취소 여부를 먼저 여쭤보면 좋습니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "식사",
+        title: "아침(저녁)이 아직 안 왔어요",
+        mom: "안녕하세요 저희 아직 아침 식사가 안 온 것 같은데요? 다른 집은 받았나 해서요.",
+        answer: [
+          "어머님 확인해볼게요! 잠시만요 \uD83D\uDE4F",
+          "배달이 순서대로 도는데, 준비가 조금 늦어진 집은 뒤이어 가는 경우가 있어요. 누락은 아닌지 바로 확인해서 곧 도착하도록 챙기겠습니다. 혹시 시간이 더 걸리면 바로 다시 안내드릴게요!",
+        ],
+        points: [
+          "즉시 확인 의지를 먼저 표현.",
+          "배달 순서상 지연인지 누락인지 바로 확인(누락 아니면 안심시키기).",
+          "지연되면 다시 안내하겠다고 약속.",
+        ],
+      },
+      {
+        cat: "식사",
+        title: "○○ 레스토랑 예약 좀 해주실 수 있나요?",
+        mom: "오늘 저녁에 란타우 가보려고 하는데 혹시 예약 좀 대신 해주실 수 있을까요?",
+        answer: [
+          "어머님~ 네! 제가 '드림하우스' 이름으로 예약 도와드릴게요. 인원수랑 원하시는 시간만 알려주시겠어요?",
+          "예약되면 바로 확인해서 알려드릴게요. 가시는 길 차량이 필요하시면 그것도 같이 봐드릴 수 있으니 말씀 주세요 \uD83D\uDE0A",
+        ],
+        points: [
+          "레스토랑 예약 대행 가능('드림하우스' 이름으로).",
+          "인원·시간만 받아 처리하고, 예약 확인 후 회신.",
+          "이동 수단까지 함께 챙겨 제안.",
+        ],
+      },
+      {
+        cat: "식사",
+        title: "저희 오늘 레스토랑 가는데, 저녁은 그냥 두고 가시죠?",
+        mom: "저희가 오늘 레스토랑 가는데 저녁은 그냥 문 앞에 두고 가시겠죠?",
+        answer: [
+          "어머님~ 네, 따로 취소하지 않으시면 평소처럼 문 앞에 두고 가요! 그런데 레스토랑에서 식사까지 하고 오시면 시간이 좀 걸리실 텐데, 그동안 문 앞에 둔 저녁이 상할 수도 있어서요 ㅠㅠ 음식도 아깝구요. 혹시 저녁 식사는 취소해 드릴까요?",
+          "원하시면 바로 취소해 두겠습니다! 다음에도 외출 일정 있으실 때 미리 말씀 주시면 그때그때 맞춰 드릴게요 😊",
+        ],
+        points: [
+          "기본 운영(취소 안 하면 문 앞에 둠)을 안내.",
+          "외출이 길어지면 문 앞에 둔 음식이 상할 수 있으니, '식사 취소 여부'를 먼저 여쭤본다(음식 낭비·위생 방지).",
+          "다음을 위해 미리 안내 부탁.",
+        ],
+      },
+      {
+        cat: "식사",
+        title: "저희도 도시락 신청할 수 있나요?",
+        mom: "안녕하세요~! 혹시 저희도 도시락 신청할 수 있나요?",
+        answer: [
+          "안녕하세요 어머님~^^ 도시락은 올인원 패키지에 포함된 상품이라, 따로 개별 신청은 어려워요 🥺 이 부분 양해 부탁드려요!",
+          "혹시 식사 관련해서 더 궁금하신 점 있으시면 편하게 여쭤봐 주세요. 제가 도와드릴 수 있는 부분은 최대한 챙겨드리겠습니다 😊",
+        ],
+        points: [
+          "도시락=패키지 상품, 개별 신청 불가를 부드럽게 안내.",
+          "거절로 끝내지 않고 다른 도움을 열어둔다.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 비품 & 대여 ---------------- */
+  {
+    id: "supply", name: "비품 & 대여", icon: "🧴",
+    handover: {
+      intro: "어떤 물품을 회사가 제공하고 어떤 게 개인 구매인지 구분하는 것이 중요합니다. 휴지·비누는 개인 구매 품목으로, 처음 입실하실 때 웰컴 패키지로만 드리고 이후 보충은 직접 구매하셔야 합니다. 반면 세탁세제·빨래세제·설거지세제는 회사가 계속 제공하고, 정수기 물(갤런워터)은 무한 제공합니다(아떼가 채움). 수건도 회사가 제공하지만 날씨·해운 사정으로 부족할 때가 있습니다.",
+      check: [
+        "회사 제공품 보충 상태 — 세탁·빨래·설거지 세제, 수건 (날씨·해운 사정으로 수건이 부족할 때가 있음)",
+        "정수기 갤런워터 — 무한 제공, 아떼가 떨어지지 않게 채움",
+        "휴지·비누는 개인 구매 품목 (처음 웰컴 패키지로만 제공) — 추가 요청 시 안내 필요",
+        "대여 가능 물품 vs 보유하지 않은 물품 구분",
+      ],
+      fix: [
+        "휴지·비누 추가 요청: 개인 구매 품목임을 부드럽게 안내(처음 웰컴 패키지로만 제공) + 마트·H마트 셔틀 위치 안내",
+        "세제(세탁·빨래·설거지)·수건 등 회사 제공품은 떨어지면 보충. 수건은 센터 재고 확인 후, 부족하면 우선 쓸 것 먼저 전달하고 다음 날 보충",
+        "정수기 물통 무거워 못 갈 때: 인근 헬퍼가 도와드림",
+        "멀티탭은 드림센터(오피스)에 보유 — 대여 가능, 바로 챙겨드림",
+        "에어컨 바람막이·여분 매트 등은 상시 보유 물품이 아님 — 없을 땐 솔직히 안내",
+      ],
+      note: [
+        "💡 회사 제공: 세탁·빨래·설거지 세제 / 수건 / 정수기 물(무한). | 개인 구매(처음 웰컴 패키지로만 제공): 휴지·비누.",
+        "없는 물품은 '없다'고 분명히 안내하되, 가능한 대안을 함께 제시.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "비품",
+        title: "정수기 물이 다 떨어졌어요",
+        mom: "정수기 생수가 다 떨어졌는데 무거워서 제가 갈기가 힘드네요 ㅠㅠ",
+        answer: [
+          "어머님~ 정수기 물은 무한으로 제공되니 떨어지면 언제든 말씀 주세요! 물통이 무거우셔서 갈기 힘드시죠, 바로 헬퍼(아떼) 보내서 갈아드리겠습니다.",
+          "앞으로도 떨어질 때쯤 미리 채워두도록 아떼에게 전해둘게요 \uD83D\uDE0A",
+        ],
+        points: [
+          "정수기 물은 무한 제공 — 부담 없이 요청하시도록 안내.",
+          "무거운 물통은 아떼가 갈아드림.",
+          "미리 채워두도록 아떼에게 전달.",
+        ],
+      },
+      {
+        cat: "비품",
+        title: "휴지(또는 비누)가 다 떨어졌어요, 더 주세요",
+        mom: "안녕하세요~ 화장지가 다 떨어졌는데 좀 더 가져다주실 수 있나요?",
+        answer: [
+          "안녕하세요 어머님^^ 안내가 조금 헷갈리실 수 있는데, 휴지랑 비누는 처음 입실하실 때 웰컴 패키지로 챙겨드리고 그 이후로는 개인적으로 구매해서 쓰시는 품목이에요! 한국과 조금 달라서 미리 안내가 부족했다면 양해 부탁드려요 ㅠㅠ",
+          "마트가 단지 안에도 있고 H마트 셔틀도 있어서 어렵지 않게 구하실 수 있어요. 위치 안내가 필요하시면 말씀 주세요! 참고로 세탁·빨래·설거지 세제는 저희가 계속 채워드리고 정수기 물도 무한으로 드리니, 그건 떨어지면 편하게 말씀 주세요 😊",
+        ],
+        points: [
+          "휴지·비누는 개인 구매 품목(처음 웰컴 패키지로만 제공)임을 부드럽게 안내.",
+          "마트 위치·H마트 셔틀 등 구매 방법을 함께 알려준다.",
+          "반대로 회사 제공품(세제류·정수기 물)은 언제든 채워드린다고 안내해 균형을 맞춘다.",
+        ],
+      },
+      {
+        cat: "비품",
+        title: "수건이 계속 부족해요",
+        mom: "저희 수건이 계속 부족해요. 지금 쓸 수 있는 게 하나도 없는데 빨래 널어진 것도 없어요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 불편하셨겠어요, 우선 지금 쓰실 수건 바로 가져다드리겠습니다!",
+          "요 며칠 날이 흐려서 빨래가 잘 안 말라 전반적으로 수건이 부족하고, 센터 수건도 해운 지연으로 재고가 빠듯한 상황이에요 ㅠㅠ 그래도 최대한 수거해서 내일 넉넉히 채워드리겠습니다. 아떼에게도 수건 회전 잘 되도록 한번 더 챙기라고 전하겠습니다!",
+        ],
+        points: [
+          "우선 '지금 쓸 것'을 바로 전달(급한 불 먼저).",
+          "부족 원인(날씨·해운 지연)을 솔직히 설명.",
+          "내일 보충 + 아떼 재확인까지 약속.",
+        ],
+      },
+      {
+        cat: "비품",
+        title: "멀티탭 좀 빌릴 수 있나요?",
+        mom: "혹시 멀티탭 1구짜리라도 빌릴 수 있나요? 메인방 에어컨 바람을 옆방에서 끌어오려는데 선이 짧아서요.",
+        answer: [
+          "어머님~ 네! 멀티탭은 드림센터(오피스)에 보유하고 있어서 대여해 가실 수 있어요. 바로 챙겨드릴게요!",
+          "그런데 말씀 들어보니 메인방 에어컨 바람을 옆방으로 끌어오시려는 것 같은데, 혹시 메인 에어컨이 시원하지 않아서 그러신 거라면 에어컨 자체를 점검해드리는 게 더 나을 수도 있어요. 멀티탭 가져다드리면서 에어컨도 같이 한번 봐드릴게요 😊",
+        ],
+        points: [
+          "멀티탭은 드림센터(오피스)에 보유 — 대여 가능하다고 바로 안내.",
+          "요청 뒤의 진짜 이유(에어컨 성능)를 짚어 더 나은 해결로 연결.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 정산 & 비용 ---------------- */
+  {
+    id: "settle", name: "정산 & 비용", icon: "🧾",
+    handover: {
+      intro: "체크아웃 때 전기세와 보증금을 정산합니다. 전기미터는 방문할 때마다 기록해두고, 정산은 반드시 셀과 교차확인(1차 작성 → 2차 확인 → 최종)해서 오류·누락을 막습니다. 비용이 걸린 일이라 임의 판단보다 보고·승인이 원칙입니다.",
+      check: [
+        "전기미터 수치 (매 방문 기록 → 체크아웃 정산에 사용)",
+        "보증금 — 집(채)당 기준: 주 2,000페소, 4주 8,000페소",
+        "추가 스테이·추가 픽업·파손 등 차감/추가 항목",
+      ],
+      fix: [
+        "중간 전기체크 요청 시 즉시 측정 후 금액 안내",
+        "체크아웃 정산: 전기세 + 파손비용 차감 후 환불 또는 추가 징수. 손글씨보다 영수증 양식이 신뢰도 ↑",
+        "정산은 셀과 크로스체크(1차 작성 → 2차 확인 → 최종)로 오류·누락 방지",
+      ],
+      note: [
+        "💰 보증금: 1채 기준 주 2,000 / 4주 8,000페소 (아이 수가 아니라 '집'당)",
+        "추가 인원·픽업 비용은 체크인 디테일에 미리 기재해 누락 방지.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "정산",
+        title: "전기세가 지금까지 얼마나 나왔는지 미리 알 수 있을까요?",
+        mom: "체크아웃 전에 전기세가 대략 얼마나 나왔는지 미리 알 수 있을까요? 현금을 준비해두려고요.",
+        answer: [
+          "어머님~ 네, 미리 확인해 드릴게요! 제가 전기 미터를 보고 지금까지 사용량 기준으로 대략 금액 알려드리겠습니다(사용량 1단위당 14페소예요).",
+          "최종 금액은 체크아웃 당일 아침 미터로 정산되어 조금 달라질 수 있는데, 미리 가늠하시기엔 충분할 거예요. 현금이나 원화 모두 가능하니 편하신 쪽으로 준비하셔도 됩니다 \uD83D\uDE0A",
+        ],
+        points: [
+          "미터 확인해 중간 사용량 기준 예상 금액 안내(1단위 14페소).",
+          "최종은 체크아웃 아침 정산이라 달라질 수 있음을 안내.",
+          "현금·원화 모두 가능함을 알려준다.",
+        ],
+      },
+      {
+        cat: "정산",
+        title: "오늘 퇴실인데 정산하러 오시나요? (시간 조정)",
+        mom: "안녕하세요! 오늘 퇴실인데요~ 전기세 정산이랑 유심 교체 해주시러 오시나요? 그런데 저희 지금 나갈 거라 3시엔 어렵고, 혹시 7시쯤 오실 수 있나요?",
+        answer: [
+          "안녕하세요 어머님~^^ 네, 체크아웃 정산하러 방문드릴게요! 시간은 어머님 편하신 7시로 맞춰서 가겠습니다.",
+          "전기세는 그때 미터 확인해서 정산하고, 유심은 드랍하실 때 기사에게 주시면 돼요(교체용 핀은 기사가 가지고 있어요). 외출 잘 다녀오시고, 7시에 뵙겠습니다 😊",
+        ],
+        points: [
+          "어머님 일정에 맞춰 방문 시간 유연하게 조정.",
+          "정산 항목(전기세) + 유심 회수 방법(기사 전달, 핀은 기사)까지 미리 안내.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 유심 & 비자 ---------------- */
+  {
+    id: "sim", name: "유심 & 비자", icon: "📱",
+    handover: {
+      intro: "투숙 기간 동안 한국 유심 대신 필리핀 유심을 빌려드립니다. 가장 중요한 건 '체크아웃 때 반드시 회수'하는 것입니다(미반납 사례가 많아 예외 없음). 비자 연장은 여권을 다루는 일이라 보관·전달을 일관되게 해야 합니다.",
+      check: [
+        "유심 — 체크아웃 시 즉시 회수 (미반납 사례 많음, 예외 없음)",
+        "유심 전달/회수 시 '유심' 메모를 붙여 혼동 방지 (기사 전달 시 특히)",
+        "비자 연장 — 여권 보관·전달 일관성 (분실·도난 위험 주의)",
+      ],
+      fix: [
+        "유심 교체용 핀은 기사가 가지고 있음 → 어머님이 핀이 없다고 하시면 안심시키기",
+        "유심 추가 사용 요청: 체크아웃 즉시 회수 원칙. 미반납 사례가 많아 규정을 동일하게 적용",
+        "비자 연장: 인상된 금액으로 안내(2026년 2월 이후 스티커 100페소 추가, 총 4,160페소)",
+      ],
+      note: [
+        "💰 비자 연장 총 4,160페소 (스티커 비용 100페소 인상분 포함)",
+        "여권은 잠금 보관함에 보관하고, 전달 절차를 일관되게 — 책상 위 방치 금지.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "비자",
+        title: "비자 연장 비용이 듣던 거랑 달라요",
+        mom: "비자 연장 비용이 전에 안내받은 거랑 영수증 금액이 다른데요? 왜 더 나왔어요?",
+        answer: [
+          "어머님~ 확인해 드릴게요! 2026년 2월부터 비자 스티커 비용이 100페소 추가되어 총 4,160페소가 되었어요. 영수증 금액과 정확히 맞게 안내드린 거라 오해 없으셨으면 합니다 \uD83D\uDE4F",
+          "항목별로 자세히 보고 싶으시면 영수증 내역 그대로 보여드릴게요. 더 궁금하신 점 있으시면 편하게 말씀 주세요 \uD83D\uDE0A",
+        ],
+        points: [
+          "인상 시점·사유(2026년 2월, 스티커 100페소 추가)를 정확히 설명.",
+          "영수증 금액과 안내 금액이 일치함을 강조.",
+          "원하면 항목별 상세 내역 제공.",
+        ],
+      },
+      {
+        cat: "유심",
+        title: "유심 교체할 핀(침)이 없는데 어떻게 하나요?",
+        mom: "유심 교체할 때 뾰족한 침이 없는데 어떻게 교체해야 하나요? 기사님이 가져오시는지요^^",
+        answer: [
+          "어머님~ 걱정 마세요! 유심 교체용 핀은 기사가 가지고 있어요 😊 드랍하실 때 기사가 핀으로 교체해 드리고, 한국 유심으로 바꿔드릴 거예요.",
+          "혹시 그 전에 더 궁금하신 점 있으시면 편하게 말씀 주세요!",
+        ],
+        points: [
+          "핀은 기사가 보유 — 어머님이 따로 준비 안 하셔도 됨을 안심시킨다.",
+          "교체 시점(드랍 시)을 명확히 안내.",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 안전 & 긴급 ---------------- */
+  {
+    id: "safety", name: "안전 & 긴급", icon: "🚨",
+    handover: {
+      intro: "정전·태풍·단수처럼 동네 전체에 영향을 주는 사안과, 아픈 아이·분실 같은 개별 긴급 상황을 다룹니다. 긴급할수록 '먼저, 자주' 연락하는 것이 어머님 신뢰를 크게 높입니다. 특히 첫 방문 가정은 병원·응급 상황에서 많이 불안해하시므로, 절차 안내와 동행 지원이 큰 도움이 됩니다.",
+      check: [
+        "정전·태풍·단수 등 빌리지 전체 영향 사안 — 발생 시 즉시 공지",
+        "아픈 아이·병원 필요 여부 (특히 첫 방문 가정)",
+        "분실·도난 — 경찰 리포트 필요 여부 (보험 청구용)",
+      ],
+      fix: [
+        "정전/태풍: 안전 안내 + 외출 자제 요청, 전력회사 확인 후 복구 시점 공유. 헬퍼 근무 어려운 경우 양해 요청",
+        "병원: 첫 방문 가정은 병원 이용 절차·위치 안내, 필요 시 동행 지원. 응급 시 즉시 보고",
+        "분실(휴대폰 등): 위치추적 안내, 보험 청구엔 경찰 리포트가 필요하므로 본인 신고 안내(경찰서 위치 안내)",
+        "⚠️ 정전 시 어머님이 채널을 나가시면 메시지를 못 보냄 → 나가지 마시도록 안내",
+      ],
+      note: [
+        "긴급 상황일수록 '먼저, 자주' 연락하는 것이 신뢰를 크게 높입니다. 늦은 시간이라도 도착 확인 등은 알려드리면 어머님이 안심하십니다.",
+        "병원·의료 대응은 신규 매니저의 신규 담당 영역 — 자주 가는 병원·보험 절차를 정리해두면 좋습니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "안전",
+        title: "갑자기 정전이에요, 언제 들어오나요?",
+        mom: "갑자기 정전이에요! 너무 더운 날에 ㅠㅠ 언제 들어와요? 불안해요.",
+        answer: [
+          "어머님 갑작스러운 정전이라 많이 놀라고 더우셨죠 ㅠㅠ 지금 베이스워터뿐 아니라 인근 라푸라푸 지역도 함께 정전된 상황이에요. 저희가 전력회사에 확인 중이고, 복구 시점이 파악되면 바로 알려드리겠습니다!",
+          "한 가지만 부탁드릴게요 — 채널에서 '나가기'를 누르시면 저희가 메시지를 보내드릴 수가 없어요 ㅠㅠ 그대로 두시면 전기 들어오는 대로 바로 연락드릴게요. 그리고 안전을 위해 복구 전까지는 가급적 외출은 삼가 주세요. 빠르게 확인해서 안내드리겠습니다!",
+        ],
+        points: [
+          "광역 정전임을 알려 '우리 집만의 문제'라는 불안을 줄인다.",
+          "전력회사 확인 + 복구 시 즉시 공유 약속.",
+          "채널 '나가기' 주의 + 외출 자제 안내(안전).",
+        ],
+      },
+      {
+        cat: "안전",
+        title: "아이가 밤새 아파서 아침 일찍 병원에 가려고 해요",
+        mom: "딸이 밤새 아팠어서 ㅠㅠ 대한병원 오픈런하려고 해요. 저희 집 아떼한테 2층 침대방 먼저 청소 부탁한다고 전달해 주세요. 집에 가면 애기 쉬어야 할 것 같아서요 ㅠㅠ",
+        answer: [
+          "어머님 ㅠㅠ 아이가 밤새 아팠다니… 얼마나 마음 졸이셨어요. 네, 아떼에게 2층 침대방 먼저 청소해두라고 바로 전달하겠습니다! 병원 다녀와서 아이가 바로 편히 쉴 수 있게 준비해 둘게요.",
+          "병원 다녀오신 뒤 약 먹고 푹 자면 금방 나아지길 바랄게요. 혹시 병원 가시는 길이나 통역 등 도움 필요하시면 언제든 말씀 주세요. 아이 얼른 회복하길 진심으로 바라겠습니다 🙏",
+        ],
+        points: [
+          "아픈 아이에 대한 깊은 공감으로 시작.",
+          "요청(방 청소)을 즉시 처리 약속.",
+          "병원 길·통역 등 추가 지원을 먼저 제안(첫 방문 가정 배려).",
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 규정 & 안내 ---------------- */
+  {
+    id: "rule", name: "규정 & 채널 안내", icon: "📌",
+    handover: {
+      intro: "이 카카오톡 채널은 '투숙 중 상담' 전용입니다. 재예약·견적·도시락 개별신청 같은 건 아카데미로 안내합니다. 또 외부인(종교단체·영업)이 무단 방문하는 경우가 있어, 어머님께 '오피스 허락 없이 외부인과 접촉하지 마시라'고 안내하고 즉시 보고받습니다.",
+      check: [
+        "투숙자 채널은 '투숙 중 상담' 전용 — 재예약·견적은 아카데미로 안내",
+        "상담 운영시간 외 문의 (월~토 8~5시, 긴급은 전화)",
+        "외부인(종교단체 등) 무단 방문 여부",
+      ],
+      fix: [
+        "재예약·견적·도시락 개별신청 등은 아카데미로 안내 (투숙 채널은 투숙 상담만)",
+        "운영시간 외 문의: 자동안내가 나가고, 다음 운영시간에 친절히 답변",
+        "외부인 무단 방문: 오피스 허락 없이 외부인 접촉·집 구경 금지 안내 + 오피스·빌리지 관리사무소 보고",
+      ],
+      note: [
+        "☎ 긴급 상담 전화 09292932991 / 상담시간 월~토 8:00~17:00",
+        "거절·안내 시에도 '다음 안내처'를 알려드리면 친절하게 마무리됩니다.",
+      ],
+    },
+    scenarios: [
+      {
+        cat: "규정",
+        title: "재방문(재예약) 견적 받아보고 싶어요",
+        mom: "있는 동안 너무 좋아서요! 혹시 11월에 빈 집 있을까요? 있으면 재방문 견적 받아보고 싶어요!!",
+        answer: [
+          "어머님 ㅠㅠ 너무 감사한 말씀이에요! 다시 찾아주신다니 정말 기쁩니다 ❤",
+          "다만 이 채널은 투숙 중 상담 전용이라, 재예약·견적 문의는 아카데미 쪽으로 해주시면 더 정확하고 빠르게 안내받으실 수 있어요! 제가 연결해 드릴 수도 있으니 편하신 대로 말씀 주세요. 꼭 다시 뵙길 바라겠습니다 😊",
+        ],
+        points: [
+          "재방문 의사에 대한 감사·반가움을 충분히 표현.",
+          "투숙 채널 vs 재예약(아카데미) 창구를 구분해 안내.",
+          "거절이 아니라 '더 정확한 곳으로' 연결하는 느낌으로.",
+        ],
+      },
+      {
+        cat: "규정",
+        title: "(상담시간 외) 한국분이 찾아와 집을 보여줬는데 괜찮나요?",
+        mom: "아까 한국분이 찾아와서 집 구경시켜 달라길래 보여줬는데, 괜찮은 거죠?",
+        answer: [
+          "어머님, 알려주셔서 정말 감사합니다! 그런데 앞으로는 오피스 허락 없이 외부인에게 집을 보여주시거나 접촉하지 않으셨으면 해요.",
+          "종교단체나 영업 목적으로 찾아오는 경우가 종종 있어서, 어머님들 안전과 사생활 보호를 위해 그렇습니다 🙏 비슷한 분이 또 오시면 응대하지 마시고 바로 저희에게 알려 주세요. 저희가 확인하고 빌리지 관리사무소에도 공유해두겠습니다!",
+        ],
+        points: [
+          "먼저 알려주신 것에 감사 → 행동 지침 안내.",
+          "과거 종교단체·영업 방문 사례가 있어 '안전·사생활' 차원임을 설명.",
+          "발견 즉시 오피스 보고 + 빌리지 관리사무소 공유.",
+        ],
+      },
+    ],
+  },
+];
+
+/* ===== 복붙용 안내문 템플릿 (실제 운영 문구 기반) ===== */
+const TEMPLATES = [
+  {
+    title: "정전 / 태풍 안내",
+    when: "광역 정전·태풍 발생 시 전체 공지",
+    body: "안녕하세요. 이른 시간에 죄송합니다. 현재 태풍의 영향으로 막탄 대부분 지역에 정전이 발생한 것으로 확인되었습니다. 현재 전력회사 측의 업데이트를 기다리고 있는 상황입니다. 혹시 모를 안전사고에 대비해 외출을 삼가 주세요. 복구되는 대로 다시 안내드리겠습니다. 너그러운 양해 부탁드립니다. 감사합니다 🙏",
+  },
+  {
+    title: "단수 / 수압 저하 안내",
+    when: "MCWD 공급 중단·수압 저하 시",
+    body: "안녕하세요. 지속된 물 공급 부족 현상으로 인해 오늘 오전 베이스워터 수도 담당(MSY)에 직접 방문하여 상황을 확인하였습니다. 베이스워터는 지하 대형 물탱크에 물을 저장한 뒤 펌프로 각 세대에 공급하는 중앙급수 방식이며, MCWD(수도국)와 지하수(Deep Well) 두 수원을 사용합니다. 현재 배관 손상으로 MCWD 공급이 중단되어 지하수만으로 공급 중이라 특히 2층 수압이 낮게 느껴질 수 있습니다. 불편을 드려 죄송하며, 정상화될 때까지 조금만 양해 부탁드립니다 🙏",
+  },
+  {
+    title: "인터넷 지연 안내",
+    when: "인터넷 속도 저하·끊김 시",
+    body: "📢 안내드립니다. 최근 인터넷 속도가 느려지는 현상이 있어 인터넷 회사에 직접 방문하여 확인한 결과, 메인 허브 정전으로 전체 지역의 연결 속도가 떨어져 있는 상태라고 안내받았습니다. 현재 담당 팀에서 복구 작업 중입니다. 이용에 불편을 드려 죄송하며, 저희도 지속적으로 확인·수리 촉구하여 빠르게 안정적인 서비스를 제공해드리도록 하겠습니다. 감사합니다.",
+  },
+  {
+    title: "공휴일 휴무 안내",
+    when: "필리핀 공휴일 전날 공지",
+    body: "안녕하세요, 드림아카데미입니다 😊 내일 ○월 ○일(○)은 필리핀 공휴일로 아카데미·드림센터(헬퍼)·셔틀 서비스가 모두 휴무입니다. 이용에 불편을 드려 죄송하며 너그러운 양해 부탁드립니다 🙏 ○월 ○일(○)에 더 밝은 모습으로 다시 인사드리겠습니다! ※ 패키지 식사는 동일하게 제공됩니다. 다만 헬퍼가 없는 관계로, 외출 일정이 있으신 경우 식사는 미리 취소 부탁드립니다 😊",
+  },
+  {
+    title: "수영장 / 놀이터 임시 중단 안내",
+    when: "시설 점검·안전 조치 시",
+    body: "📢 시설 임시 운영 중단 안내. 안녕하세요. 베이스워터 빌리지 관리 측의 안내에 따라 점검 및 유지보수 작업으로 인해 해당 시설 이용이 잠시 중단됩니다. 더 나은 환경을 위한 조치이오니 너그러운 양해 부탁드립니다. 재개방 시 현장 확인 후 다시 안내드리겠습니다. 이용에 불편을 드려 죄송합니다. 감사합니다.",
+  },
+  {
+    title: "상담 운영시간 안내",
+    when: "운영시간 외 문의 시 (자동)",
+    body: "드림하우스 투숙자 전용 상담채널입니다! ✔️상담요일: 월요일~토요일 ✔️상담시간: 8시~5시 🔥긴급상담은 전화 부탁드립니다🔥 ☎ 09292932991",
+  },
+];
+
+/* ===== 연락처 · 요금 ===== */
+const CONTACTS = [
+  ["수리기사 Jerry(제리)", "방충망·전등·일반 수리, 구매 심부름 가능 (회사 소속) — 단, 에어컨은 못 봄"],
+  ["에어컨 기사 Gari(가리)", "에어컨 냉방·냄새·고장 점검 및 수리"],
+  ["드라이버", "Bryan · Leo · Marco · ED (셔틀·픽업·드랍·드림카)"],
+  ["현지매니저 (셀/Cell)", "아떼·드라이버 총괄, 현장 조율"],
+  ["어머님 문의 채널", "카카오톡 '행복한 드림하우스' (투숙자 전용 상담)"],
+  ["긴급 상담 전화", "☎ 09292932991 / 상담시간 월~토 8:00~17:00"],
+  ["트라이시클 (단거리 이동)", "09632751817 / 09632751818 — \"B17L5, 트라이시클 플리즈\""],
+  ["재예약·견적", "아카데미로 안내 (투숙 채널은 투숙 상담 전용)"],
+];
+
+const FEES = [
+  ["보증금", "1채 기준 주 2,000페소 / 4주 8,000페소 (집당, 아이 수 아님)"],
+  ["전기요금", "사용량 1단위 × 14페소 (체크인·체크아웃 시 미터 확인)"],
+  ["추가 공항 드랍", "800페소"],
+  ["추가 픽업", "1,000페소"],
+  ["드림카", "⚠️ 현재 유가 인상으로 운영 중단 (재개 시: 시간제 2시간 1,000+시간당 350 / 픽드랍 600~)"],
+  ["비자 연장", "총 4,160페소 (스티커 100페소 인상분 포함)"],
+  ["도어락 기본 비밀번호", "123456# (체크인 시 변경)"],
+  ["정수기 갤런워터", "무한 제공 (아떼가 채움)"],
+  ["셔틀", "패키지 전용 무료 / H마트 월·수·금 / 씨사이드 편도"],
+];
+
+const ATTES = [
+  ["16-19","Marites"],["17-4","Antoneth"],["17-5","Mam Cell (오피스)"],
+  ["17-7","Sheila"],["17-8","Margie"],["17-9","Lydia"],["17-10","Chona"],
+  ["17-11","Jasmin"],["17-12","Anjeline"],["17-13","Jerra"],["17-14","Jennifer"],
+  ["17-15","Maureen"],["17-16","Jocelyn"],["17-17","Roda"],["17-18","Joan"],
+  ["13-10","Lyn (스태프)"],["20-1","Marlyn (스태프)"],["20-21","Bebe (스태프)"],
+];
+
+/* ===== 체크인/아웃 ===== */
+const CHECKIN = [
+  "위치 안내 — 게이트 3곳, 오피스(대여물품·셔틀 탑승), 수영장·놀이터·마트",
+  "수영장 이용 안내 — 수영모 필수 / 가드가 어느 집이냐 물으면 주소 알려주기",
+  "도어락 비밀번호 변경 안내 + 에어컨 켜서 냉방 22도 세팅 확인",
+  "와이파이 이름·비밀번호 안내 (객실별로 다름)",
+  "헬퍼(아떼) 근무시간(8~17시, 점심 12~13시)·가능(청소·빨래·간단 요리·마트 동행)·불가(아이 돌봄·수영장 케어·외출 동행) 안내",
+  "전기요금 계산 방법 안내 — 사용량 × 14페소 / 다음날 아침 미터 확인",
+  "상담 가능 시간(월~토 8~18시)·셔틀 마감(전날 16:50)·긴급 연락처(09292932991) 안내",
+  "대여물품 안내(구명조끼·킥보드·튜브·추가 그릇·멀티탭) + 분실·파손 시 비용 청구 주의",
+  "변기에 휴지 절대 넣지 말 것 강조 (아이에게도 전달)",
+  "흡연 안내 — 실내·베란다·복도 전면 금연(위반 시 즉시 퇴실·환불 불가) / 주차장 흡연 구역",
+  "정수기 생수 무제한(헬퍼가 채움) + 절약 사용 요청",
+  "방충망 문은 잠그지 말고 열어두기 (아떼가 열쇠로 입실)",
+  "방 열쇠는 거실 보관 / 아이들이 도어락 장난치지 않도록 안내",
+  "휴지·비누는 웰컴 패키지로만 제공(이후 개인 구매) / 세제류는 회사 제공 안내",
+  "트라이시클 이용 안내 (09632751817 / 09632751818)",
+  "유심 전달·확인 (기사 전달 시 유심 메모 부착)",
+  "셔틀/에프터스쿨 신청 방법 안내 (전날 16:50 마감, 월요일분 금요일)",
+  "식단표·에프터스쿨·필드트립 일정표 비치 확인",
+  "환영 선물(인디언 망고+소금) 전달",
+  "벽 안내문 꼭 읽어달라고 당부 + 안내책자 안내",
+  "긴급 연락처 안내",
+];
+const CHECKOUT = [
+  "전기미터 최종 확인 → 전기세 정산",
+  "유심 반드시 회수 (예외 없음 — 미반납 사례 많음)",
+  "분실물·파손 물품 확인",
+  "보증금 정산 (전기세 + 파손비용 차감 후 환불/추가 징수)",
+  "아떼 체크아웃 후 출입 금지 재전달",
+];
+
+/* ===== 사례 ===== */
+const CASES = [
+  ["에어컨", "며칠째 반복 고장 (안 시원·꺼짐·물·냄새)", "테크니션 보드·카파시터 교체 → 끝내 신품 교체, 마사지 보상"],
+  ["수도", "태풍 후 단수·2층 수압 급감", "빌리지 중앙급수(MCWD 중단→지하수) 상황 설명, 양해 요청"],
+  ["벌레", "재방문 손님 집에서 바퀴 잇따라 출몰", "외부 바퀴 특성 설명 + 외부 방역 + 틈새 점검"],
+  ["벌레", "개미 떼로 아이가 물림", "방역업체 강하게 재방역, 엔트초크 도포, 고양이 먹이 주의 안내"],
+  ["아떼", "장보기 부탁 중 아떼 조퇴로 엇갈림", "백업 아떼 1시 배치, 변동 즉시 안내 원칙 재확립"],
+  ["셔틀", "당일·마감 후 신청, 씨사이드 복귀 차 문의", "기사 스케줄 사정 설명, 편도 안내 + 그랩 대안"],
+  ["안전", "갑작스러운 정전·태풍", "광역 상황 안내, 외출 자제·채널 나가기 주의, 복구 시 즉시 공유"],
+  ["안전", "아이 휴대폰 분실", "위치추적 안내, 보험용 경찰 리포트 본인 신고 안내(경찰서 위치)"],
+  ["정산", "체크아웃 정산·유심 회수 시간 조정", "어머님 일정(7시)에 맞춰 방문, 유심은 드랍 시 기사 회수"],
+  ["비품", "날씨·해운 지연으로 수건 부족", "쓸 것 먼저 전달, 다음 날 보충, 아떼 회전 재확인"],
+];
+
+/* ===== 개선 과제 (전임 매니저 보고서) ===== */
+const IMPROVE = [
+  "체크인 직전 최종 점검 절차 신설 (입실 직전 벌레·냄새·청결 재점검)",
+  "침구류(이불) 정기 점검·교체 기준 마련",
+  "TV·OTT 계정 체크인 전 로그아웃·삭제 필수화",
+  "안내서 개선 (코팅·링바인더, 목차·페이지번호, 주소·게이트 운영시간 추가, 오탈자 교정)",
+  "한국인 매니저 근무 기준(시간·장소·대응범위) 명확화",
+  "오피스 보안 (여권 잠금보관, 개인정보 이면지 금지, 노후 PC 교체·백업, 물품 전달 확인 체계)",
+  "직원(드라이버·정비공·아떼) 휴식·대기 공간 마련",
+  "웰컴키트에 생수 포함 (새벽 도착·물갈이 우려 대응)",
+  "사진 공유 개인정보 보호 (개인 한정 제공 / 동의 절차 강화)",
+  "CCTV 설치 검토 (근태·분쟁 대응·안전, 동의 절차 포함)",
+  "병원 진료 동행·안내 서비스 (첫 방문·첫 진료 한정)",
+  "소통창구 일원화 (분산된 다수 채널 통합, 차량편성·긴급상황 공유 체계)",
+];
+
+/* ===== 마인드셋 (착안사항) ===== */
+const MINDSET = [
+  "한국인 매니저는 '고객'이 아니라 '운영 인력'. 관리자 관점에서 일관된 기준으로 판단한다.",
+  "고객과는 적절한 거리 유지. 지나친 친밀함은 운영·관리에 오히려 부담이 될 수 있다.",
+  "모든 판단은 비용과 연결된다. 임의 판단보다 보고·승인 절차를 거친다.",
+  "보고받은 내용을 끊임없이 의심하라. 가능하면 직접 가서 눈으로 보고 손으로 확인한다. (셀의 보고도 포함)",
+  "셀(현지매니저) 부재 시에도 근무 기강이 유지되도록 관리자 역할을 한다.",
+  "정산은 1차 작성 → 2차 교차확인 → 최종 보고의 단계적 검증으로 오류·누락을 막는다.",
+  "안내서·패키지 규정을 충분히 숙지한다. 잘못된 안내는 곧장 민원이 된다.",
+  "선제 대응이 최고의 CS. 어머님이 말씀하시기 전에 먼저 방문해 문제를 발견하면 불만이 크게 줄어든다.",
+];
+
+/* ===== 신입용: 용어 사전 ===== */
+const GLOSSARY = [
+  ["베이스워터 (Bayswater)","드림하우스 하우스들이 모여 있는 주택 단지(빌리지). 자체 관리사무소와 중앙급수 시설이 있고, 단지 안에 수영장·놀이터·마트가 있습니다."],
+  ["드림센터 / 오피스 / 드하 관리실","모두 같은 곳을 가리키는 말. 헬퍼와 매니저가 상주하는 본부로, 월~토 8~17시 운영. 대여물품·신청서·정산이 여기서 오갑니다."],
+  ["셀 (Cell / Mam Cell)","현지 총괄 매니저. 아떼와 드라이버를 관리하고 현장을 조율합니다. 오피스(17-5호)에 있습니다."],
+  ["아떼 (Atte) / 헬퍼","각 하우스 담당 가사도우미. 청소·빨래·설거지·밥·마트 동행을 합니다. 호실별로 정해져 있습니다. (아이 돌봄·외출 동행은 불가)"],
+  ["테크니션 (기사)","기술자. 제리(Jerry)=방충망·전등 등 일반 수리(에어컨 제외), 가리(Gari)=에어컨 전담."],
+  ["드라이버","차량 기사. Bryan · Leo · Marco · ED."],
+  ["패키지 / 올인원","식사·셔틀·수업 등이 포함된 상품. (드림하우스만 이용하는 과거 예약은 셔틀 미포함인 경우가 있어 확인 필요)"],
+  ["셔틀","패키지 고객 전용 무료 단체 차량. 오피스 앞에서 탑승. H마트(월·수·금) 등 정해진 곳을 운행."],
+  ["드림카","유료 개별 차량(탑스힐 시간제·식당 픽드랍 등). ⚠️ 현재 유가 인상으로 운영을 잠시 중단한 상태입니다."],
+  ["체크인 디테일","입실 정보 양식. 베드 세팅·유심·셔틀·공항 픽드랍 등이 적혀 있어 하우스 준비의 기준이 됩니다. 아카데미가 전달합니다."],
+  ["MCW(D) / 지하수(Deep Well)","MCW=세부 민간 수도기업(상수도), 지하수=빌리지 자체 수원. 둘 중 하나가 약해지면 수압이 떨어집니다."],
+  ["엔트초크 (Ant Chalk)","개미·벌레 퇴치용 분필. 문 앞·틈새에 칠해 둡니다."],
+  ["트라이시클","단지 근처 단거리 이동 수단(오토바이 택시). 09632751817 / 09632751818 — \"B17L5, 트라이시클 플리즈\""],
+  ["아카데미 / 플레이드림","드림아카데미=영어학원(수업·재예약·견적 담당), 플레이드림=키즈 영어 놀이센터."],
+];
+
+/* ===== 신입용: 누가 누구인가 ===== */
+const ORG = [
+  ["대표 (메이)","드림컴퍼니 대표. 큰 결정·승인을 담당."],
+  ["한국인 매니저 (나)","어머님과 현지 운영을 잇는 핵심. 점검·응대·보고를 담당."],
+  ["셀 (현지 총괄)","아떼·드라이버 관리, 현장 조율. 오피스(17-5호) 상주."],
+  ["아떼 (하우스별 헬퍼)","각 집 청소·빨래·밥·마트 동행."],
+  ["드라이버","Bryan · Leo · Marco · ED — 셔틀·픽업·드랍."],
+  ["테크니션","제리(일반 수리), 가리(에어컨)."],
+  ["아카데미 · 플레이드림","수업·재예약·견적·키즈 프로그램. 체크인 디테일도 아카데미가 전달."],
+];
+
+/* ===== 신입용: 하루 흐름 ===== */
+const DAYFLOW = [
+  "오전(특히 월·수·금 8시): 전 호실을 돌며 인사하고 컨디션 점검(인터넷·수압·에어컨·벌레·냄새·청결). 불편은 그 자리에서 기록해 셀에게 인폼하고 당일 처리 여부 확인.",
+  "오전: 오늘 셔틀·픽업·드랍·드림카 일정과 기사 배정을 확인하고, 기사에게 한 번 더 전달.",
+  "수시: 카카오톡 채널로 들어오는 어머님 문의에 응대(따뜻하고 자세하게).",
+  "오후: 체크인/체크아웃 준비·진행, 정산(셀과 더블체크).",
+  "오전·오후 2회: 입실현황·하우스 특이사항·차량편성·예정사항을 정리해 그룹챗에 보고.",
+  "긴급(정전·태풍·아픈 아이 등): 먼저·자주 연락하고 즉시 보고.",
+];
+
+/* ===== 기본 운영 원칙 ===== */
+const PRINCIPLES = [
+  "모든 체크인·체크아웃 일정을 반드시 사전에 숙지 (체크인 디테일은 아카데미가 전달).",
+  "체크인 안내와 체크아웃 인사는 반드시 한국인 직원이 직접 진행.",
+  "누락 방지를 위해 주간·월간 스케줄을 미리 작성해 이중 확인.",
+  "대부분 셀이 잘 챙기지만 놓치는 부분이 있으니, 특히 에어컨 수리 등은 직접 확인.",
+];
+
+/* ===== 월·수·금 정기 순회 ===== */
+const PATROL = [
+  "오전 8시 시작으로 전체 집을 방문합니다.",
+  "기본 인사: \"안녕하세요 어머님~ 불편한 점은 없으실까요?\"",
+  "주요 이슈 체크: 인터넷·수압·수영장 이용 불편 등.",
+  "해당 주의 체크인/체크아웃 일정을 재확인.",
+  "수리 요청된 부분이 제대로 완료되었는지 가능하면 꼭 직접 확인.",
+  "불편사항은 그 자리에서 바로 기록 → 셀에게 인폼 → 당일 내 처리 여부 확인.",
+  "시간이 되면 셔틀 시간에 맞춰 손님께 인사·안내 (특히 파롤라 투어 시).",
+];
+
+/* ===== SNS · 카페 포스팅 ===== */
+const SNS = [
+  "아카데미에서 인스타그램용 사진 촬영을 요청할 수 있습니다 (베이스워터 시설, 헬퍼(아떼), 드림하우스 내·외부 등).",
+  "카페 포스팅도 다양한 업무 관련 내용으로 요청받을 수 있습니다.",
+  "포스팅을 위해 새 장소 방문이 필요하면 차량 지원·입장료 지원이 가능합니다.",
+];
+
+/* ===== 체크인 안내 스크립트 (손님에게 직접 안내) ===== */
+const CHECKIN_SCRIPT = [
+  {
+    title: "① 위치 안내",
+    items: [
+      "게이트 3곳 위치 안내",
+      "오피스 위치·로고 설명 → \"오피스에서 대여물품(구명조끼·킥보드·튜브·추가 그릇·멀티탭 등) 빌리실 수 있어요\"",
+      "셔틀은 오피스 앞에서 탑승, 불편사항도 오피스 방문 가능",
+      "수영장·놀이터·마트 위치 → \"수영장은 수영모 필수예요. 가드가 어느 집이냐 물으면 주소 알려주세요\"",
+      "오피스 운영시간: 월~토 8:00 ~ 17:00",
+      "📌 모든 항목을 길게 설명할 필요 없음 — 위치 중심으로 쭉 안내한 뒤 안내책자 참고 요청",
+    ],
+  },
+  {
+    title: "② 상담 가능 시간",
+    items: [
+      "상담 가능: 월~토 8:00 ~ 18:00 (세부 현지시간)",
+      "셔틀 신청 마감: 전날 16:50까지",
+      "긴급 연락처: 09292932991 (응급·긴급 상황만)",
+      "비응급(인터넷·전구 교체·TV 작동 등)은 17시 전에 문의 부탁",
+    ],
+  },
+  {
+    title: "③ 헬퍼(아떼) 안내",
+    items: [
+      "근무시간: 8:00 ~ 17:00 / 점심 12:00~13:00",
+      "가능: 청소·빨래·간단한 요리·마트 동행",
+      "불가: 아이 돌봄, 수영장 아이 케어, 외출 동행 (절대 불가)",
+      "결근 시 다른 헬퍼 배정 (결근이 겹치는 날은 어려울 수 있어 양해 요청)",
+      "세탁: 손빨래/수건·흰옷·색깔옷 구분 요청",
+      "편히 쉬고 싶을 땐 아떼에게 \"오피스 갔다가 몇 시에 다시 와주세요\" 하셔도 됨",
+    ],
+  },
+  {
+    title: "④ 전기요금 안내",
+    items: [
+      "체크인 시 전기 미터 숫자를 확인·기록",
+      "체크아웃 시 미터 확인 후 (사용량 × 14페소)로 계산",
+      "현금 또는 원화 결제 가능 (환율 기준 안내)",
+      "계산 방법은 벽 안내문 참고 / 셀이 체크아웃 아침에 미리 방문해 진행",
+    ],
+  },
+  {
+    title: "⑤ 기타 주요 안내 (⭐는 벽 안내문에도 기재)",
+    items: [
+      "⭐ 정수기 생수: 무제한, 헬퍼가 자동으로 채움 / 절약 사용 요청",
+      "⭐ 변기: 휴지 절대 넣지 말 것 (아이에게도 꼭 전달)",
+      "⭐ 샤워기 수압 약하면 헬퍼에게 클리닝 요청 → 그래도 약하면 교체 요청",
+      "⭐ 흡연: 실내·베란다·복도 전면 금연 / 위반 시 즉시 퇴실·환불 불가 / 주차장 흡연 구역 이용",
+      "⭐ 트라이시클: 09632751817 / 09632751818 → \"B17L5, 트라이시클 플리즈\"",
+      "대여물품 분실·파손 시 비용 청구 / 킥보드는 주차장 보관, 비 맞지 않게",
+      "WIFI: 객실별 이름·비밀번호 전달",
+      "방 열쇠: 거실 보관 / 아이들이 도어락을 장난감처럼 쓰지 않도록",
+      "방충망 문: 잠그지 말고 열어두기 (아떼가 열쇠로 입실)",
+      "벽 안내문 꼭 읽어달라고 요청",
+    ],
+  },
+];
+
+/* ===== 체크인 당일 준비 (직원용) ===== */
+const CHECKIN_PREP = [
+  "모든 전자기기 작동 확인 — 전기포트·전자렌지·에어컨·TV·온수기·냉장고·세탁기 (셀 1차, 매니저 2차 확인)",
+  "에어컨 미리 켜서 시원한지 확인 + 각 집 리모컨 종류·위치 파악 (집마다 리모컨이 다름)",
+  "수압·온수·변기 물내림 등 기본 점검",
+  "벌레·냄새·청결 상태 점검 (입실 직전 한 번 더)",
+  "침구(이불·베개) 청결 및 세팅 확인",
+  "셀과 함께 비품 리스트 보며 물건 이상 여부 확인 (패키지용/비패키지용 안내책자 구분)",
+  "웰컴 패키지 세팅(휴지·비누 등) + 환영 선물(인디언 망고+소금) 준비",
+  "정수기 물(갤런워터) 채워져 있는지 확인",
+  "와이파이 이름·비밀번호 카드 준비 (객실별로 다름)",
+  "TV·OTT 계정은 이전 손님 것 로그아웃·삭제 확인",
+  "픽업·드랍 시간이 기사에게 잘 전달됐는지 확인 (오피스 기사 스케줄)",
+  "전기 미터기 숫자 기록 (낮 입실은 다음날 아침 / 토요일 입실 → 월요일 기록 OK)",
+];
+
+/* ===== 체크아웃 전날 (직원용) ===== */
+const CHECKOUT_BEFORE = [
+  "다음날 체크아웃임을 손님에게 상기 → \"내일 벌써 체크아웃이시네요~ 잘 보내셨어요?\"",
+  "차량 시간 안내 → \"드랍 차량은 몇 시로 잡아드릴까요~? 보통 공항까지는 20~30분 정도 소요돼요! 국제선은 2시간 전 도착으로 많이들 가시는데, 유료 좌석 구매 등에 따라 다들 다르게 정하셔서 고민해보시고 알려주셔도 됩니다 (아카데미에서 확인해 넘겨주기도 해요)\"",
+  "전기세 안내 → \"전기세 정리는 내일 댁에 계실 때 할게요~\"",
+];
+
+/* ===== 체크아웃 당일 (직원용) — 기존 CHECKOUT 대체 ===== */
+const CHECKOUT_DAY = [
+  "정산 더블체크(셀과 함께): 전기세·추가 숙박료·드림카·생수·유심비 등 누락 없이 → 아카데미 더블체크",
+  "체크아웃 디테일에 모든 납부 항목 포함됐는지 먼저 파악 후 손님 안내",
+  "집기·물품 파손 여부 확인 (가볍게 여쭤보고 함께 확인)",
+  "유심 회수: 낮 체크아웃은 테이블 위 확인 / 밤 체크아웃은 기사에게 회수 요청 (기사에게 '유심 회수' 꼭 전달)",
+  "안부·체크아웃 인사(한국인 직원) + 드랍 차량 시간 안내 → \"정리·청소 안 하셔도 되고 짐만 잘 챙겨 가세요~\"",
+];
+
+/* ===== 체크아웃 후 마무리 (직원용) ===== */
+const CHECKOUT_AFTER = [
+  "분실물 확인: 모자·썬캡·래쉬가드·겉옷·신발·문제집 등 (밤 체크아웃이 많아 다음날 아침 방문 권장)",
+  "수리·보수 필요 부분 확인 후 그룹챗에 보고",
+  "⚠️ 체크아웃 다음날, 아떼는 절대 먼저 집에 들어가지 말 것 → 매니저가 먼저 방문해 물건 확인 후 입실",
+];
+
+</script>
+
+<script>
+/* ============ 탭 정의 ============ */
+const TABS = [
+  {id:"start",    name:"시작하기"},
+  {id:"basic",    name:"기본 업무"},
+  {id:"checkin",  name:"체크인"},
+  {id:"checkout", name:"체크아웃"},
+  {id:"manual",   name:"업무 매뉴얼"},
+  {id:"tpl",      name:"복붙 안내문"},
+  {id:"contact",  name:"연락처·요금·아떼"},
+  {id:"cases",    name:"사례 모음"},
+  {id:"improve",  name:"개선·마인드셋"},
+];
+let activeTab = "start";
+let activePart = "전체";
+const doneState = {};
+
+const tabsEl = document.getElementById("tabs");
+const mainEl = document.getElementById("main");
+
+function buildTabs(){
+  tabsEl.innerHTML = "";
+  TABS.forEach(t=>{
+    const b=document.createElement("button");
+    b.className="tab"+(t.id===activeTab?" active":"");
+    b.textContent=t.name;
+    b.onclick=()=>{activeTab=t.id;render();window.scrollTo({top:0,behavior:"smooth"});};
+    tabsEl.appendChild(b);
+  });
+}
+
+/* ============ 각 탭 렌더 ============ */
+function esc(s){return s;} // 데이터는 신뢰된 소스
+
+function renderStart(){
+  return `
+  <h2 class="sec">시작하기</h2>
+  <p class="sec-desc">드림하우스 한국인 매니저의 역할과 일하는 3가지 원칙, 그리고 첫 주에 해야 할 것들입니다.</p>
+
+  <div class="box">
+    <h3>매니저의 역할</h3>
+    <ul>
+      <li>어머님(한국 가족 고객)과 현지 운영(아떼·드라이버·기사) 사이를 잇는 핵심 연결자입니다.</li>
+      <li>첫인상·응대·문제 해결이 곧 재방문·지인추천으로 이어집니다. 단순 지원 인력이 아니라 운영 품질을 좌우하는 자리입니다.</li>
+      <li>고객이 아닌 '운영 인력'의 관점에서, 모든 상황을 관리자 시선으로 판단합니다.</li>
+    </ul>
+  </div>
+
+  <div class="principles">
+    <div class="pr"><div class="n">1</div><h4>선제 대응</h4><p>어머님이 말씀하시기 전에 먼저 돌고 먼저 발견합니다. 미리 챙긴 한 번이 불만 열 번을 막습니다.</p></div>
+    <div class="pr"><div class="n">2</div><h4>규정은 동일하게,<br>설명은 따뜻하게</h4><p>규정은 모두에게 똑같이. 다만 거절도 비유·이유·공감을 담아 길고 다정하게 설명합니다.</p></div>
+    <div class="pr"><div class="n">3</div><h4>즉시 보고</h4><p>비용·안전·분쟁이 걸린 일은 임의 판단보다 보고·승인. 보고받은 내용도 직접 눈으로 확인합니다.</p></div>
+  </div>
+
+  <div class="twocol">
+    <div class="box">
+      <h3>첫 주 체크리스트</h3>
+      <ul>
+        <li>셀(현지매니저)에게 업무 전반 인수, 드라이버 연락처·차량번호 확인</li>
+        <li>전 호실을 돌며 인사 + 컨디션 점검 (벌레·냄새·청결)</li>
+        <li>호실별 아떼 명단 숙지 (연락처 탭 참고)</li>
+        <li>안내서·패키지 규정 숙지 (잘못된 안내는 곧 민원)</li>
+        <li>금주 체크인·체크아웃·셔틀·드림카 일정 파악</li>
+        <li>업무 보고 양식 익히기 (오전·오후 보고)</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3>상담 운영 기준</h3>
+      <ul>
+        <li>채널: 카카오톡 '행복한 드림하우스' (투숙자 전용)</li>
+        <li>상담시간: 월~토 8:00 ~ 17:00</li>
+        <li>긴급상담: ☎ 09292932991</li>
+        <li>재예약·견적·도시락 개별신청 → 아카데미로 안내</li>
+        <li>운영시간 외 문의는 자동안내 후 다음 운영시간에 답변</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>누가 누구인가 (조직)</h3>
+    <table>${ORG.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>
+  </div>
+
+  <div class="box">
+    <h3>하루 업무 흐름</h3>
+    <ul>${DAYFLOW.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>꼭 알아야 할 용어</h3>
+    <table>${GLOSSARY.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>
+  </div>`;
+}
+
+function renderManual(){
+  const cats = ["전체", ...PARTS.map(p=>p.name)];
+  let html = `
+  <h2 class="sec">업무 매뉴얼</h2>
+  <p class="sec-desc">파트를 고르면 그 파트의 <b>인수인계 안내</b>(무엇을 점검하고 어떻게 조치하는지)와 <b>응대 연습</b>(실제 톤의 모범답안)이 함께 나옵니다.</p>
+  <div class="ho-intro" style="margin-bottom:22px;">💡 <b>모범답안 활용법</b> — 아래 모범답안은 여러 상황에 두루 쓸 수 있도록 일부러 <b>길고 두루뭉술하게</b> 적어둔 '참고용'입니다. 전체를 그대로 다 보내라는 뜻이 아니라, <b>지금 어머님 상황에 맞는 부분만 골라서 인용</b>하시면 됩니다. 외워야 할 것은 문장이 아니라 <b>흐름</b>(공감 → 이유 설명 → 바로 해볼 자가조치 → 조치 약속)입니다.</div>`;
+
+  // 진행도
+  const total = PARTS.reduce((a,p)=>a+p.scenarios.length,0);
+  const done = Object.values(doneState).filter(Boolean).length;
+  html += `<div class="progress-card"><span class="label">응대 연습 진행도</span><div class="track"><div class="fill" style="width:${total?done/total*100:0}%"></div></div><span class="count">${done} / ${total} 완료</span></div>`;
+
+  // 필터
+  html += `<div class="filters">`;
+  cats.forEach(c=>{ html += `<button class="chip${c===activePart?" active":""}" data-part="${c}">${c}</button>`; });
+  html += `</div>`;
+
+  // 파트 블록
+  let idx = 0;
+  PARTS.forEach(p=>{
+    if(activePart!=="전체" && activePart!==p.name){ idx += p.scenarios.length; return; }
+    html += `<div class="part-head"><span class="ic">${p.icon}</span><h3>${p.name}</h3></div>`;
+
+    // 인수인계 안내
+    html += `<div class="handover"><span class="tag">📋 인수인계 안내</span>`;
+    if(p.handover.intro) html += `<p class="ho-intro">${p.handover.intro}</p>`;
+    html += `<div class="ho-group"><div class="ho-label">무엇을 점검하나</div><ul class="ho-check">${p.handover.check.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+    html += `<div class="ho-group"><div class="ho-label">어떻게 조치하나</div><ul class="ho-fix">${p.handover.fix.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+    if(p.handover.note && p.handover.note.length){
+      html += `<div class="ho-group"><div class="ho-label">담당 · 요금 · 주의</div><ul class="ho-note">${p.handover.note.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+    }
+    html += `</div>`;
+
+    // 응대 연습
+    html += `<div class="prac-label">💬 응대 연습 (모범답안)</div>`;
+    p.scenarios.forEach(s=>{
+      const i = idx++;
+      const isDone = !!doneState[i];
+      html += `
+      <div class="card${isDone?" done":""}" data-sid="${i}">
+        <div class="card-head"><h4>${s.title}</h4></div>
+        <div class="situation">
+          <div class="who"><span class="dot">엄마</span> 어머님이 이렇게 말씀하십니다</div>
+          <div class="bubble">${s.mom}</div>
+        </div>
+        <div class="practice">
+          <label>어떻게 답하시겠어요?</label>
+          <textarea placeholder="본인 말투로 답을 적어보세요..."></textarea>
+        </div>
+        <div class="actions">
+          <button class="btn" data-act="show">모범답안 보기</button>
+          <button class="btn ghost" data-act="reset">다시 쓰기</button>
+          <label class="done-toggle"><input type="checkbox" ${isDone?"checked":""} data-act="done"> 완료</label>
+        </div>
+        <div class="answer">
+          <div class="answer-box">
+            <div class="ans-label">모범답안 · 상황에 맞게 필요한 부분만 인용</div>
+            ${s.answer.map(par=>`<p>${par}</p>`).join("")}
+          </div>
+          <div class="points">
+            <div class="p-label">핵심 포인트</div>
+            <ul>${s.points.map(pt=>`<li>${pt}</li>`).join("")}</ul>
+          </div>
+        </div>
+      </div>`;
+    });
+  });
+  return html;
+}
+
+function renderTpl(){
+  let html = `<h2 class="sec">복붙 안내문</h2><p class="sec-desc">자주 쓰는 공지 문구입니다. 펼쳐서 '복사'한 뒤 채널에 바로 붙여 쓰세요. (날짜·장소만 바꿔주세요)</p>`;
+  TEMPLATES.forEach((t,i)=>{
+    html += `
+    <div class="tpl">
+      <div class="tpl-head" data-tpl="${i}">
+        <div><h4>${t.title}</h4><div class="when">${t.when}</div></div>
+        <span class="chev">펼치기 ▾</span>
+      </div>
+      <div class="tpl-body">
+        <div class="tpl-text">${t.body}</div>
+        <button class="copy-btn" data-copy="${i}">📋 복사하기</button>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderContact(){
+  let html = `<h2 class="sec">연락처 · 요금 · 아떼 명단</h2><p class="sec-desc">누구에게 연락하고, 비용은 얼마이며, 어느 집에 어느 아떼가 배정되어 있는지 한눈에.</p>`;
+  html += `<div class="box"><h3>연락처</h3><table>${CONTACTS.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table></div>`;
+  html += `<div class="box"><h3>요금표</h3><table>${FEES.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table></div>`;
+  html += `<div class="box"><h3>호실별 아떼 배정</h3><div class="atte-grid">${ATTES.map(a=>`<div class="atte"><b>${a[0]}</b> · ${a[1]}</div>`).join("")}</div></div>`;
+  return html;
+}
+
+function renderBasic(){
+  return `
+  <h2 class="sec">기본 업무</h2>
+  <p class="sec-desc">매일·매주 반복하는 기본 업무와 보고 방식입니다. 신입이라면 이 흐름부터 익히세요.</p>
+
+  <div class="box">
+    <h3>기본 운영 원칙</h3>
+    <ul>${PRINCIPLES.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>월·수·금 정기 순회</h3>
+    <ul>${PATROL.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>SNS · 카페 포스팅 업무</h3>
+    <ul>${SNS.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>일일 보고 양식</h3>
+    <ul>
+      <li><b>입실 현황</b> : 현재 입실 ○개 (체크인/체크아웃 예정 표기)</li>
+      <li><b>하우스 특이사항</b> : 호실별 — (완료)/(조치 중) 구분</li>
+      <li><b>차량 편성</b> : 셔틀·픽업·드랍·드림카 (기사·시간·인원)</li>
+      <li><b>예정사항</b> : 체크인/아웃, 렌트, 추가 픽드랍</li>
+      <li><b>기타사항</b> : 방역·비품·정산 등</li>
+    </ul>
+    <div class="tpl-text" style="white-space:pre-wrap;background:var(--cream-soft);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.7;margin-top:12px;">'26.○○.○○.(○) 오전 보고
+■ 입실 현황 : 10개
+■ 하우스 특이사항
+ o 17-9 : 2층 에어컨 냉방 불량 → 기사(가리) 호출 (조치 중)
+ o 17-15 : 샤워호스 누수 → 교체 완료
+■ ○월 ○주차 예정사항
+ o (셔틀) H마트 10:00
+ o (Check out) 17-4 *12:00 J-park drop</div>
+  </div>`;
+}
+
+function renderCheckin(){
+  let html = `
+  <h2 class="sec">체크인</h2>
+  <p class="sec-desc">입실 손님을 맞이하는 전체 과정입니다. 안내는 위치 중심으로 한 번에 쭉 한 뒤 안내책자 참고를 요청하세요. (체크인 인사는 반드시 한국인 직원이 직접)</p>
+
+  <div class="box">
+    <h3>체크인 당일 준비 (직원용)</h3>
+    <ul>${CHECKIN_PREP.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="prac-label">🗺️ 손님에게 안내하는 스크립트</div>`;
+  CHECKIN_SCRIPT.forEach(s=>{
+    html += `<div class="script-block"><h4>${s.title}</h4><ul>${s.items.map(i=>`<li>${i}</li>`).join("")}</ul></div>`;
+  });
+  html += `
+  <div class="box">
+    <h3>체크인 체크리스트</h3>
+    <ul>${CHECKIN.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>`;
+  return html;
+}
+
+function renderCheckout(){
+  return `
+  <h2 class="sec">체크아웃</h2>
+  <p class="sec-desc">퇴실 전날·당일·이후로 나눈 과정입니다. (체크아웃 인사도 반드시 한국인 직원이 직접)</p>
+
+  <div class="box">
+    <h3>체크아웃 전날</h3>
+    <ul>${CHECKOUT_BEFORE.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>체크아웃 당일 (셀과 더블체크)</h3>
+    <ul>${CHECKOUT_DAY.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>체크아웃 후 마무리</h3>
+    <ul>${CHECKOUT_AFTER.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>
+
+  <div class="box">
+    <h3>체크아웃 체크리스트</h3>
+    <ul>${CHECKOUT.map(x=>`<li>${x}</li>`).join("")}</ul>
+  </div>`;
+}
+
+function renderCases(){
+  let html = `<h2 class="sec">사례 모음</h2><p class="sec-desc">실제로 있었던 상황과 처리 방식입니다. 비슷한 일이 오면 참고하세요.</p>`;
+  html += `<div class="box"><table>${CASES.map(c=>`<tr><td>${c[0]}</td><td><b style="color:var(--navy)">${c[1]}</b><br><span style="color:var(--muted)">→ ${c[2]}</span></td></tr>`).join("")}</table></div>`;
+  return html;
+}
+
+function renderImprove(){
+  let html = `<h2 class="sec">개선 과제 · 마인드셋</h2><p class="sec-desc">전임 매니저가 남긴 운영 개선 과제와, 매니저가 늘 새기면 좋은 마음가짐입니다.</p>`;
+  html += `<div class="box"><h3>운영 개선 과제 (앞으로 추진)</h3><ul>${IMPROVE.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+  html += `<div class="box"><h3>매니저 마인드셋</h3><ul>${MINDSET.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;
+  return html;
+}
+
+function render(){
+  buildTabs();
+  let content="";
+  if(activeTab==="start") content=renderStart();
+  else if(activeTab==="basic") content=renderBasic();
+  else if(activeTab==="checkin") content=renderCheckin();
+  else if(activeTab==="checkout") content=renderCheckout();
+  else if(activeTab==="manual") content=renderManual();
+  else if(activeTab==="tpl") content=renderTpl();
+  else if(activeTab==="contact") content=renderContact();
+  else if(activeTab==="cases") content=renderCases();
+  else if(activeTab==="improve") content=renderImprove();
+  mainEl.innerHTML = `<section class="panel active">${content}</section>`;
+  attach();
+}
+
+function attach(){
+  // 파트 필터
+  mainEl.querySelectorAll("[data-part]").forEach(b=>{
+    b.onclick=()=>{activePart=b.getAttribute("data-part");render();};
+  });
+  // 시나리오 카드
+  mainEl.querySelectorAll(".card").forEach(card=>{
+    const sid=card.getAttribute("data-sid");
+    const ans=card.querySelector(".answer");
+    const ta=card.querySelector("textarea");
+    card.querySelector('[data-act="show"]').onclick=(e)=>{
+      ans.classList.toggle("show");
+      e.target.textContent=ans.classList.contains("show")?"답안 접기":"모범답안 보기";
+    };
+    card.querySelector('[data-act="reset"]').onclick=()=>{ta.value="";ta.focus();};
+    card.querySelector('[data-act="done"]').onchange=(e)=>{
+      doneState[sid]=e.target.checked;
+      // 진행도/스타일만 갱신
+      card.classList.toggle("done",e.target.checked);
+      const total=PARTS.reduce((a,p)=>a+p.scenarios.length,0);
+      const done=Object.values(doneState).filter(Boolean).length;
+      const fill=mainEl.querySelector(".fill");const cnt=mainEl.querySelector(".count");
+      if(fill)fill.style.width=(total?done/total*100:0)+"%";
+      if(cnt)cnt.textContent=`${done} / ${total} 완료`;
+    };
+  });
+  // 안내문 토글 + 복사
+  mainEl.querySelectorAll("[data-tpl]").forEach(h=>{
+    h.onclick=()=>{
+      const body=h.nextElementSibling;
+      body.classList.toggle("show");
+      h.querySelector(".chev").textContent=body.classList.contains("show")?"접기 ▴":"펼치기 ▾";
+    };
+  });
+  mainEl.querySelectorAll("[data-copy]").forEach(b=>{
+    b.onclick=()=>{
+      const i=b.getAttribute("data-copy");
+      const text=TEMPLATES[i].body;
+      navigator.clipboard?.writeText(text).then(()=>{
+        const o=b.textContent;b.textContent="✅ 복사됨!";setTimeout(()=>b.textContent=o,1500);
+      }).catch(()=>{b.textContent="길게 눌러 복사하세요";});
+    };
+  });
+}
+
+render();
+</script>
+</body>
+</html>
