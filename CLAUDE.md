@@ -1435,3 +1435,41 @@ special_request, ssp
 - 주간 스케줄 일요일 컬럼 제거(월~토 6칸) — 프롬프트 준비됨, 미push
 - 주간 스케줄 인쇄 미세조정(카드 안잘림+페이지마다 타이틀, 77d51d0 적용·추가조정 가능)
 - 텔레그램 정기 알림 구현(드림보드 ⑤)
+
+## 2026-06-06 세션 (튜터 금액·인쇄·유령정리 중심)
+
+1. **신청 제약 4가지** (dfdff44):
+   - 공통 헬퍼 `lib/lessonDates.ts` (isLessonDateAllowed, tutorBaseRate, tutorDailyRate, countLessonDays) — 요일→날짜 전개 3곳 공통 적용
+   - 6/12(2026-06-12) 휴일: 튜터 세션 제외 + 셔틀 `SHUTTLE_HOLIDAYS`(이미 포함, 🚫휴무)
+   - 토요일 = 매월 둘째·넷째 주만 (`Math.ceil(getDate()/7)∈{2,4}`). 폼 멘트 "토요일은 매달 2·4주차만 가능"
+   - 수정 경고: portal/tutor·portal/my-applications "인보이스가 발행되고 수정·변경하시는 경우에는 반영이 불가할 수 있습니다"(amber)
+
+2. **튜터 금액·회차 버그 수정** (dfdff44~55e5674):
+   - 버그: 인보이스 total=classFee×classSession×days로 타임 이중곱. 상세페이지는 주×요일×타임으로 4배. 세 화면(상세/인보이스/포털) 금액 제각각이던 원인
+   - 정의 통일: 단가=하루치(기본×타임, 1:1=300/2T=600, 1:2=350/2T=700), 회차=실제 수업일수(타임 안곱), 총액=단가×일수. `lib/lessonDates.ts` 단일 소스. `tutor_lessons.hourly_rate`=하루치 저장
+   - TutorInvoice.tsx(total=classFee×days), tutor-class/[id]/page.tsx, portal/tutor 통일
+   - 검증값: 1:1 2T 5일=3,000 / 1:1 1T 3일=900 / 1:2 1T 8일=2,800 / 1:2 2T 5일=3,500
+
+3. **신청 수신함 확정 버튼** (55e5674):
+   - 액션 컬럼에 "확정" 버튼(상태=배정됨일 때만). `createLessonForApp()` 공통 함수로 확정 로직 추출
+   - 상태흐름: 대기중→검토중→배정됨→확정→완료
+
+4. **기존 확정 17건 total_amount 보정** (실행 완료, scripts/fix-tutor-lesson-amounts.PROPOSAL.sql 미커밋):
+   - 옛 버그로 틀린 17건을 단가×일수로 교정(신나영 10,800→3,000 등). 단일 트랜잭션 17/17 적용
+
+5. **주간 스케줄 인쇄 — 자체 미리보기 모달** (cab80e3~1761b47):
+   - 일요일 컬럼 제거(월~토 6칸): TutorWeeklySchedule.tsx + admineng/tutor-class/page.tsx
+   - 브라우저 @media print scale-to-fit가 빈 페이지·4페이지 분할 유발 → 자체 인쇄 미리보기 모달 채택
+   - "출력" → A4 가로 흰 종이 박스 모달에 캘린더 렌더 + scale 자동축소, [Print]→window.print()(@media print로 박스만)
+   - "미리보기=출력물" 일치. 인보이스 인쇄는 usableH 1040→1400으로 과축소 수정
+
+6. **유령 수업 정리 + 삭제 버그 수정** (40b9477):
+   - 문제: 신청 상세 [삭제]가 tutor_requests만 지우고 확정 시 생성된 tutor_lessons는 안 지워 주간뷰/인보이스에 유령 잔존
+   - 수정: 신청 삭제 시 연결 tutor_lessons(+sessions)도 함께 삭제(application_id + admin_memo의 request_id 두 경로). confirm 문구에 "연결된 확정 수업도 함께 삭제됩니다"
+   - 데이터 정리: 유령 4건 삭제(신나영 1T×2, 최서우·최은우 1:2, 문선빈 시간없음). tutor_lessons 20→17건(신청과 정합)
+   - 문선빈 튜터 Erica→Annie 수정(신청과 정합)
+
+### 다음 세션 대기 (2026-06-06 기준)
+- 튜터 재배정 동기화: 신청 상세에서 튜터 변경 시 연결 tutor_lessons.tutor_id도 자동 업데이트(이번엔 수동 보정함)
+- 요일/시간 미설정(--:--) 수업이 생기는 근본 원인 점검(확정 시 시간 정보 누락 패턴)
+- 텔레그램 정기 알림(드림보드 ⑤), 봇 토큰 revoke 재발급
