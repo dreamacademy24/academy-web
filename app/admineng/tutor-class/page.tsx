@@ -407,22 +407,29 @@ export default function EngTutorClassPage() {
   function handlePrint() {
     const el = printRef.current;
     if (!el) { window.print(); return; }
-    const usableW = 1080, usableH = 720; // A4 landscape 8mm 여백 가용 영역(px 근사)
+    const usableW = 1090, usableH = 760; // A4 landscape 6mm 여백 가용 영역(px 실측 근사)
     const naturalH = el.scrollHeight;
     const naturalW = el.offsetWidth;
     const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
     const prevTransform = el.style.transform;
     const prevOrigin = el.style.transformOrigin;
     const prevWidth = el.style.width;
+    const prevHeight = el.style.height;
+    const prevOverflow = el.style.overflow;
     if (s < 1) {
       el.style.transformOrigin = "top left";
       el.style.transform = `scale(${s})`;
       el.style.width = `${Math.round(naturalW / s)}px`;
+      // transform만으론 레이아웃 높이가 안 줄어 빈 페이지가 남음 → 실제 스케일 높이로 고정 + 넘침 숨김
+      el.style.height = `${Math.round(naturalH * s)}px`;
+      el.style.overflow = "hidden";
     }
     const restore = () => {
       el.style.transform = prevTransform;
       el.style.transformOrigin = prevOrigin;
       el.style.width = prevWidth;
+      el.style.height = prevHeight;
+      el.style.overflow = prevOverflow;
       window.removeEventListener("afterprint", restore);
     };
     window.addEventListener("afterprint", restore);
@@ -859,13 +866,14 @@ export default function EngTutorClassPage() {
 .eempty{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
 .ee-print-title,.ee-print-footer{display:none}
 @media print{
-  @page{size:A4 landscape;margin:8mm}
+  @page{size:A4 landscape;margin:6mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #ee-weekly-print, #ee-weekly-print *{visibility:visible}
   #ee-weekly-print{position:absolute;left:0;top:0;box-shadow:none!important;padding:0!important;background:#fff!important}
-  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 일반 흐름으로 1회만 표시 */
+  .ee-print-body{overflow:hidden}
+  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 일반 흐름으로 1회만 표시. printRef 바깥(네비)은 제외 */
   .ee-weekly-ctrl{display:none!important}
   .ee-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
   .ee-print-footer{display:block!important;text-align:center;font-size:10px;color:#475569;margin-top:8px;padding-top:6px;border-top:1px solid #e2e8f0}

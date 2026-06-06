@@ -309,23 +309,30 @@ export default function TutorWeeklySchedule() {
   function handlePrint() {
     const el = printRef.current;
     if (!el) { window.print(); return; }
-    // A4 landscape, 8mm 여백 기준 가용 영역(px 근사): 너비 ~1080, 높이 ~720
-    const usableW = 1080, usableH = 720;
+    // A4 landscape, 6mm 여백 기준 가용 영역(px 실측 근사): 너비 ~1090, 높이 ~760
+    const usableW = 1090, usableH = 760;
     const naturalH = el.scrollHeight;
     const naturalW = el.offsetWidth;
     const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
     const prevTransform = el.style.transform;
     const prevOrigin = el.style.transformOrigin;
     const prevWidth = el.style.width;
+    const prevHeight = el.style.height;
+    const prevOverflow = el.style.overflow;
     if (s < 1) {
       el.style.transformOrigin = "top left";
       el.style.transform = `scale(${s})`;
       el.style.width = `${Math.round(naturalW / s)}px`;
+      // transform만으론 레이아웃 높이가 안 줄어 빈 페이지가 남음 → 실제 스케일 높이로 고정 + 넘침 숨김
+      el.style.height = `${Math.round(naturalH * s)}px`;
+      el.style.overflow = "hidden";
     }
     const restore = () => {
       el.style.transform = prevTransform;
       el.style.transformOrigin = prevOrigin;
       el.style.width = prevWidth;
+      el.style.height = prevHeight;
+      el.style.overflow = prevOverflow;
       window.removeEventListener("afterprint", restore);
     };
     window.addEventListener("afterprint", restore);
@@ -404,12 +411,15 @@ export default function TutorWeeklySchedule() {
 .tws-print-btn:hover{background:#f1f5f9}
 .tws-print-title{display:none}
 @media print{
-  @page{size:A4 landscape;margin:8mm}
+  @page{size:A4 landscape;margin:6mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #tws-weekly-print, #tws-weekly-print *{visibility:visible}
   #tws-weekly-print{position:absolute;left:0;top:0;background:#fff!important}
+  /* printRef 바깥 요소 확실히 제외 */
+  .tws-ctrl,.tws-overlay,.tws-toast{display:none!important}
+  .tws-print-body{overflow:hidden}
   /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 타이틀은 일반 흐름으로 1회 표시 */
   .tws-ctrl,.tws-overlay,.tws-toast{display:none!important}
   .tws-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
