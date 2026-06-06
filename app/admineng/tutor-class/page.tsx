@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } fr
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
+import { countLessonDays } from "@/lib/lessonDates";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -552,8 +553,13 @@ export default function EngTutorClassPage() {
         ? rawDaysList.map((d: string) => dayLabelEn(d)).filter(Boolean).join(", ")
         : "-";
       const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
-      const total = Number(l.total_sessions || 0);
-      const remaining = Math.max(0, total - skips.length);
+      // 회차는 날짜범위에서 결석(skip)을 제외해 실제 일수로 산출 — 출석/인보이스 화면과 동일 기준.
+      // (l.total_sessions은 생성 후 추가된 결석을 반영 못해 어긋날 수 있어 라이브 재계산 사용)
+      const normDays = rawDaysList.map((d: string) => normalizeWeekday(d)).filter(Boolean);
+      const liveTotal = countLessonDays(l.start_date, l.end_date, normDays, skips);
+      const total = liveTotal || Number(l.total_sessions || 0);
+      // skip은 위 total에서 이미 제외됨 → 추가 차감하지 않음(이중 차감 버그 방지)
+      const remaining = total;
       return { l, statusLabel, statusBg, statusFg, daysStr, skips, total, remaining };
     });
   }, [myLessons]);

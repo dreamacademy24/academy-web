@@ -208,7 +208,19 @@ export default function TutorRequestDetailPage() {
       console.warn("[save] tutorId 해석 실패로 tutor_lessons 동기화 스킵:", tutorId);
       lessonMsg = " (수업 동기화 스킵: 튜터 ID 해석 실패 — 이름이 tutors 테이블에 존재하는지 확인)";
     } else {
-      console.log("[save] 튜터 미배정 → tutor_lessons 동기화 스킵");
+      // 튜터 미배정(배정 해제) — 이전에 배정되어 생성된 tutor_lessons(+회차)가 남아
+      // 선생님 화면에 "유령 수업"으로 보이는 문제 방지: 연결 수업을 함께 정리.
+      const { data: byApp } = await supabase.from("tutor_lessons").select("id").eq("application_id", row.id);
+      const { data: byMemo } = await supabase.from("tutor_lessons").select("id").ilike("admin_memo", `%request_id: ${row.id}%`);
+      const orphanIds = Array.from(new Set([...(byApp || []), ...(byMemo || [])].map((x: { id: string }) => x.id)));
+      if (orphanIds.length > 0) {
+        await supabase.from("tutor_lesson_sessions").delete().in("lesson_id", orphanIds);
+        const { error: delErr } = await supabase.from("tutor_lessons").delete().in("id", orphanIds);
+        if (delErr) { console.error("[save] 미배정 정리 실패:", delErr); lessonMsg = " (이전 배정 수업 정리 실패: " + delErr.message + ")"; }
+        else { console.log("[save] 미배정 → 이전 수업 정리 완료:", orphanIds); lessonMsg = " (이전 배정 수업 정리됨)"; }
+      } else {
+        console.log("[save] 튜터 미배정 → 정리할 수업 없음");
+      }
     }
 
     setSaving(false);
@@ -284,11 +296,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <div className="dt-grid">
           <div className="dt-card">
             <h2>기본 정보</h2>
-            <div className="dt-row"><span className="dt-k">접수일</span><span className="dt-v">{row.created_at?.slice(0,10) || "-"}</span></div>
+            <div className="dt-row"><span className="dt-k">접수일</span><span className="dt-v">{row.created_at ? (() => { const d = new Date(row.created_at); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })() : "-"}</span></div>
             <div className="dt-row"><span className="dt-k">예약자</span><span className="dt-v">{fmt(row.guest_name || row.house_number)}</span></div>
             <div className="dt-row"><span className="dt-k">학생 (한)</span><span className="dt-v">{fmt(row.student_name_kr)}</span></div>
             <div className="dt-row"><span className="dt-k">학생 (영)</span><span className="dt-v">{fmt(row.student_name_en)}</span></div>
-            <div className="dt-row"><span className="dt-k">나이</span><span className="dt-v">{fmt(row.student_age)}</span></div>
+            <div className="dt-row"><span className="dt-k">나이</span><span className="dt-v">{row.class_type === "1:2" && row.student2_age ? `${fmt(row.student_age)} / ${row.student2_age}` : fmt(row.student_age)}</span></div>
             {(row.student2_name || row.student2_eng_name) && (<>
               <div className="dt-row"><span className="dt-k">학생2 (한)</span><span className="dt-v">{fmt(row.student2_name)}</span></div>
               <div className="dt-row"><span className="dt-k">학생2 (영)</span><span className="dt-v">{fmt(row.student2_eng_name)}</span></div>

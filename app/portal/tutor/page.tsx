@@ -93,15 +93,6 @@ const ST: Record<string, { label: string; bg: string; color: string }> = {
   confirmed: { label: "확정",   bg: "#dcfce7", color: "#166534" },
   cancelled: { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
 };
-const APP_STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  pending:   { label: "📋 신청완료", bg: "#dbeafe", color: "#1d4ed8" },
-  reviewing: { label: "🔍 검토중",   bg: "#fef3c7", color: "#92400e" },
-  assigned:  { label: "🔍 검토중",   bg: "#fef3c7", color: "#92400e" },
-  confirmed: { label: "✅ 신청승인", bg: "#dcfce7", color: "#15803d" },
-  completed: { label: "✅ 완료",     bg: "#d1fae5", color: "#065f46" },
-  cancelled: { label: "❌ 취소",     bg: "#fee2e2", color: "#dc2626" },
-};
-
 interface InvSession { id: string; session_idx: number; session_date: string; session_time: string | null; status: string }
 interface InvLesson {
   id: string;
@@ -1356,7 +1347,6 @@ export default function PortalTutorPage() {
         <h2>📋 내 튜터 신청내역 ({requests.length}건)</h2>
         {requests.length === 0 ? <div className="empty">아직 신청 내역이 없습니다</div> :
           requests.map(r => {
-            const meta = APP_STATUS_META[r.status] || APP_STATUS_META.pending;
             const studentName = [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "-";
             const daysVal = Array.isArray(r.preferred_days_arr)
               ? r.preferred_days_arr.join(", ")
@@ -1386,7 +1376,6 @@ export default function PortalTutorPage() {
                       );
                     })()}
                   </div>
-                  <span style={{ display: "inline-block", padding: "4px 12px", borderRadius: 6, fontSize: 12, fontWeight: 700, background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
                 <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.7 }}>
                   <div><span style={{ fontWeight: 700, color: "#6b7c93", marginRight: 4 }}>수업 유형:</span>{r.class_type || "-"}</div>
