@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 
@@ -304,6 +304,35 @@ export default function TutorWeeklySchedule() {
     return s.session_time || "--:--";
   }
 
+  // 인쇄: A4 가로 1페이지에 맞춰 scale-to-fit (인보이스 handlePrint와 동일 방식, 가로/세로 모두 고려)
+  const printRef = useRef<HTMLDivElement>(null);
+  function handlePrint() {
+    const el = printRef.current;
+    if (!el) { window.print(); return; }
+    // A4 landscape, 8mm 여백 기준 가용 영역(px 근사): 너비 ~1080, 높이 ~720
+    const usableW = 1080, usableH = 720;
+    const naturalH = el.scrollHeight;
+    const naturalW = el.offsetWidth;
+    const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
+    const prevTransform = el.style.transform;
+    const prevOrigin = el.style.transformOrigin;
+    const prevWidth = el.style.width;
+    if (s < 1) {
+      el.style.transformOrigin = "top left";
+      el.style.transform = `scale(${s})`;
+      el.style.width = `${Math.round(naturalW / s)}px`;
+    }
+    const restore = () => {
+      el.style.transform = prevTransform;
+      el.style.transformOrigin = prevOrigin;
+      el.style.width = prevWidth;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    setTimeout(restore, 4000);
+    window.print();
+  }
+
   return (<div className="tws-print-area" id="tws-weekly-print">
     <style>{`
 .tws-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
@@ -373,24 +402,23 @@ export default function TutorWeeklySchedule() {
 
 .tws-print-btn{padding:7px 14px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#1a1a2e}
 .tws-print-btn:hover{background:#f1f5f9}
-.tws-print-title,.tws-print-footer{display:none}
+.tws-print-title{display:none}
 @media print{
-  @page{size:A4 landscape;margin:22mm 10mm 14mm 10mm}
+  @page{size:A4 landscape;margin:8mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #tws-weekly-print, #tws-weekly-print *{visibility:visible}
-  #tws-weekly-print{background:#fff!important}
-  .tws-ctrl,.tws-legend,.tws-overlay,.tws-toast{display:none!important}
-  .tws-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
-  .tws-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
+  #tws-weekly-print{position:absolute;left:0;top:0;background:#fff!important}
+  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 타이틀은 일반 흐름으로 1회 표시 */
+  .tws-ctrl,.tws-overlay,.tws-toast{display:none!important}
+  .tws-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
   .tws-grid{grid-template-columns:repeat(6,1fr)!important}
+  /* scale-to-fit로 한 페이지에 들어가므로 분할 안 일어남 — 카드만 break-inside 유지 */
   .tws-col{break-inside:avoid!important;page-break-inside:avoid!important;min-height:auto!important}
   .tws-sess{break-inside:avoid!important;page-break-inside:avoid!important}
 }
     `}</style>
-
-    <div className="tws-print-title">주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
 
     <div className="tws-ctrl">
       <div className="tws-nav" role="group" aria-label="주 네비게이션">
@@ -398,7 +426,7 @@ export default function TutorWeeklySchedule() {
         <button className={weekOffset === 0 ? "ac" : ""} onClick={() => setWeekOffset(0)}>이번 주</button>
         <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
       </div>
-      <button className="tws-print-btn" onClick={() => window.print()} title="현재 보는 주만 인쇄">🖨 출력</button>
+      <button className="tws-print-btn" onClick={handlePrint} title="현재 보는 주만 인쇄 (A4 가로 1페이지)">🖨 출력</button>
       <div className="tws-label">
         {weekLabelKR(weekOffset)}
         <span className="sub">{formatWeekRange(week.startDate, week.endDate)}</span>
@@ -415,6 +443,9 @@ export default function TutorWeeklySchedule() {
       </select>
       <div className="tws-cnt">{filteredSessions.length} sessions</div>
     </div>
+
+    <div ref={printRef} className="tws-print-body">
+    <div className="tws-print-title">주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
 
     {(legendTutors.length > 0 || hasUnassigned) && (
       <div className="tws-legend">
@@ -495,6 +526,7 @@ export default function TutorWeeklySchedule() {
         })}
       </div>
     )}
+    </div>{/* /tws-print-body (printRef) */}
 
     {selected && (
       <div className="tws-overlay" onClick={() => setSelected(null)}>
@@ -554,6 +586,5 @@ export default function TutorWeeklySchedule() {
     )}
 
     {toast && <div className="tws-toast" role="status" aria-live="polite">{toast}</div>}
-    <div className="tws-print-footer">드림아카데미 · 주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
   </div>);
 }

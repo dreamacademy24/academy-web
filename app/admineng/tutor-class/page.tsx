@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
@@ -401,6 +401,34 @@ export default function EngTutorClassPage() {
   }, [tab, loadAllLessons]);
 
   const week = useMemo(() => sundayWeek(weekOffset), [weekOffset]);
+
+  // 인쇄: A4 가로 1페이지에 맞춰 scale-to-fit (TutorInvoice handlePrint와 동일 방식)
+  const printRef = useRef<HTMLDivElement>(null);
+  function handlePrint() {
+    const el = printRef.current;
+    if (!el) { window.print(); return; }
+    const usableW = 1080, usableH = 720; // A4 landscape 8mm 여백 가용 영역(px 근사)
+    const naturalH = el.scrollHeight;
+    const naturalW = el.offsetWidth;
+    const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
+    const prevTransform = el.style.transform;
+    const prevOrigin = el.style.transformOrigin;
+    const prevWidth = el.style.width;
+    if (s < 1) {
+      el.style.transformOrigin = "top left";
+      el.style.transform = `scale(${s})`;
+      el.style.width = `${Math.round(naturalW / s)}px`;
+    }
+    const restore = () => {
+      el.style.transform = prevTransform;
+      el.style.transformOrigin = prevOrigin;
+      el.style.width = prevWidth;
+      window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+    setTimeout(restore, 4000);
+    window.print();
+  }
 
   // Map: dateStr → lessons that occur on that day (filtered by date range overlap + class_days)
   const weekLessonsByDate = useMemo(() => {
@@ -831,15 +859,17 @@ export default function EngTutorClassPage() {
 .eempty{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
 .ee-print-title,.ee-print-footer{display:none}
 @media print{
-  @page{size:A4 landscape;margin:22mm 10mm 14mm 10mm}
+  @page{size:A4 landscape;margin:8mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
   body *{visibility:hidden}
   #ee-weekly-print, #ee-weekly-print *{visibility:visible}
-  #ee-weekly-print{box-shadow:none!important;padding:0!important;background:#fff!important}
+  #ee-weekly-print{position:absolute;left:0;top:0;box-shadow:none!important;padding:0!important;background:#fff!important}
+  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 일반 흐름으로 1회만 표시 */
   .ee-weekly-ctrl{display:none!important}
-  .ee-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
-  .ee-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
+  .ee-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+  .ee-print-footer{display:block!important;text-align:center;font-size:10px;color:#475569;margin-top:8px;padding-top:6px;border-top:1px solid #e2e8f0}
+  /* scale-to-fit로 한 페이지에 들어가므로 분할 안 일어남 — 카드만 break-inside 유지 */
   .ee-day-col{break-inside:avoid!important;page-break-inside:avoid!important}
   .ee-sess-card{break-inside:avoid!important;page-break-inside:avoid!important}
 }
@@ -1101,14 +1131,13 @@ export default function EngTutorClassPage() {
 
       {tab === "weekly" && (
         <div id="ee-weekly-print" className="ee-weekly-print" style={{background:"#fff",borderRadius:12,padding:16,marginTop:8,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
-          <div className="ee-print-title">Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
           <div className="ee-weekly-ctrl" style={{display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",gap:4,background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,padding:3}}>
               <button onClick={() => setWeekOffset(o => o - 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>◀ Prev</button>
               <button onClick={() => setWeekOffset(0)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:weekOffset===0?"#1a6fc4":"transparent",color:weekOffset===0?"#fff":"#475569"}}>This Week</button>
               <button onClick={() => setWeekOffset(o => o + 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>Next ▶</button>
             </div>
-            <button onClick={() => window.print()} style={{padding:"7px 14px",background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#1a1a2e"}}>🖨 Print</button>
+            <button onClick={handlePrint} style={{padding:"7px 14px",background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#1a1a2e"}}>🖨 Print</button>
             <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",padding:"7px 12px",background:"#eff6ff",borderRadius:8}}>
               {fmtRange(week.startDate, week.endDate)}
             </div>
@@ -1117,6 +1146,9 @@ export default function EngTutorClassPage() {
               {loadingAllLessons ? "Loading..." : `${allLessons.length} active lessons`}
             </div>
           </div>
+
+          <div ref={printRef} className="ee-print-body">
+          <div className="ee-print-title">Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
 
           {(weekTutorLegend.length > 0 || weekHasUnassigned) && (
             <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12,fontSize:11.5,color:"#475569",fontWeight:700,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
@@ -1183,6 +1215,7 @@ export default function EngTutorClassPage() {
             })}
           </div>
           <div className="ee-print-footer">Dream Academy · Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
+          </div>{/* /ee-print-body (printRef) */}
         </div>
       )}
 
