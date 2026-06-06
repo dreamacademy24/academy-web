@@ -1404,3 +1404,34 @@ special_request, ssp
 2. **예약자 이름 버그**: 어드민 신청목록 예약자가 아이디(portal_name) 표시 → bookings 조회해서 실제 이름으로
 3. **애프터스쿨 신청목록 연동**: `/admin/afterschool-fieldtrip` 신청목록 → fieldtrip_applications (셔틀처럼 월챕터+그룹핑)
 4. **애프터스쿨 손님폼 재구성**: `/after-school-fieldtrip` → 셔틀 폼 구조로 (방번호 제거+세션자동, 월챕터+주차, 선택프로그램 인원칸, 투어별 INSERT)
+
+## 2026-06-04 세션 후반 작업 (PWA·텔레그램·신청제약·PDF)
+
+6910d12(투어셔틀 위주) 이후 보강.
+
+1. **안내 PDF 갱신**: 튜터수업 신청안내 — STEP1을 '드림게스트' 설치(`/install?app=guest`)로 변경, 맨 뒤 항공권 등록(체크인 사전정보) 페이지 추가(체크인 정보입력 카드 → 항공권 사진 자동입력 OCR, 입국/출국편). 산출물은 레포 외(Claude 생성).
+
+2. **PWA 3개 앱 분리** (e199fc8): `/install?app=guest|admin|staff` 분기.
+   - 드림게스트(`/portal`, manifest-guest) · 드림 관리자(`/admin/hub`, manifest-admin) · Dream Staff(`/admineng/hub`, manifest-staff)
+   - iOS 대응: `document.title` + `apple-mobile-web-app-title` 앱별 주입
+   - 정적 manifest 3종 `public/`. 손님 배포 링크 = `/install?app=guest`
+
+3. **텔레그램 그룹 알림** (7e2308a):
+   - `lib/telegram.ts` (서버전용: sendTelegram/escapeHtml/localTimeLine). 환경변수 `TELEGRAM_BOT_TOKEN`·`TELEGRAM_CHAT_ID` 사용 (※토큰 값은 문서에 기재 금지). 봇=@dreamph_bot, 그룹="inform dream academy"
+   - 이벤트 알림 3종: 항공권(`/api/portal/flight` PUT·PATCH), 튜터(`/api/portal/tutor` POST), 셔틀(클라 INSERT → 신규 `/api/notify/telegram` route 경유). 저장 성공 후 best-effort, 알림 실패해도 저장 영향 없음. 셔틀 테스트 발송 그룹 도착 검증됨
+   - 정기 알림(돌봄매트 스타일, Vercel Cron)은 드림보드 ⑤손님알림에 대기
+   - ⚠️ TODO: 셋업 중 노출된 봇 토큰 BotFather `/revoke` 재발급 권장
+
+4. **튜터 신청폼 "다른 학생 추가" 버튼 제거** (app/portal/tutor): 검증 완료. 1:2 둘째 학생은 예약현황 자동 연동이라 버튼 불필요. `student2_*`/`form2` 경로는 코드 보존.
+
+5. **신청 제약 4가지** (dfdff44): 공통 헬퍼 `lib/lessonDates.ts`(isLessonDateAllowed) 3곳 적용(TutorApplications 확정·TutorLessonList·portal/tutor) → 세션·회차·금액 자동 일치.
+   - 6/12(2026-06-12): 튜터 세션 제외 + 셔틀 `SHUTTLE_HOLIDAYS`(이미 포함, 🚫휴무)
+   - 토요일 = 매월 둘째·넷째 주만 (`Math.ceil(getDate()/7)∈{2,4}`). 그 외 토요일 미생성
+   - 폼 멘트: 토 선택 시 "토요일은 매달 2·4주차만 가능"
+   - 수정 경고: portal/tutor·portal/my-applications(튜터 모달·셔틀 탭) amber 문구 "인보이스가 발행되고 수정·변경하시는 경우에는 반영이 불가할 수 있습니다"
+   - 검증: 토요일 멘트·수정 경고 라이브 확인, 헬퍼 로직 코드 확인
+
+### 다음 세션 대기
+- 주간 스케줄 일요일 컬럼 제거(월~토 6칸) — 프롬프트 준비됨, 미push
+- 주간 스케줄 인쇄 미세조정(카드 안잘림+페이지마다 타이틀, 77d51d0 적용·추가조정 가능)
+- 텔레그램 정기 알림 구현(드림보드 ⑤)
