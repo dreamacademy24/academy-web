@@ -20,7 +20,7 @@ export default function BookingNonPackagePage() {
   const [bType, setBType] = useState<NPType>("dh_only");
   const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
   const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
-  const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
+  const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항", pickupAddr: "" });
   const [weeks, setWeeks] = useState(4); // 비통학형 숙소 이용 기간(주)
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
@@ -91,9 +91,9 @@ export default function BookingNonPackagePage() {
       accom_weeks: isCommute ? 0 : weeks,
       checkin_date: dates.checkIn || null,
       checkout_date: dates.checkOut || null,
-      pickup: isCommute ? "불필요함" : "필요함",
-      drop_off: isCommute ? "불필요함" : "필요함",
-      pickup_place: isCommute ? null : dates.pickupPlace,
+      pickup: isCommute ? (dates.pickupAddr.trim() ? "필요함" : "불필요함") : "필요함",
+      drop_off: isCommute ? (dates.pickupAddr.trim() ? "필요함" : "불필요함") : "필요함",
+      pickup_place: isCommute ? (dates.pickupAddr.trim() || null) : dates.pickupPlace,
       flight_in: flightInStr,
       flight_out: flightOutStr,
       special_request: specialRequest,
@@ -215,7 +215,13 @@ export default function BookingNonPackagePage() {
                 : <input className="fi" type="date" value={dates.checkOut} readOnly style={{ background: "#f3f4f6" }} />}
             </div>
           </div>
-          {isCommute && <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 픽업/항공편이 없습니다.</div>}
+          {isCommute && (<>
+            <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 항공편 정보가 없습니다. 픽드랍이 필요하면 아래에 주소를 직접 적어주세요.</div>
+            <div className="fg" style={{marginTop:10}}>
+              <label className="fl">픽드랍 주소 (선택)</label>
+              <input className="fi" placeholder="픽드랍 받을 주소를 직접 입력 (예: 막탄 OO콘도 1234호)" value={dates.pickupAddr} onChange={e => setDates({ ...dates, pickupAddr: e.target.value })} />
+            </div>
+          </>)}
         </div>
 
         <div className="bs">

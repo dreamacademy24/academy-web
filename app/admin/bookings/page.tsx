@@ -256,14 +256,18 @@ export default function AdminBookingsPage(){
     const isCommute=(b as any).booking_type==="commute"||b.accom_type==="통학형";
     return arr.map((s,i)=>{
       const weeks=Number(s.academyWeeks||b.accom_weeks||0);
-      // 수업 시작일: 저장값/체크인 무엇이든 월요일로 보정 (월요일이면 그대로)
-      const calStart=getNextMonday(s.academyStart||s.academy_start||b.checkin_date||"");
-      // 수업 종료일: 비통학형은 SSOT 공식, 통학형은 기존 로직 유지
-      const calEnd=isCommute?getLastFriday(b.checkout_date||""):(weeks>0?calcAcademyEnd(calStart,weeks):"");
-      // SSOT 검증: 예약 상세와 동일한 공식 (체크인 → 다음 월요일 → +(weeks-1)*7+4)
+      // 수업 일자 = 손님 세부내역(상세)과 동일하게 "저장값 그대로" 신뢰.
+      //  · 학생 JSONB(academyStart/academy_start) → booking.academy_start 순으로 저장값 사용
+      //  · 저장값이 없을 때만 derive: 비통학형=체크인 다음 월요일, 통학형=체크인 그대로
+      //  · 통학형은 강제 월/금 보정하지 않음(통학형은 임의 요일 시작/종료 가능)
+      const storedStart=(s.academyStart||s.academy_start||(b as any).academy_start||"").split("T")[0];
+      const storedEnd=(s.academyEnd||s.academy_end||(b as any).academy_end||"").split("T")[0];
+      const calStart=storedStart||(isCommute?(b.checkin_date||"").split("T")[0]:getNextMonday(b.checkin_date||""));
+      const calEnd=storedEnd||(isCommute?(b.checkout_date||"").split("T")[0]:(weeks>0?calcAcademyEnd(calStart,weeks):""));
+      // 정보용 경고: 비통학형에서 저장값이 "체크인 기준 기대값"과 어긋나면 표시(자동 변경은 안 함)
       const refStart=getNextMonday(b.checkin_date||"");
       const refEnd=weeks>0?calcAcademyEnd(refStart,weeks):"";
-      const mismatch=(!isCommute)&&weeks>0&&(calStart!==refStart||calEnd!==refEnd);
+      const mismatch=(!isCommute)&&weeks>0&&!!storedStart&&(calStart!==refStart||calEnd!==refEnd);
       // 달력 표시용 주수: student JSON → booking accom_weeks → start/end 역산 → "?"
       const calWeeks=(()=>{
         if(s.academyWeeks)return String(s.academyWeeks);
@@ -514,8 +518,8 @@ export default function AdminBookingsPage(){
       checkout_date:newForm.check_out||null,
       accom_type:accomType,
       accom_weeks:0,
-      pickup_place:isCommuteNP?null:(newForm.pickup_place.trim()||null),
-      drop_off:isCommuteNP?null:(newForm.drop_place.trim()||null),
+      pickup_place:newForm.pickup_place.trim()||null,
+      drop_off:newForm.drop_place.trim()||null,
       agency:newForm.agency.trim()||null,
       special_request:newForm.special_request.trim()||null,
     };

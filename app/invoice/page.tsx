@@ -1201,7 +1201,7 @@ function InvoicePageInner(){
         <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Stay Details</div>
           <table className="tb"><tbody>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI||"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO||"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{isCommute?"통학형 (Day-school only)":(cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R))}</td><td className="lb">Room No.</td><td>{isCommute?"-":(checkin.houseNo||"TBA")}</td></tr>
             <tr><td className="lb">Adults</td><td>{cP}</td><td className="lb">Children</td><td>{cK}</td></tr>
           </tbody></table>
         </div>
@@ -1258,7 +1258,7 @@ function InvoicePageInner(){
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
-            <tr><td className="lb">Accommodation</td><td>{cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R)}</td><td className="lb">Room No.</td><td>{checkin.houseNo||"TBA"}</td></tr>
+            <tr><td className="lb">Accommodation</td><td>{isCommute?"통학형 (Day-school only)":(cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R))}</td><td className="lb">Room No.</td><td>{isCommute?"-":(checkin.houseNo||"TBA")}</td></tr>
           </tbody></table>
         </div>
 
@@ -1358,7 +1358,12 @@ function InvoicePageInner(){
   {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
-  <div className="fs"><h2>패키지 견적 계산</h2>
+  <div className="fs"><h2>{isCommute?"🚶 통학형 학원비":"패키지 견적 계산"}</h2>
+    {isCommute?(
+      <div style={{padding:"14px 16px",background:"#eef2ff",border:"1px solid #c7d2fe",borderRadius:10,fontSize:13,color:"#3730a3",lineHeight:1.7}}>
+        통학형은 숙소·룸 없이 <b>학원만</b> 등록됩니다. 학원비는 아래 <b>학생 정보</b>의 학생별 기간(주차)으로 자동 계산되며(학생 수 × 단가), 합계는 아래 <b>결제 정보</b>에 표시됩니다. 숙소 선택은 필요 없습니다.
+      </div>
+    ):(<>
     <div className="mt"><button className={`mb${cm==="single"?" ac":""}`} onClick={()=>setCm("single")}>숙소 1개</button><button className={`mb${cm==="combo"?" ac":""}`} onClick={()=>setCm("combo")}>숙소 2개 조합</button></div>
 
     {cm==="single"?(<>
@@ -1377,6 +1382,7 @@ function InvoicePageInner(){
           ⚠️ 콤보 모드에서 한쪽 숙소가 0주입니다. 두 숙소의 주수를 모두 입력해야 정확한 인보이스가 발행됩니다. (현재: 숙소 A {a1W}주 + 숙소 B {a2W}주)
         </div>
       )}
+    </>)}
     </>)}
   </div>
 
