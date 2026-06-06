@@ -1249,6 +1249,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재<span id="notif-dot-approval-tab" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
+      <button class="tab-item" data-page="sboard" onclick="showPage('sboard')">공유보드</button>
     </div>
     <div class="th-right">
       <button class="user-avatar-btn" onclick="toggleUserMenu(event)">
@@ -1300,6 +1301,22 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
             </div>
             <div class="summary-grid" id="homeSG"></div>
           </div>
+        </div>
+      </div>
+
+      <!-- SHARED BOARD (공유보드) -->
+      <div id="page-sboard" class="hidden">
+        <div style="padding:16px 20px;max-width:1000px;margin:0 auto;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box">
+          <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+            <div style="font-size:11.5px;color:#dc2626;font-weight:700;margin-bottom:8px">※ 비밀번호 등 민감정보는 입력하지 마세요</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <select id="sbCat" style="padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:var(--text)"></select>
+              <input id="sbContent" type="text" placeholder="공유할 내용을 입력하세요" style="flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;color:var(--text)" onkeydown="if(event.key==='Enter'){event.preventDefault();addSBoardItem();}">
+              <button onclick="addSBoardItem()" style="padding:9px 18px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">추가</button>
+            </div>
+          </div>
+          <div id="sbFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+          <div id="sbList"></div>
         </div>
       </div>
 
@@ -3565,7 +3582,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide'];
+const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide','sboard'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -3628,6 +3645,7 @@ function showPage(p){
   if(p==='approval'){renderApprovalStandalone();document.getElementById('btnTask').style.display='none';document.getElementById('topS').textContent='\uACB0\uC7AC \uC0C1\uC2E0 \u00B7 \uC2B9\uC778 \u00B7 \uBC18\uB824';markNotifsRead('approval');}
   if(p==='manual'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC';document.getElementById('topS').textContent='';}
   if(p==='guide'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uC548\uB0B4\uBB38\uAD6C';document.getElementById('topS').textContent='';}
+  if(p==='sboard'){renderSBoard();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC';document.getElementById('topS').textContent='\uACC4\uC815\u00B7\uBCC0\uACBD\u00B7\uB9C1\uD06C\u00B7\uBA54\uBAA8 \uACF5\uC6A9';}
   if(typeof updateNavBadges==='function')updateNavBadges();
 }
 function showEmpPage(empId){
@@ -3684,6 +3702,139 @@ function _homeGotoBoardFilter(f){
 function _homeGotoBoardEmp(empId){
   boardView='emp';_boardSelEmpId=empId;_boardSelTaskId=null;showPage('board');
 }
+// ── 오늘의 체크리스트 (staff_daily_check, 날짜 바뀌면 자동 초기화, 공용) ──
+const DAILY_ITEMS=[
+  { key:'attendance', label:'학생 출석·특이사항 확인 (약·건강·봉투)' },
+  { key:'meal',       label:'인원 대비 정량 확인 + 식사지도' },
+  { key:'online',     label:'온라인 수업 학부모 안내' },
+  { key:'photos',     label:'드라이브 사진정리 (화·목 에프터스쿨 / 월 졸업식 / 필드트립 필히)' },
+  { key:'insta',      label:'인스타 피드 게시' },
+  { key:'aircon',     label:'에어컨 24도 / 5·7번방 OFF 확인' },
+  { key:'kinder',     label:'킨더 오전반 하원 체크' },
+  { key:'pm_shuttle', label:'16시 하원 차량 탑승 확인' },
+  { key:'ext_drop',   label:'연장수업 드랍 드라이버 확인' },
+];
+function _dailyP2(n){return (n<10?'0':'')+n;}
+function _dailyToday(){var u=new Date(Date.now()+8*3600000);return u.getUTCFullYear()+'-'+_dailyP2(u.getUTCMonth()+1)+'-'+_dailyP2(u.getUTCDate());}
+function _dailyUpsert(body){return fetch(SB_URL+'/rest/v1/staff_daily_check?on_conflict=check_date,item_key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(body)}).then(function(r){if(!r.ok)throw new Error('upsert '+r.status);return r;});}
+function loadDailyCheck(){
+  var sec=document.getElementById('dailyCheckSection');if(!sec)return;
+  var today=_dailyToday();
+  sbGet('staff_daily_check','check_date=eq.'+today).then(function(rows){
+    var byKey={};(rows||[]).forEach(function(r){byKey[r.item_key]=r;});
+    sec.innerHTML=_dailyCheckHtml(byKey);
+  }).catch(function(e){console.error('daily load err',e);sec.innerHTML=_dailyCheckHtml({});});
+}
+function _dailyCheckHtml(byKey){
+  var total=DAILY_ITEMS.length,done=0;
+  DAILY_ITEMS.forEach(function(it){if(byKey[it.key])done++;});
+  var pct=total?Math.round(done/total*100):0;
+  var u=new Date(Date.now()+8*3600000);
+  var mdLabel=(u.getUTCMonth()+1)+'월 '+u.getUTCDate()+'일';
+  var head='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+    '<div style="font-size:13.5px;font-weight:800;color:var(--text)">✅ 오늘의 체크리스트 <span style="font-weight:600;color:var(--text3)">('+mdLabel+')</span></div>'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+      '<div style="width:120px;height:8px;background:#e5e7eb;border-radius:9px;overflow:hidden"><div style="width:'+pct+'%;height:100%;background:#22c55e;transition:width .2s"></div></div>'+
+      '<span style="font-size:12px;font-weight:800;color:#16a34a;white-space:nowrap">'+done+'/'+total+'</span>'+
+    '</div></div>';
+  var rows=DAILY_ITEMS.map(function(it){
+    var r=byKey[it.key],checked=!!r,who='';
+    if(r){
+      var t8=new Date(new Date(r.checked_at||Date.now()).getTime()+8*3600000);
+      who='<span style="font-size:10.5px;color:var(--text3);margin-left:auto;white-space:nowrap">'+esc(r.checked_by||'')+' · '+_dailyP2(t8.getUTCHours())+':'+_dailyP2(t8.getUTCMinutes())+'</span>';
+    }
+    return '<label style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;cursor:pointer;margin-bottom:4px;background:'+(checked?'#f0fdf4':'#fafafa')+'">'+
+      '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleDailyCheck(\''+it.key+'\',this)" style="width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:#22c55e">'+
+      '<span style="font-size:12.5px;color:'+(checked?'var(--text3)':'var(--text)')+';'+(checked?'text-decoration:line-through':'')+'">'+esc(it.label)+'</span>'+
+      who+'</label>';
+  }).join('');
+  return head+'<div>'+rows+'</div>';
+}
+function toggleDailyCheck(key,el){
+  var today=_dailyToday();
+  var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  if(el.checked){
+    _dailyUpsert({check_date:today,item_key:key,checked:true,checked_by:who,checked_at:new Date().toISOString()})
+      .then(function(){loadDailyCheck();})
+      .catch(function(e){console.error('daily check err',e);el.checked=false;});
+  } else {
+    sbDel('staff_daily_check','check_date=eq.'+today+'&item_key=eq.'+key)
+      .then(function(){loadDailyCheck();})
+      .catch(function(e){console.error('daily uncheck err',e);el.checked=true;});
+  }
+}
+// ── 공유 보드 (staff_board, 공용) ──
+const BOARD_CATS = [
+  { key:'account', label:'🔑 계정·아이디' },
+  { key:'change',  label:'✏️ 수정·변경' },
+  { key:'link',    label:'🔗 링크' },
+  { key:'memo',    label:'📝 메모·공지' },
+];
+let _sbFilter='all';
+let _sbSelInit=false;
+function _sbLinkify(text){
+  return esc(text).replace(/(https?:\/\/[^\s]+)/g,function(u){return '<a href="'+u+'" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline">'+u+'</a>';});
+}
+function setSBoardFilter(k){_sbFilter=k;renderSBoard();}
+function renderSBoard(){
+  var sel=document.getElementById('sbCat');
+  if(sel && !_sbSelInit){ sel.innerHTML=BOARD_CATS.map(function(c){return '<option value="'+c.key+'">'+c.label+'</option>';}).join(''); _sbSelInit=true; }
+  var fc=document.getElementById('sbFilters');
+  if(fc){
+    var chips=[{key:'all',label:'전체'}].concat(BOARD_CATS);
+    fc.innerHTML=chips.map(function(c){
+      var a=_sbFilter===c.key;
+      return '<button onclick="setSBoardFilter(\''+c.key+'\')" style="padding:5px 12px;border-radius:999px;border:1px solid '+(a?'#3b82f6':'var(--border)')+';background:'+(a?'#eff6ff':'#fff')+';color:'+(a?'#2563eb':'var(--text2)')+';font-size:12px;font-weight:'+(a?'700':'500')+';cursor:pointer;font-family:inherit">'+c.label+'</button>';
+    }).join('');
+  }
+  var list=document.getElementById('sbList');if(!list)return;
+  sbGet('staff_board','order=created_at.desc').then(function(rows){
+    _sbRenderList(rows||[]);
+  }).catch(function(e){console.error('sboard load err',e);list.innerHTML='<div style="text-align:center;color:var(--text3);padding:30px;font-size:13px">불러오기 실패</div>';});
+}
+function _sbRenderList(rows){
+  var list=document.getElementById('sbList');if(!list)return;
+  var cats=_sbFilter==='all'?BOARD_CATS:BOARD_CATS.filter(function(c){return c.key===_sbFilter;});
+  var html='';
+  cats.forEach(function(c){
+    var items=rows.filter(function(r){return r.category===c.key;});
+    if(_sbFilter==='all' && !items.length) return;
+    html+='<div style="margin-bottom:18px">';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px">'+c.label+' <span style="font-size:11px;color:var(--text3);font-weight:600">'+items.length+'</span></div>';
+    if(!items.length){
+      html+='<div style="text-align:center;color:var(--text3);padding:18px;font-size:12px;background:#fafafa;border-radius:8px">항목이 없습니다</div>';
+    } else {
+      html+=items.map(function(r){
+        var t8=new Date(new Date(r.created_at||Date.now()).getTime()+8*3600000);
+        var when=(t8.getUTCMonth()+1)+'/'+t8.getUTCDate()+' '+_dailyP2(t8.getUTCHours())+':'+_dailyP2(t8.getUTCMinutes());
+        return '<div style="display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+_sbLinkify(r.content||'')+'</div>'+
+            '<div style="font-size:10.5px;color:var(--text3);margin-top:4px">'+esc(r.author||'-')+' · '+when+'</div>'+
+          '</div>'+
+          '<button onclick="delSBoardItem(\''+r.id+'\')" title="삭제" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);flex-shrink:0;padding:2px 4px">🗑</button>'+
+        '</div>';
+      }).join('');
+    }
+    html+='</div>';
+  });
+  if(!html) html='<div style="text-align:center;color:var(--text3);padding:40px;font-size:13px">아직 공유된 항목이 없습니다.</div>';
+  list.innerHTML=html;
+}
+function addSBoardItem(){
+  var sel=document.getElementById('sbCat'),inp=document.getElementById('sbContent');
+  if(!sel||!inp)return;
+  var content=(inp.value||'').trim();
+  if(!content){inp.focus();return;}
+  var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  sbPost('staff_board',{category:sel.value,content:content,author:who,created_at:new Date().toISOString()})
+    .then(function(){inp.value='';renderSBoard();})
+    .catch(function(e){console.error('sboard add err',e);alert('추가 실패: '+((e&&e.message)||e));});
+}
+function delSBoardItem(id){
+  if(!confirm('이 항목을 삭제할까요?'))return;
+  sbDel('staff_board','id=eq.'+id).then(function(){renderSBoard();}).catch(function(e){console.error('sboard del err',e);});
+}
 function renderHomePage(){
   var dash=document.getElementById('homeDashboard');if(!dash)return;
   var visible=_homeVisibleTasks();
@@ -3709,6 +3860,8 @@ function renderHomePage(){
   var urgentToday=visible.filter(function(t){if(isDoneTask(t))return false;if(t.priority==='high')return true;if(t.due){var d=parseLocalDate(t.due);return d<=endTodayD;}return false;});
   // Build HTML
   var html='';
+  // 오늘의 체크리스트 (최상단, async로 loadDailyCheck가 채움)
+  html+='<div id="dailyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:10px;padding:14px 16px;margin-bottom:16px"></div>';
   // Greeting + date
   var _heroName=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
   var _heroGreet='안녕하세요'+(_heroName?', '+esc(_heroName)+'님':'')+' 👋';
@@ -3808,6 +3961,7 @@ function renderHomePage(){
   html+=_homeCardWrap('📢 공지사항','',ntBody);
   html+='</div>';
   dash.innerHTML=html;
+  loadDailyCheck();
 }
 function _homeUnassignedRow(t){
   return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;font-size:12px;margin-bottom:3px;background:#fafafa">'+
