@@ -47,6 +47,7 @@ export default function DreamhouseRooms() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
+  const [viewMode, setViewMode] = useState<'grid'|'calendar'>('grid')
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [tooltip, setTooltip] = useState<{x:number,y:number,booking:Booking}|null>(null)
@@ -264,11 +265,24 @@ export default function DreamhouseRooms() {
           <span style={{fontSize:16,fontWeight:700,color:'#1e293b',minWidth:130,textAlign:'center'}}>{year}년 {MONTH_KO[month]}</span>
           <button onClick={nextMonth} style={{background:'#f1f5f9',border:'1px solid #cbd5e1',color:'#475569',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:14}}>›</button>
           <button onClick={()=>{setYear(today.getFullYear());setMonth(today.getMonth())}} style={{background:'#1e40af',border:'1px solid #1e3a8a',color:'#fff',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:13,fontWeight:600,marginLeft:8}}>오늘</button>
+          <span style={{width:1,height:22,background:'#e2e8f0',margin:'0 4px'}} />
+          <button onClick={()=>setViewMode('grid')} style={{
+            padding:'4px 12px', borderRadius:6, fontSize:13,
+            background: viewMode==='grid' ? '#1e3a8a' : '#e2e8f0',
+            color: viewMode==='grid' ? '#fff' : '#475569',
+            border:'none', cursor:'pointer'
+          }}>≡ 그리드</button>
+          <button onClick={()=>setViewMode('calendar')} style={{
+            padding:'4px 12px', borderRadius:6, fontSize:13,
+            background: viewMode==='calendar' ? '#1e3a8a' : '#e2e8f0',
+            color: viewMode==='calendar' ? '#fff' : '#475569',
+            border:'none', cursor:'pointer', marginLeft:4
+          }}>📅 달력</button>
         </div>
 
         {loading ? (
           <div style={{textAlign:'center',padding:60,color:'#3b82f6',fontSize:18}}>불러오는 중...</div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div style={{overflowX:'auto',flex:1}}>
             <table style={{borderCollapse:'collapse',minWidth:'100%'}}>
             <thead>
@@ -384,6 +398,68 @@ export default function DreamhouseRooms() {
               })}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div style={{flex:1,overflowY:'auto',padding:16}}>
+          {(() => {
+            const startDow = new Date(year, month, 1).getDay()
+            const totalDays = getDaysInMonth(year, month)
+            const cells: Date[] = []
+            for (let i = 0; i < startDow; i++) cells.push(new Date(year, month, 1 - (startDow - i)))
+            for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, month, d))
+            while (cells.length % 7 !== 0) cells.push(new Date(year, month, totalDays + (cells.length - startDow - totalDays + 1)))
+            const weeks: Date[][] = []
+            for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+            const todayStr = toDateStr(today)
+            return (
+              <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                <thead>
+                  <tr>
+                    {DOW_KO.map((d, i) => (
+                      <th key={d} style={{padding:'8px 4px',fontSize:13,fontWeight:700,borderBottom:'1px solid #e2e8f0',color: i===0?'#dc2626':i===6?'#2563eb':'#475569'}}>{d}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeks.map((week, wi) => (
+                    <tr key={wi}>
+                      {week.map((date, di) => {
+                        const dateStr = toDateStr(date)
+                        const inMonth = date.getMonth() === month
+                        const isToday = dateStr === todayStr
+                        const checkins = bookings.filter(b => b.checkin_date === dateStr)
+                        const checkouts = bookings.filter(b => b.checkout_date === dateStr)
+                        return (
+                          <td key={di} style={{verticalAlign:'top',height:90,minWidth:0,border:'1px solid #e2e8f0',padding:4,background: inMonth ? '#fff' : '#f8fafc'}}>
+                            <div style={{display:'flex',justifyContent:'flex-end',marginBottom:3,height:22}}>
+                              <span style={{
+                                fontSize:12,
+                                fontWeight: isToday ? 700 : 400,
+                                color: !inMonth ? '#cbd5e1' : (di===0 ? '#dc2626' : di===6 ? '#2563eb' : '#475569'),
+                                ...(isToday ? {background:'#1e40af',color:'#fff',borderRadius:'50%',width:22,height:22,display:'inline-flex',alignItems:'center',justifyContent:'center'} : {})
+                              }}>{date.getDate()}</span>
+                            </div>
+                            <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                              {checkins.map(b => (
+                                <div key={'in'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} 체크인`} style={{cursor:'pointer',background:'#dcfce7',color:'#166534',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {b.accom_room} {b.booker_name || b.reservation_no || ''} in
+                                </div>
+                              ))}
+                              {checkouts.map(b => (
+                                <div key={'out'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} 체크아웃`} style={{cursor:'pointer',background:'#ffedd5',color:'#9a3412',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {b.accom_room} {b.booker_name || b.reservation_no || ''} out
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          })()}
         </div>
       )}
       </div>
