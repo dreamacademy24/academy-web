@@ -47,13 +47,6 @@ export default function AdminHubPage() {
       ],
     },
     {
-      title: "현지직원",
-      cards: [
-        { icon: "🚐", title: "Shuttle Schedule", desc: "Pick up · Drop off · Daily",            href: "/ashuttle" },
-        { icon: "🌐", title: "Local Staff Hub",  desc: "현지직원 · 튜터 전용 페이지",            href: "/admineng/hub" },
-      ],
-    },
-    {
       title: "직원업무",
       cards: [
         { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
@@ -61,6 +54,13 @@ export default function AdminHubPage() {
         { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
         { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
         { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 필드트립 · 회원",         href: "/admin/site" },
+      ],
+    },
+    {
+      title: "현지직원",
+      cards: [
+        { icon: "🚐", title: "Shuttle Schedule", desc: "Pick up · Drop off · Daily",            href: "/ashuttle" },
+        { icon: "🌐", title: "Local Staff Hub",  desc: "현지직원 · 튜터 전용 페이지",            href: "/admineng/hub" },
       ],
     },
   ];
