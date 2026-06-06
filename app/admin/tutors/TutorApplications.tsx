@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "rea
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
-import { isLessonDateAllowed } from "@/lib/lessonDates";
+import { isLessonDateAllowed, tutorDailyRate, tutorBaseRate, countLessonDays } from "@/lib/lessonDates";
 import * as XLSX from "xlsx";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; is_active: boolean; hourly_rate: number }
@@ -196,6 +196,107 @@ export default function TutorApplications() {
   }
   function closeDetail() { setDetailId(null); setDetailSnap(null); setModalError(""); setShowDeleteConfirm(false); }
 
+  // 확정 처리 공통 함수 — tutor_lessons + tutor_lesson_sessions 생성.
+  // 단가=하루치(기본×타임), 회차=실제 수업 일수, 총액=단가×일수 로 저장.
+  // 모달 저장(saveAdmin)·목록 "확정" 버튼이 동일하게 호출. 실패 시 throw.
+  async function createLessonForApp(
+    app: TutorApp,
+    opts?: { assignedTutorId?: string | null; totalSessions?: number | null; totalAmount?: number | null; adminMemo?: string }
+  ): Promise<string> {
+    const assignedTutorId = opts && "assignedTutorId" in opts ? (opts.assignedTutorId ?? null) : (app.assigned_tutor_id || null);
+    const adminMemoText = (opts?.adminMemo ?? app.admin_memo ?? "").trim();
+
+    const { data: existing, error: exErr } = await supabase
+      .from("tutor_lessons").select("id").eq("application_id", app.id).maybeSingle();
+    if (exErr) console.error("기존 수업 조회 실패:", exErr);
+    if (existing) return "확정 저장 (수업은 이미 생성됨)";
+
+    const dayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+    const targetDays = (app.class_days || []).map(d => dayMap[d]).filter(n => n !== undefined);
+    const localStr = (d: Date) => {
+      const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${dd}`;
+    };
+    const _skipSet = new Set(toDateArr((app as any).skip_dates ?? app.excluded_dates));
+    const sessions: { session_date: string; session_idx: number; status: string }[] = [];
+    if (app.start_date && app.end_date && targetDays.length > 0) {
+      const cur = new Date(app.start_date + "T00:00:00");
+      const end = new Date(app.end_date + "T00:00:00");
+      let idx = 1;
+      while (cur <= end) {
+        if (targetDays.includes(cur.getDay())) {
+          const ds = localStr(cur);
+          // 휴일(6/12)·1·3·5번째 토요일·skip 제외 → 세션 미생성 (회차·금액 자동 일치)
+          if (!_skipSet.has(ds) && isLessonDateAllowed(cur, ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    // 회차 = 실제 수업 일수(= sessions.length). 단가 = 하루치. 총액 = 단가 × 일수.
+    const computedTotalSessions = (opts?.totalSessions ?? null) ?? sessions.length;
+    const sessionsPerDay = app.sessions_per_day || 1;
+    const dailyRate = tutorDailyRate(app.class_type, sessionsPerDay);
+    const computedTotalAmount = (opts?.totalAmount ?? null) ?? (dailyRate * computedTotalSessions);
+
+    const _to = blocksToTimeOverrides(app.schedule_blocks);
+    const _skipArr = toDateArr((app as any).skip_dates ?? app.excluded_dates);
+    const lessonInsertPayload: Record<string, unknown> = {
+      application_id: app.id,
+      house_or_reserver: app.house_or_reserver,
+      student_names: app.children_names,
+      student_ages: app.children_ages,
+      tutor_id: assignedTutorId,
+      class_type: app.class_type,
+      sessions_per_day: sessionsPerDay,
+      hourly_rate: dailyRate,
+      start_date: app.start_date,
+      end_date: app.end_date,
+      class_days: app.class_days,
+      class_time: app.class_time,
+      confirmed_time: null,
+      overall_level: app.overall_level,
+      speaking_level: app.speaking_level,
+      reading_level: app.reading_level,
+      writing_level: app.writing_level,
+      textbook: app.textbook,
+      class_style: app.class_style,
+      class_focus: toFocusArr(app.class_focus),
+      total_sessions: computedTotalSessions,
+      total_amount: computedTotalAmount,
+      status: "active",
+      admin_memo: `request_id: ${app.id}${adminMemoText ? '\n' + adminMemoText : ''}`,
+    };
+    if (Object.keys(_to).length > 0) lessonInsertPayload.time_overrides = _to;
+    if (_skipArr.length > 0) lessonInsertPayload.skip_dates = _skipArr;
+
+    const { data: lesson, error: e2 } = await supabase
+      .from("tutor_lessons").insert(lessonInsertPayload).select().single();
+    if (e2 || !lesson) throw new Error(`수업 생성 실패: ${e2?.message || "unknown"}`);
+
+    if (sessions.length > 0) {
+      const sessionsWithLessonId = sessions.map(s => ({ ...s, lesson_id: (lesson as { id: string }).id }));
+      const { error: e3 } = await supabase.from("tutor_lesson_sessions").insert(sessionsWithLessonId);
+      if (e3) throw new Error(`수업 생성됐지만 회차 생성 실패: ${e3.message}`);
+    }
+    return `✅ 확정 완료: ${sessions.length}회차 자동 생성`;
+  }
+
+  // 목록 "확정" 버튼 — 상세 모달의 확정 처리와 동일 로직(createLessonForApp) 호출.
+  async function confirmFromList(a: TutorApp) {
+    if (a.status === "confirmed") return;
+    if (!confirm("확정하시겠습니까?")) return;
+    const { error } = await supabase.from("tutor_requests").update({ status: "confirmed" }).eq("id", a.id);
+    if (error) { showToast("확정 실패: " + error.message); return; }
+    try {
+      const msg = await createLessonForApp(a);
+      showToast(msg);
+    } catch (e) {
+      showToast(`확정됐지만 ${e instanceof Error ? e.message : "수업 생성 실패"}`);
+    }
+    await loadApps();
+  }
+
   async function saveAdmin() {
     if (!detail) return;
     console.log("[save start]", { id: detail.id, names: detail.children_names, house: detail.house_or_reserver });
@@ -255,105 +356,23 @@ export default function TutorApplications() {
       console.log("[lesson sync] 변경 없음, 스킵");
     }
 
-    // 최초 confirmed 전환 시 → tutor_lessons + tutor_lesson_sessions 자동 생성
+    // 최초 confirmed 전환 시 → 공통 함수로 tutor_lessons + tutor_lesson_sessions 생성
     let postMsg = "저장되었습니다" + syncWarning;
     if (newStatus === "confirmed" && oldStatus !== "confirmed") {
-      const { data: existing, error: exErr } = await supabase
-        .from("tutor_lessons")
-        .select("id")
-        .eq("application_id", detail.id)
-        .maybeSingle();
-      if (exErr) {
-        console.error("기존 수업 조회 실패:", exErr);
-      }
-      if (existing) {
-        postMsg = "확정 저장 (수업은 이미 생성됨)";
-      } else {
-        const dayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
-        const targetDays = (detail.class_days || []).map(d => dayMap[d]).filter(n => n !== undefined);
-        const localStr = (d: Date) => {
-          const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
-          return `${y}-${m}-${dd}`;
-        };
-        const _skipSet = new Set(toDateArr((detail as any).skip_dates));
-        const sessions: { session_date: string; session_idx: number; status: string }[] = [];
-        if (detail.start_date && detail.end_date && targetDays.length > 0) {
-          const cur = new Date(detail.start_date + "T00:00:00");
-          const end = new Date(detail.end_date + "T00:00:00");
-          let idx = 1;
-          while (cur <= end) {
-            if (targetDays.includes(cur.getDay())) {
-              const ds = localStr(cur);
-              // 휴일(6/12)·1·3·5번째 토요일 제외 → 세션 미생성 (회차·금액도 자동 일치)
-              if (!_skipSet.has(ds) && isLessonDateAllowed(cur, ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
-            }
-            cur.setDate(cur.getDate() + 1);
-          }
-        }
-
-        const computedTotalSessions = parsedSessions ?? sessions.length;
-        const sessionsPerDay = detail.sessions_per_day || 1;
-        const computedTotalAmount = parsedAmount ?? (computedTotalSessions * sessionsPerDay * (detail.hourly_rate || 0));
-
-        const _to = blocksToTimeOverrides(detail.schedule_blocks);
-        const _skipArr = toDateArr((detail as any).skip_dates);
-        const lessonInsertPayload: Record<string, unknown> = {
-          application_id: detail.id,
-          house_or_reserver: detail.house_or_reserver,
-          student_names: detail.children_names,
-          student_ages: detail.children_ages,
-          tutor_id: adminForm.assigned_tutor_id || null,
-          class_type: detail.class_type,
-          sessions_per_day: sessionsPerDay,
-          hourly_rate: detail.hourly_rate,
-          start_date: detail.start_date,
-          end_date: detail.end_date,
-          class_days: detail.class_days,
-          class_time: detail.class_time,
-          confirmed_time: null,
-          overall_level: detail.overall_level,
-          speaking_level: detail.speaking_level,
-          reading_level: detail.reading_level,
-          writing_level: detail.writing_level,
-          textbook: detail.textbook,
-          class_style: detail.class_style,
-          class_focus: toFocusArr(detail.class_focus),
-          total_sessions: computedTotalSessions,
-          total_amount: computedTotalAmount,
-          status: "active",
-          admin_memo: `request_id: ${detail.id}${adminForm.admin_memo.trim() ? '\n' + adminForm.admin_memo.trim() : ''}`,
-        };
-        if (Object.keys(_to).length > 0) lessonInsertPayload.time_overrides = _to;
-        if (_skipArr.length > 0) lessonInsertPayload.skip_dates = _skipArr;
-        const { data: lesson, error: e2 } = await supabase
-          .from("tutor_lessons")
-          .insert(lessonInsertPayload)
-          .select()
-          .single();
-
-        if (e2 || !lesson) {
-          setSaving(false);
-          console.error("수업 생성 실패:", e2);
-          closeDetail();
-          showToast(`확정 저장됐지만 수업 생성 실패: ${e2?.message || "unknown"}`);
-          await loadApps();
-          return;
-        }
-
-        if (sessions.length > 0) {
-          const sessionsWithLessonId = sessions.map(s => ({ ...s, lesson_id: (lesson as { id: string }).id }));
-          const { error: e3 } = await supabase.from("tutor_lesson_sessions").insert(sessionsWithLessonId);
-          if (e3) {
-            setSaving(false);
-            console.error("회차 생성 실패:", e3);
-            closeDetail();
-            showToast(`수업 생성됐지만 회차 생성 실패: ${e3.message}`);
-            await loadApps();
-            return;
-          }
-        }
-
-        postMsg = `✅ 확정 완료: ${sessions.length}회차 자동 생성`;
+      try {
+        postMsg = await createLessonForApp(detail, {
+          assignedTutorId: adminForm.assigned_tutor_id || null,
+          totalSessions: parsedSessions,
+          totalAmount: parsedAmount,
+          adminMemo: adminForm.admin_memo,
+        });
+      } catch (e) {
+        setSaving(false);
+        console.error("수업 생성 실패:", e);
+        closeDetail();
+        showToast(`확정 저장됐지만 ${e instanceof Error ? e.message : "수업 생성 실패"}`);
+        await loadApps();
+        return;
       }
     }
 
@@ -386,17 +405,19 @@ export default function TutorApplications() {
   }
 
   // Estimate helpers (for placeholders/hints only — not saved)
+  // 회차 = 실제 수업 "일수"(lib/lessonDates), 단가 = 하루치(기본×타임), 총액 = 단가 × 일수.
   function estimateSessions(a: TutorApp): string {
-    if (!a.class_days || !a.start_date || !a.end_date) return "";
-    const s = new Date(a.start_date + "T00:00:00"), e = new Date(a.end_date + "T00:00:00");
-    const weeks = Math.ceil((e.getTime() - s.getTime()) / (7 * 86400000)) + 1;
-    return `자동: ${a.class_days.length}일/주 × ~${weeks}주 = ~${a.class_days.length * weeks}회`;
+    const days = countLessonDays(a.start_date, a.end_date, a.class_days, toDateArr(a.excluded_dates));
+    if (!days) return "";
+    return `자동: 실제 수업일 ${days}일`;
   }
   function estimateAmount(a: TutorApp, sessions: number | string): string {
-    const n = typeof sessions === "number" ? sessions : parseInt(sessions);
-    if (!n || !a.hourly_rate) return "";
+    const typed = typeof sessions === "number" ? sessions : parseInt(sessions);
+    const days = typed || countLessonDays(a.start_date, a.end_date, a.class_days, toDateArr(a.excluded_dates));
+    if (!days) return "";
     const spd = a.sessions_per_day || 1;
-    return `₱${a.hourly_rate} × ${spd}타임 × ${n}회 = ~₱${(a.hourly_rate * spd * n).toLocaleString()}`;
+    const daily = tutorDailyRate(a.class_type, spd);
+    return `단가 ₱${daily.toLocaleString()} (₱${tutorBaseRate(a.class_type)}×${spd}타임) × ${days}일 = ₱${(daily * days).toLocaleString()}`;
   }
 
   // Filtered list
@@ -621,6 +642,7 @@ export default function TutorApplications() {
 .ta-act-btn.view{background:#fff;color:#475569;border:1px solid #cbd5e1}.ta-act-btn.view:hover{background:#f8fafc;border-color:#94a3b8;color:#1a1a2e}
 .ta-act-btn.review{background:#f59e0b;color:#fff;border:none}.ta-act-btn.review:hover{background:#d97706}
 .ta-act-btn.assign{background:#16a34a;color:#fff;border:none}.ta-act-btn.assign:hover{background:#15803d}
+.ta-act-btn.confirm{background:#1a6fc4;color:#fff;border:none}.ta-act-btn.confirm:hover{background:#155aa0}
 .ta-act-btn:disabled{opacity:0.4;cursor:not-allowed}
 .ta-toolbar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .ta-filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -820,6 +842,14 @@ export default function TutorApplications() {
                               onClick={() => openDetail(a, true)}
                               title={a.assigned_tutor_id ? "튜터 재배정" : "튜터 배정"}
                             >배정</button>
+                          )}
+                          {/* 확정 — 배정됨 상태에서만 (상세 확정 처리와 동일 로직) */}
+                          {a.status === 'assigned' && (
+                            <button
+                              className="ta-act-btn confirm"
+                              onClick={() => confirmFromList(a)}
+                              title="확정 처리 (수업·회차 생성)"
+                            >확정</button>
                           )}
                         </div>
                       </td>

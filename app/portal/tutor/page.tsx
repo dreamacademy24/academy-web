@@ -420,12 +420,13 @@ export default function PortalTutorPage() {
     const compatPreferredTime = validBlocks[0].time;
     const compatSessions = validBlocks[0].sessions_per_day;
 
-    // 총 회차/금액 = 생성수업일 − skipDates (블록별 sessions_per_day 가중)
+    // 통일 정의: 회차 = 실제 수업 "일수"(타임 곱 X), 총액 = 단가(기본×타임) × 일수.
     const _generated = generateClassDates(validBlocks, form.start_date || '', form.end_date || '');
     const _sortedSkips = [...skipDates].filter(d => _generated.some(o => o.date === d)).sort();
-    const _totalSessions = _generated.filter(o => !_sortedSkips.includes(o.date)).reduce((s, o) => s + o.spd, 0);
-    const _unitPrice = form.class_type === '1:2' ? 350 : 300;
-    const _totalAmount = _totalSessions * _unitPrice;
+    const _kept = _generated.filter(o => !_sortedSkips.includes(o.date));
+    const _unitPrice = form.class_type === '1:2' ? 350 : 300;                  // 기본단가(타임 1)
+    const _totalSessions = new Set(_kept.map(o => o.date)).size;               // 회차 = 일수
+    const _totalAmount = _kept.reduce((s, o) => s + _unitPrice * o.spd, 0);    // Σ(기본×타임) = 단가×일수
 
     // 학생 나이(원본값) — modalStudents에서 이름 매칭으로 lookup
     const _targetKr = isFor2 ? form.student1_name_kr : form.student_name_kr;
@@ -1047,6 +1048,8 @@ export default function PortalTutorPage() {
           const _gen = generateClassDates(validBlocks, form.start_date, form.end_date);
           const skipDeduct = _gen.filter(o => skipDates.includes(o.date)).reduce((s, o) => s + o.spd, 0);
           const K = Math.max(0, K_gross - skipDeduct);
+          // 회차 = 실제 수업 "일수"(타임 곱 X) — 표시용
+          const daysCount = new Set(_gen.filter(o => !skipDates.includes(o.date)).map(o => o.date)).size;
           const skippedDays = skipDates.filter(d => _gen.some(o => o.date === d)).length;
           const ms = new Date(form.end_date + 'T00:00:00').getTime() - new Date(form.start_date + 'T00:00:00').getTime();
           const days = Math.floor(ms / 86400000) + 1;
@@ -1077,7 +1080,7 @@ export default function PortalTutorPage() {
                 <span>전체 {M}주</span>
                 {skippedDays > 0 && (<><span style={{color:'#94a3b8'}}>·</span><span style={{color:'#dc2626', fontWeight:700}}>빠짐 {skippedDays}일</span></>)}
                 <span style={{flex:1}} />
-                <span style={{fontWeight:800, color:'#1a6fc4'}}>총 {K}회</span>
+                <span style={{fontWeight:800, color:'#1a6fc4'}}>총 {daysCount}회</span>
                 <span style={{fontWeight:800, color:'#16a34a'}}>₱{amount.toLocaleString()}</span>
               </div>
             </div>

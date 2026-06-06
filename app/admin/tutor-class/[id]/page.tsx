@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
+import { countLessonDays } from "@/lib/lessonDates";
 
 interface TutorRow {
   id: string;
@@ -78,18 +79,6 @@ export default function TutorRequestDetailPage() {
   const [price, setPrice] = useState<string>("");
   const [deleting, setDeleting] = useState(false);
 
-  function computeWeeks(start: string | null | undefined, end: string | null | undefined): number {
-    if (!start || !end) return 0;
-    const s = new Date(start), e = new Date(end);
-    const diff = e.getTime() - s.getTime();
-    if (isNaN(diff) || diff < 0) return 0;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
-    return Math.max(0, Math.ceil(days / 7));
-  }
-  function countDays(preferred_days: string | null | undefined): number {
-    if (!preferred_days) return 0;
-    return preferred_days.split(',').map(s => s.trim()).filter(Boolean).length;
-  }
   function defaultPrice(classType: string | null | undefined): number {
     return classType === '1:2' ? 350 : 300;
   }
@@ -119,13 +108,13 @@ export default function TutorRequestDetailPage() {
   async function save() {
     if (!row) return;
     setSaving(true); setMsg("");
-    const weeks = computeWeeks(row.start_date, row.end_date);
-    const daysPerWeek = countDays(row.preferred_days);
     const spd = row.sessions_per_day || 1;
-    const _skipCount = toDateArr((row as any).skip_dates).length;
-    const computedSessions = Math.max(0, weeks * daysPerWeek * spd - _skipCount * spd);
-    const priceNum = parseFloat(price) || 0;
-    const computedAmount = computedSessions * priceNum;
+    const classDaysArr = row.preferred_days ? row.preferred_days.split(",").map(d => d.trim()).filter(Boolean) : [];
+    // 회차 = 실제 수업 "일수"(휴일/토요일제약/skip 반영, 타임 곱 X)
+    const computedSessions = countLessonDays(row.start_date, row.end_date, classDaysArr, toDateArr((row as any).skip_dates));
+    const priceNum = parseFloat(price) || 0;   // 기본단가(타임 1 기준)
+    const dailyRate = priceNum * spd;          // 하루치 단가 = 기본단가 × 타임
+    const computedAmount = dailyRate * computedSessions;  // 총액 = 단가 × 일수
 
     // tutorId 정규화 — UUID면 그대로, 이름(또는 잘못된 값)이면 tutors 테이블에서 name 매칭 후 id로 변환
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -177,7 +166,7 @@ export default function TutorRequestDetailPage() {
         class_days: classDaysArr,
         class_time: row.preferred_time,
         class_type: row.class_type,
-        hourly_rate: Number(priceNum) || 0,
+        hourly_rate: dailyRate,            // 하루치 단가 저장 (총액 = 단가 × 일수)
         house_or_reserver: row.guest_name,
         student_names: row.student_name_kr || (row as any).student_name || "",
         student_ages: row.student_age,
@@ -355,28 +344,29 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               </select>
             </div>
             {(() => {
-              const weeks = computeWeeks(row.start_date, row.end_date);
-              const daysPerWeek = countDays(row.preferred_days);
               const spd = row.sessions_per_day || 1;
-              const computedSessions = weeks * daysPerWeek * spd;
-              const priceNum = parseFloat(price) || 0;
-              const computedAmount = computedSessions * priceNum;
+              const classDaysArr = row.preferred_days ? row.preferred_days.split(",").map(d => d.trim()).filter(Boolean) : [];
+              // 회차 = 실제 수업 "일수"(휴일/토요일제약/skip 반영, 타임 곱 X)
+              const computedSessions = countLessonDays(row.start_date, row.end_date, classDaysArr, toDateArr((row as any).skip_dates));
+              const priceNum = parseFloat(price) || 0;   // 기본단가(타임 1 기준)
+              const dailyRate = priceNum * spd;          // 하루치 단가
+              const computedAmount = dailyRate * computedSessions;
               return (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                   <div>
-                    <label className="dt-lbl">단가 (₱/회)</label>
+                    <label className="dt-lbl">기본단가 (₱/타임)</label>
                     <input className="dt-inp" type="number" min={0} value={price} onChange={e => setPrice(e.target.value)} placeholder="예: 300" />
-                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>기본 {row.class_type === '1:2' ? '350' : '300'} ({row.class_type || '1:1'})</div>
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>기본 {row.class_type === '1:2' ? '350' : '300'} ({row.class_type || '1:1'}) · 하루치 ₱{dailyRate.toLocaleString()} ({spd}타임)</div>
                   </div>
                   <div>
-                    <label className="dt-lbl">총 회차 (자동)</label>
+                    <label className="dt-lbl">총 회차 (자동, 일수)</label>
                     <input className="dt-inp" type="number" value={computedSessions} readOnly style={{ background: "#f1f5f9", color: "#1a1a2e" }} />
-                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>{weeks}주 × {daysPerWeek}일 × {spd}타임</div>
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>실제 수업일 {computedSessions}일</div>
                   </div>
                   <div>
                     <label className="dt-lbl">총 금액 ₱ (자동)</label>
                     <input className="dt-inp" type="number" value={computedAmount} readOnly style={{ background: "#f1f5f9", color: "#16a34a", fontWeight: 700 }} />
-                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>= {computedSessions}회 × ₱{priceNum}</div>
+                    <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>= ₱{dailyRate.toLocaleString()}(하루치) × {computedSessions}일</div>
                   </div>
                 </div>
               );

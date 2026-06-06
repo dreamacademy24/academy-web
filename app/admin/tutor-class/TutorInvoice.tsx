@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "rea
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
+import { tutorDailyRate } from "@/lib/lessonDates";
 
 interface Lesson {
   id: string; created_at: string;
@@ -153,7 +154,8 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         tutor_id: r.assigned_tutor_id || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
-        hourly_rate: (r as any).price_per_session || ((r.class_type || "").includes("1:2") ? 350 : 300),
+        // 하루치 단가(기본×타임)로 통일 — 인보이스 total = 단가 × 일수
+        hourly_rate: tutorDailyRate(r.class_type, r.sessions_per_day),
         start_date: r.start_date || "",
         end_date: r.end_date || "",
         class_days: (r.preferred_days || "").split(",").map((s: string) => s.trim()).filter(Boolean),
@@ -235,7 +237,9 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   };
 
   const classSession = lesson?.sessions_per_day || 1;
-  const classFee = lesson?.hourly_rate || 0;
+  // classFee = "하루치 단가"(기본×타임). 저장된 hourly_rate가 옛 기준(기본가)일 수 있어
+  // class_type·타임에서 직접 도출해 옛/새 데이터 모두 일관되게 표시.
+  const classFee = tutorDailyRate(lesson?.class_type, classSession);
 
   const days = (() => {
     // 실제 출결 세션이 있으면 그 수 사용
@@ -255,7 +259,8 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     return count || lesson?.total_sessions || 0;
   })();
 
-  const total = classFee * classSession * days;
+  // 단가(하루치) × 회차(일수). classSession(타임)은 표시용만 — 타임 이중곱 제거.
+  const total = classFee * days;
   const levelInfo = lesson?.overall_level ? LEVEL_LABELS[lesson.overall_level] : null;
   const sessionTime = parseSessionTime(stripTimeSuffix(lesson?.confirmed_time || lesson?.class_time));
 
