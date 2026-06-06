@@ -291,7 +291,11 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   function handlePrint() {
     const el = invoiceRef.current;
     if (!el) { window.print(); return; }
-    const usableH = 1040; // A4 portrait, 8mm 여백 기준 가용 높이(px) 근사
+    // 화면 scrollHeight는 @media print 컴팩트화(폰트·여백 축소, ~30%) 적용 전 값이라
+    // 실제 인쇄 높이보다 큼. 이전 1040은 그 큰 값 기준으로 scale을 계산해 과도하게 축소됐음.
+    // 임계값을 높여 일반 인보이스는 축소 없이(s=1) 컴팩트 규칙만으로 A4 1장에 들어가게 하고,
+    // 매우 긴 인보이스에서만 완만히 축소되도록 한다.
+    const usableH = 1400; // A4 portrait 8mm 여백 가용높이(~1062px) + 인쇄 컴팩트화 보정
     const naturalH = el.scrollHeight;
     const naturalW = el.offsetWidth;
     const s = Math.min(1, usableH / Math.max(1, naturalH));
@@ -397,8 +401,9 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   .no-print{display:none!important}
   .tutor-info-container{box-shadow:none!important;padding:0!important;max-width:100%;border-radius:0;border:none}
   .tc-tabs,.tc-top{display:none!important}
-  /* 페이지 분할 방지 */
+  /* 페이지 분할 방지 — 표/규정/정보블록이 경계에서 잘리지 않게 */
   .tutor-info-container, table, tr { break-inside: avoid; page-break-inside: avoid; }
+  .ti-info, .ti-wtable, .ti-rules { break-inside: avoid !important; page-break-inside: avoid !important; }
   /* 컴팩트화 */
   .ti-title{font-size:18px}
   .ti-head{margin-bottom:14px}

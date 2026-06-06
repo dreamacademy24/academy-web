@@ -321,7 +321,7 @@ export default function TutorWeeklySchedule() {
 .tws-legend .chip{display:inline-flex;align-items:center;gap:5px}
 .tws-legend .dot{width:10px;height:10px;border-radius:50%}
 
-.tws-grid{display:grid;grid-template-columns:repeat(7,minmax(140px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.tws-grid{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
 .tws-col{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:10px;min-height:420px;display:flex;flex-direction:column}
 .tws-head{text-align:center;font-size:12px;font-weight:800;padding-bottom:8px;margin-bottom:8px;border-bottom:1px solid #e2e8f0;color:#475569}
 .tws-head .day{font-size:11px;color:#94a3b8;font-weight:700;margin-bottom:3px;letter-spacing:0.04em}
@@ -368,8 +368,8 @@ export default function TutorWeeklySchedule() {
 .tws-m-foot button{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569}
 .tws-m-foot button:hover{background:#e2e8f0}
 
-@media(max-width:1100px){.tws-grid{grid-template-columns:repeat(7,minmax(120px,1fr))}}
-@media(max-width:800px){.tws-grid{grid-template-columns:repeat(7,140px)}}
+@media(max-width:1100px){.tws-grid{grid-template-columns:repeat(6,minmax(120px,1fr))}}
+@media(max-width:800px){.tws-grid{grid-template-columns:repeat(6,140px)}}
 
 .tws-print-btn{padding:7px 14px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#1a1a2e}
 .tws-print-btn:hover{background:#f1f5f9}
@@ -384,8 +384,8 @@ export default function TutorWeeklySchedule() {
   .tws-ctrl,.tws-legend,.tws-overlay,.tws-toast{display:none!important}
   .tws-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
   .tws-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
-  .tws-grid{grid-template-columns:repeat(7,1fr)!important}
-  .tws-col{break-inside:avoid;page-break-inside:avoid;min-height:auto!important}
+  .tws-grid{grid-template-columns:repeat(6,1fr)!important}
+  .tws-col{break-inside:avoid!important;page-break-inside:avoid!important;min-height:auto!important}
   .tws-sess{break-inside:avoid!important;page-break-inside:avoid!important}
 }
     `}</style>
@@ -437,11 +437,12 @@ export default function TutorWeeklySchedule() {
       <div className="tws-week-empty">로딩 중...</div>
     ) : (
       <div className="tws-grid">
-        {week.dates.map((date, i) => {
+        {/* 일요일(인덱스 6) 제외 — 월~토 6칸만 표시. week.dates는 보존(일요일 데이터 유지) */}
+        {week.dates.slice(0, 6).map((date, i) => {
           const dt = new Date(date + "T00:00:00");
           const dayNum = dt.getDate();
           const isToday = date === today;
-          const isWeekend = i === 5 || i === 6; // Sat, Sun
+          const isWeekend = i === 5; // Sat
           const list = byDate.get(date) || [];
           return (
             <div key={date} className="tws-col">

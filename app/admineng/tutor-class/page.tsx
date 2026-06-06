@@ -840,7 +840,7 @@ export default function EngTutorClassPage() {
   .ee-weekly-ctrl{display:none!important}
   .ee-print-title{display:block!important;visibility:visible!important;position:fixed;top:0;left:0;right:0;text-align:center;font-size:13px;font-weight:800;color:#1a1a2e;padding:6px 0;background:#fff;border-bottom:1px solid #e2e8f0;z-index:9999}
   .ee-print-footer{display:block!important;visibility:visible!important;position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#475569;padding:4px 0;background:#fff;border-top:1px solid #e2e8f0;z-index:9999}
-  .ee-day-col{break-inside:avoid;page-break-inside:avoid}
+  .ee-day-col{break-inside:avoid!important;page-break-inside:avoid!important}
   .ee-sess-card{break-inside:avoid!important;page-break-inside:avoid!important}
 }
     `}</style>
@@ -973,8 +973,9 @@ export default function EngTutorClassPage() {
               </div>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
               {wk.dates.map((date, i) => {
+                if (i === 0) return null; // 일요일 제거 (데이터 보존, 표시만 제외) → 월~토 6칸
                 const dt = new Date(date + "T00:00:00");
                 const dayNum = dt.getDate();
                 const isToday = date === todayIso;
@@ -1134,8 +1135,9 @@ export default function EngTutorClassPage() {
             </div>
           )}
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
             {week.dates.map((date, i) => {
+              if (i === 0) return null; // 일요일 제거 (데이터 보존, 표시만 제외) → 월~토 6칸
               const dt = new Date(date + "T00:00:00");
               const dayNum = dt.getDate();
               const isToday = date === ymd(new Date());
