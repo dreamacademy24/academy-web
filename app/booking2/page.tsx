@@ -20,7 +20,7 @@ export default function BookingNonPackagePage() {
   const [bType, setBType] = useState<NPType>("dh_only");
   const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
   const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
-  const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항", pickupAddr: "" });
+  const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항", pickupAddr: "", pickupUndecided: false });
   const [weeks, setWeeks] = useState(4); // 비통학형 숙소 이용 기간(주)
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
@@ -55,6 +55,7 @@ export default function BookingNonPackagePage() {
     if (!students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; }
     if (!dates.checkIn) { alert(isCommute ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (!dates.checkOut) { alert(isCommute ? "수업종료 날짜를 입력해주세요." : "체크아웃 날짜를 입력해주세요."); return; }
+    if (isCommute && !dates.pickupUndecided && !dates.pickupAddr.trim()) { alert("픽드랍 주소를 입력하거나 '미정'을 선택해주세요."); return; }
     if (!agreed) { alert("예약 동의가 필요합니다."); return; }
 
     setLoading(true);
@@ -91,9 +92,9 @@ export default function BookingNonPackagePage() {
       accom_weeks: isCommute ? 0 : weeks,
       checkin_date: dates.checkIn || null,
       checkout_date: dates.checkOut || null,
-      pickup: isCommute ? (dates.pickupAddr.trim() ? "필요함" : "불필요함") : "필요함",
-      drop_off: isCommute ? (dates.pickupAddr.trim() ? "필요함" : "불필요함") : "필요함",
-      pickup_place: isCommute ? (dates.pickupAddr.trim() || null) : dates.pickupPlace,
+      pickup: "필요함",
+      drop_off: "필요함",
+      pickup_place: isCommute ? (dates.pickupUndecided ? "미정" : (dates.pickupAddr.trim() || null)) : dates.pickupPlace,
       flight_in: flightInStr,
       flight_out: flightOutStr,
       special_request: specialRequest,
@@ -216,10 +217,14 @@ export default function BookingNonPackagePage() {
             </div>
           </div>
           {isCommute && (<>
-            <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 항공편 정보가 없습니다. 픽드랍이 필요하면 아래에 주소를 직접 적어주세요.</div>
+            <div style={{fontSize:12,color:"#6b7c93",marginTop:4}}>* 통학형은 항공편 정보가 없습니다. 픽드랍 받을 주소를 직접 적어주세요. (아직 안 정했으면 미정)</div>
             <div className="fg" style={{marginTop:10}}>
-              <label className="fl">픽드랍 주소 (선택)</label>
-              <input className="fi" placeholder="픽드랍 받을 주소를 직접 입력 (예: 막탄 OO콘도 1234호)" value={dates.pickupAddr} onChange={e => setDates({ ...dates, pickupAddr: e.target.value })} />
+              <label className="fl">픽드랍 주소<span className="req">*</span></label>
+              <input className="fi" placeholder="픽드랍 받을 주소를 직접 입력 (예: 막탄 OO콘도 1234호)" value={dates.pickupAddr} disabled={dates.pickupUndecided} onChange={e => setDates({ ...dates, pickupAddr: e.target.value })} style={dates.pickupUndecided ? { background: "#f3f4f6" } : {}} />
+              <label className="fl-checkbox" style={{marginTop:6}}>
+                <input type="checkbox" checked={dates.pickupUndecided} onChange={e => setDates({ ...dates, pickupUndecided: e.target.checked, pickupAddr: e.target.checked ? "" : dates.pickupAddr })} />
+                <span>미정 (추후 입력)</span>
+              </label>
             </div>
           </>)}
         </div>

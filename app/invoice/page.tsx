@@ -580,7 +580,7 @@ function InvoicePageInner(){
     setApplied(!!d.applied||hasBilling);
     if(d.checkin!==undefined)setCheckin(d.checkin);
     if(d.adminOnly!==undefined)setAdminOnly(d.adminOnly);
-    if(d.isCommute!==undefined)setIsCommute(d.isCommute);
+    // isCommute는 스냅샷이 아니라 실제 예약(booking_type/accom_type)에서만 판정 → 아래 전용 useEffect (stale 스냅샷이 통학형을 가리는 문제 방지)
     if(d.forceFullPayment!==undefined)setForceFullPayment(d.forceFullPayment);
     if(d.lateCheckout!==undefined)setLateCheckout(d.lateCheckout);
     if(Array.isArray(d.receiptPayments)&&d.receiptPayments.length>0)setReceiptPayments(d.receiptPayments);
@@ -664,6 +664,14 @@ function InvoicePageInner(){
       .catch(()=>{})
       .finally(()=>{if(!cancelled)setSnapshotChecked(true);});
     return ()=>{cancelled=true;};
+  },[bookingId]);
+
+  /* ── isCommute는 스냅샷 유무와 무관하게 항상 실제 예약에서 판정 (stale 스냅샷이 통학형을 가리는 문제 방지) ── */
+  useEffect(()=>{
+    if(!bookingId) return;
+    supabase.from("bookings").select("booking_type,accom_type").eq("id",bookingId).maybeSingle().then(({data})=>{
+      if(data) setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
+    });
   },[bookingId]);
 
   /* ── DB에서 예약 로드 (스냅샷 없을 때만) ── */
