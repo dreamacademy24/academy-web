@@ -218,8 +218,22 @@ export default function TutorRequestDetailPage() {
 
   async function remove() {
     if (!row) return;
-    if (!confirm(`${row.guest_name || ""}님의 신청을 삭제하시겠습니까?\n되돌릴 수 없습니다.`)) return;
+    if (!confirm(`${row.guest_name || ""}님의 신청을 삭제하시겠습니까?\n⚠️ 연결된 확정 수업(주간 스케줄·인보이스)도 함께 삭제됩니다.\n되돌릴 수 없습니다.`)) return;
     setDeleting(true); setMsg("");
+
+    // 연결된 tutor_lessons 수집 — application_id 또는 admin_memo의 "request_id: <id>" (두 생성 경로 모두 커버)
+    const { data: byApp } = await supabase.from("tutor_lessons").select("id").eq("application_id", row.id);
+    const { data: byMemo } = await supabase.from("tutor_lessons").select("id").ilike("admin_memo", `%request_id: ${row.id}%`);
+    const lessonIds = Array.from(new Set([...(byApp || []), ...(byMemo || [])].map((x: { id: string }) => x.id)));
+
+    // 연결 수업의 회차(tutor_lesson_sessions) → 수업(tutor_lessons) 순서로 삭제 후 신청 삭제
+    if (lessonIds.length > 0) {
+      const { error: se } = await supabase.from("tutor_lesson_sessions").delete().in("lesson_id", lessonIds);
+      if (se) { setDeleting(false); setMsg("연결 회차 삭제 실패: " + se.message); return; }
+      const { error: le } = await supabase.from("tutor_lessons").delete().in("id", lessonIds);
+      if (le) { setDeleting(false); setMsg("연결 수업 삭제 실패: " + le.message); return; }
+    }
+
     const { error } = await supabase.from("tutor_requests").delete().eq("id", row.id);
     setDeleting(false);
     if (error) { setMsg("삭제 실패: " + error.message); return; }
