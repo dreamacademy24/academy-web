@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 
@@ -169,6 +169,8 @@ export default function TutorWeeklySchedule() {
   const [selected, setSelected] = useState<Enriched | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
 
   const week = useMemo(() => weekRange(weekOffset), [weekOffset]);
   const today = todayStr();
@@ -304,41 +306,109 @@ export default function TutorWeeklySchedule() {
     return s.session_time || "--:--";
   }
 
-  // 인쇄: A4 가로 1페이지에 맞춰 scale-to-fit (인보이스 handlePrint와 동일 방식, 가로/세로 모두 고려)
-  const printRef = useRef<HTMLDivElement>(null);
-  function handlePrint() {
-    const el = printRef.current;
-    if (!el) { window.print(); return; }
-    // A4 landscape, 6mm 여백 기준 가용 영역(px 실측 근사): 너비 ~1090, 높이 ~760
-    const usableW = 1090, usableH = 760;
-    const naturalH = el.scrollHeight;
-    const naturalW = el.offsetWidth;
-    const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
-    const prevTransform = el.style.transform;
-    const prevOrigin = el.style.transformOrigin;
-    const prevWidth = el.style.width;
-    const prevHeight = el.style.height;
-    const prevOverflow = el.style.overflow;
-    if (s < 1) {
-      el.style.transformOrigin = "top left";
-      el.style.transform = `scale(${s})`;
-      el.style.width = `${Math.round(naturalW / s)}px`;
-      // transform만으론 레이아웃 높이가 안 줄어 빈 페이지가 남음 → 실제 스케일 높이로 고정 + 넘침 숨김
-      el.style.height = `${Math.round(naturalH * s)}px`;
-      el.style.overflow = "hidden";
-    }
-    const restore = () => {
-      el.style.transform = prevTransform;
-      el.style.transformOrigin = prevOrigin;
-      el.style.width = prevWidth;
-      el.style.height = prevHeight;
-      el.style.overflow = prevOverflow;
-      window.removeEventListener("afterprint", restore);
-    };
-    window.addEventListener("afterprint", restore);
-    setTimeout(restore, 4000);
-    window.print();
-  }
+  // 인쇄 미리보기 모달 — A4 가로 박스에 보이는 그대로 한 페이지로 인쇄 ("미리보기 = 출력물")
+  const SHEET_W = 1123, SHEET_H = 794, SHEET_PAD = 28; // A4 가로 px(96dpi) + 안쪽 여백
+  const PV_AVAIL_W = SHEET_W - SHEET_PAD * 2;
+  const PV_AVAIL_H = SHEET_H - SHEET_PAD * 2;
+  const previewInnerRef = useRef<HTMLDivElement>(null);
+  function openPreview() { setPreviewScale(1); setShowPreview(true); }
+  function doPrint() { window.print(); }
+  // 모달 열릴 때(데이터 변경 시) 콘텐츠 자연 높이 측정 → 박스에 꽉 맞게 scale 계산 (폭은 PV_AVAIL_W 고정)
+  useLayoutEffect(() => {
+    if (!showPreview) return;
+    const el = previewInnerRef.current;
+    if (!el) return;
+    const prev = el.style.transform;
+    el.style.transform = "none";
+    const h = el.scrollHeight;
+    el.style.transform = prev;
+    setPreviewScale(Math.min(1, PV_AVAIL_H / Math.max(1, h)));
+  }, [showPreview, sessions, week, tutorFilter, PV_AVAIL_H]);
+
+  // 페이지·미리보기 모달이 공유하는 캘린더 본문 (타이틀+범례+월~토 6칸 그리드)
+  const calendarBlock = (
+    <>
+      <div className="tws-print-title">주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
+      {(legendTutors.length > 0 || hasUnassigned) && (
+        <div className="tws-legend">
+          {legendTutors.map(t => (
+            <span key={t.id} className="chip">
+              <span className="dot" style={{ background: t.color }} />
+              {t.name}
+            </span>
+          ))}
+          {hasUnassigned && (
+            <span className="chip">
+              <span className="dot" style={{ background: UNASSIGNED_COLOR }} />
+              (미배정)
+            </span>
+          )}
+        </div>
+      )}
+      {loading ? (
+        <div className="tws-week-empty">로딩 중...</div>
+      ) : (
+        <div className="tws-grid">
+          {/* 일요일(인덱스 6) 제외 — 월~토 6칸만 표시. week.dates는 보존(일요일 데이터 유지) */}
+          {week.dates.slice(0, 6).map((date, i) => {
+            const dt = new Date(date + "T00:00:00");
+            const dayNum = dt.getDate();
+            const isToday = date === today;
+            const isWeekend = i === 5; // Sat
+            const list = byDate.get(date) || [];
+            return (
+              <div key={date} className="tws-col">
+                <div className={`tws-head${isToday ? " today" : ""}${isWeekend ? " weekend" : ""}`}>
+                  <div className="day">{WEEKDAY_EN[i]}</div>
+                  <div className="date">{dayNum}</div>
+                </div>
+                {list.length === 0 ? (
+                  <div className="tws-empty">No class</div>
+                ) : (
+                  list.map(s => {
+                    const t = STATUS_BADGE[s.status] || STATUS_BADGE.scheduled;
+                    const typeBase = classTypeBase(s.lesson.class_type);
+                    const spd = s.lesson.sessions_per_day === 2 ? "2T" : "1T";
+                    return (
+                      <div
+                        key={s.id}
+                        className="tws-sess"
+                        style={{ borderLeftColor: s.tutor_color }}
+                        onClick={() => setSelected(s)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(s); } }}
+                      >
+                        <div className="time">{resolveTime(s)}</div>
+                        <div className="stu">{firstStudent(s.lesson.student_names)}</div>
+                        <div className={`tut${s.lesson.tutor_id ? "" : " unassigned"}`} style={s.lesson.tutor_id ? { color: s.tutor_color } : undefined}>
+                          {s.tutor_name || (s.lesson.tutor_id ? "(이름 없음)" : "미배정")}
+                        </div>
+                        <div className="badges">
+                          <span className="b b-type">{typeBase}</span>
+                          <span className={`b ${s.lesson.sessions_per_day === 2 ? "b-time2" : "b-time1"}`}>{spd}</span>
+                          <span
+                            className="b"
+                            style={{
+                              background: t.bg,
+                              color: t.color,
+                              textDecoration: t.strike ? "line-through" : "none",
+                            }}
+                          >
+                            {t.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
 
   return (<div className="tws-print-area" id="tws-weekly-print">
     <style>{`
@@ -409,24 +479,30 @@ export default function TutorWeeklySchedule() {
 
 .tws-print-btn{padding:7px 14px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#1a1a2e}
 .tws-print-btn:hover{background:#f1f5f9}
+/* 인쇄 타이틀 — 평소 숨김, 미리보기 박스 안에서만 표시 */
 .tws-print-title{display:none}
+.tws-pv-sheet .tws-print-title{display:block;text-align:center;font-size:15px;font-weight:800;color:#1a1a2e;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+
+/* 인쇄 미리보기 모달 */
+.tws-pv-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px;overflow:auto}
+.tws-pv-stage{display:flex;flex-direction:column;align-items:center;gap:14px;margin:auto}
+.tws-pv-sheet{width:${SHEET_W}px;height:${SHEET_H}px;background:#fff;box-shadow:0 12px 48px rgba(0,0,0,0.45);padding:${SHEET_PAD}px;box-sizing:border-box;overflow:hidden;flex-shrink:0}
+.tws-pv-inner{transform-origin:top left}
+.tws-pv-bar{display:flex;gap:10px;justify-content:center}
+.tws-pv-bar button{padding:10px 22px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;border:none}
+.tws-pv-print{background:#1a6fc4;color:#fff}.tws-pv-print:hover{background:#155aa0}
+.tws-pv-close{background:#fff;color:#475569;border:1px solid #cbd5e1!important}.tws-pv-close:hover{background:#f1f5f9}
+
 @media print{
-  @page{size:A4 landscape;margin:6mm}
+  @page{size:A4 landscape;margin:0}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
-  body *{visibility:hidden}
-  #tws-weekly-print, #tws-weekly-print *{visibility:visible}
-  #tws-weekly-print{position:absolute;left:0;top:0;background:#fff!important}
-  /* printRef 바깥 요소 확실히 제외 */
-  .tws-ctrl,.tws-overlay,.tws-toast{display:none!important}
-  .tws-print-body{overflow:hidden}
-  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 타이틀은 일반 흐름으로 1회 표시 */
-  .tws-ctrl,.tws-overlay,.tws-toast{display:none!important}
-  .tws-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
-  .tws-grid{grid-template-columns:repeat(6,1fr)!important}
-  /* scale-to-fit로 한 페이지에 들어가므로 분할 안 일어남 — 카드만 break-inside 유지 */
-  .tws-col{break-inside:avoid!important;page-break-inside:avoid!important;min-height:auto!important}
-  .tws-sess{break-inside:avoid!important;page-break-inside:avoid!important}
+  /* 미리보기 박스(#tws-print-sheet)만 인쇄, 나머지 전부 숨김 */
+  body *{visibility:hidden!important}
+  #tws-print-sheet, #tws-print-sheet *{visibility:visible!important}
+  #tws-print-sheet{position:fixed;left:0;top:0;margin:0;box-shadow:none!important}
+  .tws-pv-overlay{position:static!important;background:transparent!important;padding:0!important;overflow:visible!important;display:block!important}
+  .tws-pv-bar{display:none!important}
 }
     `}</style>
 
@@ -436,7 +512,7 @@ export default function TutorWeeklySchedule() {
         <button className={weekOffset === 0 ? "ac" : ""} onClick={() => setWeekOffset(0)}>이번 주</button>
         <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
       </div>
-      <button className="tws-print-btn" onClick={handlePrint} title="현재 보는 주만 인쇄 (A4 가로 1페이지)">🖨 출력</button>
+      <button className="tws-print-btn" onClick={openPreview} title="인쇄 미리보기 (A4 가로 1페이지)">🖨 출력</button>
       <div className="tws-label">
         {weekLabelKR(weekOffset)}
         <span className="sub">{formatWeekRange(week.startDate, week.endDate)}</span>
@@ -454,89 +530,27 @@ export default function TutorWeeklySchedule() {
       <div className="tws-cnt">{filteredSessions.length} sessions</div>
     </div>
 
-    <div ref={printRef} className="tws-print-body">
-    <div className="tws-print-title">주간 스케줄 — {formatWeekRange(week.startDate, week.endDate)}</div>
+    {calendarBlock}
 
-    {(legendTutors.length > 0 || hasUnassigned) && (
-      <div className="tws-legend">
-        {legendTutors.map(t => (
-          <span key={t.id} className="chip">
-            <span className="dot" style={{ background: t.color }} />
-            {t.name}
-          </span>
-        ))}
-        {hasUnassigned && (
-          <span className="chip">
-            <span className="dot" style={{ background: UNASSIGNED_COLOR }} />
-            (미배정)
-          </span>
-        )}
-      </div>
-    )}
-
-    {loading ? (
-      <div className="tws-week-empty">로딩 중...</div>
-    ) : (
-      <div className="tws-grid">
-        {/* 일요일(인덱스 6) 제외 — 월~토 6칸만 표시. week.dates는 보존(일요일 데이터 유지) */}
-        {week.dates.slice(0, 6).map((date, i) => {
-          const dt = new Date(date + "T00:00:00");
-          const dayNum = dt.getDate();
-          const isToday = date === today;
-          const isWeekend = i === 5; // Sat
-          const list = byDate.get(date) || [];
-          return (
-            <div key={date} className="tws-col">
-              <div className={`tws-head${isToday ? " today" : ""}${isWeekend ? " weekend" : ""}`}>
-                <div className="day">{WEEKDAY_EN[i]}</div>
-                <div className="date">{dayNum}</div>
-              </div>
-              {list.length === 0 ? (
-                <div className="tws-empty">No class</div>
-              ) : (
-                list.map(s => {
-                  const t = STATUS_BADGE[s.status] || STATUS_BADGE.scheduled;
-                  const typeBase = classTypeBase(s.lesson.class_type);
-                  const spd = s.lesson.sessions_per_day === 2 ? "2T" : "1T";
-                  return (
-                    <div
-                      key={s.id}
-                      className="tws-sess"
-                      style={{ borderLeftColor: s.tutor_color }}
-                      onClick={() => setSelected(s)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(s); } }}
-                    >
-                      <div className="time">{resolveTime(s)}</div>
-                      <div className="stu">{firstStudent(s.lesson.student_names)}</div>
-                      <div className={`tut${s.lesson.tutor_id ? "" : " unassigned"}`} style={s.lesson.tutor_id ? { color: s.tutor_color } : undefined}>
-                        {s.tutor_name || (s.lesson.tutor_id ? "(이름 없음)" : "미배정")}
-                      </div>
-                      <div className="badges">
-                        <span className="b b-type">{typeBase}</span>
-                        <span className={`b ${s.lesson.sessions_per_day === 2 ? "b-time2" : "b-time1"}`}>{spd}</span>
-                        <span
-                          className="b"
-                          style={{
-                            background: t.bg,
-                            color: t.color,
-                            textDecoration: t.strike ? "line-through" : "none",
-                          }}
-                        >
-                          {t.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+    {showPreview && (
+      <div className="tws-pv-overlay" onClick={() => setShowPreview(false)}>
+        <div className="tws-pv-stage" onClick={e => e.stopPropagation()}>
+          <div className="tws-pv-sheet" id="tws-print-sheet">
+            <div
+              ref={previewInnerRef}
+              className="tws-pv-inner"
+              style={{ width: PV_AVAIL_W, transform: `scale(${previewScale})`, pointerEvents: "none" }}
+            >
+              {calendarBlock}
             </div>
-          );
-        })}
+          </div>
+          <div className="tws-pv-bar">
+            <button className="tws-pv-print" onClick={doPrint}>🖨 인쇄</button>
+            <button className="tws-pv-close" onClick={() => setShowPreview(false)}>닫기</button>
+          </div>
+        </div>
       </div>
     )}
-    </div>{/* /tws-print-body (printRef) */}
 
     {selected && (
       <div className="tws-overlay" onClick={() => setSelected(null)}>

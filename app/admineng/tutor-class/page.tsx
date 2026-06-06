@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
@@ -402,40 +402,25 @@ export default function EngTutorClassPage() {
 
   const week = useMemo(() => sundayWeek(weekOffset), [weekOffset]);
 
-  // 인쇄: A4 가로 1페이지에 맞춰 scale-to-fit (TutorInvoice handlePrint와 동일 방식)
-  const printRef = useRef<HTMLDivElement>(null);
-  function handlePrint() {
-    const el = printRef.current;
-    if (!el) { window.print(); return; }
-    const usableW = 1090, usableH = 760; // A4 landscape 6mm 여백 가용 영역(px 실측 근사)
-    const naturalH = el.scrollHeight;
-    const naturalW = el.offsetWidth;
-    const s = Math.min(1, usableW / Math.max(1, naturalW), usableH / Math.max(1, naturalH));
-    const prevTransform = el.style.transform;
-    const prevOrigin = el.style.transformOrigin;
-    const prevWidth = el.style.width;
-    const prevHeight = el.style.height;
-    const prevOverflow = el.style.overflow;
-    if (s < 1) {
-      el.style.transformOrigin = "top left";
-      el.style.transform = `scale(${s})`;
-      el.style.width = `${Math.round(naturalW / s)}px`;
-      // transform만으론 레이아웃 높이가 안 줄어 빈 페이지가 남음 → 실제 스케일 높이로 고정 + 넘침 숨김
-      el.style.height = `${Math.round(naturalH * s)}px`;
-      el.style.overflow = "hidden";
-    }
-    const restore = () => {
-      el.style.transform = prevTransform;
-      el.style.transformOrigin = prevOrigin;
-      el.style.width = prevWidth;
-      el.style.height = prevHeight;
-      el.style.overflow = prevOverflow;
-      window.removeEventListener("afterprint", restore);
-    };
-    window.addEventListener("afterprint", restore);
-    setTimeout(restore, 4000);
-    window.print();
-  }
+  // 인쇄 미리보기 모달 — A4 가로 박스에 보이는 그대로 한 페이지로 인쇄 ("미리보기 = 출력물")
+  const SHEET_W = 1123, SHEET_H = 794, SHEET_PAD = 28;
+  const PV_AVAIL_W = SHEET_W - SHEET_PAD * 2;
+  const PV_AVAIL_H = SHEET_H - SHEET_PAD * 2;
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewScale, setPreviewScale] = useState(1);
+  const previewInnerRef = useRef<HTMLDivElement>(null);
+  function openPreview() { setPreviewScale(1); setShowPreview(true); }
+  function doPrint() { window.print(); }
+  useLayoutEffect(() => {
+    if (!showPreview) return;
+    const el = previewInnerRef.current;
+    if (!el) return;
+    const prev = el.style.transform;
+    el.style.transform = "none";
+    const h = el.scrollHeight;
+    el.style.transform = prev;
+    setPreviewScale(Math.min(1, PV_AVAIL_H / Math.max(1, h)));
+  }, [showPreview, allLessons, weekOffset, PV_AVAIL_H]);
 
   // Map: dateStr → lessons that occur on that day (filtered by date range overlap + class_days)
   const weekLessonsByDate = useMemo(() => {
@@ -827,6 +812,79 @@ export default function EngTutorClassPage() {
     : '-';
   const tutorName = (id: string | null) => tutors.find(t => t.id === id)?.name || "-";
 
+  // 페이지·미리보기 모달이 공유하는 주간 캘린더 본문 (타이틀+범례+월~토 6칸 그리드+푸터)
+  const eeCalendarBlock = (
+    <>
+      <div className="ee-print-title">Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
+
+      {(weekTutorLegend.length > 0 || weekHasUnassigned) && (
+        <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12,fontSize:11.5,color:"#475569",fontWeight:700,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
+          {weekTutorLegend.map(t => (
+            <span key={t.id} style={{display:"inline-flex",alignItems:"center",gap:5}}>
+              <span style={{width:10,height:10,borderRadius:"50%",background:t.color,display:"inline-block"}} />
+              {t.name}
+            </span>
+          ))}
+          {weekHasUnassigned && (
+            <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+              <span style={{width:10,height:10,borderRadius:"50%",background:UNASSIGNED_COLOR,display:"inline-block"}} />
+              Unassigned
+            </span>
+          )}
+        </div>
+      )}
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
+        {week.dates.map((date, i) => {
+          if (i === 0) return null; // 일요일 제거 (데이터 보존, 표시만 제외) → 월~토 6칸
+          const dt = new Date(date + "T00:00:00");
+          const dayNum = dt.getDate();
+          const isToday = date === ymd(new Date());
+          const isWeekend = i === 0 || i === 6;
+          const list = weekLessonsByDate.get(date) || [];
+          return (
+            <div key={date} className="ee-day-col" style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:380,display:"flex",flexDirection:"column"}}>
+              <div style={{textAlign:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #e2e8f0"}}>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:isWeekend?"#dc2626":(isToday?"#1a6fc4":"#94a3b8"),marginBottom:3}}>{WEEKDAY_LABELS[i]}</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#1a1a2e"}}>
+                  {isToday
+                    ? <span style={{display:"inline-block",background:"#1a6fc4",color:"#fff",borderRadius:999,width:26,height:26,lineHeight:"26px"}}>{dayNum}</span>
+                    : dayNum
+                  }
+                </div>
+              </div>
+              {list.length === 0 ? (
+                <div style={{textAlign:"center",color:"#cbd5e1",fontSize:11,padding:"30px 4px",fontWeight:600}}>No class</div>
+              ) : (
+                list.map((l: any) => {
+                  const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
+                  const color = tutorColor(l.tutor_id);
+                  const sname = pickEnFirst(l);
+                  const _krKeys = ['일','월','화','수','목','금','토'];
+                  const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
+                  const _ov = l.time_overrides as Record<string,string> | undefined;
+                  const time = (_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "--:--";
+                  return (
+                    <div
+                      key={l.id}
+                      className="ee-sess-card"
+                      style={{borderLeft:`4px solid ${color}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)"}}
+                    >
+                      <div style={{fontSize:11.5,fontWeight:800,color:l.tutor_id?color:"#dc2626",lineHeight:1.3}}>{tname}</div>
+                      <div style={{fontSize:12.5,fontWeight:700,color:"#1a1a2e",marginTop:2,lineHeight:1.3,wordBreak:"keep-all"}}>{sname}</div>
+                      <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{time}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ee-print-footer">Dream Academy · Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
+    </>
+  );
+
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
@@ -864,20 +922,31 @@ export default function EngTutorClassPage() {
 .ecinput{display:flex;gap:8px;margin-top:4px}
 .ecinput textarea{flex:1;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;height:64px}.ecinput textarea:focus{border-color:#1a6fc4}
 .eempty{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
+/* 인쇄 타이틀/푸터 — 평소 숨김, 미리보기 박스 안에서만 표시 */
 .ee-print-title,.ee-print-footer{display:none}
+.ee-pv-sheet .ee-print-title{display:block;text-align:center;font-size:15px;font-weight:800;color:#1a1a2e;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+.ee-pv-sheet .ee-print-footer{display:block;text-align:center;font-size:11px;color:#475569;margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0}
+
+/* 인쇄 미리보기 모달 */
+.ee-pv-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px;overflow:auto}
+.ee-pv-stage{display:flex;flex-direction:column;align-items:center;gap:14px;margin:auto}
+.ee-pv-sheet{width:1123px;height:794px;background:#fff;box-shadow:0 12px 48px rgba(0,0,0,0.45);padding:28px;box-sizing:border-box;overflow:hidden;flex-shrink:0}
+.ee-pv-inner{transform-origin:top left}
+.ee-pv-bar{display:flex;gap:10px;justify-content:center}
+.ee-pv-bar button{padding:10px 22px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;border:none}
+.ee-pv-print{background:#1a6fc4;color:#fff}.ee-pv-print:hover{background:#155aa0}
+.ee-pv-close{background:#fff;color:#475569;border:1px solid #cbd5e1!important}.ee-pv-close:hover{background:#f1f5f9}
+
 @media print{
-  @page{size:A4 landscape;margin:6mm}
+  @page{size:A4 landscape;margin:0}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   html,body{background:#fff!important;margin:0}
-  body *{visibility:hidden}
-  #ee-weekly-print, #ee-weekly-print *{visibility:visible}
-  #ee-weekly-print{position:absolute;left:0;top:0;box-shadow:none!important;padding:0!important;background:#fff!important}
-  .ee-print-body{overflow:hidden}
-  /* 고정 타이틀/푸터 제거 — 큰 빈 공간 원인. 일반 흐름으로 1회만 표시. printRef 바깥(네비)은 제외 */
-  .ee-weekly-ctrl{display:none!important}
-  .ee-print-title{display:block!important;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e;margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
-  .ee-print-footer{display:block!important;text-align:center;font-size:10px;color:#475569;margin-top:8px;padding-top:6px;border-top:1px solid #e2e8f0}
-  /* scale-to-fit로 한 페이지에 들어가므로 분할 안 일어남 — 카드만 break-inside 유지 */
+  /* 미리보기 박스(#ee-print-sheet)만 인쇄, 나머지 전부 숨김 */
+  body *{visibility:hidden!important}
+  #ee-print-sheet, #ee-print-sheet *{visibility:visible!important}
+  #ee-print-sheet{position:fixed;left:0;top:0;margin:0;box-shadow:none!important}
+  .ee-pv-overlay{position:static!important;background:transparent!important;padding:0!important;overflow:visible!important;display:block!important}
+  .ee-pv-bar{display:none!important}
   .ee-day-col{break-inside:avoid!important;page-break-inside:avoid!important}
   .ee-sess-card{break-inside:avoid!important;page-break-inside:avoid!important}
 }
@@ -1145,7 +1214,7 @@ export default function EngTutorClassPage() {
               <button onClick={() => setWeekOffset(0)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:weekOffset===0?"#1a6fc4":"transparent",color:weekOffset===0?"#fff":"#475569"}}>This Week</button>
               <button onClick={() => setWeekOffset(o => o + 1)} style={{padding:"7px 14px",border:"none",borderRadius:7,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:"transparent",color:"#475569"}}>Next ▶</button>
             </div>
-            <button onClick={handlePrint} style={{padding:"7px 14px",background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#1a1a2e"}}>🖨 Print</button>
+            <button onClick={openPreview} style={{padding:"7px 14px",background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",color:"#1a1a2e"}}>🖨 Print</button>
             <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",padding:"7px 12px",background:"#eff6ff",borderRadius:8}}>
               {fmtRange(week.startDate, week.endDate)}
             </div>
@@ -1155,75 +1224,27 @@ export default function EngTutorClassPage() {
             </div>
           </div>
 
-          <div ref={printRef} className="ee-print-body">
-          <div className="ee-print-title">Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
+          {eeCalendarBlock}
+        </div>
+      )}
 
-          {(weekTutorLegend.length > 0 || weekHasUnassigned) && (
-            <div style={{display:"flex",flexWrap:"wrap",gap:10,marginBottom:12,fontSize:11.5,color:"#475569",fontWeight:700,padding:"8px 12px",background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0"}}>
-              {weekTutorLegend.map(t => (
-                <span key={t.id} style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                  <span style={{width:10,height:10,borderRadius:"50%",background:t.color,display:"inline-block"}} />
-                  {t.name}
-                </span>
-              ))}
-              {weekHasUnassigned && (
-                <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                  <span style={{width:10,height:10,borderRadius:"50%",background:UNASSIGNED_COLOR,display:"inline-block"}} />
-                  Unassigned
-                </span>
-              )}
+      {showPreview && (
+        <div className="ee-pv-overlay" onClick={() => setShowPreview(false)}>
+          <div className="ee-pv-stage" onClick={e => e.stopPropagation()}>
+            <div className="ee-pv-sheet" id="ee-print-sheet">
+              <div
+                ref={previewInnerRef}
+                className="ee-pv-inner"
+                style={{ width: PV_AVAIL_W, transform: `scale(${previewScale})`, transformOrigin: "top left", pointerEvents: "none" }}
+              >
+                {eeCalendarBlock}
+              </div>
             </div>
-          )}
-
-          <div style={{display:"grid",gridTemplateColumns:"repeat(6,minmax(140px,1fr))",gap:8,overflowX:"auto"}}>
-            {week.dates.map((date, i) => {
-              if (i === 0) return null; // 일요일 제거 (데이터 보존, 표시만 제외) → 월~토 6칸
-              const dt = new Date(date + "T00:00:00");
-              const dayNum = dt.getDate();
-              const isToday = date === ymd(new Date());
-              const isWeekend = i === 0 || i === 6;
-              const list = weekLessonsByDate.get(date) || [];
-              return (
-                <div key={date} className="ee-day-col" style={{background:"#f8fafc",borderRadius:10,border:"1px solid #e2e8f0",padding:8,minHeight:380,display:"flex",flexDirection:"column"}}>
-                  <div style={{textAlign:"center",paddingBottom:8,marginBottom:8,borderBottom:"1px solid #e2e8f0"}}>
-                    <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:isWeekend?"#dc2626":(isToday?"#1a6fc4":"#94a3b8"),marginBottom:3}}>{WEEKDAY_LABELS[i]}</div>
-                    <div style={{fontSize:14,fontWeight:800,color:"#1a1a2e"}}>
-                      {isToday
-                        ? <span style={{display:"inline-block",background:"#1a6fc4",color:"#fff",borderRadius:999,width:26,height:26,lineHeight:"26px"}}>{dayNum}</span>
-                        : dayNum
-                      }
-                    </div>
-                  </div>
-                  {list.length === 0 ? (
-                    <div style={{textAlign:"center",color:"#cbd5e1",fontSize:11,padding:"30px 4px",fontWeight:600}}>No class</div>
-                  ) : (
-                    list.map((l: any) => {
-                      const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
-                      const color = tutorColor(l.tutor_id);
-                      const sname = pickEnFirst(l);
-                      const _krKeys = ['일','월','화','수','목','금','토'];
-                      const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
-                      const _ov = l.time_overrides as Record<string,string> | undefined;
-                      const time = (_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "--:--";
-                      return (
-                        <div
-                          key={l.id}
-                          className="ee-sess-card"
-                          style={{borderLeft:`4px solid ${color}`,borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#fff",boxShadow:"0 1px 2px rgba(0,0,0,0.04)"}}
-                        >
-                          <div style={{fontSize:11.5,fontWeight:800,color:l.tutor_id?color:"#dc2626",lineHeight:1.3}}>{tname}</div>
-                          <div style={{fontSize:12.5,fontWeight:700,color:"#1a1a2e",marginTop:2,lineHeight:1.3,wordBreak:"keep-all"}}>{sname}</div>
-                          <div style={{fontSize:10.5,color:"#6b7c93",fontWeight:700,marginTop:2}}>{time}</div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              );
-            })}
+            <div className="ee-pv-bar">
+              <button className="ee-pv-print" onClick={doPrint}>🖨 Print</button>
+              <button className="ee-pv-close" onClick={() => setShowPreview(false)}>Close</button>
+            </div>
           </div>
-          <div className="ee-print-footer">Dream Academy · Weekly Schedule — {fmtRange(week.startDate, week.endDate)}</div>
-          </div>{/* /ee-print-body (printRef) */}
         </div>
       )}
 
