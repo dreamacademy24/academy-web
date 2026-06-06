@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import PortalPushButton from "@/components/PortalPushButton";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -208,6 +209,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           ) : null
         )}
       </div>
+
+      <PortalPushButton />
 
       {hasConfirmedTutor && (
         <a href="/portal/tutor" style={{display:"block",textDecoration:"none",marginBottom:16}}>

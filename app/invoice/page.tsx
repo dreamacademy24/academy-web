@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { commuteUnitPrice } from "@/lib/commutePricing";
 import html2canvas from "html2canvas";
 
 /* ── 유틸 함수 (100% 기존 유지) ── */
@@ -891,6 +892,22 @@ function InvoicePageInner(){
   /* ── 견적 useMemo (100% 기존 유지) ── */
   const est=useMemo(()=>{
     const extras:{label:string;price:number}[]=[];
+    // 통학형: 숙소/룸 무관, 학생별 학원비(주차×시즌 단가) 합산 = 학생수×단가. 공용 단가표(commutePricing) 사용.
+    if(isCommute){
+      const valid=students.filter(s=>(s.korName||"").trim()||(s.engName||"").trim());
+      const list:any[]=valid.length>0?valid:[{academyWeeks:String(a1W||2),academyStart:a1CI,korName:"",engName:""}];
+      const items:any[]=[];
+      let total=0;
+      list.forEach((s:any,idx:number)=>{
+        const w=Number(s.academyWeeks)||Number(a1W)||2;
+        const pk=isPeak(s.academyStart||a1CI);
+        const price=commuteUnitPrice(w,pk?"peak":"off");
+        total+=price;
+        const nm=(s.korName||s.engName||`학생${idx+1}`);
+        items.push({label:`통학형 ${w}주 (${nm})`,price,fullPrice:price,ratio:1,totalW:w,ci:s.academyStart||a1CI,co:"",season:pk?"성수기":"비수기",accom:"commute",roomType:"",weeks:w,parents:0,kids:1});
+      });
+      return{total,extras,items};
+    }
     if(cm==="single"){
       const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
       const pk=isPeak(a1CI);const price=sp(e,pk);
@@ -910,7 +927,7 @@ function InvoicePageInner(){
       {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK},
       {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기",accom:a2T,roomType:a2R,weeks:a2W,parents:cP,kids:cK},
     ]};
-  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt]);
+  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt,isCommute,students]);
 
   function applyInv(){
     if(!est)return;
