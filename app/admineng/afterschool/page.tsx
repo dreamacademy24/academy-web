@@ -21,6 +21,7 @@ export default function AfterschoolLocalPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [apps, setApps] = useState<FApp[]>([]);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({}); // bookingId__한글이름 → 영어이름
   const [loading, setLoading] = useState(true);
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOf(new Date()));
 
@@ -35,7 +36,18 @@ export default function AfterschoolLocalPage() {
     const { data } = await supabase
       .from("fieldtrip_applications")
       .select("id, name, room_number, date, status, booking_id, portal_name");
-    setApps((data || []) as FApp[]);
+    const rows = (data || []) as FApp[];
+    setApps(rows);
+    // 학생 한글이름 → 영어이름 매핑 (현지직원은 영어이름으로 표시)
+    const ids = Array.from(new Set(rows.map((a) => a.booking_id).filter(Boolean))) as string[];
+    if (ids.length) {
+      const { data: st } = await supabase.from("students").select("name_kr, name_en, booking_id").in("booking_id", ids);
+      const nm: Record<string, string> = {};
+      (st || []).forEach((s: { name_kr: string | null; name_en: string | null; booking_id: string | null }) => {
+        if (s.name_en && s.name_en.trim()) nm[`${s.booking_id}__${(s.name_kr || "").trim()}`] = s.name_en.trim();
+      });
+      setNameMap(nm);
+    }
     setLoading(false);
   }, []);
 
@@ -56,12 +68,14 @@ export default function AfterschoolLocalPage() {
         const day = arr.find((x) => x.key === k); if (!day) return;
         const meta = FT_PROGRAMS[tok];
         const entry = day.programs.get(tok) || { prog: programNameOf(tok, p.key), isFt: meta?.isFieldtrip || false, time: meta?.time || "", students: [] };
-        entry.students.push({ name: (a.name || "").trim() || "-", room: (a.room_number || "").trim() || "-" });
+        const kr = (a.name || "").trim();
+        const en = nameMap[`${a.booking_id}__${kr}`];
+        entry.students.push({ name: en || kr || "-", room: (a.room_number || "").trim() || "-" });
         day.programs.set(tok, entry);
       });
     });
     return arr;
-  }, [apps, weekStart]);
+  }, [apps, weekStart, nameMap]);
 
   const totalThisWeek = days.reduce((s, d) => s + Array.from(d.programs.values()).reduce((x, e) => x + e.students.length, 0), 0);
   const range = `${MON_EN[weekStart.getMonth()]} ${weekStart.getDate()} – ${MON_EN[days[6].date.getMonth()]} ${days[6].date.getDate()}`;
