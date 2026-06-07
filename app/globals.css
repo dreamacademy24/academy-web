@@ -12,3 +12,50 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+/* ============================================================
+   디자인 토큰 (Single Source) — 드림아카데미 공통 팔레트
+   기존 페이지가 하드코딩하던 색을 변수로 codify. 신규/리팩터 시 var(--…) 사용.
+   값은 현재 앱에서 가장 많이 쓰이는 색 그대로라 시각 변화 없음.
+   ============================================================ */
+:root {
+  /* 브랜드 */
+  --da-brand: #1a6fc4;
+  --da-brand-dark: #0d3d7a;
+  --da-brand-soft: #eff6ff;
+  /* 상태 */
+  --da-ok: #16a34a;
+  --da-ok-dark: #15803d;
+  --da-ok-soft: #dcfce7;
+  --da-warn: #d97706;
+  --da-warn-soft: #fffbeb;
+  --da-trip: #c2410c;   /* 필드트립 강조 */
+  --da-trip-soft: #fff7ed;
+  --da-danger: #dc2626;
+  --da-danger-soft: #fef2f2;
+  /* 텍스트/중립 */
+  --da-text: #1a1a2e;
+  --da-muted: #6b7c93;
+  --da-faint: #94a3b8;
+  --da-border: #e2e8f0;
+  --da-bg: #f1f5f9;
+  --da-card: #ffffff;
+  /* 모양 */
+  --da-radius: 12px;
+  --da-radius-sm: 8px;
+  --da-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --da-shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.1);
+}
+
+/* 공통 유틸 클래스 (da- 접두사로 기존 페이지의 .btn/.card 등과 충돌 없음) */
+.da-card { background: var(--da-card); border-radius: var(--da-radius); box-shadow: var(--da-shadow); padding: 18px 20px; }
+.da-btn { padding: 8px 16px; border-radius: var(--da-radius-sm); border: 1px solid var(--da-border); background: var(--da-card); color: var(--da-text); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 140ms, border-color 140ms; }
+.da-btn:hover { background: var(--da-bg); }
+.da-btn-primary { background: var(--da-brand); border-color: var(--da-brand); color: #fff; }
+.da-btn-primary:hover { background: var(--da-brand-dark); }
+.da-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+.da-badge-ok { background: var(--da-ok-soft); color: var(--da-ok-dark); }
+.da-badge-warn { background: var(--da-warn-soft); color: var(--da-warn); }
+.da-badge-danger { background: var(--da-danger-soft); color: var(--da-danger); }
+.da-chip { display: inline-block; font-size: 12.5px; font-weight: 600; background: var(--da-bg); border-radius: var(--da-radius-sm); padding: 4px 10px; }
+.da-empty { text-align: center; padding: 36px; color: var(--da-faint); font-size: 14px; }
