@@ -468,6 +468,11 @@ export default function BookingDetailPage() {
                 ? <input className="ed-inp" value={editForm.booker_name||""} onChange={e=>setEditForm({...editForm,booker_name:e.target.value})}/>
                 : <div className="val">{b.booker_name || "-"}</div>}
             </div>
+            {b.booker_english && (
+              <div className="item"><div className="lbl">영문명</div>
+                <div className="val">{b.booker_english}</div>
+              </div>
+            )}
             <div className="item"><div className="lbl">연락처</div>
               {editing
                 ? <input className="ed-inp" value={editForm.booker_phone||""} onChange={e=>setEditForm({...editForm,booker_phone:e.target.value})} placeholder="010-0000-0000"/>
@@ -551,6 +556,11 @@ export default function BookingDetailPage() {
                       : <div className="val">보호자 {adults ?? "-"}명 + 아이 {children ?? "-"}명</div>;
                   })()}
             </div>
+            {Array.isArray(b.extra_guardians) && b.extra_guardians.length > 0 && (
+              <div className="item"><div className="lbl">추가 보호자</div>
+                <div className="val">{b.extra_guardians.map((g:any)=>(typeof g==="string"?g:(g?.name||g?.kr||g?.name_kr||g?.english||""))).filter(Boolean).join(", ") || `${b.extra_guardians.length}명`}</div>
+              </div>
+            )}
             <div className="item"><div className="lbl">룸 번호</div>
               {editing
                 ? <input className="ed-inp" value={editForm.house_no||""} onChange={e=>setEditForm({...editForm,house_no:e.target.value})} placeholder="예: B17L14"/>
