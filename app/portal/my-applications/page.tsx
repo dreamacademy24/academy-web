@@ -61,6 +61,8 @@ export default function MyApplicationsPage() {
   const [editId, setEditId] = useState<string>("");
   const [editForm, setEditForm] = useState({ class_type: "", preferred_days: [] as string[], preferred_time: "", start_date: "", end_date: "", notes: "" });
   const [editSaving, setEditSaving] = useState(false);
+  const [lessonsByApp, setLessonsByApp] = useState<Record<string, AnyRow[]>>({});
+  const [detail, setDetail] = useState<{ student: string; lessons: AnyRow[] } | null>(null);
 
   const load = useCallback(async (bid: string) => {
     if (!bid) return;
@@ -75,6 +77,18 @@ export default function MyApplicationsPage() {
           tutor: j.tutor || [],
           pickup: j.pickup || [],
         });
+      }
+      // 확정 튜터 수업(인보이스+일정) — 신청별로 묶기
+      const inv = await fetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);
+      if (inv.ok) {
+        const ij = await inv.json();
+        const map: Record<string, AnyRow[]> = {};
+        (ij.lessons || []).forEach((l: AnyRow) => {
+          const k = String(l.application_id || "");
+          if (!map[k]) map[k] = [];
+          map[k].push(l);
+        });
+        setLessonsByApp(map);
       }
     } finally { setLoading(false); }
   }, []);
@@ -331,6 +345,14 @@ export default function MyApplicationsPage() {
                 <div className="ma-meta">
                   <b>📅 기간:</b> {fmtDate(String(r.start_date || ""))} ~ {fmtDate(String(r.end_date || ""))}
                 </div>
+                {(lessonsByApp[id]?.length ?? 0) > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <button onClick={() => setDetail({ student: studentName, lessons: lessonsByApp[id] })}
+                      style={{ padding: "8px 14px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                      📄 수업 일정 · 인보이스 보기
+                    </button>
+                  </div>
+                )}
                 {canCancel(String(r.status || "")) && (
                   <div className="ma-actions" style={{ gap: 6 }}>
                     {String(r.status || "") === "pending" && (
@@ -476,6 +498,55 @@ export default function MyApplicationsPage() {
             <button className="btn-ok" onClick={submitCancel} disabled={cancelSaving}>
               {cancelSaving ? "처리 중..." : "취소요청 확인"}
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {detail && (
+      <div className="ma-modal-bg" onClick={() => setDetail(null)}>
+        <div className="ma-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520, maxHeight: "90vh", overflowY: "auto" }}>
+          <h3>📄 {detail.student} 튜터 수업</h3>
+          {detail.lessons.map((l: AnyRow, li: number) => {
+            const sessions: AnyRow[] = Array.isArray(l.sessions) ? (l.sessions as AnyRow[]) : [];
+            const rate = Number(l.hourly_rate) || 0;
+            const cnt = Number(l.total_sessions) || sessions.length || 0;
+            const total = Number(l.total_amount) || rate * cnt;
+            return (
+              <div key={li} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginTop: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>
+                  {l.tutor_name ? `${String(l.tutor_name)} 선생님` : "튜터 배정 예정"}
+                  {l.class_type ? <span style={{ fontSize: 12, color: "#1a6fc4", fontWeight: 700, marginLeft: 6 }}>· {String(l.class_type)}</span> : null}
+                </div>
+                <div style={{ fontSize: 12.5, color: "#6b7c93", marginBottom: 10 }}>
+                  📅 {fmtDate(String(l.start_date || ""))} ~ {fmtDate(String(l.end_date || ""))}{l.class_time ? ` · ${String(l.class_time)}` : ""}
+                </div>
+                <div style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", fontSize: 13 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}><span style={{ color: "#6b7c93" }}>회차</span><span style={{ fontWeight: 700 }}>{cnt}회</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}><span style={{ color: "#6b7c93" }}>1회 단가</span><span style={{ fontWeight: 700 }}>₱{rate.toLocaleString()}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0 0", borderTop: "1px solid #e2e8f0", marginTop: 4 }}><span style={{ fontWeight: 800 }}>총 금액</span><span style={{ fontWeight: 800, color: "#1a6fc4" }}>₱{total.toLocaleString()}</span></div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>🗓️ 수업 일정 ({sessions.length}일)</div>
+                  {sessions.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>{String(l.class_days || "")} {String(l.class_time || "")}</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                      {sessions.map((s: AnyRow, si: number) => (
+                        <div key={si} style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0", borderBottom: "1px solid #f1f5f9" }}>
+                          <span>{fmtDate(String(s.session_date || ""))}</span>
+                          <span style={{ color: "#6b7c93" }}>{String(s.session_time || l.class_time || "")}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 12 }}>* 금액·일정은 확정 기준입니다. 변경은 스탭에게 문의해주세요.</div>
+          <div className="btns" style={{ marginTop: 14 }}>
+            <button className="btn-cl" onClick={() => setDetail(null)}>닫기</button>
           </div>
         </div>
       </div>

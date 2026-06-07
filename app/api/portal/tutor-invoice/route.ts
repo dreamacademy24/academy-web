@@ -27,12 +27,12 @@ export async function GET(req: Request) {
   const bookingId = searchParams.get('booking_id')
   if (!bookingId) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
 
-  // 1. 해당 예약의 confirmed 튜터 신청
+  // 1. 해당 예약의 튜터 신청 (통합 테이블 tutor_requests). 수업(lesson)은 확정 시에만 생성되므로
+  //    아래 application_id 매칭에서 자연히 확정 건만 남는다.
   const { data: apps, error: aErr } = await supabase
-    .from('tutor_applications')
+    .from('tutor_requests')
     .select('id')
     .eq('booking_id', bookingId)
-    .eq('status', 'confirmed')
   if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 })
   const appIds = (apps || []).map((a: { id: string }) => a.id)
   if (appIds.length === 0) return NextResponse.json({ lessons: [] })
