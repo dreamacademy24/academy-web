@@ -238,7 +238,6 @@ const BODY_HTML = `<div class="toolbar">
   <div class="page">
     <div class="legend" id="legend"></div>
     <div class="absent-bar" id="absent"></div>
-    <div id="apps"></div>
     <div class="date-nav">
       <button class="nav-btn" onclick="goDay(-1)">◀ Prev day</button>
       <div class="date-head" id="dateHead"></div>
@@ -407,40 +406,6 @@ export default function AshuttlePage() {
         block.appendChild(grid);
         board.appendChild(block);
       });
-      renderApps();
-    }
-
-    /* ===== 오늘 손님 신청 자동 표시 (셔틀+픽드랍) — 읽기전용 참고 패널 ===== */
-    function escA(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
-    async function sbApps(iso){
-      const out={tour:[],pick:[]};
-      try{ const r=await fetch(SB_URL+"/rest/v1/shuttle_applications?tour_date=eq."+iso+"&select=portal_name,room_number,tour_name,depart_time,people_count,riders,request",{headers:SB_HEAD}); const a=await r.json(); if(Array.isArray(a)) out.tour=a; }catch(e){}
-      try{ const r=await fetch(SB_URL+"/rest/v1/pickup_requests?request_date=eq."+iso+"&select=pickup_place,destination,location,request_time,request_type,num_people,notes",{headers:SB_HEAD}); const a=await r.json(); if(Array.isArray(a)) out.pick=a; }catch(e){}
-      return out;
-    }
-    async function renderApps(){
-      const el=document.getElementById("apps"); if(!el) return;
-      const iso=currentISO;
-      const data=await sbApps(iso);
-      if(iso!==currentISO) return; // 그 사이 날짜 바뀌면 무시
-      const n=data.tour.length+data.pick.length;
-      if(n===0){ el.innerHTML=""; return; }
-      let h='<div style="margin:8px 0;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px">';
-      h+='<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:6px">📥 오늘 손님 신청 ('+n+'건) · 기사 배정 참고</div>';
-      h+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
-      data.tour.forEach(function(a){
-        const who=[a.portal_name,a.riders].filter(Boolean).join(" · ");
-        h+='<div style="background:#fff;border:1px solid #fcd34d;border-radius:8px;padding:6px 9px;font-size:12px;min-width:150px;line-height:1.5">'
-          +'<b>🚌 '+escA(a.tour_name||"투어셔틀")+'</b><br>'+escA(a.room_number||"")+' · '+escA(a.depart_time||"")+'<br>'+escA(who)+' ('+escA(String(a.people_count||""))+'명)'
-          +(a.request?'<br><span style="color:#b45309">'+escA(a.request)+'</span>':'')+'</div>';
-      });
-      data.pick.forEach(function(a){
-        h+='<div style="background:#fff;border:1px solid #93c5fd;border-radius:8px;padding:6px 9px;font-size:12px;min-width:150px;line-height:1.5">'
-          +'<b>🛬 '+escA(a.request_type||"픽드랍")+'</b><br>'+escA(a.location||a.pickup_place||a.destination||"")+' · '+escA(a.request_time||"")+'<br>('+escA(String(a.num_people||""))+'명)'
-          +(a.notes?'<br><span style="color:#1d4ed8">'+escA(a.notes)+'</span>':'')+'</div>';
-      });
-      h+='</div></div>';
-      el.innerHTML=h;
     }
 
     function renderLegend(){
