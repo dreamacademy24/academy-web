@@ -6,7 +6,7 @@ import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
 import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue } from "@/lib/bookingTypes";
-import { fmtAge } from "@/lib/format";
+import { fmtAge, ageNum } from "@/lib/format";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -99,20 +99,8 @@ function genCalWeeks(year:number,month:number):Date[][]{
 // 학생 age 필드 → 나이 숫자 추출 (달력/요약 표시용)
 // 지원 형식: '2016년'/'2016' (출생년도) / '20190825' (YYYYMMDD) / '만3세' / '7'/'7살'
 function getStudentAge(s:{age?:string}):string{
-  if(!s.age)return"";
-  const a=String(s.age).trim();
-  // 1) YYYYMMDD(8자리) 또는 YYYY(4자리) → 앞 4자리 연도 추출
-  const yearMatch=a.match(/^(\d{4})/);
-  if(yearMatch){
-    const age=new Date().getFullYear()-Number(yearMatch[1]);
-    return age>0&&age<120?String(age):"";
-  }
-  // 2) '만N세' / '만 N' 패턴 → N
-  const manMatch=a.match(/만\s*(\d{1,2})/);
-  if(manMatch)return manMatch[1];
-  // 3) 1~2자리 숫자(7, 7살 등) → 그대로
-  const num=parseInt(a,10);
-  return isNaN(num)?"":String(num);
+  const n=ageNum(s.age); // 공용 헬퍼(만 나이) — YYYYMMDD/YYYY/만N세/숫자 모두 처리
+  return n!==null?String(n):"";
 }
 // 나이 셀 원본 표기 (리스트 뷰 — YYYYMMDD는 연도만, 그 외는 그대로)
 function fmtStudentAge(rawAge?:string):string{ return fmtAge(rawAge); }

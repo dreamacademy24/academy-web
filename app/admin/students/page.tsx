@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import { fmtAge } from "@/lib/format";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -117,7 +118,7 @@ export default function StudentsPage() {
                   <tr key={s.id} onClick={() => setDetail(s)}>
                     <td style={{ fontWeight: 700 }}>{s.name_kr || "-"}</td>
                     <td>{s.name_en || "-"}</td>
-                    <td>{s.age || "-"}</td>
+                    <td>{fmtAge(s.age)}</td>
                     <td><span className={`badge ${s.level === "kinder" ? "b-kinder" : s.level === "junior" ? "b-junior" : "b-none"}`}>{s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"}</span></td>
                     <td>{bk?.booker_name || "-"}</td>
                     <td style={{ whiteSpace: "nowrap" }}>{bk?.check_in || "-"}</td>
@@ -136,7 +137,7 @@ export default function StudentsPage() {
       <div className="overlay" onClick={() => setDetail(null)}>
         <div className="modal" onClick={e => e.stopPropagation()}>
           <h3>{detail.name_kr} {detail.name_en ? `(${detail.name_en})` : ""}</h3>
-          <div className="d-row"><span className="d-lbl">나이</span><span className="d-val">{detail.age || "-"}</span></div>
+          <div className="d-row"><span className="d-lbl">나이</span><span className="d-val">{fmtAge(detail.age)}</span></div>
           <div className="d-row"><span className="d-lbl">과정</span><span className="d-val">{detail.level === "kinder" ? "킨더" : detail.level === "junior" ? "주니어" : "-"}</span></div>
           <div className="d-row"><span className="d-lbl">수업유형</span><span className="d-val">{detail.class_type === "morning" ? "오전반" : detail.class_type === "fullday" ? "종일반" : "-"}</span></div>
           <div className="d-row"><span className="d-lbl">예약자</span><span className="d-val">{(detail.bookings_new as unknown as { booker_name: string } | null)?.booker_name || "-"}</span></div>
