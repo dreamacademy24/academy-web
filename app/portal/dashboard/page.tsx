@@ -23,6 +23,7 @@ export default function PortalDashboard() {
   const [shuttleApps, setShuttleApps] = useState<any[]>([]);
   const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
   const [hasNewNotes, setHasNewNotes] = useState(false);
+  const [popupNotice, setPopupNotice] = useState<any>(null);
 
   useEffect(() => {
     async function init() {
@@ -98,6 +99,34 @@ export default function PortalDashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  // 입장 팝업 공지 — popup=true & 이 손님 대상, 하루 1회
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      let bookingId: string | null = null;
+      try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
+      if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
+      const { data } = await supabase.from("portal_notices").select("*").eq("popup", true).order("created_at", { ascending: false });
+      if (cancelled) return;
+      const list = (data || []).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
+      const top = list[0];
+      if (!top) return;
+      const seen = localStorage.getItem("notice_popup_seen");
+      const todayKey = top.id + "|" + new Date().toISOString().slice(0, 10);
+      if (seen === todayKey) return;
+      setPopupNotice(top);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  function dismissPopup(forToday: boolean) {
+    if (forToday && popupNotice && typeof window !== "undefined") {
+      localStorage.setItem("notice_popup_seen", popupNotice.id + "|" + new Date().toISOString().slice(0, 10));
+    }
+    setPopupNotice(null);
+  }
+
   async function logout() {
     if (typeof window !== "undefined") localStorage.removeItem("portalSession");
     await supabase.auth.signOut();
@@ -108,6 +137,7 @@ export default function PortalDashboard() {
 
   const cards = [
     { icon: "📋", title: "내 예약현황", desc: "예약·학생·결제 정보 확인", ready: true, href: "/portal/my-booking" },
+    { icon: "📢", title: "공지사항", desc: "안내·공지 확인", ready: true, href: "/portal/notices" },
     { icon: "🏨", title: "체크인 정보입력", desc: "입실 전 필요한 정보 사전 등록", subDesc: "항공권 · 체크인 · 픽드랍신청", ready: true, href: "/portal/checkin-detail" },
     { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
@@ -310,5 +340,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <p style={{ marginTop: 4 }}><a href="/">드림아카데미 홈</a></p>
       </div>
     </div>
+    {popupNotice && (
+      <div onClick={() => dismissPopup(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 18 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, maxWidth: 440, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: 22 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: popupNotice.category === "important" ? "#fceaeb" : "#eff6ff", color: popupNotice.category === "important" ? "#a32d2d" : "#1a6fc4" }}>{popupNotice.category === "important" ? "중요" : "공지"}</span>
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>{(popupNotice.created_at || "").slice(0, 10).replace(/-/g, ".")}</span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>{popupNotice.title}</div>
+          <div style={{ fontSize: 14, lineHeight: 1.8, color: "#374151", whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{popupNotice.content}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <button onClick={() => dismissPopup(true)} style={{ flex: 1, padding: 11, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#6b7c93", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>오늘 그만보기</button>
+            <button onClick={() => { setPopupNotice(null); router.push("/portal/notices"); }} style={{ flex: 1, padding: 11, border: "none", borderRadius: 8, background: "#1a6fc4", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>전체 공지 보기</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }

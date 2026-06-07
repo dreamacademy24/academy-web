@@ -35,6 +35,7 @@ export default function AdminHubPage() {
         { icon: "🎓", title: "튜터 수업 관리",   desc: "신청 수신함 · 주간 스케줄 · 수강생",      href: "/admin/tutor-class" },
         { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
         { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
+        { icon: "📢", title: "공지 배포",       desc: "손님 공지 작성 · 전체/특정 발송",       href: "/admin/notices" },
       ],
     },
     {
