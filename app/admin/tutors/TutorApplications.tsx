@@ -218,7 +218,16 @@ export default function TutorApplications() {
       return `${y}-${m}-${dd}`;
     };
     const _skipSet = new Set(toDateArr((app as any).skip_dates ?? app.excluded_dates));
-    const sessions: { session_date: string; session_idx: number; status: string }[] = [];
+    // 요일 → 시간 매핑 (요청의 schedule_blocks 기반) → 세션마다 시간 저장해 --:-- 방지
+    const _krDow: Record<string, number> = { "일":0,"월":1,"화":2,"수":3,"목":4,"금":5,"토":6, sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6 };
+    const _blockTime: Record<number, string> = {};
+    if (Array.isArray((app as any).schedule_blocks)) {
+      for (const b of (app as any).schedule_blocks as { days?: string[]; time?: string }[]) {
+        if (!b || !b.time || !Array.isArray(b.days)) continue;
+        for (const d of b.days) { const n = _krDow[String(d).trim()]; if (n !== undefined) _blockTime[n] = b.time as string; }
+      }
+    }
+    const sessions: { session_date: string; session_idx: number; status: string; session_time: string | null }[] = [];
     if (app.start_date && app.end_date && targetDays.length > 0) {
       const cur = new Date(app.start_date + "T00:00:00");
       const end = new Date(app.end_date + "T00:00:00");
@@ -227,7 +236,7 @@ export default function TutorApplications() {
         if (targetDays.includes(cur.getDay())) {
           const ds = localStr(cur);
           // 휴일(6/12)·1·3·5번째 토요일·skip 제외 → 세션 미생성 (회차·금액 자동 일치)
-          if (!_skipSet.has(ds) && isLessonDateAllowed(cur, ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled" });
+          if (!_skipSet.has(ds) && isLessonDateAllowed(cur, ds)) sessions.push({ session_date: ds, session_idx: idx++, status: "scheduled", session_time: _blockTime[cur.getDay()] || app.class_time || null });
         }
         cur.setDate(cur.getDate() + 1);
       }
