@@ -1250,7 +1250,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
       <button class="tab-item" data-page="sboard" onclick="showPage('sboard')">공유보드</button>
-      <button class="tab-item" data-page="staffguide" onclick="showPage('staffguide')">📖 직원 가이드</button>
     </div>
     <div class="th-right">
       <button class="user-avatar-btn" onclick="toggleUserMenu(event)">
@@ -1318,13 +1317,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
           </div>
           <div id="sbFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
           <div id="sbList"></div>
-        </div>
-      </div>
-
-      <!-- STAFF GUIDE (직원 가이드) -->
-      <div id="page-staffguide" class="hidden">
-        <div style="padding:16px 20px;max-width:1000px;margin:0 auto;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box">
-          <div id="staffGuideList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px"></div>
         </div>
       </div>
 
@@ -3590,7 +3582,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide','sboard','staffguide'];
+const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide','sboard'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -3654,7 +3646,6 @@ function showPage(p){
   if(p==='manual'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC';document.getElementById('topS').textContent='';}
   if(p==='guide'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uC548\uB0B4\uBB38\uAD6C';document.getElementById('topS').textContent='';}
   if(p==='sboard'){renderSBoard();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC';document.getElementById('topS').textContent='\uACC4\uC815\u00B7\uBCC0\uACBD\u00B7\uB9C1\uD06C\u00B7\uBA54\uBAA8 \uACF5\uC6A9';}
-  if(p==='staffguide'){renderStaffGuide();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCD6 \uC9C1\uC6D0 \uAC00\uC774\uB4DC';document.getElementById('topS').textContent='\uC5C5\uBB34 \uB9E4\uB274\uC5BC\u00B7\uD578\uB4DC\uBD81 \uBAA8\uC74C';}
   if(typeof updateNavBadges==='function')updateNavBadges();
 }
 function showEmpPage(empId){
@@ -3843,24 +3834,6 @@ function addSBoardItem(){
 function delSBoardItem(id){
   if(!confirm('이 항목을 삭제할까요?'))return;
   sbDel('staff_board','id=eq.'+id).then(function(){renderSBoard();}).catch(function(e){console.error('sboard del err',e);});
-}
-// ── 직원 가이드 (매뉴얼·핸드북 링크 모음, 정적) ──
-const GUIDES = [
-  { title:'📖 드림하우스 매니저 핸드북',
-    desc:'신입 매니저 인수인계 · CS 모범답안 · 체크인/아웃 · 요금·연락처',
-    url:'/dreamhouse-handbook.html' },
-];
-function renderStaffGuide(){
-  var list=document.getElementById('staffGuideList');if(!list)return;
-  list.innerHTML=GUIDES.map(function(g){
-    return '<div onclick="window.open(\''+g.url+'\',\'_blank\')" style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;cursor:pointer" onmouseenter="this.style.borderColor=\'#3b82f6\'" onmouseleave="this.style.borderColor=\'var(--border)\'">'+
-      '<div style="font-size:14px;font-weight:800;color:var(--text)">'+esc(g.title)+'</div>'+
-      '<div style="font-size:12px;color:var(--text3);line-height:1.6;flex:1">'+esc(g.desc)+'</div>'+
-      '<div style="display:flex;justify-content:flex-end">'+
-        '<button onclick="event.stopPropagation();window.open(\''+g.url+'\',\'_blank\')" style="padding:6px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">열기 →</button>'+
-      '</div>'+
-    '</div>';
-  }).join('');
 }
 function renderHomePage(){
   var dash=document.getElementById('homeDashboard');if(!dash)return;

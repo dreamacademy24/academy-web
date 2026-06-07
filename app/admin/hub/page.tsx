@@ -51,6 +51,7 @@ export default function AdminHubPage() {
       title: "직원업무",
       cards: [
         { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
+        { icon: "📖", title: "직원가이드",       desc: "드림아카데미·드림하우스 업무 매뉴얼",     href: "/staff-guide.html" },
         { icon: "🔗", title: "페이지 관리",       desc: "공개 URL 목록 · 링크 모음",            href: "/admin/pages" },
         { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
         { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
@@ -101,7 +102,7 @@ export default function AdminHubPage() {
           <div className="hub-sec">{g.title}</div>
           <div className="hub-grid">
             {g.cards.map((c, i) => (
-              <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} onClick={() => (c as any).external ? window.open(c.href, '_blank') : router.push(c.href)}>
+              <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} onClick={() => { if ((c as any).external) { window.open(c.href, '_blank'); } else if (c.href.endsWith('.html')) { window.location.href = c.href; } else { router.push(c.href); } }}>
                 <div className="ic">{c.icon}</div>
                 <div className="tx">
                   <h2>{c.title}</h2>

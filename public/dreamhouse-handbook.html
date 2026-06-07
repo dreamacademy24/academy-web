@@ -1299,12 +1299,50 @@ const CHECKOUT_AFTER = [
   "⚠️ 체크아웃 다음날, 아떼는 절대 먼저 집에 들어가지 말 것 → 매니저가 먼저 방문해 물건 확인 후 입실",
 ];
 
+/* ===== 아카데미 이해 (드림하우스 매니저용 배경지식) ===== */
+const ACADEMY = {
+  intro: "드림아카데미는 어머님·아이들이 영어연수를 온 학원입니다. 아이들은 여기서 영어 수업을 듣고, 드림하우스는 그 가족이 머무는 숙소·생활을 담당합니다. 즉 교육은 아카데미, 숙소·생활·차량·식사는 드림하우스로 역할이 나뉘어 있어요. 매니저가 이 큰 그림을 알면 어머님 문의에 훨씬 자연스럽게 답할 수 있습니다.",
+  schedule: [
+    "08:30~08:40 — 셔틀 픽업(등원) 시작",
+    "09:00 — 수업 시작",
+    "수업 구성 — 그룹 수업 4타임 + 1:1(튜터) 수업 4타임",
+    "16:00 — 수업 종료 → 하원 셔틀",
+    "애프터스쿨 — 월요일: 아카데미에서 / 수요일: 베이스워터(드림하우스 단지)에서",
+  ],
+  programs: [
+    "그룹 영어 수업 (주니어·킨더)",
+    "1:1 튜터 수업",
+    "애프터스쿨 (월·수)",
+    "필드트립 (현장학습)",
+    "화상영어",
+    "플레이드림 (키즈 영어 놀이센터)",
+  ],
+  routing: {
+    dreamhouse: ["숙소·객실","차량(셔틀·픽드랍)","식사","시설·수리","비품·대여","생활 전반"],
+    academy: ["수업·수업 진도","튜터·1:1 수업","수업 레벨·내용","재예약·견적","애프터스쿨·필드트립 신청","교육 전반"],
+  },
+  example: {
+    title: "우리 아이 수업 진도가 어떻게 되나요? (튜터 수업 등)",
+    mom: "우리 아이 튜터 수업 진도가 잘 나가고 있는지 궁금한데, 좀 알 수 있을까요?",
+    answer: [
+      "어머님~ 아이 수업에 관심 가져주셔서 감사해요! 그런데 수업 진도나 내용 같은 교육 부분은 제가 정확히 안내드리기 어려워서요. 그 부분은 아카데미에서 가장 정확하게 알고 있답니다.",
+      "아카데미로 직접 문의 주시면 선생님·튜터를 통해 자세히 안내받으실 수 있어요. 원하시면 제가 아카데미에 전달해서 연락드리도록 도와드릴까요? 😊",
+    ],
+    points: [
+      "수업 진도·내용·레벨·튜터 등 교육 문의는 매니저가 임의로 답하지 말고 아카데미로 안내.",
+      "'전달해드릴까요?'로 친절하게 연결 — 떠넘기는 느낌 없이.",
+      "드림하우스(생활)와 아카데미(교육)의 역할 구분을 자연스럽게 전한다.",
+    ],
+  },
+};
+
 </script>
 
 <script>
 /* ============ 탭 정의 ============ */
 const TABS = [
   {id:"start",    name:"시작하기"},
+  {id:"academy",  name:"아카데미 이해"},
   {id:"basic",    name:"기본 업무"},
   {id:"checkin",  name:"체크인"},
   {id:"checkout", name:"체크아웃"},
@@ -1491,6 +1529,40 @@ function renderContact(){
   return html;
 }
 
+function renderAcademy(){
+  const ex = ACADEMY.example;
+  return `
+  <h2 class="sec">아카데미 이해</h2>
+  <p class="sec-desc">드림하우스 매니저가 알아두면 좋은 드림아카데미(영어캠프) 기본 정보입니다. 가족들이 무엇을 하러 왔는지 알면 어머님 응대가 훨씬 자연스러워집니다.</p>
+
+  <div class="box">
+    <h3>드림아카데미란?</h3>
+    <p style="font-size:14px;line-height:1.72;color:var(--ink);">${ACADEMY.intro}</p>
+  </div>
+
+  <div class="twocol">
+    <div class="box"><h3>아이들 하루 일과</h3><ul>${ACADEMY.schedule.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    <div class="box"><h3>프로그램</h3><ul>${ACADEMY.programs.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+  </div>
+
+  <div class="twocol">
+    <div class="box"><h3>🏠 드림하우스 (나) 담당</h3><ul>${ACADEMY.routing.dreamhouse.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    <div class="box"><h3>🎓 아카데미 담당</h3><ul>${ACADEMY.routing.academy.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+  </div>
+
+  <div class="ho-intro" style="margin-bottom:18px;">⭐ <b>핵심 원칙</b> — 수업 진도·내용·레벨·튜터 등 <b>아카데미 관련 문의</b>는 매니저가 임의로 답하지 말고, <b>"그 부분은 아카데미로 직접 연락 주시면 안내해 드려요"</b>라고 아카데미로 연결해 주세요. (잘못 안내하면 혼선이 생깁니다)</div>
+
+  <div class="prac-label">💬 응대 예시</div>
+  <div class="card done">
+    <div class="card-head"><h4>${ex.title}</h4></div>
+    <div class="situation"><div class="who"><span class="dot">엄마</span> 어머님이 이렇게 물으시면</div><div class="bubble">${ex.mom}</div></div>
+    <div class="answer show">
+      <div class="answer-box"><div class="ans-label">모범답안 · 상황에 맞게 인용</div>${ex.answer.map(p=>`<p>${p}</p>`).join("")}</div>
+      <div class="points"><div class="p-label">핵심 포인트</div><ul>${ex.points.map(p=>`<li>${p}</li>`).join("")}</ul></div>
+    </div>
+  </div>`;
+}
+
 function renderBasic(){
   return `
   <h2 class="sec">기본 업무</h2>
@@ -1596,6 +1668,7 @@ function render(){
   buildTabs();
   let content="";
   if(activeTab==="start") content=renderStart();
+  else if(activeTab==="academy") content=renderAcademy();
   else if(activeTab==="basic") content=renderBasic();
   else if(activeTab==="checkin") content=renderCheckin();
   else if(activeTab==="checkout") content=renderCheckout();
