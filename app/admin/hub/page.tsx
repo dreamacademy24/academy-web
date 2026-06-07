@@ -28,6 +28,7 @@ export default function AdminHubPage() {
     {
       title: "드림아카데미",
       cards: [
+        { icon: "📅", title: "오늘 한눈에",     desc: "오늘 체크인·픽드랍·셔틀·필드트립",   href: "/admin/today",           primary: true },
         { icon: "📋", title: "예약 관리",       desc: "부킹 접수 · 인보이스 · 영수증",     href: "/admin/bookings",        primary: true },
         { icon: "🗂️", title: "과거 예약",       desc: "졸업·체크아웃 완료 (지난 예약 모음)",  href: "/admin/bookings?tab=confirmed&period=past" },
         { icon: "🎒", title: "애프터스쿨/필드트립 관리", desc: "신청목록 및 일정 배포 (아카데미 담당)",  href: "/admin/afterschool-fieldtrip" },
