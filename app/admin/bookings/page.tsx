@@ -43,7 +43,7 @@ function stuCount(s:any):number{
   try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return 0;return a.length;}catch{return 0;}
 }
 function fmt(n?:number){return n?n.toLocaleString("ko-KR")+"원":"-";}
-function fDate(d?:string){return d?new Date(d).toLocaleDateString("ko-KR"):"";}
+function fDate(d?:string){ if(!d)return""; const dt=new Date(d); return isNaN(dt.getTime())?d:`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
 function shortNo(no:string){return no?no.replace("DA-","").slice(-7):"-";}
 function addWeeks(dateStr:string,weeks:number):string{
   const d=new Date(dateStr);d.setDate(d.getDate()+weeks*7);return d.toISOString().slice(0,10);
@@ -142,13 +142,14 @@ function acaEnd(b:any):string{
 }
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
+  if(t==="통학형"||b.booking_type==="commute")return "통학형";
   if(t.includes("드림하우스")||t.includes("드하")){
-    const h=(b.house_no||"").replace(/\s+/g,"");
-    const r=(b.accom_room||"").replace(/\s+/g,"").toLowerCase();
-    return "DH"+h+r;
+    const room=(b.house_no||b.accom_room||"").toString().replace(/\s+/g,"").replace(/^dh/i,"").toUpperCase();
+    return room?`DH ${room}`:"DH";
   }
-  if(t.includes("제이파크"))return "JPARK";
-  if(t.includes("큐브나인"))return "CUBE9";
+  const room2=(b.accom_room||"").toString().replace(/\s+/g,"").toUpperCase();
+  if(t.includes("제이파크"))return room2?`JPARK ${room2}`:"JPARK";
+  if(t.includes("큐브나인")||t.includes("큐브"))return room2?`CUBE9 ${room2}`:"CUBE9";
   return t||"-";
 }
 
