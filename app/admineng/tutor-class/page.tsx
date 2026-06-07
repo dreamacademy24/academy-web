@@ -305,7 +305,7 @@ export default function EngTutorClassPage() {
         request_id: r.id,
         tutor_id: me.id,
         house_or_reserver: r.guest_name || "",
-        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
+        student_names: (r.student_name_en || r.student_name_kr || ""),
         student_ages: r.student_age || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
@@ -371,7 +371,7 @@ export default function EngTutorClassPage() {
         request_id: r.id,
         tutor_id: r.assigned_tutor_id,
         house_or_reserver: r.guest_name || "",
-        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
+        student_names: (r.student_name_en || r.student_name_kr || ""),
         student_ages: r.student_age || null,
         class_type: r.class_type || "",
         sessions_per_day: r.sessions_per_day || 1,
@@ -586,7 +586,7 @@ export default function EngTutorClassPage() {
       alert("Cannot identify your tutor account. Select your name from the top-right dropdown first.");
       return;
     }
-    const studentLabel = [r.student_name_kr, r.student_name_en].filter(Boolean).join(" / ") || "(no name)";
+    const studentLabel = r.student_name_en || r.student_name_kr || "(no name)";
     if (!confirm(`Take this class?\n\n${studentLabel}\n${r.start_date} ~ ${r.end_date}\n${r.preferred_days || "-"} · ${r.preferred_time || "-"}\n\nIt will appear in your My Schedule.`)) return;
     setTakingId(r.id);
     try {
@@ -622,7 +622,7 @@ export default function EngTutorClassPage() {
         class_type: r.class_type,
         hourly_rate: Number(priceNum) || 0,
         house_or_reserver: r.guest_name,
-        student_names: [r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ") || "",
+        student_names: (r.student_name_en || r.student_name_kr || ""),
         student_ages: r.student_age,
         total_sessions: computedSessions || 0,
         total_amount: computedAmount || 0,
@@ -1006,7 +1006,7 @@ export default function EngTutorClassPage() {
                       <td style={{color:"#1a6fc4",fontWeight:700,whiteSpace:"nowrap"}}>{r.house_number || "-"}</td>
                       <td>{r.guest_name || "-"}</td>
                       <td style={{fontWeight:600}}>
-                        {[r.student_name_en, r.student_name_kr].filter(Boolean).join(" / ")}
+                        {r.student_name_en || r.student_name_kr || ""}
                         {(r as any).slot_label && (
                           <span style={{
                             display:"inline-block",padding:"1px 6px",
@@ -1323,7 +1323,7 @@ export default function EngTutorClassPage() {
               <div className="ekv">
                 <span className="k">House</span><span className="v" style={{color:"#1a6fc4",fontWeight:700}}>{detail.house_number || "-"}</span>
                 <span className="k">Reserver</span><span className="v">{detail.guest_name || "-"}</span>
-                <span className="k">Student</span><span className="v">{[detail.student_name_kr, detail.student_name_en].filter(Boolean).join(" / ")}</span>
+                <span className="k">Student</span><span className="v">{detail.student_name_en || detail.student_name_kr || ""}</span>
                 <span className="k">Age</span><span className="v">{detail.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</span>
               </div>
             </div>

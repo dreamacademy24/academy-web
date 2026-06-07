@@ -350,8 +350,7 @@ export default function EngStudentCalendarPage() {
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>#</th>
-                  <th>English Name</th>
-                  <th>Korean Name</th>
+                  <th>Name</th>
                   <th style={{ width: 60 }}>Age</th>
                   <th style={{ width: 80 }}>Level</th>
                   <th style={{ width: 110 }}>Check-in</th>
@@ -367,8 +366,7 @@ export default function EngStudentCalendarPage() {
                   return (
                     <tr key={s.id}>
                       <td style={{ color: "#9ca3af" }}>{i + 1}</td>
-                      <td style={{ fontWeight: 700 }}>{s.name_en || "-"}</td>
-                      <td>{s.name_kr || "-"}</td>
+                      <td style={{ fontWeight: 700 }}>{s.name_en || s.name_kr || "-"}</td>
                       <td>{getAge(s) || "-"}</td>
                       <td>
                         <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 11, fontWeight: 700, background: lv === "kinder" ? "#ede9fe" : "#fef3c7", color: lv === "kinder" ? "#7c3aed" : "#b45309" }}>

@@ -308,8 +308,7 @@ export default function EngTutorRequestDetailPage() {
             <h2>Student Info</h2>
             <div className="drow"><span className="k">House</span><span className="v" style={{ color: "#1a6fc4", fontWeight: 700 }}>{row.house_number || "-"}</span></div>
             <div className="drow"><span className="k">Reserver</span><span className="v">{row.guest_name || "-"}</span></div>
-            <div className="drow"><span className="k">Student (KR)</span><span className="v">{row.student_name_kr || "-"}</span></div>
-            <div className="drow"><span className="k">Student (EN)</span><span className="v">{row.student_name_en || "-"}</span></div>
+            <div className="drow"><span className="k">Student</span><span className="v">{row.student_name_en || row.student_name_kr || "-"}</span></div>
             <div className="drow"><span className="k">Age</span><span className="v">{fmtAgeEn(row.student_age)}</span></div>
           </div>
 
