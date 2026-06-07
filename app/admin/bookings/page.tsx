@@ -173,7 +173,7 @@ export default function AdminBookingsPage(){
   const [authed,setAuthed]=useState(false);
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
-  const [confirmFilter,setConfirmFilter]=useState("전체");
+  const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
   const [confirmPeriod,setConfirmPeriod]=useState<"진행중"|"이번주"|"지난">("진행중");
@@ -183,7 +183,6 @@ export default function AdminBookingsPage(){
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const [assignees,setAssignees]=useState<string[]>([]);
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
-  const confirmStatuses=["전체","영수증발행","결제완료","완료"];
 
   /* ── STEP 22: 예약 유형 선택 모달 ── */
   const [showNewBooking,setShowNewBooking]=useState(false);
@@ -574,6 +573,9 @@ export default function AdminBookingsPage(){
     };
     const m=map[tab];
     if(m)setMainTab(m);
+    // 허브 "과거 예약" 진입: 확정예약 탭을 "지난·졸업"으로 열기
+    const period=new URLSearchParams(window.location.search).get("period");
+    if(period==="past"){setMainTab("confirm");setConfirmPeriod("지난");}
   },[]);
 
   // 담당자 목록 — staff_accounts(korean_admin·활성) 동적 로딩, 실패 시 폴백
@@ -917,21 +919,22 @@ export default function AdminBookingsPage(){
       const arrow=(key:string)=>confirmSort.key===key?(confirmSort.asc?"▲":"▼"):"⇅";
       const arrowCls=(key:string)=>confirmSort.key===key?"arr ac":"arr";
       return(<>
-        <div className="sub-tabs">
-          {confirmStatuses.map(t=><button key={t} className={`sub-tab${confirmFilter===t?" ac":""}`} onClick={()=>setConfirmFilter(t)}>{t} {t!=="전체"&&<>({confirmList.filter(b=>b.status===t).length})</>}</button>)}
+        <div style={{display:"flex",alignItems:"center",marginBottom:8}}>
           <input placeholder="🔍 예약자, 학생, 유학원, 예약번호 검색..." value={confirmSearch} onChange={e=>setConfirmSearch(e.target.value)} style={{marginLeft:"auto",padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,width:260,outline:"none",fontFamily:"inherit"}}/>
         </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",margin:"8px 0 4px"}}>
-          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>담당자</span>
-          <button className={`sub-tab${confirmAssignee==="전체"?" ac":""}`} onClick={()=>setConfirmAssignee("전체")}>전체</button>
-          {assigneeNames.map(name=><button key={name} className={`sub-tab${confirmAssignee===name?" ac":""}`} onClick={()=>setConfirmAssignee(name)}>{name}</button>)}
-          {hasUnassigned&&<button className={`sub-tab${confirmAssignee==="미배정"?" ac":""}`} onClick={()=>setConfirmAssignee("미배정")}>미배정</button>}
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",margin:"4px 0"}}>
-          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>유형</span>
-          {(["전체","리조트","통학형"] as const).map(t=><button key={t} className={`sub-tab${confirmType===t?" ac":""}`} onClick={()=>setConfirmType(t)}>{t}</button>)}
-          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",margin:"0 2px 0 10px"}}>기간</span>
-          {(["진행중","이번주","지난"] as const).map(t=><button key={t} className={`sub-tab${confirmPeriod===t?" ac":""}`} onClick={()=>setConfirmPeriod(t)}>{t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>)}
+        <div style={{display:"flex",flexDirection:"column",gap:8,padding:"10px 12px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,marginBottom:10}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:800,color:"#1a6fc4",width:44,flexShrink:0}}>담당자</span>
+            {["전체",...assigneeNames,...(hasUnassigned?["미배정"]:[])].map(name=>{const on=confirmAssignee===name;return <button key={name} onClick={()=>setConfirmAssignee(name)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #1a6fc4":"1px solid #dbeafe",background:on?"#1a6fc4":"#fff",color:on?"#fff":"#1a6fc4"}}>{name}</button>;})}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:800,color:"#7c3aed",width:44,flexShrink:0}}>유형</span>
+            {(["전체","리조트","통학형"] as const).map(t=>{const on=confirmType===t;return <button key={t} onClick={()=>setConfirmType(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #7c3aed":"1px solid #ede9fe",background:on?"#7c3aed":"#fff",color:on?"#fff":"#7c3aed"}}>{t}</button>;})}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:11,fontWeight:800,color:"#0d9488",width:44,flexShrink:0}}>기간</span>
+            {(["진행중","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
+          </div>
         </div>
         <div className="cf-search">
           <span className="cnt">{sorted.length}건</span>

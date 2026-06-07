@@ -29,6 +29,7 @@ export default function AdminHubPage() {
       title: "드림아카데미",
       cards: [
         { icon: "📋", title: "예약 관리",       desc: "부킹 접수 · 인보이스 · 영수증",     href: "/admin/bookings",        primary: true },
+        { icon: "🗂️", title: "과거 예약",       desc: "졸업·체크아웃 완료 (지난 예약 모음)",  href: "/admin/bookings?tab=confirmed&period=past" },
         { icon: "🎒", title: "애프터스쿨/필드트립 관리", desc: "신청목록 및 일정 배포 (아카데미 담당)",  href: "/admin/afterschool-fieldtrip" },
         { icon: "🎓", title: "튜터 수업 관리",   desc: "신청 수신함 · 주간 스케줄 · 수강생",      href: "/admin/tutor-class" },
         { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
