@@ -9,16 +9,30 @@ const supabase = createClient(
 
 const PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const PRIVATE = process.env.VAPID_PRIVATE_KEY
-if (PUBLIC && PRIVATE) {
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@dreamacademyph.com', PUBLIC, PRIVATE)
+
+// 표준 base64(+,/,=)로 저장된 키도 URL-safe base64로 정규화
+const toUrlSafe = (k: string) => k.trim().replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
+// VAPID 설정은 요청 시점에만 (모듈 로드/빌드 시 실행되면 빌드가 깨짐)
+let vapidReady = false
+function ensureVapid(): { ok: boolean; error?: string } {
+  if (vapidReady) return { ok: true }
+  if (!PUBLIC || !PRIVATE) return { ok: false, error: 'VAPID keys not configured' }
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@dreamacademyph.com', toUrlSafe(PUBLIC), toUrlSafe(PRIVATE))
+    vapidReady = true
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: (e as Error)?.message || 'invalid VAPID keys' }
+  }
 }
 
 // 공지 발행 시 호출 — 대상 손님 구독에 웹푸시 발송
 export async function POST(req: Request) {
   try {
-    if (!PUBLIC || !PRIVATE) {
-      return NextResponse.json({ error: 'VAPID keys not configured' }, { status: 500 })
-    }
+    const v = ensureVapid()
+    if (!v.ok) return NextResponse.json({ error: v.error }, { status: 500 })
+
     const { title, body, url, audience, target_ids } = await req.json()
     if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 })
 
