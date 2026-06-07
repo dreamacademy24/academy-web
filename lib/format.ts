@@ -29,6 +29,15 @@ export function ageNum(raw?: string | number | null): number | null {
   return m ? +m[1] : null;
 }
 
+// 룸번호 → "B17L10" 형식 통일.  지원: "b17l10" / "B17 L10" / "dh b17l10" / "b17-l10" 등
+// 공백·구분자 제거 + 대문자. DH 접두어 제거. 형식 못 맞추면 대문자 정리만.
+export function fmtRoom(raw?: string | null): string {
+  let s = String(raw || "").trim();
+  if (!s) return "";
+  s = s.replace(/^dh\s*/i, "").replace(/[\s\-_]+/g, "").toUpperCase();
+  return s;
+}
+
 // 날짜 → "YYYY-MM-DD" (로컬/타임존 안전, 문자열 파싱 기반).  지원: ISO, YYYY-MM-DD, YYYY/MM/DD 등
 export function fmtDate(raw?: string | null): string {
   if (!raw) return "-";

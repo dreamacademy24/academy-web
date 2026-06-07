@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 상품/브로셔 원본 자료 (참고용 — 배포 제외, 필요한 이미지는 public/으로 복사해서 사용)
+/1.커리큘럼/
+/2. 기본 브로셔/
+/3. 드림아카데미 X 드림하우스/
+/4. 드림아카데미 X 제이파크/
+/5. 드림아카데미 X 큐브나인/
+/6. 축약브로셔/
+/7. Information/

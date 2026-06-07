@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { generatePortalId, generateTempPassword } from "@/lib/portalUtils";
 import { isCommuteBooking } from "@/lib/bookingTypes";
+import { fmtRoom } from "@/lib/format";
 
 type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle" | "comments";
 interface Comment { id: string; booking_id: string; author: string; content: string; created_at: string }
@@ -339,7 +340,7 @@ export default function BookingDetailPage() {
       drop_off: (editForm.drop_off || "").trim() || null,
       adults: editForm.adults !== undefined && editForm.adults !== "" ? Number(editForm.adults) : null,
       children: editForm.children !== undefined && editForm.children !== "" ? Number(editForm.children) : null,
-      house_no: (editForm.house_no || "").trim() || null,
+      house_no: fmtRoom(editForm.house_no) || null,
       academy_start: editForm.academy_start || null,
       academy_end: (() => {
         const isCommute = isCommuteBooking(editForm);
@@ -564,7 +565,7 @@ export default function BookingDetailPage() {
             <div className="item"><div className="lbl">룸 번호</div>
               {editing
                 ? <input className="ed-inp" value={editForm.house_no||""} onChange={e=>setEditForm({...editForm,house_no:e.target.value})} placeholder="예: B17L14"/>
-                : <div className="val">{b.house_no || b.accom_room || b.room_no || b.room_number || "-"}</div>}
+                : <div className="val">{fmtRoom(b.house_no || b.accom_room || b.room_no || b.room_number) || "-"}</div>}
             </div>
           </div>
         </div>
