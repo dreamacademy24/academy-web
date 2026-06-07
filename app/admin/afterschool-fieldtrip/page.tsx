@@ -19,6 +19,8 @@ interface FieldtripApp {
   room_number: string | null;
   request: string | null;
   status: string | null;
+  booking_id: string | null;    // 예약 연결키 (픽업·셔틀·튜터와 동일)
+  portal_name: string | null;   // 신청 시점 예약자명 스냅샷
 }
 
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
@@ -80,6 +82,7 @@ function programNameOf(token: string, key: string): string {
 interface FlatRow {
   appId: number;
   childName: string;
+  reserver: string;
   room: string;
   request: string;
   status: string;
@@ -99,6 +102,7 @@ export default function AfterschoolFieldtripAdminPage() {
   const [loading, setLoading] = useState(true);
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
+  const [bookerNames, setBookerNames] = useState<Record<string, string>>({}); // booking_id → 예약자 실명
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -111,7 +115,17 @@ export default function AfterschoolFieldtripAdminPage() {
       .from("fieldtrip_applications")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setApps(data as FieldtripApp[]);
+    if (!error && data) {
+      setApps(data as FieldtripApp[]);
+      // booking_id → 예약자 실명 매핑 (픽업·셔틀과 동일하게 실명 표시)
+      const ids = Array.from(new Set((data as FieldtripApp[]).map(a => a.booking_id).filter(Boolean))) as string[];
+      if (ids.length > 0) {
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name").in("id", ids);
+        const map: Record<string, string> = {};
+        (bks || []).forEach((b: { id: string; booker_name: string | null }) => { map[b.id] = (b.booker_name || "").trim(); });
+        setBookerNames(map);
+      }
+    }
     setLoading(false);
   }, []);
 
@@ -138,6 +152,7 @@ export default function AfterschoolFieldtripAdminPage() {
   for (const a of apps) {
     const tokens = (a.date || "").split(",").map(t => t.trim()).filter(Boolean);
     const childName = (a.name || "").trim();
+    const reserver = (a.booking_id && bookerNames[a.booking_id]) || (a.portal_name || "").trim();
     const room = (a.room_number || "").trim();
     const request = (a.request || a.message || "").trim();
     const status = a.status || "pending";
@@ -147,7 +162,7 @@ export default function AfterschoolFieldtripAdminPage() {
       if (!p) continue;
       const meta = FT_PROGRAMS[token];
       flat.push({
-        appId: a.id, childName, room, request, status, token,
+        appId: a.id, childName, reserver, room, request, status, token,
         month: p.month, day: p.day,
         programName: programNameOf(token, p.key),
         isFieldtrip: meta ? meta.isFieldtrip : false,
@@ -287,8 +302,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                         <table className="af-tbl">
                           <thead>
                             <tr>
-                              <th style={{width:150}}>아이 이름</th>
-                              <th style={{width:140}}>방 번호</th>
+                              <th style={{width:130}}>아이 이름</th>
+                              <th style={{width:130}}>예약자</th>
+                              <th style={{width:120}}>방 번호</th>
                               <th style={{width:70, textAlign:"center"}}>인원</th>
                               <th>요청사항</th>
                               <th style={{width:120}}>상태</th>
@@ -300,6 +316,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                               return (
                                 <tr key={r.appId + "-" + r.token + "-" + i}>
                                   <td style={{fontWeight:600}}>{r.childName || "-"}</td>
+                                  <td style={{color:"#475569"}}>{r.reserver || "-"}</td>
                                   <td style={{color:"#475569"}}>{r.room || "-"}</td>
                                   <td style={{textAlign:"center", fontWeight:700}}>1명</td>
                                   <td className="af-notes" title={r.request}>{r.request || "-"}</td>
@@ -338,8 +355,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               <table className="af-tbl">
                 <thead>
                   <tr>
-                    <th style={{width:150}}>아이 이름</th>
-                    <th style={{width:140}}>방 번호</th>
+                    <th style={{width:130}}>아이 이름</th>
+                    <th style={{width:130}}>예약자</th>
+                    <th style={{width:120}}>방 번호</th>
                     <th style={{width:160}}>선택 일정(원본)</th>
                     <th>요청사항</th>
                     <th style={{width:120}}>상태</th>
@@ -353,6 +371,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                     return (
                       <tr key={a.id}>
                         <td style={{fontWeight:600}}>{(a.name || "").trim() || "-"}</td>
+                        <td style={{color:"#475569"}}>{((a.booking_id && bookerNames[a.booking_id]) || (a.portal_name || "").trim()) || "-"}</td>
                         <td style={{color:"#475569"}}>{(a.room_number || "").trim() || "-"}</td>
                         <td style={{color:"#475569", fontSize:12}}>{(a.date || "").trim() || "-"}</td>
                         <td className="af-notes" title={req}>{req || "-"}</td>

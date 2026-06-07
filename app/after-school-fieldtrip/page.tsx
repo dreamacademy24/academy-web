@@ -25,7 +25,7 @@ export default function AfterSchoolFieldtripPage() {
   const router = useRouter();
   const [session, setSession] = useState<{ booking_id: string } | null>(null);
   const [children, setChildren] = useState<string[]>([]);
-  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string } | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; name: string; room: string } | null>(null);
 
   // 포털 세션 체크 (shuttle 폼과 동일 패턴)
   useEffect(() => {
@@ -50,7 +50,8 @@ export default function AfterSchoolFieldtripPage() {
         setChildren(kids);
         const ci = String(b.check_in || b.checkin_date || "").slice(0, 10);
         const co = String(b.check_out || b.checkout_date || "").slice(0, 10);
-        setBookingMeta({ checkin: ci, checkout: co });
+        const room = String(b.house_no || b.accom_room || "").replace(/\s+/g, "").replace(/^dh/i, "").toUpperCase();
+        setBookingMeta({ checkin: ci, checkout: co, name: String(b.booker_name || "").trim(), room });
       })
       .catch(() => {});
   }, [session]);
@@ -215,12 +216,15 @@ export default function AfterSchoolFieldtripPage() {
       const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
       if (!res.ok) throw new Error("Network error");
 
-      // Supabase 동시 저장
+      // Supabase 동시 저장 — 예약(booking_id)과 연결 (픽업·셔틀·튜터와 동일 연결키)
       await supabase.from("fieldtrip_applications").insert({
         name: formData.get("childName") as string,
         date: formData.get("schedule") as string,
         message: formData.get("memo") as string,
         request: formData.get("memo") as string,
+        booking_id: session?.booking_id || null,
+        portal_name: bookingMeta?.name || null,
+        room_number: bookingMeta?.room || null,
       }).then(() => {});
 
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
