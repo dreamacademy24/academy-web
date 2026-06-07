@@ -68,7 +68,6 @@ export default function AdminNoticesPage() {
   }
 
   if (!authed) return null;
-  const bMap = new Map(bookings.map((b) => [b.id, b]));
   const filtered = bookings.filter((b) => { const q = search.trim().toLowerCase(); if (!q) return true; return (b.booker_name || "").toLowerCase().includes(q) || (b.reservation_no || "").toLowerCase().includes(q); });
 
   return (<>
