@@ -68,6 +68,7 @@ export default function ShuttleManagementPage() {
   const [boardApps, setBoardApps] = useState<any[]>([]);
   const [boardDrivers, setBoardDrivers] = useState<{id:string;name:string}[]>([]);
   const [dragId, setDragId] = useState<string|null>(null);
+  const [shifts, setShifts] = useState<Record<string,{am:boolean;pm:boolean}>>({}); // 기사 주간 근무표 (key: driverId_weekday)
 
   // Shuttle tab
   const [shuttles, setShuttles] = useState<Shuttle[]>([]);
@@ -120,6 +121,56 @@ export default function ShuttleManagementPage() {
   function shiftBoardDate(delta: number) { const d=new Date(boardDate+"T00:00:00"); d.setDate(d.getDate()+delta); setBoardDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); }
   function boardCap(driverId: string | null) { return boardApps.filter(a => a.tour_date===boardDate && (a.driver_id||null)===driverId).reduce((s,a)=>s+(Number(a.people_count)||0),0); }
 
+  // ─── 기사 근무표(주간) load / 토글 / 자동배정 ───
+  const loadShifts = useCallback(async () => {
+    const { data } = await supabase.from("driver_shifts").select("*");
+    const m: Record<string,{am:boolean;pm:boolean}> = {};
+    (data || []).forEach((r:any)=>{ m[`${r.driver_id}_${r.weekday}`] = { am: !!r.am, pm: !!r.pm }; });
+    setShifts(m);
+  }, []);
+  async function toggleShift(driverId: string, weekday: number) {
+    const key = `${driverId}_${weekday}`;
+    const c = shifts[key] || { am:false, pm:false };
+    // 휴무 → 오전 → 오후 → 종일 → 휴무
+    const next = (!c.am && !c.pm) ? {am:true,pm:false} : (c.am && !c.pm) ? {am:false,pm:true} : (!c.am && c.pm) ? {am:true,pm:true} : {am:false,pm:false};
+    setShifts(prev=>({...prev,[key]:next}));
+    await supabase.from("driver_shifts").upsert({ driver_id:driverId, weekday, am:next.am, pm:next.pm });
+  }
+  function shiftCell(driverId: string, weekday: number) {
+    const s = shifts[`${driverId}_${weekday}`] || {am:false,pm:false};
+    if(s.am&&s.pm) return {txt:"종일",bg:"#dcfce7",color:"#166534"};
+    if(s.am) return {txt:"오전",bg:"#dbeafe",color:"#1e40af"};
+    if(s.pm) return {txt:"오후",bg:"#fef3c7",color:"#92400e"};
+    return {txt:"휴무",bg:"#f8fafc",color:"#cbd5e1"};
+  }
+  function isAmTime(t?: string): boolean {
+    if(!t) return true;
+    const s=String(t).toLowerCase();
+    if(s.includes("오전")||s.includes("am")) return true;
+    if(s.includes("오후")||s.includes("pm")) return false;
+    const h=parseInt(s,10); return isNaN(h)?true:h<12;
+  }
+  function workingDrivers(weekday: number) {
+    return boardDrivers.filter(d=>{ const s=shifts[`${d.id}_${weekday}`]; return s && (s.am||s.pm); });
+  }
+  async function autoAssign() {
+    const wd = new Date(boardDate+"T00:00:00").getDay();
+    const working = workingDrivers(wd);
+    if(working.length===0){ alert("그날 근무하는 기사가 없습니다. '기사 관리' 탭의 근무표를 먼저 설정하세요."); return; }
+    const todo = boardApps.filter(a=>a.tour_date===boardDate && !a.driver_id);
+    if(todo.length===0){ alert("자동배정할 미배정 신청이 없습니다."); return; }
+    const cap: Record<string,number> = {}; working.forEach(d=>cap[d.id]=boardCap(d.id));
+    for(const a of todo){
+      const am = isAmTime(a.depart_time);
+      let pool = working.filter(d=>{ const s=shifts[`${d.id}_${wd}`]; return am ? s.am : s.pm; });
+      if(pool.length===0) pool = working;
+      pool = [...pool].sort((x,y)=>(cap[x.id]||0)-(cap[y.id]||0));
+      const target = pool[0];
+      cap[target.id] = (cap[target.id]||0) + (Number(a.people_count)||0);
+      await assignDriver(a.id, target.id);
+    }
+  }
+
   // ─── Shuttle load ───
   const loadShuttles = useCallback(async () => {
     const res = await fetch("/api/admin/shuttle");
@@ -138,9 +189,9 @@ export default function ShuttleManagementPage() {
     if (res.ok) { const d = await res.json(); setEntries(d.entries); setActiveDrivers(d.drivers); }
   }, [dates[0], dates[6]]);
 
-  useEffect(() => { if (authed && tab === "board") loadBoard(); }, [authed, tab, loadBoard]);
+  useEffect(() => { if (authed && tab === "board") { loadBoard(); loadShifts(); } }, [authed, tab, loadBoard, loadShifts]);
   useEffect(() => { if (authed && tab === "shuttle") loadShuttles(); }, [authed, tab, loadShuttles]);
-  useEffect(() => { if (authed && tab === "drivers") loadDrivers(); }, [authed, tab, loadDrivers]);
+  useEffect(() => { if (authed && tab === "drivers") { loadDrivers(); loadShifts(); } }, [authed, tab, loadDrivers, loadShifts]);
   useEffect(() => { if (authed && tab === "schedule") loadSchedule(); }, [authed, tab, loadSchedule]);
 
   // ─── Shuttle functions ───
@@ -290,6 +341,10 @@ export default function ShuttleManagementPage() {
         const wk = weekOf(boardDate);
         const dayApps = boardApps.filter(a => a.tour_date === boardDate);
         const unassigned = dayApps.filter(a => !a.driver_id);
+        const wd = new Date(boardDate+"T00:00:00").getDay();
+        const working = workingDrivers(wd);
+        const cols = [...working];
+        dayApps.forEach(a=>{ if(a.driver_id && !cols.find(c=>c.id===a.driver_id)){ const d=boardDrivers.find(b=>b.id===a.driver_id); if(d) cols.push(d); } });
         return (<>
           {/* 주간 네비 */}
           <div style={{display:"flex",alignItems:"center",gap:10,margin:"4px 0 10px",flexWrap:"wrap"}}>
@@ -316,7 +371,10 @@ export default function ShuttleManagementPage() {
             })}
           </div>
           {/* 선택한 날 배정 */}
-          <div style={{fontSize:12,fontWeight:700,color:"#475569",marginBottom:6}}>📅 {boardDate} ({DAYS[new Date(boardDate+"T00:00:00").getDay()]}) 기사 배정</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#475569"}}>📅 {boardDate} ({DAYS[wd]}) 기사 배정 <span style={{fontWeight:600,color:"#94a3b8"}}>· 근무 {working.length}명</span></div>
+            <button onClick={autoAssign} style={{padding:"6px 14px",border:"none",borderRadius:8,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>🤖 근무기사 자동배정</button>
+          </div>
           <div onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragId){ assignDriver(dragId,null); setDragId(null); } }}
             style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:12,marginBottom:14}}>
             <div style={{fontWeight:800,fontSize:13,color:"#92400e",marginBottom:8}}>📋 미배정 신청 ({unassigned.length}건) <span style={{fontWeight:600,color:"#b45309",fontSize:11}}>— 카드를 아래 기사에게 끌어다 배정</span></div>
@@ -326,7 +384,7 @@ export default function ShuttleManagementPage() {
           </div>
           <div style={{fontWeight:800,fontSize:13,color:"#1a6fc4",marginBottom:8}}>🚗 기사별 배정 <span style={{fontWeight:600,color:"#94a3b8",fontSize:11}}>— 다시 끌어 변경 / 위로 끌면 취소</span></div>
           <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
-            {boardDrivers.length===0?<div style={{fontSize:12,color:"#94a3b8",padding:"10px"}}>활성 기사가 없습니다. "🚗 기사 관리" 탭에서 등록하세요.</div>:boardDrivers.map(col=>{
+            {cols.length===0?<div style={{fontSize:12,color:"#94a3b8",padding:"10px"}}>이 요일에 근무하는 기사가 없습니다. "🚗 기사 관리" 탭의 주간 근무표를 설정하세요.</div>:cols.map(col=>{
               const colApps=dayApps.filter(a=>a.driver_id===col.id);
               const cap=boardCap(col.id);
               const over=cap>12;
@@ -394,6 +452,30 @@ export default function ShuttleManagementPage() {
 
       {/* ───── 탭2: 기사 관리 ───── */}
       {tab === "drivers" && (<>
+        <div className="sec">
+          <h2 style={{marginBottom:10}}>📋 주간 근무표 <span style={{fontWeight:600,fontSize:12,color:"#94a3b8"}}>— 칸 클릭: 휴무→오전→오후→종일 (매주 반복)</span></h2>
+          {drivers.filter(d=>d.is_active).length===0?<div className="empty">활성 기사가 없습니다</div>:(
+            <div style={{overflowX:"auto"}}>
+              <table style={{borderCollapse:"collapse",width:"100%",fontSize:12}}>
+                <thead><tr><th style={{textAlign:"left",padding:"6px 8px",color:"#6b7c93"}}>기사</th>
+                  {[1,2,3,4,5,6,0].map(wd=><th key={wd} style={{padding:"6px 4px",color:(wd===0||wd===6)?"#dc2626":"#6b7c93"}}>{DAYS[wd]}</th>)}
+                </tr></thead>
+                <tbody>
+                  {drivers.filter(d=>d.is_active).map(d=>(
+                    <tr key={d.id}>
+                      <td style={{padding:"6px 8px",fontWeight:700,whiteSpace:"nowrap"}}>{d.name}</td>
+                      {[1,2,3,4,5,6,0].map(wd=>{ const c=shiftCell(d.id,wd); return (
+                        <td key={wd} style={{padding:3,textAlign:"center"}}>
+                          <button onClick={()=>toggleShift(d.id,wd)} style={{width:"100%",minWidth:46,padding:"6px 0",border:"none",borderRadius:6,background:c.bg,color:c.color,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{c.txt}</button>
+                        </td>
+                      );})}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         <div className="sec">
           <div className="sec-head">
             <h2>🚗 기사 목록</h2>
