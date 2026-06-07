@@ -86,13 +86,25 @@ export default function ShuttleManagementPage() {
 
   // ─── 투어 배정 보드 load/배정 ───
   const loadBoard = useCallback(async () => {
-    const [appsRes, drsRes] = await Promise.all([
-      supabase.from("shuttle_applications").select("*").eq("tour_date", boardDate).order("depart_time", { ascending: true }),
-      supabase.from("drivers").select("id,name").eq("is_active", true).order("name"),
-    ]);
+    const appsRes = await supabase.from("shuttle_applications").select("*").eq("tour_date", boardDate).order("depart_time", { ascending: true });
     setBoardApps(appsRes.data || []);
-    setBoardDrivers((drsRes.data as {id:string;name:string}[]) || []);
+    // 기사는 RLS 우회 위해 서버 API(service role)로 로드
+    try {
+      const r = await fetch("/api/admin/drivers");
+      if (r.ok) { const d = await r.json(); setBoardDrivers(((d.drivers || []) as any[]).filter(x => x.is_active !== false).map(x => ({ id: x.id, name: x.name }))); }
+    } catch {}
   }, [boardDate]);
+  function appCard(a: any) {
+    return (
+      <div key={a.id} draggable onDragStart={() => setDragId(a.id)} onDragEnd={() => setDragId(null)}
+        style={{ background: "#f0f7ff", border: "1px solid #dbeafe", borderRadius: 8, padding: "7px 9px", cursor: "grab", fontSize: 12, lineHeight: 1.5, minWidth: 150 }}>
+        <div style={{ fontWeight: 700, color: "#1a1a2e" }}>🚌 {a.tour_name || "투어셔틀"}</div>
+        <div style={{ color: "#475569" }}>{a.room_number || ""} · {a.depart_time || ""}</div>
+        <div style={{ color: "#475569" }}>{[a.portal_name, a.riders].filter(Boolean).join(" · ")} ({a.people_count || 0}명)</div>
+        {a.request && <div style={{ color: "#b45309", fontSize: 11 }}>{a.request}</div>}
+      </div>
+    );
+  }
   async function assignDriver(appId: string, driverId: string | null) {
     setBoardApps(prev => prev.map(a => a.id === appId ? { ...a, driver_id: driverId } : a)); // 낙관적 갱신
     const { error } = await supabase.from("shuttle_applications").update({ driver_id: driverId }).eq("id", appId);
@@ -274,31 +286,34 @@ export default function ShuttleManagementPage() {
           <button className="btn btn-sm btn-gray" onClick={()=>shiftBoardDate(1)}>▶</button>
           <span style={{fontSize:12,color:"#6b7c93"}}>{boardApps.length}건 · 카드를 기사에게 끌어다 배정 (다시 끌면 변경)</span>
         </div>
+        {/* 1) 미배정 신청 리스트 */}
+        <div onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragId){ assignDriver(dragId,null); setDragId(null); } }}
+          style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:12,marginBottom:14}}>
+          <div style={{fontWeight:800,fontSize:13,color:"#92400e",marginBottom:8}}>📋 미배정 신청 ({boardApps.filter(a=>!a.driver_id).length}건) <span style={{fontWeight:600,color:"#b45309",fontSize:11}}>— 카드를 아래 기사에게 끌어다 배정</span></div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {boardApps.filter(a=>!a.driver_id).length===0?<div style={{fontSize:12,color:"#cbd5e1",padding:"6px 0"}}>이 날짜에 미배정 신청이 없습니다.</div>:boardApps.filter(a=>!a.driver_id).map(a=>appCard(a))}
+          </div>
+        </div>
+        {/* 2) 기사별 배정 */}
+        <div style={{fontWeight:800,fontSize:13,color:"#1a6fc4",marginBottom:8}}>🚗 기사별 배정 <span style={{fontWeight:600,color:"#94a3b8",fontSize:11}}>— 다시 끌어 변경 / 위로 끌면 배정 취소</span></div>
         <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
-          {[{id:null as string|null,name:"미배정"},...boardDrivers].map(col=>{
-            const colApps=boardApps.filter(a=>(a.driver_id||null)===col.id);
+          {boardDrivers.length===0?<div style={{fontSize:12,color:"#94a3b8",padding:"10px"}}>활성 기사가 없습니다. "🚗 기사 관리" 탭에서 등록하세요.</div>:boardDrivers.map(col=>{
+            const colApps=boardApps.filter(a=>a.driver_id===col.id);
             const cap=boardCap(col.id);
-            const over=col.id!==null && cap>12;
+            const over=cap>12;
             return (
-              <div key={col.id||"none"} onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragId){ assignDriver(dragId,col.id); setDragId(null); } }}
-                style={{minWidth:200,flex:"0 0 200px",background:col.id===null?"#f8fafc":"#fff",border:`1px solid ${over?"#ef4444":"#e2e8f0"}`,borderRadius:12,padding:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,fontWeight:800,fontSize:13,color:col.id===null?"#64748b":"#1a6fc4"}}>
-                  <span>{col.id===null?"🅿️ 미배정":"🚗 "+col.name}</span>
-                  {col.id!==null && <span style={{fontSize:11,fontWeight:700,color:over?"#dc2626":"#16a34a"}}>{cap}/12명{over?" ⚠️":""}</span>}
+              <div key={col.id} onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragId){ assignDriver(dragId,col.id); setDragId(null); } }}
+                style={{minWidth:200,flex:"0 0 200px",background:"#fff",border:`2px solid ${over?"#ef4444":"#e2e8f0"}`,borderRadius:12,padding:10,minHeight:120}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,fontWeight:800,fontSize:13,color:"#1a6fc4"}}>
+                  <span>🚗 {col.name}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:over?"#dc2626":"#16a34a"}}>{cap}/12명{over?" ⚠️":""}</span>
                 </div>
-                {colApps.length===0?<div style={{fontSize:12,color:"#cbd5e1",textAlign:"center",padding:"16px 0"}}>—</div>:colApps.map(a=>(
-                  <div key={a.id} draggable onDragStart={()=>setDragId(a.id)} onDragEnd={()=>setDragId(null)}
-                    style={{background:col.id===null?"#fff":"#f0f7ff",border:"1px solid #dbeafe",borderRadius:8,padding:"7px 9px",marginBottom:6,cursor:"grab",fontSize:12,lineHeight:1.5}}>
-                    <div style={{fontWeight:700,color:"#1a1a2e"}}>🚌 {a.tour_name||"투어셔틀"}</div>
-                    <div style={{color:"#475569"}}>{a.room_number||""} · {a.depart_time||""}</div>
-                    <div style={{color:"#475569"}}>{[a.portal_name,a.riders].filter(Boolean).join(" · ")} ({a.people_count||0}명)</div>
-                    {a.request&&<div style={{color:"#b45309",fontSize:11}}>{a.request}</div>}
-                  </div>
-                ))}
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {colApps.length===0?<div style={{fontSize:12,color:"#cbd5e1",textAlign:"center",padding:"16px 0"}}>여기로 드래그</div>:colApps.map(a=>appCard(a))}
+                </div>
               </div>
             );
           })}
-          {boardApps.length===0 && <div style={{padding:"30px 10px",color:"#94a3b8",fontSize:13}}>이 날짜에 셔틀 신청이 없습니다.</div>}
         </div>
       </>)}
 
