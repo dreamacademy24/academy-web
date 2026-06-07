@@ -175,6 +175,8 @@ export default function AdminBookingsPage(){
   const [filter,setFilter]=useState("전체");
   const [confirmFilter,setConfirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
+  const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
+  const [confirmPeriod,setConfirmPeriod]=useState<"진행중"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
@@ -861,6 +863,28 @@ export default function AdminBookingsPage(){
         if(!q)return true;
         return [b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.agency,b.pickup_place,b.drop_off,b.special_request,b.accom_type,b.house_no].some(v=>v&&v.toLowerCase().includes(q));
       });
+      // 누락 항목(직원이 아직 처리 안 한 것) 계산 — 통학형은 항공편 제외
+      const missingItems=(b:Booking):string[]=>{
+        const isC=b.accom_type==="통학형"||(b as any).booking_type==="commute";
+        const m:string[]=[];
+        if(!isC && !(b.flight_in||"").trim())m.push("항공");
+        if(!(b as any).portal_username)m.push("아이디");
+        if(!(b.final_price||b.base_price))m.push("인보이스");
+        if(!b.balance_date||!String(b.balance_date).includes("완료"))m.push("잔금");
+        return m;
+      };
+      // 유형(전체/리조트/통학형) + 기간(진행중/이번주/지난졸업) 필터
+      const _today=calYmd(new Date());
+      const _wkEnd=(()=>{const d=new Date();d.setDate(d.getDate()+7);return calYmd(d);})();
+      const typeFiltered=searched.filter(b=>{
+        const isC=b.accom_type==="통학형"||(b as any).booking_type==="commute";
+        if(confirmType==="통학형"&&!isC)return false;
+        if(confirmType==="리조트"&&isC)return false;
+        const co=b.checkout_date||"";
+        if(confirmPeriod==="지난")return !!co&&co<_today;
+        if(confirmPeriod==="이번주")return !!b.checkin_date&&b.checkin_date>=_today&&b.checkin_date<=_wkEnd;
+        return !co||co>=_today; // 진행중(체크아웃 안 지남)
+      });
       const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
         {key:"booker_name",label:"예약자",get:b=>b.booker_name},
@@ -877,8 +901,9 @@ export default function AdminBookingsPage(){
         {key:"balance_date",label:"잔금일",get:b=>b.balance_date||"-"},
         {key:"price",label:"금액",get:b=>b.final_price||b.base_price||0},
         {key:"special_request",label:"특이사항",get:b=>b.special_request||"-"},
+        {key:"missing",label:"누락",get:b=>missingItems(b).join("·")||"✓"},
       ];
-      const sorted=[...searched].sort((a,b)=>{
+      const sorted=[...typeFiltered].sort((a,b)=>{
         const {key,asc}=confirmSort;
         let va:any,vb:any;
         const col=cols.find(c=>c.key===key);
@@ -901,6 +926,12 @@ export default function AdminBookingsPage(){
           <button className={`sub-tab${confirmAssignee==="전체"?" ac":""}`} onClick={()=>setConfirmAssignee("전체")}>전체</button>
           {assigneeNames.map(name=><button key={name} className={`sub-tab${confirmAssignee===name?" ac":""}`} onClick={()=>setConfirmAssignee(name)}>{name}</button>)}
           {hasUnassigned&&<button className={`sub-tab${confirmAssignee==="미배정"?" ac":""}`} onClick={()=>setConfirmAssignee("미배정")}>미배정</button>}
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center",margin:"4px 0"}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>유형</span>
+          {(["전체","리조트","통학형"] as const).map(t=><button key={t} className={`sub-tab${confirmType===t?" ac":""}`} onClick={()=>setConfirmType(t)}>{t}</button>)}
+          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",margin:"0 2px 0 10px"}}>기간</span>
+          {(["진행중","이번주","지난"] as const).map(t=><button key={t} className={`sub-tab${confirmPeriod===t?" ac":""}`} onClick={()=>setConfirmPeriod(t)}>{t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>)}
         </div>
         <div className="cf-search">
           <span className="cnt">{sorted.length}건</span>
@@ -950,6 +981,7 @@ export default function AdminBookingsPage(){
               <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
                 {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
               </td>
+              <td>{(()=>{const m=missingItems(b);return m.length===0?<span style={{color:"#16a34a",fontWeight:700}}>✓</span>:m.map((x,i)=><span key={i} style={{display:"inline-block",margin:"1px",fontSize:10,background:"#fef2f2",color:"#dc2626",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{x}</span>);})()}</td>
               <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
                 <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
                   const v=e.target.checked;
