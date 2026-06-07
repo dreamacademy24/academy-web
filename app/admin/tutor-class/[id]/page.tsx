@@ -4,6 +4,7 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
 import { countLessonDays } from "@/lib/lessonDates";
+import { fmtAge } from "@/lib/format";
 
 interface TutorRow {
   id: string;
@@ -300,11 +301,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             <div className="dt-row"><span className="dt-k">예약자</span><span className="dt-v">{fmt(row.guest_name || row.house_number)}</span></div>
             <div className="dt-row"><span className="dt-k">학생 (한)</span><span className="dt-v">{fmt(row.student_name_kr)}</span></div>
             <div className="dt-row"><span className="dt-k">학생 (영)</span><span className="dt-v">{fmt(row.student_name_en)}</span></div>
-            <div className="dt-row"><span className="dt-k">나이</span><span className="dt-v">{row.class_type === "1:2" && row.student2_age ? `${fmt(row.student_age)} / ${row.student2_age}` : fmt(row.student_age)}</span></div>
+            <div className="dt-row"><span className="dt-k">나이</span><span className="dt-v">{row.class_type === "1:2" && row.student2_age ? `${fmtAge(row.student_age)} / ${fmtAge(row.student2_age)}` : fmtAge(row.student_age)}</span></div>
             {(row.student2_name || row.student2_eng_name) && (<>
               <div className="dt-row"><span className="dt-k">학생2 (한)</span><span className="dt-v">{fmt(row.student2_name)}</span></div>
               <div className="dt-row"><span className="dt-k">학생2 (영)</span><span className="dt-v">{fmt(row.student2_eng_name)}</span></div>
-              <div className="dt-row"><span className="dt-k">학생2 나이</span><span className="dt-v">{fmt(row.student2_age)}</span></div>
+              <div className="dt-row"><span className="dt-k">학생2 나이</span><span className="dt-v">{fmtAge(row.student2_age)}</span></div>
             </>)}
           </div>
 

@@ -6,6 +6,7 @@ import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
 import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue } from "@/lib/bookingTypes";
+import { fmtAge } from "@/lib/format";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -114,12 +115,7 @@ function getStudentAge(s:{age?:string}):string{
   return isNaN(num)?"":String(num);
 }
 // 나이 셀 원본 표기 (리스트 뷰 — YYYYMMDD는 연도만, 그 외는 그대로)
-function fmtStudentAge(rawAge?:string):string{
-  if(!rawAge)return"-";
-  const a=String(rawAge).trim();
-  if(/^\d{8}$/.test(a))return a.slice(0,4); // YYYYMMDD → YYYY
-  return a;
-}
+function fmtStudentAge(rawAge?:string):string{ return fmtAge(rawAge); }
 function acaStart(b:any):string{
   if(!b.checkin_date)return"-";
   const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
