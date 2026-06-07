@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { generatePortalId, generateTempPassword } from "@/lib/portalUtils";
+import { isCommuteBooking } from "@/lib/bookingTypes";
 
 type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle" | "comments";
 interface Comment { id: string; booking_id: string; author: string; content: string; created_at: string }
@@ -215,7 +216,7 @@ export default function BookingDetailPage() {
     if (table === "students") {
       // 학생 편집 시 academy_start/end 자동 기본값 (booking 정보 기반)
       const bk = data?.booking || {};
-      const isCommute = bk.accom_type === "통학형" || bk.booking_type === "commute";
+      const isCommute = isCommuteBooking(bk);
       const rawCheckin = (bk.check_in || bk.checkin_date || "").split("T")[0];
       const rawCheckout = (bk.check_out || bk.checkout_date || "").split("T")[0];
       const bStart = (bk.academy_start || "").split("T")[0]
@@ -341,7 +342,7 @@ export default function BookingDetailPage() {
       house_no: (editForm.house_no || "").trim() || null,
       academy_start: editForm.academy_start || null,
       academy_end: (() => {
-        const isCommute = editForm.accom_type === "통학형" || editForm.booking_type === "commute";
+        const isCommute = isCommuteBooking(editForm);
         if (isCommute) {
           // 통학형: checkout_date를 academy_end로 사용 (source of truth)
           return editForm.checkout_date || (editForm.academy_start ? deriveAcademyEnd(editForm.academy_start, editForm.accom_weeks) || null : null);
@@ -472,7 +473,7 @@ export default function BookingDetailPage() {
                 ? <input className="ed-inp" value={editForm.booker_phone||""} onChange={e=>setEditForm({...editForm,booker_phone:e.target.value})} placeholder="010-0000-0000"/>
                 : <div className="val">{b.booker_phone || "-"}</div>}
             </div>
-            {(b.booking_type === "commute" || b.accom_type === "통학형") ? (<>
+            {isCommuteBooking(b) ? (<>
               <div className="item"><div className="lbl">수업시작</div>
                 {editing
                   ? <input className="ed-inp" type="date" value={editForm.checkin_date||""} onChange={e=>setEditForm({...editForm,checkin_date:e.target.value})}/>
@@ -729,7 +730,7 @@ export default function BookingDetailPage() {
                       <button className="btn btn-sm btn-gray" onClick={()=>startRowEdit("students", s, i)}>✏️ 수정</button>
                     </div>
                     {(()=>{
-                      const isCommute = b?.accom_type==="통학형" || b?.booking_type==="commute";
+                      const isCommute = isCommuteBooking(b);
                       const bCheckin = b?.check_in || b?.checkin_date || "";
                       const bStart = (b?.academy_start || "").split("T")[0];
                       const cardStart = s.academyStart || s.academy_start

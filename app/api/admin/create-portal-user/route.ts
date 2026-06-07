@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { isCommuteBooking } from '@/lib/bookingTypes';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     .select('booking_type, accom_type')
     .eq('id', bookingId)
     .maybeSingle();
-  const portalType = (bkType?.booking_type === 'commute' || bkType?.accom_type === '통학형') ? 'commute' : 'all_in_one';
+  const portalType = isCommuteBooking(bkType) ? 'commute' : 'all_in_one';
 
   // Supabase Auth 계정 생성
   const email = `${username}@dreamacademyph.com`;

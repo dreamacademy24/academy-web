@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
-import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue } from "@/lib/bookingTypes";
+import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue, isCommuteBooking } from "@/lib/bookingTypes";
 import { fmtAge, ageNum } from "@/lib/format";
 
 interface Booking {
@@ -106,7 +106,7 @@ function getStudentAge(s:{age?:string}):string{
 function fmtStudentAge(rawAge?:string):string{ return fmtAge(rawAge); }
 function acaStart(b:any):string{
   if(!b.checkin_date)return"-";
-  const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+  const isCommute=isCommuteBooking(b);
   if(isCommute){
     // 통학형: JSONB academyStart 우선, 없으면 checkin_date 그대로
     try{
@@ -121,7 +121,7 @@ function acaStart(b:any):string{
 function acaEnd(b:any):string{
   const start=acaStart(b);if(start==="-"||!start)return"-";
   // 통학형: checkout_date 그대로
-  const isCommute=b.accom_type==="통학형"||b.booking_type==="commute";
+  const isCommute=isCommuteBooking(b);
   if(isCommute&&b.checkout_date)return b.checkout_date;
   // 비통학형 우선순위:
   //   1) students[0].academyEnd (직접 저장된 날짜)
@@ -142,7 +142,7 @@ function acaEnd(b:any):string{
 }
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
-  if(t==="통학형"||b.booking_type==="commute")return "통학형";
+  if(isCommuteBooking(b))return "통학형";
   if(t.includes("드림하우스")||t.includes("드하")){
     const room=(b.house_no||b.accom_room||"").toString().replace(/\s+/g,"").replace(/^dh/i,"").toUpperCase();
     return room?`DH ${room}`:"DH";
@@ -239,7 +239,7 @@ export default function AdminBookingsPage(){
       if(Array.isArray(parsed)) arr=parsed;
     }catch{return[];}
     if(arr.length===0) return [];
-    const isCommute=(b as any).booking_type==="commute"||b.accom_type==="통학형";
+    const isCommute=isCommuteBooking(b);
     return arr.map((s,i)=>{
       const weeks=Number(s.academyWeeks||b.accom_weeks||0);
       // 수업 일자 = 손님 세부내역(상세)과 동일하게 "저장값 그대로" 신뢰.
@@ -852,7 +852,7 @@ export default function AdminBookingsPage(){
       });
       // 누락 항목(직원이 아직 처리 안 한 것) 계산 — 통학형은 항공편 제외
       const missingItems=(b:Booking):string[]=>{
-        const isC=b.accom_type==="통학형"||(b as any).booking_type==="commute";
+        const isC=isCommuteBooking(b);
         const m:string[]=[];
         if(!isC && !(b.flight_in||"").trim())m.push("항공");
         if(!(b as any).portal_username)m.push("아이디");
@@ -864,7 +864,7 @@ export default function AdminBookingsPage(){
       const _today=calYmd(new Date());
       const _wkEnd=(()=>{const d=new Date();d.setDate(d.getDate()+7);return calYmd(d);})();
       const typeFiltered=searched.filter(b=>{
-        const isC=b.accom_type==="통학형"||(b as any).booking_type==="commute";
+        const isC=isCommuteBooking(b);
         if(confirmType==="통학형"&&!isC)return false;
         if(confirmType==="리조트"&&isC)return false;
         const co=b.checkout_date||"";

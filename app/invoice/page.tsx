@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
+import { isCommuteBooking } from "@/lib/bookingTypes";
 import html2canvas from "html2canvas";
 
 /* ── 유틸 함수 (100% 기존 유지) ── */
@@ -670,7 +671,7 @@ function InvoicePageInner(){
   useEffect(()=>{
     if(!bookingId) return;
     supabase.from("bookings").select("booking_type,accom_type").eq("id",bookingId).maybeSingle().then(({data})=>{
-      if(data) setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
+      if(data) setIsCommute(isCommuteBooking(data));
     });
   },[bookingId]);
 
@@ -693,7 +694,7 @@ function InvoicePageInner(){
         }catch{}
       }
       setBooker({name:data.booker_name,englishName,balanceDate:data.balance_date||""});
-      setIsCommute(data.booking_type==="commute"||data.accom_type==="통학형");
+      setIsCommute(isCommuteBooking(data));
       if(data.checkout_date) setDbCheckout(data.checkout_date);
       let sts:any[]=[];
       try{const parsed=typeof data.students==="string"?JSON.parse(data.students):data.students;if(Array.isArray(parsed))sts=parsed;}catch{}

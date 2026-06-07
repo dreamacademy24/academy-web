@@ -36,3 +36,13 @@ export const ADMIN_BOOKING_TYPES: BookingTypeDef[] = [
   ...PUBLIC_BOOKING_TYPES,
   ...ADMIN_ONLY_BOOKING_TYPES,
 ];
+
+// ── 통학형 단일 판별 (Single Source of Truth) ──
+// 정식 필드는 booking_type='commute' 이지만, 과거 데이터는 accom_type='통학형'만
+// 채워진 경우가 있어 두 필드를 모두 확인한다. 예약 레코드 판별은 항상 이 함수 사용.
+export function isCommuteBooking(
+  b: { booking_type?: string | null; accom_type?: string | null } | null | undefined
+): boolean {
+  if (!b) return false;
+  return b.booking_type === "commute" || b.accom_type === "통학형";
+}
