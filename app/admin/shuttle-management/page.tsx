@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import { supabase } from "@/lib/supabase";
 
-type Tab = "shuttle" | "drivers" | "schedule";
+type Tab = "board" | "shuttle" | "drivers" | "schedule";
 
 // ─────────────────────── Types ───────────────────────
 interface Shuttle {
@@ -54,7 +55,13 @@ function weekDates(base: Date): string[] {
 export default function ShuttleManagementPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<Tab>("shuttle");
+  const [tab, setTab] = useState<Tab>("board");
+
+  // 투어 배정 보드 (shuttle_applications 기반 드래그 배정)
+  const [boardDate, setBoardDate] = useState<string>(() => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; });
+  const [boardApps, setBoardApps] = useState<any[]>([]);
+  const [boardDrivers, setBoardDrivers] = useState<{id:string;name:string}[]>([]);
+  const [dragId, setDragId] = useState<string|null>(null);
 
   // Shuttle tab
   const [shuttles, setShuttles] = useState<Shuttle[]>([]);
@@ -77,6 +84,23 @@ export default function ShuttleManagementPage() {
 
   useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
 
+  // ─── 투어 배정 보드 load/배정 ───
+  const loadBoard = useCallback(async () => {
+    const [appsRes, drsRes] = await Promise.all([
+      supabase.from("shuttle_applications").select("*").eq("tour_date", boardDate).order("depart_time", { ascending: true }),
+      supabase.from("drivers").select("id,name").eq("is_active", true).order("name"),
+    ]);
+    setBoardApps(appsRes.data || []);
+    setBoardDrivers((drsRes.data as {id:string;name:string}[]) || []);
+  }, [boardDate]);
+  async function assignDriver(appId: string, driverId: string | null) {
+    setBoardApps(prev => prev.map(a => a.id === appId ? { ...a, driver_id: driverId } : a)); // 낙관적 갱신
+    const { error } = await supabase.from("shuttle_applications").update({ driver_id: driverId }).eq("id", appId);
+    if (error) { alert("배정 저장 실패: " + error.message); loadBoard(); }
+  }
+  function shiftBoardDate(delta: number) { const d=new Date(boardDate+"T00:00:00"); d.setDate(d.getDate()+delta); setBoardDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); }
+  function boardCap(driverId: string | null) { return boardApps.filter(a => (a.driver_id||null)===driverId).reduce((s,a)=>s+(Number(a.people_count)||0),0); }
+
   // ─── Shuttle load ───
   const loadShuttles = useCallback(async () => {
     const res = await fetch("/api/admin/shuttle");
@@ -95,6 +119,7 @@ export default function ShuttleManagementPage() {
     if (res.ok) { const d = await res.json(); setEntries(d.entries); setActiveDrivers(d.drivers); }
   }, [dates[0], dates[6]]);
 
+  useEffect(() => { if (authed && tab === "board") loadBoard(); }, [authed, tab, loadBoard]);
   useEffect(() => { if (authed && tab === "shuttle") loadShuttles(); }, [authed, tab, loadShuttles]);
   useEffect(() => { if (authed && tab === "drivers") loadDrivers(); }, [authed, tab, loadDrivers]);
   useEffect(() => { if (authed && tab === "schedule") loadSchedule(); }, [authed, tab, loadSchedule]);
@@ -235,12 +260,48 @@ export default function ShuttleManagementPage() {
       </div>
 
       <div className="tabs">
+        <button className={`tab${tab === "board" ? " ac" : ""}`} onClick={() => setTab("board")}>🚌 투어 배정</button>
         <button className={`tab${tab === "shuttle" ? " ac" : ""}`} onClick={() => setTab("shuttle")}>🚐 셔틀 관리</button>
         <button className={`tab${tab === "drivers" ? " ac" : ""}`} onClick={() => setTab("drivers")}>🚗 기사 관리</button>
         <button className={`tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📅 기사 스케줄</button>
       </div>
 
       {/* ───── 탭1: 셔틀 관리 ───── */}
+      {tab === "board" && (<>
+        <div style={{display:"flex",alignItems:"center",gap:10,margin:"4px 0 12px",flexWrap:"wrap"}}>
+          <button className="btn btn-sm btn-gray" onClick={()=>shiftBoardDate(-1)}>◀</button>
+          <input type="date" value={boardDate} onChange={e=>setBoardDate(e.target.value)} style={{padding:"7px 10px",border:"1px solid #cbd5e1",borderRadius:8,fontSize:14,fontFamily:"inherit"}}/>
+          <button className="btn btn-sm btn-gray" onClick={()=>shiftBoardDate(1)}>▶</button>
+          <span style={{fontSize:12,color:"#6b7c93"}}>{boardApps.length}건 · 카드를 기사에게 끌어다 배정 (다시 끌면 변경)</span>
+        </div>
+        <div style={{display:"flex",gap:10,overflowX:"auto",paddingBottom:8}}>
+          {[{id:null as string|null,name:"미배정"},...boardDrivers].map(col=>{
+            const colApps=boardApps.filter(a=>(a.driver_id||null)===col.id);
+            const cap=boardCap(col.id);
+            const over=col.id!==null && cap>12;
+            return (
+              <div key={col.id||"none"} onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragId){ assignDriver(dragId,col.id); setDragId(null); } }}
+                style={{minWidth:200,flex:"0 0 200px",background:col.id===null?"#f8fafc":"#fff",border:`1px solid ${over?"#ef4444":"#e2e8f0"}`,borderRadius:12,padding:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,fontWeight:800,fontSize:13,color:col.id===null?"#64748b":"#1a6fc4"}}>
+                  <span>{col.id===null?"🅿️ 미배정":"🚗 "+col.name}</span>
+                  {col.id!==null && <span style={{fontSize:11,fontWeight:700,color:over?"#dc2626":"#16a34a"}}>{cap}/12명{over?" ⚠️":""}</span>}
+                </div>
+                {colApps.length===0?<div style={{fontSize:12,color:"#cbd5e1",textAlign:"center",padding:"16px 0"}}>—</div>:colApps.map(a=>(
+                  <div key={a.id} draggable onDragStart={()=>setDragId(a.id)} onDragEnd={()=>setDragId(null)}
+                    style={{background:col.id===null?"#fff":"#f0f7ff",border:"1px solid #dbeafe",borderRadius:8,padding:"7px 9px",marginBottom:6,cursor:"grab",fontSize:12,lineHeight:1.5}}>
+                    <div style={{fontWeight:700,color:"#1a1a2e"}}>🚌 {a.tour_name||"투어셔틀"}</div>
+                    <div style={{color:"#475569"}}>{a.room_number||""} · {a.depart_time||""}</div>
+                    <div style={{color:"#475569"}}>{[a.portal_name,a.riders].filter(Boolean).join(" · ")} ({a.people_count||0}명)</div>
+                    {a.request&&<div style={{color:"#b45309",fontSize:11}}>{a.request}</div>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          {boardApps.length===0 && <div style={{padding:"30px 10px",color:"#94a3b8",fontSize:13}}>이 날짜에 셔틀 신청이 없습니다.</div>}
+        </div>
+      </>)}
+
       {tab === "shuttle" && (<>
         <div className="toolbar">
           {([["all","전체"],["pending","대기"],["confirmed","확정"],["cancelled","취소"]] as const).map(([k,v]) => (
