@@ -37,14 +37,21 @@ export async function GET(req: Request) {
   const appIds = (apps || []).map((a: { id: string }) => a.id)
   if (appIds.length === 0) return NextResponse.json({ lessons: [] })
 
-  // 2. 확정 신청에 연결된 수업 (application_id)
-  const { data: lessonRows, error: lErr } = await supabase
-    .from('tutor_lessons')
-    .select('*')
-    .in('application_id', appIds)
-    .order('start_date', { ascending: true })
-  if (lErr) return NextResponse.json({ error: lErr.message }, { status: 500 })
-  const lessons = (lessonRows || []) as LessonRow[]
+  // 2. 확정 신청에 연결된 수업 — application_id 또는 admin_memo의 request_id (옛 수업은 application_id가 빌 수 있음)
+  const byAppId = await supabase
+    .from('tutor_lessons').select('*').in('application_id', appIds).order('start_date', { ascending: true })
+  if (byAppId.error) return NextResponse.json({ error: byAppId.error.message }, { status: 500 })
+  const memoFilter = appIds.map((id) => `admin_memo.ilike.%request_id: ${id}%`).join(',')
+  const byMemo = memoFilter
+    ? await supabase.from('tutor_lessons').select('*').or(memoFilter).order('start_date', { ascending: true })
+    : { data: [], error: null }
+  const seen = new Set<string>()
+  const lessons: LessonRow[] = []
+  for (const l of [...(byAppId.data || []), ...((byMemo as { data: LessonRow[] }).data || [])] as LessonRow[]) {
+    if (seen.has(l.id)) continue
+    seen.add(l.id)
+    lessons.push(l)
+  }
   if (lessons.length === 0) return NextResponse.json({ lessons: [] })
 
   // 3. 수업별 세션

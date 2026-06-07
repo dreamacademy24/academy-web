@@ -84,7 +84,9 @@ export default function MyApplicationsPage() {
         const ij = await inv.json();
         const map: Record<string, AnyRow[]> = {};
         (ij.lessons || []).forEach((l: AnyRow) => {
-          const k = String(l.application_id || "");
+          let k = String(l.application_id || "");
+          if (!k) { const m = String(l.admin_memo || "").match(/request_id:\s*([0-9a-fA-F-]+)/); k = m ? m[1] : ""; }
+          if (!k) return;
           if (!map[k]) map[k] = [];
           map[k].push(l);
         });
@@ -248,7 +250,6 @@ export default function MyApplicationsPage() {
         <button className={`ma-tab${tab === "shuttle" ? " ac" : ""}`} onClick={() => setTab("shuttle")}>🚌 투어셔틀</button>
         <button className={`ma-tab${tab === "fieldtrip" ? " ac" : ""}`} onClick={() => setTab("fieldtrip")}>🎒 애프터스쿨/필드트립</button>
         <button className={`ma-tab${tab === "tutor" ? " ac" : ""}`} onClick={() => setTab("tutor")}>👩‍🏫 튜터</button>
-        <button className={`ma-tab${tab === "pickup" ? " ac" : ""}`} onClick={() => setTab("pickup")}>🚐 픽드랍</button>
       </div>
 
       {/* 투어셔틀 */}
@@ -370,46 +371,6 @@ export default function MyApplicationsPage() {
         </div>
       )}
 
-      {/* 픽드랍 */}
-      {tab === "pickup" && (
-        <div>
-          {data.pickup.length === 0 ? (
-            <div className="ma-empty">신청 내역이 없습니다.</div>
-          ) : data.pickup.map((r: AnyRow) => {
-            const meta = statusMeta(String(r.status || ""));
-            const id = String(r.id || "");
-            const reqType = String(r.request_type || "");
-            const isPickup = reqType === "pickup" || reqType === "extra_pickup";
-            const isDrop = reqType === "dropoff" || reqType === "extra_drop";
-            const typeLabel = reqType === "extra_pickup" ? "추가픽업"
-              : reqType === "extra_drop" ? "추가드랍"
-              : reqType === "pickup" ? "픽업"
-              : reqType === "dropoff" ? "드랍"
-              : reqType;
-            const typeBg = isPickup ? "#dbeafe" : isDrop ? "#fef3c7" : "#f1f5f9";
-            const typeFg = isPickup ? "#1d4ed8" : isDrop ? "#92400e" : "#475569";
-            return (
-              <div key={id} className="ma-card">
-                <div className="ma-row1">
-                  <span className="ma-date">신청일 {fmtDate(String(r.created_at || ""))}</span>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span className="ma-badge" style={{ background: typeBg, color: typeFg }}>{typeLabel}</span>
-                    <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
-                  </div>
-                </div>
-                <div className="ma-title-line">
-                  {String(r.location || "-")} → {String(r.destination || "-")}
-                </div>
-                <div className="ma-meta">
-                  <b>📅 날짜:</b> {fmtDate(String(r.request_date || ""))} {String(r.request_time || "")}
-                  {r.num_people != null && (<><b style={{ marginLeft: 8 }}>👥 인원:</b> {String(r.num_people)}명</>)}
-                </div>
-              </div>
-            );
-          })}
-          <div className="ma-info">ℹ️ 픽드랍 신청 취소는 스탭에게 문의해주세요.</div>
-        </div>
-      )}
     </div>
 
     {editId && (
