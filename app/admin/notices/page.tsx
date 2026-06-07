@@ -57,6 +57,13 @@ export default function AdminNoticesPage() {
       : await supabase.from("portal_notices").insert(payload);
     setSaving(false);
     if (res.error) { setMsg("저장 실패: " + res.error.message); return; }
+    // 신규 발행 시에만 폰 푸시 전송 (수정은 재알림 안 함) — best-effort
+    if (!form.id) {
+      fetch("/api/portal/push/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: payload.title, body: payload.content, audience: payload.audience, target_ids: payload.target_ids, url: "/portal/notices" }),
+      }).catch(() => {});
+    }
     reset(); await load();
   }
   async function del(id: string) {
