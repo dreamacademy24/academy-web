@@ -1038,7 +1038,7 @@ export default function BookingDetailPage() {
         <div className="sec">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
             <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>셔틀 신청 ({shuttleReqs.length}건)</h2>
-            <button className="btn btn-sm btn-blue" onClick={() => router.push("/admin/shuttle")}>+ 셔틀 관리로</button>
+            <button className="btn btn-sm btn-blue" onClick={() => router.push("/admin/shuttle-management")}>+ 셔틀 관리로</button>
           </div>
           {shuttleReqs.length === 0 ? <div className="empty">셔틀 신청 내역이 없습니다<br/>손님이 /portal/shuttle에서 신청하면 여기에 표시됩니다</div> :
             shuttleReqs.map((s: any) => {

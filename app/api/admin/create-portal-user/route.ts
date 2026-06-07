@@ -22,13 +22,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '이미 사용 중인 아이디입니다' }, { status: 409 });
   }
 
+  // 예약 유형으로 포털 계정 타입 결정 (통학형 → commute, 그 외 → all_in_one)
+  // 추후 공지·동의·사진 등 통학형 대상 기능에서 user_metadata.portal_type 으로 구분 가능
+  const { data: bkType } = await supabaseAdmin
+    .from('bookings')
+    .select('booking_type, accom_type')
+    .eq('id', bookingId)
+    .maybeSingle();
+  const portalType = (bkType?.booking_type === 'commute' || bkType?.accom_type === '통학형') ? 'commute' : 'all_in_one';
+
   // Supabase Auth 계정 생성
   const email = `${username}@dreamacademyph.com`;
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { portal_type: 'all_in_one', booking_id: bookingId }
+    user_metadata: { portal_type: portalType, booking_id: bookingId }
   });
   if (authError) {
     return NextResponse.json({ error: authError.message }, { status: 500 });

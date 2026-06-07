@@ -748,6 +748,7 @@ export default function AdminBookingsPage(){
             <td onClick={e=>e.stopPropagation()} style={{display:"flex",gap:4}}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
+              <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </td>
           </tr>))}
         </tbody></table></div>)}
@@ -811,19 +812,25 @@ export default function AdminBookingsPage(){
     {/* ── 탭2: 영수증 ── */}
     {mainTab==="receipt"&&(<>
       <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>금액</th><th>최종금액</th>
+        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>예약금</th><th>잔금</th><th>최종금액</th>
       </tr></thead><tbody>
-        {rcpList.length===0?<tr><td colSpan={7} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
-        rcpList.map(b=>(
+        {rcpList.length===0?<tr><td colSpan={8} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
+        rcpList.map(b=>{
+          const fin=b.final_price||b.base_price||0;
+          const dep=fin>=1000000?1000000:fin;
+          const bal=fin>1000000?fin-1000000:0;
+          return(
           <tr key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td>{b.balance_date||"-"}</td>
-            <td>{fmt(b.base_price)}</td>
-            <td style={{fontWeight:700}}>{fmt(b.final_price)}</td>
+            <td>{fmt(dep)}</td>
+            <td>{fmt(bal)}</td>
+            <td style={{fontWeight:700}}>{fmt(fin)}</td>
           </tr>
-        ))}
+          );
+        })}
       </tbody></table></div>
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
         {rcpList.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
