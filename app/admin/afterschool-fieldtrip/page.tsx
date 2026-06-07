@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
+import { FT_PROGRAMS, KR_DOW, parseToken, programNameOf } from "@/lib/fieldtripPrograms";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,54 +30,12 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
   cancelled: { label: "취소",   bg: "#fef2f2", color: "#dc2626" },
 };
 
-// ─────────────────────────────────────────────────────────────
-// 일정 토큰 → 프로그램 메타 매핑
-//   토큰 형식: "월-일-키" (예: "5-9-nimobrew")
-//   토큰 자체가 (날짜 + 프로그램)을 인코딩하므로 그룹 키로 사용.
-//   ※ 손님 신청폼(app/after-school-fieldtrip)에 새 일정이 추가되면 이 표도 갱신 필요.
-//      미등록 토큰은 키를 그대로 표시하는 폴백으로 처리됨.
-// ─────────────────────────────────────────────────────────────
-const FT_PROGRAMS: Record<string, { name: string; isFieldtrip: boolean; time: string }> = {
-  // May
-  "5-4-origami":      { name: "Origami Activity & Paper Airplane",        isFieldtrip: false, time: "4:20~5:10pm" },
-  "5-6-snack":        { name: "Snack Grabbing Game + Obstacle Course",    isFieldtrip: false, time: "4:30~5:20pm" },
-  "5-9-nimobrew":     { name: "Nimo Brew",                                isFieldtrip: true,  time: "픽업 10:15~20" },
-  "5-11-ecoplanting": { name: "Eco Planting & Herb",                      isFieldtrip: false, time: "4:20~5:10pm" },
-  "5-13-olympics":    { name: "Mini Olympics",                            isFieldtrip: false, time: "4:30~5:20pm" },
-  "5-18-pinwheel":    { name: "Pinwheel Activity",                        isFieldtrip: false, time: "4:20~5:10pm" },
-  "5-20-naturewalk":  { name: "Nature Walk & Jackfruit Maze",            isFieldtrip: false, time: "4:30~5:20pm" },
-  "5-23-smskating":   { name: "SM Seaside — SM Skating",                  isFieldtrip: true,  time: "픽업 10:15~20" },
-  "5-25-watergun":    { name: "Water Gun Fun",                            isFieldtrip: false, time: "4:20~5:10pm" },
-  "5-27-hulahoop":    { name: "Hula Hoop & Jump Rope",                    isFieldtrip: false, time: "4:30~5:20pm" },
-  // June
-  "6-1-flower":       { name: "Flower Arrangement",                       isFieldtrip: false, time: "4:20~5:10pm" },
-  "6-3-grossmotor":   { name: "Gross Motor",                              isFieldtrip: false, time: "4:30~5:20pm" },
-  "6-8-baseball":     { name: "Hand Baseball",                            isFieldtrip: false, time: "4:20~5:10pm" },
-  "6-10-trafficlight":{ name: "Red Light Green Light & Team Treasure Hunt", isFieldtrip: false, time: "4:30~5:20pm" },
-  "6-13-shrine":      { name: "Shrine Tour",                              isFieldtrip: true,  time: "픽업 10:15~20" },
-  "6-15-watergun":    { name: "Water Gun Fun",                            isFieldtrip: false, time: "4:20~5:10pm" },
-  "6-17-olympics":    { name: "Mini Olympics",                            isFieldtrip: false, time: "4:30~5:20pm" },
-  "6-22-natureart":   { name: "Art with Leaves, Grass & Flowers",        isFieldtrip: false, time: "4:20~5:10pm" },
-  "6-24-naturewalk":  { name: "Nature Walk & Jackfruit Maze",            isFieldtrip: false, time: "4:30~5:20pm" },
-  "6-27-magellan":    { name: "Magellan's Cross",                         isFieldtrip: true,  time: "픽업 10:15~20" },
-  "6-29-watergun":    { name: "Water Gun Fun",                            isFieldtrip: false, time: "4:20~5:10pm" },
-};
+// 프로그램 매핑(FT_PROGRAMS)·토큰 파서는 @/lib/fieldtripPrograms 로 이전 (현지직원 페이지와 공유)
 
-const KR_DOW = ["일", "월", "화", "수", "목", "금", "토"];
-
-// 토큰 파싱 → {month, day, key}
-function parseToken(token: string): { month: number; day: number; key: string } | null {
-  const m = token.trim().match(/^(\d{1,2})-(\d{1,2})-(.+)$/);
-  if (!m) return null;
-  return { month: Number(m[1]), day: Number(m[2]), key: m[3] };
-}
-
-// 토큰의 프로그램 표시명 (매핑 없으면 키를 보기 좋게 변환)
-function programNameOf(token: string, key: string): string {
-  const meta = FT_PROGRAMS[token];
-  if (meta) return meta.name;
-  return key.charAt(0).toUpperCase() + key.slice(1);
-}
+// 주간 뷰 헬퍼
+function ymdA(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function mondayOfA(base: Date) { const d = new Date(base); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); d.setHours(0, 0, 0, 0); return d; }
+const wkNavBtn: React.CSSProperties = { padding: "6px 12px", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" };
 
 // 토큰 단위로 펼친 행
 interface FlatRow {
@@ -103,6 +62,9 @@ export default function AfterschoolFieldtripAdminPage() {
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
   const [bookerNames, setBookerNames] = useState<Record<string, string>>({}); // booking_id → 예약자 실명
+  const [listView, setListView] = useState<"month" | "week">("month");
+  const [weekStart, setWeekStart] = useState<Date>(() => mondayOfA(new Date()));
+  const shiftWeek = (delta: number) => { const d = new Date(weekStart); d.setDate(d.getDate() + delta * 7); setWeekStart(mondayOfA(d)); };
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -194,6 +156,23 @@ export default function AfterschoolFieldtripAdminPage() {
   }
   const monthChapters = Array.from(monthMap.entries()).sort((a, b) => a[0] - b[0]);
 
+  // 주간 뷰 — 선택 주(월~일)의 날짜별 → 프로그램(token) 그룹
+  const weekDays = (() => {
+    const arr: { date: Date; key: string; label: string; groups: [string, FlatRow[]][] }[] = [];
+    for (let i = 0; i < 7; i++) { const d = new Date(weekStart); d.setDate(d.getDate() + i); arr.push({ date: d, key: ymdA(d), label: `${d.getMonth() + 1}/${d.getDate()} (${KR_DOW[d.getDay()]})`, groups: [] }); }
+    const year = weekStart.getFullYear();
+    const dayMap = new Map<string, Map<string, FlatRow[]>>();
+    for (const r of flat) {
+      const k = ymdA(new Date(year, r.month - 1, r.day));
+      if (!arr.find((x) => x.key === k)) continue;
+      let g = dayMap.get(k); if (!g) { g = new Map(); dayMap.set(k, g); }
+      const a = g.get(r.token) || []; a.push(r); g.set(r.token, a);
+    }
+    arr.forEach((d) => { const g = dayMap.get(d.key); if (g) d.groups = Array.from(g.entries()); });
+    return arr;
+  })();
+  const wkLabel = `${weekStart.getMonth() + 1}/${weekStart.getDate()} ~ ${weekDays[6].date.getMonth() + 1}/${weekDays[6].date.getDate()}`;
+
   // 기본 펼침 월 초기화 (현재 월 또는 가장 가까운 미래 월)
   useEffect(() => {
     if (monthsInitDone) return;
@@ -264,7 +243,38 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       ) : (monthChapters.length === 0 && legacy.length === 0) ? (
         <div className="af-card"><div className="af-empty">신청 내역이 없습니다.</div></div>
       ) : (
-        <div style={{display:"flex", flexDirection:"column", gap:14}}>
+        <>
+        <div style={{display:"flex",gap:6,marginBottom:14,alignItems:"center"}}>
+          <span style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginRight:2}}>보기</span>
+          <button onClick={()=>setListView("month")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #cbd5e1",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:listView==="month"?"#16a34a":"#fff",color:listView==="month"?"#fff":"#475569"}}>📅 월별</button>
+          <button onClick={()=>setListView("week")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #cbd5e1",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:listView==="week"?"#16a34a":"#fff",color:listView==="week"?"#fff":"#475569"}}>🗓️ 주간</button>
+        </div>
+        {listView === "week" && (
+          <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <button onClick={()=>shiftWeek(-1)} style={wkNavBtn}>◀ 이전주</button>
+              <button onClick={()=>setWeekStart(mondayOfA(new Date()))} style={wkNavBtn}>이번주</button>
+              <button onClick={()=>shiftWeek(1)} style={wkNavBtn}>다음주 ▶</button>
+              <b style={{fontSize:14}}>{wkLabel}</b>
+            </div>
+            {weekDays.every(d=>d.groups.length===0) ? (
+              <div className="af-card"><div className="af-empty">이번 주 신청이 없습니다.</div></div>
+            ) : weekDays.filter(d=>d.groups.length>0).map(d=>(
+              <div key={d.key} className="af-card" style={{padding:"12px 16px"}}>
+                <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>{d.label}</div>
+                {d.groups.map(([token,rows])=>{ const r0=rows[0]; return (
+                  <div key={token} style={{border:"1px solid #e2e8f0",borderRadius:10,padding:"8px 12px",marginBottom:8,background:r0.isFieldtrip?"#fff7ed":"#fff"}}>
+                    <div style={{fontSize:13,fontWeight:800,marginBottom:6,color:r0.isFieldtrip?"#c2410c":"#1a1a2e"}}>{r0.programName}{r0.isFieldtrip?" · 필드트립":""} <span style={{fontWeight:600,color:"#94a3b8"}}>· {rows.length}명</span></div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {rows.map((r,i)=>(<span key={i} style={{fontSize:12.5,fontWeight:600,background:"#f1f5f9",borderRadius:8,padding:"3px 9px"}}>{r.childName}{r.room?<span style={{color:"#1a6fc4",fontWeight:700}}> 🏠 {r.room}</span>:null}</span>))}
+                    </div>
+                  </div>
+                );})}
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{display: listView==="week" ? "none" : "flex", flexDirection:"column", gap:14}}>
           {monthChapters.map(([month, mGroups]) => {
             const open = expandedMonths.has(month);
             const mPeople = mGroups.reduce((s, [, rows]) => s + rows.length, 0);
@@ -395,6 +405,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             </div>
           )}
         </div>
+        </>
       )}
     </div>
   </>);

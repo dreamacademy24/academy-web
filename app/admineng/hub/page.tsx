@@ -69,6 +69,7 @@ export default function EngHubPage() {
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
     { icon: "🎓", title: "Tutor Classes", desc: "Requests · My Schedule · Weekly", href: "/admineng/tutor-class" },
     { icon: "📅", title: "Student Calendar", desc: "Weekly schedule · New in · Graduation", href: "/admineng/student-calendar" },
+    { icon: "🌿", title: "After School / Field Trip", desc: "Weekly prep — class · house · students", href: "/admineng/afterschool" },
     { icon: "🚐", title: "Shuttle Schedule", desc: "Pick up · Drop off · Daily", href: "/ashuttle" },
   ];
 
