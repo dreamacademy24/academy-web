@@ -257,7 +257,7 @@ export default function DreamHousePage() {
             <div className="hbadge">📚 튜터 서비스</div>
             <div className="hbadge orange">⭐ 올인원</div>
           </div>
-          <img src="/images/dreamhouse.jpg" alt="Dream House" className="hero-img fade" />
+          <img loading="lazy" src="/images/dreamhouse.jpg" alt="Dream House" className="hero-img fade" />
         </div>
       </div>
 
@@ -289,43 +289,43 @@ export default function DreamHousePage() {
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🏠</span> 외관</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr",gap:8}}>
-                <img src="/images/dh-exterior.jpg" alt="외관" style={{width:"100%",aspectRatio:"16/7",objectFit:"cover",objectPosition:"center",borderRadius:14}}/>
+                <img loading="lazy" src="/images/dh-exterior.jpg" alt="외관" style={{width:"100%",aspectRatio:"16/7",objectFit:"cover",objectPosition:"center",borderRadius:14}}/>
               </div>
             </div>
 
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛋️</span> 거실</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                <img src="/images/dh-living1.jpg" alt="거실+주방 전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dh-living2.jpg" alt="거실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dh-living3.jpg" alt="거실+소파" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dh-living1.jpg" alt="거실+주방 전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dh-living2.jpg" alt="거실" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dh-living3.jpg" alt="거실+소파" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
               </div>
             </div>
 
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🛏️</span> 방 3개</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                <img src="/images/dh-room1.jpg" alt="침실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse_Room-1.jpg" alt="침실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouseroom-11.jpg" alt="침실3" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dh-room1.jpg" alt="침실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouse_Room-1.jpg" alt="침실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouseroom-11.jpg" alt="침실3" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
               </div>
             </div>
 
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🍳</span> 주방</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                <img src="/images/Dreamhouse_room-12_.png" alt="주방전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse_Room-4.jpg" alt="주방싱크" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse_Room-2.jpg" alt="가전" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/Dreamhouse_room-12_.png" alt="주방전체" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouse_Room-4.jpg" alt="주방싱크" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouse_Room-2.jpg" alt="가전" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
               </div>
             </div>
 
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#FF6B35",marginBottom:10,display:"flex",alignItems:"center",gap:6}}><span>🚿</span> 욕실 2개</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                <img src="/images/dreamhouseroom-10.jpg" alt="욕실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouseroom22.png" alt="샤워기" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
-                <img src="/images/dreamhouse25.png" alt="욕실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouseroom-10.jpg" alt="욕실1" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouseroom22.png" alt="샤워기" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
+                <img loading="lazy" src="/images/dreamhouse25.png" alt="욕실2" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",borderRadius:12}}/>
               </div>
             </div>
 
@@ -343,7 +343,7 @@ export default function DreamHousePage() {
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,marginTop:28}}>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater002.jpg" alt="수영장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater002.jpg" alt="수영장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🏊 수영장</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -357,7 +357,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater006.jpg" alt="농구 코트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater006.jpg" alt="농구 코트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🏀 농구 코트</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -369,7 +369,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater007.jpg" alt="테니스장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater007.jpg" alt="테니스장" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🎾 테니스장</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -382,7 +382,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater003.jpg" alt="놀이터" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater003.jpg" alt="놀이터" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛝 놀이터</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -393,7 +393,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater005.jpg" alt="미니마트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater005.jpg" alt="미니마트" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>🛒 미니마트</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>
@@ -405,7 +405,7 @@ export default function DreamHousePage() {
           </div>
 
           <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:16,overflow:"hidden"}}>
-            <img src="/images/bayswater008.png" alt="카페" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
+            <img loading="lazy" src="/images/bayswater008.png" alt="카페" style={{width:"100%",aspectRatio:"4/3",objectFit:"cover",display:"block"}}/>
             <div style={{padding:"16px 18px 20px"}}>
               <div style={{fontWeight:800,fontSize:15,marginBottom:8}}>☕ 카페 (Lin's Coffee Shop)</div>
               <div style={{fontSize:13,color:"#6b7c93",lineHeight:1.7,display:"flex",flexDirection:"column",gap:4}}>

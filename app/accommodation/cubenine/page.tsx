@@ -280,7 +280,7 @@ export default function CubeNinePage() {
             <div className="hbadge">📚 정규수업</div>
             <div className="hbadge navy">⭐ 올인원</div>
           </div>
-          <img src="/images/cube9.png" alt="Cube9 Resort" className="hero-img fade" />
+          <img loading="lazy" src="/images/cube9.png" alt="Cube9 Resort" className="hero-img fade" />
         </div>
       </div>
 

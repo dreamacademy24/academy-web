@@ -969,7 +969,7 @@ export default function AdminBookingsPage(){
               <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
                 {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
               </td>
-              <td>{(()=>{const m=missingItems(b);return m.length===0?<span style={{color:"#16a34a",fontWeight:700}}>✓</span>:m.map((x,i)=><span key={i} style={{display:"inline-block",margin:"1px",fontSize:10,background:"#fef2f2",color:"#dc2626",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{x}</span>);})()}</td>
+              <td>{(()=>{const m=missingItems(b);return m.length===0?<span style={{color:"#16a34a",fontWeight:700}}>✓</span>:m.map((x,i)=><span key={i} style={{display:"inline-block",margin:"1px",fontSize:10,background:"#fffbeb",color:"#b45309",border:"1px solid #fde68a",padding:"1px 5px",borderRadius:8,fontWeight:700}}>{x}</span>);})()}</td>
               <td onClick={e=>e.stopPropagation()} style={{textAlign:"center"}}>
                 <input type="checkbox" className="chk" checked={!!b.confirmed} onChange={async e=>{
                   const v=e.target.checked;

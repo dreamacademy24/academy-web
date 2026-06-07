@@ -272,7 +272,7 @@ export default function JparkPage() {
             <div className="hbadge">📚 정규수업</div>
             <div className="hbadge blue">⭐ 올인클루시브</div>
           </div>
-          <img src="/images/jpark.png" alt="J-Park Island Resort" className="hero-img fade" />
+          <img loading="lazy" src="/images/jpark.png" alt="J-Park Island Resort" className="hero-img fade" />
         </div>
       </div>
 

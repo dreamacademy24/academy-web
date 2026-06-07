@@ -108,7 +108,7 @@ export default function AdminHubPage() {
                 <div className="ic">{c.icon}</div>
                 <div className="tx">
                   <h2>{c.title}</h2>
-                  <p>{c.desc}</p>
+                  <p title={c.desc}>{c.desc}</p>
                 </div>
               </div>
             ))}
