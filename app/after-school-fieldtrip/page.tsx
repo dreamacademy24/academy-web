@@ -21,6 +21,7 @@ export default function AfterSchoolFieldtripPage() {
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<{ token: string; label: string; fieldtrip: boolean }[]>([]); // 선택한 일정 라이브 요약
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const [session, setSession] = useState<{ booking_id: string } | null>(null);
@@ -91,6 +92,7 @@ export default function AfterSchoolFieldtripPage() {
   useEffect(() => {
     disableExpiredSchedules();
     restrictScheduleRange();
+    recomputeSelected();
   }, [activeMonth, bookingMeta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getPHTNow() {
@@ -191,6 +193,22 @@ export default function AfterSchoolFieldtripPage() {
   function toggleWeek(key: string) {
     setOpenWeeks((prev) => ({ ...prev, [key]: !prev[key] }));
   }
+
+  // 체크된 일정 → 라이브 요약 재계산 (셔틀 폼의 "선택한 투어" 요약과 동일 컨셉)
+  const recomputeSelected = useCallback(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const checked = Array.from(form.querySelectorAll('input[name="schedule"]:checked')) as HTMLInputElement[];
+    setSelected(checked.map((cb) => {
+      const item = cb.closest(".schedule-item");
+      const main = (item?.querySelector(".schedule-main")?.textContent || cb.value).trim();
+      return {
+        token: cb.value,
+        label: main.replace(/\s*필드트립\s*$/, "").trim(),
+        fieldtrip: !!item?.classList.contains("fieldtrip"),
+      };
+    }));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -475,7 +493,7 @@ export default function AfterSchoolFieldtripPage() {
                 <div className="chip">● 사전 예약제</div>
               </header>
 
-              <form id="afterschool-form" ref={formRef} onSubmit={handleSubmit}>
+              <form id="afterschool-form" ref={formRef} onSubmit={handleSubmit} onChange={recomputeSelected}>
                 {/* Child name */}
                 <div className="field">
                   <label className="label-main" htmlFor="child-name">아이 이름<span className="required">*</span></label>
@@ -765,6 +783,24 @@ export default function AfterSchoolFieldtripPage() {
                     <input id="agree" name="agree" type="checkbox" required />
                     <label htmlFor="agree">신청 및 이용 규정을 모두 읽고 이해했으며, 위 내용에 동의합니다.<span className="required">*</span></label>
                   </div>
+                </div>
+
+                <div style={{ margin: "14px 0", padding: "12px 14px", border: "1px solid var(--stroke)", borderRadius: 12, background: "#fff" }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>📋 선택한 일정</span>
+                    <span style={{ color: "var(--accent)", fontWeight: 800 }}>{selected.length}건</span>
+                  </div>
+                  {selected.length === 0 ? (
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>위에서 신청할 일정을 선택하면 여기에 표시됩니다.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {selected.map((s) => (
+                        <div key={s.token} style={{ fontSize: 12.5, fontWeight: 600, color: s.fieldtrip ? "#c2410c" : "#1f2937", display: "flex", gap: 6, alignItems: "center" }}>
+                          <span>{s.fieldtrip ? "🟠" : "🔵"}</span><span>{s.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="submit-row">
