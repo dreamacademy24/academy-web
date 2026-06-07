@@ -166,6 +166,7 @@ export default function AdminBookingsPage(){
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
+  const [showAllCols,setShowAllCols]=useState(false); // 확정예약 전체 컬럼 토글
   const [assignees,setAssignees]=useState<string[]>([]);
   const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
 
@@ -890,6 +891,9 @@ export default function AdminBookingsPage(){
         {key:"special_request",label:"특이사항",get:b=>b.special_request||"-"},
         {key:"missing",label:"누락",get:b=>missingItems(b).join("·")||"✓"},
       ];
+      // 핵심 컬럼(기본 표시). 나머지(아카데미·항공·유학원·금액)는 "전체 컬럼" 토글 시 표시
+      const CORE_COLS=new Set(["reservation_no","booker_name","students","checkin_date","checkout_date","dday","accom","balance_date","special_request","missing"]);
+      const visCols=showAllCols?cols:cols.filter(c=>CORE_COLS.has(c.key));
       const sorted=[...typeFiltered].sort((a,b)=>{
         const {key,asc}=confirmSort;
         let va:any,vb:any;
@@ -923,7 +927,8 @@ export default function AdminBookingsPage(){
         </div>
         <div className="cf-search">
           <span className="cnt">{sorted.length}건</span>
-          <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportConfirmXlsx(sorted)}>📥 엑셀 내보내기</button>
+          <button onClick={()=>setShowAllCols(v=>!v)} style={{marginLeft:"auto",background:showAllCols?"#1a6fc4":"#eff6ff",color:showAllCols?"#fff":"#1a6fc4",padding:"6px 14px",fontSize:12,fontWeight:700,border:"1px solid #bfdbfe",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}}>{showAllCols?"핵심 컬럼만":"전체 컬럼 보기"}</button>
+          <button className="sub-tab" style={{marginLeft:8,background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportConfirmXlsx(sorted)}>📥 엑셀 내보내기</button>
         </div>
         {/* STEP 24: 통계 바 */}
         <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap"}}>
@@ -939,10 +944,10 @@ export default function AdminBookingsPage(){
           <button onClick={createFlightCheckTasks} style={{marginLeft:"auto",padding:"8px 16px",background:"#7c3aed",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>🔔 알림 태스크 생성</button>
         </div>
         <div className="ss-w"><table className="ss"><thead><tr>
-          {cols.map(c=><th key={c.key} onClick={()=>toggleSort(c.key)}>{c.label}<span className={arrowCls(c.key)}>{arrow(c.key)}</span></th>)}
+          {visCols.map(c=><th key={c.key} onClick={()=>toggleSort(c.key)}>{c.label}<span className={arrowCls(c.key)}>{arrow(c.key)}</span></th>)}
           <th onClick={()=>toggleSort("confirmed")}>최종확인<span className={arrowCls("confirmed")}>{arrow("confirmed")}</span></th>
         </tr></thead><tbody>
-          {sorted.length===0?<tr><td colSpan={cols.length+1} className="empty">확정 예약이 없습니다.</td></tr>:
+          {sorted.length===0?<tr><td colSpan={visCols.length+1} className="empty">확정 예약이 없습니다.</td></tr>:
           sorted.map(b=>{
             const dday=getDday(b.checkin_date);
             const bdday=getBalanceDday(b.balance_date);
@@ -959,13 +964,9 @@ export default function AdminBookingsPage(){
               <td>{b.checkout_date||"-"}</td>
               <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
               <td>{fmtAccom(b)}</td>
-              <td>{acaStart(b)}</td>
-              <td>{acaEnd(b)}</td>
-              <td>{b.flight_in||"-"}</td>
-              <td>{b.flight_out||"-"}</td>
-              <td>{b.agency||"-"}</td>
+              {showAllCols&&<><td>{acaStart(b)}</td><td>{acaEnd(b)}</td><td>{b.flight_in||"-"}</td><td>{b.flight_out||"-"}</td><td>{b.agency||"-"}</td></>}
               <td>{b.balance_date||"-"}</td>
-              <td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>
+              {showAllCols&&<td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>}
               <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
                 {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
               </td>
