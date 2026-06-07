@@ -96,7 +96,7 @@ textarea.in{min-height:120px;resize:vertical}
 .b-imp{background:#fceaeb;color:#a32d2d}.b-gen{background:#eff6ff;color:#1a6fc4}.b-all{background:#dcfce7;color:#166534}.b-sel{background:#fef3c7;color:#92400e}.b-pop{background:#f3e8ff;color:#7c3aed}
 .empty{color:#cbd5e1;font-size:13px;text-align:center;padding:24px}
 .msg{font-size:12px;color:#dc2626;margin-top:8px;font-weight:600}
-</style>
+`}</style>
     <div className="nw">
       <div className="top">
         <button className="back" onClick={() => router.push("/admin/hub")}>←</button>

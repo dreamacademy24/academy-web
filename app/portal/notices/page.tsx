@@ -54,7 +54,7 @@ export default function PortalNoticesPage() {
 .modal .t{font-size:18px;font-weight:800;margin:8px 0 4px}
 .modal .body{font-size:14px;line-height:1.8;color:#374151;white-space:pre-wrap;margin-top:12px}
 .close{margin-top:18px;width:100%;padding:11px;border:none;border-radius:8px;background:#1a6fc4;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
-</style>
+`}</style>
     <div className="pw">
       <div className="top">
         <button className="back" onClick={() => router.push("/portal/dashboard")}>←</button>
