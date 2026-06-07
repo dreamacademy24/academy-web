@@ -181,19 +181,29 @@ export default function TutorRequestDetailPage() {
         class_focus: toFocusArr(row.class_focus_arr ?? (row as any).class_focus),
         status: "active",
         admin_memo: memoCombined,
+        application_id: row.id,   // FK 명시 (memo 문자열에만 의존하지 않도록)
       };
       console.log("[save] tutor_lessons payload:", lessonPayload);
-      const { data: existingRows, error: selErr } = await supabase
-        .from("tutor_lessons")
-        .select("id")
-        .ilike("admin_memo", `%request_id: ${row.id}%`)
-        .limit(1);
-      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
-      if (selErr) console.error("[save] tutor_lessons SELECT 실패:", selErr);
-      if (existing?.id) {
-        const { error: upErr } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", existing.id);
+      // 기존 연결 수업 조회 — application_id 또는 memo request_id (두 생성 경로 모두 커버)
+      const { data: byApp } = await supabase.from("tutor_lessons").select("id").eq("application_id", row.id);
+      const { data: byMemo } = await supabase.from("tutor_lessons").select("id").ilike("admin_memo", `%request_id: ${row.id}%`);
+      const linkedIds = Array.from(new Set([...(byApp || []), ...(byMemo || [])].map((x: { id: string }) => x.id)));
+      if (linkedIds.length > 0) {
+        // 대표 1건을 새 튜터/내용으로 UPDATE → 튜터 재배정 시 tutor_id 자동 동기화
+        const keepId = linkedIds[0];
+        const { error: upErr } = await supabase.from("tutor_lessons").update(lessonPayload).eq("id", keepId);
         if (upErr) { console.error("[save] tutor_lessons UPDATE 실패:", upErr); lessonMsg = " (수업 동기화 실패: " + upErr.message + ")"; }
-        else console.log("[save] tutor_lessons UPDATED id=", existing.id);
+        else {
+          console.log("[save] tutor_lessons UPDATED id=", keepId, "(tutor_id 동기화)");
+          // 중복(유령) 수업 정리 — 대표 외 나머지 + 그 회차 삭제
+          const dupIds = linkedIds.slice(1);
+          if (dupIds.length > 0) {
+            await supabase.from("tutor_lesson_sessions").delete().in("lesson_id", dupIds);
+            const { error: dupErr } = await supabase.from("tutor_lessons").delete().in("id", dupIds);
+            if (dupErr) console.error("[save] 중복 수업 정리 실패:", dupErr);
+            else console.log("[save] 중복 수업 정리:", dupIds);
+          }
+        }
       } else {
         const to = blocksToTimeOverrides(row.schedule_blocks);
         const skipArr = toDateArr((row as any).skip_dates);
