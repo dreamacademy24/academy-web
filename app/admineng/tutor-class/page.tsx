@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
@@ -610,7 +611,7 @@ export default function EngTutorClassPage() {
   // 튜터가 직접 자기 자신을 배정 — 요청 update + tutor_lessons UPSERT (admin save() 동일 로직)
   async function takeClass(r: TutorReq) {
     if (!me) {
-      alert("Cannot identify your tutor account. Select your name from the top-right dropdown first.");
+      toastErr("Cannot identify your tutor account. Select your name from the top-right dropdown first.");
       return;
     }
     const studentLabel = r.student_name_en || r.student_name_kr || "(no name)";
@@ -633,7 +634,7 @@ export default function EngTutorClassPage() {
         total_sessions: computedSessions || 0,
         total_amount: computedAmount || 0,
       }).eq("id", r.id);
-      if (upErr) { alert("Failed to take: " + upErr.message); setTakingId(""); return; }
+      if (upErr) { toastErr("Failed to take: " + upErr.message); setTakingId(""); return; }
 
       // 2) tutor_lessons UPSERT
       const classDaysArr = r.preferred_days
@@ -681,14 +682,14 @@ export default function EngTutorClassPage() {
         if (e3) console.warn("[takeClass] lesson INSERT failed:", e3);
       }
 
-      alert(`✅ Taken!\n"${studentLabel}" is now in your My Schedule.`);
+      toastOk(`Taken!\n"${studentLabel}" is now in your My Schedule.`);
       setTakingId("");
       // reqs(My Schedule/Classes) + allLessons(Weekly/Invoice) 모두 재로드
       load();
       loadAllLessons();
     } catch (e: any) {
       console.error("[takeClass] failed:", e);
-      alert("Failed: " + (e?.message || e));
+      toastErr("Failed: " + (e?.message || e));
       setTakingId("");
     }
   }
@@ -696,7 +697,7 @@ export default function EngTutorClassPage() {
   // ── 합성 lesson을 실제 tutor_lessons 행으로 생성 → Attendance 이동 ──
   async function createLessonAndOpenAttendance(lesson: any) {
     const reqId = String(lesson.request_id || lesson.id || "").replace(/^req:/, "");
-    if (!reqId) { alert("Cannot resolve request id."); return; }
+    if (!reqId) { toastErr("Cannot resolve request id."); return; }
     setCreatingLessonForId(lesson.id);
     try {
       // 이미 동일 request_id로 생성된 lesson이 있을 수 있으므로 우선 조회
@@ -745,7 +746,7 @@ export default function EngTutorClassPage() {
         .select()
         .single();
       if (error || !data) {
-        alert("Failed to create lesson: " + (error?.message || "unknown"));
+        toastErr("Failed to create lesson: " + (error?.message || "unknown"));
         setCreatingLessonForId("");
         return;
       }
@@ -754,7 +755,7 @@ export default function EngTutorClassPage() {
       loadAllLessons();
       router.push(`/admin/tutor-class/${data.id}/attendance`);
     } catch (e: any) {
-      alert("Failed: " + (e?.message || e));
+      toastErr("Failed: " + (e?.message || e));
     } finally {
       setCreatingLessonForId("");
     }
@@ -767,34 +768,34 @@ export default function EngTutorClassPage() {
       .update({ tutor_memo: memoDraft[lessonId] ?? null })
       .eq("id", lessonId);
     setSavingLessonId("");
-    if (error) { alert("Save failed: " + error.message); return; }
+    if (error) { toastErr("Save failed: " + error.message); return; }
     await loadMyLessons();
     await loadAllLessons();
-    alert("✅ Notes saved.");
+    toastOk("Notes saved.");
   }
 
   async function cancelOneDate(lesson: any) {
     const d = (cancelDate[lesson.id] || "").trim();
-    if (!d) { alert("Please select a date to cancel."); return; }
+    if (!d) { toastErr("Please select a date to cancel."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    if (current.includes(d)) { alert("This date is already cancelled."); return; }
+    if (current.includes(d)) { toastErr("This date is already cancelled."); return; }
     setSavingLessonId(lesson.id);
     const { error } = await supabase.from("tutor_lessons")
       .update({ skip_dates: [...current, d] })
       .eq("id", lesson.id);
     setSavingLessonId("");
-    if (error) { alert("Cancel failed: " + error.message); return; }
+    if (error) { toastErr("Cancel failed: " + error.message); return; }
     setCancelDate(prev => ({ ...prev, [lesson.id]: "" }));
     await loadMyLessons();
     await loadAllLessons();
-    alert(`✅ ${d} class cancelled.`);
+    toastOk(`${d} class cancelled.`);
   }
 
   async function rescheduleDate(lesson: any) {
     const oldD = (changeOld[lesson.id] || "").trim();
     const newD = (changeNew[lesson.id] || "").trim();
-    if (!oldD || !newD) { alert("Please select both the original date and the new date."); return; }
-    if (oldD === newD) { alert("Original date and new date are the same."); return; }
+    if (!oldD || !newD) { toastErr("Please select both the original date and the new date."); return; }
+    if (oldD === newD) { toastErr("Original date and new date are the same."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
     const nextSkips = current.includes(oldD) ? current : [...current, oldD];
     const note = `변경: ${oldD}→${newD}`;
@@ -804,12 +805,12 @@ export default function EngTutorClassPage() {
       .update({ skip_dates: nextSkips, tutor_memo: nextMemo })
       .eq("id", lesson.id);
     setSavingLessonId("");
-    if (error) { alert("Reschedule failed: " + error.message); return; }
+    if (error) { toastErr("Reschedule failed: " + error.message); return; }
     setChangeOld(prev => ({ ...prev, [lesson.id]: "" }));
     setChangeNew(prev => ({ ...prev, [lesson.id]: "" }));
     await loadMyLessons();
     await loadAllLessons();
-    alert(`✅ Rescheduled: ${oldD} → ${newD}`);
+    toastOk(`Rescheduled: ${oldD} → ${newD}`);
   }
 
   async function saveAssign() {

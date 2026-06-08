@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -142,7 +143,7 @@ export default function AfterFieldDeploy() {
       .from("schedule_items").delete()
       .eq("deploy_month", month)
       .in("type", ["afterschool", "fieldtrip"]);
-    if (delErr) { setAfBusy(""); alert("기존 항목 삭제 실패: " + delErr.message); return; }
+    if (delErr) { setAfBusy(""); toastErr("기존 항목 삭제 실패: " + delErr.message); return; }
     const inserts = dates
       .filter(d => (afRows[d.date] || "").trim())
       .map(d => ({
@@ -155,7 +156,7 @@ export default function AfterFieldDeploy() {
       }));
     if (inserts.length > 0) {
       const { error: insErr } = await supabase.from("schedule_items").insert(inserts);
-      if (insErr) { setAfBusy(""); alert("저장 실패: " + insErr.message); return; }
+      if (insErr) { setAfBusy(""); toastErr("저장 실패: " + insErr.message); return; }
     }
     const { data } = await supabase
       .from("schedule_items").select("*")
@@ -164,12 +165,12 @@ export default function AfterFieldDeploy() {
     setAfItems(loaded);
     setAfDeployed(loaded.some(i => i.is_deployed));
     setAfBusy("");
-    alert("저장됐어요!");
+    toastOk("저장됐어요!");
   }
 
   async function deployAfRows() {
     if (afBusy) return;
-    if (afItems.length === 0) { alert("배포할 항목이 없습니다. 먼저 저장하세요."); return; }
+    if (afItems.length === 0) { toastErr("배포할 항목이 없습니다. 먼저 저장하세요."); return; }
     if (!confirm(`${monthLabel(month)} 애프터스쿨·필드트립 ${afItems.length}건을 배포합니다. 계속할까요?`)) return;
     setAfBusy("deploy");
     const { error } = await supabase
@@ -177,10 +178,10 @@ export default function AfterFieldDeploy() {
       .eq("deploy_month", month)
       .in("type", ["afterschool", "fieldtrip"]);
     setAfBusy("");
-    if (error) { alert("배포 실패: " + error.message); return; }
+    if (error) { toastErr("배포 실패: " + error.message); return; }
     setAfDeployed(true);
     setAfItems(prev => prev.map(i => ({ ...i, is_deployed: true })));
-    alert("배포 완료!");
+    toastOk("배포 완료!");
   }
 
   // ── 휴일 탭 로직 ──
@@ -209,17 +210,17 @@ export default function AfterFieldDeploy() {
   async function addHoliday() {
     const d = (newHoliDate || "").trim();
     const n = (newHoliName || "").trim();
-    if (!d || !n) { alert("날짜와 휴일명을 모두 입력해주세요."); return; }
+    if (!d || !n) { toastErr("날짜와 휴일명을 모두 입력해주세요."); return; }
     const year = Number(d.slice(0, 4));
-    if (!year) { alert("날짜 형식이 올바르지 않습니다."); return; }
-    if (holidays.some(h => h.date === d)) { alert("이미 등록된 날짜입니다."); return; }
+    if (!year) { toastErr("날짜 형식이 올바르지 않습니다."); return; }
+    if (holidays.some(h => h.date === d)) { toastErr("이미 등록된 날짜입니다."); return; }
     setHoliBusy("add");
     const { data, error } = await supabase
       .from("holidays")
       .insert({ date: d, name: n, year, is_deployed: false })
       .select().single();
     setHoliBusy("");
-    if (error) { alert("추가 실패: " + error.message); return; }
+    if (error) { toastErr("추가 실패: " + error.message); return; }
     if (data) {
       setHolidays(prev => [...prev, data as Holiday].sort((a, b) => a.date.localeCompare(b.date)));
       setNewHoliDate(""); setNewHoliName("");
@@ -234,12 +235,12 @@ export default function AfterFieldDeploy() {
     setHoliBusy("delete");
     const { error } = await supabase.from("holidays").delete().eq("id", id);
     setHoliBusy("");
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
     setHolidays(prev => prev.filter(h => h.id !== id));
   }
 
   async function deployHolidays() {
-    if (holidays.length === 0) { alert("배포할 휴일이 없습니다."); return; }
+    if (holidays.length === 0) { toastErr("배포할 휴일이 없습니다."); return; }
     if (!confirm(`${holiYear}년 휴일 ${holidays.length}건을 전체 배포합니다. 계속할까요?`)) return;
     setHoliBusy("deploy");
     const { error } = await supabase
@@ -247,9 +248,9 @@ export default function AfterFieldDeploy() {
       .update({ is_deployed: true })
       .eq("year", holiYear);
     setHoliBusy("");
-    if (error) { alert("배포 실패: " + error.message); return; }
+    if (error) { toastErr("배포 실패: " + error.message); return; }
     setHolidays(prev => prev.map(h => ({ ...h, is_deployed: true })));
-    alert(`✅ ${holiYear}년 휴일 전체 배포 완료!`);
+    toastOk(`${holiYear}년 휴일 전체 배포 완료!`);
   }
 
   return (

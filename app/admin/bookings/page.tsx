@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -329,10 +330,10 @@ export default function AdminBookingsPage(){
       const diff=Math.round((ci.getTime()-today.getTime())/(1000*60*60*24));
       return diff>=25&&diff<=35;
     });
-    if(targets.length===0){alert("체크인 25~35일 이내 예약이 없습니다.");return;}
+    if(targets.length===0){toastErr("체크인 25~35일 이내 예약이 없습니다.");return;}
     // 기존 태스크 조회 (중복 방지 - title에 예약번호 포함 여부)
     const {data:existing,error:eErr}=await supabase.from("staff_tasks").select("title");
-    if(eErr){alert("staff_tasks 테이블 조회 실패: "+eErr.message);return;}
+    if(eErr){toastErr("staff_tasks 테이블 조회 실패: "+eErr.message);return;}
     const existTitles=new Set((existing??[]).map((t:{title:string})=>t.title));
     const toInsert=targets.filter(b=>{
       const title="✈️ 항공권 확인 - "+b.booker_name+" ("+b.checkin_date+")";
@@ -349,14 +350,14 @@ export default function AdminBookingsPage(){
         note:"예약번호: "+b.reservation_no+"\n체크인: "+b.checkin_date+"\n학생: "+stuNames(b.students),
       };
     });
-    if(toInsert.length===0){alert("새로 생성할 태스크가 없습니다. (이미 생성됨)");return;}
+    if(toInsert.length===0){toastErr("새로 생성할 태스크가 없습니다. (이미 생성됨)");return;}
     const {error:iErr}=await supabase.from("staff_tasks").insert(toInsert);
-    if(iErr){alert("태스크 생성 실패: "+iErr.message);return;}
-    alert(toInsert.length+"개 항공권 확인 태스크가 생성됐어요!");
+    if(iErr){toastErr("태스크 생성 실패: "+iErr.message);return;}
+    toastErr(toInsert.length+"개 항공권 확인 태스크가 생성됐어요!");
   }
 
   async function saveNewBooking(){
-    if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
+    if(!newForm.booker_name.trim()){toastErr("예약자명을 입력하세요.");return;}
     setSavingNew(true);
     // 예약번호 생성 (booking/invoice 페이지와 동일 포맷: DA-YYYYMMDD-NNNNNN)
     const todayCompact=new Date().toISOString().slice(0,10).replace(/-/g,"");
@@ -413,7 +414,7 @@ export default function AdminBookingsPage(){
       method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Prefer":"return=representation"},
       body:JSON.stringify(body),
     });
-    if(!r.ok){const e=await r.text();alert("저장 실패: "+e);setSavingNew(false);return;}
+    if(!r.ok){const e=await r.text();toastErr("저장 실패: "+e);setSavingNew(false);return;}
     const inserted=await r.json();
     // Insert accommodation detail into booking_accommodations
     const accomRows:Record<string,unknown>[]=[];
@@ -474,7 +475,7 @@ export default function AdminBookingsPage(){
         // students 컬럼은 jsonb — 배열 그대로 전송 (JSON.stringify 이중 래핑 금지)
         body:JSON.stringify({students:studentsJsonb}),
       });
-      if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);alert("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
+      if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);toastErr("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
     }
     setSavingNew(false);setShowNewBooking(false);
     setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
@@ -483,13 +484,13 @@ export default function AdminBookingsPage(){
     setStudents23([{...emptyStudent}]);
     setPayForm({total_amount:0,deposit_amount:0,deposit_paid:false,payment_memo:""});
     await load(); // 리스트 새로고침
-    alert("새 예약이 등록되었습니다!");
+    toastOk("새 예약이 등록되었습니다!");
   }
 
   async function saveNewNonPackage(){
-    if(!newForm.booker_name.trim()){alert("예약자명을 입력하세요.");return;}
-    if(!newForm.check_in){alert(npType==='commute'?"수업시작 날짜를 입력하세요.":"체크인 날짜를 입력하세요.");return;}
-    if(!newForm.check_out){alert(npType==='commute'?"수업종료 날짜를 입력하세요.":"체크아웃 날짜를 입력하세요.");return;}
+    if(!newForm.booker_name.trim()){toastErr("예약자명을 입력하세요.");return;}
+    if(!newForm.check_in){toastErr(npType==='commute'?"수업시작 날짜를 입력하세요.":"체크인 날짜를 입력하세요.");return;}
+    if(!newForm.check_out){toastErr(npType==='commute'?"수업종료 날짜를 입력하세요.":"체크아웃 날짜를 입력하세요.");return;}
     setSavingNew(true);
     const today=new Date().toISOString().slice(0,10).replace(/-/g,"");
     const reservationNo=`DA-${today}-${Math.floor(Math.random()*900000+100000)}`;
@@ -512,7 +513,7 @@ export default function AdminBookingsPage(){
     };
     if(isCommuteNP)payload.booking_type='commute';
     const {data:inserted,error}=await supabase.from("bookings").insert(payload).select();
-    if(error){alert("저장 실패: "+error.message);setSavingNew(false);return;}
+    if(error){toastErr("저장 실패: "+error.message);setSavingNew(false);return;}
     const bookingId=inserted?.[0]?.id;
     if(bookingId){
       const studentRows=students23.filter(s=>s.name_kr.trim()).map(s=>({
@@ -539,7 +540,7 @@ export default function AdminBookingsPage(){
     setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
     setNpType('dh_only');setStudents23([{...emptyStudent}]);
     await load();
-    alert("비패키지 예약이 등록되었습니다!");
+    toastOk("비패키지 예약이 등록되었습니다!");
   }
 
   useEffect(()=>{
@@ -578,7 +579,7 @@ export default function AdminBookingsPage(){
   const load=useCallback(async()=>{
     setLoading(true);
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
-    if(error){console.error(error);alert("데이터 로드 실패");}
+    if(error){console.error(error);toastErr("데이터 로드 실패");}
     if(data){
       const allInOnes=(data as any[]).filter(b=>b.is_all_in_one).map(b=>({name:b.booker_name,id:b.id,val:b.is_all_in_one}));
       console.log('[load] total:',data.length,'/ is_all_in_one truthy:',allInOnes.length,allInOnes);
@@ -769,7 +770,7 @@ export default function AdminBookingsPage(){
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
-              <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);alert("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
+              <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);toastErr("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
               <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no)){const{error}=await supabase.from("bookings").delete().eq("id",b.id);if(error){alert("삭제 실패: "+error.message);return;}load();}}}>삭제</button>
             </td>
           </tr>);

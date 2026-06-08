@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -202,15 +203,15 @@ export default function EngTutorRequestDetailPage() {
 
   async function takeThisClass() {
     if (!row) return;
-    if (!actingTutor) { alert("Please select your name first on the previous page (top right)."); return; }
+    if (!actingTutor) { toastErr("Please select your name first on the previous page (top right)."); return; }
     const me = tutors.find(t => t.name === actingTutor);
-    if (!me) { alert(`Tutor "${actingTutor}" not found in active tutor list.`); return; }
+    if (!me) { toastErr(`Tutor "${actingTutor}" not found in active tutor list.`); return; }
     setTaking(true);
     const { error } = await supabase.from("tutor_requests")
       .update({ assigned_tutor_id: me.id, status: "assigned", ...paymentPayload() })
       .eq("id", row.id);
     setTaking(false);
-    if (error) { alert("Failed: " + error.message); return; }
+    if (error) { toastErr("Failed: " + error.message); return; }
     showToast();
     load();
   }
@@ -222,14 +223,14 @@ export default function EngTutorRequestDetailPage() {
       .update({ assigned_tutor_id: managerTutorId || null, status: managerTutorId ? "assigned" : row.status, ...paymentPayload() })
       .eq("id", row.id);
     setSavingAssign(false);
-    if (error) { alert("Failed: " + error.message); return; }
+    if (error) { toastErr("Failed: " + error.message); return; }
     showToast();
     load();
   }
 
   async function postComment() {
     if (!row) return;
-    if (!actingTutor) { alert("Please select your name first on the previous page (top right)."); return; }
+    if (!actingTutor) { toastErr("Please select your name first on the previous page (top right)."); return; }
     if (!newComment.trim()) return;
     setPosting(true);
     const { error } = await supabase.from("tutor_class_comments").insert({
@@ -238,7 +239,7 @@ export default function EngTutorRequestDetailPage() {
       comment: newComment.trim(),
     });
     setPosting(false);
-    if (error) { alert("Failed to post: " + error.message); return; }
+    if (error) { toastErr("Failed to post: " + error.message); return; }
     setNewComment("");
     loadComments();
   }

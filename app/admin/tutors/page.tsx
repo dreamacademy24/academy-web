@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -51,7 +52,7 @@ export default function TutorsPage() {
     const { data, error } = await supabase.from("tutors").select("*").order("name");
     if (error) {
       console.error("튜터 조회 실패:", error);
-      alert("조회 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
+      toastErr("조회 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
       return;
     }
     if (data) setTutors(data as Tutor[]);
@@ -95,14 +96,14 @@ export default function TutorsPage() {
     setModal(t ? { data: t } : {});
   }
   async function saveTutor() {
-    if (!form.name.trim()) { alert("이름을 입력하세요."); return; }
+    if (!form.name.trim()) { toastErr("이름을 입력하세요."); return; }
     const payload = { name: form.name.trim(), phone: form.phone.trim(), specialty: form.specialty.trim(), hourly_rate: form.hourly_rate };
     const { error } = modal?.data
       ? await supabase.from("tutors").update(payload).eq("id", modal.data.id).select()
       : await supabase.from("tutors").insert(payload).select();
     if (error) {
       console.error("튜터 저장 실패:", error, "payload:", payload);
-      alert("저장 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
+      toastErr("저장 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
       return;
     }
     setModal(null);
@@ -112,7 +113,7 @@ export default function TutorsPage() {
     const { error } = await supabase.from("tutors").update({ is_active: !current }).eq("id", id);
     if (error) {
       console.error("튜터 상태 변경 실패:", error);
-      alert("상태 변경 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
+      toastErr("상태 변경 실패: " + error.message + (error.details ? "\n\n상세: " + error.details : "") + (error.hint ? "\n힌트: " + error.hint : ""));
       return;
     }
     await loadTutors();

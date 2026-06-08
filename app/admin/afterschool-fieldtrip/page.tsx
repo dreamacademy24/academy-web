@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -125,8 +126,8 @@ export default function AfterschoolFieldtripAdminPage() {
 
   async function saveAddSignup() {
     const stu = students.find(s => s.id === addStudentId);
-    if (!stu) { alert("아이를 선택하세요."); return; }
-    if (addTokens.size === 0) { alert("날짜를 1개 이상 선택하세요."); return; }
+    if (!stu) { toastErr("아이를 선택하세요."); return; }
+    if (addTokens.size === 0) { toastErr("날짜를 1개 이상 선택하세요."); return; }
     setAddSaving(true);
     const { error } = await supabase.from("fieldtrip_applications").insert({
       name: stu.name_kr || stu.name_en,
@@ -136,7 +137,7 @@ export default function AfterschoolFieldtripAdminPage() {
       room_number: stu.room || null, status: "confirmed",
     });
     setAddSaving(false);
-    if (error) { alert("저장 실패: " + error.message); return; }
+    if (error) { toastErr("저장 실패: " + error.message); return; }
     setAddOpen(false); setAddStudentId(""); setAddSearch(""); setAddTokens(new Set());
     load();
   }
@@ -145,7 +146,7 @@ export default function AfterschoolFieldtripAdminPage() {
     const prev = apps;
     setApps(apps.map(a => a.id === appId ? { ...a, status } : a));
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", appId);
-    if (error) { alert("상태 변경 실패: " + error.message); setApps(prev); }
+    if (error) { toastErr("상태 변경 실패: " + error.message); setApps(prev); }
   }
 
   function toggleMonth(m: number) {
@@ -391,124 +392,4 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                                       onChange={e => changeStatus(r.appId, e.target.value)}
                                     >
                                       <option value="pending">대기중</option>
-                                      <option value="confirmed">확정</option>
-                                      <option value="cancelled">취소</option>
-                                    </select>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })}
-                </div>
-                )}
-              </div>
-            );
-          })}
-
-          {legacy.length > 0 && (
-            <div className="af-card">
-              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#f1f5f9", borderBottom:"1px solid #cbd5e1"}}>
-                <div style={{fontSize:15, fontWeight:800, color:"#475569"}}>📦 미분류 (일정 미확인)</div>
-                <div style={{fontSize:13, fontWeight:700, color:"#475569", background:"#fff", border:"1px solid #cbd5e1", padding:"4px 12px", borderRadius:999}}>총 {legacy.length}건</div>
-              </div>
-              <table className="af-tbl">
-                <thead>
-                  <tr>
-                    <th style={{width:130}}>아이 이름</th>
-                    <th style={{width:130}}>예약자</th>
-                    <th style={{width:120}}>방 번호</th>
-                    <th style={{width:160}}>선택 일정(원본)</th>
-                    <th>요청사항</th>
-                    <th style={{width:120}}>상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {legacy.map(a => {
-                    const status = a.status || "pending";
-                    const meta = STATUS_META[status] || STATUS_META.pending;
-                    const req = (a.request || a.message || "").trim();
-                    return (
-                      <tr key={a.id}>
-                        <td style={{fontWeight:600}}>{(a.name || "").trim() || "-"}</td>
-                        <td style={{color:"#475569"}}>{((a.booking_id && bookerNames[a.booking_id]) || (a.portal_name || "").trim()) || "-"}</td>
-                        <td style={{color:"#475569"}}>{(a.room_number || "").trim() || "-"}</td>
-                        <td style={{color:"#475569", fontSize:12}}>{(a.date || "").trim() || "-"}</td>
-                        <td className="af-notes" title={req}>{req || "-"}</td>
-                        <td>
-                          <select
-                            className="af-sel"
-                            style={{background:meta.bg, color:meta.color, borderColor:meta.bg}}
-                            value={status}
-                            onChange={e => changeStatus(a.id, e.target.value)}
-                          >
-                            <option value="pending">대기중</option>
-                            <option value="confirmed">확정</option>
-                            <option value="cancelled">취소</option>
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        </>
-      )}
-
-      {addOpen && (() => {
-        const groups = (() => { const m = new Map<string, DeployedScheduleItem[]>(); for (const it of [...deployedItems].sort((a,b)=>a.date.localeCompare(b.date))) { const mk=it.date.slice(0,7); if(!m.has(mk)) m.set(mk,[]); m.get(mk)!.push(it); } return Array.from(m.entries()); })();
-        const filtered = students.filter(s => { const q=addSearch.trim().toLowerCase(); return !q || (s.name_kr+s.name_en+s.reserver+s.room).toLowerCase().includes(q); });
-        return (
-        <div onClick={()=>setAddOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:200,padding:"36px 14px",overflowY:"auto"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,maxWidth:560,width:"100%",padding:22}}>
-            <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
-              <h3 style={{fontSize:17,fontWeight:800,flex:1}}>➕ 직원 신청 추가</h3>
-              <button onClick={()=>setAddOpen(false)} style={{border:"none",background:"none",fontSize:20,cursor:"pointer"}}>✕</button>
-            </div>
-            <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>1. 아이 선택</div>
-            <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="이름·예약자 검색" style={{width:"100%",padding:"9px 11px",border:"1px solid #cbd5e1",borderRadius:9,fontSize:13,marginBottom:8,fontFamily:"inherit"}} />
-            <div style={{maxHeight:168,overflowY:"auto",border:"1px solid #eef2f7",borderRadius:10,marginBottom:16}}>
-              {filtered.length===0 ? <div style={{padding:14,color:"#cbd5e1",fontSize:13}}>{students.length===0?"학생 목록을 불러오는 중…":"검색 결과 없음"}</div> :
-               filtered.slice(0,80).map(s => (
-                <div key={s.id} onClick={()=>setAddStudentId(s.id)} style={{padding:"9px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:addStudentId===s.id?"#eff6ff":"#fff",borderBottom:"1px solid #f1f5f9"}}>
-                  <span style={{fontWeight:700,fontSize:13.5}}>{s.name_kr||s.name_en}</span>
-                  {s.name_en && s.name_kr && <span style={{fontSize:12,color:"#64748b"}}>{s.name_en}</span>}
-                  <span style={{marginLeft:"auto",fontSize:11.5,color:"#94a3b8"}}>{s.reserver}{s.room?` · 🏠${s.room}`:""}</span>
-                  {addStudentId===s.id && <span style={{color:"#2563eb",fontWeight:800}}>✓</span>}
-                </div>
-              ))}
-            </div>
-            <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>2. 날짜 선택 <span style={{fontWeight:600,color:"#94a3b8"}}>(복수 가능)</span></div>
-            <div style={{maxHeight:240,overflowY:"auto",border:"1px solid #eef2f7",borderRadius:10,marginBottom:16}}>
-              {groups.length===0 ? <div style={{padding:14,color:"#cbd5e1",fontSize:13}}>배포된 일정이 없습니다.</div> :
-               groups.map(([mk,its]) => (
-                <div key={mk}>
-                  <div style={{padding:"6px 12px",fontSize:12,fontWeight:800,color:"#15803d",background:"#f0fdf4",position:"sticky",top:0}}>📅 {Number(mk.split("-")[1])}월</div>
-                  {its.map(it => { const tok=tokenForItem(it); const on=addTokens.has(tok); const dt=new Date(it.date+"T00:00:00"); const ft=it.type==="fieldtrip"; return (
-                    <label key={it.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f8fafc",background:on?(ft?"#fff7ed":"#eff6ff"):"#fff"}}>
-                      <input type="checkbox" checked={on} onChange={()=>setAddTokens(prev=>{const n=new Set(prev); if(n.has(tok))n.delete(tok); else n.add(tok); return n;})} />
-                      <span style={{fontWeight:700,fontSize:12.5,color:ft?"#c2410c":"#1a1a2e"}}>{dt.getMonth()+1}/{dt.getDate()} ({KR_DOW[dt.getDay()]})</span>
-                      <span style={{fontSize:12.5,color:"#334155"}}>{it.title}</span>
-                      {ft && <span style={{fontSize:10,fontWeight:800,background:"#c2410c",color:"#fff",padding:"1px 6px",borderRadius:999}}>필드트립</span>}
-                    </label>
-                  );})}
-                </div>
-              ))}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setAddOpen(false)} style={{padding:"11px 18px",border:"1px solid #cbd5e1",borderRadius:9,background:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
-              <button onClick={saveAddSignup} disabled={addSaving} style={{flex:1,padding:"11px",border:"none",borderRadius:9,background:"#16a34a",color:"#fff",fontWeight:800,cursor:addSaving?"default":"pointer",fontFamily:"inherit",opacity:addSaving?0.7:1}}>{addSaving?"저장 중…":`신청 추가 (${addTokens.size}건)`}</button>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
-    </div>
-  </>);
-}
+                                    

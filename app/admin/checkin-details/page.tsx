@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -218,7 +219,7 @@ function CheckinDetailsInner() {
   // 인쇄 팝업 열기
   function openPrintWindow(html: string) {
     const w = window.open("", "_blank");
-    if (!w) { alert("팝업이 차단되었습니다. 팝업을 허용해주세요."); return; }
+    if (!w) { toastErr("팝업이 차단되었습니다. 팝업을 허용해주세요."); return; }
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -463,7 +464,7 @@ function CheckinDetailsInner() {
   }
 
   function handlePrint(lang: "en" | "kr" = "en") {
-    if (!booking) { alert("예약을 먼저 선택하세요."); return; }
+    if (!booking) { toastErr("예약을 먼저 선택하세요."); return; }
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
     printGuestDetails(lang, booking, d, dash);

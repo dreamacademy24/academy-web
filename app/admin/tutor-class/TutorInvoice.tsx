@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { toastErr } from "@/lib/toast";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
@@ -340,7 +341,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
       document.body.removeChild(link);
     } catch (e) {
       console.error("이미지 저장 실패:", e);
-      alert("이미지 저장 실패: " + (e instanceof Error ? e.message : String(e)));
+      toastErr("이미지 저장 실패: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setSaving(false);
     }

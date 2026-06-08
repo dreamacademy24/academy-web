@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toastErr } from "@/lib/toast";
 import { useRouter } from 'next/navigation';
 
 type Application = {
@@ -92,7 +93,7 @@ export default function MineduListClient({
       setSelected(null);
       router.refresh();
     } catch (err) {
-      alert('삭제에 실패했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
+      toastErr('삭제에 실패했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
     }
   };
 
@@ -164,7 +165,7 @@ export default function MineduListClient({
       router.refresh();
     } catch (err) {
       console.error('[updateAssignee] failed:', err);
-      alert('담당자 변경에 실패했습니다. 다시 시도해주세요.');
+      toastErr('담당자 변경에 실패했습니다. 다시 시도해주세요.');
       if (selectEl) selectEl.value = prev || '';
     }
   };
@@ -192,7 +193,7 @@ export default function MineduListClient({
       router.refresh();
     } catch (err) {
       console.error('[updateStatus] failed:', err);
-      alert('상태 변경에 실패했습니다. 다시 시도해주세요.');
+      toastErr('상태 변경에 실패했습니다. 다시 시도해주세요.');
       if (selectEl) selectEl.value = prev || 'new';
     }
   };

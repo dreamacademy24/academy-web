@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toastErr } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
 
@@ -128,7 +129,7 @@ export default function AdminPage() {
 
   async function updateShuttleStatus(id: number, status: string) {
     const { error } = await supabase.from("shuttle_applications").update({ status }).eq("id", id);
-    if (error) alert("상태 변경 실패: " + error.message);
+    if (error) toastErr("상태 변경 실패: " + error.message);
     else await fetchShuttleApps();
   }
 
@@ -141,7 +142,7 @@ export default function AdminPage() {
 
   async function updateFieldtripStatus(id: number, status: string) {
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", id);
-    if (error) alert("상태 변경 실패: " + error.message);
+    if (error) toastErr("상태 변경 실패: " + error.message);
     else await fetchFieldtripApps();
   }
 
@@ -159,7 +160,7 @@ export default function AdminPage() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: s.username, action: s.is_active ? "deactivate" : "activate" }),
     });
-    if (!res.ok) { const j = await res.json().catch(() => ({})); alert("실패: " + (j.error || res.status)); return; }
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toastErr("실패: " + (j.error || res.status)); return; }
     await fetchStaff();
   }
 
@@ -170,13 +171,13 @@ export default function AdminPage() {
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: s.username, action: "reset_password", newPassword: newPassword.trim() }),
     });
-    if (!res.ok) { const j = await res.json().catch(() => ({})); alert("실패: " + (j.error || res.status)); return; }
-    alert("비밀번호가 재설정되었습니다.");
+    if (!res.ok) { const j = await res.json().catch(() => ({})); toastErr("실패: " + (j.error || res.status)); return; }
+    toastErr("비밀번호가 재설정되었습니다.");
   }
 
   async function addStaff() {
     if (!staffForm.name.trim() || !staffForm.username.trim() || !staffForm.password.trim()) {
-      alert("이름, username, 비밀번호는 필수입니다.");
+      toastErr("이름, username, 비밀번호는 필수입니다.");
       return;
     }
     setStaffSaving(true);
@@ -187,7 +188,7 @@ export default function AdminPage() {
     setStaffSaving(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      alert(res.status === 409 ? "이미 존재하는 username입니다." : "추가 실패: " + (j.error || res.status));
+      toastErr(res.status === 409 ? "이미 존재하는 username입니다." : "추가 실패: " + (j.error || res.status));
       return;
     }
     setShowStaffModal(false);
@@ -251,7 +252,7 @@ export default function AdminPage() {
       setAdminAuthed('admin-site');
       setAuthed(true);
     } else {
-      alert("비밀번호가 틀렸습니다.");
+      toastErr("비밀번호가 틀렸습니다.");
     }
   }
 
@@ -269,7 +270,7 @@ export default function AdminPage() {
 
   async function handleSubmit() {
     if (!form.title.trim() || !form.date.trim() || !form.content.trim()) {
-      alert("모든 항목을 입력해주세요.");
+      toastErr("모든 항목을 입력해주세요.");
       return;
     }
     setSubmitting(true);
@@ -279,12 +280,12 @@ export default function AdminPage() {
         .from("notices")
         .update({ category: form.category, title: form.title.trim(), date: form.date.trim(), content: form.content.trim() })
         .eq("id", editingId);
-      if (error) alert("수정 실패: " + error.message);
+      if (error) toastErr("수정 실패: " + error.message);
     } else {
       const { error } = await supabase
         .from("notices")
         .insert({ category: form.category, title: form.title.trim(), date: form.date.trim(), content: form.content.trim() });
-      if (error) alert("등록 실패: " + error.message);
+      if (error) toastErr("등록 실패: " + error.message);
     }
 
     resetForm();
@@ -295,7 +296,7 @@ export default function AdminPage() {
   async function handleDeleteNotice(id: number) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from("notices").delete().eq("id", id);
-    if (error) alert("삭제 실패: " + error.message);
+    if (error) toastErr("삭제 실패: " + error.message);
     else await fetchNotices();
   }
 
@@ -305,13 +306,13 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/users', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert('삭제 실패: ' + (j.error || res.status));
+        toastErr('삭제 실패: ' + (j.error || res.status));
         return;
       }
       setSelMember(null);
       await fetchMembers();
     } catch (e) {
-      alert('삭제 실패: ' + (e instanceof Error ? e.message : String(e)));
+      toastErr('삭제 실패: ' + (e instanceof Error ? e.message : String(e)));
     }
   }
 

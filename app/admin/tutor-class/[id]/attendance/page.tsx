@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
@@ -189,25 +190,25 @@ export default function AttendancePage() {
       .update({ attendance_log: log, tutor_memo: notes || null, total_sessions: total, notes_log: notesLog })
       .eq("id", lesson.id);
     setSaving(false);
-    if (error) { alert("Save failed: " + error.message); return; }
-    alert("✅ Saved");
+    if (error) { toastErr("Save failed: " + error.message); return; }
+    toastOk("Saved");
     router.back();
   }
 
   async function cancelOneDate() {
     if (!lesson) return;
     const d = cancelDateVal.trim();
-    if (!d) { alert("Please select a date to cancel."); return; }
+    if (!d) { toastErr("Please select a date to cancel."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    if (current.includes(d)) { alert("This date is already cancelled."); return; }
+    if (current.includes(d)) { toastErr("This date is already cancelled."); return; }
     setSavingManage(true);
     const { error } = await supabase.from("tutor_lessons")
       .update({ skip_dates: [...current, d] })
       .eq("id", lesson.id);
     setSavingManage(false);
-    if (error) { alert("Cancel failed: " + error.message); return; }
+    if (error) { toastErr("Cancel failed: " + error.message); return; }
     setCancelDateVal("");
-    alert(`✅ ${d} class cancelled.`);
+    toastOk(`${d} class cancelled.`);
     load();
   }
 
@@ -215,8 +216,8 @@ export default function AttendancePage() {
     if (!lesson) return;
     const oldD = changeOldVal.trim();
     const newD = changeNewVal.trim();
-    if (!oldD || !newD) { alert("Please select both the original date and the new date."); return; }
-    if (oldD === newD) { alert("Original date and new date are the same."); return; }
+    if (!oldD || !newD) { toastErr("Please select both the original date and the new date."); return; }
+    if (oldD === newD) { toastErr("Original date and new date are the same."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
     const nextSkips = current.includes(oldD) ? current : [...current, oldD];
     const note = `Rescheduled: ${oldD} → ${newD}`;
@@ -226,11 +227,11 @@ export default function AttendancePage() {
       .update({ skip_dates: nextSkips, tutor_memo: nextNotes })
       .eq("id", lesson.id);
     setSavingManage(false);
-    if (error) { alert("Reschedule failed: " + error.message); return; }
+    if (error) { toastErr("Reschedule failed: " + error.message); return; }
     setChangeOldVal("");
     setChangeNewVal("");
     setNotes(nextNotes);
-    alert(`✅ Rescheduled: ${oldD} → ${newD}`);
+    toastOk(`Rescheduled: ${oldD} → ${newD}`);
     load();
   }
 
@@ -240,8 +241,8 @@ export default function AttendancePage() {
     const { error } = await supabase.from("tutor_lessons")
       .update({ class_days: draftDays }).eq("id", lesson.id);
     setSavingManage(false);
-    if (error) { alert("Save failed: " + error.message); return; }
-    alert("✅ Class days saved.");
+    if (error) { toastErr("Save failed: " + error.message); return; }
+    toastOk("Class days saved.");
     load();
   }
 
@@ -261,8 +262,8 @@ export default function AttendancePage() {
       .update({ confirmed_time: draftConfirmedTime || null, time_overrides: merged })
       .eq("id", lesson.id);
     setSavingTimes(false);
-    if (error) { alert("Time save failed: " + error.message); return; }
-    alert("✅ Class times saved.");
+    if (error) { toastErr("Time save failed: " + error.message); return; }
+    toastOk("Class times saved.");
     load();
   }
 

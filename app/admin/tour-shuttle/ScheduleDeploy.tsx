@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -149,7 +150,7 @@ export default function ScheduleDeploy() {
   const [placeSaving, setPlaceSaving] = useState(false);
 
   async function saveAddPlace() {
-    if (!placeForm.date || !placeForm.title.trim()) { alert("날짜와 장소명은 필수입니다."); return; }
+    if (!placeForm.date || !placeForm.title.trim()) { toastErr("날짜와 장소명은 필수입니다."); return; }
     setPlaceSaving(true);
     const dm = placeForm.date.slice(0, 7); // YYYY-MM
     const depart = placeForm.desc.trim();
@@ -168,7 +169,7 @@ export default function ScheduleDeploy() {
       deploy_month: dm,
     });
     setPlaceSaving(false);
-    if (error) { alert("저장 실패: " + error.message); return; }
+    if (error) { toastErr("저장 실패: " + error.message); return; }
     setPlaceOpen(false);
     setPlaceForm({ date: "", title: "", desc: "", back: "" });
     if (dm !== month) setMonth(dm); // 다른 달이면 그 달로 이동 (load는 useEffect가 처리)
@@ -209,7 +210,7 @@ export default function ScheduleDeploy() {
   async function runGenerate() {
     if (busy) return;
     const gen = generateItems(month);
-    if (gen.length === 0) { alert("생성할 항목이 없습니다."); return; }
+    if (gen.length === 0) { toastErr("생성할 항목이 없습니다."); return; }
     const ok = confirm(`${monthLabel(month)} 투어셔틀 ${gen.length}건을 자동 생성합니다.\n해당 월의 기존 셔틀 항목은 모두 삭제됩니다. 계속할까요?`);
     if (!ok) return;
     setBusy("generate");
@@ -220,18 +221,18 @@ export default function ScheduleDeploy() {
       .eq("type", "shuttle");
     if (delErr) {
       setBusy("");
-      alert("기존 항목 삭제 실패: " + delErr.message);
+      toastErr("기존 항목 삭제 실패: " + delErr.message);
       return;
     }
     const { error: insErr } = await supabase.from("schedule_items").insert(gen);
     setBusy("");
-    if (insErr) { alert("생성 실패: " + insErr.message); return; }
+    if (insErr) { toastErr("생성 실패: " + insErr.message); return; }
     await load();
   }
 
   async function runDeploy() {
     if (busy) return;
-    if (items.length === 0) { alert("배포할 항목이 없습니다. 먼저 자동 생성하세요."); return; }
+    if (items.length === 0) { toastErr("배포할 항목이 없습니다. 먼저 자동 생성하세요."); return; }
     const ok = confirm(`${monthLabel(month)} 투어셔틀 ${items.length}건을 배포합니다. 포털에서 보이게 됩니다. 계속할까요?`);
     if (!ok) return;
     setBusy("deploy");
@@ -241,7 +242,7 @@ export default function ScheduleDeploy() {
       .eq("deploy_month", month)
       .eq("type", "shuttle");
     setBusy("");
-    if (error) { alert("배포 실패: " + error.message); return; }
+    if (error) { toastErr("배포 실패: " + error.message); return; }
     await load();
   }
 
@@ -261,7 +262,7 @@ export default function ScheduleDeploy() {
       .update({ title: editTitle.trim(), description: editDesc.trim() || null })
       .eq("id", editing.id);
     setEditSaving(false);
-    if (error) { alert("저장 실패: " + error.message); return; }
+    if (error) { toastErr("저장 실패: " + error.message); return; }
     closeEdit();
     await load();
   }
@@ -271,7 +272,7 @@ export default function ScheduleDeploy() {
     setEditSaving(true);
     const { error } = await supabase.from("schedule_items").delete().eq("id", editing.id);
     setEditSaving(false);
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
     closeEdit();
     await load();
   }

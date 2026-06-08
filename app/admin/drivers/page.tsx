@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -74,7 +75,7 @@ export default function DriversPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ driver_id: driverId }),
     });
-    if (!res.ok) { alert("토큰 생성 실패"); return; }
+    if (!res.ok) { toastErr("토큰 생성 실패"); return; }
     const { token } = await res.json();
     const url = `${window.location.origin}/driver/${token}`;
     await navigator.clipboard.writeText(url);

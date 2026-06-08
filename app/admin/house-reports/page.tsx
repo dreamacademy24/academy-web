@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -139,7 +140,7 @@ export default function HouseReportsPage() {
 
   async function createTask(room_no: string, item: Item, rReporter: string, report_date: string, key: string) {
     if (!item.content || !item.content.trim()) {
-      alert('업무 내용이 없습니다');
+      toastErr('업무 내용이 없습니다');
       return;
     }
     setCreating(key);
@@ -148,8 +149,8 @@ export default function HouseReportsPage() {
       body: JSON.stringify({ action: "create_task", room_no, content: item.content, status: item.status, reporter: rReporter, report_date }),
     });
     setCreating(null);
-    if (!res.ok) { const r = await res.json(); alert(r.error || "생성 실패"); return; }
-    alert("✓ 업무가 생성되었습니다");
+    if (!res.ok) { const r = await res.json(); toastErr(r.error || "생성 실패"); return; }
+    toastOk("업무가 생성되었습니다");
   }
 
   async function deleteReport(id: string) {
@@ -159,7 +160,7 @@ export default function HouseReportsPage() {
       body: JSON.stringify({ action: "delete", id }),
     });
     if (res.ok) { loadReports(); loadHistory(); loadPending(); }
-    else alert("삭제 실패");
+    else toastErr("삭제 실패");
   }
 
   /* ──── Write: form actions ──── */
@@ -186,11 +187,11 @@ export default function HouseReportsPage() {
       const file = fileList[i];
       const isImage = IMAGE_TYPES.includes(file.type);
       const isVideo = VIDEO_TYPES.includes(file.type);
-      if (!isImage && !isVideo) { alert(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
-      if (isImage && file.size > IMAGE_MAX_SIZE) { alert(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
-      if (isVideo && file.size > VIDEO_MAX_SIZE) { alert(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
-      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { alert(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
-      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { alert(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (!isImage && !isVideo) { toastErr(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
+      if (isImage && file.size > IMAGE_MAX_SIZE) { toastErr(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isVideo && file.size > VIDEO_MAX_SIZE) { toastErr(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { toastErr(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { toastErr(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
       if (isImage) addedImages++;
       if (isVideo) addedVideos++;
 
@@ -229,13 +230,13 @@ export default function HouseReportsPage() {
       body: JSON.stringify({ action: "update_pending", id, status }),
     });
     if (res.ok) loadPending();
-    else alert("상태 변경 실패");
+    else toastErr("상태 변경 실패");
   }
 
   async function submitReport() {
-    if (!formRooms.length) { alert("호실을 1개 이상 추가해주세요"); return; }
+    if (!formRooms.length) { toastErr("호실을 1개 이상 추가해주세요"); return; }
     const validRooms = formRooms.filter(r => r.room_no);
-    if (!validRooms.length) { alert("호실 번호를 입력해주세요"); return; }
+    if (!validRooms.length) { toastErr("호실 번호를 입력해주세요"); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/house-reports", {
@@ -249,8 +250,8 @@ export default function HouseReportsPage() {
           memo: formMemo || null,
         }),
       });
-      if (!res.ok) { const r = await res.json(); alert(r.error || "제출 실패"); return; }
-      alert("보고 완료! ✅");
+      if (!res.ok) { const r = await res.json(); toastErr(r.error || "제출 실패"); return; }
+      toastOk("보고 완료! ✅");
       setFormRooms([]);
       setFormMemo("");
       setFormDate(todayStr());
@@ -260,7 +261,7 @@ export default function HouseReportsPage() {
       setMainTab("view"); setSlot("all");
       loadReports();
     } catch (e) {
-      alert("제출 실패: " + (e instanceof Error ? e.message : "unknown"));
+      toastErr("제출 실패: " + (e instanceof Error ? e.message : "unknown"));
     } finally {
       setSubmitting(false);
     }
@@ -294,11 +295,11 @@ export default function HouseReportsPage() {
       const file = fileList[i];
       const isImage = IMAGE_TYPES.includes(file.type);
       const isVideo = VIDEO_TYPES.includes(file.type);
-      if (!isImage && !isVideo) { alert(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
-      if (isImage && file.size > IMAGE_MAX_SIZE) { alert(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
-      if (isVideo && file.size > VIDEO_MAX_SIZE) { alert(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
-      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { alert(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
-      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { alert(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (!isImage && !isVideo) { toastErr(`지원하지 않는 파일 형식입니다: ${file.name}`); continue; }
+      if (isImage && file.size > IMAGE_MAX_SIZE) { toastErr(`이미지는 최대 10MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isVideo && file.size > VIDEO_MAX_SIZE) { toastErr(`동영상은 최대 50MB까지 업로드 가능합니다. (현재 파일: ${(file.size / 1024 / 1024).toFixed(1)}MB)`); continue; }
+      if (isImage && existingImages + addedImages >= IMAGE_MAX_COUNT) { toastErr(`이미지는 최대 ${IMAGE_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
+      if (isVideo && existingVideos + addedVideos >= VIDEO_MAX_COUNT) { toastErr(`동영상은 최대 ${VIDEO_MAX_COUNT}개까지 첨부 가능합니다.`); continue; }
       if (isImage) addedImages++;
       if (isVideo) addedVideos++;
       promises.push(new Promise<void>((resolve) => {
@@ -332,12 +333,12 @@ export default function HouseReportsPage() {
           memo: editMemo || null,
         }),
       });
-      if (!res.ok) { const r = await res.json(); alert(r.error || "수정 실패"); return; }
-      alert("수정 완료! ✅");
+      if (!res.ok) { const r = await res.json(); toastErr(r.error || "수정 실패"); return; }
+      toastOk("수정 완료! ✅");
       setEditingReport(null);
       loadReports();
     } catch (e) {
-      alert("수정 실패: " + (e instanceof Error ? e.message : "unknown"));
+      toastErr("수정 실패: " + (e instanceof Error ? e.message : "unknown"));
     } finally {
       setEditSubmitting(false);
     }

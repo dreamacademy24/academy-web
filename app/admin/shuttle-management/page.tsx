@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
@@ -116,7 +117,7 @@ export default function ShuttleManagementPage() {
   async function assignDriver(appId: string, driverId: string | null) {
     setBoardApps(prev => prev.map(a => a.id === appId ? { ...a, driver_id: driverId } : a)); // 낙관적 갱신
     const { error } = await supabase.from("shuttle_applications").update({ driver_id: driverId }).eq("id", appId);
-    if (error) { alert("배정 저장 실패: " + error.message); loadBoard(); }
+    if (error) { toastErr("배정 저장 실패: " + error.message); loadBoard(); }
   }
   function shiftBoardDate(delta: number) { const d=new Date(boardDate+"T00:00:00"); d.setDate(d.getDate()+delta); setBoardDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); }
   function boardCap(driverId: string | null) { return boardApps.filter(a => a.tour_date===boardDate && (a.driver_id||null)===driverId).reduce((s,a)=>s+(Number(a.people_count)||0),0); }
@@ -156,9 +157,9 @@ export default function ShuttleManagementPage() {
   async function autoAssign() {
     const wd = new Date(boardDate+"T00:00:00").getDay();
     const working = workingDrivers(wd);
-    if(working.length===0){ alert("그날 근무하는 기사가 없습니다. '기사 관리' 탭의 근무표를 먼저 설정하세요."); return; }
+    if(working.length===0){ toastErr("그날 근무하는 기사가 없습니다. '기사 관리' 탭의 근무표를 먼저 설정하세요."); return; }
     const todo = boardApps.filter(a=>a.tour_date===boardDate && !a.driver_id);
-    if(todo.length===0){ alert("자동배정할 미배정 신청이 없습니다."); return; }
+    if(todo.length===0){ toastErr("자동배정할 미배정 신청이 없습니다."); return; }
     const cap: Record<string,number> = {}; working.forEach(d=>cap[d.id]=boardCap(d.id));
     for(const a of todo){
       const am = isAmTime(a.depart_time);
@@ -248,7 +249,7 @@ export default function ShuttleManagementPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ driver_id: driverId }),
     });
-    if (!res.ok) { alert("토큰 생성 실패"); return; }
+    if (!res.ok) { toastErr("토큰 생성 실패"); return; }
     const { token } = await res.json();
     await navigator.clipboard.writeText(`${window.location.origin}/driver/${token}`);
     setCopiedId(driverId);

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -69,7 +70,7 @@ export default function AdminNoticesPage() {
   async function del(id: string) {
     if (!confirm("이 공지를 삭제하시겠습니까?")) return;
     const { error } = await supabase.from("portal_notices").delete().eq("id", id);
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
     if (form.id === id) reset();
     await load();
   }

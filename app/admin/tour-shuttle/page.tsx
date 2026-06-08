@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -59,13 +60,13 @@ export default function TourShuttleAdminPage() {
   async function deleteApp(id: string) {
     if (!window.confirm("이 신청 내역을 삭제할까요?")) return;
     const { error } = await supabase.from("shuttle_applications").delete().eq("id", id);
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
     load();
   }
 
   async function saveAddManual() {
     if (!addForm.tour_name.trim() || !addForm.tour_date || !addForm.portal_name.trim()) {
-      alert("투어명, 날짜, 예약자명은 필수입니다.");
+      toastErr("투어명, 날짜, 예약자명은 필수입니다.");
       return;
     }
     setAddSaving(true);
@@ -83,7 +84,7 @@ export default function TourShuttleAdminPage() {
       status: "confirmed",
     });
     setAddSaving(false);
-    if (error) { alert("저장 실패: " + error.message); return; }
+    if (error) { toastErr("저장 실패: " + error.message); return; }
     setAddOpen(false);
     setAddForm({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
     load();
@@ -144,7 +145,7 @@ export default function TourShuttleAdminPage() {
     const prev = apps;
     setApps(apps.map(a => a.id === id ? { ...a, status } : a));
     const { error } = await supabase.from("shuttle_applications").update({ status }).eq("id", id);
-    if (error) { alert("상태 변경 실패: " + error.message); setApps(prev); }
+    if (error) { toastErr("상태 변경 실패: " + error.message); setApps(prev); }
   }
 
   if (!authed) return null;

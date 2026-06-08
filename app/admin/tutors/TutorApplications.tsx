@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr } from "@/lib/scheduleBlocks";
@@ -629,7 +630,7 @@ export default function TutorApplications() {
       showToast(`엑셀 다운로드 완료 (${rows.length}건)`);
     } catch (e) {
       console.error("엑셀 다운로드 실패:", e);
-      alert("다운로드 실패: " + (e instanceof Error ? e.message : String(e)));
+      toastErr("다운로드 실패: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setDownloading(false);
     }
@@ -836,7 +837,7 @@ export default function TutorApplications() {
                                   method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ status: 'reviewing' }),
                                 });
-                                if (!res.ok) { const r = await res.json().catch(() => ({})); alert(r.error || '상태 변경 실패'); return; }
+                                if (!res.ok) { const r = await res.json().catch(() => ({})); toastErr(r.error || '상태 변경 실패'); return; }
                                 await loadApps();
                               }}
                               title="검토중으로 변경"

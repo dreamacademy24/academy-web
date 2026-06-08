@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -53,7 +54,7 @@ export default function PortalRequestsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: tab, id, status }),
     });
-    if (!res.ok) { const r = await res.json(); alert(r.error || "처리 실패"); return; }
+    if (!res.ok) { const r = await res.json(); toastErr(r.error || "처리 실패"); return; }
     load();
   }
 

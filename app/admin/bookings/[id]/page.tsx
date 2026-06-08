@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { generatePortalId, generateTempPassword } from "@/lib/portalUtils";
@@ -106,7 +107,7 @@ export default function BookingDetailPage() {
       body: JSON.stringify({ author: currentAuthor || "관리자", content: newComment }),
     });
     setPosting(false);
-    if (!res.ok) { alert("작성 실패"); return; }
+    if (!res.ok) { toastErr("작성 실패"); return; }
     setNewComment("");
     loadComments();
   }
@@ -114,7 +115,7 @@ export default function BookingDetailPage() {
   async function deleteComment(commentId: string) {
     if (!confirm("이 코멘트를 삭제하시겠습니까?")) return;
     const res = await fetch(`/api/bookings/${id}/comments?comment_id=${commentId}&author=${encodeURIComponent(currentAuthor)}`, { method: "DELETE" });
-    if (!res.ok) { const r = await res.json(); alert(r.error || "삭제 실패"); return; }
+    if (!res.ok) { const r = await res.json(); toastErr(r.error || "삭제 실패"); return; }
     loadComments();
   }
 
@@ -258,7 +259,7 @@ export default function BookingDetailPage() {
         });
         if (!res.ok && res.status !== 404) {
           const j = await res.json().catch(()=>({}));
-          alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+          toastErr("저장 실패: " + (j.error || "알 수 없는 오류"));
           setRowSaving(false);
           return;
         }
@@ -287,13 +288,13 @@ export default function BookingDetailPage() {
       });
       if (!putRes.ok) {
         const j = await putRes.json().catch(()=>({}));
-        alert("JSONB 저장 실패: " + (j.error || "알 수 없는 오류"));
+        toastErr("JSONB 저장 실패: " + (j.error || "알 수 없는 오류"));
         setRowSaving(false);
         return;
       }
     } else {
       // pickup_requests / shuttle_requests: 일반 PATCH
-      if (!rowEditing.id) { setRowSaving(false); alert("row id 없음"); return; }
+      if (!rowEditing.id) { setRowSaving(false); toastErr("row id 없음"); return; }
       const res = await fetch(`/api/bookings/${id}/update-row`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -301,7 +302,7 @@ export default function BookingDetailPage() {
       });
       if (!res.ok) {
         const j = await res.json().catch(()=>({}));
-        alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+        toastErr("저장 실패: " + (j.error || "알 수 없는 오류"));
         setRowSaving(false);
         return;
       }
@@ -362,7 +363,7 @@ export default function BookingDetailPage() {
     setSaving(false);
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      alert("저장 실패: " + (j.error || "알 수 없는 오류"));
+      toastErr("저장 실패: " + (j.error || "알 수 없는 오류"));
       return;
     }
     setEditing(false);
@@ -967,7 +968,7 @@ export default function BookingDetailPage() {
         <div className="sec">
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 8, borderBottom: "2px solid #e2e8f0" }}>
             <h2 style={{ flex: 1, fontSize: 15, fontWeight: 800, color: "#1a6fc4" }}>튜터 신청 ({tutorReqs.length}건)</h2>
-            <button className="btn btn-sm btn-blue" onClick={() => alert("튜터 신청 추가 기능은 /admin/tutors에서 사용하세요.")}>+ 튜터 신청 추가</button>
+            <button className="btn btn-sm btn-blue" onClick={() => toastErr("튜터 신청 추가 기능은 /admin/tutors에서 사용하세요.")}>+ 튜터 신청 추가</button>
           </div>
           {tutorReqs.length === 0 ? <div className="empty">튜터 신청 내역이 없습니다<br/>손님이 /portal/tutor에서 신청하면 여기에 표시됩니다</div> :
             tutorReqs.map((t: any) => {

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toastErr } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
 
 // Vercel 배포 시 환경변수에 NEXT_PUBLIC_ADMIN_PASSWORD 추가 필요
@@ -99,7 +100,7 @@ export default function AdminPage() {
 
   async function updateShuttleStatus(id: number, status: string) {
     const { error } = await supabase.from("shuttle_applications").update({ status }).eq("id", id);
-    if (error) alert("상태 변경 실패: " + error.message);
+    if (error) toastErr("상태 변경 실패: " + error.message);
     else await fetchShuttleApps();
   }
 
@@ -112,7 +113,7 @@ export default function AdminPage() {
 
   async function updateFieldtripStatus(id: number, status: string) {
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", id);
-    if (error) alert("상태 변경 실패: " + error.message);
+    if (error) toastErr("상태 변경 실패: " + error.message);
     else await fetchFieldtripApps();
   }
 
@@ -139,7 +140,7 @@ export default function AdminPage() {
     if (pw === ADMIN_PASSWORD) {
       setAuthed(true);
     } else {
-      alert("비밀번호가 틀렸습니다.");
+      toastErr("비밀번호가 틀렸습니다.");
     }
   }
 
@@ -157,7 +158,7 @@ export default function AdminPage() {
 
   async function handleSubmit() {
     if (!form.title.trim() || !form.date.trim() || !form.content.trim()) {
-      alert("모든 항목을 입력해주세요.");
+      toastErr("모든 항목을 입력해주세요.");
       return;
     }
     setSubmitting(true);
@@ -167,12 +168,12 @@ export default function AdminPage() {
         .from("notices")
         .update({ category: form.category, title: form.title.trim(), date: form.date.trim(), content: form.content.trim() })
         .eq("id", editingId);
-      if (error) alert("수정 실패: " + error.message);
+      if (error) toastErr("수정 실패: " + error.message);
     } else {
       const { error } = await supabase
         .from("notices")
         .insert({ category: form.category, title: form.title.trim(), date: form.date.trim(), content: form.content.trim() });
-      if (error) alert("등록 실패: " + error.message);
+      if (error) toastErr("등록 실패: " + error.message);
     }
 
     resetForm();
@@ -183,14 +184,14 @@ export default function AdminPage() {
   async function handleDeleteNotice(id: number) {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     const { error } = await supabase.from("notices").delete().eq("id", id);
-    if (error) alert("삭제 실패: " + error.message);
+    if (error) toastErr("삭제 실패: " + error.message);
     else await fetchNotices();
   }
 
   async function handleDeleteMember(id: string, name: string) {
     if (!confirm(`"${name}" 회원을 정말 삭제하시겠습니까?\n프로필 정보가 삭제됩니다.`)) return;
     const { error } = await supabase.from("profiles").delete().eq("id", id);
-    if (error) alert("삭제 실패: " + error.message);
+    if (error) toastErr("삭제 실패: " + error.message);
     else await fetchMembers();
   }
 

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, Fragment } from "react";
+import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { formatLessonTime } from "@/lib/scheduleBlocks";
@@ -301,7 +302,7 @@ export default function TutorLessonList() {
     setSavingLessonId(lessonId);
     const { error } = await supabase.from("tutor_lessons").delete().eq("id", lessonId);
     setSavingLessonId("");
-    if (error) { alert("삭제 실패: " + error.message); return; }
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
     setLessons(ls => ls.filter(l => l.id !== lessonId));
     if (expandedId === lessonId) setExpandedId("");
     showToast("🗑 수업이 삭제되었습니다");

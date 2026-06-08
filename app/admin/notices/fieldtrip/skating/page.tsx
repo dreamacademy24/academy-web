@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toastOk } from "@/lib/toast";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -91,7 +92,7 @@ export default function SkatingNoticeEditor() {
       .eq("id", notice.id);
     setSaving(false);
     if (error) { setErr("저장 실패: " + error.message); return; }
-    alert("저장되었습니다.");
+    toastOk("저장되었습니다.");
   }
 
   if (loading) return <div style={{ padding: 40, fontFamily: FONT }}>불러오는 중...</div>;

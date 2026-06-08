@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -140,8 +141,8 @@ export default function OnlineClassPage() {
         }),
       });
       const r = await res.json();
-      if (!res.ok) { alert(r.error || "취소 실패"); return; }
-      alert(r.message || (r.makeup_added ? "보강 처리되었습니다." : "취소되었습니다."));
+      if (!res.ok) { toastErr(r.error || "취소 실패"); return; }
+      toastOk(r.message || (r.makeup_added ? "보강 처리되었습니다." : "취소되었습니다."));
       setCancelTarget(null);
       if (expandedId) {
         const res2 = await fetch(`/api/online-class/sessions?enrollment_id=${expandedId}`);
@@ -149,7 +150,7 @@ export default function OnlineClassPage() {
       }
       await loadEnrollments();
     } catch (e) {
-      alert("취소 실패: " + (e instanceof Error ? e.message : "unknown"));
+      toastErr("취소 실패: " + (e instanceof Error ? e.message : "unknown"));
     } finally {
       setCancelling(false);
     }
@@ -193,12 +194,12 @@ export default function OnlineClassPage() {
         body: JSON.stringify({ id: editTarget.id, ...editForm }),
       });
       const r = await res.json();
-      if (!res.ok) { alert(r.error || "저장 실패"); return; }
-      alert("수정 완료 ✅");
+      if (!res.ok) { toastErr(r.error || "저장 실패"); return; }
+      toastOk("수정 완료 ✅");
       setEditTarget(null);
       await loadEnrollments();
     } catch (e) {
-      alert("저장 실패: " + (e instanceof Error ? e.message : "unknown"));
+      toastErr("저장 실패: " + (e instanceof Error ? e.message : "unknown"));
     } finally { setEditSaving(false); }
   }
   function toggleDay(d: string) {
@@ -209,10 +210,10 @@ export default function OnlineClassPage() {
   }
 
   async function submitEnrollment() {
-    if (!form.student_name.trim()) { alert("학생명을 입력해주세요"); return; }
-    if (!form.start_date) { alert("시작일을 입력해주세요"); return; }
-    if (!form.days_of_week.length) { alert("수강 요일을 선택해주세요"); return; }
-    if (Number(form.total_sessions) < 1) { alert("총 회차를 입력해주세요"); return; }
+    if (!form.student_name.trim()) { toastErr("학생명을 입력해주세요"); return; }
+    if (!form.start_date) { toastErr("시작일을 입력해주세요"); return; }
+    if (!form.days_of_week.length) { toastErr("수강 요일을 선택해주세요"); return; }
+    if (Number(form.total_sessions) < 1) { toastErr("총 회차를 입력해주세요"); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/online-class/enrollments", {
@@ -229,9 +230,9 @@ export default function OnlineClassPage() {
           tutor_id: form.tutor_id || null,
         }),
       });
-      if (!res.ok) { const r = await res.json(); alert(r.error || "등록 실패"); return; }
+      if (!res.ok) { const r = await res.json(); toastErr(r.error || "등록 실패"); return; }
       const r = await res.json();
-      alert(`등록 완료! 세션 ${r.sessions_created}개 생성됨 ✅`);
+      toastOk(`등록 완료! 세션 ${r.sessions_created}개 생성됨 ✅`);
       setForm({
         student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
         tutor_id: "", enrollment_type: "free_package", level: "",
@@ -242,7 +243,7 @@ export default function OnlineClassPage() {
       });
       await loadEnrollments();
       setTab("list");
-    } catch (e) { alert("등록 실패: " + (e instanceof Error ? e.message : "unknown")); }
+    } catch (e) { toastErr("등록 실패: " + (e instanceof Error ? e.message : "unknown")); }
     finally { setSubmitting(false); }
   }
 
