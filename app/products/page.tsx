@@ -45,6 +45,64 @@ function minListPrice(d?: ParsedAccom): number {
   return vals.length ? Math.min(...vals) : 0;
 }
 
+/* ── 숙소 상세 (공식 안내서·브로셔 기반) ── */
+interface RoomType { name: string; size?: string; beds?: string; cap?: string; note?: string; }
+interface Highlight { icon: string; title: string; desc: string; }
+interface ProductDetail {
+  hero: string; gallery: string[]; intro: string; badges: string[];
+  roomTypes: RoomType[]; highlights: Highlight[]; location: string[];
+}
+const PRODUCT_DETAIL: Record<string, ProductDetail> = {
+  dreamhouse: {
+    hero: "/images/dreamhouse.jpg",
+    gallery: ["/images/dh-exterior.jpg", "/images/dh-living1.jpg", "/images/dreamhouse_Room-1.jpg", "/images/dreamhouseroom-10.jpg", "/images/bayswater002.jpg"],
+    intro: "현지 생활을 그대로 담은 단독 2층 독채 숙소입니다. 베이스워터 빌리지 안에 위치해 한국인이 편안하게 생활할 수 있는 프라이빗 공간으로, 한국 정수기·디지털 도어락·한국산 가전이 구비되어 있습니다.",
+    badges: ["독채 빌리지", "방 3 · 욕실 2", "수영장 자유이용", "주 6일 헬퍼 포함"],
+    roomTypes: [
+      { name: "드림하우스 (독채 전체)", beds: "방 3개 · 욕실 2개 · 거실 · 뒷마당", cap: "한 가족 단독 사용", note: "한국 정수기 · 디지털 도어락 · 방충망 · 한국산 가전" },
+    ],
+    highlights: [
+      { icon: "🏊", title: "수영장 · 테니스 · 농구장", desc: "베이스워터 빌리지 부대시설 자유 이용" },
+      { icon: "🛒", title: "미니마트 · 카페 · 스낵바", desc: "단지 내 도보 이용, 카드결제 가능" },
+      { icon: "🧹", title: "주 6일 헬퍼 서비스", desc: "청소·정리 등 생활 지원 (드림하우스 전용)" },
+    ],
+    location: ["드림아카데미 차량 5분", "그랜드몰(플레이드림) 차량 5분", "제이파크 리조트 차량 10분", "공항 차량 약 20분"],
+  },
+  jpark: {
+    hero: "/images/jpark.png",
+    gallery: ["/images/jpark-g1.jpg", "/images/jpark-g2.jpg", "/images/jpark-g3.jpg", "/images/jpark-g4.jpg", "/images/jpark-g5.jpg"],
+    intro: "막탄 최대 번화가에 위치한 5성급 아일랜드 리조트입니다. 7개 이상의 테마 수영장과 워터슬라이드, 다양한 액티비티를 갖춘 가족 맞춤형 올인클루시브 리조트로, 도보권에 식당·마트·마사지 등 편의시설이 풍부합니다.",
+    badges: ["5성급", "820 객실", "테마 수영장 7+", "리조트 식당 30% 할인"],
+    roomTypes: [
+      { name: "Deluxe (Tower B)", size: "38㎡", beds: "침실 + 욕실", cap: "최대 4인" },
+      { name: "Premier (Tower G · 신축)", size: "32㎡", beds: "침실 + 욕실 (신축동)", cap: "최대 4인" },
+      { name: "Mactan Suite (Tower A/C)", size: "76㎡", beds: "침실1 + 거실1 + 욕실1 + 화장실2", cap: "최대 4인" },
+    ],
+    highlights: [
+      { icon: "🍽️", title: "레스토랑 30% 할인", desc: "리조트 내 레스토랑·바 30% 할인 (일부 제외) · 조식 50% 할인" },
+      { icon: "🏝️", title: "전용 해변 · 워터파크", desc: "테마 수영장 7개+, 워터슬라이드, 프라이빗 비치" },
+      { icon: "👶", title: "키즈 프렌들리", desc: "성인 결제 시 6세 미만 아동 최대 2명 조식 무료" },
+    ],
+    location: ["샹스몰 도보 2분", "한인마트 도보 3분", "공항 차량 20분", "드림아카데미 차량 10~13분"],
+  },
+  cubenine: {
+    hero: "/images/cube9.png",
+    gallery: ["/images/cube9-g1.jpg", "/images/cube9-g2.jpg", "/images/cube9-g3.jpg", "/images/cube9-g4.jpg", "/images/cube9-g5.jpg"],
+    intro: "오션뷰 인피니티 풀과 조용한 여유를 갖춘 막탄 프리미엄 리조트입니다. 바다를 바라보는 야외 수영장과 해양 액티비티, 오션뷰 레스토랑 조식이 포함되어 자연과 함께하는 힐링 어학연수 환경을 제공합니다.",
+    badges: ["오션뷰", "인피니티 풀", "조식 포함", "해양 액티비티"],
+    roomTypes: [
+      { name: "Deluxe Ocean (King / Twin)", size: "46.08㎡", beds: "오션뷰 + 테라스 + 선셋베드", cap: "최대 4인" },
+      { name: "Deluxe Pool Access (트윈 퀸)", size: "43.68㎡", beds: "메인풀 직접 연결", cap: "최대 4인" },
+    ],
+    highlights: [
+      { icon: "🌅", title: "오션뷰 인피니티 풀", desc: "바다를 바라보는 야외 수영장" },
+      { icon: "🍳", title: "조식 포함 (월~일)", desc: "오션뷰 더나인 레스토랑 조식 · 1주 팀당 ₩10만 식사바우처" },
+      { icon: "🛶", title: "해양 액티비티", desc: "카약·패들 이용, 다이빙 스팟 인접" },
+    ],
+    location: ["샹스몰 차량 3분 / 도보 10분", "공항 차량 20~30분", "베이스워터 차량 5분", "드림아카데미 차량 10~13분"],
+  },
+};
+
 // 정렬된 distinct 숫자 배열
 function uniqSortedNum(arr: number[]): number[] {
   return Array.from(new Set(arr)).sort((a, b) => a - b);
@@ -425,7 +483,41 @@ export default function ProductsPage() {
 
         {book && (
           <div id="pdetail">
-            <div className="pdetail-head">📋 {sections.find((s) => s.id === activeTab)?.title} · 상세 가격</div>
+            {(() => {
+              const det = PRODUCT_DETAIL[activeTab];
+              if (!det) return null;
+              return (
+                <div className="pd-rich">
+                  <div className="pd-hero" style={{ backgroundImage: `url(${det.hero})` }} />
+                  <div className="pd-thumbs">
+                    {det.gallery.map((g) => <div key={g} className="pd-thumb" style={{ backgroundImage: `url(${g})` }} />)}
+                  </div>
+                  <div className="pd-badges">{det.badges.map((b) => <span key={b}>{b}</span>)}</div>
+                  <p className="pd-intro">{det.intro}</p>
+                  <h3 className="pd-h">🛏️ 룸 타입</h3>
+                  <div className="pd-rooms">
+                    {det.roomTypes.map((r) => (
+                      <div className="pd-room" key={r.name}>
+                        <div className="pd-room-name">{r.name}{r.size && <span className="pd-room-size">{r.size}</span>}</div>
+                        <div className="pd-room-info">{[r.beds, r.cap, r.note].filter(Boolean).join(" · ")}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <h3 className="pd-h">✨ 주요 특징</h3>
+                  <div className="pd-highlights">
+                    {det.highlights.map((h) => (
+                      <div className="pd-hl" key={h.title}>
+                        <span className="pd-hl-ic">{h.icon}</span>
+                        <div className="pd-hl-tx"><b>{h.title}</b><span>{h.desc}</span></div>
+                      </div>
+                    ))}
+                  </div>
+                  <h3 className="pd-h">📍 위치</h3>
+                  <div className="pd-loc">{det.location.map((l) => <span key={l}>{l}</span>)}</div>
+                </div>
+              );
+            })()}
+            <div className="pdetail-head">💰 {sections.find((s) => s.id === activeTab)?.title} · 상세 가격</div>
             {sections.map((cfg) => (
               <div key={cfg.id} style={{ display: activeTab === cfg.id ? "block" : "none" }}>
                 <AccomSection cfg={cfg} data={book[cfg.id]} />
@@ -531,11 +623,36 @@ export default function ProductsPage() {
         .pcard-price b { font-size: 18px; color: #1a1a2e; font-weight: 800; }
         .pcard-cta { flex-shrink: 0; font-size: 12.5px; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 7px 12px; border-radius: 8px; }
         .pcard.sel .pcard-cta { background: #2563eb; color: #fff; }
-        .pdetail-head { font-size: 16px; font-weight: 800; color: #1a1a2e; margin: 4px 0 14px; padding-left: 4px; }
+        .pdetail-head { font-size: 16px; font-weight: 800; color: #1a1a2e; margin: 24px 0 14px; padding-left: 4px; }
+        .pd-rich { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; margin-bottom: 8px; }
+        .pd-hero { width: 100%; height: 230px; border-radius: 12px; background-size: cover; background-position: center; }
+        .pd-thumbs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
+        .pd-thumb { height: 64px; border-radius: 8px; background-size: cover; background-position: center; }
+        .pd-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 12px; }
+        .pd-badges span { font-size: 12px; font-weight: 700; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; padding: 4px 11px; border-radius: 999px; }
+        .pd-intro { font-size: 13.5px; color: #475569; line-height: 1.75; margin: 0 0 6px; }
+        .pd-h { font-size: 15px; font-weight: 800; color: #1a1a2e; margin: 20px 0 10px; }
+        .pd-rooms { display: flex; flex-direction: column; gap: 9px; }
+        .pd-room { border: 1px solid #e2e8f0; border-radius: 11px; padding: 12px 14px; background: #f8fafc; }
+        .pd-room-name { font-size: 14px; font-weight: 800; color: #1a1a2e; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .pd-room-size { font-size: 11.5px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 6px; }
+        .pd-room-info { font-size: 12.5px; color: #64748b; margin-top: 4px; line-height: 1.5; }
+        .pd-highlights { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .pd-hl { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #eef2f7; border-radius: 11px; padding: 12px; background: #fff; }
+        .pd-hl-ic { font-size: 22px; flex-shrink: 0; }
+        .pd-hl-tx { display: flex; flex-direction: column; min-width: 0; }
+        .pd-hl-tx b { font-size: 13px; font-weight: 800; margin-bottom: 2px; }
+        .pd-hl-tx span { font-size: 11.5px; color: #6b7c93; line-height: 1.5; }
+        .pd-loc { display: flex; flex-wrap: wrap; gap: 7px; }
+        .pd-loc span { font-size: 12.5px; color: #475569; background: #f1f5f9; border-radius: 8px; padding: 6px 11px; font-weight: 600; }
+        .pd-loc span::before { content: "📍 "; }
         @media (max-width: 600px) {
           .biz dl { grid-template-columns: 1fr; }
           .phero h1 { font-size: 23px; }
           .pgrid { grid-template-columns: 1fr; }
+          .pd-highlights { grid-template-columns: 1fr; }
+          .pd-hero { height: 180px; }
+          .pd-thumb { height: 48px; }
         }
       `}</style>
     </div>
