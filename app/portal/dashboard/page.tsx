@@ -24,6 +24,7 @@ export default function PortalDashboard() {
   const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
   const [hasNewNotes, setHasNewNotes] = useState(false);
   const [popupNotice, setPopupNotice] = useState<any>(null);
+  const [noticeUnread, setNoticeUnread] = useState(0);
 
   useEffect(() => {
     async function init() {
@@ -120,6 +121,28 @@ export default function PortalDashboard() {
     return () => { cancelled = true; };
   }, []);
 
+  // 안읽은 공지 수 → 공지 카드 빨간 배지 + 앱 아이콘 배지(setAppBadge)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      let bookingId: string | null = null;
+      try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
+      if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
+      const { data } = await supabase.from("portal_notices").select("id,created_at,audience,target_ids").order("created_at", { ascending: false });
+      if (cancelled) return;
+      const list = (data || []).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
+      let lastSeen = ""; try { lastSeen = localStorage.getItem("notices_last_seen") || ""; } catch {}
+      const unread = lastSeen ? list.filter((n: any) => String(n.created_at) > lastSeen).length : list.length;
+      setNoticeUnread(unread);
+      try {
+        const navAny = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+        if (navAny.setAppBadge) { if (unread > 0) navAny.setAppBadge(unread); else navAny.clearAppBadge?.(); }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   function dismissPopup(forToday: boolean) {
     if (forToday && popupNotice && typeof window !== "undefined") {
       localStorage.setItem("notice_popup_seen", popupNotice.id + "|" + new Date().toISOString().slice(0, 10));
@@ -181,6 +204,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .db-card h3{font-size:15px;font-weight:700;margin-bottom:4px}
 .db-card p{font-size:12px;color:#6b7c93;line-height:1.5}
 .db-card .coming{position:absolute;top:10px;right:10px;padding:2px 8px;background:#fef3c7;color:#92400e;border-radius:6px;font-size:10px;font-weight:700}
+.db-card .db-badge{position:absolute;top:10px;right:10px;min-width:22px;height:22px;padding:0 6px;background:#ef4444;color:#fff;border-radius:999px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 5px rgba(239,68,68,0.5)}
 .db-footer{text-align:center;margin-top:32px;font-size:12px;color:#94a3b8}
 .db-footer a{color:#1a6fc4;text-decoration:none;font-weight:600}
 @media(max-width:500px){.db-w{padding:24px 16px}.db-info{grid-template-columns:1fr}.db-grid{grid-template-columns:1fr}}
@@ -300,6 +324,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               if (c.href) router.push(c.href);
             }}>
             {!c.ready && <span className="coming">준비 중</span>}
+            {c.title === "공지사항" && noticeUnread > 0 && (
+              <span className="db-badge">{noticeUnread > 99 ? "99+" : noticeUnread}</span>
+            )}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>
             <p>{c.desc}</p>

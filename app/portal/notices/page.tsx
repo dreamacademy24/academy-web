@@ -33,6 +33,12 @@ export default function PortalNoticesPage() {
   }, []);
   useEffect(() => { if (bookingId) load(bookingId); }, [bookingId, load]);
 
+  // 공지 페이지 방문 = 읽음 처리: 안읽음 기준 시각 갱신 + 앱 아이콘 배지 제거
+  useEffect(() => {
+    try { localStorage.setItem("notices_last_seen", new Date().toISOString()); } catch {}
+    try { (navigator as Navigator & { clearAppBadge?: () => Promise<void> }).clearAppBadge?.(); } catch {}
+  }, []);
+
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
