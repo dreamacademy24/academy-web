@@ -692,18 +692,16 @@ export default function PortalShuttlePage() {
                               <div style={{fontSize:13, fontWeight:700, color:"#1a1a2e"}}>{md}{dow && ` (${dow})`} · {t.tourName}</div>
                               <div style={{fontSize:11, color:"#6b7280", marginTop:2}}>출발 {t.departTime.replace(/(am|pm)$/i, '')}</div>
                             </div>
-                            <input
-                              type="number"
-                              min={1}
-                              max={6}
-                              value={t.people}
-                              onChange={e => {
-                                const n = Math.max(1, Math.min(6, Number(e.target.value) || 1));
-                                setSelectedTours(prev => prev.map(x => x.value === t.value ? { ...x, people: n } : x));
-                              }}
-                              style={{ width:60, padding:"6px 8px", border:"1px solid #cbd5e1", borderRadius:6, fontSize:13, fontFamily:"inherit", textAlign:"center", outline:"none" }}
-                            />
-                            <span style={{fontSize:12, color:"#475569", fontWeight:600}}>명</span>
+                            <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
+                              <button type="button" aria-label="인원 줄이기"
+                                onClick={() => setSelectedTours(prev => prev.map(x => x.value === t.value ? { ...x, people: Math.max(1, x.people - 1) } : x))}
+                                style={{ width:34, height:34, border:"1px solid #cbd5e1", borderRadius:8, background:"#fff", fontSize:20, fontWeight:700, lineHeight:1, cursor:"pointer", color: t.people<=1 ? "#cbd5e1" : "#1a6fc4" }}>−</button>
+                              <span style={{ minWidth:26, textAlign:"center", fontSize:16, fontWeight:800, color:"#1a1a2e" }}>{t.people}</span>
+                              <button type="button" aria-label="인원 늘리기"
+                                onClick={() => setSelectedTours(prev => prev.map(x => x.value === t.value ? { ...x, people: Math.min(6, x.people + 1) } : x))}
+                                style={{ width:34, height:34, border:"1px solid #cbd5e1", borderRadius:8, background:"#fff", fontSize:20, fontWeight:700, lineHeight:1, cursor:"pointer", color: t.people>=6 ? "#cbd5e1" : "#1a6fc4" }}>+</button>
+                              <span style={{fontSize:12, color:"#475569", fontWeight:600, marginLeft:2}}>명</span>
+                            </div>
                           </div>
                         );
                       })}

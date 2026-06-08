@@ -61,6 +61,8 @@ export default function MyApplicationsPage() {
   const [editId, setEditId] = useState<string>("");
   const [editForm, setEditForm] = useState({ class_type: "", preferred_days: [] as string[], preferred_time: "", start_date: "", end_date: "", notes: "" });
   const [editSaving, setEditSaving] = useState(false);
+  const [pplEdit, setPplEdit] = useState<{ id: string; value: number } | null>(null);
+  const [pplSaving, setPplSaving] = useState(false);
   const [lessonsByApp, setLessonsByApp] = useState<Record<string, AnyRow[]>>({});
   const [detail, setDetail] = useState<{ student: string; lessons: AnyRow[] } | null>(null);
 
@@ -147,6 +149,18 @@ export default function MyApplicationsPage() {
     closeCancel();
     if (bookingId) load(bookingId);
     setToast("취소 요청이 접수되었습니다.");
+    setTimeout(() => setToast(""), 2500);
+  }
+
+  async function savePpl() {
+    if (!pplEdit) return;
+    setPplSaving(true);
+    const { error } = await supabase.from("shuttle_applications").update({ people_count: pplEdit.value }).eq("id", pplEdit.id);
+    setPplSaving(false);
+    if (error) { alert("인원 수정 실패: " + error.message); return; }
+    setPplEdit(null);
+    if (bookingId) load(bookingId);
+    setToast("인원이 수정되었습니다.");
     setTimeout(() => setToast(""), 2500);
   }
 
@@ -281,11 +295,26 @@ export default function MyApplicationsPage() {
                 </div>
                 <div className="ma-meta">
                   {depart && <><b>🕐 출발:</b> {depart}{" "}</>}
-                  <b style={{ marginLeft: depart ? 8 : 0 }}>👥 인원:</b> {String(ppl)}명{" "}
+                  <b style={{ marginLeft: depart ? 8 : 0 }}>👥 인원:</b>{" "}
+                  {pplEdit?.id === id ? (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, verticalAlign: "middle" }}>
+                      <button type="button" onClick={() => setPplEdit(p => p ? { ...p, value: Math.max(1, p.value - 1) } : p)} style={{ width: 30, height: 30, border: "1px solid #cbd5e1", borderRadius: 7, background: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1, cursor: "pointer", color: pplEdit.value <= 1 ? "#cbd5e1" : "#1a6fc4" }}>−</button>
+                      <b style={{ minWidth: 18, textAlign: "center", fontSize: 15 }}>{pplEdit.value}</b>
+                      <button type="button" onClick={() => setPplEdit(p => p ? { ...p, value: Math.min(6, p.value + 1) } : p)} style={{ width: 30, height: 30, border: "1px solid #cbd5e1", borderRadius: 7, background: "#fff", fontSize: 18, fontWeight: 700, lineHeight: 1, cursor: "pointer", color: pplEdit.value >= 6 ? "#cbd5e1" : "#1a6fc4" }}>+</button>
+                      <span>명</span>
+                      <button type="button" onClick={savePpl} disabled={pplSaving} style={{ marginLeft: 4, padding: "5px 11px", border: "none", borderRadius: 6, background: "#16a34a", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>{pplSaving ? "저장중…" : "저장"}</button>
+                      <button type="button" onClick={() => setPplEdit(null)} style={{ padding: "5px 9px", border: "1px solid #cbd5e1", borderRadius: 6, background: "#fff", fontSize: 12, cursor: "pointer", color: "#64748b" }}>취소</button>
+                    </span>
+                  ) : (
+                    <>{String(ppl)}명{" "}</>
+                  )}
                   <b style={{ marginLeft: 8 }}>📍 픽업:</b> {room}
                 </div>
                 {canCancel(String(r.status || "")) && (
                   <div className="ma-actions">
+                    {pplEdit?.id !== id && (
+                      <button className="ma-cancel-btn" style={{ borderColor: "#bfdbfe", color: "#1a6fc4" }} onClick={() => setPplEdit({ id, value: Number(r.people_count ?? r.num_people ?? 1) || 1 })}>✏️ 인원수정</button>
+                    )}
                     <button className="ma-cancel-btn" onClick={() => openCancel("shuttle_applications", id, `${md} · ${tourName}`)}>취소요청</button>
                   </div>
                 )}
