@@ -212,7 +212,22 @@ export default function TutorRequestDetailPage() {
         if (skipArr.length > 0) insertPayload = { ...insertPayload, skip_dates: skipArr };
         const { data: ins, error: insErr } = await supabase.from("tutor_lessons").insert(insertPayload).select().single();
         if (insErr) { console.error("[save] tutor_lessons INSERT 실패:", insErr); lessonMsg = " (수업 생성 실패: " + insErr.message + ")"; }
-        else console.log("[save] tutor_lessons INSERTED id=", ins?.id);
+        else {
+          console.log("[save] tutor_lessons INSERTED id=", ins?.id);
+          // 정산 자동 청구: 수업 최초 생성 시(=이 INSERT 분기) 튜터비를 settlement_items에 charge 등록.
+          // UPDATE 분기(재저장)에는 없으므로 수업당 1회만 — 중복 없음. (목록 확정 경로와 동일 정책)
+          const _bid = (row as any).booking_id;
+          if (_bid && (computedAmount || 0) > 0) {
+            const _md = (d: string) => (d ? d.slice(5).replace("-", "/") : "");
+            const _label = `튜터비 · ${row.student_name_kr || row.student_name_en || ""}${row.start_date ? ` (${_md(row.start_date)}~${_md(row.end_date)})` : ""}`;
+            const { error: _ce } = await supabase.from("settlement_items").insert({
+              booking_id: _bid, kind: "charge", label: _label, amount: computedAmount,
+              item_date: row.start_date || new Date().toISOString().slice(0, 10),
+              status: "approved", recorded_by: "시스템(튜터확정)",
+            });
+            if (_ce) console.error("[save] 정산 자동청구 실패(수업은 정상):", _ce);
+          }
+        }
       }
     } else if (tutorId) {
       // 튜터를 선택했는데 UUID/이름 매칭에 실패한 케이스 — null 저장 방지 + 경고
