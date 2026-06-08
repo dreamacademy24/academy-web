@@ -217,12 +217,12 @@ export default function PortalShuttlePage() {
       if (scheduleDow === 1) {
         const deadline = new Date(scheduleDate);
         deadline.setDate(deadline.getDate() - 3);
-        deadline.setHours(16, 50, 0, 0);
+        deadline.setHours(16, 30, 0, 0);
         isExpired = pht >= deadline;
       } else {
         const deadline = new Date(scheduleDate);
         deadline.setDate(deadline.getDate() - 1);
-        deadline.setHours(16, 50, 0, 0);
+        deadline.setHours(16, 30, 0, 0);
         isExpired = pht >= deadline;
       }
 
@@ -232,8 +232,8 @@ export default function PortalShuttlePage() {
         (item as HTMLElement).style.cursor = "not-allowed";
         (item as HTMLElement).style.transform = "none";
         (item as HTMLElement).title = scheduleDow === 1
-          ? "신청 마감 (금요일 16:50 PHT 기준)"
-          : "신청 마감 (전날 16:50 PHT 기준)";
+          ? "신청 마감 (금요일 16:30 PHT 기준)"
+          : "신청 마감 (전날 16:30 PHT 기준)";
         checkbox.checked = false;
       }
     });
@@ -520,8 +520,8 @@ export default function PortalShuttlePage() {
               <ul>
                 <li>드림아카데미 패키지에는 투어 셔틀 서비스가 포함되어 있습니다.</li>
                 <li>모든 셔틀 신청은 <strong>사전 예약제</strong>로 운영됩니다.</li>
-                <li><strong>월–금 오후 4시 50분까지 신청 가능</strong>하며, <strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
-                <li>탑승 전날 16:50까지 신청해야 하며, 주말이 낀 경우 안내된 기준을 따릅니다.</li>
+                <li><strong>월–금 오후 4시 30분까지 신청 가능</strong>하며, <strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
+                <li>탑승 전날 16:30까지 신청해야 하며, 주말이 낀 경우 안내된 기준을 따릅니다.</li>
                 <li>셔틀 스케쥴은 <strong>현지 사정에 따라 변경될 수 있으며</strong>, 최신 일정은 사이트 공지를 기준으로 합니다.</li>
               </ul>
               <h3>🏠 드림하우스 / 제이파크 / 큐브나인</h3>
@@ -582,8 +582,8 @@ export default function PortalShuttlePage() {
               }}>
                 <div style={{fontSize:24, lineHeight:1}}>📋</div>
                 <div style={{flex:1, minWidth:0}}>
-                  <div style={{fontSize:14, fontWeight:700, color:"#1e3a8a", marginBottom:3, lineHeight:1.3}}>월~금 오후 4시 50분까지 신청 가능</div>
-                  <div style={{fontSize:12, color:"#475569", lineHeight:1.4}}>토·일 및 당일 신청 불가 · 탑승 전날 16:50까지</div>
+                  <div style={{fontSize:14, fontWeight:700, color:"#1e3a8a", marginBottom:3, lineHeight:1.3}}>월~금 오후 4시 30분까지 신청 가능</div>
+                  <div style={{fontSize:12, color:"#475569", lineHeight:1.4}}>토·일 및 당일 신청 불가 · 탑승 전날 16:30까지</div>
                 </div>
                 <div className="chip" style={{flexShrink:0}}>● 사전 예약제</div>
               </div>
@@ -745,8 +745,8 @@ export default function PortalShuttlePage() {
                 <ul>
                   <li>드림아카데미 패키지에는 투어 셔틀 서비스가 포함되어 있습니다.</li>
                   <li>모든 셔틀 신청은 <strong>사전 예약제</strong>로 운영됩니다.</li>
-                  <li><strong>월–금 오후 4시 50분까지 신청 가능</strong>하며, <strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
-                  <li>탑승 전날 16:50까지 신청해야 하며, 주말이 낀 경우 안내된 기준을 따릅니다.</li>
+                  <li><strong>월–금 오후 4시 30분까지 신청 가능</strong>하며, <strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
+                  <li>탑승 전날 16:30까지 신청해야 하며, 주말이 낀 경우 안내된 기준을 따릅니다.</li>
                   <li>셔틀 스케쥴은 <strong>현지 사정에 따라 변경될 수 있으며</strong>, 최신 일정은 사이트 공지를 기준으로 합니다.</li>
                 </ul>
               </div>

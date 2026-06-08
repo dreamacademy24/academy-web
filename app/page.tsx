@@ -150,6 +150,8 @@ export default function HomePage() {
     .nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .nav-cta { background: var(--blue); color: var(--white); font-size: 13.5px; font-weight: 600; padding: 9px 20px; border-radius: 4px; transition: background 160ms; white-space: nowrap; }
     .nav-cta:hover { background: var(--blue-dark); color: var(--white); }
+    .nav-center a.nav-pay { color: var(--blue); font-weight: 700; }
+    .nav-center a.nav-pay::before { content: "💳 "; }
     .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 4px; }
     .hamburger span { width: 22px; height: 2px; background: var(--text); display: block; border-radius: 2px; }
     .mob-nav { display: none; position: fixed; top: 66px; left: 0; right: 0; background: var(--white); z-index: 299; padding: 16px 24px 24px; flex-direction: column; border-top: 1px solid var(--stroke); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
@@ -406,7 +408,6 @@ export default function HomePage() {
       </div>
     </div>
     <a href="/package">올인원패키지</a>
-    <a href="/products">요금</a>
     <div className="nav-dd">
       <a href="#">숙소 <span className="nav-dd-arrow">▾</span></a>
       <div className="nav-dd-menu">
@@ -418,6 +419,7 @@ export default function HomePage() {
     <a href="/playdream">플레이드림</a>
     <a href="/notice">공지사항</a>
     <a href="/community">커뮤니티</a>
+    <a href="/products" className="nav-pay">결제</a>
   </div>
   <div className="nav-right">
     {adminInfo ? (<>
@@ -445,13 +447,13 @@ export default function HomePage() {
   <a href="/junior">주니어 커리큘럼</a>
   <a href="/kinder">킨더 커리큘럼</a>
   <a href="/package">올인원패키지</a>
-  <a href="/products">요금</a>
   <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
   <a href="/accommodation/jpark">제이파크</a>
   <a href="/accommodation/cubenine">큐브나인</a>
   <a href="/playdream">플레이드림</a>
   <a href="/notice">공지사항</a>
   <a href="/community">커뮤니티</a>
+  <a href="/products" className="nav-pay">결제</a>
   {adminInfo ? (
     <a href="/admin/hub">관리페이지 →</a>
   ) : supaUser ? (
