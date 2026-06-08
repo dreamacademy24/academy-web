@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
 import { loadDeployedSchedule, mergeWithFallback, tokenForItem, timeOfDate, KR_DOW, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
+import { toastOk, toastErr } from "@/lib/toast";
 
 export default function AfterSchoolFieldtripPage() {
   const [activeMonth, setActiveMonth] = useState("5");
@@ -249,7 +250,7 @@ export default function AfterSchoolFieldtripPage() {
 
     const checked = form.querySelectorAll('input[name="schedule"]:checked');
     if (checked.length === 0) {
-      alert("날짜를 최소 1개 이상 선택해 주세요.");
+      toastErr("날짜를 최소 1개 이상 선택해 주세요.");
       return;
     }
 
@@ -268,7 +269,7 @@ export default function AfterSchoolFieldtripPage() {
         portal_name: bookingMeta?.name || null,
         room_number: bookingMeta?.room || null,
       });
-      if (insErr) { console.error(insErr); alert("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
+      if (insErr) { console.error(insErr); toastErr("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
 
       // 2) 구글시트 백업 (best-effort — 실패해도 신청은 정상 처리)
       try {
@@ -279,11 +280,11 @@ export default function AfterSchoolFieldtripPage() {
         await fetch(FORM_ENDPOINT, { method: "POST", body: formData, mode: "no-cors" });
       } catch (e) { console.warn("구글시트 백업 실패(무시):", e); }
 
-      alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
+      toastOk("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
       form.reset();
     } catch (err) {
       console.error(err);
-      alert("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      toastErr("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }

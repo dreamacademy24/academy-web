@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isLessonDateAllowed } from "@/lib/lessonDates";
+import { toastErr } from "@/lib/toast";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -345,10 +346,10 @@ export default function PortalTutorPage() {
       if (res.ok && d.translated) {
         setNoteTranslations(prev => ({ ...prev, [key]: d.translated }));
       } else {
-        alert("번역 실패: " + (d.error || "알 수 없는 오류"));
+        toastErr("번역 실패: " + (d.error || "알 수 없는 오류"));
       }
     } catch (e) {
-      alert("번역 실패: " + (e instanceof Error ? e.message : "네트워크 오류"));
+      toastErr("번역 실패: " + (e instanceof Error ? e.message : "네트워크 오류"));
     } finally {
       setTranslatingKey("");
     }
@@ -519,7 +520,7 @@ export default function PortalTutorPage() {
   async function cancel(id: string) {
     if (!confirm("신청을 취소하시겠습니까?")) return;
     const res = await fetch(`/api/portal/tutor?id=${id}`, { method: "DELETE" });
-    if (!res.ok) { const r = await res.json(); alert(r.error || "취소 실패"); return; }
+    if (!res.ok) { const r = await res.json(); toastErr(r.error || "취소 실패"); return; }
     reload();
   }
 
@@ -592,7 +593,7 @@ export default function PortalTutorPage() {
     setCancelReqSaving(false);
     if (!res.ok) {
       const r = await res.json().catch(() => ({}));
-      alert("취소 요청 실패: " + (r.error || ""));
+      toastErr("취소 요청 실패: " + (r.error || ""));
       return;
     }
     setCancelReqId("");
@@ -871,7 +872,7 @@ export default function PortalTutorPage() {
               const v = e.target.value;
               setForm({ ...form, start_date: v });
               if (v && new Date(v) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)) {
-                window.alert("⚠️ 수업은 최소 2주 전 사전 신청이 필요합니다.\n선택하신 날짜는 신청이 불가할 수 있습니다.");
+                toastErr("수업은 최소 2주 전 사전 신청이 필요합니다.\n선택하신 날짜는 신청이 불가할 수 있습니다.");
               }
             }} />
           {form.start_date && new Date(form.start_date) < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) && (
@@ -1582,10 +1583,10 @@ export default function PortalTutorPage() {
                 onClick={() => {
                   const el = document.getElementById("tutor-time-input") as HTMLInputElement | null;
                   const v = (el?.value || "").trim();
-                  if (!/^\d{2}:\d{2}$/.test(v)) { alert("시간 형식이 올바르지 않습니다 (예: 14:30)"); return; }
+                  if (!/^\d{2}:\d{2}$/.test(v)) { toastErr("시간 형식이 올바르지 않습니다 (예: 14:30)"); return; }
                   const [hh, mm] = v.split(":").map(Number);
-                  if (hh < 10 || hh > 20 || (hh === 20 && mm > 0)) { alert("시작 시간은 10:00 ~ 20:00 범위 내여야 합니다."); return; }
-                  if (peak && hh < 17) { alert("성수기에는 17:00 이후 시작만 가능합니다."); return; }
+                  if (hh < 10 || hh > 20 || (hh === 20 && mm > 0)) { toastErr("시작 시간은 10:00 ~ 20:00 범위 내여야 합니다."); return; }
+                  if (peak && hh < 17) { toastErr("성수기에는 17:00 이후 시작만 가능합니다."); return; }
                   setBlocks(prev => prev.map((x, i) => i === timeBlockIdx ? { ...x, time: formatTimeRange(v, x.sessions_per_day) } : x));
                   setTimePickerOpen(false);
                 }}

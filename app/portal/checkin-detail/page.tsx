@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolvePortalSession } from "@/lib/portalSession";
+import { toastOk, toastErr } from "@/lib/toast";
 
 interface FormState {
   q1: string; q2: string; q6: string;
@@ -94,14 +95,14 @@ export default function PortalCheckinDetailPage() {
   }
 
   async function savePickup(type: "arrival" | "departure" | "extra" | "extra_pickup" | "extra_drop") {
-    if (!bookingId) { alert("예약 정보를 불러오는 중입니다."); return; }
+    if (!bookingId) { toastErr("예약 정보를 불러오는 중입니다."); return; }
     const src =
       type === "arrival" ? arrPickup :
       type === "departure" ? depPickup :
       type === "extra_pickup" ? extraPickupForm :
       type === "extra_drop" ? extraDropForm :
       extraForm;
-    if (!src.request_date) { alert("날짜를 입력해 주세요."); return; }
+    if (!src.request_date) { toastErr("날짜를 입력해 주세요."); return; }
     const setSaving =
       type === "arrival" ? setSavingArr :
       type === "departure" ? setSavingDep :
@@ -125,7 +126,7 @@ export default function PortalCheckinDetailPage() {
         }),
       });
       const j = await res.json();
-      if (!res.ok) { alert("저장 실패: " + (j.error || "")); setSaving(false); return; }
+      if (!res.ok) { toastErr("저장 실패: " + (j.error || "")); setSaving(false); return; }
       await loadPickups(bookingId);
       if (type === "extra") {
         setShowExtraForm(false);
@@ -137,7 +138,7 @@ export default function PortalCheckinDetailPage() {
         setShowExtraDropForm(false);
         setExtraDropForm({ request_type: "extra_drop", request_date: "", request_time: "", location: "드림하우스", destination: "", num_people: 1, flight_info: "", notes: "", status: "pending" });
       }
-      alert("✅ 신청이 저장되었습니다.");
+      toastOk("신청이 저장되었습니다.");
     } finally { setSaving(false); }
   }
 
@@ -232,7 +233,7 @@ export default function PortalCheckinDetailPage() {
   }
 
   async function submit() {
-    if (!form.q1.trim()) { alert('1번 문항(예약자 성함과 입실 일자)을 입력해주세요.'); return; }
+    if (!form.q1.trim()) { toastErr('1번 문항(예약자 성함과 입실 일자)을 입력해주세요.'); return; }
     setSubmitting(true);
     const res = await fetch('/api/checkin-portal', {
       method: 'POST',
@@ -249,7 +250,7 @@ export default function PortalCheckinDetailPage() {
       }),
     });
     setSubmitting(false);
-    if (!res.ok) { const j = await res.json().catch(()=>({})); alert('제출 실패: ' + (j.error||'')); return; }
+    if (!res.ok) { const j = await res.json().catch(()=>({})); toastErr('제출 실패: ' + (j.error||'')); return; }
     setDone(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -531,7 +532,7 @@ export default function PortalCheckinDetailPage() {
               onClick={()=>{
                 // 날짜는 사용자 입력 우선, 비어있으면 항공편 OUT 날짜 자동 채움
                 const outDate = depPickup.request_date || flightForm.flight_out_date;
-                if (!outDate) { alert("드랍 날짜를 입력해주세요."); return; }
+                if (!outDate) { toastErr("드랍 날짜를 입력해주세요."); return; }
                 setDepPickup(p=>({...p,request_date:outDate,location:p.location||"드림하우스",destination:p.destination||"막탄공항"}));
                 // 다음 마이크로태스크에서 save 호출 (state 반영 후)
                 setTimeout(()=>savePickup("departure"), 0);

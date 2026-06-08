@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { toastErr } from "@/lib/toast";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -143,7 +144,7 @@ export default function MyApplicationsPage() {
     setCancelSaving(false);
     if (!res.ok) {
       const r = await res.json().catch(() => ({}));
-      alert("취소 요청 실패: " + (r.error || ""));
+      toastErr("취소 요청 실패: " + (r.error || ""));
       return;
     }
     closeCancel();
@@ -157,7 +158,7 @@ export default function MyApplicationsPage() {
     setPplSaving(true);
     const { error } = await supabase.from("shuttle_applications").update({ people_count: pplEdit.value }).eq("id", pplEdit.id);
     setPplSaving(false);
-    if (error) { alert("인원 수정 실패: " + error.message); return; }
+    if (error) { toastErr("인원 수정 실패: " + error.message); return; }
     setPplEdit(null);
     if (bookingId) load(bookingId);
     setToast("인원이 수정되었습니다.");
@@ -201,7 +202,7 @@ export default function MyApplicationsPage() {
     setEditSaving(false);
     if (!res.ok) {
       const r = await res.json().catch(() => ({}));
-      alert("수정 실패: " + (r.error || ""));
+      toastErr("수정 실패: " + (r.error || ""));
       return;
     }
     setEditId("");

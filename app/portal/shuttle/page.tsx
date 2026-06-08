@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
+import { toastOk, toastErr } from "@/lib/toast";
 
 // ── 셔틀 자동 생성 헬퍼 (public/shuttle 와 동일) ────────────────────
 const SHUTTLE_HOLIDAYS = new Set([
@@ -263,7 +264,7 @@ export default function PortalShuttlePage() {
     if (!form.reportValidity()) return;
 
     if (selectedTours.length === 0) {
-      alert("투어를 최소 1개 이상 선택해 주세요.");
+      toastErr("투어를 최소 1개 이상 선택해 주세요.");
       return;
     }
 
@@ -314,12 +315,12 @@ export default function PortalShuttlePage() {
         } catch { /* 알림 실패 무시 */ }
       }
 
-      alert("신청 완료! 예약현황에서 확인하세요.");
+      toastOk("신청 완료! 예약현황에서 확인하세요.");
       if (formRef.current) formRef.current.reset();
       setSelectedTours([]);
     } catch (err) {
       console.error(err);
-      alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      toastErr("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }

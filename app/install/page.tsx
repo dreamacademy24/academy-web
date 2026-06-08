@@ -29,6 +29,7 @@ function InstallInner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installed, setInstalled] = useState(false);
   const [tab, setTab] = useState<Tab>("android");
+  const [inApp, setInApp] = useState<"" | "android" | "ios">(""); // 카톡 등 인앱 브라우저 감지
 
   // ── 앱별 메타/매니페스트 주입 (iOS Safari는 manifest name을 무시하고 title·apple 메타를 따름) ──
   useEffect(() => {
@@ -92,6 +93,10 @@ function InstallInner() {
     else if (isAndroid) setTab("android");
     else setTab("pc");
 
+    // 인앱 브라우저(카톡/인스타/페북/라인/네이버/다음) 감지 — PWA 설치 불가
+    const isInApp = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|DaumApps|; wv\)/i.test(ua);
+    if (isInApp) setInApp(isIOS ? "ios" : "android");
+
     if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone) {
       setInstalled(true);
     }
@@ -111,6 +116,19 @@ function InstallInner() {
       window.removeEventListener("appinstalled", installedHandler);
     };
   }, []);
+
+  function openExternal() {
+    const ua = navigator.userAgent;
+    const url = window.location.href;
+    if (/KAKAOTALK/i.test(ua)) {
+      // 카카오톡 → 기본(외부) 브라우저로 열기
+      window.location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(url);
+      return;
+    }
+    // 기타 안드로이드 인앱 → 크롬으로 열기 (Intent)
+    const noScheme = url.replace(/^https?:\/\//, "");
+    window.location.href = `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`;
+  }
 
   async function handleInstall() {
     if (!deferredPrompt) return;
@@ -145,6 +163,13 @@ function InstallInner() {
         .install-btn:disabled{background:#cbd5e1;cursor:not-allowed;box-shadow:none;transform:none;}
         .installed-badge{padding:14px;background:#d1fae5;color:#065f46;border-radius:12px;font-weight:600;font-size:14px;}
         .no-auto{padding:14px;background:#f1f5f9;color:#64748b;border-radius:12px;font-size:13px;line-height:1.6;}
+        .inapp-card{background:#fff;border:2px solid #f59e0b;border-radius:18px;padding:20px 18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(245,158,11,0.18);text-align:center;}
+        .inapp-title{font-size:16px;font-weight:800;color:#b45309;margin-bottom:8px;}
+        .inapp-desc{font-size:13.5px;color:#475569;line-height:1.65;margin-bottom:14px;}
+        .inapp-btn{width:100%;padding:15px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(22,163,74,0.3);}
+        .inapp-btn:active{transform:translateY(1px);}
+        .inapp-url{margin-top:12px;font-size:12px;color:#94a3b8;line-height:1.7;}
+        .inapp-url b{color:#475569;font-size:12.5px;}
         .section-title{font-size:15px;font-weight:700;margin-bottom:12px;color:#1a1a2e;}
         .tabs{display:flex;gap:6px;margin-bottom:18px;background:#f1f5f9;padding:4px;border-radius:10px;}
         .tab{flex:1;padding:10px 4px;border:none;background:transparent;color:#64748b;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
@@ -174,6 +199,21 @@ function InstallInner() {
           <p className="subtitle">{cfg.name} 앱을 홈 화면에 추가하고 앱처럼 사용하세요</p>
           <div className="app-badge">설치 후 시작 화면: {cfg.desc}</div>
         </div>
+
+        {inApp && (
+          <div className="inapp-card">
+            <div className="inapp-title">⚠️ 지금은 {inApp === "ios" ? "인앱" : "카카오톡/인앱"} 브라우저예요</div>
+            <p className="inapp-desc">
+              {inApp === "ios"
+                ? "앱 설치는 Safari에서만 됩니다. 우측 하단 메뉴 → “Safari로 열기” 를 눌러주세요."
+                : "앱 설치는 크롬에서만 됩니다. 아래 버튼으로 크롬에서 다시 열어주세요."}
+            </p>
+            {inApp === "android" && (
+              <button className="inapp-btn" onClick={openExternal}>🌐 크롬으로 열기</button>
+            )}
+            <div className="inapp-url">또는 주소 복사 → 크롬에 붙여넣기<br /><b>dreamacademyph.com/install?app=guest</b></div>
+          </div>
+        )}
 
         <div className="card auto-card">
           <h2>📲 빠른 설치</h2>
