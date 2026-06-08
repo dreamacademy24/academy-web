@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
+import { loadDeployedSchedule, mergeWithFallback, tokenForItem, timeOfDate, KR_DOW, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 
 export default function AfterSchoolFieldtripPage() {
   const [activeMonth, setActiveMonth] = useState("5");
@@ -27,6 +28,37 @@ export default function AfterSchoolFieldtripPage() {
   const [session, setSession] = useState<{ booking_id: string } | null>(null);
   const [children, setChildren] = useState<string[]>([]);
   const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; name: string; room: string } | null>(null);
+  const [deployItems, setDeployItems] = useState<DeployedScheduleItem[]>([]);
+
+  // 배포된 일정 로드 → 하드코딩 5·6월 베이스라인과 병합 (배포가 우선, 월 추가 시 자동 노출)
+  useEffect(() => {
+    loadDeployedSchedule(supabase)
+      .then((d) => setDeployItems(mergeWithFallback(d)))
+      .catch(() => setDeployItems(mergeWithFallback([])));
+  }, []);
+
+  // 배포 일정 → 월 → 주차(월~일) 구조 (하드코딩 대체)
+  const monthData = useMemo(() => {
+    const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const mondayOf = (base: Date) => { const d = new Date(base); const w = d.getDay(); d.setDate(d.getDate() + (w === 0 ? -6 : 1 - w)); d.setHours(0, 0, 0, 0); return d; };
+    const months = new Map<number, Map<string, DeployedScheduleItem[]>>();
+    for (const it of [...deployItems].sort((a, b) => a.date.localeCompare(b.date))) {
+      const dt = new Date(it.date + "T00:00:00");
+      const m = dt.getMonth() + 1;
+      const mk = ymd(mondayOf(dt));
+      if (!months.has(m)) months.set(m, new Map());
+      const wk = months.get(m)!;
+      if (!wk.has(mk)) wk.set(mk, []);
+      wk.get(mk)!.push(it);
+    }
+    return Array.from(months.entries()).sort((a, b) => a[0] - b[0]).map(([month, wkMap]) => ({
+      month,
+      weeks: Array.from(wkMap.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([mk, its], i) => {
+        const mon = new Date(mk + "T00:00:00"); const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+        return { key: `${month}-${i + 1}`, idx: i + 1, label: `${mon.getMonth() + 1}/${mon.getDate()} – ${sun.getMonth() + 1}/${sun.getDate()}`, items: its };
+      }),
+    }));
+  }, [deployItems]);
 
   // 포털 세션 체크 (shuttle 폼과 동일 패턴)
   useEffect(() => {
@@ -57,8 +89,8 @@ export default function AfterSchoolFieldtripPage() {
       .catch(() => {});
   }, [session]);
 
-  // 예약 기간 내 월만 노출 (shuttle 폼과 동일 컨셉, 스케줄은 2026년 5·6월)
-  const ALL_MONTHS = ["5", "6"];
+  // 예약 기간 내 월만 노출 (배포된 월에서 자동 도출 — 하드코딩 제거)
+  const ALL_MONTHS = monthData.map((md) => String(md.month));
   const visibleMonths = (() => {
     if (!bookingMeta?.checkin || !bookingMeta?.checkout) return ALL_MONTHS;
     const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
@@ -93,7 +125,7 @@ export default function AfterSchoolFieldtripPage() {
     disableExpiredSchedules();
     restrictScheduleRange();
     recomputeSelected();
-  }, [activeMonth, bookingMeta]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeMonth, bookingMeta, deployItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getPHTNow() {
     const now = new Date();
@@ -524,251 +556,52 @@ export default function AfterSchoolFieldtripPage() {
                   <p className="label-sub">참여하실 날짜를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 토요일 필드트립입니다.</p>
 
                   <div className="month-toggle">
-                    {visibleMonths.includes("5") && (
+                    {monthData.filter((md) => visibleMonths.includes(String(md.month))).map((md) => (
                       <button
+                        key={md.month}
                         type="button"
-                        data-month="5"
-                        data-active={activeMonth === "5" ? "true" : "false"}
-                        onClick={() => setActiveMonth("5")}
+                        data-month={md.month}
+                        data-active={activeMonth === String(md.month) ? "true" : "false"}
+                        onClick={() => setActiveMonth(String(md.month))}
                       >
-                        5월
+                        {md.month}월
                       </button>
-                    )}
-                    {visibleMonths.includes("6") && (
-                      <button
-                        type="button"
-                        data-month="6"
-                        data-active={activeMonth === "6" ? "true" : "false"}
-                        onClick={() => setActiveMonth("6")}
-                      >
-                        6월
-                      </button>
-                    )}
+                    ))}
                   </div>
 
                   <div className="month-schedules">
-
-                    {/* May */}
-                    <div className="month-panel" data-month-panel="5" data-visible={activeMonth === "5" ? "true" : "false"}>
-
-                      {/* May Week 1 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["5-1"] ? "true" : "false"} onClick={() => toggleWeek("5-1")}>
-                          <span className="week-acc-title">1주차 <em>5/4 – 5/9</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["5-1"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-4-origami" />
-                              <div className="schedule-label"><span className="schedule-main">5/4 (월) · Origami Activity &amp; Paper Airplane</span><span className="schedule-sub">4:20~5:10pm · Academy · 종이접기 및 비행기 날리기 대회</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-6-snack" />
-                              <div className="schedule-label"><span className="schedule-main">5/6 (수) · Snack Grabbing Game + Obstacle Course</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 간식 잡기 및 장애물 코스 게임</span></div>
-                            </label>
-                            <label className="schedule-item fieldtrip">
-                              <input type="checkbox" name="schedule" value="5-9-nimobrew" />
-                              <div className="schedule-label"><span className="schedule-main">5/9 (토) · Nimo Brew <span className="fieldtrip-badge">필드트립</span></span><span className="schedule-sub">10:30~4:30pm · 집 앞 픽드랍 · 파충류 체험 (픽업 10:15~20 / 드랍 4:20~25)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* May Week 2 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["5-2"] ? "true" : "false"} onClick={() => toggleWeek("5-2")}>
-                          <span className="week-acc-title">2주차 <em>5/10 – 5/16</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["5-2"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-11-ecoplanting" />
-                              <div className="schedule-label"><span className="schedule-main">5/11 (월) · Eco Planting &amp; Herb</span><span className="schedule-sub">4:20~5:10pm · Academy · 친환경 식물 심기 및 허브 심기</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-13-olympics" />
-                              <div className="schedule-label"><span className="schedule-main">5/13 (수) · Mini Olympics</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 미니 올림픽</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* May Week 3 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["5-3"] ? "true" : "false"} onClick={() => toggleWeek("5-3")}>
-                          <span className="week-acc-title">3주차 <em>5/17 – 5/23</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["5-3"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-18-pinwheel" />
-                              <div className="schedule-label"><span className="schedule-main">5/18 (월) · Pinwheel Activity</span><span className="schedule-sub">4:20~5:10pm · Academy · 바람개비 게임</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-20-naturewalk" />
-                              <div className="schedule-label"><span className="schedule-main">5/20 (수) · Nature Walk &amp; Jackfruit Maze</span><span className="schedule-sub">4:30~5:20pm · Dream House Office (B17 L5) · 베이스워터 산책 및 열대과일 테마 미로</span></div>
-                            </label>
-                            <label className="schedule-item fieldtrip">
-                              <input type="checkbox" name="schedule" value="5-23-smskating" />
-                              <div className="schedule-label"><span className="schedule-main">5/23 (토) · SM Seaside — SM Skating <span className="fieldtrip-badge">필드트립</span></span><span className="schedule-sub">10:30~4:30pm · 집 앞 픽드랍 · 아이스 스케이팅 (픽업 10:15~20 / 드랍 4:20~25)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* May Week 4 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["5-4"] ? "true" : "false"} onClick={() => toggleWeek("5-4")}>
-                          <span className="week-acc-title">4주차 <em>5/24 – 5/30</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["5-4"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-25-watergun" />
-                              <div className="schedule-label"><span className="schedule-main">5/25 (월) · Water Gun Fun</span><span className="schedule-sub">4:20~5:10pm · Academy · 물총놀이 (젖는 옷·신발 착용, 수건 지참, 개인 물총 불가)</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="5-27-hulahoop" />
-                              <div className="schedule-label"><span className="schedule-main">5/27 (수) · Hula Hoop &amp; Jump Rope</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 훌라후프 및 줄넘기 활동</span></div>
-                            </label>
-                            <div style={{padding:14,borderRadius:10,background:'#fef2f2',border:'1px solid #fecaca',opacity:0.85}}>
-                              <div style={{fontWeight:700,color:'#dc2626',fontSize:13}}>🚫 5/29 (금) · 휴무</div>
-                              <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>수업·헬퍼·셔틀 미운영 · 식사는 정상 제공</div>
+                    {monthData.length === 0 && (
+                      <p className="label-sub" style={{ padding: "18px 4px" }}>아직 공개된 일정이 없습니다. 곧 업데이트됩니다.</p>
+                    )}
+                    {monthData.map((md) => (
+                      <div key={md.month} className="month-panel" data-month-panel={md.month} data-visible={activeMonth === String(md.month) ? "true" : "false"}>
+                        {md.weeks.map((wk) => (
+                          <div key={wk.key} className="week-accordion">
+                            <button type="button" className="week-accordion-btn" data-open={(openWeeks[wk.key] ?? wk.idx === 1) ? "true" : "false"} onClick={() => toggleWeek(wk.key)}>
+                              <span className="week-acc-title">{wk.idx}주차 <em>{wk.label}</em></span>
+                              <span className="week-acc-arrow">▾</span>
+                            </button>
+                            <div className="week-accordion-body" data-open={(openWeeks[wk.key] ?? wk.idx === 1) ? "true" : "false"}>
+                              <div className="schedule-grid">
+                                {wk.items.map((it) => {
+                                  const dt = new Date(it.date + "T00:00:00");
+                                  const isFt = it.type === "fieldtrip";
+                                  return (
+                                    <label key={it.id} className={`schedule-item${isFt ? " fieldtrip" : ""}`}>
+                                      <input type="checkbox" name="schedule" value={tokenForItem(it)} />
+                                      <div className="schedule-label">
+                                        <span className="schedule-main">{dt.getMonth() + 1}/{dt.getDate()} ({KR_DOW[dt.getDay()]}) · {it.title}{isFt && <span className="fieldtrip-badge">필드트립</span>}</span>
+                                        <span className="schedule-sub">{timeOfDate(it.date, it.type)}{it.description ? ` · ${it.description}` : ""}</span>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
-
-                      {/* May Week 5 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["5-5"] ? "true" : "false"} onClick={() => toggleWeek("5-5")}>
-                          <span className="week-acc-title">5주차 <em>5/31</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["5-5"] ? "true" : "false"}>
-                          <p className="label-sub" style={{padding:'8px 4px'}}>5/31 (일) — 수업 없음 (주말)</p>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    {/* June */}
-                    <div className="month-panel" data-month-panel="6" data-visible={activeMonth === "6" ? "true" : "false"}>
-
-                      {/* June Week 1 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["6-1"] ? "true" : "false"} onClick={() => toggleWeek("6-1")}>
-                          <span className="week-acc-title">1주차 <em>6/1 – 6/7</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["6-1"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-1-flower" />
-                              <div className="schedule-label"><span className="schedule-main">6/1 (월) · Flower Arrangement</span><span className="schedule-sub">4:20~5:10pm · Academy · 꽃꽂이 활동 수업</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-3-grossmotor" />
-                              <div className="schedule-label"><span className="schedule-main">6/3 (수) · Gross Motor</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 다양한 신체 활동 (체육 중심 수업)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* June Week 2 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["6-2"] ? "true" : "false"} onClick={() => toggleWeek("6-2")}>
-                          <span className="week-acc-title">2주차 <em>6/8 – 6/14</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["6-2"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-8-baseball" />
-                              <div className="schedule-label"><span className="schedule-main">6/8 (월) · Hand Baseball</span><span className="schedule-sub">4:20~5:10pm · Academy · 손 야구 게임</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-10-trafficlight" />
-                              <div className="schedule-label"><span className="schedule-main">6/10 (수) · Red Light Green Light &amp; Team Treasure Hunt</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 신호등 게임 및 보물 찾기</span></div>
-                            </label>
-                            <div style={{padding:14,borderRadius:10,background:'#fef2f2',border:'1px solid #fecaca',opacity:0.85}}>
-                              <div style={{fontWeight:700,color:'#dc2626',fontSize:13}}>🚫 6/12 (금) · 휴무</div>
-                              <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>수업·헬퍼·셔틀 미운영 · 식사는 정상 제공</div>
-                            </div>
-                            <label className="schedule-item fieldtrip">
-                              <input type="checkbox" name="schedule" value="6-13-shrine" />
-                              <div className="schedule-label"><span className="schedule-main">6/13 (토) · Shrine Tour <span className="fieldtrip-badge">필드트립</span></span><span className="schedule-sub">10:30~4:30pm · 집 앞 픽드랍 · 막탄 대표 명소 쉬라인 투어 (픽업 10:15~20 / 드랍 4:20~25)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* June Week 3 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["6-3"] ? "true" : "false"} onClick={() => toggleWeek("6-3")}>
-                          <span className="week-acc-title">3주차 <em>6/15 – 6/21</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["6-3"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-15-watergun" />
-                              <div className="schedule-label"><span className="schedule-main">6/15 (월) · Water Gun Fun</span><span className="schedule-sub">4:20~5:10pm · Academy · 물총놀이 (젖는 옷·신발 착용, 수건 지참, 개인 물총 불가)</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-17-olympics" />
-                              <div className="schedule-label"><span className="schedule-main">6/17 (수) · Mini Olympics</span><span className="schedule-sub">4:30~5:20pm · Club House in Bayswater · 미니 올림픽</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* June Week 4 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["6-4"] ? "true" : "false"} onClick={() => toggleWeek("6-4")}>
-                          <span className="week-acc-title">4주차 <em>6/22 – 6/28</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["6-4"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-22-natureart" />
-                              <div className="schedule-label"><span className="schedule-main">6/22 (월) · Art with Leaves, Grass &amp; Flowers</span><span className="schedule-sub">4:20~5:10pm · Academy · 나뭇잎·풀·꽃을 이용한 미술 활동</span></div>
-                            </label>
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-24-naturewalk" />
-                              <div className="schedule-label"><span className="schedule-main">6/24 (수) · Nature Walk &amp; Jackfruit Maze</span><span className="schedule-sub">4:30~5:20pm · Dream House Office (B17 L5) · 베이스워터 산책 및 열대과일 테마 미로</span></div>
-                            </label>
-                            <label className="schedule-item fieldtrip">
-                              <input type="checkbox" name="schedule" value="6-27-magellan" />
-                              <div className="schedule-label"><span className="schedule-main">6/27 (토) · Magellan&apos;s Cross <span className="fieldtrip-badge">필드트립</span></span><span className="schedule-sub">10:30~4:30pm · 집 앞 픽드랍 · 세부의 역사 마젤란 십자가 (픽업 10:15~20 / 드랍 4:20~25)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* June Week 5 */}
-                      <div className="week-accordion">
-                        <button type="button" className="week-accordion-btn" data-open={openWeeks["6-5"] ? "true" : "false"} onClick={() => toggleWeek("6-5")}>
-                          <span className="week-acc-title">5주차 <em>6/29 – 6/30</em></span>
-                          <span className="week-acc-arrow">▾</span>
-                        </button>
-                        <div className="week-accordion-body" data-open={openWeeks["6-5"] ? "true" : "false"}>
-                          <div className="schedule-grid">
-                            <label className="schedule-item">
-                              <input type="checkbox" name="schedule" value="6-29-watergun" />
-                              <div className="schedule-label"><span className="schedule-main">6/29 (월) · Water Gun Fun</span><span className="schedule-sub">4:20~5:10pm · Academy · 물총놀이 (젖는 옷·신발 착용, 수건 지참, 개인 물총 불가)</span></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-
+                    ))}
                   </div>
                   <p className="month-hint">※ 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.</p>
                 </div>

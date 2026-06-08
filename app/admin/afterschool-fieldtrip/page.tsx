@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
-import { FT_PROGRAMS, KR_DOW, parseToken, programNameOf } from "@/lib/fieldtripPrograms";
+import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,6 +62,7 @@ export default function AfterschoolFieldtripAdminPage() {
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
   const [bookerNames, setBookerNames] = useState<Record<string, string>>({}); // booking_id → 예약자 실명
+  const [scheduleByMd, setScheduleByMd] = useState<Record<string, DeployedScheduleItem>>({}); // 배포 일정(월-일 → 항목)
   const [listView, setListView] = useState<"month" | "week">("month");
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOfA(new Date()));
   const shiftWeek = (delta: number) => { const d = new Date(weekStart); d.setDate(d.getDate() + delta * 7); setWeekStart(mondayOfA(d)); };
@@ -73,6 +74,8 @@ export default function AfterschoolFieldtripAdminPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    // 배포된 일정(프로그램명) 로드 — 신청 토큰을 날짜로 해석
+    try { setScheduleByMd(buildScheduleByMd(await loadDeployedSchedule(supabase))); } catch { /* noop */ }
     const { data, error } = await supabase
       .from("fieldtrip_applications")
       .select("*")
@@ -120,15 +123,14 @@ export default function AfterschoolFieldtripAdminPage() {
     const status = a.status || "pending";
     let pushedAny = false;
     for (const token of tokens) {
-      const p = parseToken(token);
-      if (!p) continue;
-      const meta = FT_PROGRAMS[token];
+      const r = resolveProgram(token, scheduleByMd);
+      if (!r) continue;
       flat.push({
         appId: a.id, childName, reserver, room, request, status, token,
-        month: p.month, day: p.day,
-        programName: programNameOf(token, p.key),
-        isFieldtrip: meta ? meta.isFieldtrip : false,
-        time: meta ? meta.time : "",
+        month: r.month, day: r.day,
+        programName: r.name,
+        isFieldtrip: r.isFieldtrip,
+        time: r.time,
       });
       pushedAny = true;
     }
