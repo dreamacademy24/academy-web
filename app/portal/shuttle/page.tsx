@@ -192,11 +192,8 @@ export default function PortalShuttlePage() {
 
   // Disable expired schedules
   useEffect(() => {
-    function getPHTNow() {
-      const now = new Date();
-      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-      return new Date(utc + 8 * 3600000);
-    }
+    // 현재 세부(필리핀) 시각 — 기기 시간대와 무관하게 항상 Asia/Manila 기준
+    function getPHTNow() { return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })); }
 
     const pht = getPHTNow();
 
@@ -208,32 +205,27 @@ export default function PortalShuttlePage() {
       if (parts.length < 2) return;
       const month = parseInt(parts[0], 10);
       const day = parseInt(parts[1], 10);
-      const year = pht.getFullYear();
-      const scheduleDate = new Date(year, month - 1, day);
+      const scheduleDate = new Date(pht.getFullYear(), month - 1, day);
       const scheduleDow = scheduleDate.getDay();
 
-      let isExpired = false;
-
-      if (scheduleDow === 1) {
-        const deadline = new Date(scheduleDate);
-        deadline.setDate(deadline.getDate() - 3);
-        deadline.setHours(16, 30, 0, 0);
-        isExpired = pht >= deadline;
-      } else {
-        const deadline = new Date(scheduleDate);
-        deadline.setDate(deadline.getDate() - 1);
-        deadline.setHours(16, 30, 0, 0);
-        isExpired = pht >= deadline;
-      }
+      // 마감 = 탑승 전날 세부 16:30. 단 토·일·월은 직전 금요일 16:30로 통합 (주말 인력 미운영)
+      let backDays = 1;
+      if (scheduleDow === 1) backDays = 3;        // 월 → 금
+      else if (scheduleDow === 0) backDays = 2;   // 일 → 금
+      else if (scheduleDow === 6) backDays = 1;   // 토 → 금
+      const deadline = new Date(scheduleDate);
+      deadline.setDate(deadline.getDate() - backDays);
+      deadline.setHours(16, 30, 0, 0);
+      const isExpired = pht >= deadline;
 
       if (isExpired) {
         checkbox.disabled = true;
         (item as HTMLElement).style.opacity = "0.38";
         (item as HTMLElement).style.cursor = "not-allowed";
         (item as HTMLElement).style.transform = "none";
-        (item as HTMLElement).title = scheduleDow === 1
-          ? "신청 마감 (금요일 16:30 PHT 기준)"
-          : "신청 마감 (전날 16:30 PHT 기준)";
+        (item as HTMLElement).title = (scheduleDow === 1 || scheduleDow === 0 || scheduleDow === 6)
+          ? "신청 마감 (직전 금요일 세부시간 16:30 기준)"
+          : "신청 마감 (전날 세부시간 16:30 기준)";
         checkbox.checked = false;
       }
     });
