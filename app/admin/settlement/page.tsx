@@ -53,6 +53,14 @@ export default function SettlementPage() {
   }, []);
   useEffect(() => { if (authed) loadBookings(); }, [authed, loadBookings]);
 
+  // 전체 승인 대기(튜터 납부) — 예약 선택과 무관하게 표시
+  const [globalPending, setGlobalPending] = useState<Item[]>([]);
+  const loadGlobalPending = useCallback(async () => {
+    const { data } = await supabase.from("settlement_items").select("*").eq("status", "pending").order("item_date", { ascending: true });
+    setGlobalPending((data || []) as Item[]);
+  }, []);
+  useEffect(() => { if (authed) loadGlobalPending(); }, [authed, loadGlobalPending]);
+
   const loadItems = useCallback(async (bid: string) => {
     setLoading(true);
     const { data } = await supabase.from("settlement_items").select("*").eq("booking_id", bid).order("item_date", { ascending: true });
@@ -96,6 +104,14 @@ export default function SettlementPage() {
     if (error) { toastErr("승인 실패: " + error.message); return; }
     toastOk("승인(배포)됐어요");
     if (sel) loadItems(sel.id);
+    loadGlobalPending();
+  }
+  async function rejectItem(id: string) {
+    if (!confirm("이 납부 기록을 삭제할까요? (튜터가 잘못 기록한 경우)")) return;
+    const { error } = await supabase.from("settlement_items").delete().eq("id", id);
+    if (error) { toastErr("삭제 실패: " + error.message); return; }
+    if (sel) loadItems(sel.id);
+    loadGlobalPending();
   }
   async function delItem(id: string) {
     if (!confirm("이 항목을 삭제할까요?")) return;
@@ -114,6 +130,25 @@ export default function SettlementPage() {
         <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>🧾 정산 관리</h1>
       </div>
       <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>예약을 선택해 보증금·튜터비·추가비용·납부를 기록하고, 튜터 납부 기록을 승인(배포)합니다.</p>
+
+      {globalPending.length > 0 && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 16, marginBottom: 18 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#b45309", marginBottom: 10 }}>⏳ 튜터 납부 승인 대기 — 전체 {globalPending.length}건</div>
+          {globalPending.map(it => {
+            const bk = bookings.find(b => b.id === it.booking_id);
+            return (
+              <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: "1px solid #fef3c7" }}>
+                <span style={{ fontSize: 12, color: "#94a3b8", width: 70, flexShrink: 0 }}>{it.item_date}</span>
+                <button onClick={() => { if (bk) { setSel(bk); window.scrollTo({ top: 0 }); } }} style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8", background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0, width: 110, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bk?.booker_name || "(미매칭)"}</button>
+                <span style={{ flex: 1, fontSize: 13, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.label} <span style={{ color: "#94a3b8", fontSize: 11 }}>· {it.recorded_by}</span></span>
+                <b style={{ fontSize: 13, flexShrink: 0 }}>{won(Number(it.amount))}</b>
+                <button onClick={() => approveItem(it.id)} style={{ border: "none", background: "#16a34a", color: "#fff", borderRadius: 6, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>승인</button>
+                <button onClick={() => rejectItem(it.id)} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 16, flexShrink: 0 }}>×</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 18, alignItems: "start" }}>
         {/* 예약 선택 */}

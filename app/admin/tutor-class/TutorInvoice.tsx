@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
-import { toastErr } from "@/lib/toast";
+import { toastErr, toastOk } from "@/lib/toast";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
@@ -21,6 +21,7 @@ interface Lesson {
   class_focus_arr: string[] | null;
   class_style: string | null;
   time_overrides?: Record<string, string> | null;
+  booking_id?: string | null;
 }
 interface SessionRow {
   id: string; lesson_id: string;
@@ -118,6 +119,12 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  // 납부 받음 기록 (튜터 → 승인 대기 → 한국직원 승인)
+  const [payOpen, setPayOpen] = useState(false);
+  const [payAmt, setPayAmt] = useState("");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [payMemo, setPayMemo] = useState("");
+  const [paySaving, setPaySaving] = useState(false);
 
   const loadLessons = useCallback(async () => {
     setLoading(true);
@@ -137,11 +144,18 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     const lessonList = (lRes.data || []) as Lesson[];
     const reqList = (rRes.data || []) as any[];
 
+    // request_id → booking_id 매핑 (납부 기록을 예약에 연결)
+    const reqBookingMap = new Map<string, string | null>();
+    for (const r of reqList) reqBookingMap.set(r.id, r.booking_id || null);
     // lesson과 이미 연결된 request_id 추출 (admin_memo의 "request_id: XXX" 패턴)
     const linkedReqIds = new Set<string>();
     for (const l of lessonList) {
       const m = /request_id:\s*([a-f0-9-]+)/i.exec((l as any).admin_memo || "");
-      if (m) linkedReqIds.add(m[1]);
+      if (m) {
+        linkedReqIds.add(m[1]);
+        // 실제 lesson에 booking_id 주입 (직접 컬럼 우선, 없으면 request 경유)
+        (l as any).booking_id = (l as any).booking_id || reqBookingMap.get(m[1]) || null;
+      }
     }
     // 연결 안 된 confirmed 신청을 합성 Lesson으로 변환
     const synthetic: Lesson[] = reqList
@@ -166,6 +180,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         total_sessions: r.total_sessions || null,
         total_amount: r.total_amount || null,
         status: "active",
+        booking_id: r.booking_id || null,
       })) as Lesson[];
 
     const list: Lesson[] = [...lessonList, ...synthetic];
@@ -287,6 +302,25 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     }
     return `${l.house_or_reserver} · ${l.student_names} (${typeBase} ${t}, ${fmtMD(l.start_date)}~${fmtMD(l.end_date)})${tag}`;
   };
+
+  async function recordPayment() {
+    if (!lesson) return;
+    const bid = lesson.booking_id || null;
+    if (!bid) { toastErr(englishMode ? "No booking linked. Ask Korea staff." : "예약 연결이 없어 기록할 수 없습니다. 한국 직원에게 문의하세요."); return; }
+    const amt = Number(payAmt);
+    if (!amt || amt <= 0) { toastErr(englishMode ? "Enter an amount" : "금액을 입력하세요"); return; }
+    setPaySaving(true);
+    const who = lesson.student_names || lesson.house_or_reserver || "";
+    const label = (englishMode ? "Tutor payment" : "튜터비 납부") + (who ? ` · ${who}` : "") + (payMemo.trim() ? ` (${payMemo.trim()})` : "");
+    const { error } = await supabase.from("settlement_items").insert({
+      booking_id: bid, kind: "payment", label, amount: amt, item_date: payDate,
+      status: "pending", recorded_by: englishMode ? "tutor" : "직원",
+    });
+    setPaySaving(false);
+    if (error) { toastErr((englishMode ? "Failed: " : "저장 실패: ") + error.message); return; }
+    setPayAmt(""); setPayMemo(""); setPayOpen(false);
+    toastOk(englishMode ? "Recorded. Waiting for Korea staff approval." : "기록됐어요. 한국 직원 승인 대기 중입니다.");
+  }
 
   // A4 1페이지에 맞춰 scale-to-fit 적용 후 인쇄
   function handlePrint() {
@@ -453,6 +487,31 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         {saving ? (englishMode ? "Saving..." : "저장 중...") : `🖼️ ${englishMode ? "Save Image" : "이미지 저장"}`}
       </button>
     </div>
+
+    {lesson && (
+      <div style={{ border: "1px solid #ddd6fe", background: "#faf5ff", borderRadius: 10, padding: "12px 14px", margin: "10px 0 4px" }}>
+        <div onClick={() => setPayOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13.5, fontWeight: 800, color: "#6d28d9" }}>
+          💵 {englishMode ? "Record Payment Received" : "납부 받음 기록"}
+          <span style={{ marginLeft: "auto", fontSize: 12, color: "#a78bfa" }}>{payOpen ? "▲" : "▼"}</span>
+        </div>
+        {payOpen && (
+          <div style={{ marginTop: 10 }}>
+            {!lesson.booking_id && (
+              <div style={{ fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 7, padding: "7px 10px", marginBottom: 9 }}>
+                ⚠ {englishMode ? "No booking linked to this lesson — cannot record. Please tell Korea staff." : "이 수업에 예약이 연결되어 있지 않아 기록할 수 없습니다. 한국 직원에게 알려주세요."}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <input value={payAmt} onChange={e => setPayAmt(e.target.value)} type="number" placeholder={englishMode ? "Amount ₱" : "금액 ₱"} style={{ width: 120, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
+              <input value={payDate} onChange={e => setPayDate(e.target.value)} type="date" style={{ padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
+              <input value={payMemo} onChange={e => setPayMemo(e.target.value)} placeholder={englishMode ? "Memo (optional)" : "메모 (선택)"} style={{ flex: 1, minWidth: 120, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
+              <button onClick={recordPayment} disabled={paySaving || !lesson.booking_id} style={{ border: "none", background: "#7c3aed", color: "#fff", borderRadius: 7, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: lesson.booking_id ? "pointer" : "not-allowed", opacity: paySaving || !lesson.booking_id ? 0.6 : 1 }}>{paySaving ? (englishMode ? "Saving…" : "저장 중…") : (englishMode ? "Record" : "기록")}</button>
+            </div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>{englishMode ? "Korea staff will review and approve before it appears to the parent." : "한국 직원 승인 후 학부모 화면에 반영됩니다."}</div>
+          </div>
+        )}
+      </div>
+    )}
 
     {loading ? (
       <div className="ti-empty">로딩 중...</div>
