@@ -663,15 +663,21 @@ export default function AdminBookingsPage(){
 .cal-wrap{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e2e8f0;padding:14px;}
 .cal-tbl{width:100%;border-collapse:collapse;table-layout:fixed;min-width:1000px;}
 .cal-tbl th{font-size:11px;font-weight:700;color:#475569;padding:8px 6px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center;}
-.cal-tbl td{vertical-align:top;padding:6px;border:1px solid #e2e8f0;font-size:11px;height:90px;}
+.cal-tbl td{vertical-align:top;padding:6px;border:1px solid #e2e8f0;font-size:12px;height:100px;}
 .cal-side{background:#f5f3ff;color:#4c1d95;font-weight:700;text-align:center;width:100px;}
 .cal-side .cal-total{margin-top:6px;padding-top:6px;border-top:1px solid #ddd6fe;font-size:14px;color:#6d28d9;}
 .cal-cell .cal-d{font-weight:800;color:#1a1a2e;font-size:12px;margin-bottom:3px;}
 .cal-cell.out-month{background:#fafafa;}.cal-cell.out-month .cal-d{color:#cbd5e1;}
 .cal-newin{background:#dcfce7;color:#166534;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
 .cal-out{background:#eff6ff;color:#1d4ed8;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
-.cal-stu-in{color:#16a34a;font-size:10px;line-height:1.4;}
-.cal-stu-out{color:#1d4ed8;font-size:10px;line-height:1.4;}
+.cal-stu-list{display:flex;flex-direction:column;gap:2px;max-height:152px;overflow-y:auto;margin-top:3px;}
+.cal-stu-in,.cal-stu-out{font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-stu-in{color:#15803d;}.cal-stu-out{color:#1d4ed8;}
+.cal-stu-in b,.cal-stu-out b{font-weight:700;}
+.cal-stu-in .pm,.cal-stu-out .pm{font-weight:900;margin-right:2px;}
+.cal-stu-in .en,.cal-stu-out .en{color:#94a3b8;font-weight:500;font-size:11px;}
+.cal-stu-in .meta,.cal-stu-out .meta{color:#64748b;font-weight:500;font-size:10.5px;}
+.cal-stu-in .kbadge,.cal-stu-out .kbadge{display:inline-block;color:#1a1a2e;font-weight:800;margin-right:1px;}
 @media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
 @media print{
   @page{size:A4 landscape;margin:8mm;}
@@ -690,7 +696,9 @@ export default function AdminBookingsPage(){
   .cal-side{width:80px !important;}
   .cal-cell .cal-d{font-size:9px !important;margin-bottom:2px !important;}
   .cal-newin,.cal-out{font-size:7px !important;padding:1px 3px !important;margin-bottom:2px !important;}
-  .cal-stu-in,.cal-stu-out{font-size:8px !important;line-height:1.25 !important;}
+  .cal-stu-in,.cal-stu-out{font-size:8px !important;line-height:1.25 !important;white-space:normal !important;}
+  .cal-stu-list{max-height:none !important;overflow:visible !important;}
+  .cal-stu-in .en,.cal-stu-out .en{font-size:7.5px !important;}.cal-stu-in .meta,.cal-stu-out .meta{font-size:7px !important;}
   /* 월 타이틀 가운데 정렬 */
   .cal-title{text-align:center !important;width:100%;font-size:14px !important;margin-bottom:6mm !important;}
 }
@@ -1155,8 +1163,10 @@ export default function AdminBookingsPage(){
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
-                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`s${s.key}`} className="cal-stu-in" title={mmTitle} style={{fontSize:11}}>+ {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}{s.mismatch&&<span style={{marginLeft:3}}>🔴❗</span>}</div>);})}
-                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const ageStr=age?`${age}y`:"-";const wkStr=`${s.calWeeks}w`;const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`e${s.key}`} className="cal-stu-out" title={mmTitle} style={{fontSize:11}}>- {isKinder&&<span style={{color:"#1a1a2e",fontWeight:800}}>K</span>}{s.korName||""}/{s.engName||""}/{ageStr}/{wkStr}{s.mismatch&&<span style={{marginLeft:3}}>🔴❗</span>}</div>);})}
+                                <div className="cal-stu-list">
+                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`s${s.key}`} className="cal-stu-in" title={mmTitle}><span className="pm">＋</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{s.mismatch&&<span> 🔴❗</span>}</div>);})}
+                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`e${s.key}`} className="cal-stu-out" title={mmTitle}><span className="pm">－</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{s.mismatch&&<span> 🔴❗</span>}</div>);})}
+                                </div>
                               </td>
                             );
                           })}
