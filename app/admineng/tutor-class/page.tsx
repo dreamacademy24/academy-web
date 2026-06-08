@@ -48,21 +48,46 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 
 function fmtDate(s: string) { return s ? s.slice(5, 10).replace('-', '/') : '-'; }
 
-// Weekly View 학생명: 영문 우선 → student_names 라틴 토큰 → 한글 폴백 (최대 2명 join)
+// 학생 한글이름 → 영문이름 맵 (students 테이블 기반, load 시 채움). 현지직원 화면은 항상 영문 우선.
+const _enNameMap: Record<string, string> = {};
+function _toEn(t: string): string {
+  const k = t.trim();
+  if (!k) return k;
+  if (/[A-Za-z]/.test(k)) return k;        // 이미 영문
+  return _enNameMap[k] || k;               // 한글 → 영문 변환 (없으면 원본)
+}
+
+// Weekly View 학생명: 영문 우선 → student_names 토큰을 영문으로 변환 → 폴백 (최대 2명 join)
 function pickEnFirst(l: any): string {
   const direct = String(l?.student_name_en || l?.student_eng_name || "").trim();
-  if (direct) {
+  if (direct && /[A-Za-z]/.test(direct)) {
     const parts = direct.split(/[,]/).map((s: string) => s.trim()).filter(Boolean);
     return parts.slice(0, 2).join(" / ") || direct;
   }
-  const raw = String(l?.student_names || "");
+  const raw = String(l?.student_names || direct || l?.student_name_kr || "");
   const tokens: string[] = [];
   for (const g of raw.split("/").map(s => s.trim()).filter(Boolean)) {
     for (const t of g.split(",").map(s => s.trim()).filter(Boolean)) tokens.push(t);
   }
-  const latin = tokens.filter(t => /[A-Za-z]/.test(t));
+  const en = tokens.map(_toEn);
+  const latin = en.filter(t => /[A-Za-z]/.test(t));
   if (latin.length > 0) return latin.slice(0, 2).join(" / ");
-  return tokens[0] || "-";
+  return en[0] || "-";
+}
+
+// students 테이블에서 한글→영문 이름 맵을 1회 로드 (현지직원 화면 영문 표시)
+let _enMapLoaded = false;
+async function ensureEnMap(): Promise<void> {
+  if (_enMapLoaded) return;
+  try {
+    const { data: st } = await supabase.from("students").select("name_kr, name_en");
+    (st || []).forEach((s: any) => {
+      const kr = String(s.name_kr || "").trim();
+      const en = String(s.name_en || "").trim();
+      if (kr && en && /[A-Za-z]/.test(en)) _enNameMap[kr] = en;
+    });
+    _enMapLoaded = true;
+  } catch { /* noop */ }
 }
 
 // Lesson 자동생성용 헬퍼 (admin/tutor-class/[id]/save 와 동일 로직)
@@ -268,6 +293,7 @@ export default function EngTutorClassPage() {
   const loadMyLessons = useCallback(async () => {
     if (!me) { setMyLessons([]); return; }
     setLoadingLessons(true);
+    await ensureEnMap();
     const myMatched = reqs.filter(r => r.assigned_tutor_id === me.id);
     const myReqIds = myMatched.map(r => r.id);
     const [{ data: direct }, { data: byAppId }] = await Promise.all([
@@ -342,6 +368,7 @@ export default function EngTutorClassPage() {
   // 전체 active 수업 로드 + lesson 미생성 confirmed tutor_requests 합성 — Weekly/Invoice 탭 진입 시
   const loadAllLessons = useCallback(async () => {
     setLoadingAllLessons(true);
+    await ensureEnMap();
     const [lRes, rRes] = await Promise.all([
       supabase.from("tutor_lessons").select("*")
         .eq("status", "active")

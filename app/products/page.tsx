@@ -530,10 +530,11 @@ export default function ProductsPage() {
         <section className="terms">
           <h2>이용약관 · 환불정책</h2>
           <p className="terms-notice">{COMMON_NOTICE_TEXT}</p>
-          {(["dreamhouse", "jpark", "cubenine"] as const).map((key) => {
-            const policy = REFUND_POLICIES[key];
+          {(() => {
+            const policy = REFUND_POLICIES[activeTab];
+            if (!policy) return null;
             return (
-              <div className="policy" key={key}>
+              <div className="policy">
                 <h3>{policy.title}</h3>
                 {policy.sections.map((sec, i) => (
                   <div className="psec" key={i}>
@@ -545,7 +546,7 @@ export default function ProductsPage() {
                 ))}
               </div>
             );
-          })}
+          })()}
         </section>
       </main>
 
