@@ -3738,8 +3738,8 @@ async function renderCustomerActivity(){
   var rows=[];
   try{rows=await sbFetch('customer_activity?done=eq.false&order=created_at.desc&limit=50').then(function(r){return r.ok?r.json():[];});}catch(e){rows=[];}
   if(!Array.isArray(rows))rows=[];
-  var TM={shuttle:'🚌',fieldtrip:'🌿',tutor:'👩‍🏫',flight:'✈️',payment:'💳',pickup:'🚐'};
-  var AM={'신청':{bg:'#dbeafe',c:'#1d4ed8'},'변경':{bg:'#fef3c7',c:'#92400e'},'취소':{bg:'#fee2e2',c:'#dc2626'},'등록':{bg:'#dcfce7',c:'#166534'}};
+  var TM={shuttle:'🚌',fieldtrip:'🌿',tutor:'👩‍🏫',tutor_note:'📝',flight:'✈️',payment:'💳',pickup:'🚐'};
+  var AM={'신청':{bg:'#dbeafe',c:'#1d4ed8'},'변경':{bg:'#fef3c7',c:'#92400e'},'취소':{bg:'#fee2e2',c:'#dc2626'},'등록':{bg:'#dcfce7',c:'#166534'},'코멘트':{bg:'#ede9fe',c:'#6d28d9'}};
   var body=rows.length?rows.map(function(a){
     var am=AM[a.action]||{bg:'#f1f5f9',c:'#475569'};
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f1f5f9">'

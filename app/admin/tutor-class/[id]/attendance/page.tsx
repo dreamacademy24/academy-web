@@ -191,6 +191,23 @@ export default function AttendancePage() {
       .eq("id", lesson.id);
     setSaving(false);
     if (error) { toastErr("Save failed: " + error.message); return; }
+    // 현지직원 코멘트("무슨 일 있었는지") → 직원업무 "확인해야 할 목록" + 텔레그램 (메모 있을 때만)
+    try {
+      const noteParts: string[] = [];
+      if (notes && notes.trim()) noteParts.push(notes.trim());
+      for (const v of Object.values(notesLog)) if (v && String(v).trim()) noteParts.push(String(v).trim());
+      const noteText = noteParts.join(" / ");
+      if (noteText) {
+        await supabase.from("customer_activity").insert({
+          type: "tutor_note", action: "코멘트",
+          title: `${lesson.student_names || "수업"} · ${noteText}`.slice(0, 250),
+          reserver: lesson.house_or_reserver || null,
+          ref_table: "tutor_lessons", ref_id: lesson.id,
+        });
+        fetch("/api/notify/telegram", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "note", payload: { who: lesson.house_or_reserver || lesson.student_names, student: lesson.student_names, note: noteText } }) }).catch(() => {});
+      }
+    } catch { /* noop */ }
     toastOk("Saved");
     router.back();
   }

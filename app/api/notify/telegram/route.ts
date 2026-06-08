@@ -54,6 +54,15 @@ export async function POST(req: Request) {
       } catch { /* noop */ }
     }
 
+    if (type === 'note') {
+      const lines = [`📝 <b>현지직원 코멘트</b>`]
+      if (p.who) lines.push(`담당/집: ${escapeHtml(p.who)}`)
+      if (p.student) lines.push(`수업: ${escapeHtml(p.student)}`)
+      if (p.note) lines.push(`내용: ${escapeHtml(p.note)}`)
+      const tl = localTimeLine(); if (tl) lines.push(tl)
+      await sendTelegram(lines.join('\n'))
+    }
+
     // 알림은 best-effort — 항상 ok
     return NextResponse.json({ ok: true })
   } catch (e) {
