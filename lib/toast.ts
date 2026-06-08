@@ -17,9 +17,10 @@ function ensureContainer(): HTMLElement | null {
   return c;
 }
 
-export function toast(message: string, type: ToastType = "success"): void {
+export function toast(message: unknown, type: ToastType = "success"): void {
   const c = ensureContainer();
-  if (!c || !message) return;
+  const msg = message == null ? "" : (typeof message === "string" ? message : String((message as { message?: unknown })?.message ?? message));
+  if (!c || !msg) return;
   const palette: Record<ToastType, { bg: string; icon: string }> = {
     success: { bg: "#16a34a", icon: "✓ " },
     error: { bg: "#dc2626", icon: "⚠️ " },
@@ -27,7 +28,7 @@ export function toast(message: string, type: ToastType = "success"): void {
   };
   const { bg, icon } = palette[type];
   const el = document.createElement("div");
-  el.textContent = icon + message;
+  el.textContent = icon + msg;
   el.style.cssText =
     `pointer-events:auto;background:${bg};color:#fff;font-family:'Noto Sans KR',sans-serif;` +
     "font-size:14px;font-weight:700;padding:12px 18px;border-radius:10px;" +
@@ -43,6 +44,6 @@ export function toast(message: string, type: ToastType = "success"): void {
   }, ms);
 }
 
-export const toastOk = (m: string) => toast(m, "success");
-export const toastErr = (m: string) => toast(m, "error");
-export const toastInfo = (m: string) => toast(m, "info");
+export const toastOk = (m: unknown) => toast(m, "success");
+export const toastErr = (m: unknown) => toast(m, "error");
+export const toastInfo = (m: unknown) => toast(m, "info");
