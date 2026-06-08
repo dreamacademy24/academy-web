@@ -92,8 +92,8 @@ function buildShWeeks(year: number, month: number) {
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     if (dow === 2 && week.length > 0) flush();
     week.push({ dateStr, dayLabel:`${month}/${d} (${DAY_KR[dow]})`, slots: getShSlots(dateStr), special: SHUTTLE_SPECIAL_MSG[dateStr] });
-    if (d === days) flush();
   }
+  flush(); // 남은 마지막 주차 마감 (누락 방지)
   return weeks;
 }
 

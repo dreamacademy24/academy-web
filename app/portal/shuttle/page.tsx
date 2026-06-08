@@ -110,8 +110,8 @@ function buildShWeeks(year: number, month: number, rangeStart?: string, rangeEnd
     // 화요일(=2)에 도달하면 직전 주차 마감
     if (dow === 2 && week.length > 0) flush();
     week.push({ dateStr, dayLabel:`${month}/${d} (${DAY_KR[dow]})`, slots: getShSlots(dateStr), special: SHUTTLE_SPECIAL_MSG[dateStr] });
-    if (d === days) flush();
   }
+  flush(); // 남은 마지막 주차 마감 (rangeEnd가 월 중간이어도 누락 방지)
   return weeks;
 }
 
