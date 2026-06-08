@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
-import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
+import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, tokenForItem, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,6 +66,14 @@ export default function AfterschoolFieldtripAdminPage() {
   const [listView, setListView] = useState<"month" | "week">("month");
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOfA(new Date()));
   const shiftWeek = (delta: number) => { const d = new Date(weekStart); d.setDate(d.getDate() + delta * 7); setWeekStart(mondayOfA(d)); };
+  // 직원 신청 추가 모달
+  const [deployedItems, setDeployedItems] = useState<DeployedScheduleItem[]>([]);
+  const [students, setStudents] = useState<{ id: string; name_kr: string; name_en: string; booking_id: string | null; reserver: string; room: string }[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addStudentId, setAddStudentId] = useState("");
+  const [addSearch, setAddSearch] = useState("");
+  const [addTokens, setAddTokens] = useState<Set<string>>(new Set());
+  const [addSaving, setAddSaving] = useState(false);
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -74,8 +82,27 @@ export default function AfterschoolFieldtripAdminPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    // 배포된 일정(프로그램명) 로드 — 신청 토큰을 날짜로 해석
-    try { setScheduleByMd(buildScheduleByMd(await loadDeployedSchedule(supabase))); } catch { /* noop */ }
+    // 배포된 일정(프로그램명) 로드 — 신청 토큰을 날짜로 해석 + 직원 신청 모달용 원본
+    try { const deployed = await loadDeployedSchedule(supabase); setDeployedItems(deployed); setScheduleByMd(buildScheduleByMd(deployed)); } catch { /* noop */ }
+    // 직원 신청 모달용 학생 목록 (이름 + 예약자 + 방번호)
+    try {
+      const { data: st } = await supabase.from("students").select("id, name_kr, name_en, booking_id");
+      const rows = (st || []) as { id: string; name_kr: string | null; name_en: string | null; booking_id: string | null }[];
+      const bids = Array.from(new Set(rows.map(r => r.booking_id).filter(Boolean))) as string[];
+      const bmap: Record<string, { booker_name: string | null; house_no: string | null; accom_room: string | null }> = {};
+      if (bids.length) {
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room").in("id", bids);
+        (bks || []).forEach((b: { id: string; booker_name: string | null; house_no: string | null; accom_room: string | null }) => { bmap[b.id] = { booker_name: b.booker_name, house_no: b.house_no, accom_room: b.accom_room }; });
+      }
+      setStudents(rows.map(r => {
+        const b = bmap[r.booking_id || ""];
+        return {
+          id: r.id, name_kr: (r.name_kr || "").trim(), name_en: (r.name_en || "").trim(), booking_id: r.booking_id,
+          reserver: (b?.booker_name || "").trim(),
+          room: String(b?.house_no || b?.accom_room || "").replace(/\s+/g, "").replace(/^dh/i, "").toUpperCase(),
+        };
+      }).filter(s => s.name_kr || s.name_en).sort((a, b) => a.name_kr.localeCompare(b.name_kr)));
+    } catch { /* noop */ }
     const { data, error } = await supabase
       .from("fieldtrip_applications")
       .select("*")
@@ -95,6 +122,24 @@ export default function AfterschoolFieldtripAdminPage() {
   }, []);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
+
+  async function saveAddSignup() {
+    const stu = students.find(s => s.id === addStudentId);
+    if (!stu) { alert("아이를 선택하세요."); return; }
+    if (addTokens.size === 0) { alert("날짜를 1개 이상 선택하세요."); return; }
+    setAddSaving(true);
+    const { error } = await supabase.from("fieldtrip_applications").insert({
+      name: stu.name_kr || stu.name_en,
+      date: Array.from(addTokens).join(", "),
+      message: "[직원 신청]", request: "[직원 신청]",
+      booking_id: stu.booking_id, portal_name: stu.reserver || null,
+      room_number: stu.room || null, status: "confirmed",
+    });
+    setAddSaving(false);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    setAddOpen(false); setAddStudentId(""); setAddSearch(""); setAddTokens(new Set());
+    load();
+  }
 
   async function changeStatus(appId: number, status: string) {
     const prev = apps;
@@ -237,6 +282,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"transparent",color:mainTab==="deploy"?"#fff":"#6b7c93"}}
         >📅 배포</button>
       </div>
+
+      {mainTab === "list" && (
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+          <button onClick={() => setAddOpen(true)} style={{padding:"9px 16px",border:"none",borderRadius:9,background:"#16a34a",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>➕ 직원 신청 추가</button>
+        </div>
+      )}
 
       {mainTab === "deploy" ? (
         <AfterFieldDeploy />
@@ -409,6 +460,55 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         </div>
         </>
       )}
+
+      {addOpen && (() => {
+        const groups = (() => { const m = new Map<string, DeployedScheduleItem[]>(); for (const it of [...deployedItems].sort((a,b)=>a.date.localeCompare(b.date))) { const mk=it.date.slice(0,7); if(!m.has(mk)) m.set(mk,[]); m.get(mk)!.push(it); } return Array.from(m.entries()); })();
+        const filtered = students.filter(s => { const q=addSearch.trim().toLowerCase(); return !q || (s.name_kr+s.name_en+s.reserver+s.room).toLowerCase().includes(q); });
+        return (
+        <div onClick={()=>setAddOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:200,padding:"36px 14px",overflowY:"auto"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,maxWidth:560,width:"100%",padding:22}}>
+            <div style={{display:"flex",alignItems:"center",marginBottom:14}}>
+              <h3 style={{fontSize:17,fontWeight:800,flex:1}}>➕ 직원 신청 추가</h3>
+              <button onClick={()=>setAddOpen(false)} style={{border:"none",background:"none",fontSize:20,cursor:"pointer"}}>✕</button>
+            </div>
+            <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>1. 아이 선택</div>
+            <input value={addSearch} onChange={e=>setAddSearch(e.target.value)} placeholder="이름·예약자 검색" style={{width:"100%",padding:"9px 11px",border:"1px solid #cbd5e1",borderRadius:9,fontSize:13,marginBottom:8,fontFamily:"inherit"}} />
+            <div style={{maxHeight:168,overflowY:"auto",border:"1px solid #eef2f7",borderRadius:10,marginBottom:16}}>
+              {filtered.length===0 ? <div style={{padding:14,color:"#cbd5e1",fontSize:13}}>{students.length===0?"학생 목록을 불러오는 중…":"검색 결과 없음"}</div> :
+               filtered.slice(0,80).map(s => (
+                <div key={s.id} onClick={()=>setAddStudentId(s.id)} style={{padding:"9px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:addStudentId===s.id?"#eff6ff":"#fff",borderBottom:"1px solid #f1f5f9"}}>
+                  <span style={{fontWeight:700,fontSize:13.5}}>{s.name_kr||s.name_en}</span>
+                  {s.name_en && s.name_kr && <span style={{fontSize:12,color:"#64748b"}}>{s.name_en}</span>}
+                  <span style={{marginLeft:"auto",fontSize:11.5,color:"#94a3b8"}}>{s.reserver}{s.room?` · 🏠${s.room}`:""}</span>
+                  {addStudentId===s.id && <span style={{color:"#2563eb",fontWeight:800}}>✓</span>}
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>2. 날짜 선택 <span style={{fontWeight:600,color:"#94a3b8"}}>(복수 가능)</span></div>
+            <div style={{maxHeight:240,overflowY:"auto",border:"1px solid #eef2f7",borderRadius:10,marginBottom:16}}>
+              {groups.length===0 ? <div style={{padding:14,color:"#cbd5e1",fontSize:13}}>배포된 일정이 없습니다.</div> :
+               groups.map(([mk,its]) => (
+                <div key={mk}>
+                  <div style={{padding:"6px 12px",fontSize:12,fontWeight:800,color:"#15803d",background:"#f0fdf4",position:"sticky",top:0}}>📅 {Number(mk.split("-")[1])}월</div>
+                  {its.map(it => { const tok=tokenForItem(it); const on=addTokens.has(tok); const dt=new Date(it.date+"T00:00:00"); const ft=it.type==="fieldtrip"; return (
+                    <label key={it.id} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f8fafc",background:on?(ft?"#fff7ed":"#eff6ff"):"#fff"}}>
+                      <input type="checkbox" checked={on} onChange={()=>setAddTokens(prev=>{const n=new Set(prev); if(n.has(tok))n.delete(tok); else n.add(tok); return n;})} />
+                      <span style={{fontWeight:700,fontSize:12.5,color:ft?"#c2410c":"#1a1a2e"}}>{dt.getMonth()+1}/{dt.getDate()} ({KR_DOW[dt.getDay()]})</span>
+                      <span style={{fontSize:12.5,color:"#334155"}}>{it.title}</span>
+                      {ft && <span style={{fontSize:10,fontWeight:800,background:"#c2410c",color:"#fff",padding:"1px 6px",borderRadius:999}}>필드트립</span>}
+                    </label>
+                  );})}
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setAddOpen(false)} style={{padding:"11px 18px",border:"1px solid #cbd5e1",borderRadius:9,background:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+              <button onClick={saveAddSignup} disabled={addSaving} style={{flex:1,padding:"11px",border:"none",borderRadius:9,background:"#16a34a",color:"#fff",fontWeight:800,cursor:addSaving?"default":"pointer",fontFamily:"inherit",opacity:addSaving?0.7:1}}>{addSaving?"저장 중…":`신청 추가 (${addTokens.size}건)`}</button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   </>);
 }
