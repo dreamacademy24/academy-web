@@ -1,6 +1,18 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
+import { toastOk, toastErr } from '@/lib/toast'
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+
+// 접속 주소 (설치 → 시작 화면)
+const OPS_LINKS = [
+  { label: '손님 (드림게스트)', install: 'dreamacademyph.com/install?app=guest', start: 'dreamacademyph.com/portal' },
+  { label: '한국 관리자 (드림 관리자)', install: 'dreamacademyph.com/install?app=admin', start: 'dreamacademyph.com/admin/hub' },
+  { label: '현지직원·튜터 (Dream Staff)', install: 'dreamacademyph.com/install?app=staff', start: 'dreamacademyph.com/admineng/hub' },
+  { label: '직원업무 (Team Manager)', install: '—', start: 'dreamacademyph.com/staff' },
+]
 
 const OT_DATA = [
   { id:'o1', title:'OT 참석 안내', content:`안녕하세요 😊 드림아카데미입니다!\n\nOT 안내 드립니다.\n\n일시: [날짜] [시간]\n장소: 드림아카데미\n\nOT에서는 수업 커리큘럼, 생활 규칙, 셔틀 이용 방법, 애프터스쿨·필드트립 신청 방법 등을 안내해 드립니다.\n\n꼭 참석 부탁드립니다! 😊` },
@@ -42,10 +54,35 @@ const FIELDTRIP_DATA = [
 ]
 
 export default function ResourcesPage() {
-  const [tab, setTab] = useState<'fieldtrip'|'afterschool'|'ot'>('fieldtrip')
+  const [tab, setTab] = useState<'fieldtrip'|'afterschool'|'ot'|'ops'>('fieldtrip')
   const [selected, setSelected] = useState<{id:string,title:string,content:string}|null>(null)
   const [editContent, setEditContent] = useState('')
   const [copied, setCopied] = useState(false)
+  // 운영 메모 (공유 저장)
+  const [opsMemo, setOpsMemo] = useState('')
+  const [opsLoaded, setOpsLoaded] = useState(false)
+  const [opsSaving, setOpsSaving] = useState(false)
+  const [opsCopied, setOpsCopied] = useState('')
+
+  const loadOpsMemo = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('admin_ops_memo').select('content').eq('key', 'main').maybeSingle()
+      setOpsMemo((data?.content as string) || '')
+    } catch { /* noop */ }
+    setOpsLoaded(true)
+  }, [])
+  useEffect(() => { if (tab === 'ops' && !opsLoaded) loadOpsMemo() }, [tab, opsLoaded, loadOpsMemo])
+
+  async function saveOpsMemo() {
+    setOpsSaving(true)
+    const { error } = await supabase.from('admin_ops_memo').upsert({ key: 'main', content: opsMemo, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    setOpsSaving(false)
+    if (error) { toastErr('저장 실패: ' + error.message); return }
+    toastOk('운영 메모가 저장됐어요')
+  }
+  function copyText(t: string, id: string) {
+    navigator.clipboard.writeText(t).then(() => { setOpsCopied(id); setTimeout(() => setOpsCopied(''), 1500) })
+  }
 
   const currentData = tab === 'fieldtrip' ? FIELDTRIP_DATA : tab === 'afterschool' ? AFTERSCHOOL_DATA : OT_DATA
 
@@ -79,13 +116,14 @@ export default function ResourcesPage() {
       </div>
 
       <div style={{display:'flex',gap:8,marginBottom:24,borderBottom:'2px solid #e5e7eb',paddingBottom:0}}>
-        {([['fieldtrip','🗺️ 필드트립'],['afterschool','🎨 애프터스쿨'],['ot','📋 OT 자료']] as const).map(([key,label])=>(
+        {([['fieldtrip','🗺️ 필드트립'],['afterschool','🎨 애프터스쿨'],['ot','📋 OT 자료'],['ops','🔗 운영 정보']] as const).map(([key,label])=>(
           <button key={key} onClick={()=>setTab(key)} style={{padding:'10px 20px',border:'none',background:'none',cursor:'pointer',fontWeight:tab===key?700:400,color:tab===key?'#2563eb':'#374151',borderBottom:tab===key?'2px solid #2563eb':'2px solid transparent',marginBottom:-2,fontSize:14}}>
             {label}
           </button>
         ))}
       </div>
 
+      {tab !== 'ops' && (
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14}}>
         {currentData.map(item=>(
           <div key={item.id} onClick={()=>openModal(item)} style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:10,padding:'16px 18px',cursor:'pointer',transition:'box-shadow 0.15s',boxShadow:'0 1px 3px rgba(0,0,0,0.05)'}}
@@ -96,6 +134,47 @@ export default function ResourcesPage() {
           </div>
         ))}
       </div>
+      )}
+
+      {tab === 'ops' && (
+        <div style={{display:'grid',gridTemplateColumns:'1fr',gap:18,maxWidth:760}}>
+          <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'13px 18px',borderBottom:'1px solid #f1f5f9',fontWeight:800,fontSize:15}}>🔗 접속 주소</div>
+            <div style={{padding:'4px 0'}}>
+              {OPS_LINKS.map((l,i)=>(
+                <div key={i} style={{padding:'11px 18px',borderBottom:i<OPS_LINKS.length-1?'1px solid #f8fafc':'none'}}>
+                  <div style={{fontSize:13.5,fontWeight:700,color:'#1f2937',marginBottom:6}}>{l.label}</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:11,color:'#94a3b8',width:34,flexShrink:0}}>설치</span>
+                      <code style={{flex:1,fontSize:12.5,color:'#4338ca',background:'#eef2ff',padding:'4px 9px',borderRadius:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.install}</code>
+                      {l.install!=='—'&&<button onClick={()=>copyText('https://'+l.install,'i'+i)} style={{border:'1px solid #e5e7eb',background:'#fff',borderRadius:6,padding:'4px 9px',fontSize:11,cursor:'pointer',fontWeight:600,color:opsCopied==='i'+i?'#16a34a':'#64748b'}}>{opsCopied==='i'+i?'✓':'복사'}</button>}
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{fontSize:11,color:'#94a3b8',width:34,flexShrink:0}}>시작</span>
+                      <code style={{flex:1,fontSize:12.5,color:'#0f766e',background:'#ecfdf5',padding:'4px 9px',borderRadius:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.start}</code>
+                      <button onClick={()=>copyText('https://'+l.start,'s'+i)} style={{border:'1px solid #e5e7eb',background:'#fff',borderRadius:6,padding:'4px 9px',fontSize:11,cursor:'pointer',fontWeight:600,color:opsCopied==='s'+i?'#16a34a':'#64748b'}}>{opsCopied==='s'+i?'✓':'복사'}</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'13px 18px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span style={{fontWeight:800,fontSize:15}}>📝 운영 메모</span>
+              <span style={{fontSize:11,color:'#94a3b8'}}>모든 관리자 공유 · 저장 버튼 눌러야 반영</span>
+            </div>
+            <div style={{padding:16}}>
+              <textarea value={opsMemo} onChange={e=>setOpsMemo(e.target.value)} placeholder={opsLoaded?'계정 정보 · 결정사항 · 자주 쓰는 링크 · 메모… 자유롭게 적어두세요.':'불러오는 중…'}
+                style={{width:'100%',minHeight:300,border:'1px solid #d1d5db',borderRadius:8,padding:12,fontSize:13.5,lineHeight:1.7,resize:'vertical',fontFamily:'inherit',boxSizing:'border-box'}} />
+              <div style={{display:'flex',justifyContent:'flex-end',marginTop:10}}>
+                <button onClick={saveOpsMemo} disabled={opsSaving} style={{padding:'9px 20px',background:'#2563eb',color:'#fff',border:'none',borderRadius:8,cursor:'pointer',fontWeight:700,fontSize:13,opacity:opsSaving?0.7:1}}>{opsSaving?'저장 중…':'💾 저장'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div onClick={()=>setSelected(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999,padding:24}}>
