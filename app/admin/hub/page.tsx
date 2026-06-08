@@ -33,6 +33,7 @@ export default function AdminHubPage() {
         { icon: "🗂️", title: "과거 예약",       desc: "졸업·체크아웃 완료 (지난 예약 모음)",  href: "/admin/bookings?tab=confirmed&period=past" },
         { icon: "🎒", title: "애프터스쿨/필드트립 관리", desc: "신청목록 및 일정 배포 (아카데미 담당)",  href: "/admin/afterschool-fieldtrip" },
         { icon: "🎓", title: "튜터 수업 관리",   desc: "신청 수신함 · 주간 스케줄 · 수강생",      href: "/admin/tutor-class" },
+        { icon: "🧾", title: "정산 관리",        desc: "보증금·튜터비·차감·납부 기록 및 승인",   href: "/admin/settlement" },
         { icon: "💻", title: "화상영어",         desc: "출석관리 · 수업일정 · 가용현황",      href: "/admin/online-class" },
         { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
         { icon: "📢", title: "공지 배포",       desc: "손님 공지 작성 · 전체/특정 발송",       href: "/admin/notices" },
