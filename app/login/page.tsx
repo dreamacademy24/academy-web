@@ -4,34 +4,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
 
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return "h_" + Math.abs(hash).toString(36);
-}
-
-const ADMIN_ACCOUNTS = [
-  { id: "admin-may",   pw: "h_dyghlz", role: "admin", name: "May",   staffId: "may" },
-  { id: "admin-ceo",   pw: "h_azeaz3", role: "admin", name: "CEO",   staffId: "ceo" },
-  { id: "admin-jamie", pw: "h_4whzg",  role: "staff", name: "Jamie", staffId: "jamie" },
-  { id: "admin-hanny", pw: "h_5ytroi", role: "staff", name: "Hanny", staffId: "hanny" },
-  { id: "admin-sage",  pw: "h_tmt0j2", role: "staff", name: "Sage",  staffId: "sage"  },
-  { id: "admin-eric",  pw: "h_im0z0p", role: "staff", name: "Eric",  staffId: "eric"  },
-  { id: "admin-jun",   pw: "h_krvnp7", role: "staff", name: "Jun",   staffId: "jun"   },
-  { id: "admin-candice", pw: "h_1q6h54", role: "staff", name: "Candice", staffId: "candice" },
-  { id: "admin-judy",  pw: "h_d205wh", role: "staff", name: "Judy",  staffId: "judy"  },
-  // 튜터 계정 (화상영어 전용) — staffId는 online_tutors.staff_user_id와 매핑
-  { id: "admin-ann",     pw: "h_bpke76", role: "tutor", name: "T.Ann",     staffId: "admin-ann"     },
-  { id: "admin-angel",   pw: "h_nn1req", role: "tutor", name: "T.Angel",   staffId: "admin-angel"   },
-  { id: "admin-carla",   pw: "h_8aonka", role: "tutor", name: "T.Carla",   staffId: "admin-carla"   },
-  { id: "admin-amelyn",  pw: "h_zbg7cn", role: "tutor", name: "T.Amelyn",  staffId: "admin-amelyn"  },
-  { id: "admin-cristel", pw: "h_hn7tab", role: "tutor", name: "T.Cristel", staffId: "admin-cristel" },
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ id: "", password: "" });
@@ -53,19 +25,38 @@ export default function LoginPage() {
     if (!idTrim || !form.password) { setErr("아이디와 비밀번호를 입력해주세요."); return; }
     setErr(""); setLoading(true);
 
-    // 관리자 계정 (admin-xxx)
-    if (idTrim.startsWith("admin-")) {
-      const account = ADMIN_ACCOUNTS.find(a => a.id === idTrim && a.pw === simpleHash(form.password));
-      if (!account) {
-        setErr("관리자 아이디 또는 비밀번호가 올바르지 않습니다.");
-        setLoading(false); return;
+    // 1) 직원/어드민 계정 (staff_accounts DB 검증)
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: idTrim, password: form.password }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        const staff = data.staff;
+        if (data.role === "local_teacher") {
+          // 현지직원 → teacherSession + 현지직원 허브
+          localStorage.setItem("teacherSession", JSON.stringify(staff));
+          window.location.href = "/admineng/hub";
+          return;
+        }
+        // korean_admin (그 외 어드민 역할 포함) → 어드민 세션 + 어드민 허브
+        setAdminAuthed(staff.username, { role: data.role, name: staff.name, staffId: staff.username });
+        window.location.href = "/admin/hub";
+        return;
       }
-      setAdminAuthed(account.id, { role: account.role, name: account.name, staffId: account.staffId });
-      window.location.href = account.role === "tutor" ? "/tutor/online-class" : "/admin/hub";
-      return;
+      // 401 = 직원 계정 아님 → 일반 회원 로그인으로 폴백. 그 외 상태는 에러 표시.
+      if (res.status !== 401) {
+        setErr(data?.message || "로그인에 실패했습니다.");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // 네트워크 오류 등 → 일반 회원 로그인 시도로 폴백
     }
 
-    // 일반 회원 (아이디 → 가상 이메일 변환)
+    // 2) 일반 회원 (아이디 → 가상 이메일 변환)
     const internalEmail = `${idTrim}@dreamacademyph.com`;
     const { error } = await supabase.auth.signInWithPassword({
       email: internalEmail,
