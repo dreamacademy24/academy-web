@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { toastOk, toastErr } from '@/lib/toast'
+import { BASE_URL, PUBLIC_PAGES } from '@/lib/publicPages'
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
@@ -160,6 +161,25 @@ export default function ResourcesPage() {
               ))}
             </div>
           </div>
+          <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'13px 18px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <span style={{fontWeight:800,fontSize:15}}>🌐 공개 페이지 주소</span>
+              <span style={{fontSize:11,color:'#94a3b8'}}>{PUBLIC_PAGES.length}개</span>
+            </div>
+            <div style={{maxHeight:340,overflowY:'auto'}}>
+              {PUBLIC_PAGES.map((p,i)=>(
+                <div key={p.url} style={{display:'flex',alignItems:'center',gap:8,padding:'9px 14px',borderBottom:i<PUBLIC_PAGES.length-1?'1px solid #f8fafc':'none'}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#1f2937',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.label}</div>
+                    <code style={{fontSize:11.5,color:'#64748b'}}>{p.url}</code>
+                  </div>
+                  <button onClick={()=>copyText(BASE_URL+p.url,'p'+i)} style={{border:'1px solid #e5e7eb',background:'#fff',borderRadius:6,padding:'4px 9px',fontSize:11,cursor:'pointer',fontWeight:600,color:opsCopied==='p'+i?'#16a34a':'#64748b',flexShrink:0}}>{opsCopied==='p'+i?'✓':'복사'}</button>
+                  <button onClick={()=>window.open(BASE_URL+p.url,'_blank','noopener')} style={{border:'none',background:'#1a6fc4',color:'#fff',borderRadius:6,padding:'5px 10px',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0}}>열기 ↗</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:12,overflow:'hidden'}}>
             <div style={{padding:'13px 18px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <span style={{fontWeight:800,fontSize:15}}>📝 운영 메모</span>
