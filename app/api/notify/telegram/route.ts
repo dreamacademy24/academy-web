@@ -43,6 +43,15 @@ export async function POST(req: Request) {
       if (totalPeople > 0) lines.push(`인원: ${escapeHtml(totalPeople)}명`)
       const tl = localTimeLine(); if (tl) lines.push(tl)
       await sendTelegram(lines.join('\n'))
+      // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
+      try {
+        await supabase.from('customer_activity').insert({
+          type: 'shuttle', action: '신청',
+          title: summary ? `${summary}${totalPeople > 0 ? ` · ${totalPeople}명` : ''}` : '투어 셔틀 신청',
+          reserver: name, booking_id: p.booking_id || null,
+          ref_table: 'shuttle_applications',
+        })
+      } catch { /* noop */ }
     }
 
     // 알림은 best-effort — 항상 ok

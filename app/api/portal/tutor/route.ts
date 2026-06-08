@@ -126,6 +126,16 @@ export async function POST(req: Request) {
       note: `학생: ${body.student_name_kr || ''} (${body.student_name_en || ''})\n나이: ${body.student_age || '-'}\n유형: ${body.class_type || '-'}\n기간: ${body.start_date || '-'} ~ ${body.end_date || '-'}\n요일: ${(body.preferred_days_arr || []).join(',')}\n시간: ${body.preferred_time || '-'}`,
     })
 
+    // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
+    try {
+      const stu = [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ')
+      await supabase.from('customer_activity').insert({
+        type: 'tutor', action: '신청',
+        title: `${stu || '학생'}${body.class_type ? ` · ${body.class_type}` : ''}${body.start_date ? ` · ${body.start_date}~${body.end_date || ''}` : ''}`,
+        reserver: bookerName, booking_id: body.booking_id || null, ref_table: 'tutor_requests',
+      })
+    } catch { /* noop */ }
+
     // 텔레그램 그룹 알림 (best-effort)
     {
       const studentName = [body.student_name_kr, body.student_name_en].filter(Boolean).join(' / ')

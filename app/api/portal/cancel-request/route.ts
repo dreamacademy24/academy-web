@@ -25,6 +25,20 @@ export async function POST(req: Request) {
     const { error } = await supabase.from(table).update(update).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    // 직원업무 체크리스트용 취소 활동 로그 (셔틀/필드트립/튜터 전체, best-effort)
+    try {
+      const typeMap: Record<string, string> = { shuttle_applications: "shuttle", fieldtrip_applications: "fieldtrip", tutor_requests: "tutor" };
+      const { data: cr } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
+      const row = (cr || {}) as Record<string, unknown>;
+      const who = String(row.portal_name || row.room_number || row.name || row.student_name_kr || "");
+      const ttl = String(row.tour_name || row.name || row.student_name_kr || "취소 요청");
+      await supabase.from("customer_activity").insert({
+        type: typeMap[table] || "etc", action: "취소",
+        title: ttl, reserver: who,
+        booking_id: (row.booking_id as string) || null, ref_table: table, ref_id: String(id),
+      });
+    } catch { /* noop */ }
+
     // 셔틀 취소요청 → 텔레그램 알림 (best-effort, 실패해도 무시)
     if (table === "shuttle_applications") {
       try {

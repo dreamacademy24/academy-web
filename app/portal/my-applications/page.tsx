@@ -159,6 +159,15 @@ export default function MyApplicationsPage() {
     const { error } = await supabase.from("shuttle_applications").update({ people_count: pplEdit.value }).eq("id", pplEdit.id);
     setPplSaving(false);
     if (error) { toastErr("인원 수정 실패: " + error.message); return; }
+    // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
+    try {
+      const row = (data.shuttle || []).find((r: AnyRow) => String(r.id) === pplEdit.id);
+      await supabase.from("customer_activity").insert({
+        type: "shuttle", action: "변경",
+        title: `${String(row?.tour_name || "투어 셔틀")} · 인원 ${pplEdit.value}명으로 변경`,
+        booking_id: bookingId, ref_table: "shuttle_applications", ref_id: pplEdit.id,
+      });
+    } catch { /* noop */ }
     setPplEdit(null);
     if (bookingId) load(bookingId);
     setToast("인원이 수정되었습니다.");

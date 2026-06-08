@@ -86,6 +86,13 @@ export async function PATCH(req: Request) {
       assignee: 'all', due: today, done: false, shared: true,
       note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${f.flight_in_airline || ''} ${f.flight_in_no || ''} ${f.flight_in_date || ''} ${f.flight_in_time || ''}\n출국: ${f.flight_out_airline || ''} ${f.flight_out_no || ''} ${f.flight_out_date || ''} ${f.flight_out_time || ''}`,
     })
+    try {
+      await supabase.from('customer_activity').insert({
+        type: 'flight', action: '등록',
+        title: `항공편 등록/변경${checkIn ? ` · 체크인 ${checkIn}` : ''}`,
+        reserver: bookerName, booking_id, ref_table: 'bookings',
+      })
+    } catch { /* noop */ }
 
     // 텔레그램 그룹 알림 (best-effort)
     {
@@ -153,6 +160,13 @@ export async function PUT(req: Request) {
       shared: true,
       note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${flight_in?.airline || ''} ${flight_in?.date || ''} ${flight_in?.time || ''}\n출국: ${flight_out?.airline || ''} ${flight_out?.date || ''} ${flight_out?.time || ''}`,
     })
+    try {
+      await supabase.from('customer_activity').insert({
+        type: 'flight', action: '등록',
+        title: `항공편 등록/변경${checkIn ? ` · 체크인 ${checkIn}` : ''}`,
+        reserver: bookerName, booking_id, ref_table: 'bookings',
+      })
+    } catch { /* noop */ }
 
     // 텔레그램 그룹 알림 (best-effort)
     {

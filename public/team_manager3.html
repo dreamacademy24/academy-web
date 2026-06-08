@@ -3672,7 +3672,39 @@ function showEmpPage(empId){
 }
 
 // ── HOME ──
-function renderHome(){renderHomePage();renderWeekReport();renderGoalsCard();renderNotices();renderHomeSG();}
+function renderHome(){renderHomePage();renderWeekReport();renderGoalsCard();renderNotices();renderHomeSG();renderCustomerActivity();}
+
+// ── 손님 신청/변경/취소 "확인해야 할 목록" (customer_activity) ──
+function _actWhen(iso){try{var d=new Date(iso);var diff=(Date.now()-d.getTime())/60000;if(diff<1)return '방금';if(diff<60)return Math.floor(diff)+'분 전';if(diff<1440)return Math.floor(diff/60)+'시간 전';return (d.getMonth()+1)+'/'+d.getDate();}catch(e){return '';}}
+async function renderCustomerActivity(){
+  var el=document.getElementById('custActBox');if(!el)return;
+  var rows=[];
+  try{rows=await sbFetch('customer_activity?done=eq.false&order=created_at.desc&limit=50').then(function(r){return r.ok?r.json():[];});}catch(e){rows=[];}
+  if(!Array.isArray(rows))rows=[];
+  var TM={shuttle:'🚌',fieldtrip:'🌿',tutor:'👩‍🏫',flight:'✈️',payment:'💳',pickup:'🚐'};
+  var AM={'신청':{bg:'#dbeafe',c:'#1d4ed8'},'변경':{bg:'#fef3c7',c:'#92400e'},'취소':{bg:'#fee2e2',c:'#dc2626'},'등록':{bg:'#dcfce7',c:'#166534'}};
+  var body=rows.length?rows.map(function(a){
+    var am=AM[a.action]||{bg:'#f1f5f9',c:'#475569'};
+    return '<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f1f5f9">'
+      +'<div onclick="toggleCustomerActivity(\''+a.id+'\')" title="확인 완료로 체크" style="width:20px;height:20px;border:2px solid #cbd5e1;border-radius:5px;cursor:pointer;flex-shrink:0"></div>'
+      +'<span style="font-size:15px;flex-shrink:0">'+(TM[a.type]||'🔔')+'</span>'
+      +'<span style="font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px;background:'+am.bg+';color:'+am.c+';flex-shrink:0">'+esc(a.action||'')+'</span>'
+      +'<div style="flex:1;min-width:0;font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.reserver?a.reserver+' · ':'')+esc(a.title||'')+'</div>'
+      +'<span style="font-size:11px;color:#94a3b8;flex-shrink:0">'+_actWhen(a.created_at)+'</span></div>';
+  }).join(''):'<div style="text-align:center;color:#cbd5e1;padding:24px;font-size:13px">확인할 손님 신청이 없습니다 ✨</div>';
+  el.innerHTML='<div style="background:#fff;border:0.5px solid #e2e8f0;border-left:4px solid #ef4444;border-radius:10px;overflow:hidden">'
+    +'<div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between">'
+    +'<div style="font-size:14px;font-weight:800;color:#1e293b">🔔 손님 신청 — 확인해야 할 목록</div>'
+    +'<span style="font-size:11px;color:#ef4444;font-weight:800;background:#fee2e2;padding:2px 9px;border-radius:9px">'+rows.length+'건</span></div>'
+    +'<div style="max-height:300px;overflow-y:auto">'+body+'</div></div>';
+}
+async function toggleCustomerActivity(id){
+  try{
+    var u=(typeof CU!=='undefined'&&CU)?CU.name:'';
+    await fetch(SB_URL+'/rest/v1/customer_activity?id=eq.'+id,{method:'PATCH',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({done:true,done_by:u,done_at:new Date().toISOString()})});
+  }catch(e){}
+  renderCustomerActivity();
+}
 function _homeStatCard(opts){
   var subHtml=opts.sub?'<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:600">'+opts.sub+'</div>':'';
   return '<div onclick="'+opts.onclick+'" style="background:'+(opts.bg||'#fff')+';border:1px solid '+(opts.border||'var(--border)')+';border-radius:10px;padding:12px;cursor:pointer;transition:transform .12s" onmouseenter="this.style.transform=\'translateY(-2px)\'" onmouseleave="this.style.transform=\'translateY(0)\'">'+
@@ -3903,6 +3935,8 @@ function renderHomePage(){
   html+=    '</div>';
   html+=  '</div>';
   html+='</div>';
+  // 손님 신청 — 확인해야 할 목록 (비동기 채움)
+  html+='<div id="custActBox" style="margin-bottom:12px"></div>';
   // Main 3 columns
   html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;height:300px">';
   // Card 1: Unassigned
@@ -4739,7 +4773,8 @@ async function loadStudentEvents(year,month){
     const SB_KEY2=typeof SB_KEY!=='undefined'?SB_KEY:(typeof SUPABASE_ANON_KEY!=='undefined'?SUPABASE_ANON_KEY:null);
     if(!SB_URL2){_studentEvents=[];return;}
     const startDate=year+'-'+String(month).padStart(2,'0')+'-01';
-    const endDate=year+'-'+String(month).padStart(2,'0')+'-31';
+    const _lastDay=new Date(year, month, 0).getDate(); // 그 달 마지막 날 (6월=30, 2월=28/29)
+    const endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(_lastDay).padStart(2,'0');
     const hdr={'apikey':SB_KEY2,'Authorization':'Bearer '+SB_KEY2};
     const [r1,r2]=await Promise.all([
       fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name&checkin_date=gte.'+startDate+'&checkin_date=lte.'+endDate+'&order=checkin_date',{headers:hdr}),

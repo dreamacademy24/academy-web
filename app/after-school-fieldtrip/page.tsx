@@ -271,6 +271,17 @@ export default function AfterSchoolFieldtripPage() {
       });
       if (insErr) { console.error(insErr); toastErr("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
 
+      // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
+      try {
+        const summary = selected.map((s) => s.label).filter(Boolean).join(", ") || scheduleValues;
+        await supabase.from("customer_activity").insert({
+          type: "fieldtrip", action: "신청",
+          title: `${childName || "아이"} · ${summary}`.slice(0, 200),
+          reserver: bookingMeta?.name || null, booking_id: session?.booking_id || null,
+          ref_table: "fieldtrip_applications",
+        });
+      } catch { /* noop */ }
+
       // 2) 구글시트 백업 (best-effort — 실패해도 신청은 정상 처리)
       try {
         const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbwqK13BTYKhX4HqJHxJCotHP2X2lbtdRptQkW-j9A6-ZffkRtt1B8v1IKwIZ6uMBM4/exec";
