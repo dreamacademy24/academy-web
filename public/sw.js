@@ -1,4 +1,4 @@
-const CACHE_NAME = "dreamacademy-v1";
+const CACHE_NAME = "dreamacademy-v2";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -42,16 +42,33 @@ self.addEventListener('push', function (event) {
     tag: data.tag,
     renotify: !!data.tag,
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(title, options);
+    // 앱 아이콘 배지 = 안 읽은(트레이에 남은) 알림 개수 — 앱이 꺼져 있어도 반영
+    try {
+      if (self.navigator && self.navigator.setAppBadge) {
+        const notifs = await self.registration.getNotifications();
+        const n = (typeof data.badgeCount === "number" && data.badgeCount > 0) ? data.badgeCount : (notifs.length || 1);
+        await self.navigator.setAppBadge(n);
+      }
+    } catch (e) {}
+  })());
 });
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
   const targetUrl = (event.notification.data && event.notification.data.url) || '/portal';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
-      for (const c of list) { if (c.url.includes(targetUrl) && 'focus' in c) return c.focus(); }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })
-  );
+  event.waitUntil((async () => {
+    // 배지 갱신: 트레이에 남은 알림 수 기준 (없으면 제거)
+    try {
+      if (self.navigator) {
+        const notifs = await self.registration.getNotifications();
+        if (notifs.length > 0 && self.navigator.setAppBadge) await self.navigator.setAppBadge(notifs.length);
+        else if (self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+      }
+    } catch (e) {}
+    const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of list) { if (c.url.includes(targetUrl) && 'focus' in c) return c.focus(); }
+    if (clients.openWindow) return clients.openWindow(targetUrl);
+  })());
 });
