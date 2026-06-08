@@ -34,6 +34,63 @@
 }
 body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
 
+/* ══════════════════════════════════
+   TM 디자인 시스템 — 재사용 컴포넌트 kit (전 화면 공통, 토큰 기반)
+══════════════════════════════════ */
+/* 카드 */
+.tm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-sm);overflow:hidden;}
+.tm-card-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--border);}
+.tm-card-h .t{font-size:14px;font-weight:800;color:var(--text);flex:1;min-width:0;}
+.tm-card-b{padding:14px 16px;}
+/* 섹션 헤더 */
+.tm-sech{font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px;margin:0 0 11px;}
+.tm-sech .c{margin-left:auto;font-size:11px;font-weight:700;color:var(--text3);}
+/* 버튼 */
+.tm-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:13px;font-weight:700;
+  padding:9px 16px;border-radius:var(--rs);border:1px solid var(--border);background:var(--surface);color:var(--text2);
+  cursor:pointer;transition:all .14s;white-space:nowrap;line-height:1;}
+.tm-btn:hover{border-color:var(--border2);background:var(--surface2);}
+.tm-btn-pri{background:var(--primary);border-color:var(--primary);color:#fff;}
+.tm-btn-pri:hover{background:#3651d4;border-color:#3651d4;}
+.tm-btn-ok{background:var(--green);border-color:var(--green);color:#fff;}
+.tm-btn-ok:hover{filter:brightness(.95);}
+.tm-btn-danger{background:var(--red);border-color:var(--red);color:#fff;}
+.tm-btn-danger:hover{filter:brightness(.95);}
+.tm-btn-ghost{background:transparent;border-color:transparent;color:var(--text2);}
+.tm-btn-ghost:hover{background:var(--surface2);}
+.tm-btn-sm{padding:6px 11px;font-size:12px;border-radius:var(--rxs);}
+.tm-btn:disabled{opacity:.55;cursor:default;}
+/* 뱃지 */
+.tm-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;line-height:1.2;white-space:nowrap;}
+.tm-badge.is-ok{background:var(--green-l);color:var(--green);}
+.tm-badge.is-warn{background:var(--amber-l);color:#b45309;}
+.tm-badge.is-danger{background:var(--red-l);color:var(--red);}
+.tm-badge.is-info{background:var(--primary-l);color:var(--primary);}
+.tm-badge.is-muted{background:var(--surface2);color:var(--text3);}
+/* 칩 */
+.tm-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--surface2);color:var(--text2);}
+/* 입력 */
+.tm-input,.tm-select,.tm-textarea{width:100%;font-family:inherit;font-size:13.5px;color:var(--text);
+  padding:9px 12px;border:1px solid var(--border2);border-radius:var(--rs);background:var(--surface);outline:none;transition:border-color .14s;}
+.tm-input:focus,.tm-select:focus,.tm-textarea:focus{border-color:var(--primary);}
+.tm-input::placeholder,.tm-textarea::placeholder{color:var(--text3);}
+.tm-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:5px;display:block;}
+/* 빈 화면 */
+.tm-empty{text-align:center;color:var(--text3);padding:36px 16px;font-size:13px;}
+.tm-empty .ic{font-size:26px;display:block;margin-bottom:8px;opacity:.7;}
+/* 모달 */
+.tm-ov{position:fixed;inset:0;background:rgba(15,18,40,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:18px;}
+.tm-modal{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow-lg);max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
+.tm-modal-h{display:flex;align-items:center;gap:8px;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);}
+.tm-modal-h .t{font-size:16px;font-weight:800;flex:1;}
+.tm-modal-x{border:none;background:none;font-size:20px;color:var(--text3);cursor:pointer;line-height:1;}
+.tm-modal-b{padding:18px 20px;}
+.tm-modal-f{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border);}
+/* 구분선·뮤트 */
+.tm-divider{height:1px;background:var(--border);margin:14px 0;}
+.tm-muted{color:var(--text3);}
+.tm-row{display:flex;align-items:center;gap:10px;}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
