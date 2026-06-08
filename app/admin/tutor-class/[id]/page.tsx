@@ -219,7 +219,7 @@ export default function TutorRequestDetailPage() {
           const _bid = (row as any).booking_id;
           if (_bid && (computedAmount || 0) > 0) {
             const _md = (d: string) => (d ? d.slice(5).replace("-", "/") : "");
-            const _label = `튜터비 · ${row.student_name_kr || row.student_name_en || ""}${row.start_date ? ` (${_md(row.start_date)}~${_md(row.end_date)})` : ""}`;
+            const _label = `튜터비 · ${row.student_name_kr || (row as any).student_name_en || ""}${row.start_date ? ` (${_md(row.start_date)}~${_md(row.end_date)})` : ""}`;
             const { error: _ce } = await supabase.from("settlement_items").insert({
               booking_id: _bid, kind: "charge", label: _label, amount: computedAmount,
               item_date: row.start_date || new Date().toISOString().slice(0, 10),
