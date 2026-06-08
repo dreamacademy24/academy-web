@@ -38,6 +38,13 @@ function won(n: number) {
   return "₩" + n.toLocaleString("ko-KR");
 }
 
+// 숙소별 최저 정가 (카드 "최저 ₩…부터")
+function minListPrice(d?: ParsedAccom): number {
+  if (!d) return 0;
+  const vals = Object.values(d.prices).map((p) => p[0]).filter((n) => n > 0);
+  return vals.length ? Math.min(...vals) : 0;
+}
+
 // 정렬된 distinct 숫자 배열
 function uniqSortedNum(arr: number[]): number[] {
   return Array.from(new Set(arr)).sort((a, b) => a - b);
@@ -374,8 +381,14 @@ export default function ProductsPage() {
       </header>
 
       <div className="phero">
-        <h1>요금 안내 · 패키지 상품</h1>
-        <p>드림아카데미 어학연수 패키지 상품의 구성과 가격을 안내합니다. 모든 가격은 원화(₩) 기준입니다.</p>
+        <span className="store-badge">🏝️ 드림아카데미 공식 스토어</span>
+        <h1>필리핀 세부 영어캠프 패키지</h1>
+        <p>숙소 · 정규수업 · 평일 3식 · 주말 셔틀 · 애프터스쿨까지 올인원. 원하시는 패키지를 선택하세요.</p>
+        <div className="trust-row">
+          <span>🔒 안전결제 (PG)</span>
+          <span>💬 고객센터 010-2639-2826</span>
+          <span>↩️ 환불정책 명시</span>
+        </div>
       </div>
 
       <main className="pmain">
@@ -383,27 +396,43 @@ export default function ProductsPage() {
         {!book && !error && <div className="ploading">가격 정보를 불러오는 중...</div>}
 
         {book && (
-          <div className="ptabs" role="tablist">
-            {sections.map((cfg) => (
-              <button
-                key={cfg.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === cfg.id}
-                className={`ptab ${activeTab === cfg.id ? "active" : ""}`}
-                onClick={() => setActiveTab(cfg.id)}
-              >
-                {cfg.shortLabel}
-              </button>
-            ))}
+          <div className="pgrid">
+            {sections.map((cfg) => {
+              const mp = minListPrice(book[cfg.id]);
+              const sel = activeTab === cfg.id;
+              const icon = cfg.id === "dreamhouse" ? "🏡" : cfg.id === "jpark" ? "🌊" : "🏊";
+              return (
+                <button
+                  key={cfg.id}
+                  type="button"
+                  className={`pcard ${sel ? "sel" : ""}`}
+                  onClick={() => { setActiveTab(cfg.id); if (typeof document !== "undefined") document.getElementById("pdetail")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                >
+                  <div className={`pcard-img img-${cfg.id}`}><span>{icon}</span></div>
+                  <div className="pcard-body">
+                    <div className="pcard-name">{cfg.title}</div>
+                    <div className="pcard-tag">{cfg.tagline}</div>
+                    <div className="pcard-foot">
+                      <div className="pcard-price">{mp > 0 ? (<><span>최저</span> <b>{won(mp)}</b> 부터</>) : "가격 문의"}</div>
+                      <span className="pcard-cta">{sel ? "✓ 선택됨" : "상세 보기 →"}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {book && sections.map((cfg) => (
-          <div key={cfg.id} style={{ display: activeTab === cfg.id ? "block" : "none" }}>
-            <AccomSection cfg={cfg} data={book[cfg.id]} />
+        {book && (
+          <div id="pdetail">
+            <div className="pdetail-head">📋 {sections.find((s) => s.id === activeTab)?.title} · 상세 가격</div>
+            {sections.map((cfg) => (
+              <div key={cfg.id} style={{ display: activeTab === cfg.id ? "block" : "none" }}>
+                <AccomSection cfg={cfg} data={book[cfg.id]} />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
         {/* 이용약관 / 환불정책 */}
         <section className="terms">
@@ -482,9 +511,31 @@ export default function ProductsPage() {
         .biz .ph { color: #f59e0b; }
         .biz-note { font-size: 12px; color: #94a3b8; margin: 16px 0 0; line-height: 1.6; }
         .copyright { max-width: 880px; margin: 20px auto 0; font-size: 12px; color: #64748b; text-align: center; }
+        .store-badge { display: inline-block; background: #eef2ff; color: #4338ca; font-size: 12.5px; font-weight: 800; padding: 5px 14px; border-radius: 999px; margin-bottom: 12px; }
+        .trust-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin-top: 16px; }
+        .trust-row span { font-size: 12.5px; color: #475569; font-weight: 600; }
+        .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+        .pcard { display: flex; flex-direction: column; text-align: left; padding: 0; border: 1.5px solid #e2e8f0; border-radius: 16px; background: #fff; cursor: pointer; overflow: hidden; font-family: inherit; transition: transform 160ms, box-shadow 160ms, border-color 160ms; }
+        .pcard:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(20,30,60,0.10); }
+        .pcard.sel { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+        .pcard-img { height: 130px; display: flex; align-items: center; justify-content: center; font-size: 46px; }
+        .pcard-img.img-dreamhouse { background: linear-gradient(135deg, #34d399, #0ea5a4); }
+        .pcard-img.img-jpark { background: linear-gradient(135deg, #38bdf8, #2563eb); }
+        .pcard-img.img-cubenine { background: linear-gradient(135deg, #a78bfa, #7c3aed); }
+        .pcard-body { padding: 16px 16px 18px; display: flex; flex-direction: column; flex: 1; }
+        .pcard-name { font-size: 16px; font-weight: 800; margin-bottom: 5px; }
+        .pcard-tag { font-size: 12.5px; color: #6b7c93; line-height: 1.5; flex: 1; margin-bottom: 14px; }
+        .pcard-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+        .pcard-price { font-size: 12px; color: #94a3b8; }
+        .pcard-price span { font-size: 11px; }
+        .pcard-price b { font-size: 18px; color: #1a1a2e; font-weight: 800; }
+        .pcard-cta { flex-shrink: 0; font-size: 12.5px; font-weight: 800; color: #2563eb; background: #eff6ff; padding: 7px 12px; border-radius: 8px; }
+        .pcard.sel .pcard-cta { background: #2563eb; color: #fff; }
+        .pdetail-head { font-size: 16px; font-weight: 800; color: #1a1a2e; margin: 4px 0 14px; padding-left: 4px; }
         @media (max-width: 600px) {
           .biz dl { grid-template-columns: 1fr; }
           .phero h1 { font-size: 23px; }
+          .pgrid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>
