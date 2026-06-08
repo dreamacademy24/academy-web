@@ -452,6 +452,11 @@ export default function MyApplicationsPage() {
         <div className="ma-modal" onClick={e => e.stopPropagation()}>
           <h3>취소 요청</h3>
           <div className="desc"><b style={{ color: "#1a1a2e" }}>{cancelModal.title}</b><br />취소 요청 후에는 스탭이 확인 후 처리합니다.</div>
+          {cancelModal.table === "shuttle_applications" && (
+            <div style={{ marginTop: 8, marginBottom: 4, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "9px 11px", fontSize: 12.5, color: "#b45309", fontWeight: 600, lineHeight: 1.6 }}>
+              ⚠️ 셔틀은 <b>2회 이상 취소 시 탑승이 제한될 수 있습니다.</b> 신중히 신청해 주세요.
+            </div>
+          )}
           <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6, display: "block" }}>사유 (선택)</label>
           <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="취소 사유를 입력해주세요" />
           <div className="btns">
