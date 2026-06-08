@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; house_no: string | null; }
+interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; }
 interface Item { id: string; booking_id: string; kind: string; label: string; amount: number; item_date: string | null; status: string; recorded_by: string | null; approved_by: string | null; created_at: string; }
 
 type Kind = "deposit" | "charge" | "deduct" | "payment";
@@ -35,8 +35,21 @@ export default function SettlementPage() {
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, house_no").order("checkin_date", { ascending: false });
-    setBookings((data || []) as Booking[]);
+    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no").order("checkin_date", { ascending: false });
+    const today = new Date().toISOString().slice(0, 10);
+    const rank = (b: Booking) => {
+      const ci = b.checkin_date || "", co = b.checkout_date || "";
+      if (ci && ci <= today && (!co || co >= today)) return 0; // 투숙중
+      if (ci && ci > today) return 1;                          // 예정
+      return 2;                                                 // 지난
+    };
+    const sorted = ((data || []) as Booking[]).sort((a, b) => {
+      const ra = rank(a), rb = rank(b);
+      if (ra !== rb) return ra - rb;
+      if (ra === 1) return (a.checkin_date || "").localeCompare(b.checkin_date || ""); // 예정: 가까운 순
+      return (b.checkin_date || "").localeCompare(a.checkin_date || "");               // 투숙중/지난: 최근 순
+    });
+    setBookings(sorted);
   }, []);
   useEffect(() => { if (authed) loadBookings(); }, [authed, loadBookings]);
 
@@ -109,12 +122,19 @@ export default function SettlementPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="예약자·예약번호·방번호 검색" style={{ width: "100%", padding: "9px 11px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
           </div>
           <div style={{ maxHeight: 460, overflowY: "auto" }}>
-            {filtered.map(b => (
+            {filtered.map(b => {
+              const today = new Date().toISOString().slice(0, 10);
+              const staying = !!(b.checkin_date && b.checkin_date <= today && (!b.checkout_date || b.checkout_date >= today));
+              return (
               <div key={b.id} onClick={() => setSel(b)} style={{ padding: "10px 13px", cursor: "pointer", borderBottom: "1px solid #f8fafc", background: sel?.id === b.id ? "#eff6ff" : "#fff" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{b.booker_name || "(이름없음)"}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  {b.booker_name || "(이름없음)"}
+                  {staying && <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 20, background: "#dcfce7", color: "#15803d" }}>투숙중</span>}
+                </div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>{b.house_no || ""} {b.checkin_date ? `· ${b.checkin_date}` : ""}</div>
               </div>
-            ))}
+              );
+            })}
             {filtered.length === 0 && <div style={{ padding: 16, color: "#cbd5e1", fontSize: 13 }}>예약이 없습니다</div>}
           </div>
         </div>
