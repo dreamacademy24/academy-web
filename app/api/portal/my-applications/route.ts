@@ -23,11 +23,10 @@ export async function GET(req: Request) {
     supabase.from("shuttle_applications").select("*")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
-    roomNumber
-      ? supabase.from("fieldtrip_applications").select("*")
-          .eq("room_number", roomNumber)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as Array<Record<string, unknown>>, error: null } as { data: Array<Record<string, unknown>>; error: null }),
+    // booking_id 기준(셔틀·튜터와 동일). 구버전 room_number 저장분도 OR로 호환.
+    supabase.from("fieldtrip_applications").select("*")
+      .or(roomNumber ? `booking_id.eq.${bookingId},room_number.eq.${roomNumber}` : `booking_id.eq.${bookingId}`)
+      .order("created_at", { ascending: false }),
     // /portal/tutor와 동일하게 booking_id로 직접 조회 (student_id 경유 X)
     supabase.from("tutor_requests")
       .select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, cancel_reason, created_at")

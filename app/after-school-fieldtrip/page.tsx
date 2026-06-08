@@ -222,34 +222,36 @@ export default function AfterSchoolFieldtripPage() {
     }
 
     setSubmitting(true);
+    const scheduleValues = Array.from(checked).map((cb) => (cb as HTMLInputElement).value).join(", ");
+    const childName = (form.querySelector('[name="childName"]') as HTMLInputElement | HTMLSelectElement | null)?.value || "";
+    const memo = (form.querySelector('[name="memo"]') as HTMLTextAreaElement | null)?.value || "";
     try {
-      const FORM_ENDPOINT =
-        "https://script.google.com/macros/s/AKfycbwqK13BTYKhX4HqJHxJCotHP2X2lbtdRptQkW-j9A6-ZffkRtt1B8v1IKwIZ6uMBM4/exec";
-      const formData = new FormData(form);
-      formData.delete("schedule");
-      const scheduleValues = Array.from(checked)
-        .map((cb) => (cb as HTMLInputElement).value)
-        .join(", ");
-      formData.append("schedule", scheduleValues);
-      const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Network error");
-
-      // Supabase 동시 저장 — 예약(booking_id)과 연결 (픽업·셔틀·튜터와 동일 연결키)
-      await supabase.from("fieldtrip_applications").insert({
-        name: formData.get("childName") as string,
-        date: formData.get("schedule") as string,
-        message: formData.get("memo") as string,
-        request: formData.get("memo") as string,
+      // 1) Supabase 저장 = 앱의 source of truth. 구글시트 성공 여부와 무관하게 먼저 확실히 저장.
+      const { error: insErr } = await supabase.from("fieldtrip_applications").insert({
+        name: childName,
+        date: scheduleValues,
+        message: memo,
+        request: memo,
         booking_id: session?.booking_id || null,
         portal_name: bookingMeta?.name || null,
         room_number: bookingMeta?.room || null,
-      }).then(() => {});
+      });
+      if (insErr) { console.error(insErr); alert("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
+
+      // 2) 구글시트 백업 (best-effort — 실패해도 신청은 정상 처리)
+      try {
+        const FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbwqK13BTYKhX4HqJHxJCotHP2X2lbtdRptQkW-j9A6-ZffkRtt1B8v1IKwIZ6uMBM4/exec";
+        const formData = new FormData(form);
+        formData.delete("schedule");
+        formData.append("schedule", scheduleValues);
+        await fetch(FORM_ENDPOINT, { method: "POST", body: formData, mode: "no-cors" });
+      } catch (e) { console.warn("구글시트 백업 실패(무시):", e); }
 
       alert("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
       form.reset();
     } catch (err) {
       console.error(err);
-      alert("전송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      alert("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }
