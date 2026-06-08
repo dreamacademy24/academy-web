@@ -19,6 +19,7 @@ interface TutorApp {
   textbook: string | null; class_style: string; class_focus: string[] | null; child_notes: string | null;
   agreed_privacy: boolean; agreed_tutor_rules?: boolean; agreed_tutor_rules_bool?: boolean;
   status: string; assigned_tutor_id: string | null;
+  booking_id: string | null;
   total_sessions: number | null; total_amount: number | null; admin_memo: string | null;
   schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
@@ -118,6 +119,7 @@ export default function TutorApplications() {
       id: r.id,
       created_at: r.created_at,
       updated_at: r.updated_at || null,
+      booking_id: r.booking_id || null,
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
       house_number: (() => {
@@ -288,6 +290,19 @@ export default function TutorApplications() {
       const sessionsWithLessonId = sessions.map(s => ({ ...s, lesson_id: (lesson as { id: string }).id }));
       const { error: e3 } = await supabase.from("tutor_lesson_sessions").insert(sessionsWithLessonId);
       if (e3) throw new Error(`수업 생성됐지만 회차 생성 실패: ${e3.message}`);
+    }
+
+    // 정산 자동 청구: 튜터비를 settlement_items에 charge로 등록 (예약 연결 시).
+    // createLessonForApp은 최초 1회만 도달(기존 수업 있으면 위에서 early-return)하므로 중복 없음.
+    if (app.booking_id && computedTotalAmount > 0) {
+      const mdShort = (d: string) => (d ? d.slice(5).replace("-", "/") : "");
+      const label = `튜터비 · ${app.children_names || ""}${app.start_date ? ` (${mdShort(app.start_date)}~${mdShort(app.end_date)})` : ""}`;
+      const { error: eChg } = await supabase.from("settlement_items").insert({
+        booking_id: app.booking_id, kind: "charge", label,
+        amount: computedTotalAmount, item_date: app.start_date || localStr(new Date()),
+        status: "approved", recorded_by: "시스템(튜터확정)",
+      });
+      if (eChg) console.error("정산 자동청구 실패(수업은 정상):", eChg);
     }
     return `✅ 확정 완료: ${sessions.length}회차 자동 생성`;
   }
