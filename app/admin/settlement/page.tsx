@@ -5,7 +5,15 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; }
+interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; students?: unknown; }
+function studentNames(b: Booking): string {
+  const raw = b.students;
+  let arr: any[] = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (typeof raw === "string") { try { const p = JSON.parse(raw); if (Array.isArray(p)) arr = p; } catch {} }
+  const names = arr.map((s: any) => s?.name_kr || s?.korName || s?.name || s?.name_en || s?.engName || "").filter(Boolean);
+  return names.join(", ");
+}
 interface Item { id: string; booking_id: string; kind: string; label: string; amount: number; item_date: string | null; status: string; recorded_by: string | null; approved_by: string | null; created_at: string; }
 
 type Kind = "deposit" | "charge" | "deduct" | "payment";
@@ -35,7 +43,7 @@ export default function SettlementPage() {
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no").order("checkin_date", { ascending: false });
+    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, students").order("checkin_date", { ascending: false });
     const today = new Date().toISOString().slice(0, 10);
     const rank = (b: Booking) => {
       const ci = b.checkin_date || "", co = b.checkout_date || "";
@@ -72,7 +80,7 @@ export default function SettlementPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return bookings.slice(0, 40);
-    return bookings.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || ""}`.toLowerCase().includes(q)).slice(0, 40);
+    return bookings.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || ""} ${studentNames(b)}`.toLowerCase().includes(q)).slice(0, 40);
   }, [bookings, search]);
 
   const sum = useMemo(() => {
@@ -167,6 +175,7 @@ export default function SettlementPage() {
                   {staying && <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 20, background: "#dcfce7", color: "#15803d" }}>투숙중</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>{b.house_no || ""} {b.checkin_date ? `· ${b.checkin_date}` : ""}</div>
+                {studentNames(b) && <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>👦 {studentNames(b)}</div>}
               </div>
               );
             })}
