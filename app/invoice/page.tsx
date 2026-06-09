@@ -783,6 +783,29 @@ function InvoicePageInner(){
           if(data.cn_room_type) setA1R(data.cn_room_type);
         }
       }
+      // 숙소 구간(seg1/seg2)이 있으면 순서·날짜·기간을 그대로 반영 (최종 override)
+      if (data.seg1_type && data.seg2_type) {
+        const segMap: Record<string, AT> = { jaypark: "jpark", dreamhouse: "dreamhouse", cubenine: "cubenine" };
+        const s1 = segMap[data.seg1_type as string] || "dreamhouse";
+        const s2 = segMap[data.seg2_type as string] || "jpark";
+        const segW = (a?: string, b?: string) => {
+          if (!a || !b) return 0;
+          const w = Math.round((new Date(b).getTime() - new Date(a).getTime()) / (7 * 86400000));
+          return w > 0 ? w : 0;
+        };
+        const sc1 = ((data.seg1_checkin as string) || "").split("T")[0];
+        const w1 = segW(data.seg1_checkin as string, data.seg1_checkout as string);
+        const w2 = segW(data.seg2_checkin as string, data.seg2_checkout as string);
+        setCm("combo");
+        setA1T(s1); setA2T(s2);
+        if (sc1) setA1CI(sc1);
+        if (w1) setA1W(w1);
+        if (w2) setA2W(w2);
+        if (s1 === "jpark" && data.jp_room_type) setA1R(data.jp_room_type);
+        if (s1 === "cubenine" && data.cn_room_type) setA1R(data.cn_room_type);
+        if (s2 === "jpark" && data.jp_room_type) setA2R(data.jp_room_type);
+        if (s2 === "cubenine" && data.cn_room_type) setA2R(data.cn_room_type);
+      }
       if(data.adults) setCP(data.adults);
       if(data.children){setCK(data.children);}else if(sts&&sts.length>0){setCK(sts.length);}
       if(data.base_price>0){
