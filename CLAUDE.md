@@ -1473,3 +1473,56 @@ special_request, ssp
 - 튜터 재배정 동기화: 신청 상세에서 튜터 변경 시 연결 tutor_lessons.tutor_id도 자동 업데이트(이번엔 수동 보정함)
 - 요일/시간 미설정(--:--) 수업이 생기는 근본 원인 점검(확정 시 시간 정보 누락 패턴)
 - 텔레그램 정기 알림(드림보드 ⑤), 봇 토큰 revoke 재발급
+
+## 2026-06-09 세션 (콤보 예약 숙소 구간 라우팅 — 픽드랍/셔틀/엄마포털)
+
+### 배경 — 콤보 예약 = 숙소 2곳 순서 (예: 제이파크 4주 → 드림하우스 2주)
+- `bookings` 컬럼: seg1_type/seg1_checkin/seg1_checkout, seg2_type/seg2_checkin/seg2_checkout (date),
+  jp_room_type/cn_room_type, dh_weeks/jp_weeks/cn_period
+- seg type 값: jaypark / dreamhouse / cubenine. 한글 매핑 ACC_KR = {jaypark:'제이파크', dreamhouse:'드림하우스', cubenine:'큐브나인'}
+- 환승일 = seg1_checkout = seg2_checkin (첫 숙소 퇴실 = 둘째 숙소 입실 동일 날짜)
+- 캡처/표시 레이어(폼·모달·상세·인보이스·리스트·룸캘린더)는 직전 세션들에서 완료, 이번엔 **라우팅 레이어** 완성
+
+### 완료 커밋 016c7c0 (4파일, +95/-18)
+1. **엄마 포털** (`app/portal/my-booking/page.tsx`):
+   - isCombo면 예약유형="제이파크+드림하우스", 체크인=seg1_checkin / 체크아웃=seg2_checkout
+   - "숙소 구간 (순서대로)" 블록 — ①②카드 각 숙소명+체크인~체크아웃 + "공항 도착 시 ①번 숙소로 이동 후, {seg1_checkout}에 ②번으로 이동" 안내
+   - `b`는 /api/portal/booking (select('*')) → seg 필드 그대로 들어옴
+2. **픽드랍 라우팅** (`app/api/admin/pickups/route.ts` + `app/admin/pickups/page.tsx`):
+   - extract select에 seg 필드 추가. 콤보면 3건 생성:
+     · pickup: 공항 → seg1 숙소 (request_date=seg1_checkin)
+     · transfer(신규 유형): seg1 숙소 → seg2 숙소 (request_date=seg1_checkout)
+     · dropoff: seg2 숙소 → 공항 (request_date=checkout_date)
+   - 단독 예약은 기존대로 destination/location='드림하우스'
+   - 페이지: t-transfer CSS, "🔄 환승" 뱃지(리스트·달력·상세), transfer는 flightTxt 공백, 달력 cal-ptr 핀
+3. **셔틀 픽업장소** (`app/portal/shuttle/page.tsx`):
+   - bookingMeta에 seg 필드 로드(/api/bookings/[id] select('*'))
+   - 제출 시 resolvePickup(tourDate): 콤보면 tourDate>=seg2_checkin → seg2 숙소, 아니면 seg1 숙소. room_number에 저장
+   - 예약현황 카드(my-applications)·어드민 tour-shuttle 신청목록에 픽업 숙소로 표시
+
+### DB 마이그레이션 (실행 완료) ⚠️ 중요
+```sql
+ALTER TABLE pickup_requests DROP CONSTRAINT IF EXISTS pickup_requests_request_type_check;
+ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
+  CHECK (request_type IN ('pickup','dropoff','departure','arrival','extra_pickup','extra_drop','additional','transfer'));
+```
+- 기존 request_type 6종(pickup/dropoff/departure/arrival/extra_pickup/extra_drop)에 transfer 추가
+- 처음엔 기존 6종을 빠뜨려서 23514 위반 → 전부 포함해야 통과
+
+### 라이브 검증 (끝에서 끝까지, Chrome MCP)
+- 검증용으로 김세훈 예약(4e48f1f0-874f-4faf-8243-e2b1a9dae796)을 임시 콤보(제이파크 7/4~8/1 → 드림하우스 8/1~8/15)로 PATCH 후 검증, 종료 시 제이파크 단독으로 원복
+- ✅ 픽드랍: 공항→제이파크(7/4), 제이파크→드림하우스 환승(8/1), 드림하우스→공항(8/15) 3건 생성 + UI 🔄환승 표시
+- ✅ 엄마포털: "제이파크+드림하우스" + 구간 ①제이파크 7/4~8/1 / ②드림하우스 8/1~8/15 + 환승 안내 렌더 확인
+- ✅ 셔틀: 실제 폼 제출(7/6 H-Mart, 8/5 H-Mart) → 어드민 tour-shuttle 신청목록에서 7/6→🏠제이파크, 8/5→🏠드림하우스 확인
+- 테스트 데이터 정리: DELETE FROM pickup_requests/shuttle_applications WHERE booking_id='4e48f1f0...' (실행 완료)
+- 양지나 등 기존 실제 콤보 예약도 환승 자동 생성 정상 확인
+
+### 핵심 학습 포인트
+- **콤보 라우팅 단일 규칙:** "tourDate >= seg2_checkin → 둘째 숙소" 하나로 셔틀 픽업·환승일 판별 일관 처리. 환승일 당일은 이미 새 숙소(드림하우스)로 판정
+- **Supabase CHECK 제약 확장:** 새 enum 값 추가 시 기존 값 전부 나열해야 함. 누락 시 23514. `SELECT DISTINCT request_type`으로 현재 값 먼저 확인
+- **portalSession 로컬 검증 패턴:** localStorage.setItem('portalSession', {booking_id, booking_number, guest_name, check_in_date, expires})로 임의 예약 포털 화면 검증 가능. 'portalSession' 키는 MCP에서 sensitive로 읽기 차단되나 set/remove는 동작
+- **셔틀 폼 MCP 자동화:** label.schedule-item 클릭으로 투어 선택, 동의는 label 클릭, window.alert override 후 제출
+
+### 다음 세션 대기
+- 콤보 예약 신규 생성 시 어드민 패키지 모달이 MCP 렌더러를 멈추는 이슈(native confirm/alert 추정) — 검증은 PATCH 우회로 진행함
+- 직전 세션 대기 항목(튜터 재배정 동기화, --:-- 시간 미설정 근본 원인, 텔레그램 정기 알림, 봇 토큰 revoke) 유지
