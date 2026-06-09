@@ -144,6 +144,21 @@ function acaEnd(b:any):string{
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
   if(isCommuteBooking(b))return "통학형";
+  // 콤보: 숙소 구간(seg1/seg2) 순서대로 짧은 코드 (예: JP+DH)
+  const SHORT:Record<string,string>={jaypark:"JP",dreamhouse:"DH",cubenine:"CUBE9"};
+  if(b.seg1_type&&b.seg2_type){
+    return `${SHORT[b.seg1_type]||b.seg1_type}+${SHORT[b.seg2_type]||b.seg2_type}`;
+  }
+  if(t.includes("+")){
+    // seg 없는 옛 콤보: accom_type 텍스트 순서로 추정
+    const order:string[]=[];
+    t.split("+").forEach((p:string)=>{
+      if(/제이파크/.test(p))order.push("JP");
+      else if(/드림하우스|드하/.test(p))order.push("DH");
+      else if(/큐브/.test(p))order.push("CUBE9");
+    });
+    if(order.length>=2)return order.join("+");
+  }
   if(t.includes("드림하우스")||t.includes("드하")){
     const room=(b.house_no||b.accom_room||"").toString().replace(/\s+/g,"").replace(/^dh/i,"").toUpperCase();
     return room?`DH ${room}`:"DH";
