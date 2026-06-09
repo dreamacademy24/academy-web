@@ -816,18 +816,20 @@ function InvoicePageInner(){
         setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"드림하우스 보증금",amount:""}]});
         setApplied(true);
         // calculator state 복원 (룸타입/주수/인원 — 신 포맷 items에만 존재. 옛 데이터는 undefined → no-op)
+        // 단, 숙소 구간(seg1/seg2)이 있으면 숙소/주수는 구간이 source → 저장된 accom/weeks 복원 스킵(순서 보존)
+        const _hasSeg = !!(data.seg1_type && data.seg2_type);
         if(items[0]){
-          if(items[0].accom) setA1T(items[0].accom);
-          if(items[0].roomType) setA1R(items[0].roomType);
-          if(items[0].weeks) setA1W(items[0].weeks);
+          if(!_hasSeg && items[0].accom) setA1T(items[0].accom);
+          if(!_hasSeg && items[0].roomType) setA1R(items[0].roomType);
+          if(!_hasSeg && items[0].weeks) setA1W(items[0].weeks);
           if(items[0].parents) setCP(items[0].parents);
           if(items[0].kids) setCK(items[0].kids);
         }
         if(items[1]){
           setCm("combo");
-          if(items[1].accom) setA2T(items[1].accom);
-          if(items[1].roomType) setA2R(items[1].roomType);
-          if(items[1].weeks) setA2W(items[1].weeks);
+          if(!_hasSeg && items[1].accom) setA2T(items[1].accom);
+          if(!_hasSeg && items[1].roomType) setA2R(items[1].roomType);
+          if(!_hasSeg && items[1].weeks) setA2W(items[1].weeks);
         }
       }
       if(data.reservation_no) setReservationNo(data.reservation_no);
