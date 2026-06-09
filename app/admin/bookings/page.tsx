@@ -180,6 +180,17 @@ export default function AdminBookingsPage(){
     dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,
     pickup_place:"",drop_place:"",agency:"",special_request:""});
   const [savingNew,setSavingNew]=useState(false);
+  // 콤보 숙소 구간 (순서대로): seg[0] 먼저 → seg[1] 다음
+  const [newSegs,setNewSegs]=useState<{type:string;checkin:string;checkout:string}[]>([
+    {type:"jaypark",checkin:"",checkout:""},{type:"dreamhouse",checkin:"",checkout:""}]);
+  const nbIsCombo = bType==="dreamhouse_jaypark"||bType==="dreamhouse_cubenine";
+  useEffect(()=>{
+    if(!nbIsCombo) return;
+    const a = bType==="dreamhouse_cubenine"?["cubenine","dreamhouse"]:["jaypark","dreamhouse"];
+    setNewSegs(prev=>[{...prev[0],type:a[0]},{...prev[1],type:a[1]}]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[bType]);
+  const NB_ACC_KR:Record<string,string>={jaypark:"제이파크",dreamhouse:"드림하우스",cubenine:"큐브나인"};
 
   const CN_PERIODS=["1주","2주","4주","6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
@@ -393,8 +404,14 @@ export default function AdminBookingsPage(){
       booker_name:newForm.booker_name.trim(),
       booker_english:newForm.booker_english.trim()||null,
       booker_phone:newForm.booker_phone.trim()||null,
-      checkin_date:newForm.check_in||null,
-      checkout_date:newForm.check_out||null,
+      checkin_date:nbIsCombo?(newSegs[0].checkin||null):(newForm.check_in||null),
+      checkout_date:nbIsCombo?(newSegs[1].checkout||null):(newForm.check_out||null),
+      seg1_type:nbIsCombo?newSegs[0].type:null,
+      seg1_checkin:nbIsCombo?(newSegs[0].checkin||null):null,
+      seg1_checkout:nbIsCombo?(newSegs[0].checkout||null):null,
+      seg2_type:nbIsCombo?newSegs[1].type:null,
+      seg2_checkin:nbIsCombo?(newSegs[1].checkin||null):null,
+      seg2_checkout:nbIsCombo?(newSegs[1].checkout||null):null,
       flight_in:flightInStr||null,
       flight_out:flightOutStr||null,
       pickup_place:newForm.pickup_place.trim()||null,
@@ -1264,6 +1281,23 @@ export default function AdminBookingsPage(){
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
               {CN_PERIODS.map(p=><option key={p} value={p}>{p}</option>)}
             </select>
+          </div>
+        )}
+        {nbIsCombo&&(
+          <div style={{marginTop:6,paddingTop:10,borderTop:"1px solid #e2e8f0"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+              <span style={{fontSize:13,fontWeight:700,color:"#475569"}}>숙소 구간별 체크인·체크아웃 (순서대로)</span>
+              <button type="button" onClick={()=>setNewSegs([{...newSegs[1]},{...newSegs[0]}])} style={{padding:"3px 9px",background:"#fff",border:"1px solid #3b82f6",color:"#3b82f6",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:600}}>⇅ 순서</button>
+            </div>
+            {newSegs.map((sg,i)=>(
+              <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                <span style={{fontSize:12,fontWeight:700,color:"#1e40af",minWidth:80}}>{i+1}. {NB_ACC_KR[sg.type]||sg.type}</span>
+                <input type="date" value={sg.checkin} onChange={e=>{const n=[...newSegs];n[i]={...n[i],checkin:e.target.value};setNewSegs(n);}} style={{padding:"6px 8px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}/>
+                <span style={{color:"#94a3b8"}}>~</span>
+                <input type="date" value={sg.checkout} onChange={e=>{const n=[...newSegs];n[i]={...n[i],checkout:e.target.value};setNewSegs(n);}} style={{padding:"6px 8px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}/>
+              </div>
+            ))}
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>픽드랍·셔틀이 이 구간에 맞춰 연결됩니다.</div>
           </div>
         )}
         {bType==="jaypark"&&(
