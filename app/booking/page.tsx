@@ -95,12 +95,8 @@ export default function BookingPage() {
   useEffect(() => {
     if (bType === "commute" || isCombo || !dates.checkIn) return;
     let totalWeeks = 0;
+    // 콤보(dreamhouse_jaypark/cubenine)는 위 isCombo 가드로 early-return → 여기 분기 불필요
     if (bType === "dreamhouse") totalWeeks = accom.dh_weeks;
-    else if (bType === "dreamhouse_jaypark") totalWeeks = accom.dh_weeks + accom.jp_weeks;
-    else if (bType === "dreamhouse_cubenine") {
-      const cnDays = accom.cn_period === "6일" ? 6 : parseInt(accom.cn_period) * 7;
-      totalWeeks = accom.dh_weeks + cnDays / 7;
-    }
     else if (bType === "jaypark") totalWeeks = accom.jp_weeks;
     else if (bType === "cubenine") {
       const cnDays = accom.cn_period === "6일" ? 6 : parseInt(accom.cn_period) * 7;
