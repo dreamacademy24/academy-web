@@ -192,7 +192,7 @@ export default function AdminBookingsPage(){
   const [npType,setNpType]=useState<'dh_only'|'jp_only'|'cn_only'|'commute'>('dh_only');
   const [bType,setBType]=useState<BookingTypeValue>("dreamhouse");
   const [newForm,setNewForm]=useState({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",
-    dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,
+    dh_weeks:2,jp_weeks:1,cn_period:"1주",jp_room_type:"디럭스",cn_room_type:"디럭스",room_accom:"dreamhouse",room_weeks:1,
     pickup_place:"",drop_place:"",agency:"",special_request:""});
   const [savingNew,setSavingNew]=useState(false);
   // 콤보 숙소 구간 (순서대로): seg[0] 먼저 → seg[1] 다음
@@ -441,6 +441,8 @@ export default function AdminBookingsPage(){
       dh_weeks:(bType==="dreamhouse"||bType==="dreamhouse_jaypark"||bType==="dreamhouse_cubenine")?newForm.dh_weeks:null,
       jp_weeks:(bType==="jaypark"||bType==="dreamhouse_jaypark")?newForm.jp_weeks:null,
       cn_period:(bType==="cubenine"||bType==="dreamhouse_cubenine")?newForm.cn_period:null,
+      jp_room_type:(bType==="jaypark"||bType==="dreamhouse_jaypark")?newForm.jp_room_type:null,
+      cn_room_type:(bType==="cubenine"||bType==="dreamhouse_cubenine")?newForm.cn_room_type:null,
     };
     const r=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/bookings`,{
       method:"POST",headers:{"Content-Type":"application/json","apikey":process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Authorization":"Bearer "+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,"Prefer":"return=representation"},
@@ -510,7 +512,7 @@ export default function AdminBookingsPage(){
       if(!patchR.ok){const e=await patchR.text();console.error("bookings.students PATCH failed:",e);toastErr("학생 정보 동기화 실패: "+e+"\n예약은 등록됐지만 리스트에 학생이름이 안 보일 수 있습니다.");}
     }
     setSavingNew(false);setShowNewBooking(false);
-    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
+    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",jp_room_type:"디럭스",cn_room_type:"디럭스",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
     setBType("dreamhouse");
     setFlightIn({...emptyFlight,undecided:false});setFlightOut({...emptyFlight,undecided:false});
     setStudents23([{...emptyStudent}]);
@@ -569,7 +571,7 @@ export default function AdminBookingsPage(){
       }
     }
     setSavingNew(false);setShowNewBooking(false);
-    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
+    setNewForm({booker_name:"",booker_english:"",booker_phone:"",check_in:"",check_out:"",dh_weeks:2,jp_weeks:1,cn_period:"1주",jp_room_type:"디럭스",cn_room_type:"디럭스",room_accom:"dreamhouse",room_weeks:1,pickup_place:"",drop_place:"",agency:"",special_request:""});
     setNpType('dh_only');setStudents23([{...emptyStudent}]);
     await load();
     toastOk("비패키지 예약이 등록되었습니다!");
@@ -1281,20 +1283,28 @@ export default function AdminBookingsPage(){
           </div>
         )}
         {bType==="dreamhouse_jaypark"&&(
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
             <label style={{fontSize:13,minWidth:90}}>제이파크</label>
             <select value={newForm.jp_weeks} onChange={e=>setNewForm({...newForm,jp_weeks:Number(e.target.value)})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
               {[1,2,3,4,5,6,7,8].map(w=><option key={w} value={w}>{w}주</option>)}
             </select>
+            <select value={newForm.jp_room_type} onChange={e=>setNewForm({...newForm,jp_room_type:e.target.value})}
+              style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
+              {["디럭스","프리미어","막탄스윗"].map(r=><option key={r} value={r}>{r}</option>)}
+            </select>
           </div>
         )}
         {bType==="dreamhouse_cubenine"&&(
-          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+          <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
             <label style={{fontSize:13,minWidth:90}}>큐브나인</label>
             <select value={newForm.cn_period} onChange={e=>setNewForm({...newForm,cn_period:e.target.value})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
               {CN_PERIODS.map(p=><option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={newForm.cn_room_type} onChange={e=>setNewForm({...newForm,cn_room_type:e.target.value})}
+              style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
+              {["디럭스","풀억세스룸"].map(r=><option key={r} value={r}>{r}</option>)}
             </select>
           </div>
         )}
