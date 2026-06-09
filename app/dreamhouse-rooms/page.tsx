@@ -89,7 +89,15 @@ export default function DreamhouseRooms() {
     const lastDay = `${ly}-${String(lm+1).padStart(2,'0')}-${getDaysInMonth(ly, lm)}`
     const res = await fetch(`/api/dreamhouse?firstDay=${firstDay}&lastDay=${lastDay}`)
     const data = await res.json()
-    setBookings(Array.isArray(data) ? data : [])
+    // 콤보 예약: 드림하우스 구간(seg)이 있으면 그 구간 날짜로만 룸 점유 표시 (전체 기간 X)
+    const arr = (Array.isArray(data) ? data : []).map((b: Record<string, string>) => {
+      let dhCi: string | null = null, dhCo: string | null = null
+      if (b.seg1_type === 'dreamhouse') { dhCi = b.seg1_checkin; dhCo = b.seg1_checkout }
+      else if (b.seg2_type === 'dreamhouse') { dhCi = b.seg2_checkin; dhCo = b.seg2_checkout }
+      if (dhCi && dhCo) return { ...b, checkin_date: String(dhCi).split('T')[0], checkout_date: String(dhCo).split('T')[0] }
+      return b
+    })
+    setBookings(arr as unknown as Booking[])
     setLoading(false)
   }
 
