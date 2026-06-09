@@ -125,7 +125,7 @@ type SelectedTour = { value: string; tourName: string; date: string; departTime:
 export default function PortalShuttlePage() {
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
-  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string } | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string; seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string; seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string } | null>(null);
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
   const [activeMonth, setActiveMonth] = useState("");
@@ -145,7 +145,15 @@ export default function PortalShuttlePage() {
         const ci = String(b.check_in || b.checkin_date || '').slice(0, 10);
         const co = String(b.check_out || b.checkout_date || '').slice(0, 10);
         const room = String(b.house_no || b.accom_room || b.accom_type || '').trim();
-        setBookingMeta({ checkin: ci, checkout: co, room });
+        setBookingMeta({
+          checkin: ci, checkout: co, room,
+          seg1_type: b.seg1_type || undefined,
+          seg1_checkin: b.seg1_checkin ? String(b.seg1_checkin).slice(0, 10) : undefined,
+          seg1_checkout: b.seg1_checkout ? String(b.seg1_checkout).slice(0, 10) : undefined,
+          seg2_type: b.seg2_type || undefined,
+          seg2_checkin: b.seg2_checkin ? String(b.seg2_checkin).slice(0, 10) : undefined,
+          seg2_checkout: b.seg2_checkout ? String(b.seg2_checkout).slice(0, 10) : undefined,
+        });
       })
       .catch(() => {});
   }, [session]);
@@ -280,6 +288,17 @@ export default function PortalShuttlePage() {
 
       // Supabase 동시 저장 — selectedTours 1개당 row 1개씩 INSERT
       const memo = (formData.get("memo") as string) || "";
+      // 콤보 예약: 투어 날짜가 어느 숙소 구간인지에 따라 픽업장소 자동 결정
+      const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
+      const resolvePickup = (tourDate: string): string => {
+        const m = bookingMeta;
+        if (m?.seg1_type && m?.seg2_type && tourDate) {
+          // seg2 기간(둘째 숙소 체크인 이후)이면 둘째 숙소, 아니면 첫 숙소
+          if (m.seg2_checkin && tourDate >= m.seg2_checkin) return ACC_KR[m.seg2_type] || m.seg2_type;
+          return ACC_KR[m.seg1_type] || m.seg1_type;
+        }
+        return m?.room || "";
+      };
       const rows = selectedTours.map(t => ({
         booking_id: session.booking_id,
         portal_name: session.guest_name,
@@ -288,7 +307,7 @@ export default function PortalShuttlePage() {
         tour_date: t.date,
         depart_time: t.departTime,
         people_count: t.people,
-        room_number: bookingMeta?.room || "",
+        room_number: resolvePickup(t.date),
         message: memo,
         request: memo,
         status: "pending",

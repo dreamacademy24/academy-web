@@ -164,7 +164,7 @@ export default function PickupsPage() {
 .tbl tr.over{background:#fef2f2}
 .tbl tr.over:hover{background:#fee2e2}
 .badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700}
-.t-pickup{background:#dbeafe;color:#1e40af}.t-dropoff{background:#fce7f3;color:#9d174d}.t-additional{background:#fef3c7;color:#92400e}
+.t-pickup{background:#dbeafe;color:#1e40af}.t-dropoff{background:#fce7f3;color:#9d174d}.t-additional{background:#fef3c7;color:#92400e}.t-transfer{background:#e0e7ff;color:#4338ca}
 .sel{padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;outline:none;background:#fff;min-width:90px}.sel:focus{border-color:#1a6fc4}
 .warn{color:#dc2626;font-weight:700;font-size:11px;white-space:nowrap}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px}
@@ -180,6 +180,7 @@ export default function PickupsPage() {
 .cal-tbl td.out-month .cal-d{color:#cbd5e1}
 .cal-pin{display:inline-block;background:#dcfce7;color:#166534;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px;margin-right:3px}
 .cal-pout{display:inline-block;background:#fef2f2;color:#dc2626;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px}
+.cal-ptr{display:inline-block;background:#e0e7ff;color:#4338ca;font-weight:700;font-size:10px;padding:1px 5px;border-radius:4px}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .day-detail{margin-top:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px}
 .day-row{display:grid;grid-template-columns:80px 1fr 1fr 100px 60px;gap:8px;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:12px;align-items:center}
@@ -227,12 +228,14 @@ export default function PickupsPage() {
                   const over = !!p.driver_id && total > 12;
                   const st = ST[p.status] || ST.pending;
                   // bookings 텍스트 flight 필드(flight_in/flight_out) → flight_info fallback
-                  const flightTxt = p.request_type === "pickup"
+                  const flightTxt = p.request_type === "transfer"
+                    ? ""
+                    : p.request_type === "pickup"
                     ? (p.bookings?.flight_in || p.flight_info)
                     : (p.bookings?.flight_out || p.flight_info);
                   return (
                     <tr key={p.id} className={over ? "over" : ""}>
-                      <td><span className={`badge t-${p.request_type}`}>{p.request_type === "pickup" ? "✈️IN 픽업" : p.request_type === "dropoff" ? "✈️OUT 드랍" : "추가"}</span></td>
+                      <td><span className={`badge t-${p.request_type}`}>{p.request_type === "pickup" ? "✈️IN 픽업" : p.request_type === "dropoff" ? "✈️OUT 드랍" : p.request_type === "transfer" ? "🔄 환승" : "추가"}</span></td>
                       <td style={{ whiteSpace: "nowrap" }}>{fDate(p.request_date)}</td>
                       <td>{p.request_time || "-"}</td>
                       <td>{bookerOf(p)}</td>
@@ -292,6 +295,7 @@ export default function PickupsPage() {
                     const inMonth = day.getMonth() === calMonth - 1;
                     const dayPickups = pickups.filter(p => p.request_date === dStr && p.request_type === "pickup");
                     const dayDrops = pickups.filter(p => p.request_date === dStr && p.request_type === "dropoff");
+                    const dayTransfers = pickups.filter(p => p.request_date === dStr && p.request_type === "transfer");
                     const isSel = selDay === dStr;
                     const cls = `${!inMonth ? "out-month" : ""}${isSel ? " sel" : ""}`.trim();
                     return (
@@ -299,6 +303,7 @@ export default function PickupsPage() {
                         <div className="cal-d">{day.getMonth() + 1}/{day.getDate()}</div>
                         {dayPickups.length > 0 && <div className="cal-pin">✈️IN {dayPickups.length}</div>}
                         {dayDrops.length > 0 && <div className="cal-pout">✈️OUT {dayDrops.length}</div>}
+                        {dayTransfers.length > 0 && <div className="cal-ptr">🔄 {dayTransfers.length}</div>}
                       </td>
                     );
                   })}
@@ -310,10 +315,10 @@ export default function PickupsPage() {
             <div className="day-detail">
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: "#1a6fc4" }}>{fDate(selDay)} 일정 ({selDayPickups.length}건)</div>
               {selDayPickups.map(p => {
-                const flightTxt = p.request_type === "pickup" ? (p.bookings?.flight_in || p.flight_info) : (p.bookings?.flight_out || p.flight_info);
+                const flightTxt = p.request_type === "transfer" ? "" : p.request_type === "pickup" ? (p.bookings?.flight_in || p.flight_info) : (p.bookings?.flight_out || p.flight_info);
                 return (
                   <div key={p.id} className="day-row">
-                    <span className={`badge t-${p.request_type}`}>{p.request_type === "pickup" ? "✈️IN" : "✈️OUT"}</span>
+                    <span className={`badge t-${p.request_type}`}>{p.request_type === "pickup" ? "✈️IN" : p.request_type === "dropoff" ? "✈️OUT" : p.request_type === "transfer" ? "🔄" : "추가"}</span>
                     <span style={{ fontWeight: 700 }}>{bookerOf(p)}</span>
                     <span style={{ fontSize: 11, color: "#475569" }}>{p.request_time || "시간미정"} · {flightTxt || "항공편미정"}</span>
                     <span style={{ fontSize: 11, color: "#475569" }}>{p.location || "-"} → {p.destination || "-"}</span>

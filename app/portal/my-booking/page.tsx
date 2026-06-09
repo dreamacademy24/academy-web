@@ -166,6 +166,17 @@ export default function MyBookingPage() {
   const paidAmt = b.paid_amount || 0;
   const balance = totalAmt - paidAmt;
 
+  // 콤보 예약(숙소 2곳 순서) 표시용
+  const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
+  const isCombo = !!(b.seg1_type && b.seg2_type);
+  const comboLabel = isCombo ? `${ACC_KR[b.seg1_type] || b.seg1_type}+${ACC_KR[b.seg2_type] || b.seg2_type}` : "";
+  const segs = isCombo
+    ? [
+        { type: b.seg1_type, ci: b.seg1_checkin, co: b.seg1_checkout },
+        { type: b.seg2_type, ci: b.seg2_checkin, co: b.seg2_checkout },
+      ]
+    : [];
+
   return (<>
     <style>{`
 .mb-w{max-width:640px;margin:0 auto;padding:24px 24px 40px}
@@ -198,14 +209,30 @@ export default function MyBookingPage() {
         <h2>예약 정보</h2>
         <div className="grid">
           <div className="item"><div className="lbl">예약번호</div><div className="val">{b.reservation_no || session.booking_number}</div></div>
-          <div className="item"><div className="lbl">예약유형</div><div className="val">{b.booking_type || b.accom_type || "-"}</div></div>
-          <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(b.check_in || b.checkin_date)}</div></div>
-          <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.check_out || b.checkout_date)}</div></div>
+          <div className="item"><div className="lbl">예약유형</div><div className="val">{isCombo ? comboLabel : (b.booking_type || b.accom_type || "-")}</div></div>
+          <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(isCombo ? b.seg1_checkin : (b.check_in || b.checkin_date))}</div></div>
+          <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(isCombo ? b.seg2_checkout : (b.check_out || b.checkout_date))}</div></div>
           <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(deriveAcademyStartFB(b) || null)}</div></div>
           <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(deriveAcademyEndFB(b) || null)}</div></div>
           <div className="item"><div className="lbl">픽업장소</div><div className="val">{b.pickup_place || "-"}</div></div>
           <div className="item"><div className="lbl">유학원</div><div className="val">{b.agency || "-"}</div></div>
         </div>
+
+        {isCombo && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#6b7c93", marginBottom: 8 }}>숙소 구간 (순서대로)</div>
+            {segs.map((s, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 8, background: i === 0 ? "#1a6fc4" : "#0ea5a3", color: "#fff", fontWeight: 800, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{ACC_KR[s.type] || s.type}</div>
+                  <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 2 }}>{fDate(s.ci)} ~ {fDate(s.co)}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>공항 도착 시 ①번 숙소로 이동 후, {fDate(b.seg1_checkout)}에 ②번 숙소로 이동합니다.</div>
+          </div>
+        )}
       </div>
 
       {/* 항공편 UI는 /checkin/[token] 페이지의 항공권등록 탭으로 이동됨 — 여기서는 표시하지 않음 */}
