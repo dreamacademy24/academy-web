@@ -51,11 +51,18 @@ function getPackageAccoms(bType: string): AccomType[] {
   return ["dreamhouse"]; // 드림하우스 단독, 통학형, 룸오프리 등 기본
 }
 
+const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
+
 export default function BookingPage() {
   const [bType, setBType] = useState<BookingType>("dreamhouse");
   const [booker, setBooker] = useState({ name: "", nameEng: "", phone: "" });
   const [extraGuardians, setExtraGuardians] = useState<{kor: string; eng: string}[]>([]);
   const [accom, setAccom] = useState({ dh_weeks: 4, jp_weeks: 2, cn_period: "1주", jp_room_type: "디럭스", cn_room_type: "디럭스" });
+  // 콤보 예약 숙소 구간(순서대로). seg[0]=먼저 묵는 숙소, seg[1]=다음 숙소
+  const [segs, setSegs] = useState<{ type: string; checkin: string; checkout: string }[]>([
+    { type: "jaypark", checkin: "", checkout: "" },
+    { type: "dreamhouse", checkin: "", checkout: "" },
+  ]);
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
@@ -68,8 +75,25 @@ export default function BookingPage() {
   const [policyOpen, setPolicyOpen] = useState<boolean>(false);
 
   // 자동 체크아웃 계산
+  const isCombo = bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine";
+  const comboAccs = bType === "dreamhouse_cubenine" ? ["cubenine", "dreamhouse"] : ["jaypark", "dreamhouse"];
+
+  // 콤보 전환 시 구간 숙소 기본값(패키지 먼저 → 드림하우스)
   useEffect(() => {
-    if (bType === "commute" || !dates.checkIn) return;
+    if (!isCombo) return;
+    setSegs(prev => [{ ...prev[0], type: comboAccs[0] }, { ...prev[1], type: comboAccs[1] }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bType]);
+
+  // 콤보: 구간 날짜가 전체 체크인/체크아웃의 source
+  useEffect(() => {
+    if (!isCombo) return;
+    setDates(prev => ({ ...prev, checkIn: segs[0].checkin || "", checkOut: segs[1].checkout || "" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCombo, segs]);
+
+  useEffect(() => {
+    if (bType === "commute" || isCombo || !dates.checkIn) return;
     let totalWeeks = 0;
     if (bType === "dreamhouse") totalWeeks = accom.dh_weeks;
     else if (bType === "dreamhouse_jaypark") totalWeeks = accom.dh_weeks + accom.jp_weeks;
@@ -105,6 +129,9 @@ export default function BookingPage() {
     if (!dates.checkIn) { alert(bType === "commute" ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (bType === "commute" && !dates.checkOut) { alert("수업종료 날짜를 입력해주세요."); return; }
     if (!agreed) { alert("포함/불포함 사항 및 환불규정 확인 동의가 필요합니다."); return; }
+    if (isCombo && (!segs[0].checkin || !segs[0].checkout || !segs[1].checkin || !segs[1].checkout)) {
+      alert("콤보 예약은 각 숙소 구간의 체크인/체크아웃을 모두 입력해주세요."); return;
+    }
 
     setLoading(true);
     const rno = "DA-" + todayCompact + "-" + Math.floor(Math.random() * 900000 + 100000);
@@ -151,8 +178,14 @@ export default function BookingPage() {
       cn_period: usesCN ? accom.cn_period : null,
       jp_room_type: usesJP ? accom.jp_room_type : null,
       cn_room_type: usesCN ? accom.cn_room_type : null,
-      checkin_date: dates.checkIn || null,
-      checkout_date: dates.checkOut || null,
+      seg1_type: isCombo ? segs[0].type : null,
+      seg1_checkin: isCombo ? (segs[0].checkin || null) : null,
+      seg1_checkout: isCombo ? (segs[0].checkout || null) : null,
+      seg2_type: isCombo ? segs[1].type : null,
+      seg2_checkin: isCombo ? (segs[1].checkin || null) : null,
+      seg2_checkout: isCombo ? (segs[1].checkout || null) : null,
+      checkin_date: isCombo ? (segs[0].checkin || null) : (dates.checkIn || null),
+      checkout_date: isCombo ? (segs[1].checkout || null) : (dates.checkOut || null),
       pickup: bType === "commute" ? "불필요함" : "필요함",
       drop_off: bType === "commute" ? "불필요함" : "필요함",
       pickup_place: dates.pickupPlace,
@@ -309,6 +342,32 @@ export default function BookingPage() {
                 </div>
               )}
             </div>
+
+            {isCombo && (
+              <div style={{ marginTop: 14, borderTop: "1px solid #eef2f7", paddingTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                  <label className="fl" style={{ margin: 0 }}>숙소 구간별 체크인·체크아웃 (순서대로)<span className="req">*</span></label>
+                  <button type="button" onClick={() => setSegs([{ ...segs[1] }, { ...segs[0] }])} style={{ padding: "4px 10px", background: "#fff", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⇅ 순서 바꾸기</button>
+                </div>
+                {segs.map((sg, i) => (
+                  <div key={i} className="fr" style={{ alignItems: "flex-end", marginBottom: 8 }}>
+                    <div className="fg" style={{ maxWidth: 150 }}>
+                      <label className="fl">{i + 1}번째 숙소</label>
+                      <div style={{ padding: "9px 11px", background: "#eff6ff", borderRadius: 8, fontWeight: 700, fontSize: 14, color: "#1e40af" }}>{ACC_KR[sg.type] || sg.type}</div>
+                    </div>
+                    <div className="fg">
+                      <label className="fl">체크인</label>
+                      <input className="fi" type="date" value={sg.checkin} onChange={e => { const n = [...segs]; n[i] = { ...n[i], checkin: e.target.value }; setSegs(n); }} />
+                    </div>
+                    <div className="fg">
+                      <label className="fl">체크아웃</label>
+                      <input className="fi" type="date" value={sg.checkout} onChange={e => { const n = [...segs]; n[i] = { ...n[i], checkout: e.target.value }; setSegs(n); }} />
+                    </div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 12, color: "#6b7c93" }}>예: 제이파크 6/13~7/11(4주) → 드림하우스 7/11~7/25(2주). 픽드랍·셔틀이 이 구간에 맞춰 연결됩니다.</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -393,8 +452,9 @@ export default function BookingPage() {
             <h2>4️⃣ 체크인 · 항공편</h2>
             <div className="fr">
               <div className="fg">
-                <label className="fl">체크인<span className="req">*</span></label>
-                <input className="fi" type="date" value={dates.checkIn} onChange={e => setDates({ ...dates, checkIn: e.target.value })} />
+                <label className="fl">체크인{!isCombo && <span className="req">*</span>}</label>
+                <input className="fi" type="date" value={dates.checkIn} readOnly={isCombo} onChange={e => { if (!isCombo) setDates({ ...dates, checkIn: e.target.value }); }} style={isCombo ? { background: "#f3f4f6" } : undefined} />
+                {isCombo && <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 3 }}>콤보는 위 &apos;숙소 구간&apos;에서 입력합니다</div>}
               </div>
               <div className="fg">
                 <label className="fl">체크아웃 (자동)</label>

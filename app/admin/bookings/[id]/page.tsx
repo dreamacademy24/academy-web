@@ -29,6 +29,7 @@ const BT_LABEL: Record<string, string> = {
   room_only: "숙소만 (Room Only)",
 };
 
+const ACC_KR_D: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
 function fDate(d: string | null) { return d || "-"; }
 function fAmt(n: number | null) { return n ? n.toLocaleString() + "원" : "-"; }
 
@@ -209,6 +210,12 @@ export default function BookingDetailPage() {
       house_no: b.house_no || b.accom_room || b.room_no || b.room_number || "",
       academy_start: b.academy_start || deriveAcademyStart(b.check_in || b.checkin_date) || "",
       late_checkout: b.late_checkout ? "1" : "",
+      seg1_type: b.seg1_type || "",
+      seg1_checkin: (b.seg1_checkin || "").split("T")[0] || "",
+      seg1_checkout: (b.seg1_checkout || "").split("T")[0] || "",
+      seg2_type: b.seg2_type || "",
+      seg2_checkin: (b.seg2_checkin || "").split("T")[0] || "",
+      seg2_checkout: (b.seg2_checkout || "").split("T")[0] || "",
     });
     setEditing(true);
   }
@@ -322,6 +329,12 @@ export default function BookingDetailPage() {
       late_checkout: !!editForm.late_checkout,
       accom_weeks: Number(editForm.accom_weeks) || null,
       accom_type: editForm.accom_type || null,
+      seg1_type: editForm.seg1_type || null,
+      seg1_checkin: editForm.seg1_checkin || null,
+      seg1_checkout: editForm.seg1_checkout || null,
+      seg2_type: editForm.seg2_type || null,
+      seg2_checkin: editForm.seg2_checkin || null,
+      seg2_checkout: editForm.seg2_checkout || null,
       agency: (editForm.agency || "").trim() || null,
       flight_in: (editForm.flight_in || "").trim() || null,
       flight_out: (editForm.flight_out || "").trim() || null,
@@ -536,6 +549,35 @@ export default function BookingDetailPage() {
                   </select>
                 : <div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div>}
             </div>
+            {((editing && ((editForm.accom_type || "").includes("+") || (editForm as any).seg1_type)) || b.seg1_type) && (
+              <div className="item" style={{ gridColumn: "1 / -1" }}>
+                <div className="lbl">숙소 구간 (순서대로)</div>
+                {editing ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {[1, 2].map(n => (
+                      <div key={n} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: 700, color: "#64748b", width: 14 }}>{n}</span>
+                        <select className="ed-inp" style={{ maxWidth: 130 }} value={(editForm as any)[`seg${n}_type`] || ""} onChange={e => setEditForm({ ...editForm, [`seg${n}_type`]: e.target.value } as any)}>
+                          <option value="">숙소</option>
+                          <option value="jaypark">제이파크</option>
+                          <option value="dreamhouse">드림하우스</option>
+                          <option value="cubenine">큐브나인</option>
+                        </select>
+                        <input className="ed-inp" type="date" style={{ maxWidth: 150 }} value={(editForm as any)[`seg${n}_checkin`] || ""} onChange={e => setEditForm({ ...editForm, [`seg${n}_checkin`]: e.target.value } as any)} />
+                        <span style={{ color: "#94a3b8" }}>~</span>
+                        <input className="ed-inp" type="date" style={{ maxWidth: 150 }} value={(editForm as any)[`seg${n}_checkout`] || ""} onChange={e => setEditForm({ ...editForm, [`seg${n}_checkout`]: e.target.value } as any)} />
+                      </div>
+                    ))}
+                    <div className="ed-note">픽드랍·셔틀이 이 구간에 맞춰 연결됩니다.</div>
+                  </div>
+                ) : (
+                  <div className="val" style={{ lineHeight: 1.8 }}>
+                    {b.seg1_type && <div>① {ACC_KR_D[b.seg1_type] || b.seg1_type} : {fDate((b.seg1_checkin || "").split("T")[0])} ~ {fDate((b.seg1_checkout || "").split("T")[0])}</div>}
+                    {b.seg2_type && <div>② {ACC_KR_D[b.seg2_type] || b.seg2_type} : {fDate((b.seg2_checkin || "").split("T")[0])} ~ {fDate((b.seg2_checkout || "").split("T")[0])}</div>}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="item"><div className="lbl">유학원</div>
               {editing
                 ? <input className="ed-inp" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/>
