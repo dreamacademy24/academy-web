@@ -63,6 +63,16 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, snapshot: data })
 }
 
+// DELETE /api/invoice/snapshot?booking_id=xxx — 저장된 인보이스 전체 삭제 (초기화)
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const bookingId = searchParams.get('booking_id')
+  if (!bookingId) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
+  const { error } = await supabase.from('invoice_snapshots').delete().eq('booking_id', bookingId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // PATCH /api/invoice/snapshot — { booking_id, confirmed_at?, saved_data? } 확정/해제 + 데이터 저장
 // confirmed_at:
 //   · null            → 확정 해제

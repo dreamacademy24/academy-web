@@ -621,6 +621,17 @@ function InvoicePageInner(){
     setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
   }
 
+  // 저장된 인보이스 전체 삭제(초기화) → 예약 정보로 처음부터 다시 불러옴
+  async function resetInvoice(){
+    if(!bookingId) return;
+    if(!confirm("저장된 인보이스를 삭제하고 예약 정보로 처음부터 다시 불러올까요?\n입력했던 금액·항목이 모두 지워집니다.")) return;
+    try{
+      const res=await fetch("/api/invoice/snapshot?booking_id="+encodeURIComponent(bookingId),{method:"DELETE"});
+      if(!res.ok){ const j=await res.json().catch(()=>({})); alert("초기화 실패: "+(j.error||res.status)); return; }
+      window.location.reload();
+    }catch{ alert("초기화 실패"); }
+  }
+
   // 스냅샷 저장 (인보이스 미리보기 클릭 시 자동 호출)
   async function saveSnapshot(override?:Record<string,unknown>){
     if(!bookingId) return;
@@ -1503,6 +1514,7 @@ function InvoicePageInner(){
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>{const v=e.target.checked;setLateCheckout(v);saveSnapshot({lateCheckout:v});}}/>Late Check-out (22:30pm)</label>
           <button onClick={requestEdit} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
+          <button onClick={resetInvoice} style={{padding:"7px 14px",background:"#fff",color:"#dc2626",border:"1px solid #fecaca",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>🗑 초기화</button>
           {!confirmedAt&&(
             <button onClick={confirmInvoice} style={{padding:"7px 16px",background:"#16a34a",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✅ 인보이스 확정</button>
           )}
