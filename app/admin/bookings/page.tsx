@@ -697,15 +697,15 @@ export default function AdminBookingsPage(){
 .cal-wrap{width:100%;background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #e2e8f0;padding:14px;}
 .cal-tbl{width:100%;border-collapse:collapse;table-layout:fixed;min-width:1000px;}
 .cal-tbl th{font-size:11px;font-weight:700;color:#475569;padding:8px 6px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center;}
-.cal-tbl td{vertical-align:top;padding:6px;border:1px solid #e2e8f0;font-size:12px;height:100px;}
+.cal-tbl td{vertical-align:top;padding:6px;border:1px solid #e2e8f0;font-size:12px;min-height:100px;}
 .cal-side{background:#f5f3ff;color:#4c1d95;font-weight:700;text-align:center;width:100px;}
 .cal-side .cal-total{margin-top:6px;padding-top:6px;border-top:1px solid #ddd6fe;font-size:14px;color:#6d28d9;}
 .cal-cell .cal-d{font-weight:800;color:#1a1a2e;font-size:12px;margin-bottom:3px;}
 .cal-cell.out-month{background:#fafafa;}.cal-cell.out-month .cal-d{color:#cbd5e1;}
 .cal-newin{background:#dcfce7;color:#166534;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
 .cal-out{background:#eff6ff;color:#1d4ed8;font-weight:700;padding:2px 5px;border-radius:4px;font-size:10px;display:block;margin-bottom:3px;}
-.cal-stu-list{display:flex;flex-direction:column;gap:2px;max-height:152px;overflow-y:auto;margin-top:3px;}
-.cal-stu-in,.cal-stu-out{font-size:12px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-stu-list{display:flex;flex-direction:column;gap:3px;margin-top:3px;}
+.cal-stu-in,.cal-stu-out{font-size:12px;line-height:1.4;white-space:normal;word-break:break-word;overflow-wrap:anywhere;}
 .cal-stu-in{color:#15803d;}.cal-stu-out{color:#1d4ed8;}
 .cal-stu-in b,.cal-stu-out b{font-weight:700;}
 .cal-stu-in .pm,.cal-stu-out .pm{font-weight:900;margin-right:2px;}
