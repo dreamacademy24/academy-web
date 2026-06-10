@@ -379,6 +379,43 @@ export default function BookingDetailPage() {
       toastErr("저장 실패: " + (j.error || "알 수 없는 오류"));
       return;
     }
+    // 학생 academy 날짜 동기화: 예약의 academy_start/academy_end(기간) 변경 시 연결 학생도 함께 갱신.
+    // 학생관리 리스트/달력은 bookings.students JSONB의 academyEnd를 읽으므로, 이 동기화가 없으면
+    // 예약 상세 값과 학생 값이 어긋나 "날짜 불일치" 경고가 발생함.
+    const syncStart = (payload.academy_start as string) || "";
+    const syncEnd = (payload.academy_end as string) || "";
+    if (syncStart || syncEnd) {
+      const studs = ((data as any)?.students || []) as any[];
+      if (studs.length > 0) {
+        // 1) JSONB 동기화 (연결된 모든 학생) — 학생관리가 읽는 유일/주 소스
+        const arr = studs.map((s) => ({
+          ...s,
+          academy_start: syncStart || s.academy_start || s.academyStart || "",
+          academy_end:   syncEnd   || s.academy_end   || s.academyEnd   || "",
+          academyStart:  syncStart || s.academyStart || s.academy_start || "",
+          academyEnd:    syncEnd   || s.academyEnd   || s.academy_end   || "",
+        }));
+        const sres = await fetch(`/api/bookings/${id}/update-row`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentsJsonb: arr }),
+        });
+        if (!sres.ok) {
+          const j = await sres.json().catch(() => ({}));
+          toastErr("학생 날짜 동기화 실패: " + (j.error || "알 수 없는 오류"));
+        }
+        // 2) students 테이블 DB row 동기화 (UUID 있는 학생만, booking_id는 API에서 검증)
+        for (const s of studs) {
+          const rid = s.id && /^[0-9a-f-]{36}$/i.test(String(s.id)) ? s.id : null;
+          if (!rid) continue;
+          await fetch(`/api/bookings/${id}/update-row`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ table: "students", rowId: rid, fields: { academy_start: syncStart || null, academy_end: syncEnd || null } }),
+          }).catch(() => {});
+        }
+      }
+    }
     setEditing(false);
     load();
   }
