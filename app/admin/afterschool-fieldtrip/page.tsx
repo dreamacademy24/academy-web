@@ -183,9 +183,15 @@ export default function AfterschoolFieldtripAdminPage() {
     if (!pushedAny) legacy.push(a);
   }
 
+  // 오늘 이전 날짜 제거
+  const _now = new Date();
+  const _todayM = _now.getMonth() + 1;
+  const _todayD = _now.getDate();
+  const activFlat = flat.filter(r => r.month > _todayM || (r.month === _todayM && r.day >= _todayD));
+
   // 토큰(=날짜+프로그램) 단위 그룹
   const groupMap = new Map<string, FlatRow[]>();
-  for (const r of flat) {
+  for (const r of activFlat) {
     const arr = groupMap.get(r.token) || [];
     arr.push(r);
     groupMap.set(r.token, arr);
@@ -242,7 +248,7 @@ export default function AfterschoolFieldtripAdminPage() {
 
   if (!authed) return null;
 
-  const totalRows = flat.length + legacy.length;
+  const totalRows = activFlat.length + legacy.length;
 
   return (<>
     <style>{`

@@ -150,6 +150,11 @@ export default function TourShuttleAdminPage() {
 
   if (!authed) return null;
 
+  // 지난 날짜 제외한 건수
+  const _now2 = new Date();
+  const _todayStr2 = `${_now2.getFullYear()}-${String(_now2.getMonth()+1).padStart(2,"0")}-${String(_now2.getDate()).padStart(2,"0")}`;
+  const futureCount = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim() && (a.tour_date || "") >= _todayStr2).length;
+
   return (<>
     <style>{`
 *{box-sizing:border-box}
@@ -174,7 +179,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <button className="ts-back" onClick={() => router.push("/admin/hub")}>← 어드민 홈</button>
         <div>
           <span className="ts-title">🚌 투어셔틀 관리</span>
-          <span className="ts-sub">총 {apps.length}건</span>
+          <span className="ts-sub">총 {futureCount}건</span>
         </div>
         <div style={{ width: 100 }} />
       </div>
@@ -204,7 +209,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <div className="ts-card"><div className="ts-loading">불러오는 중...</div></div>
       ) : (() => {
         // 투어명+tour_date 둘 다 존재 → 정상 그룹 / 둘 중 하나 없으면 → 미분류
-        const valid = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim());
+        const _n = new Date(); const _tdy = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,"0")}-${String(_n.getDate()).padStart(2,"0")}`;
+        const valid = apps.filter(a => (a.tour_name || "").trim() && (a.tour_date || "").trim() && (a.tour_date || "") >= _tdy);
         const legacy = apps.filter(a => !((a.tour_name || "").trim() && (a.tour_date || "").trim()));
         const groupMap = new Map<string, ShuttleApp[]>();
         for (const a of valid) {
