@@ -174,6 +174,7 @@ export default function AdminBookingsPage(){
   const [authed,setAuthed]=useState(false);
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
+  const [listPeriod,setListPeriod]=useState<"현재"|"지난">("현재");
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
@@ -651,8 +652,24 @@ export default function AdminBookingsPage(){
 
   if(!authed) return null;
 
-  const filtered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
-  const _todayStr=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.toISOString().slice(0,10);})();
+  const _todayStr=(()=>{const d=new Date();d.setHours(0,0,0,0);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;})();
+  // 예약 종료일 추정 (checkout_date → students academyEnd → checkin+12주)
+  function estimateEnd(b:Booking):string{
+    if(b.checkout_date)return b.checkout_date;
+    try{
+      const stu=typeof b.students==="string"?JSON.parse(b.students):b.students;
+      if(Array.isArray(stu)&&stu.length>0){
+        const ends=(stu as any[]).map(s=>s.academyEnd||s.academy_end||"").filter(Boolean).sort();
+        if(ends.length>0)return ends[ends.length-1];
+      }
+    }catch{}
+    if(b.checkin_date){const d=new Date(b.checkin_date);d.setDate(d.getDate()+84);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
+    return "9999-12-31";
+  }
+  const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
+  const statusFiltered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
+  const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):statusFiltered.filter(b=>isPast(b));
+  const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
     if(!["영수증발행","완료"].includes(b.status))return false;
     // 과거 예약(체크아웃 지난) 제외 — 현재+미래만
@@ -822,7 +839,11 @@ export default function AdminBookingsPage(){
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
-        <button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(filtered)}>📥 엑셀</button>
+        <span style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
+          <button className={`sub-tab${listPeriod==="현재"?" ac":""}`} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setListPeriod("현재")}>현재+예정</button>
+          <button className={`sub-tab${listPeriod==="지난"?" ac":""}`} style={{fontSize:12,padding:"4px 10px",background:listPeriod==="지난"?"#fef3c7":"",color:listPeriod==="지난"?"#92400e":""}} onClick={()=>setListPeriod("지난")}>지난 예약 {pastCount>0&&<span style={{background:"#fbbf24",color:"#78350f",borderRadius:10,padding:"0 6px",fontSize:10,marginLeft:3,fontWeight:700}}>{pastCount}</span>}</button>
+          <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(filtered)}>📥 엑셀</button>
+        </span>
       </div>
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
         <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
