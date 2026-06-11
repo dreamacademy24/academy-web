@@ -1408,7 +1408,7 @@ function InvoicePageInner(){
               This document confirms that the above-listed student(s) are enrolled in the<br/>
               <b>Dream Academy English Program</b> for the period indicated.<br/><br/>
               <b>School:</b> Dream Academy Philippines<br/>
-              <b>Address:</b> Banilad, Cebu City, Philippines<br/>
+              <b>Address:</b> Marigondon, Lapu-Lapu City, Philippines<br/>
               <b>Contact:</b> dreamacademyph@gmail.com
             </div>
             <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #e2e8f0",fontSize:11,color:"#94a3b8",lineHeight:1.6}}>
