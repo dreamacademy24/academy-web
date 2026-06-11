@@ -1152,7 +1152,7 @@ function InvoicePageInner(){
     alert("✅ 드림하우스 예약 완료!\n배정 룸: "+assigned);
   }
 
-  /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) ── */
+  /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) + 상태→영수증발행 ── */
   async function saveReceiptPayments(){
     if(!bookingId){alert("예약 ID가 없습니다.");return;}
     setSavingReceipt(true);
@@ -1164,6 +1164,11 @@ function InvoicePageInner(){
       const j=await res.json().catch(()=>null);
       if(!res.ok){alert("저장 실패: "+(j?.error||res.status));setSavingReceipt(false);return;}
       setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
+      // 지불내역이 하나라도 있으면 상태를 "영수증발행"으로 업데이트
+      const hasPayments=receiptPayments.some(p=>(p.amount||"").trim()!=="");
+      if(hasPayments){
+        await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+      }
       alert("✅ 지불내역이 저장되었습니다.");
     }catch{alert("저장 실패");}
     setSavingReceipt(false);
