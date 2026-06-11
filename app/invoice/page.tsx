@@ -825,7 +825,10 @@ function InvoicePageInner(){
         const discs=typeof data.discounts==="string"?JSON.parse(data.discounts):(data.discounts||[]);
         const adds=typeof data.additions==="string"?JSON.parse(data.additions):(data.additions||[]);
         const locs=typeof data.locals==="string"?JSON.parse(data.locals):(data.locals||[]);
-        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:locs.length>0?locs:[{id:1,name:"드림하우스 보증금",amount:""}]});
+        const _isCommute=isCommuteBooking(data);
+        const defaultLocals:LC[]=_isCommute?[{id:1,name:"",amount:""}]:[{id:1,name:"드림하우스 보증금",amount:""}];
+        const filteredLocs=_isCommute?locs.filter((l:LC)=>l.name!=="드림하우스 보증금"):locs;
+        setBilling({basePrice:data.base_price,items,discounts:discs.length>0?discs:[{id:1,name:"",amount:0}],additions:adds.length>0?adds:[{id:1,name:"",amount:0}],locals:filteredLocs.length>0?filteredLocs:defaultLocals});
         setApplied(true);
         // calculator state 복원 (룸타입/주수/인원 — 신 포맷 items에만 존재. 옛 데이터는 undefined → no-op)
         // 단, 숙소 구간(seg1/seg2)이 있으면 숙소/주수는 구간이 source → 저장된 accom/weeks 복원 스킵(순서 보존)
@@ -886,12 +889,17 @@ function InvoicePageInner(){
     }));
   },[students[0]?.academyStart,students[0]?.academyWeeks,students[0]?.academyEnd]);
 
-  /* ── 드림하우스 보증금 자동계산 ── */
+  /* ── 드림하우스 보증금 자동계산 (통학형은 보증금 없음) ── */
   useEffect(()=>{
+    if(isCommute){
+      // 통학형이면 드림하우스 보증금 항목 제거
+      setBilling(b=>({...b,locals:b.locals.filter(l=>l.name!=="드림하우스 보증금")}));
+      return;
+    }
     const totalWeeks=cm==="combo"?a1W+a2W:a1W;
     const deposit=totalWeeks*2000;
     setBilling(b=>({...b,locals:b.locals.map(l=>l.name==="드림하우스 보증금"?{...l,amount:String(deposit)}:l)}));
-  },[a1W,a2W,cm]);
+  },[a1W,a2W,cm,isCommute]);
 
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
@@ -1265,13 +1273,13 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Transportation</div>
+        {!isCommute&&<div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Transportation</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Pickup</td><td>{checkin.pickup==="O"?"Yes":"No"}</td><td className="lb">Drop-off</td><td>{checkin.drop==="O"?"Yes":"No"}</td></tr>
             <tr><td className="lb">Flight In</td><td>{checkin.flightIn||"TBA"}</td><td className="lb">Flight Out</td><td>{checkin.flightOut||"TBA"}</td></tr>
             <tr><td className="lb">Pickup Location</td><td>{checkin.pickupPlace||"TBA"}</td><td className="lb">Room Assignment</td><td>{checkin.houseNo||"TBA"}</td></tr>
           </tbody></table>
-        </div>
+        </div>}
 
         {checkin.specialRequest&&(
           <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Special Requests</div>
@@ -1564,13 +1572,13 @@ function InvoicePageInner(){
       </tbody></table>
       {billing.locals.filter(c=>c.name||c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name||c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
-      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Check-in Details</div><table className="tb"><tbody>
+      {!isCommute&&<div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Check-in Details</div><table className="tb"><tbody>
         <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
         <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
         <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
         {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
       </tbody></table>
-      <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>
+      <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>}
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
