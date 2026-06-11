@@ -1400,6 +1400,22 @@ function InvoicePageInner(){
         <div style={{fontSize:12,color:"#475569",padding:"16px 20px",background:"#f8fafc",border:"1px solid #e5e7eb",borderRadius:12,marginTop:16}}>
           Please confirm the total amount and refund policy before finalizing your reservation.
         </div></>}
+
+        {isCommute&&(
+          <div style={{marginTop:32,padding:"24px 28px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:12}}>ENROLLMENT CONFIRMATION</div>
+            <div style={{fontSize:12,color:"#475569",lineHeight:1.8}}>
+              This document confirms that the above-listed student(s) are enrolled in the<br/>
+              <b>Dream Academy English Program</b> for the period indicated.<br/><br/>
+              <b>School:</b> Dream Academy Philippines<br/>
+              <b>Address:</b> Banilad, Cebu City, Philippines<br/>
+              <b>Contact:</b> dreamacademyph@gmail.com
+            </div>
+            <div style={{marginTop:16,paddingTop:12,borderTop:"1px solid #e2e8f0",fontSize:11,color:"#94a3b8",lineHeight:1.6}}>
+              Issued by Dream Company Philippines. This document is for enrollment verification purposes only.
+            </div>
+          </div>
+        )}
       </div>
       <div className="pb no-print">
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
