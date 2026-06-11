@@ -177,7 +177,7 @@ export default function AdminBookingsPage(){
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
-  const [confirmPeriod,setConfirmPeriod]=useState<"진행중"|"이번주"|"지난">("진행중");
+  const [confirmPeriod,setConfirmPeriod]=useState<"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
@@ -615,10 +615,33 @@ export default function AdminBookingsPage(){
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
     if(error){console.error(error);toastErr("데이터 로드 실패");}
     if(data){
-      const allInOnes=(data as any[]).filter(b=>b.is_all_in_one).map(b=>({name:b.booker_name,id:b.id,val:b.is_all_in_one}));
-      console.log('[load] total:',data.length,'/ is_all_in_one truthy:',allInOnes.length,allInOnes);
-      const sample=data[0] as any;
-      console.log('[load] sample[0] keys:',sample?Object.keys(sample).filter(k=>k.includes('all')||k.includes('portal')):'none');
+      // 과거 예약 자동 완료 처리: 체크아웃 지난 영수증발행/결제완료 → 완료
+      const today=new Date();today.setHours(0,0,0,0);
+      const todayStr=today.toISOString().slice(0,10);
+      const pastIds=(data as any[]).filter(b=>{
+        if(!["영수증발행","결제완료"].includes(b.status))return false;
+        const co=b.checkout_date||"";
+        if(co&&co<todayStr)return true;
+        // 통학형: checkout_date 없으면 academy_end나 students JSONB의 academyEnd 확인
+        if(!co&&b.checkin_date&&b.checkin_date<todayStr){
+          try{
+            const stu=typeof b.students==="string"?JSON.parse(b.students):b.students;
+            if(Array.isArray(stu)&&stu.length>0){
+              const ends=stu.map((s:any)=>s.academyEnd||s.academy_end||"").filter(Boolean);
+              if(ends.length>0&&ends.every((e:string)=>e<todayStr))return true;
+            }
+          }catch{}
+          // checkin 3개월 이상 지났으면 완료 처리
+          const ci=new Date(b.checkin_date);
+          if((today.getTime()-ci.getTime())>90*86400000)return true;
+        }
+        return false;
+      }).map((b:any)=>b.id);
+      if(pastIds.length>0){
+        await supabase.from("bookings").update({status:"완료",updated_at:new Date().toISOString()}).in("id",pastIds);
+        data.forEach((b:any)=>{if(pastIds.includes(b.id))b.status="완료";});
+        console.log(`[auto-complete] ${pastIds.length}건 과거 예약 → 완료 처리`);
+      }
       setBookings(data as Booking[]);
     }
     setLoading(false);
@@ -628,8 +651,15 @@ export default function AdminBookingsPage(){
 
   if(!authed) return null;
 
-  const filtered=filter==="전체"?bookings:bookings.filter(b=>b.status===filter);
-  const rcpList=bookings.filter(b=>["영수증발행","완료"].includes(b.status));
+  const filtered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
+  const _todayStr=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.toISOString().slice(0,10);})();
+  const rcpList=bookings.filter(b=>{
+    if(!["영수증발행","완료"].includes(b.status))return false;
+    // 과거 예약(체크아웃 지난) 제외 — 현재+미래만
+    const co=b.checkout_date||"";
+    if(co&&co<_todayStr)return false;
+    return true;
+  });
   const confirmList=bookings.filter(b=>["영수증발행","결제완료","완료"].includes(b.status));
   const confirmFiltered=confirmFilter==="전체"?confirmList:confirmList.filter(b=>b.status===confirmFilter);
 
@@ -912,9 +942,12 @@ export default function AdminBookingsPage(){
         if(confirmType==="통학형"&&!isC)return false;
         if(confirmType==="리조트"&&isC)return false;
         const co=b.checkout_date||"";
+        const ci=b.checkin_date||"";
         if(confirmPeriod==="지난")return !!co&&co<_today;
-        if(confirmPeriod==="이번주")return !!b.checkin_date&&b.checkin_date>=_today&&b.checkin_date<=_wkEnd;
-        return !co||co>=_today; // 진행중(체크아웃 안 지남)
+        if(confirmPeriod==="이번주")return !!ci&&ci>=_today&&ci<=_wkEnd;
+        if(confirmPeriod==="예정")return !!ci&&ci>_today; // 체크인 전
+        // 진행중 = 현재 투숙/수업중 (체크인 <= 오늘 <= 체크아웃)
+        return !!ci&&ci<=_today&&(!co||co>=_today);
       });
       const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
@@ -965,7 +998,7 @@ export default function AdminBookingsPage(){
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
             <span style={{fontSize:11,fontWeight:800,color:"#0d9488",width:44,flexShrink:0}}>기간</span>
-            {(["진행중","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
+            {(["진행중","예정","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="진행중"?"현재 진행중":t==="예정"?"입실 예정":t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
           </div>
         </div>
         <div className="cf-search">
