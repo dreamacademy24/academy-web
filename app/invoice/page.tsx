@@ -599,7 +599,10 @@ function InvoicePageInner(){
       setConfirmedAt(j?.snapshot?.confirmed_at||new Date().toISOString());
       setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
       setHasSnapshot(true);
-      alert("✅ 인보이스가 확정되었습니다.");
+      // 인보이스 확정 시 예약 상태를 "영수증발행"으로 변경 → 확정예약 탭에 표시
+      const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+      if(stErr) console.error("[confirmInvoice status]",stErr);
+      alert("✅ 인보이스가 확정되었습니다."+(stErr?"":"\n(예약 상태: 영수증발행)"));
     }catch(e){console.error(e);alert("확정 실패 — 네트워크/서버 확인");}
   }
   // "수정하기" 진입 — 확정 상태면 경고 후 confirmed_at = null로 풀고 편집 모드 진입
@@ -899,7 +902,7 @@ function InvoicePageInner(){
     const totalWeeks=cm==="combo"?a1W+a2W:a1W;
     const deposit=totalWeeks*2000;
     setBilling(b=>({...b,locals:b.locals.map(l=>l.name==="드림하우스 보증금"?{...l,amount:String(deposit)}:l)}));
-  },[a1W,a2W,cm,isCommute]);
+  },[a1W,a2W,cm,isCommute,hasSnapshot]);
 
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
@@ -1175,9 +1178,10 @@ function InvoicePageInner(){
       // 지불내역이 하나라도 있으면 상태를 "영수증발행"으로 업데이트
       const hasPayments=receiptPayments.some(p=>(p.amount||"").trim()!=="");
       if(hasPayments){
-        await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+        const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+        if(stErr){console.error("[receipt status update]",stErr);alert("⚠️ 지불내역은 저장되었으나 예약 상태 변경 실패: "+stErr.message);setSavingReceipt(false);return;}
       }
-      alert("✅ 지불내역이 저장되었습니다.");
+      alert("✅ 지불내역이 저장되었습니다."+(hasPayments?" (예약 상태: 영수증발행)":""));
     }catch{alert("저장 실패");}
     setSavingReceipt(false);
   }
@@ -1334,7 +1338,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
-        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>
+        {!isCommute&&<><div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>
           {billing.items.length>0&&(
             <table className="tb"><tbody>
               {billing.items.map((item,i)=>(
@@ -1395,7 +1399,7 @@ function InvoicePageInner(){
 
         <div style={{fontSize:12,color:"#475569",padding:"16px 20px",background:"#f8fafc",border:"1px solid #e5e7eb",borderRadius:12,marginTop:16}}>
           Please confirm the total amount and refund policy before finalizing your reservation.
-        </div>
+        </div></>}
       </div>
       <div className="pb no-print">
         <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
