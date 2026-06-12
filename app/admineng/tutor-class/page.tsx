@@ -942,8 +942,8 @@ export default function EngTutorClassPage() {
 .eback{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit}.eback:hover{border-color:#1a6fc4;color:#1a6fc4}
 .etabs{display:flex;gap:4px;background:#fff;padding:4px;border-radius:12px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 .etab{flex:1;padding:10px 8px;font-size:13px;font-weight:700;text-align:center;border:none;border-radius:9px;cursor:pointer;font-family:inherit;background:transparent;color:#6b7c93;transition:all 120ms}.etab:hover:not(.ac){background:#f1f5f9}.etab.ac{background:#1a6fc4;color:#fff}
-.tbl-w{background:#fff;border-radius:12px;overflow-x:auto;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
-.tbl{width:100%;border-collapse:collapse;table-layout:fixed}
+.tbl-w{background:#fff;border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.tbl{width:100%;min-width:920px;border-collapse:collapse;table-layout:fixed}
 .tbl th{font-size:11px;font-weight:700;color:#6b7c93;padding:11px 10px;text-align:left;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap}
 .tbl td{font-size:12.5px;padding:10px 10px;border-bottom:1px solid #f1f5f9;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbl tbody tr:hover td{background:#f8fafc;cursor:pointer}
