@@ -432,8 +432,12 @@ export default function MealPlanPage() {
                     <td colSpan={13}></td>
                   </tr>
                   <tr className="checked-row">
-                    <td colSpan={4}>STAFF NAME :</td>
+                    <td colSpan={4} style={{ background: "#fff", border: "1px solid transparent" }}></td>
                     <td colSpan={4}>CHECKED BY — BREAKFAST</td><td colSpan={4}>CHECKED BY — LUNCH</td><td colSpan={5}>CHECKED BY — DINNER</td>
+                  </tr>
+                  <tr style={{ height: 42 }}>
+                    <td colSpan={4} style={{ textAlign: "right", fontWeight: 800, fontSize: 12, paddingRight: 10, background: "#fff", border: "1px solid transparent" }}>STAFF NAME :</td>
+                    <td colSpan={4}></td><td colSpan={4}></td><td colSpan={5}></td>
                   </tr>
                 </tbody>
               </table>
