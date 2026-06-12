@@ -229,6 +229,12 @@ export default function PortalTutorPage() {
   const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
 
+  // 배포 휴일 → 수업일 전개에서 자동 제외
+  const [, setHolidayTick] = useState(0);
+  useEffect(() => {
+    import("@/lib/holidays").then(m => m.applyDeployedHolidaysToLessons(supabase)).then(l => { if (l.length > 0) setHolidayTick(t => t + 1); }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     async function init() {
       if (typeof window === "undefined") return;

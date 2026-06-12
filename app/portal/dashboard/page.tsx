@@ -22,6 +22,9 @@ export default function PortalDashboard() {
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [shuttleApps, setShuttleApps] = useState<any[]>([]);
   const [hasConfirmedTutor, setHasConfirmedTutor] = useState(false);
+  const [confirmedTutorIds, setConfirmedTutorIds] = useState<string[]>([]);
+  const [stayHolidays, setStayHolidays] = useState<Array<{ date: string; name: string }> | null>(null);
+  const [dashStudents, setDashStudents] = useState<any[]>([]);
   const [hasNewNotes, setHasNewNotes] = useState(false);
   const [popupNotice, setPopupNotice] = useState<any>(null);
   const [noticeUnread, setNoticeUnread] = useState(0);
@@ -79,7 +82,7 @@ export default function PortalDashboard() {
       if (!bookingId || cancelled) return;
       fetch(`/api/bookings/${bookingId}`)
         .then(r => r.json())
-        .then(d => { if (!cancelled) setBookingInfo(d?.booking || d); })
+        .then(d => { if (!cancelled) { setBookingInfo(d?.booking || d); setDashStudents(d?.students || []); } })
         .catch(() => {});
       supabase
         .from("shuttle_applications")
@@ -90,8 +93,14 @@ export default function PortalDashboard() {
       fetch(`/api/portal/tutor?booking_id=${bookingId}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => {
-          if (!cancelled && d?.requests?.some((r: any) => r.status === 'confirmed')) {
+          // 확인(클릭)한 확정 건은 다시 안 띄움 — 새로 확정된 건만 배너 표시
+          const confirmedIds: string[] = (d?.requests || []).filter((r: any) => r.status === 'confirmed').map((r: any) => String(r.id));
+          let seen: string[] = [];
+          try { seen = JSON.parse(localStorage.getItem('tutor_confirm_seen') || '[]'); } catch {}
+          const unseen = confirmedIds.filter(id => !seen.includes(id));
+          if (!cancelled && unseen.length > 0) {
             setHasConfirmedTutor(true);
+            setConfirmedTutorIds(confirmedIds);
           }
           const anyNotes = d?.notesMap && Object.values(d.notesMap)
             .some((a: any) => Array.isArray(a) && a.length > 0);
@@ -203,6 +212,26 @@ export default function PortalDashboard() {
     } catch {}
   }, [noticeUnread, appsChanged, ocChanged]);
 
+  // 체류 기간에 휴무일이 끼면 미리 안내 팝업 (하루 1회)
+  useEffect(() => {
+    if (typeof window === "undefined" || !bookingInfo) return;
+    const ci = (bookingInfo.check_in || bookingInfo.checkin_date || "").slice(0, 10);
+    const co = (bookingInfo.check_out || bookingInfo.checkout_date || "").slice(0, 10);
+    if (!ci || !co) return;
+    let cancelled = false;
+    import("@/lib/holidays").then(async m => {
+      const list = await m.fetchDeployedHolidays(supabase);
+      const hits = m.holidaysInRange(list, ci, co);
+      if (cancelled || hits.length === 0) return;
+      const key = "stay_holiday_seen";
+      const todayKey = hits.map(h => h.date).join("|") + "|" + new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem(key) === todayKey) return;
+      localStorage.setItem(key, todayKey);
+      setStayHolidays(hits);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [bookingInfo]);
+
   function dismissPopup(forToday: boolean) {
     if (forToday && popupNotice && typeof window !== "undefined") {
       localStorage.setItem("notice_popup_seen", popupNotice.id + "|" + new Date().toISOString().slice(0, 10));
@@ -225,7 +254,7 @@ export default function PortalDashboard() {
     { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "방문 튜터 수업 신청", ready: true, href: "/portal/tutor" },
-    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업 · 남은 횟수 · 취소", ready: true, href: "/portal/online-class" },
+    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: false, href: "/portal/online-class" },
     { icon: "🧾", title: "정산내역", desc: "보증금·튜터비·추가비용·납부 내역", ready: false, href: "/portal/settlement" },
     { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-applications" },
   ];
@@ -327,8 +356,80 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       <PortalPushButton />
 
+      {/* 체류 기간 휴무일 사전 안내 팝업 */}
+      {stayHolidays && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setStayHolidays(null)}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 22px", maxWidth: 420, width: "100%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 10 }}>📢 주요 안내 — 휴무일</div>
+            <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, marginBottom: 8 }}>체류 기간 중 아래 휴무일이 있어요.</div>
+            <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, fontWeight: 700, color: "#b45309", marginBottom: 10 }}>
+              {stayHolidays.map(h => { const d = new Date(h.date + "T00:00:00"); return `${d.getMonth() + 1}/${d.getDate()}(${["일","월","화","수","목","금","토"][d.getDay()]}) ${h.name}`; }).join(", ")}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+              {[
+                { icon: "✕", text: "수업 · 헬퍼 · 셔틀 · 관리실 운영하지 않아요", bg: "#fef2f2", color: "#b91c1c", ic: "#dc2626" },
+                { icon: "✓", text: "식사는 정상 제공됩니다", bg: "#ecfdf5", color: "#065f46", ic: "#059669" },
+                { icon: "!", text: "휴무일에 대한 별도 환불 · 보강은 없습니다", bg: "#fffbeb", color: "#92400e", ic: "#b45309" },
+              ].map(l => (
+                <div key={l.icon} style={{ display: "flex", gap: 8, alignItems: "flex-start", background: l.bg, borderRadius: 8, padding: "9px 11px" }}>
+                  <span style={{ fontWeight: 800, color: l.ic }}>{l.icon}</span>
+                  <span style={{ fontSize: 13, color: l.color, fontWeight: 600 }}>{l.text}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setStayHolidays(null)}
+              style={{ width: "100%", padding: 13, background: "#4f46e5", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+              확인했어요
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 잔금 D-7 자동 안내 */}
+      {(() => {
+        const bd = (bookingInfo?.balance_date || "").slice(0, 10);
+        const paidStatuses = ["영수증발행", "결제완료", "완료"];
+        if (!bd || paidStatuses.includes(bookingInfo?.status || "")) return null;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const t = new Date(bd + "T00:00:00");
+        const dday = Math.round((t.getTime() - today.getTime()) / 86400000);
+        if (dday < 0 || dday > 7) return null;
+        return (
+          <a href="/portal/payment" style={{ display: "block", textDecoration: "none", marginBottom: 16 }}>
+            <div style={{ background: "linear-gradient(135deg,#fef3c7,#fde68a)", border: "2px solid #f59e0b", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+              <div style={{ fontSize: 32 }}>💰</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#92400e", marginBottom: 3 }}>잔금 납부일 {dday === 0 ? "오늘" : `D-${dday}`} ({bd})</div>
+                <div style={{ fontSize: 12, color: "#a16207" }}>결제 안내를 확인해주세요 →</div>
+              </div>
+            </div>
+          </a>
+        );
+      })()}
+
+      {/* 학생 영문이름 미입력 안내 */}
+      {dashStudents.some((s: any) => !(s.name_en || "").trim()) && (
+        <a href="/portal/my-booking" style={{ display: "block", textDecoration: "none", marginBottom: 16 }}>
+          <div style={{ background: "linear-gradient(135deg,#fee2e2,#fecaca)", border: "2px solid #f87171", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+            <div style={{ fontSize: 32 }}>✏️</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#b91c1c", marginBottom: 3 }}>학생 영문 혹은 사용하는 영어 이름을 기재해주세요!</div>
+              <div style={{ fontSize: 12, color: "#dc2626" }}>내 예약현황에서 바로 입력할 수 있어요 →</div>
+            </div>
+          </div>
+        </a>
+      )}
+
       {hasConfirmedTutor && (
-        <a href="/portal/my-applications" style={{display:"block",textDecoration:"none",marginBottom:16}}>
+        <a href="/portal/my-applications" style={{display:"block",textDecoration:"none",marginBottom:16}}
+          onClick={() => {
+            // 확인했으면 이 확정 건들은 다시 안 띄움
+            try {
+              const seen: string[] = JSON.parse(localStorage.getItem('tutor_confirm_seen') || '[]');
+              localStorage.setItem('tutor_confirm_seen', JSON.stringify(Array.from(new Set([...seen, ...confirmedTutorIds]))));
+            } catch {}
+          }}>
           <div style={{
             background:"linear-gradient(135deg,#dcfce7,#bbf7d0)",
             border:"2px solid #86efac",

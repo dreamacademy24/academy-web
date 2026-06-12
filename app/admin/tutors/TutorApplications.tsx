@@ -163,6 +163,11 @@ export default function TutorApplications() {
     if (data) setTutors(data as Tutor[]);
   }, []);
   useEffect(() => { loadApps(); loadTutors(); }, [loadApps, loadTutors]);
+  // 배포 휴일 → 확정 시 세션 전개에서 자동 제외
+  const [, setHolidayTick] = useState(0);
+  useEffect(() => {
+    import("@/lib/holidays").then(m => m.applyDeployedHolidaysToLessons(supabase)).then(l => { if (l.length > 0) setHolidayTick(t => t + 1); }).catch(() => {});
+  }, []);
 
   // 파생 detail — 항상 apps의 현재 상태 기준으로 조회. id와 필드 일관성 보장.
   const detail = useMemo<TutorApp | null>(() => {

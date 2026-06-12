@@ -19,12 +19,15 @@ const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
   '2026-08-09': '⚠️ 아이언맨 도로통제로 투어셔틀 불가',
 };
 
+// 배포된 휴일(holidays 테이블) — 페이지 로드 시 채워져 셔틀도 자동 차단
+const EXTRA_SHUTTLE_HOLIDAYS = new Set<string>();
+
 interface ShSlot { time: string; name: string; return: string; note?: string; }
 
 function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 
 function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
-  if (SHUTTLE_HOLIDAYS.has(dateStr)) return 'holiday';
+  if (SHUTTLE_HOLIDAYS.has(dateStr) || EXTRA_SHUTTLE_HOLIDAYS.has(dateStr)) return 'holiday';
   const d = new Date(dateStr + 'T00:00:00');
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
@@ -123,6 +126,14 @@ interface PortalSession { booking_id: string; guest_name: string; expires: numbe
 type SelectedTour = { value: string; tourName: string; date: string; departTime: string; people: number };
 
 export default function PortalShuttlePage() {
+  // 배포 휴일 로드 → 셔틀 차단 반영 (tick으로 재렌더)
+  const [, setHolidayTick] = useState(0);
+  useEffect(() => {
+    import("@/lib/holidays").then(m => m.fetchDeployedHolidays(supabase)).then(list => {
+      list.forEach(h => EXTRA_SHUTTLE_HOLIDAYS.add(h.date));
+      if (list.length > 0) setHolidayTick(t => t + 1);
+    }).catch(() => {});
+  }, []);
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
   const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string; seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string; seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string } | null>(null);

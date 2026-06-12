@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import RefundPolicyModal from "@/components/RefundPolicyModal";
-import { getRefundPolicyKeys } from "@/lib/refundPolicy";
+import { getRefundPolicyKeys, REFUND_POLICY_VERSION } from "@/lib/refundPolicy";
+import { fetchDeployedHolidays, holidaysInRange, fmtHolidayList, HOLIDAY_NOTICE_LINES, type HolidayItem } from "@/lib/holidays";
 import {
   COMMON_EXCLUSIONS,
   getInclusionsByAccom,
@@ -72,6 +73,22 @@ export default function BookingPage() {
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
   const [agreed, setAgreed] = useState<boolean>(false);
+  // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
+  const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
+  const [holidayPopup, setHolidayPopup] = useState<HolidayItem[] | null>(null);
+  const [holidayPopupKey, setHolidayPopupKey] = useState("");
+  useEffect(() => { fetchDeployedHolidays(supabase).then(setDeployedHolidays); }, []);
+  const holidayHits = useMemo(
+    () => holidaysInRange(deployedHolidays, dates.checkIn, dates.checkOut),
+    [deployedHolidays, dates.checkIn, dates.checkOut]
+  );
+  useEffect(() => {
+    if (holidayHits.length === 0) return;
+    const key = dates.checkIn + "~" + dates.checkOut;
+    if (key === holidayPopupKey) return;
+    setHolidayPopupKey(key);
+    setHolidayPopup(holidayHits);
+  }, [holidayHits, dates.checkIn, dates.checkOut, holidayPopupKey]);
   const [policyOpen, setPolicyOpen] = useState<boolean>(false);
 
   // 자동 체크아웃 계산
@@ -192,6 +209,21 @@ export default function BookingPage() {
     }).select().single();
 
     if (error) { setLoading(false); alert("접수 실패: " + error.message); return; }
+
+    // 동의 내역 보관 (증거용) — 실패해도 접수에는 영향 없음
+    try {
+      await supabase.from("booking_consents").insert({
+        booking_id: booking?.id || null,
+        reservation_no: rno,
+        booker_name: booker.name.trim(),
+        booking_type: bType,
+        policy_version: REFUND_POLICY_VERSION,
+        policy_keys: getRefundPolicyKeys(bType),
+        agreed_text: "포함/불포함 사항을 확인하였고, 환불규정도 확인하였으며, 예약에 동의합니다.",
+        holidays_notified: holidayHits.length > 0 ? holidayHits : null,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      });
+    } catch { /* best-effort */ }
 
     // students 테이블에도 저장
     if (booking?.id) {
@@ -627,6 +659,23 @@ export default function BookingPage() {
           </div>
         </div>
 
+        {/* 기간 내 휴무일 안내 배너 */}
+        {holidayHits.length > 0 && (
+          <div style={{ marginTop: 16, padding: "13px 15px", background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 10 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 800, color: "#b45309", marginBottom: 7 }}>
+              🏖️ 선택하신 기간에 휴무일이 있어요 — {fmtHolidayList(holidayHits)}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {HOLIDAY_NOTICE_LINES.map(l => (
+                <div key={l.icon} style={{ display: "flex", gap: 7, alignItems: "flex-start", background: l.bg, borderRadius: 7, padding: "7px 10px" }}>
+                  <span style={{ fontWeight: 800, color: l.ic }}>{l.icon}</span>
+                  <span style={{ fontSize: 12.5, color: l.color, fontWeight: 600 }}>{l.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 동의 체크박스 + 환불규정 보기 */}
         <div style={{
           marginTop: 16,
@@ -691,5 +740,33 @@ export default function BookingPage() {
       onClose={() => setPolicyOpen(false)}
       policyKeys={getRefundPolicyKeys(bType)}
     />
+
+    {/* 휴무일 안내 팝업 (기간 선택 시 1회) */}
+    {holidayPopup && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        onClick={() => setHolidayPopup(null)}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: "24px 22px", maxWidth: 420, width: "100%" }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 10 }}>🏖️ 휴무일 안내</div>
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, marginBottom: 8 }}>
+            선택하신 기간에 아래 휴무일이 포함되어 있어요.
+          </div>
+          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, fontWeight: 700, color: "#b45309", marginBottom: 10 }}>
+            {fmtHolidayList(holidayPopup)}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+            {HOLIDAY_NOTICE_LINES.map(l => (
+              <div key={l.icon} style={{ display: "flex", gap: 8, alignItems: "flex-start", background: l.bg, borderRadius: 8, padding: "9px 11px" }}>
+                <span style={{ fontWeight: 800, color: l.ic }}>{l.icon}</span>
+                <span style={{ fontSize: 13, color: l.color, fontWeight: 600 }}>{l.text}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setHolidayPopup(null)}
+            style={{ width: "100%", padding: 13, background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            확인했어요
+          </button>
+        </div>
+      </div>
+    )}
   </>);
 }

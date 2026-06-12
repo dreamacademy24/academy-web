@@ -146,6 +146,11 @@ export default function TutorLessonList() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+  // 배포 휴일 → 날짜 재전개에서 자동 제외
+  const [, setHolidayTick] = useState(0);
+  useEffect(() => {
+    import("@/lib/holidays").then(m => m.applyDeployedHolidaysToLessons(supabase)).then(l => { if (l.length > 0) setHolidayTick(t => t + 1); }).catch(() => {});
+  }, []);
 
   const filtered = lessons.filter(l => {
     if (statusFilter !== "all" && l.status !== statusFilter) return false;

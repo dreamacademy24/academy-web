@@ -183,6 +183,8 @@ export default function PortalCheckinDetailPage() {
     const bid = s.booking_id;
     setBookingId(bid);
     loadPickups(bid);
+    // 예약자 성함·입실일자 자동 채움 (입력칸 제거 — 예약현황 정보 사용)
+    setForm(prev => prev.q1 ? prev : { ...prev, q1: `${s.guest_name || ""}${s.check_in_date ? `, ${s.check_in_date} 입실` : ""}`.trim() });
 
     fetch(`/api/checkin-portal?bookingId=${bid}`)
       .then(r => r.json())
@@ -233,7 +235,7 @@ export default function PortalCheckinDetailPage() {
   }
 
   async function submit() {
-    if (!form.q1.trim()) { toastErr('1번 문항(예약자 성함과 입실 일자)을 입력해주세요.'); return; }
+    // 예약자 성함·입실일자는 예약 정보에서 자동 포함 (입력 제거됨)
     setSubmitting(true);
     const res = await fetch('/api/checkin-portal', {
       method: 'POST',
@@ -309,13 +311,9 @@ export default function PortalCheckinDetailPage() {
           </div>
 
           {tab === "checkin" && (<>
+          {/* 예약자 성함·입실일자는 예약현황에 이미 있어 입력 제거 (제출 시 자동 포함) */}
           <div className="q">
-            <div className="q-title"><span className="q-num">1</span>예약자 대표 성함과 입실 일자</div>
-            <div className="q-hint">예: <b>홍길동, 2026년 5월 9일</b></div>
-            <input className="fi" value={form.q1} onChange={e=>up('q1',e.target.value)} placeholder="홍길동, 2026년 5월 9일"/>
-          </div>
-          <div className="q">
-            <div className="q-title"><span className="q-num">2</span>투숙자 전체인원 영문이름</div>
+            <div className="q-title"><span className="q-num">1</span>투숙자 전체인원 영문이름</div>
             <div className="q-hint">예: <b>kim ooo / yoo ooo ooo</b> (가족 전원의 영문이름)</div>
             <p style={{fontSize:12,color:"#888",marginBottom:6}}>※ 이전에 작성하신 경우 다시 작성하지 않아도 됩니다.</p>
             <input className="fi" value={form.q2} onChange={e=>up('q2',e.target.value)} placeholder="kim ooo / yoo ooo ooo"/>
@@ -323,7 +321,7 @@ export default function PortalCheckinDetailPage() {
 
           {/* ① 베드 세팅 */}
           <div className="q">
-            <div className="q-title"><span className="q-num">3</span>원하시는 베드 세팅</div>
+            <div className="q-title"><span className="q-num">2</span>원하시는 베드 세팅</div>
             <div className="q-hint">보통 <b>2~3인: 마스터룸 베드2개</b> / <b>4인 이상: 마스터룸 베드2개 + 작은방 베드1개</b></div>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
@@ -370,8 +368,11 @@ export default function PortalCheckinDetailPage() {
 
           {/* ② 유심 대여 */}
           <div className="q">
-            <div className="q-title"><span className="q-num">4</span>유심 대여 신청</div>
+            <div className="q-title"><span className="q-num">3</span>유심 대여 신청</div>
             <div className="q-hint">필요하신 유심 수량과 요금제를 선택해 주세요. (필요 없으시면 비워두세요)</div>
+            <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"9px 12px",fontSize:12.5,color:"#1d4ed8",fontWeight:600,marginBottom:8}}>
+              ✅ 유심 대여 서비스에 신청해 주시면 요금제가 세팅된 상태로 드리고 있습니다.
+            </div>
             <div style={{background:'#f8f9fa',border:'1px solid #e2e8f0',borderRadius:8,padding:16,marginBottom:12,fontSize:12.5,lineHeight:1.7,color:'#374151'}}>
               <div style={{fontWeight:800,fontSize:14,marginBottom:8,color:'#1a1a2e'}}>📱 유심 대여 서비스</div>
               <div style={{fontWeight:700,color:'#1a6fc4',marginTop:6,marginBottom:4}}>#기본 안내</div>
@@ -660,7 +661,7 @@ export default function PortalCheckinDetailPage() {
 
           {tab === "checkin" && (<>
           <div className="q">
-            <div className="q-title"><span className="q-num">7</span>기타 요청사항</div>
+            <div className="q-title"><span className="q-num">4</span>기타 요청사항</div>
             <div className="q-hint">추가 픽드랍, 알러지 등 자유롭게 작성해 주세요. (선택)</div>
             <textarea className="ta" value={form.q6} onChange={e=>up('q6',e.target.value)} placeholder="자유롭게 작성"/>
           </div>

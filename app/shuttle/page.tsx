@@ -18,10 +18,13 @@ const SHUTTLE_SPECIAL_MSG: Record<string,string> = {
 
 interface ShSlot { time: string; name: string; return: string; note?: string; }
 
+// 배포된 휴일(holidays 테이블) — 로드 시 채워져 자동 차단
+const EXTRA_SHUTTLE_HOLIDAYS = new Set<string>();
+
 function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
 
 function getShSlots(dateStr: string): ShSlot[] | 'holiday' {
-  if (SHUTTLE_HOLIDAYS.has(dateStr)) return 'holiday';
+  if (SHUTTLE_HOLIDAYS.has(dateStr) || EXTRA_SHUTTLE_HOLIDAYS.has(dateStr)) return 'holiday';
   const d = new Date(dateStr + 'T00:00:00');
   const dow = d.getDay();
   const odd = nthWeekday(d) % 2 === 1;
@@ -100,6 +103,14 @@ function buildShWeeks(year: number, month: number) {
 const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
 
 export default function ShuttlePage() {
+  // 배포 휴일 로드 → 셔틀 차단 반영
+  const [, setHolidayTick] = useState(0);
+  useEffect(() => {
+    import("@/lib/holidays").then(m => m.fetchDeployedHolidays(supabase)).then(list => {
+      list.forEach(h => EXTRA_SHUTTLE_HOLIDAYS.add(h.date));
+      if (list.length > 0) setHolidayTick(t => t + 1);
+    }).catch(() => {});
+  }, []);
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
   const [activeMonth, setActiveMonth] = useState("5");

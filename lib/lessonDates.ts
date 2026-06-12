@@ -8,8 +8,15 @@ export const LESSON_HOLIDAYS = new Set<string>([
   "2026-06-12",
 ]);
 
+// 배포된 휴일(holidays 테이블) 주입용 — 페이지에서 lib/holidays.applyDeployedHolidaysToLessons() 호출 시 채워짐
+const EXTRA_HOLIDAYS = new Set<string>();
+export function setExtraLessonHolidays(dates: string[]) {
+  EXTRA_HOLIDAYS.clear();
+  dates.forEach(d => { if (d) EXTRA_HOLIDAYS.add(d.slice(0, 10)); });
+}
+
 export function isHolidayDate(ds: string): boolean {
-  return LESSON_HOLIDAYS.has(ds);
+  return LESSON_HOLIDAYS.has(ds) || EXTRA_HOLIDAYS.has(ds);
 }
 
 // 그 달의 몇 번째 토요일인지로 판정 — 둘째(2)·넷째(4)만 유효

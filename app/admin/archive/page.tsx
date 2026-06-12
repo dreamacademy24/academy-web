@@ -8,7 +8,7 @@ import { toastOk, toastErr } from "@/lib/toast";
 /* 지난 내역 보관함 — 날짜가 지난 신청을 모아 보고, 오래된 것은 기간 선택 후 일괄 삭제
    데이터는 옮기지 않고 그대로 둔 채 "지난 것"만 여기서 조회 (참석 아이 내역 보존용) */
 
-type TabKey = "booking" | "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq";
+type TabKey = "booking" | "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq" | "consent";
 type Row = Record<string, any>;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -23,13 +23,14 @@ const TABS: { key: TabKey; label: string; dateLabel: string }[] = [
   { key: "tutor", label: "👩‍🏫 튜터 수업", dateLabel: "종료일" },
   { key: "pickup", label: "🛬 픽드랍", dateLabel: "이동일" },
   { key: "ocreq", label: "💻 화상영어 변경", dateLabel: "신청일" },
+  { key: "consent", label: "📝 동의 내역", dateLabel: "동의일" },
 ];
 
 export default function ArchivePage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<TabKey>("shuttle");
-  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ booking: [], shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [] });
+  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ booking: [], shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [], consent: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   /* 삭제 도구 */
@@ -45,13 +46,14 @@ export default function ArchivePage() {
   const load = useCallback(async () => {
     setLoading(true);
     const today = todayStr();
-    const [bk, sh, ft, tu, pk, oc] = await Promise.all([
+    const [bk, sh, ft, tu, pk, oc, cs] = await Promise.all([
       supabase.from("bookings").select("id, reservation_no, booker_name, checkin_date, checkout_date, accom_type, status, students").lt("checkout_date", today).order("checkout_date", { ascending: false }).limit(1000),
       supabase.from("shuttle_applications").select("*").lt("tour_date", today).order("tour_date", { ascending: false }).limit(1000),
       supabase.from("fieldtrip_applications").select("*").order("created_at", { ascending: false }).limit(1000),
       supabase.from("tutor_requests").select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, created_at, house_or_reserver").lt("end_date", today).order("end_date", { ascending: false }).limit(1000),
       supabase.from("pickup_requests").select("*").lt("request_date", today).order("request_date", { ascending: false }).limit(1000),
       supabase.from("online_change_requests").select("*").neq("status", "pending").order("created_at", { ascending: false }).limit(500),
+      supabase.from("booking_consents").select("*").order("created_at", { ascending: false }).limit(1000),
     ]);
     setRows({
       booking: bk.data || [],
@@ -60,6 +62,7 @@ export default function ArchivePage() {
       tutor: tu.data || [],
       pickup: pk.data || [],
       ocreq: oc.data || [],
+      consent: cs.data || [],
     });
     setLoading(false);
   }, []);
@@ -67,6 +70,10 @@ export default function ArchivePage() {
 
   /* 행 → 표시 텍스트 (탭별) */
   function rowView(t: TabKey, r: Row): { date: string; who: string; detail: string; status: string } {
+    if (t === "consent") {
+      const hol = Array.isArray(r.holidays_notified) ? r.holidays_notified.map((h: Row) => h.date).join(", ") : "";
+      return { date: fD(r.created_at), who: `${r.booker_name || "-"} (${(r.reservation_no || "").slice(-6)})`, detail: `규정 v${r.policy_version || "-"} · ${(r.policy_keys || []).join("+")} · "${(r.agreed_text || "").slice(0, 30)}…"${hol ? ` · 휴일안내: ${hol}` : ""}`, status: "동의" };
+    }
     if (t === "booking") {
       let stu = "";
       try { const a = typeof r.students === "string" ? JSON.parse(r.students) : r.students; if (Array.isArray(a)) stu = a.map((s: Row) => s.korName || s.name_kr || "").filter(Boolean).join(", "); } catch {}

@@ -64,6 +64,26 @@ export default function MyBookingPage() {
   const [loading, setLoading] = useState(true);
   const [flightEditing, setFlightEditing] = useState(false);
   const [flightForm, setFlightForm] = useState<FlightForm>(EMPTY_FLIGHT);
+  // 학생 영문이름 입력
+  const [engDraft, setEngDraft] = useState<Record<string, string>>({});
+  const [engSaving, setEngSaving] = useState<string | null>(null);
+
+  async function saveEng(s: any) {
+    const key = s.id || s.name_kr;
+    const en = (engDraft[key] || "").trim();
+    if (!en) { alert("영문 혹은 사용하는 영어 이름을 입력해주세요."); return; }
+    if (!session?.booking_id) return;
+    setEngSaving(key);
+    try {
+      const res = await fetch("/api/portal/student-english", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: session.booking_id, student_id: s.id || null, name_kr: s.name_kr || null, name_en: en }),
+      });
+      if (!res.ok) { alert("저장에 실패했어요. 잠시 후 다시 시도해주세요."); return; }
+      const r = await fetch(`/api/portal/booking?booking_id=${session.booking_id}`);
+      if (r.ok) setData(await r.json());
+    } finally { setEngSaving(null); }
+  }
   const [flightSaving, setFlightSaving] = useState(false);
   const flightFileRef = useRef<HTMLInputElement>(null);
   const [flightOcrLoading, setFlightOcrLoading] = useState(false);
@@ -390,13 +410,36 @@ export default function MyBookingPage() {
 
       <div className="sec">
         <h2>학생 ({students.length}명)</h2>
+        {students.some((s: any) => !(s.name_en || "").trim()) && (
+          <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#b91c1c", fontWeight: 700, marginBottom: 10 }}>
+            ❗ 영문 혹은 사용하는 영어 이름을 입력해 주세요 — 수업·선생님 안내에 사용됩니다.
+          </div>
+        )}
         {students.length === 0 ? <div className="empty">등록된 학생이 없습니다</div> :
           students.map((s: any) => (
-            <div key={s.id} className="stu">
-              <div className="nm">{s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : ""}</div>
+            <div key={s.id || s.name_kr} className="stu">
+              <div className="nm">
+                {s.name_kr || "-"} {s.name_en ? `(${s.name_en})` : <span style={{ color: "#dc2626", fontSize: 12, fontWeight: 800 }}>❗ 영문이름 미입력</span>}
+              </div>
               <div className="sub">
                 {s.age || "-"} · {s.level === "kinder" ? "킨더" : s.level === "junior" ? "주니어" : "-"} · {s.class_type === "morning" ? "오전반" : s.class_type === "fullday" ? "종일반" : "-"}
               </div>
+              <div className="sub" style={{ marginTop: 3 }}>
+                {s.photo_allowed
+                  ? <span style={{ color: "#166534", fontWeight: 700 }}>📸 사진 SNS·공유폴더 공유 동의</span>
+                  : <span style={{ color: "#b91c1c", fontWeight: 700 }}>📵 사진 비동의 — 사진 촬영 자체가 없습니다</span>}
+              </div>
+              {!(s.name_en || "").trim() && (
+                <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                  <input value={engDraft[s.id || s.name_kr] || ""} placeholder="예: Sally Kim (영문/영어이름)"
+                    onChange={e => setEngDraft(p => ({ ...p, [s.id || s.name_kr]: e.target.value }))}
+                    style={{ flex: 1, padding: "9px 11px", border: "1.5px solid #fecaca", borderRadius: 8, fontSize: 13.5, fontFamily: "inherit", outline: "none" }} />
+                  <button disabled={engSaving === (s.id || s.name_kr)} onClick={() => saveEng(s)}
+                    style={{ padding: "9px 14px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                    {engSaving === (s.id || s.name_kr) ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              )}
             </div>
           ))
         }
