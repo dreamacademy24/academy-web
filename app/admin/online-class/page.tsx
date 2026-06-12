@@ -65,7 +65,9 @@ export default function OnlineClassPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   // register tab
-  const [splitPrePost, setSplitPrePost] = useState(false); // 연수전/연수후 분리 입력 (특수 케이스만)
+  const [periodTag, setPeriodTag] = useState<"standalone" | "pre" | "post">("standalone"); // 시기 구분 (등록 1건 = 수강권 1개)
+  const [dayTimesOn, setDayTimesOn] = useState(false); // 요일별 시간 다르게
+  const [dayTimes, setDayTimes] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
     tutor_id: "", enrollment_type: "free_package", level: "",
@@ -95,13 +97,6 @@ export default function OnlineClassPage() {
 
   useEffect(() => { if (authed) { loadEnrollments(); loadTutors(); } }, [authed, loadEnrollments, loadTutors]);
 
-  // auto-calc total (연수전/연수후 분리 입력 시에만)
-  useEffect(() => {
-    if (!splitPrePost) return;
-    const pre = Number(form.pre_sessions) || 0;
-    const post = Number(form.post_sessions) || 0;
-    setForm(f => ({ ...f, total_sessions: String(pre + post) }));
-  }, [form.pre_sessions, form.post_sessions, splitPrePost]);
 
   // auto-calc duration
   useEffect(() => {
@@ -216,16 +211,20 @@ export default function OnlineClassPage() {
     if (!form.days_of_week.length) { toastErr("수강 요일을 선택해주세요"); return; }
     if (Number(form.total_sessions) < 1) { toastErr("총 회차를 입력해주세요"); return; }
     const total = Number(form.total_sessions);
-    // 기본 = 단일 수강권. 연수전/연수후 분리는 토글 켠 경우만
-    const pre = splitPrePost ? (Number(form.pre_sessions) || 0) : 0;
-    const post = splitPrePost ? (Number(form.post_sessions) || 0) : total;
+    // 등록 1건 = 수강권 1개. 시기는 태그만 (연수전+연수후면 각각 따로 등록)
+    const pre = periodTag === "pre" ? total : 0;
+    const post = periodTag === "pre" ? 0 : total;
+    const dt = dayTimesOn
+      ? Object.fromEntries(form.days_of_week.filter(d => (dayTimes[d] || "").trim()).map(d => [d, dayTimes[d].trim()]))
+      : null;
     setSubmitting(true);
     try {
       const res = await fetch("/api/online-class/enrollments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          class_period: splitPrePost ? "both" : "post",
+          class_period: periodTag,
+          day_times: dt && Object.keys(dt).length > 0 ? dt : null,
           days_of_week: form.days_of_week,
           duration_weeks: Number(form.duration_weeks) || null,
           class_duration_weeks: Number(form.class_duration_weeks) || null,
@@ -239,6 +238,7 @@ export default function OnlineClassPage() {
       if (!res.ok) { const r = await res.json(); toastErr(r.error || "등록 실패"); return; }
       const r = await res.json();
       toastOk(`등록 완료! 세션 ${r.sessions_created}개 생성됨 ✅`);
+      setPeriodTag("standalone"); setDayTimesOn(false); setDayTimes({});
       setForm({
         student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
         tutor_id: "", enrollment_type: "free_package", level: "",
@@ -370,7 +370,11 @@ export default function OnlineClassPage() {
                   const isSplit = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
                   return (
                     <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => loadSessions(e.id)}>
-                      <td style={{ fontWeight: 700 }}>{e.student_name}{isSplit && <span title="연수전/연수후 분리 수강" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}</td>
+                      <td style={{ fontWeight: 700 }}>{e.student_name}
+                        {isSplit && <span title="연수전/연수후 분리 수강 (구버전)" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}
+                        {e.class_period === "pre" && <span style={{ marginLeft: 4, fontSize: 9, background: "#e1f5ee", color: "#085041", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>연수전</span>}
+                        {e.class_period === "standalone" && <span style={{ marginLeft: 4, fontSize: 9, background: "#f1f5f9", color: "#475569", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>단독</span>}
+                      </td>
                       <td>{e.student_name_en || "-"}</td>
                       <td>{e.tutor?.name_display || "-"}</td>
                       <td>{daysToKr(e.days_of_week)}</td>
@@ -452,9 +456,25 @@ export default function OnlineClassPage() {
             </div>
           </div>
           <div className="form-row">
-            <div><label className="form-label">한국 수업 시간</label><input className="form-input" value={form.class_time_kr} onChange={e => setForm({ ...form, class_time_kr: e.target.value })} placeholder="21:00" /></div>
-            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={form.class_time_ph} onChange={e => setForm({ ...form, class_time_ph: e.target.value })} placeholder="20:00" /></div>
+            <div><label className="form-label">한국 수업 시간</label><input className="form-input" value={form.class_time_kr} onChange={e => setForm({ ...form, class_time_kr: e.target.value })} placeholder="21:00" disabled={dayTimesOn} style={dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : undefined} /></div>
+            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={form.class_time_ph} onChange={e => setForm({ ...form, class_time_ph: e.target.value })} placeholder="20:00" disabled={dayTimesOn} style={dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : undefined} /></div>
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={dayTimesOn} onChange={e => setDayTimesOn(e.target.checked)} />
+            요일별 시간 다르게 (예: 수 17:00 / 금 18:00)
+          </label>
+          {dayTimesOn && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 8, marginBottom: 14, padding: "10px 12px", background: "#f8fafc", borderRadius: 8 }}>
+              {form.days_of_week.length === 0 && <div style={{ fontSize: 12, color: "#94a3b8", gridColumn: "1/-1" }}>먼저 위에서 수강 요일을 선택해주세요</div>}
+              {form.days_of_week.map(d => (
+                <div key={d}>
+                  <label className="form-label" style={{ fontSize: 11 }}>{d}요일 (한국시간)</label>
+                  <input className="form-input" value={dayTimes[d] || ""} onChange={e => setDayTimes(t => ({ ...t, [d]: e.target.value }))} placeholder="17:00" />
+                </div>
+              ))}
+              <div style={{ fontSize: 11, color: "#94a3b8", gridColumn: "1/-1" }}>필리핀 시간은 자동으로 1시간 빼서 저장됩니다</div>
+            </div>
+          )}
         </div>
 
         <div className="form-card">
@@ -478,22 +498,21 @@ export default function OnlineClassPage() {
             </div>
             <div>
               <label className="form-label">총 회차 *</label>
-              <input type="number" className="form-input" value={form.total_sessions} readOnly={splitPrePost}
+              <input type="number" className="form-input" value={form.total_sessions}
                 onChange={e => setForm({ ...form, total_sessions: e.target.value })}
-                style={splitPrePost ? { background: "#f8fafc", fontWeight: 700 } : { fontWeight: 700 }}
+                style={{ fontWeight: 700 }}
                 placeholder={form.duration_weeks && form.sessions_per_week ? `예: ${Number(form.duration_weeks) * Number(form.sessions_per_week)}` : ""} />
             </div>
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 10, cursor: "pointer" }}>
-            <input type="checkbox" checked={splitPrePost} onChange={e => setSplitPrePost(e.target.checked)} />
-            연수전 / 연수후로 나뉘는 수강 (특수 케이스만 체크)
-          </label>
-          {splitPrePost && (
-            <div className="form-row">
-              <div><label className="form-label">연수전 회차</label><input type="number" className="form-input" value={form.pre_sessions} onChange={e => setForm({ ...form, pre_sessions: e.target.value })} /></div>
-              <div><label className="form-label">연수후 회차</label><input type="number" className="form-input" value={form.post_sessions} onChange={e => setForm({ ...form, post_sessions: e.target.value })} /></div>
+          <div className="form-mb">
+            <label className="form-label">시기 구분</label>
+            <div className="day-chips">
+              {([["standalone", "단독 (화상수업만)"], ["pre", "연수전"], ["post", "연수후"]] as const).map(([v, label]) => (
+                <button key={v} className={`day-chip${periodTag === v ? " on" : ""}`} onClick={() => setPeriodTag(v)}>{label}</button>
+              ))}
             </div>
-          )}
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 5 }}>연수전 + 연수후 둘 다 있으면 → 각각 따로 등록 (승인·잔여횟수·인보이스 독립)</div>
+          </div>
         </div>
 
         <div className="form-card">

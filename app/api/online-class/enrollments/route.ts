@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       class_time_kr, class_time_ph,
       start_date, end_date, duration_weeks, class_duration_weeks, class_period,
       sessions_per_week, total_sessions, pre_sessions, post_sessions,
-      package_booking_id, notes, status,
+      package_booking_id, notes, status, day_times,
     } = body
 
     if (!student_name || !start_date || !total_sessions || !days_of_week?.length) {
@@ -79,6 +79,7 @@ export async function POST(req: Request) {
         duration_weeks: duration_weeks || null,
         class_duration_weeks: class_duration_weeks || null,
         class_period: class_period || 'post',
+        day_times: day_times || null,
         sessions_per_week: sessions_per_week || 3,
         total_sessions: Number(total_sessions),
         pre_sessions: Number(pre_sessions) || 0,
@@ -102,16 +103,29 @@ export async function POST(req: Request) {
 
     const sessionDates = generateSessionDates(start_date, calcEnd, days_of_week, Number(total_sessions))
 
+    // 요일별 시간 (day_times: {"수":"17:00","금":"18:00"} — 한국시간 기준, 필리핀 = -1시간)
+    const DAY_KR_BY_JS = ['일', '월', '화', '수', '목', '금', '토']
+    const phOf = (kr: string | null) => {
+      if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
+      const [h, m] = kr.split(':').map(Number)
+      return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+    }
     if (sessionDates.length > 0) {
-      const rows = sessionDates.map((date, idx) => ({
-        enrollment_id: enrollment.id,
-        tutor_id: tutor_id || null,
-        session_number: idx + 1,
-        scheduled_date: date,
-        scheduled_time_kr: class_time_kr || null,
-        scheduled_time_ph: class_time_ph || null,
-        status: 'scheduled',
-      }))
+      const rows = sessionDates.map((date, idx) => {
+        const dayKr = DAY_KR_BY_JS[new Date(date + 'T00:00:00').getDay()]
+        const overrideKr = day_times ? (day_times as Record<string, string>)[dayKr] : null
+        const tKr = overrideKr || class_time_kr || null
+        const tPh = overrideKr ? phOf(overrideKr) : (class_time_ph || phOf(tKr))
+        return {
+          enrollment_id: enrollment.id,
+          tutor_id: tutor_id || null,
+          session_number: idx + 1,
+          scheduled_date: date,
+          scheduled_time_kr: tKr,
+          scheduled_time_ph: tPh,
+          status: 'scheduled',
+        }
+      })
       const { error: sesErr } = await supabase.from('online_sessions').insert(rows)
       if (sesErr) return NextResponse.json({ error: sesErr.message }, { status: 500 })
     }
@@ -127,7 +141,7 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const { id, ...fields } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type']
+    const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times']
     const updates: Record<string, unknown> = {}
     for (const k of allowed) { if (k in fields) updates[k] = fields[k] }
     const { error } = await supabase.from('online_enrollments').update(updates).eq('id', id)
