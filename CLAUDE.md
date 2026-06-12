@@ -1526,3 +1526,48 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 ### 다음 세션 대기
 - 콤보 예약 신규 생성 시 어드민 패키지 모달이 MCP 렌더러를 멈추는 이슈(native confirm/alert 추정) — 검증은 PATCH 우회로 진행함
 - 직전 세션 대기 항목(튜터 재배정 동기화, --:-- 시간 미설정 근본 원인, 텔레그램 정기 알림, 봇 토큰 revoke) 유지
+
+## 2026-06-12 세션 (인보이스 매핑 fix + 현지직원 영어화 + 모바일 반응형)
+
+### 완료 커밋
+- (인보이스 매핑 fix — app/invoice/page.tsx, includes 기반) — 푸시됨
+- `4e50b22` 현지직원 화면 UI 한글 영어화 (나이/시간/드롭다운/메모)
+- `f40db37` 모바일 viewport 추가 + 현지직원 화면 반응형/한글 정리
+- `375165a` 교사 달력/애프터스쿨 모바일 패딩·가로스크롤
+
+### 1. 인보이스 숙소 매핑 버그 (app/invoice/page.tsx)
+- 증상: accom_type="제이파크 패키지"인 예약이 인보이스에서 **드림하우스**로 잘못 떴음
+- 원인: accom_type을 정확일치(`=== "제이파크" || === "제이파크 단독"`)로만 매핑 → "제이파크 패키지"는 어디에도 안 걸려 기본값 a1T="dreamhouse" 유지
+- 수정: 부분일치로 변경. `_at.includes("드림하우스")` / `_at.includes("제이파크")` / `_at.includes("큐브나인")||includes("큐브")`. 콤보(+)는 위 `_at.includes("+")` 분기에서 먼저 처리되니 안전. 분해컬럼(jp_weeks/jp_room_type) 적용 조건도 includes로 통일
+- ⚠️ 이미 인보이스 **스냅샷 저장**된 예약은 booking 로드를 스킵하므로, 화면이 옛값이면 인보이스 페이지 **🗑 초기화** 버튼으로 스냅샷 지우고 재로드
+
+### 2. 현지직원(교사) 화면 한글 잔재 정리 — englishMode/영어화
+- 교사 페이지: /admineng/hub·tutor-class(+[id])·student-calendar·afterschool, /tutor/online-class. UI는 대부분 이미 영어, 잔재만 정리
+- **검증 방법**: localStorage.setItem('teacherSession', {username,name,role,color,initial})로 교사 세션 위장 → 화면 순회 (admineng/login API = staff_accounts + verify_teacher_login RPC)
+- 수정:
+  · `app/admineng/tutor-class/[id]/page.tsx` — fmtAgeEn에 "숫자+세"(예 "20180612/9세"→9 years old) 분기 추가; Block 시간 "(1타임, 50분)" 떼고 영어 "1 session · 50 min"
+  · `app/admineng/tutor-class/page.tsx` — Weekly 그리드 시간에 `stripTimeSuffix()` 적용(2곳); reschedule 메모 "변경:"→"Changed:"; import에 stripTimeSuffix 추가
+  · `app/admin/tutor-class/TutorInvoice.tsx` — 드롭다운 "로딩 중/수업 없음" → englishMode 분기(한국인 어드민은 한글 유지). 공유 컴포넌트라 englishMode로 분기 필수
+- **남은 한글 = 데이터(UI 아님)**: 예약자 한글 이름(한자혜 등)·학생 메모(그림그리기…)는 손님 입력 데이터 → 번역 버튼(haiku) 별도 기능 필요. "Angel (테스트)"는 테스트 튜터명 → DB에서 "(테스트)" 제거하면 됨
+- 핵심: `lib/scheduleBlocks.ts`의 `stripTimeSuffix(s)` = `(...타임...)` 접미사 제거 헬퍼. 시간 표시할 때 재사용
+
+### 3. 모바일 반응형 (가장 큰 건: viewport)
+- **근본 원인**: 사이트 전체에 viewport 메타태그가 **없었음** → 폰에서 데스크탑 980px로 축소돼 보이고 @media도 안 먹음
+- 수정 `app/layout.tsx`: `export const viewport: Viewport = { width:"device-width", initialScale:1, maximumScale:5 }` 추가 (Next.js App Router 방식). + deprecated `apple-mobile-web-app-capable` 옆에 `mobile-web-app-capable` 추가
+- 이 viewport는 **전역** 적용 → 모든 페이지가 폰에서 실제 너비로 렌더(반응형 CSS 있는 손님 페이지는 더 좋아짐)
+- `app/admineng/tutor-class/page.tsx`: `@media(max-width:600px)` 블록 추가 — .ew 패딩↓, .etabs 가로스크롤, .etab flex:0 0 auto, 표 폰트↓, 모달 패딩↓
+- `app/admineng/student-calendar/page.tsx` + `afterschool/page.tsx`: `@media(max-width:600px){ 패딩↓; overflow-x:auto }` (컨테이너는 이미 max-width라 폰에서 줄어듦)
+- **한계**: 데스크탑 브라우저 창이 OS 최소폭(~1058px) 아래로 안 줄어서 진짜 폰 폭(414px) 시뮬 불가 → 실제 폰으로 메이가 확인 후 깨지는 페이지만 콕 집어 보정하는 게 정확
+
+### 핵심 학습 포인트
+- **viewport 메타 누락 = 모바일 안 예쁨의 근본 원인.** 반응형은 페이지 2개(PC/모바일) 따로 만드는 게 아니라 viewport + @media로 하나가 자동 적응. App Router는 `export const viewport`
+- **공유 컴포넌트 영어화는 englishMode로 분기** (TutorInvoice 등은 한국인 어드민 /admin + 교사 /admineng 둘 다 씀 → 무조건 영어화하면 한국인 화면 깨짐)
+- **accom_type 매칭은 includes로** (정확일치는 "제이파크 패키지" 같은 변형 못 잡음). 단 콤보(+)를 먼저 분기해야 단독 분기와 안 겹침
+- **샌드박스 git status가 호스트와 desync** 가능 — 커밋/푸시는 메이 컴퓨터가 source of truth. 샌드박스 bash의 git status가 옛 상태 보여도 실제 레포는 최신일 수 있음
+
+### 다음 세션 후보 (메이 선택 대기)
+1. 손님 데이터 번역 버튼 (교사 화면 한글 이름·메모 → 영어, haiku /api/translate)
+2. 텔레그램 정기 알림 (드림보드 ⑤) + 봇 토큰 revoke 재발급
+3. Team Manager(직원업무) 전체 개편 Phase 2~5
+4. 손님 /booking 콤보 실제 제출 end-to-end 검증 (폼 렌더·다운스트림은 확인됨, 실제 submit만 남음)
+5. 모바일: 실제 폰 확인 후 깨지는 페이지 보정 (견적/인보이스 출력 등 고정폭 출력시트)
