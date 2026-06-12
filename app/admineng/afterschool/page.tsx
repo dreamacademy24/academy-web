@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { toEN } from "@/lib/afterschoolNames";
 import {
   loadDeployedSchedule, mergeWithFallback, resolveProgram, buildScheduleByMd, mdFromDate,
   type DeployedScheduleItem,
@@ -178,12 +179,12 @@ export default function AfterschoolLocalPage() {
         <div className="today-box">
           <div className="today-h">⭐ Today — {(() => { const d = new Date(); return `${MON_EN[d.getMonth()]} ${d.getDate()} (${DOW_EN[d.getDay()]})`; })()}</div>
           {todayItems.length === 0 ? (
-            <div className="today-none">No activity today{upcomingGroups.length > 0 && upcomingGroups[0][1].length > 0 ? ` — next: ${(() => { const n = upcomingGroups[0][1][0]; const d = new Date(n.date + "T00:00:00"); return `${n.title} on ${MON_EN[d.getMonth()]} ${d.getDate()} (${DOW_EN[d.getDay()]})`; })()}` : ""}</div>
+            <div className="today-none">No activity today{upcomingGroups.length > 0 && upcomingGroups[0][1].length > 0 ? ` — next: ${(() => { const n = upcomingGroups[0][1][0]; const d = new Date(n.date + "T00:00:00"); return `${toEN(n.title)} on ${MON_EN[d.getMonth()]} ${d.getDate()} (${DOW_EN[d.getDay()]})`; })()}` : ""}</div>
           ) : todayItems.map(it => {
             const kids = signupsByMd[mdFromDate(it.date)] || [];
             return (
               <div key={it.id} className="today-item">
-                <div className="today-title">{it.title} {it.type === "fieldtrip" && <span className="ftb">FIELD TRIP</span>} <span className="cnt" style={{ marginLeft: "auto" }}>{kids.length} kids</span></div>
+                <div className="today-title">{toEN(it.title)} {it.type === "fieldtrip" && <span className="ftb">FIELD TRIP</span>} <span className="cnt" style={{ marginLeft: "auto" }}>{kids.length} kids</span></div>
                 {kids.length === 0 ? <div className="none" style={{ padding: "6px 0 0" }}>No sign-ups.</div> : (
                   <div className="kids" style={{ padding: "8px 0 0" }}>
                     {kids.map((k, i) => (
@@ -211,7 +212,7 @@ export default function AfterschoolLocalPage() {
                   <div className={`row-card${kids.length > 0 ? " has" : ""}`} key={it.id}>
                     <div className={`rhead ${isFt ? "ft" : "as"}`}>
                       <span className="dt">{dt.getMonth() + 1}/{dt.getDate()} ({DOW_EN[dt.getDay()]})</span>
-                      <span className="pn">{it.title}</span>
+                      <span className="pn">{toEN(it.title)}</span>
                       {isFt && <span className="ftb">FIELD TRIP</span>}
                       <span className={`cnt${kids.length > 0 ? " on" : ""}`}>{kids.length > 0 ? `${kids.length} kids` : "—"}</span>
                     </div>
@@ -242,7 +243,7 @@ export default function AfterschoolLocalPage() {
                 <div className="row-card past" key={it.id}>
                   <div className={`rhead ${it.type === "fieldtrip" ? "ft" : "as"}`}>
                     <span className="dt">{dt.getMonth() + 1}/{dt.getDate()} ({DOW_EN[dt.getDay()]})</span>
-                    <span className="pn">{it.title}</span>
+                    <span className="pn">{toEN(it.title)}</span>
                     <span className="cnt">{kids.length > 0 ? `${kids.length} kids` : "—"}</span>
                   </div>
                 </div>
@@ -269,7 +270,7 @@ export default function AfterschoolLocalPage() {
                 <div className={`cell ${c.inMonth ? "" : "out"}${isToday ? " tdy" : ""}`} key={i}>
                   <div className="d">{c.date.getDate()}</div>
                   {matches && (<>
-                    <div className={`pg ${it.type === "fieldtrip" ? "ft" : "as"}`}>{it.title}</div>
+                    <div className={`pg ${it.type === "fieldtrip" ? "ft" : "as"}`}>{toEN(it.title)}</div>
                     {kids.length > 0 && <span className="nb">{kids.length}</span>}
                   </>)}
                 </div>

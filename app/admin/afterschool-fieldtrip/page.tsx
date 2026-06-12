@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
+import { toKR } from "@/lib/afterschoolNames";
 import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, tokenForItem, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 
 const supabase = createClient(
@@ -361,7 +362,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                       <div key={token} className="af-card">
                         <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background: r0.isFieldtrip ? "#fff7ed" : "#eff6ff", borderBottom: r0.isFieldtrip ? "1px solid #fed7aa" : "1px solid #bfdbfe"}}>
                           <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
-                            📅 {r0.month}/{r0.day}{dowStr} · {r0.programName}
+                            📅 {r0.month}/{r0.day}{dowStr} · {toKR(r0.programName)}
                             {r0.isFieldtrip && <span style={{fontSize:11, fontWeight:700, background:"#c2410c", color:"#fff", padding:"2px 8px", borderRadius:999}}>필드트립</span>}
                             {r0.time && <span style={{fontWeight:600, color:"#475569"}}>· {r0.time}</span>}
                           </div>
