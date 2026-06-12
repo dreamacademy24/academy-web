@@ -167,6 +167,7 @@ export default function EngStudentCalendarPage() {
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .sc-w{max-width:1500px;margin:0 auto;padding:24px 18px 60px}
 .sc-top{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+@media(max-width:600px){.sc-w{padding:12px 8px 40px;overflow-x:auto}}
 .sc-back{padding:7px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit}
 .sc-back:hover{border-color:#1a6fc4;color:#1a6fc4}
 .sc-title{font-size:20px;font-weight:800;flex:1}

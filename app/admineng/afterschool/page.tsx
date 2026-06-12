@@ -105,6 +105,7 @@ export default function AfterschoolLocalPage() {
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#f1f5f9;color:#1a1a2e}
 .w{max-width:980px;margin:0 auto;padding:24px 16px 60px}
 .top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+@media(max-width:600px){.w{padding:12px 8px 40px;overflow-x:auto}}
 .back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px}.back:hover{background:#e2e8f0}
 .top h1{font-size:20px;font-weight:800;flex:1}
 .sub{font-size:13px;color:#6b7c93;margin:0 0 16px 46px}
