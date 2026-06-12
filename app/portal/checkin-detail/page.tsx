@@ -184,7 +184,8 @@ export default function PortalCheckinDetailPage() {
     setBookingId(bid);
     loadPickups(bid);
     // 예약자 성함·입실일자 자동 채움 (입력칸 제거 — 예약현황 정보 사용)
-    setForm(prev => prev.q1 ? prev : { ...prev, q1: `${s.guest_name || ""}${s.check_in_date ? `, ${s.check_in_date} 입실` : ""}`.trim() });
+    const sAny = s as typeof s & { check_in_date?: string };
+    setForm(prev => prev.q1 ? prev : { ...prev, q1: `${s.guest_name || ""}${sAny.check_in_date ? `, ${sAny.check_in_date} 입실` : ""}`.trim() });
 
     fetch(`/api/checkin-portal?bookingId=${bid}`)
       .then(r => r.json())
