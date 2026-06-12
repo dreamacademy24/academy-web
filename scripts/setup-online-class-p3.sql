@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS online_change_requests (
 );
 ALTER TABLE online_change_requests ENABLE ROW LEVEL SECURITY;
 
+-- PostgREST 조인(embed)용 FK — 없으면 어드민 수신함 500 에러 (2026-06-12 exec_sql로 실행 완료)
+ALTER TABLE online_change_requests
+  ADD CONSTRAINT online_change_requests_enrollment_fk
+  FOREIGN KEY (enrollment_id) REFERENCES online_enrollments(id) ON DELETE CASCADE;
+
 CREATE TABLE IF NOT EXISTS online_notifications (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   tutor_id uuid,                   -- online_tutors.id (NULL = 전체 튜터 공지)
