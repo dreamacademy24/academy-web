@@ -461,7 +461,6 @@ export default function BookingPage() {
               <label className="fl">픽업 장소</label>
               <select className="fsl" value={dates.pickupPlace} onChange={e => setDates({ ...dates, pickupPlace: e.target.value })}>
                 <option value="공항">공항</option>
-                <option value="드림하우스">드림하우스</option>
                 <option value="기타">기타</option>
               </select>
             </div>

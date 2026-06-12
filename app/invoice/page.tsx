@@ -747,8 +747,9 @@ function InvoicePageInner(){
           setCm("combo"); setA1T("dreamhouse"); setA2T("cubenine");
           if(data.dh_weeks) setA1W(data.dh_weeks);
           if(data.cn_period){
-            const m=String(data.cn_period).match(/(\d+)/);
-            if(m) setA2W(Number(m[1]));
+            const raw=String(data.cn_period);
+            if(raw.includes("6일")||raw==="6일"){setA2W(1);}
+            else{const m=raw.match(/(\d+)/);if(m)setA2W(Number(m[1]));}
           }
           if(data.cn_room_type) setA2R(data.cn_room_type);
         }
@@ -759,6 +760,16 @@ function InvoicePageInner(){
         setCm("single"); setA1T("jpark");
       } else if (_at && (_at.includes("큐브나인") || _at.includes("큐브"))) {
         setCm("single"); setA1T("cubenine");
+      }
+      // 콤보 fallback: dh_weeks/jp_weeks/cn_period 모두 NULL인 옛 예약 → accom_weeks 반분 또는 dates 역산
+      if(_at && _at.includes("+")){
+        const hasW1=!!(data.dh_weeks);
+        const hasW2=!!(data.jp_weeks||data.cn_period);
+        if(!hasW1&&!hasW2&&data.accom_weeks){
+          // accom_weeks를 반으로 나눠 양쪽에 배분 (정확하지 않으나 default(2)보다 나음)
+          const half=Math.ceil(Number(data.accom_weeks)/2);
+          setA1W(half); setA2W(Number(data.accom_weeks)-half);
+        }
       }
       // "통학형" 또는 미일치 — 변경 없음 (default 유지)
       // 콤보일 때 accom_weeks는 합산값이라 a1W에 통째 넣으면 a2W=0 사고 발생.
@@ -793,8 +804,9 @@ function InvoicePageInner(){
           if(data.jp_room_type) setA1R(data.jp_room_type);
         }
         if (_at && (_at.includes("큐브나인") || _at.includes("큐브")) && data.cn_period) {
-          const m=String(data.cn_period).match(/(\d+)/);
-          if(m) setA1W(Number(m[1]));
+          const raw=String(data.cn_period);
+          if(raw.includes("6일")||raw==="6일"){setA1W(1);}
+          else{const m=raw.match(/(\d+)/);if(m)setA1W(Number(m[1]));}
           if(data.cn_room_type) setA1R(data.cn_room_type);
         }
       }
