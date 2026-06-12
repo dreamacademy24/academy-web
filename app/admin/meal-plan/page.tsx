@@ -304,14 +304,12 @@ export default function MealPlanPage() {
       .instr b{display:inline-block;min-width:230px}
       .instr-line{margin:3px 0}
       .day-foot{text-align:center;font-size:10px;color:#aaa;margin-top:8px}
-      .lbl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1;min-height:0}
-      .lbl-col{display:flex;flex-direction:column;gap:6px;min-height:0}
-      .lbl-col-h{text-align:center;font-weight:800;font-size:14px;padding:6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;flex:0 0 auto}
-      .lbl-card{border:1.5px solid #334155;border-radius:8px;padding:6px 8px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;max-height:130px}
+      table.lbl{width:100%;border-collapse:separate;border-spacing:8px 6px;table-layout:fixed}
+      table.lbl th{text-align:center;font-weight:800;font-size:14px;padding:7px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px}
+      .lbl-card{border:1.5px solid #334155;border-radius:8px;padding:8px;text-align:center;min-height:62px;display:flex;flex-direction:column;justify-content:center}
       .lbl-card .h{font-size:10px;font-weight:800;letter-spacing:1px;color:#0d9488}
       .lbl-card .rm{font-size:19px;font-weight:900;margin:1px 0}
       .lbl-card .ct{font-size:16px;font-weight:800}
-      .lbl-page{display:flex;flex-direction:column;min-height:75vh}
       .lbl-note{font-size:13px;font-weight:700;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px 12px;margin:10px 0}
       .gs-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50}
       .gs-modal{background:#fff;border-radius:14px;padding:22px;width:min(560px,92vw);max-height:86vh;overflow:auto}
@@ -327,12 +325,11 @@ export default function MealPlanPage() {
         .mp-w{max-width:100%;padding:0}
         .day-block{border:none;padding:0;margin:0;page-break-after:always}
         @page{size:A4 landscape;margin:10mm}
-        .lbl-page{height:190mm;min-height:0;overflow:hidden}
-        .lbl-card{max-height:36mm;break-inside:avoid}
-        table.day tr,table.mp tr{break-inside:avoid}
+        table.lbl tr,.lbl-card{break-inside:avoid;page-break-inside:avoid}
+        table.day tr,table.mp tr{break-inside:avoid;page-break-inside:avoid}
         .instr{break-inside:avoid}
       }
-      @media(max-width:700px){.mp-w{padding:14px 8px}.lbl-grid{grid-template-columns:1fr}table.mp th,table.mp td{font-size:11px;padding:5px 4px}}
+      @media(max-width:700px){.mp-w{padding:14px 8px}table.mp th,table.mp td{font-size:11px;padding:5px 4px}}
     `}</style>
 
     <div className="mp-w">
@@ -459,38 +456,40 @@ export default function MealPlanPage() {
 
         {/* ───── 라벨 ───── */}
         {view === "labels" && (() => {
-          /* 하루치 라벨 — 8팀까지 한 장, 9팀부터 2장 분할 (원본 PDF 방식). 각 장은 페이지 높이에 꽉 차게 */
+          /* 하루치 라벨 — 표 구조(집=행)라서 페이지가 어디서 넘어가든 카드 중간이 잘리지 않음 */
           const renderLblDay = (d: string, idx: number) => {
             const holi = isHoliday(d);
             const dayGuests = guests.filter(g => g.adultsByDay[idx] > 0);
-            const pageCount = Math.max(1, Math.ceil(dayGuests.length / 8));
-            const chunkSize = Math.ceil(dayGuests.length / pageCount);
-            const chunks = Array.from({ length: pageCount }, (_, p) => dayGuests.slice(p * chunkSize, (p + 1) * chunkSize));
-            return chunks.map((chunk, p) => (
-              <div className="day-block lbl-page" key={`${d}-${p}`}>
-                <div className="day-title" style={{ flex: "0 0 auto" }}>Dream Academy  |  Meal Labels  |  {fShort(d)} ({DAYS_EN[pD(d).getDay()]}){holi && <span className="holi"> ※ 휴무 — 점심 아이 포함</span>}, {d.slice(0, 4)}{pageCount > 1 && `   (${p + 1}/${pageCount})`}</div>
-                {holi && <div className="lbl-note" style={{ flex: "0 0 auto" }}>★ 오늘은 점심에 아이 인원 포함  /  Kids included in LUNCH today</div>}
-                <div className="lbl-grid">
-                  {(["BREAKFAST", holi ? "LUNCH  ★아이포함" : "LUNCH (adults)", "DINNER"]).map((meal, mi) => (
-                    <div className="lbl-col" key={meal}>
-                      <div className="lbl-col-h">{meal}</div>
-                      {chunk.map(g => {
-                        const loc = g.locByDay[idx];
-                        const isJp = loc === "JPARK";
-                        return (
-                          <div className="lbl-card" key={g.b.id}>
-                            {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
-                            {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
-                            <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
-                            <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
+            const meals = ["BREAKFAST", holi ? "LUNCH  ★아이포함" : "LUNCH (adults)", "DINNER"];
+            return (
+              <div className="day-block" key={d}>
+                <div className="day-title">Dream Academy  |  Meal Labels  |  {fShort(d)} ({DAYS_EN[pD(d).getDay()]}){holi && <span className="holi"> ※ 휴무 — 점심 아이 포함</span>}, {d.slice(0, 4)}</div>
+                {holi && <div className="lbl-note">★ 오늘은 점심에 아이 인원 포함  /  Kids included in LUNCH today</div>}
+                <table className="lbl">
+                  <thead><tr>{meals.map(m => <th key={m}>{m}</th>)}</tr></thead>
+                  <tbody>
+                    {dayGuests.map(g => {
+                      const loc = g.locByDay[idx];
+                      const isJp = loc === "JPARK";
+                      return (
+                        <tr key={g.b.id}>
+                          {[0, 1, 2].map(mi => (
+                            <td key={mi}>
+                              <div className="lbl-card">
+                                {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
+                                {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
+                                <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
+                                <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            ));
+            );
           };
           const di = weekDates.indexOf(labelDate);
           const idx = di >= 0 ? di : 0;
