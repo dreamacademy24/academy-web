@@ -369,44 +369,32 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                             총 {total}명
                           </div>
                         </div>
-                        <table className="af-tbl">
-                          <thead>
-                            <tr>
-                              <th style={{width:130}}>아이 이름</th>
-                              <th style={{width:130}}>예약자</th>
-                              <th style={{width:120}}>방 번호</th>
-                              <th style={{width:70, textAlign:"center"}}>인원</th>
-                              <th>요청사항</th>
-                              <th style={{width:120}}>상태</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((r, i) => {
-                              const meta = STATUS_META[r.status] || STATUS_META.pending;
-                              return (
-                                <tr key={r.appId + "-" + r.token + "-" + i}>
-                                  <td style={{fontWeight:600}}>{r.childName || "-"}</td>
-                                  <td style={{color:"#475569"}}>{r.reserver || "-"}</td>
-                                  <td style={{color:"#475569"}}>{r.room || "-"}</td>
-                                  <td style={{textAlign:"center", fontWeight:700}}>1명</td>
-                                  <td className="af-notes" title={r.request}>{r.request || "-"}</td>
-                                  <td>
-                                    <select
-                                      className="af-sel"
-                                      style={{background:meta.bg, color:meta.color, borderColor:meta.bg}}
-                                      value={r.status}
-                                      onChange={e => changeStatus(r.appId, e.target.value)}
-                                    >
-                                      <option value="pending">대기중</option>
-                                      <option value="confirmed">확정</option>
-                                      <option value="cancelled">취소</option>
-                                    </select>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                        {/* 컴팩트 칩 — 아이 이름 위주 가로 나열, 집 번호는 작게 (예약자 생략, 마우스 올리면 표시) */}
+                        <div style={{display:"flex", flexWrap:"wrap", gap:6, padding:"10px 14px"}}>
+                          {rows.map((r, i) => {
+                            const meta = STATUS_META[r.status] || STATUS_META.pending;
+                            const lot = (r.room || "").replace(/^b?17/i, "").replace(/^[-_ ]/, "").toUpperCase() || "-";
+                            return (
+                              <div key={r.appId + "-" + r.token + "-" + i}
+                                title={`예약자: ${r.reserver || "-"} · 방: ${r.room || "-"}${r.request ? `\n요청: ${r.request}` : ""}`}
+                                style={{display:"inline-flex", alignItems:"center", gap:6, padding:"6px 9px", background:"#f8fafc", border:"1px solid #eef2f7", borderRadius:9, fontSize:13}}>
+                                <span style={{fontWeight:800, whiteSpace:"nowrap"}}>{r.childName || "-"}</span>
+                                <span style={{color:"#94a3b8", fontSize:10.5, fontWeight:700, whiteSpace:"nowrap"}}>{lot}</span>
+                                {r.request && <span style={{fontSize:11}} title={r.request}>💬</span>}
+                                <select
+                                  className="af-sel"
+                                  style={{background:meta.bg, color:meta.color, borderColor:meta.bg, padding:"2px 4px", fontSize:11}}
+                                  value={r.status}
+                                  onChange={e => changeStatus(r.appId, e.target.value)}
+                                >
+                                  <option value="pending">대기</option>
+                                  <option value="confirmed">확정</option>
+                                  <option value="cancelled">취소</option>
+                                </select>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
