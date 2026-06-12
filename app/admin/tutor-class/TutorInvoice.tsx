@@ -470,10 +470,10 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         value={selectedId}
         onChange={e => setSelectedId(e.target.value)}
         disabled={loading || lessons.length === 0}
-        aria-label="수강생 선택"
+        aria-label={englishMode ? "Select student" : "수강생 선택"}
       >
         {lessons.length === 0 ? (
-          <option value="">{loading ? "로딩 중..." : "수업 없음"}</option>
+          <option value="">{loading ? (englishMode ? "Loading..." : "로딩 중...") : (englishMode ? "No classes" : "수업 없음")}</option>
         ) : (
           lessons.map(l => (
             <option key={l.id} value={l.id}>{optionLabel(l)}</option>

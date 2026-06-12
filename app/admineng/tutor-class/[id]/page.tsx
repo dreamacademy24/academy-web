@@ -82,6 +82,9 @@ function fmtAgeEn(s: string | null | undefined): string {
     const cleaned = p.replace(/\d{4}\.\d{2}\.\d{2}\s*/g, "");
     const km2 = cleaned.match(/만\s*(\d+)\s*세/);
     if (km2) return `${km2[1]} years old`;
+    // "N세" / "YYYYMMDD/N세" — 만 없이 숫자+세 패턴 (예: "20180612/9세" → 9 years old)
+    const km3 = p.match(/(\d+)\s*세/);
+    if (km3) return `${km3[1]} years old`;
     return cleaned || p;
   });
   return out.join(", ");
@@ -322,12 +325,13 @@ export default function EngTutorRequestDetailPage() {
                 const daysStr = Array.isArray(b.days)
                   ? b.days.map(d => DAY_EN[d.trim()] || DAY_EN[d.trim().toLowerCase()] || d.trim()).filter(Boolean).join('·')
                   : '';
-                const timeStr = (b.time || '-').replace(/\(1타임\)/g, '(1 session)').replace(/\(2타임\)/g, '(2 sessions)');
-                const spd = Number(b.sessions_per_day) === 2 ? '2 sessions' : '1 session';
+                // 시간 문자열에서 한글 단위 제거: "(1타임, 50분)" 등 → 통째로 떼고 아래 spd로 영어 표기
+                const timeStr = (b.time || '-').replace(/\s*\(\s*\d+\s*타임[^)]*\)/g, '').trim() || '-';
+                const spd = Number(b.sessions_per_day) === 2 ? '2 sessions · 100 min' : '1 session · 50 min';
                 return (
                   <div key={i} className="drow">
                     <span className="k">Block {i+1}</span>
-                    <span className="v">{daysStr || '-'} — {timeStr} ({spd})</span>
+                    <span className="v">{daysStr || '-'} — {timeStr} · {spd}</span>
                   </div>
                 );
               })

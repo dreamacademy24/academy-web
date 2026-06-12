@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } fr
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime } from "@/lib/scheduleBlocks";
+import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime, stripTimeSuffix } from "@/lib/scheduleBlocks";
 import { countLessonDays } from "@/lib/lessonDates";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
@@ -798,7 +798,7 @@ export default function EngTutorClassPage() {
     if (oldD === newD) { toastErr("Original date and new date are the same."); return; }
     const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
     const nextSkips = current.includes(oldD) ? current : [...current, oldD];
-    const note = `변경: ${oldD}→${newD}`;
+    const note = `Changed: ${oldD}→${newD}`;
     const nextMemo = lesson.tutor_memo ? `${lesson.tutor_memo}\n${note}` : note;
     setSavingLessonId(lesson.id);
     const { error } = await supabase.from("tutor_lessons")
@@ -897,7 +897,7 @@ export default function EngTutorClassPage() {
                   const _krKeys = ['일','월','화','수','목','금','토'];
                   const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                   const _ov = l.time_overrides as Record<string,string> | undefined;
-                  const time = (_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "--:--";
+                  const time = stripTimeSuffix((_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "") || "--:--";
                   return (
                     <div
                       key={l.id}
@@ -1140,7 +1140,7 @@ export default function EngTutorClassPage() {
                         const _krKeys = ['일','월','화','수','목','금','토'];
                         const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                         const _ov = (e as any).overrides as Record<string,string> | undefined;
-                        const _time = (_ov && _ov[_kr]) || e.time;
+                        const _time = stripTimeSuffix((_ov && _ov[_kr]) || e.time || "");
                         return (
                         <div
                           key={e.id + ":" + date}
