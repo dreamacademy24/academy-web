@@ -1571,3 +1571,75 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 3. Team Manager(직원업무) 전체 개편 Phase 2~5
 4. 손님 /booking 콤보 실제 제출 end-to-end 검증 (폼 렌더·다운스트림은 확인됨, 실제 submit만 남음)
 5. 모바일: 실제 폰 확인 후 깨지는 페이지 보정 (견적/인보이스 출력 등 고정폭 출력시트)
+
+## 2026-06-12 세션 2차 (대형 — 모리인폼·화상영어 개편·알림·휴일 시스템)
+
+### 1) 식단 모리인폼 시스템 (/admin/meal-plan 신규, hub 드림하우스 그룹 🍽 카드)
+- 올인원(bookings.is_all_in_one) 자동 추출 → 주간 명단 / 일별 체크리스트(월~금, 기존 모리인폼 양식+싸인칸) / 라벨(표 구조 = 인쇄 시 카드 안 잘림, 주간 일괄 출력)
+- **식사 규정**: 드림하우스·제이파크 = 식사 O (제이파크 주소 "JPARK"), 큐브나인 = X, 통학형 = X. 콤보는 seg 구간별 자동 전환 (양지나: JPARK → 7/11부터 B17L8)
+- **보호자 체류**(bookings.guardian_stays jsonb, scripts/setup-meal-plan.sql 실행됨): 기간 겹치는 주차만 성인 수 자동 반영. 입력처 = 예약상세 기본정보 탭 + 식단 명단 보호자 숫자 클릭. 저장 시 인보이스 추가항목(additions) 동시 등록 옵션 (주당 드하17만/JP18만/C9 15만 힌트)
+- 주차 Xw/Yw = firstMonday(식사시작) 기준. 휴무일 자동 표시(2026 드림센터 내장+토글)
+- 수동 보정 완료: 신현선 2+2, 김가희 1+1 (guardian_stays+children 직접 PATCH)
+- 백업: 수동 생성 스크립트 C:\Users\desko\Claude\Projects\모리\generate_moriinform.py
+
+### 2) 정산 관리: ⚡ 전기세 옵션 (보증금 차감으로 기록, label "전기세 — 메모")
+
+### 3) 화상영어 개편 P1~P4 완료 (컨셉: 등록 1건 = 수강권 1개, 신청→승인→수업→종료→재등록)
+- P1 어드민(/admin/online-class): 행 클릭 → 우측 슬라이드 패널(잔여 진행바+월별 출결+튜터 메모), 표에서 전후 컬럼 제거→잔여 바, 등록 폼 = 시기 태그(단독/연수전/연수후) + **요일별 시간**(day_times jsonb, PH=-1h 자동), 주간스케줄·가용현황 탭 연결. scripts/setup-online-class-v2.sql 실행됨
+- P2 포털(/portal/online-class): 진행률 바, 수강권 전환 칩, 재등록 배너, 사전취소(4일 규칙). **현재 대시보드 카드 ready:false로 재잠금** (수강생 계정연결 후 오픈 예정)
+- P3 변경요청: online_change_requests + online_notifications 테이블(setup-online-class-p3.sql, FK 포함 실행됨). 포털 신청(4일 전 제한) → 어드민 📬 수신함(빨간 뱃지) 승인 → 적용일 이후 예정 세션만 재생성(이력 보존, 회차번호 유지) → 튜터 알림 적재. E2E 검증 완료
+- P4: 튜터 화면(/tutor/online-class) 미읽음 팝업(30초 폴링, OK 시 읽음+갱신) + 티쳐 텔레그램(lib/telegram sendTelegramTeachers, **TELEGRAM_TEACHER_CHAT_ID 환경변수 대기**)
+- ⚠️ 운영 포인트: 수강 등록 시 "손님 계정 ID" 비우면 포털에서 안 보임 → 기존 33명 계정연결 필요 (재오픈 선행 작업)
+
+### 4) 손님 알림 시스템
+- 대시보드 카드 빨간 뱃지: 공지(기존) + 신청 상태변경(셔틀/필드트립/튜터/픽드랍, apps_status_seen 스냅샷 비교) + 화상영어 변경결과. 앱 아이콘 배지 = 합산 setAppBadge
+- 웹푸시는 이미 완성·가동 중이었음 (sw.js push+badge, /api/portal/push/send·subscribe, VAPID 설정됨, 구독 ~10건). 공지 배포 시 자동 발송 연동돼 있음
+- 추가: 공지 배포 화면 "푸시 도달 가능 N명" + **📲 내 폰 테스트** 버튼(test:true → PUSH_TEST_USERNAME, 기본 ECHTST30만 발송)
+- 대시보드 배너: 💰 잔금 D-7(미결제 시, /portal/payment) + ✏️ 학생 영문이름 요청(빨간) + 튜터 확정(클릭 시 tutor_confirm_seen으로 dismiss, 링크 my-applications로 수정)
+
+### 5) 휴일 시스템 (배포 = 전체 연동) — lib/holidays.ts (단일 소스: holidays 테이블 is_deployed)
+- 부킹: 휴일 낀 기간 선택 → 팝업+배너 (체크리스트: ✕수업·헬퍼·셔틀·관리실 / ✓식사 제공 / !환불·보강 없음)
+- 포털 대시보드: 체류 기간 휴일 사전 안내 팝업(하루 1회)
+- 차단: 투어셔틀(portal+public, EXTRA_SHUTTLE_HOLIDAYS) / 튜터(lessonDates setExtraLessonHolidays — portal/tutor·TutorApplications·TutorLessonList mount 시 주입)
+- 환불규정(lib/refundPolicy) 5·6항 추가: 휴무일 환불 없음 + 필리핀 갑작스러운 휴일도 환불·보강 없음. REFUND_POLICY_VERSION="2026-06-12"
+
+### 6) 동의 내역 보관 (booking_consents, setup-booking-consents.sql 실행됨)
+- 부킹 제출 시 자동 저장: 예약자/규정버전/policy_keys/동의문구/그때 안내된 휴일/UA. 조회 = 보관함 📝 동의 탭 (일괄삭제 제외 = 영구 보존)
+
+### 7) 지난 내역 보관함 (/admin/archive, hub 카드)
+- 탭: 📋과거예약(조회전용)/셔틀/필드트립/튜터/픽드랍/화상영어변경/📝동의. 월별+검색
+- 🗑 오래된 내역 일괄 삭제: 3/6/12개월 선택 → 건수 미리보기 → "삭제" 타이핑 확인. 튜터는 lessons+sessions 연쇄 정리. 예약·동의는 삭제 제외
+
+### 8) PWA 3개 앱 분리 완성
+- manifest scope 분리: guest /portal · admin /admin · staff /admineng (전부 "/"였어서 한 앱 설치 시 다른 앱 "이미 설치됨" 오인 — 해결)
+- /install 페이지 manifest 서버 분기 (generateMetadata, InstallClient 분리) — JS 늦은 교체 레이스 제거
+- ⚠️ 폰에 구버전 'Dream Academy'(scope /) 깔려 있으면 여전히 설치 막힘 → **제거 후 재설치 필요** (손님 공지 필요)
+
+### 9) 애프터스쿨/필드트립
+- 선생님 화면(/admineng/afterschool) 개편: ⭐Today 카드(참가 아이 큰 칩) + Upcoming만 기본 + Past programs 접힘(날짜 지나면 자동 이동)
+- 한국인 신청목록: 표 → 컴팩트 칩 (아이이름 굵게+호수 작게+상태 미니셀렉트, 예약자는 툴팁)
+- **영한 사전 lib/afterschoolNames.ts**: 한국인=한글/현지직원=영어 자동 변환, 오타·대소문자·&↔and 흡수. DB 제목 2건 표준화 완료
+- 발견: 6/15 물총놀이 중복 배포 (12명+3명 카드 2개) — 메이 확인 필요
+
+### 10) 기타
+- 학생관리: 영문명 누락 ❗빨간 배지 / 포털 my-booking: 손님이 영문이름 직접 입력(/api/portal/student-english, students+JSONB 동시 갱신) + 사진동의 표시(📸 동의/📵 비동의-촬영없음)
+- 체크인 사전정보: 예약자성함·입실일자 입력 제거(세션 자동) + 유심 "요금제 세팅된 상태로 제공" 문구. 빌드픽스(check_in_date 타입)
+- 내신청내역 튜터 팝업 "수업 일정 0일" 버그 fix (attendance_log/요일 전개 폴백, /api/portal/tutor-invoice)
+- 튜터클래스 모바일 표 min-width+가로스크롤 (글자 뭉개짐 해결)
+- 페이지 관리(/admin/pages) 폐지 → 자료모음 운영정보 탭으로 리다이렉트 (?tab= 파라미터 지원)
+
+### 실행된 SQL (전부 완료): setup-meal-plan / setup-online-class-v2 / setup-online-class-p3(+FK) / setup-booking-consents / bookings.guardian_stays
+### 환경변수 대기: TELEGRAM_TEACHER_CHAT_ID (티쳐 그룹), PUSH_TEST_USERNAME(선택, 기본 ECHTST30)
+
+### 다음 세션 우선 후보
+1. 화상영어 재오픈 — 기존 33명 손님계정 자동 연결 도구 → ready:true
+2. 애프터스쿨 손님폼 재구성 (셔틀 폼 구조)
+3. 튜터 버그 2건 (재배정 동기화 / --:-- 시간)
+4. 알림 구독 유도 강화(카톡 인앱 안내) + 인보이스 게스트 리디자인 + 교사화면 번역 버튼
+5. 메이 직접: 티쳐 텔레그램 chat_id, 구버전 앱 제거 공지, 6/15 중복, 영문명·보호자체류 입력, 봇 토큰 revoke
+
+### 핵심 학습 포인트 (이번 세션)
+- **PWA 다중 앱 = manifest id+scope 둘 다 분리** 필수. scope "/" 겹치면 설치 차단. manifest는 generateMetadata로 서버 분기 (클라 JS 교체는 레이스)
+- **Supabase 새 테이블 + PostgREST embed = FK 필수** (없으면 "Could not find a relationship" 500). exec_sql RPC로 즉석 수정 가능
+- **웹푸시 발송 API에 테스트 모드 없으면 사고남** (전체 구독자에 테스트 발송한 사고 1회 — test:true 추가로 해결)
+- **호스트↔샌드박스 파일 동기화 지연/잘림** 빈발 — 검증은 호스트 Read/Grep 기준, tsc는 참고만
