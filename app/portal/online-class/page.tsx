@@ -85,6 +85,14 @@ function PortalOnlineClassInner() {
   const [cancelTarget, setCancelTarget] = useState<{ session: Session; info: any } | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
+  // 변경 요청
+  const [changeOpen, setChangeOpen] = useState(false);
+  const [chDays, setChDays] = useState<string[]>([]);
+  const [chTime, setChTime] = useState("");
+  const [chEff, setChEff] = useState("");
+  const [chMemo, setChMemo] = useState("");
+  const [chSubmitting, setChSubmitting] = useState(false);
+  const [myReqs, setMyReqs] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -113,6 +121,40 @@ function PortalOnlineClassInner() {
   }, [authUserId, testUser]);
 
   useEffect(() => { if (!authChecking && (authUserId || testUser)) load(); }, [authChecking, authUserId, testUser, load]);
+
+  // 내 변경요청 조회 (검토 중 표시용)
+  useEffect(() => {
+    (async () => {
+      const uid = authUserId || enrollments[0]?.customer_user_id;
+      if (!uid) return;
+      const res = await fetch(`/api/portal/online-class/change-request?customer_user_id=${uid}`);
+      if (res.ok) { const d = await res.json(); setMyReqs(d.requests || []); }
+    })();
+  }, [authUserId, enrollments]);
+
+  async function submitChange() {
+    if (!activeEnroll) return;
+    const uid = testUser ? activeEnroll.customer_user_id : authUserId;
+    if (!uid) { setMsg({ text: "계정 연결 정보가 없습니다. 관리자에게 문의해주세요.", type: "err" }); return; }
+    if (!chEff) { setMsg({ text: "적용 시작일을 선택해주세요.", type: "err" }); return; }
+    if (chDays.length === 0 && !chTime.trim()) { setMsg({ text: "변경할 요일 또는 시간을 입력해주세요.", type: "err" }); return; }
+    setChSubmitting(true);
+    try {
+      const res = await fetch("/api/portal/online-class/change-request", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enrollment_id: activeEnroll.id, customer_user_id: uid,
+          req_days_of_week: chDays, req_time_kr: chTime.trim() || null,
+          effective_from: chEff, memo: chMemo.trim() || null,
+        }),
+      });
+      const r = await res.json();
+      if (!res.ok) { setMsg({ text: r.error || "신청에 실패했습니다.", type: "err" }); return; }
+      setMsg({ text: "변경 요청이 접수되었습니다. 확인 후 안내드릴게요 😊", type: "ok" });
+      setChangeOpen(false); setChDays([]); setChTime(""); setChEff(""); setChMemo("");
+      setMyReqs(prev => [r.request, ...prev]);
+    } finally { setChSubmitting(false); }
+  }
 
   const [selEnrollId, setSelEnrollId] = useState<string | null>(null);
   const activeEnroll = useMemo(
@@ -364,6 +406,27 @@ function PortalOnlineClassInner() {
                 </div>
               );
             })()}
+            {(() => {
+              const pendingReq = myReqs.find(r => r.enrollment_id === activeEnroll.id && r.status === "pending");
+              const lastDone = myReqs.find(r => r.enrollment_id === activeEnroll.id && r.status !== "pending");
+              return (
+                <div style={{ marginTop: 12 }}>
+                  {pendingReq ? (
+                    <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#92400e", fontWeight: 600 }}>
+                      ⏳ 변경 요청 검토 중 — {pendingReq.req_days_of_week?.length ? pendingReq.req_days_of_week.join("/") : ""} {pendingReq.req_time_kr || ""} (적용일 {pendingReq.effective_from})
+                    </div>
+                  ) : (
+                    <button onClick={() => { setChangeOpen(true); setChDays([]); setChTime(""); setChEff(""); setChMemo(""); }}
+                      style={{ width: "100%", padding: "11px", background: "#fff", color: "#1a6fc4", border: "1.5px solid #93c5fd", borderRadius: 10, fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+                      🔄 요일·시간 변경 요청
+                    </button>
+                  )}
+                  {lastDone && lastDone.status === "rejected" && lastDone.admin_note && (
+                    <div style={{ fontSize: 11.5, color: "#dc2626", marginTop: 6 }}>지난 요청이 반려되었어요: {lastDone.admin_note}</div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="sec">
@@ -435,6 +498,55 @@ function PortalOnlineClassInner() {
         </>
       )}
     </div>
+
+    {/* 변경 요청 모달 */}
+    {changeOpen && activeEnroll && (
+      <div className="modal-bg" onClick={() => !chSubmitting && setChangeOpen(false)}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <h3>요일·시간 변경 요청</h3>
+          <div className="detail">
+            현재: {daysToKr(activeEnroll.days_of_week || [])} {activeEnroll.class_time_kr || ""}<br />
+            바꾸고 싶은 항목만 입력하세요. 적용일 <b>4일 전까지</b> 신청 가능해요.
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>새 요일 (그대로면 비워두세요)</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {["월", "화", "수", "목", "금", "토"].map(d => (
+                <button key={d} onClick={() => setChDays(p => p.includes(d) ? p.filter(x => x !== d) : [...p, d])}
+                  style={{ padding: "8px 13px", borderRadius: 8, border: "1.5px solid", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    borderColor: chDays.includes(d) ? "#1a6fc4" : "#e2e8f0",
+                    background: chDays.includes(d) ? "#1a6fc4" : "#fff",
+                    color: chDays.includes(d) ? "#fff" : "#6b7c93" }}>{d}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>새 시간 (한국)</div>
+              <input value={chTime} onChange={e => setChTime(e.target.value)} placeholder="예: 20:00"
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>적용 시작일 *</div>
+              <input type="date" value={chEff} onChange={e => setChEff(e.target.value)}
+                min={(() => { const d = new Date(); d.setDate(d.getDate() + 4); return localStr(d); })()}
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>메모 (선택)</div>
+            <textarea value={chMemo} onChange={e => setChMemo(e.target.value)} placeholder="예: 학원 일정이 바뀌어서요"
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 56 }} />
+          </div>
+          <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 12 }}>관리자 확인 후 승인되면 선생님께 자동으로 안내되고, 적용일 이후 수업 일정이 새로 생성됩니다.</div>
+          <div className="acts">
+            <button className="btn-cancel" disabled={chSubmitting} onClick={() => setChangeOpen(false)}>닫기</button>
+            <button style={{ flex: 1, padding: 10, borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: "#1a6fc4", color: "#fff", opacity: chSubmitting ? 0.6 : 1 }}
+              disabled={chSubmitting} onClick={submitChange}>{chSubmitting ? "신청 중..." : "변경 요청하기"}</button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {cancelTarget && (
       <div className="modal-bg" onClick={() => !cancelLoading && setCancelTarget(null)}>

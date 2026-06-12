@@ -47,7 +47,12 @@ const DAYS = ["월", "화", "수", "목", "금", "토"];
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"list" | "register">("list");
+  const [tab, setTab] = useState<"list" | "register" | "requests">("list");
+
+  // 변경요청 수신함
+  const [changeReqs, setChangeReqs] = useState<any[]>([]);
+  const [reqFilter, setReqFilter] = useState<"pending" | "all">("pending");
+  const [reqProcessing, setReqProcessing] = useState<string | null>(null);
 
   // list tab
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -95,7 +100,32 @@ export default function OnlineClassPage() {
     if (res.ok) { const d = await res.json(); setTutors(d.tutors || []); }
   }, []);
 
-  useEffect(() => { if (authed) { loadEnrollments(); loadTutors(); } }, [authed, loadEnrollments, loadTutors]);
+  const loadChangeReqs = useCallback(async () => {
+    const res = await fetch("/api/online-class/change-requests");
+    if (res.ok) { const d = await res.json(); setChangeReqs(d.requests || []); }
+  }, []);
+
+  useEffect(() => { if (authed) { loadEnrollments(); loadTutors(); loadChangeReqs(); } }, [authed, loadEnrollments, loadTutors, loadChangeReqs]);
+
+  async function processReq(id: string, action: "approve" | "reject") {
+    let admin_note: string | null = null;
+    if (action === "reject") {
+      admin_note = window.prompt("거절 사유 (엄마 포털에 표시됩니다)") || null;
+      if (admin_note === null) return;
+    } else {
+      if (!window.confirm("승인하면 적용일 이후 예정 수업이 새 요일·시간으로 자동 재생성됩니다. 진행할까요?")) return;
+    }
+    setReqProcessing(id);
+    const res = await fetch("/api/online-class/change-requests", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action, admin_note }),
+    });
+    const r = await res.json();
+    setReqProcessing(null);
+    if (!res.ok) { toastErr(r.error || "처리 실패"); return; }
+    toastOk(action === "approve" ? `승인 완료 — 세션 ${r.regenerated}개 재생성, 튜터 알림 전송됨 ✅` : "거절 처리됨");
+    loadChangeReqs(); loadEnrollments();
+  }
 
 
   // auto-calc duration
@@ -327,6 +357,14 @@ export default function OnlineClassPage() {
       <div className="tabs">
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
+        <button className={`tab${tab === "requests" ? " ac" : ""}`} onClick={() => setTab("requests")} style={{ position: "relative" }}>
+          📬 변경요청
+          {changeReqs.filter(r => r.status === "pending").length > 0 && (
+            <span style={{ marginLeft: 5, background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 9, padding: "1px 6px", verticalAlign: "middle" }}>
+              {changeReqs.filter(r => r.status === "pending").length}
+            </span>
+          )}
+        </button>
         <button className="tab" onClick={() => router.push("/admin/online-class-attendance")}>📅 주간 스케줄</button>
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
@@ -522,6 +560,62 @@ export default function OnlineClassPage() {
 
         <button className="submit-btn" onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
       </div>}
+
+      {/* ═══ TAB 3: 변경요청 수신함 ═══ */}
+      {tab === "requests" && (() => {
+        const shown = changeReqs.filter(r => reqFilter === "all" || r.status === "pending");
+        const ST: Record<string, { label: string; bg: string; c: string }> = {
+          pending: { label: "검토 대기", bg: "#fef3c7", c: "#92400e" },
+          approved: { label: "승인됨", bg: "#dcfce7", c: "#166534" },
+          rejected: { label: "거절됨", bg: "#fef2f2", c: "#dc2626" },
+        };
+        return (
+          <div className="sec" style={{ overflowX: "visible" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center" }}>
+              <button className="btn-sm" style={reqFilter === "pending" ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : {}} onClick={() => setReqFilter("pending")}>대기 중</button>
+              <button className="btn-sm" style={reqFilter === "all" ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : {}} onClick={() => setReqFilter("all")}>전체</button>
+              <span className="cnt">{shown.length}건</span>
+            </div>
+            {shown.length === 0 ? (
+              <div className="empty">{reqFilter === "pending" ? "대기 중인 변경 요청이 없습니다" : "변경 요청 내역이 없습니다"}</div>
+            ) : shown.map(r => {
+              const en = r.enrollment || {};
+              const st = ST[r.status] || ST.pending;
+              return (
+                <div key={r.id} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                    <span className="badge" style={{ background: st.bg, color: st.c }}>{st.label}</span>
+                    <b style={{ fontSize: 14 }}>{en.student_name}</b>
+                    <span style={{ fontSize: 12, color: "#6b7c93" }}>{en.tutor?.name_display || "튜터 미지정"}</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>{(r.created_at || "").slice(0, 16).replace("T", " ")}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center", background: "#f8fafc", borderRadius: 8, padding: "10px 12px", fontSize: 12.5 }}>
+                    <div>
+                      <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>현재</div>
+                      {daysToKr(en.days_of_week || [])} {en.class_time_kr || ""}
+                    </div>
+                    <div style={{ fontSize: 16, color: "#1a6fc4" }}>→</div>
+                    <div>
+                      <div style={{ fontSize: 10.5, color: "#1a6fc4", fontWeight: 700, marginBottom: 2 }}>요청 (적용일 {r.effective_from})</div>
+                      <b>{r.req_days_of_week?.length ? daysToKr(r.req_days_of_week) : daysToKr(en.days_of_week || [])} {r.req_time_kr || en.class_time_kr || ""}</b>
+                    </div>
+                  </div>
+                  {r.memo && <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>💬 {r.memo}</div>}
+                  {r.admin_note && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>관리자: {r.admin_note}</div>}
+                  {r.status === "pending" && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                      <button className="btn-sm" disabled={reqProcessing === r.id} style={{ background: "#0d9488", color: "#fff", borderColor: "#0d9488", padding: "7px 16px" }} onClick={() => processReq(r.id, "approve")}>
+                        {reqProcessing === r.id ? "처리 중..." : "✓ 승인 (세션 재생성 + 튜터 알림)"}
+                      </button>
+                      <button className="btn-sm" disabled={reqProcessing === r.id} style={{ color: "#dc2626", borderColor: "#fecaca", padding: "7px 16px" }} onClick={() => processReq(r.id, "reject")}>거절</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
     </div>
 
     {/* ───── 출결 우측 슬라이드 패널 ───── */}
