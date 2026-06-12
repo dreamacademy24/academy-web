@@ -6487,7 +6487,7 @@ function setOpType(t){
   var sec=document.getElementById('opVoteSection');if(sec)sec.style.display=t==='vote'?'block':'none';
   if(t==='vote'){
     var dl=document.getElementById('opVoteDeadline');
-    if(dl&&!dl.value){var d=new Date();d.setDate(d.getDate()+7);dl.value=d.toISOString().slice(0,10);}
+    if(dl&&!dl.value){var d=new Date();d.setDate(d.getDate()+7);dl.value=localDateStr(d);}
     if(!document.querySelectorAll('#opVoteOpts .opv-row').length){opVoteAddOpt();opVoteAddOpt();}
   }
 }
@@ -6569,7 +6569,7 @@ function seedDesignVotePost(){
   sbGet('staff_opinions','title=eq.'+encodeURIComponent(SEED_TITLE)+'&limit=1').then(function(rows){
     if(rows&&rows.length>0)return; // 이미 존재
     var d=new Date();d.setDate(d.getDate()+7);
-    var deadline=d.toISOString().slice(0,10);
+    var deadline=localDateStr(d);
     var voteOpts=[
       {label:'예시 1 - 리스트+타임라인',url:'/vote/design-1.html'},
       {label:'예시 2 - 카드+담당자',url:'/vote/design-2.html'},

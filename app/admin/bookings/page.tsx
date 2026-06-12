@@ -387,7 +387,7 @@ export default function AdminBookingsPage(){
     if(!newForm.booker_name.trim()){toastErr("예약자명을 입력하세요.");return;}
     setSavingNew(true);
     // 예약번호 생성 (booking/invoice 페이지와 동일 포맷: DA-YYYYMMDD-NNNNNN)
-    const todayCompact=new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const _n=new Date();const todayCompact=`${_n.getFullYear()}${String(_n.getMonth()+1).padStart(2,"0")}${String(_n.getDate()).padStart(2,"0")}`;
     const rno="DA-"+todayCompact+"-"+Math.floor(Math.random()*900000+100000);
     const accomDetail:Record<string,unknown>={booking_type:bType};
     if(bType==="dreamhouse"){accomDetail.dh_weeks=newForm.dh_weeks;}
@@ -527,7 +527,7 @@ export default function AdminBookingsPage(){
     if(!newForm.check_in){toastErr(npType==='commute'?"수업시작 날짜를 입력하세요.":"체크인 날짜를 입력하세요.");return;}
     if(!newForm.check_out){toastErr(npType==='commute'?"수업종료 날짜를 입력하세요.":"체크아웃 날짜를 입력하세요.");return;}
     setSavingNew(true);
-    const today=new Date().toISOString().slice(0,10).replace(/-/g,"");
+    const _n2=new Date();const today=`${_n2.getFullYear()}${String(_n2.getMonth()+1).padStart(2,"0")}${String(_n2.getDate()).padStart(2,"0")}`;
     const reservationNo=`DA-${today}-${Math.floor(Math.random()*900000+100000)}`;
     const accomTypeMap:Record<string,string>={dh_only:"드림하우스 단독",jp_only:"제이파크 단독",cn_only:"큐브나인 단독",commute:"통학형"};
     const accomType=accomTypeMap[npType];
@@ -618,7 +618,7 @@ export default function AdminBookingsPage(){
     if(data){
       // 과거 예약 자동 완료 처리: 체크아웃 지난 영수증발행/결제완료 → 완료
       const today=new Date();today.setHours(0,0,0,0);
-      const todayStr=today.toISOString().slice(0,10);
+      const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
       const pastIds=(data as any[]).filter(b=>{
         if(!["영수증발행","결제완료"].includes(b.status))return false;
         const co=b.checkout_date||"";
