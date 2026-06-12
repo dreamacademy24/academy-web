@@ -816,13 +816,33 @@ export default function EngTutorClassPage() {
   async function saveAssign() {
     if (!detail) return;
     setAssigning(true);
+    const oldTutorId = detail.assigned_tutor_id;
+    const newTutorId = assignTutorId || null;
     await supabase.from("tutor_requests").update({
-      assigned_tutor_id: assignTutorId || null,
-      status: assignTutorId ? "assigned" : detail.status,
+      assigned_tutor_id: newTutorId,
+      status: newTutorId ? "assigned" : detail.status,
     }).eq("id", detail.id);
+    // 튜터 변경 시 연결된 tutor_lessons.tutor_id도 자동 동기화
+    if (oldTutorId !== newTutorId) {
+      const { data: linked } = await supabase.from("tutor_lessons")
+        .select("id").eq("application_id", detail.id);
+      const linkedIds = (linked || []).map((l: any) => l.id);
+      // application_id 없는 옛 수업: admin_memo에서 request_id 매칭
+      if (linkedIds.length === 0) {
+        const { data: byMemo } = await supabase.from("tutor_lessons")
+          .select("id,admin_memo").like("admin_memo", `%request_id: ${detail.id}%`);
+        if (byMemo) linkedIds.push(...byMemo.map((l: any) => l.id));
+      }
+      if (linkedIds.length > 0 && newTutorId) {
+        await supabase.from("tutor_lessons")
+          .update({ tutor_id: newTutorId, application_id: detail.id })
+          .in("id", linkedIds);
+      }
+    }
     setAssigning(false);
     setDetail(null);
     load();
+    loadAllLessons();
   }
 
   async function submitComment() {
@@ -1413,21 +1433,4 @@ export default function EngTutorClassPage() {
                 {comments.length === 0 && <div style={{color:"#94a3b8",fontSize:12}}>No comments yet.</div>}
                 {comments.map(c => (
                   <div className="ecmsg" key={c.id}>
-                    <div className="ecwho">{c.tutor_name}<span className="ectime">{new Date(c.created_at).toLocaleDateString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span></div>
-                    <div className="ectxt">{c.comment}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="ecinput" style={{marginTop:10}}>
-                <textarea placeholder="Write a comment (staff only)..." value={comment} onChange={e=>setComment(e.target.value)} />
-                <button className="ebtn ebtn-blue" disabled={savingComment||!comment.trim()} onClick={submitComment} style={{alignSelf:"flex-end"}}>
-                  {savingComment?"...":"Send"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-  </>);
-}
+                    <div className="ecwho">{c.tutor_name}<span className="ectime">{new Date(c.created_at).toLocaleDateString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span

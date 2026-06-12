@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
@@ -918,34 +918,40 @@ function InvoicePageInner(){
 
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
-    const items:{name:string;amount:string}[]=[];
+    const items:{name:string;amount:string;_auto:string}[]=[];
     // SSP: '항상 표시' — cP가 0/NaN/undefined여도 최소 1줄 보장
     const adultCount=Math.max(1,Number(cP)||1);
     for(let i=0;i<adultCount;i++){
-      items.push({name:"1인 SSP / SSP I card",amount:"11,000"});
+      items.push({name:"1인 SSP / SSP I card",amount:"11,000",_auto:"ssp"});
     }
     const isJunior=(s:StudentInfo)=>s.grade==="주니어"||(s.level||"").toLowerCase()==="junior";
     const isKinder=(s:StudentInfo)=>s.grade==="킨더"||(s.level||"").toLowerCase()==="kinder";
     if(students.some(isJunior)){
-      items.push({name:"교재비 - 주니어 1권",amount:"350"});
+      items.push({name:"교재비 - 주니어 1권",amount:"350",_auto:"junior"});
     }
+    // 킨더 재료비: a1W/a2W에서 직접 주수 계산 (students.academyWeeks 타이밍 문제 우회)
     const kinderStudents=students.filter(isKinder);
     if(kinderStudents.length>0){
-      const weeks=Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0),0);
+      const accomWeeks=cm==="combo"?a1W+a2W:a1W;
+      const weeks=accomWeeks||Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0),0);
       if(weeks>0){
         const amt=weeks===4?2500:weeks===2?1750:Math.round((weeks/4)*2500);
         const amtFmt=amt.toLocaleString();
-        items.push({name:`킨더 - 재료비 ${weeks}주 ${amtFmt}페소`,amount:amtFmt});
+        items.push({name:`킨더 - 재료비 ${weeks}주 ${amtFmt}페소`,amount:amtFmt,_auto:"kinder"});
       }
     }
     return items;
-  },[cP,students]);
+  },[cP,students,a1W,a2W,cm]);
 
-  /* ── 최초 로드 시 SSP 항목 없으면 autoLocals를 기존 locals에 append (드림하우스 보증금 등 유지) ── */
+  /* ── 자동 항목 → locals 동기화 (최초 append + 주수 변경 시 킨더 재료비 업데이트) ── */
+  const autoLocalsApplied=useRef(false);
   useEffect(()=>{
     if(hasSnapshot) return; // 스냅샷/확정 인보이스는 자동채움 스킵
+    if(autoLocals.length===0) return;
     const hasSSP=billing.locals.some(l=>l.name?.includes('SSP'));
-    if(!hasSSP && autoLocals.length>0){
+    if(!hasSSP && !autoLocalsApplied.current){
+      // 최초: 기존 locals 유지하면서 자동항목 append
+      autoLocalsApplied.current=true;
       const base=Date.now();
       setBilling(prev=>({
         ...prev,
@@ -954,6 +960,26 @@ function InvoicePageInner(){
           ...autoLocals.map((item,i)=>({id:base+i,name:item.name,amount:String(item.amount)}))
         ]
       }));
+    } else if(autoLocalsApplied.current){
+      // 이미 적용됨 → 킨더 재료비만 갱신 (SSP/교재비는 금액 고정이라 불필요)
+      const newKinder=autoLocals.find(a=>a._auto==="kinder");
+      setBilling(prev=>{
+        const updated=prev.locals.map(l=>{
+          if(l.name?.includes('킨더')&&l.name?.includes('재료비')&&newKinder){
+            return {...l,name:newKinder.name,amount:String(newKinder.amount)};
+          }
+          return l;
+        });
+        // 기존에 킨더가 없었는데 새로 생겼으면 추가
+        if(newKinder && !updated.some(l=>l.name?.includes('킨더')&&l.name?.includes('재료비'))){
+          updated.push({id:Date.now()+99,name:newKinder.name,amount:String(newKinder.amount)});
+        }
+        // 킨더 학생이 없어졌으면 제거
+        if(!newKinder){
+          return {...prev,locals:updated.filter(l=>!(l.name?.includes('킨더')&&l.name?.includes('재료비')))};
+        }
+        return {...prev,locals:updated};
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[autoLocals, hasSnapshot]);
@@ -1046,7 +1072,8 @@ function InvoicePageInner(){
     const juniorCount=validStudents.filter(s=>s.grade==="주니어").length;
     const kinderCount=validStudents.filter(s=>s.grade==="킨더").length;
     const kinderStudents=validStudents.filter(s=>s.grade==="킨더");
-    const kinderWeeks=kinderStudents.length>0?Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0)):0;
+    const accomWeeks=cm==="combo"?a1W+a2W:a1W;
+    const kinderWeeks=accomWeeks||( kinderStudents.length>0?Math.max(...kinderStudents.map(s=>Number(s.academyWeeks)||0)):0);
     const calcKinder=(w:number)=>{if(w<=0)return 0;if(w===4)return 2500;if(w===2)return 1750;return Math.round((w/4)*2500);};
     const kinderAmount=calcKinder(kinderWeeks);
     const base=Date.now();
