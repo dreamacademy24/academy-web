@@ -57,7 +57,6 @@ export default function AdminHubPage() {
       cards: [
         { icon: "👥", title: "직원업무",         desc: "팀 업무 · 일정 · 프로젝트",          href: staffHref },
         { icon: "📖", title: "직원가이드",       desc: "드림아카데미·드림하우스 업무 매뉴얼",     href: "/staff-guide.html" },
-        { icon: "🔗", title: "페이지 관리",       desc: "공개 URL 목록 · 링크 모음",            href: "/admin/pages" },
         { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
         { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
         { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 필드트립 · 회원",         href: "/admin/site" },

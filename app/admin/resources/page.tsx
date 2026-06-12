@@ -56,6 +56,12 @@ const FIELDTRIP_DATA = [
 
 export default function ResourcesPage() {
   const [tab, setTab] = useState<'fieldtrip'|'afterschool'|'ot'|'ops'>('fieldtrip')
+  // URL ?tab=ops 등으로 진입 시 해당 탭 열기 (구 페이지 관리 리다이렉트 호환)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const t = new URLSearchParams(window.location.search).get("tab")
+    if (t === "ops" || t === "afterschool" || t === "ot" || t === "fieldtrip") setTab(t)
+  }, [])
   const [selected, setSelected] = useState<{id:string,title:string,content:string}|null>(null)
   const [editContent, setEditContent] = useState('')
   const [copied, setCopied] = useState(false)

@@ -8,7 +8,7 @@ import { toastOk, toastErr } from "@/lib/toast";
 /* 지난 내역 보관함 — 날짜가 지난 신청을 모아 보고, 오래된 것은 기간 선택 후 일괄 삭제
    데이터는 옮기지 않고 그대로 둔 채 "지난 것"만 여기서 조회 (참석 아이 내역 보존용) */
 
-type TabKey = "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq";
+type TabKey = "booking" | "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq";
 type Row = Record<string, any>;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -17,6 +17,7 @@ const monthsAgo = (m: number) => { const d = new Date(); d.setMonth(d.getMonth()
 const fD = (s: string | null | undefined) => (s || "").slice(0, 10);
 
 const TABS: { key: TabKey; label: string; dateLabel: string }[] = [
+  { key: "booking", label: "📋 예약", dateLabel: "체크아웃" },
   { key: "shuttle", label: "🚌 투어셔틀", dateLabel: "투어일" },
   { key: "fieldtrip", label: "🎒 애프터스쿨/필드트립", dateLabel: "신청일" },
   { key: "tutor", label: "👩‍🏫 튜터 수업", dateLabel: "종료일" },
@@ -28,7 +29,7 @@ export default function ArchivePage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<TabKey>("shuttle");
-  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [] });
+  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ booking: [], shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   /* 삭제 도구 */
@@ -44,7 +45,8 @@ export default function ArchivePage() {
   const load = useCallback(async () => {
     setLoading(true);
     const today = todayStr();
-    const [sh, ft, tu, pk, oc] = await Promise.all([
+    const [bk, sh, ft, tu, pk, oc] = await Promise.all([
+      supabase.from("bookings").select("id, reservation_no, booker_name, checkin_date, checkout_date, accom_type, status, students").lt("checkout_date", today).order("checkout_date", { ascending: false }).limit(1000),
       supabase.from("shuttle_applications").select("*").lt("tour_date", today).order("tour_date", { ascending: false }).limit(1000),
       supabase.from("fieldtrip_applications").select("*").order("created_at", { ascending: false }).limit(1000),
       supabase.from("tutor_requests").select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, created_at, house_or_reserver").lt("end_date", today).order("end_date", { ascending: false }).limit(1000),
@@ -52,6 +54,7 @@ export default function ArchivePage() {
       supabase.from("online_change_requests").select("*").neq("status", "pending").order("created_at", { ascending: false }).limit(500),
     ]);
     setRows({
+      booking: bk.data || [],
       shuttle: sh.data || [],
       fieldtrip: (ft.data || []).filter((r: Row) => fD(r.created_at) < today),
       tutor: tu.data || [],
@@ -64,6 +67,11 @@ export default function ArchivePage() {
 
   /* 행 → 표시 텍스트 (탭별) */
   function rowView(t: TabKey, r: Row): { date: string; who: string; detail: string; status: string } {
+    if (t === "booking") {
+      let stu = "";
+      try { const a = typeof r.students === "string" ? JSON.parse(r.students) : r.students; if (Array.isArray(a)) stu = a.map((s: Row) => s.korName || s.name_kr || "").filter(Boolean).join(", "); } catch {}
+      return { date: fD(r.checkout_date), who: `${r.booker_name || "-"} (${(r.reservation_no || "").slice(-6)})`, detail: `${stu ? `👧 ${stu} · ` : ""}${r.accom_type || ""} · ${fD(r.checkin_date)}~${fD(r.checkout_date)}`, status: r.status || "-" };
+    }
     if (t === "shuttle") return { date: fD(r.tour_date), who: `${r.portal_name || "-"} 🏠${r.room_number || "-"}`, detail: `${r.tour_name || ""} · ${r.people_count || "-"}명${r.riders ? ` · ${typeof r.riders === "string" ? r.riders : JSON.stringify(r.riders)}` : ""}`, status: r.status || "-" };
     if (t === "fieldtrip") return { date: fD(r.created_at), who: `${r.name || "-"} 🏠${r.room_number || "-"}`, detail: String(r.date || ""), status: r.status || "-" };
     if (t === "tutor") return { date: fD(r.end_date), who: r.student_name_en || r.student_name_kr || "-", detail: `${r.class_type || ""} · ${fD(r.start_date)}~${fD(r.end_date)} · ${r.house_or_reserver || ""}`, status: r.status || "-" };
@@ -202,7 +210,7 @@ export default function ArchivePage() {
             {Object.entries(delPreview).map(([k, v]) => <span key={k}>{k}: <b style={{ color: v > 0 ? "#dc2626" : "#94a3b8" }}>{v}건</b></span>)}
           </div>
         )}
-        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>※ 삭제는 되돌릴 수 없어요. 튜터 내역은 연결된 수업·출결 기록도 함께 정리됩니다.</div>
+        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>※ 삭제는 되돌릴 수 없어요. 튜터 내역은 연결된 수업·출결 기록도 함께 정리됩니다. <b>예약(📋)은 학생·정산·인보이스가 연결돼 있어 일괄 삭제에서 제외</b> — 필요 시 예약관리에서 개별 삭제하세요.</div>
       </div>
 
       <div className="tabs">
