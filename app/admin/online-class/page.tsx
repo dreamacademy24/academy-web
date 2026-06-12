@@ -65,6 +65,7 @@ export default function OnlineClassPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   // register tab
+  const [splitPrePost, setSplitPrePost] = useState(false); // 연수전/연수후 분리 입력 (특수 케이스만)
   const [form, setForm] = useState({
     student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
     tutor_id: "", enrollment_type: "free_package", level: "",
@@ -94,12 +95,13 @@ export default function OnlineClassPage() {
 
   useEffect(() => { if (authed) { loadEnrollments(); loadTutors(); } }, [authed, loadEnrollments, loadTutors]);
 
-  // auto-calc total
+  // auto-calc total (연수전/연수후 분리 입력 시에만)
   useEffect(() => {
+    if (!splitPrePost) return;
     const pre = Number(form.pre_sessions) || 0;
     const post = Number(form.post_sessions) || 0;
     setForm(f => ({ ...f, total_sessions: String(pre + post) }));
-  }, [form.pre_sessions, form.post_sessions]);
+  }, [form.pre_sessions, form.post_sessions, splitPrePost]);
 
   // auto-calc duration
   useEffect(() => {
@@ -110,7 +112,6 @@ export default function OnlineClassPage() {
   }, [form.start_date, form.end_date]);
 
   async function loadSessions(enrollmentId: string) {
-    if (expandedId === enrollmentId) { setExpandedId(null); return; }
     setExpandedId(enrollmentId);
     setSessionsLoading(true);
     const res = await fetch(`/api/online-class/sessions?enrollment_id=${enrollmentId}`);
@@ -214,19 +215,24 @@ export default function OnlineClassPage() {
     if (!form.start_date) { toastErr("시작일을 입력해주세요"); return; }
     if (!form.days_of_week.length) { toastErr("수강 요일을 선택해주세요"); return; }
     if (Number(form.total_sessions) < 1) { toastErr("총 회차를 입력해주세요"); return; }
+    const total = Number(form.total_sessions);
+    // 기본 = 단일 수강권. 연수전/연수후 분리는 토글 켠 경우만
+    const pre = splitPrePost ? (Number(form.pre_sessions) || 0) : 0;
+    const post = splitPrePost ? (Number(form.post_sessions) || 0) : total;
     setSubmitting(true);
     try {
       const res = await fetch("/api/online-class/enrollments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          class_period: splitPrePost ? "both" : "post",
           days_of_week: form.days_of_week,
           duration_weeks: Number(form.duration_weeks) || null,
           class_duration_weeks: Number(form.class_duration_weeks) || null,
           sessions_per_week: Number(form.sessions_per_week) || 3,
-          total_sessions: Number(form.total_sessions),
-          pre_sessions: Number(form.pre_sessions) || 0,
-          post_sessions: Number(form.post_sessions) || 0,
+          total_sessions: total,
+          pre_sessions: pre,
+          post_sessions: post,
           tutor_id: form.tutor_id || null,
         }),
       });
@@ -285,6 +291,9 @@ export default function OnlineClassPage() {
 .ses-cell .num{font-size:8px;opacity:0.7}
 .ses-cell .cancel-btn{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:none;font-size:11px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;padding:0;font-weight:700}
 .ses-cell:hover .cancel-btn{display:flex}
+.panel-bg{position:fixed;inset:0;background:rgba(15,23,42,0.35);z-index:900}
+.panel{position:fixed;top:0;right:0;width:min(540px,94vw);height:100vh;background:#fff;box-shadow:-10px 0 36px rgba(0,0,0,0.18);z-index:910;overflow-y:auto;padding:22px;animation:slideIn .18s ease-out}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
 .modal{background:#fff;border-radius:14px;max-width:420px;width:100%;padding:24px}
 .modal h3{font-size:18px;font-weight:800;margin-bottom:12px;color:#1a1a2e}
@@ -312,16 +321,14 @@ export default function OnlineClassPage() {
     <div className="oc-w">
       <div className="oc-top">
         <button className="oc-back" onClick={() => router.push("/admin/hub")}>←</button>
-        <h1>화상영어 출결 관리</h1>
-        <button
-          onClick={() => router.push("/admin/online-class/availability")}
-          style={{ marginLeft: "auto", padding: "8px 14px", background: "#1e40af", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-        >📊 시간대별 가용 현황</button>
+        <h1>화상영어 관리</h1>
       </div>
 
       <div className="tabs">
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
+        <button className="tab" onClick={() => router.push("/admin/online-class-attendance")}>📅 주간 스케줄</button>
+        <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
@@ -348,8 +355,7 @@ export default function OnlineClassPage() {
             <table className="tbl">
               <thead><tr>
                 <th>학생명</th><th>영문명</th><th>담당T</th><th>요일</th><th>한국시간</th>
-                <th>시작일</th><th>종료일</th><th>기간</th>
-                <th>전</th><th>후</th><th>총</th><th>사용</th><th>잔여</th>
+                <th>기간</th><th style={{ minWidth: 140 }}>잔여 회차</th>
                 <th>상태</th><th>관리</th>
               </tr></thead>
               <tbody>
@@ -357,25 +363,30 @@ export default function OnlineClassPage() {
                   const stLabel = STATUS_LABEL[e.status] || e.status;
                   const stBg = STATUS_BG[e.status] || "#f1f5f9";
                   const stColor = STATUS_COLOR[e.status] || "#64748b";
-                  const isOpen = expandedId === e.id;
+                  const total = e.total_sessions || 0;
+                  const used = e.used_sessions || 0;
+                  const rem = e.remaining_sessions ?? Math.max(0, total - used);
+                  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+                  const isSplit = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
                   return (
-                    <tr key={e.id} style={{ cursor: "default" }}>
-                      <td style={{ fontWeight: 700 }}>{e.student_name}</td>
+                    <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => loadSessions(e.id)}>
+                      <td style={{ fontWeight: 700 }}>{e.student_name}{isSplit && <span title="연수전/연수후 분리 수강" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}</td>
                       <td>{e.student_name_en || "-"}</td>
                       <td>{e.tutor?.name_display || "-"}</td>
                       <td>{daysToKr(e.days_of_week)}</td>
                       <td>{e.class_time_kr || "-"}</td>
-                      <td>{e.start_date || "-"}</td>
-                      <td>{e.end_date || "-"}</td>
-                      <td>{e.duration_weeks ? `${e.duration_weeks}주` : "-"}</td>
-                      <td>{e.pre_sessions}</td>
-                      <td>{e.post_sessions}</td>
-                      <td style={{ fontWeight: 700 }}>{e.total_sessions}</td>
-                      <td>{e.used_sessions}</td>
-                      <td style={{ fontWeight: 700, color: (e.remaining_sessions ?? 0) <= 3 ? "#dc2626" : "#166534" }}>{e.remaining_sessions ?? "-"}</td>
+                      <td style={{ fontSize: 11 }}>{e.start_date || "-"} ~ {e.end_date || "-"}</td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ flex: 1, height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
+                            <div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4", borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534", whiteSpace: "nowrap" }}>{rem} / {total}</span>
+                        </div>
+                      </td>
                       <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <button className="btn-sm" onClick={() => loadSessions(e.id)}>{isOpen ? "접기" : "출결"}</button>
+                      <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
+                        <button className="btn-sm" onClick={() => loadSessions(e.id)}>출결</button>
                         {" "}
                         <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
                         {" "}
@@ -388,54 +399,6 @@ export default function OnlineClassPage() {
             </table>
           )}
 
-          {/* 출결 현황 accordion */}
-          {expandedId && (
-            <div style={{ padding: "12px 4px", borderTop: "2px solid #e2e8f0", marginTop: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: "#374151" }}>
-                출결 현황 — {enrollments.find(e => e.id === expandedId)?.student_name}
-              </div>
-              {sessionsLoading ? (
-                <div style={{ textAlign: "center", padding: 20, color: "#94a3b8" }}>로딩 중...</div>
-              ) : sessions.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 20, color: "#94a3b8" }}>세션이 없습니다</div>
-              ) : (
-                <div className="ses-row">
-                  {sessions.map(s => {
-                    let st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-                    // cancelled within 3 days = red X (deducted), 4+ days = yellow △ (makeup)
-                    if (s.status === "cancelled") {
-                      const dB = s.cancel_days_before;
-                      st = (dB != null && dB >= 4) ? SES_STYLE.makeup : SES_STYLE.cancelled;
-                    }
-                    const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
-                    const tt = `#${s.session_number} ${s.scheduled_date} ${s.status}` + (s.cancel_days_before != null ? ` (${s.cancel_days_before}d)` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "");
-                    return (
-                      <div key={s.id} className="ses-cell" style={{ background: st.bg, color: st.color }} title={tt}>
-                        <div className="num">{d}</div>
-                        <div>{st.label}</div>
-                        {s.session_note && <span style={{ position: "absolute", top: 2, right: 2, fontSize: 10 }}>💬</span>}
-                        {s.status === "scheduled" && (
-                          <button className="cancel-btn" onClick={() => openCancelModal(s)} title="취소">×</button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {sessions.some(s => s.session_note) && (
-                <div style={{ marginTop: 16, padding: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: "#78350f", marginBottom: 10 }}>📝 튜터 메모</div>
-                  {sessions.filter(s => s.session_note).map(s => (
-                    <div key={s.id} style={{ background: "#fff", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px", marginBottom: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>#{s.session_number} · {s.scheduled_date}{s.scheduled_time_kr ? ` · ${s.scheduled_time_kr}` : ""}</div>
-                      <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{s.session_note}</div>
-                    </div>
-                  ))}
-                  <div style={{ fontSize: 11, color: "#a16207", marginTop: 4 }}>읽기 전용 — 튜터만 수정 가능</div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </>}
 
@@ -506,14 +469,6 @@ export default function OnlineClassPage() {
           </div>
           <div className="form-row">
             <div>
-              <label className="form-label">수업 구분</label>
-              <select className="form-input" value={form.class_period} onChange={e => setForm({ ...form, class_period: e.target.value })}>
-                <option value="pre">전 (pre)</option>
-                <option value="post">후 (post)</option>
-                <option value="both">전후 (both)</option>
-              </select>
-            </div>
-            <div>
               <label className="form-label">주 수업 횟수</label>
               <select className="form-input" value={form.sessions_per_week} onChange={e => setForm({ ...form, sessions_per_week: e.target.value })}>
                 <option value="2">2회</option>
@@ -521,15 +476,24 @@ export default function OnlineClassPage() {
                 <option value="5">5회</option>
               </select>
             </div>
+            <div>
+              <label className="form-label">총 회차 *</label>
+              <input type="number" className="form-input" value={form.total_sessions} readOnly={splitPrePost}
+                onChange={e => setForm({ ...form, total_sessions: e.target.value })}
+                style={splitPrePost ? { background: "#f8fafc", fontWeight: 700 } : { fontWeight: 700 }}
+                placeholder={form.duration_weeks && form.sessions_per_week ? `예: ${Number(form.duration_weeks) * Number(form.sessions_per_week)}` : ""} />
+            </div>
           </div>
-          <div className="form-row">
-            <div><label className="form-label">수업 전 회차</label><input type="number" className="form-input" value={form.pre_sessions} onChange={e => setForm({ ...form, pre_sessions: e.target.value })} /></div>
-            <div><label className="form-label">수업 후 회차</label><input type="number" className="form-input" value={form.post_sessions} onChange={e => setForm({ ...form, post_sessions: e.target.value })} /></div>
-          </div>
-          <div className="form-mb">
-            <label className="form-label">총 회차 (자동계산)</label>
-            <input type="number" className="form-input" value={form.total_sessions} readOnly style={{ background: "#f8fafc", fontWeight: 700 }} />
-          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 10, cursor: "pointer" }}>
+            <input type="checkbox" checked={splitPrePost} onChange={e => setSplitPrePost(e.target.checked)} />
+            연수전 / 연수후로 나뉘는 수강 (특수 케이스만 체크)
+          </label>
+          {splitPrePost && (
+            <div className="form-row">
+              <div><label className="form-label">연수전 회차</label><input type="number" className="form-input" value={form.pre_sessions} onChange={e => setForm({ ...form, pre_sessions: e.target.value })} /></div>
+              <div><label className="form-label">연수후 회차</label><input type="number" className="form-input" value={form.post_sessions} onChange={e => setForm({ ...form, post_sessions: e.target.value })} /></div>
+            </div>
+          )}
         </div>
 
         <div className="form-card">
@@ -540,6 +504,87 @@ export default function OnlineClassPage() {
         <button className="submit-btn" onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
       </div>}
     </div>
+
+    {/* ───── 출결 우측 슬라이드 패널 ───── */}
+    {expandedId && (() => {
+      const en = enrollments.find(e => e.id === expandedId);
+      if (!en) return null;
+      const total = en.total_sessions || 0;
+      const used = en.used_sessions || 0;
+      const rem = en.remaining_sessions ?? Math.max(0, total - used);
+      const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+      /* 월별 그룹 */
+      const byMonth: Record<string, Session[]> = {};
+      sessions.forEach(s => { const k = (s.scheduled_date || "").slice(0, 7); (byMonth[k] = byMonth[k] || []).push(s); });
+      const months = Object.keys(byMonth).sort();
+      return (
+        <div className="panel-bg" onClick={() => setExpandedId(null)}>
+          <div className="panel" onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>{en.student_name} <span style={{ fontSize: 13, fontWeight: 500, color: "#64748b" }}>{en.student_name_en}</span></h3>
+              <button onClick={() => openEditModal(en)} className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }}>✏️ 수정</button>
+              <button onClick={() => setExpandedId(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#64748b", padding: "0 4px" }}>✕</button>
+            </div>
+            <div style={{ fontSize: 12.5, color: "#475569", marginBottom: 12, lineHeight: 1.7 }}>
+              {en.tutor?.name_display || "튜터 미지정"} · {daysToKr(en.days_of_week)} {en.class_time_kr || ""}{en.class_time_ph ? ` (PH ${en.class_time_ph})` : ""}<br />
+              {en.start_date} ~ {en.end_date || "미정"}{(en.class_period === "both" || (en.pre_sessions > 0 && en.post_sessions > 0)) && <span style={{ marginLeft: 6, fontSize: 10, background: "#ede9fe", color: "#6d28d9", padding: "1px 6px", borderRadius: 8, fontWeight: 700 }}>연수전 {en.pre_sessions} + 연수후 {en.post_sessions}</span>}
+            </div>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>
+                <span>사용 {used}회 / 전체 {total}회</span>
+                <span style={{ color: rem <= 3 ? "#dc2626" : "#166534" }}>잔여 {rem}회</span>
+              </div>
+              <div style={{ height: 10, background: "#e2e8f0", borderRadius: 5, overflow: "hidden" }}>
+                <div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4" }} />
+              </div>
+            </div>
+            {sessionsLoading ? (
+              <div style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>로딩 중...</div>
+            ) : sessions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>세션이 없습니다</div>
+            ) : months.map(m => (
+              <div key={m} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#1a6fc4", marginBottom: 6 }}>{m.replace("-", "년 ")}월</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {byMonth[m].map(s => {
+                    let st = SES_STYLE[s.status] || SES_STYLE.scheduled;
+                    if (s.status === "cancelled") {
+                      const dB = s.cancel_days_before;
+                      st = (dB != null && dB >= 4) ? SES_STYLE.makeup : SES_STYLE.cancelled;
+                    }
+                    const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
+                    const tt = `#${s.session_number} ${s.scheduled_date} ${s.status}` + (s.cancel_days_before != null ? ` (${s.cancel_days_before}d)` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "");
+                    return (
+                      <div key={s.id} className="ses-cell" style={{ background: st.bg, color: st.color }} title={tt}>
+                        <div className="num">{d}</div>
+                        <div>{st.label}</div>
+                        {s.session_note && <span style={{ position: "absolute", top: 2, right: 2, fontSize: 10 }}>💬</span>}
+                        {s.status === "scheduled" && (
+                          <button className="cancel-btn" onClick={() => openCancelModal(s)} title="취소">×</button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 14 }}>O 출석 · X 결석/차감취소 · △ 보강 · 예정 칸에 마우스 올리면 × 취소 버튼</div>
+            {sessions.some(s => s.session_note) && (
+              <div style={{ padding: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "#78350f", marginBottom: 10 }}>📝 튜터 메모</div>
+                {sessions.filter(s => s.session_note).map(s => (
+                  <div key={s.id} style={{ background: "#fff", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>#{s.session_number} · {s.scheduled_date}{s.scheduled_time_kr ? ` · ${s.scheduled_time_kr}` : ""}</div>
+                    <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{s.session_note}</div>
+                  </div>
+                ))}
+                <div style={{ fontSize: 11, color: "#a16207", marginTop: 4 }}>읽기 전용 — 튜터만 수정 가능</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    })()}
 
     {editTarget && (
       <div className="modal-bg" onClick={() => !editSaving && setEditTarget(null)}>
@@ -574,11 +619,18 @@ export default function OnlineClassPage() {
             <div><label className="form-label" style={{ fontSize: 11 }}>연수 기간 (주)</label><input type="number" className="form-input" value={String(editForm.duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, duration_weeks: e.target.value }))} /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>화상수업 기간 (주)</label><input type="number" className="form-input" value={String(editForm.class_duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, class_duration_weeks: e.target.value }))} /></div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div><label className="form-label" style={{ fontSize: 11 }}>수업 전 회차</label><input type="number" className="form-input" value={String(editForm.pre_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, pre_sessions: Number(e.target.value) }))} /></div>
-            <div><label className="form-label" style={{ fontSize: 11 }}>수업 후 회차</label><input type="number" className="form-input" value={String(editForm.post_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, post_sessions: Number(e.target.value) }))} /></div>
-            <div><label className="form-label" style={{ fontSize: 11 }}>총 회차</label><input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value) }))} /></div>
-          </div>
+          {(editTarget.class_period === "both" || (editTarget.pre_sessions > 0 && editTarget.post_sessions > 0)) ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div><label className="form-label" style={{ fontSize: 11 }}>연수전 회차</label><input type="number" className="form-input" value={String(editForm.pre_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, pre_sessions: Number(e.target.value) }))} /></div>
+              <div><label className="form-label" style={{ fontSize: 11 }}>연수후 회차</label><input type="number" className="form-input" value={String(editForm.post_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, post_sessions: Number(e.target.value) }))} /></div>
+              <div><label className="form-label" style={{ fontSize: 11 }}>총 회차</label><input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value) }))} /></div>
+            </div>
+          ) : (
+            <div style={{ marginBottom: 12 }}>
+              <label className="form-label" style={{ fontSize: 11 }}>총 회차</label>
+              <input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value), post_sessions: Number(e.target.value), pre_sessions: 0 }))} />
+            </div>
+          )}
           <div style={{ marginBottom: 12 }}>
             <label className="form-label" style={{ fontSize: 11 }}>상태</label>
             <select className="form-input" value={String(editForm.status ?? "active")} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}>
