@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isLessonDateAllowed } from '@/lib/lessonDates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -77,11 +78,41 @@ export async function GET(req: Request) {
     for (const t of (tRows || []) as { id: string; name: string }[]) tutorMap.set(t.id, t.name)
   }
 
-  const result = lessons.map(l => ({
-    ...l,
-    tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
-    sessions: sessByLesson.get(l.id) || [],
-  }))
+  // 세션 테이블이 비어있는 신형 lesson: attendance_log 날짜 → 없으면 요일×기간 전개로 일정 생성
+  const DAY_NUM: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }
+  function deriveDates(l: LessonRow & { attendance_log?: Record<string, string> | null; class_days?: string[] | null; start_date?: string | null; end_date?: string | null }): string[] {
+    const log = l.attendance_log
+    if (log && typeof log === 'object' && Object.keys(log).length > 0) return Object.keys(log).sort()
+    if (!l.start_date || !l.end_date || !Array.isArray(l.class_days) || l.class_days.length === 0) return []
+    const target = l.class_days.map(d => DAY_NUM[String(d || '').trim().toLowerCase()] ?? DAY_NUM[String(d || '').trim()]).filter(n => n !== undefined)
+    if (target.length === 0) return []
+    const out: string[] = []
+    const cur = new Date(l.start_date + 'T00:00:00')
+    const end = new Date(l.end_date + 'T00:00:00')
+    if (isNaN(cur.getTime()) || isNaN(end.getTime())) return []
+    let guard = 0
+    while (cur <= end && guard < 400) {
+      if (target.includes(cur.getDay())) {
+        const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
+        if (isLessonDateAllowed(cur, ds)) out.push(ds)
+      }
+      cur.setDate(cur.getDate() + 1)
+      guard++
+    }
+    return out
+  }
+
+  const result = lessons.map(l => {
+    const real = sessByLesson.get(l.id) || []
+    const sessions = real.length > 0
+      ? real
+      : deriveDates(l as LessonRow & { attendance_log?: Record<string, string> | null }).map(ds => ({ lesson_id: l.id, session_date: ds, session_time: (l as { class_time?: string | null }).class_time || null }))
+    return {
+      ...l,
+      tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
+      sessions,
+    }
+  })
 
   return NextResponse.json({ lessons: result })
 }

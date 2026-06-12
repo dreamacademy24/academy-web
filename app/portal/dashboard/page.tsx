@@ -25,6 +25,8 @@ export default function PortalDashboard() {
   const [hasNewNotes, setHasNewNotes] = useState(false);
   const [popupNotice, setPopupNotice] = useState<any>(null);
   const [noticeUnread, setNoticeUnread] = useState(0);
+  const [appsChanged, setAppsChanged] = useState(0);
+  const [ocChanged, setOcChanged] = useState(0);
 
   useEffect(() => {
     async function init() {
@@ -121,7 +123,7 @@ export default function PortalDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  // 안읽은 공지 수 → 공지 카드 빨간 배지 + 앱 아이콘 배지(setAppBadge)
+  // 안읽은 공지 수 → 공지 카드 빨간 배지
   useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
@@ -135,13 +137,71 @@ export default function PortalDashboard() {
       let lastSeen = ""; try { lastSeen = localStorage.getItem("notices_last_seen") || ""; } catch {}
       const unread = lastSeen ? list.filter((n: any) => String(n.created_at) > lastSeen).length : list.length;
       setNoticeUnread(unread);
-      try {
-        const navAny = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
-        if (navAny.setAppBadge) { if (unread > 0) navAny.setAppBadge(unread); else navAny.clearAppBadge?.(); }
-      } catch {}
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // 신청 상태 변경 (셔틀/필드트립/튜터/픽드랍 + 화상영어 변경요청) → 카드 빨간 배지
+  // 방식: 마지막으로 본 상태 스냅샷(localStorage apps_status_seen)과 비교, 달라진 건수만 카운트
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      let bookingId: string | null = null;
+      try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!bookingId && user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id;
+
+      const items: Array<{ key: string; status: string }> = [];
+      if (bookingId) {
+        try {
+          const res = await fetch(`/api/portal/my-applications?booking_id=${bookingId}`);
+          if (res.ok) {
+            const d = await res.json();
+            (["shuttle", "fieldtrip", "tutor", "pickup"] as const).forEach(k =>
+              (d[k] || []).forEach((it: any) => items.push({ key: `${k}:${it.id}`, status: String(it.status ?? "") })));
+          }
+        } catch {}
+      }
+      let ocItems: Array<{ key: string; status: string }> = [];
+      if (user?.id) {
+        try {
+          const r2 = await fetch(`/api/portal/online-class/change-request?customer_user_id=${user.id}`);
+          if (r2.ok) { const dd = await r2.json(); ocItems = (dd.requests || []).map((it: any) => ({ key: `ocreq:${it.id}`, status: String(it.status ?? "") })); }
+        } catch {}
+      }
+      if (cancelled) return;
+
+      const rawSnap = localStorage.getItem("apps_status_seen");
+      if (rawSnap === null) {
+        // 첫 방문: 현재 상태를 기준점으로 저장, 뱃지 0
+        const init: Record<string, string> = {};
+        [...items, ...ocItems].forEach(it => { init[it.key] = it.status; });
+        try { localStorage.setItem("apps_status_seen", JSON.stringify(init)); } catch {}
+        return;
+      }
+      let snap: Record<string, string> = {};
+      try { snap = JSON.parse(rawSnap || "{}"); } catch {}
+      const countChanged = (arr: Array<{ key: string; status: string }>) =>
+        arr.filter(it => snap[it.key] !== undefined && snap[it.key] !== it.status).length;
+      setAppsChanged(countChanged(items));
+      setOcChanged(countChanged(ocItems));
+      // 새로 만든 신청(스냅샷에 없음)은 본인이 만든 거라 카운트하지 않되, 스냅샷에는 추가
+      const merged = { ...snap };
+      [...items, ...ocItems].forEach(it => { if (merged[it.key] === undefined) merged[it.key] = it.status; });
+      try { localStorage.setItem("apps_status_seen", JSON.stringify(merged)); } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 앱 아이콘 배지 = 공지 + 상태변경 합산 (지원 기기에서만)
+  useEffect(() => {
+    try {
+      const total = noticeUnread + appsChanged + ocChanged;
+      const navAny = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+      if (navAny.setAppBadge) { if (total > 0) navAny.setAppBadge(total); else navAny.clearAppBadge?.(); }
+    } catch {}
+  }, [noticeUnread, appsChanged, ocChanged]);
 
   function dismissPopup(forToday: boolean) {
     if (forToday && popupNotice && typeof window !== "undefined") {
@@ -268,7 +328,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       <PortalPushButton />
 
       {hasConfirmedTutor && (
-        <a href="/portal/tutor" style={{display:"block",textDecoration:"none",marginBottom:16}}>
+        <a href="/portal/my-applications" style={{display:"block",textDecoration:"none",marginBottom:16}}>
           <div style={{
             background:"linear-gradient(135deg,#dcfce7,#bbf7d0)",
             border:"2px solid #86efac",
@@ -285,7 +345,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 튜터 수업이 확정되었습니다!
               </div>
               <div style={{fontSize:12,color:"#166534"}}>
-                예약 확정 인보이스를 확인하세요 →
+                내 신청 내역에서 확정된 수업·인보이스를 확인하세요 →
               </div>
             </div>
           </div>
@@ -327,6 +387,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             {!c.ready && <span className="coming">준비 중</span>}
             {c.title === "공지사항" && noticeUnread > 0 && (
               <span className="db-badge">{noticeUnread > 99 ? "99+" : noticeUnread}</span>
+            )}
+            {c.title === "내 신청 내역" && appsChanged > 0 && (
+              <span className="db-badge">{appsChanged > 99 ? "99+" : appsChanged}</span>
+            )}
+            {c.title === "화상영어" && ocChanged > 0 && (
+              <span className="db-badge">{ocChanged > 99 ? "99+" : ocChanged}</span>
             )}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>

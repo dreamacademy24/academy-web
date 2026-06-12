@@ -22,6 +22,8 @@ export default function AdminNoticesPage() {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [pushReach, setPushReach] = useState<number | null>(null);
+  const [testSending, setTestSending] = useState(false);
 
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
@@ -34,6 +36,24 @@ export default function AdminNoticesPage() {
     setBookings((b.data || []) as Bk[]);
   }, []);
   useEffect(() => { if (authed) load(); }, [authed, load]);
+  useEffect(() => {
+    if (!authed) return;
+    fetch("/api/portal/push/send").then(r => r.ok ? r.json() : null).then(d => { if (d) setPushReach(d.subscribers ?? 0); }).catch(() => {});
+  }, [authed]);
+
+  async function sendTestPush() {
+    if (!form.title.trim()) { setMsg("테스트할 제목을 먼저 입력하세요."); return; }
+    setTestSending(true);
+    try {
+      const res = await fetch("/api/portal/push/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title.trim(), body: form.content.trim(), url: "/portal/notices", test: true }),
+      });
+      const r = await res.json();
+      if (!res.ok) { setMsg("테스트 발송 실패: " + (r.error || "")); return; }
+      setMsg(`📲 테스트 발송 완료 (테스트 계정 기기 ${r.sent}대) — 폰에서 확인해보세요`);
+    } finally { setTestSending(false); }
+  }
 
   function edit(n: Notice) {
     setForm({ id: n.id, category: n.category || "general", title: n.title || "", content: n.content || "", popup: !!n.popup, audience: n.audience || "all", target_ids: Array.isArray(n.target_ids) ? n.target_ids : [] });
@@ -109,6 +129,11 @@ textarea.in{min-height:120px;resize:vertical}
       <div className="top">
         <button className="back" onClick={() => router.push("/admin/hub")}>←</button>
         <h1>📢 공지 배포</h1>
+        {pushReach !== null && (
+          <span style={{ fontSize: 12.5, fontWeight: 700, background: "#eff6ff", color: "#1d4ed8", padding: "6px 12px", borderRadius: 10 }}>
+            🔔 푸시 도달 가능: {pushReach}명
+          </span>
+        )}
       </div>
 
       <div className="card">
@@ -156,6 +181,9 @@ textarea.in{min-height:120px;resize:vertical}
         {msg && <div className="msg">{msg}</div>}
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button className="btn btn-p" disabled={saving} onClick={save}>{saving ? "저장 중..." : form.id ? "수정 완료" : "공지 등록"}</button>
+          <button className="btn" disabled={testSending} onClick={sendTestPush} style={{ background: "#f0fdfa", color: "#0f766e", border: "1px solid #99f6e4" }}>
+            {testSending ? "발송 중..." : "📲 내 폰 테스트"}
+          </button>
           {form.id && <button className="btn btn-g" onClick={reset}>취소</button>}
         </div>
       </div>

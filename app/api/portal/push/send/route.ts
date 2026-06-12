@@ -27,17 +27,30 @@ function ensureVapid(): { ok: boolean; error?: string } {
   }
 }
 
+// 푸시 도달 가능 인원 (어드민 공지 화면 표시용)
+export async function GET() {
+  const { count } = await supabase.from('push_subscriptions').select('id', { count: 'exact', head: true })
+  return NextResponse.json({ subscribers: count ?? 0 })
+}
+
 // 공지 발행 시 호출 — 대상 손님 구독에 웹푸시 발송
+// test: true → 테스트 계정(PUSH_TEST_USERNAME, 기본 ECHTST30)에만 발송
 export async function POST(req: Request) {
   try {
     const v = ensureVapid()
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: 500 })
 
-    const { title, body, url, audience, target_ids } = await req.json()
+    const { title, body, url, audience, target_ids, test } = await req.json()
     if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 })
 
     let q = supabase.from('push_subscriptions').select('endpoint, p256dh, auth, booking_id')
-    if (audience === 'selected' && Array.isArray(target_ids) && target_ids.length > 0) {
+    if (test === true) {
+      const username = process.env.PUSH_TEST_USERNAME || 'ECHTST30'
+      const { data: tb } = await supabase.from('bookings').select('id').eq('portal_username', username)
+      const ids = (tb || []).map(b => b.id)
+      if (ids.length === 0) return NextResponse.json({ error: `테스트 계정(${username}) 예약을 찾을 수 없습니다` }, { status: 404 })
+      q = q.in('booking_id', ids)
+    } else if (audience === 'selected' && Array.isArray(target_ids) && target_ids.length > 0) {
       q = q.in('booking_id', target_ids)
     }
     const { data: subs, error } = await q

@@ -80,6 +80,13 @@ export default function MyApplicationsPage() {
           tutor: j.tutor || [],
           pickup: j.pickup || [],
         });
+        // 읽음 처리 — 대시보드 빨간 뱃지용 상태 스냅샷 갱신
+        try {
+          const snap = JSON.parse(localStorage.getItem("apps_status_seen") || "{}");
+          (["shuttle", "fieldtrip", "tutor", "pickup"] as const).forEach(k =>
+            (j[k] || []).forEach((it: AnyRow) => { snap[`${k}:${it.id}`] = String(it.status ?? ""); }));
+          localStorage.setItem("apps_status_seen", JSON.stringify(snap));
+        } catch {}
       }
       // 확정 튜터 수업(인보이스+일정) — 신청별로 묶기
       const inv = await fetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);

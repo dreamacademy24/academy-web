@@ -128,7 +128,16 @@ function PortalOnlineClassInner() {
       const uid = authUserId || enrollments[0]?.customer_user_id;
       if (!uid) return;
       const res = await fetch(`/api/portal/online-class/change-request?customer_user_id=${uid}`);
-      if (res.ok) { const d = await res.json(); setMyReqs(d.requests || []); }
+      if (res.ok) {
+        const d = await res.json();
+        setMyReqs(d.requests || []);
+        // 읽음 처리 — 대시보드 화상영어 빨간 뱃지용 상태 스냅샷 갱신
+        try {
+          const snap = JSON.parse(localStorage.getItem("apps_status_seen") || "{}");
+          (d.requests || []).forEach((it: any) => { snap[`ocreq:${it.id}`] = String(it.status ?? ""); });
+          localStorage.setItem("apps_status_seen", JSON.stringify(snap));
+        } catch {}
+      }
     })();
   }, [authUserId, enrollments]);
 
