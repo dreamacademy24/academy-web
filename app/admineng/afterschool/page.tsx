@@ -76,16 +76,22 @@ export default function AfterschoolLocalPage() {
     return map;
   }, [apps, byMd, nameMap]);
 
-  // 배포 항목 → 월별 그룹 (리스트)
-  const monthGroups = useMemo(() => {
+  // 오늘 기준 분리: 오늘 / 다가오는 일정(월별) / 지난 일정(접힘)
+  const todayStr = ymd(new Date());
+  const { todayItems, upcomingGroups, pastItems } = useMemo(() => {
+    const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date));
+    const today = sorted.filter(it => it.date === todayStr);
+    const upcoming = sorted.filter(it => it.date > todayStr);
+    const past = sorted.filter(it => it.date < todayStr).reverse(); // 최근 것부터
     const m = new Map<string, DeployedScheduleItem[]>();
-    for (const it of [...items].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const it of upcoming) {
       const mk = it.date.slice(0, 7);
       if (!m.has(mk)) m.set(mk, []);
       m.get(mk)!.push(it);
     }
-    return Array.from(m.entries());
-  }, [items]);
+    return { todayItems: today, upcomingGroups: Array.from(m.entries()), pastItems: past };
+  }, [items, todayStr]);
+  const [showPast, setShowPast] = useState(false);
 
   const calCells = useMemo(() => {
     const y = cursor.getFullYear(), mo = cursor.getMonth();
@@ -138,6 +144,20 @@ export default function AfterschoolLocalPage() {
 .cell .pg{margin-top:3px;font-weight:700;line-height:1.25;font-size:11px}
 .cell .pg.ft{color:#c2410c}.cell .pg.as{color:#1d4ed8}
 .cell .nb{display:inline-block;margin-top:3px;background:#16a34a;color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:1px 7px}
+.today-box{background:#16a34a;border-radius:14px;padding:16px 18px;margin-bottom:18px;color:#fff}
+.today-h{font-size:15px;font-weight:800;margin-bottom:8px}
+.today-none{font-size:13.5px;opacity:0.92}
+.today-item{background:#fff;border-radius:10px;padding:12px 14px;color:#1a1a2e;margin-top:6px}
+.today-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;flex-wrap:wrap}
+.chip.big{font-size:14px;padding:7px 12px}
+.row-card{background:#fff;border:1px solid #eef2f7;border-radius:11px;margin-bottom:6px;overflow:hidden}
+.row-card.has{border-color:#bbf7d0;box-shadow:0 1px 5px rgba(22,163,74,0.10)}
+.row-card.past{opacity:0.65}
+.rhead{display:flex;align-items:center;gap:8px;padding:9px 14px;flex-wrap:wrap}
+.rhead.ft{background:#fff7ed}.rhead.as{background:#fff}
+.cnt.on{background:#dcfce7;border-color:#86efac;color:#166534}
+.row-card .kids{padding:8px 14px 11px;border-top:1px dashed #e2e8f0}
+.past-toggle{width:100%;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;font-family:inherit;margin-bottom:8px}
     `}</style>
     <div className="w">
       <div className="top">
@@ -152,9 +172,33 @@ export default function AfterschoolLocalPage() {
         <button data-on={view === "calendar"} onClick={() => setView("calendar")}>📅 Calendar</button>
       </div>
 
-      {loading ? <div className="empty">Loading…</div> : view === "list" ? (
-        monthGroups.length === 0 ? <div className="empty">No deployed schedule yet.</div> :
-        monthGroups.map(([mk, list]) => {
+      {loading ? <div className="empty">Loading…</div> : view === "list" ? (<>
+
+        {/* ───── TODAY ───── */}
+        <div className="today-box">
+          <div className="today-h">⭐ Today — {(() => { const d = new Date(); return `${MON_EN[d.getMonth()]} ${d.getDate()} (${DOW_EN[d.getDay()]})`; })()}</div>
+          {todayItems.length === 0 ? (
+            <div className="today-none">No activity today{upcomingGroups.length > 0 && upcomingGroups[0][1].length > 0 ? ` — next: ${(() => { const n = upcomingGroups[0][1][0]; const d = new Date(n.date + "T00:00:00"); return `${n.title} on ${MON_EN[d.getMonth()]} ${d.getDate()} (${DOW_EN[d.getDay()]})`; })()}` : ""}</div>
+          ) : todayItems.map(it => {
+            const kids = signupsByMd[mdFromDate(it.date)] || [];
+            return (
+              <div key={it.id} className="today-item">
+                <div className="today-title">{it.title} {it.type === "fieldtrip" && <span className="ftb">FIELD TRIP</span>} <span className="cnt" style={{ marginLeft: "auto" }}>{kids.length} kids</span></div>
+                {kids.length === 0 ? <div className="none" style={{ padding: "6px 0 0" }}>No sign-ups.</div> : (
+                  <div className="kids" style={{ padding: "8px 0 0" }}>
+                    {kids.map((k, i) => (
+                      <span className="chip big" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ───── UPCOMING ───── */}
+        {upcomingGroups.length === 0 ? <div className="empty">No upcoming schedule.</div> :
+        upcomingGroups.map(([mk, list]) => {
           const [yy, mm] = mk.split("-").map(Number);
           return (
             <div key={mk}>
@@ -163,23 +207,18 @@ export default function AfterschoolLocalPage() {
                 const dt = new Date(it.date + "T00:00:00");
                 const isFt = it.type === "fieldtrip";
                 const kids = signupsByMd[mdFromDate(it.date)] || [];
-                const isToday = it.date === todayKey;
                 return (
-                  <div className="card" key={it.id}>
-                    <div className={`chead ${isFt ? "ft" : "as"}${isToday ? " today" : ""}`}>
+                  <div className={`row-card${kids.length > 0 ? " has" : ""}`} key={it.id}>
+                    <div className={`rhead ${isFt ? "ft" : "as"}`}>
                       <span className="dt">{dt.getMonth() + 1}/{dt.getDate()} ({DOW_EN[dt.getDay()]})</span>
                       <span className="pn">{it.title}</span>
                       {isFt && <span className="ftb">FIELD TRIP</span>}
-                      {isToday && <span className="tdy">TODAY</span>}
-                      <span className="cnt">{kids.length} signed up</span>
+                      <span className={`cnt${kids.length > 0 ? " on" : ""}`}>{kids.length > 0 ? `${kids.length} kids` : "—"}</span>
                     </div>
-                    {kids.length === 0 ? <div className="none">No sign-ups yet.</div> : (
+                    {kids.length > 0 && (
                       <div className="kids">
                         {kids.map((k, i) => (
-                          <span className="chip" key={i}>
-                            <b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}
-                            {k.status === "pending" ? <span className="pd">· pending</span> : null}
-                          </span>
+                          <span className="chip" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}</span>
                         ))}
                       </div>
                     )}
@@ -188,8 +227,30 @@ export default function AfterschoolLocalPage() {
               })}
             </div>
           );
-        })
-      ) : (
+        })}
+
+        {/* ───── PAST (접힘) ───── */}
+        {pastItems.length > 0 && (
+          <div style={{ marginTop: 18 }}>
+            <button className="past-toggle" onClick={() => setShowPast(s => !s)}>
+              {showPast ? "▲ Hide past programs" : `▼ Past programs (${pastItems.length})`}
+            </button>
+            {showPast && pastItems.map(it => {
+              const dt = new Date(it.date + "T00:00:00");
+              const kids = signupsByMd[mdFromDate(it.date)] || [];
+              return (
+                <div className="row-card past" key={it.id}>
+                  <div className={`rhead ${it.type === "fieldtrip" ? "ft" : "as"}`}>
+                    <span className="dt">{dt.getMonth() + 1}/{dt.getDate()} ({DOW_EN[dt.getDay()]})</span>
+                    <span className="pn">{it.title}</span>
+                    <span className="cnt">{kids.length > 0 ? `${kids.length} kids` : "—"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </>) : (
         <>
           <div className="calnav">
             <button onClick={() => shiftMonth(-1)}>◀ Prev</button>
