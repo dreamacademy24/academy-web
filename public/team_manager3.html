@@ -5848,42 +5848,9 @@ function refreshApvPendingCount(){
   }).catch(function(){_apvPendingCount=0;});
 }
 function _empOpenApproval(){
-  // Render approval into detail panel
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div id="_empApprovalSlot"><div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">로딩 중...</div></div>';
-  var wrap=document.getElementById('empApprovalWrap');
-  if(!wrap){markNotifsRead('approval');refreshApvPendingCount();return;}
-  try{
-    wrap.style.display='block';
-    renderApprovalPage(curEmpId);
-    // renderApprovalPage is async (sbGet) — poll wrap until content loads, then copy to slot
-    var attempts=0;
-    var poll=setInterval(function(){
-      attempts++;
-      var html=wrap.innerHTML||'';
-      var loaded=html.indexOf('로딩 중')<0 && html.length>40;
-      if(loaded||attempts>40){
-        clearInterval(poll);
-        var slot=document.getElementById('_empApprovalSlot');
-        if(slot){
-          if(loaded){
-            slot.innerHTML=wrap.innerHTML;
-            // 복제된 apvCmts_/apvCmtInp_ 중복 ID 제거 — 이후 getElementById가 slot을 찾도록
-            wrap.innerHTML='';
-            // slot의 댓글 컨테이너에 다시 로드 (초기 _apvLoadCmts가 복제 전 wrap을 타깃했을 수 있음)
-            slot.querySelectorAll('[id^="apvCmts_"]').forEach(function(el){
-              _apvLoadCmts(el.id.substring('apvCmts_'.length));
-            });
-          } else slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
-        }
-        wrap.style.display='none';
-      }
-    },200);
-  }catch(err){
-    console.error('[_empOpenApproval] error:',err);
-    var slot=document.getElementById('_empApprovalSlot');
-    if(slot)slot.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">에러: '+esc(String(err&&err.message||err))+'</div>';
-  }
+  d.innerHTML='<div id="_empApprovalSlot"></div>';
+  renderApprovalPage(curEmpId,'_empApprovalSlot');
   markNotifsRead('approval');
   refreshApvPendingCount();
 }
@@ -5931,7 +5898,7 @@ function setEF(f,el){
   if(f==='approval'){
     listWrap.style.display='none';dailyWrap.classList.add('hidden');
     document.getElementById('empApprovalWrap').style.display='block';
-    renderApprovalPage(curEmpId);markNotifsRead('approval');return;
+    renderApprovalPage(curEmpId,'empApprovalWrap');markNotifsRead('approval');return;
   }
   if(f==='daily'){
     listWrap.style.display='none';dailyWrap.classList.remove('hidden');
@@ -5946,112 +5913,94 @@ function setEF(f,el){
 function renderApprovalStandalone(){
   var page=document.getElementById('apvStandaloneWrap');
   if(!page||!CU)return;
-  page.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8">로딩 중...</div>';
-  var wrap=document.getElementById('empApprovalWrap');
-  if(!wrap){page.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444">결재 영역 초기화 실패</div>';return;}
-  wrap.style.display='block';
-  renderApprovalPage(CU.id);
-  var attempts=0;
-  var poll=setInterval(function(){
-    attempts++;
-    var html=wrap.innerHTML||'';
-    var loaded=html.indexOf('로딩 중')<0 && html.length>40;
-    if(loaded||attempts>40){
-      clearInterval(poll);
-      if(loaded){
-        page.innerHTML=wrap.innerHTML;
-        wrap.innerHTML='';
-        page.querySelectorAll('[id^="apvCmts_"]').forEach(function(el){
-          if(typeof _apvLoadCmts==='function')_apvLoadCmts(el.id.substring('apvCmts_'.length));
-        });
-      }else page.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444">결재 데이터 로드 실패. 새로고침 해주세요.</div>';
-      wrap.style.display='none';
-    }
-  },200);
+  renderApprovalPage(CU.id,'apvStandaloneWrap');
   if(typeof refreshApvPendingCount==='function')refreshApvPendingCount();
 }
-function renderApprovalPage(empId){
-  var wrap=document.getElementById('empApprovalWrap');
+function renderApprovalPage(empId,targetId){
+  var tid=targetId||(document.getElementById('_empApprovalSlot')?'_empApprovalSlot':'empApprovalWrap');
+  var wrap=document.getElementById(tid);
   if(!wrap)return;
-  wrap.innerHTML='<div style="padding:20px;text-align:center;color:#94a3b8">로딩 중...</div>';
+  wrap.innerHTML='<div class="tm-empty"><span class="ic">⏳</span>로딩 중...</div>';
   var isApprover=CU&&(CU.id==='ceo'||CU.id==='jun');
   var query='or=(from_id.eq.'+empId;
   if(isApprover)query+=',to_id.eq.'+CU.id+',to_id.eq.both';
   query+=')&order=created_at.desc';
   sbGet('staff_approvals',query).then(function(rows){
-    var html='<div style="padding:0 2px">';
-    html+='<button onclick="var s=document.getElementById(\'apvFormSection\');s.style.display=s.style.display===\'none\'?\'block\':\'none\'" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px">\u270f\ufe0f 결재 상신하기 \u25bc</button>';
-    html+='<div id="apvFormSection" style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:20px">';
-    html+='<div style="font-size:15px;font-weight:800;margin-bottom:14px">결재 상신</div>';
-    html+='<input id="apvTitle" type="text" placeholder="결재 제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">';
-    html+='<textarea id="apvBody" placeholder="결재 내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:100px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>';
-    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:13px;font-weight:600">결재자:</span>';
-    html+='<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
-    html+='</div><div style="margin-bottom:12px"><label style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f1f5f9;border:1.5px dashed #cbd5e1;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:#374151">\ud83d\udcce 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label><div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div></div>';
-    html+='<button onclick="submitApproval(\x27'+empId+'\x27)" style="padding:10px 24px;background:#1a6fc4;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">상신하기</button></div>';
-    var pending=(rows||[]).filter(function(a){return a.status==='pending'&&isApprover&&(a.to_id===CU.id||a.to_id==='both');});
-    if(pending.length){
-      html+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:800;margin-bottom:12px">결재 대기 '+pending.length+'건</div>';
-      pending.forEach(function(a){
-        var fromUser=ALL.find(function(u){return u.id===a.from_id;});
-        var ds=new Date(a.ts);
-        var dateStr=(ds.getMonth()+1)+'/'+(ds.getDate());
-        html+='<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid #1a6fc4">';
-        html+='<div style="display:flex;justify-content:space-between;margin-bottom:10px">';
-        html+='<div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:600">'+(fromUser?esc(fromUser.name):'?')+'</span><span style="font-size:11px;color:#94a3b8">'+dateStr+'</span></div>';
-        html+='<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">대기중</span></div>';
-        html+='<div style="font-size:16px;font-weight:800;margin-bottom:8px">'+esc(a.title)+'</div>';
-        html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap;margin-bottom:12px">'+esc(a.body)+'</div>';
-        if(a.files&&a.files.length)html+=renderAttachments(a.files);
-        html+='<div style="display:flex;gap:8px"><button onclick="processApproval('+a.id+',\x27approve\x27)" style="padding:8px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">승인</button>';
-        html+='<input id="rr_'+a.id+'" type="text" placeholder="반려 사유..." style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">';
-        html+='<button onclick="processApproval('+a.id+',\x27reject\x27)" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">반려</button></div>';
-        // 댓글 섹션 (source: _empApvShowList 3217-3225)
-        html+='<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">';
-        html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
-        html+='<div style="display:flex;gap:6px">';
-        html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#f8fafc">';
-        html+='<button onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)" style="padding:7px 12px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
-        html+='</div></div>';
-        html+='</div>';
-      });
-      html+='</div>';
+    rows=rows||[];
+    rows.forEach(function(a){var s=a.status||'pending';a._st=(s==='approve')?'approved':((s==='reject')?'rejected':s);});
+    var inbox=rows.filter(function(a){return isApprover&&a._st==='pending'&&(a.to_id===CU.id||a.to_id==='both');});
+    var mine=rows.filter(function(a){return a.from_id===empId;});
+    var done=rows.filter(function(a){return a._st!=='pending';});
+    if(!_apvTab)_apvTab=(isApprover&&inbox.length)?'inbox':'mine';
+    if(_apvTab==='inbox'&&!isApprover)_apvTab='mine';
+    var ST={pending:{l:'⏳ 대기중',cls:'is-warn'},approved:{l:'✅ 승인',cls:'is-ok'},rejected:{l:'⛔ 반려',cls:'is-danger'}};
+    function nameOf(id){if(id==='both')return 'CEO · Jun';var u=ALL.find(function(x){return x.id===id;});return u?u.name:(id||'-');}
+    function fmtD(a){var d=new Date(a.created_at||a.ts||Date.now());return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+    function badge(a){var s=ST[a._st]||ST.pending;return '<span class="tm-badge '+s.cls+'">'+s.l+'</span>';}
+    function rerender(){return 'renderApprovalPage(\x27'+empId+'\x27,\x27'+tid+'\x27)';}
+    function tabBtn(tab,label,n,danger){
+      var active=_apvTab===tab;
+      return '<button class="tm-btn'+(active?' tm-btn-pri':'')+'" style="border-radius:999px" onclick="_apvTab=\x27'+tab+'\x27;'+rerender()+'">'+label+(n>0?' <span class="tm-badge '+(danger?'is-danger':'is-muted')+'" style="margin-left:2px">'+n+'</span>':'')+'</button>';
     }
-    var mine=(rows||[]).filter(function(a){return a.from_id===empId;});
-    if(mine.length){
-      html+='<div><div style="font-size:14px;font-weight:800;margin-bottom:12px">상신 내역</div>';
-      mine.forEach(function(a){
-        var stMap={pending:{label:'대기중',color:'#ea580c',bg:'#fff7ed'},approve:{label:'승인',color:'#16a34a',bg:'#f0fdf4'},reject:{label:'반려',color:'#dc2626',bg:'#fef2f2'}};
-        var st=stMap[a.status]||stMap.pending;
-        html+='<div style="background:#fff;border-left:4px solid '+st.color+';border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px">';
-        html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:16px;font-weight:800">'+esc(a.title)+'</div><span style="background:'+st.bg+';color:'+st.color+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+st.label+'</span></div>';
-        html+='<div style="font-size:14px;line-height:1.8;color:#1a1d2e;white-space:pre-wrap">'+esc(a.body)+'</div>';
-        if(a.files&&a.files.length)html+=renderAttachments(a.files);
-        if(a.status==='rejected'&&a.reject_reason){
-          html+='<div style="margin-top:8px;padding:8px;background:#fef2f2;border-radius:8px;font-size:12px;color:#dc2626">반려 사유: '+esc(a.reject_reason)+'</div>';
-          html+='<button onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27block\x27" style="margin-top:8px;padding:6px 14px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">수정 후 재상신</button>';
-          html+='<div id="resubArea_'+a.id+'" style="display:none;margin-top:10px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">';
-          html+='<input id="resubTitle_'+a.id+'" type="text" value="'+esc(a.title)+'" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">';
-          html+='<textarea id="resubBody_'+a.id+'" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box">'+esc(a.body)+'</textarea>';
-          html+='<div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end"><button onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27none\x27" style="padding:7px 16px;background:#f1f5f9;color:#374151;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">취소</button>';
-          html+='<button onclick="resubmitApproval('+a.id+')" style="padding:7px 16px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">재상신</button></div></div>';
+    function card(a,withActions){
+      var h='<div class="tm-card" style="margin-bottom:12px">';
+      h+='<div class="tm-card-h"><span class="t">'+esc(a.title||'(제목 없음)')+'</span>'+badge(a)+'</div>';
+      h+='<div class="tm-card-b">';
+      h+='<div class="tm-row tm-muted" style="font-size:12px;margin-bottom:10px;flex-wrap:wrap"><span>👤 '+esc(nameOf(a.from_id))+'</span><span>→</span><span>'+esc(nameOf(a.to_id||'ceo'))+'</span><span style="margin-left:auto">'+fmtD(a)+'</span></div>';
+      h+='<div style="font-size:13.5px;line-height:1.75;white-space:pre-wrap;color:var(--text)">'+esc(a.body||'')+'</div>';
+      if(a.files&&a.files.length)h+='<div style="margin-top:10px">'+renderAttachments(a.files)+'</div>';
+      if(a._st==='rejected'&&a.reject_reason){
+        h+='<div style="margin-top:10px;padding:9px 12px;background:var(--red-l);border-radius:8px;font-size:12.5px;color:var(--red)">반려 사유: '+esc(a.reject_reason)+'</div>';
+        if(a.from_id===empId){
+          h+='<button class="tm-btn tm-btn-sm" style="margin-top:8px" onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27block\x27">✏️ 수정 후 재상신</button>';
+          h+='<div id="resubArea_'+a.id+'" style="display:none;margin-top:10px;padding:12px;background:var(--surface2);border-radius:8px">';
+          h+='<input id="resubTitle_'+a.id+'" class="tm-input" type="text" value="'+esc(a.title)+'" style="margin-bottom:6px">';
+          h+='<textarea id="resubBody_'+a.id+'" class="tm-textarea" style="resize:vertical;min-height:80px">'+esc(a.body)+'</textarea>';
+          h+='<div class="tm-row" style="margin-top:8px;justify-content:flex-end"><button class="tm-btn tm-btn-sm" onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27none\x27">취소</button>';
+          h+='<button class="tm-btn tm-btn-sm tm-btn-pri" onclick="resubmitApproval('+a.id+');setTimeout(function(){'+rerender()+'},800)">재상신</button></div></div>';
         }
-        // 댓글 섹션 (source: _empApvShowMyList 3315-3323)
-        html+='<div style="border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">';
-        html+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
-        html+='<div style="display:flex;gap:6px">';
-        html+='<input id="apvCmtInp_'+a.id+'" placeholder="댓글 달기..." onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}" style="flex:1;padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#f8fafc">';
-        html+='<button onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)" style="padding:7px 12px;background:#1a6fc4;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">전송</button>';
-        html+='</div></div>';
-        html+='</div>';
-      });
-      html+='</div>';
-    } else {
-      html+='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">상신한 결재가 없습니다</div>';
+      }
+      if(withActions){
+        h+='<div class="tm-divider"></div>';
+        h+='<div class="tm-row" style="flex-wrap:wrap"><button class="tm-btn tm-btn-ok" style="padding:10px 26px" onclick="processApproval('+a.id+',\x27approve\x27);setTimeout(function(){'+rerender()+'},900)">✅ 승인</button>';
+        h+='<input id="rr_'+a.id+'" class="tm-input" placeholder="반려 시 사유 입력" style="flex:1;min-width:160px">';
+        h+='<button class="tm-btn tm-btn-danger" onclick="processApproval('+a.id+',\x27reject\x27);setTimeout(function(){'+rerender()+'},900)">반려</button></div>';
+      }
+      h+='<div class="tm-divider"></div>';
+      h+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
+      h+='<div class="tm-row"><input id="apvCmtInp_'+a.id+'" class="tm-input" placeholder="댓글 달기..." style="flex:1" onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}">';
+      h+='<button class="tm-btn tm-btn-sm" onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)">전송</button></div>';
+      h+='</div></div>';
+      return h;
     }
+    var html='<div style="max-width:840px;margin:0 auto;padding:4px 2px 40px">';
+    html+='<div class="tm-row" style="margin-bottom:14px"><div style="font-size:17px;font-weight:800;flex:1">🗂 결재</div>';
+    html+='<button class="tm-btn tm-btn-pri" onclick="var s=document.getElementById(\x27apvFormSection\x27);var open=s.style.display===\x27none\x27;s.style.display=open?\x27block\x27:\x27none\x27;if(open){var t=document.getElementById(\x27apvTitle\x27);if(t)t.focus();}">✏️ 결재 상신</button></div>';
+    html+='<div id="apvFormSection" class="tm-card" style="display:none;margin-bottom:16px">';
+    html+='<div class="tm-card-h"><span class="t">새 결재 상신</span></div><div class="tm-card-b">';
+    html+='<label class="tm-label">제목</label><input id="apvTitle" class="tm-input" type="text" placeholder="예: 6월 물품 구매 결재" style="margin-bottom:10px">';
+    html+='<label class="tm-label">내용</label><textarea id="apvBody" class="tm-textarea" placeholder="결재 내용을 입력하세요" style="resize:vertical;min-height:110px;margin-bottom:10px"></textarea>';
+    html+='<label class="tm-label">결재자</label><div class="tm-row" style="margin-bottom:10px;flex-wrap:wrap">';
+    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
+    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="jun"> Jun</label>';
+    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="both"> CEO + Jun</label></div>';
+    html+='<label class="tm-btn" style="border-style:dashed">📎 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label>';
+    html+='<div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>';
+    html+='</div><div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\x27apvFormSection\x27).style.display=\x27none\x27">취소</button>';
+    html+='<button class="tm-btn tm-btn-pri" onclick="submitApproval(\x27'+empId+'\x27)">상신하기</button></div></div>';
+    html+='<div class="tm-row" style="margin-bottom:14px;flex-wrap:wrap">';
+    if(isApprover)html+=tabBtn('inbox','📥 결재 대기',inbox.length,true);
+    html+=tabBtn('mine','📤 내 상신',mine.length,false);
+    html+=tabBtn('done','🗃 처리완료',done.length,false);
+    html+='</div>';
+    var list,empty,withAct=false;
+    if(_apvTab==='inbox'){list=inbox;empty='대기 중인 결재가 없습니다';withAct=true;}
+    else if(_apvTab==='done'){list=done;empty='처리된 결재가 없습니다';}
+    else{list=mine;empty='상신한 결재가 없습니다';}
+    if(!list.length)html+='<div class="tm-empty"><span class="ic">🗂</span>'+empty+'</div>';
+    else list.forEach(function(a){html+=card(a,withAct&&a._st==='pending');});
     html+='</div>';
     wrap.innerHTML=html;
-    // pending + mine 모든 결재 아이템에 댓글 로드
     (rows||[]).forEach(function(a){_apvLoadCmts(String(a.id));});
   });
 }
