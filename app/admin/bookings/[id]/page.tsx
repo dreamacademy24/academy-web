@@ -81,6 +81,10 @@ export default function BookingDetailPage() {
   const [gsEditing, setGsEditing] = useState(false);
   const [gsRows, setGsRows] = useState<Array<{ name: string; from: string; to: string }>>([]);
   const [gsSaving, setGsSaving] = useState(false);
+  // 보호자 추가요금 → 인보이스 추가 항목 등록
+  const [gsInvOn, setGsInvOn] = useState(false);
+  const [gsInvName, setGsInvName] = useState("보호자 추가 체류");
+  const [gsInvAmt, setGsInvAmt] = useState<string>("");
 
   // 올인원 패키지 / 포털 계정
   const [isAllInOne, setIsAllInOne] = useState<boolean>(false);
@@ -676,16 +680,37 @@ export default function BookingDetailPage() {
                       <button onClick={()=>setGsRows(gsRows.filter((_,j)=>j!==i))} style={{background:"#fee2e2",color:"#b91c1c",border:"none",borderRadius:7,padding:"5px 9px",cursor:"pointer",fontWeight:700}}>✕</button>
                     </div>
                   ))}
-                  <div style={{display:"flex",gap:6,marginTop:4}}>
+                  {/* 보호자 추가요금 → 인보이스 추가 항목 */}
+                  <div style={{marginTop:10,padding:"8px 10px",background:"#f0fdfa",border:"1px solid #99f6e4",borderRadius:8}}>
+                    <label style={{display:"flex",alignItems:"center",gap:6,fontSize:12.5,fontWeight:700,cursor:"pointer"}}>
+                      <input type="checkbox" checked={gsInvOn} onChange={e=>setGsInvOn(e.target.checked)}/>
+                      💰 인보이스 추가 항목으로 요금 등록
+                    </label>
+                    {gsInvOn && (
+                      <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap",alignItems:"center"}}>
+                        <input className="ed-inp" style={{maxWidth:200}} value={gsInvName} onChange={e=>setGsInvName(e.target.value)} placeholder="항목명 (예: 보호자 추가 6/22~6/28)"/>
+                        <input className="ed-inp" type="number" style={{maxWidth:120}} value={gsInvAmt} onChange={e=>setGsInvAmt(e.target.value)} placeholder="금액(원)"/>
+                        <span style={{fontSize:11,color:"#0f766e"}}>주당: 드하 17만 · 제이파크 18만 · 큐브나인 15만</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{display:"flex",gap:6,marginTop:8}}>
                     <button onClick={()=>setGsRows([...gsRows,{name:`보호자${gsRows.length+1}`,from:(b.checkin_date||"").slice(0,10),to:(b.checkout_date||"").slice(0,10)}])} style={{padding:"5px 12px",fontSize:12,border:"1px solid #d6dee8",borderRadius:7,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>＋ 보호자 추가</button>
                     <button disabled={gsSaving} onClick={async()=>{
                       const valid = gsRows.filter(g=>g.from&&g.to&&g.from<=g.to);
                       if(valid.length===0){ alert("보호자 1명 이상, 기간을 올바르게 입력해주세요"); return; }
+                      const body: Record<string, unknown> = { guardian_stays: valid };
+                      if(gsInvOn){
+                        const amt = Number(gsInvAmt)||0;
+                        if(!gsInvName.trim()||amt<=0){ alert("인보이스 항목명과 금액을 입력해주세요"); return; }
+                        const cur = (()=>{ try { const a = typeof b.additions==="string"?JSON.parse(b.additions):b.additions; return Array.isArray(a)?a:[]; } catch { return []; } })();
+                        body.additions = [...cur.filter((a:any)=>a&&a.name), {id:Date.now(), name:gsInvName.trim(), amount:amt}];
+                      }
                       setGsSaving(true);
-                      const res = await fetch(`/api/bookings/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({guardian_stays:valid})});
+                      const res = await fetch(`/api/bookings/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
                       setGsSaving(false);
                       if(!res.ok){ alert("저장 실패 — scripts/setup-meal-plan.sql 실행 여부를 확인해주세요"); return; }
-                      setGsEditing(false); load();
+                      setGsEditing(false); setGsInvOn(false); setGsInvAmt(""); load();
                     }} style={{padding:"5px 14px",fontSize:12,border:"none",borderRadius:7,background:"#0d9488",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{gsSaving?"저장 중...":"💾 저장"}</button>
                     <button onClick={()=>setGsEditing(false)} style={{padding:"5px 12px",fontSize:12,border:"1px solid #d6dee8",borderRadius:7,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>취소</button>
                   </div>

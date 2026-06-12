@@ -101,6 +101,9 @@ export default function MealPlanPage() {
   const [gsTarget, setGsTarget] = useState<Bk | null>(null);
   const [gsRows, setGsRows] = useState<GuardianStay[]>([]);
   const [gsSaving, setGsSaving] = useState(false);
+  const [gsInvOn, setGsInvOn] = useState(false);
+  const [gsInvName, setGsInvName] = useState("보호자 추가 체류");
+  const [gsInvAmt, setGsInvAmt] = useState<string>("");
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -114,7 +117,7 @@ export default function MealPlanPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,house_no,accom_room,accom_type,booking_type,adults,children,students,guardian_stays,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,house_no,accom_room,accom_type,booking_type,adults,children,students,guardian_stays,additions,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .eq("is_all_in_one", true);
     if (error) { setToast("로딩 실패: " + error.message); setLoading(false); return; }
     setBookings(data || []);
@@ -190,17 +193,25 @@ export default function MealPlanPage() {
     const to = segs[segs.length - 1]?.to || (b.checkout_date || "").slice(0, 10);
     const stays = parseStays(b);
     setGsRows(stays.length > 0 ? stays : Array.from({ length: Math.max(1, Number(b.adults) || 1) }, (_, i) => ({ name: i === 0 ? "보호자1 (상주)" : `보호자${i + 1}`, from, to })));
+    setGsInvOn(false); setGsInvName("보호자 추가 체류"); setGsInvAmt("");
     setGsTarget(b);
   }
   async function saveGs() {
     if (!gsTarget) return;
     const valid = gsRows.filter(g => g.from && g.to && g.from <= g.to);
     if (valid.length === 0) { setToast("보호자 1명 이상 필요해요"); return; }
+    const patch: Record<string, unknown> = { guardian_stays: valid };
+    if (gsInvOn) {
+      const amt = Number(gsInvAmt) || 0;
+      if (!gsInvName.trim() || amt <= 0) { setToast("인보이스 항목명과 금액을 입력해주세요"); return; }
+      const cur = (() => { try { const a = typeof gsTarget.additions === "string" ? JSON.parse(gsTarget.additions) : gsTarget.additions; return Array.isArray(a) ? a : []; } catch { return []; } })();
+      patch.additions = [...cur.filter((a: any) => a && a.name), { id: Date.now(), name: gsInvName.trim(), amount: amt }];
+    }
     setGsSaving(true);
-    const { error } = await supabase.from("bookings").update({ guardian_stays: valid }).eq("id", gsTarget.id);
+    const { error } = await supabase.from("bookings").update(patch).eq("id", gsTarget.id);
     setGsSaving(false);
     if (error) { setToast("저장 실패: " + error.message); return; }
-    setToast("보호자 체류 저장 완료");
+    setToast(gsInvOn ? "보호자 체류 + 인보이스 항목 저장 완료" : "보호자 체류 저장 완료");
     setGsTarget(null);
     load();
   }
@@ -501,6 +512,19 @@ export default function MealPlanPage() {
                 </div>
               ))}
               <button className="mp-btn" style={{ background: "#e2e8f0", marginTop: 6 }} onClick={() => setGsRows([...gsRows, { name: `보호자${gsRows.length + 1}`, from: rFrom, to: rTo }])}>＋ 보호자 추가</button>
+              <div style={{ marginTop: 12, padding: "8px 10px", background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+                  <input type="checkbox" checked={gsInvOn} onChange={e => setGsInvOn(e.target.checked)} />
+                  💰 인보이스 추가 항목으로 요금 등록
+                </label>
+                {gsInvOn && (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
+                    <input style={{ border: "1px solid #d6dee8", borderRadius: 7, padding: "7px 9px", fontSize: 13, fontFamily: "inherit", maxWidth: 200 }} value={gsInvName} onChange={e => setGsInvName(e.target.value)} placeholder="항목명 (예: 보호자 추가 6/22~6/28)" />
+                    <input type="number" style={{ border: "1px solid #d6dee8", borderRadius: 7, padding: "7px 9px", fontSize: 13, fontFamily: "inherit", maxWidth: 120 }} value={gsInvAmt} onChange={e => setGsInvAmt(e.target.value)} placeholder="금액(원)" />
+                    <span style={{ fontSize: 11, color: "#0f766e" }}>주당: 드하 17만 · 제이파크 18만 · 큐브나인 15만</span>
+                  </div>
+                )}
+              </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
                 <button className="mp-btn" style={{ background: "#e2e8f0" }} onClick={() => setGsTarget(null)}>취소</button>
                 <button className="mp-btn teal" disabled={gsSaving} onClick={saveGs}>{gsSaving ? "저장 중..." : "💾 저장"}</button>

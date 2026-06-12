@@ -34,7 +34,7 @@ export default function SettlementPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   // 입력 폼
-  const [fKind, setFKind] = useState<Kind>("charge");
+  const [fKind, setFKind] = useState<Kind | "electric">("charge");
   const [fLabel, setFLabel] = useState("");
   const [fAmount, setFAmount] = useState("");
   const [fDate, setFDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -94,11 +94,14 @@ export default function SettlementPage() {
   async function addItem() {
     if (!sel) return;
     const amt = Number(fAmount);
-    if (!fLabel.trim()) { toastErr("내용을 입력하세요"); return; }
+    const isElectric = fKind === "electric"; // 전기세 = 보증금 차감으로 기록
+    if (!isElectric && !fLabel.trim()) { toastErr("내용을 입력하세요"); return; }
     if (!amt || amt <= 0) { toastErr("금액을 입력하세요"); return; }
+    const kind: Kind = isElectric ? "deduct" : fKind;
+    const label = isElectric ? ("전기세" + (fLabel.trim() ? " — " + fLabel.trim() : "")) : fLabel.trim();
     setSaving(true);
     const { error } = await supabase.from("settlement_items").insert({
-      booking_id: sel.id, kind: fKind, label: fLabel.trim(), amount: amt, item_date: fDate,
+      booking_id: sel.id, kind, label, amount: amt, item_date: fDate,
       status: "approved", recorded_by: "직원",
     });
     setSaving(false);
@@ -226,10 +229,11 @@ export default function SettlementPage() {
               <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 16 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>➕ 항목 추가</div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  <select value={fKind} onChange={e => setFKind(e.target.value as Kind)} style={{ padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13, fontFamily: "inherit" }}>
+                  <select value={fKind} onChange={e => setFKind(e.target.value as Kind | "electric")} style={{ padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13, fontFamily: "inherit" }}>
                     <option value="charge">청구 (튜터비·추가)</option>
                     <option value="deposit">보증금</option>
                     <option value="deduct">차감 (물품·커피·픽드랍)</option>
+                    <option value="electric">⚡ 전기세 (보증금 차감)</option>
                     <option value="payment">납부</option>
                   </select>
                   <input value={fLabel} onChange={e => setFLabel(e.target.value)} placeholder="내용 (예: 튜터비 6월 / 물 구매)" style={{ flex: 1, minWidth: 140, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13, fontFamily: "inherit" }} />
