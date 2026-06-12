@@ -165,7 +165,7 @@ export default function PortalDashboard() {
     { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
     { icon: "👩‍🏫", title: "튜터 수업", desc: "방문 튜터 수업 신청", ready: true, href: "/portal/tutor" },
-    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: false, href: "/portal/online-class" },
+    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업 · 남은 횟수 · 취소", ready: true, href: "/portal/online-class" },
     { icon: "🧾", title: "정산내역", desc: "보증금·튜터비·추가비용·납부 내역", ready: false, href: "/portal/settlement" },
     { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-applications" },
   ];

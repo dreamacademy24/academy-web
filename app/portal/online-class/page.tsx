@@ -33,7 +33,7 @@ const DAY_KR: Record<string, string> = {
 };
 function daysToKr(days: string[]) { return (days || []).map(d => DAY_KR[d.toLowerCase()] || d).join("/"); }
 
-const PERIOD_LABEL: Record<string, string> = { pre: "선(pre)", post: "후(post)", ssp: "SSP" };
+const PERIOD_LABEL: Record<string, string> = { pre: "연수전", post: "연수후", both: "연수전후", standalone: "화상수업", ssp: "SSP" };
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:  { label: "예정",   bg: "#dbeafe", color: "#1e40af" },
@@ -114,9 +114,10 @@ function PortalOnlineClassInner() {
 
   useEffect(() => { if (!authChecking && (authUserId || testUser)) load(); }, [authChecking, authUserId, testUser, load]);
 
+  const [selEnrollId, setSelEnrollId] = useState<string | null>(null);
   const activeEnroll = useMemo(
-    () => enrollments.find(e => e.status === "active") || enrollments[0] || null,
-    [enrollments]
+    () => enrollments.find(e => e.id === selEnrollId) || enrollments.find(e => e.status === "active") || enrollments[0] || null,
+    [enrollments, selEnrollId]
   );
   const activeSessions = useMemo(
     () => activeEnroll ? sessions.filter(s => s.enrollment_id === activeEnroll.id) : [],
@@ -300,6 +301,37 @@ function PortalOnlineClassInner() {
         <div className="sec"><div className="empty">등록된 화상영어 수강 정보가 없습니다.</div></div>
       ) : (
         <>
+          {enrollments.length > 1 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {enrollments.map(e => (
+                <button key={e.id} onClick={() => setSelEnrollId(e.id)}
+                  style={{ padding: "8px 14px", borderRadius: 10, border: "1.5px solid", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+                    borderColor: activeEnroll?.id === e.id ? "#1a6fc4" : "#e2e8f0",
+                    background: activeEnroll?.id === e.id ? "#1a6fc4" : "#fff",
+                    color: activeEnroll?.id === e.id ? "#fff" : "#475569" }}>
+                  {e.student_name} · {PERIOD_LABEL[e.class_period] || "화상수업"}{e.status === "completed" ? " (완료)" : ""}
+                </button>
+              ))}
+            </div>
+          )}
+          {(() => {
+            const todayStr = localStr(new Date());
+            const remaining = activeEnroll.total_sessions - activeEnroll.used_sessions;
+            const ended = activeEnroll.status === "completed" || remaining <= 0 || (activeEnroll.end_date && activeEnroll.end_date < todayStr);
+            if (!ended) return null;
+            return (
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 14, padding: "14px 16px", marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#1e40af", marginBottom: 4 }}>🔔 화상영어 수업이 새롭게 시작됩니다</div>
+                <div style={{ fontSize: 12.5, color: "#1d4ed8", lineHeight: 1.6 }}>
+                  이번 수강이 마무리되었어요. 계속 수업을 원하시면 새 일정으로 등록해 주세요.
+                </div>
+                <button onClick={() => alert("재등록 신청 기능이 곧 오픈됩니다 😊\n우선 관리자(카카오톡)에게 말씀해 주시면 바로 등록해드려요!")}
+                  style={{ marginTop: 8, padding: "8px 16px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  재등록 신청하기
+                </button>
+              </div>
+            );
+          })()}
           <div className="sec">
             <h2>수강 정보</h2>
             <div className="grid">
@@ -315,6 +347,23 @@ function PortalOnlineClassInner() {
               <div className="stat used"><div className="num">{activeEnroll.used_sessions}</div><div className="lbl">사용 회차</div></div>
               <div className="stat remain"><div className="num">{activeEnroll.total_sessions - activeEnroll.used_sessions}</div><div className="lbl">잔여 회차</div></div>
             </div>
+            {(() => {
+              const total = activeEnroll.total_sessions || 0;
+              const used = activeEnroll.used_sessions || 0;
+              const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+              const rem = total - used;
+              return (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ height: 10, background: "#e2e8f0", borderRadius: 5, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4", borderRadius: 5, transition: "width .3s" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#6b7c93", marginTop: 5, fontWeight: 600 }}>
+                    <span>{pct}% 진행</span>
+                    {activeEnroll.end_date && <span>종료 예정 {activeEnroll.end_date}</span>}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="sec">
