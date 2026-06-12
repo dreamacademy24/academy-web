@@ -43,6 +43,7 @@ export default function AdminHubPage() {
       title: "드림하우스",
       cards: [
         { icon: "🏠", title: "드림하우스",       desc: "룸 예약현황 · 충돌감지",             href: "/dreamhouse-rooms" },
+        { icon: "🍽", title: "식단 모리인폼",    desc: "올인원 주간 식단 체크리스트 · 라벨 · 엑셀",  href: "/admin/meal-plan" },
         { icon: "🏠", title: "하우스 보고",      desc: "호실 점검 · 조치 현황",              href: "/admin/house-reports" },
         { icon: "🚌", title: "투어셔틀 관리",     desc: "셔틀 신청 및 일정 배포 (드림하우스 담당)",  href: "/admin/tour-shuttle" },
         { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management" },

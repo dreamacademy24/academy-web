@@ -77,6 +77,11 @@ export default function BookingDetailPage() {
   const [rowForm, setRowForm] = useState<Record<string, any>>({});
   const [rowSaving, setRowSaving] = useState(false);
 
+  // 보호자 체류 기간 (식단 인원 연동)
+  const [gsEditing, setGsEditing] = useState(false);
+  const [gsRows, setGsRows] = useState<Array<{ name: string; from: string; to: string }>>([]);
+  const [gsSaving, setGsSaving] = useState(false);
+
   // 올인원 패키지 / 포털 계정
   const [isAllInOne, setIsAllInOne] = useState<boolean>(false);
   const [portalUsername, setPortalUsername] = useState('');
@@ -642,6 +647,51 @@ export default function BookingDetailPage() {
                 <div className="val">{b.extra_guardians.map((g:any)=>(typeof g==="string"?g:(g?.name||g?.kr||g?.name_kr||g?.english||""))).filter(Boolean).join(", ") || `${b.extra_guardians.length}명`}</div>
               </div>
             )}
+            {/* 보호자 체류 기간 — 식단 모리인폼 주차별 성인 수 연동 */}
+            <div className="item"><div className="lbl">보호자 체류 (식단)</div>
+              {!gsEditing ? (
+                <div className="val" style={{lineHeight:1.7}}>
+                  {(() => {
+                    const stays = (() => { try { const a = typeof b.guardian_stays === "string" ? JSON.parse(b.guardian_stays) : b.guardian_stays; return Array.isArray(a) ? a : []; } catch { return []; } })();
+                    return stays.length === 0
+                      ? <span style={{color:"#94a3b8"}}>미입력 (예약 보호자 수 {b.adults ?? 1}명 기준)</span>
+                      : stays.map((g:any,i:number)=><div key={i}>{g.name || `보호자${i+1}`} : {g.from} ~ {g.to}</div>);
+                  })()}
+                  <button onClick={() => {
+                    const stays = (() => { try { const a = typeof b.guardian_stays === "string" ? JSON.parse(b.guardian_stays) : b.guardian_stays; return Array.isArray(a) ? a : []; } catch { return []; } })();
+                    const from = (b.checkin_date||"").slice(0,10), to = (b.checkout_date||"").slice(0,10);
+                    setGsRows(stays.length > 0 ? stays : Array.from({length: Math.max(1, Number(b.adults)||1)}, (_,i)=>({name: i===0?"보호자1 (상주)":`보호자${i+1}`, from, to})));
+                    setGsEditing(true);
+                  }} style={{marginTop:4,padding:"4px 12px",fontSize:12,border:"1px solid #d6dee8",borderRadius:7,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>✏️ 기간 입력</button>
+                </div>
+              ) : (
+                <div className="val">
+                  <div style={{fontSize:11.5,color:"#6b7c93",marginBottom:6}}>기간이 겹치는 보호자 수만큼 해당 주차 식단 인원에 반영됩니다.</div>
+                  {gsRows.map((g,i)=>(
+                    <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                      <input className="ed-inp" style={{maxWidth:120}} value={g.name} placeholder={`보호자${i+1}`} onChange={e=>setGsRows(gsRows.map((x,j)=>j===i?{...x,name:e.target.value}:x))}/>
+                      <input className="ed-inp" type="date" style={{maxWidth:145}} value={g.from} onChange={e=>setGsRows(gsRows.map((x,j)=>j===i?{...x,from:e.target.value}:x))}/>
+                      <span style={{color:"#94a3b8"}}>~</span>
+                      <input className="ed-inp" type="date" style={{maxWidth:145}} value={g.to} onChange={e=>setGsRows(gsRows.map((x,j)=>j===i?{...x,to:e.target.value}:x))}/>
+                      <button onClick={()=>setGsRows(gsRows.filter((_,j)=>j!==i))} style={{background:"#fee2e2",color:"#b91c1c",border:"none",borderRadius:7,padding:"5px 9px",cursor:"pointer",fontWeight:700}}>✕</button>
+                    </div>
+                  ))}
+                  <div style={{display:"flex",gap:6,marginTop:4}}>
+                    <button onClick={()=>setGsRows([...gsRows,{name:`보호자${gsRows.length+1}`,from:(b.checkin_date||"").slice(0,10),to:(b.checkout_date||"").slice(0,10)}])} style={{padding:"5px 12px",fontSize:12,border:"1px solid #d6dee8",borderRadius:7,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>＋ 보호자 추가</button>
+                    <button disabled={gsSaving} onClick={async()=>{
+                      const valid = gsRows.filter(g=>g.from&&g.to&&g.from<=g.to);
+                      if(valid.length===0){ alert("보호자 1명 이상, 기간을 올바르게 입력해주세요"); return; }
+                      setGsSaving(true);
+                      const res = await fetch(`/api/bookings/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({guardian_stays:valid})});
+                      setGsSaving(false);
+                      if(!res.ok){ alert("저장 실패 — scripts/setup-meal-plan.sql 실행 여부를 확인해주세요"); return; }
+                      setGsEditing(false); load();
+                    }} style={{padding:"5px 14px",fontSize:12,border:"none",borderRadius:7,background:"#0d9488",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{gsSaving?"저장 중...":"💾 저장"}</button>
+                    <button onClick={()=>setGsEditing(false)} style={{padding:"5px 12px",fontSize:12,border:"1px solid #d6dee8",borderRadius:7,background:"#fff",cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="item"><div className="lbl">룸 번호</div>
               {editing
                 ? <input className="ed-inp" value={editForm.house_no||""} onChange={e=>setEditForm({...editForm,house_no:e.target.value})} placeholder="예: B17L14"/>
