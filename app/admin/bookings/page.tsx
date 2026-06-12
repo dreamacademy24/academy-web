@@ -1170,7 +1170,10 @@ export default function AdminBookingsPage(){
               <td>{s.academyWeeks?s.academyWeeks+"주":"-"}</td>
               <td>{s.grade||"-"}</td>
               <td style={{fontWeight:700}}>{s.korName||"-"}{s.mismatch&&<span title={`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`} style={{marginLeft:4,cursor:"help"}}>🔴❗</span>}</td>
-              <td>{s.engName||"-"}</td>
+              <td>{s.engName
+                ? s.engName
+                : <span title="영문명 없음 — 현지직원 화면에 한글로 표시됩니다. 예약 상세 > 학생 탭에서 입력해주세요" style={{background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:8,cursor:"help",whiteSpace:"nowrap"}}>❗ 영문명 없음</span>}
+              </td>
               <td>{fmtStudentAge(s.age)}</td>
               <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
               <td>{s.checkin_date||"-"}</td>
