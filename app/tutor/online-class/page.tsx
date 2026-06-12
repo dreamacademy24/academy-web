@@ -195,6 +195,32 @@ function TutorOnlineClassInner() {
     }
   }, [tutor, selectedDate]);
 
+  // ─── Notifications (schedule changes etc.) — 30s polling + unread popup ───
+  const [notifs, setNotifs] = useState<Array<{ id: string; message: string; is_read: boolean; created_at: string }>>([]);
+  const [notifDismissed, setNotifDismissed] = useState(false);
+  const loadNotifs = useCallback(async () => {
+    if (!tutor) return;
+    const res = await fetch(`/api/online-class/notifications?tutor_id=${tutor.id}`);
+    if (res.ok) { const d = await res.json(); setNotifs(d.notifications || []); }
+  }, [tutor]);
+  useEffect(() => {
+    loadNotifs();
+    const iv = setInterval(loadNotifs, 30000);
+    return () => clearInterval(iv);
+  }, [loadNotifs]);
+  const unreadNotifs = notifs.filter(n => !n.is_read);
+  async function markNotifsRead() {
+    const ids = unreadNotifs.map(n => n.id);
+    setNotifDismissed(true);
+    if (ids.length === 0) return;
+    await fetch("/api/online-class/notifications", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    loadNotifs();
+    loadEnrollments(); loadWeek(); loadToday();
+  }
+
   async function markStatus(sessionId: string, status: string) {
     if (!tutor) return;
     setUpdating(sessionId);
@@ -601,6 +627,31 @@ function TutorOnlineClassInner() {
         </>
       )}
     </div>
+
+    {/* ─── Schedule update popup (unread notifications) ─── */}
+    {unreadNotifs.length > 0 && !notifDismissed && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 22, maxWidth: 440, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+            <span style={{ fontSize: 16, fontWeight: 800 }}>Schedule update{unreadNotifs.length > 1 ? `s (${unreadNotifs.length})` : ""}</span>
+          </div>
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {unreadNotifs.map(n => (
+              <div key={n.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
+                <div style={{ fontSize: 13.5, color: "#1a1a2e", lineHeight: 1.6 }}>{n.message}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{(n.created_at || "").slice(0, 16).replace("T", " ")}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: "#6b7c93", margin: "8px 0 14px" }}>Your schedule has been updated. Please check My Schedule.</div>
+          <button onClick={markNotifsRead}
+            style={{ width: "100%", padding: 12, background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+            OK, got it
+          </button>
+        </div>
+      </div>
+    )}
   </>);
 }
 

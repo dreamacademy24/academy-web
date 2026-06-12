@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { sendTelegramTeachers, escapeHtml } from '@/lib/telegram'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -136,12 +137,14 @@ export async function PATCH(req: Request) {
       .update({ status: 'approved', admin_note: admin_note || null, processed_by: processed_by || '관리자', processed_at: new Date().toISOString() })
       .eq('id', id)
 
-    // 4) 튜터 알림 적재 (영문) — 실패해도 승인은 유지
+    // 4) 튜터 알림 적재 + 티쳐 텔레그램 (영문) — 실패해도 승인은 유지
     try {
       const dayEn: Record<string, string> = { '월': 'Mon', '화': 'Tue', '수': 'Wed', '목': 'Thu', '금': 'Fri', '토': 'Sat' }
       const stuName = enroll.student_name_en || enroll.student_name
+      const tutorName = enroll.tutor?.name_display || 'Unassigned'
       const msg = `Schedule update — ${stuName}: ${newDays.map((d: string) => dayEn[d] || d).join('/')}${newTimeKr ? ` ${newTimeKr} KST` : ''}, from ${effective}. (${regenerated} sessions updated)`
       await supabase.from('online_notifications').insert({ tutor_id: enroll.tutor_id || null, type: 'schedule_change', message: msg })
+      await sendTelegramTeachers(`📢 <b>Online Class Schedule Update</b>\n👩‍🏫 ${escapeHtml(tutorName)}\n${escapeHtml(msg)}`)
     } catch { /* best-effort */ }
 
     return NextResponse.json({ ok: true, status: 'approved', regenerated })

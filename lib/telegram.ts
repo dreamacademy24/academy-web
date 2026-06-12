@@ -43,3 +43,24 @@ export async function sendTelegram(text: string): Promise<void> {
     console.error("[telegram] send failed:", e);
   }
 }
+
+// 티쳐(튜터) 전용 그룹 — TELEGRAM_TEACHER_CHAT_ID 환경변수 (미설정 시 조용히 무시)
+export async function sendTelegramTeachers(text: string): Promise<void> {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_TEACHER_CHAT_ID;
+    if (!token || !chatId) return;
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    });
+  } catch (e) {
+    console.error("[telegram teachers] send failed:", e);
+  }
+}
