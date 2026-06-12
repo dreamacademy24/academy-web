@@ -28,15 +28,31 @@ const MEAL_HOLIDAYS = new Set([
 type GuardianStay = { name: string; from: string; to: string };
 type Bk = Record<string, any>;
 
-/* 콤보 예약이면 드림하우스 구간만, 아니면 전체 체류 구간 */
-function dhRange(b: Bk): [string, string] | null {
+/* 기본규정: 올인원 드림하우스/제이파크 = 식사 O, 큐브나인 = 식사 X */
+type MealSeg = { from: string; to: string; loc: "DH" | "JPARK" };
+
+function segLoc(t: string | null | undefined): "DH" | "JPARK" | null {
+  if (t === "dreamhouse") return "DH";
+  if (t === "jaypark") return "JPARK";
+  return null; // cubenine 등 → 식사 없음
+}
+
+/* 식사 제공 구간 목록 (콤보는 구간별, 환승일은 둘째 숙소 소속) */
+function mealSegs(b: Bk): MealSeg[] {
   if (b.seg1_type || b.seg2_type) {
-    if (b.seg1_type === "dreamhouse") return [b.seg1_checkin?.slice(0, 10), b.seg1_checkout?.slice(0, 10)];
-    if (b.seg2_type === "dreamhouse") return [b.seg2_checkin?.slice(0, 10), b.seg2_checkout?.slice(0, 10)];
-    return null; // 콤보인데 드림하우스 구간 없음 → 식단 제외
+    const segs: MealSeg[] = [];
+    const l1 = segLoc(b.seg1_type), l2 = segLoc(b.seg2_type);
+    if (l1 && b.seg1_checkin && b.seg1_checkout)
+      segs.push({ from: b.seg1_checkin.slice(0, 10), to: b.seg2_type ? addD(b.seg1_checkout.slice(0, 10), -1) : b.seg1_checkout.slice(0, 10), loc: l1 });
+    if (l2 && b.seg2_checkin && b.seg2_checkout)
+      segs.push({ from: b.seg2_checkin.slice(0, 10), to: b.seg2_checkout.slice(0, 10), loc: l2 });
+    return segs;
   }
-  if (!b.checkin_date || !b.checkout_date) return null;
-  return [b.checkin_date.slice(0, 10), b.checkout_date.slice(0, 10)];
+  if (!b.checkin_date || !b.checkout_date) return [];
+  const at = String(b.accom_type || "");
+  if (at.includes("큐브")) return [];
+  const loc: "DH" | "JPARK" = at.includes("제이파크") ? "JPARK" : "DH";
+  return [{ from: b.checkin_date.slice(0, 10), to: b.checkout_date.slice(0, 10), loc }];
 }
 
 function parseRoom(b: Bk): { bld: number; lot: number; label: string } {
@@ -118,25 +134,33 @@ export default function MealPlanPage() {
     const rows = bookings.map(b => {
       if (String(b.status || "").includes("취소")) return null;
       if (b.booking_type === "commute" || String(b.accom_type || "").includes("통학")) return null;
-      const range = dhRange(b);
-      if (!range || !range[0] || !range[1]) return null;
-      const [dhIn, dhOut] = range;
-      if (dhIn > weekFri || dhOut < weekMon) return null; // 이번 주 미체류
-      const base = firstMonday(dhIn);
-      const total = Math.max(1, Math.ceil((diffDays(base, dhOut) + 1) / 7));
+      const segs = mealSegs(b);
+      if (segs.length === 0) return null;
+      const mIn = segs[0].from, mOut = segs[segs.length - 1].to;
+      if (!mIn || !mOut || mIn > weekFri || mOut < weekMon) return null; // 이번 주 식사 없음
+      const base = firstMonday(mIn);
+      const total = Math.max(1, Math.ceil((diffDays(base, mOut) + 1) / 7));
       const cur = Math.min(total, Math.max(1, Math.floor(diffDays(base, weekMon) / 7) + 1));
       const room = parseRoom(b);
+      /* 날짜별 식사 위치: JPARK or 드하 호수 라벨 (없으면 null) */
+      const locByDay = weekDates.map(d => {
+        const s = segs.find(sg => d >= sg.from && d <= sg.to);
+        return s ? (s.loc === "JPARK" ? "JPARK" : room.label) : null;
+      });
+      if (locByDay.every(l => !l)) return null;
       const kids = kidsCount(b);
-      const adultsByDay = weekDates.map(d => (d >= dhIn && d <= dhOut) ? adultsOn(b, d) : 0);
+      const adultsByDay = weekDates.map((d, i) => locByDay[i] ? adultsOn(b, d) : 0);
       const adultsSet = [...new Set(adultsByDay.filter(n => n > 0))];
-      const isCombo = !!(b.seg1_type || b.seg2_type);
+      const addr = [...new Set(locByDay.filter(Boolean))].join(" → ");
       const notes: string[] = [];
       if (cur >= total) notes.push("⚠ Last week");
       else if (cur === 1) notes.push("🆕 New");
-      if (isCombo) notes.push(b.seg1_type === "dreamhouse" ? "콤보(드하 먼저)" : `콤보 · ${fShort(dhIn)}부터 드하`);
-      return { b, room, dhIn, dhOut, cur, total, kids, adultsByDay, adultsSet, note: notes.join(" · "), stay: `${cur}w / ${total}w` };
-    }).filter(Boolean) as Array<{ b: Bk; room: { bld: number; lot: number; label: string }; dhIn: string; dhOut: string; cur: number; total: number; kids: number; adultsByDay: number[]; adultsSet: number[]; note: string; stay: string }>;
-    rows.sort((x, y) => x.room.bld - y.room.bld || x.room.lot - y.room.lot);
+      if (segs.length > 1) notes.push(`콤보 · ${fShort(segs[1].from)} ${segs[1].loc === "DH" ? "드하" : "제이파크"} 이동`);
+      /* 정렬: 이번 주 JPARK만 체류하는 집은 맨 뒤 */
+      const sortBld = locByDay.some(l => l && l !== "JPARK") ? room.bld : 50;
+      return { b, room, sortBld, segs, mIn, mOut, cur, total, kids, locByDay, adultsByDay, adultsSet, addr, note: notes.join(" · "), stay: `${cur}w / ${total}w` };
+    }).filter(Boolean) as Array<{ b: Bk; room: { bld: number; lot: number; label: string }; sortBld: number; segs: MealSeg[]; mIn: string; mOut: string; cur: number; total: number; kids: number; locByDay: (string | null)[]; adultsByDay: number[]; adultsSet: number[]; addr: string; note: string; stay: string }>;
+    rows.sort((x, y) => x.sortBld - y.sortBld || x.room.lot - y.room.lot);
     return rows;
   }, [bookings, weekMon, weekFri, weekDates]);
 
@@ -146,10 +170,10 @@ export default function MealPlanPage() {
     const incoming: string[] = [], outgoing: string[] = [];
     bookings.forEach(b => {
       if (String(b.status || "").includes("취소")) return;
-      const range = dhRange(b); if (!range || !range[0] || !range[1]) return;
-      const [dhIn, dhOut] = range;
-      if (dhIn > weekFri && dhIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(dhIn)})`);
-      if (dhOut >= weekMon && dhOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(dhOut)})`);
+      const segs = mealSegs(b); if (segs.length === 0) return;
+      const mIn = segs[0].from, mOut = segs[segs.length - 1].to;
+      if (mIn > weekFri && mIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(mIn)})`);
+      if (mOut >= weekMon && mOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(mOut)})`);
     });
     return { incoming, outgoing };
   }, [bookings, weekMon, weekFri]);
@@ -161,9 +185,11 @@ export default function MealPlanPage() {
 
   /* ───── 보호자 체류 편집 ───── */
   function openGs(b: Bk) {
-    const range = dhRange(b)!;
+    const segs = mealSegs(b);
+    const from = segs[0]?.from || (b.checkin_date || "").slice(0, 10);
+    const to = segs[segs.length - 1]?.to || (b.checkout_date || "").slice(0, 10);
     const stays = parseStays(b);
-    setGsRows(stays.length > 0 ? stays : Array.from({ length: Math.max(1, Number(b.adults) || 1) }, (_, i) => ({ name: i === 0 ? "보호자1 (상주)" : `보호자${i + 1}`, from: range[0], to: range[1] })));
+    setGsRows(stays.length > 0 ? stays : Array.from({ length: Math.max(1, Number(b.adults) || 1) }, (_, i) => ({ name: i === 0 ? "보호자1 (상주)" : `보호자${i + 1}`, from, to })));
     setGsTarget(b);
   }
   async function saveGs() {
@@ -193,7 +219,7 @@ export default function MealPlanPage() {
       [`Dream Academy  |  Meal Attendance Overview  |  ${weekLabel}`], [],
       ["GUEST REFERENCE LIST"],
       ["Name", "Address", "Adults", "Kids", "Stay", "Note"],
-      ...guests.map(g => [engName(g.b), g.room.label, g.adultsSet.join("→"), g.kids, g.stay, g.note]),
+      ...guests.map(g => [engName(g.b), g.addr, g.adultsSet.join("→"), g.kids, g.stay, g.note]),
       ["TOTAL", "", totA, totK, "", ""],
       [`  ※ ${foot}`],
     ];
@@ -209,7 +235,7 @@ export default function MealPlanPage() {
         ["  ✔ = attending    Cancel = meal cancelled    Fresh Box = pack for absent guest"],
         ["GUEST INFO", "", "", "", "BREAKFAST", "", "", "", `LUNCH${holi ? "  ★아이포함" : ""}`, "", "", "", "DINNER", "", "", "", "NOTE"],
         ["Name", "Address", "Adults", "Kids", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", ""],
-        ...dayRows.map(g => [engName(g.b), g.room.label, g.adultsByDay[di], g.kids, "", "", "", "", "", "", "", "", "", "", "", "", g.note]),
+        ...dayRows.map(g => [engName(g.b), g.locByDay[di], g.adultsByDay[di], g.kids, "", "", "", "", "", "", "", "", "", "", "", "", g.note]),
       ];
       aoa.push(["TOTAL", "", dayRows.reduce((s, g) => s + g.adultsByDay[di], 0), dayRows.reduce((s, g) => s + g.kids, 0)]);
       aoa.push([]);
@@ -328,7 +354,7 @@ export default function MealPlanPage() {
                 {guests.map(g => (
                   <tr key={g.b.id}>
                     <td className="nm">{engName(g.b)}<span className="kr">{g.b.booker_name}</span></td>
-                    <td>{g.room.label}</td>
+                    <td>{g.addr}</td>
                     <td><span className="adult-edit no-print-style" onClick={() => openGs(g.b)} title="보호자 체류 기간 수정">{g.adultsSet.join(" → ")}</span></td>
                     <td>{g.kids}</td>
                     <td>{g.stay}</td>
@@ -382,7 +408,7 @@ export default function MealPlanPage() {
                 <tbody>
                   {dayGuests.map(g => (
                     <tr key={g.b.id} style={{ height: 30 }}>
-                      <td className="nm">{engName(g.b)}</td><td>{g.room.label}</td>
+                      <td className="nm">{engName(g.b)}</td><td>{g.locByDay[di]}</td>
                       <td style={{ fontWeight: 700 }}>{g.adultsByDay[di]}</td><td style={{ fontWeight: 700 }}>{g.kids}</td>
                       {Array.from({ length: 12 }).map((_, i) => <td key={i}></td>)}
                       <td style={{ fontSize: 10.5 }}>{g.note.includes("Last") ? "⚠ Last week" : g.note.includes("New") ? "🆕 New" : ""}</td>
@@ -434,13 +460,18 @@ export default function MealPlanPage() {
                 {(["BREAKFAST", holi ? "LUNCH  ★아이포함" : "LUNCH (adults)", "DINNER"]).map((meal, mi) => (
                   <div key={meal}>
                     <div className="lbl-col-h">{meal}</div>
-                    {dayGuests.map(g => (
-                      <div className="lbl-card" key={g.b.id}>
-                        {g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
-                        <div className="rm">B{g.room.bld}  L{g.room.lot}</div>
-                        <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
-                      </div>
-                    ))}
+                    {dayGuests.map(g => {
+                      const loc = g.locByDay[idx];
+                      const isJp = loc === "JPARK";
+                      return (
+                        <div className="lbl-card" key={g.b.id}>
+                          {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
+                          {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
+                          <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
+                          <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -451,13 +482,14 @@ export default function MealPlanPage() {
 
       {/* ───── 보호자 체류 모달 ───── */}
       {gsTarget && (() => {
-        const range = dhRange(gsTarget)!;
+        const segs = mealSegs(gsTarget);
+        const rFrom = segs[0]?.from || "", rTo = segs[segs.length - 1]?.to || "";
         return (
           <div className="gs-modal-bg" onClick={() => setGsTarget(null)}>
             <div className="gs-modal" onClick={e => e.stopPropagation()}>
               <h3>보호자 체류 기간 — {gsTarget.booker_name}</h3>
               <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
-                드림하우스 체류: {range[0]} ~ {range[1]} · 기간이 겹치는 보호자 수만큼 해당 주차 식단 인원에 반영됩니다.
+                식사 제공 기간: {rFrom} ~ {rTo} · 기간이 겹치는 보호자 수만큼 해당 주차 식단 인원에 반영됩니다.
               </div>
               {gsRows.map((g, i) => (
                 <div className="gs-row" key={i}>
@@ -468,7 +500,7 @@ export default function MealPlanPage() {
                   <button className="gs-del" onClick={() => setGsRows(gsRows.filter((_, j) => j !== i))}>✕</button>
                 </div>
               ))}
-              <button className="mp-btn" style={{ background: "#e2e8f0", marginTop: 6 }} onClick={() => setGsRows([...gsRows, { name: `보호자${gsRows.length + 1}`, from: range[0], to: range[1] }])}>＋ 보호자 추가</button>
+              <button className="mp-btn" style={{ background: "#e2e8f0", marginTop: 6 }} onClick={() => setGsRows([...gsRows, { name: `보호자${gsRows.length + 1}`, from: rFrom, to: rTo }])}>＋ 보호자 추가</button>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
                 <button className="mp-btn" style={{ background: "#e2e8f0" }} onClick={() => setGsTarget(null)}>취소</button>
                 <button className="mp-btn teal" disabled={gsSaving} onClick={saveGs}>{gsSaving ? "저장 중..." : "💾 저장"}</button>
