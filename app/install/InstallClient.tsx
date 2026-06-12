@@ -1,0 +1,284 @@
+"use client";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+
+type Tab = "android" | "ios" | "pc";
+type AppKey = "guest" | "admin" | "staff";
+
+interface AppConfig {
+  key: AppKey;
+  name: string;
+  startUrl: string;
+  manifest: string;
+  desc: string;
+}
+
+const APPS: Record<AppKey, AppConfig> = {
+  guest: { key: "guest", name: "드림게스트", startUrl: "/portal", manifest: "/manifest-guest.webmanifest", desc: "예약 조회 · 결제 · 셔틀/픽업/튜터 신청" },
+  admin: { key: "admin", name: "드림 관리자", startUrl: "/admin/hub", manifest: "/manifest-admin.webmanifest", desc: "관리자 허브" },
+  staff: { key: "staff", name: "Dream Staff", startUrl: "/admineng/hub", manifest: "/manifest-staff.webmanifest", desc: "현지 직원 / 튜터" },
+};
+
+function InstallInner() {
+  const sp = useSearchParams();
+  const raw = sp.get("app");
+  const appKey: AppKey = raw === "admin" ? "admin" : raw === "staff" ? "staff" : "guest";
+  const cfg = APPS[appKey];
+
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [installed, setInstalled] = useState(false);
+  const [tab, setTab] = useState<Tab>("android");
+  const [inApp, setInApp] = useState<"" | "android" | "ios">(""); // 카톡 등 인앱 브라우저 감지
+
+  // ── 앱별 메타/매니페스트 주입 (iOS Safari는 manifest name을 무시하고 title·apple 메타를 따름) ──
+  useEffect(() => {
+    document.title = cfg.name;
+
+    // apple-mobile-web-app-title → 홈 화면 추가 시 아이콘 이름
+    let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement | null;
+    const createdAppleTitle = !appleTitle;
+    if (!appleTitle) {
+      appleTitle = document.createElement("meta");
+      appleTitle.setAttribute("name", "apple-mobile-web-app-title");
+      document.head.appendChild(appleTitle);
+    }
+    appleTitle.setAttribute("content", cfg.name);
+
+    // apple-mobile-web-app-capable 보장
+    if (!document.querySelector('meta[name="apple-mobile-web-app-capable"]')) {
+      const capable = document.createElement("meta");
+      capable.setAttribute("name", "apple-mobile-web-app-capable");
+      capable.setAttribute("content", "yes");
+      document.head.appendChild(capable);
+    }
+
+    // apple-touch-icon 보장 (기존 로고 공유)
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+      const ati = document.createElement("link");
+      ati.setAttribute("rel", "apple-touch-icon");
+      ati.setAttribute("href", "/icons/apple-touch-icon.png");
+      document.head.appendChild(ati);
+    }
+
+    // manifest 분기 (안드로이드 Chrome 설치용) — 전역 manifest href를 이 페이지에서만 교체
+    let manifest = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+    const createdManifest = !manifest;
+    if (!manifest) {
+      manifest = document.createElement("link");
+      manifest.setAttribute("rel", "manifest");
+      document.head.appendChild(manifest);
+    }
+    const prevManifest = manifest.getAttribute("href");
+    manifest.setAttribute("href", cfg.manifest);
+
+    // 이탈 시 원복 → 다른 페이지/PWA 영향 방지
+    return () => {
+      if (manifest) {
+        if (createdManifest) manifest.remove();
+        else if (prevManifest) manifest.setAttribute("href", prevManifest);
+      }
+      if (appleTitle) {
+        if (createdAppleTitle) appleTitle.remove();
+        else appleTitle.setAttribute("content", "드림아카데미");
+      }
+    };
+  }, [cfg]);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isAndroid = /Android/i.test(ua);
+    if (isIOS) setTab("ios");
+    else if (isAndroid) setTab("android");
+    else setTab("pc");
+
+    // 인앱 브라우저(카톡/인스타/페북/라인/네이버/다음) 감지 — PWA 설치 불가
+    const isInApp = /KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|DaumApps|; wv\)/i.test(ua);
+    if (isInApp) setInApp(isIOS ? "ios" : "android");
+
+    if (window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone) {
+      setInstalled(true);
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const installedHandler = () => {
+      setInstalled(true);
+      setDeferredPrompt(null);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
+
+  function openExternal() {
+    const ua = navigator.userAgent;
+    const url = window.location.href;
+    if (/KAKAOTALK/i.test(ua)) {
+      // 카카오톡 → 기본(외부) 브라우저로 열기
+      window.location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(url);
+      return;
+    }
+    // 기타 안드로이드 인앱 → 크롬으로 열기 (Intent)
+    const noScheme = url.replace(/^https?:\/\//, "");
+    window.location.href = `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`;
+  }
+
+  async function handleInstall() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setInstalled(true);
+    }
+    setDeferredPrompt(null);
+  }
+
+  return (
+    <div className="wrap">
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;}
+        .wrap{min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:40px 16px;font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;color:#1a1a2e;}
+        .container{max-width:520px;margin:0 auto;}
+        .header{text-align:center;color:#fff;margin-bottom:28px;}
+        .logo-wrap{width:96px;height:96px;margin:0 auto 16px;background:#fff;border-radius:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.2);overflow:hidden;}
+        .logo-wrap img{width:72px;height:72px;object-fit:contain;}
+        .title{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px;}
+        .subtitle{font-size:14px;opacity:0.9;font-weight:400;}
+        .app-badge{display:inline-block;margin-top:10px;padding:5px 14px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);border-radius:999px;font-size:12.5px;font-weight:600;}
+        .card{background:#fff;border-radius:18px;padding:24px 20px;margin-bottom:16px;box-shadow:0 8px 24px rgba(0,0,0,0.08);}
+        .auto-card{text-align:center;}
+        .auto-card h2{font-size:16px;font-weight:700;margin-bottom:8px;color:#1a1a2e;}
+        .auto-card p{font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.6;}
+        .install-btn{width:100%;padding:16px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 12px rgba(102,126,234,0.35);}
+        .install-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(102,126,234,0.45);}
+        .install-btn:active{transform:translateY(0);}
+        .install-btn:disabled{background:#cbd5e1;cursor:not-allowed;box-shadow:none;transform:none;}
+        .installed-badge{padding:14px;background:#d1fae5;color:#065f46;border-radius:12px;font-weight:600;font-size:14px;}
+        .no-auto{padding:14px;background:#f1f5f9;color:#64748b;border-radius:12px;font-size:13px;line-height:1.6;}
+        .inapp-card{background:#fff;border:2px solid #f59e0b;border-radius:18px;padding:20px 18px;margin-bottom:16px;box-shadow:0 8px 24px rgba(245,158,11,0.18);text-align:center;}
+        .inapp-title{font-size:16px;font-weight:800;color:#b45309;margin-bottom:8px;}
+        .inapp-desc{font-size:13.5px;color:#475569;line-height:1.65;margin-bottom:14px;}
+        .inapp-btn{width:100%;padding:15px;background:#16a34a;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(22,163,74,0.3);}
+        .inapp-btn:active{transform:translateY(1px);}
+        .inapp-url{margin-top:12px;font-size:12px;color:#94a3b8;line-height:1.7;}
+        .inapp-url b{color:#475569;font-size:12.5px;}
+        .section-title{font-size:15px;font-weight:700;margin-bottom:12px;color:#1a1a2e;}
+        .tabs{display:flex;gap:6px;margin-bottom:18px;background:#f1f5f9;padding:4px;border-radius:10px;}
+        .tab{flex:1;padding:10px 4px;border:none;background:transparent;color:#64748b;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;font-family:inherit;transition:all 0.15s;}
+        .tab.active{background:#fff;color:#667eea;box-shadow:0 2px 6px rgba(0,0,0,0.06);}
+        .steps{display:flex;flex-direction:column;gap:14px;}
+        .step{display:flex;gap:12px;align-items:flex-start;}
+        .step-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+        .step-text{flex:1;font-size:14px;line-height:1.65;color:#334155;padding-top:4px;}
+        .step-text strong{color:#1a1a2e;font-weight:700;}
+        .step-icon{display:inline-block;padding:2px 8px;background:#eef2ff;color:#667eea;border-radius:6px;font-weight:700;margin:0 2px;font-size:13px;}
+        .footer{text-align:center;margin-top:24px;}
+        .footer-link{display:inline-block;padding:12px 24px;background:rgba(255,255,255,0.15);color:#fff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:600;border:1px solid rgba(255,255,255,0.3);transition:background 0.15s;}
+        .footer-link:hover{background:rgba(255,255,255,0.25);}
+        @media(max-width:480px){
+          .wrap{padding:24px 12px;}
+          .title{font-size:22px;}
+          .card{padding:20px 16px;}
+        }
+      `}</style>
+
+      <div className="container">
+        <div className="header">
+          <div className="logo-wrap">
+            <Image src="/logo.png" alt={cfg.name} width={72} height={72} priority />
+          </div>
+          <h1 className="title">{cfg.name} 설치하기</h1>
+          <p className="subtitle">{cfg.name} 앱을 홈 화면에 추가하고 앱처럼 사용하세요</p>
+          <div className="app-badge">설치 후 시작 화면: {cfg.desc}</div>
+        </div>
+
+        {inApp && (
+          <div className="inapp-card">
+            <div className="inapp-title">⚠️ 지금은 {inApp === "ios" ? "인앱" : "카카오톡/인앱"} 브라우저예요</div>
+            <p className="inapp-desc">
+              {inApp === "ios"
+                ? "앱 설치는 Safari에서만 됩니다. 우측 하단 메뉴 → “Safari로 열기” 를 눌러주세요."
+                : "앱 설치는 크롬에서만 됩니다. 아래 버튼으로 크롬에서 다시 열어주세요."}
+            </p>
+            {inApp === "android" && (
+              <button className="inapp-btn" onClick={openExternal}>🌐 크롬으로 열기</button>
+            )}
+            <div className="inapp-url">또는 주소 복사 → 크롬에 붙여넣기<br /><b>dreamacademyph.com/install?app=guest</b></div>
+          </div>
+        )}
+
+        <div className="card auto-card">
+          <h2>📲 빠른 설치</h2>
+          <p>브라우저에서 지원하는 경우 아래 버튼으로 바로 설치할 수 있어요.</p>
+          {installed ? (
+            <div className="installed-badge">✅ 이미 설치되어 있습니다</div>
+          ) : deferredPrompt ? (
+            <button className="install-btn" onClick={handleInstall}>
+              📲 {cfg.name} 설치하기
+            </button>
+          ) : (
+            <div className="no-auto">
+              자동 설치를 지원하지 않는 브라우저예요.<br />아래 안내를 따라 수동으로 설치해 주세요.
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="section-title">수동 설치 안내</div>
+          <div className="tabs">
+            <button className={`tab ${tab === "android" ? "active" : ""}`} onClick={() => setTab("android")}>📱 안드로이드</button>
+            <button className={`tab ${tab === "ios" ? "active" : ""}`} onClick={() => setTab("ios")}>🍎 아이폰</button>
+            <button className={`tab ${tab === "pc" ? "active" : ""}`} onClick={() => setTab("pc")}>💻 PC</button>
+          </div>
+
+          {tab === "android" && (
+            <div className="steps">
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬 브라우저</strong>에서 이 페이지(설치 안내)를 여세요</span></div>
+              <div className="step"><span className="step-num">2</span><span className="step-text">우측 상단 <span className="step-icon">⋮</span> 메뉴 버튼을 누르세요</span></div>
+              <div className="step"><span className="step-num">3</span><span className="step-text"><strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong> 선택</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text"><strong>설치</strong> 버튼을 누르면 <strong>{cfg.name}</strong> 아이콘이 추가됩니다</span></div>
+            </div>
+          )}
+
+          {tab === "ios" && (
+            <div className="steps">
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>Safari 브라우저</strong>에서 이 페이지(설치 안내)를 여세요</span></div>
+              <div className="step"><span className="step-num">2</span><span className="step-text">하단 <span className="step-icon">􀈂</span> 공유 버튼을 누르세요</span></div>
+              <div className="step"><span className="step-num">3</span><span className="step-text">목록에서 <strong>홈 화면에 추가</strong>를 선택</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text">이름이 <strong>{cfg.name}</strong>인지 확인 후 우측 상단 <strong>추가</strong>를 누르세요</span></div>
+            </div>
+          )}
+
+          {tab === "pc" && (
+            <div className="steps">
+              <div className="step"><span className="step-num">1</span><span className="step-text"><strong>크롬</strong> 또는 <strong>엣지</strong> 브라우저에서 이 페이지를 여세요</span></div>
+              <div className="step"><span className="step-num">2</span><span className="step-text">주소창 오른쪽 끝의 <span className="step-icon">⊕</span> 설치 아이콘 클릭</span></div>
+              <div className="step"><span className="step-num">3</span><span className="step-text">팝업에서 <strong>설치</strong> 버튼 클릭</span></div>
+              <div className="step"><span className="step-num">4</span><span className="step-text">바탕화면 또는 시작메뉴에서 <strong>{cfg.name}</strong>을 실행할 수 있어요</span></div>
+            </div>
+          )}
+        </div>
+
+        <div className="footer">
+          <a href={cfg.startUrl} className="footer-link">설치 없이 바로 사용하기 →</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function InstallClient() {
+  return (
+    <Suspense fallback={null}>
+      <InstallInner />
+    </Suspense>
+  );
+}
