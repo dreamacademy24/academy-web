@@ -7,6 +7,7 @@ import { isAdminAuthed } from "@/lib/adminAuth";
 import AfterFieldDeploy from "./AfterFieldDeploy";
 import { toKR } from "@/lib/afterschoolNames";
 import { KR_DOW, parseToken, resolveProgram, loadDeployedSchedule, buildScheduleByMd, tokenForItem, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
+import { resolveComboAccom } from "@/lib/bookingTypes";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,13 +65,14 @@ export default function AfterschoolFieldtripAdminPage() {
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
   const [monthsInitDone, setMonthsInitDone] = useState(false);
   const [bookerNames, setBookerNames] = useState<Record<string, string>>({}); // booking_id → 예약자 실명
+  const [bookingMap, setBookingMap] = useState<Record<string, any>>({}); // booking_id → 예약 seg 데이터
   const [scheduleByMd, setScheduleByMd] = useState<Record<string, DeployedScheduleItem>>({}); // 배포 일정(월-일 → 항목)
   const [listView, setListView] = useState<"month" | "week">("month");
   const [weekStart, setWeekStart] = useState<Date>(() => mondayOfA(new Date()));
   const shiftWeek = (delta: number) => { const d = new Date(weekStart); d.setDate(d.getDate() + delta * 7); setWeekStart(mondayOfA(d)); };
   // 직원 신청 추가 모달
   const [deployedItems, setDeployedItems] = useState<DeployedScheduleItem[]>([]);
-  const [students, setStudents] = useState<{ id: string; name_kr: string; name_en: string; booking_id: string | null; reserver: string; room: string }[]>([]);
+  const [students, setStudents] = useState<{ id: string; name_kr: string; name_en: string; booking_id: string | null; reserver: string; room: string; _booking?: any }[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [addStudentId, setAddStudentId] = useState("");
   const [addSearch, setAddSearch] = useState("");
@@ -91,17 +93,19 @@ export default function AfterschoolFieldtripAdminPage() {
       const { data: st } = await supabase.from("students").select("id, name_kr, name_en, booking_id");
       const rows = (st || []) as { id: string; name_kr: string | null; name_en: string | null; booking_id: string | null }[];
       const bids = Array.from(new Set(rows.map(r => r.booking_id).filter(Boolean))) as string[];
-      const bmap: Record<string, { booker_name: string | null; house_no: string | null; accom_room: string | null }> = {};
+      const bmap: Record<string, { booker_name: string | null; house_no: string | null; accom_room: string | null; seg1_type: string | null; seg2_type: string | null; seg2_checkin: string | null; accom_type: string | null }> = {};
       if (bids.length) {
-        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room").in("id", bids);
-        (bks || []).forEach((b: { id: string; booker_name: string | null; house_no: string | null; accom_room: string | null }) => { bmap[b.id] = { booker_name: b.booker_name, house_no: b.house_no, accom_room: b.accom_room }; });
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type").in("id", bids);
+        (bks || []).forEach((b: any) => { bmap[b.id] = b; });
       }
       setStudents(rows.map(r => {
         const b = bmap[r.booking_id || ""];
+        const accom = resolveComboAccom(b);
         return {
           id: r.id, name_kr: (r.name_kr || "").trim(), name_en: (r.name_en || "").trim(), booking_id: r.booking_id,
           reserver: (b?.booker_name || "").trim(),
-          room: String(b?.house_no || b?.accom_room || "").replace(/\s+/g, "").replace(/^dh/i, "").toUpperCase(),
+          room: accom.room || accom.nameEn, // DH→"B17L8", JP→"J-Park"
+          _booking: b || null, // 콤보 날짜별 판별용 원본 보관
         };
       }).filter(s => s.name_kr || s.name_en).sort((a, b) => a.name_kr.localeCompare(b.name_kr)));
     } catch { /* noop */ }
@@ -114,10 +118,12 @@ export default function AfterschoolFieldtripAdminPage() {
       // booking_id → 예약자 실명 매핑 (픽업·셔틀과 동일하게 실명 표시)
       const ids = Array.from(new Set((data as FieldtripApp[]).map(a => a.booking_id).filter(Boolean))) as string[];
       if (ids.length > 0) {
-        const { data: bks } = await supabase.from("bookings").select("id, booker_name").in("id", ids);
+        const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type").in("id", ids);
         const map: Record<string, string> = {};
-        (bks || []).forEach((b: { id: string; booker_name: string | null }) => { map[b.id] = (b.booker_name || "").trim(); });
+        const bkMap: Record<string, any> = {};
+        (bks || []).forEach((b: any) => { map[b.id] = (b.booker_name || "").trim(); bkMap[b.id] = b; });
         setBookerNames(map);
+        setBookingMap(bkMap);
       }
     }
     setLoading(false);
@@ -130,12 +136,18 @@ export default function AfterschoolFieldtripAdminPage() {
     if (!stu) { toastErr("아이를 선택하세요."); return; }
     if (addTokens.size === 0) { toastErr("날짜를 1개 이상 선택하세요."); return; }
     setAddSaving(true);
+    // 콤보 예약: 선택 날짜 중 첫 날짜 기준으로 현재 숙소 판별
+    const firstToken = Array.from(addTokens)[0] || "";
+    const fp = firstToken.split("-");
+    const firstYmd = fp.length >= 2 ? `2026-${String(fp[0]).padStart(2, "0")}-${String(fp[1]).padStart(2, "0")}` : "";
+    const accom = resolveComboAccom(stu._booking, firstYmd);
+    const roomLabel = accom.room || accom.nameEn;
     const { error } = await supabase.from("fieldtrip_applications").insert({
       name: stu.name_kr || stu.name_en,
       date: Array.from(addTokens).join(", "),
       message: "[직원 신청]", request: "[직원 신청]",
       booking_id: stu.booking_id, portal_name: stu.reserver || null,
-      room_number: stu.room || null, status: "confirmed",
+      room_number: roomLabel || null, status: "confirmed",
     });
     setAddSaving(false);
     if (error) { toastErr("저장 실패: " + error.message); return; }
@@ -165,13 +177,21 @@ export default function AfterschoolFieldtripAdminPage() {
     const tokens = (a.date || "").split(",").map(t => t.trim()).filter(Boolean);
     const childName = (a.name || "").trim();
     const reserver = (a.booking_id && bookerNames[a.booking_id]) || (a.portal_name || "").trim();
-    const room = (a.room_number || "").trim();
+    const rawRoom = (a.room_number || "").trim();
+    const bk = a.booking_id ? bookingMap[a.booking_id] : null;
     const request = (a.request || a.message || "").trim();
     const status = a.status || "pending";
     let pushedAny = false;
     for (const token of tokens) {
       const r = resolveProgram(token, scheduleByMd);
       if (!r) continue;
+      // 콤보 예약: 토큰 날짜 기반으로 현재 숙소 판별
+      let room = rawRoom;
+      if (bk?.seg1_type && bk?.seg2_type) {
+        const ymd = `2026-${String(r.month).padStart(2, "0")}-${String(r.day).padStart(2, "0")}`;
+        const accom = resolveComboAccom(bk, ymd);
+        room = accom.room || accom.nameEn;
+      }
       flat.push({
         appId: a.id, childName, reserver, room, request, status, token,
         month: r.month, day: r.day,
@@ -508,3 +528,4 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
     </div>
   </>);
 }
+                                                                                                                             

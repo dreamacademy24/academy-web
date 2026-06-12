@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
+import { resolveComboAccom } from "@/lib/bookingTypes";
 import { toastOk, toastErr } from "@/lib/toast";
 
 // ── 셔틀 자동 생성 헬퍼 (public/shuttle 와 동일) ────────────────────
@@ -136,7 +137,7 @@ export default function PortalShuttlePage() {
   }, []);
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
-  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string; seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string; seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string } | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string; seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string; seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string; house_no?: string; accom_room?: string; accom_type?: string } | null>(null);
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
   const [activeMonth, setActiveMonth] = useState("");
@@ -164,6 +165,9 @@ export default function PortalShuttlePage() {
           seg2_type: b.seg2_type || undefined,
           seg2_checkin: b.seg2_checkin ? String(b.seg2_checkin).slice(0, 10) : undefined,
           seg2_checkout: b.seg2_checkout ? String(b.seg2_checkout).slice(0, 10) : undefined,
+          house_no: b.house_no || undefined,
+          accom_room: b.accom_room || undefined,
+          accom_type: b.accom_type || undefined,
         });
       })
       .catch(() => {});
@@ -300,15 +304,9 @@ export default function PortalShuttlePage() {
       // Supabase 동시 저장 — selectedTours 1개당 row 1개씩 INSERT
       const memo = (formData.get("memo") as string) || "";
       // 콤보 예약: 투어 날짜가 어느 숙소 구간인지에 따라 픽업장소 자동 결정
-      const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
       const resolvePickup = (tourDate: string): string => {
-        const m = bookingMeta;
-        if (m?.seg1_type && m?.seg2_type && tourDate) {
-          // seg2 기간(둘째 숙소 체크인 이후)이면 둘째 숙소, 아니면 첫 숙소
-          if (m.seg2_checkin && tourDate >= m.seg2_checkin) return ACC_KR[m.seg2_type] || m.seg2_type;
-          return ACC_KR[m.seg1_type] || m.seg1_type;
-        }
-        return m?.room || "";
+        const accom = resolveComboAccom(bookingMeta, tourDate);
+        return accom.room || accom.nameKr; // DH→"B17L8", JP→"제이파크"
       };
       const rows = selectedTours.map(t => ({
         booking_id: session.booking_id,
@@ -792,16 +790,4 @@ export default function PortalShuttlePage() {
                   <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가합니다.</li>
                   <li>가는 차량을 탑승하지 않고 돌아오는 차량만 탑승하는 것은 불가합니다.</li>
                   <li>가는 차량만 탑승하는 것은 가능합니다.</li>
-                  <li>최대 정원 내에서만 베이비시터 동반 탑승이 가능합니다.</li>
-                  <li>투어 셔틀은 <strong>투숙객 전용 서비스</strong>로, 외부인은 탑승이 불가합니다.</li>
-                  <li>정원 외 탑승은 안전상 절대 허용되지 않습니다.</li>
-                </ul>
-                <p className="tagline">자세한 셔틀 시간표는 드림센터 내부 공지를 기준으로 합니다.</p>
-              </div>
-            </aside>
-          </div>
-        </section>
-      </main>
-    </>
-  );
-}
+                  <l

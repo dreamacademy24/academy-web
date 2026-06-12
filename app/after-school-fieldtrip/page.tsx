@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
+import { resolveComboAccom } from "@/lib/bookingTypes";
 import { loadDeployedSchedule, mergeWithFallback, tokenForItem, timeOfDate, KR_DOW, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 import { toastOk, toastErr } from "@/lib/toast";
 
@@ -28,7 +29,7 @@ export default function AfterSchoolFieldtripPage() {
   const router = useRouter();
   const [session, setSession] = useState<{ booking_id: string } | null>(null);
   const [children, setChildren] = useState<string[]>([]);
-  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; name: string; room: string } | null>(null);
+  const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; name: string; room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; house_no?: string; accom_room?: string; accom_type?: string } | null>(null);
   const [deployItems, setDeployItems] = useState<DeployedScheduleItem[]>([]);
 
   // 배포된 일정 로드 → 하드코딩 5·6월 베이스라인과 병합 (배포가 우선, 월 추가 시 자동 노출)
@@ -84,8 +85,17 @@ export default function AfterSchoolFieldtripPage() {
         setChildren(kids);
         const ci = String(b.check_in || b.checkin_date || "").slice(0, 10);
         const co = String(b.check_out || b.checkout_date || "").slice(0, 10);
-        const room = String(b.house_no || b.accom_room || "").replace(/\s+/g, "").replace(/^dh/i, "").toUpperCase();
-        setBookingMeta({ checkin: ci, checkout: co, name: String(b.booker_name || "").trim(), room });
+        const defaultAccom = resolveComboAccom(b);
+        const room = defaultAccom.room || defaultAccom.nameEn;
+        setBookingMeta({
+          checkin: ci, checkout: co, name: String(b.booker_name || "").trim(), room,
+          seg1_type: b.seg1_type || undefined,
+          seg2_type: b.seg2_type || undefined,
+          seg2_checkin: b.seg2_checkin ? String(b.seg2_checkin).slice(0, 10) : undefined,
+          house_no: b.house_no || undefined,
+          accom_room: b.accom_room || undefined,
+          accom_type: b.accom_type || undefined,
+        });
       })
       .catch(() => {});
   }, [session]);
@@ -260,6 +270,14 @@ export default function AfterSchoolFieldtripPage() {
     const memo = (form.querySelector('[name="memo"]') as HTMLTextAreaElement | null)?.value || "";
     try {
       // 1) Supabase 저장 = 앱의 source of truth. 구글시트 성공 여부와 무관하게 먼저 확실히 저장.
+      // 콤보 예약: 선택된 날짜 중 대표 날짜로 현재 숙소 판별 (첫 날짜 기준)
+      const firstToken = scheduleValues.split(",")[0]?.trim() || "";
+      const firstParts = firstToken.split("-");
+      const firstYmd = firstParts.length >= 2
+        ? `2026-${String(firstParts[0]).padStart(2, "0")}-${String(firstParts[1]).padStart(2, "0")}`
+        : "";
+      const accom = resolveComboAccom(bookingMeta, firstYmd);
+      const roomLabel = accom.room || accom.nameEn; // DH→"B17L8", JP→"J-Park"
       const { error: insErr } = await supabase.from("fieldtrip_applications").insert({
         name: childName,
         date: scheduleValues,
@@ -267,7 +285,7 @@ export default function AfterSchoolFieldtripPage() {
         request: memo,
         booking_id: session?.booking_id || null,
         portal_name: bookingMeta?.name || null,
-        room_number: bookingMeta?.room || null,
+        room_number: roomLabel || null,
       });
       if (insErr) { console.error(insErr); toastErr("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
 
