@@ -96,6 +96,7 @@ export default function MealPlanPage() {
   const [baseDate, setBaseDate] = useState(() => fD(new Date()));
   const [view, setView] = useState<"list" | "daily" | "labels">("list");
   const [labelDate, setLabelDate] = useState("");
+  const [lblWeek, setLblWeek] = useState(false);
   const [holidayOv, setHolidayOv] = useState<Record<string, boolean>>({});
   /* 보호자 체류 편집 모달 */
   const [gsTarget, setGsTarget] = useState<Bk | null>(null);
@@ -303,12 +304,14 @@ export default function MealPlanPage() {
       .instr b{display:inline-block;min-width:230px}
       .instr-line{margin:3px 0}
       .day-foot{text-align:center;font-size:10px;color:#aaa;margin-top:8px}
-      .lbl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-      .lbl-col-h{text-align:center;font-weight:800;font-size:14px;padding:8px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px}
-      .lbl-card{border:1.5px solid #334155;border-radius:8px;padding:10px 8px;text-align:center;margin-top:8px}
+      .lbl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1;min-height:0}
+      .lbl-col{display:flex;flex-direction:column;gap:6px;min-height:0}
+      .lbl-col-h{text-align:center;font-weight:800;font-size:14px;padding:6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;flex:0 0 auto}
+      .lbl-card{border:1.5px solid #334155;border-radius:8px;padding:6px 8px;text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;max-height:130px}
       .lbl-card .h{font-size:10px;font-weight:800;letter-spacing:1px;color:#0d9488}
-      .lbl-card .rm{font-size:20px;font-weight:900;margin:2px 0}
-      .lbl-card .ct{font-size:17px;font-weight:800}
+      .lbl-card .rm{font-size:19px;font-weight:900;margin:1px 0}
+      .lbl-card .ct{font-size:16px;font-weight:800}
+      .lbl-page{display:flex;flex-direction:column;min-height:75vh}
       .lbl-note{font-size:13px;font-weight:700;color:#b45309;background:#fef3c7;border-radius:8px;padding:8px 12px;margin:10px 0}
       .gs-modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50}
       .gs-modal{background:#fff;border-radius:14px;padding:22px;width:min(560px,92vw);max-height:86vh;overflow:auto}
@@ -324,6 +327,10 @@ export default function MealPlanPage() {
         .mp-w{max-width:100%;padding:0}
         .day-block{border:none;padding:0;margin:0;page-break-after:always}
         @page{size:A4 landscape;margin:10mm}
+        .lbl-page{height:190mm;min-height:0;overflow:hidden}
+        .lbl-card{max-height:36mm;break-inside:avoid}
+        table.day tr,table.mp tr{break-inside:avoid}
+        .instr{break-inside:avoid}
       }
       @media(max-width:700px){.mp-w{padding:14px 8px}.lbl-grid{grid-template-columns:1fr}table.mp th,table.mp td{font-size:11px;padding:5px 4px}}
     `}</style>
@@ -452,46 +459,59 @@ export default function MealPlanPage() {
 
         {/* ───── 라벨 ───── */}
         {view === "labels" && (() => {
+          /* 하루치 라벨 — 8팀까지 한 장, 9팀부터 2장 분할 (원본 PDF 방식). 각 장은 페이지 높이에 꽉 차게 */
+          const renderLblDay = (d: string, idx: number) => {
+            const holi = isHoliday(d);
+            const dayGuests = guests.filter(g => g.adultsByDay[idx] > 0);
+            const pageCount = Math.max(1, Math.ceil(dayGuests.length / 8));
+            const chunkSize = Math.ceil(dayGuests.length / pageCount);
+            const chunks = Array.from({ length: pageCount }, (_, p) => dayGuests.slice(p * chunkSize, (p + 1) * chunkSize));
+            return chunks.map((chunk, p) => (
+              <div className="day-block lbl-page" key={`${d}-${p}`}>
+                <div className="day-title" style={{ flex: "0 0 auto" }}>Dream Academy  |  Meal Labels  |  {fShort(d)} ({DAYS_EN[pD(d).getDay()]}){holi && <span className="holi"> ※ 휴무 — 점심 아이 포함</span>}, {d.slice(0, 4)}{pageCount > 1 && `   (${p + 1}/${pageCount})`}</div>
+                {holi && <div className="lbl-note" style={{ flex: "0 0 auto" }}>★ 오늘은 점심에 아이 인원 포함  /  Kids included in LUNCH today</div>}
+                <div className="lbl-grid">
+                  {(["BREAKFAST", holi ? "LUNCH  ★아이포함" : "LUNCH (adults)", "DINNER"]).map((meal, mi) => (
+                    <div className="lbl-col" key={meal}>
+                      <div className="lbl-col-h">{meal}</div>
+                      {chunk.map(g => {
+                        const loc = g.locByDay[idx];
+                        const isJp = loc === "JPARK";
+                        return (
+                          <div className="lbl-card" key={g.b.id}>
+                            {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
+                            {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
+                            <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
+                            <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ));
+          };
           const di = weekDates.indexOf(labelDate);
           const idx = di >= 0 ? di : 0;
           const d = weekDates[idx];
-          const holi = isHoliday(d);
-          const dayGuests = guests.filter(g => g.adultsByDay[idx] > 0);
-          return (
-            <div className="day-block">
-              <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-                {weekDates.map(wd => (
-                  <button key={wd} className="mp-btn" style={{ background: wd === d ? "#0d9488" : "#e2e8f0", color: wd === d ? "#fff" : "#475569" }} onClick={() => setLabelDate(wd)}>
-                    {fShort(wd)} ({DAYS_EN[pD(wd).getDay()]})
-                  </button>
-                ))}
+          return (<>
+            <div className="no-print" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              {weekDates.map(wd => (
+                <button key={wd} className="mp-btn" style={{ background: !lblWeek && wd === d ? "#0d9488" : "#e2e8f0", color: !lblWeek && wd === d ? "#fff" : "#475569" }} onClick={() => { setLblWeek(false); setLabelDate(wd); }}>
+                  {fShort(wd)} ({DAYS_EN[pD(wd).getDay()]})
+                </button>
+              ))}
+              <button className="mp-btn" style={{ background: lblWeek ? "#1e3a5f" : "#e2e8f0", color: lblWeek ? "#fff" : "#475569" }} onClick={() => setLblWeek(true)}>📄 일주일 전체 (5장)</button>
+              {!lblWeek && (
                 <label style={{ fontSize: 12.5, color: "#64748b" }}>
-                  <input type="checkbox" checked={holi} onChange={e => setHolidayOv({ ...holidayOv, [d]: e.target.checked })} /> 휴무 (점심 아이 포함)
+                  <input type="checkbox" checked={isHoliday(d)} onChange={e => setHolidayOv({ ...holidayOv, [d]: e.target.checked })} /> 휴무 (점심 아이 포함)
                 </label>
-              </div>
-              <div className="day-title">Dream Academy  |  Meal Labels  |  {fShort(d)} ({DAYS_EN[pD(d).getDay()]}){holi && <span className="holi"> ※ 휴무 — 점심 아이 포함</span>}, {d.slice(0, 4)}</div>
-              {holi && <div className="lbl-note">★ 오늘은 점심에 아이 인원 포함  /  Kids included in LUNCH today</div>}
-              <div className="lbl-grid">
-                {(["BREAKFAST", holi ? "LUNCH  ★아이포함" : "LUNCH (adults)", "DINNER"]).map((meal, mi) => (
-                  <div key={meal}>
-                    <div className="lbl-col-h">{meal}</div>
-                    {dayGuests.map(g => {
-                      const loc = g.locByDay[idx];
-                      const isJp = loc === "JPARK";
-                      return (
-                        <div className="lbl-card" key={g.b.id}>
-                          {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
-                          {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
-                          <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
-                          <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+              )}
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>🖨 인쇄 버튼을 누르면 {lblWeek ? "월~금 5장이 한 번에" : "이 날짜가 한 장에 꽉 차게"} 출력됩니다</span>
             </div>
-          );
+            {lblWeek ? weekDates.map((wd, wi) => renderLblDay(wd, wi)) : renderLblDay(d, idx)}
+          </>);
         })()}
       </>}
 
