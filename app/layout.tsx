@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import SWRegister from "./sw-register";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   },
 };
 
+// 모바일 반응형 — 폰에서 화면 실제 너비에 맞춰 렌더 (없으면 데스크탑 980px로 축소돼 보임)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,6 +34,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1a6fc4" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

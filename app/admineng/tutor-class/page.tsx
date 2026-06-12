@@ -923,6 +923,20 @@ export default function EngTutorClassPage() {
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .ew{max-width:1400px;margin:0 auto;padding:24px 20px}
+/* 모바일(폰) 대응 — 교사 전용 페이지 */
+@media(max-width:600px){
+  .ew{padding:14px 10px}
+  .etop h1{font-size:17px}
+  .etop{gap:8px;margin-bottom:14px}
+  .etabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .etab{flex:0 0 auto;padding:9px 12px;font-size:12px;white-space:nowrap}
+  .tbl th{font-size:10.5px;padding:8px 7px}
+  .tbl td{font-size:11.5px;padding:8px 7px}
+  .ehead{padding:13px 15px}
+  .ehead h3{font-size:15px}
+  .ebody{padding:14px 15px;gap:13px}
+  .ekv{grid-template-columns:90px 1fr}
+}
 .etop{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .etop h1{font-size:20px;font-weight:800;flex:1}
 .eback{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit}.eback:hover{border-color:#1a6fc4;color:#1a6fc4}
