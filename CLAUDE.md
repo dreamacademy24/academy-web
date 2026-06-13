@@ -1638,6 +1638,62 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 4. 알림 구독 유도 강화(카톡 인앱 안내) + 인보이스 게스트 리디자인 + 교사화면 번역 버튼
 5. 메이 직접: 티쳐 텔레그램 chat_id, 구버전 앱 제거 공지, 6/15 중복, 영문명·보호자체류 입력, 봇 토큰 revoke
 
+## 2026-06-13 새벽 — Team Manager 개편 Phase 2~4 (team_manager3.html만 수정)
+
+### Phase 2 결재 ✅
+- **상태 표시 버그픽스**: 상신 내역 stMap 키가 approve/reject였는데 DB는 approved/rejected → 승인된 결재가 전부 "대기중"으로 보이던 문제 해결 (norm 매핑 + 구버전 값 호환)
+- 탭 구조: 📥 결재 대기(승인자만, 빨간 카운트) / 📤 내 상신 / 🗃 처리완료. 카드형(.tm-card) + 상태 뱃지(.tm-badge)
+- 상신 폼: tm-card 폼 (제목/내용/결재자 라디오 CEO·Jun·둘다/파일첨부/취소·상신 푸터)
+- **구조 개선**: renderApprovalPage(empId, targetId)로 타깃 직접 렌더 — 기존 "숨은 wrap에 그려서 복사+폴링" 핵 제거. _empOpenApproval/renderApprovalStandalone 단순화, setEF는 'empApprovalWrap' 명시
+- 레이아웃 max-width 840px 중앙
+
+### Phase 3 개인업무 보드 ✅
+- 우측 빈 화면(renderEmpDetailEmpty) → **칸반 보드**: 요약 3카드(오늘 마감/진행 중/이번 주 완료) + 3컬럼(🚨긴급/📋진행/✅완료, 컬럼당 8개+더보기)
+- 카드 호버 액션 ✓완료(qTog)·✏️편집(openTaskEdit), D-day 뱃지 규칙 통일(.empb-due: TODAY·지남=빨강, D-3 이내=주황)
+- 상세 화면 상단 "← 내 보드" 복귀 버튼. CSS는 .empb-* (tm kit 옆에 추가)
+
+### Phase 3.5 내 업무 사용성 팩 ✅
+- **⚡ 빠른 추가**(보드 상단 입력): "제목 6/20"·"제목 내일/오늘/모레" 끝 날짜 자동 파싱, 맨앞 "!" = 긴급. Enter 한 번에 등록 (uid/tasks.unshift/svTasks/syncTaskToSB 동일 경로)
+- **⏭ 내일로 미루기**: 보드 카드 호버 버튼 + 상세 화면 — due가 과거/없음이면 내일로, 아니면 +1일
+- **기한 원클릭 칩**(상세): 오늘/내일/+1주/하루 미루기/기한 없음 (_empSetDue)
+- **사이드바 즉시 체크박스**: 목록에서 클릭 한 번으로 완료 토글(qTog), 상세 안 들어가도 됨 (색 점 → 체크박스로 교체)
+- 헬퍼: _empDs/_empParseQuick/_empQuickAdd/_empSetDue/_empPostpone (_empAddDailyTask 뒤)
+
+### Phase 4 홈 '이번 주' 스트립 ✅
+- 홈 하단 7일 그리드: 요일별 마감 업무(클릭→보드) + 배포 휴무(holidays is_deployed) 🏖 표시 + 오늘 강조 + "달력 전체 →"
+- 풀 달력 임베드는 보류 (결정 대기)
+
+### 결재 v2 — 좌우 분할 + 서식 에디터 (2026-06-13)
+- renderApprovalPage 재작성: 좌측 리스트(제목·상태·🖼개수) + 우측 상세. _apvSelId/_apvCtx 상태. _apvSelect로 전환
+- 상신 모달 _apvOpenForm: contenteditable 에디터(_apvEd execCommand) — 굵게/기울임/밑줄/취소선/크기/색/목록/☑체크/구분선. submitApproval이 ed.innerHTML 저장
+- 본문 렌더 _apvBodyHtml: HTML이면 _apvSafeHtml(script·on*·javascript: 제거)로 출력, 아니면 esc. 체크박스는 _apvBindChecks로 클릭 시 body 재저장(인터랙티브)
+- 첨부 이미지: renderOpinionAttachments(최대 500px+라이트박스), 업로드 한도 이미지 10→30MB
+- CSS: .apv-rich img/ul/checkbox/hr, #apvBodyEd
+
+### 공지 게시판형 (2026-06-13)
+- renderAnnouncementsPage 재작성: 상단 "✏️ 공지 작성"(admin) + tm-card 피드. 제목+서식 본문+이미지 첨부
+- _ntOpenForm 모달(에디터 동일 패턴), _ntSubmit → notices.unshift+syncNtToSB. _ntBodyHtml로 HTML 렌더
+- ⚠️ DB 컬럼 추가 필요: staff_notices.title(text), staff_notices.files(jsonb). ntToRow/rowToNt에 title·files 매핑 추가됨 — **SQL 미실행 시 title/files 저장 안 되고 text(서식)만 저장됨** (구버전 호환은 됨)
+- 옛 saveNotice/noticeModal 경로는 그대로 둠(폴백)
+
+### 공지 = 정부 민원 게시판형 (2026-06-13)
+- 목록: 번호·작성일·제목·읽음 4칼럼 테이블(회색 헤더, 16px 행). 제목 클릭 → **풀스크린 오버레이**(#ntViewOv, position:fixed inset:0 z-index:2000, 상단 sticky "← 목록으로" 바). showPage 진입 시 오버레이 자동 정리
+- _ntSelId/_ntOpen/_ntBack 상태. 글쓰기=_ntOpenForm(서식 에디터)
+- **📖 사용법 공지 버튼**(_ntPostGuide): 클릭 1번에 "직원업무 사용법 안내" 공지를 requireRead=true로 자동 등록(빠른추가·완료체크·미루기·결재·공지·홈 설명 포함)
+
+### 전체 업무 — 이미 좌우 분할 구조라 유지 (renderBoard/renderBoardSidebar: 업무별·직원별 토글+필터+검색+우측 상세). 추가 개편 보류
+
+### Phase 5 IA 탭 통합 — 미실행 (아침 결정 대기)
+- 제안: 탭 12개 → 홈/업무/달력/결재/소통(공지+채팅+의견)/자료/손님신청 7개
+
+### 검증
+- node vm.Script로 3개 script 블록 구문 검사 전부 통과 (각 Phase 후 반복)
+- 배포 전 라이브 확인 필요: 결재 탭 전환·승인 흐름, 개인업무 보드, 홈 스트립
+
+### ⚠️ 세션 교훈 — 병렬 세션 파일 corruption 사고
+- 다른 세션(Claude Code)이 잘린 파일(shuttle/tutor-class/afterschool, \0 포함)을 cac3377·0a1f0db에 커밋 → 8948370 빌드 실패. 해당 세션이 직접 복구함
+- **교훈: 두 세션이 같은 레포를 동시에 만질 때는 파일 영역을 분리하고, 커밋 전 깨진 파일 확인(tail -c) 필수**
+
 ### 핵심 학습 포인트 (이번 세션)
 - **PWA 다중 앱 = manifest id+scope 둘 다 분리** 필수. scope "/" 겹치면 설치 차단. manifest는 generateMetadata로 서버 분기 (클라 JS 교체는 레이스)
 - **Supabase 새 테이블 + PostgREST embed = FK 필수** (없으면 "Could not find a relationship" 500). exec_sql RPC로 즉석 수정 가능

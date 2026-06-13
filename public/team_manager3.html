@@ -90,6 +90,28 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .tm-divider{height:1px;background:var(--border);margin:14px 0;}
 .tm-muted{color:var(--text3);}
 .tm-row{display:flex;align-items:center;gap:10px;}
+/* 개인업무 보드 (Phase 3) */
+.empb-sum{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.empb-sum .n{font-size:22px;font-weight:800;}
+.empb-sum .l{font-size:11px;color:var(--text3);font-weight:600;}
+.empb-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 11px;margin-bottom:7px;cursor:pointer;transition:box-shadow .12s,border-color .12s;}
+.empb-card:hover{box-shadow:var(--shadow-sm);border-color:var(--border2);}
+.empb-card.is-urgent{border-color:#fca5a5;border-left:3px solid var(--red);border-radius:0 9px 9px 0;}
+.empb-card.is-done{opacity:.62;}
+.empb-act{display:none;position:absolute;top:6px;right:6px;gap:3px;}
+.empb-card:hover .empb-act{display:flex;}
+.empb-act button{border:1px solid var(--border);background:var(--surface);border-radius:5px;font-size:10.5px;padding:2px 7px;cursor:pointer;font-family:inherit;}
+.empb-act button:hover{background:var(--surface2);}
+.empb-due{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:8px;background:var(--surface2);color:var(--text3);}
+.empb-due.is-hot{background:var(--red-l);color:var(--red);}
+.empb-due.is-soon{background:var(--amber-l);color:#b45309;}
+.apv-rich img{max-width:100%;border-radius:8px;margin:6px 0;}
+.apv-rich ul{padding-left:20px;margin:6px 0;}
+.apv-rich input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:4px;cursor:pointer;accent-color:var(--green);}
+.apv-rich hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+#apvBodyEd:empty:before{content:attr(data-ph);color:var(--text3);}
+#apvBodyEd ul{padding-left:20px;}
+#apvBodyEd input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:4px;}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:4px;height:4px;}
@@ -3297,8 +3319,8 @@ function loadThreadsFromSB(){
 }
 
 // ── Supabase sync: notices → staff_notices ──
-function ntToRow(n){return{id:n.id,text:n.text||'',done:!!n.done,date:n.date||'',require_read:!!n.requireRead};}
-function rowToNt(r){return{id:r.id,text:r.text||'',done:!!r.done,date:r.date||'',requireRead:!!r.require_read};}
+function ntToRow(n){return{id:n.id,title:n.title||'',text:n.text||'',files:n.files||[],done:!!n.done,date:n.date||'',require_read:!!n.requireRead};}
+function rowToNt(r){return{id:r.id,title:r.title||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],done:!!r.done,date:r.date||'',requireRead:!!r.require_read};}
 function syncNtToSB(n){sbUpsert('staff_notices',ntToRow(n)).catch(function(e){console.error('notice sync err',e);});}
 function delNtFromSB(id){sbDel('staff_notices','id=eq.'+id).catch(function(e){console.error('notice del err',e);});}
 function loadNoticesFromSB(){
@@ -3679,6 +3701,7 @@ document.addEventListener('click',function(e){
   dd.classList.remove('open');
 });
 function showPage(p){
+  try{var _ov=document.getElementById('ntViewOv');if(_ov){_ov.remove();document.body.style.overflow='';_ntSelId=null;}}catch(e){}
   if(p==='mywork'){
     if(typeof CU !== 'undefined' && CU && CU.id){
       showEmpPage(CU.id);
@@ -4058,8 +4081,49 @@ function renderHomePage(){
   var ntBody=recentNotices.length?recentNotices.map(function(n){return '<div onclick="_homeOpenNotice(\''+n.id+'\')" style="padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11.5px;margin-bottom:3px;background:#fafafa" onmouseenter="this.style.background=\'#f3f4f6\'" onmouseleave="this.style.background=\'#fafafa\'"><div style="display:flex;align-items:center;gap:6px;color:var(--text)"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(n.text||'')+'</span>'+(isNewTask({created_at:n.date})?'<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">NEW</span>':'')+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">'+esc(n.date||'')+'</div></div>';}).join(''):'<div style="text-align:center;color:var(--text3);padding:16px;font-size:11.5px">공지사항 없음</div>';
   html+=_homeCardWrap('📢 공지사항','',ntBody);
   html+='</div>';
+  html+='<div id="homeWeekStrip" style="margin-top:12px"></div>';
   dash.innerHTML=html;
   loadDailyCheck();
+  _homeRenderWeekStrip();
+}
+/* 홈 하단 이번 주 스트립 — 요일별 마감 업무 + 배포 휴무 (Phase 4) */
+function _homeRenderWeekStrip(){
+  var box=document.getElementById('homeWeekStrip');if(!box)return;
+  var mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+  var days=[];var i;
+  for(i=0;i<7;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);days.push(d);}
+  function ds(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  var todayS=todayStr();
+  var dows=['일','월','화','수','목','금','토'];
+  function build(holidaySet){
+    var h='<div class="tm-card"><div class="tm-card-h"><span class="t">📅 이번 주</span><button class="tm-btn tm-btn-ghost tm-btn-sm" onclick="showPage(\'calendar\')">달력 전체 →</button></div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:12px 14px">';
+    days.forEach(function(d){
+      var k=ds(d);
+      var isToday=k===todayS;
+      var isHol=holidaySet&&holidaySet[k];
+      var due=tasks.filter(function(t){return t.due===k&&!isDoneTask(t)&&(t.shared||isManagerCU()||(CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0))));});
+      h+='<div style="border:1px solid '+(isToday?'var(--primary)':'var(--border)')+';border-radius:8px;padding:7px 8px;min-height:74px;'+(isToday?'box-shadow:0 0 0 1px var(--primary);':'')+(isHol?'background:var(--amber-l);':'')+'">';
+      h+='<div style="font-size:10.5px;font-weight:800;color:'+(d.getDay()===0?'var(--red)':(d.getDay()===6?'var(--primary)':'var(--text3)'))+'">'+(d.getMonth()+1)+'/'+d.getDate()+' '+dows[d.getDay()]+(isToday?' · 오늘':'')+'</div>';
+      if(isHol)h+='<div style="font-size:10px;font-weight:800;color:#b45309;margin-top:3px">🏖 '+esc(holidaySet[k])+'</div>';
+      if(due.length){
+        due.slice(0,3).forEach(function(t){
+          h+='<div onclick="_homeGotoBoardTask(\''+t.id+'\')" title="'+esc(t.title||'')+'" style="font-size:10.5px;color:var(--text2);margin-top:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">• '+esc(t.title||'')+'</div>';
+        });
+        if(due.length>3)h+='<div style="font-size:10px;color:var(--text3);margin-top:2px">+'+(due.length-3)+'</div>';
+      }
+      h+='</div>';
+    });
+    h+='</div></div>';
+    box.innerHTML=h;
+  }
+  build(null);
+  try{
+    sbGet('holidays','is_deployed=eq.true&select=date,name').then(function(rows){
+      var set={};(rows||[]).forEach(function(r){if(r.date)set[r.date]=r.name||'휴무';});
+      build(set);
+    }).catch(function(){});
+  }catch(e){}
 }
 function _homeUnassignedRow(t){
   return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;font-size:12px;margin-bottom:3px;background:#fafafa">'+
@@ -4116,46 +4180,172 @@ function markRead(noticeId){
 
 // 공지사항 전용 페이지 — 사이드바 📢 공지사항 클릭 시 진입.
 // notices 전역·isAdmin()·togNotice/delNotice/markRead 를 그대로 재사용.
+function _ntBodyHtml(n){
+  var b=n.text||'';
+  if(/<[a-z][^>]*>/i.test(b))return '<div class="apv-rich">'+_apvSafeHtml(b)+'</div>';
+  return '<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:var(--text)">'+esc(b)+'</div>';
+}
+var _ntSelId=null;
+function _ntOpen(id){_ntSelId=String(id);renderAnnouncementsPage();}
+function _ntBack(){_ntSelId=null;var ov=document.getElementById('ntViewOv');if(ov)ov.remove();document.body.style.overflow='';renderAnnouncementsPage();}
+function _ntPlain(n){
+  var b=n.text||'';var t=document.createElement('div');t.innerHTML=b;return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim();
+}
 function renderAnnouncementsPage(){
   var feed=document.getElementById('announcementsFeed');if(!feed)return;
-  if(!notices||!notices.length){
-    feed.innerHTML='<div class="empty-state" style="padding:60px 20px;text-align:center;color:var(--text3)"><div class="ei" style="font-size:40px;margin-bottom:10px">📋</div>등록된 공지사항이 없습니다</div>';
+  var admin=isAdmin();
+  /* ── 글 보기 ── */
+  var _ntOv=document.getElementById('ntViewOv');
+  if(_ntSelId){
+    var n=(notices||[]).find(function(x){return String(x.id)===String(_ntSelId);});
+    if(!n){_ntSelId=null;return renderAnnouncementsPage();}
+    var readers=noticeReads[n.id]||[];var hasRead=readers.indexOf(CU.id)>=0;
+    if(!_ntOv){_ntOv=document.createElement('div');_ntOv.id='ntViewOv';document.body.appendChild(_ntOv);}
+    _ntOv.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;';
+    var h='<div style="position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;gap:10px;z-index:1"><button class="tm-btn tm-btn-sm" onclick="_ntBack()">← 목록으로</button><span style="font-size:13px;font-weight:800;color:var(--text2)">📢 공지사항</span></div>';
+    h+='<div style="max-width:820px;margin:0 auto;padding:24px 18px 60px">';
+    h+='<div class="tm-card"><div class="tm-card-b" style="padding:26px 28px">';
+    h+='<div style="font-size:20px;font-weight:800;margin-bottom:8px">'+(n.requireRead?'<span class="tm-badge is-warn" style="vertical-align:middle;margin-right:6px">읽음확인</span>':'')+esc(n.title||_ntPlain(n).slice(0,40)||'(제목 없음)')+'</div>';
+    h+='<div class="tm-row tm-muted" style="font-size:12px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px"><span>📢 공지</span><span style="margin-left:auto">'+esc(n.date||'')+'</span></div>';
+    h+=_ntBodyHtml(n);
+    if(n.files&&n.files.length)h+=renderOpinionAttachments(n.files);
+    if(n.requireRead){
+      h+='<div class="tm-divider"></div>';
+      if(admin)h+='<div style="font-size:12.5px;color:var(--text3)">📖 '+readers.length+'/'+ALL.length+' 읽음</div>';
+      else if(hasRead)h+='<div style="font-size:12.5px;color:var(--green);font-weight:700">✓ 읽음 확인됨</div>';
+      else h+='<button class="tm-btn tm-btn-pri" onclick="markRead(\x27'+n.id+'\x27);_ntBack()">읽음 확인</button>';
+    }
+    if(admin){
+      h+='<div class="tm-row" style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)">';
+      h+='<button class="tm-btn tm-btn-sm" onclick="_annTog(\x27'+n.id+'\x27)">'+(n.done?'↩ 되돌리기':'✓ 완료처리')+'</button>';
+      h+='<button class="tm-btn tm-btn-sm" style="color:var(--red);margin-left:auto" onclick="_annDel(\x27'+n.id+'\x27);_ntBack()">✕ 삭제</button></div>';
+    }
+    h+='</div></div></div>';
+    _ntOv.innerHTML=h;_ntOv.style.display='block';document.body.style.overflow='hidden';
     return;
   }
-  var admin=isAdmin();
-  feed.innerHTML=notices.map(function(n){
-    var readers=noticeReads[n.id]||[];
-    var hasRead=readers.indexOf(CU.id)>=0;
-    var badges='';
-    if(n.requireRead)badges+='<span class="badge badge-amber" style="font-size:10px">읽음확인 필수</span>';
-    if(n.done)badges+='<span class="badge" style="background:#e5e7eb;color:#6b7280;font-size:10px">완료</span>';
-    var readBlock='';
-    if(n.requireRead){
-      if(admin){
-        readBlock='<div style="font-size:11.5px;color:var(--text3);margin-top:10px">📖 '+readers.length+'/'+ALL.length+' 읽음</div>';
-      } else if(hasRead){
-        readBlock='<div style="font-size:11.5px;color:var(--green);font-weight:700;margin-top:10px">✓ 읽음 확인됨</div>';
-      } else {
-        readBlock='<div style="margin-top:10px"><button class="notice-read-btn" onclick="markRead(\''+n.id+'\')">읽음 확인</button></div>';
-      }
-    }
-    var adminActs='';
-    if(admin){
-      adminActs='<div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);justify-content:flex-end">'+
-        '<button class="notice-btn" onclick="_annTog(\''+n.id+'\')">'+(n.done?'↩ 되돌리기':'✓ 완료처리')+'</button>'+
-        '<button class="notice-btn" onclick="_annDel(\''+n.id+'\')" style="color:#dc2626">✕ 삭제</button>'+
-        '</div>';
-    }
-    return '<article style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,0.03);'+(n.done?'opacity:.6':'')+'">'+
-      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
-        badges+
-        '<span style="font-size:11.5px;color:var(--text3);margin-left:auto">'+esc(n.date||'')+'</span>'+
-      '</div>'+
-      '<div style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word">'+esc(n.text||'')+'</div>'+
-      readBlock+
-      adminActs+
-    '</article>';
+  if(_ntOv){_ntOv.remove();document.body.style.overflow='';}
+  /* ── 목록 ── */
+  var head='<div style="max-width:860px;margin:0 auto">';
+  head+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div style="font-size:18px;font-weight:800;flex:1">📢 공지사항</div>';
+  if(admin)head+='<button class="tm-btn tm-btn-sm" style="margin-right:6px" onclick="_ntPostGuide()">📖 사용법 공지</button><button class="tm-btn tm-btn-pri" onclick="_ntOpenForm()">✏️ 글쓰기</button>';
+  head+='</div>';
+  if(!notices||!notices.length){feed.innerHTML=head+'<div class="tm-empty"><span class="ic">📋</span>등록된 공지가 없습니다</div></div>';return;}
+  var rows='';
+  var total=notices.length;
+  notices.forEach(function(n,i){
+    var readers=noticeReads[n.id]||[];var hasRead=readers.indexOf(CU.id)>=0;
+    var num=total-i;
+    var title=esc(n.title||_ntPlain(n).slice(0,50)||'(제목 없음)');
+    var nFiles=(n.files||[]).length;
+    var unread=(n.requireRead&&!hasRead&&!admin);
+    rows+='<div onclick="_ntOpen(\x27'+n.id+'\x27)" style="display:grid;grid-template-columns:56px 110px 1fr 90px;gap:12px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);cursor:pointer;'+(n.done?'opacity:.5;':'')+'" onmouseenter="this.style.background=\x27var(--surface2)\x27" onmouseleave="this.style.background=\x27\x27">';
+    rows+='<div style="text-align:center;font-size:13px;color:var(--text3)">'+num+'</div>';
+    rows+='<div style="text-align:center;font-size:12.5px;color:var(--text3)">'+esc((n.date||'').slice(0,10))+'</div>';
+    rows+='<div style="min-width:0"><span style="font-size:14.5px;font-weight:'+(unread?'800':'600')+';color:var(--text)">'+title+'</span>';
+    if(n.requireRead)rows+=' <span class="tm-badge is-warn" style="font-size:10px">읽음확인</span>';
+    if(unread)rows+=' <span class="tm-badge is-danger" style="font-size:10px">N</span>';
+    if(nFiles)rows+=' <span style="font-size:11px;color:var(--text3)">📎'+nFiles+'</span>';
+    if(n.done)rows+=' <span class="tm-badge is-muted" style="font-size:10px">완료</span>';
+    rows+='</div>';
+    rows+='<div style="text-align:center;font-size:11.5px;color:'+(unread?'var(--red)':'var(--text3)')+';font-weight:'+(unread?'700':'400')+'">'+(n.requireRead?(unread?'미확인':'확인'):'-')+'</div>';
+    rows+='</div>';
+  });
+  feed.innerHTML=head+'<div class="tm-card"><div style="display:grid;grid-template-columns:56px 110px 1fr 90px;gap:12px;padding:13px 18px;border-bottom:2px solid var(--border2);font-size:12px;font-weight:800;color:var(--text2);background:var(--surface2)"><div style="text-align:center">번호</div><div style="text-align:center">작성일</div><div>제목</div><div style="text-align:center">읽음</div></div>'+rows+'</div></div>';
+}
+/* 공지 작성 — 서식 에디터 모달 */
+function _ntPostGuide(){
+  if(!confirm('직원업무 사용법 공지를 새로 등록할까요?'))return;
+  var body=''
+    +'<div style="font-size:15px;line-height:1.9">'
+    +'<b>📋 내 업무 — 이렇게 편해졌어요</b><br>'
+    +'• <b>빠른 추가</b>: 상단 입력칸에 <b>"셔틀 명단 정리 6/20"</b> 처럼 쓰고 Enter → 끝! (끝에 <u>오늘/내일/모레/6-20</u> 쓰면 기한 자동, 맨 앞에 <u>!</u> 붙이면 긴급)<br>'
+    +'• <b>한 번에 완료</b>: 왼쪽 목록의 네모(체크박스)만 누르면 바로 완료 처리<br>'
+    +'• <b>미루기</b>: 카드의 <b>⏭</b> 또는 상세에서 [오늘][내일][+1주] 버튼으로 기한 원클릭 변경<br>'
+    +'• 들어가면 바로 <b>내 보드</b>(긴급/진행중/완료)가 보여요<br>'
+    +'<hr>'
+    +'<b>🗂 결재 — 게시판처럼</b><br>'
+    +'• 왼쪽에서 결재를 고르면 오른쪽에 자세히 보여요<br>'
+    +'• <b>상신할 때</b> 굵게·색·☑체크박스·사진(30MB)까지 넣어 글처럼 작성 가능<br>'
+    +'• 승인/반려는 오른쪽 상세에서 바로<br>'
+    +'<hr>'
+    +'<b>📢 공지 — 지금 이 화면</b><br>'
+    +'• 제목 클릭하면 새 화면으로 크게 열려요. <b>읽음확인 필수</b> 글은 꼭 [읽음 확인] 눌러주세요!<br>'
+    +'<hr>'
+    +'<b>🏠 홈</b> 맨 아래 <b>이번 주</b>에서 요일별 마감·휴무를 한눈에 볼 수 있어요.'
+    +'</div>';
+  var _nn={id:uid(),title:'📖 직원업무 사용법 안내 (새로워졌어요!)',text:body,files:[],done:false,date:nowStr(),requireRead:true};
+  notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);
+  renderAnnouncementsPage();if(typeof renderNotices==='function')renderNotices();
+  createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'직원업무 사용법 공지가 등록되었어요');
+  toast('사용법 공지를 등록했어요');
+}
+function _ntEd(cmd,val){var ed=document.getElementById('ntBodyEd');if(ed)ed.focus();try{document.execCommand(cmd,false,val||null);}catch(e){}}
+function _ntEdCheck(){var ed=document.getElementById('ntBodyEd');if(ed)ed.focus();try{document.execCommand('insertHTML',false,'<div><input type="checkbox"> 항목 </div>');}catch(e){}}
+var _ntFiles=[];
+async function handleNtFiles(event){
+  var files=Array.from(event.target.files||[]);
+  var prev=document.getElementById('ntFilePreview');
+  if(prev)prev.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px">⏳ 업로드 중...</div>';
+  var results=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    if(f.size>30*1024*1024){toast(f.name+': 이미지는 30MB 이하','#ef4444');continue;}
+    try{results.push(await uploadToStorage(f));}catch(e){toast(f.name+' 업로드 실패','#ef4444');}
+  }
+  _ntFiles=(_ntFiles||[]).concat(results);
+  if(prev)prev.innerHTML=_ntFiles.map(function(f,idx){
+    var isImg=(f.type||'').indexOf('image/')===0;
+    return '<div style="position:relative;display:inline-block;margin:3px"><button onclick="_ntFiles.splice('+idx+',1);handleNtFiles({target:{files:[]}})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:10px">×</button>'+
+      (isImg?'<img src="'+f.url+'" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border)">':'<div style="width:64px;height:64px;background:var(--surface2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px">📄</div>')+'</div>';
   }).join('');
+}
+function _ntOpenForm(){
+  _ntFiles=[];
+  var old=document.getElementById('ntFormOv');if(old)old.remove();
+  var ov=document.createElement('div');ov.id='ntFormOv';ov.className='tm-ov';
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  var h='<div class="tm-modal" style="max-width:680px">';
+  h+='<div class="tm-modal-h"><span class="t">✏️ 공지 작성</span><button class="tm-modal-x" onclick="document.getElementById(\x27ntFormOv\x27).remove()">×</button></div>';
+  h+='<div class="tm-modal-b">';
+  h+='<label class="tm-label">제목</label><input id="ntTitle" class="tm-input" type="text" placeholder="공지 제목 (선택)" style="margin-bottom:10px">';
+  h+='<label class="tm-label">내용</label>';
+  h+='<div style="display:flex;gap:4px;flex-wrap:wrap;padding:6px;background:var(--surface2);border:1px solid var(--border2);border-bottom:none;border-radius:8px 8px 0 0">';
+  h+='<button class="tm-btn tm-btn-sm" style="font-weight:900" onclick="_ntEd(\x27bold\x27)">B</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="font-style:italic" onclick="_ntEd(\x27italic\x27)">I</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="text-decoration:underline" onclick="_ntEd(\x27underline\x27)">U</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_ntEd(\x27fontSize\x27,\x275\x27)">크게</button>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_ntEd(\x27fontSize\x27,\x273\x27)">보통</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" style="color:#ef4444;font-weight:800" onclick="_ntEd(\x27foreColor\x27,\x27#ef4444\x27)">가</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="color:#2563eb;font-weight:800" onclick="_ntEd(\x27foreColor\x27,\x27#2563eb\x27)">가</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_ntEd(\x27insertUnorderedList\x27)">• 목록</button>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_ntEdCheck()">☑ 체크</button>';
+  h+='<button class="tm-btn tm-btn-sm tm-btn-ghost" onclick="_ntEd(\x27removeFormat\x27)">지우기</button></div>';
+  h+='<div id="ntBodyEd" contenteditable="true" style="min-height:160px;max-height:340px;overflow-y:auto;border:1px solid var(--border2);border-radius:0 0 8px 8px;padding:12px 14px;font-size:14px;line-height:1.8;outline:none;background:var(--surface);margin-bottom:10px"></div>';
+  h+='<label class="tm-btn" style="border-style:dashed">📎 사진/파일 첨부 (이미지 30MB)<input type="file" id="ntFiles" multiple style="display:none" onchange="handleNtFiles(event)"></label>';
+  h+='<div id="ntFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>';
+  h+='<label class="tm-chip" style="cursor:pointer;margin-top:12px"><input type="checkbox" id="ntRequireRead"> 읽음 확인 필수</label>';
+  h+='</div><div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\x27ntFormOv\x27).remove()">취소</button>';
+  h+='<button class="tm-btn tm-btn-pri" onclick="_ntSubmit()">공지 등록</button></div></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);
+  var t=document.getElementById('ntTitle');if(t)t.focus();
+}
+function _ntSubmit(){
+  var ed=document.getElementById('ntBodyEd');
+  var title=(document.getElementById('ntTitle')||{}).value||'';
+  var bodyVal=ed?ed.innerHTML:'';
+  var plain=ed?(ed.textContent||'').trim():'';
+  if(!plain&&!title.trim()&&!(ed&&ed.querySelector('input,img'))){toast('내용을 입력해주세요','#ef4444');return;}
+  var rr=(document.getElementById('ntRequireRead')||{}).checked||false;
+  var _nn={id:uid(),title:title.trim(),text:bodyVal,files:_ntFiles||[],done:false,date:nowStr(),requireRead:rr};
+  notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);
+  var ov=document.getElementById('ntFormOv');if(ov)ov.remove();_ntFiles=[];
+  renderAnnouncementsPage();renderNotices();
+  createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'새 공지: '+(title.trim()||plain).slice(0,30));
+  if(typeof sendPortalPushForNotice==='function'){}
 }
 // 공지 페이지 내 액션 래퍼 — 기존 togNotice/delNotice 재사용 후 현재 피드만 갱신.
 function _annTog(id){togNotice(id);renderAnnouncementsPage();}
@@ -4486,6 +4676,7 @@ function renderBoardTaskDetail(taskId){
   var prog=t.progress||0;
   var cmts=taskComments[t.id]||[];
   var html='';
+  html+='<button class="tm-btn tm-btn-ghost tm-btn-sm" style="margin-bottom:10px" onclick="_empSelTaskId=null;renderEmpSidebar(curEmpId);renderEmpDetailEmpty(getP(curEmpId))">← 내 보드</button>';
   html+='<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">';
   html+='<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
   if(t.priority==='high')html+='<span style="background:#fef2f2;color:#991b1b;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">🚨 긴급</span>';
@@ -4509,6 +4700,15 @@ function renderBoardTaskDetail(taskId){
     html+='<span style="padding:6px 12px;background:#f3f4f6;color:#6b7280;border-radius:7px;font-size:11px;font-weight:700">👁 읽기 전용</span>';
   }
   html+='</div></div>';
+  if(canEdit&&!isDoneTask(t)){
+    html+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px"><span style="font-size:11px;font-weight:700;color:var(--text3)">기한</span>';
+    html+='<button class="tm-btn tm-btn-sm" onclick="_empSetDue(\''+t.id+'\',\'today\')">오늘</button>';
+    html+='<button class="tm-btn tm-btn-sm" onclick="_empSetDue(\''+t.id+'\',\'tomorrow\')">내일</button>';
+    html+='<button class="tm-btn tm-btn-sm" onclick="_empSetDue(\''+t.id+'\',\'plus7\')">+1주</button>';
+    html+='<button class="tm-btn tm-btn-sm" onclick="_empPostpone(\''+t.id+'\')">⏭ 하루 미루기</button>';
+    html+='<button class="tm-btn tm-btn-sm tm-btn-ghost" onclick="_empSetDue(\''+t.id+'\',\'none\')">기한 없음</button>';
+    html+='</div>';
+  }
   if(prog>0){
     html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
   }
@@ -5707,7 +5907,7 @@ function _renderEmpSection(label, list, color, collapsed, secKey){
     var dueColor=dueT&&(dueT.cls==='tag-red'||dueT.cls==='tag-orange')?'#ef4444':'var(--text3)';
     var dragAttrs=secKey?(' draggable="true" data-tid="'+t.id+'" data-sec="'+secKey+'" data-emp="'+esc(curEmpId||'')+'" ondragstart="_empDragStart(event)" ondragover="_empDragOver(event)" ondragleave="_empDragLeave(event)" ondrop="_empDrop(event)" ondragend="_empDragEnd(event)"'):'';
     return '<div'+dragAttrs+' onclick="selectEmpTask(\''+t.id+'\')" style="padding:7px 8px;cursor:'+(secKey?'grab':'pointer')+';border-radius:5px;margin-bottom:3px;'+bgSel+';display:flex;flex-direction:column;gap:2px">'+
-      '<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+color+';flex-shrink:0"></span>'+
+      '<div style="display:flex;align-items:center;gap:6px;min-width:0"><input type="checkbox" '+(isDoneTask(t)?'checked':'')+' onclick="event.stopPropagation();qTog(\''+t.id+'\',event)" title="완료 체크" style="width:13px;height:13px;accent-color:var(--green);cursor:pointer;flex-shrink:0;margin:0">'+
       '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+'</span>'+
       (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0">'+cmt+'</span>':'')+
       '</div>'+
@@ -5725,7 +5925,75 @@ function selectEmpTask(taskId){
 }
 function renderEmpDetailEmpty(emp){
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:14px;font-weight:600">왼쪽에서 업무를 선택하세요</div><div style="font-size:12px;margin-top:6px">'+esc((emp&&emp.name)||'')+'의 업무 공간</div></div>';
+  var empId=(emp&&emp.id)||curEmpId;
+  var isOwner=CU&&CU.id===empId;
+  var pool=tasks.filter(function(t){return t.assignee===empId||(t.assignees&&t.assignees.indexOf(empId)>=0);});
+  if(!(isAdmin()||isOwner))pool=pool.filter(function(t){return t.shared;});
+  var doneList=pool.filter(isDoneTask);
+  var notDone=pool.filter(function(t){return !isDoneTask(t);});
+  var urgent=notDone.filter(_isUrgentEmpTask);
+  var active=notDone.filter(function(t){return !_isUrgentEmpTask(t);});
+  var today=todayStr();
+  var todayDue=notDone.filter(function(t){return t.due===today;}).length;
+  var ws=new Date();ws.setHours(0,0,0,0);ws.setDate(ws.getDate()-((ws.getDay()+6)%7));
+  var weekDone=doneList.filter(function(t){var ts=t.doneAt||t.updatedAt||t.updated_at||t.createdAt;if(!ts)return false;var x=new Date(ts);return !isNaN(x)&&x>=ws;}).length;
+  function dueBadge(t){
+    if(!t.due)return '';
+    var dd=dL(t.due);if(!dd)return '';
+    var cls=(dd.cls==='tag-over'||dd.text==='TODAY')?' is-hot':(dd.cls==='tag-soon'?' is-soon':'');
+    return '<span class="empb-due'+cls+'">'+dd.text+'</span>';
+  }
+  function clTxt(t){
+    var c=t.checklist;if(!c)return '';
+    var items=Array.isArray(c)?c:(c.items||[]);
+    if(!items.length)return '';
+    var done=items.filter(function(i){return i.done;}).length;
+    return '<span style="font-size:10.5px;color:var(--text3)">☑ '+done+'/'+items.length+'</span>';
+  }
+  function bCard(t){
+    var done=isDoneTask(t);
+    var urgentCls=(!done&&_isUrgentEmpTask(t))?' is-urgent':'';
+    var cmt=(taskComments[t.id]||[]).length;
+    var h='<div class="empb-card'+urgentCls+(done?' is-done':'')+'" onclick="selectEmpTask(\x27'+t.id+'\x27)">';
+    if(isOwner||isAdmin()){
+      h+='<div class="empb-act">';
+      h+='<button title="'+(done?'완료 취소':'완료')+'" onclick="event.stopPropagation();qTog(\x27'+t.id+'\x27,event)">'+(done?'↩':'✓')+'</button>';
+      h+='<button title="편집" onclick="event.stopPropagation();openTaskEdit(\x27'+t.id+'\x27)">✏️</button>';
+      if(!done)h+='<button title="내일로 미루기" onclick="event.stopPropagation();_empPostpone(\x27'+t.id+'\x27)">⏭</button>';
+      h+='</div>';
+    }
+    h+='<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;padding-right:46px;'+(done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+esc(t.title||'')+'</div>';
+    var meta=[dueBadge(t),clTxt(t),(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':'')].filter(function(x){return x;});
+    if(meta.length)h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+meta.join('')+'</div>';
+    h+='</div>';
+    return h;
+  }
+  function col(label,color,list,emptyTxt,limit){
+    var shown=limit?list.slice(0,limit):list;
+    var h='<div style="min-width:0"><div style="font-size:12px;font-weight:800;color:'+color+';margin-bottom:7px">'+label+' <span style="color:var(--text3);font-weight:600">'+list.length+'</span></div>';
+    if(!list.length)h+='<div style="font-size:11.5px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:12px;text-align:center">'+emptyTxt+'</div>';
+    else{h+=shown.map(bCard).join('');if(limit&&list.length>limit)h+='<div style="font-size:11px;color:var(--text3);text-align:center;padding:4px">+'+(list.length-limit)+'개 더 (왼쪽 목록에서)</div>';}
+    h+='</div>';
+    return h;
+  }
+  var html='<div style="max-width:980px">';
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div style="font-size:16px;font-weight:800;flex:1">📊 '+esc((emp&&emp.name)||'')+'의 보드</div>';
+  if(isOwner||isAdmin())html+='<button class="tm-btn tm-btn-pri tm-btn-sm" onclick="openTaskModal(\x27'+empId+'\x27)">+ 업무 추가</button>';
+  html+='</div>';
+  if(isOwner||isAdmin())html+='<div style="margin-bottom:12px"><input id="empQuickInp" class="tm-input" placeholder="⚡ 빠른 추가 — 예: 셔틀 명단 정리 6/20 · !긴급건 내일 · 끝에 날짜/오늘/내일, 맨앞 ! = 긴급 (Enter)" onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_empQuickAdd(\x27'+empId+'\x27)}"></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px">';
+  html+='<div class="empb-sum"><div class="n" style="color:'+(todayDue?'var(--red)':'var(--text)')+'">'+todayDue+'</div><div class="l">오늘 마감</div></div>';
+  html+='<div class="empb-sum"><div class="n" style="color:var(--primary)">'+notDone.length+'</div><div class="l">진행 중</div></div>';
+  html+='<div class="empb-sum"><div class="n" style="color:var(--green)">'+weekDone+'</div><div class="l">이번 주 완료</div></div>';
+  html+='</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">';
+  html+=col('🚨 긴급','var(--red)',urgent,'긴급 업무 없음 👍',8);
+  html+=col('📋 진행 중','var(--primary)',active,'진행 중 업무 없음',8);
+  html+=col('✅ 완료','var(--green)',doneList,'완료된 업무 없음',6);
+  html+='</div>';
+  if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
+  html+='</div>';
+  d.innerHTML=html;
 }
 function renderEmpDetail(taskId){
   var d=document.getElementById('empDetail');if(!d)return;
@@ -5889,6 +6157,59 @@ function _empAddDailyTask(empId){
   inp.value='';
   renderEmpDailyMini(empId);renderEmpSidebar(empId);
 }
+/* ── 내 업무 사용성 팩 (Phase 3.5): 빠른 추가·기한 원클릭·내일로 미루기 ── */
+function _empDs(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function _empParseQuick(text){
+  var t=(text||'').trim();var pr='normal';
+  if(t.charAt(0)==='!'){pr='high';t=t.slice(1).trim();}
+  var due=null;
+  var m=t.match(/\s+(오늘|내일|모레|(\d{1,2})\/(\d{1,2}))$/);
+  if(m){
+    var now=new Date();now.setHours(0,0,0,0);
+    if(m[1]==='오늘')due=_empDs(now);
+    else if(m[1]==='내일'){now.setDate(now.getDate()+1);due=_empDs(now);}
+    else if(m[1]==='모레'){now.setDate(now.getDate()+2);due=_empDs(now);}
+    else{var mo=parseInt(m[2],10),dd=parseInt(m[3],10);var d=new Date(now.getFullYear(),mo-1,dd);if(d<now)d.setFullYear(d.getFullYear()+1);due=_empDs(d);}
+    t=t.slice(0,m.index).trim();
+  }
+  return {title:t,due:due,priority:pr};
+}
+function _empQuickAdd(empId){
+  var inp=document.getElementById('empQuickInp');if(!inp)return;
+  var v=(inp.value||'').trim();if(!v)return;
+  var pq=_empParseQuick(v);
+  if(!pq.title){toast('업무 내용을 입력해주세요','#ef4444');return;}
+  var newT={id:uid(),title:pq.title,assignee:empId,assignees:[empId],due:pq.due,createdAt:new Date().toISOString(),done:false,files:[],checklist:[],progress:0,shared:false,projId:null,priority:pq.priority,note:''};
+  tasks.unshift(newT);rebuildIdx();svTasks();syncTaskToSB(newT);
+  toast('✅ 추가: '+pq.title+(pq.due?' ('+pq.due+')':'')+(pq.priority==='high'?' 🚨':''));
+  renderEmpSidebar(empId);
+  if(!_empSelTaskId)renderEmpDetailEmpty(getP(empId));
+  var inp2=document.getElementById('empQuickInp');if(inp2){inp2.focus();}
+}
+function _empSetDue(taskId,mode){
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
+  var now=new Date();now.setHours(0,0,0,0);
+  if(mode==='none')t.due=null;
+  else if(mode==='today')t.due=_empDs(now);
+  else if(mode==='tomorrow'){var d1=new Date(now);d1.setDate(d1.getDate()+1);t.due=_empDs(d1);}
+  else if(mode==='plus7'){var base=t.due?parseLocalDate(t.due):new Date(now);if(!base||isNaN(base)||base<now)base=new Date(now);base.setDate(base.getDate()+7);t.due=_empDs(base);}
+  svTasks();syncTaskToSB(t);
+  renderEmpSidebar(curEmpId);
+  if(_empSelTaskId===taskId)renderEmpDetail(taskId);else if(!_empSelTaskId)renderEmpDetailEmpty(getP(curEmpId));
+  toast(t.due?('📅 기한: '+t.due):'기한 없음');
+}
+function _empPostpone(taskId){
+  var t=tasks.find(function(x){return x.id===taskId;});if(!t)return;
+  var now=new Date();now.setHours(0,0,0,0);
+  var base=t.due?parseLocalDate(t.due):new Date(now);
+  if(!base||isNaN(base)||base<now)base=new Date(now);
+  base.setDate(base.getDate()+1);
+  t.due=_empDs(base);
+  svTasks();syncTaskToSB(t);
+  renderEmpSidebar(curEmpId);
+  if(_empSelTaskId===taskId)renderEmpDetail(taskId);else if(!_empSelTaskId)renderEmpDetailEmpty(getP(curEmpId));
+  toast('⏭ '+t.due+'(으)로 미뤘어요');
+}
 function setEF(f,el){
   empFilter=f;
   document.querySelectorAll('#empTabs .tab-btn').forEach(function(t){t.classList.remove('active');});
@@ -5916,11 +6237,38 @@ function renderApprovalStandalone(){
   renderApprovalPage(CU.id,'apvStandaloneWrap');
   if(typeof refreshApvPendingCount==='function')refreshApvPendingCount();
 }
+var _apvSelId=null;var _apvCtx={empId:null,tid:null};
+function _apvSafeHtml(html){
+  var s=String(html||'');
+  s=s.replace(/<script[\s\S]*?<\/script>/gi,'');
+  s=s.replace(/\son\w+\s*=\s*"[^"]*"/gi,'').replace(/\son\w+\s*=\s*'[^']*'/gi,'');
+  s=s.replace(/javascript:/gi,'');
+  return s;
+}
+function _apvBodyHtml(a){
+  var b=a.body||'';
+  if(/<[a-z][^>]*>/i.test(b))return '<div class="apv-rich" id="apvBodyHtml_'+a.id+'" style="font-size:14px;line-height:1.8;color:var(--text)">'+_apvSafeHtml(b)+'</div>';
+  return '<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;color:var(--text)">'+esc(b)+'</div>';
+}
+function _apvBindChecks(a){
+  var box=document.getElementById('apvBodyHtml_'+a.id);if(!box)return;
+  var inputs=box.querySelectorAll('input[type="checkbox"]');
+  for(var i=0;i<inputs.length;i++){
+    (function(inp){
+      inp.disabled=false;
+      inp.onchange=function(){
+        if(inp.checked)inp.setAttribute('checked','');else inp.removeAttribute('checked');
+        sbPatch('staff_approvals','id=eq.'+String(a.id),{body:box.innerHTML}).then(function(){a.body=box.innerHTML;toast('체크 저장됨');}).catch(function(){toast('저장 실패','#ef4444');});
+      };
+    })(inputs[i]);
+  }
+}
+function _apvSelect(id){_apvSelId=String(id);renderApprovalPage(_apvCtx.empId,_apvCtx.tid);}
 function renderApprovalPage(empId,targetId){
   var tid=targetId||(document.getElementById('_empApprovalSlot')?'_empApprovalSlot':'empApprovalWrap');
+  _apvCtx={empId:empId,tid:tid};
   var wrap=document.getElementById(tid);
   if(!wrap)return;
-  wrap.innerHTML='<div class="tm-empty"><span class="ic">⏳</span>로딩 중...</div>';
   var isApprover=CU&&(CU.id==='ceo'||CU.id==='jun');
   var query='or=(from_id.eq.'+empId;
   if(isApprover)query+=',to_id.eq.'+CU.id+',to_id.eq.both';
@@ -5933,76 +6281,114 @@ function renderApprovalPage(empId,targetId){
     var done=rows.filter(function(a){return a._st!=='pending';});
     if(!_apvTab)_apvTab=(isApprover&&inbox.length)?'inbox':'mine';
     if(_apvTab==='inbox'&&!isApprover)_apvTab='mine';
-    var ST={pending:{l:'⏳ 대기중',cls:'is-warn'},approved:{l:'✅ 승인',cls:'is-ok'},rejected:{l:'⛔ 반려',cls:'is-danger'}};
+    var list=_apvTab==='inbox'?inbox:(_apvTab==='done'?done:mine);
+    if(_apvSelId&&!rows.some(function(a){return String(a.id)===String(_apvSelId);}))_apvSelId=null;
+    if(!_apvSelId&&list.length)_apvSelId=String(list[0].id);
+    var sel=rows.find(function(a){return String(a.id)===String(_apvSelId);})||null;
+    var ST={pending:{l:'⏳ 대기',cls:'is-warn'},approved:{l:'✅ 승인',cls:'is-ok'},rejected:{l:'⛔ 반려',cls:'is-danger'}};
     function nameOf(id){if(id==='both')return 'CEO · Jun';var u=ALL.find(function(x){return x.id===id;});return u?u.name:(id||'-');}
     function fmtD(a){var d=new Date(a.created_at||a.ts||Date.now());return (d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
     function badge(a){var s=ST[a._st]||ST.pending;return '<span class="tm-badge '+s.cls+'">'+s.l+'</span>';}
     function rerender(){return 'renderApprovalPage(\x27'+empId+'\x27,\x27'+tid+'\x27)';}
     function tabBtn(tab,label,n,danger){
       var active=_apvTab===tab;
-      return '<button class="tm-btn'+(active?' tm-btn-pri':'')+'" style="border-radius:999px" onclick="_apvTab=\x27'+tab+'\x27;'+rerender()+'">'+label+(n>0?' <span class="tm-badge '+(danger?'is-danger':'is-muted')+'" style="margin-left:2px">'+n+'</span>':'')+'</button>';
+      return '<button class="tm-btn tm-btn-sm'+(active?' tm-btn-pri':'')+'" style="border-radius:999px" onclick="_apvTab=\x27'+tab+'\x27;_apvSelId=null;'+rerender()+'">'+label+(n>0?' <span class="tm-badge '+(danger?'is-danger':'is-muted')+'">'+n+'</span>':'')+'</button>';
     }
-    function card(a,withActions){
-      var h='<div class="tm-card" style="margin-bottom:12px">';
-      h+='<div class="tm-card-h"><span class="t">'+esc(a.title||'(제목 없음)')+'</span>'+badge(a)+'</div>';
-      h+='<div class="tm-card-b">';
-      h+='<div class="tm-row tm-muted" style="font-size:12px;margin-bottom:10px;flex-wrap:wrap"><span>👤 '+esc(nameOf(a.from_id))+'</span><span>→</span><span>'+esc(nameOf(a.to_id||'ceo'))+'</span><span style="margin-left:auto">'+fmtD(a)+'</span></div>';
-      h+='<div style="font-size:13.5px;line-height:1.75;white-space:pre-wrap;color:var(--text)">'+esc(a.body||'')+'</div>';
-      if(a.files&&a.files.length)h+='<div style="margin-top:10px">'+renderAttachments(a.files)+'</div>';
-      if(a._st==='rejected'&&a.reject_reason){
-        h+='<div style="margin-top:10px;padding:9px 12px;background:var(--red-l);border-radius:8px;font-size:12.5px;color:var(--red)">반려 사유: '+esc(a.reject_reason)+'</div>';
-        if(a.from_id===empId){
-          h+='<button class="tm-btn tm-btn-sm" style="margin-top:8px" onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27block\x27">✏️ 수정 후 재상신</button>';
-          h+='<div id="resubArea_'+a.id+'" style="display:none;margin-top:10px;padding:12px;background:var(--surface2);border-radius:8px">';
-          h+='<input id="resubTitle_'+a.id+'" class="tm-input" type="text" value="'+esc(a.title)+'" style="margin-bottom:6px">';
-          h+='<textarea id="resubBody_'+a.id+'" class="tm-textarea" style="resize:vertical;min-height:80px">'+esc(a.body)+'</textarea>';
-          h+='<div class="tm-row" style="margin-top:8px;justify-content:flex-end"><button class="tm-btn tm-btn-sm" onclick="document.getElementById(\x27resubArea_'+a.id+'\x27).style.display=\x27none\x27">취소</button>';
-          h+='<button class="tm-btn tm-btn-sm tm-btn-pri" onclick="resubmitApproval('+a.id+');setTimeout(function(){'+rerender()+'},800)">재상신</button></div></div>';
-        }
-      }
-      if(withActions){
-        h+='<div class="tm-divider"></div>';
-        h+='<div class="tm-row" style="flex-wrap:wrap"><button class="tm-btn tm-btn-ok" style="padding:10px 26px" onclick="processApproval('+a.id+',\x27approve\x27);setTimeout(function(){'+rerender()+'},900)">✅ 승인</button>';
-        h+='<input id="rr_'+a.id+'" class="tm-input" placeholder="반려 시 사유 입력" style="flex:1;min-width:160px">';
-        h+='<button class="tm-btn tm-btn-danger" onclick="processApproval('+a.id+',\x27reject\x27);setTimeout(function(){'+rerender()+'},900)">반려</button></div>';
-      }
-      h+='<div class="tm-divider"></div>';
-      h+='<div id="apvCmts_'+a.id+'" style="margin-bottom:8px"></div>';
-      h+='<div class="tm-row"><input id="apvCmtInp_'+a.id+'" class="tm-input" placeholder="댓글 달기..." style="flex:1" onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(a.id)+'\x27)}">';
-      h+='<button class="tm-btn tm-btn-sm" onclick="_apvAddCmt(\x27'+String(a.id)+'\x27)">전송</button></div>';
-      h+='</div></div>';
-      return h;
-    }
-    var html='<div style="max-width:840px;margin:0 auto;padding:4px 2px 40px">';
-    html+='<div class="tm-row" style="margin-bottom:14px"><div style="font-size:17px;font-weight:800;flex:1">🗂 결재</div>';
-    html+='<button class="tm-btn tm-btn-pri" onclick="var s=document.getElementById(\x27apvFormSection\x27);var open=s.style.display===\x27none\x27;s.style.display=open?\x27block\x27:\x27none\x27;if(open){var t=document.getElementById(\x27apvTitle\x27);if(t)t.focus();}">✏️ 결재 상신</button></div>';
-    html+='<div id="apvFormSection" class="tm-card" style="display:none;margin-bottom:16px">';
-    html+='<div class="tm-card-h"><span class="t">새 결재 상신</span></div><div class="tm-card-b">';
-    html+='<label class="tm-label">제목</label><input id="apvTitle" class="tm-input" type="text" placeholder="예: 6월 물품 구매 결재" style="margin-bottom:10px">';
-    html+='<label class="tm-label">내용</label><textarea id="apvBody" class="tm-textarea" placeholder="결재 내용을 입력하세요" style="resize:vertical;min-height:110px;margin-bottom:10px"></textarea>';
-    html+='<label class="tm-label">결재자</label><div class="tm-row" style="margin-bottom:10px;flex-wrap:wrap">';
-    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
-    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="jun"> Jun</label>';
-    html+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="both"> CEO + Jun</label></div>';
-    html+='<label class="tm-btn" style="border-style:dashed">📎 파일/사진 첨부<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label>';
-    html+='<div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>';
-    html+='</div><div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\x27apvFormSection\x27).style.display=\x27none\x27">취소</button>';
-    html+='<button class="tm-btn tm-btn-pri" onclick="submitApproval(\x27'+empId+'\x27)">상신하기</button></div></div>';
-    html+='<div class="tm-row" style="margin-bottom:14px;flex-wrap:wrap">';
-    if(isApprover)html+=tabBtn('inbox','📥 결재 대기',inbox.length,true);
+    var html='<div style="max-width:1180px;margin:0 auto;padding:4px 2px 30px">';
+    html+='<div class="tm-row" style="margin-bottom:12px;flex-wrap:wrap"><div style="font-size:17px;font-weight:800;margin-right:6px">🗂 결재</div>';
+    if(isApprover)html+=tabBtn('inbox','📥 대기',inbox.length,true);
     html+=tabBtn('mine','📤 내 상신',mine.length,false);
     html+=tabBtn('done','🗃 처리완료',done.length,false);
+    html+='<span style="flex:1"></span><button class="tm-btn tm-btn-pri" onclick="_apvOpenForm(\x27'+empId+'\x27)">✏️ 결재 상신</button></div>';
+    html+='<div style="display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px;align-items:start">';
+    html+='<div style="display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 210px);overflow-y:auto;padding-right:2px">';
+    if(!list.length)html+='<div class="tm-empty"><span class="ic">🗂</span>'+(_apvTab==='inbox'?'대기 중인 결재가 없습니다':(_apvTab==='done'?'처리된 결재가 없습니다':'상신한 결재가 없습니다'))+'</div>';
+    else list.forEach(function(a){
+      var selCls=String(a.id)===String(_apvSelId);
+      var nImg=(a.files||[]).filter(function(f){return (f.type||'').indexOf('image/')===0;}).length;
+      html+='<div onclick="_apvSelect(\x27'+String(a.id)+'\x27)" style="background:var(--surface);border:1px solid '+(selCls?'var(--primary)':'var(--border)')+';'+(selCls?'box-shadow:0 0 0 1px var(--primary);':'')+'border-radius:10px;padding:11px 13px;cursor:pointer">';
+      html+='<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px"><span style="flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.title||'(제목 없음)')+'</span>'+badge(a)+'</div>';
+      html+='<div style="font-size:11px;color:var(--text3)">'+esc(nameOf(a.from_id))+' → '+esc(nameOf(a.to_id||'ceo'))+' · '+fmtD(a)+(nImg?' · 🖼'+nImg:'')+((a.files&&a.files.length>nImg)?' 📎':'')+'</div>';
+      html+='</div>';
+    });
     html+='</div>';
-    var list,empty,withAct=false;
-    if(_apvTab==='inbox'){list=inbox;empty='대기 중인 결재가 없습니다';withAct=true;}
-    else if(_apvTab==='done'){list=done;empty='처리된 결재가 없습니다';}
-    else{list=mine;empty='상신한 결재가 없습니다';}
-    if(!list.length)html+='<div class="tm-empty"><span class="ic">🗂</span>'+empty+'</div>';
-    else list.forEach(function(a){html+=card(a,withAct&&a._st==='pending');});
-    html+='</div>';
+    html+='<div class="tm-card" style="min-height:320px">';
+    if(!sel){
+      html+='<div class="tm-empty" style="padding:90px 16px"><span class="ic">👈</span>왼쪽에서 결재를 선택하세요</div>';
+    }else{
+      html+='<div class="tm-card-h"><span class="t" style="font-size:16px">'+esc(sel.title||'(제목 없음)')+'</span>'+badge(sel)+'</div>';
+      html+='<div class="tm-card-b">';
+      html+='<div class="tm-row tm-muted" style="font-size:12px;margin-bottom:14px;flex-wrap:wrap"><span>👤 '+esc(nameOf(sel.from_id))+'</span><span>→</span><span>'+esc(nameOf(sel.to_id||'ceo'))+'</span><span style="margin-left:auto">'+fmtD(sel)+'</span></div>';
+      html+=_apvBodyHtml(sel);
+      if(sel.files&&sel.files.length)html+=renderOpinionAttachments(sel.files);
+      if(sel._st==='rejected'&&sel.reject_reason){
+        html+='<div style="margin-top:12px;padding:10px 13px;background:var(--red-l);border-radius:8px;font-size:12.5px;color:var(--red)">반려 사유: '+esc(sel.reject_reason)+'</div>';
+        if(sel.from_id===empId){
+          html+='<button class="tm-btn tm-btn-sm" style="margin-top:8px" onclick="document.getElementById(\x27resubArea_'+sel.id+'\x27).style.display=\x27block\x27">✏️ 수정 후 재상신</button>';
+          html+='<div id="resubArea_'+sel.id+'" style="display:none;margin-top:10px;padding:12px;background:var(--surface2);border-radius:8px">';
+          html+='<input id="resubTitle_'+sel.id+'" class="tm-input" type="text" value="'+esc(sel.title)+'" style="margin-bottom:6px">';
+          html+='<textarea id="resubBody_'+sel.id+'" class="tm-textarea" style="resize:vertical;min-height:80px">'+esc(sel.body)+'</textarea>';
+          html+='<div class="tm-row" style="margin-top:8px;justify-content:flex-end"><button class="tm-btn tm-btn-sm" onclick="document.getElementById(\x27resubArea_'+sel.id+'\x27).style.display=\x27none\x27">취소</button>';
+          html+='<button class="tm-btn tm-btn-sm tm-btn-pri" onclick="resubmitApproval('+sel.id+');setTimeout(function(){'+rerender()+'},800)">재상신</button></div></div>';
+        }
+      }
+      if(_apvTab==='inbox'&&sel._st==='pending'){
+        html+='<div class="tm-divider"></div>';
+        html+='<div class="tm-row" style="flex-wrap:wrap"><button class="tm-btn tm-btn-ok" style="padding:11px 30px;font-size:14px" onclick="processApproval('+sel.id+',\x27approve\x27);setTimeout(function(){'+rerender()+'},900)">✅ 승인</button>';
+        html+='<input id="rr_'+sel.id+'" class="tm-input" placeholder="반려 시 사유 입력" style="flex:1;min-width:160px">';
+        html+='<button class="tm-btn tm-btn-danger" onclick="processApproval('+sel.id+',\x27reject\x27);setTimeout(function(){'+rerender()+'},900)">반려</button></div>';
+      }
+      html+='<div class="tm-divider"></div>';
+      html+='<div id="apvCmts_'+sel.id+'" style="margin-bottom:8px"></div>';
+      html+='<div class="tm-row"><input id="apvCmtInp_'+sel.id+'" class="tm-input" placeholder="댓글 달기..." style="flex:1" onkeydown="if(event.key===\x27Enter\x27){event.preventDefault();_apvAddCmt(\x27'+String(sel.id)+'\x27)}">';
+      html+='<button class="tm-btn tm-btn-sm" onclick="_apvAddCmt(\x27'+String(sel.id)+'\x27)">전송</button></div>';
+      html+='</div>';
+    }
+    html+='</div></div></div>';
     wrap.innerHTML=html;
-    (rows||[]).forEach(function(a){_apvLoadCmts(String(a.id));});
+    if(sel){_apvLoadCmts(String(sel.id));_apvBindChecks(sel);}
   });
+}
+function _apvEd(cmd,val){var ed=document.getElementById('apvBodyEd');if(ed)ed.focus();try{document.execCommand(cmd,false,val||null);}catch(e){}}
+function _apvEdCheck(){var ed=document.getElementById('apvBodyEd');if(ed)ed.focus();try{document.execCommand('insertHTML',false,'<div><input type="checkbox"> 항목 </div>');}catch(e){}}
+function _apvOpenForm(empId){
+  var old=document.getElementById('apvFormOv');if(old)old.remove();
+  var ov=document.createElement('div');ov.id='apvFormOv';ov.className='tm-ov';
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  var h='<div class="tm-modal" style="max-width:680px">';
+  h+='<div class="tm-modal-h"><span class="t">✏️ 새 결재 상신</span><button class="tm-modal-x" onclick="document.getElementById(\x27apvFormOv\x27).remove()">×</button></div>';
+  h+='<div class="tm-modal-b">';
+  h+='<label class="tm-label">제목</label><input id="apvTitle" class="tm-input" type="text" placeholder="예: 6월 물품 구매 결재" style="margin-bottom:10px">';
+  h+='<label class="tm-label">내용</label>';
+  h+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:0;padding:6px;background:var(--surface2);border-radius:8px 8px 0 0;border:1px solid var(--border2);border-bottom:none">';
+  h+='<button class="tm-btn tm-btn-sm" style="font-weight:900" onclick="_apvEd(\x27bold\x27)">B</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="font-style:italic" onclick="_apvEd(\x27italic\x27)">I</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="text-decoration:underline" onclick="_apvEd(\x27underline\x27)">U</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="text-decoration:line-through" onclick="_apvEd(\x27strikeThrough\x27)">S</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_apvEd(\x27fontSize\x27,\x275\x27)">크게</button>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_apvEd(\x27fontSize\x27,\x273\x27)">보통</button>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_apvEd(\x27fontSize\x27,\x272\x27)">작게</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" style="color:#ef4444;font-weight:800" onclick="_apvEd(\x27foreColor\x27,\x27#ef4444\x27)">가</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="color:#2563eb;font-weight:800" onclick="_apvEd(\x27foreColor\x27,\x27#2563eb\x27)">가</button>';
+  h+='<button class="tm-btn tm-btn-sm" style="font-weight:800" onclick="_apvEd(\x27foreColor\x27,\x27#1a1d2e\x27)">가</button>';
+  h+='<span style="width:1px;background:var(--border);margin:0 2px"></span>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_apvEd(\x27insertUnorderedList\x27)">• 목록</button>';
+  h+='<button class="tm-btn tm-btn-sm" onclick="_apvEdCheck()">☑ 체크</button>';
+  h+='<button class="tm-btn tm-btn-sm tm-btn-ghost" onclick="_apvEd(\x27removeFormat\x27)">지우기</button>';
+  h+='</div>';
+  h+='<div id="apvBodyEd" contenteditable="true" style="min-height:180px;max-height:360px;overflow-y:auto;border:1px solid var(--border2);border-radius:0 0 8px 8px;padding:12px 14px;font-size:14px;line-height:1.8;outline:none;background:var(--surface);margin-bottom:10px"></div>';
+  h+='<label class="tm-label">결재자</label><div class="tm-row" style="margin-bottom:10px;flex-wrap:wrap">';
+  h+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="ceo" checked> CEO (대표)</label>';
+  h+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="jun"> Jun</label>';
+  h+='<label class="tm-chip" style="cursor:pointer"><input type="radio" name="apvTo" value="both"> CEO + Jun</label></div>';
+  h+='<label class="tm-btn" style="border-style:dashed">📎 파일/사진 첨부 (이미지 30MB · 영상 100MB)<input type="file" id="apvFiles" multiple style="display:none" onchange="handleApvFiles(event)"></label>';
+  h+='<div id="apvFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>';
+  h+='</div><div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\x27apvFormOv\x27).remove()">취소</button>';
+  h+='<button class="tm-btn tm-btn-pri" onclick="submitApproval(\x27'+empId+'\x27)">상신하기</button></div></div>';
+  ov.innerHTML=h;document.body.appendChild(ov);
+  var ti=document.getElementById('apvTitle');if(ti)ti.focus();
 }
 
 
@@ -6086,7 +6472,7 @@ async function uploadToStorage(file){
 }
 async function handleApvFiles(event){
   var files=Array.from(event.target.files||[]);
-  var MAX_SIZE_IMG=10*1024*1024;
+  var MAX_SIZE_IMG=30*1024*1024;
   var MAX_SIZE_VID=100*1024*1024;
   var preview=document.getElementById('apvFilePreview');
   if(preview){preview.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px">⏳ 업로드 중...</div>';}
@@ -6095,7 +6481,7 @@ async function handleApvFiles(event){
     var file=files[i];
     var isVideo=file.type.startsWith('video/');
     var maxSize=isVideo?MAX_SIZE_VID:MAX_SIZE_IMG;
-    if(file.size>maxSize){errors.push(file.name+': '+(isVideo?'영상은 100MB':'이미지는 10MB')+' 이하만 가능합니다');continue;}
+    if(file.size>maxSize){errors.push(file.name+': '+(isVideo?'영상은 100MB':'이미지는 30MB')+' 이하만 가능합니다');continue;}
     try{var result=await uploadToStorage(file);results.push(result);}
     catch(e){errors.push(file.name+': 업로드 실패');console.error(e);}
   }
@@ -6124,19 +6510,24 @@ function renderApvFilePreview(files){
 function _apvFileRemove(idx){_apvFiles.splice(idx,1);renderApvFilePreview(_apvFiles);}
 function submitApproval(empId){
   var title=document.getElementById("apvTitle");
-  var body=document.getElementById("apvBody");
-  var toEl=document.querySelector("input[name=\"apvTo\"]:checked");
-  if(!title||!title.value.trim()){toast("\uc81c\ubaa9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
-  if(!body||!body.value.trim()){toast("\ub0b4\uc6a9\uc744 \uc785\ub825\ud574\uc8fc\uc138\uc694","#ef4444");return;}
+  var ed=document.getElementById("apvBodyEd");
+  var toEl=document.querySelector("input[name='apvTo']:checked");
+  if(!title||!title.value.trim()){toast("제목을 입력해주세요","#ef4444");return;}
+  var bodyVal=ed?ed.innerHTML:"";
+  var plain=ed?(ed.textContent||"").trim():"";
+  var hasEl=ed&&ed.querySelector("input,img");
+  if(!plain&&!hasEl){toast("내용을 입력해주세요","#ef4444");return;}
   var files=_apvFiles||[];
   var _apvTo=toEl?toEl.value:"ceo";var _apvTitle=title.value.trim();
-  sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:body.value.trim(),files:files,status:"pending",ts:Date.now()})
+  sbPost("staff_approvals",{from_id:CU?CU.id:"",to_id:_apvTo,title:_apvTitle,body:bodyVal,files:files,status:"pending",ts:Date.now()})
     .then(function(){
-      toast("\uacb0\uc7ac \uc0c1\uc2e0 \uc644\ub8cc!");
-      _apvFiles=[];renderApvFilePreview([]);
-      renderApprovalPage(empId);renderEmpApvTab(curEmpId);_empApvShowForm();
-      var _apvIds=[_apvTo];
-      createNotifMultiple(_apvIds,'approval','',CU.name+'님이 결재를 요청했습니다: '+_apvTitle.slice(0,20));
+      toast("결재 상신 완료!");
+      _apvFiles=[];
+      var ov=document.getElementById("apvFormOv");if(ov)ov.remove();
+      _apvTab="mine";_apvSelId=null;
+      renderApprovalPage(empId,_apvCtx.tid||undefined);
+      if(typeof renderEmpApvTab==="function"&&curEmpId)renderEmpApvTab(curEmpId);
+      createNotifMultiple([_apvTo],"approval","",CU.name+"님이 결재를 요청했습니다: "+_apvTitle.slice(0,20));
     });
 }
 function processApproval(id, action){
