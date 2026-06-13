@@ -11,10 +11,15 @@ export default function PortalSettlementPage() {
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [finalClosed, setFinalClosed] = useState(false);
+  const [open, setOpen] = useState<boolean | null>(null); // 데모 공개 여부 (null=확인중)
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async (bid: string) => {
     setLoading(true);
+    const { data: bk } = await supabase.from("bookings").select("settlement_open").eq("id", bid).maybeSingle();
+    const isOpen = !!bk?.settlement_open;
+    setOpen(isOpen);
+    if (!isOpen) { setLoading(false); return; }
     const { data } = await supabase.from("settlement_items").select("id, section, kind, label, amount, item_date, note")
       .eq("booking_id", bid).eq("status", "approved").order("item_date", { ascending: true });
     setItems((data || []) as Item[]);
@@ -52,24 +57,41 @@ export default function PortalSettlementPage() {
   const depDeduct = sumOf(depositItems, "deduct");
   const depRefund = sumOf(depositItems, "refund");
   const depositRefund = depRecv - depDeduct + depRefund;
-  const classTotal = classItems.reduce((a, i) => a + Number(i.amount || 0), 0);
-  const finalNet = depositRefund - classTotal;
+  const classCharge = classItems.filter(i => i.kind !== "payment").reduce((a, i) => a + Number(i.amount || 0), 0);
+  const classPaid = classItems.filter(i => i.kind === "payment").reduce((a, i) => a + Number(i.amount || 0), 0);
+  const classDue = classCharge - classPaid;
+  const finalNet = depositRefund - classDue;
 
-  const Row = (it: Item) => (
-    <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderBottom: "1px solid #f8fafc" }}>
-      <span style={{ fontSize: 11.5, color: "#94a3b8", width: 60, flexShrink: 0 }}>{it.item_date || "-"}</span>
-      <span style={{ flex: 1, fontSize: 13, minWidth: 0 }}>{it.label}{it.note && <span style={{ color: "#94a3b8", fontSize: 11 }}> · {it.note}</span>}</span>
-      <b style={{ fontSize: 13, flexShrink: 0, color: it.kind === "deduct" ? "#dc2626" : it.kind === "refund" ? "#166534" : "#1a1a2e" }}>{it.kind === "deduct" ? "−" : it.kind === "refund" ? "+" : ""}{peso(Number(it.amount))}</b>
-    </div>
-  );
+  const KIND_TAG: Record<string, { lbl: string; bg: string; c: string; sign: string }> = {
+    deposit: { lbl: "보증금", bg: "#dcfce7", c: "#166534", sign: "+" },
+    deduct: { lbl: "차감", bg: "#fef2f2", c: "#dc2626", sign: "−" },
+    refund: { lbl: "환불", bg: "#dcfce7", c: "#166534", sign: "+" },
+    charge: { lbl: "청구", bg: "#eff6ff", c: "#1d4ed8", sign: "+" },
+    payment: { lbl: "납부", bg: "#f5f3ff", c: "#6d28d9", sign: "−" },
+  };
+  const Row = (it: Item) => {
+    const tg = KIND_TAG[it.kind] || { lbl: it.kind, bg: "#f1f5f9", c: "#475569", sign: "" };
+    return (
+      <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", borderBottom: "1px solid #f8fafc" }}>
+        <span style={{ fontSize: 11.5, color: "#94a3b8", width: 52, flexShrink: 0 }}>{it.item_date || "-"}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: tg.bg, color: tg.c, flexShrink: 0 }}>{tg.lbl}</span>
+        <span style={{ flex: 1, fontSize: 13, minWidth: 0 }}>{it.label}{it.note && <span style={{ color: "#94a3b8", fontSize: 11 }}> · {it.note}</span>}</span>
+        <b style={{ fontSize: 13, flexShrink: 0, color: tg.c }}>{tg.sign}{peso(Number(it.amount))}</b>
+      </div>
+    );
+  };
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 18px 60px", fontFamily: "'Noto Sans KR',sans-serif", color: "#1a1a2e" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <button onClick={() => router.push("/portal/dashboard")} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600 }}>← 마이페이지</button>
-        <h1 style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>🧾 정산내역</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>🧾 정산내역 {open && <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", padding: "2px 8px", borderRadius: 8, verticalAlign: "middle" }}>베타</span>}</h1>
       </div>
       <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 16 }}>현지에서 지불하시는 금액(보증금·수업·교재비 등) 내역입니다.</p>
+
+      {open === false ? (
+        <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 44, textAlign: "center", color: "#94a3b8", fontSize: 14, lineHeight: 1.6 }}>정산내역 기능은 현재 준비 중입니다.<br />오픈되면 안내드리겠습니다 🙏</div>
+      ) : (<>
 
       {finalClosed && (
         <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 12, padding: "14px 18px", marginBottom: 16 }}>
@@ -99,8 +121,9 @@ export default function PortalSettlementPage() {
               <div style={{ fontSize: 19, fontWeight: 900, color: "#047857", marginTop: 3 }}>{peso(depositRefund)}</div>
             </div>
             <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "13px 15px" }}>
-              <div style={{ fontSize: 12, color: "#6b7c93", fontWeight: 700 }}>② 수업·교재비 합계</div>
-              <div style={{ fontSize: 19, fontWeight: 900, marginTop: 3 }}>{peso(classTotal)}</div>
+              <div style={{ fontSize: 12, color: "#6b7c93", fontWeight: 700 }}>② 수업·교재비 받을 잔액</div>
+              <div style={{ fontSize: 19, fontWeight: 900, marginTop: 3 }}>{peso(classDue)}</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>청구 {peso(classCharge)}{classPaid ? ` − 납부 ${peso(classPaid)}` : ""}</div>
             </div>
           </div>
           <div style={{ background: finalNet >= 0 ? "#0f5132" : "#7f1d1d", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, color: "#fff" }}>
@@ -113,6 +136,7 @@ export default function PortalSettlementPage() {
           <p style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 12, lineHeight: 1.6 }}>※ 본 내역은 현지 지불 금액 기준입니다. 보증금은 차감 항목을 제외하고 환급됩니다.</p>
         </>
       )}
+      </>)}
     </div>
   );
 }

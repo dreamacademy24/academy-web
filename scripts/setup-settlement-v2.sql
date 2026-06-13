@@ -63,4 +63,7 @@ ALTER TABLE settlement_status ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "all" ON settlement_status;
 CREATE POLICY "all" ON settlement_status FOR ALL USING (true) WITH CHECK (true);
 
+-- 5) 데모 공개 대상 (지정한 예약만 엄마 포털에 정산내역 노출)
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS settlement_open boolean DEFAULT false;
+
 NOTIFY pgrst, 'reload schema';

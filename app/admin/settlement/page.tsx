@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; students?: unknown; }
+interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; students?: unknown; settlement_open?: boolean | null; }
 function studentNames(b: Booking): string {
   const raw = b.students;
   let arr: any[] = [];
@@ -52,7 +52,7 @@ export default function SettlementPage() {
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, students").order("checkin_date", { ascending: false });
+    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, students, settlement_open").order("checkin_date", { ascending: false });
     const today = today10();
     const rank = (b: Booking) => {
       const ci = b.checkin_date || "", co = b.checkout_date || "";
@@ -110,8 +110,11 @@ export default function SettlementPage() {
   const depDeduct = sumOf(depositItems, "deduct");
   const depRefund = sumOf(depositItems, "refund");
   const depositRefund = depRecv - depDeduct + depRefund;
-  const classTotal = appr(classItems).reduce((a, i) => a + Number(i.amount || 0), 0);
-  const finalNet = depositRefund - classTotal; // +면 환불, −면 납부
+  // 수업·교재비: 청구(charge 등) = 받을 돈(+), 납부(payment) = 이미 받음(−) → 받을 잔액 = 청구 − 납부
+  const classCharge = appr(classItems).filter(i => i.kind !== "payment").reduce((a, i) => a + Number(i.amount || 0), 0);
+  const classPaid = appr(classItems).filter(i => i.kind === "payment").reduce((a, i) => a + Number(i.amount || 0), 0);
+  const classDue = classCharge - classPaid; // 아직 받아야 할 수업·교재비
+  const finalNet = depositRefund - classDue; // +면 환불, −면 납부
 
   // ── 항목 추가 ──
   function openAdd(section: Section) {
@@ -227,6 +230,16 @@ export default function SettlementPage() {
     toastOk("승인됐어요 (엄마 화면에 표시)");
     if (sel) loadItems(sel.id);
   }
+  // 데모 공개 토글 — 지정한 예약만 엄마 포털에 정산내역 노출
+  async function toggleOpen() {
+    if (!sel) return;
+    const next = !sel.settlement_open;
+    const { error } = await supabase.from("bookings").update({ settlement_open: next }).eq("id", sel.id);
+    if (error) { toastErr("변경 실패: " + error.message); return; }
+    setSel({ ...sel, settlement_open: next });
+    setBookings(prev => prev.map(b => b.id === sel.id ? { ...b, settlement_open: next } : b));
+    toastOk(next ? "엄마에게 공개됨 (베타 대상)" : "엄마 공개 해제됨");
+  }
 
   // ── 마감 ──
   async function setClose(part: "academy" | "final") {
@@ -259,8 +272,8 @@ export default function SettlementPage() {
   // ── 인쇄 (1장 자동 축소) ──
   function buildPrint() {
     if (!sel) return;
-    const dRows = depositItems.map(i => `<tr><td class="d">${i.item_date || ""}</td><td>${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${i.kind === "deduct" ? "minus" : "plus"}">${i.kind === "deduct" ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
-    const cRows = classItems.map(i => `<tr><td class="d">${i.item_date || ""}</td><td>${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a">${peso(Number(i.amount))}</td></tr>`).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
+    const dRows = depositItems.map(i => { const tag = i.kind === "deduct" ? "차감" : i.kind === "refund" ? "환불" : "보증금"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${i.kind === "deduct" ? "#dc2626" : "#166534"}">[${tag}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${i.kind === "deduct" ? "minus" : "plus"}">${i.kind === "deduct" ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
+    const cRows = classItems.map(i => { const pay = i.kind === "payment"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${pay ? "#6d28d9" : "#1d4ed8"}">[${pay ? "납부" : "청구"}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${pay ? "minus" : "plus"}">${pay ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
     const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"/><title>정산내역 - ${esc(sel.booker_name || "")}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 body{font-family:'Noto Sans KR',Arial,sans-serif;color:#1a1a2e;background:#fff}
@@ -289,7 +302,7 @@ td.empty{color:#cbd5e1;text-align:center}
 <table>${cRows}</table>
 <div class="tot">
   <div class="box refund"><div class="lb">① 보증금 환불 예정</div><div class="vl">${peso(depositRefund)}</div></div>
-  <div class="box"><div class="lb">② 수업·교재비 합계</div><div class="vl">${peso(classTotal)}</div></div>
+  <div class="box"><div class="lb">② 수업·교재비 받을 잔액 (청구 ${peso(classCharge)}${classPaid ? ` − 납부 ${peso(classPaid)}` : ""})</div><div class="vl">${peso(classDue)}</div></div>
   <div class="box final" style="background:${finalNet >= 0 ? "#0f5132" : "#7f1d1d"};color:#fff;border:none"><div class="lb" style="color:#fff;opacity:.85">최종 ${finalNet >= 0 ? "환불" : "납부"} (①−②)</div><div class="vl" style="color:#fff">${peso(Math.abs(finalNet))}</div></div>
 </div>
 <div class="foot">※ 본 정산내역은 현지 지불 금액 기준입니다. 보증금은 차감 항목을 제외하고 환급됩니다. 문의는 담당 매니저에게 연락 주세요.</div>
@@ -319,7 +332,7 @@ td.empty{color:#cbd5e1;text-align:center}
         <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>🧾 정산 관리</h1>
         <button onClick={() => setPresetMgr(true)} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⚙️ 자주 쓰는 항목</button>
       </div>
-      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>현지 지불 금액만 정산합니다 (원화 잔금입금 제외). 보증금 정산 / 수업·교재비를 기록하고, 최종 마감 시 엄마에게 알림이 전송됩니다.</p>
+      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>현지 지불 금액만 정산합니다 (원화 잔금입금 제외). 보증금 정산 / 수업·교재비를 기록하고, 최종 마감 시 엄마에게 알림이 전송됩니다. <b style={{ color: "#7c3aed" }}>※ 베타: 예약별 "엄마 공개" 토글을 켠 예약만 엄마 포털에 정산내역이 보입니다.</b></p>
 
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 18, alignItems: "start" }}>
         {/* 예약 선택 */}
@@ -359,7 +372,8 @@ td.empty{color:#cbd5e1;text-align:center}
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <div style={{ fontSize: 17, fontWeight: 800 }}>{sel.booker_name} <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{sel.house_no || ""}</span></div>
-                <button onClick={importInvoice} disabled={importing} style={{ marginLeft: "auto", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1 }}>{importing ? "불러오는 중…" : "📄 인보이스 불러오기"}</button>
+                <button onClick={toggleOpen} title="지정한 예약만 엄마 포털에 정산내역이 보입니다 (데모)" style={{ marginLeft: "auto", background: sel.settlement_open ? "#dcfce7" : "#f1f5f9", border: `1px solid ${sel.settlement_open ? "#86efac" : "#e2e8f0"}`, color: sel.settlement_open ? "#15803d" : "#64748b", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>{sel.settlement_open ? "👩‍👧 엄마 공개 ON (베타)" : "🔒 엄마 비공개"}</button>
+                <button onClick={importInvoice} disabled={importing} style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1 }}>{importing ? "불러오는 중…" : "📄 인보이스 불러오기"}</button>
                 <button onClick={buildPrint} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>🖨 인쇄</button>
               </div>
 
@@ -388,9 +402,9 @@ td.empty{color:#cbd5e1;text-align:center}
                   <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 4 }}>{peso(depRecv)} − 차감 {peso(depDeduct)}{depRefund ? ` + 환불 ${peso(depRefund)}` : ""}</div>
                 </div>
                 <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "13px 15px" }}>
-                  <div style={{ fontSize: 12, color: "#6b7c93", fontWeight: 700 }}>② 수업·교재비 합계</div>
-                  <div style={{ fontSize: 20, fontWeight: 900, marginTop: 3 }}>{peso(classTotal)}</div>
-                  <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 4 }}>{classItems.length}개 항목</div>
+                  <div style={{ fontSize: 12, color: "#6b7c93", fontWeight: 700 }}>② 수업·교재비 받을 잔액</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, marginTop: 3, color: classDue < 0 ? "#6d28d9" : "#1a1a2e" }}>{peso(classDue)}</div>
+                  <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 4 }}>청구 {peso(classCharge)}{classPaid ? ` − 납부 ${peso(classPaid)}` : ""}</div>
                 </div>
               </div>
               {/* 최종 환불 / 납부 = ① − ② */}
@@ -424,10 +438,16 @@ td.empty{color:#cbd5e1;text-align:center}
               {presets.filter(p => p.section === aSection).length === 0 && <span style={{ fontSize: 12, color: "#cbd5e1" }}>등록된 자주 쓰는 항목이 없습니다 (⚙️에서 추가)</span>}
             </div>
             <div style={{ display: "grid", gap: 9 }}>
-              {aSection === "deposit" && (
+              {aSection === "deposit" ? (
                 <div style={{ display: "flex", gap: 6 }}>
                   {(["deposit", "deduct", "refund"] as Kind[]).map(k => (
                     <button key={k} onClick={() => setAKind(k)} style={{ flex: 1, fontSize: 12.5, padding: "7px 0", borderRadius: 8, border: `1px solid ${aKind === k ? "#4f46e5" : "#e2e8f0"}`, background: aKind === k ? "#eef2ff" : "#fff", color: aKind === k ? "#4338ca" : "#64748b", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>{k === "deposit" ? "보증금 +" : k === "deduct" ? "차감 −" : "환불 +"}</button>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 6 }}>
+                  {(["charge", "payment"] as Kind[]).map(k => (
+                    <button key={k} onClick={() => setAKind(k)} style={{ flex: 1, fontSize: 12.5, padding: "7px 0", borderRadius: 8, border: `1px solid ${aKind === k ? "#4f46e5" : "#e2e8f0"}`, background: aKind === k ? "#eef2ff" : "#fff", color: aKind === k ? "#4338ca" : "#64748b", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>{k === "charge" ? "청구 + (받을 돈)" : "납부 − (받은 돈)"}</button>
                   ))}
                 </div>
               )}
@@ -455,6 +475,14 @@ td.empty{color:#cbd5e1;text-align:center}
 
 function esc(s: string) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
+const KIND_TAG: Record<string, { lbl: string; bg: string; c: string; sign: string }> = {
+  deposit: { lbl: "보증금", bg: "#dcfce7", c: "#166534", sign: "+" },
+  deduct: { lbl: "차감", bg: "#fef2f2", c: "#dc2626", sign: "−" },
+  refund: { lbl: "환불", bg: "#dcfce7", c: "#166534", sign: "+" },
+  charge: { lbl: "청구", bg: "#eff6ff", c: "#1d4ed8", sign: "+" },
+  payment: { lbl: "납부", bg: "#f5f3ff", c: "#6d28d9", sign: "−" },
+};
+
 function SectionBlock({ title, color, sub, items, onAdd, onDel, onApprove }: { title: string; color: string; sub?: string; items: Item[]; onAdd: () => void; onDel: (id: string) => void; onApprove: (id: string) => void }) {
   return (
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
@@ -465,13 +493,15 @@ function SectionBlock({ title, color, sub, items, onAdd, onDel, onApprove }: { t
       </div>
       {items.length === 0 ? <div style={{ padding: 16, color: "#cbd5e1", fontSize: 12.5, textAlign: "center" }}>내역이 없습니다</div>
         : items.map(it => (
-          <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #f8fafc", background: it.status !== "approved" ? "#fffbeb" : "transparent" }}>
+          {(() => { const tg = KIND_TAG[it.kind] || { lbl: it.kind, bg: "#f1f5f9", c: "#475569", sign: "" }; return (
+          <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 14px", borderBottom: "1px solid #f8fafc", background: it.status !== "approved" ? "#fffbeb" : "transparent" }}>
             <span style={{ fontSize: 11.5, color: "#94a3b8", width: 62, flexShrink: 0 }}>{it.item_date || "-"}</span>
+            <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: tg.bg, color: tg.c, flexShrink: 0 }}>{tg.lbl}</span>
             <span style={{ flex: 1, fontSize: 13, minWidth: 0 }}>{it.label}{it.note && <span style={{ color: "#94a3b8", fontSize: 11 }}> · {it.note}</span>}{it.status !== "approved" && <span style={{ color: "#b45309", fontSize: 11, fontWeight: 700 }}> · 승인대기</span>}</span>
-            <b style={{ fontSize: 13, flexShrink: 0, color: it.kind === "deduct" ? "#dc2626" : it.kind === "refund" ? "#166534" : "#1a1a2e" }}>{it.kind === "deduct" ? "−" : it.kind === "refund" ? "+" : ""}{peso(Number(it.amount))}</b>
+            <b style={{ fontSize: 13, flexShrink: 0, color: tg.c }}>{tg.sign}{peso(Number(it.amount))}</b>
             {it.status !== "approved" && <button onClick={() => onApprove(it.id)} style={{ border: "none", background: "#16a34a", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>승인</button>}
             <button onClick={() => onDel(it.id)} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>×</button>
-          </div>
+          </div>); })()}
         ))}
     </div>
   );
