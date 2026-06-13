@@ -28,6 +28,7 @@ export default function SettlementPage() {
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [search, setSearch] = useState("");
+  const [listFilter, setListFilter] = useState<"staying" | "upcoming" | "all">("staying");
   const [sel, setSel] = useState<Booking | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -87,11 +88,17 @@ export default function SettlementPage() {
   }, []);
   useEffect(() => { if (sel?.id) { loadItems(sel.id); loadStatus(sel.id); } else { setItems([]); setStatus(null); } }, [sel?.id, loadItems, loadStatus]);
 
+  const isStaying = (b: Booking) => { const t = today10(); return !!(b.checkin_date && b.checkin_date.slice(0, 10) <= t && (!b.checkout_date || b.checkout_date.slice(0, 10) >= t)); };
+  const isUpcoming = (b: Booking) => { const t = today10(); return !!(b.checkin_date && b.checkin_date.slice(0, 10) > t); };
+  const stayingCount = useMemo(() => bookings.filter(isStaying).length, [bookings]);
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return bookings.slice(0, 40);
-    return bookings.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || ""} ${studentNames(b)}`.toLowerCase().includes(q)).slice(0, 40);
-  }, [bookings, search]);
+    let base = bookings;
+    if (q) base = base.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || ""} ${studentNames(b)}`.toLowerCase().includes(q));
+    else if (listFilter === "staying") base = base.filter(isStaying);
+    else if (listFilter === "upcoming") base = base.filter(isUpcoming);
+    return base.slice(0, 60);
+  }, [bookings, search, listFilter]);
 
   const sectionOf = (i: Item) => i.section || (["deposit", "deduct", "refund"].includes(i.kind) ? "deposit" : "class");
   const depositItems = items.filter(i => sectionOf(i) === "deposit");
@@ -318,7 +325,12 @@ td.empty{color:#cbd5e1;text-align:center}
         {/* 예약 선택 */}
         <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ padding: 12, borderBottom: "1px solid #f1f5f9" }}>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="예약자·예약번호·방번호 검색" style={{ width: "100%", padding: "9px 11px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            <div style={{ display: "flex", gap: 5, marginBottom: 9 }}>
+              {([["staying", `🟢 투숙중${stayingCount ? ` ${stayingCount}` : ""}`], ["upcoming", "📅 예정"], ["all", "전체"]] as [typeof listFilter, string][]).map(([k, lbl]) => (
+                <button key={k} onClick={() => setListFilter(k)} style={{ flex: 1, fontSize: 12, fontWeight: 700, padding: "7px 0", borderRadius: 7, border: `1px solid ${listFilter === k ? "#16a34a" : "#e2e8f0"}`, background: listFilter === k ? "#dcfce7" : "#fff", color: listFilter === k ? "#15803d" : "#64748b", cursor: "pointer", fontFamily: "inherit" }}>{lbl}</button>
+              ))}
+            </div>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="검색 (이름·예약번호·방번호) — 검색 시 전체에서 찾음" style={{ width: "100%", padding: "9px 11px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
           </div>
           <div style={{ maxHeight: 520, overflowY: "auto" }}>
             {filtered.map(b => {
@@ -335,7 +347,7 @@ td.empty{color:#cbd5e1;text-align:center}
                 </div>
               );
             })}
-            {filtered.length === 0 && <div style={{ padding: 16, color: "#cbd5e1", fontSize: 13 }}>예약이 없습니다</div>}
+            {filtered.length === 0 && <div style={{ padding: 16, color: "#cbd5e1", fontSize: 13 }}>{search ? "검색 결과가 없습니다" : listFilter === "staying" ? "현재 투숙중인 예약이 없습니다 (전체 탭에서 확인)" : "예약이 없습니다"}</div>}
           </div>
         </div>
 
