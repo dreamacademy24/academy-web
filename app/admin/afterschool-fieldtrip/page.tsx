@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { toastErr } from "@/lib/toast";
+import { toastErr, toastOk } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -160,6 +160,28 @@ export default function AfterschoolFieldtripAdminPage() {
     setApps(apps.map(a => a.id === appId ? { ...a, status } : a));
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", appId);
     if (error) { toastErr("상태 변경 실패: " + error.message); setApps(prev); }
+  }
+
+  // 칩별 삭제 — 해당 프로그램(토큰)만 제거. 토큰이 하나뿐이면 신청 row 전체 삭제.
+  // fieldtrip_applications 를 직접 수정하므로 현지직원(/admineng/afterschool) 표에도 자동 반영됨.
+  async function deleteToken(appId: number, token: string, childName: string, programName: string) {
+    const a = apps.find(x => x.id === appId);
+    if (!a) return;
+    const tokens = (a.date || "").split(",").map(t => t.trim()).filter(Boolean);
+    const remaining = tokens.filter(t => t !== token);
+    if (!window.confirm(`${childName || ""} — "${programName}" 신청을 삭제할까요?\n(티쳐 표에서도 함께 사라집니다)`)) return;
+    const prev = apps;
+    if (remaining.length === 0) {
+      setApps(apps.filter(x => x.id !== appId));
+      const { error } = await supabase.from("fieldtrip_applications").delete().eq("id", appId);
+      if (error) { toastErr("삭제 실패: " + error.message); setApps(prev); return; }
+    } else {
+      const newDate = remaining.join(", ");
+      setApps(apps.map(x => x.id === appId ? { ...x, date: newDate } : x));
+      const { error } = await supabase.from("fieldtrip_applications").update({ date: newDate }).eq("id", appId);
+      if (error) { toastErr("삭제 실패: " + error.message); setApps(prev); return; }
+    }
+    toastOk("삭제됐어요 (티쳐 표에도 반영)");
   }
 
   function toggleMonth(m: number) {
@@ -412,6 +434,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                                   <option value="confirmed">확정</option>
                                   <option value="cancelled">취소</option>
                                 </select>
+                                <button
+                                  onClick={() => deleteToken(r.appId, r.token, r.childName, r.programName)}
+                                  title="이 신청 삭제 (티쳐 표에도 반영)"
+                                  style={{border:"none", background:"none", color:"#cbd5e1", cursor:"pointer", fontSize:13, padding:"0 2px", lineHeight:1}}
+                                >🗑</button>
                               </div>
                             );
                           })}
