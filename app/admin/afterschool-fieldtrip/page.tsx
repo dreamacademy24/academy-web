@@ -93,7 +93,7 @@ export default function AfterschoolFieldtripAdminPage() {
       const { data: st } = await supabase.from("students").select("id, name_kr, name_en, booking_id");
       const rows = (st || []) as { id: string; name_kr: string | null; name_en: string | null; booking_id: string | null }[];
       const bids = Array.from(new Set(rows.map(r => r.booking_id).filter(Boolean))) as string[];
-      const bmap: Record<string, { booker_name: string | null; house_no: string | null; accom_room: string | null; seg1_type: string | null; seg2_type: string | null; seg2_checkin: string | null; accom_type: string | null }> = {};
+      const bmap: Record<string, any> = {};
       if (bids.length) {
         const { data: bks } = await supabase.from("bookings").select("id, booker_name, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type").in("id", bids);
         (bks || []).forEach((b: any) => { bmap[b.id] = b; });
@@ -528,4 +528,3 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
     </div>
   </>);
 }
-                                                                                                                             

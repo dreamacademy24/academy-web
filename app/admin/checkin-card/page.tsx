@@ -3,19 +3,17 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import { firstAccomRoomLabel, firstAccomName, isCombo, type ComboBooking } from "@/lib/checkinCard";
 
-interface Booking {
+type Booking = ComboBooking & {
   booker_name?: string;
   booker_english?: string;
-  accom_type?: string;
-  accom_room?: string;
-  house_no?: string;
   checkin_date?: string;
   flight_in?: string;
   flight_in_airline?: string;
   flight_in_date?: string;
   flight_in_time?: string;
-}
+};
 
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 
@@ -24,30 +22,6 @@ function fmtMonthDay(d: string): string {
   const dt = new Date(d + "T00:00:00");
   if (isNaN(dt.getTime())) return d;
   return `${MONTHS[dt.getMonth()]}-${dt.getDate()}`;
-}
-
-function accomLabel(accom_type: string): string {
-  const t = accom_type || "";
-  if (t.includes("+")) {
-    const parts: string[] = [];
-    if (t.includes("드림하우스") || t.includes("드하")) parts.push("Dream House");
-    if (t.includes("제이파크")) parts.push("J-Park");
-    if (t.includes("큐브나인") || t.includes("큐브")) parts.push("Cube9");
-    return parts.join(" + ") || t;
-  }
-  if (t.includes("드림하우스")) return "Dream House";
-  if (t.includes("제이파크")) return "J-Park";
-  if (t.includes("큐브나인") || t.includes("큐브")) return "Cube9";
-  if (t.includes("통학")) return "Commute";
-  return t;
-}
-
-function roomLabel(accom_room: string, house_no: string): string {
-  const raw = (house_no || accom_room || "").toString();
-  if (!raw) return "";
-  const cleaned = raw.replace(/^dh/i, "").replace(/\s+/g, "").toUpperCase();
-  // 숫자 다음에 오는 영문자 앞에 공백: B17L14 → B17 L14
-  return cleaned.replace(/(\d+)([A-Z])/g, "$1 $2");
 }
 
 function CheckinCardInner() {
@@ -79,10 +53,12 @@ function CheckinCardInner() {
 
   const korName = b.booker_name || "-";
   const engName = b.booker_english || "";
-  const accom = accomLabel(b.accom_type || "");
-  const room = roomLabel(b.accom_room || "", b.house_no || "");
-  // 날짜: 항공편 입국일 우선, 없으면 체크인 날짜
-  const dateStr = fmtMonthDay(b.flight_in_date || b.checkin_date || "");
+  // 콤보예약(제이파크+드림하우스 등)이면 첫 숙소(seg1) 기준 — 양지나=제이파크 먼저
+  const { accom, room } = firstAccomRoomLabel(b);
+  const combo = isCombo(b);
+  const firstName = firstAccomName(b);
+  // 날짜: 콤보면 seg1 체크인, 아니면 항공편 입국일 → 체크인
+  const dateStr = fmtMonthDay((combo ? b.seg1_checkin : "") || b.flight_in_date || b.checkin_date || "");
   const flightTime = b.flight_in_time || "";
   const flightCode = b.flight_in_airline || b.flight_in || "";
   // "MAY-9 / 23:30 (KE601)" 또는 "MAY-9 (KE601 5/9 23:30)" 또는 "MAY-9"
@@ -117,6 +93,7 @@ function CheckinCardInner() {
         {accom && <div style={{fontSize:48,color:"#1a6fc4",fontWeight:700,marginBottom:8}}>{accom}</div>}
         {room && <div style={{fontSize:48,color:"#1a6fc4",fontWeight:700,marginBottom:44}}>{room}</div>}
         {flightLine && <div style={{fontSize:40,color:"#1a1a2e",fontWeight:600}}>{flightLine}</div>}
+        {combo && <div style={{fontSize:22,color:"#6d28d9",fontWeight:700,marginTop:28,background:"#ede9fe",padding:"10px 24px",borderRadius:999}}>입국 시 {firstName}로 이동</div>}
       </div>
     </>
   );

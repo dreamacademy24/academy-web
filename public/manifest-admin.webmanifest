@@ -4,14 +4,26 @@
   "short_name": "드림 관리자",
   "description": "드림아카데미 관리자 허브",
   "start_url": "/admin/hub",
-  "scope": "/",
+  "scope": "/admin",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1a6fc4",
   "orientation": "portrait",
   "icons": [
-    { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
   ]
 }

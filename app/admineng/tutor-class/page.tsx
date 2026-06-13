@@ -827,7 +827,6 @@ export default function EngTutorClassPage() {
       const { data: linked } = await supabase.from("tutor_lessons")
         .select("id").eq("application_id", detail.id);
       const linkedIds = (linked || []).map((l: any) => l.id);
-      // application_id 없는 옛 수업: admin_memo에서 request_id 매칭
       if (linkedIds.length === 0) {
         const { data: byMemo } = await supabase.from("tutor_lessons")
           .select("id,admin_memo").like("admin_memo", `%request_id: ${detail.id}%`);
@@ -1433,4 +1432,21 @@ export default function EngTutorClassPage() {
                 {comments.length === 0 && <div style={{color:"#94a3b8",fontSize:12}}>No comments yet.</div>}
                 {comments.map(c => (
                   <div className="ecmsg" key={c.id}>
-                    <div className="ecwho">{c.tutor_name}<span className="ectime">{new Date(c.created_at).toLocaleDateString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span
+                    <div className="ecwho">{c.tutor_name}<span className="ectime">{new Date(c.created_at).toLocaleDateString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</span></div>
+                    <div className="ectxt">{c.comment}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="ecinput" style={{marginTop:10}}>
+                <textarea placeholder="Write a comment (staff only)..." value={comment} onChange={e=>setComment(e.target.value)} />
+                <button className="ebtn ebtn-blue" disabled={savingComment||!comment.trim()} onClick={submitComment} style={{alignSelf:"flex-end"}}>
+                  {savingComment?"...":"Send"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </>);
+}

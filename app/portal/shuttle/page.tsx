@@ -790,4 +790,16 @@ export default function PortalShuttlePage() {
                   <li>정해진 픽업·드롭 장소 외 중도 승·하차는 불가합니다.</li>
                   <li>가는 차량을 탑승하지 않고 돌아오는 차량만 탑승하는 것은 불가합니다.</li>
                   <li>가는 차량만 탑승하는 것은 가능합니다.</li>
-                  <l
+                  <li>최대 정원 내에서만 베이비시터 동반 탑승이 가능합니다.</li>
+                  <li>투어 셔틀은 <strong>투숙객 전용 서비스</strong>로, 외부인은 탑승이 불가합니다.</li>
+                  <li>정원 외 탑승은 안전상 절대 허용되지 않습니다.</li>
+                </ul>
+                <p className="tagline">자세한 셔틀 시간표는 드림센터 내부 공지를 기준으로 합니다.</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
