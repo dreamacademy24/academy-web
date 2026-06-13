@@ -86,6 +86,7 @@ function CheckinDetailsInner() {
   const autoSelectedRef = useRef(false);
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [checkinStatus, setCheckinStatus] = useState<Record<string, { submitted: boolean; saved: boolean }>>({});
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -101,7 +102,7 @@ function CheckinDetailsInner() {
 
   const loadBookings = useCallback(async () => {
     const res = await fetch("/api/admin/checkin-details");
-    if (res.ok) { const d = await res.json(); setBookings(d.bookings || []); }
+    if (res.ok) { const d = await res.json(); setBookings(d.bookings || []); setCheckinStatus(d.status || {}); }
   }, []);
 
   useEffect(() => { if (isAdminAuthed()) setAuthed(true); else window.location.href = "/login"; }, []);
@@ -296,7 +297,9 @@ function CheckinDetailsInner() {
 <title>${L.title} — ${dash(b.booker_name)}</title>
 <style>
   *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:18px 22px;background:#fff;min-height:257mm;display:flex;flex-direction:column;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:0;background:#fff;}
+  #cdwrap{overflow:hidden;}
+  #cdsheet{padding:18px 22px;min-height:257mm;display:flex;flex-direction:column;transform-origin:top center;}
 
   /* ── HEADER ── */
   .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
@@ -358,6 +361,7 @@ function CheckinDetailsInner() {
   }
 </style></head>
 <body>
+<div id="cdwrap"><div id="cdsheet">
   <div class="hd">
     <img src="${logo}" onerror="this.style.display='none'"/>
     <div class="hd-right">
@@ -457,6 +461,8 @@ function CheckinDetailsInner() {
       </tr>
     </table>
   </div>
+</div></div>
+  <script>(function(){function fit(){var w=document.getElementById('cdwrap'),s=document.getElementById('cdsheet');if(!w||!s)return;s.style.transform='';w.style.height='';var maxH=Math.round(277/25.4*96);var h=s.scrollHeight;if(h>maxH){var f=maxH/h;s.style.transform='scale('+f+')';w.style.height=(h*f)+'px';}}if(document.readyState!=='loading')fit();else document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load',fit);})();</script>
   <script>window.onload=function(){window.print();};</script>
 </body></html>`;
     // <script>autoprint 제거 후 state에 저장 → 오버레이 iframe으로 표시
@@ -537,19 +543,64 @@ function CheckinDetailsInner() {
         </div>
       </div>
 
-      {(editing || !detail || !booking) && (<div className="sec">
-        <h2>예약 선택</h2>
-        <div className="sel-row">
-          <select value={selId || ""} onChange={e => { if (e.target.value) selectBooking(e.target.value); }}>
-            <option value="">— 예약 선택 —</option>
-            {bookings.map(b => (
-              <option key={b.id} value={b.id}>
-                {fDate(b.checkin_date)} ~ {fDate(b.checkout_date)} | {b.booker_name} | {b.accom_type || "-"}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>)}
+      {(editing || !detail || !booking) && (() => {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const ymd = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+        const todayStr = ymd(today);
+        const ci = (b: Booking) => (b.checkin_date || "").slice(0,10);
+        const co = (b: Booking) => (b.checkout_date || "").slice(0,10);
+        // 미래(예정)/지난 분리 — 체크아웃이 오늘보다 이전이면 지난 건
+        const upcoming = bookings.filter(b => ci(b) && (!co(b) || co(b) >= todayStr));
+        const past = bookings.filter(b => co(b) && co(b) < todayStr);
+        // 월별 그룹 (예정)
+        const groups: Record<string, Booking[]> = {};
+        upcoming.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (groups[k] = groups[k] || []).push(b); });
+        const months = Object.keys(groups).sort();
+        const stOf = (b: Booking) => checkinStatus[b.id] || { submitted:false, saved:false };
+        const badge = (b: Booking) => {
+          const s = stOf(b);
+          if (s.saved) return <span style={{background:"#dcfce7",color:"#166534",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>✓ 작성완료</span>;
+          if (s.submitted) return <span style={{background:"#dbeafe",color:"#1d4ed8",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>손님 제출됨</span>;
+          return <span style={{background:"#fef2f2",color:"#dc2626",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>미작성</span>;
+        };
+        const dday = (b: Booking) => {
+          const d = ci(b); if (!d) return "";
+          const diff = Math.round((new Date(d+"T00:00:00").getTime() - today.getTime())/86400000);
+          if (diff === 0) return "오늘";
+          if (diff > 0) return `D-${diff}`;
+          return "체류중";
+        };
+        const row = (b: Booking) => (
+          <div key={b.id} onClick={() => selectBooking(b.id)}
+            style={{display:"grid",gridTemplateColumns:"70px 1fr 130px 92px",gap:10,alignItems:"center",padding:"12px 14px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",background:selId===b.id?"#eff6ff":""}}>
+            <span style={{fontSize:12,fontWeight:700,color:dday(b)==="오늘"?"#dc2626":"#64748b",textAlign:"center"}}>{dday(b)}</span>
+            <span style={{minWidth:0}}><b style={{fontSize:14}}>{b.booker_name}</b> <span style={{fontSize:11.5,color:"#94a3b8"}}>{b.accom_type||""}</span></span>
+            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fDate(b.checkin_date)}</span>
+            <span style={{textAlign:"right"}}>{badge(b)}</span>
+          </div>
+        );
+        const MON = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+        return (<div className="sec">
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <h2 style={{margin:0}}>체크인 예정 ({upcoming.length})</h2>
+            <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 작성 →</span>
+          </div>
+          {upcoming.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>예정된 체크인이 없습니다</div> :
+            months.map(mk => {
+              const [yy,mm] = mk.split("-").map(Number);
+              return (<div key={mk} style={{marginBottom:8}}>
+                <div style={{fontSize:12.5,fontWeight:800,color:"#1a6fc4",padding:"8px 4px"}}>📅 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {groups[mk].length}팀</span></div>
+                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{groups[mk].map(row)}</div>
+              </div>);
+            })}
+          {past.length > 0 && (
+            <details style={{marginTop:12}}>
+              <summary style={{cursor:"pointer",fontSize:12.5,fontWeight:700,color:"#94a3b8",padding:"6px 2px"}}>🗂 지난 체크인 ({past.length})</summary>
+              <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",marginTop:6,opacity:0.7}}>{past.slice().reverse().map(row)}</div>
+            </details>
+          )}
+        </div>);
+      })()}
 
       {detail && booking && (<>
         {!editing && (

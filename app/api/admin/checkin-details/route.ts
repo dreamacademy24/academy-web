@@ -34,7 +34,20 @@ export async function GET(req: Request) {
       .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, adults, children, special_request, students, reservation_no, booking_type, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
       .order('checkin_date', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ bookings: data })
+    // 체크인 디테일 제출/저장 현황 맵 (목록에서 제출완료/미제출 표시용)
+    const { data: dets } = await supabase
+      .from('checkin_details')
+      .select('booking_id, submitted_at, admin_saved_at, guest_names_en, bed_setting')
+    const status: Record<string, { submitted: boolean; saved: boolean }> = {}
+    for (const d of (dets || []) as Array<Record<string, unknown>>) {
+      const bid = String(d.booking_id || '')
+      if (!bid) continue
+      status[bid] = {
+        submitted: !!d.submitted_at,
+        saved: !!d.admin_saved_at || !!d.guest_names_en || !!d.bed_setting,
+      }
+    }
+    return NextResponse.json({ bookings: data, status })
   }
 
   // booking 기본정보 fetch
