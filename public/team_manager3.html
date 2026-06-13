@@ -1331,7 +1331,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
       <button class="tab-item" data-page="projects" onclick="showPage('projects')">프로젝트<span id="notif-dot-projects" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="opinions" onclick="showPage('opinions')">의견요청<span id="notif-dot-opinions" class="notif-dot" style="display:none"></span><span id="badge-opinions" class="nav-badge">0</span></button>
-      <button class="tab-item" data-page="chat" onclick="showPage('chat')">채팅<span id="badge-chat" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재<span id="notif-dot-approval-tab" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
@@ -4256,25 +4255,42 @@ function renderAnnouncementsPage(){
 /* 공지 작성 — 서식 에디터 모달 */
 function _ntPostGuide(){
   if(!confirm('직원업무 사용법 공지를 새로 등록할까요?'))return;
-  var body=''
-    +'<div style="font-size:15px;line-height:1.9">'
-    +'<b>📋 내 업무 — 이렇게 편해졌어요</b><br>'
-    +'• <b>빠른 추가</b>: 상단 입력칸에 <b>"셔틀 명단 정리 6/20"</b> 처럼 쓰고 Enter → 끝! (끝에 <u>오늘/내일/모레/6-20</u> 쓰면 기한 자동, 맨 앞에 <u>!</u> 붙이면 긴급)<br>'
-    +'• <b>한 번에 완료</b>: 왼쪽 목록의 네모(체크박스)만 누르면 바로 완료 처리<br>'
-    +'• <b>미루기</b>: 카드의 <b>⏭</b> 또는 상세에서 [오늘][내일][+1주] 버튼으로 기한 원클릭 변경<br>'
-    +'• 들어가면 바로 <b>내 보드</b>(긴급/진행중/완료)가 보여요<br>'
+  var b=''
+    +'<div style="font-size:15px;line-height:1.95">'
+    +'<div style="background:#eff6ff;border-left:4px solid #1a6fc4;padding:10px 14px;border-radius:8px;margin-bottom:14px"><b>직원업무가 새로워졌어요!</b> 아래를 한 번만 읽어두면 훨씬 편하게 쓸 수 있어요 😊</div>'
+    +'<b style="font-size:16px">⚡ 1. 빠른 추가 — 제일 많이 쓰게 될 기능</b><br>'
+    +'<b>내 업무</b> 화면 맨 위 입력칸에 <b>그냥 한 줄로 써서 Enter</b>만 누르면 업무가 만들어져요. 따로 날짜·긴급 설정 안 해도 돼요.<br>'
+    +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin:8px 0">'
+    +'<b>📌 규칙</b><br>'
+    +'• 끝에 <b>오늘 / 내일 / 모레</b> 또는 <b>6/20</b> 같이 날짜를 쓰면 → 그 날짜가 마감일로 자동 입력<br>'
+    +'• 맨 앞에 <b>!</b> 를 붙이면 → 🚨 긴급으로 분류<br>'
+    +'• 아무것도 안 붙이면 → 그냥 기한 없는 일반 업무<br>'
+    +'</div>'
+    +'<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;margin:8px 0">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;background:#1a6fc4;color:#fff;font-weight:700;font-size:13px"><div style="padding:8px 12px">이렇게 입력하면</div><div style="padding:8px 12px;border-left:1px solid rgba(255,255,255,.3)">이렇게 만들어져요</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">셔틀 명단 정리 내일</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">제목 <b>셔틀 명단 정리</b> · 마감 <b>내일</b></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">!인보이스 확인 6/20</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">🚨긴급 <b>인보이스 확인</b> · 마감 <b>6월 20일</b></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">비품 주문하기</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">제목 <b>비품 주문하기</b> (기한 없음)</div></div>'
+    +'</div>'
     +'<hr>'
-    +'<b>🗂 결재 — 게시판처럼</b><br>'
-    +'• 왼쪽에서 결재를 고르면 오른쪽에 자세히 보여요<br>'
-    +'• <b>상신할 때</b> 굵게·색·☑체크박스·사진(30MB)까지 넣어 글처럼 작성 가능<br>'
+    +'<b style="font-size:16px">✅ 2. 한 번에 완료 / 미루기</b><br>'
+    +'• 왼쪽 목록의 <b>네모(체크박스)</b>만 누르면 바로 완료 처리 (상세 안 들어가도 돼요)<br>'
+    +'• 카드의 <b>⏭</b> 버튼 또는 상세에서 <b>[오늘][내일][+1주]</b>로 마감일을 한 번에 바꿀 수 있어요<br>'
+    +'• 들어가면 바로 <b>내 보드</b>(🚨긴급 / 📋진행중 / ✅완료)가 한눈에 보여요<br>'
+    +'<hr>'
+    +'<b style="font-size:16px">🗂 3. 결재</b><br>'
+    +'• 왼쪽에서 결재 건을 고르면 오른쪽에 내용이 크게 보여요<br>'
+    +'• <b>상신할 때</b> 굵게·색·☑체크박스·<b>사진(최대 30MB)</b>까지 넣어 게시판 글처럼 작성 가능<br>'
     +'• 승인/반려는 오른쪽 상세에서 바로<br>'
     +'<hr>'
-    +'<b>📢 공지 — 지금 이 화면</b><br>'
-    +'• 제목 클릭하면 새 화면으로 크게 열려요. <b>읽음확인 필수</b> 글은 꼭 [읽음 확인] 눌러주세요!<br>'
+    +'<b style="font-size:16px">📢 4. 공지 (지금 이 화면)</b><br>'
+    +'• 게시판이에요. 제목을 누르면 <b>새 화면으로 크게</b> 열려요<br>'
+    +'• <b>읽음확인 필수</b>라고 표시된 글은 꼭 [읽음 확인]을 눌러주세요<br>'
     +'<hr>'
-    +'<b>🏠 홈</b> 맨 아래 <b>이번 주</b>에서 요일별 마감·휴무를 한눈에 볼 수 있어요.'
+    +'<b style="font-size:16px">🏠 5. 홈</b><br>'
+    +'맨 아래 <b>이번 주</b>에서 요일별 마감 업무와 휴무일을 한눈에 볼 수 있어요.'
     +'</div>';
-  var _nn={id:uid(),title:'📖 직원업무 사용법 안내 (새로워졌어요!)',text:body,files:[],done:false,date:nowStr(),requireRead:true};
+  var _nn={id:uid(),title:'📖 직원업무 사용법 안내 (꼭 읽어주세요!)',text:b,files:[],done:false,date:nowStr(),requireRead:true};
   notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);
   renderAnnouncementsPage();if(typeof renderNotices==='function')renderNotices();
   createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'직원업무 사용법 공지가 등록되었어요');

@@ -522,6 +522,10 @@ function CheckinDetailsInner() {
         <button className="cd-back" onClick={()=>router.push("/admin/hub")}>←</button>
         <h1>체크인 디테일</h1>
         <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+          <button onClick={()=>{ if(selId) window.open(`/admin/checkin-card?bookingId=${selId}`,"_blank"); }} disabled={!selId}
+            style={{padding:"6px 12px",border:"none",background:"#1a6fc4",color:"#fff",borderRadius:6,fontSize:12,fontWeight:700,cursor:selId?"pointer":"not-allowed",fontFamily:"inherit",opacity:selId?1:0.5}}>
+            🪧 체크인 카드
+          </button>
           <button onClick={()=>handlePrint("kr")} disabled={!booking}
             style={{padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
             🖨️ 인쇄 (KR)
