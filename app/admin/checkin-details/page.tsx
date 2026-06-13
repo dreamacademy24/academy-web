@@ -7,6 +7,7 @@ import { isAdminAuthed } from "@/lib/adminAuth";
 interface Booking {
   id: string; booker_name: string; booker_english?: string;
   accom_type?: string; accom_room?: string; house_no?: string;
+  booking_type?: string; seg1_type?: string; seg2_type?: string;
   checkin_date: string; checkout_date: string;
   pickup_place?: string; drop_off?: string;
   flight_in?: string; flight_out?: string;
@@ -550,9 +551,20 @@ function CheckinDetailsInner() {
         const ci = (b: Booking) => (b.checkin_date || "").slice(0,10);
         const co = (b: Booking) => (b.checkout_date || "").slice(0,10);
         // 미래(예정)/지난 분리 — 체크아웃이 오늘보다 이전이면 지난 건
+        // 드림하우스 포함 예약만 체크인 디테일 필요 (통학형·제이파크/큐브 단독 제외)
+        const needsCheckin = (b: Booking) => {
+          const at = String(b.accom_type || "");
+          const bt = String(b.booking_type || "").toLowerCase();
+          if (at.includes("드림하우스") || at.toLowerCase().includes("dream")) return true;
+          if (bt.includes("dreamhouse")) return true;
+          if (b.seg1_type === "dreamhouse" || b.seg2_type === "dreamhouse") return true;
+          if (b.house_no && b.house_no.trim()) return true; // 룸번호 있으면 드하
+          return false;
+        };
+        const dh = bookings.filter(needsCheckin);
         // 예정 = 아직 도착 안 한(체크인 날짜가 오늘 이후) 예약만. 이미 도착(체류중)·체크아웃 완료는 아래 접힘
-        const upcoming = bookings.filter(b => ci(b) && ci(b) >= todayStr);
-        const past = bookings.filter(b => ci(b) && ci(b) < todayStr);
+        const upcoming = dh.filter(b => ci(b) && ci(b) >= todayStr);
+        const past = dh.filter(b => ci(b) && ci(b) < todayStr);
         // 월별 그룹 (예정)
         const groups: Record<string, Booking[]> = {};
         upcoming.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (groups[k] = groups[k] || []).push(b); });
