@@ -492,8 +492,9 @@ function SectionBlock({ title, color, sub, items, onAdd, onDel, onApprove }: { t
         <button onClick={onAdd} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#2563eb", background: "#eff6ff", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>+ 항목</button>
       </div>
       {items.length === 0 ? <div style={{ padding: 16, color: "#cbd5e1", fontSize: 12.5, textAlign: "center" }}>내역이 없습니다</div>
-        : items.map(it => (
-          {(() => { const tg = KIND_TAG[it.kind] || { lbl: it.kind, bg: "#f1f5f9", c: "#475569", sign: "" }; return (
+        : items.map(it => {
+          const tg = KIND_TAG[it.kind] || { lbl: it.kind, bg: "#f1f5f9", c: "#475569", sign: "" };
+          return (
           <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px 14px", borderBottom: "1px solid #f8fafc", background: it.status !== "approved" ? "#fffbeb" : "transparent" }}>
             <span style={{ fontSize: 11.5, color: "#94a3b8", width: 62, flexShrink: 0 }}>{it.item_date || "-"}</span>
             <span style={{ fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: tg.bg, color: tg.c, flexShrink: 0 }}>{tg.lbl}</span>
@@ -501,8 +502,8 @@ function SectionBlock({ title, color, sub, items, onAdd, onDel, onApprove }: { t
             <b style={{ fontSize: 13, flexShrink: 0, color: tg.c }}>{tg.sign}{peso(Number(it.amount))}</b>
             {it.status !== "approved" && <button onClick={() => onApprove(it.id)} style={{ border: "none", background: "#16a34a", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>승인</button>}
             <button onClick={() => onDel(it.id)} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 15, flexShrink: 0 }}>×</button>
-          </div>); })()}
-        ))}
+          </div>);
+        })}
     </div>
   );
 }
