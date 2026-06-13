@@ -550,8 +550,9 @@ function CheckinDetailsInner() {
         const ci = (b: Booking) => (b.checkin_date || "").slice(0,10);
         const co = (b: Booking) => (b.checkout_date || "").slice(0,10);
         // 미래(예정)/지난 분리 — 체크아웃이 오늘보다 이전이면 지난 건
-        const upcoming = bookings.filter(b => ci(b) && (!co(b) || co(b) >= todayStr));
-        const past = bookings.filter(b => co(b) && co(b) < todayStr);
+        // 예정 = 아직 도착 안 한(체크인 날짜가 오늘 이후) 예약만. 이미 도착(체류중)·체크아웃 완료는 아래 접힘
+        const upcoming = bookings.filter(b => ci(b) && ci(b) >= todayStr);
+        const past = bookings.filter(b => ci(b) && ci(b) < todayStr);
         // 월별 그룹 (예정)
         const groups: Record<string, Booking[]> = {};
         upcoming.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (groups[k] = groups[k] || []).push(b); });
@@ -595,7 +596,7 @@ function CheckinDetailsInner() {
             })}
           {past.length > 0 && (
             <details style={{marginTop:12}}>
-              <summary style={{cursor:"pointer",fontSize:12.5,fontWeight:700,color:"#94a3b8",padding:"6px 2px"}}>🗂 지난 체크인 ({past.length})</summary>
+              <summary style={{cursor:"pointer",fontSize:12.5,fontWeight:700,color:"#94a3b8",padding:"6px 2px"}}>🗂 도착 완료 · 지난 체크인 ({past.length})</summary>
               <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",marginTop:6,opacity:0.7}}>{past.slice().reverse().map(row)}</div>
             </details>
           )}
