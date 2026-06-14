@@ -380,7 +380,7 @@ export default function AdminBookingsPage(){
     if(toInsert.length===0){toastErr("새로 생성할 태스크가 없습니다. (이미 생성됨)");return;}
     const {error:iErr}=await supabase.from("staff_tasks").insert(toInsert);
     if(iErr){toastErr("태스크 생성 실패: "+iErr.message);return;}
-    toastErr(toInsert.length+"개 항공권 확인 태스크가 생성됐어요!");
+    toastOk(toInsert.length+"개 항공권 확인 태스크가 생성됐어요!");
   }
 
   async function saveNewBooking(){

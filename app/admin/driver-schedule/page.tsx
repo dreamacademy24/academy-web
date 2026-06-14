@@ -24,7 +24,7 @@ function weekDates(base: Date): string[] {
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
     const dd = new Date(d); dd.setDate(d.getDate() + i);
-    dates.push(dd.toISOString().slice(0, 10));
+    dates.push(`${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, "0")}-${String(dd.getDate()).padStart(2, "0")}`);
   }
   return dates;
 }

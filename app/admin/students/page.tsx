@@ -30,10 +30,16 @@ export default function StudentsPage() {
   const [detail, setDetail] = useState<Student | null>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
+    // bookings_new 임베드 우선, 실패(테이블 없음 등) 시 임베드 없이 폴백 → 빈 화면 방지
+    let { data, error } = await supabase
       .from("students")
       .select("*, bookings_new(booker_name, check_in, booking_type)")
       .order("name_kr");
+    if (error) {
+      const res = await supabase.from("students").select("*").order("name_kr");
+      data = res.data; error = res.error;
+    }
+    if (error) { console.error("students load 실패:", error.message); return; }
     if (data) setStudents(data as Student[]);
   }, []);
 
