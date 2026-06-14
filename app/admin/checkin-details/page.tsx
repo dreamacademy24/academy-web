@@ -555,6 +555,10 @@ function CheckinDetailsInner() {
         const needsCheckin = (b: Booking) => {
           const at = String(b.accom_type || "");
           const bt = String(b.booking_type || "").toLowerCase();
+          // 통학형/제이파크 단독/큐브나인 단독은 드하 아님 → 제외 (stray house_no 있어도)
+          const isCommute = at.includes("통학") || bt.includes("commute");
+          const isSoloOther = (at.includes("제이파크") || at.includes("큐브")) && !at.includes("드림하우스");
+          if (isCommute || isSoloOther) return false;
           if (at.includes("드림하우스") || at.toLowerCase().includes("dream")) return true;
           if (bt.includes("dreamhouse")) return true;
           if (b.seg1_type === "dreamhouse" || b.seg2_type === "dreamhouse") return true;

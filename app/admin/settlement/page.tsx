@@ -21,7 +21,7 @@ interface Preset { id: string; section: string; kind: string; label: string; def
 interface Status { booking_id: string; academy_closed: boolean; academy_closed_at: string | null; final_closed: boolean; final_closed_at: string | null; }
 
 const peso = (n: number) => "₱" + (n || 0).toLocaleString("en-US");
-const today10 = () => new Date().toISOString().slice(0, 10);
+const today10 = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 export default function SettlementPage() {
   const router = useRouter();
@@ -177,16 +177,25 @@ export default function SettlementPage() {
       const rows: Record<string, unknown>[] = [];
       let invCount = 0, tutCount = 0;
 
+      // 중복 방지: state(items) 대신 DB에서 최신 항목을 다시 읽어 dedup (빠른 더블클릭/stale 방지)
+      const { data: freshItems } = await supabase.from("settlement_items").select("label, amount, note").eq("booking_id", sel.id);
+      const cur = (freshItems || []) as { label: string; amount: number; note: string | null }[];
+
       // ── 1) 게스트 인보이스 현지지불(bookings.locals) ──
       const { data: bk } = await supabase.from("bookings").select("locals").eq("id", sel.id).maybeSingle();
       let arr: any[] = [];
       const raw = bk?.locals;
       if (Array.isArray(raw)) arr = raw;
       else if (typeof raw === "string") { try { const p = JSON.parse(raw); if (Array.isArray(p)) arr = p; } catch {} }
-      const invExisting = new Set(items.filter(i => i.note === "인보이스").map(i => `${i.label}|${Number(i.amount)}`));
+      const invExisting = new Set(cur.filter(i => i.note === "인보이스").map(i => `${i.label}|${Number(i.amount)}`));
       arr.map((l: any) => ({ label: String(l?.name || "").trim(), amount: parseAmt(l?.amount) }))
         .filter(l => l.label && l.amount > 0 && !invExisting.has(`${l.label}|${l.amount}`))
-        .forEach(l => { rows.push({ booking_id: sel.id, section: "class", kind: "charge", label: l.label, amount: l.amount, item_date: today10(), note: "인보이스", status: "approved", recorded_by: "인보이스" }); invCount++; });
+        .forEach(l => {
+          // 보증금 항목은 보증금 정산 섹션으로, 나머지는 수업·교재비
+          const isDep = l.label.includes("보증금");
+          rows.push({ booking_id: sel.id, section: isDep ? "deposit" : "class", kind: isDep ? "deposit" : "charge", label: l.label, amount: l.amount, item_date: today10(), note: "인보이스", status: "approved", recorded_by: "인보이스" });
+          invCount++;
+        });
 
       // ── 2) 튜터 인보이스(tutor_lessons) — tutor_requests.booking_id → application_id 경유 (booking_id 직접컬럼 의존 X) ──
       const lessonMap = new Map<string, any>();
@@ -196,7 +205,7 @@ export default function SettlementPage() {
         const { data: l2 } = await supabase.from("tutor_lessons").select("*").in("application_id", reqIds);
         (l2 || []).forEach((l: any) => lessonMap.set(String(l.id), l));
       }
-      const tutExisting = new Set(items.filter(i => i.note?.startsWith("튜터:")).map(i => i.note));
+      const tutExisting = new Set(cur.filter(i => i.note?.startsWith("튜터:")).map(i => i.note));
       lessonMap.forEach((l) => {
         const amt = parseAmt(l.total_amount);
         const noteKey = `튜터:${String(l.id).slice(0, 12)}`;
@@ -265,15 +274,17 @@ export default function SettlementPage() {
   }
   async function reopen() {
     if (!sel || !window.confirm("마감을 해제할까요?")) return;
-    await supabase.from("settlement_status").upsert({ booking_id: sel.id, academy_closed: false, final_closed: false, updated_at: new Date().toISOString() }, { onConflict: "booking_id" });
+    const { error } = await supabase.from("settlement_status").upsert({ booking_id: sel.id, academy_closed: false, final_closed: false, updated_at: new Date().toISOString() }, { onConflict: "booking_id" });
+    if (error) { toastErr("마감 해제 실패: " + error.message); return; }
+    toastOk("마감 해제됨");
     loadStatus(sel.id);
   }
 
   // ── 인쇄 (1장 자동 축소) ──
   function buildPrint() {
     if (!sel) return;
-    const dRows = depositItems.map(i => { const tag = i.kind === "deduct" ? "차감" : i.kind === "refund" ? "환불" : "보증금"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${i.kind === "deduct" ? "#dc2626" : "#166534"}">[${tag}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${i.kind === "deduct" ? "minus" : "plus"}">${i.kind === "deduct" ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
-    const cRows = classItems.map(i => { const pay = i.kind === "payment"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${pay ? "#6d28d9" : "#1d4ed8"}">[${pay ? "납부" : "청구"}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${pay ? "minus" : "plus"}">${pay ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
+    const dRows = depositItems.filter(i => i.status === "approved").map(i => { const tag = i.kind === "deduct" ? "차감" : i.kind === "refund" ? "환불" : "보증금"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${i.kind === "deduct" ? "#dc2626" : "#166534"}">[${tag}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${i.kind === "deduct" ? "minus" : "plus"}">${i.kind === "deduct" ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
+    const cRows = classItems.filter(i => i.status === "approved").map(i => { const pay = i.kind === "payment"; return `<tr><td class="d">${i.item_date || ""}</td><td><b style="font-size:10px;color:${pay ? "#6d28d9" : "#1d4ed8"}">[${pay ? "납부" : "청구"}]</b> ${esc(i.label)}${i.note ? ` <span class="nt">${esc(i.note)}</span>` : ""}</td><td class="a ${pay ? "minus" : "plus"}">${pay ? "−" : "+"}${peso(Number(i.amount))}</td></tr>`; }).join("") || `<tr><td colspan="3" class="empty">내역 없음</td></tr>`;
     const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"/><title>정산내역 - ${esc(sel.booker_name || "")}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 body{font-family:'Noto Sans KR',Arial,sans-serif;color:#1a1a2e;background:#fff}

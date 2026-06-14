@@ -157,7 +157,7 @@ export default function AfterschoolFieldtripAdminPage() {
 
   async function changeStatus(appId: number, status: string) {
     const prev = apps;
-    setApps(apps.map(a => a.id === appId ? { ...a, status } : a));
+    setApps(p => p.map(a => a.id === appId ? { ...a, status } : a));
     const { error } = await supabase.from("fieldtrip_applications").update({ status }).eq("id", appId);
     if (error) { toastErr("상태 변경 실패: " + error.message); setApps(prev); }
   }
@@ -168,16 +168,18 @@ export default function AfterschoolFieldtripAdminPage() {
     const a = apps.find(x => x.id === appId);
     if (!a) return;
     const tokens = (a.date || "").split(",").map(t => t.trim()).filter(Boolean);
-    const remaining = tokens.filter(t => t !== token);
+    // 같은 토큰이 중복돼 있어도 클릭한 1개만 제거 (전체 삭제 방지)
+    const idx = tokens.indexOf(token);
+    const remaining = idx < 0 ? tokens : [...tokens.slice(0, idx), ...tokens.slice(idx + 1)];
     if (!window.confirm(`${childName || ""} — "${programName}" 신청을 삭제할까요?\n(티쳐 표에서도 함께 사라집니다)`)) return;
     const prev = apps;
     if (remaining.length === 0) {
-      setApps(apps.filter(x => x.id !== appId));
+      setApps(p => p.filter(x => x.id !== appId));
       const { error } = await supabase.from("fieldtrip_applications").delete().eq("id", appId);
       if (error) { toastErr("삭제 실패: " + error.message); setApps(prev); return; }
     } else {
       const newDate = remaining.join(", ");
-      setApps(apps.map(x => x.id === appId ? { ...x, date: newDate } : x));
+      setApps(p => p.map(x => x.id === appId ? { ...x, date: newDate } : x));
       const { error } = await supabase.from("fieldtrip_applications").update({ date: newDate }).eq("id", appId);
       if (error) { toastErr("삭제 실패: " + error.message); setApps(prev); return; }
     }
