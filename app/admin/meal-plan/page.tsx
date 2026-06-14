@@ -323,8 +323,19 @@ export default function MealPlanPage() {
         body{background:#fff!important}
         .mp-top,.mp-nav,.mp-tabs,.mp-actions,.mp-sec-note,.no-print{display:none!important}
         .mp-w{max-width:100%;padding:0}
-        .day-block{border:none;padding:0;margin:0;page-break-after:always}
-        @page{size:A4 landscape;margin:10mm}
+        .day-block{border:none;padding:0;margin:0;page-break-after:always;page-break-inside:avoid;break-inside:avoid}
+        .day-block:last-child{page-break-after:auto}
+        @page{size:A4 landscape;margin:7mm}
+        /* 하루 = 한 장에 확실히 들어가게 인쇄용 컴팩트 */
+        .day-title{font-size:14px;margin-bottom:2px}
+        .day-sub{font-size:10px;margin-bottom:5px}
+        table.day th,table.day td{padding:2.5px 3px;font-size:10px}
+        table.day td.nm{font-size:10.5px}
+        .checked-row td{font-size:9px}
+        .instr{margin-top:6px;padding:6px 10px;font-size:9px}
+        .instr b{min-width:200px}
+        .instr-line{margin:1.5px 0}
+        .day-foot{font-size:8.5px;margin-top:4px}
         table.lbl tr,.lbl-card{break-inside:avoid;page-break-inside:avoid}
         table.day tr,table.mp tr{break-inside:avoid;page-break-inside:avoid}
         .instr{break-inside:avoid}
