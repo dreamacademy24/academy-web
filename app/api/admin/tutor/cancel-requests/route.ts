@@ -63,17 +63,18 @@ export async function PATCH(req: Request) {
       const log = (lesson.attendance_log || {}) as Record<string, string>;
       log[cr.cancel_date] = "✕";
       const updates: Record<string, unknown> = { attendance_log: log };
-      // 차감이면 total_sessions -1
+      // 차감이면 total_sessions -1 / no_deduct는 차감 없이 취소 (아픈 경우 등)
       if (resolution === "deduct" && lesson.total_sessions > 0) {
         updates.total_sessions = lesson.total_sessions - 1;
       }
+      // no_deduct: 출석부 ✕ 기록만, total_sessions 유지
       await sb.from("tutor_lessons").update(updates).eq("id", cr.lesson_id);
     }
 
     // 교사 알림 (online_notifications 패턴 재사용)
     if (cr.tutor_id) {
       const msg = `Lesson cancelled — ${cr.student_name || "Student"} on ${cr.cancel_date}` +
-        (resolution === "deduct" ? " (session deducted)" : resolution === "makeup" ? " (makeup scheduled)" : "");
+        (resolution === "deduct" ? " (session deducted)" : resolution === "makeup" ? " (makeup scheduled)" : resolution === "no_deduct" ? " (no deduction)" : "");
       await sb.from("online_notifications").insert({
         tutor_id: cr.tutor_id,
         type: "lesson_cancelled",
@@ -87,14 +88,14 @@ export async function PATCH(req: Request) {
           `Student: ${escapeHtml(cr.student_name || "?")}\n` +
           `Date: ${cr.cancel_date}\n` +
           `Reason: ${escapeHtml(cr.reason || "N/A")}\n` +
-          (resolution === "deduct" ? "📉 Session deducted" : resolution === "makeup" ? "🔄 Makeup to be scheduled" : "")
+          (resolution === "deduct" ? "📉 Session deducted" : resolution === "makeup" ? "🔄 Makeup to be scheduled" : resolution === "no_deduct" ? "💚 No deduction (special case)" : "")
         );
       } catch { /* best-effort */ }
     }
 
     // 한국인 직원 텔레그램
     try {
-      const resText = resolution === "deduct" ? "차감" : resolution === "makeup" ? "보강" : "미정";
+      const resText = resolution === "deduct" ? "차감" : resolution === "makeup" ? "보강" : resolution === "no_deduct" ? "미차감" : "미정";
       await sendTelegram(
         `✅ <b>튜터 취소 승인</b>\n` +
         `학생: ${cr.student_name || "?"}\n` +

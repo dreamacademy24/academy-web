@@ -209,12 +209,13 @@ export default function AfterschoolFieldtripAdminPage() {
     for (const token of tokens) {
       const r = resolveProgram(token, scheduleByMd);
       if (!r) continue;
-      // 콤보 예약: 토큰 날짜 기반으로 현재 숙소 판별
+      // 예약 데이터에서 룸 번호 라이브 조회 (스냅샷 rawRoom은 폴백)
       let room = rawRoom;
-      if (bk?.seg1_type && bk?.seg2_type) {
+      if (bk) {
         const ymd = `2026-${String(r.month).padStart(2, "0")}-${String(r.day).padStart(2, "0")}`;
         const accom = resolveComboAccom(bk, ymd);
-        room = accom.room || accom.nameEn;
+        const liveRoom = accom.room || accom.nameEn;
+        if (liveRoom) room = liveRoom;
       }
       flat.push({
         appId: a.id, childName, reserver, room, request, status, token,
@@ -234,12 +235,13 @@ export default function AfterschoolFieldtripAdminPage() {
   const _todayD = _now.getDate();
   const activFlat = flat.filter(r => r.month > _todayM || (r.month === _todayM && r.day >= _todayD));
 
-  // 토큰(=날짜+프로그램) 단위 그룹
+  // 날짜 기준 그룹 (같은 날짜의 다른 토큰 키도 합침 — 예: "6-15-watergun" + "6-15-as" → 동일 그룹)
   const groupMap = new Map<string, FlatRow[]>();
   for (const r of activFlat) {
-    const arr = groupMap.get(r.token) || [];
+    const groupKey = `${r.month}-${r.day}`;
+    const arr = groupMap.get(groupKey) || [];
     arr.push(r);
-    groupMap.set(r.token, arr);
+    groupMap.set(groupKey, arr);
   }
   // 월 → 그룹들
   const monthMap = new Map<number, [string, FlatRow[]][]>();

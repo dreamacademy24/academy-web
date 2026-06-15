@@ -37,7 +37,7 @@ export default function TutorCancelRequests({ onCountChange }: { onCountChange?:
   const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
   const [loading, setLoading] = useState(true);
   const [processId, setProcessId] = useState<string>("");
-  const [resolution, setResolution] = useState<"deduct" | "makeup">("deduct");
+  const [resolution, setResolution] = useState<"deduct" | "makeup" | "no_deduct">("deduct");
   const [adminNote, setAdminNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [processAction, setProcessAction] = useState<"approve" | "reject">("approve");
@@ -196,7 +196,7 @@ export default function TutorCancelRequests({ onCountChange }: { onCountChange?:
                     <div style={{ marginTop: 6, fontSize: 12, color: "#64748b" }}>
                       <b>처리:</b>{" "}
                       <span className="tcr-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                      {cr.resolution && <span style={{ marginLeft: 6 }}>({cr.resolution === "deduct" ? "차감" : "보강"})</span>}
+                      {cr.resolution && <span style={{ marginLeft: 6 }}>({cr.resolution === "deduct" ? "차감" : cr.resolution === "no_deduct" ? "미차감" : "보강"})</span>}
                       {cr.processed_by && <span style={{ marginLeft: 6 }}>· {cr.processed_by}</span>}
                       {cr.admin_note && <div style={{ marginTop: 4, fontStyle: "italic" }}>메모: {cr.admin_note}</div>}
                     </div>
@@ -254,10 +254,25 @@ export default function TutorCancelRequests({ onCountChange }: { onCountChange?:
                 >
                   🔄 보강<br /><span style={{ fontSize: 11, fontWeight: 500 }}>다른 날 보강 예정</span>
                 </button>
+                <button
+                  onClick={() => setResolution("no_deduct")}
+                  style={{
+                    flex: 1, padding: "10px", borderRadius: 8, border: resolution === "no_deduct" ? "2px solid #059669" : "1px solid #e2e8f0",
+                    background: resolution === "no_deduct" ? "#ecfdf5" : "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+                    color: resolution === "no_deduct" ? "#059669" : "#64748b"
+                  }}
+                >
+                  💚 미차감<br /><span style={{ fontSize: 11, fontWeight: 500 }}>차감 없이 취소</span>
+                </button>
               </div>
-              {!processItem.is_refundable && (
+              {!processItem.is_refundable && resolution === "deduct" && (
                 <div style={{ marginTop: 8, fontSize: 11.5, color: "#991b1b", fontWeight: 600, background: "#fef2f2", padding: "6px 10px", borderRadius: 6 }}>
                   ⚠️ 4일 이내 취소 — 차감 처리가 권장됩니다.
+                </div>
+              )}
+              {resolution === "no_deduct" && (
+                <div style={{ marginTop: 8, fontSize: 11.5, color: "#065f46", fontWeight: 600, background: "#ecfdf5", padding: "6px 10px", borderRadius: 6 }}>
+                  💚 회차 차감 없이 취소됩니다. (아픈 경우 등 특별 사유)
                 </div>
               )}
             </div>

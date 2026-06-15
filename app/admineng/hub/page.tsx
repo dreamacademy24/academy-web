@@ -177,6 +177,7 @@ export default function EngHubPage() {
       <div className="hub-foot">
         <a className="hub-link" href="/guide">Staff Guide</a>
         <a className="hub-link" href="/">Home</a>
+        <a href="/admin/hub" style={{ marginLeft: "auto", padding: "8px 16px", background: "#1a6fc4", color: "#fff", borderRadius: 8, fontSize: 12.5, fontWeight: 700, textDecoration: "none", display: "inline-block" }}>🔒 Admin</a>
       </div>
     </div>
   </>);

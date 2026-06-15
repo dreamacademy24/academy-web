@@ -7,12 +7,13 @@ import {
   loadDeployedSchedule, mergeWithFallback, resolveProgram, buildScheduleByMd, mdFromDate,
   type DeployedScheduleItem,
 } from "@/lib/fieldtripPrograms";
+import { resolveComboAccom } from "@/lib/bookingTypes";
 
 interface FApp {
   id: number; name: string | null; room_number: string | null;
   date: string | null; status: string | null; booking_id: string | null; portal_name: string | null;
 }
-interface Signup { name: string; room: string; status: string; }
+interface Signup { name: string; room: string; status: string; appId: number; token: string; }
 
 const DOW_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -25,6 +26,7 @@ export default function AfterschoolLocalPage() {
   const [items, setItems] = useState<DeployedScheduleItem[]>([]);
   const [apps, setApps] = useState<FApp[]>([]);
   const [nameMap, setNameMap] = useState<Record<string, string>>({}); // bookingId__KRname → ENname
+  const [bookingRoomMap, setBookingRoomMap] = useState<Record<string, any>>({}); // booking_id → 예약 데이터 (룸 번호 라이브 조회용)
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"list" | "calendar">("list");
   const [cursor, setCursor] = useState<Date>(() => { const d = new Date(); d.setDate(1); return d; });
@@ -44,7 +46,7 @@ export default function AfterschoolLocalPage() {
       .select("id, name, room_number, date, status, booking_id, portal_name");
     const rows = (data || []) as FApp[];
     setApps(rows);
-    // 학생 한글이름 → 영어이름 (현지직원은 영어이름으로 표시)
+    // 학생 한글이름 → 영어이름 (현지직원은 영어이름으로 표시) + 예약 데이터 (룸 번호 라이브 조회)
     const ids = Array.from(new Set(rows.map((a) => a.booking_id).filter(Boolean))) as string[];
     if (ids.length) {
       const { data: st } = await supabase.from("students").select("name_kr, name_en, booking_id").in("booking_id", ids);
@@ -53,15 +55,38 @@ export default function AfterschoolLocalPage() {
         if (s.name_en && s.name_en.trim()) nm[`${s.booking_id}__${(s.name_kr || "").trim()}`] = s.name_en.trim();
       });
       setNameMap(nm);
+      // 예약 데이터 로드 (룸 번호 라이브 조회용)
+      const { data: bks } = await supabase.from("bookings")
+        .select("id, house_no, accom_room, seg1_type, seg2_type, seg2_checkin, accom_type")
+        .in("id", ids);
+      const bkMap: Record<string, any> = {};
+      (bks || []).forEach((b: any) => { bkMap[b.id] = b; });
+      setBookingRoomMap(bkMap);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
+  // 삭제: 해당 토큰만 제거, 마지막 토큰이면 행 전체 삭제
+  async function deleteSignup(appId: number, token: string, name: string) {
+    const a = apps.find(x => x.id === appId);
+    if (!a) return;
+    if (!window.confirm(`Delete "${name}" from this activity?`)) return;
+    const tokens = (a.date || "").split(",").map(t => t.trim()).filter(Boolean);
+    const idx = tokens.indexOf(token);
+    const remaining = idx < 0 ? tokens : [...tokens.slice(0, idx), ...tokens.slice(idx + 1)];
+    if (remaining.length === 0) {
+      await supabase.from("fieldtrip_applications").delete().eq("id", appId);
+    } else {
+      await supabase.from("fieldtrip_applications").update({ date: remaining.join(", ") }).eq("id", appId);
+    }
+    load();
+  }
+
   const byMd = useMemo(() => buildScheduleByMd(items), [items]);
 
-  // "M-D" → 신청자 (취소 제외, 영어이름 우선)
+  // "M-D" → 신청자 (취소 제외, 영어이름 우선, 룸 번호 라이브 조회)
   const signupsByMd = useMemo(() => {
     const map: Record<string, Signup[]> = {};
     for (const a of apps) {
@@ -71,11 +96,19 @@ export default function AfterschoolLocalPage() {
         const key = `${r.month}-${r.day}`;
         const kr = (a.name || "").trim();
         const en = nameMap[`${a.booking_id}__${kr}`];
-        (map[key] ||= []).push({ name: en || kr || "-", room: (a.room_number || "").trim(), status: a.status || "pending" });
+        // 룸 번호: 예약 데이터에서 라이브 조회 (스냅샷 폴백)
+        let room = (a.room_number || "").trim();
+        if (a.booking_id && bookingRoomMap[a.booking_id]) {
+          const ymdStr = `2026-${String(r.month).padStart(2, "0")}-${String(r.day).padStart(2, "0")}`;
+          const accom = resolveComboAccom(bookingRoomMap[a.booking_id], ymdStr);
+          const liveRoom = accom.room || accom.nameEn;
+          if (liveRoom) room = liveRoom;
+        }
+        (map[key] ||= []).push({ name: en || kr || "-", room, status: a.status || "pending", appId: a.id, token: tok });
       });
     }
     return map;
-  }, [apps, byMd, nameMap]);
+  }, [apps, byMd, nameMap, bookingRoomMap]);
 
   // 오늘 기준 분리: 오늘 / 다가오는 일정(월별) / 지난 일정(접힘)
   const todayStr = ymd(new Date());
@@ -188,7 +221,7 @@ export default function AfterschoolLocalPage() {
                 {kids.length === 0 ? <div className="none" style={{ padding: "6px 0 0" }}>No sign-ups.</div> : (
                   <div className="kids" style={{ padding: "8px 0 0" }}>
                     {kids.map((k, i) => (
-                      <span className="chip big" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}</span>
+                      <span className="chip big" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}<button onClick={()=>deleteSignup(k.appId,k.token,k.name)} title="Delete" style={{border:"none",background:"none",color:"#cbd5e1",cursor:"pointer",fontSize:12,padding:"0 2px",marginLeft:4,lineHeight:1}}>✕</button></span>
                     ))}
                   </div>
                 )}
@@ -219,7 +252,7 @@ export default function AfterschoolLocalPage() {
                     {kids.length > 0 && (
                       <div className="kids">
                         {kids.map((k, i) => (
-                          <span className="chip" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}</span>
+                          <span className="chip" key={i}><b>{k.name}</b>{k.room ? <span className="rm">🏠 {k.room}</span> : null}{k.status === "pending" ? <span className="pd">· pending</span> : null}<button onClick={()=>deleteSignup(k.appId,k.token,k.name)} title="Delete" style={{border:"none",background:"none",color:"#cbd5e1",cursor:"pointer",fontSize:11,padding:"0 2px",marginLeft:3,lineHeight:1}}>✕</button></span>
                         ))}
                       </div>
                     )}
