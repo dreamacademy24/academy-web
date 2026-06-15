@@ -32,6 +32,10 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   const [menu, setMenu] = useState<Menu | null>(null);
   const [busy, setBusy] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [cands, setCands] = useState<{ id: string; name: string; room: string; ci: string; co: string }[]>([]);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [loadingCands, setLoadingCands] = useState(false);
 
   // 올인원=해당 주 월요일 / 아카데미=해당 월 1일 (둘 다 한 장)
   const monday = (() => { const d = new Date(base); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d; })();
@@ -69,25 +73,36 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     if (error) { toastErr("삭제 실패: " + error.message); return; }
     toastOk("삭제됨"); setMenu(null);
   }
-  async function publish() {
+  // 발행 → 받을 손님 선택 모달 (투숙중 자동 선택)
+  async function openPicker() {
     if (!menu) { toastErr("발행할 식단이 없습니다. 먼저 사진을 올려주세요."); return; }
-    const who = monthly ? "모든 손님" : "올인원 손님";
-    if (!window.confirm(`${periodLabel} 식단을 발행하고 ${who}에게 알림을 보낼까요?`)) return;
+    setPickerOpen(true); setLoadingCands(true);
+    const today = ymd(new Date());
+    let q = supabase.from("bookings").select("id, booker_name, house_no, checkin_date, checkout_date");
+    if (!monthly) q = q.eq("is_all_in_one", true); // 올인원만
+    const { data } = await q;
+    const staying = (data || []).filter((b: any) => {
+      const ci = (b.checkin_date || "").slice(0, 10), co = (b.checkout_date || "").slice(0, 10);
+      return ci && ci <= today && (!co || co >= today); // 투숙중
+    }).map((b: any) => ({ id: b.id, name: b.booker_name || "(이름없음)", room: b.house_no || "", ci: (b.checkin_date || "").slice(0, 10), co: (b.checkout_date || "").slice(0, 10) }));
+    staying.sort((a: any, b: any) => a.name.localeCompare(b.name));
+    setCands(staying);
+    setSel(new Set(staying.map((s: any) => s.id))); // 기본 전체 선택(투숙중)
+    setLoadingCands(false);
+  }
+  async function doPublish() {
+    if (!menu) return;
+    const ids = [...sel];
+    if (ids.length === 0) { toastErr("받을 손님을 1팀 이상 선택하세요"); return; }
     setPublishing(true);
     try {
       const { error } = await supabase.from("meal_menus").update({ published: true }).eq("id", menu.id);
       if (error) throw error;
-      let cnt = "";
-      if (monthly) {
-        await fetch("/api/portal/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "아카데미 식단 안내 🍽", body: `${base.getMonth() + 1}월 점심·간식 식단표가 등록되었습니다.`, url: "/portal/meal-menu" }) }).catch(() => {});
-        cnt = "모든 손님";
-      } else {
-        const { data: bk } = await supabase.from("bookings").select("id").eq("is_all_in_one", true);
-        const ids = (bk || []).map((b: { id: string }) => b.id);
-        if (ids.length) await fetch("/api/portal/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audience: "selected", target_ids: ids, title: "이번주 식단 안내 🍽", body: "이번주 드림하우스 식단표가 등록되었습니다.", url: "/portal/meal-menu" }) }).catch(() => {});
-        cnt = `올인원 ${ids.length}팀`;
-      }
-      toastOk(`발행 완료 — ${cnt}에 알림 전송`); load();
+      const title = monthly ? "아카데미 식단 안내 🍽" : "이번주 식단 안내 🍽";
+      const body = monthly ? `${base.getMonth() + 1}월 점심·간식 식단표가 등록되었습니다.` : "이번주 드림하우스 식단표가 등록되었습니다.";
+      await fetch("/api/portal/push/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audience: "selected", target_ids: ids, title, body, url: "/portal/meal-menu" }) }).catch(() => {});
+      toastOk(`발행 완료 — ${ids.length}팀에 알림 전송`);
+      setPickerOpen(false); load();
     } catch (e) { toastErr("발행 실패: " + ((e as Error)?.message || "")); }
     setPublishing(false);
   }
@@ -99,8 +114,8 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
         <span style={{ fontWeight: 800, fontSize: 15, minWidth: 150, textAlign: "center" }}>{periodLabel}</span>
         <button onClick={() => setBase(d => { const n = new Date(d); if (monthly) n.setMonth(n.getMonth() + 1); else n.setDate(n.getDate() + 7); return n; })} style={navBtn}>다음{monthly ? " 달" : " 주"} →</button>
         <button onClick={() => setBase(new Date())} style={navBtn}>{monthly ? "이번 달" : "이번 주"}</button>
-        <button onClick={publish} disabled={publishing} style={{ marginLeft: "auto", background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: publishing ? 0.6 : 1 }}>
-          {publishing ? "발행 중…" : `📢 발행 & 알림${menu?.published ? " (발행됨)" : ""}`}
+        <button onClick={openPicker} disabled={publishing} style={{ marginLeft: "auto", background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: publishing ? 0.6 : 1 }}>
+          {`📢 발행 & 알림${menu?.published ? " (발행됨)" : ""}`}
         </button>
       </div>
       <p style={{ fontSize: 12, color: "#6b7c93", margin: "0 0 12px" }}>
@@ -123,6 +138,36 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
           {menu && <button onClick={delMenu} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 12, alignSelf: "flex-end" }}>삭제</button>}
         </div>
       </div>
+
+      {/* 받는 손님 선택 모달 */}
+      {pickerOpen && (
+        <div onClick={() => setPickerOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 3 }}>받을 손님 선택</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10 }}>{monthly ? "투숙중인 손님" : "투숙중인 올인원 손님"}이 자동 선택됩니다. 빼고 싶은 분은 체크 해제하세요.</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button onClick={() => setSel(new Set(cands.map(c => c.id)))} style={{ fontSize: 12, border: "1px solid #e2e8f0", background: "#fff", borderRadius: 7, padding: "5px 11px", cursor: "pointer", fontWeight: 600 }}>전체 선택</button>
+              <button onClick={() => setSel(new Set())} style={{ fontSize: 12, border: "1px solid #e2e8f0", background: "#fff", borderRadius: 7, padding: "5px 11px", cursor: "pointer", fontWeight: 600 }}>전체 해제</button>
+              <span style={{ marginLeft: "auto", fontSize: 12.5, fontWeight: 700, color: "#1e3a5f", alignSelf: "center" }}>{sel.size} / {cands.length}팀</span>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", border: "1px solid #f1f5f9", borderRadius: 8 }}>
+              {loadingCands ? <div style={{ padding: 24, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>불러오는 중…</div>
+                : cands.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: "#cbd5e1", fontSize: 13 }}>투숙중인 {monthly ? "손님" : "올인원 손님"}이 없습니다</div>
+                : cands.map(c => (
+                  <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderBottom: "1px solid #f8fafc", cursor: "pointer" }}>
+                    <input type="checkbox" checked={sel.has(c.id)} onChange={e => { setSel(prev => { const n = new Set(prev); if (e.target.checked) n.add(c.id); else n.delete(c.id); return n; }); }} />
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700 }}>{c.name} <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 400 }}>{c.room}</span></span>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{c.ci?.slice(5)}~{c.co?.slice(5)}</span>
+                  </label>
+                ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button onClick={() => setPickerOpen(false)} style={{ flex: 1, padding: "11px 0", border: "1px solid #e2e8f0", background: "#fff", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>취소</button>
+              <button onClick={doPublish} disabled={publishing || sel.size === 0} style={{ flex: 2, padding: "11px 0", border: "none", background: publishing || sel.size === 0 ? "#94a3b8" : "#1e3a5f", color: "#fff", borderRadius: 9, fontWeight: 800, cursor: "pointer", fontSize: 13.5 }}>{publishing ? "발행 중…" : `📢 ${sel.size}팀에 발행 & 알림`}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
