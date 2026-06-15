@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dream Academy — 시스템 전체 설명도</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:#f8fafc;color:#1a1a2e;padding:24px 16px 60px}
+.wrap{max-width:1100px;margin:0 auto}
+
+/* 헤더 */
+.hd{text-align:center;margin-bottom:32px}
+.hd h1{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:6px}
+.hd p{font-size:13px;color:#64748b;line-height:1.6}
+.hd .ver{font-size:11px;color:#94a3b8;margin-top:4px}
+
+/* 섹션 */
+.sec{margin-bottom:32px}
+.sec-t{font-size:15px;font-weight:800;color:#1a1a2e;margin-bottom:14px;padding-left:4px;display:flex;align-items:center;gap:8px}
+.sec-t .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* 플로우 그리드 */
+.flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.card{border-radius:12px;padding:14px 16px;border:1.5px solid #e2e8f0;background:#fff;transition:all 180ms}
+.card:hover{border-color:#94a3b8;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.card .ic{font-size:24px;margin-bottom:6px}
+.card h3{font-size:13px;font-weight:800;margin-bottom:3px;line-height:1.3}
+.card p{font-size:11px;color:#64748b;line-height:1.5}
+.card .tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;margin-top:6px}
+.tag-live{background:#dcfce7;color:#16a34a}
+.tag-snap{background:#fef3c7;color:#b45309}
+.tag-auto{background:#dbeafe;color:#2563eb}
+
+/* 화살표 연결 설명 */
+.conn{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px;padding:12px 16px;background:#f1f5f9;border-radius:10px;border:1px solid #e2e8f0}
+.conn-item{font-size:11px;color:#475569;display:flex;align-items:center;gap:4px}
+.conn-arrow{color:#94a3b8;font-weight:700}
+
+/* 범례 */
+.legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+
+/* 전체 흐름도 */
+.bigflow{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:28px}
+.bigflow h2{font-size:16px;font-weight:800;text-align:center;margin-bottom:18px;color:#1a1a2e}
+.bf-row{display:flex;align-items:stretch;gap:10px;margin-bottom:12px;flex-wrap:wrap;justify-content:center}
+.bf-box{border-radius:10px;padding:12px 14px;text-align:center;min-width:130px;flex:1;max-width:200px}
+.bf-box h4{font-size:12px;font-weight:800;margin-bottom:2px}
+.bf-box p{font-size:10px;opacity:0.7;line-height:1.4}
+.bf-src{background:#eff6ff;border:1.5px solid #3b82f6;color:#1e40af}
+.bf-admin{background:#f0fdf4;border:1.5px solid #22c55e;color:#166534}
+.bf-staff{background:#faf5ff;border:1.5px solid #a855f7;color:#7e22ce}
+.bf-portal{background:#fff7ed;border:1.5px solid #f97316;color:#c2410c}
+.bf-arrow{display:flex;align-items:center;justify-content:center;font-size:18px;color:#94a3b8;min-width:30px;flex-shrink:0}
+.bf-down{text-align:center;color:#94a3b8;font-size:16px;margin:6px 0}
+
+/* 테이블 */
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+.tbl th{background:#f1f5f9;padding:8px 10px;text-align:left;font-weight:700;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.tbl td{padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.tbl tr:hover td{background:#f8fafc}
+.emoji{font-size:14px}
+
+/* 인쇄 */
+@media print{
+  body{background:#fff;padding:12px}
+  .card:hover{box-shadow:none;border-color:#e2e8f0}
+  .wrap{max-width:100%}
+}
+@media(max-width:600px){
+  .flow{grid-template-columns:1fr}
+  .bf-row{flex-direction:column;align-items:center}
+  .bf-arrow{transform:rotate(90deg)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 헤더 -->
+<div class="hd">
+  <h1>🏫 Dream Academy 시스템 전체 설명도</h1>
+  <p>예약부터 포털까지, 모든 데이터가 어떻게 이어지는지 한눈에 보는 지도</p>
+  <div class="ver">2026년 6월 · dreamacademyph.com</div>
+</div>
+
+<!-- 범례 -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> 원본 데이터</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> 관리자 화면</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> 현지직원 화면</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> 손님(엄마) 포털</div>
+</div>
+
+<!-- ===== 전체 흐름도 ===== -->
+<div class="bigflow">
+  <h2>📊 데이터 흐름 전체 구조</h2>
+
+  <!-- 원본 -->
+  <div class="bf-row">
+    <div class="bf-box bf-src">
+      <h4>📋 예약 (bookings)</h4>
+      <p>예약자 · 학생 · 숙소 · 날짜 · 항공편 · 결제</p>
+    </div>
+    <div class="bf-arrow">＋</div>
+    <div class="bf-box bf-src">
+      <h4>👤 학생 (students)</h4>
+      <p>이름(한/영) · 나이 · 레벨 · SSP · 사진동의</p>
+    </div>
+  </div>
+  <div class="bf-down">⬇ 예약이 등록되면 자동으로 아래 시스템에 연결됩니다 ⬇</div>
+
+  <!-- 관리자 시스템 -->
+  <div class="bf-row">
+    <div class="bf-box bf-admin"><h4>🏠 룸 캘린더</h4><p>숙소 배정 현황</p></div>
+    <div class="bf-box bf-admin"><h4>🛬 픽드랍</h4><p>공항 ↔ 숙소</p></div>
+    <div class="bf-box bf-admin"><h4>📝 체크인</h4><p>사전정보 · 피켓</p></div>
+    <div class="bf-box bf-admin"><h4>🍽 식단</h4><p>모리인폼 · 라벨</p></div>
+    <div class="bf-box bf-admin"><h4>📄 인보이스</h4><p>견적 · 청구 · 영수증</p></div>
+  </div>
+  <div class="bf-down">⬇</div>
+
+  <!-- 현지직원 + 손님 -->
+  <div class="bf-row">
+    <div class="bf-box bf-staff"><h4>🌿 After School</h4><p>현지직원 일정 확인</p></div>
+    <div class="bf-box bf-staff"><h4>🎧 Online Class</h4><p>현지직원 출결 관리</p></div>
+    <div class="bf-box bf-staff"><h4>🎓 Tutor Class</h4><p>현지직원 수업 확인</p></div>
+    <div class="bf-box bf-staff"><h4>🚐 Shuttle</h4><p>현지직원 셔틀 확인</p></div>
+  </div>
+  <div class="bf-down">⬇</div>
+  <div class="bf-row">
+    <div class="bf-box bf-portal"><h4>📱 손님 포털</h4><p>내 예약 · 셔틀 · 튜터 · 화상영어 · 결제 · 항공편</p></div>
+  </div>
+</div>
+
+<!-- ===== 1. 예약 시스템 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#3b82f6"></div> 1. 예약 시스템 (원본 데이터)</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">📋</div>
+      <h3>예약 관리</h3>
+      <p>부킹리스트 · 인보이스 탭 · 영수증 탭 · 확정예약 탭 · 학생관리 탭</p>
+      <span class="tag tag-live">원본 데이터</span>
+    </div>
+    <div class="card">
+      <div class="ic">📄</div>
+      <h3>예약 상세 (마스터뷰)</h3>
+      <p>기본정보 · 픽업/체크인 · 학생 · 인보이스 · 튜터 · 셔틀 · 코멘트</p>
+      <span class="tag tag-live">7개 탭 통합</span>
+    </div>
+    <div class="card">
+      <div class="ic">🏠</div>
+      <h3>드림하우스 룸 캘린더</h3>
+      <p>예약의 숙소 배정(accom_room)을 실시간으로 캘린더에 표시</p>
+      <span class="tag tag-live">실시간 연동</span>
+    </div>
+    <div class="card">
+      <div class="ic">👤</div>
+      <h3>학생 관리</h3>
+      <p>리스트 + 달력 뷰. 아카데미 시작일 기준 자동 배치</p>
+      <span class="tag tag-auto">자동 계산</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📋</span> 예약 등록</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">학생 자동 생성</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">룸 캘린더 반영</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">픽드랍 자동 추출</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">식단 명단 반영</div>
+  </div>
+</div>
+
+<!-- ===== 2. 드림하우스 운영 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#22c55e"></div> 2. 드림하우스 운영 (관리자)</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">🛬</div>
+      <h3>픽드랍 관리</h3>
+      <p>예약의 항공편 → 자동 추출. 콤보 예약은 환승(transfer) 자동 생성</p>
+      <span class="tag tag-auto">자동 추출</span>
+    </div>
+    <div class="card">
+      <div class="ic">🚌</div>
+      <h3>투어셔틀 관리</h3>
+      <p>손님 신청 → 월별/주차별 그룹. 셔틀 배포 관리</p>
+      <span class="tag tag-snap">신청 시점 기록</span>
+    </div>
+    <div class="card">
+      <div class="ic">🍽</div>
+      <h3>식단 관련 업무</h3>
+      <p>올인원 예약 기준 자동 명단. 주간 식단 배포 + 체크리스트 + 라벨 인쇄</p>
+      <span class="tag tag-live">실시간 연동</span>
+    </div>
+    <div class="card">
+      <div class="ic">📝</div>
+      <h3>체크인 디테일</h3>
+      <p>예약 기반 자동생성. 손님 폼 링크 → 사전정보 수집. PDF 출력</p>
+      <span class="tag tag-auto">자동 생성</span>
+    </div>
+    <div class="card">
+      <div class="ic">🪧</div>
+      <h3>체크인 피켓 카드</h3>
+      <p>예약자 이름/영문/숙소/항공편 → A4 인쇄용 카드</p>
+      <span class="tag tag-live">실시간 연동</span>
+    </div>
+    <div class="card">
+      <div class="ic">🏠</div>
+      <h3>하우스 보고</h3>
+      <p>호실별 점검 보고. 미해결 항목 이월 추적. 사진/영상 첨부</p>
+      <span class="tag tag-live">독립 시스템</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📋</span> 예약의 항공편</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">픽드랍 자동 생성</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">기사 배정</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">기사 스케줄 달력</div>
+  </div>
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📋</span> 콤보 예약 (제이파크→드림하우스)</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">픽업(공항→1차숙소) + 환승(1차→2차) + 드랍(2차→공항) 3건 자동</div>
+  </div>
+</div>
+
+<!-- ===== 3. 애프터스쿨/필드트립 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#a855f7"></div> 3. 애프터스쿨 / 필드트립</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">🎒</div>
+      <h3>관리자: 신청목록 + 배포</h3>
+      <p>월별/주차별 그룹. 프로그램별 참가자 칩. 상태 관리. 일정 배포</p>
+      <span class="tag tag-live">실시간 룸 조회</span>
+    </div>
+    <div class="card">
+      <div class="ic">🌿</div>
+      <h3>현지직원: Today + Upcoming</h3>
+      <p>오늘 프로그램 참가 아이 확인. 다가오는 일정 목록. 룸번호 실시간</p>
+      <span class="tag tag-live">실시간 룸 조회</span>
+    </div>
+    <div class="card">
+      <div class="ic">📱</div>
+      <h3>손님 포털: 신청 폼</h3>
+      <p>월별 프로그램 선택 + 참가 아이 체크. 자동 Supabase 저장</p>
+      <span class="tag tag-snap">신청 시점 기록</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📱</span> 손님 신청</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">fieldtrip_applications 저장</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">관리자 신청목록 표시</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">현지직원 Today 카드</div>
+  </div>
+</div>
+
+<!-- ===== 4. 투어셔틀 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#f97316"></div> 4. 투어셔틀</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">🚌</div>
+      <h3>관리자: 신청목록 + 배포</h3>
+      <p>월/주차 그룹. 투어별 탑승자/인원/상태. 배포 탭에서 장소 추가</p>
+      <span class="tag tag-snap">룸번호 = 신청 시점</span>
+    </div>
+    <div class="card">
+      <div class="ic">🚐</div>
+      <h3>현지직원: Shuttle Schedule</h3>
+      <p>일별 셔틀 스케줄 확인. 출발시간/복귀시간/인원</p>
+      <span class="tag tag-live">배포 데이터 기준</span>
+    </div>
+    <div class="card">
+      <div class="ic">📱</div>
+      <h3>손님 포털: 셔틀 신청</h3>
+      <p>주차별 투어 아코디언 선택 → 투어별 인원 입력 → 제출</p>
+      <span class="tag tag-snap">제출 시 룸 고정</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📱</span> 손님 셔틀 신청</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">shuttle_applications 저장 (룸/이름 스냅샷)</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">관리자 신청목록</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">배포 → 현지직원 확인</div>
+  </div>
+</div>
+
+<!-- ===== 5. 튜터 수업 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#8b5cf6"></div> 5. 튜터 수업 (방문 튜터)</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">🎓</div>
+      <h3>관리자: 4탭 통합</h3>
+      <p>신청 수신함 · 수강생 · 주간 스케줄 · 인보이스</p>
+      <span class="tag tag-live">확정 시 레슨 자동 생성</span>
+    </div>
+    <div class="card">
+      <div class="ic">📊</div>
+      <h3>현지직원: My Classes</h3>
+      <p>본인 배정 수업 목록. 출결 입력. 메모 작성</p>
+      <span class="tag tag-live">본인 수업만 필터</span>
+    </div>
+    <div class="card">
+      <div class="ic">📱</div>
+      <h3>손님 포털: 튜터 신청</h3>
+      <p>18항목 폼. 수정/취소 요청 가능. 인보이스 확인</p>
+      <span class="tag tag-snap">신청 시점 기록</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">📱</span> 손님 튜터 신청</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">tutor_requests 저장</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">관리자 수신함</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">튜터 배정 → 확정</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">tutor_lessons + sessions 자동 생성</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">현지직원 My Classes</div>
+  </div>
+</div>
+
+<!-- ===== 6. 화상영어 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#0891b2"></div> 6. 화상영어 (Online Class)</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">💻</div>
+      <h3>관리자: 출석 모니터링</h3>
+      <p>튜터별 색상. 주간 그리드. 잔여 진행바. 변경요청 수신함</p>
+      <span class="tag tag-live">실시간 출결</span>
+    </div>
+    <div class="card">
+      <div class="ic">🎧</div>
+      <h3>현지직원 (튜터): 출결 입력</h3>
+      <p>Today · My Students · My Schedule 3탭. 직접 출결 마킹</p>
+      <span class="tag tag-live">본인 학생만</span>
+    </div>
+    <div class="card">
+      <div class="ic">📱</div>
+      <h3>손님 포털: 수강 현황</h3>
+      <p>잔여 수업 진행바. 재등록 배너. 사전취소(4일 규칙). 변경요청</p>
+      <span class="tag tag-snap">등록 시 학생이름 고정</span>
+    </div>
+  </div>
+
+  <div class="conn">
+    <div class="conn-item"><span class="emoji">🔧</span> 관리자가 수강 등록</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">online_enrollments 생성</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">세션 자동 전개</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">현지직원 출결 입력</div>
+    <div class="conn-arrow">→</div>
+    <div class="conn-item">손님 포털 진행바 반영</div>
+  </div>
+</div>
+
+<!-- ===== 7. 손님 포털 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#f97316"></div> 7. 손님(엄마) 포털 — 모든 신청의 출발점</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">📱</div>
+      <h3>마이페이지 (대시보드)</h3>
+      <p>예약 요약 · 알림 배지 · 잔금 안내 · 메뉴 6개 카드</p>
+      <span class="tag tag-live">실시간</span>
+    </div>
+    <div class="card">
+      <div class="ic">📋</div>
+      <h3>내 예약 확인</h3>
+      <p>예약 상세 정보. 콤보 숙소 구간 표시. 학생 영문이름 입력</p>
+      <span class="tag tag-live">실시간</span>
+    </div>
+    <div class="card">
+      <div class="ic">✈️</div>
+      <h3>항공편 등록</h3>
+      <p>입국/출국 항공편 입력. 체크인 7일 전 잠금</p>
+      <span class="tag tag-live">예약에 직접 저장</span>
+    </div>
+    <div class="card">
+      <div class="ic">💳</div>
+      <h3>잔금 결제</h3>
+      <p>PayPal 결제. 결제 완료 시 예약 상태 자동 변경</p>
+      <span class="tag tag-auto">자동 상태 변경</span>
+    </div>
+    <div class="card">
+      <div class="ic">📝</div>
+      <h3>내 신청 내역</h3>
+      <p>셔틀 · 필드트립 · 튜터 · 픽드랍 신청 현황 한눈에</p>
+      <span class="tag tag-snap">신청 시점 기록</span>
+    </div>
+    <div class="card">
+      <div class="ic">📝</div>
+      <h3>체크인 사전정보</h3>
+      <p>도착 시간 · 유심 · 식사 · 침구 등 사전 질문</p>
+      <span class="tag tag-live">예약에 직접 저장</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 데이터 연결 맵 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#64748b"></div> 📌 핵심 데이터 연결 정리</div>
+
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>데이터</th>
+        <th>원본 위치</th>
+        <th>사용하는 곳</th>
+        <th>연동 방식</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>숙소/룸번호</strong></td>
+        <td>bookings.house_no / accom_room</td>
+        <td>룸캘린더, 인보이스, 식단, 체크인, 픽드랍, 애프터스쿨</td>
+        <td><span class="tag tag-live">실시간 조회</span></td>
+      </tr>
+      <tr>
+        <td><strong>숙소/룸번호</strong></td>
+        <td>bookings.house_no / accom_room</td>
+        <td>투어셔틀 신청, 필드트립 신청</td>
+        <td><span class="tag tag-snap">신청 시점 스냅샷</span></td>
+      </tr>
+      <tr>
+        <td><strong>예약자 이름</strong></td>
+        <td>bookings.booker_name</td>
+        <td>관리자 전체, 인보이스, 식단</td>
+        <td><span class="tag tag-live">실시간 조회</span></td>
+      </tr>
+      <tr>
+        <td><strong>학생 이름</strong></td>
+        <td>students 테이블 + bookings.students JSONB</td>
+        <td>학생관리, 인보이스, 애프터스쿨, 튜터, 화상영어</td>
+        <td><span class="tag tag-snap">각 시스템 등록 시점</span></td>
+      </tr>
+      <tr>
+        <td><strong>항공편</strong></td>
+        <td>bookings.flight_in_* / flight_out_*</td>
+        <td>픽드랍 자동 추출, 체크인 카드, 기사 스케줄</td>
+        <td><span class="tag tag-auto">자동 추출</span></td>
+      </tr>
+      <tr>
+        <td><strong>결제 상태</strong></td>
+        <td>bookings.status / payment_status</td>
+        <td>확정예약 탭, 포털 결제, 영수증</td>
+        <td><span class="tag tag-live">실시간</span></td>
+      </tr>
+      <tr>
+        <td><strong>콤보 숙소 구간</strong></td>
+        <td>bookings.seg1_* / seg2_*</td>
+        <td>포털 내 예약, 픽드랍(환승), 셔틀(숙소 자동 판별), 식단</td>
+        <td><span class="tag tag-auto">자동 라우팅</span></td>
+      </tr>
+      <tr>
+        <td><strong>휴일</strong></td>
+        <td>holidays 테이블 (is_deployed)</td>
+        <td>셔틀 차단, 튜터 세션 제외, 식단 표시, 포털 사전안내</td>
+        <td><span class="tag tag-auto">자동 적용</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 알림 흐름 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#ef4444"></div> 🔔 알림 흐름</div>
+  <div class="flow">
+    <div class="card">
+      <div class="ic">📲</div>
+      <h3>텔레그램 (한국인 직원)</h3>
+      <p>항공편 등록 · 튜터 신청 · 셔틀 신청 · 취소 승인 시 자동 발송</p>
+      <span class="tag tag-auto">자동</span>
+    </div>
+    <div class="card">
+      <div class="ic">📲</div>
+      <h3>텔레그램 (현지직원)</h3>
+      <p>화상영어 변경 승인 · 튜터 취소 승인 시 자동 발송</p>
+      <span class="tag tag-auto">자동</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔔</div>
+      <h3>손님 웹푸시</h3>
+      <p>공지 배포 시 자동 발송. PWA 앱 배지 표시</p>
+      <span class="tag tag-auto">자동</span>
+    </div>
+    <div class="card">
+      <div class="ic">🔴</div>
+      <h3>직원 알림 (staff_notifications)</h3>
+      <p>업무 댓글 · 공지 · 결재 · 의견요청 · 미배정 업무</p>
+      <span class="tag tag-auto">30초 폴링</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 접근 경로 ===== -->
+<div class="sec">
+  <div class="sec-t"><div class="dot" style="background:#64748b"></div> 🔗 접근 경로 정리</div>
+  <table class="tbl">
+    <thead>
+      <tr><th>구분</th><th>URL</th><th>로그인</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>관리자 허브</strong></td><td>/admin/hub</td><td>admin-* 계정</td></tr>
+      <tr><td><strong>직원업무</strong></td><td>/staff</td><td>직원 비밀번호</td></tr>
+      <tr><td><strong>현지직원 허브</strong></td><td>/admineng/hub</td><td>staff_accounts 계정</td></tr>
+      <tr><td><strong>손님 포털</strong></td><td>/portal/dashboard</td><td>회원가입 or 예약번호</td></tr>
+      <tr><td><strong>직원 가이드</strong></td><td>/guide</td><td>없음 (공개)</td></tr>
+      <tr><td><strong>PWA 설치</strong></td><td>/install?app=guest|admin|staff</td><td>없음</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 푸터 -->
+<div style="text-align:center;margin-top:40px;padding-top:20px;border-top:1px solid #e2e8f0">
+  <p style="font-size:11px;color:#94a3b8">Dream Academy System Map · 2026.06 · 내부용 문서</p>
+</div>
+
+</div>
+</body>
+</html>

@@ -40,12 +40,30 @@ function fmtDate(s: string | null) {
   return s.length >= 10 ? s.slice(0, 10) : s;
 }
 
+const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
+
+/** 콤보 예약: 투어 날짜가 seg2 구간이면 seg2 숙소명, 아니면 seg1 숙소명 반환 */
+function resolveComboRoom(
+  tourDate: string | null,
+  info: { room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; accom_type?: string }
+): string {
+  if (!info) return "";
+  const isCombo = info.seg1_type && info.seg2_type;
+  if (!isCombo) return info.room || "";
+  // 콤보: tourDate >= seg2_checkin → 둘째 숙소
+  const td = (tourDate || "").slice(0, 10);
+  const s2 = (info.seg2_checkin || "").slice(0, 10);
+  if (td && s2 && td >= s2) return ACC_KR[info.seg2_type!] || info.seg2_type || info.room;
+  return ACC_KR[info.seg1_type!] || info.seg1_type || info.room;
+}
+
 export default function TourShuttleAdminPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [apps, setApps] = useState<ShuttleApp[]>([]);
   const [bookingNumbers, setBookingNumbers] = useState<Record<string, string>>({});
   const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
+  const [bookingRooms, setBookingRooms] = useState<Record<string, { room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; accom_type?: string }>>({});
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
   const [addOpen, setAddOpen] = useState(false);
@@ -105,9 +123,10 @@ export default function TourShuttleAdminPage() {
       setApps(data as ShuttleApp[]);
       const ids = Array.from(new Set(data.map(d => d.booking_id).filter(Boolean) as string[]));
       if (ids.length > 0) {
-        const { data: bs } = await supabase.from("bookings").select("id, reservation_no, booker_name, students").in("id", ids);
+        const { data: bs } = await supabase.from("bookings").select("id, reservation_no, booker_name, students, house_no, accom_room, accom_type, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout").in("id", ids);
         const numMap: Record<string, string> = {};
         const nameMap: Record<string, string> = {};
+        const roomMap: Record<string, { room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; accom_type?: string }> = {};
         (bs || []).forEach((b: any) => {
           numMap[b.id] = b.reservation_no || "";
           // 예약자 이름: booker_name 우선, 없으면 students JSONB 대표자명 폴백
@@ -122,9 +141,13 @@ export default function TourShuttleAdminPage() {
             } catch { /* ignore parse error */ }
           }
           if (nm) nameMap[b.id] = nm;
+          // 라이브 룸번호 + 콤보 seg 정보
+          const rm = (b.accom_room || b.house_no || "").trim().replace(/^DH[\s-]*/i, "").toUpperCase();
+          roomMap[b.id] = { room: rm, seg1_type: b.seg1_type, seg2_type: b.seg2_type, seg2_checkin: b.seg2_checkin, accom_type: b.accom_type };
         });
         setBookingNumbers(numMap);
         setBookingNames(nameMap);
+        setBookingRooms(roomMap);
       }
     }
     setLoading(false);
@@ -274,30 +297,44 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               </div>
               {activeList.map(a => {
                 const req = a.request || a.message || "";
+                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
+                const displayRoom = liveRoom || a.room_number || "-";
+                const bookerName = a.booking_id ? bookingNames[a.booking_id] : "";
                 return (
                   <div key={a.id} style={{display:"flex", alignItems:"center", gap:14, padding:"10px 16px", borderTop:"1px solid #f1f5f9", fontSize:14}}>
-                    <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {a.room_number || "-"}</span>
+                    <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {displayRoom}</span>
+                    {bookerName && <span style={{width:70, fontSize:13, color:"#6366f1", fontWeight:600}} title={bookerName}>{bookerName.length > 5 ? bookerName.slice(0,5)+"…" : bookerName}</span>}
                     <span style={{width:50, color:"#475569", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                     <span style={{flex:1, color: req ? "#475569" : "#94a3b8"}}>{req ? `📝 ${req}` : "—"}</span>
                   </div>
                 );
               })}
-              {reqList.map(a => (
+              {reqList.map(a => {
+                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
+                const displayRoom = liveRoom || a.room_number || "-";
+                const bookerName = a.booking_id ? bookingNames[a.booking_id] : "";
+                return (
                 <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderTop:"1px solid #f1f5f9", background:"#fffbeb", fontSize:14}}>
-                  <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {a.room_number || "-"}</span>
+                  <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {displayRoom}</span>
+                  {bookerName && <span style={{width:70, fontSize:13, color:"#92400e", fontWeight:600}}>{bookerName.length > 5 ? bookerName.slice(0,5)+"…" : bookerName}</span>}
                   <span style={{width:50, color:"#92400e", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                   <span style={{flex:1, color:"#92400e", fontSize:13}}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
                   <button onClick={() => changeStatus(a.id, "cancelled")} style={{fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#1a1a2e", fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>취소 확정</button>
                 </div>
-              ))}
-              {cancList.map(a => (
+                );
+              })}
+              {cancList.map(a => {
+                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
+                const displayRoom = liveRoom || a.room_number || "-";
+                return (
                 <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 16px", borderTop:"1px solid #f1f5f9", fontSize:13, color:"#94a3b8"}}>
-                  <span style={{width:90, textDecoration:"line-through"}}>{a.room_number || "-"}</span>
+                  <span style={{width:90, textDecoration:"line-through"}}>{displayRoom}</span>
                   <span style={{width:50, textDecoration:"line-through"}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                   <span style={{flex:1}}>취소됨</span>
                   <button onClick={() => changeStatus(a.id, "confirmed")} style={{fontSize:12, padding:"5px 10px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>되돌리기</button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           );
         };
@@ -403,7 +440,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                       return (
                         <tr key={a.id}>
                           <td style={{fontWeight:600}}>{(a.booking_id && bookingNames[a.booking_id]) || a.portal_name || a.name || "-"}</td>
-                          <td style={{color:"#475569"}}>{a.room_number || "-"}</td>
+                          <td style={{color:"#475569"}}>{(a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "") || a.room_number || "-"}</td>
                           <td style={{textAlign:"center", fontWeight:700}}>{a.people_count != null ? `${a.people_count}명` : "-"}</td>
                           <td style={{color:"#475569", fontSize:12}}>{dt}</td>
                           <td className="ts-notes" title={req}>{req || "-"}</td>

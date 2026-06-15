@@ -13,9 +13,10 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, accom_room, checkin_date, checkout_date, booker_name, reservation_no, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+    .select('id, accom_room, checkin_date, checkout_date, booker_name, reservation_no, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
     .not('accom_room', 'is', null)
     .neq('accom_room', '')
+    .not('status', 'ilike', '%취소%')
     .lte('checkin_date', lastDay)
     .gte('checkout_date', firstDay)
     .order('checkin_date')

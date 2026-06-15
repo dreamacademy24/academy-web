@@ -244,8 +244,9 @@ export default function PortalDashboard() {
   // 체류 기간에 휴무일이 끼면 미리 안내 팝업 (하루 1회)
   useEffect(() => {
     if (typeof window === "undefined" || !bookingInfo) return;
-    const ci = (bookingInfo.check_in || bookingInfo.checkin_date || "").slice(0, 10);
-    const co = (bookingInfo.check_out || bookingInfo.checkout_date || "").slice(0, 10);
+    const isCombo = bookingInfo.seg1_type && bookingInfo.seg2_type;
+    const ci = (isCombo ? bookingInfo.seg1_checkin : (bookingInfo.check_in || bookingInfo.checkin_date || "")).slice(0, 10);
+    const co = (isCombo ? bookingInfo.seg2_checkout : (bookingInfo.check_out || bookingInfo.checkout_date || "")).slice(0, 10);
     if (!ci || !co) return;
     let cancelled = false;
     import("@/lib/holidays").then(async m => {
@@ -339,20 +340,23 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <h1>안녕하세요, {displayName}님!</h1>
         {bookingInfo ? (
           <>
-            <div style={{display:'flex', gap:8, marginBottom:8}}>
-              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
-                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크인</div>
-                <div style={{fontWeight:700, fontSize:14}}>
-                  {bookingInfo.check_in || bookingInfo.checkin_date || bookingInfo.academy_start || '-'}
+            {(() => {
+              const combo = bookingInfo.seg1_type && bookingInfo.seg2_type;
+              const ciVal = combo ? (bookingInfo.seg1_checkin || bookingInfo.check_in || bookingInfo.checkin_date || '-') : (bookingInfo.check_in || bookingInfo.checkin_date || bookingInfo.academy_start || '-');
+              const coVal = combo ? (bookingInfo.seg2_checkout || bookingInfo.check_out || bookingInfo.checkout_date || '-') : (bookingInfo.check_out || bookingInfo.checkout_date || bookingInfo.academy_end || '-');
+              return (
+                <div style={{display:'flex', gap:8, marginBottom:8}}>
+                  <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                    <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크인</div>
+                    <div style={{fontWeight:700, fontSize:14}}>{ciVal}</div>
+                  </div>
+                  <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
+                    <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크아웃</div>
+                    <div style={{fontWeight:700, fontSize:14}}>{coVal}</div>
+                  </div>
                 </div>
-              </div>
-              <div style={{flex:1, background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'10px 14px'}}>
-                <div style={{fontSize:11, opacity:0.8, marginBottom:2}}>체크아웃</div>
-                <div style={{fontWeight:700, fontSize:14}}>
-                  {bookingInfo.check_out || bookingInfo.checkout_date || bookingInfo.academy_end || '-'}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
             {(() => {
               const students = Array.isArray(bookingInfo.students)
                 ? bookingInfo.students

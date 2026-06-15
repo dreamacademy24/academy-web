@@ -31,7 +31,8 @@ export async function GET(req: Request) {
   if (!bookingId) {
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, adults, children, special_request, students, reservation_no, booking_type, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+      .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, adults, children, special_request, students, reservation_no, booking_type, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+      .not('status', 'ilike', '%취소%')
       .order('checkin_date', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     // 체크인 디테일 제출/저장 현황 맵 (목록에서 제출완료/미제출 표시용)
