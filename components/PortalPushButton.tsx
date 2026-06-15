@@ -137,14 +137,14 @@ export default function PortalPushButton() {
 
   if (status === "ios-install") {
     return (
-      <div style={card}>
+      <div style={{ ...card, background: "#eff6ff", border: "1.5px solid #bfdbfe", boxShadow: "none" }}>
         <div style={{ fontSize: 30 }}>🔔</div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a2e", marginBottom: 3 }}>
-            알림 받기
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#1d4ed8", marginBottom: 3 }}>
+            알림 받으려면 홈 화면에 추가하세요
           </div>
-          <div style={{ fontSize: 12, color: "#6b7c93", lineHeight: 1.5 }}>
-            홈 화면에 추가 후 알림을 켤 수 있어요.
+          <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>
+            사파리 하단 <b>공유 <span style={{ fontSize: 13 }}>⬆️</span> → "홈 화면에 추가"</b> 후, 홈 화면 아이콘으로 열면 식단·셔틀·튜터 알림을 받을 수 있어요.
           </div>
         </div>
       </div>
@@ -183,35 +183,35 @@ export default function PortalPushButton() {
     );
   }
 
-  // default
+  // default — 미구독: 눈에 띄게 강조 (구독 유도)
   return (
-    <div style={card}>
+    <div style={{ ...card, background: "#fffbeb", border: "1.5px solid #fcd34d", boxShadow: "none", flexWrap: "wrap" }}>
       <div style={{ fontSize: 30 }}>🔔</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a2e", marginBottom: 3 }}>
-          알림 받기
+      <div style={{ flex: 1, minWidth: 180 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 800, color: "#92400e", marginBottom: 3 }}>
+          알림을 켜주세요!
         </div>
-        <div style={{ fontSize: 12, color: "#6b7c93", lineHeight: 1.5 }}>
-          셔틀·튜터·체크인 등 예약 소식을 알림으로 받아보세요.
+        <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.5 }}>
+          이번주 식단 · 셔틀 · 튜터 · 정산 등 중요한 소식을 폰 알림으로 바로 받아보세요.
         </div>
       </div>
       <button
         onClick={enablePush}
         disabled={busy}
         style={{
-          padding: "10px 16px",
+          padding: "11px 20px",
           borderRadius: 10,
           border: "none",
-          background: busy ? "#94a3b8" : "#1a6fc4",
+          background: busy ? "#94a3b8" : "#d97706",
           color: "#fff",
-          fontSize: 13,
-          fontWeight: 700,
+          fontSize: 13.5,
+          fontWeight: 800,
           cursor: busy ? "default" : "pointer",
           fontFamily: "inherit",
           whiteSpace: "nowrap",
         }}
       >
-        {busy ? "설정 중…" : "🔔 알림 받기"}
+        {busy ? "설정 중…" : "🔔 알림 켜기"}
       </button>
     </div>
   );

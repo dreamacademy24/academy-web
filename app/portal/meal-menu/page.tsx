@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Menu { kind: string; menu_date: string; image_url: string; }
-const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MEAL_ORDER = "🌅 아침 · ☀️ 점심 · 🌙 저녁(어른) · 🧒 저녁(아동)";
 
@@ -20,6 +19,9 @@ export default function PortalMealMenuPage() {
   const weekDays = Array.from({ length: 5 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
   const weekLabel = `${monday.getMonth() + 1}/${monday.getDate()} ~ ${weekDays[4].getMonth() + 1}/${weekDays[4].getDate()}`;
   const monthFirst = new Date(base.getFullYear(), base.getMonth(), 1);
+
+  // 식단 화면을 열면 '본 시각' 기록 → 대시보드 식단 빨간 뱃지 사라짐
+  useEffect(() => { try { localStorage.setItem("meal_seen", new Date().toISOString()); } catch {} }, []);
 
   useEffect(() => {
     async function init() {
@@ -39,7 +41,7 @@ export default function PortalMealMenuPage() {
   const load = useCallback(async () => {
     setLoading(true);
     if (tab === "aio") {
-      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url").eq("kind", "dreamhouse").eq("published", true).in("menu_date", weekDays.map(ymd));
+      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url").eq("kind", "dreamhouse").eq("published", true).eq("menu_date", ymd(monday));
       setMenus((data || []) as Menu[]);
     } else {
       const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url").eq("kind", "academy").eq("published", true).eq("menu_date", ymd(monthFirst));
@@ -52,7 +54,6 @@ export default function PortalMealMenuPage() {
 
   if (aio === null) return <div style={{ padding: 40, textAlign: "center", color: "#94a3b8", fontFamily: "'Noto Sans KR',sans-serif" }}>불러오는 중…</div>;
 
-  const byDate = (d: string) => menus.find(m => m.menu_date === d);
   const academyImg = menus[0]?.image_url;
 
   return (
@@ -79,14 +80,10 @@ export default function PortalMealMenuPage() {
       {tab === "aio" ? (
         <>
           <p style={{ fontSize: 12, color: "#6b7c93", marginBottom: 14 }}>드림하우스 식단 · 항목 순서: {MEAL_ORDER}</p>
-          {loading ? <Loading /> : menus.length === 0 ? <Empty text="아직 이번 주 식단이 등록되지 않았습니다." /> : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {weekDays.map(d => { const date = ymd(d); const m = byDate(date); if (!m) return null; return (
-                <div key={date} style={card}>
-                  <div style={cardHd}>{d.getMonth() + 1}/{d.getDate()} ({DOW[d.getDay()]})</div>
-                  <img src={m.image_url} alt={`${date} 식단`} style={{ width: "100%", display: "block" }} />
-                </div>
-              ); })}
+          {loading ? <Loading /> : !menus[0] ? <Empty text="아직 이번 주 식단이 등록되지 않았습니다." /> : (
+            <div style={card}>
+              <div style={cardHd}>{weekLabel} 드림하우스 식단</div>
+              <img src={menus[0].image_url} alt="이번주 식단" style={{ width: "100%", display: "block" }} />
             </div>
           )}
         </>

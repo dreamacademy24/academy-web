@@ -30,6 +30,7 @@ export default function PortalDashboard() {
   const [noticeUnread, setNoticeUnread] = useState(0);
   const [appsChanged, setAppsChanged] = useState(0);
   const [ocChanged, setOcChanged] = useState(0);
+  const [mealNew, setMealNew] = useState(0);
 
   useEffect(() => {
     async function init() {
@@ -203,14 +204,29 @@ export default function PortalDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  // 앱 아이콘 배지 = 공지 + 상태변경 합산 (지원 기기에서만)
+  // 식단 새 발행 인앱 뱃지 (구독 없이도 보임): 발행된 식단이 마지막 확인 이후 갱신됐으면 표시
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("meal_menus").select("updated_at").eq("published", true).order("updated_at", { ascending: false }).limit(30);
+      if (cancelled || !data || data.length === 0) return;
+      let seen = "";
+      try { seen = localStorage.getItem("meal_seen") || ""; } catch {}
+      if (!seen) { try { localStorage.setItem("meal_seen", data[0].updated_at); } catch {}; return; } // 첫 방문: 기준점만
+      setMealNew(data.filter((m: { updated_at: string }) => m.updated_at > seen).length);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // 앱 아이콘 배지 = 공지 + 상태변경 + 식단 합산 (지원 기기에서만)
   useEffect(() => {
     try {
-      const total = noticeUnread + appsChanged + ocChanged;
+      const total = noticeUnread + appsChanged + ocChanged + mealNew;
       const navAny = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
       if (navAny.setAppBadge) { if (total > 0) navAny.setAppBadge(total); else navAny.clearAppBadge?.(); }
     } catch {}
-  }, [noticeUnread, appsChanged, ocChanged]);
+  }, [noticeUnread, appsChanged, ocChanged, mealNew]);
 
   // 체류 기간에 휴무일이 끼면 미리 안내 팝업 (하루 1회)
   useEffect(() => {
@@ -355,8 +371,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         )}
       </div>
 
-      <PortalPushButton />
-
       {/* 체류 기간 휴무일 사전 안내 팝업 */}
       {stayHolidays && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
@@ -479,6 +493,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         </a>
       )}
 
+      <PortalPushButton />
+
       <div className="db-grid">
         {(authUser ? memberCards : cards).map((c, i) => (
           <div key={i} className="db-card" style={{ cursor: "pointer" }}
@@ -495,6 +511,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             )}
             {c.title === "화상영어" && ocChanged > 0 && (
               <span className="db-badge">{ocChanged > 99 ? "99+" : ocChanged}</span>
+            )}
+            {c.title === "식단" && mealNew > 0 && (
+              <span className="db-badge">{mealNew > 99 ? "99+" : mealNew}</span>
             )}
             <div className="icon">{c.icon}</div>
             <h3>{c.title}</h3>
