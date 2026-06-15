@@ -229,6 +229,14 @@ export default function PortalTutorPage() {
   const [pickerSlot, setPickerSlot] = useState<null | 'single' | '1' | '2'>(null);
   const [timePickerOpen, setTimePickerOpen] = useState(false);
 
+  // 하루 취소 신청
+  const [cancelDayOpen, setCancelDayOpen] = useState(false);
+  const [cancelDayLesson, setCancelDayLesson] = useState<InvLesson | null>(null);
+  const [cancelDaySession, setCancelDaySession] = useState<InvSession | null>(null);
+  const [cancelDayReason, setCancelDayReason] = useState("");
+  const [cancelDaySaving, setCancelDaySaving] = useState(false);
+  const [cancelRequests, setCancelRequests] = useState<any[]>([]);
+
   // 배포 휴일 → 수업일 전개에서 자동 제외
   const [, setHolidayTick] = useState(0);
   useEffect(() => {
@@ -270,6 +278,9 @@ export default function PortalTutorPage() {
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
       const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
       if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
+      // 취소 요청 목록
+      const crRes = await fetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
+      if (crRes.ok) { const d = await crRes.json(); setCancelRequests(d || []); }
       if (session.booking_id) {
         const sRes = await fetch(`/api/portal/students?booking_id=${session.booking_id}`);
         if (sRes.ok) {
@@ -335,6 +346,59 @@ export default function PortalTutorPage() {
     if (!session) return;
     const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
     if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); setNotesMap(d.notesMap || {}); }
+    // 취소 요청도 새로고침
+    const crRes = await fetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
+    if (crRes.ok) { const d = await crRes.json(); setCancelRequests(d || []); }
+  }
+
+  // 해당 세션에 대한 취소 요청 상태 확인
+  function getCancelStatus(lessonId: string, sessionDate: string): { status: string; resolution?: string } | null {
+    const cr = cancelRequests.find((r: any) => r.lesson_id === lessonId && r.cancel_date === sessionDate);
+    if (!cr) return null;
+    return { status: cr.status, resolution: cr.resolution };
+  }
+
+  // 하루 취소 모달 열기
+  function openCancelDay(lesson: InvLesson, sess: InvSession) {
+    setCancelDayLesson(lesson);
+    setCancelDaySession(sess);
+    setCancelDayReason("");
+    setCancelDayOpen(true);
+  }
+
+  // 하루 취소 제출
+  async function submitCancelDay() {
+    if (!cancelDayLesson || !cancelDaySession || !session) return;
+    setCancelDaySaving(true);
+    try {
+      const res = await fetch("/api/portal/tutor/cancel-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lesson_id: cancelDayLesson.id,
+          cancel_date: cancelDaySession.session_date,
+          reason: cancelDayReason || null,
+          booking_id: session.booking_id,
+          requested_by: session.guest_name,
+          student_name: cancelDayLesson.student_names || "",
+          tutor_id: null, // 서버에서 lesson 기준 조회 가능
+        }),
+      });
+      if (res.ok) {
+        const cr = await res.json();
+        setCancelRequests(prev => [cr, ...prev]);
+        setCancelDayOpen(false);
+        setTutorToast("취소 요청이 접수되었습니다.");
+        setTimeout(() => setTutorToast(""), 3000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || "취소 요청에 실패했습니다.");
+      }
+    } catch {
+      alert("네트워크 오류가 발생했습니다.");
+    } finally {
+      setCancelDaySaving(false);
+    }
   }
 
   async function translateNote(reqId: string, date: string, note: string) {
@@ -770,10 +834,30 @@ export default function PortalTutorPage() {
                   <div style={{ marginTop: 8, borderTop: "1px solid #e2e8f0", paddingTop: 8 }}>
                     {l.sessions.map(s => {
                       const st = SESS_ST[s.status] || SESS_ST.scheduled;
+                      const cr = getCancelStatus(l.id, s.session_date);
+                      const canCancel = s.status === "scheduled" && !cr;
                       return (
-                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 2px", fontSize: 12 }}>
-                          <span style={{ color: "#475569" }}>{s.session_idx}회차 · {s.session_date}{s.session_time ? ` ${s.session_time}` : ""}</span>
-                          <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 2px", fontSize: 12, gap: 6 }}>
+                          <span style={{ color: "#475569", flex: 1 }}>{s.session_idx}회차 · {s.session_date}{s.session_time ? ` ${s.session_time}` : ""}</span>
+                          <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+                            {cr ? (
+                              <span className="badge" style={{
+                                background: cr.status === "pending" ? "#fef3c7" : cr.status === "approved" ? "#fef2f2" : "#f1f5f9",
+                                color: cr.status === "pending" ? "#92400e" : cr.status === "approved" ? "#dc2626" : "#64748b",
+                                fontSize: 11
+                              }}>
+                                {cr.status === "pending" ? "취소 대기중" : cr.status === "approved" ? (cr.resolution === "deduct" ? "취소(차감)" : "취소(보강)") : "취소 거절"}
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                            )}
+                            {canCancel && (
+                              <button
+                                onClick={() => openCancelDay(l, s)}
+                                style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                              >취소 신청</button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -1633,6 +1717,58 @@ export default function PortalTutorPage() {
         </div>
       </div>
     )}
+
+    {/* 하루 취소 모달 */}
+    {cancelDayOpen && cancelDayLesson && cancelDaySession && (() => {
+      const cancelD = new Date(cancelDaySession.session_date + "T00:00:00+08:00");
+      const diffMs = cancelD.getTime() - Date.now();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      const isRefundable = diffDays >= 4;
+      return (
+        <div className="modal-bg" onClick={() => !cancelDaySaving && setCancelDayOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <h3>🚫 수업 하루 취소 신청</h3>
+            <div style={{ background:"#f8fafc", borderRadius:8, padding:"10px 14px", margin:"10px 0", fontSize:13 }}>
+              <div><strong>학생:</strong> {cancelDayLesson.student_names || "-"}</div>
+              <div><strong>선생님:</strong> {cancelDayLesson.tutor_name || "미배정"}</div>
+              <div><strong>취소 요청일:</strong> <span style={{ color:"#dc2626", fontWeight:700 }}>{cancelDaySession.session_date}</span> ({cancelDaySession.session_idx}회차)</div>
+            </div>
+            {!isRefundable && (
+              <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderLeft:"4px solid #dc2626", borderRadius:8, padding:"10px 14px", margin:"10px 0", fontSize:12.5, fontWeight:700, color:"#991b1b", lineHeight:1.5 }}>
+                ⚠️ 수업일 4일 이내 취소는 <u>환불 및 보강이 불가</u>합니다.<br/>
+                해당 수업일의 비용은 차감 처리됩니다.
+              </div>
+            )}
+            {isRefundable && (
+              <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"10px 14px", margin:"10px 0", fontSize:12.5, fontWeight:600, color:"#1e40af", lineHeight:1.5 }}>
+                ℹ️ 수업일 4일 전 취소 — 담당자가 확인 후 차감 또는 보강으로 처리해 드립니다.
+              </div>
+            )}
+            <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#374151", margin:"12px 0 6px" }}>취소 사유 (선택)</label>
+            <textarea
+              value={cancelDayReason}
+              onChange={e => setCancelDayReason(e.target.value)}
+              placeholder="취소 사유를 입력해주세요 (예: 아이 컨디션 문제, 일정 변경 등)"
+              style={{ width:"100%", minHeight:80, padding:"9px 11px", border:"1px solid #e5e7eb", borderRadius:7, fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical", boxSizing:"border-box" }}
+            />
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:14 }}>
+              <button
+                type="button"
+                onClick={() => setCancelDayOpen(false)}
+                disabled={cancelDaySaving}
+                style={{ padding:"9px 14px", background:"#fff", color:"#475569", border:"1px solid #cbd5e1", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}
+              >닫기</button>
+              <button
+                type="button"
+                onClick={submitCancelDay}
+                disabled={cancelDaySaving}
+                style={{ padding:"9px 18px", background:"#dc2626", color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:cancelDaySaving?0.6:1 }}
+              >{cancelDaySaving ? "처리 중..." : "취소 신청"}</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
 
     {tutorToast && (
       <div role="status" aria-live="polite" style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"#1a1a2e", color:"#fff", padding:"12px 22px", borderRadius:10, fontSize:13.5, fontWeight:700, boxShadow:"0 10px 30px rgba(0,0,0,0.2)", zIndex:200 }}>

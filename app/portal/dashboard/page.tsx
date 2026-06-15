@@ -31,6 +31,19 @@ export default function PortalDashboard() {
   const [appsChanged, setAppsChanged] = useState(0);
   const [ocChanged, setOcChanged] = useState(0);
   const [mealNew, setMealNew] = useState(0);
+  // 배너 dismiss 상태
+  const [dismissBalance, setDismissBalance] = useState(false);
+  const [dismissEngName, setDismissEngName] = useState(false);
+  const [dismissNewNotes, setDismissNewNotes] = useState(false);
+
+  // 배너 dismiss localStorage 로드
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("dismiss_balance") === today) setDismissBalance(true);
+    if (localStorage.getItem("dismiss_engname") === today) setDismissEngName(true);
+    if (localStorage.getItem("dismiss_newnotes") === today) setDismissNewNotes(true);
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -402,7 +415,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       )}
 
       {/* 잔금 D-7 자동 안내 */}
-      {(() => {
+      {!dismissBalance && (() => {
         const bd = (bookingInfo?.balance_date || "").slice(0, 10);
         const paidStatuses = ["영수증발행", "결제완료", "완료"];
         if (!bd || paidStatuses.includes(bookingInfo?.status || "")) return null;
@@ -411,29 +424,41 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         const dday = Math.round((t.getTime() - today.getTime()) / 86400000);
         if (dday < 0 || dday > 7) return null;
         return (
-          <a href="/portal/payment" style={{ display: "block", textDecoration: "none", marginBottom: 16 }}>
-            <div style={{ background: "linear-gradient(135deg,#fef3c7,#fde68a)", border: "2px solid #f59e0b", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
-              <div style={{ fontSize: 32 }}>💰</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#92400e", marginBottom: 3 }}>잔금 납부일 {dday === 0 ? "오늘" : `D-${dday}`} ({bd})</div>
-                <div style={{ fontSize: 12, color: "#a16207" }}>결제 안내를 확인해주세요 →</div>
+          <div style={{ position: "relative", marginBottom: 16 }}>
+            <a href="/portal/payment" style={{ display: "block", textDecoration: "none" }}>
+              <div style={{ background: "linear-gradient(135deg,#fef3c7,#fde68a)", border: "2px solid #f59e0b", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+                <div style={{ fontSize: 32 }}>💰</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#92400e", marginBottom: 3 }}>잔금 납부일 {dday === 0 ? "오늘" : `D-${dday}`} ({bd})</div>
+                  <div style={{ fontSize: 12, color: "#a16207" }}>결제 안내를 확인해주세요 →</div>
+                </div>
               </div>
-            </div>
-          </a>
+            </a>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); localStorage.setItem("dismiss_balance", new Date().toISOString().slice(0,10)); setDismissBalance(true); }}
+              style={{ position: "absolute", top: 6, right: 8, background: "rgba(255,255,255,0.7)", border: "none", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#92400e", cursor: "pointer" }}>
+              오늘 그만보기
+            </button>
+          </div>
         );
       })()}
 
       {/* 학생 영문이름 미입력 안내 */}
-      {dashStudents.some((s: any) => !(s.name_en || "").trim()) && (
-        <a href="/portal/my-booking" style={{ display: "block", textDecoration: "none", marginBottom: 16 }}>
-          <div style={{ background: "linear-gradient(135deg,#fee2e2,#fecaca)", border: "2px solid #f87171", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
-            <div style={{ fontSize: 32 }}>✏️</div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#b91c1c", marginBottom: 3 }}>학생 영문 혹은 사용하는 영어 이름을 기재해주세요!</div>
-              <div style={{ fontSize: 12, color: "#dc2626" }}>내 예약현황에서 바로 입력할 수 있어요 →</div>
+      {!dismissEngName && dashStudents.some((s: any) => !(s.name_en || "").trim()) && (
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <a href="/portal/my-booking" style={{ display: "block", textDecoration: "none" }}>
+            <div style={{ background: "linear-gradient(135deg,#fee2e2,#fecaca)", border: "2px solid #f87171", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}>
+              <div style={{ fontSize: 32 }}>✏️</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#b91c1c", marginBottom: 3 }}>학생 영문 혹은 사용하는 영어 이름을 기재해주세요!</div>
+                <div style={{ fontSize: 12, color: "#dc2626" }}>내 예약현황에서 바로 입력할 수 있어요 →</div>
+              </div>
             </div>
-          </div>
-        </a>
+          </a>
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); localStorage.setItem("dismiss_engname", new Date().toISOString().slice(0,10)); setDismissEngName(true); }}
+            style={{ position: "absolute", top: 6, right: 8, background: "rgba(255,255,255,0.7)", border: "none", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>
+            오늘 그만보기
+          </button>
+        </div>
       )}
 
       {hasConfirmedTutor && (
@@ -468,29 +493,35 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         </a>
       )}
 
-      {hasNewNotes && (
-        <a href="/portal/tutor" style={{display:"block",textDecoration:"none",marginBottom:16}}>
-          <div style={{
-            background:"linear-gradient(135deg,#fee2e2,#fecaca)",
-            border:"2px solid #fca5a5",
-            borderRadius:16,
-            padding:"16px 20px",
-            display:"flex",
-            alignItems:"center",
-            gap:14,
-            cursor:"pointer",
-          }}>
-            <div style={{fontSize:32}}>📝</div>
-            <div>
-              <div style={{fontSize:14,fontWeight:800,color:"#b91c1c",marginBottom:3}}>
-                새 데일리 노트가 도착했습니다!
-              </div>
-              <div style={{fontSize:12,color:"#991b1b"}}>
-                튜터 수업 노트를 확인하세요 →
+      {hasNewNotes && !dismissNewNotes && (
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <a href="/portal/tutor" style={{display:"block",textDecoration:"none"}}>
+            <div style={{
+              background:"linear-gradient(135deg,#fee2e2,#fecaca)",
+              border:"2px solid #fca5a5",
+              borderRadius:16,
+              padding:"16px 20px",
+              display:"flex",
+              alignItems:"center",
+              gap:14,
+              cursor:"pointer",
+            }}>
+              <div style={{fontSize:32}}>📝</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:"#b91c1c",marginBottom:3}}>
+                  새 데일리 노트가 도착했습니다!
+                </div>
+                <div style={{fontSize:12,color:"#991b1b"}}>
+                  튜터 수업 노트를 확인하세요 →
+                </div>
               </div>
             </div>
-          </div>
-        </a>
+          </a>
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); localStorage.setItem("dismiss_newnotes", new Date().toISOString().slice(0,10)); setDismissNewNotes(true); }}
+            style={{ position: "absolute", top: 6, right: 8, background: "rgba(255,255,255,0.7)", border: "none", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#b91c1c", cursor: "pointer" }}>
+            오늘 그만보기
+          </button>
+        </div>
       )}
 
       <PortalPushButton />

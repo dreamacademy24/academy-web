@@ -6,15 +6,17 @@ import TutorApplications from "../tutors/TutorApplications";
 import TutorLessonList from "./TutorLessonList";
 import TutorInvoice from "./TutorInvoice";
 import TutorWeeklySchedule from "./TutorWeeklySchedule";
+import TutorCancelRequests from "./TutorCancelRequests";
 
-type Tab = "applications" | "schedule" | "students" | "invoice";
+type Tab = "applications" | "schedule" | "students" | "invoice" | "cancels";
 
 export default function TutorClassPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = (searchParams?.get("tab") as Tab) || "applications";
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<Tab>(["applications","schedule","students","invoice"].includes(initialTab) ? initialTab : "applications");
+  const [tab, setTab] = useState<Tab>(["applications","schedule","students","invoice","cancels"].includes(initialTab) ? initialTab : "applications");
+  const [cancelCount, setCancelCount] = useState(0);
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -24,7 +26,7 @@ export default function TutorClassPage() {
   // URL ?tab= 변경 시 탭 동기화 (같은 경로 router.push 후에도 반영)
   useEffect(() => {
     const t = searchParams?.get("tab");
-    if (t && ["applications","schedule","students","invoice"].includes(t)) {
+    if (t && ["applications","schedule","students","invoice","cancels"].includes(t)) {
       setTab(t as Tab);
     }
   }, [searchParams]);
@@ -77,6 +79,10 @@ export default function TutorClassPage() {
         <button className={`tc-tab${tab === "invoice" ? " ac" : ""}`} onClick={() => setTab("invoice")} role="tab" aria-selected={tab === "invoice"}>
           💰 인보이스
         </button>
+        <button className={`tc-tab${tab === "cancels" ? " ac" : ""}`} onClick={() => setTab("cancels")} role="tab" aria-selected={tab === "cancels"} style={{ position: "relative" }}>
+          🚫 취소 요청
+          {cancelCount > 0 && <span style={{ position: "absolute", top: 3, right: 6, background: "#dc2626", color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{cancelCount}</span>}
+        </button>
       </div>
 
       {tab === "applications" && <TutorApplications />}
@@ -86,6 +92,8 @@ export default function TutorClassPage() {
       {tab === "students" && <TutorLessonList />}
 
       {tab === "invoice" && <TutorInvoice />}
+
+      {tab === "cancels" && <TutorCancelRequests onCountChange={setCancelCount} />}
     </div>
   </>);
 }
