@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
+import MealMenuPublish from "./MealMenuPublish";
 
 /* ───────── 날짜 헬퍼 (로컬 타임존 안전 — toISOString 금지) ───────── */
 const pD = (s: string) => { const [a, b, c] = s.slice(0, 10).split("-").map(Number); return new Date(a, b - 1, c); };
@@ -94,7 +95,7 @@ export default function MealPlanPage() {
   const [bookings, setBookings] = useState<Bk[]>([]);
   const [loading, setLoading] = useState(true);
   const [baseDate, setBaseDate] = useState(() => fD(new Date()));
-  const [view, setView] = useState<"list" | "daily" | "labels">("list");
+  const [view, setView] = useState<"list" | "daily" | "labels" | "menu_aio" | "menu_academy">("list");
   const [labelDate, setLabelDate] = useState("");
   const [lblWeek, setLblWeek] = useState(false);
   const [holidayOv, setHolidayOv] = useState<Record<string, boolean>>({});
@@ -346,7 +347,7 @@ export default function MealPlanPage() {
     <div className="mp-w">
       <div className="mp-top">
         <a className="mp-back" href="/admin/hub">← 관리자 홈</a>
-        <h1>🍽 식단 모리인폼</h1>
+        <h1>🍽 식단 관련 업무</h1>
         <span style={{ fontSize: 12.5, color: "#64748b" }}>올인원 패키지 · 드림하우스 체류 구간 자동 추출</span>
       </div>
 
@@ -365,7 +366,12 @@ export default function MealPlanPage() {
         <button className={`mp-tab ${view === "list" ? "on" : ""}`} onClick={() => setView("list")}>📋 주간 명단</button>
         <button className={`mp-tab ${view === "daily" ? "on" : ""}`} onClick={() => setView("daily")}>✅ 일별 체크리스트</button>
         <button className={`mp-tab ${view === "labels" ? "on" : ""}`} onClick={() => setView("labels")}>🏷 라벨</button>
+        <button className={`mp-tab ${view === "menu_aio" ? "on" : ""}`} onClick={() => setView("menu_aio")}>🏠 올인원 식단(엄마용)</button>
+        <button className={`mp-tab ${view === "menu_academy" ? "on" : ""}`} onClick={() => setView("menu_academy")}>🎓 학생 식단(월간)</button>
       </div>
+
+      {view === "menu_aio" && <MealMenuPublish kind="dreamhouse" />}
+      {view === "menu_academy" && <MealMenuPublish kind="academy" />}
 
       {loading ? <div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>불러오는 중...</div> : <>
 
@@ -555,7 +561,7 @@ export default function MealPlanPage() {
                   <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}>
                     <input style={{ border: "1px solid #d6dee8", borderRadius: 7, padding: "7px 9px", fontSize: 13, fontFamily: "inherit", maxWidth: 200 }} value={gsInvName} onChange={e => setGsInvName(e.target.value)} placeholder="항목명 (예: 보호자 추가 6/22~6/28)" />
                     <input type="number" style={{ border: "1px solid #d6dee8", borderRadius: 7, padding: "7px 9px", fontSize: 13, fontFamily: "inherit", maxWidth: 120 }} value={gsInvAmt} onChange={e => setGsInvAmt(e.target.value)} placeholder="금액(원)" />
-                    <span style={{ fontSize: 11, color: "#0f766e" }}>주당: 드하 17만 · 제이파크 18만 · 큐브나인 15만</span>
+                    <span style={{ fontSize: 11, color: "#0f766e" }}>주당: 드하 34만 · 제이파크 34만 · 큐브나인 25만</span>
                   </div>
                 )}
               </div>

@@ -690,7 +690,7 @@ export default function BookingDetailPage() {
                       <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap",alignItems:"center"}}>
                         <input className="ed-inp" style={{maxWidth:200}} value={gsInvName} onChange={e=>setGsInvName(e.target.value)} placeholder="항목명 (예: 보호자 추가 6/22~6/28)"/>
                         <input className="ed-inp" type="number" style={{maxWidth:120}} value={gsInvAmt} onChange={e=>setGsInvAmt(e.target.value)} placeholder="금액(원)"/>
-                        <span style={{fontSize:11,color:"#0f766e"}}>주당: 드하 17만 · 제이파크 18만 · 큐브나인 15만</span>
+                        <span style={{fontSize:11,color:"#0f766e"}}>주당: 드하 34만 · 제이파크 34만 · 큐브나인 25만</span>
                       </div>
                     )}
                   </div>

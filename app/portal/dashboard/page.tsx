@@ -256,6 +256,7 @@ export default function PortalDashboard() {
     { icon: "👩‍🏫", title: "튜터 수업", desc: "방문 튜터 수업 신청", ready: true, href: "/portal/tutor" },
     { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: false, href: "/portal/online-class" },
     { icon: "🧾", title: "정산내역" + (bookingInfo?.settlement_open ? " (베타)" : ""), desc: "보증금·튜터비·추가비용 정산 내역", ready: !!bookingInfo?.settlement_open, href: "/portal/settlement" },
+    { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: true, href: "/portal/meal-menu" },
     { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-applications" },
   ];
 
