@@ -106,7 +106,7 @@ export async function GET(req: Request) {
     const real = sessByLesson.get(l.id) || []
     const sessions = real.length > 0
       ? real
-      : deriveDates(l as LessonRow & { attendance_log?: Record<string, string> | null }).map(ds => ({ lesson_id: l.id, session_date: ds, session_time: (l as { class_time?: string | null }).class_time || null }))
+      : deriveDates(l as LessonRow & { attendance_log?: Record<string, string> | null }).map((ds, idx) => ({ id: `virtual-${l.id}-${ds}`, lesson_id: l.id, session_date: ds, session_time: (l as { class_time?: string | null }).class_time || null, session_idx: idx + 1, status: 'scheduled' }))
     return {
       ...l,
       tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
