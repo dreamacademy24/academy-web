@@ -136,7 +136,11 @@ export default function PortalDashboard() {
       const { data } = await supabase.from("portal_notices").select("*").eq("popup", true).order("created_at", { ascending: false });
       if (cancelled) return;
       const list = (data || []).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
-      const top = list[0];
+      // 영구 dismiss된 공지 제외
+      let dismissed: string[] = [];
+      try { dismissed = JSON.parse(localStorage.getItem("notice_popup_dismissed") || "[]"); } catch {}
+      const visible = list.filter((n: any) => !dismissed.includes(n.id));
+      const top = visible[0];
       if (!top) return;
       const seen = localStorage.getItem("notice_popup_seen");
       const todayKey = top.id + "|" + new Date().toISOString().slice(0, 10);
@@ -262,9 +266,18 @@ export default function PortalDashboard() {
     return () => { cancelled = true; };
   }, [bookingInfo]);
 
-  function dismissPopup(forToday: boolean) {
-    if (forToday && popupNotice && typeof window !== "undefined") {
-      localStorage.setItem("notice_popup_seen", popupNotice.id + "|" + new Date().toISOString().slice(0, 10));
+  function dismissPopup(mode: "today" | "forever" | "close") {
+    if (popupNotice && typeof window !== "undefined") {
+      if (mode === "today") {
+        localStorage.setItem("notice_popup_seen", popupNotice.id + "|" + new Date().toISOString().slice(0, 10));
+      } else if (mode === "forever") {
+        try {
+          const raw = localStorage.getItem("notice_popup_dismissed") || "[]";
+          const arr: string[] = JSON.parse(raw);
+          if (!arr.includes(popupNotice.id)) arr.push(popupNotice.id);
+          localStorage.setItem("notice_popup_dismissed", JSON.stringify(arr));
+        } catch { localStorage.setItem("notice_popup_dismissed", JSON.stringify([popupNotice.id])); }
+      }
     }
     setPopupNotice(null);
   }
@@ -591,7 +604,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       </div>
     </div>
     {popupNotice && (
-      <div onClick={() => dismissPopup(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 18 }}>
+      <div onClick={() => dismissPopup("today")} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 18 }}>
         <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, maxWidth: 440, width: "100%", maxHeight: "85vh", overflowY: "auto", padding: 22 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <span style={{ fontSize: 10.5, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: popupNotice.category === "important" ? "#fceaeb" : "#eff6ff", color: popupNotice.category === "important" ? "#a32d2d" : "#1a6fc4" }}>{popupNotice.category === "important" ? "중요" : "공지"}</span>
@@ -599,9 +612,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           </div>
           <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>{popupNotice.title}</div>
           <div style={{ fontSize: 14, lineHeight: 1.8, color: "#374151", whiteSpace: "pre-wrap", maxHeight: 260, overflowY: "auto" }}>{popupNotice.content}</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-            <button onClick={() => dismissPopup(true)} style={{ flex: 1, padding: 11, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#6b7c93", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>오늘 그만보기</button>
-            <button onClick={() => { setPopupNotice(null); router.push("/portal/notices"); }} style={{ flex: 1, padding: 11, border: "none", borderRadius: 8, background: "#1a6fc4", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>전체 공지 보기</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 18 }}>
+            <button onClick={() => { dismissPopup("close"); router.push("/portal/notices"); }} style={{ width: "100%", padding: 12, border: "none", borderRadius: 8, background: "#1a6fc4", color: "#fff", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>전체 공지 보기</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => dismissPopup("today")} style={{ flex: 1, padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#6b7c93", fontWeight: 600, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>오늘 그만보기</button>
+              <button onClick={() => dismissPopup("forever")} style={{ flex: 1, padding: 10, border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#94a3b8", fontWeight: 600, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>다시 보지 않기</button>
+            </div>
           </div>
         </div>
       </div>
