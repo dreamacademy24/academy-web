@@ -82,14 +82,23 @@ export async function GET(req: Request) {
   const DAY_NUM: Record<string, number> = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }
   function deriveDates(l: LessonRow & { attendance_log?: Record<string, string> | null; class_days?: string[] | null; start_date?: string | null; end_date?: string | null }): string[] {
     const log = l.attendance_log
-    if (log && typeof log === 'object' && Object.keys(log).length > 0) return Object.keys(log).sort()
-    if (!l.start_date || !l.end_date || !Array.isArray(l.class_days) || l.class_days.length === 0) return []
+    const logDates = (log && typeof log === 'object') ? Object.keys(log).sort() : []
+    const totalExpected = Number((l as Record<string, unknown>).total_sessions) || 0
+
+    // attendance_log가 전체 회차 이상이면 그대로 사용
+    if (logDates.length > 0 && logDates.length >= totalExpected && totalExpected > 0) return logDates
+
+    // 요일×기간 전개 시도
+    if (!l.start_date || !l.end_date || !Array.isArray(l.class_days) || l.class_days.length === 0) {
+      // 전개 불가 → attendance_log라도 반환
+      return logDates.length > 0 ? logDates : []
+    }
     const target = l.class_days.map(d => DAY_NUM[String(d || '').trim().toLowerCase()] ?? DAY_NUM[String(d || '').trim()]).filter(n => n !== undefined)
-    if (target.length === 0) return []
+    if (target.length === 0) return logDates.length > 0 ? logDates : []
     const out: string[] = []
     const cur = new Date(l.start_date + 'T00:00:00')
     const end = new Date(l.end_date + 'T00:00:00')
-    if (isNaN(cur.getTime()) || isNaN(end.getTime())) return []
+    if (isNaN(cur.getTime()) || isNaN(end.getTime())) return logDates.length > 0 ? logDates : []
     let guard = 0
     while (cur <= end && guard < 400) {
       if (target.includes(cur.getDay())) {
@@ -99,6 +108,11 @@ export async function GET(req: Request) {
       cur.setDate(cur.getDate() + 1)
       guard++
     }
+    // attendance_log에만 있는 날짜도 병합
+    for (const d of logDates) {
+      if (!out.includes(d)) out.push(d)
+    }
+    out.sort()
     return out
   }
 
