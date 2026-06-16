@@ -113,6 +113,10 @@ export async function GET(req: Request) {
       if (!out.includes(d)) out.push(d)
     }
     out.sort()
+    // total_sessions로 cap (날짜 범위가 더 넓어도 약정 회차만큼만)
+    if (totalExpected > 0 && out.length > totalExpected) {
+      return out.slice(0, totalExpected)
+    }
     return out
   }
 

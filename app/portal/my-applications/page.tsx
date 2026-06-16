@@ -580,7 +580,7 @@ export default function MyApplicationsPage() {
             const sessions: AnyRow[] = Array.isArray(l.sessions) ? (l.sessions as AnyRow[]) : [];
             const rate = Number(l.hourly_rate) || 0;
             const cnt = Number(l.total_sessions) || sessions.length || 0;
-            const total = Number(l.total_amount) || rate * cnt;
+            const total = (rate && cnt) ? rate * cnt : (Number(l.total_amount) || 0);
             return (
               <div key={li} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginTop: 12 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>
@@ -606,9 +606,17 @@ export default function MyApplicationsPage() {
                         const sDate = String(s.session_date || "");
                         const cr = getCancelDayStatus(lessonId, sDate);
                         const canCancelDay = String(s.status || "scheduled") === "scheduled" && !cr;
+                        // 4일 이내 판별
+                        const sd = new Date(sDate + "T00:00:00+08:00");
+                        const daysLeft = (sd.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+                        const isUrgent = daysLeft >= 0 && daysLeft < 4;
+                        const isPast = daysLeft < 0;
                         return (
-                          <div key={si} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "5px 0", borderBottom: "1px solid #f1f5f9", gap: 6 }}>
-                            <span style={{ flex: 1 }}>{s.session_idx ? `${s.session_idx}회차 · ` : ""}{fmtDate(sDate)}</span>
+                          <div key={si} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "5px 0", borderBottom: "1px solid #f1f5f9", gap: 6, opacity: isPast ? 0.45 : 1 }}>
+                            <span style={{ flex: 1 }}>
+                              {s.session_idx ? `${s.session_idx}회차 · ` : ""}{fmtDate(sDate)}
+                              {isUrgent && !cr && <span title="4일 이내 — 취소 시 환불 불가" style={{ marginLeft: 4, fontSize: 13 }}>⚠️</span>}
+                            </span>
                             <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
                               {cr ? (
                                 <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: cr.status === "pending" ? "#fef3c7" : cr.status === "approved" ? "#fef2f2" : "#f1f5f9", color: cr.status === "pending" ? "#92400e" : cr.status === "approved" ? "#dc2626" : "#64748b" }}>
@@ -617,10 +625,10 @@ export default function MyApplicationsPage() {
                               ) : (
                                 <span style={{ color: "#6b7c93", fontSize: 12 }}>{String(s.session_time || l.class_time || "")}</span>
                               )}
-                              {canCancelDay && (
+                              {canCancelDay && !isPast && (
                                 <button onClick={() => openCancelDay(l, s)}
-                                  style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}>
-                                  취소
+                                  style={{ background: isUrgent ? "#fef2f2" : "#f0f9ff", border: `1px solid ${isUrgent ? "#fecaca" : "#bae6fd"}`, color: isUrgent ? "#dc2626" : "#0369a1", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}>
+                                  취소{isUrgent ? "⚠️" : ""}
                                 </button>
                               )}
                             </div>
@@ -652,22 +660,43 @@ export default function MyApplicationsPage() {
             {(() => {
               const cd = new Date(String(cancelDaySession.session_date || "") + "T00:00:00+08:00");
               const diff = (cd.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-              return diff < 4 ? (
-                <div style={{ marginTop: 8, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#dc2626", fontWeight: 600, lineHeight: 1.5 }}>
-                  ⚠️ 수업일 4일 이내 취소 — <b>환불 불가</b> (회차 차감 또는 보강으로 처리됩니다)
-                </div>
-              ) : (
-                <div style={{ marginTop: 8, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#15803d", fontWeight: 600, lineHeight: 1.5 }}>
-                  ✅ 수업일 4일 이전 취소 — 환불 가능
-                </div>
+              const isUrgentCancel = diff < 4;
+              return (
+                <>
+                  {isUrgentCancel ? (
+                    <div style={{ marginTop: 8, background: "#fef2f2", border: "2px solid #f87171", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#dc2626", fontWeight: 700, lineHeight: 1.6 }}>
+                      ⚠️ 수업일 4일 이내 취소<br/>
+                      <span style={{ fontSize: 15, fontWeight: 800 }}>환불이 불가</span>합니다.<br/>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#991b1b" }}>회차 차감 또는 보강으로 처리됩니다.</span>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 8, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#15803d", fontWeight: 600, lineHeight: 1.5 }}>
+                      ✅ 수업일 4일 이전 취소 — 환불 가능
+                    </div>
+                  )}
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", margin: "10px 0 6px" }}>
+                    취소 사유 {isUrgentCancel ? <span style={{ color: "#dc2626" }}>(필수)</span> : "(선택)"}
+                  </label>
+                  <textarea value={cancelDayReason} onChange={e => setCancelDayReason(e.target.value)} placeholder={isUrgentCancel ? "환불 불가 취소입니다. 취소 사유를 반드시 입력해주세요." : "취소 사유를 입력해주세요 (선택)"} style={{ width: "100%", minHeight: 80, padding: "9px 11px", border: `1px solid ${isUrgentCancel && !cancelDayReason.trim() ? "#f87171" : "#e5e7eb"}`, borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical" }} />
+                  {isUrgentCancel && !cancelDayReason.trim() && (
+                    <div style={{ fontSize: 11, color: "#dc2626", marginTop: 2 }}>취소 사유를 입력해주세요</div>
+                  )}
+                </>
               );
             })()}
           </div>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", margin: "10px 0 6px" }}>사유 (선택)</label>
-          <textarea value={cancelDayReason} onChange={e => setCancelDayReason(e.target.value)} placeholder="취소 사유를 입력해주세요" style={{ width: "100%", minHeight: 80, padding: "9px 11px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical" }} />
           <div className="btns" style={{ marginTop: 14 }}>
             <button className="btn-cl" onClick={() => setCancelDayOpen(false)} disabled={cancelDaySaving}>닫기</button>
-            <button className="btn-ok" onClick={submitCancelDay} disabled={cancelDaySaving} style={{ background: "#dc2626" }}>
+            <button className="btn-ok" onClick={() => {
+              // 4일 이내 취소는 사유 필수
+              const cd2 = new Date(String(cancelDaySession.session_date || "") + "T00:00:00+08:00");
+              const diff2 = (cd2.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+              if (diff2 < 4 && !cancelDayReason.trim()) {
+                alert("환불 불가 취소입니다. 취소 사유를 반드시 입력해주세요.");
+                return;
+              }
+              submitCancelDay();
+            }} disabled={cancelDaySaving} style={{ background: "#dc2626" }}>
               {cancelDaySaving ? "처리 중..." : "취소 신청"}
             </button>
           </div>
