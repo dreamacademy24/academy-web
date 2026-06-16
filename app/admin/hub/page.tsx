@@ -47,8 +47,7 @@ export default function AdminHubPage() {
         { icon: "🍽", title: "식단 관련 업무",    desc: "식단 배포(엄마용) · 식당 인폼(직원 체크리스트·라벨)",  href: "/admin/meal-plan" },
         { icon: "🏠", title: "하우스 보고",      desc: "호실 점검 · 조치 현황",              href: "/admin/house-reports" },
         { icon: "🚌", title: "투어셔틀 관리",     desc: "셔틀 신청 및 일정 배포 (드림하우스 담당)",  href: "/admin/tour-shuttle" },
-        { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management" },
-        { icon: "🛬", title: "픽드랍 관리",     desc: "픽업 · 드랍 일정 · 기사 배정",       href: "/admin/pickups" },
+        { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management", coming: true },
         { icon: "📝", title: "체크인 디테일",    desc: "자동생성 · PDF 출력",               href: "/admin/checkin-details" },
       ],
     },
@@ -106,7 +105,8 @@ export default function AdminHubPage() {
           <div className="hub-sec">{g.title}</div>
           <div className="hub-grid">
             {g.cards.map((c, i) => (
-              <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} onClick={() => { if ((c as any).external) { window.open(c.href, '_blank'); } else if (c.href.endsWith('.html')) { window.location.href = c.href; } else { router.push(c.href); } }}>
+              <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} style={(c as any).coming ? { opacity: 0.55, position: "relative" } : { position: "relative" }} onClick={() => { if ((c as any).coming) { alert("준비 중입니다 😊"); return; } if ((c as any).external) { window.open(c.href, '_blank'); } else if (c.href.endsWith('.html')) { window.location.href = c.href; } else { router.push(c.href); } }}>
+                {(c as any).coming && <span style={{ position: "absolute", top: 8, right: 10, fontSize: 10, fontWeight: 700, color: "#fff", background: "#94a3b8", padding: "2px 8px", borderRadius: 6 }}>준비 중</span>}
                 <div className="ic">{c.icon}</div>
                 <div className="tx">
                   <h2>{c.title}</h2>
