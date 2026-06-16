@@ -104,9 +104,23 @@ export async function GET(req: Request) {
 
   const result = lessons.map(l => {
     const real = sessByLesson.get(l.id) || []
-    const sessions = real.length > 0
-      ? real
-      : deriveDates(l as LessonRow & { attendance_log?: Record<string, string> | null }).map((ds, idx) => ({ id: `virtual-${l.id}-${ds}`, lesson_id: l.id, session_date: ds, session_time: (l as { class_time?: string | null }).class_time || null, session_idx: idx + 1, status: 'scheduled' }))
+    const totalExpected = Number((l as Record<string, unknown>).total_sessions) || 0
+    const derived = deriveDates(l as LessonRow & { attendance_log?: Record<string, string> | null })
+    const makeVirtual = (ds: string, idx: number) => ({ id: `virtual-${l.id}-${ds}`, lesson_id: l.id, session_date: ds, session_time: (l as { class_time?: string | null }).class_time || null, session_idx: idx + 1, status: 'scheduled' as const })
+
+    let sessions: (SessionRow | ReturnType<typeof makeVirtual>)[]
+    if (real.length === 0) {
+      // DB에 세션 없음 → 전부 가상 생성
+      sessions = derived.map(makeVirtual)
+    } else if (real.length < totalExpected && derived.length > real.length) {
+      // DB에 일부만 있음 (예: 1건) → 나머지를 derive로 보충
+      const realDates = new Set(real.map(r => r.session_date))
+      const extra = derived.filter(ds => !realDates.has(ds)).map(makeVirtual)
+      sessions = [...real, ...extra].sort((a, b) => (a.session_date || '').localeCompare(b.session_date || ''))
+      sessions.forEach((s, i) => { (s as { session_idx: number }).session_idx = i + 1 })
+    } else {
+      sessions = real
+    }
     return {
       ...l,
       tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
