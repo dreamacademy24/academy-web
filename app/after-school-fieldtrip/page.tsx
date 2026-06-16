@@ -100,21 +100,32 @@ export default function AfterSchoolFieldtripPage() {
       .catch(() => {});
   }, [session]);
 
-  // 예약 기간 내 월만 노출 (배포된 월에서 자동 도출 — 하드코딩 제거)
-  const ALL_MONTHS = monthData.map((md) => String(md.month));
-  const visibleMonths = (() => {
-    if (!bookingMeta?.checkin || !bookingMeta?.checkout) return ALL_MONTHS;
-    const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
-    const eM = parseInt(bookingMeta.checkout.slice(5, 7), 10);
+  // 예약 기간 내 월은 항상 탭 노출 (배포 데이터 없어도 빈 탭 표시)
+  const visibleMonths = useMemo(() => {
+    const deployedMonths = monthData.map((md) => String(md.month));
+    if (!bookingMeta?.checkin || !bookingMeta?.checkout) {
+      // 예약 정보 없으면 배포된 월 + 현재/다음 월
+      const now = new Date();
+      const curM = now.getMonth() + 1;
+      const s = new Set(deployedMonths);
+      s.add(String(curM));
+      if (curM < 12) s.add(String(curM + 1));
+      return Array.from(s).sort((a, b) => Number(a) - Number(b));
+    }
+    // 체크인~체크아웃 사이 모든 월 생성
     const sY = parseInt(bookingMeta.checkin.slice(0, 4), 10);
+    const sM = parseInt(bookingMeta.checkin.slice(5, 7), 10);
     const eY = parseInt(bookingMeta.checkout.slice(0, 4), 10);
-    return ALL_MONTHS.filter(m => {
-      const mi = parseInt(m, 10);
-      const inS = sY < 2026 || (sY === 2026 && mi >= sM);
-      const inE = eY > 2026 || (eY === 2026 && mi <= eM);
-      return inS && inE;
-    });
-  })();
+    const eM = parseInt(bookingMeta.checkout.slice(5, 7), 10);
+    const months: string[] = [];
+    let y = sY, m = sM;
+    while (y < eY || (y === eY && m <= eM)) {
+      months.push(String(m));
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return months;
+  }, [bookingMeta, monthData]);
 
   // activeMonth가 visibleMonths에 없으면 첫 월로 자동 설정
   useEffect(() => {
@@ -586,26 +597,30 @@ export default function AfterSchoolFieldtripPage() {
                   <p className="label-sub">참여하실 날짜를 <strong>복수 선택</strong>할 수 있습니다. <span style={{ color: '#c2410c', fontWeight: 600 }}>주황색</span>은 토요일 필드트립입니다.</p>
 
                   <div className="month-toggle">
-                    {monthData.filter((md) => visibleMonths.includes(String(md.month))).map((md) => (
+                    {visibleMonths.map((m) => (
                       <button
-                        key={md.month}
+                        key={m}
                         type="button"
-                        data-month={md.month}
-                        data-active={activeMonth === String(md.month) ? "true" : "false"}
-                        onClick={() => setActiveMonth(String(md.month))}
+                        data-month={m}
+                        data-active={activeMonth === m ? "true" : "false"}
+                        onClick={() => setActiveMonth(m)}
                       >
-                        {md.month}월
+                        {m}월
                       </button>
                     ))}
                   </div>
 
                   <div className="month-schedules">
-                    {monthData.length === 0 && (
+                    {visibleMonths.length === 0 && (
                       <p className="label-sub" style={{ padding: "18px 4px" }}>아직 공개된 일정이 없습니다. 곧 업데이트됩니다.</p>
                     )}
-                    {monthData.map((md) => (
-                      <div key={md.month} className="month-panel" data-month-panel={md.month} data-visible={activeMonth === String(md.month) ? "true" : "false"}>
-                        {md.weeks.map((wk) => (
+                    {visibleMonths.map((m) => {
+                      const md = monthData.find((d) => String(d.month) === m);
+                      return (
+                      <div key={m} className="month-panel" data-month-panel={m} data-visible={activeMonth === m ? "true" : "false"}>
+                        {!md ? (
+                          <p className="label-sub" style={{ padding: "18px 4px", color: "#9ca3af" }}>아직 공개된 일정이 없습니다. 곧 업데이트됩니다.</p>
+                        ) : md.weeks.map((wk) => (
                           <div key={wk.key} className="week-accordion">
                             <button type="button" className="week-accordion-btn" data-open={(openWeeks[wk.key] ?? wk.idx === 1) ? "true" : "false"} onClick={() => toggleWeek(wk.key)}>
                               <span className="week-acc-title">{wk.idx}주차 <em>{wk.label}</em></span>
@@ -631,7 +646,8 @@ export default function AfterSchoolFieldtripPage() {
                           </div>
                         ))}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   <p className="month-hint">※ 예정된 내용은 사정에 따라 일부 조정될 수 있습니다.</p>
                 </div>
