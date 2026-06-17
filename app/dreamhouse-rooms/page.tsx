@@ -126,7 +126,11 @@ export default function DreamhouseRooms() {
     cellMap[dateStr] = {}
     ROOMS.forEach(r => { cellMap[dateStr][r] = [] })
   })
-  bookings.forEach(b => {
+  // accom_room 대소문자 정규화 (DB에 B17L14/b17L14 혼재 대응)
+  const normalizeRoom = (r: string) => ROOMS.find(rm => rm.toLowerCase() === r.toLowerCase()) || r
+  const normalizedBookings = bookings.map(b => ({ ...b, accom_room: normalizeRoom(b.accom_room) }))
+
+  normalizedBookings.forEach(b => {
     // 문자열 직접 비교 (YYYY-MM-DD는 lexicographic 정렬이 시간순과 동일, timezone 영향 없음)
     // 체크인 당일 ~ 체크아웃 당일까지 inclusive 블록
     dates.forEach(({dateStr}) => {
@@ -141,7 +145,7 @@ export default function DreamhouseRooms() {
   // 당일 전환 충돌 감지 (같은 룸에서 체크아웃일 = 다른 예약 체크인일)
   const conflictSet = new Set<string>() // "dateStr_room"
   ROOMS.forEach(room => {
-    const roomBookings = bookings.filter(b => b.accom_room === room)
+    const roomBookings = normalizedBookings.filter(b => b.accom_room === room)
     roomBookings.forEach(b1 => {
       roomBookings.forEach(b2 => {
         if (b1.id === b2.id) return
@@ -155,8 +159,8 @@ export default function DreamhouseRooms() {
   // 사이드패널 통계 (같은 월 데이터 기반)
   const monthFirstDay = `${year}-${String(month+1).padStart(2,'0')}-01`
   const monthLastDay = `${year}-${String(month+1).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`
-  const monthlyCheckins = bookings.filter(b => b.checkin_date >= monthFirstDay && b.checkin_date <= monthLastDay).length
-  const monthlyCheckouts = bookings.filter(b => b.checkout_date >= monthFirstDay && b.checkout_date <= monthLastDay).length
+  const monthlyCheckins = normalizedBookings.filter(b => b.checkin_date >= monthFirstDay && b.checkin_date <= monthLastDay).length
+  const monthlyCheckouts = normalizedBookings.filter(b => b.checkout_date >= monthFirstDay && b.checkout_date <= monthLastDay).length
 
   const duplicates: {date:string,room:string,count:number}[] = []
   Object.entries(cellMap).forEach(([date, rooms]) => {
@@ -171,7 +175,7 @@ export default function DreamhouseRooms() {
     conflicts.push({date: key.slice(0,idx), room: key.slice(idx+1)})
   })
 
-  const emptyRooms = ROOMS.filter(r => !bookings.some(b => b.accom_room === r))
+  const emptyRooms = ROOMS.filter(r => !normalizedBookings.some(b => b.accom_room === r))
 
   const prevMonth = () => {
     if (month === 0) { setYear(y=>y-1); setMonth(11) }
@@ -435,8 +439,8 @@ export default function DreamhouseRooms() {
                         const dateStr = toDateStr(date)
                         const inMonth = date.getMonth() === month
                         const isToday = dateStr === todayStr
-                        const checkins = bookings.filter(b => b.checkin_date === dateStr)
-                        const checkouts = bookings.filter(b => b.checkout_date === dateStr)
+                        const checkins = normalizedBookings.filter(b => b.checkin_date === dateStr)
+                        const checkouts = normalizedBookings.filter(b => b.checkout_date === dateStr)
                         return (
                           <td key={di} style={{verticalAlign:'top',height:90,minWidth:0,border:'1px solid #e2e8f0',padding:4,background: inMonth ? '#fff' : '#f8fafc'}}>
                             <div style={{display:'flex',justifyContent:'flex-end',marginBottom:3,height:22}}>
