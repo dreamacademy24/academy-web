@@ -144,6 +144,16 @@ export default function OnlineClassPage() {
     setSessionsLoading(false);
   }
 
+  async function deleteEnrollment(e: Enrollment) {
+    const label = `${e.student_name} (${e.student_name_en || ""})`;
+    if (!window.confirm(`정말 삭제하시겠습니까?\n\n${label}\n기간: ${e.start_date} ~ ${e.end_date || "미정"}\n\n⚠️ 연결된 출결 세션·변경요청·알림이 모두 삭제됩니다.`)) return;
+    const res = await fetch(`/api/online-class/enrollments/${e.id}`, { method: "DELETE" });
+    if (!res.ok) { const r = await res.json().catch(() => ({})); toastErr(r.error || "삭제 실패"); return; }
+    toastOk(`${e.student_name} 수강 삭제 완료`);
+    if (expandedId === e.id) { setExpandedId(null); setSessions([]); }
+    loadEnrollments(); loadChangeReqs();
+  }
+
   function openCancelModal(s: Session) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const sched = new Date((s.scheduled_date || "") + "T00:00:00");
@@ -433,6 +443,8 @@ export default function OnlineClassPage() {
                         <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
                         {" "}
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
+                        {" "}
+                        <button className="btn-sm" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={() => deleteEnrollment(e)}>삭제</button>
                       </td>
                     </tr>
                   );

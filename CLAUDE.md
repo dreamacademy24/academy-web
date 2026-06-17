@@ -1699,3 +1699,19 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - **Supabase 새 테이블 + PostgREST embed = FK 필수** (없으면 "Could not find a relationship" 500). exec_sql RPC로 즉석 수정 가능
 - **웹푸시 발송 API에 테스트 모드 없으면 사고남** (전체 구독자에 테스트 발송한 사고 1회 — test:true 추가로 해결)
 - **호스트↔샌드박스 파일 동기화 지연/잘림** 빈발 — 검증은 호스트 Read/Grep 기준, tsc는 참고만
+
+## 2026-06-16 세션
+
+### 완료
+- ✅ 애프터스쿨 7월 탭 미표시 버그 수정 (12c1e3c) — visibleMonths를 예약 기간 기반으로 생성
+- ✅ SW 캐시 v2→v3 강제 갱신 (43f5dab) — 폰 캐시 문제 해결
+
+### 해야 할 작업 (우선순위순)
+1. 📱 **Google Play Store 앱 등록 (TWA)** — 현재 PWA를 TWA로 감싸서 Play Store 정식 앱 배포
+   - 메이: Google Play Console 가입 + $25 결제
+   - 개발: Bubblewrap으로 TWA 빌드 + assetlinks.json + AAB 생성 + 스토어 등록
+   - 장점: 푸시 알림 안정성 향상, 앱 삭제율 감소, 정식 앱 느낌
+2. 🐛 튜터 내 신청내역 표시 버그 확인 (회차 3회인데 수업 일정 1일만 표시)
+3. 🔴 SW 캐시 갱신 후 폰에서 애프터스쿨 7월 탭 + 튜터 화면 정상 확인
+4. 기존 미완료: 인보이스 디자인 리디자인, 신규 예약 저장 확인
+5. Phase 5 IA 탭 통합 (직원업무 탭 12개→7개)

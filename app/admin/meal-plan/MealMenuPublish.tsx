@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface MealDay { date: number; weekday: string; breakfast: string[]; lunch: string[]; dinner_adult: string[]; dinner_child: string[]; }
+interface MealDay { date: number; weekday: string; breakfast?: string[]; lunch: string[]; dinner_adult?: string[]; dinner_child?: string[]; snack?: string[]; }
 interface Menu { id: string; kind: string; menu_date: string; image_url: string; published: boolean; meal_data?: MealDay[]; }
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MEAL_ORDER = "🌅 아침 · ☀️ 점심 · 🌙 저녁(어른) · 🧒 저녁(아동)";
@@ -27,45 +27,80 @@ function compress(file: File): Promise<string> {
   });
 }
 
-/* ---- 미리보기용 카드 컴포넌트 ---- */
-const MEAL_ROWS: { key: keyof Pick<MealDay, "breakfast" | "lunch" | "dinner_adult" | "dinner_child">; label: string; emoji: string; bg: string; border: string; text: string }[] = [
-  { key: "breakfast", label: "아침", emoji: "🌅", bg: "#fef3c7", border: "#fde68a", text: "#92400e" },
-  { key: "lunch", label: "점심", emoji: "☀️", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
-  { key: "dinner_adult", label: "저녁 (어른)", emoji: "🌙", bg: "#e0e7ff", border: "#a5b4fc", text: "#3730a3" },
-  { key: "dinner_child", label: "저녁 (아동)", emoji: "🧒", bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
-];
+/* ---- 미리보기용 테이블 컴포넌트 ---- */
 
-function MealCardPreview({ days, month }: { days: MealDay[]; month: number }) {
+const DH_COLS = [
+  { key: "breakfast", label: "🌅 아침", bg: "#fef3c7" },
+  { key: "lunch", label: "☀️ 점심", bg: "#dbeafe" },
+  { key: "dinner_adult", label: "🌙 저녁(어른)", bg: "#e0e7ff" },
+  { key: "dinner_child", label: "🧒 저녁(아동)", bg: "#fce7f3" },
+];
+const WEEKDAY_LABELS = ["월", "화", "수", "목", "금"];
+
+function groupByWeek(days: MealDay[]): MealDay[][] {
+  const weeks: MealDay[][] = []; let cur: MealDay[] = [];
+  for (const d of days) { cur.push(d); if (cur.length === 5 || d.weekday === "금") { weeks.push(cur); cur = []; } }
+  if (cur.length > 0) weeks.push(cur);
+  return weeks;
+}
+
+function MealCardPreview({ days, month, isAcademy }: { days: MealDay[]; month: number; isAcademy: boolean }) {
+  if (isAcademy) {
+    // 아카데미: 주간 그리드 (월~금), 간식=민트
+    const weeks = groupByWeek(days);
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {weeks.map((week, wi) => {
+          const maxLunch = Math.max(...week.map(d => (d.lunch || []).length), 1);
+          const maxSnack = Math.max(...week.map(d => (d.snack || []).length), 0);
+          const dateRange = week.length > 0 ? `${month}/${week[0].date} ~ ${month}/${week[week.length - 1].date}` : "";
+          return (
+            <div key={wi} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ padding: "9px 14px", fontWeight: 800, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>
+                {month}월 학생 점심·간식 <span style={{ fontSize: 11.5, fontWeight: 500, color: "#94a3b8" }}>({dateRange})</span>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 380 }}>
+                  <thead>
+                    <tr>{week.map((d, di) => <th key={di} style={{ background: "#1e3a5f", color: "#fff", padding: "6px 5px", fontWeight: 800, fontSize: 11.5, textAlign: "center", width: `${100 / week.length}%` }}>{WEEKDAY_LABELS[di] || d.weekday}</th>)}</tr>
+                    <tr>{week.map((d, di) => <td key={di} style={{ background: "#f1f5f9", padding: "4px 5px", fontWeight: 800, fontSize: 11, textAlign: "center", color: "#1e3a5f", borderBottom: "2px solid #e2e8f0" }}>{d.date}({d.weekday})</td>)}</tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: maxLunch }, (_, ri) => (
+                      <tr key={`l${ri}`}>{week.map((d, di) => <td key={di} style={{ padding: "3px 5px", borderBottom: "1px solid #f1f5f9", verticalAlign: "top", fontSize: 11.5, lineHeight: 1.5 }}>{(d.lunch || [])[ri] || ""}</td>)}</tr>
+                    ))}
+                    {maxSnack > 0 && Array.from({ length: maxSnack }, (_, ri) => (
+                      <tr key={`s${ri}`}>{week.map((d, di) => <td key={di} style={{ padding: "3px 5px", borderBottom: "1px solid #d1fae5", verticalAlign: "top", fontSize: 11.5, lineHeight: 1.5, background: "#ecfdf5", color: "#059669", fontWeight: 600 }}>{(d.snack || [])[ri] || ""}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {maxSnack > 0 && <div style={{ padding: "5px 12px 7px", fontSize: 10.5, color: "#059669", fontWeight: 600 }}>▲ 민트색 = 간식</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  // 드림하우스: 날짜별 4열 테이블
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {days.map((day, i) => (
-        <div key={i} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #e2e8f0" }}>
-          <div style={{ background: "#1e3a5f", color: "#fff", padding: "8px 14px", fontWeight: 800, fontSize: 14 }}>
-            {month}/{day.date} ({day.weekday})
+      {days.map((day, i) => {
+        const maxLen = Math.max(...DH_COLS.map(c => ((day as any)[c.key] || []).length), 1);
+        return (
+          <div key={i} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <div style={{ padding: "9px 14px", fontWeight: 800, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>{month}/{day.date} ({day.weekday})</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 400 }}>
+                <thead><tr>{DH_COLS.map(c => <th key={c.key} style={{ background: c.bg, padding: "6px 7px", fontWeight: 800, fontSize: 11, textAlign: "center", borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap" }}>{c.label}</th>)}</tr></thead>
+                <tbody>{Array.from({ length: maxLen }, (_, ri) => (
+                  <tr key={ri}>{DH_COLS.map(c => <td key={c.key} style={{ padding: "4px 7px", borderBottom: "1px solid #f1f5f9", verticalAlign: "top", fontSize: 11.5, lineHeight: 1.5 }}>{((day as any)[c.key] || [])[ri] || ""}</td>)}</tr>
+                ))}</tbody>
+              </table>
+            </div>
           </div>
-          <div style={{ padding: "5px 9px 9px" }}>
-            {MEAL_ROWS.map(row => {
-              const items = day[row.key];
-              if (!items || items.length === 0) return null;
-              return (
-                <div key={row.key} style={{ marginTop: 5 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                    <span style={{ fontSize: 12 }}>{row.emoji}</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 800, color: row.text }}>{row.label}</span>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 2 }}>
-                    {items.map((item, j) => (
-                      <span key={j} style={{ display: "inline-block", background: row.bg, border: `1px solid ${row.border}`, color: row.text, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -103,6 +138,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     try {
       const fd = new FormData();
       fd.append("image", file);
+      fd.append("kind", kind);
       const res = await fetch("/api/ocr/meal", { method: "POST", body: fd });
       const json = await res.json();
       if (json.ok && json.days) {
@@ -237,7 +273,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
             <span style={{ fontWeight: 800, fontSize: 14 }}>② 미리보기</span>
             <span style={{ fontSize: 11.5, color: "#64748b" }}>— 손님에게 이렇게 보입니다</span>
           </div>
-          <MealCardPreview days={menu!.meal_data!} month={menuMonth} />
+          <MealCardPreview days={menu!.meal_data!} month={menuMonth} isAcademy={monthly} />
         </div>
       )}
 

@@ -796,6 +796,15 @@ function InvoicePageInner(){
       if (data.accom_weeks && !isCombo) {
         setA1W(data.accom_weeks);
       }
+      // 통학형: accom_weeks 없으면 날짜 기반 주수 역산
+      if (isCommuteBooking(data) && !data.accom_weeks) {
+        const _start = data.academy_start || data.checkin_date;
+        const _end = data.academy_end || data.checkout_date;
+        if (_start && _end) {
+          const diffW = Math.round((new Date(_end).getTime() - new Date(_start).getTime()) / (7 * 86400000));
+          if (diffW > 0) setA1W(diffW);
+        }
+      }
       // 단독: 분해 컬럼이 있으면 우선 사용 (정확도 ↑)
       if (!isCombo) {
         if (_at && _at.includes("드림하우스") && data.dh_weeks) setA1W(data.dh_weeks);
@@ -994,7 +1003,11 @@ function InvoicePageInner(){
       const items:any[]=[];
       let total=0;
       list.forEach((s:any,idx:number)=>{
-        const w=Number(s.academyWeeks)||Number(a1W)||2;
+        let w=Number(s.academyWeeks)||0;
+        if(!w && s.academyStart && s.academyEnd){
+          w=Math.round((new Date(s.academyEnd).getTime()-new Date(s.academyStart).getTime())/(7*86400000));
+        }
+        if(!w) w=Number(a1W)||2;
         const pk=isPeak(s.academyStart||a1CI);
         const price=commuteUnitPrice(w,pk?"peak":"off");
         total+=price;

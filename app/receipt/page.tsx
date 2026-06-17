@@ -102,7 +102,7 @@ function ReceiptPageInner(){
           setPayments([{id:1,type:"예약금",date:today,amount:"1,000,000"}]);
           // Only transition to 영수증발행 if current status warrants it
           if(row.status && row.status !== "영수증발행" && row.status !== "결제완료" && row.status !== "완료"){
-            await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+            await supabase.from("bookings").update({status:"영수증발행",payment_status:"paid",paid_amount:finalPrice||0,updated_at:new Date().toISOString()}).eq("id",bookingId);
           }
           return;
         }
@@ -129,7 +129,23 @@ function ReceiptPageInner(){
     }));
   }
 
-  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
+  async function savePaymentStatus(){
+    if(!bookingId||!data)return;
+    const total=payments.reduce((sum,p)=>{
+      const n=Number(String(p.amount).replace(/[,\s]/g,""));
+      return sum+(isNaN(n)?0:n);
+    },0);
+    const status=total>=data.finalPrice?"paid":total>0?"partial":"unpaid";
+    const{error}=await supabase.from("bookings").update({
+      payment_status:status,
+      paid_amount:total,
+      updated_at:new Date().toISOString()
+    }).eq("id",bookingId);
+    if(error){alert("결제 저장 실패: "+error.message);return;}
+    alert(`✅ 결제 정보 저장! (${status==="paid"?"완납":status==="partial"?"부분납":"미납"})`);
+  }
+
+  const DH_ROOMS=['b13L10','b16L19','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
   async function saveToDreamhouse(){
     if(!bookingId||!data)return;
     const ci=data.checkInDate?.trim()||null;
@@ -140,7 +156,7 @@ function ReceiptPageInner(){
     const avail=DH_ROOMS.filter(r=>!occ.includes(r));
     if(!avail.length){alert("⚠️ 가용 룸이 없습니다!");return;}
     const assigned=avail[Math.floor(Math.random()*avail.length)];
-    const{error}=await supabase.from("bookings").update({accom_room:assigned,checkin_date:ci,checkout_date:co,status:"영수증발행"}).eq("id",bookingId);
+    const{error}=await supabase.from("bookings").update({accom_room:assigned,checkin_date:ci,checkout_date:co,status:"영수증발행",payment_status:"paid",paid_amount:data.finalPrice||0}).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
     setSheetSaved(true);
     setData(prev=>prev?{...prev,houseNo:assigned}:prev);
@@ -257,7 +273,10 @@ function ReceiptPageInner(){
             <button className="pay-del" onClick={()=>removePayment(p.id)} disabled={payments.length===1}>✕</button>
           </div>
         ))}
-        <button className="pay-add" onClick={addPayment}>+ 입금 항목 추가</button>
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button className="pay-add" style={{flex:1,marginTop:0}} onClick={addPayment}>+ 입금 항목 추가</button>
+          <button onClick={savePaymentStatus} style={{padding:"9px 20px",borderRadius:8,border:"none",background:"#16a34a",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>💾 결제 정보 저장</button>
+        </div>
       </div>
 
       {/* ── 영수증 본문 ── */}

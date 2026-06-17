@@ -574,7 +574,7 @@ function calcPlan(p:PlanState):CalcResult|null{
 export default function EstimateCalc(){
   const resultRef=useRef<HTMLDivElement>(null);
   const MAX_PLANS = 5;
-  const DEFAULT_ACCOM_ROTATION: AccomLocal[] = ["dreamhouse","jpark","cubenine","dreamhouse","jpark"];
+  const DEFAULT_ACCOM_ROTATION: AccomLocal[] = ["dreamhouse","jaypark","cubenine","dreamhouse","jaypark"];
   const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
 
   function up(idx:number,patch:Partial<PlanState>){
