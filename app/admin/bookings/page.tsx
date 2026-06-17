@@ -175,6 +175,7 @@ export default function AdminBookingsPage(){
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
   const [listPeriod,setListPeriod]=useState<"현재"|"지난">("현재");
+  const [listSearch,setListSearch]=useState("");
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
@@ -669,6 +670,7 @@ export default function AdminBookingsPage(){
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
   const statusFiltered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):statusFiltered.filter(b=>isPast(b));
+  const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));});
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
     if(!["영수증발행","완료"].includes(b.status))return false;
@@ -840,16 +842,18 @@ export default function AdminBookingsPage(){
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
         <span style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
+          <input type="text" placeholder="🔍 예약자, 학생, 예약번호, 숙소..." value={listSearch} onChange={e=>setListSearch(e.target.value)} style={{fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:220,outline:"none"}}/>
+          {listSearch&&<button onClick={()=>setListSearch("")} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#9ca3af",padding:"2px 4px"}}>✕</button>}
           <button className={`sub-tab${listPeriod==="현재"?" ac":""}`} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setListPeriod("현재")}>현재+예정</button>
           <button className={`sub-tab${listPeriod==="지난"?" ac":""}`} style={{fontSize:12,padding:"4px 10px",background:listPeriod==="지난"?"#fef3c7":"",color:listPeriod==="지난"?"#92400e":""}} onClick={()=>setListPeriod("지난")}>지난 예약 {pastCount>0&&<span style={{background:"#fbbf24",color:"#78350f",borderRadius:10,padding:"0 6px",fontSize:10,marginLeft:3,fontWeight:700}}>{pastCount}</span>}</button>
-          <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(filtered)}>📥 엑셀</button>
+          <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(searchedList)}>📥 엑셀</button>
         </span>
       </div>
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
         <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
       </tr></thead><tbody>
-        {filtered.length===0?<tr><td colSpan={9} className="empty">예약이 없습니다.</td></tr>:
-        filtered.map(b=>{
+        {searchedList.length===0?<tr><td colSpan={9} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
+        searchedList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{b.reservation_no}</td>
@@ -870,8 +874,8 @@ export default function AdminBookingsPage(){
         })}
       </tbody></table></div>
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
-        {filtered.length===0?<div className="empty">예약이 없습니다.</div>:
-        filtered.map(b=>{
+        {searchedList.length===0?<div className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</div>:
+        searchedList.map(b=>{
           const sc=SC[b.status]||SC["접수"];
           return(<div key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
