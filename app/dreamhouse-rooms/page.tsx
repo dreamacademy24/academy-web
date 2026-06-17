@@ -508,7 +508,7 @@ export default function DreamhouseRooms() {
             <div style={{display:'flex',gap:8}}>
               <button onClick={async()=>{
                 if(modalRoom===modal.accom_room){alert('동일한 룸입니다.');return;}
-                const{error}=await supabase.from('bookings').update({accom_room:modalRoom}).eq('id',modal.id);
+                const{error}=await supabase.from('bookings').update({accom_room:modalRoom,house_no:modalRoom}).eq('id',modal.id);
                 if(error){alert('변경 실패: '+error.message);return;}
                 alert('✅ 룸이 '+modalRoom+'으로 변경되었습니다.');
                 setModal(null);fetchBookings();

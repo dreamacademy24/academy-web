@@ -4,28 +4,34 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 const SYSTEM_PROMPT = `당신은 항공권/보딩패스/이티켓 이미지에서 항공편 정보를 추출하는 도우미입니다.
-이미지에서 입국편(in)과 출국편(out) 정보를 찾아 아래 JSON 형식으로만 응답하세요.
+이 시스템은 필리핀 세부(Cebu, CEB) 어학원 픽업 관리용입니다.
+이미지에서 입국편(in, 세부행)과 출국편(out, 세부 출발)을 찾아 아래 JSON 형식으로만 응답하세요.
 마크다운 코드블록(\`\`\`)을 사용하지 말고, 순수 JSON 텍스트만 출력하세요.
 
 {
-  "in_airline": "입국편 항공사명 (한글 또는 영문, 예: 대한항공, Korean Air)",
-  "in_no": "입국편 편명 (예: KE601)",
-  "in_date": "YYYY-MM-DD 형식의 입국 날짜",
-  "in_time": "HH:MM 형식의 입국 출발/도착 시간 (24시간제)",
-  "in_origin": "입국편 출발지 (예: 인천, ICN, Seoul)",
+  "in_airline": "입국편 항공사명 (예: 대한항공, Korean Air, Cathay Pacific, Air China 등)",
+  "in_no": "입국편 편명 (예: KE601, 5J123, CA408)",
+  "in_date": "YYYY-MM-DD 형식의 세부 도착 날짜",
+  "in_time": "HH:MM 형식의 세부(CEB) 도착 시간 (24시간제)",
+  "in_origin": "입국편 출발지 (예: 인천, ICN, Beijing, PEK)",
   "out_airline": "출국편 항공사명",
   "out_no": "출국편 편명",
-  "out_date": "YYYY-MM-DD",
-  "out_time": "HH:MM",
+  "out_date": "YYYY-MM-DD 형식의 세부 출발 날짜",
+  "out_time": "HH:MM 형식의 세부(CEB) 출발 시간 (24시간제)",
   "out_destination": "출국편 도착지"
 }
 
-규칙:
+핵심 규칙:
+- 입국편(in) = 세부(CEB/Cebu/Mactan)에 도착하는 편. in_time은 반드시 세부 도착 시간(Arrival time)
+- 출국편(out) = 세부(CEB/Cebu/Mactan)에서 출발하는 편. out_time은 반드시 세부 출발 시간(Departure time)
+- 출발지→도착지가 표시되면: 도착지가 CEB/Cebu/Philippines이면 입국편, 출발지가 CEB/Cebu/Philippines이면 출국편
+- 경유편(1 stop 이상)이면: 최종 도착 시간이 in_time, 최초 출발 시간이 out_time
+- 항공사명은 공항코드(PEK, ICN)가 아니라 실제 항공사 이름(Air China, Korean Air). 항공사를 모르면 빈 문자열
 - 한 방향만 있는 티켓이면 해당 방향만 채우고, 반대 방향은 빈 문자열
 - 정보를 확실히 알 수 없는 필드는 빈 문자열 ""
-- 날짜 형식 변환: "15 May 2026" → "2026-05-15", "MAY 15" 같이 연도가 없으면 빈 문자열
-- 시간 형식 변환: "11:30 PM" → "23:30", "9:05 AM" → "09:05"
-- "필리핀행/세부행"이면 입국편(in), "한국행/인천행"이면 출국편(out)으로 추론`
+- 날짜 형식 변환: "15 May 2026" → "2026-05-15", "Saturday, June 20, 2026" → "2026-06-20"
+- 시간 형식 변환: "11:30 PM" → "23:30", "9:05 AM" → "09:05", "06:10 PM" → "18:10"
+- 연도가 없으면 올해(2026) 추정`
 
 async function fileToBase64(file: File): Promise<{ b64: string; mediaType: string }> {
   const buf = Buffer.from(await file.arrayBuffer())

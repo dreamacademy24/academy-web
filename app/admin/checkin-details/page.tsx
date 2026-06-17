@@ -256,7 +256,7 @@ function CheckinDetailsInner() {
           const j = await res.json().catch(() => ({}));
           console.error("upload failed:", j.error);
         }
-        // 2) OCR 자동인식 → 항공편 정보 자동 채움
+        // 2) OCR 자동인식 → 항공편 정보 자동 채움 + DB 자동 저장
         try {
           const ocrFd = new FormData();
           ocrFd.append("image", file);
@@ -265,14 +265,40 @@ function CheckinDetailsInner() {
             const ocrData = await ocrRes.json();
             if (ocrData.ok && ocrData.fields) {
               const f = ocrData.fields;
-              if (f.in_airline || f.in_no) setFlightIn([f.in_airline, f.in_no].filter(Boolean).join(" "));
+              const newIn = (f.in_airline || f.in_no) ? [f.in_airline, f.in_no].filter(Boolean).join(" ") : "";
+              if (newIn) setFlightIn(newIn);
               if (f.in_date) setFlightInDate(f.in_date);
               if (f.in_time) setFlightInTime(f.in_time);
-              if (f.out_airline || f.out_no) setFlightOut([f.out_airline, f.out_no].filter(Boolean).join(" "));
+              const newOut = (f.out_airline || f.out_no) ? [f.out_airline, f.out_no].filter(Boolean).join(" ") : "";
+              if (newOut) setFlightOut(newOut);
               if (f.out_date) setFlightOutDate(f.out_date);
               if (f.out_time) setFlightOutTime(f.out_time);
-              setMsg("✅ 항공권 인식 완료! 정보를 확인해주세요.");
-              setTimeout(() => setMsg(""), 4000);
+              // 3) bookings 테이블에 자동 저장 (확정예약/픽드랍 등에 자동 연동)
+              const flightUpdate: Record<string, string> = {};
+              if (f.in_airline) flightUpdate.flight_in_airline = f.in_airline;
+              if (f.in_no) flightUpdate.flight_in_no = f.in_no;
+              if (f.in_date) flightUpdate.flight_in_date = f.in_date;
+              if (f.in_time) flightUpdate.flight_in_time = f.in_time;
+              if (f.in_origin) flightUpdate.flight_in_origin = f.in_origin;
+              if (f.out_airline) flightUpdate.flight_out_airline = f.out_airline;
+              if (f.out_no) flightUpdate.flight_out_no = f.out_no;
+              if (f.out_date) flightUpdate.flight_out_date = f.out_date;
+              if (f.out_time) flightUpdate.flight_out_time = f.out_time;
+              if (f.out_destination) flightUpdate.flight_out_destination = f.out_destination;
+              // 통합 flight_in/flight_out 필드도 업데이트
+              if (newIn) flightUpdate.flight_in = newIn;
+              if (newOut) flightUpdate.flight_out = newOut;
+              if (Object.keys(flightUpdate).length > 0) {
+                try {
+                  await fetch(`/api/bookings/${selId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(flightUpdate),
+                  });
+                } catch { /* 저장 실패해도 UI는 유지 */ }
+              }
+              setMsg("✅ 항공권 인식 완료! 예약 정보에 자동 저장되었습니다.");
+              setTimeout(() => setMsg(""), 5000);
             }
           }
         } catch { /* OCR 실패해도 이미지 저장은 완료 */ }
