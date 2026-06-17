@@ -107,6 +107,8 @@ export default function MealPlanPage() {
   const [gsInvName, setGsInvName] = useState("보호자 추가 체류");
   const [gsInvAmt, setGsInvAmt] = useState<string>("");
   const [toast, setToast] = useState("");
+  /* 주별 제외 (meal_exclusions 테이블) */
+  const [exclusions, setExclusions] = useState<Set<string>>(new Set()); // booking_id Set
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -128,15 +130,41 @@ export default function MealPlanPage() {
 
   /* 이번 주 월~금 */
   const weekMon = mondayOf(baseDate);
+
+  /* 주 변경 시 exclusions 새로 로드 */
+  useEffect(() => {
+    if (!authed) return;
+    (async () => {
+      const { data } = await supabase
+        .from("meal_exclusions")
+        .select("booking_id")
+        .eq("week_start", weekMon);
+      setExclusions(new Set((data || []).map((r: any) => r.booking_id)));
+    })();
+  }, [authed, weekMon]); // eslint-disable-line
+
+  async function excludeGuest(bookingId: string) {
+    const { error } = await supabase.from("meal_exclusions").upsert({ booking_id: bookingId, week_start: weekMon }, { onConflict: "booking_id,week_start" });
+    if (error) { setToast("제외 실패: " + error.message); return; }
+    setExclusions(prev => new Set([...prev, bookingId]));
+    setToast("이번 주 명단에서 제외했어요");
+  }
+  async function restoreGuest(bookingId: string) {
+    const { error } = await supabase.from("meal_exclusions").delete().eq("booking_id", bookingId).eq("week_start", weekMon);
+    if (error) { setToast("복원 실패: " + error.message); return; }
+    setExclusions(prev => { const s = new Set(prev); s.delete(bookingId); return s; });
+    setToast("명단에 복원했어요");
+  }
   const weekDates = useMemo(() => Array.from({ length: 5 }, (_, i) => addD(weekMon, i)), [weekMon]);
   const weekFri = weekDates[4];
   useEffect(() => { if (!labelDate || labelDate < weekDates[0] || labelDate > weekFri) setLabelDate(weekDates[0]); }, [weekMon]); // eslint-disable-line
 
   const isHoliday = (d: string) => holidayOv[d] !== undefined ? holidayOv[d] : MEAL_HOLIDAYS.has(d);
 
-  /* 이번 주 식단 대상 게스트 */
+  /* 이번 주 식단 대상 게스트 (exclusions 반영) */
   const guests = useMemo(() => {
     const rows = bookings.map(b => {
+      if (exclusions.has(b.id)) return null; // 이번 주 제외된 손님
       if (String(b.status || "").includes("취소")) return null;
       if (b.booking_type === "commute" || String(b.accom_type || "").includes("통학")) return null;
       const segs = mealSegs(b);
@@ -167,7 +195,7 @@ export default function MealPlanPage() {
     }).filter(Boolean) as Array<{ b: Bk; room: { bld: number; lot: number; label: string }; sortBld: number; segs: MealSeg[]; mIn: string; mOut: string; cur: number; total: number; kids: number; locByDay: (string | null)[]; adultsByDay: number[]; adultsSet: number[]; addr: string; note: string; stay: string }>;
     rows.sort((x, y) => x.sortBld - y.sortBld || x.room.lot - y.room.lot);
     return rows;
-  }, [bookings, weekMon, weekFri, weekDates]);
+  }, [bookings, weekMon, weekFri, weekDates, exclusions]);
 
   /* 다음 주 입퇴소 예고 */
   const upcoming = useMemo(() => {
@@ -182,6 +210,12 @@ export default function MealPlanPage() {
     });
     return { incoming, outgoing };
   }, [bookings, weekMon, weekFri]);
+
+  /* 이번 주 제외된 손님 목록 (복원용) */
+  const excludedList = useMemo(() => {
+    if (exclusions.size === 0) return [];
+    return bookings.filter(b => exclusions.has(b.id)).map(b => ({ id: b.id, name: b.booker_name, eng: (b.booker_english || "").trim() || b.booker_name, room: parseRoom(b).label }));
+  }, [bookings, exclusions]);
 
   const weekLabel = `${fShort(weekDates[0])} – ${fShort(weekFri)}, ${weekDates[0].slice(0, 4)}`;
   const engName = (b: Bk) => (b.booker_english || "").trim() || b.booker_name;
@@ -379,9 +413,9 @@ export default function MealPlanPage() {
         {view === "list" && (
           <div className="day-block">
             <div className="day-title">Dream Academy  |  Meal Attendance Overview  |  {weekLabel}</div>
-            <div className="day-sub">GUEST REFERENCE LIST · 보호자 숫자 클릭 → 체류 기간 수정</div>
+            <div className="day-sub">GUEST REFERENCE LIST · 보호자 숫자 클릭 → 체류 기간 수정 · ✕ 이번 주만 제외</div>
             <table className="mp">
-              <thead><tr><th style={{ minWidth: 150 }}>Name</th><th>Address</th><th>Adults</th><th>Kids</th><th>Stay</th><th>Note</th></tr></thead>
+              <thead><tr><th style={{ minWidth: 150 }}>Name</th><th>Address</th><th>Adults</th><th>Kids</th><th>Stay</th><th>Note</th><th className="no-print" style={{ width: 50 }}></th></tr></thead>
               <tbody>
                 {guests.map(g => (
                   <tr key={g.b.id}>
@@ -395,15 +429,31 @@ export default function MealPlanPage() {
                       {g.note.includes("New") && <span className="badge b-new">🆕 New</span>}{" "}
                       {g.note.includes("콤보") && <span className="badge b-combo">{g.note.split("·").find(s => s.includes("콤보"))?.trim()}</span>}
                     </td>
+                    <td className="no-print" style={{ padding: "4px 2px" }}>
+                      <button onClick={() => excludeGuest(g.b.id)} title="이번 주 명단에서 제외" style={{ background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✕</button>
+                    </td>
                   </tr>
                 ))}
                 <tr style={{ fontWeight: 800, background: "#f8fafc" }}>
                   <td>TOTAL</td><td>{guests.length} houses</td>
                   <td>{guests.reduce((s, g) => s + (g.adultsByDay.find(n => n > 0) || 0), 0)}</td>
-                  <td>{guests.reduce((s, g) => s + g.kids, 0)}</td><td colSpan={2}></td>
+                  <td>{guests.reduce((s, g) => s + g.kids, 0)}</td><td colSpan={2}></td><td className="no-print"></td>
                 </tr>
               </tbody>
             </table>
+            {/* 제외된 손님 복원 영역 */}
+            {excludedList.length > 0 && (
+              <div className="no-print" style={{ marginTop: 12, padding: "10px 14px", background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: 8 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>🚫 이번 주 제외됨 ({excludedList.length}건) — 클릭하면 복원</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {excludedList.map(ex => (
+                    <button key={ex.id} onClick={() => restoreGuest(ex.id)} style={{ background: "#fff", border: "1px solid #d6dee8", borderRadius: 7, padding: "5px 12px", cursor: "pointer", fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}>
+                      ↩ {ex.eng} <span style={{ color: "#64748b", fontSize: 11 }}>({ex.room})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {(upcoming.incoming.length > 0 || upcoming.outgoing.length > 0 || weekDates.some(isHoliday)) && (
               <div className="mp-sec-note">
                 {weekDates.filter(isHoliday).map(d => <div key={d}>※ <b className="holi">{fShort(d)} 휴무</b> — 식사 제공, 점심 아이 포함</div>)}
