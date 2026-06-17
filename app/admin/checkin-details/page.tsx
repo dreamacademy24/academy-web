@@ -11,8 +11,12 @@ interface Booking {
   checkin_date: string; checkout_date: string;
   pickup_place?: string; drop_off?: string;
   flight_in?: string; flight_out?: string;
+  flight_in_airline?: string; flight_in_date?: string; flight_in_time?: string;
+  flight_out_airline?: string; flight_out_date?: string; flight_out_time?: string;
   adults?: number; children?: number;
   special_request?: string; reservation_no?: string;
+  flight_images?: string[];
+  flight_in_no?: string; flight_out_no?: string;
 }
 
 interface Detail {
@@ -94,12 +98,20 @@ function CheckinDetailsInner() {
   const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
   const [simCards, setSimCards] = useState<SimCard[]>([]);
   const [extraPickups, setExtraPickups] = useState<ExtraPickup[]>([]);
+  const [flightIn, setFlightIn] = useState("");
+  const [flightInDate, setFlightInDate] = useState("");
+  const [flightInTime, setFlightInTime] = useState("");
+  const [flightOut, setFlightOut] = useState("");
+  const [flightOutDate, setFlightOutDate] = useState("");
+  const [flightOutTime, setFlightOutTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [editing, setEditing] = useState(true); // true=편집 폼, false=인쇄 미리보기 뷰
   const [savedAt, setSavedAt] = useState("");    // 어드민 저장 완료 일시
   const [printHtml, setPrintHtml] = useState("");
   const [localItems, setLocalItems] = useState<{name:string;amount:string}[]>([]);
+  const [flightImages, setFlightImages] = useState<string[]>([]);
+  const [uploadingImg, setUploadingImg] = useState(false);
 
   const loadBookings = useCallback(async () => {
     const res = await fetch("/api/admin/checkin-details");
@@ -118,7 +130,16 @@ function CheckinDetailsInner() {
     const res = await fetch(`/api/admin/checkin-details?bookingId=${id}`);
     if (res.ok) {
       const d = await res.json();
-      if (d.booking) setBooking(d.booking);
+      if (d.booking) {
+        setBooking(d.booking);
+        setFlightIn([d.booking.flight_in_airline, d.booking.flight_in_no, !d.booking.flight_in_airline && !d.booking.flight_in_no ? d.booking.flight_in : ""].filter(Boolean).join(" ") || "");
+        setFlightInDate((d.booking.flight_in_date || "").split("T")[0] || "");
+        setFlightInTime(d.booking.flight_in_time || "");
+        setFlightOut([d.booking.flight_out_airline, d.booking.flight_out_no, !d.booking.flight_out_airline && !d.booking.flight_out_no ? d.booking.flight_out : ""].filter(Boolean).join(" ") || "");
+        setFlightOutDate((d.booking.flight_out_date || "").split("T")[0] || "");
+        setFlightOutTime(d.booking.flight_out_time || "");
+        setFlightImages(Array.isArray(d.booking.flight_images) ? d.booking.flight_images : []);
+      }
       if (d.detail) {
         setDetail(d.detail);
         // invoice_snapshot에서 현지지불 항목 로드
@@ -186,9 +207,74 @@ function CheckinDetailsInner() {
     const ts = d.detail?.admin_saved_at || new Date().toISOString();
     setSavedAt(ts);
     if (typeof window!=="undefined" && selId) localStorage.setItem("checkin_saved_"+selId, ts);
+    // 항공편 정보가 변경된 경우 bookings 테이블에도 저장
+    const flightPatch: Record<string,string> = {};
+    if(flightIn) flightPatch.flight_in = flightIn;
+    if(flightOut) flightPatch.flight_out = flightOut;
+    if(flightInDate) flightPatch.flight_in_date = flightInDate;
+    if(flightInTime) flightPatch.flight_in_time = flightInTime;
+    if(flightOutDate) flightPatch.flight_out_date = flightOutDate;
+    if(flightOutTime) flightPatch.flight_out_time = flightOutTime;
+    // airline을 flight_in에서 분리 (첫 단어가 항공사인 경우)
+    if(flightIn) {
+      const parts = flightIn.trim().split(/\s+/);
+      if(parts.length >= 2) { flightPatch.flight_in_airline = parts[0]; }
+    }
+    if(flightOut) {
+      const parts = flightOut.trim().split(/\s+/);
+      if(parts.length >= 2) { flightPatch.flight_out_airline = parts[0]; }
+    }
+    if(Object.keys(flightPatch).length > 0) {
+      await fetch(`/api/bookings/${selId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(flightPatch),
+      });
+      // booking state도 갱신
+      if(booking) setBooking({...booking, ...flightPatch});
+    }
     setEditing(false); // 저장 완료 → 인쇄 미리보기 뷰로 전환
     setMsg("저장 완료!");
     setTimeout(() => setMsg(""), 2500);
+  }
+
+  async function uploadFlightImage(files: FileList) {
+    if (!selId || !files.length) return;
+    setUploadingImg(true);
+    const { createClient } = await import("@supabase/supabase-js");
+    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const newUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const ext = f.name.split(".").pop() || "jpg";
+      const path = `flight/${selId}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+      const { error } = await sb.storage.from("staff-files").upload(path, f);
+      if (!error) {
+        const { data: pub } = sb.storage.from("staff-files").getPublicUrl(path);
+        if (pub?.publicUrl) newUrls.push(pub.publicUrl);
+      }
+    }
+    if (newUrls.length > 0) {
+      const updated = [...flightImages, ...newUrls];
+      await fetch(`/api/bookings/${selId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flight_images: updated }),
+      });
+      setFlightImages(updated);
+    }
+    setUploadingImg(false);
+  }
+
+  async function deleteFlightImage(url: string) {
+    if (!selId || !confirm("이 이미지를 삭제할까요?")) return;
+    const updated = flightImages.filter(u => u !== url);
+    await fetch(`/api/bookings/${selId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ flight_images: updated }),
+    });
+    setFlightImages(updated);
   }
 
   // 한글 값 → 영문 변환 (EN 인쇄용). 미매핑 값은 원문 그대로 유지
@@ -544,7 +630,7 @@ function CheckinDetailsInner() {
         </div>
       </div>
 
-      {(editing || !detail || !booking) && (() => {
+      {(!detail || !booking) && (() => {
         const today = new Date(); today.setHours(0,0,0,0);
         const ymd = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
         const todayStr = ymd(today);
@@ -633,7 +719,30 @@ function CheckinDetailsInner() {
           <div className="row"><span className="lbl">숙소 / 룸</span><span className="val">{booking.accom_type || "-"} {booking.accom_room || booking.house_no || ""}</span></div>
           <div className="row"><span className="lbl">인원</span><span className="val">성인 {booking.adults || 0}명 + 아이 {booking.children || 0}명</span></div>
           <div className="row"><span className="lbl">픽업 / 드랍</span><span className="val">{booking.pickup_place || "-"} / {booking.drop_off || "-"}</span></div>
-          <div className="row"><span className="lbl">항공편 (IN/OUT)</span><span className="val">{booking.flight_in || "-"} / {booking.flight_out || "-"}</span></div>
+          <div className="row"><span className="lbl">입국편</span><span className="val">{flightIn || booking.flight_in || "-"}{flightInDate ? ` / ${fDate(flightInDate)}` : ""}{flightInTime ? ` ${flightInTime}` : ""}</span></div>
+          <div className="row"><span className="lbl">출국편</span><span className="val">{flightOut || booking.flight_out || "-"}{flightOutDate ? ` / ${fDate(flightOutDate)}` : ""}{flightOutTime ? ` ${flightOutTime}` : ""}</span></div>
+          {/* 항공권 이미지 */}
+          <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #eee"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"#64748b"}}>항공권 이미지</span>
+              <label style={{padding:"4px 10px",background:"#eff6ff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:6,fontSize:11.5,fontWeight:600,cursor:"pointer"}}>
+                {uploadingImg ? "업로드중..." : "이미지 업로드"}
+                <input type="file" accept="image/*" multiple hidden onChange={e => e.target.files && uploadFlightImage(e.target.files)} disabled={uploadingImg}/>
+              </label>
+            </div>
+            {flightImages.length > 0 ? (
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {flightImages.map((img, i) => (
+                  <div key={i} style={{position:"relative",border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden"}}>
+                    <a href={img} target="_blank" rel="noopener noreferrer"><img src={img} alt="" style={{width:160,height:120,objectFit:"cover",display:"block"}}/></a>
+                    <button onClick={() => deleteFlightImage(img)} style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{fontSize:12,color:"#94a3b8"}}>등록된 항공권 이미지가 없습니다</div>
+            )}
+          </div>
         </div>
 
         {editing && (<div className="sec">
@@ -642,6 +751,35 @@ function CheckinDetailsInner() {
             <div className="fg"><label className="fl">예약자 성함</label><input className="fi" value={detail.booker_name||""} onChange={e=>field("booker_name",e.target.value)}/></div>
             <div className="fg"><label className="fl">입실 일자</label><input className="fi" value={detail.checkin_date||""} onChange={e=>field("checkin_date",e.target.value)} placeholder="2026-05-09 또는 2026년 5월 9일"/></div>
           </div>
+          {/* 항공편 정보 */}
+          <div style={{marginBottom:14}}>
+            <label className="fl" style={{marginBottom:8}}>✈️ 항공편 정보</label>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div className="fg">
+                <label className="fl">🛬 입국편 (항공사 + 편명)</label>
+                <input className="fi" value={flightIn} onChange={e=>setFlightIn(e.target.value)} placeholder="예: 대한항공 KE601"/>
+              </div>
+              <div className="fg">
+                <label className="fl">🛬 입국 날짜 / 시간</label>
+                <div style={{display:"flex",gap:6}}>
+                  <input className="fi" type="date" value={flightInDate} onChange={e=>setFlightInDate(e.target.value)} style={{flex:1}}/>
+                  <input className="fi" type="time" value={flightInTime} onChange={e=>setFlightInTime(e.target.value)} style={{flex:1}}/>
+                </div>
+              </div>
+              <div className="fg">
+                <label className="fl">🛫 출국편 (항공사 + 편명)</label>
+                <input className="fi" value={flightOut} onChange={e=>setFlightOut(e.target.value)} placeholder="예: 대한항공 KE602"/>
+              </div>
+              <div className="fg">
+                <label className="fl">🛫 출국 날짜 / 시간</label>
+                <div style={{display:"flex",gap:6}}>
+                  <input className="fi" type="date" value={flightOutDate} onChange={e=>setFlightOutDate(e.target.value)} style={{flex:1}}/>
+                  <input className="fi" type="time" value={flightOutTime} onChange={e=>setFlightOutTime(e.target.value)} style={{flex:1}}/>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="fg" style={{marginBottom:10}}><label className="fl">투숙자 전체 영문이름</label><textarea className="ta" value={detail.guest_names_en||""} onChange={e=>field("guest_names_en",e.target.value)} placeholder="kim ooo / yoo ooo ooo / ..."/></div>
 
           {/* ① 베드 세팅 — 룸별 카드 선택 */}

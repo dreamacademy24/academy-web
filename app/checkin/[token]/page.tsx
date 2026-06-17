@@ -119,6 +119,27 @@ export default function CheckinFormPage() {
         flight_out_destination: f.out_destination || p.flight_out_destination,
       }));
       setFlightOcrMsg("✅ 자동입력 완료! 내용을 확인해주세요.");
+      // 항공권 사진 저장
+      if (bookingId && file) {
+        try {
+          const { createClient } = await import("@supabase/supabase-js");
+          const sb = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          );
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `flight/${bookingId}/${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
+          const { error: upErr } = await sb.storage.from("staff-files").upload(path, file);
+          if (!upErr) {
+            const { data: pub } = sb.storage.from("staff-files").getPublicUrl(path);
+            if (pub?.publicUrl) {
+              const { data: bk } = await sb.from("bookings").select("flight_images").eq("id", bookingId).maybeSingle();
+              const existing = Array.isArray(bk?.flight_images) ? bk.flight_images : [];
+              await sb.from("bookings").update({ flight_images: [...existing, pub.publicUrl] }).eq("id", bookingId);
+            }
+          }
+        } catch (imgErr) { console.error("flight image save:", imgErr); }
+      }
     } catch {
       setFlightOcrMsg("❌ 인식 실패. 직접 입력해주세요.");
     } finally {

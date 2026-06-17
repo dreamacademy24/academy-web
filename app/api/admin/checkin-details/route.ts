@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   if (!bookingId) {
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, adults, children, special_request, students, reservation_no, booking_type, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+      .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, flight_out_date, flight_out_time, flight_out_airline, adults, children, special_request, students, reservation_no, booking_type, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout, flight_images, flight_in_no, flight_out_no')
       .not('status', 'ilike', '%취소%')
       .order('checkin_date', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
   // booking 기본정보 fetch
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, adults, children, special_request, students, reservation_no, booking_type, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+    .select('id, booker_name, booker_english, accom_type, accom_room, house_no, checkin_date, checkout_date, pickup_place, drop_off, flight_in, flight_out, flight_in_date, flight_in_time, flight_in_airline, flight_out_date, flight_out_time, flight_out_airline, adults, children, special_request, students, reservation_no, booking_type, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout, flight_images, flight_in_no, flight_out_no')
     .eq('id', bookingId)
     .maybeSingle()
   if (!booking) return NextResponse.json({ error: 'booking not found' }, { status: 404 })
