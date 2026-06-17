@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { resolvePortalSession } from "@/lib/portalSession";
 
 interface Notice { id: string; category: string; title: string; content: string; popup: boolean; audience: string; target_ids: string[]; created_at: string; }
@@ -25,10 +24,14 @@ export default function PortalNoticesPage() {
 
   const load = useCallback(async (bid: string) => {
     setLoading(true);
-    const { data } = await supabase.from("portal_notices").select("*").order("created_at", { ascending: false });
-    const all = (data || []) as Notice[];
-    const visible = all.filter((n) => n.audience !== "selected" || (Array.isArray(n.target_ids) && n.target_ids.includes(bid)));
-    setList(visible);
+    try {
+      const res = await fetch("/api/portal/notices");
+      if (!res.ok) { setLoading(false); return; }
+      const { notices } = await res.json();
+      const all = (notices || []) as Notice[];
+      const visible = all.filter((n) => n.audience !== "selected" || (Array.isArray(n.target_ids) && n.target_ids.includes(bid)));
+      setList(visible);
+    } catch {}
     setLoading(false);
   }, []);
   useEffect(() => { if (bookingId) load(bookingId); }, [bookingId, load]);

@@ -133,9 +133,10 @@ export default function PortalDashboard() {
       let bookingId: string | null = null;
       try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
       if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
-      const { data } = await supabase.from("portal_notices").select("*").eq("popup", true).order("created_at", { ascending: false });
+      let allNotices: any[] = [];
+      try { const res = await fetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices = d.notices || []; } } catch {}
       if (cancelled) return;
-      const list = (data || []).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
+      const list = allNotices.filter((n: any) => n.popup).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
       // 영구 dismiss된 공지 제외
       let dismissed: string[] = [];
       try { dismissed = JSON.parse(localStorage.getItem("notice_popup_dismissed") || "[]"); } catch {}
@@ -158,9 +159,10 @@ export default function PortalDashboard() {
       let bookingId: string | null = null;
       try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
       if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
-      const { data } = await supabase.from("portal_notices").select("id,created_at,audience,target_ids").order("created_at", { ascending: false });
+      let allNotices2: any[] = [];
+      try { const res = await fetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices2 = d.notices || []; } } catch {}
       if (cancelled) return;
-      const list = (data || []).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
+      const list = allNotices2.filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
       let lastSeen = ""; try { lastSeen = localStorage.getItem("notices_last_seen") || ""; } catch {}
       const unread = lastSeen ? list.filter((n: any) => String(n.created_at) > lastSeen).length : list.length;
       setNoticeUnread(unread);
