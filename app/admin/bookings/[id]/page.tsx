@@ -6,6 +6,7 @@ import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { generatePortalId, generateTempPassword } from "@/lib/portalUtils";
 import { isCommuteBooking } from "@/lib/bookingTypes";
 import { fmtRoom } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
 
 type Tab = "info" | "pickup" | "students" | "invoice" | "tutor" | "shuttle" | "comments";
 interface Comment { id: string; booking_id: string; author: string; content: string; created_at: string }
@@ -225,6 +226,8 @@ export default function BookingDetailPage() {
       seg2_type: b.seg2_type || "",
       seg2_checkin: (b.seg2_checkin || "").split("T")[0] || "",
       seg2_checkout: (b.seg2_checkout || "").split("T")[0] || "",
+      extra_stay_checkin: b.extra_stay_checkin || "",
+      extra_stay_checkout: b.extra_stay_checkout || "",
     });
     setEditing(true);
   }
@@ -344,6 +347,8 @@ export default function BookingDetailPage() {
       seg2_type: editForm.seg2_type || null,
       seg2_checkin: editForm.seg2_checkin || null,
       seg2_checkout: editForm.seg2_checkout || null,
+      extra_stay_checkin: editForm.extra_stay_checkin || null,
+      extra_stay_checkout: editForm.extra_stay_checkout || null,
       agency: (editForm.agency || "").trim() || null,
       flight_in: (editForm.flight_in || "").trim() || null,
       flight_out: (editForm.flight_out || "").trim() || null,
@@ -582,6 +587,27 @@ export default function BookingDetailPage() {
                   : <div className="val">{fDate(b.academy_end || deriveAcademyEnd(b.check_in || b.checkin_date, b.accom_weeks))}</div>}
               </div>
             </>)}
+            {/* 추가 투숙 */}
+            <div className="item"><div className="lbl">추가 투숙</div>
+              {editing ? (
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <input className="ed-inp" type="date" value={editForm.extra_stay_checkin||""} onChange={e=>setEditForm(p=>({...p,extra_stay_checkin:e.target.value}))} style={{maxWidth:150}}/>
+                  <span style={{color:"#94a3b8"}}>~</span>
+                  <input className="ed-inp" type="date" value={editForm.extra_stay_checkout||""} onChange={e=>setEditForm(p=>({...p,extra_stay_checkout:e.target.value}))} style={{maxWidth:150}}/>
+                </div>
+              ) : (
+                <div className="val">
+                  {b.extra_stay_checkin && b.extra_stay_checkout
+                    ? `${b.extra_stay_checkin} ~ ${b.extra_stay_checkout}`
+                    : b.extra_stay_checkin || b.extra_stay_checkout || "-"}
+                </div>
+              )}
+            </div>
+            {!editing && b.extra_stay_checkin && b.extra_stay_checkout && (
+              <div style={{gridColumn:"1 / -1",padding:"8px 12px",background:"#fef3c7",border:"1px solid #fde68a",borderRadius:8,fontSize:12,color:"#92400e",marginTop:6}}>
+                ⚠️ 추가 투숙 기간에는 셔틀·애프터스쿨·헬퍼 서비스가 포함되지 않습니다
+              </div>
+            )}
             <div className="item"><div className="lbl">예약유형</div>
               {editing
                 ? <select className="ed-inp" value={editForm.accom_type||""} onChange={e=>setEditForm({...editForm,accom_type:e.target.value})}>
@@ -773,6 +799,50 @@ export default function BookingDetailPage() {
                 : <div className="val">{[b.flight_out_airline, b.flight_out_no].filter(Boolean).join(" ") || b.flight_out || "-"}{b.flight_out_date ? ` / ${fDate(b.flight_out_date)} ${b.flight_out_time||""}` : ""}{b.flight_out_destination ? ` · ${b.flight_out_destination}` : ""}</div>}
             </div>
           </div>)}
+          {/* 항공권 이미지 */}
+          <div style={{marginTop:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#6b7c93",marginBottom:8}}>📸 항공권 이미지</div>
+            {(b.flight_images && Array.isArray(b.flight_images) && b.flight_images.length > 0) && (
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                {b.flight_images.map((img: string, i: number) => (
+                  <div key={i} style={{position:"relative",borderRadius:8,overflow:"hidden",border:"1px solid #e2e8f0"}}>
+                    <img src={img} alt={`항공권 ${i+1}`} style={{width:160,height:120,objectFit:"cover",cursor:"pointer"}} onClick={()=>window.open(img,"_blank")}/>
+                    <button onClick={async ()=>{
+                      if(!confirm("이 이미지를 삭제하시겠습니까?")) return;
+                      const updated = b.flight_images.filter((_:string,j:number)=>j!==i);
+                      const res = await fetch(`/api/bookings/${b.id}`, {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({flight_images:updated})});
+                      if(res.ok) load();
+                    }} style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label style={{display:"inline-flex",alignItems:"center",gap:6,padding:"8px 16px",background:"#f0f9ff",border:"1px dashed #93c5fd",borderRadius:8,color:"#1a6fc4",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              📎 이미지 업로드
+              <input type="file" accept="image/*" multiple style={{display:"none"}} onChange={async (e)=>{
+                const files = e.target.files;
+                if(!files || files.length === 0) return;
+                const uploaded: string[] = [];
+                for(const file of Array.from(files)) {
+                  const ext = file.name.split(".").pop() || "jpg";
+                  const path = `flight/${b.id}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+                  const { error } = await supabase.storage.from("staff-files").upload(path, file, { contentType: file.type });
+                  if(!error) {
+                    const { data: urlData } = supabase.storage.from("staff-files").getPublicUrl(path);
+                    if(urlData?.publicUrl) uploaded.push(urlData.publicUrl);
+                  }
+                }
+                if(uploaded.length > 0) {
+                  const existing = Array.isArray(b.flight_images) ? b.flight_images : [];
+                  const res = await fetch(`/api/bookings/${b.id}`, {method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({flight_images:[...existing,...uploaded]})});
+                  if(res.ok) { load(); alert(`${uploaded.length}장 업로드 완료`); }
+                  else alert("업로드 실패");
+                }
+                e.target.value = "";
+              }}/>
+            </label>
+            <span style={{fontSize:11,color:"#94a3b8",marginLeft:8}}>클릭하면 원본 크기로 볼 수 있습니다</span>
+          </div>
           <div className="grid" style={{marginTop:14}}>
             <div className="item"><div className="lbl">픽업장소</div>
               {editing

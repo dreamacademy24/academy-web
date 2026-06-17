@@ -231,7 +231,7 @@ export default function MyBookingPage() {
           <div className="item"><div className="lbl">예약번호</div><div className="val">{b.reservation_no || session.booking_number}</div></div>
           <div className="item"><div className="lbl">예약유형</div><div className="val">{isCombo ? comboLabel : (b.booking_type || b.accom_type || "-")}</div></div>
           <div className="item"><div className="lbl">체크인</div><div className="val">{fDate(isCombo ? b.seg1_checkin : (b.check_in || b.checkin_date))}</div></div>
-          <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(isCombo ? b.seg2_checkout : (b.check_out || b.checkout_date))}</div></div>
+          <div className="item"><div className="lbl">체크아웃</div><div className="val">{fDate(b.extra_stay_checkout || (isCombo ? b.seg2_checkout : (b.check_out || b.checkout_date)))}</div></div>
           <div className="item"><div className="lbl">아카데미 시작</div><div className="val">{fDate(deriveAcademyStartFB(b) || null)}</div></div>
           <div className="item"><div className="lbl">아카데미 종료</div><div className="val">{fDate(deriveAcademyEndFB(b) || null)}</div></div>
           <div className="item"><div className="lbl">픽업장소</div><div className="val">{b.pickup_place || "-"}</div></div>
@@ -251,6 +251,29 @@ export default function MyBookingPage() {
               </div>
             ))}
             <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>공항 도착 시 ①번 숙소로 이동 후, {fDate(b.seg1_checkout)}에 ②번 숙소로 이동합니다.</div>
+          </div>
+        )}
+
+        {/* 추가 투숙 안내 */}
+        {b.extra_stay_checkin && b.extra_stay_checkout && (
+          <div className="sec" style={{marginTop:16}}>
+            <h3 style={{fontSize:15,fontWeight:700,color:"#92400e",marginBottom:10}}>🏠 추가 투숙 안내</h3>
+            <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"14px 18px"}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:11,color:"#92400e",fontWeight:600,marginBottom:2}}>추가 투숙 체크인</div>
+                  <div style={{fontSize:15,fontWeight:700}}>{b.extra_stay_checkin}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"#92400e",fontWeight:600,marginBottom:2}}>추가 투숙 체크아웃</div>
+                  <div style={{fontSize:15,fontWeight:700}}>{b.extra_stay_checkout}</div>
+                </div>
+              </div>
+              <div style={{fontSize:12.5,color:"#78350f",lineHeight:1.6,borderTop:"1px solid #fde68a",paddingTop:10}}>
+                추가 투숙 기간에는 숙소만 제공되며,<br/>
+                셔틀·애프터스쿨·헬퍼 서비스는 포함되지 않습니다.
+              </div>
+            </div>
           </div>
         )}
       </div>
