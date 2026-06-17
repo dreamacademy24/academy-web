@@ -241,40 +241,35 @@ function CheckinDetailsInner() {
   async function uploadFlightImage(files: FileList) {
     if (!selId || !files.length) return;
     setUploadingImg(true);
-    const { createClient } = await import("@supabase/supabase-js");
-    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-    const newUrls: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      const ext = f.name.split(".").pop() || "jpg";
-      const path = `flight/${selId}/${Date.now()}_${Math.random().toString(36).slice(2,6)}.${ext}`;
-      const { error } = await sb.storage.from("staff-files").upload(path, f);
-      if (!error) {
-        const { data: pub } = sb.storage.from("staff-files").getPublicUrl(path);
-        if (pub?.publicUrl) newUrls.push(pub.publicUrl);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const fd = new FormData();
+        fd.append("image", files[i]);
+        fd.append("bookingId", selId);
+        const res = await fetch("/api/upload-flight-image", { method: "POST", body: fd });
+        if (res.ok) {
+          const j = await res.json();
+          if (j.flight_images) setFlightImages(j.flight_images);
+        } else {
+          const j = await res.json().catch(() => ({}));
+          console.error("upload failed:", j.error);
+        }
       }
-    }
-    if (newUrls.length > 0) {
-      const updated = [...flightImages, ...newUrls];
-      await fetch(`/api/bookings/${selId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flight_images: updated }),
-      });
-      setFlightImages(updated);
-    }
+    } catch (err) { console.error("uploadFlightImage:", err); }
     setUploadingImg(false);
   }
 
   async function deleteFlightImage(url: string) {
     if (!selId || !confirm("이 이미지를 삭제할까요?")) return;
-    const updated = flightImages.filter(u => u !== url);
-    await fetch(`/api/bookings/${selId}`, {
-      method: "PATCH",
+    const res = await fetch("/api/upload-flight-image", {
+      method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ flight_images: updated }),
+      body: JSON.stringify({ bookingId: selId, url }),
     });
-    setFlightImages(updated);
+    if (res.ok) {
+      const j = await res.json();
+      if (j.flight_images) setFlightImages(j.flight_images);
+    }
   }
 
   // 한글 값 → 영문 변환 (EN 인쇄용). 미매핑 값은 원문 그대로 유지

@@ -19,12 +19,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
   if (!detail) return NextResponse.json({ error: 'invalid token' }, { status: 404 })
 
-  // 예약 기본정보 (있으면 헤더 표시용)
+  // 예약 기본정보 (있으면 헤더 표시용) + flight_images
   let booking = null
   if (detail.booking_id) {
     const { data: b } = await supabase
       .from('bookings')
-      .select('booker_name, accom_type, checkin_date, checkout_date, reservation_no')
+      .select('booker_name, accom_type, checkin_date, checkout_date, reservation_no, flight_images, flight_in_airline, flight_in_no, flight_in_date, flight_in_time, flight_in_origin, flight_in_undecided, flight_out_airline, flight_out_no, flight_out_date, flight_out_time, flight_out_destination, flight_out_undecided')
       .eq('id', detail.booking_id)
       .maybeSingle()
     booking = b

@@ -93,6 +93,24 @@ export default function CheckinFormPage() {
     } finally { setSaving(false); }
   }
 
+  // 서버 API로 항공권 이미지 업로드 (service_role 사용)
+  async function uploadFlightImageViaApi(file: File) {
+    if (!token || !file) return;
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("token", token);
+      const res = await fetch("/api/upload-flight-image", { method: "POST", body: fd });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        console.error("flight image upload failed:", j.error);
+      } else {
+        const j = await res.json();
+        if (j.flight_images) setFlightImages(j.flight_images);
+      }
+    } catch (err) { console.error("flight image save:", err); }
+  }
+
   async function handleFlightOcr(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -119,33 +137,29 @@ export default function CheckinFormPage() {
         flight_out_destination: f.out_destination || p.flight_out_destination,
       }));
       setFlightOcrMsg("✅ 자동입력 완료! 내용을 확인해주세요.");
-      // 항공권 사진 저장
-      if (bookingId && file) {
-        try {
-          const { createClient } = await import("@supabase/supabase-js");
-          const sb = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-          );
-          const ext = file.name.split(".").pop() || "jpg";
-          const path = `flight/${bookingId}/${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
-          const { error: upErr } = await sb.storage.from("staff-files").upload(path, file);
-          if (!upErr) {
-            const { data: pub } = sb.storage.from("staff-files").getPublicUrl(path);
-            if (pub?.publicUrl) {
-              const { data: bk } = await sb.from("bookings").select("flight_images").eq("id", bookingId).maybeSingle();
-              const existing = Array.isArray(bk?.flight_images) ? bk.flight_images : [];
-              await sb.from("bookings").update({ flight_images: [...existing, pub.publicUrl] }).eq("id", bookingId);
-            }
-          }
-        } catch (imgErr) { console.error("flight image save:", imgErr); }
-      }
+      // 항공권 사진 서버 API로 저장
+      await uploadFlightImageViaApi(file);
     } catch {
       setFlightOcrMsg("❌ 인식 실패. 직접 입력해주세요.");
     } finally {
       setFlightOcrLoading(false);
       if (e.target) e.target.value = "";
     }
+  }
+
+  // 별도 사진 업로드 (OCR 없이)
+  const flightUploadRef = useRef<HTMLInputElement>(null);
+  const [flightUploading, setFlightUploading] = useState(false);
+  const [flightImages, setFlightImages] = useState<string[]>([]);
+  async function handleFlightImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    setFlightUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      await uploadFlightImageViaApi(files[i]);
+    }
+    setFlightUploading(false);
+    if (e.target) e.target.value = "";
   }
 
   useEffect(() => {
@@ -201,6 +215,29 @@ export default function CheckinFormPage() {
         if (det.booking_id) {
           setBookingId(det.booking_id);
           loadPickups(det.booking_id);
+        }
+        // 기존 항공권 이미지 로드
+        if (d.booking?.flight_images && Array.isArray(d.booking.flight_images)) {
+          setFlightImages(d.booking.flight_images);
+        }
+        // 항공편 정보 pre-fill (booking 기본 데이터에서)
+        if (d.booking) {
+          const bk = d.booking;
+          setFlightForm(prev => ({
+            ...prev,
+            flight_in_airline: prev.flight_in_airline || bk.flight_in_airline || "",
+            flight_in_no: prev.flight_in_no || bk.flight_in_no || "",
+            flight_in_date: prev.flight_in_date || (bk.flight_in_date || "").split("T")[0] || "",
+            flight_in_time: prev.flight_in_time || bk.flight_in_time || "",
+            flight_in_origin: prev.flight_in_origin || bk.flight_in_origin || "",
+            flight_in_undecided: prev.flight_in_undecided || !!bk.flight_in_undecided,
+            flight_out_airline: prev.flight_out_airline || bk.flight_out_airline || "",
+            flight_out_no: prev.flight_out_no || bk.flight_out_no || "",
+            flight_out_date: prev.flight_out_date || (bk.flight_out_date || "").split("T")[0] || "",
+            flight_out_time: prev.flight_out_time || bk.flight_out_time || "",
+            flight_out_destination: prev.flight_out_destination || bk.flight_out_destination || "",
+            flight_out_undecided: prev.flight_out_undecided || !!bk.flight_out_undecided,
+          }));
         }
         setLoading(false);
       } catch {
@@ -425,13 +462,33 @@ export default function CheckinFormPage() {
           <div className="q-title">✈️ 항공편 등록</div>
           <div className="q-hint">입국·출국 항공편 정보를 입력해 주세요. 미정인 경우 체크박스를 선택해 주세요.</div>
           <div style={{marginBottom:12}}>
-            <input ref={flightFileRef} type="file" accept="image/*" onChange={handleFlightOcr} style={{display:"none"}}/>
-            <button type="button" onClick={()=>flightFileRef.current?.click()} disabled={flightOcrLoading}
-              style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 14px",background:"#4f6ef7",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:flightOcrLoading?"wait":"pointer",opacity:flightOcrLoading?0.7:1}}>
-              {flightOcrLoading?"⏳ 분석 중...":"📷 항공권 사진으로 자동입력"}
-            </button>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+              <input ref={flightFileRef} type="file" accept="image/*" onChange={handleFlightOcr} style={{display:"none"}}/>
+              <button type="button" onClick={()=>flightFileRef.current?.click()} disabled={flightOcrLoading}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 14px",background:"#4f6ef7",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:flightOcrLoading?"wait":"pointer",opacity:flightOcrLoading?0.7:1}}>
+                {flightOcrLoading?"⏳ 분석 중...":"📷 항공권 사진으로 자동입력"}
+              </button>
+              <input ref={flightUploadRef} type="file" accept="image/*" multiple onChange={handleFlightImageUpload} style={{display:"none"}}/>
+              <button type="button" onClick={()=>flightUploadRef.current?.click()} disabled={flightUploading}
+                style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 14px",background:"#fff",color:"#4f6ef7",border:"1.5px solid #4f6ef7",borderRadius:8,fontSize:13,fontWeight:600,cursor:flightUploading?"wait":"pointer",opacity:flightUploading?0.7:1}}>
+                {flightUploading?"업로드중...":"🖼 항공권 사진 업로드"}
+              </button>
+            </div>
             {flightOcrMsg && <div style={{marginTop:6,fontSize:12,color:flightOcrMsg.startsWith("✅")?"#16a34a":"#dc2626"}}>{flightOcrMsg}</div>}
           </div>
+          {/* 업로드된 항공권 이미지 갤러리 */}
+          {flightImages.length > 0 && (
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,fontWeight:600,color:"#64748b",marginBottom:6}}>📎 업로드된 항공권 사진 ({flightImages.length}장)</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {flightImages.map((img,i) => (
+                  <a key={i} href={img} target="_blank" rel="noopener noreferrer" style={{border:"1px solid #e0e4ef",borderRadius:8,overflow:"hidden"}}>
+                    <img src={img} alt="" style={{width:120,height:90,objectFit:"cover",display:"block"}}/>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
           {([
             ['in','🛬 입국편','출발지','인천','flight_in'] as const,
             ['out','🛫 출국편','도착지','인천','flight_out'] as const,
