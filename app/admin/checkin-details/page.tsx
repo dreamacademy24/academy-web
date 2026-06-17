@@ -655,7 +655,7 @@ function CheckinDetailsInner() {
     `}</style>
     <div className="cd-w">
       <div className="cd-top">
-        <button className="cd-back" onClick={()=>router.push("/admin/hub")}>←</button>
+        <button className="cd-back" onClick={()=>{ if(selId){setSelId(null);setBooking(null);setDetail(null);setEditing(true);setMsg("");}else{router.push("/admin/hub");} }}>←</button>
         <h1>체크인 디테일</h1>
         <div style={{marginLeft:"auto",display:"flex",gap:8}}>
           <button onClick={()=>{ if(selId) window.open(`/admin/checkin-card?bookingId=${selId}`,"_blank"); }} disabled={!selId}
