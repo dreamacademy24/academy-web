@@ -243,8 +243,10 @@ function CheckinDetailsInner() {
     setUploadingImg(true);
     try {
       for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // 1) 이미지 저장
         const fd = new FormData();
-        fd.append("image", files[i]);
+        fd.append("image", file);
         fd.append("bookingId", selId);
         const res = await fetch("/api/upload-flight-image", { method: "POST", body: fd });
         if (res.ok) {
@@ -254,6 +256,26 @@ function CheckinDetailsInner() {
           const j = await res.json().catch(() => ({}));
           console.error("upload failed:", j.error);
         }
+        // 2) OCR 자동인식 → 항공편 정보 자동 채움
+        try {
+          const ocrFd = new FormData();
+          ocrFd.append("image", file);
+          const ocrRes = await fetch("/api/ocr/flight", { method: "POST", body: ocrFd });
+          if (ocrRes.ok) {
+            const ocrData = await ocrRes.json();
+            if (ocrData.ok && ocrData.fields) {
+              const f = ocrData.fields;
+              if (f.in_airline || f.in_no) setFlightIn([f.in_airline, f.in_no].filter(Boolean).join(" "));
+              if (f.in_date) setFlightInDate(f.in_date);
+              if (f.in_time) setFlightInTime(f.in_time);
+              if (f.out_airline || f.out_no) setFlightOut([f.out_airline, f.out_no].filter(Boolean).join(" "));
+              if (f.out_date) setFlightOutDate(f.out_date);
+              if (f.out_time) setFlightOutTime(f.out_time);
+              setMsg("✅ 항공권 인식 완료! 정보를 확인해주세요.");
+              setTimeout(() => setMsg(""), 4000);
+            }
+          }
+        } catch { /* OCR 실패해도 이미지 저장은 완료 */ }
       }
     } catch (err) { console.error("uploadFlightImage:", err); }
     setUploadingImg(false);
@@ -721,7 +743,7 @@ function CheckinDetailsInner() {
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <span style={{fontSize:12,fontWeight:700,color:"#64748b"}}>항공권 이미지</span>
               <label style={{padding:"4px 10px",background:"#eff6ff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:6,fontSize:11.5,fontWeight:600,cursor:"pointer"}}>
-                {uploadingImg ? "업로드중..." : "이미지 업로드"}
+                {uploadingImg ? "인식중..." : "📷 항공권 업로드 (자동인식)"}
                 <input type="file" accept="image/*" multiple hidden onChange={e => e.target.files && uploadFlightImage(e.target.files)} disabled={uploadingImg}/>
               </label>
             </div>
