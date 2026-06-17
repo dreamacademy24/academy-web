@@ -216,6 +216,23 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   }
 
   const hasMealData = menu?.meal_data && Array.isArray(menu.meal_data) && menu.meal_data.length > 0;
+  // 항목 수 경고: 대부분의 날짜에 1~2개만 있으면 OCR이 잘못 읽은 것
+  const avgItems = hasMealData ? Math.round(menu!.meal_data!.reduce((s, d) => s + (d.lunch?.length || 0), 0) / menu!.meal_data!.length) : 0;
+  const tooFewItems = hasMealData && avgItems <= 2;
+
+  // 🔄 다시 인식 (기존 이미지로 OCR 재실행)
+  async function retryOcr() {
+    if (!menu?.image_url || ocrBusy) return;
+    setOcrBusy(true);
+    try {
+      // base64 data URL → File 객체로 변환
+      const res = await fetch(menu.image_url);
+      const blob = await res.blob();
+      const file = new File([blob], "meal.jpg", { type: blob.type || "image/jpeg" });
+      await runOcr(file, menu.id);
+    } catch (e) { toastErr("다시 인식 실패"); console.warn(e); }
+    // ocrBusy는 runOcr 내부에서 해제됨
+  }
 
   return (
     <div style={{ padding: "4px 2px 20px", maxWidth: 600 }}>
@@ -266,13 +283,23 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
         </div>
       </div>
 
-      {/* STEP 2: AI 인식 결과 미리보기 (카드형) */}
+      {/* STEP 2: AI 인식 결과 미리보기 */}
       {hasMealData && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ fontWeight: 800, fontSize: 14 }}>② 미리보기</span>
             <span style={{ fontSize: 11.5, color: "#64748b" }}>— 손님에게 이렇게 보입니다</span>
+            <button onClick={retryOcr} disabled={ocrBusy} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#2563eb", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 7, padding: "5px 10px", cursor: "pointer", opacity: ocrBusy ? 0.5 : 1 }}>
+              {ocrBusy ? "인식 중…" : "🔄 다시 인식"}
+            </button>
           </div>
+          {/* 항목 수 경고 */}
+          {tooFewItems && (
+            <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, fontSize: 12.5, color: "#dc2626", fontWeight: 600, marginBottom: 10, lineHeight: 1.6 }}>
+              ⚠️ 날짜당 평균 {avgItems}개 항목만 인식되었습니다 (정상은 4~8개).
+              <br />AI가 식단표를 잘못 읽었을 수 있습니다. <b>"🔄 다시 인식"</b> 버튼을 눌러보세요.
+            </div>
+          )}
           <MealCardPreview days={menu!.meal_data!} month={menuMonth} isAcademy={monthly} />
         </div>
       )}
