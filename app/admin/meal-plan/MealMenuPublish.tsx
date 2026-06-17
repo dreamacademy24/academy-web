@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface Menu { id: string; kind: string; menu_date: string; image_url: string; published: boolean; }
+interface MealDay { date: number; weekday: string; breakfast: string[]; lunch: string[]; dinner_adult: string[]; dinner_child: string[]; }
+interface Menu { id: string; kind: string; menu_date: string; image_url: string; published: boolean; meal_data?: MealDay[]; }
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MEAL_ORDER = "🌅 아침 · ☀️ 점심 · 🌙 저녁(어른) · 🧒 저녁(아동)";
 
@@ -26,6 +27,49 @@ function compress(file: File): Promise<string> {
   });
 }
 
+/* ---- 미리보기용 카드 컴포넌트 ---- */
+const MEAL_ROWS: { key: keyof Pick<MealDay, "breakfast" | "lunch" | "dinner_adult" | "dinner_child">; label: string; emoji: string; bg: string; border: string; text: string }[] = [
+  { key: "breakfast", label: "아침", emoji: "🌅", bg: "#fef3c7", border: "#fde68a", text: "#92400e" },
+  { key: "lunch", label: "점심", emoji: "☀️", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
+  { key: "dinner_adult", label: "저녁 (어른)", emoji: "🌙", bg: "#e0e7ff", border: "#a5b4fc", text: "#3730a3" },
+  { key: "dinner_child", label: "저녁 (아동)", emoji: "🧒", bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
+];
+
+function MealCardPreview({ days, month }: { days: MealDay[]; month: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {days.map((day, i) => (
+        <div key={i} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #e2e8f0" }}>
+          <div style={{ background: "#1e3a5f", color: "#fff", padding: "8px 14px", fontWeight: 800, fontSize: 14 }}>
+            {month}/{day.date} ({day.weekday})
+          </div>
+          <div style={{ padding: "5px 9px 9px" }}>
+            {MEAL_ROWS.map(row => {
+              const items = day[row.key];
+              if (!items || items.length === 0) return null;
+              return (
+                <div key={row.key} style={{ marginTop: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                    <span style={{ fontSize: 12 }}>{row.emoji}</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: row.text }}>{row.label}</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingLeft: 2 }}>
+                    {items.map((item, j) => (
+                      <span key={j} style={{ display: "inline-block", background: row.bg, border: `1px solid ${row.border}`, color: row.text, borderRadius: 6, padding: "2px 7px", fontSize: 11, fontWeight: 500, lineHeight: 1.5 }}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academy" }) {
   const monthly = kind === "academy";
   const [base, setBase] = useState(() => new Date());
@@ -36,6 +80,8 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   const [cands, setCands] = useState<{ id: string; name: string; room: string; ci: string; co: string }[]>([]);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [loadingCands, setLoadingCands] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [showImg, setShowImg] = useState(false); // 원본 이미지 토글
 
   // 올인원=해당 주 월요일 / 아카데미=해당 월 1일 (둘 다 한 장)
   const monday = (() => { const d = new Date(base); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d; })();
@@ -43,6 +89,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   const monthFirst = new Date(base.getFullYear(), base.getMonth(), 1);
   const targetDate = monthly ? ymd(monthFirst) : ymd(monday);
   const periodLabel = monthly ? `${base.getFullYear()}년 ${base.getMonth() + 1}월` : `${monday.getMonth() + 1}/${monday.getDate()} ~ ${fri.getMonth() + 1}/${fri.getDate()}`;
+  const menuMonth = menu?.menu_date ? parseInt(menu.menu_date.split("-")[1], 10) : (monday.getMonth() + 1);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from("meal_menus").select("*").eq("kind", kind).eq("menu_date", targetDate).maybeSingle();
@@ -51,19 +98,43 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   }, [kind, targetDate]);
   useEffect(() => { load(); }, [load]);
 
+  async function runOcr(file: File, menuId: string) {
+    setOcrBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch("/api/ocr/meal", { method: "POST", body: fd });
+      const json = await res.json();
+      if (json.ok && json.days) {
+        const { error } = await supabase.from("meal_menus").update({ meal_data: json.days }).eq("id", menuId);
+        if (!error) { toastOk("✅ 식단 자동 인식 완료! 아래 미리보기를 확인하고 배포하세요"); load(); }
+        else { toastErr("인식 데이터 저장 실패: " + error.message); console.error("meal_data save error:", error); }
+      } else {
+        toastErr("AI 인식 실패 — 이미지를 다시 올려보세요");
+        console.warn("OCR failed:", json.error || json.raw);
+      }
+    } catch (e) { toastErr("AI 인식 오류"); console.warn("OCR fetch error:", e); }
+    setOcrBusy(false);
+  }
+
   async function onUpload(file: File) {
     if (!file.type.startsWith("image/")) { toastErr("이미지 파일만 가능합니다"); return; }
     setBusy(true);
     try {
       const dataUrl = await compress(file);
+      let savedId = menu?.id;
       if (menu) {
-        const { error } = await supabase.from("meal_menus").update({ image_url: dataUrl, updated_at: new Date().toISOString() }).eq("id", menu.id);
+        // 이미지 교체 시 기존 meal_data 초기화 (새로 OCR 돌려야 하니까)
+        const { error } = await supabase.from("meal_menus").update({ image_url: dataUrl, meal_data: null, published: false, updated_at: new Date().toISOString() }).eq("id", menu.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("meal_menus").insert({ kind, menu_date: targetDate, image_url: dataUrl, published: false });
+        const { data, error } = await supabase.from("meal_menus").insert({ kind, menu_date: targetDate, image_url: dataUrl, published: false }).select("id").single();
         if (error) throw error;
+        savedId = data?.id;
       }
-      toastOk("업로드됐어요"); load();
+      toastOk("이미지 업로드 완료 — AI가 식단을 인식합니다…"); await load();
+      // OCR 자동 실행 (best-effort, 실패해도 이미지는 정상)
+      if (savedId) runOcr(file, savedId);
     } catch (e) { toastErr("업로드 실패: " + ((e as Error)?.message || "")); }
     setBusy(false);
   }
@@ -76,6 +147,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   // 발행 → 받을 손님 선택 모달 (투숙중 자동 선택)
   async function openPicker() {
     if (!menu) { toastErr("발행할 식단이 없습니다. 먼저 사진을 올려주세요."); return; }
+    if (!menu.meal_data) { toastErr("AI 인식이 아직 완료되지 않았습니다. 잠시 기다려주세요."); return; }
     setPickerOpen(true); setLoadingCands(true);
     const today = ymd(new Date());
     let q = supabase.from("bookings").select("id, booker_name, house_no, checkin_date, checkout_date");
@@ -107,16 +179,16 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     setPublishing(false);
   }
 
+  const hasMealData = menu?.meal_data && Array.isArray(menu.meal_data) && menu.meal_data.length > 0;
+
   return (
-    <div style={{ padding: "4px 2px 20px", maxWidth: 560 }}>
+    <div style={{ padding: "4px 2px 20px", maxWidth: 600 }}>
+      {/* 네비게이션 + 배포 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0 12px", flexWrap: "wrap" }}>
         <button onClick={() => setBase(d => { const n = new Date(d); if (monthly) n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })} style={navBtn}>← 이전{monthly ? " 달" : " 주"}</button>
         <span style={{ fontWeight: 800, fontSize: 15, minWidth: 150, textAlign: "center" }}>{periodLabel}</span>
         <button onClick={() => setBase(d => { const n = new Date(d); if (monthly) n.setMonth(n.getMonth() + 1); else n.setDate(n.getDate() + 7); return n; })} style={navBtn}>다음{monthly ? " 달" : " 주"} →</button>
         <button onClick={() => setBase(new Date())} style={navBtn}>{monthly ? "이번 달" : "이번 주"}</button>
-        <button onClick={openPicker} disabled={publishing} style={{ marginLeft: "auto", background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 9, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: publishing ? 0.6 : 1 }}>
-          {`📢 발행 & 알림${menu?.published ? " (발행됨)" : ""}`}
-        </button>
       </div>
       <p style={{ fontSize: 12, color: "#6b7c93", margin: "0 0 12px" }}>
         {monthly
@@ -124,20 +196,69 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
           : <>드림하우스 올인원 식단표 — 한 주에 1장(항목 순서: {MEAL_ORDER}). <b>올인원 손님</b>에게만 보입니다.</>}
       </p>
 
-      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "9px 12px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center" }}>
-          <span style={{ fontWeight: 800, fontSize: 14 }}>{monthly ? `${base.getMonth() + 1}월 식단표` : "이번 주 식단표"}</span>
-          {menu?.published ? <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, background: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: 8 }}>발행됨</span> : menu ? <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, background: "#fef3c7", color: "#b45309", padding: "2px 8px", borderRadius: 8 }}>임시저장</span> : null}
+      {/* STEP 1: 이미지 업로드 영역 (컴팩트) */}
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ padding: "9px 12px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontWeight: 800, fontSize: 14 }}>① 식단표 이미지</span>
+          {menu?.published ? <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, background: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: 8 }}>발행됨</span> : menu ? <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, background: "#fef3c7", color: "#b45309", padding: "2px 8px", borderRadius: 8 }}>미발행</span> : null}
         </div>
         <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-          {menu?.image_url ? <img src={menu.image_url} alt="식단" style={{ width: "100%", borderRadius: 8, border: "1px solid #eef2f7" }} /> : <div style={{ height: 170, border: "2px dashed #cbd5e1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13 }}>사진 없음 — 아래에서 업로드</div>}
-          <label style={{ fontSize: 13, fontWeight: 700, color: "#2563eb", background: "#eff6ff", borderRadius: 8, padding: "9px 0", textAlign: "center", cursor: "pointer" }}>
-            {busy ? "업로드 중…" : (menu ? "📷 사진 교체" : "📷 사진 올리기")}
-            <input type="file" accept="image/*" style={{ display: "none" }} disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
-          </label>
-          {menu && <button onClick={delMenu} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 12, alignSelf: "flex-end" }}>삭제</button>}
+          {/* 이미지가 있으면 작은 썸네일로, 없으면 드래그 영역 */}
+          {menu?.image_url ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img src={menu.image_url} alt="식단" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #eef2f7", cursor: "pointer", flexShrink: 0 }} onClick={() => setShowImg(!showImg)} />
+              <div style={{ flex: 1, fontSize: 12, color: "#64748b" }}>
+                {hasMealData ? "✅ AI 인식 완료" : ocrBusy ? "🔍 AI 인식 중…" : "이미지 업로드됨"}
+                <br /><span style={{ fontSize: 11, color: "#94a3b8", cursor: "pointer", textDecoration: "underline" }} onClick={() => setShowImg(!showImg)}>{showImg ? "이미지 접기" : "원본 보기"}</span>
+              </div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", background: "#eff6ff", borderRadius: 8, padding: "7px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>
+                {busy ? "업로드 중…" : "📷 교체"}
+                <input type="file" accept="image/*" style={{ display: "none" }} disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+              </label>
+            </div>
+          ) : (
+            <label style={{ height: 120, border: "2px dashed #cbd5e1", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13, cursor: "pointer", flexDirection: "column", gap: 4 }}>
+              {busy ? "업로드 중…" : <><span style={{ fontSize: 28 }}>📷</span>식단표 사진 올리기</>}
+              <input type="file" accept="image/*" style={{ display: "none" }} disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = ""; }} />
+            </label>
+          )}
+          {/* 원본 이미지 펼치기 */}
+          {showImg && menu?.image_url && <img src={menu.image_url} alt="식단 원본" style={{ width: "100%", borderRadius: 8, border: "1px solid #eef2f7" }} />}
+          {/* OCR 진행 상태 */}
+          {ocrBusy && <div style={{ padding: "10px 14px", background: "#eff6ff", borderRadius: 8, fontSize: 13, color: "#2563eb", fontWeight: 600, textAlign: "center" }}>🔍 AI가 식단을 인식하고 있습니다… (10~20초 소요)</div>}
+          {menu && <button onClick={delMenu} style={{ border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 11, alignSelf: "flex-end" }}>삭제</button>}
         </div>
       </div>
+
+      {/* STEP 2: AI 인식 결과 미리보기 (카드형) */}
+      {hasMealData && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <span style={{ fontWeight: 800, fontSize: 14 }}>② 미리보기</span>
+            <span style={{ fontSize: 11.5, color: "#64748b" }}>— 손님에게 이렇게 보입니다</span>
+          </div>
+          <MealCardPreview days={menu!.meal_data!} month={menuMonth} />
+        </div>
+      )}
+
+      {/* STEP 3: 배포 버튼 */}
+      {hasMealData && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: 14 }}>③ 배포</span>
+          </div>
+          <button onClick={openPicker} disabled={publishing || ocrBusy} style={{ width: "100%", background: menu?.published ? "#15803d" : "#1e3a5f", color: "#fff", border: "none", borderRadius: 10, padding: "13px 18px", fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: (publishing || ocrBusy) ? 0.6 : 1 }}>
+            {menu?.published ? "✅ 발행됨 — 다시 발행하기" : "📢 손님에게 발행 & 알림"}
+          </button>
+        </div>
+      )}
+
+      {/* 아직 meal_data가 없고 이미지만 있을 때 안내 */}
+      {menu && !hasMealData && !ocrBusy && (
+        <div style={{ padding: "14px 16px", background: "#fef3c7", borderRadius: 10, fontSize: 13, color: "#92400e", textAlign: "center", marginBottom: 14 }}>
+          AI 인식에 실패했거나 아직 데이터가 없습니다. 이미지를 다시 올려보세요.
+        </div>
+      )}
 
       {/* 받는 손님 선택 모달 */}
       {pickerOpen && (

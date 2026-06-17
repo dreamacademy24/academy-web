@@ -3,13 +3,21 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-interface Menu { kind: string; menu_date: string; image_url: string; }
+interface MealDay {
+  date: number;
+  weekday: string;
+  breakfast: string[];
+  lunch: string[];
+  dinner_adult: string[];
+  dinner_child: string[];
+}
+interface Menu { kind: string; menu_date: string; image_url: string; meal_data?: MealDay[]; }
 const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const MEAL_ORDER = "🌅 아침 · ☀️ 점심 · 🌙 저녁(어른) · 🧒 저녁(아동)";
 
 export default function PortalMealMenuPage() {
   const router = useRouter();
-  const [aio, setAio] = useState<boolean | null>(null); // 올인원 여부
+  const [aio, setAio] = useState<boolean | null>(null);
   const [tab, setTab] = useState<"aio" | "academy">("aio");
   const [base, setBase] = useState(() => new Date());
   const [menus, setMenus] = useState<Menu[]>([]);
@@ -20,7 +28,6 @@ export default function PortalMealMenuPage() {
   const weekLabel = `${monday.getMonth() + 1}/${monday.getDate()} ~ ${weekDays[4].getMonth() + 1}/${weekDays[4].getDate()}`;
   const monthFirst = new Date(base.getFullYear(), base.getMonth(), 1);
 
-  // 식단 화면을 열면 '본 시각' 기록 → 대시보드 식단 빨간 뱃지 사라짐
   useEffect(() => { try { localStorage.setItem("meal_seen", new Date().toISOString()); } catch {} }, []);
 
   useEffect(() => {
@@ -33,7 +40,7 @@ export default function PortalMealMenuPage() {
       const { data: bk } = await supabase.from("bookings").select("is_all_in_one").eq("id", bid).maybeSingle();
       const isAio = !!bk?.is_all_in_one;
       setAio(isAio);
-      setTab(isAio ? "aio" : "academy"); // 올인원 아니면 학생 식단만
+      setTab(isAio ? "aio" : "academy");
     }
     init();
   }, [router]);
@@ -41,10 +48,10 @@ export default function PortalMealMenuPage() {
   const load = useCallback(async () => {
     setLoading(true);
     if (tab === "aio") {
-      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url").eq("kind", "dreamhouse").eq("published", true).eq("menu_date", ymd(monday));
+      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url, meal_data").eq("kind", "dreamhouse").eq("published", true).eq("menu_date", ymd(monday));
       setMenus((data || []) as Menu[]);
     } else {
-      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url").eq("kind", "academy").eq("published", true).eq("menu_date", ymd(monthFirst));
+      const { data } = await supabase.from("meal_menus").select("kind, menu_date, image_url, meal_data").eq("kind", "academy").eq("published", true).eq("menu_date", ymd(monthFirst));
       setMenus((data || []) as Menu[]);
     }
     setLoading(false);
@@ -55,6 +62,8 @@ export default function PortalMealMenuPage() {
   if (aio === null) return <div style={{ padding: 40, textAlign: "center", color: "#94a3b8", fontFamily: "'Noto Sans KR',sans-serif" }}>불러오는 중…</div>;
 
   const academyImg = menus[0]?.image_url;
+  const mealData: MealDay[] | null = menus[0]?.meal_data && Array.isArray(menus[0].meal_data) ? menus[0].meal_data : null;
+  const menuMonth = menus[0]?.menu_date ? parseInt(menus[0].menu_date.split("-")[1], 10) : (monday.getMonth() + 1);
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 18px 60px", fontFamily: "'Noto Sans KR',sans-serif", color: "#1a1a2e" }}>
@@ -81,18 +90,22 @@ export default function PortalMealMenuPage() {
         <>
           <p style={{ fontSize: 12, color: "#6b7c93", marginBottom: 14 }}>드림하우스 식단 · 항목 순서: {MEAL_ORDER}</p>
           {loading ? <Loading /> : !menus[0] ? <Empty text="아직 이번 주 식단이 등록되지 않았습니다." /> : (
-            <div style={card}>
-              <div style={cardHd}>{weekLabel} 드림하우스 식단</div>
-              <img src={menus[0].image_url} alt="이번주 식단" style={{ width: "100%", display: "block" }} />
-            </div>
+            mealData ? (
+              <MealCards days={mealData} month={menuMonth} />
+            ) : (
+              <div style={imgCard}>
+                <div style={imgCardHd}>{weekLabel} 드림하우스 식단</div>
+                <img src={menus[0].image_url} alt="이번주 식단" style={{ width: "100%", display: "block" }} />
+              </div>
+            )
           )}
         </>
       ) : (
         <>
           <p style={{ fontSize: 12, color: "#6b7c93", marginBottom: 14 }}>학생 점심·간식(아카데미) · 모든 학생 제공 · 🍱 점심 · 🍪 간식</p>
           {loading ? <Loading /> : !academyImg ? <Empty text="아직 이번 달 학생 식단이 등록되지 않았습니다." /> : (
-            <div style={card}>
-              <div style={cardHd}>{base.getMonth() + 1}월 학생 점심 식단</div>
+            <div style={imgCard}>
+              <div style={imgCardHd}>{base.getMonth() + 1}월 학생 점심 식단</div>
               <img src={academyImg} alt="학생 식단" style={{ width: "100%", display: "block" }} />
             </div>
           )}
@@ -106,9 +119,55 @@ export default function PortalMealMenuPage() {
   );
 }
 
+/* ---- Meal Card UI ---- */
+
+const MEAL_ROWS: { key: keyof Pick<MealDay, "breakfast" | "lunch" | "dinner_adult" | "dinner_child">; label: string; emoji: string; bg: string; border: string; text: string }[] = [
+  { key: "breakfast", label: "아침", emoji: "🌅", bg: "#fef3c7", border: "#fde68a", text: "#92400e" },
+  { key: "lunch", label: "점심", emoji: "☀️", bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
+  { key: "dinner_adult", label: "저녁 (어른)", emoji: "🌙", bg: "#e0e7ff", border: "#a5b4fc", text: "#3730a3" },
+  { key: "dinner_child", label: "저녁 (아동)", emoji: "🧒", bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
+];
+
+function MealCards({ days, month }: { days: MealDay[]; month: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {days.map((day, i) => (
+        <div key={i} style={{ background: "#fff", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #e2e8f0" }}>
+          {/* 카드 헤더 */}
+          <div style={{ background: "#1e3a5f", color: "#fff", padding: "10px 16px", fontWeight: 800, fontSize: 15 }}>
+            {month}/{day.date} ({day.weekday})
+          </div>
+          {/* 4행 메뉴 */}
+          <div style={{ padding: "6px 10px 10px" }}>
+            {MEAL_ROWS.map(row => {
+              const items = day[row.key];
+              if (!items || items.length === 0) return null;
+              return (
+                <div key={row.key} style={{ marginTop: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13 }}>{row.emoji}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: row.text }}>{row.label}</span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, paddingLeft: 2 }}>
+                    {items.map((item, j) => (
+                      <span key={j} style={{ display: "inline-block", background: row.bg, border: `1px solid ${row.border}`, color: row.text, borderRadius: 7, padding: "3px 9px", fontSize: 12, fontWeight: 500, lineHeight: 1.5 }}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Loading() { return <div style={{ padding: 40, textAlign: "center", color: "#94a3b8" }}>불러오는 중…</div>; }
 function Empty({ text }: { text: string }) { return <div style={{ background: "#fff", border: "1px dashed #cbd5e1", borderRadius: 12, padding: 44, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>{text}</div>; }
-const card: React.CSSProperties = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" };
-const cardHd: React.CSSProperties = { padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontWeight: 800, fontSize: 14 };
+const imgCard: React.CSSProperties = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" };
+const imgCardHd: React.CSSProperties = { padding: "10px 14px", borderBottom: "1px solid #f1f5f9", fontWeight: 800, fontSize: 14 };
 const navBtn: React.CSSProperties = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 11px", cursor: "pointer", fontWeight: 600, fontSize: 12.5 };
 const tabBtn = (on: boolean): React.CSSProperties => ({ flex: 1, padding: "9px 0", borderRadius: 9, border: `1px solid ${on ? "#1e3a5f" : "#e2e8f0"}`, background: on ? "#1e3a5f" : "#fff", color: on ? "#fff" : "#64748b", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" });
