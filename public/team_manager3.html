@@ -3301,6 +3301,118 @@ function delProjFromSB(id){
   sbDel('staff_projects','id=eq.'+id).catch(function(e){console.error('proj del err',e);});
 }
 
+// ── 고정업무 (Recurring Tasks) ──
+var _recTasks=[]; // staff_recurring rows
+var _recDone={}; // { recurringId_YYYY-MM-DD: true }
+var DAYS_KR=['일','월','화','수','목','금','토'];
+function loadRecurring(){
+  return sbGet('staff_recurring','active=eq.true&order=day_of_week.asc').then(function(rows){
+    _recTasks=rows||[];
+    console.log('[SB] recurring loaded:',_recTasks.length);
+  }).catch(function(e){console.error('[SB] recurring load err',e);_recTasks=[];});
+}
+function loadRecurringDone(fromDate,toDate){
+  return sbGet('staff_recurring_done','done_date=gte.'+fromDate+'&done_date=lte.'+toDate).then(function(rows){
+    (rows||[]).forEach(function(r){_recDone[r.recurring_id+'_'+r.done_date]=true;});
+  }).catch(function(e){console.error('[SB] recurring done load err',e);});
+}
+function isRecDone(recId,dateStr){return !!_recDone[recId+'_'+dateStr];}
+function toggleRecDone(recId,dateStr,empId){
+  var key=recId+'_'+dateStr;
+  if(_recDone[key]){
+    sbDel('staff_recurring_done','recurring_id=eq.'+recId+'&done_date=eq.'+dateStr).then(function(){
+      delete _recDone[key]; refreshAll();
+    }).catch(function(e){alert('체크 해제 실패: '+e.message);});
+  } else {
+    sbPost('staff_recurring_done',{recurring_id:recId,done_date:dateStr,done_by:empId}).then(function(){
+      _recDone[key]=true; refreshAll();
+    }).catch(function(e){alert('체크 실패: '+e.message);});
+  }
+}
+/* 특정 날짜에 해당하는 고정업무 필터 (주기/요일 매칭) */
+function getRecurringForDate(dateStr,empId){
+  var d=parseLocalDate(dateStr); if(!d) return [];
+  var dow=d.getDay(); // 0=일
+  return _recTasks.filter(function(r){
+    if(r.day_of_week!==dow) return false;
+    if(!r.is_shared && r.owner_id!==empId) return false;
+    if(r.frequency==='biweekly'){
+      var start=parseLocalDate(r.start_date||r.created_at.slice(0,10));
+      if(!start) return true;
+      var diff=Math.round((d.getTime()-start.getTime())/(7*86400000));
+      if(diff%2!==0) return false;
+    }
+    return true;
+  });
+}
+/* 고정업무 관리 모달 */
+function openRecurringModal(){
+  var old=document.getElementById('recModalOv'); if(old) old.remove();
+  var ov=document.createElement('div');
+  ov.id='recModalOv'; ov.className='tm-ov';
+  ov.onclick=function(e){if(e.target===ov) ov.remove();};
+  _recRender(ov); document.body.appendChild(ov);
+}
+function _recRender(ov){
+  var mine=_recTasks.filter(function(r){return r.owner_id===CU.id||r.is_shared;});
+  var h='<div class="tm-modal" style="max-width:560px">';
+  h+='<div class="tm-modal-h"><span class="t">🔁 고정업무 관리</span><button class="tm-modal-x" onclick="document.getElementById(\'recModalOv\').remove()">×</button></div>';
+  h+='<div class="tm-modal-b" style="max-height:60vh;overflow:auto">';
+  h+='<div style="margin-bottom:12px;font-size:12px;color:#64748b">등록하면 달력 + 데일리 체크리스트에 자동으로 나타납니다</div>';
+  /* 추가 폼 */
+  h+='<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center">';
+  h+='<input id="recTitle" placeholder="업무 내용" style="flex:1;min-width:140px;border:1px solid #d6dee8;border-radius:7px;padding:7px 9px;font-size:13px">';
+  h+='<select id="recFreq" style="border:1px solid #d6dee8;border-radius:7px;padding:7px 6px;font-size:13px"><option value="weekly">매주</option><option value="biweekly">격주</option></select>';
+  h+='<select id="recDow" style="border:1px solid #d6dee8;border-radius:7px;padding:7px 6px;font-size:13px">';
+  for(var i=1;i<=6;i++) h+='<option value="'+i+'">'+DAYS_KR[i]+'</option>';
+  h+='<option value="0">일</option>';
+  h+='</select>';
+  h+='<label style="font-size:12px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="recShared"> 전체공유</label>';
+  h+='<button class="tm-btn tm-btn-pri" style="padding:7px 14px;font-size:13px" onclick="_recAdd()">추가</button>';
+  h+='</div>';
+  /* 목록 */
+  if(mine.length===0) h+='<div style="color:#94a3b8;font-size:13px;padding:16px 0;text-align:center">등록된 고정업무가 없어요</div>';
+  mine.forEach(function(r){
+    var freqKr=r.frequency==='weekly'?'매주':'격주';
+    var shared=r.is_shared?'<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:4px;margin-left:6px">공유</span>':'';
+    var ownerTag=r.owner_id!==CU.id?'<span style="font-size:10px;color:#94a3b8;margin-left:6px">('+r.owner_id+')</span>':'';
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9">';
+    h+='<span style="font-size:13px;font-weight:600;flex:1">'+esc(r.title)+shared+ownerTag+'</span>';
+    h+='<span style="font-size:12px;color:#64748b;white-space:nowrap">'+freqKr+' · '+DAYS_KR[r.day_of_week]+'</span>';
+    if(r.owner_id===CU.id||isAdmin()) h+='<button style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;font-weight:700;font-size:11px" onclick="_recDel(\''+r.id+'\')">삭제</button>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\'recModalOv\').remove()">닫기</button></div>';
+  h+='</div>';
+  ov.innerHTML=h;
+}
+function _recAdd(){
+  var title=(document.getElementById('recTitle')||{}).value||'';
+  if(!title.trim()){alert('업무 내용을 입력해주세요');return;}
+  var freq=(document.getElementById('recFreq')||{}).value||'weekly';
+  var dow=parseInt((document.getElementById('recDow')||{}).value||'1',10);
+  var shared=!!(document.getElementById('recShared')||{}).checked;
+  sbPost('staff_recurring',{title:title.trim(),frequency:freq,day_of_week:dow,owner_id:CU.id,is_shared:shared,active:true,start_date:todayStr()}).then(function(res){
+    var row=Array.isArray(res)?res[0]:res;
+    if(row&&row.id) _recTasks.push(row);
+    var ov=document.getElementById('recModalOv');
+    if(ov) _recRender(ov);
+    toast('고정업무 등록 완료');
+    refreshAll();
+  }).catch(function(e){alert('저장 실패: '+e.message);});
+}
+function _recDel(id){
+  if(!confirm('이 고정업무를 삭제할까요?')) return;
+  sbDel('staff_recurring','id=eq.'+id).then(function(){
+    _recTasks=_recTasks.filter(function(r){return r.id!==id;});
+    var ov=document.getElementById('recModalOv');
+    if(ov) _recRender(ov);
+    toast('고정업무 삭제 완료');
+    refreshAll();
+  }).catch(function(e){alert('삭제 실패: '+e.message);});
+}
+
 function loadTasksFromSB(){
   return sbGet('staff_tasks','order=created_at.desc').then(function(rows){
     if(rows&&rows.length>0){
@@ -3566,6 +3678,8 @@ function uid(){try{return crypto.randomUUID();}catch(e){return Date.now().toStri
 function nowStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function localDateStr(d){var mm=d.getMonth()+1;var dd=d.getDate();return d.getFullYear()+'-'+(mm<10?'0':'')+mm+'-'+(dd<10?'0':'')+dd;}
 function todayStr(){return localDateStr(new Date());}
+function mondayOfWeek(ds){var d=parseLocalDate(ds);if(!d)return ds;var dow=d.getDay();d.setDate(d.getDate()-((dow+6)%7));return localDateStr(d);}
+function addDaysStr(ds,n){var d=parseLocalDate(ds);d.setDate(d.getDate()+n);return localDateStr(d);}
 function esc(t){var s=String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');s=s.replace(/(https?:\/\/[^\s&<>"{}|\\^`\[\]]+)/g,function(u){return '<a href="'+u.replace(/&amp;/g,'&')+'" target="_blank" rel="noopener noreferrer" style="color:#6366f1;text-decoration:underline;word-break:break-all;">'+u+'</a>';});return s.replace(/\n/g,'<br>');}
 
 let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
@@ -3663,7 +3777,7 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();showPage('home');
-  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){refreshAll();startPolling();loadMyNotifs();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
@@ -4168,6 +4282,14 @@ function _homeRenderWeekStrip(){
         });
         if(due.length>3)h+='<div style="font-size:10px;color:var(--text3);margin-top:2px">+'+(due.length-3)+'</div>';
       }
+      /* 고정업무 표시 */
+      var recEmpId=CU?CU.id:'';
+      var recs=getRecurringForDate(k,recEmpId);
+      recs.slice(0,3).forEach(function(r){
+        var dn=isRecDone(r.id,k);
+        h+='<div title="🔁 '+esc(r.title||'')+'" style="font-size:10px;color:'+(dn?'#a78bfa':'#7c3aed')+';margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(dn?'text-decoration:line-through;opacity:.5;':'')+'">🔁 '+esc(r.title||'')+'</div>';
+      });
+      if(recs.length>3)h+='<div style="font-size:9px;color:#a78bfa;margin-top:1px">+🔁'+(recs.length-3)+'</div>';
       h+='</div>';
     });
     h+='</div></div>';
@@ -5189,6 +5311,13 @@ function _gatherEventsForDate(ds){
       evs.push({type:'shuttle',title:e.title});
     });
   }
+  /* 고정업무 (반복) */
+  if(_calIncludeType('task')){
+    var recEmpId=CU?CU.id:'';
+    getRecurringForDate(ds,recEmpId).forEach(function(r){
+      evs.push({type:'recurring',title:'🔁 '+r.title,recId:r.id,date:ds});
+    });
+  }
   return evs;
 }
 
@@ -5209,6 +5338,13 @@ function _appendCalEvent(cell,ev){
     const sp=document.createElement('span');sp.className='cal-event-txt';sp.textContent=txt;
     el.appendChild(sp);el.title=t.title;
     el.onclick=function(){openTaskCmt(t.id);};
+    cell.appendChild(el);
+  }else if(ev.type==='recurring'){
+    const el=document.createElement('div');el.className='cal-event ev-recurring';
+    el.style.cssText='background:#f3e8ff;color:#7c3aed;border-left:3px solid #7c3aed;';
+    const sp=document.createElement('span');sp.className='cal-event-txt';sp.textContent=ev.title;
+    el.appendChild(sp);el.title=ev.title;
+    el.onclick=function(){openRecurringModal();};
     cell.appendChild(el);
   }else{
     const cls=ev.type==='checkin'?'ev-checkin':ev.type==='checkout'?'ev-checkout':ev.type==='after'?'ev-after':ev.type==='shuttle'?'ev-shuttle':'ev-field';
@@ -5884,6 +6020,34 @@ function renderEmpDailyTab(empId){
     html+='</div>';
   }
   html+='</div>';
+  /* ── 🔁 고정업무 (반복) 섹션 ── */
+  var recToday=getRecurringForDate(today,empId);
+  if(recToday.length>0||(_recTasks.length>0&&CU&&CU.id===empId)){
+    html+='<div style="border-top:1px dashed #c4b5fd;padding-top:12px;margin-top:8px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+    html+='<div style="font-size:12px;font-weight:700;color:#6d28d9">🔁 고정업무 (반복)</div>';
+    if(CU&&CU.id===empId) html+='<button onclick="openRecurringModal()" style="background:none;border:none;color:#7c3aed;font-size:11px;cursor:pointer;font-weight:700">⚙️ 관리</button>';
+    html+='</div>';
+    if(recToday.length>0){
+      recToday.forEach(function(r){
+        var done=isRecDone(r.id,today);
+        var freqKr=r.frequency==='weekly'?'매주':'격주';
+        var shared=r.is_shared?'<span style="font-size:9px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:3px;margin-left:4px">공유</span>':'';
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;background:'+(done?'#f5f3ff':'#ede9fe')+';margin-bottom:4px;cursor:pointer" onclick="toggleRecDone(\''+r.id+'\',\''+today+'\',\''+empId+'\')">';
+        html+='<div style="width:18px;height:18px;border-radius:4px;border:1.5px solid '+(done?'#7c3aed':'#a78bfa')+';background:'+(done?'#7c3aed':'#fff')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+        if(done) html+='<span style="color:#fff;font-size:10px">✓</span>';
+        html+='</div>';
+        html+='<span style="flex:1;font-size:12.5px;color:'+(done?'#a78bfa':'#4c1d95')+';'+(done?'text-decoration:line-through':'')+'">';
+        html+=esc(r.title)+shared;
+        html+='</span>';
+        html+='<span style="font-size:10px;color:#a78bfa">'+freqKr+' '+DAYS_KR[r.day_of_week]+'</span>';
+        html+='</div>';
+      });
+    } else {
+      html+='<div style="font-size:11px;color:#a78bfa;padding:6px 0">오늘은 반복 업무가 없어요</div>';
+    }
+    html+='</div>';
+  }
   el.innerHTML=html;
 }
 function _dailyToggle(empId,itemId){
