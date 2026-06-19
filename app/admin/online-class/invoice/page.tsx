@@ -87,38 +87,58 @@ function fmtDayLabel(d: Date): string {
   return `${pad2(d.getDate())}-${MONTH_ABBR[d.getMonth()]}`;
 }
 
-// 성수기 방학 (7/15 ~ 8/30) — 매년 고정, 이 기간 수업 없음
-const SUMMER_BREAK_START = "07-15";
-const SUMMER_BREAK_END = "08-30";
-function isSummerBreak(dateStr: string): boolean {
+// 성수기 방학 — 매년 고정, 이 기간 수업 없음
+const BREAK_PERIODS = [
+  { start: "07-15", end: "08-30", label: "☀️ 여름 성수기 (7/15 ~ 8/30) — 수업 없음" },
+  { start: "12-15", end: "02-28", label: "❄️ 겨울 성수기 (12/15 ~ 2/28) — 수업 없음" },
+];
+function isBreakPeriod(dateStr: string): boolean {
   const md = dateStr.slice(5); // "2026-07-20" → "07-20"
-  return md >= SUMMER_BREAK_START && md <= SUMMER_BREAK_END;
+  return BREAK_PERIODS.some(p =>
+    p.start <= p.end
+      ? md >= p.start && md <= p.end       // 같은 해 (7/15~8/30)
+      : md >= p.start || md <= p.end       // 연도 걸침 (12/15~2/28)
+  );
 }
+function getBreakLabel(dateStr: string): string {
+  const md = dateStr.slice(5);
+  for (const p of BREAK_PERIODS) {
+    const match = p.start <= p.end
+      ? md >= p.start && md <= p.end
+      : md >= p.start || md <= p.end;
+    if (match) return p.label;
+  }
+  return "방학";
+}
+// 하위 호환 alias
+const isSummerBreak = isBreakPeriod;
 
 type CalCell = { date: Date; dateStr: string; inRange: boolean };
 type CalWeek = CalCell[];
-type CalSegment = { type: "weeks"; weeks: CalWeek[] } | { type: "break" };
+type CalSegment = { type: "weeks"; weeks: CalWeek[] } | { type: "break"; label: string };
 
 /** 연속 방학 주를 하나의 break 세그먼트로 합침 */
 function groupWeekSegments(weeks: CalWeek[]): CalSegment[] {
   const segments: CalSegment[] = [];
   let buf: CalWeek[] = [];
   let inBreak = false;
+  let breakLabel = "";
   for (const week of weeks) {
     const wd = week.slice(1, 6); // MON~FRI
-    const allBreak = wd.every(c => c.inRange && isSummerBreak(c.dateStr));
+    const allBreak = wd.every(c => c.inRange && isBreakPeriod(c.dateStr));
     const anyIn = week.some(c => c.inRange);
     if (allBreak && anyIn) {
       if (!inBreak) {
         if (buf.length) { segments.push({ type: "weeks", weeks: buf }); buf = []; }
         inBreak = true;
+        breakLabel = getBreakLabel(wd[0].dateStr);
       }
     } else {
-      if (inBreak) { segments.push({ type: "break" }); inBreak = false; }
+      if (inBreak) { segments.push({ type: "break", label: breakLabel }); inBreak = false; }
       buf.push(week);
     }
   }
-  if (inBreak) segments.push({ type: "break" });
+  if (inBreak) segments.push({ type: "break", label: breakLabel });
   if (buf.length) segments.push({ type: "weeks", weeks: buf });
   return segments;
 }
@@ -144,7 +164,7 @@ function renderCalendar(
             return (
               <tr key={`brk-${si}`}>
                 <td colSpan={7} className="break-row">
-                  <span>☀️ 성수기 방학 (7/15 ~ 8/30) — 수업 없음</span>
+                  <span>{seg.label}</span>
                 </td>
               </tr>
             );
