@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -296,6 +296,35 @@ function OnlineInvoiceInner() {
   const preWeeks = useMemo(() => buildCalendarWeeks(preSessions), [preSessions]);
   const postWeeks = useMemo(() => buildCalendarWeeks(postSessions), [postSessions]);
   const allWeeks = useMemo(() => buildCalendarWeeks(extendedSessions), [extendedSessions]);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+
+  const [imgSaving, setImgSaving] = useState(false);
+  async function saveAsImage() {
+    const el = invoiceRef.current || document.querySelector(".invoice-wrap") as HTMLElement | null;
+    if (!el || !enrollment) return;
+    setImgSaving(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      const safeName = (enrollment.student_name || "invoice").replace(/[^가-힣a-zA-Z0-9]/g, "_");
+      link.download = `OnlineClass_${safeName}_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("이미지 저장 실패:", e);
+      setMsg({ text: "이미지 저장 실패: " + (e instanceof Error ? e.message : String(e)), type: "err" });
+    } finally {
+      setImgSaving(false);
+    }
+  }
 
   async function savePdf() {
     if (typeof window !== "undefined") window.print();
@@ -409,10 +438,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;marg
     <div className="toolbar no-print">
       <button onClick={() => router.push("/admin/online-class")}>← 목록으로</button>
       <button className="primary" onClick={savePdf}>🖨️ PDF 출력</button>
+      <button onClick={saveAsImage} disabled={imgSaving} style={{background:"#6366f1",color:"#fff"}}>📷 {imgSaving ? "저장중..." : "이미지 저장"}</button>
       <button className="success" onClick={saveToDb} disabled={saving}>💾 {saving ? "저장중..." : "저장"}</button>
     </div>
 
-    <div className="invoice-wrap">
+    <div className="invoice-wrap" ref={invoiceRef}>
       <table className="hdr-tbl">
         <tbody>
           <tr>
