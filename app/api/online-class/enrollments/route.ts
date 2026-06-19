@@ -142,8 +142,17 @@ export async function PATCH(req: Request) {
     const { id, ...fields } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times']
+    const INT_FIELDS = new Set(['duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week'])
     const updates: Record<string, unknown> = {}
-    for (const k of allowed) { if (k in fields) updates[k] = fields[k] }
+    for (const k of allowed) {
+      if (!(k in fields)) continue
+      let v = fields[k]
+      // 빈 문자열 → null (integer 컬럼에 "" 넣으면 Supabase 에러)
+      if (v === '' || v === undefined) v = null
+      // 숫자 필드는 명시적 변환
+      if (INT_FIELDS.has(k) && v !== null) v = Number(v) || 0
+      updates[k] = v
+    }
     const { error } = await supabase.from('online_enrollments').update(updates).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
