@@ -113,10 +113,8 @@ export async function GET(req: Request) {
       if (!out.includes(d)) out.push(d)
     }
     out.sort()
-    // total_sessions로 cap (날짜 범위가 더 넓어도 약정 회차만큼만)
-    if (totalExpected > 0 && out.length > totalExpected) {
-      return out.slice(0, totalExpected)
-    }
+    // 날짜 범위(start~end) 기반으로 생성된 전체 날짜를 반환.
+    // 취소 세션이 있으면 대체 날짜가 추가될 수 있으므로 total_sessions cap 제거.
     return out
   }
 
@@ -130,8 +128,9 @@ export async function GET(req: Request) {
     if (real.length === 0) {
       // DB에 세션 없음 → 전부 가상 생성
       sessions = derived.map(makeVirtual)
-    } else if (real.length < totalExpected && derived.length > real.length) {
-      // DB에 일부만 있음 (예: 1건) → 나머지를 derive로 보충
+    } else if (derived.length > real.length) {
+      // DB 세션보다 날짜 범위 전개가 더 많음 → 빠진 날짜 보충
+      // (end_date 연장, 취소 대체 등으로 DB 세션이 부족할 때)
       const realDates = new Set(real.map(r => r.session_date))
       const extra = derived.filter(ds => !realDates.has(ds)).map(makeVirtual)
       sessions = [...real, ...extra].sort((a, b) => (a.session_date || '').localeCompare(b.session_date || ''))
