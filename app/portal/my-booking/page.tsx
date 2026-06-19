@@ -181,7 +181,12 @@ export default function MyBookingPage() {
     </div>
   );
 
-  const pay = PAY[b.payment_status] || PAY.unpaid;
+  // payment_status가 없으면 예약 status에서 유도: 영수증발행/결제완료/완료 = 결제완료
+  const derivedPay = b.payment_status || (
+    ["영수증발행","결제완료","완료"].includes(b.status) ? "paid" :
+    b.status === "인보이스발행" ? "unpaid" : "unpaid"
+  );
+  const pay = PAY[derivedPay] || PAY.unpaid;
   const totalAmt = b.total_amount || b.final_price || b.base_price || 0;
   const paidAmt = b.paid_amount || 0;
   const balance = totalAmt - paidAmt;

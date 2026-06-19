@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const total = b.total_amount || b.final_price || b.base_price || 0
   const paid = b.paid_amount || 0
   const balance = total - paid
-  const paymentStatus = b.payment_status || (b.status === '결제완료' || b.status === '완료' ? 'paid' : balance === 0 && total > 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid')
+  const paymentStatus = b.payment_status || (['영수증발행','결제완료','완료'].includes(b.status) ? 'paid' : balance === 0 && total > 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid')
 
   return NextResponse.json({
     booking_id: bookingId,
