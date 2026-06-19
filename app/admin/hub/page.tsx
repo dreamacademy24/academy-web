@@ -59,6 +59,7 @@ export default function AdminHubPage() {
         { icon: "🛒", title: "민에듀 공구",      desc: "신청 접수 · 상담 진행 · 완료",         href: "/admin/minedu" },
         { icon: "📂", title: "자료모음",          desc: "필드트립·애프터스쿨·OT 안내문 편집 및 출력",  href: "/admin/resources" },
         { icon: "⚙️", title: "사이트 관리",     desc: "공지사항 · 필드트립 · 회원",         href: "/admin/site" },
+        { icon: "📧", title: "이메일",          desc: "admin@dreamacademyph.com 웹메일",  href: "https://privateemail.com/appsuite/", external: true },
       ],
     },
     {
