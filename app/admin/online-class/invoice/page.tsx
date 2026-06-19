@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -94,11 +95,40 @@ function isSummerBreak(dateStr: string): boolean {
   return md >= SUMMER_BREAK_START && md <= SUMMER_BREAK_END;
 }
 
+type CalCell = { date: Date; dateStr: string; inRange: boolean };
+type CalWeek = CalCell[];
+type CalSegment = { type: "weeks"; weeks: CalWeek[] } | { type: "break" };
+
+/** 연속 방학 주를 하나의 break 세그먼트로 합침 */
+function groupWeekSegments(weeks: CalWeek[]): CalSegment[] {
+  const segments: CalSegment[] = [];
+  let buf: CalWeek[] = [];
+  let inBreak = false;
+  for (const week of weeks) {
+    const wd = week.slice(1, 6); // MON~FRI
+    const allBreak = wd.every(c => c.inRange && isSummerBreak(c.dateStr));
+    const anyIn = week.some(c => c.inRange);
+    if (allBreak && anyIn) {
+      if (!inBreak) {
+        if (buf.length) { segments.push({ type: "weeks", weeks: buf }); buf = []; }
+        inBreak = true;
+      }
+    } else {
+      if (inBreak) { segments.push({ type: "break" }); inBreak = false; }
+      buf.push(week);
+    }
+  }
+  if (inBreak) segments.push({ type: "break" });
+  if (buf.length) segments.push({ type: "weeks", weeks: buf });
+  return segments;
+}
+
 function renderCalendar(
-  weeks: Array<Array<{ date: Date; dateStr: string; inRange: boolean }>>,
+  weeks: CalWeek[],
   sessionMap: Record<string, Session>,
   enrollment: Enrollment
 ) {
+  const segments = groupWeekSegments(weeks);
   return (
     <table className="cal-tbl">
       <thead>
@@ -109,40 +139,28 @@ function renderCalendar(
         </tr>
       </thead>
       <tbody>
-        {weeks.map((week, wi) => {
-          // 이 주가 전체 성수기 방학 주인지 체크 (월~금 모두 방학이면 축약 표시)
-          const weekdayCells = week.filter((_, i) => i > 0 && i < 6); // MON~FRI
-          const allBreak = weekdayCells.every(c => c.inRange && isSummerBreak(c.dateStr));
-          const anyInRange = week.some(c => c.inRange);
-
-          // 성수기 전체 주는 한 줄로 축약
-          if (allBreak && anyInRange) {
-            const firstDay = week[0];
-            const lastDay = week[6];
+        {segments.map((seg, si) => {
+          if (seg.type === "break") {
             return (
-              <tr key={wi}>
+              <tr key={`brk-${si}`}>
                 <td colSpan={7} className="break-row">
-                  <span>☀️ 성수기 방학 ({fmtDayLabel(firstDay.date)} ~ {fmtDayLabel(lastDay.date)})</span>
+                  <span>☀️ 성수기 방학 (7/15 ~ 8/30) — 수업 없음</span>
                 </td>
               </tr>
             );
           }
-
-          return (
-            <tr key={wi}>
+          return seg.weeks.map((week, wi) => (
+            <tr key={`s${si}-w${wi}`}>
               {week.map(cell => {
                 const s = sessionMap[cell.dateStr];
                 const classes: string[] = [];
                 if (!cell.inRange) classes.push("out");
-                const dayOfWeek = cell.date.getDay(); // 0=Sun, 6=Sat
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const dow = cell.date.getDay();
+                const isWeekend = dow === 0 || dow === 6;
                 const isBreak = cell.inRange && !isWeekend && isSummerBreak(cell.dateStr);
                 let timeLabel = "";
-
                 if (isBreak) {
-                  // 성수기 방학 — 수업 없음
-                  classes.push("break");
-                  timeLabel = "방학";
+                  classes.push("break"); timeLabel = "방학";
                 } else if (s) {
                   if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
                   else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
@@ -158,7 +176,7 @@ function renderCalendar(
                 );
               })}
             </tr>
-          );
+          ));
         })}
       </tbody>
     </table>
@@ -204,25 +222,60 @@ function OnlineInvoiceInner() {
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
+  // 성수기 방학 세션 제외 + 부족 회차 방학 후로 연장
+  const DAY_MAP_INV: Record<string, number> = { "월":1,"화":2,"수":3,"목":4,"금":5,"토":6,"일":0 };
+  const extendedSessions = useMemo(() => {
+    if (!enrollment || sessions.length === 0) return sessions;
+    // 방학 기간 세션 제외
+    const active = sessions.filter(s => !isSummerBreak(s.scheduled_date));
+    const total = enrollment.total_sessions || 0;
+    if (active.length >= total) return active;
+    // 부족분을 방학 이후로 연장
+    const needed = total - active.length;
+    const sorted = [...active].sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
+    const lastDate = sorted.length > 0 ? sorted[sorted.length - 1].scheduled_date : "2026-08-31";
+    const targetDays = (enrollment.days_of_week || []).map(d => DAY_MAP_INV[d]).filter(n => n !== undefined);
+    const existDates = new Set(sorted.map(s => s.scheduled_date));
+    const virtual: Session[] = [];
+    const cur = new Date(lastDate + "T00:00:00");
+    cur.setDate(cur.getDate() + 1);
+    let guard = 0;
+    while (virtual.length < needed && guard < 400) {
+      const ds = localStr(cur);
+      if (targetDays.includes(cur.getDay()) && !isSummerBreak(ds) && !existDates.has(ds)) {
+        virtual.push({
+          id: `virt-${ds}`, enrollment_id: enrollment.id,
+          session_number: active.length + virtual.length + 1,
+          scheduled_date: ds,
+          scheduled_time_kr: enrollment.class_time_kr, scheduled_time_ph: enrollment.class_time_ph,
+          status: "scheduled",
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+      guard++;
+    }
+    return [...sorted, ...virtual].sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  }, [sessions, enrollment]);
+
   const sessionMap = useMemo(() => {
     const map: Record<string, Session> = {};
-    for (const s of sessions) map[s.scheduled_date] = s;
+    for (const s of extendedSessions) map[s.scheduled_date] = s;
     return map;
-  }, [sessions]);
+  }, [extendedSessions]);
 
   const { preSessions, postSessions } = useMemo(() => {
-    if (!enrollment) return { preSessions: sessions, postSessions: [] };
+    if (!enrollment) return { preSessions: extendedSessions, postSessions: [] };
     if (enrollment.class_period === "both") {
-      const sorted = [...sessions].sort((a,b) => a.session_number - b.session_number);
+      const sorted = [...extendedSessions].sort((a,b) => a.session_number - b.session_number);
       const preCount = enrollment.pre_sessions || 0;
       return { preSessions: sorted.slice(0, preCount), postSessions: sorted.slice(preCount) };
     }
-    return { preSessions: sessions, postSessions: [] };
-  }, [enrollment, sessions]);
+    return { preSessions: extendedSessions, postSessions: [] };
+  }, [enrollment, extendedSessions]);
 
   const preWeeks = useMemo(() => buildCalendarWeeks(preSessions), [preSessions]);
   const postWeeks = useMemo(() => buildCalendarWeeks(postSessions), [postSessions]);
-  const allWeeks = useMemo(() => buildCalendarWeeks(sessions), [sessions]);
+  const allWeeks = useMemo(() => buildCalendarWeeks(extendedSessions), [extendedSessions]);
 
   async function savePdf() {
     if (typeof window !== "undefined") window.print();
