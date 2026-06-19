@@ -60,6 +60,7 @@ export default function OnlineClassPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tutorFilter, setTutorFilter] = useState("all");
+  const [periodFilter, setPeriodFilter] = useState<"current" | "upcoming" | "past">("current");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -293,21 +294,26 @@ export default function OnlineClassPage() {
     finally { setSubmitting(false); }
   }
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const tutorNames = [...new Set(enrollments.map(e => e.tutor?.name_display).filter(Boolean))].sort() as string[];
+  const hasNoTutor = enrollments.some(e => !e.tutor);
+
   const filtered = enrollments.filter(e => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
-    if (tutorFilter !== "all" && e.tutor?.name_display !== tutorFilter) return false;
+    if (tutorFilter === "미배정") { if (e.tutor) return false; }
+    else if (tutorFilter !== "all" && e.tutor?.name_display !== tutorFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!e.student_name?.toLowerCase().includes(q) && !e.student_name_en?.toLowerCase().includes(q)) return false;
     }
+    // 기간 필터
+    const sd = e.start_date || "";
+    const ed = e.end_date || "";
+    if (periodFilter === "current") return e.status === "active" && sd <= todayStr;
+    if (periodFilter === "upcoming") return e.status === "active" && sd > todayStr;
+    if (periodFilter === "past") return e.status !== "active" || (!!ed && ed < todayStr);
     return true;
   });
-
-  // 현재/예정/종료 그룹 분리
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const currentList = filtered.filter(e => e.start_date <= todayStr && e.status === "active");
-  const upcomingList = filtered.filter(e => e.start_date > todayStr && e.status === "active");
-  const otherList = filtered.filter(e => e.status !== "active");
 
   if (!authed) return null;
 
@@ -387,90 +393,87 @@ export default function OnlineClassPage() {
 
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
       {tab === "list" && <>
-        <div className="toolbar">
-          <input placeholder="학생명/영문명 검색" value={search} onChange={e => setSearch(e.target.value)} style={{ minWidth: 160 }} />
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">전체 상태</option>
-            <option value="active">수업중</option>
-            <option value="completed">완료</option>
-            <option value="paused">일시중지</option>
-          </select>
-          <select value={tutorFilter} onChange={e => setTutorFilter(e.target.value)}>
-            <option value="all">전체 튜터</option>
-            {tutors.map(t => <option key={t.id} value={t.name_display}>{t.name_display}</option>)}
-          </select>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+          <input placeholder="🔍 학생명, 영문명 검색..." value={search} onChange={e => setSearch(e.target.value)} style={{ marginLeft: "auto", padding: "7px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, width: 240, outline: "none", fontFamily: "inherit" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, marginBottom: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#1a6fc4", width: 44, flexShrink: 0 }}>담당T</span>
+            {["all", ...tutorNames, ...(hasNoTutor ? ["미배정"] : [])].map(name => {
+              const on = tutorFilter === name;
+              const label = name === "all" ? "전체" : name;
+              return <button key={name} onClick={() => setTutorFilter(name)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #1a6fc4" : "1px solid #dbeafe", background: on ? "#1a6fc4" : "#fff", color: on ? "#fff" : "#1a6fc4" }}>{label}</button>;
+            })}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#0d9488", width: 44, flexShrink: 0 }}>기간</span>
+            {([["current", "현재 수업중"], ["upcoming", "예정"], ["past", "종료·기타"]] as const).map(([key, label]) => {
+              const on = periodFilter === key;
+              return <button key={key} onClick={() => setPeriodFilter(key as typeof periodFilter)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #0d9488" : "1px solid #ccfbf1", background: on ? "#0d9488" : "#fff", color: on ? "#fff" : "#0d9488" }}>{label}</button>;
+            })}
+          </div>
+        </div>
+        <div style={{ marginBottom: 8 }}>
           <span className="cnt">{filtered.length}명</span>
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="sec"><div className="empty">등록된 수강생이 없습니다</div></div>
-        ) : (<>
-          {[
-            { label: "📗 현재 수업중", list: currentList, color: "#166534", bg: "#dcfce7" },
-            { label: "📘 예정", list: upcomingList, color: "#1e40af", bg: "#dbeafe" },
-            { label: "📁 종료 / 기타", list: otherList, color: "#64748b", bg: "#f1f5f9" },
-          ].filter(g => g.list.length > 0).map(group => (
-            <div key={group.label} style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: group.color }}>{group.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: group.color, background: group.bg, padding: "2px 8px", borderRadius: 6 }}>{group.list.length}명</span>
-              </div>
-              <div className="sec">
-                <table className="tbl">
-                  <thead><tr>
-                    <th>학생명</th><th>영문명</th><th>담당T</th><th>요일</th><th>한국시간</th>
-                    <th>기간</th><th style={{ minWidth: 140 }}>잔여 회차</th>
-                    <th>상태</th><th>관리</th>
-                  </tr></thead>
-                  <tbody>
-                    {group.list.map(e => {
-                      const stLabel = STATUS_LABEL[e.status] || e.status;
-                      const stBg = STATUS_BG[e.status] || "#f1f5f9";
-                      const stColor = STATUS_COLOR[e.status] || "#64748b";
-                      const total = e.total_sessions || 0;
-                      const used = e.used_sessions || 0;
-                      const rem = e.remaining_sessions ?? Math.max(0, total - used);
-                      const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-                      const isSplit = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
-                      return (
-                        <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => loadSessions(e.id)}>
-                          <td style={{ fontWeight: 700 }}>{e.student_name}
-                            {isSplit && <span title="연수전/연수후 분리 수강 (구버전)" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}
-                            {e.class_period === "pre" && <span style={{ marginLeft: 4, fontSize: 9, background: "#e1f5ee", color: "#085041", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>연수전</span>}
-                            {e.class_period === "standalone" && <span style={{ marginLeft: 4, fontSize: 9, background: "#f1f5f9", color: "#475569", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>단독</span>}
-                          </td>
-                          <td>{e.student_name_en || "-"}</td>
-                          <td>{e.tutor?.name_display || "-"}</td>
-                          <td>{daysToKr(e.days_of_week)}</td>
-                          <td>{e.class_time_kr || "-"}</td>
-                          <td style={{ fontSize: 11 }}>{e.start_date || "-"} ~ {e.end_date || "-"}</td>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                              <div style={{ flex: 1, height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
-                                <div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4", borderRadius: 4 }} />
-                              </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534", whiteSpace: "nowrap" }}>{rem} / {total}</span>
-                            </div>
-                          </td>
-                          <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
-                          <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
-                            <button className="btn-sm" onClick={() => loadSessions(e.id)}>출결</button>
-                            {" "}
-                            <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
-                            {" "}
-                            <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
-                            {" "}
-                            <button className="btn-sm" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={() => deleteEnrollment(e)}>삭제</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </>)}
+        <div className="sec">
+          {filtered.length === 0 ? (
+            <div className="empty">해당 조건의 수강생이 없습니다</div>
+          ) : (
+            <table className="tbl">
+              <thead><tr>
+                <th>학생명</th><th>영문명</th><th>담당T</th><th>요일</th><th>한국시간</th>
+                <th>기간</th><th style={{ minWidth: 140 }}>잔여 회차</th>
+                <th>상태</th><th>관리</th>
+              </tr></thead>
+              <tbody>
+                {filtered.map(e => {
+                  const stLabel = STATUS_LABEL[e.status] || e.status;
+                  const stBg = STATUS_BG[e.status] || "#f1f5f9";
+                  const stColor = STATUS_COLOR[e.status] || "#64748b";
+                  const total = e.total_sessions || 0;
+                  const used = e.used_sessions || 0;
+                  const rem = e.remaining_sessions ?? Math.max(0, total - used);
+                  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+                  const isSplit = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
+                  return (
+                    <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => loadSessions(e.id)}>
+                      <td style={{ fontWeight: 700 }}>{e.student_name}
+                        {isSplit && <span title="연수전/연수후 분리 수강 (구버전)" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}
+                        {e.class_period === "pre" && <span style={{ marginLeft: 4, fontSize: 9, background: "#e1f5ee", color: "#085041", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>연수전</span>}
+                        {e.class_period === "standalone" && <span style={{ marginLeft: 4, fontSize: 9, background: "#f1f5f9", color: "#475569", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>단독</span>}
+                      </td>
+                      <td>{e.student_name_en || "-"}</td>
+                      <td>{e.tutor?.name_display || "-"}</td>
+                      <td>{daysToKr(e.days_of_week)}</td>
+                      <td>{e.class_time_kr || "-"}</td>
+                      <td style={{ fontSize: 11 }}>{e.start_date || "-"} ~ {e.end_date || "-"}</td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ flex: 1, height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
+                            <div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4", borderRadius: 4 }} />
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534", whiteSpace: "nowrap" }}>{rem} / {total}</span>
+                        </div>
+                      </td>
+                      <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
+                      <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
+                        <button className="btn-sm" onClick={() => loadSessions(e.id)}>출결</button>
+                        {" "}
+                        <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
+                        {" "}
+                        <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
+                        {" "}
+                        <button className="btn-sm" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={() => deleteEnrollment(e)}>삭제</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </>}
 
       {/* ═══ TAB 2: 수강 등록 ═══ */}
