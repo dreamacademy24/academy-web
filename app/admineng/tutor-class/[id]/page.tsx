@@ -164,8 +164,8 @@ export default function EngTutorRequestDetailPage() {
         .select("house_no, accom_room")
         .eq("id", (r as any).booking_id)
         .maybeSingle();
-      const combined = [bs?.house_no, bs?.accom_room].filter(Boolean).join("");
-      if (combined) (r as any).house_number = combined;
+      const room = (bs?.house_no || bs?.accom_room || '').toString().replace(/^dh/i,'').replace(/\s+/g,'').toUpperCase();
+      if (room) (r as any).house_number = room;
     }
     setRow(r);
     if (r?.assigned_tutor_id) setManagerTutorId(r.assigned_tutor_id);

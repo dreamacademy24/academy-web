@@ -142,7 +142,7 @@ export default function TourShuttleAdminPage() {
           }
           if (nm) nameMap[b.id] = nm;
           // 라이브 룸번호 + 콤보 seg 정보
-          const rm = (b.accom_room || b.house_no || "").trim().replace(/^DH[\s-]*/i, "").toUpperCase();
+          const rm = (b.house_no || b.accom_room || "").trim().replace(/^DH[\s-]*/i, "").toUpperCase();
           roomMap[b.id] = { room: rm, seg1_type: b.seg1_type, seg2_type: b.seg2_type, seg2_checkin: b.seg2_checkin, accom_type: b.accom_type };
         });
         setBookingNumbers(numMap);

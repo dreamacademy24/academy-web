@@ -691,7 +691,7 @@ function CheckinDetailsInner() {
           if (at.includes("드림하우스") || at.toLowerCase().includes("dream")) return true;
           if (bt.includes("dreamhouse")) return true;
           if (b.seg1_type === "dreamhouse" || b.seg2_type === "dreamhouse") return true;
-          if (b.house_no && b.house_no.trim()) return true; // 룸번호 있으면 드하
+          if ((b.house_no && b.house_no.trim()) || (b.accom_room && b.accom_room.trim())) return true; // 룸번호 있으면 드하
           return false;
         };
         const dh = bookings.filter(needsCheckin);

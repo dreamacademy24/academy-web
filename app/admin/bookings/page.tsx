@@ -248,6 +248,7 @@ export default function AdminBookingsPage(){
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
   const [stuView,setStuView]=useState<"list"|"cal">("list");
+  const [calPrintHalf,setCalPrintHalf]=useState<"all"|"1st"|"2nd">("all");
   const _now=new Date();
   const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
   const [stuMonthNum,setStuMonthNum]=useState<string>(String(_now.getMonth()+1).padStart(2,"0")); // "" = 전체, "01"~"12"
@@ -1141,7 +1142,14 @@ export default function AdminBookingsPage(){
           </div>
           <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
-          {stuView==="cal"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄 (A4 가로)</button>}
+          {stuView==="cal"&&<div style={{display:"flex",gap:4,marginLeft:"auto",alignItems:"center"}}>
+            <select className="no-print" value={calPrintHalf} onChange={e=>setCalPrintHalf(e.target.value as any)} style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="all">전체 (한 장)</option>
+              <option value="1st">1~15일 (전반)</option>
+              <option value="2nd">16~말일 (후반)</option>
+            </select>
+            <button className="sub-tab" style={{background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄</button>
+          </div>}
         </div>
         {mismatchCount>0&&(
           <div style={{margin:"6px 0 10px",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #dc2626",borderRadius:8,fontSize:13,color:"#991b1b",fontWeight:700}}>
@@ -1194,7 +1202,17 @@ export default function AdminBookingsPage(){
           (()=>{
             const calYear=Number(stuYear)||_now.getFullYear();
             const calMonth=Number(stuMonthNum)||(_now.getMonth()+1);
-            const weeks=genCalWeeks(calYear,calMonth);
+            const allWeeks=genCalWeeks(calYear,calMonth);
+            // 2주 분할 인쇄: 전반(1~15일 포함 주) / 후반(16~말일 포함 주)
+            const weeks=calPrintHalf==="all"?allWeeks:allWeeks.filter(wk=>{
+              const hasInRange=wk.some(d=>{
+                if(d.getMonth()!==calMonth-1)return false;
+                const dd=d.getDate();
+                return calPrintHalf==="1st"?dd<=15:dd>=16;
+              });
+              return hasInRange;
+            });
+            const halfLabel=calPrintHalf==="1st"?" (1~15일)":calPrintHalf==="2nd"?" (16~말일)":"";
             return (
               <div className="cal-wrap">
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -1203,7 +1221,7 @@ export default function AdminBookingsPage(){
                     if(m<1){y-=1;m=12;}
                     setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));
                   }}>← 이전달</button>
-                  <div className="cal-title" style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>{calYear}년 {calMonth}월 학생 캘린더</div>
+                  <div className="cal-title" style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>{calYear}년 {calMonth}월 학생 캘린더{halfLabel}</div>
                   <button className="sub-tab no-print" onClick={()=>{
                     let y=calYear,m=calMonth+1;
                     if(m>12){y+=1;m=1;}

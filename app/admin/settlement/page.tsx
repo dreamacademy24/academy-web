@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
 
-interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; students?: unknown; settlement_open?: boolean | null; }
+interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; accom_room?: string | null; students?: unknown; settlement_open?: boolean | null; }
 function studentNames(b: Booking): string {
   const raw = b.students;
   let arr: any[] = [];
@@ -52,7 +52,7 @@ export default function SettlementPage() {
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, students, settlement_open").order("checkin_date", { ascending: false });
+    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, accom_room, students, settlement_open").order("checkin_date", { ascending: false });
     const today = today10();
     const rank = (b: Booking) => {
       const ci = b.checkin_date || "", co = b.checkout_date || "";
@@ -94,7 +94,7 @@ export default function SettlementPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let base = bookings;
-    if (q) base = base.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || ""} ${studentNames(b)}`.toLowerCase().includes(q));
+    if (q) base = base.filter(b => `${b.booker_name || ""} ${b.reservation_no || ""} ${b.house_no || b.accom_room || ""} ${studentNames(b)}`.toLowerCase().includes(q));
     else if (listFilter === "staying") base = base.filter(isStaying);
     else if (listFilter === "upcoming") base = base.filter(isUpcoming);
     return base.slice(0, 60);
@@ -306,7 +306,7 @@ td.empty{color:#cbd5e1;text-align:center}
 @media print{@page{size:A4;margin:12mm}}
 </style></head><body>
 <div id="cdwrap"><div id="cdsheet">
-<div class="hd"><h1>정산내역</h1><span class="sub">${esc(sel.booker_name || "")} · ${esc(sel.house_no || "")} · ${today10()}</span></div>
+<div class="hd"><h1>정산내역</h1><span class="sub">${esc(sel.booker_name || "")} · ${esc(sel.house_no || sel.accom_room || "")} · ${today10()}</span></div>
 <div class="sec-t sec-dep">🏠 보증금 정산 (받은 보증금 ${peso(depRecv)})</div>
 <table>${dRows}</table>
 <div class="sec-t sec-cls">💰 수업 · 교재비 등</div>
@@ -366,7 +366,7 @@ td.empty{color:#cbd5e1;text-align:center}
                     {b.booker_name || "(이름없음)"}
                     {staying && <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 7px", borderRadius: 20, background: "#dcfce7", color: "#15803d" }}>투숙중</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{b.house_no || ""} {b.checkin_date ? `· ${b.checkin_date}` : ""}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{b.house_no || b.accom_room || ""} {b.checkin_date ? `· ${b.checkin_date}` : ""}</div>
                   {studentNames(b) && <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>👦 {studentNames(b)}</div>}
                 </div>
               );
@@ -382,7 +382,7 @@ td.empty{color:#cbd5e1;text-align:center}
           ) : (
             <>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>{sel.booker_name} <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{sel.house_no || ""}</span></div>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{sel.booker_name} <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{sel.house_no || sel.accom_room || ""}</span></div>
                 <button onClick={toggleOpen} title="지정한 예약만 엄마 포털에 정산내역이 보입니다 (데모)" style={{ marginLeft: "auto", background: sel.settlement_open ? "#dcfce7" : "#f1f5f9", border: `1px solid ${sel.settlement_open ? "#86efac" : "#e2e8f0"}`, color: sel.settlement_open ? "#15803d" : "#64748b", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>{sel.settlement_open ? "👩‍👧 엄마 공개 ON (베타)" : "🔒 엄마 비공개"}</button>
                 <button onClick={importInvoice} disabled={importing} style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: importing ? 0.6 : 1 }}>{importing ? "불러오는 중…" : "📄 인보이스 불러오기"}</button>
                 <button onClick={buildPrint} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>🖨 인쇄</button>

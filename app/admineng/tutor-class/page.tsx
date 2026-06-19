@@ -263,8 +263,8 @@ export default function EngTutorClassPage() {
       (bs || []).forEach((b: any) => { bm[b.id] = { house_no: b.house_no, accom_room: b.accom_room }; });
       list.forEach(r => {
         const b = bm[r.booking_id] || {};
-        const combined = [b.house_no, b.accom_room].filter(Boolean).join('');
-        if (combined) r.house_number = combined;
+        const room = (b.house_no || b.accom_room || '').toString().replace(/^dh/i,'').replace(/\s+/g,'').toUpperCase();
+        if (room) r.house_number = room;
       });
     }
     setReqs(list as TutorReq[]);

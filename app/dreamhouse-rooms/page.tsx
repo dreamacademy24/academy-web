@@ -512,8 +512,11 @@ export default function DreamhouseRooms() {
             <div style={{display:'flex',gap:8}}>
               <button onClick={async()=>{
                 if(modalRoom===modal.accom_room){alert('동일한 룸입니다.');return;}
-                const{error}=await supabase.from('bookings').update({accom_room:modalRoom,house_no:modalRoom}).eq('id',modal.id);
-                if(error){alert('변경 실패: '+error.message);return;}
+                try{
+                  const res=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room:modalRoom})});
+                  const json=await res.json();
+                  if(!res.ok){alert('변경 실패: '+(json.error||res.statusText));return;}
+                }catch(e:any){alert('변경 실패: '+e.message);return;}
                 alert('✅ 룸이 '+modalRoom+'으로 변경되었습니다.');
                 setModal(null);fetchBookings();
               }} style={{flex:1,padding:'10px 0',background:'#1e40af',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>변경 저장</button>

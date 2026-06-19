@@ -24,3 +24,23 @@ export async function GET(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+/* 룸 변경 — service_role로 accom_room + house_no 동시 업데이트 */
+export async function PATCH(request: Request) {
+  try {
+    const { id, room } = await request.json()
+    if (!id || !room) return NextResponse.json({ error: 'id, room 필수' }, { status: 400 })
+
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ accom_room: room, house_no: room })
+      .eq('id', id)
+      .select('id, accom_room, house_no')
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}

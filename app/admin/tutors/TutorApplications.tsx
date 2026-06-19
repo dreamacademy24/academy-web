@@ -124,8 +124,8 @@ export default function TutorApplications() {
       house_or_reserver: r.guest_name || r.house_number || '',
       house_number: (() => {
         const b = bookingMap[r.booking_id] || {};
-        const combined = [b.house_no, b.accom_room].filter(Boolean).join('');
-        return combined || r.house_number || '';
+        const room = (b.house_no || b.accom_room || '').toString().replace(/^dh/i,'').replace(/\s+/g,'').toUpperCase();
+        return room || r.house_number || '';
       })(),
       children_names: [r.student_name_kr, r.student_name_en].filter(Boolean).join(' / '),
       children_ages: r.student_age || '',
