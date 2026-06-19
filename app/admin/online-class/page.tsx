@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -44,6 +44,72 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = 
 
 const DAYS = ["월", "화", "수", "목", "금", "토"];
 
+// 수업 시간 선택 모달용 — 13:00 ~ 23:00, 30분 간격
+const TIME_SLOTS: string[] = [];
+for (let h = 13; h <= 23; h++) {
+  TIME_SLOTS.push(`${h}:00`);
+  if (h < 23) TIME_SLOTS.push(`${h}:30`);
+}
+function subtractHour(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  return `${h - 1}:${String(m).padStart(2, "0")}`;
+}
+
+// 기간 컬럼 헬퍼
+function fmtMD(dateStr: string): string {
+  if (!dateStr) return "?";
+  const [, m, d] = dateStr.split("-");
+  return `${parseInt(m)}/${parseInt(d)}`;
+}
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function PeriodCell({ e }: { e: Enrollment }) {
+  const sd = e.start_date || "";
+  const ed = e.end_date || "";
+  const today = new Date().toISOString().slice(0, 10);
+  const isBoth = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
+  const isPre = !isBoth && e.class_period === "pre";
+  const isPost = !isBoth && (e.class_period === "post" || e.class_period === "standalone");
+
+  const nowBadge = <span style={{ marginLeft: 3, fontSize: 9, fontWeight: 800, color: "#059669", background: "#d1fae5", padding: "1px 5px", borderRadius: 6 }}>현재</span>;
+
+  if (isBoth && sd && ed) {
+    const spw = e.sessions_per_week || 3;
+    const preW = Math.max(1, Math.ceil((e.pre_sessions || 0) / spw));
+    const postW = Math.max(1, Math.ceil((e.post_sessions || 0) / spw));
+    const preStart = addDays(sd, -(preW * 7));
+    const preEnd = addDays(sd, -1);
+    const postStart = addDays(ed, 1);
+    const postEnd = addDays(ed, postW * 7);
+    const preNow = today >= preStart && today <= preEnd;
+    const postNow = today >= postStart && today <= postEnd;
+    return (
+      <div style={{ lineHeight: 1.6, whiteSpace: "nowrap" }}>
+        <div><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>전</span><span style={{ fontSize: 11 }}>{fmtMD(preStart)}~{fmtMD(preEnd)}</span>{preNow && nowBadge}</div>
+        <div style={{ fontSize: 10, color: "#94a3b8", paddingLeft: 2 }}>연수 {fmtMD(sd)}~{fmtMD(ed)}</div>
+        <div><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>후</span><span style={{ fontSize: 11 }}>{fmtMD(postStart)}~{fmtMD(postEnd)}</span>{postNow && nowBadge}</div>
+      </div>
+    );
+  }
+
+  if (isPre) {
+    const isNow = sd <= today && (!ed || ed >= today);
+    return <div style={{ whiteSpace: "nowrap" }}><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>전</span><span style={{ fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}</span>{isNow && nowBadge}</div>;
+  }
+
+  // standalone / post
+  const isNow = sd <= today && (!ed || ed >= today);
+  if (e.class_period === "post") {
+    return <div style={{ whiteSpace: "nowrap" }}><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>후</span><span style={{ fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}</span>{isNow && nowBadge}</div>;
+  }
+
+  // standalone — 화상영어 기간만
+  return <div style={{ whiteSpace: "nowrap", fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}{isNow && nowBadge}</div>;
+}
+
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
@@ -69,6 +135,20 @@ export default function OnlineClassPage() {
   const [editTarget, setEditTarget] = useState<Enrollment | null>(null);
   const [editForm, setEditForm] = useState<Record<string, unknown>>({});
   const [editSaving, setEditSaving] = useState(false);
+
+  // 시간 선택 모달
+  const [tpShow, setTpShow] = useState(false);
+  const [tpLabel, setTpLabel] = useState("");
+  const tpCb = useRef<((time: string) => void) | null>(null);
+  function openTimePicker(label: string, cb: (time: string) => void) {
+    setTpLabel(label);
+    tpCb.current = cb;
+    setTpShow(true);
+  }
+  function selectTime(time: string) {
+    tpCb.current?.(time);
+    setTpShow(false);
+  }
 
   // register tab
   const [periodTag, setPeriodTag] = useState<"standalone" | "pre" | "post">("standalone"); // 시기 구분 (등록 1건 = 수강권 1개)
@@ -448,7 +528,7 @@ export default function OnlineClassPage() {
                       <td>{e.tutor?.name_display || "-"}</td>
                       <td>{daysToKr(e.days_of_week)}</td>
                       <td>{e.class_time_kr || "-"}</td>
-                      <td style={{ fontSize: 11 }}>{e.start_date || "-"} ~ {e.end_date || "-"}</td>
+                      <td><PeriodCell e={e} /></td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <div style={{ flex: 1, height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", minWidth: 60 }}>
@@ -526,8 +606,8 @@ export default function OnlineClassPage() {
             </div>
           </div>
           <div className="form-row">
-            <div><label className="form-label">한국 수업 시간</label><input className="form-input" value={form.class_time_kr} onChange={e => setForm({ ...form, class_time_kr: e.target.value })} placeholder="21:00" disabled={dayTimesOn} style={dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : undefined} /></div>
-            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={form.class_time_ph} onChange={e => setForm({ ...form, class_time_ph: e.target.value })} placeholder="20:00" disabled={dayTimesOn} style={dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : undefined} /></div>
+            <div><label className="form-label">한국 수업 시간</label><input className="form-input" value={form.class_time_kr} readOnly onClick={() => { if (!dayTimesOn) openTimePicker("한국 수업 시간", t => setForm(f => ({ ...f, class_time_kr: t, class_time_ph: subtractHour(t) }))); }} placeholder="시간 선택" style={{ cursor: dayTimesOn ? "not-allowed" : "pointer", ...(dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : {}) }} /></div>
+            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={form.class_time_ph} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} placeholder="자동 계산" title="한국 시간 -1시간 자동" /></div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 8, cursor: "pointer" }}>
             <input type="checkbox" checked={dayTimesOn} onChange={e => setDayTimesOn(e.target.checked)} />
@@ -539,7 +619,7 @@ export default function OnlineClassPage() {
               {form.days_of_week.map(d => (
                 <div key={d}>
                   <label className="form-label" style={{ fontSize: 11 }}>{d}요일 (한국시간)</label>
-                  <input className="form-input" value={dayTimes[d] || ""} onChange={e => setDayTimes(t => ({ ...t, [d]: e.target.value }))} placeholder="17:00" />
+                  <input className="form-input" value={dayTimes[d] || ""} readOnly onClick={() => openTimePicker(`${d}요일 수업 시간`, t => setDayTimes(prev => ({ ...prev, [d]: t })))} placeholder="시간 선택" style={{ cursor: "pointer" }} />
                 </div>
               ))}
               <div style={{ fontSize: 11, color: "#94a3b8", gridColumn: "1/-1" }}>필리핀 시간은 자동으로 1시간 빼서 저장됩니다</div>
@@ -758,8 +838,8 @@ export default function OnlineClassPage() {
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div><label className="form-label" style={{ fontSize: 11 }}>한국 시간</label><input className="form-input" value={String(editForm.class_time_kr ?? "")} onChange={e => setEditForm(f => ({ ...f, class_time_kr: e.target.value }))} /></div>
-            <div><label className="form-label" style={{ fontSize: 11 }}>필리핀 시간</label><input className="form-input" value={String(editForm.class_time_ph ?? "")} onChange={e => setEditForm(f => ({ ...f, class_time_ph: e.target.value }))} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>한국 시간</label><input className="form-input" value={String(editForm.class_time_kr ?? "")} readOnly onClick={() => openTimePicker("한국 수업 시간", t => setEditForm(f => ({ ...f, class_time_kr: t, class_time_ph: subtractHour(t) })))} style={{ cursor: "pointer" }} /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>필리핀 시간</label><input className="form-input" value={String(editForm.class_time_ph ?? "")} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} title="한국 시간 -1시간 자동" /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>시작일</label><input type="date" className="form-input" value={String(editForm.start_date ?? "")} onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))} /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>종료일</label><input type="date" className="form-input" value={String(editForm.end_date ?? "")} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>연수 기간 (주)</label><input type="number" className="form-input" value={String(editForm.duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, duration_weeks: e.target.value }))} /></div>
@@ -823,5 +903,32 @@ export default function OnlineClassPage() {
         </div>
       );
     })()}
+
+    {/* 시간 선택 모달 */}
+    {tpShow && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setTpShow(false)}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", minWidth: 340, maxWidth: 420, boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#1e293b", marginBottom: 16, textAlign: "center" }}>{tpLabel}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {TIME_SLOTS.map(t => (
+              <button
+                key={t}
+                onClick={() => selectTime(t)}
+                style={{
+                  padding: "10px 0", borderRadius: 10, border: "1px solid #e2e8f0",
+                  background: "#f8fafc", fontSize: 14, fontWeight: 700, cursor: "pointer",
+                  color: "#334155", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#1e40af"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "#1e40af"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#f8fafc"; e.currentTarget.style.color = "#334155"; e.currentTarget.style.borderColor = "#e2e8f0"; }}
+              >{t}</button>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button onClick={() => setTpShow(false)} style={{ padding: "8px 24px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#64748b" }}>닫기</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }

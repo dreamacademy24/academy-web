@@ -86,6 +86,14 @@ function fmtDayLabel(d: Date): string {
   return `${pad2(d.getDate())}-${MONTH_ABBR[d.getMonth()]}`;
 }
 
+// 성수기 방학 (7/15 ~ 8/30) — 매년 고정, 이 기간 수업 없음
+const SUMMER_BREAK_START = "07-15";
+const SUMMER_BREAK_END = "08-30";
+function isSummerBreak(dateStr: string): boolean {
+  const md = dateStr.slice(5); // "2026-07-20" → "07-20"
+  return md >= SUMMER_BREAK_START && md <= SUMMER_BREAK_END;
+}
+
 function renderCalendar(
   weeks: Array<Array<{ date: Date; dateStr: string; inRange: boolean }>>,
   sessionMap: Record<string, Session>,
@@ -101,29 +109,57 @@ function renderCalendar(
         </tr>
       </thead>
       <tbody>
-        {weeks.map((week, wi) => (
-          <tr key={wi}>
-            {week.map(cell => {
-              const s = sessionMap[cell.dateStr];
-              const classes: string[] = [];
-              if (!cell.inRange) classes.push("out");
-              let timeLabel = "";
-              if (s) {
-                if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
-                else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
-                else if (s.status === "attended") { classes.push("attended"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
-                else if (s.status === "absent" || s.status === "no_show") { classes.push("holiday"); timeLabel = "결석"; }
-                else { timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
-              }
-              return (
-                <td key={cell.dateStr} className={classes.join(" ")}>
-                  <div className="d">{cell.inRange ? fmtDayLabel(cell.date) : cell.date.getDate()}</div>
-                  {timeLabel && <div className="t">{timeLabel}</div>}
+        {weeks.map((week, wi) => {
+          // 이 주가 전체 성수기 방학 주인지 체크 (월~금 모두 방학이면 축약 표시)
+          const weekdayCells = week.filter((_, i) => i > 0 && i < 6); // MON~FRI
+          const allBreak = weekdayCells.every(c => c.inRange && isSummerBreak(c.dateStr));
+          const anyInRange = week.some(c => c.inRange);
+
+          // 성수기 전체 주는 한 줄로 축약
+          if (allBreak && anyInRange) {
+            const firstDay = week[0];
+            const lastDay = week[6];
+            return (
+              <tr key={wi}>
+                <td colSpan={7} className="break-row">
+                  <span>☀️ 성수기 방학 ({fmtDayLabel(firstDay.date)} ~ {fmtDayLabel(lastDay.date)})</span>
                 </td>
-              );
-            })}
-          </tr>
-        ))}
+              </tr>
+            );
+          }
+
+          return (
+            <tr key={wi}>
+              {week.map(cell => {
+                const s = sessionMap[cell.dateStr];
+                const classes: string[] = [];
+                if (!cell.inRange) classes.push("out");
+                const dayOfWeek = cell.date.getDay(); // 0=Sun, 6=Sat
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const isBreak = cell.inRange && !isWeekend && isSummerBreak(cell.dateStr);
+                let timeLabel = "";
+
+                if (isBreak) {
+                  // 성수기 방학 — 수업 없음
+                  classes.push("break");
+                  timeLabel = "방학";
+                } else if (s) {
+                  if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
+                  else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
+                  else if (s.status === "attended") { classes.push("attended"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
+                  else if (s.status === "absent" || s.status === "no_show") { classes.push("holiday"); timeLabel = "결석"; }
+                  else { classes.push("has-class"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
+                }
+                return (
+                  <td key={cell.dateStr} className={classes.join(" ")}>
+                    <div className="d">{cell.inRange ? fmtDayLabel(cell.date) : cell.date.getDate()}</div>
+                    {timeLabel && <div className="t">{timeLabel}</div>}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -269,7 +305,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;marg
 .cal-tbl td.holiday .t{color:#92400e;font-weight:700}
 .cal-tbl td.makeup{background:#fff7ed}
 .cal-tbl td.makeup .t{color:#c2410c;font-weight:700}
+.cal-tbl td.attended{background:#dcfce7}
+.cal-tbl td.attended .d{background:#bbf7d0}
 .cal-tbl td.attended .t{color:#166534;font-weight:700}
+.cal-tbl td.has-class{background:#dbeafe}
+.cal-tbl td.has-class .d{background:#bfdbfe}
+.cal-tbl td.has-class .t{color:#1e40af}
+.cal-tbl td.break{background:#f1f5f9}
+.cal-tbl td.break .t{color:#94a3b8;font-weight:700;font-size:10px}
+.cal-tbl td.break-row{background:#f8fafc;text-align:center;padding:10px;font-size:12px;font-weight:700;color:#64748b;height:auto;border:1px solid #333}
 
 .rules{margin-top:22px;padding:14px 16px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;font-size:11.5px;line-height:1.75}
 .rules .title{font-weight:800;text-align:center;font-size:13px;color:#92400e;margin-bottom:6px}
