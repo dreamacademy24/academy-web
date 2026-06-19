@@ -541,6 +541,7 @@ export default function OnlineClassPage() {
             <div>
               <label className="form-label">주 수업 횟수</label>
               <select className="form-input" value={form.sessions_per_week} onChange={e => setForm({ ...form, sessions_per_week: e.target.value })}>
+                <option value="1">1회</option>
                 <option value="2">2회</option>
                 <option value="3">3회</option>
                 <option value="5">5회</option>
