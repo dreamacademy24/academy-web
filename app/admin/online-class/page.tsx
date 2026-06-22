@@ -305,6 +305,11 @@ export default function OnlineClassPage() {
     if (!editTarget) return;
     setEditSaving(true);
     try {
+      // 요일이 변경되었는지 감지
+      const oldDays = [...(editTarget.days_of_week || [])].sort().join(",");
+      const newDays = [...((editForm.days_of_week as string[]) || [])].sort().join(",");
+      const daysChanged = oldDays !== newDays;
+
       const res = await fetch("/api/online-class/enrollments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -312,12 +317,38 @@ export default function OnlineClassPage() {
       });
       const r = await res.json();
       if (!res.ok) { toastErr(r.error || "저장 실패"); return; }
-      toastOk("수정 완료 ✅");
+
+      // 요일 변경 시 세션 재생성 안내
+      if (daysChanged) {
+        toastOk("수정 완료 ✅ — 요일이 변경되었습니다. 아래 🔄 세션 재생성 버튼으로 세션을 갱신하세요.");
+      } else {
+        toastOk("수정 완료 ✅");
+      }
       setEditTarget(null);
       await loadEnrollments();
     } catch (e) {
       toastErr("저장 실패: " + (e instanceof Error ? e.message : "unknown"));
     } finally { setEditSaving(false); }
+  }
+
+  const [regenerating, setRegenerating] = useState(false);
+  async function regenerateSessions(enrollmentId: string) {
+    if (!window.confirm("예정(scheduled) 세션을 삭제하고 현재 요일/시간 설정으로 재생성합니다.\n\n출석/취소 이력은 보존됩니다. 진행할까요?")) return;
+    setRegenerating(true);
+    try {
+      const res = await fetch("/api/online-class/enrollments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: enrollmentId, regenerate_sessions: true }),
+      });
+      const r = await res.json();
+      if (!res.ok) { toastErr(r.error || "재생성 실패"); return; }
+      toastOk(`세션 ${r.sessions_regenerated}개 재생성 완료 ✅`);
+      await loadEnrollments();
+      if (expandedId === enrollmentId) loadSessions(enrollmentId);
+    } catch (e) {
+      toastErr("재생성 실패: " + (e instanceof Error ? e.message : "unknown"));
+    } finally { setRegenerating(false); }
   }
   function toggleDay(d: string) {
     setForm(f => ({
@@ -542,6 +573,8 @@ export default function OnlineClassPage() {
                         <button className="btn-sm" onClick={() => loadSessions(e.id)}>출결</button>
                         {" "}
                         <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
+                        {" "}
+                        <button className="btn-sm" style={{ color: "#d97706", borderColor: "#fcd34d" }} onClick={() => regenerateSessions(e.id)} disabled={regenerating}>🔄</button>
                         {" "}
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
                         {" "}
