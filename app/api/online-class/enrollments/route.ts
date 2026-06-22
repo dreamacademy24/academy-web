@@ -153,8 +153,27 @@ export async function PATCH(req: Request) {
       if (INT_FIELDS.has(k) && v !== null) v = Number(v) || 0
       updates[k] = v
     }
+    // 튜터 변경 감지: 기존 tutor_id 먼저 조회
+    let oldTutorId: string | null = null
+    if ('tutor_id' in updates) {
+      const { data: prev } = await supabase.from('online_enrollments').select('tutor_id').eq('id', id).single()
+      oldTutorId = prev?.tutor_id ?? null
+    }
+
     const { error } = await supabase.from('online_enrollments').update(updates).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // 튜터 변경 시 모든 세션의 tutor_id도 자동 동기화
+    let sessionsTutorSynced = 0
+    if ('tutor_id' in updates && updates.tutor_id !== oldTutorId) {
+      const newTutorId = (updates.tutor_id as string) || null
+      const { data: synced } = await supabase
+        .from('online_sessions')
+        .update({ tutor_id: newTutorId })
+        .eq('enrollment_id', id)
+        .select('id')
+      sessionsTutorSynced = synced?.length ?? 0
+    }
 
     // 세션 재생성 요청 시: 기존 scheduled 세션 삭제 → 새 요일/시간 기준 재생성
     let sessionsRegenerated = 0
@@ -243,7 +262,7 @@ export async function PATCH(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, sessions_regenerated: sessionsRegenerated })
+    return NextResponse.json({ ok: true, sessions_regenerated: sessionsRegenerated, sessions_tutor_synced: sessionsTutorSynced })
   } catch (e: unknown) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
   }

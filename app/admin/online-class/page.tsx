@@ -318,12 +318,12 @@ export default function OnlineClassPage() {
       const r = await res.json();
       if (!res.ok) { toastErr(r.error || "저장 실패"); return; }
 
-      // 요일 변경 시 세션 재생성 안내
-      if (daysChanged) {
-        toastOk("수정 완료 ✅ — 요일이 변경되었습니다. 아래 🔄 세션 재생성 버튼으로 세션을 갱신하세요.");
-      } else {
-        toastOk("수정 완료 ✅");
-      }
+      // 변경 안내
+      const tutorChanged = editForm.tutor_id !== editTarget.tutor_id;
+      const msgs: string[] = ["수정 완료 ✅"];
+      if (tutorChanged && r.sessions_tutor_synced) msgs.push(`튜터 변경 → 세션 ${r.sessions_tutor_synced}개 자동 동기화`);
+      if (daysChanged) msgs.push("요일 변경 → 🔄 세션 재생성 버튼으로 세션을 갱신하세요.");
+      toastOk(msgs.join(" · "));
       setEditTarget(null);
       await loadEnrollments();
     } catch (e) {
