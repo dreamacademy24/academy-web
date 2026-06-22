@@ -33,7 +33,7 @@ interface Consultation {
   consultation_invites: Invite[];
 }
 
-interface Booking { id: string; booker_name: string; reservation_no: string; check_in: string; check_out?: string; checkout_date?: string }
+interface Booking { id: string; booker_name: string; reservation_no: string; checkin_date: string; checkout_date?: string; students?: any }
 
 const DAY_KR = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -75,11 +75,12 @@ export default function AdminConsultationsPage() {
 
   const loadBookings = useCallback(async () => {
     // 활성 예약 목록 (대상 선택용)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("bookings")
-      .select("id, booker_name, reservation_no, check_in, check_out, checkout_date")
+      .select("id, booker_name, reservation_no, checkin_date, checkout_date, students")
       .not("status", "eq", "cancelled")
-      .order("check_in", { ascending: true });
+      .order("checkin_date", { ascending: true });
+    if (error) console.error("loadBookings error:", error.message);
     if (data) setBookings(data as Booking[]);
   }, []);
 
@@ -314,18 +315,26 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           </div>
 
           {fTarget === "selected" && (<>
-            <label>대상 엄마 선택 ({fInvites.length}명)</label>
-            <div className="invite-grid">
-              {bookings.map((b) => (
-                <span
-                  key={b.id}
-                  className={`invite-chip ${fInvites.includes(b.id) ? "sel" : ""}`}
-                  onClick={() => toggleInvite(b.id)}
-                >
-                  {b.booker_name} ({b.reservation_no?.slice(-6) || "?"})
-                </span>
-              ))}
-            </div>
+            <label>대상 엄마 선택 ({fInvites.length}명) {bookings.length === 0 && <span style={{ color: "#dc2626" }}>— 예약 데이터 없음</span>}</label>
+            {bookings.length > 0 ? (
+              <div className="invite-grid">
+                {bookings.map((b) => {
+                  const stuArr = Array.isArray(b.students) ? b.students : [];
+                  const stuName = stuArr.map((s: any) => s.korName || s.name_kr).filter(Boolean).join(", ");
+                  return (
+                    <span
+                      key={b.id}
+                      className={`invite-chip ${fInvites.includes(b.id) ? "sel" : ""}`}
+                      onClick={() => toggleInvite(b.id)}
+                    >
+                      {b.booker_name}{stuName ? ` · ${stuName}` : ""} <span style={{ opacity: 0.5, fontSize: 11 }}>({b.checkin_date?.slice(5) || "?"})</span>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>활성 예약이 없습니다. 예약을 먼저 등록해주세요.</p>
+            )}
           </>)}
         </div>
 
@@ -436,6 +445,26 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               </div>
             )}
           </div>
+
+          {/* 📊 예약 현황 요약 */}
+          {bookedSlots > 0 && (
+            <div className="form-box">
+              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 10 }}>📊 예약 현황 ({bookedSlots}건)</h3>
+              <table className="tbl">
+                <thead><tr><th>날짜</th><th>시간</th><th>예약자</th><th>학생</th></tr></thead>
+                <tbody>
+                  {slots.filter(s => s.status === "booked").map(s => (
+                    <tr key={s.id}>
+                      <td style={{ fontWeight: 700 }}>{fmtDate(s.slot_date)}</td>
+                      <td>{s.slot_time}</td>
+                      <td>{s.booked_name || "-"}</td>
+                      <td style={{ color: "#64748b" }}>{s.booked_student || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* 초대 대상 */}
           {detail.target_type === "selected" && (
