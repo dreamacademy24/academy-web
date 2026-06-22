@@ -50,6 +50,7 @@ export default function AdminHubPage() {
         { icon: "🚌", title: "투어셔틀 관리",     desc: "셔틀 신청 및 일정 배포 (드림하우스 담당)",  href: "/admin/tour-shuttle" },
         { icon: "🚐", title: "셔틀·기사 관리",   desc: "셔틀 · 기사 · 스케줄 통합",           href: "/admin/shuttle-management", coming: true },
         { icon: "📝", title: "체크인 디테일",    desc: "자동생성 · PDF 출력",               href: "/admin/checkin-details" },
+        { icon: "💰", title: "시재 관리",        desc: "보증금 · 지출 · 영수증 기록",        href: "/admin/cash-ledger" },
       ],
     },
     {
