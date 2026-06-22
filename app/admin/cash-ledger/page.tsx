@@ -12,7 +12,7 @@ interface Entry {
 }
 
 const CATEGORIES_IN = ["보증금", "현금수입", "기타입금"];
-const CATEGORIES_OUT = ["식비", "교통비", "소모품", "유지보수", "인건비", "보증금반환", "기타지출"];
+const CATEGORIES_OUT = ["교통비", "소모품", "유지보수", "인건비", "보증금반환", "기타지출"];
 const ALL_CATEGORIES = [...CATEGORIES_IN, ...CATEGORIES_OUT];
 
 const peso = (n: number) => "₱" + (n || 0).toLocaleString("en-US");
@@ -20,8 +20,14 @@ const won = (n: number) => "₩" + (n || 0).toLocaleString("en-US");
 const fmtD = (d: string) => { const dt = new Date(d + "T00:00:00"); return `${dt.getMonth() + 1}/${dt.getDate()}`; };
 const today10 = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
+const CASH_PIN = "23415";
+const PIN_SESSION_KEY = "cash_ledger_pin_ok";
+
 export default function CashLedgerPage() {
   const router = useRouter();
+  const [pinOk, setPinOk] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinErr, setPinErr] = useState(false);
   const [ready, setReady] = useState(false);
   const [staffName, setStaffName] = useState("");
   const [items, setItems] = useState<Entry[]>([]);
@@ -53,12 +59,27 @@ export default function CashLedgerPage() {
   // 필터
   const [filterCat, setFilterCat] = useState<string>("all");
 
+  // PIN 체크 (sessionStorage에 저장해서 같은 탭 세션 동안 재입력 불필요)
   useEffect(() => {
     if (!isAdminAuthed()) { window.location.href = "/login"; return; }
     const info = getAdminInfo();
     if (info) setStaffName(info.name);
+    try {
+      if (sessionStorage.getItem(PIN_SESSION_KEY) === "1") setPinOk(true);
+    } catch {}
     setReady(true);
   }, [router]);
+
+  function handlePinSubmit() {
+    if (pinInput === CASH_PIN) {
+      setPinOk(true);
+      setPinErr(false);
+      try { sessionStorage.setItem(PIN_SESSION_KEY, "1"); } catch {}
+    } else {
+      setPinErr(true);
+      setPinInput("");
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/cash-ledger?year=${year}&month=${String(month).padStart(2, "0")}`);
