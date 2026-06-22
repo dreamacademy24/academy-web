@@ -346,7 +346,7 @@ export default function AdminBookingsPage(){
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"부킹리스트");XLSX.writeFile(wb,"부킹리스트_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
   function exportConfirmXlsx(rows:Booking[]){
-    const data=rows.map(b=>({예약번호:shortNo(b.reservation_no),예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0}));
+    const data=rows.map(b=>{const isC=isCommuteBooking(b);const at=(b.accom_type||"").toLowerCase();const gub=isC?"통학형":at.includes("제이파크")?"JP":at.includes("큐브")?"C9":"DH";const aio=isC?"통학형":(b as any).is_all_in_one?"올인원":"일반";return{예약번호:shortNo(b.reservation_no),담당자:b.assignee||"",구분:gub,올인원:aio,예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0};});
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
 
@@ -977,11 +977,13 @@ export default function AdminBookingsPage(){
       });
       const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
+        {key:"assignee",label:"담당자",get:b=>b.assignee||"-"},
+        {key:"gubun",label:"구분",get:b=>{const isC=isCommuteBooking(b);if(isC)return"통학형";const at=(b.accom_type||"").toLowerCase();if(at.includes("제이파크"))return"JP";if(at.includes("큐브"))return"C9";return"DH";}},
+        {key:"allinone",label:"올인원",get:b=>{if(isCommuteBooking(b))return"통학형";return(b as any).is_all_in_one?"올인원":"일반";}},
         {key:"booker_name",label:"예약자",get:b=>b.booker_name},
         {key:"students",label:"학생",get:b=>stuNames(b.students)},
         {key:"checkin_date",label:"체크인",get:b=>b.checkin_date||"-"},
         {key:"checkout_date",label:"체크아웃",get:b=>b.checkout_date||"-"},
-        {key:"dday",label:"D-day",get:b=>{const d=getDday(b.checkin_date);return d?parseInt(d.label.replace(/[^-\d]/g,""))||0:9999;}},
         {key:"accom",label:"숙소/룸",get:b=>fmtAccom(b)},
         {key:"aca_start",label:"아카데미시작",get:b=>acaStart(b)},
         {key:"aca_end",label:"아카데미종료",get:b=>acaEnd(b)},
@@ -994,7 +996,7 @@ export default function AdminBookingsPage(){
         {key:"missing",label:"누락",get:b=>missingItems(b).join("·")||"✓"},
       ];
       // 핵심 컬럼(기본 표시). 나머지(아카데미·항공·유학원·금액)는 "전체 컬럼" 토글 시 표시
-      const CORE_COLS=new Set(["reservation_no","booker_name","students","checkin_date","checkout_date","dday","accom","balance_date","special_request","missing"]);
+      const CORE_COLS=new Set(["reservation_no","assignee","gubun","allinone","booker_name","students","checkin_date","checkout_date","accom","balance_date","special_request","missing"]);
       const visCols=showAllCols?cols:cols.filter(c=>CORE_COLS.has(c.key));
       const sorted=[...typeFiltered].sort((a,b)=>{
         const {key,asc}=confirmSort;
@@ -1051,23 +1053,26 @@ export default function AdminBookingsPage(){
         </tr></thead><tbody>
           {sorted.length===0?<tr><td colSpan={visCols.length+1} className="empty">확정 예약이 없습니다.</td></tr>:
           sorted.map(b=>{
-            const dday=getDday(b.checkin_date);
             const bdday=getBalanceDday(b.balance_date);
+            const isC=isCommuteBooking(b);
+            const gubunLabel=(()=>{if(isC)return"통학형";const at=(b.accom_type||"").toLowerCase();if(at.includes("제이파크"))return"JP";if(at.includes("큐브"))return"C9";return"DH";})();
+            const gubunColor:Record<string,{bg:string;color:string}>={"DH":{bg:"#dbeafe",color:"#1e40af"},"JP":{bg:"#fce7f3",color:"#9d174d"},"C9":{bg:"#e0e7ff",color:"#4338ca"},"통학형":{bg:"#f5f5f4",color:"#78716c"}};
+            const gc=gubunColor[gubunLabel]||gubunColor["DH"];
+            const aioLabel=isC?"통학형":(b as any).is_all_in_one?"올인원":"일반";
+            const aioColor:Record<string,{bg:string;color:string}>={"올인원":{bg:"#fef3c7",color:"#92400e"},"통학형":{bg:"#f5f5f4",color:"#78716c"},"일반":{bg:"#f1f5f9",color:"#64748b"}};
+            const ac=aioColor[aioLabel]||aioColor["일반"];
             return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
-              <td>
-                <div style={{fontWeight:600}}>{b.booker_name}
-                  {b.assignee&&<span style={{display:"inline-block",marginLeft:4,fontSize:10,background:"#eff6ff",color:"#1a6fc4",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>{b.assignee}</span>}
-                  {(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}
-                </div>
-              </td>
+              <td><span style={{fontSize:11,fontWeight:700,color:"#1a6fc4"}}>{b.assignee||"-"}</span></td>
+              <td><span style={{display:"inline-block",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,background:gc.bg,color:gc.color}}>{gubunLabel}</span></td>
+              <td><span style={{display:"inline-block",fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10,background:ac.bg,color:ac.color}}>{aioLabel}</span></td>
+              <td style={{fontWeight:600}}>{b.booker_name}</td>
               <td style={{color:"#475569",fontSize:11}}>{stuNames(b.students)}</td>
               <td style={{fontWeight:600}}>{b.checkin_date||"-"}</td>
               <td>{b.checkout_date||"-"}</td>
-              <td>{dday&&<span className="dday" style={{color:dday.color,background:dday.color+"15"}}>{dday.label}</span>}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
               <td>{fmtAccom(b)}</td>
               {showAllCols&&<><td>{acaStart(b)}</td><td>{acaEnd(b)}</td><td>{b.flight_in||"-"}</td><td>{b.flight_out||"-"}</td><td>{b.agency||"-"}</td></>}
-              <td>{b.balance_date||"-"}</td>
+              <td>{b.balance_date||"-"}{bdday&&<div style={{fontSize:9,color:bdday.color,fontWeight:700,marginTop:1}}>{bdday.label}</div>}</td>
               {showAllCols&&<td style={{fontWeight:700}}>{fmt(b.final_price||b.base_price)}</td>}
               <td className="wrap" title={b.special_request||""} style={{cursor:b.special_request?"pointer":"default",maxWidth:expandedSr.has(b.id)?"none":160}} onClick={e=>{e.stopPropagation();if(!b.special_request)return;setExpandedSr(prev=>{const n=new Set(prev);if(n.has(b.id))n.delete(b.id);else n.add(b.id);return n;});}}>
                 {!b.special_request?"-":expandedSr.has(b.id)?b.special_request:(b.special_request.length>22?b.special_request.slice(0,22)+"...":b.special_request)}
