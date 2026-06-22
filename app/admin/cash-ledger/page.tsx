@@ -20,14 +20,12 @@ const won = (n: number) => "₩" + (n || 0).toLocaleString("en-US");
 const fmtD = (d: string) => { const dt = new Date(d + "T00:00:00"); return `${dt.getMonth() + 1}/${dt.getDate()}`; };
 const today10 = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-const CASH_PIN = "23415";
-const PIN_SESSION_KEY = "cash_ledger_pin_ok";
+// 시재관리 접근 허용 계정
+const CASH_ALLOWED = ["admin-vivace", "admin-ceo"];
 
 export default function CashLedgerPage() {
   const router = useRouter();
-  const [pinOk, setPinOk] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinErr, setPinErr] = useState(false);
+  const [denied, setDenied] = useState(false);
   const [ready, setReady] = useState(false);
   const [staffName, setStaffName] = useState("");
   const [items, setItems] = useState<Entry[]>([]);
@@ -59,27 +57,16 @@ export default function CashLedgerPage() {
   // 필터
   const [filterCat, setFilterCat] = useState<string>("all");
 
-  // PIN 체크 (sessionStorage에 저장해서 같은 탭 세션 동안 재입력 불필요)
   useEffect(() => {
     if (!isAdminAuthed()) { window.location.href = "/login"; return; }
     const info = getAdminInfo();
-    if (info) setStaffName(info.name);
-    try {
-      if (sessionStorage.getItem(PIN_SESSION_KEY) === "1") setPinOk(true);
-    } catch {}
+    if (info) {
+      setStaffName(info.name);
+      // 허용된 계정만 접근 가능
+      if (!CASH_ALLOWED.includes(info.staffId)) { setDenied(true); setReady(true); return; }
+    }
     setReady(true);
   }, [router]);
-
-  function handlePinSubmit() {
-    if (pinInput === CASH_PIN) {
-      setPinOk(true);
-      setPinErr(false);
-      try { sessionStorage.setItem(PIN_SESSION_KEY, "1"); } catch {}
-    } else {
-      setPinErr(true);
-      setPinInput("");
-    }
-  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/cash-ledger?year=${year}&month=${String(month).padStart(2, "0")}`);
@@ -156,6 +143,17 @@ export default function CashLedgerPage() {
 
   if (!ready) return null;
 
+  if (denied) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "'Noto Sans KR', sans-serif", background: "#f1f5f9" }}>
+      <div style={{ textAlign: "center", padding: 40 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: "#1a1a2e" }}>접근 권한이 없습니다</h2>
+        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 20 }}>시재 관리는 허용된 관리자만 사용할 수 있습니다.</p>
+        <button onClick={() => router.push("/admin/hub")} style={{ padding: "10px 24px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← 관리자 홈으로</button>
+      </div>
+    </div>
+  );
+
   return (<>
     <style>{`*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}`}</style>
     <div style={{ maxWidth: 1020, margin: "0 auto", padding: "24px 20px" }}>
@@ -220,7 +218,7 @@ export default function CashLedgerPage() {
           <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
             <button onClick={() => { resetForm(); setAType("in"); setACat("보증금"); setAddOpen(true); }}
               style={{ padding: "8px 16px", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#1a6fc4", color: "#fff" }}>+ 입금 기록</button>
-            <button onClick={() => { resetForm(); setAType("out"); setACat("식비"); setAddOpen(true); }}
+            <button onClick={() => { resetForm(); setAType("out"); setACat("교통비"); setAddOpen(true); }}
               style={{ padding: "8px 16px", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#dc2626", color: "#fff" }}>+ 출금 기록</button>
           </div>
 

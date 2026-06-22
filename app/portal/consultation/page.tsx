@@ -189,8 +189,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
         return (
           <div key={c.id} className="cbox">
-            <h2>{c.title}</h2>
-            {c.description && <p className="desc">{c.description}</p>}
+            {c.description
+              ? <p className="desc" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.7 }}>{c.description}</p>
+              : <h2>{c.title}</h2>}
 
             {mySlot && (
               <div style={{ background: "#f0fdf4", borderRadius: 10, padding: 12, marginBottom: 14 }}>

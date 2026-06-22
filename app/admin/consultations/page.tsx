@@ -51,7 +51,6 @@ export default function AdminConsultationsPage() {
   const [sel, setSel] = useState<Consultation | null>(null);
   const [mode, setMode] = useState<"view" | "create">("view");
   // create form
-  const [fTitle, setFTitle] = useState("");
   const [fDesc, setFDesc] = useState("");
   const [fTarget, setFTarget] = useState<"all" | "selected">("all");
   const [fSlots, setFSlots] = useState<{ date: string; time: string }[]>([]);
@@ -138,8 +137,15 @@ export default function AdminConsultationsPage() {
     setFInvites((prev) => prev.includes(bid) ? prev.filter((x) => x !== bid) : [...prev, bid]);
   }
 
+  function autoTitle() {
+    if (fSlots.length === 0) return "학습 상담";
+    const first = fSlots[0].date;
+    const dt = new Date(first + "T00:00:00");
+    return `${dt.getMonth() + 1}월 학습 상담`;
+  }
+
   async function createConsultation(publish: boolean) {
-    if (!fTitle.trim()) return alert("제목을 입력해주세요");
+    if (!fDesc.trim()) return alert("안내 내용을 입력해주세요");
     if (fSlots.length === 0) return alert("시간 슬롯을 1개 이상 추가해주세요");
     if (fTarget === "selected" && fInvites.length === 0) return alert("대상 엄마를 1명 이상 선택해주세요");
     setSaving(true);
@@ -148,7 +154,7 @@ export default function AdminConsultationsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: fTitle, description: fDesc || null, target_type: fTarget,
+          title: autoTitle(), description: fDesc || null, target_type: fTarget,
           slots: fSlots, invite_booking_ids: fTarget === "selected" ? fInvites : [],
           status: publish ? "published" : "draft",
         }),
@@ -159,7 +165,7 @@ export default function AdminConsultationsPage() {
       resetForm(); load(); setMode("view");
     } finally { setSaving(false); }
   }
-  function resetForm() { setFTitle(""); setFDesc(""); setFTarget("all"); setFSlots([]); setFInvites([]); setInvSearch(""); }
+  function resetForm() { setFDesc(""); setFTarget("all"); setFSlots([]); setFInvites([]); setInvSearch(""); }
 
   function startCreate() { resetForm(); setMode("create"); setSel(null); }
   function backToList() { setMode("view"); }
@@ -222,7 +228,7 @@ export default function AdminConsultationsPage() {
             <div key={c.id} onClick={() => { setSel(c); setMode("view"); }}
               style={{ padding: "12px 14px", cursor: "pointer", borderBottom: "1px solid #f8fafc", background: active ? "#eff6ff" : "#fff", transition: "background 120ms" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 800, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={c.description || c.title}>{c.description || c.title}</span>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 8, background: sb.bg, color: sb.color, flexShrink: 0 }}>{sb.label}</span>
               </div>
               <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#64748b", alignItems: "center" }}>
@@ -307,12 +313,12 @@ export default function AdminConsultationsPage() {
 
     return (<>
       {/* 헤더 + 통계 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>{sel.title}</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: sb.bg, color: sb.color }}>{sb.label}</span>
         {sel.target_type === "selected" && <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: "#fef3c7", color: "#b45309" }}>특정 대상</span>}
+        <span style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8" }}>{new Date(sel.created_at).toLocaleDateString("ko-KR")}</span>
       </div>
-      {sel.description && <p style={{ fontSize: 13, color: "#64748b", whiteSpace: "pre-wrap", marginBottom: 12, lineHeight: 1.6 }}>{sel.description}</p>}
+      {sel.description && <p style={{ fontSize: 15, fontWeight: 600, color: "#1a1a2e", whiteSpace: "pre-wrap", marginBottom: 14, lineHeight: 1.7 }}>{sel.description}</p>}
 
       {/* 통계 카드 3개 */}
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -432,13 +438,9 @@ export default function AdminConsultationsPage() {
       </div>
 
       <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "18px 20px", marginBottom: 12 }}>
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>상담 제목 *</label>
-        <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="예: 6월 학습 상담"
-          style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 14 }} />
-
-        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>안내 문구</label>
-        <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="엄마들에게 보여질 안내 메시지를 입력하세요"
-          style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 70, marginBottom: 14 }} />
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>안내 내용 *</label>
+        <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="엄마들에게 보여질 안내 내용을 입력하세요"
+          style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 100, marginBottom: 14 }} />
 
         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>대상</label>
         <div style={{ display: "flex", gap: 8 }}>

@@ -3635,8 +3635,7 @@ function showSyncBadge(){
 // 하드코딩 직원 명단 — staff_accounts API 동적 로딩 실패 시 폴백으로 사용
 let EMPS=[
   {id:'jamie',name:'Jamie', color:'#0ea5e9',initial:'JA'},
-  {id:'hanny',name:'Hanny', color:'#f59e0b',initial:'H'},
-  {id:'sage', name:'Sage',  color:'#10b981',initial:'S'},
+  {id:'vivace',name:'Vivace', color:'#f59e0b',initial:'V'},
   {id:'eric', name:'Eric',  color:'#f97316',initial:'E'},
   {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU'},
   {id:'candice',name:'Candice', color:'#14b8a6',initial:'CA'},
@@ -3690,7 +3689,7 @@ let goals=ld('tm_goals',[]);
 let noticeReads=ld('tm_read',{});
 
 
-const DEFAULT_PASSWORDS={jamie:'jamie1234',hanny:'hanny1234',sage:'sage1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',judy:'Judy2026!',ceo:'ceo1234'};
+const DEFAULT_PASSWORDS={jamie:'jamie1234',vivace:'vivace1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',judy:'Judy2026!',ceo:'ceo1234'};
 let PASSWORDS=ld('tm_pw',DEFAULT_PASSWORDS);
 Object.keys(DEFAULT_PASSWORDS).forEach(function(k){if(!PASSWORDS[k])PASSWORDS[k]=DEFAULT_PASSWORDS[k];});
 sv('tm_pw',PASSWORDS);
