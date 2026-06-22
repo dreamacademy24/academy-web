@@ -46,6 +46,13 @@ type BedConfig = { room1: string; room2: string; room3: string };
 type SimCard = { plan: string };
 type ExtraPickup = { type: string; date: string; airline: string; flight: string; time: string };
 
+// 항공편 합산 텍스트에서 날짜/시간 추출
+function parseFlightText(text: string) {
+  const dateM = text.match(/(\d{4}-\d{2}-\d{2})/);
+  const timeM = text.match(/(\d{1,2}:\d{2})/);
+  return { date: dateM?.[1] || "", time: timeM?.[1] || "" };
+}
+
 function fDate(d: string | null) {
   if (!d) return "-";
   const dt = new Date(d + "T00:00:00");
@@ -95,7 +102,7 @@ function CheckinDetailsInner() {
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
-  const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
+  const [bedConfig, setBedConfig] = useState<BedConfig>({room1:"",room2:"",room3:""});
   const [simCards, setSimCards] = useState<SimCard[]>([]);
   const [extraPickups, setExtraPickups] = useState<ExtraPickup[]>([]);
   const [flightIn, setFlightIn] = useState("");
@@ -132,12 +139,15 @@ function CheckinDetailsInner() {
       const d = await res.json();
       if (d.booking) {
         setBooking(d.booking);
+        // 합산 텍스트에서 날짜/시간 폴백 파싱
+        const inParsed = parseFlightText(d.booking.flight_in || "");
+        const outParsed = parseFlightText(d.booking.flight_out || "");
         setFlightIn([d.booking.flight_in_airline, d.booking.flight_in_no, !d.booking.flight_in_airline && !d.booking.flight_in_no ? d.booking.flight_in : ""].filter(Boolean).join(" ") || "");
-        setFlightInDate((d.booking.flight_in_date || "").split("T")[0] || "");
-        setFlightInTime(d.booking.flight_in_time || "");
+        setFlightInDate((d.booking.flight_in_date || "").split("T")[0] || inParsed.date);
+        setFlightInTime(d.booking.flight_in_time || inParsed.time);
         setFlightOut([d.booking.flight_out_airline, d.booking.flight_out_no, !d.booking.flight_out_airline && !d.booking.flight_out_no ? d.booking.flight_out : ""].filter(Boolean).join(" ") || "");
-        setFlightOutDate((d.booking.flight_out_date || "").split("T")[0] || "");
-        setFlightOutTime(d.booking.flight_out_time || "");
+        setFlightOutDate((d.booking.flight_out_date || "").split("T")[0] || outParsed.date);
+        setFlightOutTime(d.booking.flight_out_time || outParsed.time);
         setFlightImages(Array.isArray(d.booking.flight_images) ? d.booking.flight_images : []);
       }
       if (d.detail) {

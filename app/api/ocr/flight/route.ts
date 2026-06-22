@@ -12,12 +12,14 @@ const SYSTEM_PROMPT = `당신은 항공권/보딩패스/이티켓 이미지에�
   "in_airline": "입국편 항공사명 (예: 대한항공, Korean Air, Cathay Pacific, Air China 등)",
   "in_no": "입국편 편명 (예: KE601, 5J123, CA408)",
   "in_date": "YYYY-MM-DD 형식의 세부 도착 날짜",
-  "in_time": "HH:MM 형식의 세부(CEB) 도착 시간 (24시간제)",
+  "in_dep_time": "HH:MM 형식의 출발지 출발 시간 (24시간제, departure time from origin)",
+  "in_time": "HH:MM 형식의 세부(CEB) 도착 시간 (24시간제, arrival time at CEB)",
   "in_origin": "입국편 출발지 (예: 인천, ICN, Beijing, PEK)",
   "out_airline": "출국편 항공사명",
   "out_no": "출국편 편명",
   "out_date": "YYYY-MM-DD 형식의 세부 출발 날짜",
-  "out_time": "HH:MM 형식의 세부(CEB) 출발 시간 (24시간제)",
+  "out_time": "HH:MM 형식의 세부(CEB) 출발 시간 (24시간제, departure time from CEB)",
+  "out_arr_time": "HH:MM 형식의 도착지 도착 시간 (24시간제, arrival time at destination)",
   "out_destination": "출국편 도착지"
 }
 
@@ -101,7 +103,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'parse failed', raw: text }, { status: 502 })
   }
 
-  const keys = ['in_airline','in_no','in_date','in_time','in_origin','out_airline','out_no','out_date','out_time','out_destination']
+  const keys = ['in_airline','in_no','in_date','in_dep_time','in_time','in_origin','out_airline','out_no','out_date','out_time','out_arr_time','out_destination']
   const fields: Record<string, string> = {}
   for (const k of keys) fields[k] = typeof parsed[k] === 'string' ? parsed[k] : ''
 

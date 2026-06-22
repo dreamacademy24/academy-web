@@ -8,6 +8,13 @@ interface FormState {
   q6: string; // 기타
 }
 
+// 항공편 합산 텍스트에서 날짜/시간 추출 ("대한항공 Ke601 2026-06-26 20:05" → date, time)
+function parseFlightText(text: string) {
+  const dateM = text.match(/(\d{4}-\d{2}-\d{2})/);
+  const timeM = text.match(/(\d{1,2}:\d{2})/);
+  return { date: dateM?.[1] || "", time: timeM?.[1] || "" };
+}
+
 const SIM_PLANS = ["2GB / 3일 / ₱75","6GB / 7일 / ₱149","24GB / 30일 / ₱499","36GB / 30일 / ₱599","48GB / 30일 / ₱699"];
 
 export default function CheckinFormPage() {
@@ -17,7 +24,7 @@ export default function CheckinFormPage() {
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({ q1: "", q2: "", q6: "" });
-  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
+  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:""});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
   const [extraPickups, setExtraPickups] = useState<{type:string;date:string;airline:string;flight:string;time:string}[]>([]);
   const [flightForm, setFlightForm] = useState({
@@ -188,7 +195,7 @@ export default function CheckinFormPage() {
         });
         try {
           const b = JSON.parse(det.bed_setting || "{}");
-          if (b.room1 || b.room2) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"});
+          if (b.room1 || b.room2 || b.room3) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||""});
         } catch {}
         try {
           const s = JSON.parse(det.usim_request || "[]");
@@ -223,18 +230,21 @@ export default function CheckinFormPage() {
         // 항공편 정보 pre-fill (booking 기본 데이터에서)
         if (d.booking) {
           const bk = d.booking;
+          // 합산 텍스트에서 날짜/시간 폴백 파싱 (flight_in = "대한항공 Ke601 2026-06-26 20:05")
+          const inParsed = parseFlightText(bk.flight_in || "");
+          const outParsed = parseFlightText(bk.flight_out || "");
           setFlightForm(prev => ({
             ...prev,
             flight_in_airline: prev.flight_in_airline || bk.flight_in_airline || "",
             flight_in_no: prev.flight_in_no || bk.flight_in_no || "",
-            flight_in_date: prev.flight_in_date || (bk.flight_in_date || "").split("T")[0] || "",
-            flight_in_time: prev.flight_in_time || bk.flight_in_time || "",
+            flight_in_date: prev.flight_in_date || (bk.flight_in_date || "").split("T")[0] || inParsed.date,
+            flight_in_time: prev.flight_in_time || bk.flight_in_time || inParsed.time,
             flight_in_origin: prev.flight_in_origin || bk.flight_in_origin || "",
             flight_in_undecided: prev.flight_in_undecided || !!bk.flight_in_undecided,
             flight_out_airline: prev.flight_out_airline || bk.flight_out_airline || "",
             flight_out_no: prev.flight_out_no || bk.flight_out_no || "",
-            flight_out_date: prev.flight_out_date || (bk.flight_out_date || "").split("T")[0] || "",
-            flight_out_time: prev.flight_out_time || bk.flight_out_time || "",
+            flight_out_date: prev.flight_out_date || (bk.flight_out_date || "").split("T")[0] || outParsed.date,
+            flight_out_time: prev.flight_out_time || bk.flight_out_time || outParsed.time,
             flight_out_destination: prev.flight_out_destination || bk.flight_out_destination || "",
             flight_out_undecided: prev.flight_out_undecided || !!bk.flight_out_undecided,
           }));
@@ -341,11 +351,21 @@ export default function CheckinFormPage() {
         </div>
 
         <div className="q">
-          <div className="q-title"><span className="q-num">3</span>원하시는 베드 세팅</div>
-          <div className="q-hint">보통 <b>2~3인: 마스터룸 베드2개</b> / <b>4인 이상: 마스터룸 베드2개 + 작은방 베드1개</b></div>
+          <div className="q-title"><span className="q-num">3</span>🛏️ 베드 세팅</div>
+          <div style={{background:"#f0f7ff",border:"1px solid #bfdbfe",borderRadius:10,padding:"14px 16px",marginBottom:14,lineHeight:1.7}}>
+            <div style={{fontSize:14,fontWeight:800,color:"#1e40af",marginBottom:6}}>베드 세팅 안내</div>
+            <div style={{fontSize:13,color:"#334155"}}>
+              방마다 매트리스를 요청하시는 대로 넣어드리고 있습니다.<br/>
+              <b>투숙 인원에 맞게 각 방별로 선택</b>해 주세요.
+            </div>
+            <div style={{fontSize:12,color:"#64748b",marginTop:6}}>
+              보통 2~3인: 마스터룸 베드 2개 / 4인 이상: 마스터룸 베드 2개 + 작은방 베드 1개
+            </div>
+          </div>
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             <div style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"12px 16px"}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:10,color:"#334"}}>룸 1 — 마스터룸 (큰방)</div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:4,color:"#334"}}>룸 1 — 마스터룸 (큰방)</div>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:8}}>화장실 연결된 메인 침실</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {["더블베드 1개 (2인 스테이)","더블베드 2개 (3~4인 스테이)"].map(opt=>(
                   <button key={opt} type="button"

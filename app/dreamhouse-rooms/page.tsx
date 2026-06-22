@@ -295,14 +295,14 @@ export default function DreamhouseRooms() {
         {loading ? (
           <div style={{textAlign:'center',padding:60,color:'#3b82f6',fontSize:18}}>불러오는 중...</div>
         ) : viewMode === 'grid' ? (
-          <div style={{overflowX:'auto',flex:1}}>
+          <div style={{overflowX:'auto',overflowY:'auto',flex:1}}>
             <table style={{borderCollapse:'collapse',minWidth:'100%'}}>
             <thead>
               <tr>
-                <th style={{position:'sticky',left:0,zIndex:10,background:'#1e3a8a',padding:'10px 8px',fontSize:12,color:'#dbeafe',borderRight:'2px solid #1e40af',borderBottom:'2px solid #1e40af',minWidth:70,textAlign:'center'}}>날짜</th>
+                <th style={{position:'sticky',left:0,top:0,zIndex:20,background:'#1e293b',padding:'10px 8px',fontSize:12,color:'#f1f5f9',borderRight:'2px solid #334155',borderBottom:'2px solid #334155',minWidth:70,textAlign:'center'}}>날짜</th>
                 {ROOMS.map((room, ri) => (
-                  <th key={room} style={{background:'#1e3a8a',padding:'10px 6px',fontSize:11,color:ROOM_COLORS[ri],borderRight:'1px solid #1e40af',borderBottom:'2px solid #1e40af',minWidth:68,textAlign:'center',fontWeight:700}}>
-                    {room}
+                  <th key={room} style={{position:'sticky',top:0,zIndex:15,background:'#1e293b',padding:'8px 6px 6px',fontSize:11,color:'#f1f5f9',borderRight:'1px solid #334155',borderBottom:'2px solid #334155',minWidth:68,textAlign:'center',fontWeight:700}}>
+                    <span style={{display:'inline-block',borderBottom:`3px solid ${ROOM_COLORS[ri]}`,paddingBottom:3}}>{room}</span>
                   </th>
                 ))}
               </tr>

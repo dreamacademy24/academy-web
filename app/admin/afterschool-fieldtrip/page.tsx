@@ -229,11 +229,23 @@ export default function AfterschoolFieldtripAdminPage() {
     if (!pushedAny) legacy.push(a);
   }
 
+  // 중복 제거: 같은 아이 + 같은 날짜 + 같은 프로그램 → 첫 번째만 유지
+  const _seenFlat = new Set<string>();
+  const _dedupIdx: number[] = [];
+  for (let i = 0; i < flat.length; i++) {
+    const r = flat[i];
+    const key = `${r.childName}||${r.month}-${r.day}||${r.programName}`;
+    if (_seenFlat.has(key)) continue;
+    _seenFlat.add(key);
+    _dedupIdx.push(i);
+  }
+  const dedupFlat = _dedupIdx.map(i => flat[i]);
+
   // 오늘 이전 날짜 제거
   const _now = new Date();
   const _todayM = _now.getMonth() + 1;
   const _todayD = _now.getDate();
-  const activFlat = flat.filter(r => r.month > _todayM || (r.month === _todayM && r.day >= _todayD));
+  const activFlat = dedupFlat.filter(r => r.month > _todayM || (r.month === _todayM && r.day >= _todayD));
 
   // 날짜 기준 그룹 (같은 날짜의 다른 토큰 키도 합침 — 예: "6-15-watergun" + "6-15-as" → 동일 그룹)
   const groupMap = new Map<string, FlatRow[]>();
@@ -263,7 +275,7 @@ export default function AfterschoolFieldtripAdminPage() {
     for (let i = 0; i < 7; i++) { const d = new Date(weekStart); d.setDate(d.getDate() + i); arr.push({ date: d, key: ymdA(d), label: `${d.getMonth() + 1}/${d.getDate()} (${KR_DOW[d.getDay()]})`, groups: [] }); }
     const year = weekStart.getFullYear();
     const dayMap = new Map<string, Map<string, FlatRow[]>>();
-    for (const r of flat) {
+    for (const r of dedupFlat) {
       const k = ymdA(new Date(year, r.month - 1, r.day));
       if (!arr.find((x) => x.key === k)) continue;
       let g = dayMap.get(k); if (!g) { g = new Map(); dayMap.set(k, g); }

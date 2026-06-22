@@ -178,8 +178,8 @@ export default function SettlementPage() {
       let invCount = 0, tutCount = 0;
 
       // 중복 방지: state(items) 대신 DB에서 최신 항목을 다시 읽어 dedup (빠른 더블클릭/stale 방지)
-      const { data: freshItems } = await supabase.from("settlement_items").select("label, amount, note").eq("booking_id", sel.id);
-      const cur = (freshItems || []) as { label: string; amount: number; note: string | null }[];
+      const { data: freshItems } = await supabase.from("settlement_items").select("label, amount, note, recorded_by").eq("booking_id", sel.id);
+      const cur = (freshItems || []) as { label: string; amount: number; note: string | null; recorded_by: string | null }[];
 
       // ── 1) 게스트 인보이스 현지지불(bookings.locals) ──
       const { data: bk } = await supabase.from("bookings").select("locals").eq("id", sel.id).maybeSingle();
@@ -197,7 +197,7 @@ export default function SettlementPage() {
           invCount++;
         });
 
-      // ── 2) 튜터 인보이스(tutor_lessons) — tutor_requests.booking_id → application_id 경유 (booking_id 직접컬럼 의존 X) ──
+      // ── 2) 튜터 인보이스(tutor_lessons) — 경로 A: tutor_requests.booking_id → application_id 경유 ──
       const lessonMap = new Map<string, any>();
       const { data: reqs } = await supabase.from("tutor_requests").select("id").eq("booking_id", sel.id);
       const reqIds = (reqs || []).map((r: any) => r.id);
@@ -205,11 +205,38 @@ export default function SettlementPage() {
         const { data: l2 } = await supabase.from("tutor_lessons").select("*").in("application_id", reqIds);
         (l2 || []).forEach((l: any) => lessonMap.set(String(l.id), l));
       }
+      // ── 경로 B (폴백): booking_id 없는 신청 → 예약자명·학생명으로 tutor_lessons 직접 매칭 ──
+      if (lessonMap.size === 0) {
+        const bkName = (sel.booker_name || "").trim();
+        const stuNames = studentNames(sel).split(",").map(s => s.trim()).filter(Boolean);
+        const candidates = [bkName, ...stuNames].filter(Boolean);
+        if (candidates.length) {
+          const orFilters = candidates.map(n => `house_or_reserver.ilike.%${n}%,student_names.ilike.%${n}%`).join(",");
+          let q = supabase.from("tutor_lessons").select("*").or(orFilters);
+          // 체류기간 겹침 필터 — 동명이인 방지
+          if (sel.checkin_date) q = q.gte("end_date", sel.checkin_date);
+          if (sel.checkout_date) q = q.lte("start_date", sel.checkout_date);
+          const { data: l3 } = await q;
+          (l3 || []).forEach((l: any) => lessonMap.set(String(l.id), l));
+        }
+        // 경로 B-2: tutor_requests에서도 이름 매칭으로 재검색 → lesson 연결
+        if (lessonMap.size === 0 && candidates.length) {
+          const orF2 = candidates.map(n => `guest_name.ilike.%${n}%,student_name_kr.ilike.%${n}%`).join(",");
+          const { data: reqs2 } = await supabase.from("tutor_requests").select("id").or(orF2);
+          const rIds2 = (reqs2 || []).map((r: any) => r.id);
+          if (rIds2.length) {
+            const { data: l4 } = await supabase.from("tutor_lessons").select("*").in("application_id", rIds2);
+            (l4 || []).forEach((l: any) => lessonMap.set(String(l.id), l));
+          }
+        }
+      }
       const tutExisting = new Set(cur.filter(i => i.note?.startsWith("튜터:")).map(i => i.note));
+      // 자동 생성 항목(시스템 튜터확정)도 이미 있으면 스킵 — label+amount 기준 dedup
+      const autoCreatedSet = new Set(cur.filter(i => i.recorded_by === "시스템(튜터확정)").map(i => `${i.amount}`));
       lessonMap.forEach((l) => {
         const amt = parseAmt(l.total_amount);
         const noteKey = `튜터:${String(l.id).slice(0, 12)}`;
-        if (amt <= 0 || tutExisting.has(noteKey)) return;
+        if (amt <= 0 || tutExisting.has(noteKey) || autoCreatedSet.has(`${amt}`)) return;
         const n = Number(l.total_sessions) || 0;
         const ds = tutorDates(l);
         const label = `튜터비${n ? ` ${n}회` : ""}${ds ? ` (${ds})` : ""}`;

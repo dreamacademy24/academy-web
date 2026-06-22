@@ -76,7 +76,15 @@ export default function AdminTodayPage() {
         }
       });
     });
-    setFtRows(rows);
+    // 중복 제거: 같은 아이 + 같은 프로그램 → 첫 번째만 유지
+    const _seenFt = new Set<string>();
+    const dedupRows = rows.filter(r => {
+      const key = `${r.child}||${r.program}`;
+      if (_seenFt.has(key)) return false;
+      _seenFt.add(key);
+      return true;
+    });
+    setFtRows(dedupRows);
     setLoading(false);
   }, []);
 

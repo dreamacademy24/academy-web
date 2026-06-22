@@ -21,9 +21,31 @@ export default function EngHubPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // 1) teacherSession 있으면 바로 사용
     try {
       const raw = localStorage.getItem("teacherSession");
-      if (raw) setStaff(JSON.parse(raw));
+      if (raw) { setStaff(JSON.parse(raw)); setReady(true); return; }
+    } catch {}
+    // 2) 어드민(korean_admin)으로 이미 로그인돼 있으면 자동 teacherSession 생성
+    try {
+      const adminInfo = localStorage.getItem("adminInfo");
+      const adminToken = localStorage.getItem("adminToken");
+      if (adminToken && adminInfo) {
+        const info = JSON.parse(adminInfo);
+        if (info.staffId) {
+          const autoStaff: Staff = {
+            username: info.staffId.startsWith("admin-") ? info.staffId : `admin-${info.staffId}`,
+            name: info.name || info.staffId,
+            role: "korean_admin",
+            color: "#1e3a5f",
+            initial: (info.name || "?").slice(0, 2).toUpperCase(),
+          };
+          localStorage.setItem("teacherSession", JSON.stringify(autoStaff));
+          setStaff(autoStaff);
+          setReady(true);
+          return;
+        }
+      }
     } catch {}
     setReady(true);
   }, []);
