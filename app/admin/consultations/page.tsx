@@ -48,8 +48,8 @@ export default function AdminConsultationsPage() {
   const [ready, setReady] = useState(false);
   const [list, setList] = useState<Consultation[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [view, setView] = useState<"list" | "create" | "detail">("list");
-  const [detail, setDetail] = useState<Consultation | null>(null);
+  const [sel, setSel] = useState<Consultation | null>(null);
+  const [mode, setMode] = useState<"view" | "create">("view");
   // create form
   const [fTitle, setFTitle] = useState("");
   const [fDesc, setFDesc] = useState("");
@@ -156,43 +156,45 @@ export default function AdminConsultationsPage() {
       const j = await res.json();
       if (!res.ok) return alert(j.error || "생성 실패");
       alert(publish ? "✅ 배포되었습니다" : "✅ 임시저장되었습니다");
-      resetForm(); load(); setView("list");
+      resetForm(); load(); setMode("view");
     } finally { setSaving(false); }
   }
-  function resetForm() { setFTitle(""); setFDesc(""); setFTarget("all"); setFSlots([]); setFInvites([]); }
+  function resetForm() { setFTitle(""); setFDesc(""); setFTarget("all"); setFSlots([]); setFInvites([]); setInvSearch(""); }
+
+  function startCreate() { resetForm(); setMode("create"); setSel(null); }
+  function backToList() { setMode("view"); }
 
   async function publishConsultation(c: Consultation) {
     if (!confirm("배포하시겠습니까? 엄마들이 볼 수 있게 됩니다.")) return;
     const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: c.id, status: "published" }) });
-    if (res.ok) { alert("✅ 배포 완료"); load(); if (detail?.id === c.id) refreshDetail(c.id); }
+    if (res.ok) { alert("✅ 배포 완료"); load(); if (sel?.id === c.id) refreshDetail(c.id); }
   }
   async function closeConsultation(c: Consultation) {
     if (!confirm("마감하시겠습니까?")) return;
     const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: c.id, status: "closed" }) });
-    if (res.ok) { alert("✅ 마감 완료"); load(); if (detail?.id === c.id) refreshDetail(c.id); }
+    if (res.ok) { alert("✅ 마감 완료"); load(); if (sel?.id === c.id) refreshDetail(c.id); }
   }
   async function deleteConsultation(c: Consultation) {
     if (!confirm(`"${c.title}" 삭제하시겠습니까?`)) return;
     const res = await fetch(`/api/admin/consultations?id=${c.id}`, { method: "DELETE" });
-    if (res.ok) { alert("삭제 완료"); if (detail?.id === c.id) { setDetail(null); setView("list"); } load(); }
+    if (res.ok) { alert("삭제 완료"); if (sel?.id === c.id) setSel(null); load(); }
   }
   async function addSlotToDetail() {
-    if (!detail || !addDate) return;
-    const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: detail.id, add_slots: [{ date: addDate, time: addTime }] }) });
-    if (res.ok) { setAddDate(""); load(); refreshDetail(detail.id); }
+    if (!sel || !addDate) return;
+    const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: sel.id, add_slots: [{ date: addDate, time: addTime }] }) });
+    if (res.ok) { setAddDate(""); load(); refreshDetail(sel.id); }
   }
   async function removeDetailSlot(slotId: string) {
-    if (!detail || !confirm("이 슬롯을 삭제합니까?")) return;
-    const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: detail.id, remove_slot_ids: [slotId] }) });
-    if (res.ok) { load(); refreshDetail(detail.id); }
+    if (!sel || !confirm("이 슬롯을 삭제합니까?")) return;
+    const res = await fetch("/api/admin/consultations", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: sel.id, remove_slot_ids: [slotId] }) });
+    if (res.ok) { load(); refreshDetail(sel.id); }
   }
   async function refreshDetail(id: string) {
     const res = await fetch("/api/admin/consultations");
     const j = await res.json();
     const found = j.consultations?.find((c: Consultation) => c.id === id);
-    if (found) setDetail(found);
+    if (found) setSel(found);
   }
-  function openDetail(c: Consultation) { setDetail(c); setView("detail"); }
 
   if (!ready) return null;
 
@@ -202,55 +204,79 @@ export default function AdminConsultationsPage() {
     closed: { bg: "#fee2e2", color: "#dc2626", label: "마감" },
   };
 
-  /* ── 대상 선택 UI (정산 관리 스타일 카드 리스트) ── */
-  const InviteList = () => (
-    <div style={{ marginTop: 8 }}>
-      {/* 필터 탭 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
-        {([
-          { k: "staying" as const, icon: "🟢", label: `투숙중 ${stayingCount}` },
-          { k: "upcoming" as const, icon: "🏨", label: "예정" },
-          { k: "all" as const, icon: "", label: "전체" },
-        ]).map(f => (
-          <button key={f.k} onClick={() => { setInvFilter(f.k); setInvSearch(""); }}
-            style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-              border: invFilter === f.k ? "1.5px solid #1a6fc4" : "1px solid #e2e8f0",
-              background: invFilter === f.k ? "#eff6ff" : "#fff", color: invFilter === f.k ? "#1a6fc4" : "#64748b" }}>
-            {f.icon ? `${f.icon} ` : ""}{f.label}
-          </button>
-        ))}
+  /* ── 좌측: 상담 목록 카드 ── */
+  const LeftConsultationList = () => (
+    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontWeight: 800, fontSize: 14, flex: 1 }}>📋 상담 목록</span>
+        <button onClick={startCreate} style={{ padding: "5px 12px", borderRadius: 7, border: "1px solid #1a6fc4", background: "#eff6ff", color: "#1a6fc4", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ 새 상담</button>
       </div>
-      {/* 검색 */}
-      <input value={invSearch} onChange={e => setInvSearch(e.target.value)}
-        placeholder="검색 (이름·예약번호·방번호) — 검색 시 전체 0"
-        style={{ width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", marginBottom: 8, outline: "none" }} />
-      {/* 선택된 수 */}
-      <div style={{ fontSize: 12, color: "#1a6fc4", fontWeight: 700, marginBottom: 6 }}>
-        ✅ {fInvites.length}명 선택됨 {fInvites.length > 0 && <span onClick={() => setFInvites([])} style={{ color: "#dc2626", cursor: "pointer", marginLeft: 8, fontWeight: 400 }}>전체 해제</span>}
+      <div style={{ maxHeight: 560, overflowY: "auto" }}>
+        {list.length === 0 && <div style={{ padding: 24, color: "#94a3b8", fontSize: 13, textAlign: "center" }}>등록된 상담이 없습니다</div>}
+        {list.map(c => {
+          const total = c.consultation_slots?.length || 0;
+          const booked = c.consultation_slots?.filter(s => s.status === "booked").length || 0;
+          const sb = SB[c.status] || SB.draft;
+          const active = sel?.id === c.id;
+          return (
+            <div key={c.id} onClick={() => { setSel(c); setMode("view"); }}
+              style={{ padding: "12px 14px", cursor: "pointer", borderBottom: "1px solid #f8fafc", background: active ? "#eff6ff" : "#fff", transition: "background 120ms" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 800, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 8, background: sb.bg, color: sb.color, flexShrink: 0 }}>{sb.label}</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#64748b", alignItems: "center" }}>
+                <span>슬롯 {total}</span>
+                <span style={{ color: "#16a34a", fontWeight: 700 }}>예약 {booked}</span>
+                {c.target_type === "selected" && <span style={{ color: "#b45309", fontWeight: 600 }}>특정</span>}
+                <span style={{ marginLeft: "auto", color: "#cbd5e1", fontSize: 10 }}>{new Date(c.created_at).toLocaleDateString("ko-KR")}</span>
+              </div>
+              {total > 0 && <div style={{ height: 4, borderRadius: 2, background: "#e2e8f0", marginTop: 6, overflow: "hidden" }}><div style={{ height: "100%", borderRadius: 2, background: "linear-gradient(90deg,#1a6fc4,#38bdf8)", width: `${(booked / total) * 100}%`, transition: "width 300ms" }} /></div>}
+            </div>
+          );
+        })}
       </div>
-      {/* 카드 리스트 */}
-      <div style={{ maxHeight: 400, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff" }}>
-        {filteredBookings.length === 0 && <div style={{ padding: 24, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>표시할 예약이 없습니다</div>}
+    </div>
+  );
+
+  /* ── 좌측: 대상 선택 (생성 모드에서 "특정 대상" 선택 시) ── */
+  const LeftBookingSelect = () => (
+    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ padding: 12, borderBottom: "1px solid #f1f5f9" }}>
+        <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>👩 대상 선택</div>
+        <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
+          {([["staying", `🟢 투숙중${stayingCount ? ` ${stayingCount}` : ""}`], ["upcoming", "📅 예정"], ["all", "전체"]] as [typeof invFilter, string][]).map(([k, lbl]) => (
+            <button key={k} onClick={() => { setInvFilter(k); setInvSearch(""); }}
+              style={{ flex: 1, fontSize: 11, fontWeight: 700, padding: "6px 0", borderRadius: 7, border: `1px solid ${invFilter === k ? "#1a6fc4" : "#e2e8f0"}`, background: invFilter === k ? "#eff6ff" : "#fff", color: invFilter === k ? "#1a6fc4" : "#64748b", cursor: "pointer", fontFamily: "inherit" }}>{lbl}</button>
+          ))}
+        </div>
+        <input value={invSearch} onChange={e => setInvSearch(e.target.value)}
+          placeholder="검색 (이름·방번호)"
+          style={{ width: "100%", padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+        <div style={{ fontSize: 11, color: "#1a6fc4", fontWeight: 700, marginTop: 6 }}>
+          ✅ {fInvites.length}명 선택됨 {fInvites.length > 0 && <span onClick={() => setFInvites([])} style={{ color: "#dc2626", cursor: "pointer", marginLeft: 6 }}>해제</span>}
+        </div>
+      </div>
+      <div style={{ maxHeight: 440, overflowY: "auto" }}>
+        {filteredBookings.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 12 }}>표시할 예약 없음</div>}
         {filteredBookings.map(b => {
-          const sel = fInvites.includes(b.id);
+          const checked = fInvites.includes(b.id);
+          const staying = isStaying(b);
           const room = b.house_no || b.accom_room || "";
           const stu = stuNames(b);
-          const staying = isStaying(b);
           return (
             <div key={b.id} onClick={() => toggleInvite(b.id)}
-              style={{ padding: "10px 14px", borderBottom: "1px solid #f1f5f9", cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                background: sel ? "#eff6ff" : "transparent", transition: "background 150ms" }}>
-              <input type="checkbox" checked={sel} readOnly style={{ width: 16, height: 16, accentColor: "#1a6fc4", flexShrink: 0 }} />
+              style={{ padding: "9px 13px", borderBottom: "1px solid #f1f5f9", cursor: "pointer", display: "flex", alignItems: "center", gap: 9, background: checked ? "#eff6ff" : "transparent" }}>
+              <input type="checkbox" checked={checked} readOnly style={{ width: 15, height: 15, accentColor: "#1a6fc4", flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontWeight: 800, fontSize: 14 }}>{b.booker_name}</span>
-                  {staying && <span style={{ fontSize: 10, fontWeight: 700, background: "#dcfce7", color: "#16a34a", padding: "1px 6px", borderRadius: 8 }}>투숙중</span>}
+                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{b.booker_name}</span>
+                  {staying && <span style={{ fontSize: 9, fontWeight: 700, background: "#dcfce7", color: "#16a34a", padding: "1px 5px", borderRadius: 6 }}>투숙중</span>}
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                  {room && <span style={{ marginRight: 6 }}>{room}</span>}
-                  · {b.checkin_date}
+                <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>
+                  {room && <span>{room} · </span>}{b.checkin_date}
                 </div>
-                {stu && <div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>👶 {stu}</div>}
+                {stu && <div style={{ fontSize: 10, color: "#64748b", marginTop: 1 }}>👶 {stu}</div>}
               </div>
             </div>
           );
@@ -259,251 +285,225 @@ export default function AdminConsultationsPage() {
     </div>
   );
 
-  return (<>
-    <style>{`
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.cw{max-width:960px;margin:0 auto;padding:24px 20px}
-.hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.hdr h1{font-size:22px;font-weight:800;flex:1}
-.btn{padding:8px 16px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 150ms}
-.btn-blue{background:#1a6fc4;color:#fff}.btn-blue:hover{background:#1558a0}
-.btn-green{background:#16a34a;color:#fff}.btn-green:hover{background:#15803d}
-.btn-gray{background:#fff;color:#64748b;border:1px solid #e2e8f0}.btn-gray:hover{background:#f8fafc}
-.btn-red{background:#fee2e2;color:#dc2626}.btn-red:hover{background:#fecaca}
-.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
-.box{background:#fff;border-radius:12px;padding:20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
-.box label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;margin-top:14px}
-.box label:first-child{margin-top:0}
-.box input,.box textarea,.box select{width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none}
-.box textarea{min-height:80px;resize:vertical}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
-.bar{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;margin-top:8px}
-.bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#1a6fc4,#38bdf8);transition:width 300ms}
-.slot-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.slot-chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:#e0f2fe;color:#0369a1}
-.slot-chip .x{cursor:pointer;margin-left:4px;color:#94a3b8;font-weight:700}.slot-chip .x:hover{color:#dc2626}
-/* 목록 카드 */
-.c-card{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:pointer;border:2px solid transparent;transition:all 150ms}
-.c-card:hover{border-color:#1a6fc4;box-shadow:0 4px 16px rgba(26,111,196,0.1)}
-/* 결과 카드 */
-.res-card{padding:12px 16px;border-radius:10px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;margin-bottom:8px;background:#fff}
-.res-card .num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
-@media(max-width:600px){.cw{padding:16px 12px}.slot-row{flex-direction:column;align-items:stretch}}
-    `}</style>
+  /* ── 우측: 상세 뷰 ── */
+  const RightDetail = () => {
+    if (!sel) return (
+      <div style={{ background: "#fff", border: "2px dashed #e2e8f0", borderRadius: 12, padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>
+        ← 왼쪽에서 상담을 선택하세요
+      </div>
+    );
 
-    <div className="cw">
-      <div className="hdr">
-        <button className="btn btn-gray" onClick={() => router.push("/admin/hub")}>← 관리자 홈</button>
-        <h1>📋 상담 예약 관리</h1>
-        {view !== "list" && <button className="btn btn-gray" onClick={() => { setView("list"); setDetail(null); }}>← 목록</button>}
-        {view === "list" && <button className="btn btn-blue" onClick={() => { resetForm(); setView("create"); }}>+ 새 상담 만들기</button>}
+    const slots = [...(sel.consultation_slots || [])].sort((a, b) =>
+      `${a.slot_date} ${a.slot_time}`.localeCompare(`${b.slot_date} ${b.slot_time}`)
+    );
+    const total = slots.length;
+    const booked = slots.filter(s => s.status === "booked").length;
+    const sb = SB[sel.status] || SB.draft;
+    const bookedSlots = slots.filter(s => s.status === "booked");
+    const availSlots = slots.filter(s => s.status === "available");
+    // 날짜별 그룹
+    const byDate: Record<string, Slot[]> = {};
+    for (const s of slots) { if (!byDate[s.slot_date]) byDate[s.slot_date] = []; byDate[s.slot_date].push(s); }
+
+    return (<>
+      {/* 헤더 + 통계 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>{sel.title}</h2>
+        <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: sb.bg, color: sb.color }}>{sb.label}</span>
+        {sel.target_type === "selected" && <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: "#fef3c7", color: "#b45309" }}>특정 대상</span>}
+      </div>
+      {sel.description && <p style={{ fontSize: 13, color: "#64748b", whiteSpace: "pre-wrap", marginBottom: 12, lineHeight: 1.6 }}>{sel.description}</p>}
+
+      {/* 통계 카드 3개 */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ padding: "10px 18px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0", flex: 1 }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700 }}>전체 슬롯</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1a1a2e" }}>{total}</div>
+        </div>
+        <div style={{ padding: "10px 18px", background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0", flex: 1 }}>
+          <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>예약 완료</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#16a34a" }}>{booked}</div>
+        </div>
+        <div style={{ padding: "10px 18px", background: "#eff6ff", borderRadius: 10, border: "1px solid #bfdbfe", flex: 1 }}>
+          <div style={{ fontSize: 11, color: "#1a6fc4", fontWeight: 700 }}>잔여</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#1a6fc4" }}>{total - booked}</div>
+        </div>
+      </div>
+      {total > 0 && <div style={{ height: 8, borderRadius: 4, background: "#e2e8f0", overflow: "hidden", marginBottom: 14 }}><div style={{ height: "100%", borderRadius: 4, background: "linear-gradient(90deg,#1a6fc4,#38bdf8)", width: `${(booked / total) * 100}%`, transition: "width 300ms" }} /></div>}
+
+      {/* 액션 버튼 */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {sel.status === "draft" && <button style={{ padding: "7px 14px", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#16a34a", color: "#fff" }} onClick={() => publishConsultation(sel)}>📢 배포하기</button>}
+        {sel.status === "published" && <button style={{ padding: "7px 14px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", background: "#fff", color: "#64748b" }} onClick={() => closeConsultation(sel)}>마감</button>}
+        <button style={{ padding: "5px 10px", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", background: "#fee2e2", color: "#dc2626", marginLeft: "auto" }} onClick={() => deleteConsultation(sel)}>삭제</button>
       </div>
 
-      {/* ═══ 목록 ═══ */}
-      {view === "list" && (<>
-        {list.length === 0 && <div className="box" style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>등록된 상담이 없습니다</div>}
-        {list.map(c => {
-          const total = c.consultation_slots?.length || 0;
-          const booked = c.consultation_slots?.filter(s => s.status === "booked").length || 0;
-          const sb = SB[c.status] || SB.draft;
-          return (
-            <div key={c.id} className="c-card" onClick={() => openDetail(c)}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 16, fontWeight: 800, flex: 1 }}>{c.title}</span>
-                <span className="badge" style={{ background: sb.bg, color: sb.color }}>{sb.label}</span>
-                {c.target_type === "selected" && <span className="badge" style={{ background: "#fef3c7", color: "#b45309" }}>특정 대상</span>}
+      {/* ✅ 예약 결과 — 가장 눈에 잘 띄는 위치 */}
+      {booked > 0 && (
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 10, color: "#16a34a" }}>✅ 예약 결과 ({booked}건)</h3>
+          {bookedSlots.map((s, i) => (
+            <div key={s.id} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 12, marginBottom: 6, background: "#f8fafc" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff", background: "#16a34a", flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 14 }}>{s.booked_name || "?"}</div>
+                {s.booked_student && <div style={{ fontSize: 12, color: "#64748b" }}>👶 {s.booked_student}</div>}
               </div>
-              <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#64748b" }}>
-                <span>슬롯 {total}개</span>
-                <span style={{ color: "#16a34a", fontWeight: 700 }}>예약 {booked}건</span>
-                <span>잔여 {total - booked}</span>
-                <span style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8" }}>{new Date(c.created_at).toLocaleDateString("ko-KR")}</span>
-              </div>
-              {total > 0 && <div className="bar"><div className="bar-fill" style={{ width: `${(booked / total) * 100}%` }} /></div>}
-              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                {c.status === "draft" && <button className="btn btn-green btn-sm" onClick={e => { e.stopPropagation(); publishConsultation(c); }}>📢 배포</button>}
-                {c.status === "published" && <button className="btn btn-gray btn-sm" onClick={e => { e.stopPropagation(); closeConsultation(c); }}>마감</button>}
-                <button className="btn btn-red btn-sm" onClick={e => { e.stopPropagation(); deleteConsultation(c); }}>삭제</button>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#1a6fc4" }}>{fmtDate(s.slot_date)}</div>
+                <div style={{ fontSize: 13, color: "#64748b" }}>{s.slot_time}</div>
               </div>
             </div>
-          );
-        })}
-      </>)}
-
-      {/* ═══ 생성 ═══ */}
-      {view === "create" && (<>
-        <div className="box">
-          <label>상담 제목 *</label>
-          <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="예: 6월 학습 상담" />
-          <label>안내 문구</label>
-          <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="엄마들에게 보여질 안내 메시지를 입력하세요" />
-          <label>대상</label>
-          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-            <button className={`btn ${fTarget === "all" ? "btn-blue" : "btn-gray"}`} onClick={() => setFTarget("all")}>전체</button>
-            <button className={`btn ${fTarget === "selected" ? "btn-blue" : "btn-gray"}`} onClick={() => setFTarget("selected")}>특정 대상 선택</button>
-          </div>
-          {fTarget === "selected" && <InviteList />}
+          ))}
         </div>
+      )}
 
-        <div className="box">
-          <label>시간 슬롯 추가</label>
-          <div className="slot-row" style={{ marginTop: 4 }}>
-            <input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} style={{ flex: 1 }} />
-            <select value={slotTime} onChange={e => setSlotTime(e.target.value)} style={{ width: 100 }}>
-              {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <button className="btn btn-blue btn-sm" onClick={addSlot}>+ 추가</button>
-          </div>
-          {fSlots.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-              {fSlots.map((s, i) => (
-                <span key={i} className="slot-chip">{fmtDate(s.date)} {s.time}<span className="x" onClick={() => removeSlot(i)}>×</span></span>
-              ))}
-            </div>
-          )}
-          {fSlots.length === 0 && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>날짜와 시간을 선택하고 [+ 추가]를 눌러주세요</p>}
+      {/* 미예약 경고 */}
+      {availSlots.length > 0 && booked > 0 && (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#b45309" }}>⚠️ {availSlots.length}개 슬롯이 아직 비어있습니다</div>
+          <div style={{ fontSize: 11, color: "#92400e", marginTop: 3 }}>{availSlots.map(s => `${fmtDate(s.slot_date)} ${s.slot_time}`).join(" · ")}</div>
         </div>
+      )}
 
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button className="btn btn-gray" onClick={() => createConsultation(false)} disabled={saving}>임시저장</button>
-          <button className="btn btn-green" onClick={() => createConsultation(true)} disabled={saving}>{saving ? "처리 중..." : "📢 바로 배포"}</button>
-        </div>
-      </>)}
-
-      {/* ═══ 상세 (현황판 + 결과) ═══ */}
-      {view === "detail" && detail && (() => {
-        const slots = [...(detail.consultation_slots || [])].sort((a, b) =>
-          `${a.slot_date} ${a.slot_time}`.localeCompare(`${b.slot_date} ${b.slot_time}`)
-        );
-        const total = slots.length;
-        const booked = slots.filter(s => s.status === "booked").length;
-        const sb = SB[detail.status] || SB.draft;
-        const bookedSlots = slots.filter(s => s.status === "booked");
-        const availSlots = slots.filter(s => s.status === "available");
-        // 날짜별 그룹
-        const byDate: Record<string, Slot[]> = {};
-        for (const s of slots) { if (!byDate[s.slot_date]) byDate[s.slot_date] = []; byDate[s.slot_date].push(s); }
-
-        return (<>
-          {/* 헤더 정보 */}
-          <div className="box">
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>{detail.title}</h2>
-              <span className="badge" style={{ background: sb.bg, color: sb.color, fontSize: 13, padding: "4px 12px" }}>{sb.label}</span>
-            </div>
-            {detail.description && <p style={{ fontSize: 13, color: "#64748b", whiteSpace: "pre-wrap", marginBottom: 10, lineHeight: 1.6 }}>{detail.description}</p>}
-            {/* 통계 카드 */}
-            <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
-              <div style={{ padding: "10px 18px", background: "#f8fafc", borderRadius: 10, border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700 }}>전체 슬롯</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#1a1a2e" }}>{total}</div>
-              </div>
-              <div style={{ padding: "10px 18px", background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0" }}>
-                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>예약 완료</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#16a34a" }}>{booked}</div>
-              </div>
-              <div style={{ padding: "10px 18px", background: "#eff6ff", borderRadius: 10, border: "1px solid #bfdbfe" }}>
-                <div style={{ fontSize: 11, color: "#1a6fc4", fontWeight: 700 }}>잔여</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#1a6fc4" }}>{total - booked}</div>
-              </div>
-            </div>
-            {total > 0 && <div className="bar" style={{ marginTop: 12 }}><div className="bar-fill" style={{ width: `${(booked / total) * 100}%` }} /></div>}
-            <div style={{ display: "flex", gap: 6, marginTop: 14 }}>
-              {detail.status === "draft" && <button className="btn btn-green" onClick={() => publishConsultation(detail)}>📢 배포하기</button>}
-              {detail.status === "published" && <button className="btn btn-gray" onClick={() => closeConsultation(detail)}>마감</button>}
-              <button className="btn btn-red btn-sm" style={{ marginLeft: "auto" }} onClick={() => deleteConsultation(detail)}>삭제</button>
-            </div>
-          </div>
-
-          {/* ✅ 예약 결과 (예약된 슬롯이 있을 때) */}
-          {booked > 0 && (
-            <div className="box">
-              <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>✅ 예약 결과 ({booked}건)</h3>
-              {bookedSlots.map((s, i) => (
-                <div key={s.id} className="res-card">
-                  <div className="num" style={{ background: "#16a34a" }}>{i + 1}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14 }}>{s.booked_name || "?"}</div>
-                    {s.booked_student && <div style={{ fontSize: 12, color: "#64748b" }}>👶 {s.booked_student}</div>}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1a6fc4" }}>{fmtDate(s.slot_date)}</div>
-                    <div style={{ fontSize: 13, color: "#64748b" }}>{s.slot_time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ⏰ 전체 슬롯 현황 */}
-          <div className="box">
-            <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>⏰ 시간 슬롯 현황</h3>
-            {Object.entries(byDate).map(([date, dateSlots]) => (
-              <div key={date} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "#1a6fc4", marginBottom: 6, paddingLeft: 2 }}>📅 {fmtDate(date)}</div>
-                {dateSlots.map(s => (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", padding: "8px 12px", borderRadius: 8, marginBottom: 4,
-                    background: s.status === "booked" ? "#f0fdf4" : "#f8fafc", border: `1px solid ${s.status === "booked" ? "#bbf7d0" : "#e2e8f0"}` }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, width: 60 }}>{s.slot_time}</span>
-                    {s.status === "booked" ? (<>
-                      <span className="badge" style={{ background: "#dcfce7", color: "#16a34a", marginRight: 8 }}>예약됨</span>
-                      <span style={{ fontSize: 13, fontWeight: 600 }}>{s.booked_name}{s.booked_student ? ` (${s.booked_student})` : ""}</span>
-                    </>) : (<>
-                      <span className="badge" style={{ background: "#f1f5f9", color: "#94a3b8" }}>대기</span>
-                      <span style={{ marginLeft: "auto" }}>
-                        {detail.status !== "closed" && <button className="btn btn-red btn-sm" onClick={() => removeDetailSlot(s.id)}>×</button>}
-                      </span>
-                    </>)}
-                  </div>
-                ))}
+      {/* ⏰ 전체 슬롯 현황 */}
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 10 }}>⏰ 시간 슬롯 현황</h3>
+        {Object.entries(byDate).map(([date, dateSlots]) => (
+          <div key={date} style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#1a6fc4", marginBottom: 5 }}>📅 {fmtDate(date)}</div>
+            {dateSlots.map(s => (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", padding: "7px 10px", borderRadius: 8, marginBottom: 3,
+                background: s.status === "booked" ? "#f0fdf4" : "#f8fafc", border: `1px solid ${s.status === "booked" ? "#bbf7d0" : "#e2e8f0"}` }}>
+                <span style={{ fontWeight: 700, fontSize: 13, width: 50 }}>{s.slot_time}</span>
+                {s.status === "booked" ? (<>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 6, background: "#dcfce7", color: "#16a34a", marginRight: 6 }}>예약됨</span>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{s.booked_name}{s.booked_student ? ` (${s.booked_student})` : ""}</span>
+                </>) : (<>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 6, background: "#f1f5f9", color: "#94a3b8" }}>대기</span>
+                  <span style={{ marginLeft: "auto" }}>
+                    {sel.status !== "closed" && <button onClick={() => removeDetailSlot(s.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "3px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>×</button>}
+                  </span>
+                </>)}
               </div>
             ))}
-            {/* 슬롯 추가 */}
-            {detail.status !== "closed" && (
-              <div className="slot-row" style={{ marginTop: 8, paddingTop: 10, borderTop: "1px solid #e2e8f0" }}>
-                <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} style={{ flex: 1, padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit" }} />
-                <select value={addTime} onChange={e => setAddTime(e.target.value)} style={{ width: 100, padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit" }}>
-                  {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <button className="btn btn-blue btn-sm" onClick={addSlotToDetail}>+ 슬롯 추가</button>
-              </div>
-            )}
           </div>
+        ))}
+        {/* 슬롯 추가 */}
+        {sel.status !== "closed" && (
+          <div style={{ display: "flex", gap: 6, marginTop: 8, paddingTop: 8, borderTop: "1px solid #f1f5f9", flexWrap: "wrap", alignItems: "center" }}>
+            <input type="date" value={addDate} onChange={e => setAddDate(e.target.value)} style={{ flex: 1, padding: "7px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12, fontFamily: "inherit", outline: "none", minWidth: 120 }} />
+            <select value={addTime} onChange={e => setAddTime(e.target.value)} style={{ width: 80, padding: "7px 8px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12, fontFamily: "inherit", outline: "none" }}>
+              {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button onClick={addSlotToDetail} style={{ padding: "7px 12px", borderRadius: 8, border: "1px solid #1a6fc4", background: "#eff6ff", color: "#1a6fc4", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ 추가</button>
+          </div>
+        )}
+      </div>
 
-          {/* 미예약 슬롯 안내 */}
-          {availSlots.length > 0 && booked > 0 && (
-            <div className="box" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#b45309" }}>
-                ⚠️ 아직 {availSlots.length}개 슬롯이 비어있습니다
-              </div>
-              <div style={{ fontSize: 12, color: "#92400e", marginTop: 4 }}>
-                {availSlots.map(s => `${fmtDate(s.slot_date)} ${s.slot_time}`).join(" · ")}
-              </div>
-            </div>
-          )}
+      {/* 초대 대상 */}
+      {sel.target_type === "selected" && sel.consultation_invites?.length > 0 && (
+        <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "16px 18px" }}>
+          <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>👩 초대 대상 ({sel.consultation_invites.length}명)</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {sel.consultation_invites.map(inv => {
+              const bk = bookings.find(b => b.id === inv.booking_id);
+              const hasBooked = bookedSlots.some(s => s.booked_name === bk?.booker_name);
+              return (
+                <span key={inv.id} style={{ padding: "3px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600,
+                  background: hasBooked ? "#dcfce7" : "#fee2e2", color: hasBooked ? "#16a34a" : "#dc2626",
+                  border: `1px solid ${hasBooked ? "#bbf7d0" : "#fecaca"}` }}>
+                  {hasBooked ? "✅ " : "⏳ "}{bk?.booker_name || inv.booking_id.slice(0, 8)}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>);
+  };
 
-          {/* 초대 대상 */}
-          {detail.target_type === "selected" && detail.consultation_invites?.length > 0 && (
-            <div className="box">
-              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>👩 초대 대상 ({detail.consultation_invites.length}명)</h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {detail.consultation_invites.map(inv => {
-                  const bk = bookings.find(b => b.id === inv.booking_id);
-                  const hasBooked = bookedSlots.some(s => s.booked_name === bk?.booker_name);
-                  return (
-                    <span key={inv.id} style={{ padding: "4px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      background: hasBooked ? "#dcfce7" : "#fee2e2", color: hasBooked ? "#16a34a" : "#dc2626",
-                      border: `1px solid ${hasBooked ? "#bbf7d0" : "#fecaca"}` }}>
-                      {hasBooked ? "✅ " : "⏳ "}{bk?.booker_name || inv.booking_id.slice(0, 8)}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>);
-      })()}
+  /* ── 우측: 생성 폼 ── */
+  const RightCreateForm = () => (
+    <>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <button onClick={backToList} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#fff", color: "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>← 목록</button>
+        <h2 style={{ fontSize: 18, fontWeight: 800, flex: 1 }}>새 상담 만들기</h2>
+      </div>
+
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "18px 20px", marginBottom: 12 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>상담 제목 *</label>
+        <input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="예: 6월 학습 상담"
+          style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 14 }} />
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>안내 문구</label>
+        <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="엄마들에게 보여질 안내 메시지를 입력하세요"
+          style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 70, marginBottom: 14 }} />
+
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 4 }}>대상</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setFTarget("all")} style={{ padding: "7px 16px", borderRadius: 8, border: `1.5px solid ${fTarget === "all" ? "#1a6fc4" : "#e2e8f0"}`, background: fTarget === "all" ? "#eff6ff" : "#fff", color: fTarget === "all" ? "#1a6fc4" : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>전체</button>
+          <button onClick={() => setFTarget("selected")} style={{ padding: "7px 16px", borderRadius: 8, border: `1.5px solid ${fTarget === "selected" ? "#1a6fc4" : "#e2e8f0"}`, background: fTarget === "selected" ? "#eff6ff" : "#fff", color: fTarget === "selected" ? "#1a6fc4" : "#64748b", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>특정 대상 선택 ←</button>
+        </div>
+        {fTarget === "selected" && <p style={{ fontSize: 11, color: "#1a6fc4", marginTop: 6 }}>👈 왼쪽 패널에서 대상 엄마를 선택하세요</p>}
+      </div>
+
+      <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "18px 20px", marginBottom: 12 }}>
+        <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6 }}>시간 슬롯 추가</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <input type="date" value={slotDate} onChange={e => setSlotDate(e.target.value)} style={{ flex: 1, padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", minWidth: 120 }} />
+          <select value={slotTime} onChange={e => setSlotTime(e.target.value)} style={{ width: 85, padding: "8px 8px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }}>
+            {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <button onClick={addSlot} style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#1a6fc4", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ 추가</button>
+        </div>
+        {fSlots.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+            {fSlots.map((s, i) => (
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 7, fontSize: 12, fontWeight: 600, background: "#e0f2fe", color: "#0369a1" }}>
+                {fmtDate(s.date)} {s.time}
+                <span onClick={() => removeSlot(i)} style={{ cursor: "pointer", marginLeft: 3, color: "#94a3b8", fontWeight: 700 }}>×</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {fSlots.length === 0 && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>날짜와 시간을 선택하고 [+ 추가]를 눌러주세요</p>}
+      </div>
+
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button onClick={() => createConsultation(false)} disabled={saving} style={{ padding: "8px 16px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", background: "#fff", color: "#64748b" }}>임시저장</button>
+        <button onClick={() => createConsultation(true)} disabled={saving} style={{ padding: "8px 16px", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", background: "#16a34a", color: "#fff" }}>{saving ? "처리 중..." : "📢 바로 배포"}</button>
+      </div>
+    </>
+  );
+
+  /* ── 렌더 ── */
+  return (<>
+    <style>{`*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}`}</style>
+    <div style={{ maxWidth: 1020, margin: "0 auto", padding: "24px 20px" }}>
+      {/* 헤더 */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <button onClick={() => router.push("/admin/hub")} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>← 관리자 홈</button>
+        <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>🗓 상담 예약 관리</h1>
+      </div>
+      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>상담 일정을 만들고 배포하면, 엄마들이 포털에서 원하는 시간에 예약할 수 있습니다. 예약 결과는 상담을 클릭해서 확인하세요.</p>
+
+      {/* 좌우 분할 */}
+      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 18, alignItems: "start" }}>
+        {/* ── 좌측 패널 ── */}
+        {mode === "create" && fTarget === "selected"
+          ? <LeftBookingSelect />
+          : <LeftConsultationList />
+        }
+
+        {/* ── 우측 패널 ── */}
+        <div>
+          {mode === "create"
+            ? <RightCreateForm />
+            : <RightDetail />
+          }
+        </div>
+      </div>
     </div>
   </>);
 }
