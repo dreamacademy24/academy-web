@@ -28,6 +28,16 @@ type Booking = {
   checkout_date: string
   booker_name?: string
   reservation_no?: string
+  students?: any
+  room_locked?: boolean
+}
+
+function stuNames(b: Booking): string {
+  const raw = b.students
+  let arr: any[] = []
+  if (Array.isArray(raw)) arr = raw
+  else if (typeof raw === 'string') { try { const p = JSON.parse(raw); if (Array.isArray(p)) arr = p } catch {} }
+  return arr.map((s: any) => s?.name_kr || s?.korName || s?.name || '').filter(Boolean).join(', ')
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -190,9 +200,9 @@ export default function DreamhouseRooms() {
   const DOW_KO = ['일','월','화','수','목','금','토']
 
   return (
-    <div style={{minHeight:'100vh',background:'#f8fafc',color:'#1e293b',fontFamily:'sans-serif',display:'flex'}}>
+    <div style={{height:'100vh',background:'#f8fafc',color:'#1e293b',fontFamily:'sans-serif',display:'flex',overflow:'hidden'}}>
       {/* 사이드패널 */}
-      <aside style={{width:260,flexShrink:0,background:'#f8fafc',borderRight:'1px solid #e2e8f0',padding:16,height:'100vh',position:'sticky',top:0,overflowY:'auto'}}>
+      <aside style={{width:260,flexShrink:0,background:'#f8fafc',borderRight:'1px solid #e2e8f0',padding:16,height:'100vh',overflowY:'auto'}}>
         {/* 헤더 */}
         <div style={{marginBottom:16}}>
           <button onClick={()=>router.push('/admin')} style={{background:'transparent',border:'1px solid #cbd5e1',color:'#475569',padding:'6px 10px',borderRadius:6,cursor:'pointer',fontSize:12,marginBottom:10}}>← 어드민</button>
@@ -270,7 +280,7 @@ export default function DreamhouseRooms() {
       </aside>
 
       {/* 캘린더 영역 */}
-      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
+      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
         {/* 월 네비게이션 */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'14px 24px',borderBottom:'1px solid #e2e8f0',background:'#ffffff'}}>
           <button onClick={prevMonth} style={{background:'#f1f5f9',border:'1px solid #cbd5e1',color:'#475569',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:14}}>‹</button>
@@ -393,12 +403,14 @@ export default function DreamhouseRooms() {
                           {!isDouble && !isConflict && isCheckin && b && (
                             <div style={{fontSize:9,color:ROOM_COLORS[ri],fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 2px'}}>
                               {b.booker_name || b.reservation_no || 'IN'}
+                              {stuNames(b) && <div style={{fontSize:8,color:'#64748b',fontWeight:400,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>👶{stuNames(b)}</div>}
                             </div>
                           )}
                           {!isDouble && hasBooking && (
                             <div style={{position:'absolute',bottom:2,left:0,right:0,display:'flex',justifyContent:'center',gap:2}}>
                               {isCheckin && <span style={{width:5,height:5,borderRadius:'50%',background:'#4ade80',display:'inline-block'}} title="체크인"/>}
                               {isCheckout && <span style={{width:5,height:5,borderRadius:'50%',background:'#fb923c',display:'inline-block'}} title="체크아웃"/>}
+                              {b?.room_locked && <span style={{fontSize:7,lineHeight:1}} title="룸 잠금">🔒</span>}
                             </div>
                           )}
                         </td>
@@ -453,13 +465,13 @@ export default function DreamhouseRooms() {
                             </div>
                             <div style={{display:'flex',flexDirection:'column',gap:2}}>
                               {checkins.map(b => (
-                                <div key={'in'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} 체크인`} style={{cursor:'pointer',background:'#dcfce7',color:'#166534',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                  {b.accom_room} {b.booker_name || b.reservation_no || ''} in
+                                <div key={'in'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크인`} style={{cursor:'pointer',background:'#dcfce7',color:'#166534',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {b.accom_room} {b.booker_name || b.reservation_no || ''}{stuNames(b) ? ` (${stuNames(b)})` : ''} in
                                 </div>
                               ))}
                               {checkouts.map(b => (
-                                <div key={'out'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} 체크아웃`} style={{cursor:'pointer',background:'#ffedd5',color:'#9a3412',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                                  {b.accom_room} {b.booker_name || b.reservation_no || ''} out
+                                <div key={'out'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크아웃`} style={{cursor:'pointer',background:'#ffedd5',color:'#9a3412',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {b.accom_room} {b.booker_name || b.reservation_no || ''}{stuNames(b) ? ` (${stuNames(b)})` : ''} out
                                 </div>
                               ))}
                             </div>
@@ -486,6 +498,12 @@ export default function DreamhouseRooms() {
                 <span style={{color:'#64748b'}}>예약자명</span>
                 <span style={{fontWeight:600,color:'#1e293b'}}>{modal.booker_name || '-'}</span>
               </div>
+              {stuNames(modal) && (
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+                  <span style={{color:'#64748b'}}>학생</span>
+                  <span style={{fontWeight:600,color:'#1e293b'}}>👶 {stuNames(modal)}</span>
+                </div>
+              )}
               <div style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
                 <span style={{color:'#64748b'}}>예약번호</span>
                 <span style={{fontWeight:600,color:'#1e293b'}}>{modal.reservation_no || '-'}</span>
@@ -500,17 +518,42 @@ export default function DreamhouseRooms() {
               </div>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13}}>
                 <span style={{color:'#64748b'}}>현재 룸</span>
-                <span style={{fontWeight:700,color:'#1e40af'}}>{modal.accom_room}</span>
+                <span style={{fontWeight:700,color:'#1e40af'}}>
+                  {modal.accom_room}
+                  {modal.room_locked && <span style={{marginLeft:6,fontSize:10,color:'#dc2626'}}>🔒 잠금</span>}
+                </span>
               </div>
+              {/* 룸 잠금 토글 */}
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13}}>
+                <span style={{color:'#64748b'}}>룸 잠금</span>
+                <button onClick={async()=>{
+                  const newLocked = !modal.room_locked;
+                  try{
+                    const res=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room_locked:newLocked})});
+                    if(!res.ok){const j=await res.json();alert(j.error||'실패');return;}
+                  }catch(e:any){alert(e.message);return;}
+                  setModal({...modal,room_locked:newLocked});
+                  fetchBookings();
+                }} style={{
+                  padding:'6px 16px',border:'none',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                  background: modal.room_locked ? '#fee2e2' : '#dcfce7',
+                  color: modal.room_locked ? '#dc2626' : '#16a34a'
+                }}>
+                  {modal.room_locked ? '🔓 잠금 해제' : '🔒 잠금 설정'}
+                </button>
+              </div>
+              {/* 룸 변경 (잠금 시 비활성) */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:13,opacity:modal.room_locked?0.4:1}}>
                 <span style={{color:'#64748b'}}>룸 변경</span>
-                <select value={modalRoom} onChange={e=>setModalRoom(e.target.value)} style={{padding:'6px 12px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,color:'#1e293b',fontWeight:600}}>
+                <select value={modalRoom} onChange={e=>setModalRoom(e.target.value)} disabled={!!modal.room_locked}
+                  style={{padding:'6px 12px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,color:'#1e293b',fontWeight:600,cursor:modal.room_locked?'not-allowed':'pointer'}}>
                   {ROOMS.map(r=><option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
             </div>
             <div style={{display:'flex',gap:8}}>
-              <button onClick={async()=>{
+              <button disabled={!!modal.room_locked} onClick={async()=>{
+                if(modal.room_locked){alert('🔒 룸이 잠겨있어 변경할 수 없습니다.');return;}
                 if(modalRoom===modal.accom_room){alert('동일한 룸입니다.');return;}
                 try{
                   const res=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room:modalRoom})});
@@ -519,7 +562,7 @@ export default function DreamhouseRooms() {
                 }catch(e:any){alert('변경 실패: '+e.message);return;}
                 alert('✅ 룸이 '+modalRoom+'으로 변경되었습니다.');
                 setModal(null);fetchBookings();
-              }} style={{flex:1,padding:'10px 0',background:'#1e40af',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>변경 저장</button>
+              }} style={{flex:1,padding:'10px 0',background:modal.room_locked?'#94a3b8':'#1e40af',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:modal.room_locked?'not-allowed':'pointer'}}>변경 저장</button>
               <button onClick={()=>{setModal(null);router.push('/invoice?id='+modal.id);}} style={{flex:1,padding:'10px 0',background:'#f1f5f9',color:'#1e40af',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>인보이스 보기</button>
               <button onClick={()=>setModal(null)} style={{padding:'10px 16px',background:'#fff',color:'#64748b',border:'1px solid #e2e8f0',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer'}}>닫기</button>
             </div>
@@ -543,9 +586,13 @@ export default function DreamhouseRooms() {
           pointerEvents:'none',
           boxShadow:'0 8px 32px rgba(0,0,0,0.15)'
         }}>
-          <div style={{fontWeight:700,color:'#1e40af',marginBottom:6}}>{tooltip.booking.accom_room}</div>
+          <div style={{fontWeight:700,color:'#1e40af',marginBottom:6}}>
+            {tooltip.booking.accom_room}
+            {tooltip.booking.room_locked && <span style={{marginLeft:4,fontSize:10}}>🔒</span>}
+          </div>
           <div style={{fontSize:12,color:'#64748b'}}>예약번호: <span style={{color:'#1e293b'}}>{tooltip.booking.reservation_no || '-'}</span></div>
           <div style={{fontSize:12,color:'#64748b'}}>예약자: <span style={{color:'#1e293b'}}>{tooltip.booking.booker_name || '-'}</span></div>
+          {stuNames(tooltip.booking) && <div style={{fontSize:12,color:'#64748b'}}>학생: <span style={{color:'#1e293b',fontWeight:600}}>👶 {stuNames(tooltip.booking)}</span></div>}
           <div style={{fontSize:12,color:'#64748b'}}>체크인: <span style={{color:'#16a34a'}}>{tooltip.booking.checkin_date}</span></div>
           <div style={{fontSize:12,color:'#64748b'}}>체크아웃: <span style={{color:'#ea580c'}}>{tooltip.booking.checkout_date}</span></div>
         </div>
