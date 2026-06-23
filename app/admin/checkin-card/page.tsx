@@ -11,6 +11,7 @@ type Booking = ComboBooking & {
   checkin_date?: string;
   flight_in?: string;
   flight_in_airline?: string;
+  flight_in_no?: string;
   flight_in_date?: string;
   flight_in_time?: string;
 };
@@ -60,7 +61,7 @@ function CheckinCardInner() {
   // 날짜: 콤보면 seg1 체크인, 아니면 항공편 입국일 → 체크인
   const dateStr = fmtMonthDay((combo ? b.seg1_checkin : "") || b.flight_in_date || b.checkin_date || "");
   const flightTime = b.flight_in_time || "";
-  const flightCode = b.flight_in_airline || b.flight_in || "";
+  const flightCode = [b.flight_in_airline, b.flight_in_no].filter(Boolean).join(" ") || b.flight_in || "";
   // "MAY-9 / 23:30 (KE601)" 또는 "MAY-9 (KE601 5/9 23:30)" 또는 "MAY-9"
   let flightLine = "";
   if (dateStr) {
