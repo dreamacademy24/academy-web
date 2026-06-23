@@ -63,12 +63,13 @@ export default function AdminTodayPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const tdy = localToday();
-    const [bk, pk, sh, ft, cs] = await Promise.all([
+    const [bk, pk, sh, ft, csRes] = await Promise.all([
       supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, booking_type, accom_type, reservation_no, students"),
       supabase.from("pickup_requests").select("*").eq("request_date", tdy),
       supabase.from("shuttle_applications").select("*").eq("tour_date", tdy),
       supabase.from("fieldtrip_applications").select("id, name, portal_name, date, booking_id, status"),
-      supabase.from("consultation_slots").select("*, consultations(title)").eq("slot_date", tdy).eq("status", "booked"),
+      // 상담은 RLS로 anon 읽기 차단 → service_role API 경유
+      fetch("/api/admin/consultations").then((r) => (r.ok ? r.json() : { consultations: [] })).catch(() => ({ consultations: [] })),
     ]);
 
     const bookings = (bk.data || []) as Booking[];
@@ -80,10 +81,18 @@ export default function AdminTodayPage() {
     setPickups(((pk.data || []) as Pickup[]).map((p) => ({ row: p, name: (p.booking_id && resolveBookerName(bMap.get(p.booking_id))) || "—" })));
     setShuttles(((sh.data || []) as Shuttle[]).filter((s) => (s.status || "") !== "cancelled").map((s) => ({ row: s, name: (s.booking_id && resolveBookerName(bMap.get(s.booking_id))) || (s.portal_name || "").trim() || "—" })));
 
-    // 오늘 상담 일정 (예약 확정된 슬롯) — 시간 오름차순
-    const consultRows = ((cs.data || []) as ConsultSlot[])
-      .map((c) => ({ row: c, name: (c.booked_name || "").trim() || (c.booked_by && resolveBookerName(bMap.get(c.booked_by))) || "—" }))
-      .sort((a, b) => `${a.row.slot_time || ""}`.localeCompare(`${b.row.slot_time || ""}`));
+    // 오늘 상담 일정 (예약 확정된 슬롯) — 오늘 + booked만 추출, 시간 오름차순
+    const consultList = (csRes?.consultations || []) as Array<{ title: string | null; consultation_slots?: ConsultSlot[] }>;
+    const consultRows: { row: ConsultSlot; name: string }[] = [];
+    consultList.forEach((c) => {
+      (c.consultation_slots || []).forEach((sl) => {
+        if (dateOnly(sl.slot_date) === tdy && (sl.status || "") === "booked") {
+          const row: ConsultSlot = { ...sl, consultations: { title: c.title } };
+          consultRows.push({ row, name: (sl.booked_name || "").trim() || (sl.booked_by && resolveBookerName(bMap.get(sl.booked_by))) || "—" });
+        }
+      });
+    });
+    consultRows.sort((a, b) => `${a.row.slot_time || ""}`.localeCompare(`${b.row.slot_time || ""}`));
     setConsults(consultRows);
 
     // 필드트립: date 토큰("M-D-key" 콤마결합) 중 오늘 날짜 토큰만 추출
