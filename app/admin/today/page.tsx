@@ -16,14 +16,31 @@ function prettyKey(key: string): string {
   return key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-interface Booking { id: string; booker_name: string | null; checkin_date: string | null; checkout_date: string | null; booking_type: string | null; accom_type: string | null; reservation_no: string | null; }
+interface Booking { id: string; booker_name: string | null; checkin_date: string | null; checkout_date: string | null; booking_type: string | null; accom_type: string | null; reservation_no: string | null; students?: unknown; }
 interface Pickup { id: string; booking_id: string | null; request_type: string | null; request_date: string | null; pickup_place?: string | null; drop_place?: string | null; }
 interface Shuttle { id: number; booking_id: string | null; portal_name: string | null; tour_name: string | null; tour_date: string | null; depart_time: string | null; people_count: number | null; room_number: string | null; status: string | null; }
 interface Fieldtrip { id: number; name: string | null; portal_name: string | null; date: string | null; booking_id: string | null; status: string | null; }
+interface ConsultSlot { id: number | string; slot_date: string | null; slot_time: string | null; status: string | null; booked_by: string | null; booked_name: string | null; booked_student: string | null; consultation_id: string | null; consultations?: { title: string | null } | null; }
 
 interface FtRow { id: number; child: string; reserver: string; program: string; isFieldtrip: boolean; }
 
 const PICKUP_LABEL: Record<string, string> = { pickup: "픽업", dropoff: "드랍", extra_pickup: "추가 픽업", extra_drop: "추가 드랍" };
+
+// 예약자 성함 해석: booker_name 우선, 없으면 students JSONB 대표자명 폴백
+function resolveBookerName(b?: Booking | null): string {
+  if (!b) return "";
+  let nm = (b.booker_name || "").trim();
+  if (!nm && b.students) {
+    try {
+      const arr = typeof b.students === "string" ? JSON.parse(b.students) : b.students;
+      if (Array.isArray(arr) && arr.length > 0) {
+        const s0 = (arr[0] || {}) as Record<string, string>;
+        nm = (s0.korName || s0.name_kr || s0.name || s0.engName || s0.name_en || "").trim();
+      }
+    } catch { /* ignore parse error */ }
+  }
+  return nm;
+}
 
 export default function AdminTodayPage() {
   const router = useRouter();
@@ -34,7 +51,8 @@ export default function AdminTodayPage() {
   const [checkins, setCheckins] = useState<Booking[]>([]);
   const [checkouts, setCheckouts] = useState<Booking[]>([]);
   const [pickups, setPickups] = useState<{ row: Pickup; name: string }[]>([]);
-  const [shuttles, setShuttles] = useState<Shuttle[]>([]);
+  const [shuttles, setShuttles] = useState<{ row: Shuttle; name: string }[]>([]);
+  const [consults, setConsults] = useState<{ row: ConsultSlot; name: string }[]>([]);
   const [ftRows, setFtRows] = useState<FtRow[]>([]);
 
   useEffect(() => {
@@ -45,11 +63,12 @@ export default function AdminTodayPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const tdy = localToday();
-    const [bk, pk, sh, ft] = await Promise.all([
-      supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, booking_type, accom_type, reservation_no"),
+    const [bk, pk, sh, ft, cs] = await Promise.all([
+      supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, booking_type, accom_type, reservation_no, students"),
       supabase.from("pickup_requests").select("*").eq("request_date", tdy),
       supabase.from("shuttle_applications").select("*").eq("tour_date", tdy),
       supabase.from("fieldtrip_applications").select("id, name, portal_name, date, booking_id, status"),
+      supabase.from("consultation_slots").select("*, consultations(title)").eq("slot_date", tdy).eq("status", "booked"),
     ]);
 
     const bookings = (bk.data || []) as Booking[];
@@ -58,8 +77,14 @@ export default function AdminTodayPage() {
     setCheckins(bookings.filter((b) => dateOnly(b.checkin_date) === tdy));
     setCheckouts(bookings.filter((b) => dateOnly(b.checkout_date) === tdy));
 
-    setPickups(((pk.data || []) as Pickup[]).map((p) => ({ row: p, name: (p.booking_id && bMap.get(p.booking_id)?.booker_name) || "—" })));
-    setShuttles(((sh.data || []) as Shuttle[]).filter((s) => (s.status || "") !== "cancelled"));
+    setPickups(((pk.data || []) as Pickup[]).map((p) => ({ row: p, name: (p.booking_id && resolveBookerName(bMap.get(p.booking_id))) || "—" })));
+    setShuttles(((sh.data || []) as Shuttle[]).filter((s) => (s.status || "") !== "cancelled").map((s) => ({ row: s, name: (s.booking_id && resolveBookerName(bMap.get(s.booking_id))) || (s.portal_name || "").trim() || "—" })));
+
+    // 오늘 상담 일정 (예약 확정된 슬롯) — 시간 오름차순
+    const consultRows = ((cs.data || []) as ConsultSlot[])
+      .map((c) => ({ row: c, name: (c.booked_name || "").trim() || (c.booked_by && resolveBookerName(bMap.get(c.booked_by))) || "—" }))
+      .sort((a, b) => `${a.row.slot_time || ""}`.localeCompare(`${b.row.slot_time || ""}`));
+    setConsults(consultRows);
 
     // 필드트립: date 토큰("M-D-key" 콤마결합) 중 오늘 날짜 토큰만 추출
     const [, mStr, dStr] = tdy.split("-");
@@ -95,6 +120,7 @@ export default function AdminTodayPage() {
   const chips = [
     { label: "체크인", n: checkins.length, c: "#1a6fc4" },
     { label: "체크아웃", n: checkouts.length, c: "#0891b2" },
+    { label: "상담", n: consults.length, c: "#db2777" },
     { label: "픽드랍", n: pickups.length, c: "#7c3aed" },
     { label: "셔틀", n: shuttles.length, c: "#16a34a" },
     { label: "필드트립", n: ftRows.length, c: "#c2410c" },
@@ -129,7 +155,7 @@ export default function AdminTodayPage() {
         <h1>📅 오늘 한눈에</h1>
         <button className="back" title="새로고침" onClick={load}>🔄</button>
       </div>
-      <div className="sub">{today} · 오늘 처리할 체크인/아웃 · 픽드랍 · 셔틀 · 필드트립을 모았습니다.</div>
+      <div className="sub">{today} · 오늘 처리할 체크인/아웃 · 상담 · 픽드랍 · 셔틀 · 필드트립을 모았습니다.</div>
 
       <div className="chips">
         {chips.map((c) => (
@@ -162,6 +188,17 @@ export default function AdminTodayPage() {
         </div>
 
         <div className="sec">
+          <h2>🗓 오늘 상담 <span className="cnt">{consults.length}건</span></h2>
+          {consults.length === 0 ? <div className="empty">오늘 상담 일정이 없습니다.</div> : consults.map(({ row, name }) => (
+            <div className="row" key={row.id}>
+              <span className="nm">{name}</span>
+              <span className="meta">{[row.slot_time, row.booked_student ? `학생: ${row.booked_student}` : "", row.consultations?.title].filter(Boolean).join(" · ")}</span>
+              <span className="tag" style={{ background: "#fce7f3", color: "#db2777" }}>상담</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="sec">
           <h2>🚐 오늘 픽드랍 <span className="cnt">{pickups.length}건</span></h2>
           {pickups.length === 0 ? <div className="empty">오늘 픽드랍이 없습니다.</div> : pickups.map(({ row, name }) => (
             <div className="row" key={row.id}>
@@ -174,9 +211,9 @@ export default function AdminTodayPage() {
 
         <div className="sec">
           <h2>🚌 오늘 투어 셔틀 <span className="cnt">{shuttles.length}건</span></h2>
-          {shuttles.length === 0 ? <div className="empty">오늘 셔틀이 없습니다.</div> : shuttles.map((s) => (
+          {shuttles.length === 0 ? <div className="empty">오늘 셔틀이 없습니다.</div> : shuttles.map(({ row: s, name }) => (
             <div className="row" key={s.id}>
-              <span className="nm">{s.portal_name || "—"}</span>
+              <span className="nm">{name}</span>
               <span className="meta">{[s.tour_name, s.depart_time, s.room_number].filter(Boolean).join(" · ")}</span>
               <span className="tag" style={{ background: "#dcfce7", color: "#16a34a" }}>{s.people_count || 0}명</span>
             </div>
