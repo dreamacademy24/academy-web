@@ -386,8 +386,9 @@ function CheckinDetailsInner() {
     const houseNo = dash(b.house_no || b.accom_room);
     const checkIn = dash(d.checkin_date || b.checkin_date);
     const checkOut = dash(b.checkout_date);
-    const pickFlight = dash(b.pickup_place);
-    const dropFlight = dash(b.drop_off);
+    const arrAirline = [b.flight_in_airline, b.flight_in_no].filter(Boolean).join(" ") || (b.flight_in || "");
+    const arrWhen = [((b.flight_in_date || "").split("T")[0] || "").replace(/-/g,"."), b.flight_in_time].filter(Boolean).join(" ");
+    const arrFlight = [arrAirline, arrWhen].filter(Boolean).join(" / ") || dash(b.pickup_place);
     const m1 = bedNum(bedConfig.room1), m2 = bedNum(bedConfig.room2), m3 = bedNum(bedConfig.room3);
     const simList = simCards.map(s => simCompact(s.plan)).filter(Boolean);
     const simText = simList.length ? simList.join(", ") : "-";
@@ -406,7 +407,7 @@ function CheckinDetailsInner() {
     const etc = d.extra_requests ? String(d.extra_requests) : "";
     const isPkg = isPackage(b.accom_type);
     const pkgBadge = isPkg ? `<span class="pkg">${L.pkg}</span>` : "";
-    const memoLines = Array.from({length:8}).map(()=>`<div class="mline"></div>`).join("");
+    const memoLines = Array.from({length:2}).map(()=>`<div class="mline"></div>`).join("");
     const memoHtml = (etc ? `<div class="metxt">${etc}</div>` : "") + memoLines;
 
     // 정산 섹션 - 보증금 항목 찾기
@@ -427,7 +428,7 @@ function CheckinDetailsInner() {
       }
     }
     const otherLocals = localItems.filter(l => !l.name?.includes("보증금") && !l.name?.toLowerCase().includes("deposit"));
-    const blankRows = 9;
+    const blankRows = 14;
     const settleRows = Array.from({length:blankRows}).map(()=>
       `<tr><td class="sdate"></td><td class="sitem"></td><td class="samt"></td><td class="snote"></td></tr>`
     ).join("");
@@ -437,170 +438,84 @@ function CheckinDetailsInner() {
 <title>${L.title} — ${dash(b.booker_name)}</title>
 <style>
   *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:0;background:#fff;}
+  body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;margin:0;padding:0;background:#fff;}
   #cdwrap{overflow:hidden;}
-  #cdsheet{padding:18px 22px;min-height:257mm;display:flex;flex-direction:column;transform-origin:top center;}
+  #cdsheet{padding:22px 26px;min-height:257mm;display:flex;flex-direction:column;transform-origin:top center;}
 
-  /* ── HEADER ── */
-  .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-  .hd img{height:44px;width:auto;}
-  .hd-right{text-align:right;}
-  .hd-title{font-size:26px;font-weight:900;color:#0f172a;letter-spacing:1.5px;}
-  .pkg-badge{display:inline-block;box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:10px;font-weight:800;letter-spacing:0.06em;padding:3px 10px;border-radius:20px;margin-top:4px;}
-  .rule{height:3px;box-shadow:inset 0 0 0 1000px #4f46e5 !important;border-radius:2px;margin-bottom:16px;}
+  .hd{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #1f2937;padding-bottom:8px;margin-bottom:18px;}
+  .hd img{height:38px;width:auto;}
+  .hd-title{font-size:24px;font-weight:800;letter-spacing:2px;color:#1f2937;}
+  .pkg-badge{display:inline-block;box-shadow:inset 0 0 0 1000px #eef2ff !important;color:#4f46e5 !important;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:2px 10px;border-radius:4px;margin-top:5px;}
 
-  /* ── INFO TABLE ── */
-  .info-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
-  .info-tbl td{padding:7px 10px;border:1px solid #e2e8f0;font-size:12px;vertical-align:middle;}
-  .il{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#6366f1;font-size:9px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;width:90px;}
-  .iv{color:#0f172a;font-size:13px;font-weight:600;}
-  .iv-name{font-size:15px;font-weight:800;}
-  .iv-house{font-size:20px;font-weight:900;text-align:center;color:#4f46e5;letter-spacing:1px;}
+  .info{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 22px;margin-bottom:18px;}
+  .fld .lbl{font-size:9px;color:#9ca3af;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+  .fld .val{font-size:14px;font-weight:700;color:#1f2937;}
+  .fld .val .sub{font-weight:400;color:#6b7280;}
 
-  /* ── BED / SIM ── */
-  .bed-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
-  .bed-tbl td,.bed-tbl th{border:1px solid #e2e8f0;padding:6px 8px;text-align:center;vertical-align:middle;}
-  .bhd{box-shadow:inset 0 0 0 1000px #4f46e5 !important;color:#fff !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;}
-  .bsub{box-shadow:inset 0 0 0 1000px #ede9fe !important;color:#4338ca !important;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;}
-  .bnum{font-size:24px;font-weight:900;color:#0f172a;}
-  .bsim{font-size:12px;font-weight:800;color:#0f172a;}
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;}
+  .card{box-shadow:inset 0 0 0 1000px #f8fafc !important;border:1px solid #eef2f6;border-radius:8px;padding:9px 8px;text-align:center;}
+  .card .ct{font-size:9px;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;}
+  .card .cv{font-size:20px;font-weight:800;color:#1f2937;}
+  .card .cv.sm{font-size:13px;}
 
-  /* ── GUEST / PICKUP ── */
-  .row-tbl{width:100%;border-collapse:collapse;margin-bottom:10px;}
-  .row-tbl td{border:1px solid #e2e8f0;padding:8px 10px;font-size:12px;vertical-align:middle;}
-  .rl{background:#fff !important;color:#4f46e5 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #4f46e5 !important;}
-  .rv{color:#0f172a;font-size:12px;font-weight:600;}
+  .line{display:flex;gap:12px;border:1px solid #eef2f6;border-radius:8px;padding:9px 12px;margin-bottom:8px;align-items:baseline;}
+  .line .k{font-size:9px;color:#9ca3af;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0;width:74px;}
+  .line .v{font-size:12px;color:#1f2937;font-weight:600;flex:1;}
+  .line.memo .v{color:#374151;font-weight:400;}
+  .metxt{font-size:11px;color:#374151;margin-bottom:4px;}
+  .mline{border-bottom:1px solid #e5e7eb;height:22px;}
 
-  /* ── MEMO ── */
-  .memo-tbl{width:100%;border-collapse:collapse;margin-bottom:14px;flex:1;}
-  .memo-tbl td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:top;}
-  .ml{background:#fff !important;color:#475569 !important;font-size:9px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;width:90px;border-right:3px solid #cbd5e1 !important;}
-  .mc{min-height:140px;}
-  .metxt{font-size:11px;color:#1e293b;margin-bottom:6px;font-weight:600;}
-  .mline{border-bottom:1.5px solid #d1d5db;height:32px;margin-bottom:0;}
-
-  /* ── SETTLEMENT ── */
-  .settle-hd{background:#fff !important;color:#0f172a !important;font-size:10px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;padding:7px 12px;border-radius:6px 6px 0 0;border-bottom:2px solid #0f172a !important;}
-  .settle-wrap{border:1.5px solid #e2e8f0;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;}
+  .settle-hd{font-size:12px;font-weight:800;letter-spacing:0.08em;color:#1f2937;margin:6px 0 8px;display:flex;justify-content:space-between;align-items:center;}
+  .dep-pill{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:11px;font-weight:800;padding:3px 12px;border-radius:6px;}
   .settle-tbl{width:100%;border-collapse:collapse;}
-  .settle-tbl td,.settle-tbl th{border:1px solid #e2e8f0;padding:7px 10px;font-size:11px;vertical-align:middle;}
-  .dep-lbl{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;width:120px;}
-  .dep-val{font-size:14px;font-weight:900;color:#0f172a;}
-  .sh{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;color:#475569 !important;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;text-align:center;}
-  .sdate{width:80px;height:38px;}
-  .sitem{width:40%;}
-  .samt{width:18%;text-align:right;}
-  .snote{width:20%;}
-  .stotal{box-shadow:inset 0 0 0 1000px #f1f5f9 !important;font-size:11px;font-weight:700;color:#475569;text-align:right;}
-  .srefund{box-shadow:inset 0 0 0 1000px #dcfce7 !important;font-size:12px;font-weight:900;color:#166534 !important;text-align:right;}
+  .settle-tbl th{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#6b7280 !important;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1px solid #e5e7eb;}
+  .settle-tbl td{padding:10px;border-bottom:1px solid #eef2f6;font-size:11px;height:34px;}
+  .settle-tbl th.samt,.settle-tbl td.samt{text-align:right;}
+  .sdate{width:18%;} .sitem{width:42%;} .samt{width:18%;} .snote{width:22%;}
 
   @media print{
     @page{size:A4;margin:10mm 12mm;}
     body{padding:0;}
-    .rule,.bhd,.rl,.ml,.settle-hd,.srefund,.dep-lbl{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   }
 </style></head>
 <body>
 <div id="cdwrap"><div id="cdsheet">
   <div class="hd">
     <img src="${logo}" onerror="this.style.display='none'"/>
-    <div class="hd-right">
+    <div style="text-align:right;">
       <div class="hd-title">${L.title}</div>
       ${isPkg ? `<div><span class="pkg-badge">${L.pkg}</span></div>` : ""}
     </div>
   </div>
-  <div class="rule"></div>
 
-  <!-- INFO -->
-  <table class="info-tbl">
-    <tr>
-      <td class="il">${L.name}</td>
-      <td class="iv iv-name" colspan="3">${nameLine}</td>
-      <td class="il" style="width:80px">${L.house}</td>
-      <td class="iv iv-house" style="width:110px">${houseNo}</td>
-    </tr>
-    <tr>
-      <td class="il">${L.cin}</td>
-      <td class="iv" style="width:160px">${checkIn}</td>
-      <td class="il" style="width:80px">${L.cout}</td>
-      <td class="iv" style="width:160px">${checkOut}</td>
-      <td class="il">${L.pick}</td>
-      <td class="iv">${pickFlight}</td>
-    </tr>
-    <tr>
-      <td class="il">${L.drop}</td>
-      <td class="iv" colspan="5">${dropFlight}</td>
-    </tr>
-  </table>
-
-  <!-- BED / SIM -->
-  <table class="bed-tbl">
-    <tr>
-      <th class="bhd" colspan="3">${L.bed}</th>
-      <th class="bhd" rowspan="2">${L.sim}</th>
-      <th class="bhd" rowspan="2">${L.load}</th>
-    </tr>
-    <tr>
-      <th class="bsub">${L.master}</th>
-      <th class="bsub">${L.small}</th>
-      <th class="bsub">${L.first}</th>
-    </tr>
-    <tr>
-      <td class="bnum">${m1}</td>
-      <td class="bnum">${m2}</td>
-      <td class="bnum">${m3}</td>
-      <td class="bsim">${simText}</td>
-      <td class="bnum">${loadText}</td>
-    </tr>
-  </table>
-
-  <!-- GUESTS / ADD -->
-  <table class="row-tbl">
-    <tr>
-      <td class="rl">${L.guest}</td>
-      <td class="rv">${guests}</td>
-    </tr>
-    <tr>
-      <td class="rl">${L.add}</td>
-      <td class="rv">${addText}</td>
-    </tr>
-  </table>
-
-  <!-- MEMO -->
-  <table class="memo-tbl">
-    <tr>
-      <td class="ml">${L.memo}</td>
-      <td class="mc">${memoHtml}</td>
-    </tr>
-  </table>
-
-  <!-- SETTLEMENT -->
-  <div style="flex:1"></div><div class="settle-hd">🔐 ${L.settle}</div>
-  <div class="settle-wrap">
-    <table class="settle-tbl">
-      <tr>
-        <td class="dep-lbl">${L.deposit}</td>
-        <td class="dep-val" colspan="3">${depositAmt}</td>
-      </tr>
-      <tr>
-        <th class="sh sdate">${L.date}</th>
-        <th class="sh sitem">${L.item}</th>
-        <th class="sh samt">${L.amount}</th>
-        <th class="sh snote">${L.note}</th>
-      </tr>
-      ${settleRows}
-      <tr>
-        <td class="stotal" colspan="2">${L.deduct}</td>
-        <td class="stotal samt"></td>
-        <td></td>
-      </tr>
-      <tr>
-        <td class="srefund" colspan="2">${L.refund}</td>
-        <td class="srefund samt"></td>
-        <td></td>
-      </tr>
-    </table>
+  <div class="info">
+    <div class="fld"><div class="lbl">${L.name}</div><div class="val">${nameLine}</div></div>
+    <div class="fld"><div class="lbl">${L.house}</div><div class="val">${houseNo}</div></div>
+    <div class="fld"><div class="lbl">${L.pick}</div><div class="val">${arrFlight}</div></div>
+    <div class="fld"><div class="lbl">${L.cin}</div><div class="val">${checkIn}</div></div>
+    <div class="fld"><div class="lbl">${L.cout}</div><div class="val">${checkOut}</div></div>
+    <div class="fld"><div class="lbl">${L.guest}</div><div class="val">${guests}</div></div>
   </div>
+
+  <div class="cards">
+    <div class="card"><div class="ct">${L.master}</div><div class="cv">${m1}</div></div>
+    <div class="card"><div class="ct">${L.small}</div><div class="cv">${m2}</div></div>
+    <div class="card"><div class="ct">${L.first}</div><div class="cv">${m3}</div></div>
+    <div class="card"><div class="ct">${L.sim}</div><div class="cv sm">${simText}</div></div>
+    <div class="card"><div class="ct">${L.load}</div><div class="cv">${loadText}</div></div>
+  </div>
+
+  <div class="line"><span class="k">${L.add}</span><span class="v">${addText}</span></div>
+  <div class="line memo"><span class="k">${L.memo}</span><div class="v">${memoHtml}</div></div>
+
+  <div style="flex:1"></div>
+  <div class="settle-hd"><span>${L.settle}</span><span class="dep-pill">${L.deposit} ${depositAmt}</span></div>
+  <table class="settle-tbl">
+    <thead><tr>
+      <th class="sdate">${L.date}</th><th class="sitem">${L.item}</th><th class="samt">${L.amount}</th><th class="snote">${L.note}</th>
+    </tr></thead>
+    <tbody>${settleRows}</tbody>
+  </table>
 </div></div>
   <script>(function(){function fit(){var w=document.getElementById('cdwrap'),s=document.getElementById('cdsheet');if(!w||!s)return;s.style.transform='';w.style.height='';var maxH=Math.round(277/25.4*96);var h=s.scrollHeight;if(h>maxH){var f=maxH/h;s.style.transform='scale('+f+')';w.style.height=(h*f)+'px';}}if(document.readyState!=='loading')fit();else document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load',fit);})();</script>
   <script>window.onload=function(){window.print();};</script>
