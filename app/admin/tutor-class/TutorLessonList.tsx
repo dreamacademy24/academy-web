@@ -176,7 +176,7 @@ export default function TutorLessonList() {
     if (!lesson.start_date || !lesson.end_date) return [];
     const dayCodes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
     if (dayCodes.length === 0) return [];
-    const codeToIdx: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+    const codeToIdx: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6 };
     const wanted = new Set(dayCodes.map(c => codeToIdx[c]).filter(i => i !== undefined));
     const skips = new Set(Array.isArray(lesson.skip_dates) ? lesson.skip_dates : []);
     const out: string[] = [];
