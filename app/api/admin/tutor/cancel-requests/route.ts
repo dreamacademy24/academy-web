@@ -48,33 +48,45 @@ export async function PATCH(req: Request) {
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
 
-  // 승인 시 → 세션 상태 변경 + 출석부 반영
+  // 승인 시 → 세션 상태 변경 + 취소 기록(인보이스/티쳐 화면 연동)
   if (status === "approved" && cr.lesson_id && cr.cancel_date) {
+    // 처리방법(없으면 deduct 기본 — DB에도 동일하게 저장됨)
+    const res = (resolution || "deduct") as "deduct" | "makeup" | "no_deduct";
+
     // tutor_lesson_sessions 업데이트
     await sb.from("tutor_lesson_sessions")
       .update({ status: "cancelled_by_student" })
       .eq("lesson_id", cr.lesson_id)
       .eq("session_date", cr.cancel_date);
 
-    // tutor_lessons.attendance_log에 ✕ 마크
+    // tutor_lessons에 취소 기록 (cancellations = {날짜: 처리방법}) — 단일 소스
     const { data: lesson } = await sb.from("tutor_lessons")
-      .select("attendance_log, total_sessions").eq("id", cr.lesson_id).single();
+      .select("cancellations, skip_dates, total_sessions").eq("id", cr.lesson_id).single();
     if (lesson) {
-      const log = (lesson.attendance_log || {}) as Record<string, string>;
-      log[cr.cancel_date] = "✕";
-      const updates: Record<string, unknown> = { attendance_log: log };
-      // 차감이면 total_sessions -1 / no_deduct는 차감 없이 취소 (아픈 경우 등)
-      if (resolution === "deduct" && lesson.total_sessions > 0) {
-        updates.total_sessions = lesson.total_sessions - 1;
+      const cancellations = { ...((lesson.cancellations || {}) as Record<string, string>) };
+      cancellations[cr.cancel_date] = res;
+      const updates: Record<string, unknown> = { cancellations };
+      // 차감: 회차 -1 + skip_dates에도 추가(하위호환 청구 제외) / 보강·미차감: 그대로 청구
+      if (res === "deduct") {
+        const skips: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+        if (!skips.includes(cr.cancel_date)) updates.skip_dates = [...skips, cr.cancel_date];
+        if ((lesson.total_sessions || 0) > 0) updates.total_sessions = lesson.total_sessions - 1;
       }
-      // no_deduct: 출석부 ✕ 기록만, total_sessions 유지
-      await sb.from("tutor_lessons").update(updates).eq("id", cr.lesson_id);
+      const { error: upLessonErr } = await sb.from("tutor_lessons").update(updates).eq("id", cr.lesson_id);
+      // cancellations 컬럼 미존재 등으로 실패 시 → 차감 케이스만이라도 skip_dates/회차 반영(폴백)
+      if (upLessonErr && res === "deduct") {
+        const skips: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+        const fb: Record<string, unknown> = {};
+        if (!skips.includes(cr.cancel_date)) fb.skip_dates = [...skips, cr.cancel_date];
+        if ((lesson.total_sessions || 0) > 0) fb.total_sessions = lesson.total_sessions - 1;
+        if (Object.keys(fb).length) await sb.from("tutor_lessons").update(fb).eq("id", cr.lesson_id);
+      }
     }
 
     // 교사 알림 (online_notifications 패턴 재사용)
     if (cr.tutor_id) {
       const msg = `Lesson cancelled — ${cr.student_name || "Student"} on ${cr.cancel_date}` +
-        (resolution === "deduct" ? " (session deducted)" : resolution === "makeup" ? " (makeup scheduled)" : resolution === "no_deduct" ? " (no deduction)" : "");
+        (res === "deduct" ? " (session deducted)" : res === "makeup" ? " (makeup scheduled)" : " (no deduction)");
       await sb.from("online_notifications").insert({
         tutor_id: cr.tutor_id,
         type: "lesson_cancelled",
@@ -88,14 +100,14 @@ export async function PATCH(req: Request) {
           `Student: ${escapeHtml(cr.student_name || "?")}\n` +
           `Date: ${cr.cancel_date}\n` +
           `Reason: ${escapeHtml(cr.reason || "N/A")}\n` +
-          (resolution === "deduct" ? "📉 Session deducted" : resolution === "makeup" ? "🔄 Makeup to be scheduled" : resolution === "no_deduct" ? "💚 No deduction (special case)" : "")
+          (res === "deduct" ? "📉 Session deducted" : res === "makeup" ? "🔄 Makeup to be scheduled" : "💚 No deduction (special case)")
         );
       } catch { /* best-effort */ }
     }
 
     // 한국인 직원 텔레그램
     try {
-      const resText = resolution === "deduct" ? "차감" : resolution === "makeup" ? "보강" : resolution === "no_deduct" ? "미차감" : "미정";
+      const resText = res === "deduct" ? "차감" : res === "makeup" ? "보강" : "미차감";
       await sendTelegram(
         `✅ <b>튜터 취소 승인</b>\n` +
         `학생: ${cr.student_name || "?"}\n` +

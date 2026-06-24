@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime, stripTimeSuffix } from "@/lib/scheduleBlocks";
 import { countLessonDays } from "@/lib/lessonDates";
+import { cancelMap, hasAnyCancellation } from "@/lib/lessonCancellations";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
 
 interface Tutor { id: string; name: string; }
@@ -464,12 +465,11 @@ export default function EngTutorClassPage() {
           ? l.class_days.split(",")
           : [];
       const days = rawDays.map((d: string) => normalizeWeekday(d)).filter(Boolean);
-      const skips: string[] = Array.isArray(l.skip_dates) ? l.skip_dates : [];
       for (let i = 0; i < week.dates.length; i++) {
         const ds = week.dates[i];
         if (start && ds < start) continue;
         if (end && ds > end) continue;
-        if (skips.includes(ds)) continue; // 취소된 날짜는 캘린더에서 제외
+        // 취소된 날짜도 유지 → 렌더에서 '취소'로 표기
         const key = WEEKDAY_KEYS[i];
         if (days.length === 0 || days.includes(key)) {
           map.get(ds)!.push(l);
@@ -522,6 +522,7 @@ export default function EngTutorClassPage() {
         end: l.end_date || "",
         days,
         skips: skipsArr,
+        cancellations: l.cancellations || null,
         time: l.confirmed_time || l.class_time || "",
         student: pickEnFirst(l),
         classType: l.class_type || "",
@@ -558,7 +559,7 @@ export default function EngTutorClassPage() {
         const ds = mineWeek.dates[i];
         if (e.start && ds < e.start) continue;
         if (e.end && ds > e.end) continue;
-        if (e.skips && e.skips.includes(ds)) continue;
+        // 취소된 날짜도 유지 → 렌더에서 표기
         const key = WEEKDAY_KEYS[i];
         if (e.days.length === 0 || e.days.includes(key)) {
           map.get(ds)!.push(e);
@@ -913,10 +914,20 @@ export default function EngTutorClassPage() {
                   const tname = l.tutor_id ? (tutors.find(t => t.id === l.tutor_id)?.name || "(unknown)") : "Unassigned";
                   const color = tutorColor(l.tutor_id);
                   const sname = pickEnFirst(l);
+                  const cancelRes = cancelMap(l)[date];
                   const _krKeys = ['일','월','화','수','목','금','토'];
                   const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                   const _ov = l.time_overrides as Record<string,string> | undefined;
                   const time = stripTimeSuffix((_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "") || "--:--";
+                  if (cancelRes) {
+                    return (
+                      <div key={l.id} className="ee-sess-card" style={{borderLeft:"4px solid #cbd5e1",borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#f8fafc",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",opacity:0.9}}>
+                        <div style={{fontSize:11.5,fontWeight:800,color:"#94a3b8",lineHeight:1.3}}>{tname}</div>
+                        <div style={{fontSize:12.5,fontWeight:700,color:"#94a3b8",marginTop:2,lineHeight:1.3,wordBreak:"keep-all",textDecoration:"line-through"}}>{sname}</div>
+                        <div style={{fontSize:10.5,color:"#dc2626",fontWeight:800,marginTop:2}}>🚫 CANCELLED</div>
+                      </div>
+                    );
+                  }
                   return (
                     <div
                       key={l.id}
@@ -1174,6 +1185,15 @@ export default function EngTutorClassPage() {
                         const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                         const _ov = (e as any).overrides as Record<string,string> | undefined;
                         const _time = stripTimeSuffix((_ov && _ov[_kr]) || e.time || "");
+                        const cancelRes = cancelMap({ skip_dates: e.skips, cancellations: (e as any).cancellations })[date];
+                        if (cancelRes) {
+                          return (
+                            <div key={e.id + ":" + date} style={{borderLeft:"4px solid #cbd5e1",borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#f8fafc",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",opacity:0.9}}>
+                              <div style={{fontSize:12.5,fontWeight:700,color:"#94a3b8",lineHeight:1.3,wordBreak:"keep-all",textDecoration:"line-through"}}>{e.student}</div>
+                              <div style={{fontSize:10,color:"#dc2626",fontWeight:800,marginTop:2}}>🚫 CANCELLED</div>
+                            </div>
+                          );
+                        }
                         return (
                         <div
                           key={e.id + ":" + date}
@@ -1228,6 +1248,7 @@ export default function EngTutorClassPage() {
                   return (
                     <tr key={l.id}>
                       <td style={{fontWeight:600}}>
+                        {hasAnyCancellation(l) && <span title="취소/변경 있음" style={{color:"#dc2626",fontWeight:900,marginRight:4}}>❗</span>}
                         {l.student_names || "-"}
                         {(l as any).slot_label && (
                           <span style={{

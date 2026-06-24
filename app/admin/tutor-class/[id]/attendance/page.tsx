@@ -4,6 +4,7 @@ import { toastOk, toastErr } from "@/lib/toast";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
+import { cancelMap, resolutionLabelEN } from "@/lib/lessonCancellations";
 
 interface Lesson {
   id: string;
@@ -23,6 +24,7 @@ interface Lesson {
   attendance_log: Record<string, "○" | "✕" | "△"> | null;
   notes_log: Record<string, string> | null;
   time_overrides?: Record<string, string> | null;
+  cancellations?: Record<string, string> | null;
 }
 
 const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -66,14 +68,13 @@ function generateDates(lesson: Lesson): string[] {
   const codes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
   if (codes.length === 0) return [];
   const wanted = new Set(codes.map(c => CODE_TO_IDX[c]).filter(i => i !== undefined));
-  const skips = new Set(Array.isArray(lesson.skip_dates) ? lesson.skip_dates : []);
   const out: string[] = [];
   const d = new Date(lesson.start_date + "T00:00:00");
   const end = new Date(lesson.end_date + "T00:00:00");
   while (d <= end) {
     if (wanted.has(d.getDay())) {
-      const ds = ymd(d);
-      if (!skips.has(ds)) out.push(ds);
+      // 취소된 날짜도 목록에 유지 (숨기지 않고 '취소'로 표기)
+      out.push(ymd(d));
     }
     d.setDate(d.getDate() + 1);
   }
@@ -150,23 +151,28 @@ export default function AttendancePage() {
   useEffect(() => { load(); }, [load]);
 
   const dates = useMemo(() => lesson ? generateDates(lesson) : [], [lesson]);
+  const cMap = useMemo(() => cancelMap(lesson), [lesson]);
+  // 차감 취소는 청구 회차에서 제외 / 보강·미차감은 유지
+  const billedDates = useMemo(() => dates.filter(d => cMap[d] !== "deduct"), [dates, cMap]);
 
   const counts = useMemo(() => {
     const c = { O: 0, X: 0, T: 0 };
     for (const d of dates) {
+      if (cMap[d]) continue; // 취소된 날짜는 출결 집계 제외
       const v = draft[d];
       if (v === "○") c.O++;
       else if (v === "✕") c.X++;
       else if (v === "△") c.T++;
     }
     return c;
-  }, [dates, draft]);
+  }, [dates, draft, cMap]);
 
-  const baseTotal = dates.length;
+  const baseTotal = billedDates.length;
   const total = baseTotal + counts.T;
   const remaining = total - counts.O - counts.X - counts.T;
 
   function cycle(date: string) {
+    if (cMap[date]) return; // 취소된 날짜는 출결 변경 불가
     setDraft(prev => {
       const cur = prev[date] || "";
       const next: "○" | "✕" | "△" | "" =
@@ -341,6 +347,9 @@ export default function AttendancePage() {
 .at-box.s-x .idx{color:#dc2626;opacity:0.8}
 .at-box.s-t{background:#fef3c7;color:#92400e;border-color:#fcd34d}
 .at-box.s-t .idx{color:#b45309;opacity:0.8}
+.at-box.s-cancel{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;border-style:dashed;cursor:not-allowed;opacity:0.85}
+.at-box.s-cancel .idx{color:#cbd5e1}
+.at-box.s-cancel .dt{text-decoration:line-through;text-decoration-thickness:1.5px}
 
 .at-notes-card label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px}
 .at-notes-card label .en{font-weight:500;color:#6b7280;font-size:12px;margin-left:6px}
@@ -404,9 +413,10 @@ export default function AttendancePage() {
               const dt = new Date(d + "T00:00:00");
               const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
               const dw = WEEKDAYS_KR[dt.getDay()];
+              const cancelRes = cMap[d];
               const v = draft[d] || "";
               const tm = resolveTime(d, lesson);
-              const cls =
+              const cls = cancelRes ? "s-cancel" :
                 v === "○" ? "s-o" :
                 v === "✕" ? "s-x" :
                 v === "△" ? "s-t" : "s-blank";
@@ -416,12 +426,21 @@ export default function AttendancePage() {
                   type="button"
                   className={`at-box ${cls}`}
                   onClick={() => cycle(d)}
-                  title={`${d} (${dw}) ${tm} — ${v || "blank"}`}
+                  disabled={!!cancelRes}
+                  title={cancelRes ? `${d} (${dw}) — Cancelled (${resolutionLabelEN(cancelRes)})` : `${d} (${dw}) ${tm} — ${v || "blank"}`}
                 >
                   <span className="idx">#{i + 1}</span>
                   <span className="dt">{md}<span className="dw">({dw})</span></span>
-                  <span style={{fontSize:10.5,fontWeight:700,opacity:0.75,letterSpacing:"0.02em"}}>{tm}</span>
-                  <span className="mark">{v || ""}</span>
+                  <span style={{fontSize:10.5,fontWeight:700,opacity:0.75,letterSpacing:"0.02em"}}>{cancelRes ? "—" : tm}</span>
+                  {cancelRes ? (
+                    <span style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <span style={{fontSize:22,fontWeight:900,lineHeight:1}}>🚫</span>
+                      <span style={{fontSize:9.5,fontWeight:800,letterSpacing:"0.02em"}}>CANCELLED</span>
+                      <span style={{fontSize:8.5,fontWeight:700,opacity:0.8}}>{resolutionLabelEN(cancelRes)}</span>
+                    </span>
+                  ) : (
+                    <span className="mark">{v || ""}</span>
+                  )}
                 </button>
               );
             })}

@@ -88,7 +88,7 @@ export default function AdminTodayPage() {
       (c.consultation_slots || []).forEach((sl) => {
         if (dateOnly(sl.slot_date) === tdy && (sl.status || "") === "booked") {
           const row: ConsultSlot = { ...sl, consultations: { title: c.title } };
-          consultRows.push({ row, name: (sl.booked_name || "").trim() || (sl.booked_by && resolveBookerName(bMap.get(sl.booked_by))) || "—" });
+          consultRows.push({ row, name: (sl.booked_by && resolveBookerName(bMap.get(sl.booked_by))) || (sl.booked_name || "").trim() || "—" });
         }
       });
     });

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 import { tutorDailyRate } from "@/lib/lessonDates";
+import { cancelMap } from "@/lib/lessonCancellations";
 
 interface Lesson {
   id: string; created_at: string;
@@ -17,6 +18,7 @@ interface Lesson {
   total_sessions: number | null; total_amount: number | null;
   status: string;
   skip_dates: string[] | null;
+  cancellations?: Record<string, string> | null;
   child_personality: string | null;
   class_focus_arr: string[] | null;
   class_style: string | null;
@@ -246,6 +248,8 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     () => Array.isArray((lesson as any)?.skip_dates) ? (lesson as any).skip_dates as string[] : [],
     [lesson]
   );
+  // 취소 통합맵(skip_dates + cancellations). "deduct"만 청구 제외, 보강·미차감은 그대로 청구
+  const cMapInv = useMemo(() => cancelMap(lesson as any), [lesson]);
 
   const DAY_CODE_INV: Record<string, number> = {
     sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6,
@@ -258,14 +262,14 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   const classFee = tutorDailyRate(lesson?.class_type, classSession);
 
   const days = (() => {
-    // 실제 출결 세션이 있으면 그 수 사용
-    if (sessions.length > 0) return sessions.length;
-    // 없으면 class_days 기반으로 계산 (skip_dates 제외)
+    // 실제 출결 세션이 있으면 그 수 사용 (차감 취소만 제외)
+    if (sessions.length > 0) return sessions.filter(s => cMapInv[s.session_date] !== "deduct").length;
+    // 없으면 class_days 기반으로 계산 (차감 취소 제외)
     let count = 0;
     for (const week of weeks) {
       for (const date of week) {
         if (!date) continue;
-        if (skipDates.includes(date)) continue;
+        if (cMapInv[date] === "deduct") continue;
         const dow = new Date(date + "T00:00:00").getDay();
         if (Array.isArray(lesson?.class_days) && lesson.class_days.some(
           (d: string) => DAY_CODE_INV[String(d).trim()] === dow
@@ -572,9 +576,9 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
                       ({lesson.class_days.map((d:string) => DAY_SHORT[d] || DAY_SHORT[d.toLowerCase()] || d).join("/")})
                     </span>
                   )}
-                  {skipDates.length > 0 && (
+                  {Object.values(cMapInv).filter(r => r === "deduct").length > 0 && (
                     <span style={{marginLeft:6,fontSize:11,color:"#dc2626"}}>
-                      (-{skipDates.length} cancelled)
+                      (-{Object.values(cMapInv).filter(r => r === "deduct").length} cancelled)
                     </span>
                   )}
                 </td>
@@ -610,7 +614,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
                       const dow = new Date(date + "T00:00:00").getDay();
                       scheduled = lesson.class_days.some(d => DAY_CODE[String(d).trim()] === dow);
                     }
-                    const isSkipped = date ? skipDates.includes(date) : false;
+                    const isSkipped = date ? (date in cMapInv) : false;
                     const show = (!!s || scheduled) && !isSkipped;
                     const blockBg = lesson.class_type === "1:2" ? "#ede9fe" : "#dbeafe";
                     return (
