@@ -103,6 +103,8 @@ export default function TutorLessonList() {
   const [cancelDate, setCancelDate] = useState<Record<string, string>>({});
   const [changeOld, setChangeOld] = useState<Record<string, string>>({});
   const [changeNew, setChangeNew] = useState<Record<string, string>>({});
+  const [changeTimeDate, setChangeTimeDate] = useState<Record<string, string>>({});
+  const [changeTimeVal, setChangeTimeVal] = useState<Record<string, string>>({});
 
   const showToast = useCallback((m: string) => {
     setToast(m);
@@ -163,6 +165,11 @@ export default function TutorLessonList() {
     }
     return true;
   });
+
+  // 기존에 쓰던 시간 목록 (드롭다운 선택용) — 전체 수업의 confirmed/class_time 중복 제거
+  const timeOptions = Array.from(new Set(
+    lessons.map(l => (l.confirmed_time || l.class_time || "").trim()).filter(Boolean)
+  )).sort();
 
   // class_days(요일 array) + start/end + skip_dates 로 자연 수업일 목록 생성
   function generateLessonDates(lesson: LessonRow): string[] {
@@ -300,6 +307,29 @@ export default function TutorLessonList() {
     setChangeNew(prev => ({ ...prev, [lesson.id]: "" }));
     setLessons(ls => ls.map(l => l.id === lesson.id ? { ...l, skip_dates: nextSkips, tutor_memo: nextMemo } : l));
     showToast(`✅ ${oldD} → ${newD} 변경 기록`);
+  }
+  async function changeSessionTime(lesson: LessonRow) {
+    const date = (changeTimeDate[lesson.id] || "").trim();
+    const time = (changeTimeVal[lesson.id] || "").trim();
+    if (!time) { showToast("변경할 시간을 선택해주세요"); return; }
+    setSavingLessonId(lesson.id);
+    let patch: Record<string, unknown>; let next: Partial<LessonRow>;
+    if (!date || date === "__default__") {
+      patch = { confirmed_time: time };
+      next = { confirmed_time: time };
+    } else {
+      const ov = { ...(lesson.time_overrides || {}) };
+      ov[date] = time;
+      patch = { time_overrides: ov };
+      next = { time_overrides: ov };
+    }
+    const { error } = await supabase.from("tutor_lessons").update(patch).eq("id", lesson.id);
+    setSavingLessonId("");
+    if (error) { showToast("시간 변경 실패: " + error.message); return; }
+    setChangeTimeDate(prev => ({ ...prev, [lesson.id]: "" }));
+    setChangeTimeVal(prev => ({ ...prev, [lesson.id]: "" }));
+    setLessons(ls => ls.map(l => l.id === lesson.id ? { ...l, ...next } : l));
+    showToast(`✅ 시간 변경: ${date && date !== "__default__" ? date + " " : "기본 "}${time}`);
   }
 
   async function deleteLesson(lessonId: string) {
@@ -528,7 +558,10 @@ export default function TutorLessonList() {
                       </button>
                     </td>
                   </tr>
-                  {expanded && (
+                  {expanded && (() => {
+                    const availDates = generateLessonDates(l);
+                    const dowKr = (d: string) => WEEKDAYS_KR[new Date(d + "T00:00:00").getDay()];
+                    return (
                     <tr>
                       <td colSpan={13} style={{ background: "#f8fafc", padding: "14px 16px" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -551,14 +584,14 @@ export default function TutorLessonList() {
                           {/* 하루 취소 */}
                           <div style={{ background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
                             <div style={{ fontSize: 12, fontWeight: 800, color: "#dc2626", marginBottom: 8 }}>❌ 하루 취소 (skip_dates 추가)</div>
-                            <input
-                              type="date"
+                            <select
                               value={cancelDate[l.id] || ""}
-                              min={l.start_date || undefined}
-                              max={l.end_date || undefined}
                               onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
-                              style={{ width: "100%", padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
-                            />
+                              style={{ width: "100%", padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff" }}
+                            >
+                              <option value="">취소할 날짜 선택...</option>
+                              {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
+                            </select>
                             <button
                               onClick={() => cancelOneDate(l)}
                               disabled={savingLessonId === l.id || !cancelDate[l.id]}
@@ -582,14 +615,14 @@ export default function TutorLessonList() {
                             <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
                               <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
                                 원래 날짜
-                                <input
-                                  type="date"
+                                <select
                                   value={changeOld[l.id] || ""}
-                                  min={l.start_date || undefined}
-                                  max={l.end_date || undefined}
                                   onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
-                                />
+                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
+                                >
+                                  <option value="">기존 날짜 선택...</option>
+                                  {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
+                                </select>
                               </label>
                               <span style={{ fontSize: 18, color: "#94a3b8", paddingBottom: 6 }}>→</span>
                               <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
@@ -609,10 +642,46 @@ export default function TutorLessonList() {
                             </div>
                             <div style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8" }}>※ 원래 날짜는 skip_dates에 추가되고, tutor_memo에 “변경: 원래→새” 한 줄이 append됩니다.</div>
                           </div>
+
+                          {/* 시간 변경 */}
+                          <div style={{ gridColumn: "1 / span 2", background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: "#0369a1", marginBottom: 8 }}>⏰ 시간 변경 (time_overrides)</div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
+                                날짜
+                                <select
+                                  value={changeTimeDate[l.id] || "__default__"}
+                                  onChange={e => setChangeTimeDate(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
+                                >
+                                  <option value="__default__">전체 (기본 시간)</option>
+                                  {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
+                                </select>
+                              </label>
+                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
+                                시간
+                                <select
+                                  value={changeTimeVal[l.id] || ""}
+                                  onChange={e => setChangeTimeVal(prev => ({ ...prev, [l.id]: e.target.value }))}
+                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
+                                >
+                                  <option value="">시간 선택...</option>
+                                  {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </label>
+                              <button
+                                onClick={() => changeSessionTime(l)}
+                                disabled={savingLessonId === l.id || !changeTimeVal[l.id]}
+                                style={{ padding: "8px 14px", border: "none", borderRadius: 7, background: "#0369a1", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !changeTimeVal[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !changeTimeVal[l.id]) ? 0.6 : 1 }}
+                              >시간 변경</button>
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8" }}>※ 특정 날짜는 그 날만, “전체”는 기본 수업 시간을 변경합니다. 시간은 기존에 쓰던 시간 목록에서 선택.</div>
+                          </div>
                         </div>
                       </td>
                     </tr>
-                  )}
+                    );
+                  })()}
                 </Fragment>
               );
             })}

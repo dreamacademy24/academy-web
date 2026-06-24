@@ -26,10 +26,9 @@ export const INCLUSIONS_JP: PkgItem[] = [
   { icon: "💻", title: "무료 화상영어", desc: "출국 전 / 귀국 후 (등록기간만큼)" },
 ];
 
-// 통학형 (학원만 이용)
+// 통학형 (학원 정규수업만 이용 — 애프터스쿨/주말체험/화상영어 미포함)
 export const INCLUSIONS_COMMUTE: PkgItem[] = [
-  { icon: "🎓", title: "드림아카데미 정규 수업", desc: "+ 에프터 스쿨 + 주말 체험" },
-  { icon: "💻", title: "무료 화상영어", desc: "출국 전 / 귀국 후 (등록기간만큼)" },
+  { icon: "🎓", title: "드림아카데미 정규 수업", desc: "정규반 수업만 포함" },
   { icon: "ℹ️", title: "통학형 안내", desc: "숙박/식사/픽드랍 미포함 (학원만 이용)" },
 ];
 
