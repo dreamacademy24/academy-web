@@ -49,15 +49,6 @@ function fmtMD(iso: string) {
 
 const WEEKDAY_KR_KEYS = ['일','월','화','수','목','금','토'];
 
-function resolveTime(dateStr: string, lesson: Lesson): string {
-  const dow = new Date(dateStr + 'T00:00:00').getDay();
-  const krKey = WEEKDAY_KR_KEYS[dow];
-  const raw = lesson.time_overrides?.[dateStr]
-    || lesson.time_overrides?.[krKey]
-    || lesson.confirmed_time || lesson.class_time || '';
-  return stripTimeSuffix(raw) || '-';
-}
-
 function normalizeDayKR(d: string): string {
   const lower = (d || "").toLowerCase().trim();
   return DAY_KR[lower] || d;
@@ -94,16 +85,12 @@ export default function AttendancePage() {
   const [notes, setNotes] = useState("");
   const [notesLog, setNotesLog] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState("");
-  const [cancelDateVal, setCancelDateVal] = useState("");
   const [changeOldVal, setChangeOldVal] = useState("");
   const [changeNewVal, setChangeNewVal] = useState("");
   const [savingManage, setSavingManage] = useState(false);
   const [draftDays, setDraftDays] = useState<string[]>([]);
   const [draftConfirmedTime, setDraftConfirmedTime] = useState<string>("");
   const [draftDayOverrides, setDraftDayOverrides] = useState<Record<string, string>>({});
-  const [draftDateOverrides, setDraftDateOverrides] = useState<Record<string, string>>({});
-  const [newOverrideDate, setNewOverrideDate] = useState("");
-  const [newOverrideTime, setNewOverrideTime] = useState("");
   const [savingTimes, setSavingTimes] = useState(false);
   const [englishMode, setEnglishMode] = useState(false);
   const [timeOptions, setTimeOptions] = useState<string[]>([]);
@@ -116,13 +103,10 @@ export default function AttendancePage() {
     setDraftConfirmedTime(lesson.confirmed_time || lesson.class_time || "");
     const ov = lesson.time_overrides || {};
     const days: Record<string, string> = {};
-    const dates: Record<string, string> = {};
     for (const [k, v] of Object.entries(ov)) {
       if (WEEKDAY_KR_KEYS.includes(k)) days[k] = String(v);
-      else dates[k] = String(v);
     }
     setDraftDayOverrides(days);
-    setDraftDateOverrides(dates);
   }, [lesson]);
 
   const load = useCallback(async () => {
@@ -227,23 +211,6 @@ export default function AttendancePage() {
     router.back();
   }
 
-  async function cancelOneDate() {
-    if (!lesson) return;
-    const d = cancelDateVal.trim();
-    if (!d) { toastErr("Please select a date to cancel."); return; }
-    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    if (current.includes(d)) { toastErr("This date is already cancelled."); return; }
-    setSavingManage(true);
-    const { error } = await supabase.from("tutor_lessons")
-      .update({ skip_dates: [...current, d] })
-      .eq("id", lesson.id);
-    setSavingManage(false);
-    if (error) { toastErr("Cancel failed: " + error.message); return; }
-    setCancelDateVal("");
-    toastOk(`${d} class cancelled.`);
-    load();
-  }
-
   async function rescheduleDate() {
     if (!lesson) return;
     const oldD = changeOldVal.trim();
@@ -312,11 +279,12 @@ export default function AttendancePage() {
     if (!lesson) return;
     setSavingTimes(true);
     const merged: Record<string, string> = {};
-    for (const [k, v] of Object.entries(draftDayOverrides)) {
-      const t = String(v || "").trim();
-      if (t) merged[k] = t;
+    // 날짜별 시간(줄별 시간 변경)은 보존
+    for (const [k, v] of Object.entries(lesson.time_overrides || {})) {
+      if (!WEEKDAY_KR_KEYS.includes(k) && String(v).trim()) merged[k] = String(v);
     }
-    for (const [k, v] of Object.entries(draftDateOverrides)) {
+    // 요일별 시간 적용
+    for (const [k, v] of Object.entries(draftDayOverrides)) {
       const t = String(v || "").trim();
       if (t) merged[k] = t;
     }
@@ -325,7 +293,7 @@ export default function AttendancePage() {
       .eq("id", lesson.id);
     setSavingTimes(false);
     if (error) { toastErr("Time save failed: " + error.message); return; }
-    toastOk("Class times saved.");
+    toastOk(englishMode ? "Class times saved." : "시간 저장됨.");
     load();
   }
 
@@ -545,34 +513,6 @@ export default function AttendancePage() {
             >{savingManage?"Saving...":"Save Days"}</button>
           </div>
 
-          {/* Cancel Day */}
-          <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#dc2626",marginBottom:2}}>❌ Cancel Day</div>
-            <input
-              type="date"
-              lang="en"
-              placeholder="YYYY-MM-DD"
-              value={cancelDateVal}
-              min={lesson.start_date || undefined}
-              max={lesson.end_date || undefined}
-              onChange={e => setCancelDateVal(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-            />
-            {(lesson.skip_dates || []).length > 0 && (
-              <div style={{fontSize:11,color:"#475569"}}>
-                <span style={{fontWeight:700}}>Cancelled ({(lesson.skip_dates||[]).length}): </span>
-                {(lesson.skip_dates||[]).map((d:string) => (
-                  <span key={d} style={{display:"inline-block",padding:"1px 6px",borderRadius:4,background:"#fef2f2",color:"#b91c1c",fontSize:10.5,fontWeight:700,marginRight:3}}>{d}</span>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={cancelOneDate}
-              disabled={savingManage || !cancelDateVal}
-              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#dc2626",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!cancelDateVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!cancelDateVal)?0.6:1,alignSelf:"flex-start"}}
-            >{savingManage ? "Saving..." : "Cancel Day"}</button>
-          </div>
-
           {/* Reschedule */}
           <div style={{flex:"1 1 240px",display:"flex",flexDirection:"column",gap:6}}>
             <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:2}}>🔄 Reschedule</div>
@@ -653,56 +593,6 @@ export default function AttendancePage() {
               );
             })}
             <div style={{fontSize:11,color:"#6b7280"}}>Leave blank to use default time</div>
-          </div>
-
-          {/* Specific Date Time */}
-          <div style={{flex:"1 1 280px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#0369a1",marginBottom:2}}>🗓 Specific Date Time</div>
-            {Object.entries(draftDateOverrides).sort(([a],[b]) => a.localeCompare(b)).map(([dt, tm]) => (
-              <div key={dt} style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{fontSize:11,fontWeight:700,color:"#0369a1",minWidth:78}}>{dt}</span>
-                <input
-                  type="time"
-                  lang="en"
-                  value={tm}
-                  onChange={e => setDraftDateOverrides(prev => ({ ...prev, [dt]: e.target.value }))}
-                  style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
-                />
-                <button type="button"
-                  onClick={() => setDraftDateOverrides(prev => { const n = { ...prev }; delete n[dt]; return n; })}
-                  style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}
-                >✕</button>
-              </div>
-            ))}
-            <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:4,borderTop:"1px dashed #e5e7eb",marginTop:2}}>
-              <input
-                type="date"
-                lang="en"
-                placeholder="YYYY-MM-DD"
-                value={newOverrideDate}
-                min={lesson.start_date || undefined}
-                max={lesson.end_date || undefined}
-                onChange={e => setNewOverrideDate(e.target.value)}
-                style={{flex:"1 1 110px",padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
-              />
-              <input
-                type="time"
-                lang="en"
-                value={newOverrideTime}
-                onChange={e => setNewOverrideTime(e.target.value)}
-                style={{flex:"1 1 90px",padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
-              />
-              <button type="button"
-                disabled={!newOverrideDate || !newOverrideTime}
-                onClick={() => {
-                  if (!newOverrideDate || !newOverrideTime) return;
-                  setDraftDateOverrides(prev => ({ ...prev, [newOverrideDate]: newOverrideTime }));
-                  setNewOverrideDate("");
-                  setNewOverrideTime("");
-                }}
-                style={{padding:"6px 10px",background:"#0369a1",color:"#fff",border:"none",borderRadius:6,fontSize:12,fontWeight:700,cursor:(!newOverrideDate||!newOverrideTime)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(!newOverrideDate||!newOverrideTime)?0.5:1}}
-              >+ Add</button>
-            </div>
           </div>
 
         </div>
