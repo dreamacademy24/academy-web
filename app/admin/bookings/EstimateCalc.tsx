@@ -751,10 +751,12 @@ export default function EstimateCalc(){
         </div>
         {/* 보호자 / 아이 */}
         <div style={{display:"flex",gap:8,marginBottom:10}}>
+          {plan.accom !== "commute" && (
           <label style={{flex:1}}><span style={lbl}>보호자</span>
             <select style={sel} value={plan.parents} onChange={e=>up(idx,{parents:Number(e.target.value)})}>
               {[1,2,3].map(n=><option key={n} value={n}>{n}명</option>)}
             </select></label>
+          )}
           <label style={{flex:1}}><span style={lbl}>아이</span>
             <select style={sel} value={plan.kids} onChange={e=>up(idx,{kids:Number(e.target.value)})}>
               {[1,2,3,4,5].map(n=><option key={n} value={n}>{n}명</option>)}
@@ -814,7 +816,7 @@ export default function EstimateCalc(){
             <div style={{fontSize:12,color:"#475569",marginBottom:4}}>체크인: {plan.checkin} / 체크아웃: {calcCheckout(plan.checkin,totalWeeks(plan))}</div>
           )}
           <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
-          <div style={{fontSize:12,color:"#6b7c93"}}>보호자 {plan.parents}명 + 아이 {plan.kids}명</div>
+          <div style={{fontSize:12,color:"#6b7c93"}}>{plan.accom!=="commute" ? `보호자 ${plan.parents}명 + 아이 ${plan.kids}명` : `아이 ${plan.kids}명`}</div>
         </div>
 
         {/* 콤보 숙소별 내역 */}
