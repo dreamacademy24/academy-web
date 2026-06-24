@@ -4,7 +4,7 @@ import { toastOk, toastErr } from "@/lib/toast";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
-import { cancelMap, resolutionLabelEN } from "@/lib/lessonCancellations";
+import { cancelMap, resolutionLabelEN, resolutionLabelKR } from "@/lib/lessonCancellations";
 
 interface Lesson {
   id: string;
@@ -105,6 +105,9 @@ export default function AttendancePage() {
   const [newOverrideDate, setNewOverrideDate] = useState("");
   const [newOverrideTime, setNewOverrideTime] = useState("");
   const [savingTimes, setSavingTimes] = useState(false);
+  const [englishMode, setEnglishMode] = useState(false);
+  const [timeOptions, setTimeOptions] = useState<string[]>([]);
+  useEffect(() => { if (typeof window !== "undefined") setEnglishMode(!!localStorage.getItem("teacherSession")); }, []);
   useEffect(() => {
     if (lesson) setDraftDays(lesson.class_days || []);
   }, [lesson]);
@@ -145,6 +148,12 @@ export default function AttendancePage() {
       const { data: t } = await supabase.from("tutors").select("name").eq("id", l.tutor_id).maybeSingle();
       if (t) setTutorName((t as { name: string }).name || "");
     }
+    const { data: allT } = await supabase.from("tutor_lessons").select("confirmed_time, class_time");
+    const opts = Array.from(new Set(((allT || []) as { confirmed_time: string | null; class_time: string | null }[])
+      .map(r => stripTimeSuffix(r.confirmed_time || r.class_time || "").trim()).filter(Boolean)));
+    const cur = stripTimeSuffix(l.confirmed_time || l.class_time || "").trim();
+    if (cur && !opts.includes(cur)) opts.push(cur);
+    setTimeOptions(opts.sort());
     setLoading(false);
   }, [lessonId]);
 
@@ -256,6 +265,36 @@ export default function AttendancePage() {
     setNotes(nextNotes);
     toastOk(`Rescheduled: ${oldD} → ${newD}`);
     load();
+  }
+
+  async function setOneDateTime(date: string, time: string) {
+    if (!lesson) return;
+    const ov = { ...(lesson.time_overrides || {}) };
+    if (time) ov[date] = time; else delete ov[date];
+    const { error } = await supabase.from("tutor_lessons").update({ time_overrides: ov }).eq("id", lesson.id);
+    if (error) { toastErr("Time save failed: " + error.message); return; }
+    setLesson(l => l ? { ...l, time_overrides: ov } : l);
+    toastOk(englishMode ? "Time updated" : "시간 변경됨");
+  }
+  async function cancelDateInline(date: string) {
+    if (!lesson) return;
+    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    if (cur.includes(date)) return;
+    const { error } = await supabase.from("tutor_lessons").update({ skip_dates: [...cur, date] }).eq("id", lesson.id);
+    if (error) { toastErr("Cancel failed: " + error.message); return; }
+    setLesson(l => l ? { ...l, skip_dates: [...cur, date] } : l);
+    toastOk(englishMode ? "Cancelled" : "취소됨");
+  }
+  async function restoreDate(date: string) {
+    if (!lesson) return;
+    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = cur.filter(d => d !== date);
+    const cancellations = { ...((lesson.cancellations || {}) as Record<string, string>) };
+    delete cancellations[date];
+    const { error } = await supabase.from("tutor_lessons").update({ skip_dates: nextSkips, cancellations }).eq("id", lesson.id);
+    if (error) { toastErr("Restore failed: " + error.message); return; }
+    setLesson(l => l ? { ...l, skip_dates: nextSkips, cancellations } : l);
+    toastOk(englishMode ? "Restored" : "복구됨");
   }
 
   async function saveClassDays() {
@@ -391,100 +430,90 @@ export default function AttendancePage() {
 
       <div className="at-card">
         <div className="at-sum">
-          <div className="s"><span className="lbl">Total</span><b>{total}</b></div>
-          <div className="s attend"><span className="lbl">Attended</span><b>{counts.O}</b></div>
-          <div className="s miss"><span className="lbl">Absent</span><b>{counts.X}</b></div>
-          <div className="s makeup"><span className="lbl">Makeup</span><b>{counts.T}</b></div>
-          <div className="s remain"><span className="lbl">Remaining</span><b>{remaining}</b></div>
+          <div className="s"><span className="lbl">{englishMode ? "Total" : "총 회차"}</span><b>{total}</b></div>
+          <div className="s attend"><span className="lbl">{englishMode ? "Attended" : "출석"}</span><b>{counts.O}</b></div>
+          <div className="s miss"><span className="lbl">{englishMode ? "Absent" : "결석"}</span><b>{counts.X}</b></div>
+          <div className="s makeup"><span className="lbl">{englishMode ? "Makeup" : "메이크업"}</span><b>{counts.T}</b></div>
+          <div className="s remain"><span className="lbl">{englishMode ? "Remaining" : "잔여"}</span><b>{remaining}</b></div>
         </div>
       </div>
 
       <div className="at-card">
         <div className="at-help">
-          Click each box to cycle: <b>blank → ○ attended → ✕ absent → △ makeup → blank</b>. △ (Makeup) extends total session count by +1.
+          {englishMode
+            ? "Each row: set time, attendance (○ attended / ✕ absent / △ makeup), memo, and cancel. △ extends total by +1. Time & cancel save instantly; attendance & memo save with the Save button."
+            : "한 줄에서 시간 · 출결(○출석/✕결석/△메이크업) · 메모 · 취소를 처리합니다. △는 총 회차 +1. 시간·취소는 즉시 저장, 출결·메모는 저장 버튼으로 저장."}
         </div>
         {dates.length === 0 ? (
           <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 13 }}>
-            No class dates available (check start/end date and days)
+            {englishMode ? "No class dates (check start/end date and days)" : "수업일이 없습니다 (기간·요일 확인)"}
           </div>
         ) : (
-          <div className="at-grid">
-            {dates.map((d, i) => {
-              const dt = new Date(d + "T00:00:00");
-              const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
-              const dw = WEEKDAYS_KR[dt.getDay()];
-              const cancelRes = cMap[d];
-              const v = draft[d] || "";
-              const tm = resolveTime(d, lesson);
-              const cls = cancelRes ? "s-cancel" :
-                v === "○" ? "s-o" :
-                v === "✕" ? "s-x" :
-                v === "△" ? "s-t" : "s-blank";
-              return (
-                <button
-                  key={d}
-                  type="button"
-                  className={`at-box ${cls}`}
-                  onClick={() => cycle(d)}
-                  disabled={!!cancelRes}
-                  title={cancelRes ? `${d} (${dw}) — Cancelled (${resolutionLabelEN(cancelRes)})` : `${d} (${dw}) ${tm} — ${v || "blank"}`}
-                >
-                  <span className="idx">#{i + 1}</span>
-                  <span className="dt">{md}<span className="dw">({dw})</span></span>
-                  <span style={{fontSize:10.5,fontWeight:700,opacity:0.75,letterSpacing:"0.02em"}}>{cancelRes ? "—" : tm}</span>
-                  {cancelRes ? (
-                    <span style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                      <span style={{fontSize:22,fontWeight:900,lineHeight:1}}>🚫</span>
-                      <span style={{fontSize:9.5,fontWeight:800,letterSpacing:"0.02em"}}>CANCELLED</span>
-                      <span style={{fontSize:8.5,fontWeight:700,opacity:0.8}}>{resolutionLabelEN(cancelRes)}</span>
-                    </span>
-                  ) : (
-                    <span className="mark">{v || ""}</span>
-                  )}
-                </button>
-              );
-            })}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 580 }}>
+              <thead>
+                <tr style={{ background: "#f8fafc" }}>
+                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap", width: 120 }}>{englishMode ? "Date" : "회차·날짜"}</th>
+                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 150 }}>{englishMode ? "Time" : "시간"}</th>
+                  <th style={{ textAlign: "center", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 140 }}>{englishMode ? "Attendance" : "출결"}</th>
+                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0" }}>{englishMode ? "Memo" : "메모"}</th>
+                  <th style={{ textAlign: "center", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 70 }}>{englishMode ? "Cancel" : "취소"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dates.map((d, i) => {
+                  const dt = new Date(d + "T00:00:00");
+                  const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
+                  const dw = WEEKDAYS_KR[dt.getDay()];
+                  const cancelRes = cMap[d];
+                  const v = draft[d] || "";
+                  const curTime = (lesson.time_overrides?.[d]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
+                  if (cancelRes) {
+                    return (
+                      <tr key={d} style={{ borderBottom: "1px solid #f1f5f9", background: "#f8fafc", opacity: 0.85 }}>
+                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap", textDecoration: "line-through", color: "#94a3b8" }}><b>#{i + 1}</b> {md} <span style={{ fontSize: 11 }}>({dw})</span></td>
+                        <td style={{ padding: "9px 10px", color: "#dc2626", fontWeight: 700 }}>🚫 {englishMode ? `Cancelled (${resolutionLabelEN(cancelRes)})` : `취소됨 (${resolutionLabelKR(cancelRes)})`}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "center", color: "#94a3b8" }}>—</td>
+                        <td style={{ padding: "9px 10px", color: "#94a3b8", fontSize: 12 }}>{notesLog[d] || ""}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "center" }}><button onClick={() => restoreDate(d)} style={{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{englishMode ? "Restore" : "복구"}</button></td>
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={d} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}><b style={{ color: "#1a6fc4" }}>#{i + 1}</b> {md} <span style={{ fontSize: 11, color: "#94a3b8" }}>({dw})</span></td>
+                      <td style={{ padding: "9px 10px" }}>
+                        <select value={curTime} onChange={e => setOneDateTime(d, e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
+                          {curTime === "" && <option value="">-</option>}
+                          {curTime !== "" && !timeOptions.includes(curTime) && <option value={curTime}>{curTime}</option>}
+                          {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </td>
+                      <td style={{ padding: "9px 10px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        {(["○", "✕", "△"] as const).map(mk => (
+                          <button key={mk} type="button" onClick={() => setDraft(pr => ({ ...pr, [d]: pr[d] === mk ? "" : mk }))}
+                            title={mk === "○" ? (englishMode ? "Attended" : "출석") : mk === "✕" ? (englishMode ? "Absent" : "결석") : (englishMode ? "Makeup" : "메이크업")}
+                            style={{ width: 30, height: 30, margin: "0 2px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800,
+                              border: v === mk ? "none" : "1px solid #e5e7eb",
+                              background: v === mk ? (mk === "○" ? "#dcfce7" : mk === "✕" ? "#fee2e2" : "#fef3c7") : "#fff",
+                              color: v === mk ? (mk === "○" ? "#15803d" : mk === "✕" ? "#b91c1c" : "#92400e") : "#cbd5e1" }}>{mk}</button>
+                        ))}
+                      </td>
+                      <td style={{ padding: "9px 10px" }}>
+                        <input value={notesLog[d] || ""} onChange={e => setNotesLog(pr => ({ ...pr, [d]: e.target.value }))} placeholder={englishMode ? "Memo..." : "메모..."}
+                          style={{ width: "100%", padding: "6px 8px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+                      </td>
+                      <td style={{ padding: "9px 10px", textAlign: "center" }}>
+                        <button type="button" onClick={() => cancelDateInline(d)} style={{ padding: "4px 10px", border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{englishMode ? "Cancel" : "취소"}</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-
-      {dates.length > 0 && (
-        <div className="at-card">
-          <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:12}}>
-            📝 Date Notes
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {dates.map((d, i) => {
-              const dt = new Date(d + "T00:00:00");
-              const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
-              const dw = WEEKDAYS_KR[dt.getDay()];
-              const mark = draft[d] || "";
-              const markColor = mark === "○" ? "#15803d" : mark === "✕" ? "#b91c1c" : mark === "△" ? "#92400e" : "#94a3b8";
-              const note = notesLog[d] || "";
-              if (!mark && !note) return null;
-              return (
-                <div key={d} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid #f3f4f6"}}>
-                  <span style={{fontSize:11,fontWeight:700,color:"#6b7280",minWidth:28}}>#{i+1}</span>
-                  <span style={{fontSize:12,fontWeight:800,color:"#374151",minWidth:60}}>{md} ({dw})</span>
-                  <span style={{fontSize:16,fontWeight:900,color:markColor,minWidth:20,textAlign:"center"}}>{mark || ""}</span>
-                  <input
-                    type="text"
-                    value={note}
-                    onChange={e => setNotesLog(prev => ({ ...prev, [d]: e.target.value }))}
-                    placeholder="Add note..."
-                    style={{flex:1,padding:"5px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
-                  />
-                </div>
-              );
-            })}
-            {dates.every(d => !draft[d] && !notesLog[d]) && (
-              <div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:"12px 0"}}>
-                Click a date box then type a note above.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <div className="at-card">
         <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
@@ -685,8 +714,8 @@ export default function AttendancePage() {
       </div>
 
       <div className="at-foot">
-        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>Cancel</button>
-        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? "Saving..." : "💾 Save"}</button>
+        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>{englishMode ? "Back" : "닫기"}</button>
+        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? (englishMode ? "Saving..." : "저장중...") : (englishMode ? "💾 Save" : "💾 저장")}</button>
       </div>
     </div>
   </>);
