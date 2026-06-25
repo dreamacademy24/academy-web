@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
 import { cancelMap, resolutionLabelEN, resolutionLabelKR } from "@/lib/lessonCancellations";
+import { sessionsForDate } from "@/lib/lessonDates";
 
 interface Lesson {
   id: string;
@@ -25,6 +26,7 @@ interface Lesson {
   notes_log: Record<string, string> | null;
   time_overrides?: Record<string, string> | null;
   cancellations?: Record<string, string> | null;
+  session_overrides?: Record<string, number> | null;
 }
 
 const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -72,6 +74,27 @@ function generateDates(lesson: Lesson): string[] {
   return out;
 }
 
+const TIME_SLOTS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 8; h <= 20; h++) for (const m of [0, 30]) out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  return out;
+})();
+function startOf(range: string): string {
+  const s = String(range || "").split("~")[0].trim();
+  const m = s.match(/(\d{1,2}):(\d{2})/);
+  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : "";
+}
+function addMin(t: string, mins: number): string {
+  const m = t.match(/(\d{1,2}):(\d{2})/); if (!m) return t;
+  const tot = Number(m[1]) * 60 + Number(m[2]) + mins;
+  const hh = Math.floor(tot / 60) % 24, mm = tot % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+function rangeFor(start: string, sessions: number): string {
+  if (!start) return "";
+  return `${start} ~ ${addMin(start, sessions === 2 ? 100 : 50)}`;
+}
+
 export default function AttendancePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -93,7 +116,6 @@ export default function AttendancePage() {
   const [draftDayOverrides, setDraftDayOverrides] = useState<Record<string, string>>({});
   const [savingTimes, setSavingTimes] = useState(false);
   const [englishMode, setEnglishMode] = useState(false);
-  const [timeOptions, setTimeOptions] = useState<string[]>([]);
   useEffect(() => { if (typeof window !== "undefined") setEnglishMode(!!localStorage.getItem("teacherSession")); }, []);
   useEffect(() => {
     if (lesson) setDraftDays(lesson.class_days || []);
@@ -132,12 +154,6 @@ export default function AttendancePage() {
       const { data: t } = await supabase.from("tutors").select("name").eq("id", l.tutor_id).maybeSingle();
       if (t) setTutorName((t as { name: string }).name || "");
     }
-    const { data: allT } = await supabase.from("tutor_lessons").select("confirmed_time, class_time");
-    const opts = Array.from(new Set(((allT || []) as { confirmed_time: string | null; class_time: string | null }[])
-      .map(r => stripTimeSuffix(r.confirmed_time || r.class_time || "").trim()).filter(Boolean)));
-    const cur = stripTimeSuffix(l.confirmed_time || l.class_time || "").trim();
-    if (cur && !opts.includes(cur)) opts.push(cur);
-    setTimeOptions(opts.sort());
     setLoading(false);
   }, [lessonId]);
 
@@ -234,14 +250,14 @@ export default function AttendancePage() {
     load();
   }
 
-  async function setOneDateTime(date: string, time: string) {
-    if (!lesson) return;
-    const ov = { ...(lesson.time_overrides || {}) };
-    if (time) ov[date] = time; else delete ov[date];
-    const { error } = await supabase.from("tutor_lessons").update({ time_overrides: ov }).eq("id", lesson.id);
-    if (error) { toastErr("Time save failed: " + error.message); return; }
-    setLesson(l => l ? { ...l, time_overrides: ov } : l);
-    toastOk(englishMode ? "Time updated" : "시간 변경됨");
+  async function setOneDateTimeSession(date: string, start: string, sessions: number) {
+    if (!lesson || !start) return;
+    const ov = { ...(lesson.time_overrides || {}) }; ov[date] = rangeFor(start, sessions);
+    const so = { ...((lesson.session_overrides || {}) as Record<string, number>) }; so[date] = sessions;
+    const { error } = await supabase.from("tutor_lessons").update({ time_overrides: ov, session_overrides: so }).eq("id", lesson.id);
+    if (error) { toastErr("Save failed: " + error.message); return; }
+    setLesson(l => l ? { ...l, time_overrides: ov, session_overrides: so } : l);
+    toastOk(englishMode ? "Updated" : "변경됨");
   }
   async function cancelDateInline(date: string) {
     if (!lesson) return;
@@ -435,7 +451,9 @@ export default function AttendancePage() {
                   const dw = WEEKDAYS_KR[dt.getDay()];
                   const cancelRes = cMap[d];
                   const v = draft[d] || "";
-                  const curTime = (lesson.time_overrides?.[d]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
+                  const curRange = (lesson.time_overrides?.[d]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
+                  const curStart = startOf(curRange);
+                  const curSessions = sessionsForDate(lesson, d);
                   if (cancelRes) {
                     return (
                       <tr key={d} style={{ borderBottom: "1px solid #f1f5f9", background: "#f8fafc", opacity: 0.85 }}>
@@ -451,11 +469,18 @@ export default function AttendancePage() {
                     <tr key={d} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}><b style={{ color: "#1a6fc4" }}>#{i + 1}</b> {md} <span style={{ fontSize: 11, color: "#94a3b8" }}>({dw})</span></td>
                       <td style={{ padding: "9px 10px" }}>
-                        <select value={curTime} onChange={e => setOneDateTime(d, e.target.value)} style={{ width: "100%", padding: "6px 8px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
-                          {curTime === "" && <option value="">-</option>}
-                          {curTime !== "" && !timeOptions.includes(curTime) && <option value={curTime}>{curTime}</option>}
-                          {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          <select value={curStart} onChange={e => setOneDateTimeSession(d, e.target.value, curSessions)} style={{ flex: 1, padding: "6px 4px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
+                            {curStart === "" && <option value="">{englishMode ? "Start" : "시작"}</option>}
+                            {curStart !== "" && !TIME_SLOTS.includes(curStart) && <option value={curStart}>{curStart}</option>}
+                            {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <select value={String(curSessions)} onChange={e => setOneDateTimeSession(d, curStart, Number(e.target.value))} style={{ width: 70, padding: "6px 4px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
+                            <option value="1">{englishMode ? "1T" : "1타임"}</option>
+                            <option value="2">{englishMode ? "2T" : "2타임"}</option>
+                          </select>
+                        </div>
+                        {curStart !== "" && <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{rangeFor(curStart, curSessions)}</div>}
                       </td>
                       <td style={{ padding: "9px 10px", textAlign: "center", whiteSpace: "nowrap" }}>
                         {(["○", "✕", "△"] as const).map(mk => (

@@ -4,7 +4,7 @@ import { toastErr, toastOk } from "@/lib/toast";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
-import { tutorDailyRate } from "@/lib/lessonDates";
+import { tutorDailyRate, tutorTotalForDates } from "@/lib/lessonDates";
 import { cancelMap } from "@/lib/lessonCancellations";
 
 interface Lesson {
@@ -261,11 +261,11 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   // class_type·타임에서 직접 도출해 옛/새 데이터 모두 일관되게 표시.
   const classFee = tutorDailyRate(lesson?.class_type, classSession);
 
-  const days = (() => {
-    // 실제 출결 세션이 있으면 그 수 사용 (차감 취소만 제외)
-    if (sessions.length > 0) return sessions.filter(s => cMapInv[s.session_date] !== "deduct").length;
+  const billedDates: string[] = (() => {
+    // 실제 출결 세션이 있으면 그 날짜들 (차감 취소만 제외)
+    if (sessions.length > 0) return sessions.filter(s => cMapInv[s.session_date] !== "deduct").map(s => s.session_date);
     // 없으면 class_days 기반으로 계산 (차감 취소 제외)
-    let count = 0;
+    const out: string[] = [];
     for (const week of weeks) {
       for (const date of week) {
         if (!date) continue;
@@ -273,14 +273,15 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         const dow = new Date(date + "T00:00:00").getDay();
         if (Array.isArray(lesson?.class_days) && lesson.class_days.some(
           (d: string) => DAY_CODE_INV[String(d).trim()] === dow
-        )) count++;
+        )) out.push(date);
       }
     }
-    return count || lesson?.total_sessions || 0;
+    return out;
   })();
+  const days = billedDates.length || (sessions.length === 0 ? (lesson?.total_sessions || 0) : 0);
 
-  // 단가(하루치) × 회차(일수). classSession(타임)은 표시용만 — 타임 이중곱 제거.
-  const total = classFee * days;
+  // 총액 = 날짜별 단가 합산(날짜별 타임 반영). 날짜 없으면 기본단가 × 회차 폴백.
+  const total = billedDates.length > 0 ? tutorTotalForDates(lesson, billedDates) : classFee * days;
   const levelInfo = lesson?.overall_level ? LEVEL_LABELS[lesson.overall_level] : null;
   const sessionTime = parseSessionTime(stripTimeSuffix(lesson?.confirmed_time || lesson?.class_time));
 

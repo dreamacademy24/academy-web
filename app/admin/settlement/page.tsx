@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
 import { cancelMap } from "@/lib/lessonCancellations";
-import { tutorDailyRate } from "@/lib/lessonDates";
+import { tutorTotalForDates } from "@/lib/lessonDates";
 
 interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; accom_room?: string | null; students?: unknown; settlement_open?: boolean | null; }
 function studentNames(b: Booking): string {
@@ -249,8 +249,7 @@ export default function SettlementPage() {
           billedDates = genClassDates(l).filter(dd => cm[dd] !== "deduct");
         }
         const billed = billedDates.length;
-        const rate = tutorDailyRate(l.class_type, l.sessions_per_day);
-        const amt = rate * billed;
+        const amt = tutorTotalForDates(l, billedDates);
         if (amt <= 0) continue;
         const noteKey = `튜터:${String(l.id).slice(0, 12)}`;
         const dsStr = billedDates.map(mdOf).filter(Boolean).join("·");
