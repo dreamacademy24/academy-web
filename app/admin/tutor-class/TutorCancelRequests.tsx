@@ -23,6 +23,7 @@ interface CancelReq {
   requested_by: string | null;
   student_name: string | null;
   tutor_id: string | null;
+  req_type: string | null;
   created_at: string;
 }
 
@@ -179,7 +180,9 @@ export default function TutorCancelRequests({ onCountChange }: { onCountChange?:
             <div key={cr.id} className="tcr-card">
               <div className="tcr-row">
                 <div className="tcr-main">
-                  <div className="tcr-date">{cr.cancel_date}</div>
+                  <div className="tcr-date">{cr.cancel_date}
+                    {cr.req_type && cr.req_type !== "cancel" && <span style={{marginLeft:8,fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:6,background:"#eff6ff",color:"#1d4ed8",verticalAlign:"middle"}}>{cr.req_type === "time_change" ? "시간변경 요청" : cr.req_type === "date_change" ? "날짜변경 요청" : cr.req_type}</span>}
+                  </div>
                   <div className="tcr-stu">{cr.student_name || "-"}</div>
                   <div className="tcr-meta">
                     <b>요청자:</b> {cr.requested_by || "-"} · <b>선생님:</b> {(cr.tutor_id && tutorMap[cr.tutor_id]) || "-"}<br />

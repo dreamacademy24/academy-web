@@ -52,7 +52,9 @@ export async function PATCH(req: Request) {
   if (status === "approved" && cr.lesson_id && cr.cancel_date) {
     // 처리방법(없으면 deduct 기본 — DB에도 동일하게 저장됨)
     const res = (resolution || "deduct") as "deduct" | "makeup" | "no_deduct";
+    const isCancelType = !cr.req_type || cr.req_type === "cancel"; // 시간/날짜 변경 요청은 세션 취소하지 않음
 
+    if (isCancelType) {
     // tutor_lesson_sessions 업데이트
     await sb.from("tutor_lesson_sessions")
       .update({ status: "cancelled_by_student" })
@@ -81,6 +83,7 @@ export async function PATCH(req: Request) {
         if ((lesson.total_sessions || 0) > 0) fb.total_sessions = lesson.total_sessions - 1;
         if (Object.keys(fb).length) await sb.from("tutor_lessons").update(fb).eq("id", cr.lesson_id);
       }
+    }
     }
 
     // 교사 알림 (online_notifications 패턴 재사용)

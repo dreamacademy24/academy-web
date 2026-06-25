@@ -25,7 +25,8 @@ export async function GET(req: Request) {
 // POST — 하루 취소 신청
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const { lesson_id, cancel_date, reason, booking_id, requested_by, student_name, application_id, tutor_id } = body;
+  const { lesson_id, cancel_date, reason, booking_id, requested_by, student_name, application_id, tutor_id, req_type } = body;
+  const reqType = (req_type as string) || "cancel"; // cancel | time_change | date_change
 
   if (!lesson_id || !cancel_date) {
     return NextResponse.json({ error: "lesson_id, cancel_date 필수" }, { status: 400 });
@@ -56,20 +57,22 @@ export async function POST(req: Request) {
     requested_by: requested_by || null,
     student_name: student_name || null,
     tutor_id: tutor_id || null,
+    req_type: reqType,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // 텔레그램 알림 (한국인 직원 그룹)
   try {
-    const refundText = isRefundable ? "환불 가능" : "⚠️ 4일 이내 — 환불 불가";
+    const typeLabel = reqType === "time_change" ? "시간 변경 요청" : reqType === "date_change" ? "날짜 변경 요청" : "수업 취소 요청";
+    const refundText = reqType === "cancel" ? (isRefundable ? "\n환불 가능" : "\n⚠️ 4일 이내 — 환불 불가") : "";
     await sendTelegram(
-      `📋 <b>튜터 수업 취소 요청</b>\n` +
+      `📋 <b>튜터 ${typeLabel}</b>\n` +
       `학생: ${student_name || "?"}\n` +
-      `취소일: ${cancel_date}\n` +
-      `사유: ${reason || "없음"}\n` +
+      `날짜: ${cancel_date}\n` +
+      `내용: ${reason || "없음"}` +
       `${refundText}\n` +
-      `👉 어드민에서 승인/거절해주세요`
+      `👉 어드민에서 확인해주세요`
     );
   } catch { /* best-effort */ }
 
