@@ -294,12 +294,8 @@ export default function AttendancePage() {
   async function saveTimeOverrides() {
     if (!lesson) return;
     setSavingTimes(true);
+    // 기본 시간 저장 = 표준 시간으로 통일 → 날짜별 시간 override는 비우고 요일별만 유지
     const merged: Record<string, string> = {};
-    // 날짜별 시간(줄별 시간 변경)은 보존
-    for (const [k, v] of Object.entries(lesson.time_overrides || {})) {
-      if (!WEEKDAY_KR_KEYS.includes(k) && String(v).trim()) merged[k] = String(v);
-    }
-    // 요일별 시간 적용
     for (const [k, v] of Object.entries(draftDayOverrides)) {
       const t = String(v || "").trim();
       if (t) merged[k] = t;
@@ -309,7 +305,7 @@ export default function AttendancePage() {
       .eq("id", lesson.id);
     setSavingTimes(false);
     if (error) { toastErr("Time save failed: " + error.message); return; }
-    toastOk(englishMode ? "Class times saved." : "시간 저장됨.");
+    toastOk(englishMode ? "Class times unified (per-date overrides cleared)." : "기본 시간으로 통일했습니다 (날짜별 시간 초기화).");
     load();
   }
 
@@ -451,7 +447,8 @@ export default function AttendancePage() {
                   const dw = WEEKDAYS_KR[dt.getDay()];
                   const cancelRes = cMap[d];
                   const v = draft[d] || "";
-                  const curRange = (lesson.time_overrides?.[d]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
+                  const _krKey = WEEKDAY_KR_KEYS[new Date(d + "T00:00:00").getDay()];
+                  const curRange = (lesson.time_overrides?.[d]) || (lesson.time_overrides?.[_krKey]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
                   const curStart = startOf(curRange);
                   const curSessions = sessionsForDate(lesson, d);
                   if (cancelRes) {
