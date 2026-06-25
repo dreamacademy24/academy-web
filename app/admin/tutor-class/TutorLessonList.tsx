@@ -85,6 +85,7 @@ export default function TutorLessonList() {
   const [search, setSearch] = useState("");
   const [tutorFilter, setTutorFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [view, setView] = useState<"active" | "past">("active");
   const [toast, setToast] = useState("");
 
   const [selectedLesson, setSelectedLesson] = useState<LessonRow | null>(null);
@@ -154,7 +155,14 @@ export default function TutorLessonList() {
     import("@/lib/holidays").then(m => m.applyDeployedHolidaysToLessons(supabase)).then(l => { if (l.length > 0) setHolidayTick(t => t + 1); }).catch(() => {});
   }, []);
 
+  const _today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  // 끝난 수업: 완료/취소 상태이거나, 수업 종료일이 지난 경우(예약자 체류 종료 후)
+  const isPastLesson = (l: LessonRow) => l.status === "completed" || l.status === "cancelled" || (!!l.end_date && l.end_date < _today);
+  const activeCount = lessons.filter(l => !isPastLesson(l)).length;
+  const pastCount = lessons.length - activeCount;
   const filtered = lessons.filter(l => {
+    if (view === "active" && isPastLesson(l)) return false;
+    if (view === "past" && !isPastLesson(l)) return false;
     if (statusFilter !== "all" && l.status !== statusFilter) return false;
     if (tutorFilter === "__unassigned__") { if (l.tutor_id) return false; }
     else if (tutorFilter !== "all" && l.tutor_id !== tutorFilter) return false;
@@ -429,6 +437,10 @@ export default function TutorLessonList() {
     `}</style>
 
     <div className="tll-toolbar">
+      <div style={{display:"flex",gap:4,background:"#f1f5f9",borderRadius:8,padding:3}}>
+        <button onClick={() => setView("active")} style={{padding:"6px 12px",border:"none",borderRadius:6,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:view==="active"?"#1a6fc4":"transparent",color:view==="active"?"#fff":"#475569"}}>📋 진행중 {activeCount}</button>
+        <button onClick={() => setView("past")} style={{padding:"6px 12px",border:"none",borderRadius:6,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:view==="past"?"#64748b":"transparent",color:view==="past"?"#fff":"#475569"}}>🗄 과거 {pastCount}</button>
+      </div>
       <input
         type="search"
         value={search}
