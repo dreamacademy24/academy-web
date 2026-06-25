@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { toastOk, toastErr } from "@/lib/toast";
+import { cancelMap } from "@/lib/lessonCancellations";
+import { tutorDailyRate } from "@/lib/lessonDates";
 
 interface Booking { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; accom_room?: string | null; students?: unknown; settlement_open?: boolean | null; }
 function studentNames(b: Booking): string {
@@ -160,16 +162,6 @@ export default function SettlementPage() {
     const n = Number(String(v ?? "").replace(/[^0-9.]/g, ""));
     return isFinite(n) ? n : 0;
   }
-  // 튜터 레슨 날짜 추출: attendance_log 키 우선, 없으면 start~end 범위
-  function tutorDates(l: any): string {
-    const md = (s: string) => { const m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${Number(m[2])}/${Number(m[3])}` : ""; };
-    const log = l?.attendance_log;
-    let dates: string[] = [];
-    if (log && typeof log === "object" && !Array.isArray(log)) dates = Object.keys(log).filter(k => /^\d{4}-\d{2}-\d{2}/.test(k)).sort();
-    if (dates.length) return dates.map(md).filter(Boolean).join("·");
-    const a = md(l?.start_date), b = md(l?.end_date);
-    return a && b ? `${a}~${b}` : (a || "");
-  }
   async function importInvoice() {
     if (!sel) return;
     setImporting(true);
@@ -178,8 +170,8 @@ export default function SettlementPage() {
       let invCount = 0, tutCount = 0;
 
       // 중복 방지: state(items) 대신 DB에서 최신 항목을 다시 읽어 dedup (빠른 더블클릭/stale 방지)
-      const { data: freshItems } = await supabase.from("settlement_items").select("label, amount, note, recorded_by").eq("booking_id", sel.id);
-      const cur = (freshItems || []) as { label: string; amount: number; note: string | null; recorded_by: string | null }[];
+      const { data: freshItems } = await supabase.from("settlement_items").select("id, label, amount, note, recorded_by").eq("booking_id", sel.id);
+      const cur = (freshItems || []) as { id: string; label: string; amount: number; note: string | null; recorded_by: string | null }[];
 
       // ── 1) 게스트 인보이스 현지지불(bookings.locals) ──
       const { data: bk } = await supabase.from("bookings").select("locals").eq("id", sel.id).maybeSingle();
@@ -230,30 +222,66 @@ export default function SettlementPage() {
           }
         }
       }
-      const tutExisting = new Set(cur.filter(i => i.note?.startsWith("튜터:")).map(i => i.note));
-      // 자동 생성 항목(시스템 튜터확정)도 이미 있으면 스킵 — label+amount 기준 dedup
+      // 기존 튜터 항목(노트키 기준) — 값 변동 시 갱신용
+      const tutByNote = new Map<string, { id: string; amount: number; label: string }>();
+      for (const i of cur) { if (i.note && i.note.startsWith("튜터:")) tutByNote.set(i.note, { id: i.id, amount: Number(i.amount), label: i.label }); }
       const autoCreatedSet = new Set(cur.filter(i => i.recorded_by === "시스템(튜터확정)").map(i => `${i.amount}`));
-      lessonMap.forEach((l) => {
-        const amt = parseAmt(l.total_amount);
+      const mdOf = (s2: string) => { const m = String(s2 || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${Number(m[2])}/${Number(m[3])}` : ""; };
+      const genClassDates = (l: any): string[] => {
+        if (!l.start_date || !l.end_date) return [];
+        const codeToIdx: Record<string, number> = { sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,"일":0,"월":1,"화":2,"수":3,"목":4,"금":5,"토":6 };
+        const codes = (Array.isArray(l.class_days) ? l.class_days : []).map((d: string) => (d || "").toLowerCase().trim());
+        const wanted = new Set(codes.map((c: string) => codeToIdx[c]).filter((i: number) => i !== undefined));
+        if (!wanted.size) return [];
+        const out: string[] = []; const d = new Date(l.start_date + "T00:00:00"); const end = new Date(l.end_date + "T00:00:00");
+        while (d <= end) { if (wanted.has(d.getDay())) out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`); d.setDate(d.getDate()+1); }
+        return out;
+      };
+      const tutUpdates: { id: string; amount: number; label: string }[] = [];
+      // 튜터 인보이스 — 실시간 계산: (취소 차감 제외한 실제 회차) × 하루 단가
+      for (const l of lessonMap.values()) {
+        const cm = cancelMap(l);
+        let billedDates: string[];
+        const { data: sess } = await supabase.from("tutor_lesson_sessions").select("session_date").eq("lesson_id", l.id);
+        if (sess && sess.length > 0) {
+          billedDates = (sess as { session_date: string }[]).map(x => x.session_date).filter(dd => cm[dd] !== "deduct").sort();
+        } else {
+          billedDates = genClassDates(l).filter(dd => cm[dd] !== "deduct");
+        }
+        const billed = billedDates.length;
+        const rate = tutorDailyRate(l.class_type, l.sessions_per_day);
+        const amt = rate * billed;
+        if (amt <= 0) continue;
         const noteKey = `튜터:${String(l.id).slice(0, 12)}`;
-        if (amt <= 0 || tutExisting.has(noteKey) || autoCreatedSet.has(`${amt}`)) return;
-        const n = Number(l.total_sessions) || 0;
-        const ds = tutorDates(l);
-        const label = `튜터비${n ? ` ${n}회` : ""}${ds ? ` (${ds})` : ""}`;
-        rows.push({ booking_id: sel.id, section: "class", kind: "charge", label, amount: amt, item_date: today10(), note: noteKey, status: "approved", recorded_by: "튜터인보이스" });
-        tutCount++;
-      });
+        const dsStr = billedDates.map(mdOf).filter(Boolean).join("·");
+        const label = `튜터비 ${billed}회${dsStr ? ` (${dsStr})` : ""}`;
+        const ex = tutByNote.get(noteKey);
+        if (ex) {
+          if (Number(ex.amount) !== amt || ex.label !== label) { tutUpdates.push({ id: ex.id, amount: amt, label }); tutCount++; }
+        } else if (autoCreatedSet.has(`${amt}`)) {
+          // 이미 자동 생성된 동일 금액 항목 존재 → 스킵
+        } else {
+          rows.push({ booking_id: sel.id, section: "class", kind: "charge", label, amount: amt, item_date: today10(), note: noteKey, status: "approved", recorded_by: "튜터인보이스" });
+          tutCount++;
+        }
+      }
 
-      if (rows.length === 0) {
+      // 변경된 기존 튜터 항목 갱신
+      for (const u of tutUpdates) {
+        await supabase.from("settlement_items").update({ amount: u.amount, label: u.label, item_date: today10() }).eq("id", u.id);
+      }
+
+      if (rows.length === 0 && tutUpdates.length === 0) {
         setImporting(false);
-        toastErr("새로 가져올 항목이 없습니다. (인보이스/튜터비가 없거나 이미 반영됨)");
+        toastErr("새로 가져오거나 변경된 항목이 없습니다.");
         return;
       }
-      const { error } = await supabase.from("settlement_items").insert(rows);
+      let insErr = null;
+      if (rows.length > 0) { const { error } = await supabase.from("settlement_items").insert(rows); insErr = error; }
       setImporting(false);
-      if (error) { toastErr("불러오기 실패: " + error.message); return; }
+      if (insErr) { toastErr("불러오기 실패: " + insErr.message); return; }
       const total = rows.reduce((a, r) => a + Number(r.amount || 0), 0);
-      toastOk(`불러오기 완료 — 인보이스 ${invCount}건 · 튜터 ${tutCount}건 (합계 ${peso(total)})`);
+      toastOk(`불러오기 완료 — 인보이스 ${invCount}건 · 튜터 ${tutCount}건${tutUpdates.length ? ` (갱신 ${tutUpdates.length})` : ""}`);
       loadItems(sel.id);
     } catch (e) {
       setImporting(false);
