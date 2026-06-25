@@ -491,7 +491,6 @@ export default function TutorLessonList() {
               const totalNum = Number(l.total_sessions || l.counts.total || 0);
               // skip_dates 기준 잔여 (총회차 - 취소된 날짜 수). 0 미만 방지.
               const remaining = totalNum > 0 ? Math.max(0, totalNum - skips.length) : l.counts.scheduled;
-              const expanded = expandedId === l.id;
               return (
                 <Fragment key={l.id}>
                   <tr>
@@ -531,17 +530,6 @@ export default function TutorLessonList() {
                       <button className="tll-act-btn primary" onClick={() => router.push(`/admin/tutor-class/${l.id}/attendance`)}>출결</button>
                       <button
                         className="tll-act-btn"
-                        onClick={() => {
-                          setExpandedId(expanded ? "" : l.id);
-                          if (!expanded) setMemoDraft(prev => ({ ...prev, [l.id]: l.tutor_memo || "" }));
-                        }}
-                        title="코멘트 / 하루 취소 / 날짜 변경"
-                        style={expanded ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : undefined}
-                      >
-                        {expanded ? "▲ 닫기" : "🗒 관리"}
-                      </button>
-                      <button
-                        className="tll-act-btn"
                         onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}
                         title="인보이스 보기"
                       >
@@ -558,130 +546,6 @@ export default function TutorLessonList() {
                       </button>
                     </td>
                   </tr>
-                  {expanded && (() => {
-                    const availDates = generateLessonDates(l);
-                    const dowKr = (d: string) => WEEKDAYS_KR[new Date(d + "T00:00:00").getDay()];
-                    return (
-                    <tr>
-                      <td colSpan={13} style={{ background: "#f8fafc", padding: "14px 16px" }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                          {/* 코멘트 */}
-                          <div style={{ background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
-                            <div style={{ fontSize: 12, fontWeight: 800, color: "#1a6fc4", marginBottom: 8 }}>🗒 튜터 코멘트 (tutor_memo)</div>
-                            <textarea
-                              value={memoDraft[l.id] ?? (l.tutor_memo || "")}
-                              onChange={e => setMemoDraft(prev => ({ ...prev, [l.id]: e.target.value }))}
-                              placeholder="수업 진행 관련 메모..."
-                              style={{ width: "100%", minHeight: 80, padding: "9px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", resize: "vertical" }}
-                            />
-                            <button
-                              onClick={() => saveMemo(l.id)}
-                              disabled={savingLessonId === l.id}
-                              style={{ marginTop: 8, padding: "7px 14px", border: "none", borderRadius: 7, background: "#1a6fc4", color: "#fff", fontWeight: 700, fontSize: 12, cursor: savingLessonId === l.id ? "not-allowed" : "pointer", fontFamily: "inherit" }}
-                            >💾 {savingLessonId === l.id ? "저장중..." : "코멘트 저장"}</button>
-                          </div>
-
-                          {/* 하루 취소 */}
-                          <div style={{ background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
-                            <div style={{ fontSize: 12, fontWeight: 800, color: "#dc2626", marginBottom: 8 }}>❌ 하루 취소 (skip_dates 추가)</div>
-                            <select
-                              value={cancelDate[l.id] || ""}
-                              onChange={e => setCancelDate(prev => ({ ...prev, [l.id]: e.target.value }))}
-                              style={{ width: "100%", padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff" }}
-                            >
-                              <option value="">취소할 날짜 선택...</option>
-                              {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
-                            </select>
-                            <button
-                              onClick={() => cancelOneDate(l)}
-                              disabled={savingLessonId === l.id || !cancelDate[l.id]}
-                              style={{ marginTop: 8, padding: "7px 14px", border: "none", borderRadius: 7, background: "#dc2626", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !cancelDate[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !cancelDate[l.id]) ? 0.6 : 1 }}
-                            >취소 처리</button>
-                            {skips.length > 0 && (
-                              <div style={{ marginTop: 10, fontSize: 11, color: "#475569" }}>
-                                <div style={{ fontWeight: 700, marginBottom: 3 }}>취소된 날짜 ({skips.length})</div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                                  {skips.map(d => (
-                                    <span key={d} style={{ padding: "2px 7px", borderRadius: 5, background: "#fef2f2", color: "#b91c1c", fontSize: 10.5, fontWeight: 700 }}>{d}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 날짜 변경 */}
-                          <div style={{ gridColumn: "1 / span 2", background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
-                            <div style={{ fontSize: 12, fontWeight: 800, color: "#92400e", marginBottom: 8 }}>🔄 날짜 변경 (skip_dates + tutor_memo 기록)</div>
-                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
-                                원래 날짜
-                                <select
-                                  value={changeOld[l.id] || ""}
-                                  onChange={e => setChangeOld(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
-                                >
-                                  <option value="">기존 날짜 선택...</option>
-                                  {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
-                                </select>
-                              </label>
-                              <span style={{ fontSize: 18, color: "#94a3b8", paddingBottom: 6 }}>→</span>
-                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
-                                새 날짜
-                                <input
-                                  type="date"
-                                  value={changeNew[l.id] || ""}
-                                  onChange={e => setChangeNew(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none" }}
-                                />
-                              </label>
-                              <button
-                                onClick={() => rescheduleDate(l)}
-                                disabled={savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]}
-                                style={{ padding: "8px 14px", border: "none", borderRadius: 7, background: "#f59e0b", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !changeOld[l.id] || !changeNew[l.id]) ? 0.6 : 1 }}
-                              >변경 기록</button>
-                            </div>
-                            <div style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8" }}>※ 원래 날짜는 skip_dates에 추가되고, tutor_memo에 “변경: 원래→새” 한 줄이 append됩니다.</div>
-                          </div>
-
-                          {/* 시간 변경 */}
-                          <div style={{ gridColumn: "1 / span 2", background: "#fff", borderRadius: 9, padding: "12px 14px", border: "1px solid #e2e8f0" }}>
-                            <div style={{ fontSize: 12, fontWeight: 800, color: "#0369a1", marginBottom: 8 }}>⏰ 시간 변경 (time_overrides)</div>
-                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
-                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
-                                날짜
-                                <select
-                                  value={changeTimeDate[l.id] || "__default__"}
-                                  onChange={e => setChangeTimeDate(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
-                                >
-                                  <option value="__default__">전체 (기본 시간)</option>
-                                  {availDates.map(d => <option key={d} value={d}>{d} ({dowKr(d)})</option>)}
-                                </select>
-                              </label>
-                              <label style={{ fontSize: 11, fontWeight: 600, color: "#475569", display: "flex", flexDirection: "column", gap: 3 }}>
-                                시간
-                                <select
-                                  value={changeTimeVal[l.id] || ""}
-                                  onChange={e => setChangeTimeVal(prev => ({ ...prev, [l.id]: e.target.value }))}
-                                  style={{ padding: "8px 11px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit", outline: "none", background: "#fff", minWidth: 150 }}
-                                >
-                                  <option value="">시간 선택...</option>
-                                  {timeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                              </label>
-                              <button
-                                onClick={() => changeSessionTime(l)}
-                                disabled={savingLessonId === l.id || !changeTimeVal[l.id]}
-                                style={{ padding: "8px 14px", border: "none", borderRadius: 7, background: "#0369a1", color: "#fff", fontWeight: 700, fontSize: 12, cursor: (savingLessonId === l.id || !changeTimeVal[l.id]) ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: (savingLessonId === l.id || !changeTimeVal[l.id]) ? 0.6 : 1 }}
-                              >시간 변경</button>
-                            </div>
-                            <div style={{ marginTop: 8, fontSize: 10.5, color: "#94a3b8" }}>※ 특정 날짜는 그 날만, “전체”는 기본 수업 시간을 변경합니다. 시간은 기존에 쓰던 시간 목록에서 선택.</div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })()}
                 </Fragment>
               );
             })}
