@@ -506,11 +506,12 @@ export default function AttendancePage() {
       </div>
 
       <div className="at-card">
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:14}}>⚙️ {englishMode ? "Lesson Settings" : "수업 설정"}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:18,alignItems:"flex-start"}}>
 
           {/* Class Days */}
-          <div style={{flex:"1 1 200px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 Class Days</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>📅 {englishMode ? "Class Days" : "수업 요일"}</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {["mon","tue","wed","thu","fri","sat","sun"].map(day => {
                 const labelMap: Record<string,string> = {mon:"Mon",tue:"Tue",wed:"Wed",thu:"Thu",fri:"Fri",sat:"Sat",sun:"Sun"};
@@ -532,96 +533,50 @@ export default function AttendancePage() {
             </div>
             <button onClick={saveClassDays} disabled={savingManage}
               style={{height:30,padding:"0 14px",border:"none",borderRadius:6,background:"#7c3aed",color:"#fff",fontWeight:700,fontSize:12,cursor:savingManage?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingManage?0.6:1,alignSelf:"flex-start",marginTop:2}}
-            >{savingManage?"Saving...":"Save Days"}</button>
+            >{savingManage?(englishMode?"Saving...":"저장중..."):(englishMode?"Save Days":"요일 저장")}</button>
           </div>
 
-          {/* Reschedule */}
-          <div style={{flex:"1 1 240px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#92400e",marginBottom:2}}>🔄 Reschedule</div>
-            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>From</label>
-            <input
-              type="date"
-              lang="en"
-              placeholder="YYYY-MM-DD"
-              value={changeOldVal}
-              min={lesson.start_date || undefined}
-              max={lesson.end_date || undefined}
-              onChange={e => setChangeOldVal(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-            />
-            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>To</label>
-            <input
-              type="date"
-              lang="en"
-              placeholder="YYYY-MM-DD"
-              value={changeNewVal}
-              onChange={e => setChangeNewVal(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-            />
-            <button
-              onClick={rescheduleDate}
-              disabled={savingManage || !changeOldVal || !changeNewVal}
-              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!changeOldVal||!changeNewVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!changeOldVal||!changeNewVal)?0.6:1,alignSelf:"flex-start"}}
-            >{savingManage ? "Saving..." : "Reschedule"}</button>
-          </div>
-
-        </div>
-      </div>
-
-      <div className="at-card">
-        <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:12}}>⏰ Class Time Overrides</div>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-
-          {/* Default Time */}
-          <div style={{flex:"1 1 180px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4",marginBottom:2}}>⏰ Default Time</div>
-            <input
-              type="time"
-              lang="en"
-              value={draftConfirmedTime}
-              onChange={e => setDraftConfirmedTime(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}}
-            />
-            <div style={{fontSize:11,color:"#6b7280"}}>Default class time for all days</div>
-          </div>
-
-          {/* Time by Day */}
-          <div style={{flex:"1 1 260px",display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed",marginBottom:2}}>📅 Time by Day</div>
-            {(lesson.class_days || []).length === 0 && (
-              <div style={{fontSize:11,color:"#9ca3af"}}>No days set.</div>
-            )}
-            {(lesson.class_days || []).map((rawDay, i) => {
+          {/* Class Time (default + by-day) */}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4"}}>⏰ {englishMode ? "Class Time" : "수업 시간"}</div>
+            <input type="time" lang="en" value={draftConfirmedTime} onChange={e => setDraftConfirmedTime(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
+            {(lesson.class_days || []).map((rawDay, i2) => {
               const kr = normalizeDayKR(rawDay);
               const en = ({'월':'Mon','화':'Tue','수':'Wed','목':'Thu','금':'Fri','토':'Sat','일':'Sun'} as Record<string,string>)[kr] || kr;
               const val = draftDayOverrides[kr] || "";
               return (
-                <div key={`${rawDay}-${i}`} style={{display:"flex",alignItems:"center",gap:6}}>
+                <div key={`${rawDay}-${i2}`} style={{display:"flex",alignItems:"center",gap:6}}>
                   <span style={{fontSize:12,fontWeight:700,color:"#7c3aed",minWidth:32}}>{en}</span>
-                  <input
-                    type="time"
-                    lang="en"
-                    value={val}
-                    onChange={e => setDraftDayOverrides(prev => ({ ...prev, [kr]: e.target.value }))}
-                    style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}}
-                  />
+                  <input type="time" lang="en" value={val} onChange={e => setDraftDayOverrides(prev => ({ ...prev, [kr]: e.target.value }))}
+                    style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}} />
                   {val && (
-                    <button type="button"
-                      onClick={() => setDraftDayOverrides(prev => { const n = { ...prev }; delete n[kr]; return n; })}
-                      style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}
-                    >✕</button>
+                    <button type="button" onClick={() => setDraftDayOverrides(prev => { const n = { ...prev }; delete n[kr]; return n; })}
+                      style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                   )}
                 </div>
               );
             })}
-            <div style={{fontSize:11,color:"#6b7280"}}>Leave blank to use default time</div>
+            <button onClick={saveTimeOverrides} disabled={savingTimes}
+              style={{height:30,padding:"0 14px",border:"none",borderRadius:6,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingTimes?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingTimes?0.6:1,alignSelf:"flex-start",marginTop:2}}
+            >{savingTimes?(englishMode?"Saving...":"저장중..."):(englishMode?"Save & Unify Time":"시간 저장(통일)")}</button>
+            <div style={{fontSize:10.5,color:"#94a3b8"}}>{englishMode?"Saving resets per-date time changes to this time.":"저장 시 날짜별 시간 변경이 이 시간으로 초기화됩니다."}</div>
           </div>
 
-        </div>
-        <div style={{marginTop:14}}>
-          <button onClick={saveTimeOverrides} disabled={savingTimes}
-            style={{height:34,padding:"0 18px",border:"none",borderRadius:7,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:13,cursor:savingTimes?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingTimes?0.6:1}}
-          >{savingTimes ? "Saving..." : "Save Times"}</button>
+          {/* Reschedule */}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{fontSize:12,fontWeight:800,color:"#92400e"}}>🔄 {englishMode ? "Reschedule" : "일정 변경(다른 날로)"}</div>
+            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>{englishMode ? "From" : "원래 날짜"}</label>
+            <input type="date" lang="en" value={changeOldVal} min={lesson.start_date || undefined} max={lesson.end_date || undefined} onChange={e => setChangeOldVal(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
+            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>{englishMode ? "To" : "새 날짜"}</label>
+            <input type="date" lang="en" value={changeNewVal} onChange={e => setChangeNewVal(e.target.value)}
+              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
+            <button onClick={rescheduleDate} disabled={savingManage || !changeOldVal || !changeNewVal}
+              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!changeOldVal||!changeNewVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!changeOldVal||!changeNewVal)?0.6:1,alignSelf:"flex-start"}}
+            >{savingManage?(englishMode?"Saving...":"저장중..."):(englishMode?"Reschedule":"일정 변경")}</button>
+          </div>
+
         </div>
       </div>
 
