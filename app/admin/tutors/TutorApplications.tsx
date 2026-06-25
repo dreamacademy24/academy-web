@@ -49,9 +49,12 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
   assigned:  { label: "배정됨",  bg: "#dbeafe", color: "#1e40af" },
   confirmed: { label: "확정",    bg: "#dcfce7", color: "#166534" },
   completed: { label: "완료",    bg: "#d1fae5", color: "#065f46" },
+  cancel_requested: { label: "변경/취소요청", bg: "#fef2f2", color: "#dc2626" },
   cancelled: { label: "취소",    bg: "#fef2f2", color: "#dc2626" },
 };
 const STATUS_ORDER = ["pending", "reviewing", "assigned", "confirmed", "completed", "cancelled"];
+// 수신함(처리 필요)에 보일 상태 — 확정/완료/취소는 제외(수강생 목록에서 관리)
+const INBOX_STATUSES = ["pending", "reviewing", "assigned", "cancel_requested"];
 
 const LEVEL_RANK: Record<string, number> = {
   zero: 0,
@@ -450,6 +453,7 @@ export default function TutorApplications() {
 
   // Filtered list
   const filteredApps = apps.filter(a => {
+    if (!INBOX_STATUSES.includes(a.status)) return false; // 확정/완료/취소는 수강생 목록에서
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
     if (tutorFilter !== "all") {
       if (tutorFilter === "__unassigned__") { if (a.assigned_tutor_id) return false; }
@@ -751,11 +755,11 @@ export default function TutorApplications() {
         <div className="ta-toolbar">
           <div className="ta-filter-row">
             <button className={`ta-chip${statusFilter === "all" ? " ac" : ""}`} onClick={() => setStatusFilter("all")}>
-              전체<span className="cnt">{apps.length}</span>
+              전체<span className="cnt">{apps.filter(a => INBOX_STATUSES.includes(a.status)).length}</span>
             </button>
-            {STATUS_ORDER.map(s => (
+            {INBOX_STATUSES.map(s => (
               <button key={s} className={`ta-chip${statusFilter === s ? " ac" : ""}`} onClick={() => setStatusFilter(s)}>
-                {STATUS_META[s].label}<span className="cnt">{statusCounts[s] || 0}</span>
+                {STATUS_META[s]?.label || s}<span className="cnt">{statusCounts[s] || 0}</span>
               </button>
             ))}
           </div>

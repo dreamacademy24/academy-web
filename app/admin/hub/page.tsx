@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo, clearAdminAuth } from "@/lib/adminAuth";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminHubPage() {
   const router = useRouter();
@@ -9,6 +10,7 @@ export default function AdminHubPage() {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [staffId, setStaffId] = useState("");
+  const [tutorAlerts, setTutorAlerts] = useState(0);
 
   useEffect(() => {
     if (!isAdminAuthed()) { window.location.href = "/login"; return; }
@@ -16,6 +18,23 @@ export default function AdminHubPage() {
     if (info) { setName(info.name); setRole(info.role); setStaffId(info.staffId); }
     setReady(true);
   }, [router]);
+
+  // 튜터 처리 필요 건(신규/변경/취소요청) → 빨간 느낌표
+  useEffect(() => {
+    (async () => {
+      try {
+        const { count } = await supabase.from("tutor_requests")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["pending", "reviewing", "cancel_requested"]);
+        let cancelN = 0;
+        try {
+          const r = await fetch("/api/admin/tutor/cancel-requests?status=pending");
+          if (r.ok) { const d = await r.json(); cancelN = Array.isArray(d) ? d.length : 0; }
+        } catch {}
+        setTutorAlerts((count || 0) + cancelN);
+      } catch {}
+    })();
+  }, []);
 
   function logout() { clearAdminAuth(); router.push("/login"); }
 
@@ -110,6 +129,7 @@ export default function AdminHubPage() {
             {g.cards.map((c, i) => (
               <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} style={(c as any).coming ? { opacity: 0.55, position: "relative" } : { position: "relative" }} onClick={() => { if ((c as any).coming) { alert("준비 중입니다 😊"); return; } if ((c as any).external) { window.open(c.href, '_blank'); } else if (c.href.endsWith('.html')) { window.location.href = c.href; } else { router.push(c.href); } }}>
                 {(c as any).coming && <span style={{ position: "absolute", top: 8, right: 10, fontSize: 10, fontWeight: 700, color: "#fff", background: "#94a3b8", padding: "2px 8px", borderRadius: 6 }}>준비 중</span>}
+                {c.href === "/admin/tutor-class" && tutorAlerts > 0 && <span title="처리 필요(신규/변경/취소요청)" style={{ position: "absolute", top: 8, right: 10, minWidth: 20, height: 20, padding: "0 6px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#dc2626", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(220,38,38,0.4)" }}>❗{tutorAlerts}</span>}
                 <div className="ic">{c.icon}</div>
                 <div className="tx">
                   <h2>{c.title}</h2>
