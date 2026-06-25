@@ -816,9 +816,9 @@ export default function PortalTutorPage() {
                   <div><span className="k">기간:</span>{l.start_date || "-"} ~ {l.end_date || "-"}</div>
                   <div><span className="k">요일:</span>{daysKr(l.class_days)}</div>
                   <div>
-                    <span className="k">총 회차:</span>{((l as Record<string, unknown>).billed_sessions ?? l.total_sessions) != null ? `${(l as Record<string, unknown>).billed_sessions ?? l.total_sessions}회` : "-"}
+                    <span className="k">총 회차:</span>{((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_sessions ?? l.total_sessions) != null ? `${(l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_sessions ?? l.total_sessions}회` : "-"}
                     <span className="k" style={{ marginLeft: 10 }}>확정 금액:</span>
-                    {((l as Record<string, unknown>).billed_amount ?? l.total_amount) != null ? `₱${Number((l as Record<string, unknown>).billed_amount ?? l.total_amount).toLocaleString()}` : "-"}
+                    {((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_amount ?? l.total_amount) != null ? `₱${Number((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_amount ?? l.total_amount).toLocaleString()}` : "-"}
                   </div>
                 </div>
                 {l.sessions.length > 0 && (
@@ -1513,15 +1513,15 @@ export default function PortalTutorPage() {
                           borderTop:"1px solid #bbf7d0",
                           display:"flex", gap:16
                         }}>
-                          {((l as Record<string, unknown>).billed_sessions ?? l.total_sessions) != null && (
+                          {((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_sessions ?? l.total_sessions) != null && (
                             <div style={{textAlign:"center"}}>
-                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>{String((l as Record<string, unknown>).billed_sessions ?? l.total_sessions)}회</div>
+                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>{String((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_sessions ?? l.total_sessions)}회</div>
                               <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>총 수업</div>
                             </div>
                           )}
-                          {Number((l as Record<string, unknown>).billed_amount ?? l.total_amount) > 0 && (
+                          {Number((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_amount ?? l.total_amount) > 0 && (
                             <div style={{textAlign:"center"}}>
-                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>₱{Number((l as Record<string, unknown>).billed_amount ?? l.total_amount).toLocaleString()}</div>
+                              <div style={{fontSize:18,fontWeight:900,color:"#15803d"}}>₱{Number((l as unknown as { billed_sessions?: number; billed_amount?: number }).billed_amount ?? l.total_amount).toLocaleString()}</div>
                               <div style={{fontSize:10,color:"#16a34a",fontWeight:700}}>총 금액</div>
                             </div>
                           )}
