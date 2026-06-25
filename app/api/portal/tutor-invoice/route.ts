@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { isLessonDateAllowed } from '@/lib/lessonDates'
+import { isLessonDateAllowed, tutorTotalForDates } from '@/lib/lessonDates'
+import { cancelMap } from '@/lib/lessonCancellations'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -138,10 +139,17 @@ export async function GET(req: Request) {
     } else {
       sessions = real
     }
+    // 청구 기준: 취소(차감)된 날짜 제외 + 날짜별 타임 단가 합산
+    const cm = cancelMap(l as { skip_dates?: string[] | null; cancellations?: Record<string, string> | null })
+    const billedDates = sessions.map(x => x.session_date).filter(ds => cm[ds] !== "deduct")
+    const billed_sessions = billedDates.length
+    const billed_amount = tutorTotalForDates(l as { class_type?: string | null; session_overrides?: Record<string, number> | null; sessions_per_day?: number | null }, billedDates)
     return {
       ...l,
       tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
       sessions,
+      billed_sessions,
+      billed_amount,
     }
   })
 

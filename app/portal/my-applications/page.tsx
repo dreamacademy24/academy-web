@@ -578,9 +578,9 @@ export default function MyApplicationsPage() {
           <h3>📄 {detail.student} 튜터 수업</h3>
           {detail.lessons.map((l: AnyRow, li: number) => {
             const sessions: AnyRow[] = Array.isArray(l.sessions) ? (l.sessions as AnyRow[]) : [];
-            const rate = Number(l.hourly_rate) || 0;
-            const cnt = Number(l.total_sessions) || sessions.length || 0;
-            const total = (rate && cnt) ? rate * cnt : (Number(l.total_amount) || 0);
+            const cnt = Number(l.billed_sessions ?? l.total_sessions) || sessions.length || 0;
+            const total = Number(l.billed_amount ?? l.total_amount) || 0;
+            const rate = cnt ? Math.round(total / cnt) : (Number(l.hourly_rate) || 0);
             return (
               <div key={li} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginTop: 12 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 4 }}>
