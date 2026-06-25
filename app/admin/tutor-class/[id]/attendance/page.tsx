@@ -300,8 +300,11 @@ export default function AttendancePage() {
       const t = String(v || "").trim();
       if (t) merged[k] = t;
     }
+    // 기본 시간 입력(HH:MM)을 타임 길이에 맞춘 범위로 저장 (예: 16:30 → "16:30 ~ 17:20")
+    const ct = (draftConfirmedTime || "").trim();
+    const confirmedOut = ct ? (ct.includes("~") ? ct : rangeFor(ct, Number(lesson.sessions_per_day) === 2 ? 2 : 1)) : null;
     const { error } = await supabase.from("tutor_lessons")
-      .update({ confirmed_time: draftConfirmedTime || null, time_overrides: merged })
+      .update({ confirmed_time: confirmedOut, time_overrides: merged })
       .eq("id", lesson.id);
     setSavingTimes(false);
     if (error) { toastErr("Time save failed: " + error.message); return; }
