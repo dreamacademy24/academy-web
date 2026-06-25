@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { countLessonDays, tutorDailyRate } from "@/lib/lessonDates";
 
 interface TutorReq {
   id: string;
@@ -192,16 +193,21 @@ export default function EngTutorRequestDetailPage() {
 
   function paymentPayload() {
     if (!row) return {};
-    const rate = computeRate(row.class_type, row.sessions_per_day);
-    const weeks = computeWeeks(row.start_date, row.end_date);
-    const dpw = countDays(row.preferred_days);
-    const totalClasses = weeks * dpw;
-    const totalAmount = totalClasses * rate;
+    const rate = tutorDailyRate(row.class_type, row.sessions_per_day);
+    const days = countLessonDays(row.start_date, row.end_date, (row.preferred_days || "").split(",").map(s => s.trim()).filter(Boolean));
+    const totalAmount = days * rate;
     return {
-      total_sessions: totalClasses || null,
+      total_sessions: days || null,
       total_amount: totalAmount || null,
       price_per_session: rate || null,
     };
+  }
+  // 이미 확정돼 lesson이 생성된 신청건 → assigned_tutor_id 변경을 lesson.tutor_id에 동기화
+  async function syncLessonTutor(reqId: string, newTutorId: string | null) {
+    const { data: byApp } = await supabase.from("tutor_lessons").select("id").eq("application_id", reqId);
+    const { data: byMemo } = await supabase.from("tutor_lessons").select("id").ilike("admin_memo", `%request_id: ${reqId}%`);
+    const ids = Array.from(new Set([...(byApp || []), ...(byMemo || [])].map((x: { id: string }) => x.id)));
+    if (ids.length) await supabase.from("tutor_lessons").update({ tutor_id: newTutorId, application_id: reqId }).in("id", ids);
   }
 
   async function takeThisClass() {
@@ -213,6 +219,7 @@ export default function EngTutorRequestDetailPage() {
     const { error } = await supabase.from("tutor_requests")
       .update({ assigned_tutor_id: me.id, status: "assigned", ...paymentPayload() })
       .eq("id", row.id);
+    if (!error) await syncLessonTutor(row.id, me.id);
     setTaking(false);
     if (error) { toastErr("Failed: " + error.message); return; }
     showToast();
@@ -225,6 +232,7 @@ export default function EngTutorRequestDetailPage() {
     const { error } = await supabase.from("tutor_requests")
       .update({ assigned_tutor_id: managerTutorId || null, status: managerTutorId ? "assigned" : row.status, ...paymentPayload() })
       .eq("id", row.id);
+    if (!error) await syncLessonTutor(row.id, managerTutorId || null);
     setSavingAssign(false);
     if (error) { toastErr("Failed: " + error.message); return; }
     showToast();

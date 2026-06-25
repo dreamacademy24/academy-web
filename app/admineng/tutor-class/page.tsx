@@ -918,7 +918,7 @@ export default function EngTutorClassPage() {
                   const _krKeys = ['일','월','화','수','목','금','토'];
                   const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                   const _ov = l.time_overrides as Record<string,string> | undefined;
-                  const time = stripTimeSuffix((_ov && _ov[_kr]) || l.confirmed_time || l.class_time || "") || "--:--";
+                  const time = stripTimeSuffix((_ov && (_ov[date] || _ov[_kr])) || l.confirmed_time || l.class_time || "") || "--:--";
                   if (cancelRes) {
                     return (
                       <div key={l.id} className="ee-sess-card" style={{borderLeft:"4px solid #cbd5e1",borderRadius:7,padding:"6px 8px",marginBottom:6,background:"#f8fafc",boxShadow:"0 1px 2px rgba(0,0,0,0.04)",opacity:0.9}}>
@@ -1184,7 +1184,7 @@ export default function EngTutorClassPage() {
                         const _krKeys = ['일','월','화','수','목','금','토'];
                         const _kr = _krKeys[new Date(date + 'T00:00:00').getDay()];
                         const _ov = (e as any).overrides as Record<string,string> | undefined;
-                        const _time = stripTimeSuffix((_ov && _ov[_kr]) || e.time || "");
+                        const _time = stripTimeSuffix((_ov && (_ov[date] || _ov[_kr])) || e.time || "");
                         const cancelRes = cancelMap({ skip_dates: e.skips, cancellations: (e as any).cancellations })[date];
                         if (cancelRes) {
                           return (
