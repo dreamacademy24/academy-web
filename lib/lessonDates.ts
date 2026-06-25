@@ -54,6 +54,24 @@ export function tutorDailyRate(
   return tutorBaseRate(classType) * spd;
 }
 
+// 날짜별 타임(세션) — session_overrides[date] 우선, 없으면 lesson.sessions_per_day
+export function sessionsForDate(lesson: { session_overrides?: Record<string, number> | null; sessions_per_day?: number | null } | null | undefined, date: string): number {
+  const ov = lesson?.session_overrides;
+  if (ov && typeof ov === "object") {
+    const v = Number((ov as Record<string, number>)[date]);
+    if (v === 1 || v === 2) return v;
+  }
+  return Number(lesson?.sessions_per_day) === 2 ? 2 : 1;
+}
+// 날짜별 하루치 단가 (날짜별 타임 반영)
+export function tutorDayRate(lesson: { class_type?: string | null; session_overrides?: Record<string, number> | null; sessions_per_day?: number | null } | null | undefined, date: string): number {
+  return tutorDailyRate(lesson?.class_type, sessionsForDate(lesson, date));
+}
+// 청구 날짜 배열의 총액 (날짜별 타임 단가 합산)
+export function tutorTotalForDates(lesson: { class_type?: string | null; session_overrides?: Record<string, number> | null; sessions_per_day?: number | null } | null | undefined, billedDates: string[]): number {
+  return billedDates.reduce((sum, d) => sum + tutorDayRate(lesson, d), 0);
+}
+
 const _DAY_NUM: Record<string, number> = {
   sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
   "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
