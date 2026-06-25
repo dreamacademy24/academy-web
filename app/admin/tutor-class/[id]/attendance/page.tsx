@@ -4,8 +4,8 @@ import { toastOk, toastErr } from "@/lib/toast";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { stripTimeSuffix } from "@/lib/scheduleBlocks";
-import { cancelMap, resolutionLabelEN, resolutionLabelKR } from "@/lib/lessonCancellations";
-import { sessionsForDate } from "@/lib/lessonDates";
+import { cancelMap, resolutionLabelEN } from "@/lib/lessonCancellations";
+import { sessionsForDate, typeForDate } from "@/lib/lessonDates";
 
 interface Lesson {
   id: string;
@@ -25,58 +25,27 @@ interface Lesson {
   attendance_log: Record<string, "○" | "✕" | "△"> | null;
   notes_log: Record<string, string> | null;
   time_overrides?: Record<string, string> | null;
-  cancellations?: Record<string, string> | null;
   session_overrides?: Record<string, number> | null;
+  type_overrides?: Record<string, string> | null;
+  tutor_overrides?: Record<string, string> | null;
+  cancellations?: Record<string, string> | null;
 }
+interface Tutor { id: string; name: string }
 
-const WEEKDAYS_KR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
-const DAY_EN_LABEL: Record<string, string> = {
-  sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
-  "일": "Sun", "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat",
-};
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_KR_KEYS = ["일", "월", "화", "수", "목", "금", "토"];
 const CODE_TO_IDX: Record<string, number> = {
   sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
   "일": 0, "월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6,
 };
-
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
-function fmtMD(iso: string) {
-  if (!iso) return "";
-  const dt = new Date(iso + "T00:00:00");
-  if (isNaN(dt.getTime())) return iso;
-  return `${dt.getMonth() + 1}/${dt.getDate()}`;
-}
-
-const WEEKDAY_KR_KEYS = ['일','월','화','수','목','금','토'];
-
-function normalizeDayKR(d: string): string {
-  const lower = (d || "").toLowerCase().trim();
-  return DAY_KR[lower] || d;
-}
-
-function generateDates(lesson: Lesson): string[] {
-  if (!lesson.start_date || !lesson.end_date) return [];
-  const codes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
-  if (codes.length === 0) return [];
-  const wanted = new Set(codes.map(c => CODE_TO_IDX[c]).filter(i => i !== undefined));
-  const out: string[] = [];
-  const d = new Date(lesson.start_date + "T00:00:00");
-  const end = new Date(lesson.end_date + "T00:00:00");
-  while (d <= end) {
-    if (wanted.has(d.getDay())) {
-      // 취소된 날짜도 목록에 유지 (숨기지 않고 '취소'로 표기)
-      out.push(ymd(d));
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  return out;
-}
+function fmtMD(iso: string) { if (!iso) return ""; const dt = new Date(iso + "T00:00:00"); if (isNaN(dt.getTime())) return iso; return `${MONTHS[dt.getMonth()]} ${dt.getDate()}`; }
 
 const TIME_SLOTS: string[] = (() => {
   const out: string[] = [];
-  for (let h = 8; h <= 20; h++) for (const m of [0, 30]) out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  for (let h = 8; h <= 20; h++) for (const m of [0, 30]) out.push(`${pad2(h)}:${pad2(m)}`);
   return out;
 })();
 function startOf(range: string): string {
@@ -87,12 +56,22 @@ function startOf(range: string): string {
 function addMin(t: string, mins: number): string {
   const m = t.match(/(\d{1,2}):(\d{2})/); if (!m) return t;
   const tot = Number(m[1]) * 60 + Number(m[2]) + mins;
-  const hh = Math.floor(tot / 60) % 24, mm = tot % 60;
-  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  return `${pad2(Math.floor(tot / 60) % 24)}:${pad2(tot % 60)}`;
 }
 function rangeFor(start: string, sessions: number): string {
   if (!start) return "";
   return `${start} ~ ${addMin(start, sessions === 2 ? 100 : 50)}`;
+}
+function generateDates(lesson: Lesson): string[] {
+  if (!lesson.start_date || !lesson.end_date) return [];
+  const codes = (lesson.class_days || []).map(d => (d || "").toLowerCase().trim());
+  if (codes.length === 0) return [];
+  const wanted = new Set(codes.map(c => CODE_TO_IDX[c]).filter(i => i !== undefined));
+  const out: string[] = [];
+  const d = new Date(lesson.start_date + "T00:00:00");
+  const end = new Date(lesson.end_date + "T00:00:00");
+  while (d <= end) { if (wanted.has(d.getDay())) out.push(ymd(d)); d.setDate(d.getDate() + 1); }
+  return out;
 }
 
 export default function AttendancePage() {
@@ -101,491 +80,350 @@ export default function AttendancePage() {
   const lessonId = params?.id || "";
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
-  const [tutorName, setTutorName] = useState<string>("");
+  const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [draft, setDraft] = useState<Record<string, "○" | "✕" | "△" | "">>({});
-  const [notes, setNotes] = useState("");
-  const [notesLog, setNotesLog] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState("");
-  const [changeOldVal, setChangeOldVal] = useState("");
-  const [changeNewVal, setChangeNewVal] = useState("");
-  const [savingManage, setSavingManage] = useState(false);
+  const [draft, setDraft] = useState<Record<string, "○" | "✕" | "△" | "">>({});
+  const [notesLog, setNotesLog] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState("");
+  const [selDate, setSelDate] = useState<string>("");
+  const [rescheduleVal, setRescheduleVal] = useState("");
+  // lesson-wide settings
   const [draftDays, setDraftDays] = useState<string[]>([]);
-  const [draftConfirmedTime, setDraftConfirmedTime] = useState<string>("");
-  const [draftDayOverrides, setDraftDayOverrides] = useState<Record<string, string>>({});
+  const [draftConfirmedTime, setDraftConfirmedTime] = useState("");
   const [savingTimes, setSavingTimes] = useState(false);
-  const [englishMode, setEnglishMode] = useState(false);
-  useEffect(() => { if (typeof window !== "undefined") setEnglishMode(!!localStorage.getItem("teacherSession")); }, []);
-  useEffect(() => {
-    if (lesson) setDraftDays(lesson.class_days || []);
-  }, [lesson]);
-  useEffect(() => {
-    if (!lesson) return;
-    setDraftConfirmedTime(lesson.confirmed_time || lesson.class_time || "");
-    const ov = lesson.time_overrides || {};
-    const days: Record<string, string> = {};
-    for (const [k, v] of Object.entries(ov)) {
-      if (WEEKDAY_KR_KEYS.includes(k)) days[k] = String(v);
-    }
-    setDraftDayOverrides(days);
-  }, [lesson]);
+  const [savingDays, setSavingDays] = useState(false);
+
+  const tutorMap = useMemo(() => { const m: Record<string, string> = {}; tutors.forEach(t => { m[t.id] = t.name; }); return m; }, [tutors]);
 
   const load = useCallback(async () => {
     if (!lessonId) return;
-    setLoading(true);
-    setErrorMsg("");
-    const { data, error } = await supabase
-      .from("tutor_lessons")
-      .select("*")
-      .eq("id", lessonId)
-      .maybeSingle();
-    if (error || !data) {
-      setLoading(false);
-      setErrorMsg(error?.message || "Lesson not found");
-      return;
-    }
+    setLoading(true); setErrorMsg("");
+    const { data, error } = await supabase.from("tutor_lessons").select("*").eq("id", lessonId).maybeSingle();
+    if (error || !data) { setLoading(false); setErrorMsg(error?.message || "Lesson not found"); return; }
     const l = data as Lesson;
     setLesson(l);
-    setNotes(l.tutor_memo || "");
-    setNotesLog(l.notes_log || {});
     setDraft({ ...(l.attendance_log || {}) });
-    if (l.tutor_id) {
-      const { data: t } = await supabase.from("tutors").select("name").eq("id", l.tutor_id).maybeSingle();
-      if (t) setTutorName((t as { name: string }).name || "");
-    }
+    setNotesLog(l.notes_log || {});
+    setNotes(l.tutor_memo || "");
+    setDraftDays(l.class_days || []);
+    setDraftConfirmedTime(l.confirmed_time || l.class_time || "");
+    const { data: ts } = await supabase.from("tutors").select("id, name").order("name");
+    setTutors((ts || []) as Tutor[]);
     setLoading(false);
   }, [lessonId]);
-
   useEffect(() => { load(); }, [load]);
 
   const dates = useMemo(() => lesson ? generateDates(lesson) : [], [lesson]);
   const cMap = useMemo(() => cancelMap(lesson), [lesson]);
-  // 차감 취소는 청구 회차에서 제외 / 보강·미차감은 유지
   const billedDates = useMemo(() => dates.filter(d => cMap[d] !== "deduct"), [dates, cMap]);
 
   const counts = useMemo(() => {
     const c = { O: 0, X: 0, T: 0 };
-    for (const d of dates) {
-      if (cMap[d]) continue; // 취소된 날짜는 출결 집계 제외
-      const v = draft[d];
-      if (v === "○") c.O++;
-      else if (v === "✕") c.X++;
-      else if (v === "△") c.T++;
-    }
+    for (const d of dates) { if (cMap[d]) continue; const v = draft[d]; if (v === "○") c.O++; else if (v === "✕") c.X++; else if (v === "△") c.T++; }
     return c;
   }, [dates, draft, cMap]);
-
-  const baseTotal = billedDates.length;
-  const total = baseTotal + counts.T;
+  const total = billedDates.length + counts.T;
   const remaining = total - counts.O - counts.X - counts.T;
 
-  function cycle(date: string) {
-    if (cMap[date]) return; // 취소된 날짜는 출결 변경 불가
-    setDraft(prev => {
-      const cur = prev[date] || "";
-      const next: "○" | "✕" | "△" | "" =
-        cur === "" ? "○" :
-        cur === "○" ? "✕" :
-        cur === "✕" ? "△" :
-        "";
-      return { ...prev, [date]: next };
-    });
+  // resolved per-date values
+  function timeRangeOf(d: string): string {
+    if (!lesson) return "";
+    const kr = WEEKDAY_KR_KEYS[new Date(d + "T00:00:00").getDay()];
+    return lesson.time_overrides?.[d] || lesson.time_overrides?.[kr] || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
+  }
+  function tutorIdOf(d: string): string { return (lesson?.tutor_overrides?.[d]) || lesson?.tutor_id || ""; }
+  function tutorNameOf(d: string): string { const id = tutorIdOf(d); return id ? (tutorMap[id] || "") : ""; }
+
+  async function patchLesson(patch: Record<string, unknown>, optimistic: Partial<Lesson>) {
+    if (!lesson) return;
+    setLesson(l => l ? { ...l, ...optimistic } : l);
+    const { error } = await supabase.from("tutor_lessons").update(patch).eq("id", lesson.id);
+    if (error) { toastErr("Save failed: " + error.message); return; }
+    toastOk("Updated");
+  }
+  async function setDateTimeSession(d: string, start: string, sessions: number) {
+    if (!lesson || !start) return;
+    const ov = { ...(lesson.time_overrides || {}) }; ov[d] = rangeFor(start, sessions);
+    const so = { ...((lesson.session_overrides || {}) as Record<string, number>) }; so[d] = sessions;
+    await patchLesson({ time_overrides: ov, session_overrides: so }, { time_overrides: ov, session_overrides: so });
+  }
+  async function setDateType(d: string, type: string) {
+    if (!lesson) return;
+    const to = { ...((lesson.type_overrides || {}) as Record<string, string>) }; to[d] = type;
+    await patchLesson({ type_overrides: to }, { type_overrides: to });
+  }
+  async function setDateTutor(d: string, tutorId: string) {
+    if (!lesson) return;
+    const tu = { ...((lesson.tutor_overrides || {}) as Record<string, string>) };
+    if (tutorId) tu[d] = tutorId; else delete tu[d];
+    await patchLesson({ tutor_overrides: tu }, { tutor_overrides: tu });
+  }
+  async function cancelDate(d: string) {
+    if (!lesson) return;
+    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    if (cur.includes(d)) return;
+    await patchLesson({ skip_dates: [...cur, d] }, { skip_dates: [...cur, d] });
+  }
+  async function restoreDate(d: string) {
+    if (!lesson) return;
+    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = cur.filter(x => x !== d);
+    const c = { ...((lesson.cancellations || {}) as Record<string, string>) }; delete c[d];
+    await patchLesson({ skip_dates: nextSkips, cancellations: c }, { skip_dates: nextSkips, cancellations: c });
+  }
+  async function rescheduleMove(d: string, newDate: string) {
+    if (!lesson || !newDate) return;
+    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
+    const nextSkips = cur.includes(d) ? cur : [...cur, d];
+    const note = `Rescheduled: ${d} → ${newDate}`;
+    const nextMemo = lesson.tutor_memo ? `${lesson.tutor_memo}\n${note}` : note;
+    await patchLesson({ skip_dates: nextSkips, tutor_memo: nextMemo }, { skip_dates: nextSkips, tutor_memo: nextMemo });
+    setRescheduleVal(""); setNotes(nextMemo); toastOk("Rescheduled");
+  }
+  function setAttendance(d: string, mk: "○" | "✕" | "△") {
+    setDraft(p => ({ ...p, [d]: p[d] === mk ? "" : mk }));
   }
 
   async function save() {
     if (!lesson) return;
     setSaving(true);
     const log: Record<string, "○" | "✕" | "△"> = {};
-    for (const [k, v] of Object.entries(draft)) {
-      if (v === "○" || v === "✕" || v === "△") log[k] = v;
-    }
-    const { error } = await supabase
-      .from("tutor_lessons")
-      .update({ attendance_log: log, tutor_memo: notes || null, total_sessions: total, notes_log: notesLog })
-      .eq("id", lesson.id);
+    for (const [k, v] of Object.entries(draft)) if (v === "○" || v === "✕" || v === "△") log[k] = v;
+    const { error } = await supabase.from("tutor_lessons")
+      .update({ attendance_log: log, notes_log: notesLog, tutor_memo: notes || null, total_sessions: total }).eq("id", lesson.id);
     setSaving(false);
     if (error) { toastErr("Save failed: " + error.message); return; }
-    // 현지직원 코멘트("무슨 일 있었는지") → 직원업무 "확인해야 할 목록" + 텔레그램 (메모 있을 때만)
-    try {
-      const noteParts: string[] = [];
-      if (notes && notes.trim()) noteParts.push(notes.trim());
-      for (const v of Object.values(notesLog)) if (v && String(v).trim()) noteParts.push(String(v).trim());
-      const noteText = noteParts.join(" / ");
-      if (noteText) {
-        await supabase.from("customer_activity").insert({
-          type: "tutor_note", action: "코멘트",
-          title: `${lesson.student_names || "수업"} · ${noteText}`.slice(0, 250),
-          reserver: lesson.house_or_reserver || null,
-          ref_table: "tutor_lessons", ref_id: lesson.id,
-        });
-        fetch("/api/notify/telegram", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "note", payload: { who: lesson.house_or_reserver || lesson.student_names, student: lesson.student_names, note: noteText } }) }).catch(() => {});
-      }
-    } catch { /* noop */ }
     toastOk("Saved");
     router.back();
   }
-
-  async function rescheduleDate() {
-    if (!lesson) return;
-    const oldD = changeOldVal.trim();
-    const newD = changeNewVal.trim();
-    if (!oldD || !newD) { toastErr("Please select both the original date and the new date."); return; }
-    if (oldD === newD) { toastErr("Original date and new date are the same."); return; }
-    const current: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    const nextSkips = current.includes(oldD) ? current : [...current, oldD];
-    const note = `Rescheduled: ${oldD} → ${newD}`;
-    const nextNotes = notes ? `${notes}\n${note}` : note;
-    setSavingManage(true);
-    const { error } = await supabase.from("tutor_lessons")
-      .update({ skip_dates: nextSkips, tutor_memo: nextNotes })
-      .eq("id", lesson.id);
-    setSavingManage(false);
-    if (error) { toastErr("Reschedule failed: " + error.message); return; }
-    setChangeOldVal("");
-    setChangeNewVal("");
-    setNotes(nextNotes);
-    toastOk(`Rescheduled: ${oldD} → ${newD}`);
-    load();
-  }
-
-  async function setOneDateTimeSession(date: string, start: string, sessions: number) {
-    if (!lesson || !start) return;
-    const ov = { ...(lesson.time_overrides || {}) }; ov[date] = rangeFor(start, sessions);
-    const so = { ...((lesson.session_overrides || {}) as Record<string, number>) }; so[date] = sessions;
-    const { error } = await supabase.from("tutor_lessons").update({ time_overrides: ov, session_overrides: so }).eq("id", lesson.id);
-    if (error) { toastErr("Save failed: " + error.message); return; }
-    setLesson(l => l ? { ...l, time_overrides: ov, session_overrides: so } : l);
-    toastOk(englishMode ? "Updated" : "변경됨");
-  }
-  async function cancelDateInline(date: string) {
-    if (!lesson) return;
-    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    if (cur.includes(date)) return;
-    const { error } = await supabase.from("tutor_lessons").update({ skip_dates: [...cur, date] }).eq("id", lesson.id);
-    if (error) { toastErr("Cancel failed: " + error.message); return; }
-    setLesson(l => l ? { ...l, skip_dates: [...cur, date] } : l);
-    toastOk(englishMode ? "Cancelled" : "취소됨");
-  }
-  async function restoreDate(date: string) {
-    if (!lesson) return;
-    const cur: string[] = Array.isArray(lesson.skip_dates) ? lesson.skip_dates : [];
-    const nextSkips = cur.filter(d => d !== date);
-    const cancellations = { ...((lesson.cancellations || {}) as Record<string, string>) };
-    delete cancellations[date];
-    const { error } = await supabase.from("tutor_lessons").update({ skip_dates: nextSkips, cancellations }).eq("id", lesson.id);
-    if (error) { toastErr("Restore failed: " + error.message); return; }
-    setLesson(l => l ? { ...l, skip_dates: nextSkips, cancellations } : l);
-    toastOk(englishMode ? "Restored" : "복구됨");
-  }
-
   async function saveClassDays() {
     if (!lesson) return;
-    setSavingManage(true);
-    const { error } = await supabase.from("tutor_lessons")
-      .update({ class_days: draftDays }).eq("id", lesson.id);
-    setSavingManage(false);
+    setSavingDays(true);
+    const { error } = await supabase.from("tutor_lessons").update({ class_days: draftDays }).eq("id", lesson.id);
+    setSavingDays(false);
     if (error) { toastErr("Save failed: " + error.message); return; }
-    toastOk("Class days saved.");
-    load();
+    toastOk("Class days saved"); load();
   }
-
-  async function saveTimeOverrides() {
+  async function saveUnifyTime() {
     if (!lesson) return;
     setSavingTimes(true);
-    // 기본 시간 저장 = 표준 시간으로 통일 → 날짜별 시간 override는 비우고 요일별만 유지
-    const merged: Record<string, string> = {};
-    for (const [k, v] of Object.entries(draftDayOverrides)) {
-      const t = String(v || "").trim();
-      if (t) merged[k] = t;
-    }
-    // 기본 시간 입력(HH:MM)을 타임 길이에 맞춘 범위로 저장 (예: 16:30 → "16:30 ~ 17:20")
     const ct = (draftConfirmedTime || "").trim();
     const confirmedOut = ct ? (ct.includes("~") ? ct : rangeFor(ct, Number(lesson.sessions_per_day) === 2 ? 2 : 1)) : null;
-    const { error } = await supabase.from("tutor_lessons")
-      .update({ confirmed_time: confirmedOut, time_overrides: merged })
-      .eq("id", lesson.id);
+    const { error } = await supabase.from("tutor_lessons").update({ confirmed_time: confirmedOut, time_overrides: {} }).eq("id", lesson.id);
     setSavingTimes(false);
-    if (error) { toastErr("Time save failed: " + error.message); return; }
-    toastOk(englishMode ? "Class times unified (per-date overrides cleared)." : "기본 시간으로 통일했습니다 (날짜별 시간 초기화).");
-    load();
+    if (error) { toastErr("Save failed: " + error.message); return; }
+    toastOk("Class time unified"); load();
   }
 
-  if (loading) {
-    return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14 }}>Loading...</div>;
-  }
-  if (errorMsg || !lesson) {
-    return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        <div style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{errorMsg || "No lesson"}</div>
-        <button onClick={() => router.back()} style={{ padding: "8px 16px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>← Back</button>
-      </div>
-    );
-  }
+  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#6b7280", fontSize: 14, fontFamily: "'Noto Sans KR',sans-serif" }}>Loading...</div>;
+  if (errorMsg || !lesson) return (
+    <div style={{ padding: 40, textAlign: "center", fontFamily: "'Noto Sans KR',sans-serif" }}>
+      <div style={{ color: "#dc2626", fontSize: 14, marginBottom: 12 }}>{errorMsg || "No lesson"}</div>
+      <button onClick={() => router.back()} style={{ padding: "8px 16px", background: "#fff", border: "1px solid #cbd5e1", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>← Back</button>
+    </div>
+  );
 
-  const daysLabel = (lesson.class_days || []).map(d => DAY_EN_LABEL[d] || DAY_EN_LABEL[d.toLowerCase()] || d).join(", ");
-  const timeLabel = stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "-";
+  const daysLabel = (lesson.class_days || []).map(d => WEEKDAYS[CODE_TO_IDX[(d || "").toLowerCase().trim()]] || d).join(", ");
+  const selIdx = selDate ? dates.indexOf(selDate) : -1;
+  const selCancel = selDate ? cMap[selDate] : undefined;
 
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f9fafb;color:#111827}
-.at-w{max-width:1100px;margin:0 auto;padding:24px 20px}
-.at-top{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.at-back{padding:8px 12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;color:#475569;cursor:pointer;font-family:inherit}
-.at-back:hover{background:#f1f5f9;color:#1a6fc4;border-color:#cbd5e1}
-.at-title{flex:1;min-width:0}
-.at-title h1{font-size:19px;font-weight:800;color:#111827;line-height:1.4;word-break:keep-all}
-.at-title .sub{font-size:12.5px;color:#6b7280;font-weight:500;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px}
-.at-title .sub span{display:inline-block}
-.at-title .sub .tag{padding:2px 8px;background:#eff6ff;color:#1a6fc4;border-radius:5px;font-weight:700;font-size:11.5px}
-
-.at-card{background:#fff;border-radius:12px;border:1px solid #f3f4f6;box-shadow:0 1px 4px rgba(0,0,0,0.05);padding:18px 20px;margin-bottom:16px}
-
-.at-sum{display:flex;flex-wrap:wrap;gap:10px}
-.at-sum .s{padding:10px 14px;background:#f9fafb;border-radius:9px;font-size:12.5px;color:#475569;font-weight:600;display:flex;align-items:baseline;gap:6px;border:1px solid #f3f4f6}
-.at-sum .s .lbl{font-size:11px;color:#9ca3af}
-.at-sum .s b{font-size:15px;color:#111827;font-weight:800}
-.at-sum .s.attend b{color:#15803d}
-.at-sum .s.miss b{color:#dc2626}
-.at-sum .s.makeup b{color:#c2410c}
-.at-sum .s.remain b{color:#1a6fc4}
-
-.at-help{font-size:12px;color:#6b7280;line-height:1.7;background:#f9fafb;border-radius:8px;padding:10px 14px;margin-bottom:14px;border:1px dashed #e5e7eb}
-.at-help b{color:#374151}
-
-.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
-.at-box{padding:12px 6px 10px;border-radius:12px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid;transition:all 120ms;user-select:none;min-height:96px;justify-content:space-between}
-.at-box .idx{font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.02em}
-.at-box .dt{font-size:13px;font-weight:800;color:inherit}
-.at-box .dw{font-size:10.5px;font-weight:600;color:inherit;opacity:0.65;margin-left:2px}
-.at-box .mark{font-size:36px;font-weight:900;line-height:1;min-height:38px;display:flex;align-items:center;justify-content:center;width:100%}
-.at-box.s-blank{background:#f9fafb;color:#64748b;border-color:#e2e8f0}
-.at-box.s-blank:hover{border-color:#94a3b8;background:#f1f5f9}
-.at-box.s-blank .idx{color:#94a3b8}
-.at-box.s-o{background:#dcfce7;color:#15803d;border-color:#86efac}
-.at-box.s-o .idx{color:#16a34a;opacity:0.8}
-.at-box.s-x{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
-.at-box.s-x .idx{color:#dc2626;opacity:0.8}
-.at-box.s-t{background:#fef3c7;color:#92400e;border-color:#fcd34d}
-.at-box.s-t .idx{color:#b45309;opacity:0.8}
-.at-box.s-cancel{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;border-style:dashed;cursor:not-allowed;opacity:0.85}
-.at-box.s-cancel .idx{color:#cbd5e1}
-.at-box.s-cancel .dt{text-decoration:line-through;text-decoration-thickness:1.5px}
-
-.at-notes-card label{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:8px}
-.at-notes-card label .en{font-weight:500;color:#6b7280;font-size:12px;margin-left:6px}
-.at-notes-card textarea{width:100%;min-height:96px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical}
-.at-notes-card textarea:focus{border-color:#1a6fc4}
-
-.at-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
-.at-btn{height:40px;padding:0 22px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
-.at-btn.secondary{background:#fff;border:1px solid #e5e7eb;color:#475569}
-.at-btn.secondary:hover{background:#f9fafb;border-color:#cbd5e1;color:#111827}
-.at-btn.primary{background:#1a6fc4;border:none;color:#fff}
-.at-btn.primary:hover:not(:disabled){background:#155aa0}
-.at-btn:disabled{opacity:0.6;cursor:not-allowed}
-
-@media(max-width:600px){
-  .at-w{padding:16px 12px}
-  .at-sum .s{flex:1 1 calc(50% - 5px);min-width:0}
-  .at-grid{grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
-}
+.aw{max-width:1040px;margin:0 auto;padding:24px 20px 60px}
+.card{background:#fff;border-radius:12px;border:1px solid #f0f1f3;box-shadow:0 1px 4px rgba(0,0,0,0.05);padding:16px 18px;margin-bottom:14px}
+.btn{height:38px;padding:0 18px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;background:#fff;color:#475569}
+.btn.pri{background:#1a6fc4;border:none;color:#fff}.btn:disabled{opacity:0.6;cursor:not-allowed}
+.chip{padding:6px 12px;background:#f3f4f6;border-radius:8px;font-size:12px;color:#6b7280}.chip b{font-size:14px;color:#111827;margin-left:4px}
+.gbox{border-radius:12px;padding:10px 8px;text-align:center;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;transition:all 120ms;min-height:96px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.gbox:hover{border-color:#1a6fc4}
+.gbox .gi{font-size:11px;color:#6b7280}
+.gbox .gt{font-size:12.5px;font-weight:700;color:#111827}
+.gbox .gtut{font-size:10px;color:#6b7280;font-weight:600}
+.gbox .gmk{font-size:24px;font-weight:800;line-height:1.1;min-height:26px}
+.gbox.sel{border:2px solid #1a6fc4;background:#eff6ff}
+.gbox.can{border-style:dashed;background:#f8fafc;opacity:0.8}
+.sel-ipt{padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:#fff;width:100%}
+.fld{font-size:12px;color:#6b7280;margin-bottom:4px;font-weight:600}
     `}</style>
-
-    <div className="at-w">
-      <div className="at-top">
-        <button className="at-back" onClick={() => router.back()}>← Back</button>
-        <div className="at-title">
-          <h1>📋 Attendance · {lesson.house_or_reserver} · {(() => {
-            const p = (lesson.student_names || "").split("/").map(s => s.trim()).filter(Boolean);
-            return p.length >= 2 ? [...p].reverse().join(" / ") : lesson.student_names;
-          })()}</h1>
-          <div className="sub">
-            <span className="tag">{lesson.class_type}</span>
-            <span><b style={{ color: "#374151" }}>Days:</b> {daysLabel || "-"}</span>
-            <span><b style={{ color: "#374151" }}>Time:</b> {timeLabel}</span>
-            <span><b style={{ color: "#374151" }}>Period:</b> {fmtMD(lesson.start_date)}~{fmtMD(lesson.end_date)}</span>
-            {tutorName && <span><b style={{ color: "#374151" }}>Tutor:</b> {tutorName}</span>}
+    <div className="aw">
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <button className="btn" onClick={() => router.back()}>← Back</button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{ fontSize: 18, fontWeight: 800 }}>📋 Attendance · {lesson.house_or_reserver} · {lesson.student_names}</h1>
+          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+            {lesson.class_type} · Days: {daysLabel || "-"} · Period: {fmtMD(lesson.start_date)}~{fmtMD(lesson.end_date)}{lesson.tutor_id && tutorMap[lesson.tutor_id] ? ` · Tutor: ${tutorMap[lesson.tutor_id]}` : ""}
           </div>
         </div>
+        <button className="btn pri" onClick={save} disabled={saving}>{saving ? "Saving..." : "💾 Save"}</button>
       </div>
 
-      <div className="at-card">
-        <div className="at-sum">
-          <div className="s"><span className="lbl">{englishMode ? "Total" : "총 회차"}</span><b>{total}</b></div>
-          <div className="s attend"><span className="lbl">{englishMode ? "Attended" : "출석"}</span><b>{counts.O}</b></div>
-          <div className="s miss"><span className="lbl">{englishMode ? "Absent" : "결석"}</span><b>{counts.X}</b></div>
-          <div className="s makeup"><span className="lbl">{englishMode ? "Makeup" : "메이크업"}</span><b>{counts.T}</b></div>
-          <div className="s remain"><span className="lbl">{englishMode ? "Remaining" : "잔여"}</span><b>{remaining}</b></div>
-        </div>
+      <div className="card" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <span className="chip">Total<b>{total}</b></span>
+        <span className="chip">Attended<b style={{ color: "#15803d" }}>{counts.O}</b></span>
+        <span className="chip">Absent<b style={{ color: "#dc2626" }}>{counts.X}</b></span>
+        <span className="chip">Makeup<b style={{ color: "#b45309" }}>{counts.T}</b></span>
+        <span className="chip">Remaining<b style={{ color: "#1a6fc4" }}>{remaining}</b></span>
       </div>
 
-      <div className="at-card">
-        <div className="at-help">
-          {englishMode
-            ? "Each row: set time, attendance (○ attended / ✕ absent / △ makeup), memo, and cancel. △ extends total by +1. Time & cancel save instantly; attendance & memo save with the Save button."
-            : "한 줄에서 시간 · 출결(○출석/✕결석/△메이크업) · 메모 · 취소를 처리합니다. △는 총 회차 +1. 시간·취소는 즉시 저장, 출결·메모는 저장 버튼으로 저장."}
-        </div>
+      <div className="card">
+        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>Tap a date box to edit that day&apos;s attendance, time, type, tutor, or reschedule.</div>
         {dates.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#9ca3af", fontSize: 13 }}>
-            {englishMode ? "No class dates (check start/end date and days)" : "수업일이 없습니다 (기간·요일 확인)"}
-          </div>
+          <div style={{ textAlign: "center", padding: 36, color: "#9ca3af", fontSize: 13 }}>No class dates (check period & days)</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 580 }}>
-              <thead>
-                <tr style={{ background: "#f8fafc" }}>
-                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap", width: 120 }}>{englishMode ? "Date" : "회차·날짜"}</th>
-                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 150 }}>{englishMode ? "Time" : "시간"}</th>
-                  <th style={{ textAlign: "center", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 140 }}>{englishMode ? "Attendance" : "출결"}</th>
-                  <th style={{ textAlign: "left", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0" }}>{englishMode ? "Memo" : "메모"}</th>
-                  <th style={{ textAlign: "center", padding: "9px 10px", fontWeight: 700, fontSize: 11.5, color: "#6b7c93", borderBottom: "2px solid #e2e8f0", width: 70 }}>{englishMode ? "Cancel" : "취소"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dates.map((d, i) => {
-                  const dt = new Date(d + "T00:00:00");
-                  const md = `${dt.getMonth() + 1}/${dt.getDate()}`;
-                  const dw = WEEKDAYS_KR[dt.getDay()];
-                  const cancelRes = cMap[d];
-                  const v = draft[d] || "";
-                  const _krKey = WEEKDAY_KR_KEYS[new Date(d + "T00:00:00").getDay()];
-                  const curRange = (lesson.time_overrides?.[d]) || (lesson.time_overrides?.[_krKey]) || stripTimeSuffix(lesson.confirmed_time || lesson.class_time) || "";
-                  const curStart = startOf(curRange);
-                  const curSessions = sessionsForDate(lesson, d);
-                  if (cancelRes) {
-                    return (
-                      <tr key={d} style={{ borderBottom: "1px solid #f1f5f9", background: "#f8fafc", opacity: 0.85 }}>
-                        <td style={{ padding: "9px 10px", whiteSpace: "nowrap", textDecoration: "line-through", color: "#94a3b8" }}><b>#{i + 1}</b> {md} <span style={{ fontSize: 11 }}>({dw})</span></td>
-                        <td style={{ padding: "9px 10px", color: "#dc2626", fontWeight: 700 }}>🚫 {englishMode ? `Cancelled (${resolutionLabelEN(cancelRes)})` : `취소됨 (${resolutionLabelKR(cancelRes)})`}</td>
-                        <td style={{ padding: "9px 10px", textAlign: "center", color: "#94a3b8" }}>—</td>
-                        <td style={{ padding: "9px 10px", color: "#94a3b8", fontSize: 12 }}>{notesLog[d] || ""}</td>
-                        <td style={{ padding: "9px 10px", textAlign: "center" }}><button onClick={() => restoreDate(d)} style={{ padding: "4px 10px", border: "1px solid #cbd5e1", background: "#fff", color: "#475569", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{englishMode ? "Restore" : "복구"}</button></td>
-                      </tr>
-                    );
-                  }
-                  return (
-                    <tr key={d} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}><b style={{ color: "#1a6fc4" }}>#{i + 1}</b> {md} <span style={{ fontSize: 11, color: "#94a3b8" }}>({dw})</span></td>
-                      <td style={{ padding: "9px 10px" }}>
-                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                          <select value={curStart} onChange={e => setOneDateTimeSession(d, e.target.value, curSessions)} style={{ flex: 1, padding: "6px 4px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
-                            {curStart === "" && <option value="">{englishMode ? "Start" : "시작"}</option>}
-                            {curStart !== "" && !TIME_SLOTS.includes(curStart) && <option value={curStart}>{curStart}</option>}
-                            {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                          <select value={String(curSessions)} onChange={e => setOneDateTimeSession(d, curStart, Number(e.target.value))} style={{ width: 70, padding: "6px 4px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", background: "#fff", outline: "none" }}>
-                            <option value="1">{englishMode ? "1T" : "1타임"}</option>
-                            <option value="2">{englishMode ? "2T" : "2타임"}</option>
-                          </select>
-                        </div>
-                        {curStart !== "" && <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{rangeFor(curStart, curSessions)}</div>}
-                      </td>
-                      <td style={{ padding: "9px 10px", textAlign: "center", whiteSpace: "nowrap" }}>
-                        {(["○", "✕", "△"] as const).map(mk => (
-                          <button key={mk} type="button" onClick={() => setDraft(pr => ({ ...pr, [d]: pr[d] === mk ? "" : mk }))}
-                            title={mk === "○" ? (englishMode ? "Attended" : "출석") : mk === "✕" ? (englishMode ? "Absent" : "결석") : (englishMode ? "Makeup" : "메이크업")}
-                            style={{ width: 30, height: 30, margin: "0 2px", borderRadius: 6, cursor: "pointer", fontFamily: "inherit", fontSize: 15, fontWeight: 800,
-                              border: v === mk ? "none" : "1px solid #e5e7eb",
-                              background: v === mk ? (mk === "○" ? "#dcfce7" : mk === "✕" ? "#fee2e2" : "#fef3c7") : "#fff",
-                              color: v === mk ? (mk === "○" ? "#15803d" : mk === "✕" ? "#b91c1c" : "#92400e") : "#cbd5e1" }}>{mk}</button>
-                        ))}
-                      </td>
-                      <td style={{ padding: "9px 10px" }}>
-                        <input value={notesLog[d] || ""} onChange={e => setNotesLog(pr => ({ ...pr, [d]: e.target.value }))} placeholder={englishMode ? "Memo..." : "메모..."}
-                          style={{ width: "100%", padding: "6px 8px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
-                      </td>
-                      <td style={{ padding: "9px 10px", textAlign: "center" }}>
-                        <button type="button" onClick={() => cancelDateInline(d)} style={{ padding: "4px 10px", border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{englishMode ? "Cancel" : "취소"}</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px,1fr))", gap: 10 }}>
+            {dates.map((d, i) => {
+              const dt = new Date(d + "T00:00:00");
+              const dw = WEEKDAYS[dt.getDay()];
+              const canc = cMap[d];
+              const v = draft[d] || "";
+              const sessions = sessionsForDate(lesson, d);
+              const tname = tutorNameOf(d);
+              const mkColor = v === "○" ? "#15803d" : v === "✕" ? "#dc2626" : v === "△" ? "#b45309" : "#cbd5e1";
+              return (
+                <button key={d} type="button" onClick={() => { setSelDate(d); setRescheduleVal(""); }}
+                  className={`gbox${selDate === d ? " sel" : ""}${canc ? " can" : ""}`}>
+                  <div className="gi" style={canc ? { textDecoration: "line-through" } : undefined}>#{i + 1} · {MONTHS[dt.getMonth()]} {dt.getDate()} ({dw})</div>
+                  {canc ? (<>
+                    <div style={{ fontSize: 18 }}>🚫</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626" }}>Cancelled</div>
+                  </>) : (<>
+                    <div className="gt">{startOf(timeRangeOf(d)) || "--:--"} · {sessions === 2 ? "2T" : "1T"}</div>
+                    {tname && <div className="gtut">{tname}{typeForDate(lesson, d) !== lesson.class_type ? ` · ${typeForDate(lesson, d)}` : ""}</div>}
+                    <div className="gmk" style={{ color: mkColor }}>{v || "·"}</div>
+                  </>)}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="at-card">
-        <div style={{fontSize:13,fontWeight:800,color:"#374151",marginBottom:14}}>⚙️ {englishMode ? "Lesson Settings" : "수업 설정"}</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:18,alignItems:"flex-start"}}>
+      {selDate && (
+        <div className="card" style={{ border: "2px solid #1a6fc4" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 800 }}>✏️ Edit · #{selIdx + 1} · {(() => { const dt = new Date(selDate + "T00:00:00"); return `${MONTHS[dt.getMonth()]} ${dt.getDate()} (${WEEKDAYS[dt.getDay()]})`; })()}</div>
+            <button className="btn" style={{ height: 30 }} onClick={() => setSelDate("")}>Close</button>
+          </div>
 
-          {/* Class Days */}
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#7c3aed"}}>📅 {englishMode ? "Class Days" : "수업 요일"}</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-              {["mon","tue","wed","thu","fri","sat","sun"].map(day => {
-                const labelMap: Record<string,string> = {mon:"Mon",tue:"Tue",wed:"Wed",thu:"Thu",fri:"Fri",sat:"Sat",sun:"Sun"};
-                const krMap: Record<string,string> = {mon:"월",tue:"화",wed:"수",thu:"목",fri:"금",sat:"토",sun:"일"};
-                const checked = draftDays.some(d => d === day || d === krMap[day]);
+          {selCancel ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>🚫 Cancelled ({resolutionLabelEN(selCancel)})</span>
+              <button className="btn" onClick={() => { restoreDate(selDate); }}>↩ Restore</button>
+            </div>
+          ) : (() => {
+            const start = startOf(timeRangeOf(selDate));
+            const sessions = sessionsForDate(lesson, selDate);
+            const type = typeForDate(lesson, selDate);
+            const tid = tutorIdOf(selDate);
+            const v = draft[selDate] || "";
+            return (<>
+              <div className="fld">Attendance</div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                {(["○", "✕", "△"] as const).map(mk => (
+                  <button key={mk} type="button" onClick={() => setAttendance(selDate, mk)}
+                    style={{ width: 38, height: 38, borderRadius: 9, cursor: "pointer", fontFamily: "inherit", fontSize: 17, fontWeight: 800,
+                      border: v === mk ? "none" : "1px solid #e5e7eb",
+                      background: v === mk ? (mk === "○" ? "#dcfce7" : mk === "✕" ? "#fee2e2" : "#fef3c7") : "#fff",
+                      color: v === mk ? (mk === "○" ? "#15803d" : mk === "✕" ? "#dc2626" : "#b45309") : "#cbd5e1" }}>{mk}</button>
+                ))}
+                <span style={{ fontSize: 11, color: "#94a3b8", alignSelf: "center", marginLeft: 6 }}>○ attended · ✕ absent · △ makeup</span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <div className="fld">Time · Session</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <select className="sel-ipt" value={start} onChange={e => setDateTimeSession(selDate, e.target.value, sessions)}>
+                      {start === "" && <option value="">Start</option>}
+                      {start !== "" && !TIME_SLOTS.includes(start) && <option value={start}>{start}</option>}
+                      {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select className="sel-ipt" style={{ width: 70 }} value={String(sessions)} onChange={e => setDateTimeSession(selDate, start || "16:30", Number(e.target.value))}>
+                      <option value="1">1T</option><option value="2">2T</option>
+                    </select>
+                  </div>
+                  {start && <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 3 }}>{rangeFor(start, sessions)}</div>}
+                </div>
+                <div>
+                  <div className="fld">Class type</div>
+                  <select className="sel-ipt" value={type} onChange={e => setDateType(selDate, e.target.value)}>
+                    <option value="1:1">1:1</option><option value="1:2">1:2</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="fld">Tutor (this day)</div>
+                  <select className="sel-ipt" value={tid} onChange={e => setDateTutor(selDate, e.target.value)}>
+                    <option value="">(lesson tutor{lesson.tutor_id && tutorMap[lesson.tutor_id] ? `: ${tutorMap[lesson.tutor_id]}` : ""})</option>
+                    {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className="fld">Reschedule to</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="date" className="sel-ipt" value={rescheduleVal} onChange={e => setRescheduleVal(e.target.value)} />
+                    <button className="btn" style={{ height: 38 }} disabled={!rescheduleVal} onClick={() => rescheduleMove(selDate, rescheduleVal)}>Move</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14, borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>
+                <button className="btn" style={{ color: "#dc2626", borderColor: "#fca5a5" }} onClick={() => { cancelDate(selDate); }}>🚫 Cancel this day</button>
+              </div>
+            </>);
+          })()}
+        </div>
+      )}
+
+      <div className="card">
+        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>📝 Memos <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>(separate — not changed by the edit panel)</span></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {dates.filter(d => !cMap[d]).map((d, i) => {
+            const dt = new Date(d + "T00:00:00");
+            return (
+              <div key={d} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: "#6b7280", minWidth: 92, fontWeight: 600 }}>#{dates.indexOf(d) + 1} {MONTHS[dt.getMonth()]} {dt.getDate()} ({WEEKDAYS[dt.getDay()]})</span>
+                <input className="sel-ipt" style={{ fontSize: 12, flex: 1 }} value={notesLog[d] || ""} onChange={e => setNotesLog(p => ({ ...p, [d]: e.target.value }))} placeholder="Memo for this day..." />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card">
+        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>⚙️ Lesson Settings</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, alignItems: "flex-start" }}>
+          <div>
+            <div className="fld" style={{ color: "#7c3aed" }}>📅 Class Days</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map(day => {
+                const lbl: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+                const kr: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
+                const on = draftDays.some(x => x === day || x === kr[day]);
                 return (
-                  <label key={day} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:6,border:`1.5px solid ${checked?"#7c3aed":"#e5e7eb"}`,background:checked?"#f5f3ff":"#fff",cursor:"pointer",fontSize:12,fontWeight:700,color:checked?"#7c3aed":"#6b7280"}}>
-                    <input type="checkbox" checked={checked}
-                      onChange={e => setDraftDays(prev =>
-                        e.target.checked ? [...prev.filter(d => d!==day && d!==krMap[day]), day]
-                        : prev.filter(d => d!==day && d!==krMap[day])
-                      )}
-                      style={{display:"none"}}
-                    />
-                    {labelMap[day]}
+                  <label key={day} style={{ padding: "4px 10px", borderRadius: 6, border: `1.5px solid ${on ? "#7c3aed" : "#e5e7eb"}`, background: on ? "#f5f3ff" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: on ? "#7c3aed" : "#6b7280" }}>
+                    <input type="checkbox" checked={on} onChange={e => setDraftDays(prev => e.target.checked ? [...prev.filter(x => x !== day && x !== kr[day]), day] : prev.filter(x => x !== day && x !== kr[day]))} style={{ display: "none" }} />
+                    {lbl[day]}
                   </label>
                 );
               })}
             </div>
-            <button onClick={saveClassDays} disabled={savingManage}
-              style={{height:30,padding:"0 14px",border:"none",borderRadius:6,background:"#7c3aed",color:"#fff",fontWeight:700,fontSize:12,cursor:savingManage?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingManage?0.6:1,alignSelf:"flex-start",marginTop:2}}
-            >{savingManage?(englishMode?"Saving...":"저장중..."):(englishMode?"Save Days":"요일 저장")}</button>
+            <button className="btn" style={{ height: 30, marginTop: 8, background: "#7c3aed", color: "#fff", border: "none" }} onClick={saveClassDays} disabled={savingDays}>{savingDays ? "Saving..." : "Save Days"}</button>
           </div>
-
-          {/* Class Time (default + by-day) */}
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#1a6fc4"}}>⏰ {englishMode ? "Class Time" : "수업 시간"}</div>
-            <input type="time" lang="en" value={draftConfirmedTime} onChange={e => setDraftConfirmedTime(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
-            {(lesson.class_days || []).map((rawDay, i2) => {
-              const kr = normalizeDayKR(rawDay);
-              const en = ({'월':'Mon','화':'Tue','수':'Wed','목':'Thu','금':'Fri','토':'Sat','일':'Sun'} as Record<string,string>)[kr] || kr;
-              const val = draftDayOverrides[kr] || "";
-              return (
-                <div key={`${rawDay}-${i2}`} style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontSize:12,fontWeight:700,color:"#7c3aed",minWidth:32}}>{en}</span>
-                  <input type="time" lang="en" value={val} onChange={e => setDraftDayOverrides(prev => ({ ...prev, [kr]: e.target.value }))}
-                    style={{flex:1,padding:"6px 8px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:12,fontFamily:"inherit",outline:"none"}} />
-                  {val && (
-                    <button type="button" onClick={() => setDraftDayOverrides(prev => { const n = { ...prev }; delete n[kr]; return n; })}
-                      style={{padding:"4px 8px",background:"#fff",border:"1px solid #e5e7eb",borderRadius:5,color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                  )}
-                </div>
-              );
-            })}
-            <button onClick={saveTimeOverrides} disabled={savingTimes}
-              style={{height:30,padding:"0 14px",border:"none",borderRadius:6,background:"#1a6fc4",color:"#fff",fontWeight:700,fontSize:12,cursor:savingTimes?"not-allowed":"pointer",fontFamily:"inherit",opacity:savingTimes?0.6:1,alignSelf:"flex-start",marginTop:2}}
-            >{savingTimes?(englishMode?"Saving...":"저장중..."):(englishMode?"Save & Unify Time":"시간 저장(통일)")}</button>
-            <div style={{fontSize:10.5,color:"#94a3b8"}}>{englishMode?"Saving resets per-date time changes to this time.":"저장 시 날짜별 시간 변경이 이 시간으로 초기화됩니다."}</div>
+          <div>
+            <div className="fld" style={{ color: "#1a6fc4" }}>⏰ Default Class Time</div>
+            <input type="time" className="sel-ipt" value={draftConfirmedTime.includes("~") ? startOf(draftConfirmedTime) : draftConfirmedTime} onChange={e => setDraftConfirmedTime(e.target.value)} />
+            <button className="btn" style={{ height: 30, marginTop: 8, background: "#1a6fc4", color: "#fff", border: "none" }} onClick={saveUnifyTime} disabled={savingTimes}>{savingTimes ? "Saving..." : "Save & Unify Time"}</button>
+            <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 4 }}>Resets per-date time changes to this time.</div>
           </div>
-
-          {/* Reschedule */}
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            <div style={{fontSize:12,fontWeight:800,color:"#92400e"}}>🔄 {englishMode ? "Reschedule" : "일정 변경(다른 날로)"}</div>
-            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>{englishMode ? "From" : "원래 날짜"}</label>
-            <input type="date" lang="en" value={changeOldVal} min={lesson.start_date || undefined} max={lesson.end_date || undefined} onChange={e => setChangeOldVal(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
-            <label style={{fontSize:11,fontWeight:600,color:"#6b7280"}}>{englishMode ? "To" : "새 날짜"}</label>
-            <input type="date" lang="en" value={changeNewVal} onChange={e => setChangeNewVal(e.target.value)}
-              style={{padding:"8px 10px",border:"1px solid #e5e7eb",borderRadius:6,fontSize:13,fontFamily:"inherit",outline:"none"}} />
-            <button onClick={rescheduleDate} disabled={savingManage || !changeOldVal || !changeNewVal}
-              style={{height:32,padding:"0 14px",border:"none",borderRadius:6,background:"#f59e0b",color:"#fff",fontWeight:700,fontSize:13,cursor:(savingManage||!changeOldVal||!changeNewVal)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(savingManage||!changeOldVal||!changeNewVal)?0.6:1,alignSelf:"flex-start"}}
-            >{savingManage?(englishMode?"Saving...":"저장중..."):(englishMode?"Reschedule":"일정 변경")}</button>
-          </div>
-
         </div>
       </div>
 
-      <div className="at-foot">
-        <button className="at-btn secondary" onClick={() => router.back()} disabled={saving}>{englishMode ? "Back" : "닫기"}</button>
-        <button className="at-btn primary" onClick={save} disabled={saving}>{saving ? (englishMode ? "Saving..." : "저장중...") : (englishMode ? "💾 Save" : "💾 저장")}</button>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        <button className="btn" onClick={() => router.back()} disabled={saving}>Back</button>
+        <button className="btn pri" onClick={save} disabled={saving}>{saving ? "Saving..." : "💾 Save"}</button>
       </div>
     </div>
   </>);
