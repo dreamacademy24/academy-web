@@ -6379,8 +6379,8 @@ function _renderEmpChecklist(empId){
 function _empChecklistHtml(empId,dates,today,checkSet,bookings){
   var dows=['일','월','화','수','목','금','토'];
   var dowYmd={};dates.forEach(function(ymd){dowYmd[new Date(ymd+'T00:00:00').getDay()]=ymd;});
-  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&it.assignee===empId;});
-  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&it.assignee===empId;});
+  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&(it.assignee===empId||it.assignee==='all');});
+  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&(it.assignee===empId||it.assignee==='all');});
   if(!mineDaily.length&&!mineWeekly.length)return '';
   var h='<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid #4f46e5;border-radius:10px;padding:14px 16px">';
   h+='<div style="font-size:14px;font-weight:800;margin-bottom:10px">📋 내 체크리스트 <span style="font-size:11px;color:var(--text3);font-weight:600">(담당 배정된 항목)</span></div>';
