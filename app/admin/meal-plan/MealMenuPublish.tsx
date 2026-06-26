@@ -188,20 +188,33 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     if (!menu) { toastErr("발행할 식단이 없습니다. 먼저 사진을 올려주세요."); return; }
     if (!menu.meal_data) { toastErr("AI 인식이 아직 완료되지 않았습니다. 잠시 기다려주세요."); return; }
     setPickerOpen(true); setLoadingCands(true);
-    // 화면에 보이는 주(올인원) / 월(아카데미) 기간과 체류가 겹치는 손님만
-    const sun = new Date(monday); sun.setDate(monday.getDate() + 6);
-    const rangeStart = monthly ? ymd(monthFirst) : ymd(monday);
-    const rangeEnd = monthly ? ymd(new Date(base.getFullYear(), base.getMonth() + 1, 0)) : ymd(sun);
-    let q = supabase.from("bookings").select("id, booker_name, house_no, checkin_date, checkout_date");
-    if (!monthly) q = q.eq("is_all_in_one", true); // 올인원만
-    const { data } = await q;
-    const staying = (data || []).filter((b: any) => {
-      const ci = (b.checkin_date || "").slice(0, 10), co = (b.checkout_date || "").slice(0, 10);
-      return ci && ci <= rangeEnd && (!co || co >= rangeStart); // 해당 주/월에 체류
-    }).map((b: any) => ({ id: b.id, name: b.booker_name || "(이름없음)", room: b.house_no || "", ci: (b.checkin_date || "").slice(0, 10), co: (b.checkout_date || "").slice(0, 10) }));
-    staying.sort((a: any, b: any) => a.name.localeCompare(b.name));
-    setCands(staying);
-    setSel(new Set(staying.map((s: any) => s.id))); // 기본 전체 선택(투숙중)
+    const slice10 = (x: string) => (x || "").slice(0, 10);
+    let list: { id: string; name: string; room: string; ci: string; co: string }[] = [];
+    if (monthly) {
+      // 학생 식단(월간) → 그 달에 "학원 기간"이 겹치는 학생의 예약
+      const mStart = ymd(monthFirst);
+      const mEnd = ymd(new Date(base.getFullYear(), base.getMonth() + 1, 0));
+      const overlap = (as: string, ae: string) => { as = slice10(as); ae = slice10(ae); return !!as && as <= mEnd && (!ae || ae >= mStart); };
+      const { data: studs } = await supabase.from("students").select("booking_id, academy_start, academy_end");
+      const bidSet = new Set<string>();
+      (studs || []).forEach((st: any) => { if (st.booking_id && overlap(st.academy_start, st.academy_end)) bidSet.add(st.booking_id); });
+      const { data } = await supabase.from("bookings").select("id, booker_name, house_no, checkin_date, checkout_date, students");
+      list = (data || []).filter((b: any) => {
+        if (bidSet.has(b.id)) return true;
+        try { const arr = typeof b.students === "string" ? JSON.parse(b.students) : b.students; if (Array.isArray(arr)) return arr.some((s: any) => overlap(s.academyStart || s.academy_start, s.academyEnd || s.academy_end)); } catch { }
+        return false;
+      }).map((b: any) => ({ id: b.id, name: b.booker_name || "(이름없음)", room: b.house_no || "", ci: slice10(b.checkin_date), co: slice10(b.checkout_date) }));
+    } else {
+      // 드림하우스 올인원 식단(주간) → 그 주에 체류하는 올인원 손님
+      const sun = new Date(monday); sun.setDate(monday.getDate() + 6);
+      const rangeStart = ymd(monday), rangeEnd = ymd(sun);
+      const { data } = await supabase.from("bookings").select("id, booker_name, house_no, checkin_date, checkout_date").eq("is_all_in_one", true);
+      list = (data || []).filter((b: any) => { const ci = slice10(b.checkin_date), co = slice10(b.checkout_date); return ci && ci <= rangeEnd && (!co || co >= rangeStart); })
+        .map((b: any) => ({ id: b.id, name: b.booker_name || "(이름없음)", room: b.house_no || "", ci: slice10(b.checkin_date), co: slice10(b.checkout_date) }));
+    }
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    setCands(list);
+    setSel(new Set(list.map(s => s.id)));
     setLoadingCands(false);
   }
   async function doPublish() {
@@ -380,7 +393,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
         <div onClick={() => setPickerOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "100%", maxWidth: 460, maxHeight: "86vh", display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 3 }}>받을 손님 선택</div>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10 }}>이번 {monthly ? "달" : "주"} {monthly ? "손님" : "올인원 손님"}이 자동 선택됩니다. 빼고 싶은 분은 체크 해제하세요.</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10 }}>이번 {monthly ? "달 학원생" : "주 올인원 손님"}이 자동 선택됩니다. 빼고 싶은 분은 체크 해제하세요.</div>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <button onClick={() => setSel(new Set(cands.map(c => c.id)))} style={{ fontSize: 12, border: "1px solid #e2e8f0", background: "#fff", borderRadius: 7, padding: "5px 11px", cursor: "pointer", fontWeight: 600 }}>전체 선택</button>
               <button onClick={() => setSel(new Set())} style={{ fontSize: 12, border: "1px solid #e2e8f0", background: "#fff", borderRadius: 7, padding: "5px 11px", cursor: "pointer", fontWeight: 600 }}>전체 해제</button>
@@ -388,7 +401,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
             </div>
             <div style={{ flex: 1, overflowY: "auto", border: "1px solid #f1f5f9", borderRadius: 8 }}>
               {loadingCands ? <div style={{ padding: 24, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>불러오는 중…</div>
-                : cands.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: "#cbd5e1", fontSize: 13 }}>이번 {monthly ? "달" : "주"} {monthly ? "손님" : "올인원 손님"}이 없습니다</div>
+                : cands.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: "#cbd5e1", fontSize: 13 }}>이번 {monthly ? "달 학원생" : "주 올인원 손님"}이 없습니다</div>
                 : cands.map(c => (
                   <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderBottom: "1px solid #f8fafc", cursor: "pointer" }}>
                     <input type="checkbox" checked={sel.has(c.id)} onChange={e => { setSel(prev => { const n = new Set(prev); if (e.target.checked) n.add(c.id); else n.delete(c.id); return n; }); }} />
