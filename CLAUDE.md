@@ -1725,3 +1725,12 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
  B. 지시·코멘트(핵심): 4)항목별 코멘트 스레드(새 테이블 house_report_comments) 5)미해결항목 담당자지정+지시메모 6)지시 시 직원 텔레그램/포털 알림(기존 인프라 재사용)
  C. 선택: 7)전체탭 필터·검색(호실/날짜/시간대/상태) 8)미해결 D+N 일수 9)상태변경 이력
 추천 착수: A + B4·B5 묶어서. 디자인 먼저 보여주고 진행.
+
+## 보류 — 관리자 홈(/admin/hub) 즐겨찾기/카드순서 개인화 (2026-06-26 킵)
+메이 요청: 직원마다 자주 쓰는 메뉴가 달라서, 관리자 홈 상단에 "⭐ 즐겨찾은 메뉴"(직원이 6개 선택) 섹션 + 카드 위치/순서 개인 커스터마이즈.
+구현 메모:
+ - 즐겨찾기 저장: staff별(staffId) localStorage 또는 Supabase staff_hub_prefs(staff_id, fav_keys jsonb, order jsonb). 기기간 공유 원하면 Supabase.
+ - 카드 식별: 현재 hub/page.tsx groups[].cards[]에 href만 있고 고유 key 없음 → 각 카드에 key 부여(href 기반 ok).
+ - 상단 ⭐ 즐겨찾은 메뉴 6칸: 별 토글로 추가/제거, 6개 초과 막기.
+ - 순서: 드래그(SortableJS) 또는 ↑↓ 버튼으로 그룹 내 재배열, prefs에 저장.
+ - getAdminInfo().staffId 로 사용자 식별.
