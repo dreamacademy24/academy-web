@@ -14,7 +14,7 @@ function compress(file: File): Promise<string> {
     r.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const max = 1400; let w = img.width, h = img.height;
+        const max = 2000; let w = img.width, h = img.height;
         if (w > max) { h = Math.round(h * max / w); w = max; }
         const c = document.createElement("canvas"); c.width = w; c.height = h;
         const ctx = c.getContext("2d"); if (!ctx) { reject(new Error("canvas")); return; }
@@ -117,6 +117,9 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
   const [loadingCands, setLoadingCands] = useState(false);
   const [ocrBusy, setOcrBusy] = useState(false);
   const [showImg, setShowImg] = useState(false); // 원본 이미지 토글
+  const [editMode, setEditMode] = useState(false);
+  const [editDays, setEditDays] = useState<MealDay[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // 올인원=해당 주 월요일 / 아카데미=해당 월 1일 (둘 다 한 장)
   const monday = (() => { const d = new Date(base); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setHours(0, 0, 0, 0); return d; })();
@@ -237,6 +240,28 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     // ocrBusy는 runOcr 내부에서 해제됨
   }
 
+  // ✏️ 직접 수정 (인식 결과를 화면에서 바로 고치기)
+  const EDIT_FIELDS: [keyof MealDay, string][] = monthly
+    ? [["lunch", "점심"], ["snack", "간식"]]
+    : [["breakfast", "아침"], ["lunch", "점심"], ["dinner_adult", "저녁(어른)"], ["dinner_child", "저녁(아동)"]];
+  function startEdit() { setEditDays(JSON.parse(JSON.stringify(menu?.meal_data || []))); setEditMode(true); }
+  function setEditField(di: number, field: keyof MealDay, text: string) {
+    setEditDays(prev => prev.map((d, i) => i === di ? { ...d, [field]: text.split("\n") } : d));
+  }
+  async function saveEdit() {
+    if (!menu) return;
+    setSavingEdit(true);
+    const cleaned = editDays.map(d => {
+      const o: any = { date: d.date, weekday: d.weekday };
+      EDIT_FIELDS.forEach(([f]) => { o[f] = (((d as any)[f]) || []).map((x: string) => String(x).trim()).filter(Boolean); });
+      return o;
+    });
+    const { error } = await supabase.from("meal_menus").update({ meal_data: cleaned, updated_at: new Date().toISOString() }).eq("id", menu.id);
+    setSavingEdit(false);
+    if (error) { toastErr("저장 실패: " + error.message); return; }
+    toastOk("수정 저장 완료"); setEditMode(false); load();
+  }
+
   return (
     <div style={{ padding: "4px 2px 20px", maxWidth: 600 }}>
       {/* 네비게이션 + 배포 버튼 */}
@@ -295,6 +320,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
             <button onClick={retryOcr} disabled={ocrBusy} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#2563eb", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 7, padding: "5px 10px", cursor: "pointer", opacity: ocrBusy ? 0.5 : 1 }}>
               {ocrBusy ? "인식 중…" : "🔄 다시 인식"}
             </button>
+            {!editMode && <button onClick={startEdit} style={{ fontSize: 11.5, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>✏️ 직접 수정</button>}
           </div>
           {/* 항목 수 경고 */}
           {tooFewItems && (
@@ -303,7 +329,30 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
               <br />AI가 식단표를 잘못 읽었을 수 있습니다. <b>"🔄 다시 인식"</b> 버튼을 눌러보세요.
             </div>
           )}
-          <MealCardPreview days={menu!.meal_data!} month={menuMonth} isAcademy={monthly} />
+          {editMode ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 12, color: "#64748b" }}>각 칸은 한 줄에 하나씩 입력하세요 (엔터로 항목 구분). 빈 줄은 저장 시 자동 정리됩니다.</div>
+              {editDays.map((d, di) => (
+                <div key={di} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{menuMonth}/{d.date} ({d.weekday})</div>
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${EDIT_FIELDS.length}, 1fr)`, gap: 8 }}>
+                    {EDIT_FIELDS.map(([f, label]) => (
+                      <div key={String(f)}>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>{label}</div>
+                        <textarea value={((((d as any)[f]) || []) as string[]).join("\n")} onChange={e => setEditField(di, f, e.target.value)} rows={4} style={{ width: "100%", fontSize: 12.5, fontFamily: "inherit", border: "1px solid #cbd5e1", borderRadius: 7, padding: "6px 8px", resize: "vertical", boxSizing: "border-box" }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={() => setEditMode(false)} style={{ padding: "9px 16px", border: "1px solid #e2e8f0", background: "#fff", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>취소</button>
+                <button onClick={saveEdit} disabled={savingEdit} style={{ padding: "9px 18px", border: "none", background: savingEdit ? "#94a3b8" : "#7c3aed", color: "#fff", borderRadius: 9, fontWeight: 800, cursor: "pointer", fontSize: 13 }}>{savingEdit ? "저장 중…" : "💾 저장"}</button>
+              </div>
+            </div>
+          ) : (
+            <MealCardPreview days={menu!.meal_data!} month={menuMonth} isAcademy={monthly} />
+          )}
         </div>
       )}
 
