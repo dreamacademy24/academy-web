@@ -1715,3 +1715,13 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 3. 🔴 SW 캐시 갱신 후 폰에서 애프터스쿨 7월 탭 + 튜터 화면 정상 확인
 4. 기존 미완료: 인보이스 디자인 리디자인, 신규 예약 저장 확인
 5. Phase 5 IA 탭 통합 (직원업무 탭 12개→7개)
+
+## 보류 — 드림하우스 보고(/admin/house-reports) 개편 (2026-06-26 킵)
+메이 요청: PC에서 모바일처럼 세로로만 길어 불편(메이는 PC, 작성 직원은 모바일). 보고 항목에 "지시·설명" 기능 없음.
+현 구조: 전체폭 max-width 900px, 입력폼 max-width 520px(=PC가 휑함). 탭 2개(보고하기/전체). 미해결 항목(house_pending_items, status problem/in_progress/done). 항목별 코멘트 기능 없음.
+데이터: Report{reporter,report_date,time_slot(morning/afternoon/checkin),rooms[]{room_no,items[]{content,status},files},memo}. PendingItem{room_no,content,status}.
+개편 아이디어:
+ A. PC 와이드(모바일 자동 세로): 1)보고하기=좌입력+우(미해결+최근보고) 2단 2)전체탭=카드 그리드 2~3열 3)반응형 1200px/@media 모바일 1열
+ B. 지시·코멘트(핵심): 4)항목별 코멘트 스레드(새 테이블 house_report_comments) 5)미해결항목 담당자지정+지시메모 6)지시 시 직원 텔레그램/포털 알림(기존 인프라 재사용)
+ C. 선택: 7)전체탭 필터·검색(호실/날짜/시간대/상태) 8)미해결 D+N 일수 9)상태변경 이력
+추천 착수: A + B4·B5 묶어서. 디자인 먼저 보여주고 진행.
