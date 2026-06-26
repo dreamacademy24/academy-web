@@ -4113,10 +4113,13 @@ function loadWeeklyCheck(){
 }
 function _smartNames(smartKey,occYmd,bookings){
   if(!smartKey)return [];
-  var occ=new Date(occYmd+'T00:00:00');var lo,hi;
-  if(smartKey==='checkin_today'){lo=0;hi=0;}else if(smartKey==='checkin_1w'){lo=7;hi=13;}else if(smartKey==='checkin_2w'){lo=14;hi=20;}else return [];
-  var loD=new Date(occ);loD.setDate(occ.getDate()+lo);var hiD=new Date(occ);hiD.setDate(occ.getDate()+hi);
-  var loS=_ymdLocal(loD),hiS=_ymdLocal(hiD);
+  var occ=new Date(occYmd+'T00:00:00');var loS,hiS;
+  function _off(n){var d=new Date(occ);d.setDate(occ.getDate()+n);return _ymdLocal(d);}
+  if(smartKey==='checkin_today'){loS=_off(0);hiS=_off(0);}
+  else if(smartKey==='checkin_week'){var m=new Date(occ);m.setDate(occ.getDate()-((occ.getDay()+6)%7));loS=_ymdLocal(m);var e=new Date(m);e.setDate(m.getDate()+6);hiS=_ymdLocal(e);}
+  else if(smartKey==='checkin_1w'){loS=_off(7);hiS=_off(13);}
+  else if(smartKey==='checkin_2w'){loS=_off(14);hiS=_off(20);}
+  else return [];
   return (bookings||[]).filter(function(b){var c=(b.checkin_date||'').slice(0,10);return c>=loS&&c<=hiS;}).map(function(b){
     var nm=(b.booker_name||'').trim();
     if(!nm&&b.students){try{var arr=typeof b.students==='string'?JSON.parse(b.students):b.students;if(Array.isArray(arr)&&arr[0])nm=arr[0].name_kr||arr[0].korName||arr[0].name||'';}catch(e){}}
@@ -4240,7 +4243,7 @@ function openWeeklyForm(presetDow,editItem){
     '<div id="wkDowRow" style="display:flex;gap:4px;margin-bottom:12px">'+dowChips+'</div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
-    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option></select>'+
+    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option></select>'+
     '<div style="display:flex;justify-content:flex-end;gap:8px"><button onclick="var o=document.getElementById(\'wkFormOv\');if(o)o.remove();" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-family:inherit">취소</button>'+
     '<button onclick="submitWeeklyItem()" style="padding:8px 16px;border:none;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">'+(editItem?'저장':'등록')+'</button></div></div>';
   document.body.appendChild(ov);
