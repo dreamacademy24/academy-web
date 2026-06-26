@@ -1734,3 +1734,7 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
  - 상단 ⭐ 즐겨찾은 메뉴 6칸: 별 토글로 추가/제거, 6개 초과 막기.
  - 순서: 드래그(SortableJS) 또는 ↑↓ 버튼으로 그룹 내 재배열, prefs에 저장.
  - getAdminInfo().staffId 로 사용자 식별.
+
+## 보류 — 식단 관련 업무(/admin/meal-plan) 주간 명단 "비고(Note)" 편집 (2026-06-26 킵)
+메이 요청: 주간 명단 표의 Note(비고) 칸에 직원이 직접 글씨 입력 가능하게. 인라인 편집 → Supabase 저장.
+구현 메모: meal-plan 주간 명단은 bookings(is_all_in_one) 자동 추출 + guardian_stays. Note는 예약(booking)별 메모이므로 bookings.meal_note(text 신규) 또는 별도 meal_plan_notes(booking_id, week_start, note) 테이블. 주차별로 다르면 후자. 인라인 input onBlur PATCH.
