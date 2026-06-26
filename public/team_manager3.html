@@ -1368,7 +1368,6 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무</button>
       <button class="tab-item" data-page="board" onclick="showPage('board')">전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
-      <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재<span id="notif-dot-approval-tab" class="notif-dot" style="display:none"></span></button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
     </div>
@@ -1544,22 +1543,17 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <!-- EMP PAGE -->
       <div id="page-emp" class="hidden">
         <!-- NEW MASTER-DETAIL LAYOUT -->
-        <div id="empMD" style="display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 60px);background:var(--bg);margin:-24px -24px 0 -24px">
-          <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
-            <!-- 탭 헤더 -->
-            <div id="empSbTabs" style="display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0">
-              <button id="empTab-work" onclick="setEmpTab('work')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 업무</button>
-              <button id="empTab-daily" onclick="setEmpTab('daily')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">☀️ 데일리</button>
-              <button id="empTab-apv" onclick="setEmpTab('apv')" style="flex:1;padding:9px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
+        <div style="height:calc(100vh - 60px);overflow-y:auto;background:var(--bg);margin:-24px -24px 0 -24px">
+          <div style="max-width:1080px;margin:0 auto;padding:14px 20px 40px">
+            <div id="empSubNav" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;flex-wrap:wrap">
+              <button id="empTab-home" onclick="setEmpTab('home')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🏠 홈</button>
+              <button id="empTab-checklist" onclick="setEmpTab('checklist')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 체크리스트</button>
+              <button id="empTab-student" onclick="setEmpTab('student')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 학생</button>
+              <button id="empTab-calendar" onclick="setEmpTab('calendar')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📅 달력</button>
+              <button id="empTab-approval" onclick="setEmpTab('approval')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
             </div>
-            <!-- 업무 탭 -->
-            <div id="empSbWork" style="flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
-            <!-- 데일리 탭 -->
-            <div id="empSbDaily" style="display:none;flex:1;overflow-y:auto;padding:14px;min-height:0"></div>
-            <!-- 결재 탭 -->
-            <div id="empSbApv" style="display:none;flex:1;overflow-y:auto;min-height:0"></div>
+            <div id="empDetail" style="min-width:0"></div>
           </div>
-          <div id="empDetail" style="overflow-y:auto;padding:24px;min-width:0"></div>
         </div>
         <!-- LEGACY (kept hidden for QA modal / approval / pomodoro compat) -->
         <div id="empLegacy" style="display:none">
@@ -3914,7 +3908,7 @@ function showEmpPage(empId){
   var btnTask=document.getElementById('btnTask');
   if(btnTask){btnTask.textContent='+ '+emp.name+' 업무 추가';btnTask.onclick=function(){openTaskModal(empId);};btnTask.style.display=isOwner?'inline-flex':'none';}
   var btnProj=document.getElementById('btnProj');if(btnProj)btnProj.style.display='none';
-  requestAnimationFrame(function(){renderEmpPage(empId);setEmpTab('work');});
+  requestAnimationFrame(function(){renderEmpPage(empId);setEmpTab('home');});
 }
 
 // ── HOME ──
@@ -5829,29 +5823,62 @@ function _buildEmpDailyHtml(empId){
   h+='</div></div>';
   return h;
 }
+var _empTab='home';
 function setEmpTab(tab){
-  var workEl=document.getElementById('empSbWork');
-  var dailyEl=document.getElementById('empSbDaily');
-  var apvEl=document.getElementById('empSbApv');
-  var tabs=['work','daily','apv'];
-  tabs.forEach(function(t){
-    var btn=document.getElementById('empTab-'+t);
-    if(!btn)return;
-    btn.style.color='var(--text2)';
-    btn.style.borderBottom='2px solid transparent';
-    btn.style.background='none';
-  });
-  var activeBtn=document.getElementById('empTab-'+tab);
-  if(activeBtn){
-    activeBtn.style.color='var(--primary)';
-    activeBtn.style.borderBottom='2px solid var(--primary)';
-    activeBtn.style.background='var(--primary-l)';
+  if(tab==='work')tab='home';
+  if(tab==='daily')tab='checklist';
+  if(tab==='apv')tab='approval';
+  _empTab=tab;
+  ['home','checklist','student','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
+  var empId=curEmpId||(CU&&CU.id);
+  var d=document.getElementById('empDetail');
+  if(tab==='home'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId));}
+  else if(tab==='checklist'){renderEmpChecklistTab(empId);}
+  else if(tab==='student'){renderEmpStudentTab(empId);}
+  else if(tab==='calendar'){renderEmpCalendarTab(empId);}
+  else if(tab==='approval'){if(d)d.innerHTML='<div id="empSbApv" style="max-width:920px"></div>';renderEmpApvTab(empId);}
+}
+function renderEmpChecklistTab(empId){
+  var d=document.getElementById('empDetail');if(!d)return;
+  d.innerHTML='<div style="max-width:980px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">📋 체크리스트</div><div id="empChecklistBox" style="margin-bottom:6px"></div>'+_buildEmpDailyHtml(empId)+'</div>';
+  _renderEmpChecklist(empId);
+}
+function renderEmpStudentTab(empId){
+  var d=document.getElementById('empDetail');if(!d)return;
+  d.innerHTML='<div style="max-width:980px"><div style="font-size:16px;font-weight:800;margin-bottom:14px">🎓 담당 학생</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>';
+  sbGet('bookings','select=id,assignee,booker_name,students,checkin_date,checkout_date&assignee=eq.'+empId).then(function(rows){
+    var box=document.getElementById('empStuBox');if(!box)return;
+    rows=rows||[];
+    if(!rows.length){box.innerHTML='<div style="background:var(--surface2);border-radius:8px;padding:20px;text-align:center">담당 배정된 예약이 없습니다</div>';return;}
+    var h='';
+    rows.forEach(function(b){
+      var studs=[];try{var arr=typeof b.students==='string'?JSON.parse(b.students):b.students;if(Array.isArray(arr))studs=arr;}catch(e){}
+      h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px">';
+      h+='<div style="font-weight:800;font-size:14px;margin-bottom:6px">'+esc(b.booker_name||'(이름없음)')+' <span style="font-size:11px;color:var(--text3);font-weight:600">'+(b.checkin_date||'').slice(0,10)+' ~ '+(b.checkout_date||'').slice(0,10)+'</span></div>';
+      if(studs.length){h+='<div style="display:flex;flex-wrap:wrap;gap:6px">'+studs.map(function(st){var nm=st.name_kr||st.korName||st.name||st.name_en||'';var ae=st.academyStart||st.academy_start||'';var aend=st.academyEnd||st.academy_end||'';return '<span style="font-size:12px;background:#eef2ff;color:#4338ca;border-radius:7px;padding:3px 9px">'+esc(nm)+(ae?' ('+String(ae).slice(5)+'~'+String(aend).slice(5)+')':'')+'</span>';}).join('')+'</div>';}
+      else h+='<div style="font-size:12px;color:var(--text3)">학생 정보 없음</div>';
+      h+='</div>';
+    });
+    box.innerHTML=h;
+  }).catch(function(e){var box=document.getElementById('empStuBox');if(box)box.innerHTML='<div style="color:#ef4444">불러오기 실패: '+esc((e&&e.message)||'')+'</div>';});
+}
+function renderEmpCalendarTab(empId){
+  var d=document.getElementById('empDetail');if(!d)return;
+  var pool=tasks.filter(function(t){return (t.assignee===empId||(t.assignees&&t.assignees.indexOf(empId)>=0))&&!isDoneTask(t)&&t.due;});
+  pool.sort(function(a,b){return (a.due||'').localeCompare(b.due||'');});
+  var h='<div style="max-width:980px"><div style="font-size:16px;font-weight:800;margin-bottom:14px">📅 내 일정 <span style="font-size:11px;color:var(--text3);font-weight:600">(마감일 있는 업무)</span></div>';
+  if(!pool.length)h+='<div style="background:var(--surface2);border-radius:8px;padding:20px;text-align:center;color:var(--text3)">마감일이 있는 업무가 없습니다</div>';
+  else{
+    var byDate={};pool.forEach(function(t){(byDate[t.due]=byDate[t.due]||[]).push(t);});
+    Object.keys(byDate).sort().forEach(function(dt){
+      var dd=dL(dt);var lbl=dt+(dd?' ('+dd.text+')':'');
+      h+='<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:800;color:var(--primary);margin-bottom:5px">'+esc(lbl)+'</div>';
+      byDate[dt].forEach(function(t){h+='<div onclick="selectEmpTask(\''+t.id+'\')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:5px;cursor:pointer;font-size:13px">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</div>';});
+      h+='</div>';
+    });
   }
-  if(workEl)workEl.style.display=tab==='work'?'block':'none';
-  if(dailyEl)dailyEl.style.display=tab==='daily'?'block':'none';
-  if(apvEl)apvEl.style.display=tab==='apv'?'block':'none';
-  if(tab==='daily') renderEmpDailyTab(curEmpId);
-  if(tab==='apv') renderEmpApvTab(curEmpId);
+  h+='</div>';
+  d.innerHTML=h;
 }
 function renderEmpApvTab(empId){
   var el=document.getElementById('empSbApv');if(!el)return;
@@ -6356,10 +6383,8 @@ function renderEmpDetailEmpty(emp){
   html+=col('✅ 완료','var(--green)',doneList,'완료된 업무 없음',6);
   html+='</div>';
   if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
-  html+='<div id="empChecklistBox" style="margin-top:18px"></div>';
   html+='</div>';
   d.innerHTML=html;
-  _renderEmpChecklist(empId);
 }
 function _renderEmpChecklist(empId){
   var box=document.getElementById('empChecklistBox');if(!box)return;
