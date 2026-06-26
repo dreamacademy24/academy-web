@@ -4031,8 +4031,10 @@ function loadDailyCheck(){
 }
 function _dailyCheckHtml(byKey,today){
   var staffDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily';});
-  var allItems=DAILY_ITEMS.map(function(it){return {key:it.key,label:it.label,assignee:'all',fixed:true};})
-    .concat(staffDaily.map(function(it){return {key:it.id,label:it.content,assignee:it.assignee,fixed:false,id:it.id};}));
+  var seeded=staffDaily.length>0;
+  var allItems=seeded
+    ? staffDaily.map(function(it){return {key:it.id,label:it.content,assignee:it.assignee,fixed:false,id:it.id};})
+    : DAILY_ITEMS.map(function(it){return {key:it.key,label:it.label,assignee:'all',fixed:true};});
   var total=allItems.length,done=0;allItems.forEach(function(it){if(byKey[it.key])done++;});
   var pct=total?Math.round(done/total*100):0;
   var u=new Date(Date.now()+8*3600000);var mdLabel=(u.getUTCMonth()+1)+'월 '+u.getUTCDate()+'일';
@@ -4056,7 +4058,14 @@ function _dailyCheckHtml(byKey,today){
     '<select id="newDailyAssignee" style="width:96px;padding:8px;border:1px solid #cbd5e1;border-radius:7px;font-size:12px;font-family:inherit">'+_empOptionsHtml('all')+'</select>'+
     '<button onclick="addDailyItem()" style="padding:8px 14px;border:none;background:#22c55e;color:#fff;border-radius:7px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit">등록</button>'+
     '</div>';
-  return head+'<div>'+rows+'</div>'+addRow;
+  var seedRow=seeded?'':'<div style="padding:8px 2px 0"><button onclick="seedDefaultDaily()" style="width:100%;padding:8px;border:1px dashed #cbd5e1;background:#fff;color:#475569;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">📥 기본 9개 항목을 편집 가능하게 불러오기</button></div>';
+  return head+'<div>'+rows+'</div>'+seedRow+addRow;
+}
+function seedDefaultDaily(){
+  if(!confirm('기본 9개 항목을 편집 가능한 항목으로 불러올까요?'))return;
+  var who=(CU&&(CU.name||CU.id))||'';
+  var rows=DAILY_ITEMS.map(function(it,i){return {kind:'daily',content:it.label,assignee:'all',recurring:false,created_by:who,active:true,sort_idx:i+1};});
+  sbPost('staff_checklist_items',rows).then(function(){loadDailyCheck();}).catch(function(e){alert('불러오기 실패: '+(e&&e.message||e));});
 }
 function addDailyItem(){
   var inp=document.getElementById('newDailyContent');var sel=document.getElementById('newDailyAssignee');
