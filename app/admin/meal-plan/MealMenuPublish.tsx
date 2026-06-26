@@ -350,4 +350,13 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
               <button onClick={() => setPickerOpen(false)} style={{ flex: 1, padding: "11px 0", border: "1px solid #e2e8f0", background: "#fff", borderRadius: 9, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>취소</button>
-              <button onClick={doPublish} disabled={publishing || sel.size === 0} style={{ flex: 2, padding: "11px 0", border: "none", background: publishing || sel.size === 0 ? "#94a3b8" : "#1e3a5f", color: "#fff", borderRadius: 9, fontWeight: 800, cursor: "pointer", fontSi
+              <button onClick={doPublish} disabled={publishing || sel.size === 0} style={{ flex: 2, padding: "11px 0", border: "none", background: publishing || sel.size === 0 ? "#94a3b8" : "#1e3a5f", color: "#fff", borderRadius: 9, fontWeight: 800, cursor: "pointer", fontSize: 13.5 }}>{publishing ? "발행 중…" : `📢 ${sel.size}팀에 발행 & 알림`}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const navBtn: React.CSSProperties = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontWeight: 600, fontSize: 13 };
