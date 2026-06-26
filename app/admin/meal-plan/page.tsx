@@ -99,6 +99,7 @@ export default function MealPlanPage() {
   const [labelDate, setLabelDate] = useState("");
   const [lblWeek, setLblWeek] = useState(false);
   const [holidayOv, setHolidayOv] = useState<Record<string, boolean>>({});
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   /* 보호자 체류 편집 모달 */
   const [gsTarget, setGsTarget] = useState<Bk | null>(null);
   const [gsRows, setGsRows] = useState<GuardianStay[]>([]);
@@ -121,7 +122,7 @@ export default function MealPlanPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,house_no,accom_room,accom_type,booking_type,adults,children,students,guardian_stays,additions,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,house_no,accom_room,accom_type,booking_type,adults,children,students,guardian_stays,additions,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,meal_note")
       .eq("is_all_in_one", true);
     if (error) { setToast("로딩 실패: " + error.message); setLoading(false); return; }
     setBookings(data || []);
@@ -154,6 +155,12 @@ export default function MealPlanPage() {
     if (error) { setToast("복원 실패: " + error.message); return; }
     setExclusions(prev => { const s = new Set(prev); s.delete(bookingId); return s; });
     setToast("명단에 복원했어요");
+  }
+  async function saveNote(id: string, val: string) {
+    const { error } = await supabase.from("bookings").update({ meal_note: val }).eq("id", id);
+    if (error) { setToast("비고 저장 실패: " + error.message); return; }
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, meal_note: val } : b));
+    setToast("비고 저장됨");
   }
   const weekDates = useMemo(() => Array.from({ length: 5 }, (_, i) => addD(weekMon, i)), [weekMon]);
   const weekFri = weekDates[4];
@@ -428,6 +435,7 @@ export default function MealPlanPage() {
                       {g.note.includes("Last") && <span className="badge b-last">⚠ Last week</span>}{" "}
                       {g.note.includes("New") && <span className="badge b-new">🆕 New</span>}{" "}
                       {g.note.includes("콤보") && <span className="badge b-combo">{g.note.split("·").find(s => s.includes("콤보"))?.trim()}</span>}
+                      <input value={noteDraft[g.b.id] ?? (g.b.meal_note || "")} onChange={e => setNoteDraft(p => ({ ...p, [g.b.id]: e.target.value }))} onBlur={e => saveNote(g.b.id, e.target.value)} placeholder="비고 입력" style={{ display: "block", marginTop: 4, width: "100%", fontSize: 11.5, fontFamily: "inherit", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 6px", boxSizing: "border-box" }} />
                     </td>
                     <td className="no-print" style={{ padding: "4px 2px" }}>
                       <button onClick={() => excludeGuest(g.b.id)} title="이번 주 명단에서 제외" style={{ background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>✕</button>
