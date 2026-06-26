@@ -6423,6 +6423,7 @@ function renderEmpDetail(taskId){
   var prog=t.progress||0;
   var cmts=taskComments[t.id]||[];
   var html='';
+  html+='<button onclick="_empSelTaskId=null;renderEmpDetailEmpty(getP(curEmpId));" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit;font-size:12.5px;color:var(--text2);margin-bottom:12px">← 내 보드</button>';
   html+='<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">';
   html+='<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">';
   if(t.priority==='high')html+='<span style="background:#fef2f2;color:#991b1b;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">🚨 긴급</span>';
