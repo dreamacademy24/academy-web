@@ -58,8 +58,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     'flight_in_airline','flight_in_no','flight_in_date','flight_in_time','flight_in_origin','flight_in_undecided',
     'flight_out_airline','flight_out_no','flight_out_date','flight_out_time','flight_out_destination','flight_out_undecided'
   ]
+  const dateTimeKeys = new Set(['flight_in_date', 'flight_out_date', 'flight_in_time', 'flight_out_time'])
   const flightUpdate: Record<string, unknown> = {}
-  for (const k of flightKeys) if (k in body) flightUpdate[k] = body[k]
+  for (const k of flightKeys) if (k in body) {
+    let v = body[k]
+    if (dateTimeKeys.has(k) && (v === '' || v === undefined)) v = null
+    flightUpdate[k] = v
+  }
   if (Object.keys(flightUpdate).length > 0 && data.booking_id) {
     const { error: bErr } = await supabase
       .from('bookings')
