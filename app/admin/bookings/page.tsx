@@ -850,6 +850,7 @@ export default function AdminBookingsPage(){
           <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(searchedList)}>📥 엑셀</button>
         </span>
       </div>
+      {(()=>{const un=searchedList.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
         <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
       </tr></thead><tbody>
@@ -863,7 +864,7 @@ export default function AdminBookingsPage(){
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.accom_type||"미정"}>{b.accom_type||"미정"}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={(b.accom_type||"미정")+(((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())?" · 드림하우스 룸 미배정(오버부킹 주의)":"")}>{((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())&&<span style={{color:"#dc2626",fontWeight:800,marginRight:3}}>❗</span>}{b.accom_type||"미정"}</td>
             <td>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()}>
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
@@ -888,6 +889,7 @@ export default function AdminBookingsPage(){
             <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#94a3b8"}}>
               <span>체크인: {b.checkin_date||"미정"}</span><span>{b.assignee||"미지정"}</span>
             </div>
+            {((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())&&<div style={{marginTop:6,fontSize:12,color:"#dc2626",fontWeight:700}}>❗ 드림하우스 룸 미배정 (오버부킹 주의)</div>}
             <div style={{display:"flex",gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
               <button className="act act-b" style={{flex:1,minHeight:40}} onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" style={{flex:1,minHeight:40}} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
