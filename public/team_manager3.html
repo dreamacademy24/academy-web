@@ -4359,38 +4359,64 @@ function renderHomePage(){
   loadDailyCheck();
   loadWeeklyCheck();
 }
-// 🚨 예약관리 긴급 이슈 — 드림하우스 룸 미배정(오버부킹 위험)
+// 🚨 예약 운영 현황 — 자동 파생(룸배정/체크인디테일/학생영문명), 체크인 임박순
+function _daysBetween(a,b){var d1=new Date(a+'T00:00:00'),d2=new Date(b+'T00:00:00');return Math.round((d2-d1)/86400000);}
+function _studentEnMissing(b){
+  var arr=[];try{arr=typeof b.students==='string'?JSON.parse(b.students):(b.students||[]);}catch(e){arr=[];}
+  if(!Array.isArray(arr)||!arr.length)return true;
+  return arr.some(function(s){return !String((s&&(s.name_en||s.engName))||'').trim();});
+}
 function loadHomeIssues(){
   var box=document.getElementById('homeIssuesBox');if(!box)return;
   var today=_dailyToday();
-  sbGet('bookings','select=id,reservation_no,booker_name,accom_type,house_no,accom_room,checkin_date,checkout_date,status').then(function(rows){
-    rows=Array.isArray(rows)?rows:[];
-    var issues=rows.filter(function(b){
-      var needsDH=(b.accom_type||'').indexOf('드림하우스')>=0;
-      var noRoom=!String(b.house_no||b.accom_room||'').trim();
-      var notCancel=(b.status||'').indexOf('취소')<0;
-      var active=!b.checkout_date||(String(b.checkout_date).slice(0,10)>=today);
-      return needsDH&&noRoom&&notCancel&&active;
-    }).sort(function(a,b){return (a.checkin_date||'').localeCompare(b.checkin_date||'');});
-    box.innerHTML=_homeIssuesHtml(issues);
+  Promise.all([
+    sbGet('bookings','select=id,reservation_no,booker_name,accom_type,house_no,accom_room,checkin_date,checkout_date,status,students'),
+    sbGet('checkin_details','select=booking_id,submitted_at').catch(function(){return [];})
+  ]).then(function(res){
+    var rows=Array.isArray(res[0])?res[0]:[];
+    var cds=Array.isArray(res[1])?res[1]:[];
+    var cdAccessible=cds.length>0;
+    var submitted={};cds.forEach(function(c){if(c.submitted_at)submitted[c.booking_id]=true;});
+    var items=[];
+    rows.forEach(function(b){
+      if((b.status||'').indexOf('취소')>=0)return;
+      var co=String(b.checkout_date||'').slice(0,10);
+      if(co&&co<today)return;
+      var ci=String(b.checkin_date||'').slice(0,10);
+      var dday=ci?_daysBetween(today,ci):null;
+      var flags=[];
+      if((b.accom_type||'').indexOf('드림하우스')>=0&&!String(b.house_no||b.accom_room||'').trim())
+        flags.push({k:'room',label:'룸 미배정',c:'#dc2626',bg:'#fef2f2'});
+      if(cdAccessible&&dday!=null&&dday<=30&&dday>=-3&&!submitted[b.id])
+        flags.push({k:'checkin',label:'체크인디테일 미제출',c:'#b45309',bg:'#fffbeb'});
+      if(dday!=null&&dday<=60&&_studentEnMissing(b))
+        flags.push({k:'student',label:'학생 영문명 누락',c:'#b45309',bg:'#fffbeb'});
+      if(flags.length)items.push({b:b,ci:ci,dday:dday,flags:flags});
+    });
+    items.sort(function(a,b){return (a.ci||'9999').localeCompare(b.ci||'9999');});
+    box.innerHTML=_homeIssuesHtml(items);
   }).catch(function(){box.innerHTML='';});
 }
-function _homeIssuesHtml(issues){
-  if(!issues.length)return '';
-  var rows=issues.slice(0,30).map(function(b){
-    return '<div onclick="location.href=\'/admin/bookings\'" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;background:#fff;border:1px solid #fecaca;margin-bottom:5px">'+
-      '<span style="color:#dc2626;font-weight:800">❗</span>'+
-      '<span style="flex:1;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.booker_name||'(이름없음)')+'</span>'+
-      '<span style="font-size:11px;color:var(--text3);white-space:nowrap">체크인 '+esc(b.checkin_date||'미정')+'</span>'+
-      '<span style="font-size:11px;font-weight:800;color:#dc2626;white-space:nowrap">룸 미배정</span>'+
+function _homeIssuesHtml(items){
+  if(!items.length)return '';
+  var hasRoom=items.some(function(it){return it.flags.some(function(f){return f.k==='room';});});
+  var rows=items.slice(0,40).map(function(it){
+    var b=it.b;var dd=it.dday;
+    var ddTxt=dd==null?'미정':(dd===0?'D-DAY':(dd>0?'D-'+dd:'D+'+(-dd)));
+    var ddColor=(dd!=null&&dd<=7)?'#dc2626':(dd!=null&&dd<=30?'#b45309':'#64748b');
+    var chips=it.flags.map(function(f){return '<span style="font-size:10.5px;font-weight:800;color:'+f.c+';background:'+f.bg+';border:1px solid '+f.c+'33;border-radius:6px;padding:2px 7px;white-space:nowrap">'+f.label+'</span>';}).join(' ');
+    return '<div onclick="location.href=\'/admin/bookings\'" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;background:#fff;border:1px solid #fde0e0;margin-bottom:5px;flex-wrap:wrap">'+
+      '<span style="font-size:11px;font-weight:800;color:'+ddColor+';min-width:46px">'+ddTxt+'</span>'+
+      '<span style="flex:1;min-width:80px;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.booker_name||'(이름없음)')+' <span style="font-size:10.5px;color:var(--text3);font-weight:500">'+esc(it.ci||'미정')+'</span></span>'+
+      chips+
     '</div>';
   }).join('');
-  return '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:10px;padding:14px 16px">'+
+  return '<div style="background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:10px;padding:14px 16px">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">'+
-      '<div style="font-size:14px;font-weight:800;color:#b91c1c">🚨 긴급 확인 요망 · 예약관리 <span style="font-weight:700;color:#ef4444">'+issues.length+'건</span></div>'+
+      '<div style="font-size:14px;font-weight:800;color:#b91c1c">🚨 예약 운영 현황 · 확인 요망 <span style="font-weight:700;color:#ef4444">'+items.length+'건</span></div>'+
       '<button onclick="location.href=\'/admin/bookings\'" style="font-size:12px;font-weight:700;color:#b91c1c;background:#fff;border:1px solid #fecaca;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:inherit">예약관리에서 보기 →</button>'+
     '</div>'+
-    '<div style="font-size:12px;color:#991b1b;margin-bottom:8px">드림하우스 룸이 아직 배정되지 않은 예약입니다. 오버부킹 방지를 위해 룸을 배정해 주세요.</div>'+
+    '<div style="font-size:11.5px;color:#991b1b;margin-bottom:8px">체크인 임박순'+(hasRoom?' · <b>룸 미배정 = 오버부킹 주의</b>':'')+' · 클릭하면 예약관리로 이동</div>'+
     rows+'</div>';
 }
 /* 홈 하단 이번 주 스트립 — 요일별 마감 업무 + 배포 휴무 (Phase 4) */
