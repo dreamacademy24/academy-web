@@ -71,7 +71,7 @@ export default function AdminHubPage() {
         { icon: "📋", title: "SSP 관리",        desc: "신청현황 · 발급추적",                href: "/admin/ssp" },
         { icon: "📢", title: "공지 배포",       desc: "손님 공지 작성 · 전체/특정 발송",       href: "/admin/notices" },
         { icon: "🗓", title: "상담 예약",       desc: "학습 상담 일정 생성 · 배포 · 현황",      href: "/admin/consultations" },
-        { icon: "📝", title: "동의서함", desc: "체험단 동의서 1:1 발송 · 제출 현황",  href: "/admin/consents" },
+        { icon: "📝", title: "동의서함", desc: "체험단·부킹 등 온라인 동의·서명 보관",  href: "/admin/consents" },
         { icon: "🗄", title: "지난 내역 보관함", desc: "지난 신청 조회 · 오래된 내역 일괄 삭제",  href: "/admin/archive" },
       ],
     },
