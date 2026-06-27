@@ -179,7 +179,7 @@ export default function AdminBookingsPage(){
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
-  const [confirmPeriod,setConfirmPeriod]=useState<"진행중"|"예정"|"이번주"|"지난">("진행중");
+  const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [confirmSearch,setConfirmSearch]=useState("");
@@ -969,6 +969,7 @@ export default function AdminBookingsPage(){
         if(confirmType==="리조트"&&isC)return false;
         const co=b.checkout_date||"";
         const ci=b.checkin_date||"";
+        if(confirmPeriod==="전체")return true;
         if(confirmPeriod==="지난")return !!co&&co<_today;
         if(confirmPeriod==="이번주")return !!ci&&ci>=_today&&ci<=_wkEnd;
         if(confirmPeriod==="예정")return !!ci&&ci>_today; // 체크인 전
@@ -1026,7 +1027,7 @@ export default function AdminBookingsPage(){
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
             <span style={{fontSize:11,fontWeight:800,color:"#0d9488",width:44,flexShrink:0}}>기간</span>
-            {(["진행중","예정","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="진행중"?"현재 진행중":t==="예정"?"입실 예정":t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
+            {(["전체","진행중","예정","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="진행중"?"현재 진행중":t==="예정"?"입실 예정":t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
           </div>
         </div>
         <div className="cf-search">
