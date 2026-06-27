@@ -11,6 +11,7 @@ export default function AdminHubPage() {
   const [role, setRole] = useState("");
   const [staffId, setStaffId] = useState("");
   const [tutorAlerts, setTutorAlerts] = useState(0);
+  const [roomAlerts, setRoomAlerts] = useState(0);
 
   useEffect(() => {
     if (!isAdminAuthed()) { window.location.href = "/login"; return; }
@@ -32,6 +33,19 @@ export default function AdminHubPage() {
           if (r.ok) { const d = await r.json(); cancelN = Array.isArray(d) ? d.length : 0; }
         } catch {}
         setTutorAlerts((count || 0) + cancelN);
+      } catch {}
+    })();
+  }, []);
+
+  // 드림하우스 룸 미배정(오버부킹 위험) 건수 → 예약 관리 카드 ❗
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.from("bookings").select("accom_type,house_no,accom_room,status,checkout_date");
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const n = (data || []).filter((b: any) => (b.accom_type || "").includes("드림하우스") && !String(b.house_no || b.accom_room || "").trim() && !(b.status || "").includes("취소") && (!b.checkout_date || String(b.checkout_date).slice(0, 10) >= today)).length;
+        setRoomAlerts(n);
       } catch {}
     })();
   }, []);
@@ -130,6 +144,7 @@ export default function AdminHubPage() {
               <div key={i} className={`hub-card ${(c as any).primary ? "card-blue" : "card-gray"}`} style={(c as any).coming ? { opacity: 0.55, position: "relative" } : { position: "relative" }} onClick={() => { if ((c as any).coming) { alert("준비 중입니다 😊"); return; } if ((c as any).external) { window.open(c.href, '_blank'); } else if (c.href.endsWith('.html')) { window.location.href = c.href; } else { router.push(c.href); } }}>
                 {(c as any).coming && <span style={{ position: "absolute", top: 8, right: 10, fontSize: 10, fontWeight: 700, color: "#fff", background: "#94a3b8", padding: "2px 8px", borderRadius: 6 }}>준비 중</span>}
                 {c.href === "/admin/tutor-class" && tutorAlerts > 0 && <span title="처리 필요(신규/변경/취소요청)" style={{ position: "absolute", top: 8, right: 10, minWidth: 20, height: 20, padding: "0 6px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#dc2626", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(220,38,38,0.4)" }}>❗{tutorAlerts}</span>}
+                {c.href === "/admin/bookings" && roomAlerts > 0 && <span title="드림하우스 룸 미배정 — 오버부킹 주의" style={{ position: "absolute", top: 8, right: 10, minWidth: 20, height: 20, padding: "0 6px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#dc2626", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(220,38,38,0.4)" }}>❗{roomAlerts}</span>}
                 <div className="ic">{c.icon}</div>
                 <div className="tx">
                   <h2>{c.title}</h2>
