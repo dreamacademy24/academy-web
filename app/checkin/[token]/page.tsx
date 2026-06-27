@@ -260,7 +260,18 @@ export default function CheckinFormPage() {
   function up<K extends keyof FormState>(k: K, v: string) { setForm(prev => ({ ...prev, [k]: v })); }
 
   async function submit() {
-    if (!form.q1.trim()) { alert("1번 문항(예약자 성함과 입실 일자)을 입력해주세요."); return; }
+    if (!form.q1.trim()) { setTab("checkin"); alert("예약자 성함과 입실 일자를 입력해 주세요. (1번 문항)"); return; }
+    // 항공편 날짜 누락 안내 (미정 체크 시 제외)
+    if (!flightForm.flight_in_undecided && !flightForm.flight_in_date) {
+      setTab("flight");
+      alert("✈️ 입국(체크인) 항공편 날짜를 입력해 주세요.\n아직 항공편이 미정이면 '미정'에 체크해 주세요.");
+      return;
+    }
+    if (!flightForm.flight_out_undecided && !flightForm.flight_out_date) {
+      setTab("flight");
+      alert("✈️ 출국 항공편 날짜를 입력해 주세요.\n아직 항공편이 미정이면 '미정'에 체크해 주세요.");
+      return;
+    }
     setSubmitting(true);
     const res = await fetch(`/api/checkin/${token}`, {
       method: "POST",
