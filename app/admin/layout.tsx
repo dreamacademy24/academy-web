@@ -44,15 +44,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname() || "";
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [hidden, setHidden] = useState(false);
+  const [viewSrc, setViewSrc] = useState("");
 
   useEffect(() => {
     const init: Record<string, boolean> = {};
-    NAV.forEach(g => { init[g.title] = g.items.some(it => pathname === it.href || pathname.startsWith(it.href + "/")); });
+    const sp = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("src") || "") : "";
+    NAV.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && sp === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
     setOpen(init);
+    if (typeof window !== "undefined") setViewSrc(new URLSearchParams(window.location.search).get("src") || "");
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
   }, [pathname]);
 
-  const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isView = pathname === "/admin/view";
+  const active = (it: Item) => it.ext
+    ? (isView && viewSrc === it.href)
+    : (!isView && (pathname === it.href || pathname.startsWith(it.href + "/")));
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
@@ -70,11 +76,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {g.title} <span style={{ color: open[g.title] ? "#FFCB36" : "#8b909a", fontSize: 11 }}>{open[g.title] ? "▲" : "▼"}</span>
               </div>
               {open[g.title] && g.items.map(it => {
-                const on = active(it.href);
+                const on = active(it);
                 const style: React.CSSProperties = { display: "block", padding: "9px 16px 9px 28px", fontSize: 12.5, textDecoration: "none", color: on ? "#fff" : "#c4c8d0", background: on ? "#1f6fc4" : "#2b2e35" };
-                return it.ext
-                  ? <a key={it.href} href={it.href} style={style}>{it.label}</a>
-                  : <Link key={it.href} href={it.href} style={style}>{it.label}</Link>;
+                const to = it.ext ? `/admin/view?src=${encodeURIComponent(it.href)}` : it.href;
+                return <Link key={it.href} href={to} onClick={() => it.ext && setViewSrc(it.href)} style={style}>{it.label}</Link>;
               })}
             </div>
           ))}
