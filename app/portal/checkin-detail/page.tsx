@@ -19,7 +19,7 @@ export default function PortalCheckinDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({ q1:'', q2:'', q6:'' });
-  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:"더블베드 1개 (1~2인 스테이)"});
+  const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:""});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
   const [extraPickups, setExtraPickups] = useState<{type:string;date:string;airline:string;flight:string;time:string}[]>([]);
   const [flightForm, setFlightForm] = useState({
@@ -200,7 +200,7 @@ export default function PortalCheckinDetailPage() {
           });
           try {
             const b = JSON.parse(det.bed_setting || "{}");
-            if (b.room1 || b.room2) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||"더블베드 1개 (1~2인 스테이)"});
+            if (b.room1 || b.room2 || b.room3) setBedConfig({room1:b.room1||"", room2:b.room2||"", room3:b.room3||""});
           } catch {}
           try {
             const s = JSON.parse(det.usim_request || "[]");
@@ -470,7 +470,7 @@ export default function PortalCheckinDetailPage() {
                           style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
                       </div>
                       <div>
-                        <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div>
+                        <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간{key==='in' && <span style={{color:"#e8472c",fontWeight:700}}> ❗ 도착시간</span>}</div>
                         <input type="time" value={get('time')} onChange={e=>set('time',e.target.value)}
                           style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
                       </div>

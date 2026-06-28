@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
     .eq('booking_id', bookingId)
     .maybeSingle();
 
-  const payload = { ...fields, booking_id: bookingId, submitted_at: new Date().toISOString() };
+  const payload: Record<string, unknown> = { booking_id: bookingId, submitted_at: new Date().toISOString() };
+  for (const [k, v] of Object.entries(fields)) payload[k] = v === '' ? null : v;
 
   let error;
   if (existing?.id) {
