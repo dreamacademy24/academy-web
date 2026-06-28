@@ -42,7 +42,6 @@ const NAV: { title: string; items: Item[] }[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
-  const isHub = pathname === "/admin/hub";
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [hidden, setHidden] = useState(false);
 
@@ -52,9 +51,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setOpen(init);
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
   }, [pathname]);
-
-  // 허브(카드 홈)는 사이드바 없이 기존 그대로
-  if (isHub) return <>{children}</>;
 
   const active = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
@@ -66,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/hub" style={{ fontSize: 13, fontWeight: 700, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFCB36" }}>WORKSPACE</span></Link>
             <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#8b909a", cursor: "pointer", fontSize: 16 }}>‹</button>
           </div>
-          <Link href="/admin/hub" style={{ display: "block", padding: "10px 16px", fontSize: 12.5, color: "#c4c8d0", textDecoration: "none", borderBottom: "1px solid #3c4048" }}>← 관리자 홈(카드)</Link>
+          <Link href="/admin/hub" style={{ display: "block", padding: "10px 16px", fontSize: 12.5, color: "#c4c8d0", textDecoration: "none", borderBottom: "1px solid #3c4048" }}>🏠 홈(카드 보기)</Link>
           {NAV.map(g => (
             <div key={g.title}>
               <div onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
