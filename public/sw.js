@@ -1,4 +1,4 @@
-const CACHE_NAME = "dreamacademy-v4";
+const CACHE_NAME = "dreamacademy-v5";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -18,15 +18,19 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  // 페이지(HTML 네비게이션) + API + 동적 데이터는 항상 네트워크에서 최신으로 (캐시로 옛 화면 안 보이게)
+  if (req.mode === "navigate" || req.destination === "document" || url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
+  // 정적 자산(_next/static, 아이콘 등)만 캐시 (network-first)
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
+    fetch(req)
+      .then((response) => { const clone = response.clone(); caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)); return response; })
+      .catch(() => caches.match(req))
   );
 });
 
