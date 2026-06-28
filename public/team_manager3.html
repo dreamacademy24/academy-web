@@ -1404,7 +1404,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="content">
       <!-- HOME -->
       <div id="page-home">
-        <div id="homeDashboard" style="padding:16px 20px;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box;max-width:1100px;margin:0 auto"></div>
+        <div id="homeDashboard" style="padding:16px 24px;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box;max-width:1500px;margin:0 auto"></div>
         <div id="homeLegacy" style="display:none">
           <div id="weekReport"></div>
           <div id="goalsCard"></div>
@@ -4351,10 +4351,9 @@ function delSBoardItem(id){
 function renderHomePage(){
   var dash=document.getElementById('homeDashboard');if(!dash)return;
   var html='';
-  html+='<div id="homeIssuesBox" style="margin-bottom:16px"></div>';
-  html+='<div id="homeTutorBox" style="margin-bottom:16px"></div>';
-  html+='<div id="dailyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:10px;padding:14px 16px;margin-bottom:16px"></div>';
-  html+='<div id="weeklyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #4f46e5;border-radius:10px;padding:14px 16px"></div>';
+  html+='<style>.hgrid-top{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}.hgrid-main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:16px;align-items:start}.hcard-scroll{max-height:420px;overflow-y:auto}@media(max-width:1100px){.hgrid-top,.hgrid-main{grid-template-columns:1fr}}</style>';
+  html+='<div class="hgrid-top"><div id="homeIssuesBox"></div><div id="homeTutorBox"></div></div>';
+  html+='<div class="hgrid-main"><div id="dailyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:10px;padding:14px 16px"></div><div id="weeklyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #4f46e5;border-radius:10px;padding:14px 16px"></div></div>';
   dash.innerHTML=html;
   loadHomeIssues();
   loadHomeTutorIssues();
