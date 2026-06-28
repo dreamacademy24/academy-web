@@ -1738,3 +1738,17 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 ## 보류 — 식단 관련 업무(/admin/meal-plan) 주간 명단 "비고(Note)" 편집 (2026-06-26 킵)
 메이 요청: 주간 명단 표의 Note(비고) 칸에 직원이 직접 글씨 입력 가능하게. 인라인 편집 → Supabase 저장.
 구현 메모: meal-plan 주간 명단은 bookings(is_all_in_one) 자동 추출 + guardian_stays. Note는 예약(booking)별 메모이므로 bookings.meal_note(text 신규) 또는 별도 meal_plan_notes(booking_id, week_start, note) 테이블. 주차별로 다르면 후자. 인라인 input onBlur PATCH.
+
+## 2026-06-29 — 어드민 사이드바 개편 (골격, 검토 대기)
+- 백업 태그: `backup-before-sidebar` (커밋 6899f19). 되돌리려면 `git reset --hard backup-before-sidebar`.
+- 신규 파일: `app/admin/layout.tsx` — /admin/* 공통 왼쪽 접이식(아코디언) 사이드바. 기존 페이지 무수정.
+  - 그룹: 직원업무 / 예약·아카데미 / 드림하우스 / 현지직원. 활성 그룹 자동 펼침, 활성 항목 파란 강조, ☰로 숨기기.
+  - /admin/hub(카드홈)는 사이드바 제외(기존 그대로). 사이드바 상단에 "← 관리자 홈(카드)" 링크.
+  - ext:true 항목(/staff, /staff-guide.html, /dreamhouse-rooms, /admineng/hub, /ashuttle)은 /admin 밖이라 클릭 시 사이드바 사라짐(이동). → 추후 iframe 래핑 or /admin 하위로 이동 검토.
+- 알려진 다듬기 거리(다음):
+  1. 각 어드민 페이지의 기존 "← 관리자 홈" 헤더 버튼 중복 → 정리
+  2. /admin/consents는 자체 다크 사이드바 보유 → 이중 사이드바 정리
+  3. 직원업무(team_manager3.html)를 본문에 iframe으로 넣어 "직원업무 기준 셸" 완성
+  4. 사이드바에 알림 뱃지(예약 룸미배정/튜터) 연동
+  5. 모바일 토글 다듬기
+- ⚠️ 검증: 메이 어드민 세션 만료로 라이브 시각 확인 못함. 로그인 후 아무 /admin 페이지 들어가면 좌측 사이드바 보임. 이상하면 백업 태그로 즉시 복구.
