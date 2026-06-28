@@ -260,18 +260,8 @@ export default function CheckinFormPage() {
   function up<K extends keyof FormState>(k: K, v: string) { setForm(prev => ({ ...prev, [k]: v })); }
 
   async function submit() {
-    if (!form.q1.trim()) { setTab("checkin"); alert("예약자 성함과 입실 일자를 입력해 주세요. (1번 문항)"); return; }
-    // 항공편 날짜 누락 안내 (미정 체크 시 제외)
-    if (!flightForm.flight_in_undecided && !flightForm.flight_in_date) {
-      setTab("flight");
-      alert("✈️ 입국(체크인) 항공편 날짜를 입력해 주세요.\n아직 항공편이 미정이면 '미정'에 체크해 주세요.");
-      return;
-    }
-    if (!flightForm.flight_out_undecided && !flightForm.flight_out_date) {
-      setTab("flight");
-      alert("✈️ 출국 항공편 날짜를 입력해 주세요.\n아직 항공편이 미정이면 '미정'에 체크해 주세요.");
-      return;
-    }
+    // 2번(투숙자 전체 영문이름)만 필수 — 나머지(예약자명·항공편·유심 등)는 비워도 제출됩니다.
+    if (!form.q2.trim()) { setTab("checkin"); alert("2번 '투숙자 전체인원 영문이름'을 입력해 주세요.\n나머지 항목은 비워두셔도 제출됩니다."); return; }
     setSubmitting(true);
     const res = await fetch(`/api/checkin/${token}`, {
       method: "POST",
@@ -287,7 +277,14 @@ export default function CheckinFormPage() {
       }),
     });
     setSubmitting(false);
-    if (!res.ok) { const j = await res.json().catch(()=>({})); alert("제출 실패: " + (j.error || "")); return; }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      const raw = j.error || "";
+      const msg = raw.includes("date") ? "항공편 날짜 형식에 문제가 있어요. 항공편 날짜를 비우거나 올바른 날짜로 입력해 주세요."
+        : raw.includes("time") ? "항공편 시간 형식에 문제가 있어요. 시간을 비우거나 올바르게 입력해 주세요."
+        : (raw || "알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+      alert("제출 실패: " + msg); return;
+    }
     setDone(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
