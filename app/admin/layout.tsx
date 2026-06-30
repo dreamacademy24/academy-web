@@ -45,6 +45,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [hidden, setHidden] = useState(false);
   const [viewSrc, setViewSrc] = useState("");
+  const [framed, setFramed] = useState(false);
+
+  // iframe 안(= /admin/view 우측 패널)에서 렌더되면 사이드바 숨김 → 사이드바 중복 방지
+  useEffect(() => {
+    try { setFramed(window.self !== window.top); } catch { setFramed(true); }
+  }, []);
 
   useEffect(() => {
     const init: Record<string, boolean> = {};
@@ -54,6 +60,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (typeof window !== "undefined") setViewSrc(new URLSearchParams(window.location.search).get("src") || "");
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
   }, [pathname]);
+
+  if (framed) return <>{children}</>;
 
   const isView = pathname === "/admin/view";
   const active = (it: Item) => it.ext
@@ -88,10 +96,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
       <main style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
         {hidden && (
-          <button onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#33373F", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
-        )}
-        {children}
-      </main>
-    </div>
-  );
-}
+          <button onClick={() => setHidde
