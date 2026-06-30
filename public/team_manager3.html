@@ -4146,7 +4146,7 @@ function _weeklyHtml(dates,checkSet,bookings){
     its.slice(0,2).forEach(function(it){var done=!!checkSet[ymd+'|'+it.id];var sm=it.smart_key?';background:#eef2ff;color:#4338ca;border-radius:4px;padding:1px 4px':'';
       body+='<div style="font-size:10.5px;line-height:1.3;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+(done?'#94a3b8':'var(--text2)')+';'+(done?'text-decoration:line-through':'')+sm+'">'+esc(it.content||'')+'</div>';});
     if(its.length>2)body+='<div style="font-size:10px;color:var(--text3);margin-top:1px">+'+(its.length-2)+'</div>';
-    strip+='<div onclick="_wkScrollTo(\''+ymd+'\')" style="border:'+(isToday?'2px solid #4f46e5':'1px solid var(--border)')+';border-radius:7px;padding:6px;min-height:88px;cursor:pointer;'+(isToday?'background:#eef2ff;':'')+'">'+
+    strip+='<div onclick="_wkScrollTo(\''+ymd+'\')" style="border:'+(isToday?'2px solid #4f46e5':'1px solid #edeff5')+';border-radius:10px;padding:7px;min-height:88px;cursor:pointer;background:'+(isToday?'#eef2ff':'#fafbfe')+'">'+
       '<div style="font-size:10.5px;font-weight:700;color:'+(isToday?'#4338ca':col)+';margin-bottom:3px">'+dows[dow]+' '+d.getDate()+(isToday?'·오늘':'')+'</div>'+body+'</div>';
   });
   strip+='</div>';
@@ -4195,7 +4195,7 @@ function _wkBoardHtml(dates,checkSet,bookings){
       '</div>';
     items.forEach(function(it){
       var oc=dowYmd[Number(it.weekday)];var dn=oc&&!!checkSet[oc+'|'+it.id];
-      h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px">'+
+      h+='<div style="background:#fff;border:1px solid #eef0f5;border-radius:10px;padding:10px 12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(16,24,40,.04)">'+
         '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+
           '<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#eef2ff;color:#4338ca">매주 '+dows[Number(it.weekday)]+'</span>'+
           '<button onclick="openWeeklyEditById(\''+it.id+'\')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:13px" title="수정">✏️</button>'+
@@ -4351,9 +4351,9 @@ function delSBoardItem(id){
 function renderHomePage(){
   var dash=document.getElementById('homeDashboard');if(!dash)return;
   var html='';
-  html+='<style>.hgrid-top{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;align-items:start}.hgrid-main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:16px;align-items:start}.hcard-scroll{max-height:420px;overflow-y:auto}@media(max-width:1100px){.hgrid-top,.hgrid-main{grid-template-columns:1fr}}</style>';
+  html+='<style>#homeDashboard{background:#f5f6fa}.hgrid-top{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;align-items:start}.hgrid-main{display:grid;grid-template-columns:minmax(360px,440px) 1fr;gap:14px;align-items:start}.hcard{background:#fff;border:1px solid #ebedf3;border-radius:16px;padding:18px 20px;box-shadow:0 1px 3px rgba(16,24,40,.05)}.hcard-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px}.hcard-t{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:800;color:#1f2433}.hdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}.hrow{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:10px}.hcard-scroll{max-height:420px;overflow-y:auto}@media(max-width:1100px){.hgrid-top,.hgrid-main{grid-template-columns:1fr}}</style>';
   html+='<div class="hgrid-top"><div id="homeIssuesBox"></div><div id="homeTutorBox"></div></div>';
-  html+='<div class="hgrid-main"><div id="dailyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #22c55e;border-radius:10px;padding:14px 16px"></div><div id="weeklyCheckSection" style="background:#fff;border:1px solid var(--border);border-left:4px solid #4f46e5;border-radius:10px;padding:14px 16px"></div></div>';
+  html+='<div class="hgrid-main"><div id="dailyCheckSection" class="hcard"></div><div id="weeklyCheckSection" class="hcard"></div></div>';
   dash.innerHTML=html;
   loadHomeIssues();
   loadHomeTutorIssues();
@@ -4406,7 +4406,7 @@ function resetHomeDismiss(){
 }
 function _homeIssuesHtml(items,disCount){
   if(!items.length){
-    return disCount>0?'<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text3)">확인 요망 항목 없음 · <a onclick="resetHomeDismiss()" style="color:#1a6fc4;cursor:pointer;font-weight:700">숨김 '+disCount+'개 다시 보기</a></div>':'';
+    return disCount>0?'<div class="hcard" style="font-size:12px;color:var(--text3)">확인 요망 항목 없음 · <a onclick="resetHomeDismiss()" style="color:#1a6fc4;cursor:pointer;font-weight:700">숨김 '+disCount+'개 다시 보기</a></div>':'';
   }
   var hasRoom=items.some(function(it){return it.flags.some(function(f){return f.k==='room';});});
   var rows=items.slice(0,60).map(function(it){
@@ -4414,16 +4414,16 @@ function _homeIssuesHtml(items,disCount){
     var ddTxt=dd==null?'미정':(dd===0?'D-DAY':(dd>0?'D-'+dd:'D+'+(-dd)));
     var ddColor=(dd!=null&&dd<=7)?'#dc2626':(dd!=null&&dd<=30?'#b45309':'#64748b');
     var chips=it.flags.map(function(f){return '<span style="font-size:10.5px;font-weight:800;color:'+f.c+';background:'+f.bg+';border:1px solid '+f.c+'33;border-radius:6px;padding:2px 7px;white-space:nowrap">'+f.label+'</span>';}).join(' ');
-    return '<div onclick="location.href=\'/admin/bookings\'" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;background:#fff;border:1px solid #fde0e0;margin-bottom:5px;flex-wrap:wrap">'+
+    return '<div onclick="location.href=\'/admin/bookings\'" class="hrow" style="cursor:pointer;background:#fdf4f4;margin-bottom:4px;flex-wrap:wrap" onmouseover="this.style.background=\'#fbe9e9\'" onmouseout="this.style.background=\'#fdf4f4\'">'+
       '<span style="font-size:11px;font-weight:800;color:'+ddColor+';min-width:46px">'+ddTxt+'</span>'+
       '<span style="flex:1;min-width:80px;font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.booker_name||'(이름없음)')+' <span style="font-size:10.5px;color:var(--text3);font-weight:500">'+esc(it.ci||'미정')+'</span></span>'+
       chips+
       '<button onclick="dismissHomeIssue(\''+b.id+'\',event)" title="확인함 — 목록에서 숨기기" style="background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:15px;padding:0 2px;flex-shrink:0">✕</button>'+
     '</div>';
   }).join('');
-  return '<div style="background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:10px;padding:14px 16px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">'+
-      '<div style="font-size:14px;font-weight:800;color:#b91c1c">🚨 예약 운영 현황 · 확인 요망 <span style="font-weight:700;color:#ef4444">'+items.length+'건</span></div>'+
+  return '<div class="hcard">'+
+    '<div class="hcard-h">'+
+      '<div class="hcard-t"><span class="hdot" style="background:#ef4444"></span>예약 운영 현황 · 확인 요망 <span style="font-weight:700;color:#ef4444;font-size:13px">'+items.length+'건</span></div>'+
       '<div style="display:flex;gap:6px;align-items:center">'+(disCount>0?'<a onclick="resetHomeDismiss()" style="font-size:11px;color:#94a3b8;cursor:pointer">숨김 '+disCount+'개 보기</a>':'')+'<button onclick="location.href=\'/admin/bookings\'" style="font-size:12px;font-weight:700;color:#b91c1c;background:#fff;border:1px solid #fecaca;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:inherit">예약관리에서 보기 →</button></div>'+
     '</div>'+
     '<div style="font-size:11.5px;color:#991b1b;margin-bottom:8px">체크인 임박순'+(hasRoom?' · <b>룸 미배정 = 오버부킹 주의</b>':'')+' · ✕ 누르면 숨김</div>'+
@@ -4481,9 +4481,9 @@ function _homeTutorHtml(newCnt,chgCnt,mism){
     }).join('');
     rows+='</div>';
   }
-  return '<div style="background:#fff;border:1px solid var(--border);border-left:4px solid #6366f1;border-radius:10px;padding:14px 16px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">'+
-      '<div style="font-size:14px;font-weight:800;color:var(--text)">🎓 튜터 운영 현황 · 확인 요망</div>'+
+  return '<div class="hcard">'+
+    '<div class="hcard-h">'+
+      '<div class="hcard-t"><span class="hdot" style="background:#6366f1"></span>튜터 운영 현황 · 확인 요망</div>'+
       '<button onclick="location.href=\'/admin/tutor-class\'" style="font-size:12px;font-weight:700;color:#4338ca;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:inherit">튜터 관리에서 보기 →</button>'+
     '</div>'+
     '<div style="display:flex;flex-wrap:wrap">'+chips+'</div>'+
@@ -9676,4 +9676,5 @@ window.addEventListener('DOMContentLoaded', function(){
     <div id="manualEditorBody" contenteditable="true"
       style="flex:1;overflow-y:auto;padding:24px 32px;font-size:14px;line-height:1.8;color:#334155;outline:none;min-height:400px;">
     </div>
-    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:fl
+    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
+      <span id="manualSaveStatus" style="font-size:12px;color:#94a3b8;align-s
