@@ -2,18 +2,20 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-type Item = { label: string; href: string; ext?: boolean };
+type Item = { label: string; href: string; ext?: boolean; badge?: number };
 const NAV: { title: string; items: Item[] }[] = [
   { title: "직원업무", items: [
-    { label: "직원업무 홈", href: "/staff", ext: true },
-    { label: "직원 가이드", href: "/staff-guide.html", ext: true },
-    { label: "자료모음", href: "/admin/resources" },
-    { label: "사이트 관리", href: "/admin/site" },
-    { label: "민에듀 공구", href: "/admin/minedu" },
+    { label: "직원업무 홈", href: "/staff?page=home", ext: true },
+    { label: "공지사항", href: "/staff?page=announcements", ext: true },
+    { label: "내 업무", href: "/staff?page=mywork", ext: true },
+    { label: "전체 업무", href: "/staff?page=board", ext: true },
+    { label: "달력", href: "/staff?page=calendar", ext: true },
+    { label: "업무자료", href: "/staff?page=manual", ext: true },
+    { label: "안내문구", href: "/staff?page=guide", ext: true },
   ]},
   { title: "예약 · 아카데미", items: [
-    { label: "오늘 한눈에", href: "/admin/today" },
     { label: "예약 관리", href: "/admin/bookings" },
     { label: "정산 관리", href: "/admin/settlement" },
     { label: "튜터 수업", href: "/admin/tutor-class" },
@@ -38,6 +40,12 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },
     { label: "Shuttle Schedule", href: "/ashuttle", ext: true },
   ]},
+  { title: "기타 업무", items: [
+    { label: "직원 가이드", href: "/staff-guide.html", ext: true },
+    { label: "자료모음", href: "/admin/resources" },
+    { label: "사이트 관리", href: "/admin/site" },
+    { label: "민에듀 공구", href: "/admin/minedu" },
+  ]},
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -46,10 +54,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [hidden, setHidden] = useState(false);
   const [viewSrc, setViewSrc] = useState("");
   const [framed, setFramed] = useState(false);
+  const [tutorAlerts, setTutorAlerts] = useState(0);
+  const [roomAlerts, setRoomAlerts] = useState(0);
 
-  // iframe 안(= /admin/view 우측 패널)에서 렌더되면 사이드바 숨김 → 사이드바 중복 방지
   useEffect(() => {
     try { setFramed(window.self !== window.top); } catch { setFramed(true); }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { count } = await supabase.from("tutor_requests")
+          .select("id", { count: "exact", head: true })
+          .in("status", ["pending", "reviewing", "cancel_requested"]);
+        let cancelN = 0;
+        try {
+          const r = await fetch("/api/admin/tutor/cancel-requests?status=pending");
+          if (r.ok) { const d = await r.json(); cancelN = Array.isArray(d) ? d.length : 0; }
+        } catch {}
+        setTutorAlerts((count || 0) + cancelN);
+      } catch {}
+      try {
+        const { data } = await supabase.from("bookings").select("accom_type,house_no,accom_room,status,checkout_date");
+        const d = new Date();
+        const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const n = (data || []).filter((b: { accom_type?: string; house_no?: string; accom_room?: string; status?: string; checkout_date?: string }) => (b.accom_type || "").includes("드림하우스") && !String(b.house_no || b.accom_room || "").trim() && !(b.status || "").includes("취소") && (!b.checkout_date || String(b.checkout_date).slice(0, 10) >= today)).length;
+        setRoomAlerts(n);
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -64,36 +96,50 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (framed) return <>{children}</>;
 
   const isView = pathname === "/admin/view";
+  const badgeFor = (it: Item) => it.href === "/admin/bookings" ? roomAlerts : it.href === "/admin/tutor-class" ? tutorAlerts : 0;
   const active = (it: Item) => it.ext
     ? (isView && viewSrc === it.href)
     : (!isView && (pathname === it.href || pathname.startsWith(it.href + "/")));
+  const todayOn = !isView && pathname === "/admin/today";
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
       {!hidden && (
-        <aside style={{ width: 210, flexShrink: 0, background: "#33373F", color: "#D7DAE0", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px", borderBottom: "1px solid #43474F" }}>
-            <Link href="/admin/hub" style={{ fontSize: 13, fontWeight: 700, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFCB36" }}>WORKSPACE</span></Link>
-            <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#8b909a", cursor: "pointer", fontSize: 16 }}>‹</button>
+        <aside style={{ width: 224, flexShrink: 0, background: "#4d5cc8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.16)" }}>
+            <Link href="/admin/today" style={{ fontSize: 15, fontWeight: 800, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFD54A" }}>WORKSPACE</span></Link>
+            <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#c5cbf2", cursor: "pointer", fontSize: 18 }}>‹</button>
           </div>
-          <Link href="/admin/hub" style={{ display: "block", padding: "10px 16px", fontSize: 12.5, color: "#c4c8d0", textDecoration: "none", borderBottom: "1px solid #3c4048" }}>🏠 홈(카드 보기)</Link>
+          <Link href="/admin/today" style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 18px", fontSize: 15, fontWeight: 700, color: todayOn ? "#fff" : "#eef0fc", textDecoration: "none", background: todayOn ? "rgba(255,255,255,0.20)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>📅 오늘 한눈에</Link>
           {NAV.map(g => (
             <div key={g.title}>
               <div onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", fontSize: 13.5, fontWeight: 700, cursor: "pointer", borderBottom: "1px solid #3c4048", background: open[g.title] ? "#2b2e35" : "transparent" }}>
-                {g.title} <span style={{ color: open[g.title] ? "#FFCB36" : "#8b909a", fontSize: 11 }}>{open[g.title] ? "▲" : "▼"}</span>
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", fontSize: 15, fontWeight: 800, color: "#fff", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", background: open[g.title] ? "rgba(0,0,0,0.14)" : "transparent" }}>
+                {g.title} <span style={{ color: open[g.title] ? "#FFD54A" : "#c5cbf2", fontSize: 12 }}>{open[g.title] ? "▲" : "▼"}</span>
               </div>
               {open[g.title] && g.items.map(it => {
                 const on = active(it);
-                const style: React.CSSProperties = { display: "block", padding: "9px 16px 9px 28px", fontSize: 12.5, textDecoration: "none", color: on ? "#fff" : "#c4c8d0", background: on ? "#1f6fc4" : "#2b2e35" };
+                const bdg = badgeFor(it);
+                const style: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 18px 11px 30px", fontSize: 14.5, fontWeight: on ? 700 : 500, textDecoration: "none", color: on ? "#fff" : "#dfe2fa", background: on ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.07)", borderBottom: "1px solid rgba(255,255,255,0.06)" };
                 const to = it.ext ? `/admin/view?src=${encodeURIComponent(it.href)}` : it.href;
-                return <Link key={it.href} href={to} onClick={() => it.ext && setViewSrc(it.href)} style={style}>{it.label}</Link>;
+                return (
+                  <Link key={it.href} href={to} onClick={() => it.ext && setViewSrc(it.href)} style={style}>
+                    <span>{it.label}</span>
+                    {bdg > 0 && <span style={{ minWidth: 19, height: 19, padding: "0 5px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#e23b3b", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>❗{bdg}</span>}
+                  </Link>
+                );
               })}
             </div>
           ))}
-          <div style={{ height: 20 }} />
+          <div style={{ height: 24 }} />
         </aside>
       )}
       <main style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
         {hidden && (
-          <button onClick={() => setHidde
+          <button onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#4d5cc8", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
+        )}
+        {children}
+      </main>
+    </div>
+  );
+}

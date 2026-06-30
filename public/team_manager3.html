@@ -3766,7 +3766,7 @@ function doLogin(u){
   document.getElementById('sbRole').textContent=u.id==='ceo'?'CEO':'직원';
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
-  backToStep1();buildEmpNav();showPage('home');
+  backToStep1();buildEmpNav();var _initPg='home';try{var _qpPg=new URLSearchParams(window.location.search).get('page');if(_qpPg)_initPg=_qpPg;}catch(e){}showPage(_initPg);
   loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
@@ -9676,5 +9676,4 @@ window.addEventListener('DOMContentLoaded', function(){
     <div id="manualEditorBody" contenteditable="true"
       style="flex:1;overflow-y:auto;padding:24px 32px;font-size:14px;line-height:1.8;color:#334155;outline:none;min-height:400px;">
     </div>
-    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:8px;">
-      <span id="manualSaveStatus" style="font-size:12px;color:#94a3b8;align-self:center;margin-right:8px;"
+    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;justify-content:fl
