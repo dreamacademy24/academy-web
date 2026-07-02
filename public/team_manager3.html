@@ -5977,7 +5977,7 @@ function renderEmpChecklistTab(empId){
 }
 function renderEmpStudentTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div style="max-width:980px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:16px;font-weight:800">🎓 담당 학생</div><div id="empStuSum" style="font-size:12px;font-weight:800;color:var(--primary)"></div></div><div style="font-size:11.5px;color:var(--text3);margin-bottom:12px">주담당·케어담당으로 지정된 예약의 학생 — 오늘의 출석/컨디션/투약/메모를 체크하세요 (버튼은 다시 누르면 해제)</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>';
+  d.innerHTML='<div style="max-width:980px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:16px;font-weight:800">🎓 담당 학생</div><div id="empStuSum" style="font-size:12px;font-weight:800;color:var(--primary)"></div><div style="flex:1"></div>'+(isAdmin()?'<button onclick="_clEditItems()" style="padding:4px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">⚙️ 체크 항목 편집</button>':'')+'</div><div style="font-size:11.5px;color:var(--text3);margin-bottom:12px">주담당·케어담당으로 지정된 예약의 학생 — 오늘의 출석/컨디션/투약/메모를 체크하세요 (버튼은 다시 누르면 해제)</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>';
   var p=getP(empId);var myName=(p&&p.name)||empId;
   var today=todayStr();
   var q='select=id,assignee,care_assignee,booker_name,students,checkin_date,checkout_date,house_no,accom_room,special_request,status&or=(assignee.eq.'+encodeURIComponent(myName)+',care_assignee.eq.'+encodeURIComponent(myName)+')&checkout_date=gte.'+today+'&order=checkin_date';
@@ -5986,8 +5986,15 @@ function renderEmpStudentTab(empId){
     var box=document.getElementById('empStuBox');if(!box)return;
     if(!rows.length){box.innerHTML='<div style="background:var(--surface2);border-radius:8px;padding:20px;text-align:center">담당(주담당/케어담당) 배정된 예약이 없습니다<br><span style="font-size:11px;color:var(--text3)">예약 관리 &gt; 부킹 리스트에서 담당자/케어담당을 지정하세요</span></div>';return;}
     var ids=rows.map(function(b){return b.id;}).join(',');
-    sbGet('student_daily_logs','log_date=eq.'+today+'&booking_id=in.('+ids+')').then(function(logs){
-      window._stuLogMap={};(logs||[]).forEach(function(l){window._stuLogMap[l.booking_id+'_'+l.student_idx]=l;});
+    Promise.all([
+      sbGet('student_daily_logs','log_date=eq.'+today+'&booking_id=in.('+ids+')'),
+      sbGet('booking_checklists','booking_id=in.('+ids+')'),
+      sbGet('app_settings','key=eq.care_checklist_items')
+    ]).then(function(res){
+      var logs=res[0]||[],cls=res[1]||[],st=res[2]||[];
+      window._stuLogMap={};logs.forEach(function(l){window._stuLogMap[l.booking_id+'_'+l.student_idx]=l;});
+      window._stuClMap={};cls.forEach(function(c){window._stuClMap[c.booking_id]=c;});
+      window._stuClItems=(st[0]&&st[0].value)||[];
       window._stuBookings=rows;window._stuToday=today;window._stuStaff=empId;
       _stuRender();
     });
@@ -6004,6 +6011,18 @@ function _stuRender(){
     var house=b.house_no||b.accom_room||'';
     h+='<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">';
     h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span style="font-weight:800;font-size:14px">'+esc(b.booker_name||'(이름없음)')+'</span>'+(house?'<span style="font-size:11px;background:#eef2ff;color:#4338ca;border-radius:6px;padding:2px 8px;font-weight:700">'+esc(house)+'</span>':'')+'<span style="font-size:11px;color:var(--text3);font-weight:600">'+(b.checkin_date||'').slice(0,10)+' ~ '+(b.checkout_date||'').slice(0,10)+'</span>'+(b.special_request?'<span title="'+esc(b.special_request)+'" style="font-size:11px;color:#b45309;cursor:help;font-weight:700">⚠ 특이사항</span>':'')+'</div>';
+    // 주담당 체크리스트 (항목은 ⚙️로 편집)
+    var items=window._stuClItems||[];
+    if(items.length){
+      var cl=window._stuClMap[b.id]||{};var cdata=cl.data||{};
+      h+='<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:2px 0 8px;padding:8px 10px;background:var(--surface2);border-radius:8px">';
+      items.forEach(function(it){
+        var on=!!cdata[it];
+        h+='<button onclick="_clToggle(\''+b.id+'\',\''+esc(it).replace(/'/g,"\\'")+'\')" style="padding:3px 9px;border-radius:12px;border:1px solid '+(on?'transparent':'var(--border)')+';background:'+(on?'#dcfce7':'var(--surface)')+';color:'+(on?'#166534':'var(--text3)')+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+(on?'✓ ':'')+esc(it)+'</button>';
+      });
+      h+='<input id="clNote_'+b.id+'" value="'+esc(cl.note||'')+'" placeholder="비고" onblur="_clNote(\''+b.id+'\')" style="flex:1;min-width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:7px;font-size:11px;font-family:inherit;background:var(--surface);color:var(--text)"/>';
+      h+='</div>';
+    }
     if(!studs.length){h+='<div style="font-size:12px;color:var(--text3)">학생 정보 없음</div></div>';return;}
     studs.forEach(function(st,i){
       total++;
@@ -6051,6 +6070,40 @@ window._stuMemo=function(bid,idx,name){
   var cur=window._stuLogMap[key]||{};
   if((cur.note||'')===el.value.trim())return;
   _stuSave(bid,idx,name,{note:el.value.trim()||null}).then(function(ok){if(ok){var sp=document.getElementById('stuSaved_'+key);if(sp)sp.textContent='✓';}});
+};
+function _clSave(bid,patch){
+  var cur=window._stuClMap[bid]||{booking_id:bid,data:{},note:null};
+  var body={booking_id:bid,data:cur.data||{},note:cur.note||null,updated_by:window._stuStaff||null,updated_at:new Date().toISOString()};
+  Object.keys(patch).forEach(function(k){body[k]=patch[k];});
+  return fetch(SB_URL+'/rest/v1/booking_checklists?on_conflict=booking_id',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=representation,resolution=merge-duplicates'},body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return null;}).then(function(d){
+      if(!r.ok){alert('저장 실패: '+((d&&d.message)||r.status));return null;}
+      window._stuClMap[bid]=(Array.isArray(d)&&d[0])||body;
+      return true;
+    });});
+}
+window._clToggle=function(bid,item){
+  var cur=window._stuClMap[bid]||{data:{}};
+  var data={};Object.keys(cur.data||{}).forEach(function(k){data[k]=cur.data[k];});
+  data[item]=!data[item];
+  _clSave(bid,{data:data}).then(function(ok){if(ok)_stuRender();});
+};
+window._clNote=function(bid){
+  var el=document.getElementById('clNote_'+bid);if(!el)return;
+  var cur=window._stuClMap[bid]||{};
+  if((cur.note||'')===el.value.trim())return;
+  _clSave(bid,{note:el.value.trim()||null});
+};
+window._clEditItems=function(){
+  var cur=(window._stuClItems||[]).join(', ');
+  var v=prompt('체크 항목을 쉼표로 구분해 입력하세요 (전 직원 공통 적용):',cur);
+  if(v===null)return;
+  var items=v.split(',').map(function(x){return x.trim();}).filter(Boolean);
+  fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'care_checklist_items',value:items,updated_at:new Date().toISOString()})})
+    .then(function(r){
+      if(!r.ok){alert('저장 실패: '+r.status);return;}
+      window._stuClItems=items;_stuRender();
+    });
 };
 function renderEmpCalendarTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
