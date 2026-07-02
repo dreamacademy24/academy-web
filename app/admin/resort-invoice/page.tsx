@@ -91,6 +91,7 @@ export default function ResortInvoicePage() {
   const [emailModal, setEmailModal] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailCc, setEmailCc] = useState("");
+  const [attachImg, setAttachImg] = useState<string>(""); // 첨부될 인보이스 PNG 미리보기
   const [emailBody, setEmailBody] = useState("");
   const [savingImg, setSavingImg] = useState(false);
 
@@ -278,7 +279,10 @@ Kindly send us the confirmation number for this booking.
 
 ${signature}`);
     try { setEmailCc(localStorage.getItem("resortEmailCc") || "deskor112@gmail.com"); } catch { setEmailCc("deskor112@gmail.com"); }
+    setAttachImg("");
     setEmailModal(true);
+    // 첨부될 인보이스 이미지를 미리 만들어 우측에 보여줌 (발송 시 이 이미지가 그대로 첨부됨)
+    setTimeout(async () => { const img = await captureDoc(); if (img) setAttachImg(img); }, 100);
   }
 
   async function sendEmail() {
@@ -294,7 +298,7 @@ ${signature}`);
       }
       const cc = emailCc.trim();
       try { if (cc) localStorage.setItem("resortEmailCc", cc); } catch {}
-      const img = await captureDoc();
+      const img = attachImg || await captureDoc();
       const r = await fetch("/api/resort-invoice/email", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -481,28 +485,40 @@ ${signature}`);
       </div>
     </div>
     {emailModal && preview && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !sending && setEmailModal(false)}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 22, maxWidth: 620, width: "100%", maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>📧 이메일 작성 — {RESORT_LABEL[preview.resort as Resort]}</div>
-          <div style={{ marginBottom: 10 }}>
-            <span className="fl">받는 사람 {preview.resort === "jaypark" && <span style={{ color: "#94a3b8", fontWeight: 500 }}>({preview.nights < 7 ? "단기 7박 미만 → rsvn@" : "장기 7박~ → travel@"})</span>}</span>
-            <input className="fi" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
+      <div style={{ position: "fixed", inset: 0, background: "#f1f5f9", zIndex: 200, overflow: "auto" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#1a1a2e", color: "#fff", padding: "12px 22px", display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => !sending && setEmailModal(false)} style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← 돌아가기</button>
+          <div style={{ fontSize: 15, fontWeight: 800, flex: 1 }}>📧 이메일 작성 — {RESORT_LABEL[preview.resort as Resort]} · {preview.invoice_no}</div>
+          <button className="gen" style={{ padding: "9px 26px" }} disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📨 보내기"}</button>
+        </div>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "22px 18px 60px", display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
+          <div style={{ flex: "1 1 420px", minWidth: 340, background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+            <div style={{ marginBottom: 12 }}>
+              <span className="fl">받는 사람 {preview.resort === "jaypark" && <span style={{ color: "#94a3b8", fontWeight: 500 }}>({preview.nights < 7 ? "단기 7박 미만 → rsvn@" : "장기 7박~ → travel@"})</span>}</span>
+              <input className="fi" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="fl">참조 (CC) — 항상 내 메일이 기본으로 들어갑니다</span>
+              <input className="fi" value={emailCc} onChange={e => setEmailCc(e.target.value)} placeholder="deskor112@gmail.com" />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span className="fl">제목</span>
+              <input className="fi" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
+            </div>
+            <div>
+              <span className="fl">본문</span>
+              <textarea className="fi" value={emailBody} onChange={e => setEmailBody(e.target.value)} rows={16} style={{ resize: "vertical", lineHeight: 1.5 }} />
+            </div>
           </div>
-          <div style={{ marginBottom: 10 }}>
-            <span className="fl">참조 (CC) — 항상 내 메일이 기본으로 들어갑니다</span>
-            <input className="fi" value={emailCc} onChange={e => setEmailCc(e.target.value)} placeholder="deskor112@gmail.com" />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <span className="fl">제목</span>
-            <input className="fi" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <span className="fl">본문 (인보이스 이미지가 자동 첨부됩니다)</span>
-            <textarea className="fi" value={emailBody} onChange={e => setEmailBody(e.target.value)} rows={14} style={{ resize: "vertical", lineHeight: 1.5 }} />
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <button className="rtab" disabled={sending} onClick={() => setEmailModal(false)}>취소</button>
-            <button className="gen" style={{ padding: "10px 22px" }} disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📨 보내기"}</button>
+          <div style={{ flex: "1 1 340px", minWidth: 300, background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>📎 첨부 파일 <span style={{ fontWeight: 500, color: "#16a34a" }}>1개</span></div>
+            <div style={{ border: "1px solid #e2e8f0", borderRadius: 9, padding: 10, background: "#f8fafc" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#1a6fc4", marginBottom: 8 }}>🖼 invoice_{preview.invoice_no}.png</div>
+              {attachImg
+                ? <img src={attachImg} alt="첨부 인보이스" style={{ width: "100%", borderRadius: 6, border: "1px solid #e5e7eb" }} />
+                : <div style={{ padding: 30, textAlign: "center", color: "#94a3b8", fontSize: 12.5 }}>첨부 이미지 생성 중...</div>}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>이 이미지가 메일에 그대로 첨부됩니다.</div>
           </div>
         </div>
       </div>
