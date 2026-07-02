@@ -11,7 +11,7 @@ import { fmtAge, ageNum } from "@/lib/format";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
-  checkin_date:string; checkout_date?:string; accom_type:string; created_at:string; assignee?:string;
+  checkin_date:string; checkout_date?:string; accom_type:string; created_at:string; assignee?:string; care_assignee?:string;
   base_price?:number; final_price?:number; balance_date?:string; updated_at?:string;
   flight_in?:string; flight_out?:string; house_no?:string; pickup?:string; drop_off?:string;
   pickup_place?:string; special_request?:string; agency?:string; accom_room?:string;
@@ -852,7 +852,7 @@ export default function AdminBookingsPage(){
       </div>
       {(()=>{const un=searchedList.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
-        <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
+        <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:100}}>케어담당</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
       </tr></thead><tbody>
         {searchedList.length===0?<tr><td colSpan={9} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
         searchedList.map(b=>{
@@ -861,6 +861,7 @@ export default function AdminBookingsPage(){
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{b.reservation_no}</td>
             <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
+            <td><select className="asg" value={b.care_assignee||""} style={{color:b.care_assignee?"#0d9488":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({care_assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,care_assignee:v}:x));}} title="학생 케어 담당 (컨디션·출석·투약 체크)"><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>

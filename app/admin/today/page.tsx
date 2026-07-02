@@ -23,6 +23,7 @@ interface Fieldtrip { id: number; name: string | null; portal_name: string | nul
 interface ConsultSlot { id: number | string; slot_date: string | null; slot_time: string | null; status: string | null; booked_by: string | null; booked_name: string | null; booked_student: string | null; consultation_id: string | null; consultations?: { title: string | null } | null; }
 
 interface FtRow { id: number; child: string; reserver: string; program: string; isFieldtrip: boolean; }
+interface CareAlert { id: string; student_name: string | null; attendance: string | null; condition: string | null; note: string | null; staff_id: string | null; booking_id: string | null; }
 
 const PICKUP_LABEL: Record<string, string> = { pickup: "픽업", dropoff: "드랍", extra_pickup: "추가 픽업", extra_drop: "추가 드랍" };
 
@@ -54,6 +55,7 @@ export default function AdminTodayPage() {
   const [shuttles, setShuttles] = useState<{ row: Shuttle; name: string }[]>([]);
   const [consults, setConsults] = useState<{ row: ConsultSlot; name: string }[]>([]);
   const [ftRows, setFtRows] = useState<FtRow[]>([]);
+  const [careAlerts, setCareAlerts] = useState<{ row: CareAlert; booker: string }[]>([]);
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -63,13 +65,15 @@ export default function AdminTodayPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const tdy = localToday();
-    const [bk, pk, sh, ft, csRes] = await Promise.all([
+    const [bk, pk, sh, ft, csRes, care] = await Promise.all([
       supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, booking_type, accom_type, reservation_no, students"),
       supabase.from("pickup_requests").select("*").eq("request_date", tdy),
       supabase.from("shuttle_applications").select("*").eq("tour_date", tdy),
       supabase.from("fieldtrip_applications").select("id, name, portal_name, date, booking_id, status"),
       // 상담은 RLS로 anon 읽기 차단 → service_role API 경유
       fetch("/api/admin/consultations").then((r) => (r.ok ? r.json() : { consultations: [] })).catch(() => ({ consultations: [] })),
+      // 오늘 학생 케어 이상 (아픔/결석) — 케어담당이 남긴 데일리 로그
+      supabase.from("student_daily_logs").select("id, booking_id, student_name, attendance, condition, note, staff_id").eq("log_date", tdy).or("condition.eq.sick,attendance.eq.결석"),
     ]);
 
     const bookings = (bk.data || []) as Booking[];
@@ -119,6 +123,7 @@ export default function AdminTodayPage() {
       return true;
     });
     setFtRows(dedupRows);
+    setCareAlerts((((care as { data: CareAlert[] | null }).data) || []).map((c) => ({ row: c, booker: (c.booking_id && resolveBookerName(bMap.get(c.booking_id))) || "" })));
     setLoading(false);
   }, []);
 
@@ -133,6 +138,7 @@ export default function AdminTodayPage() {
     { label: "픽드랍", n: pickups.length, c: "#7c3aed" },
     { label: "셔틀", n: shuttles.length, c: "#16a34a" },
     { label: "필드트립", n: ftRows.length, c: "#c2410c" },
+    { label: "케어 이상", n: careAlerts.length, c: "#dc2626" },
   ];
 
   return (<>
@@ -176,6 +182,20 @@ export default function AdminTodayPage() {
       </div>
 
       {loading ? <div className="sec"><div className="empty">불러오는 중...</div></div> : (<>
+        {careAlerts.length > 0 && (
+          <div className="sec" style={{ border: "1.5px solid #fca5a5", background: "#fff5f5" }}>
+            <h2 style={{ color: "#b91c1c" }}>🚨 오늘 학생 케어 이상 <span className="cnt">{careAlerts.length}건</span></h2>
+            {careAlerts.map(({ row, booker }) => (
+              <div className="row" key={row.id}>
+                <span className="nm">{row.student_name || "—"}</span>
+                <span className="meta">{[booker ? `${booker} 예약` : "", row.note || ""].filter(Boolean).join(" · ")}{row.staff_id ? ` · 체크: ${row.staff_id}` : ""}</span>
+                {row.condition === "sick" && <span className="tag" style={{ background: "#fee2e2", color: "#b91c1c" }}>🤒 아픔</span>}
+                {row.attendance === "결석" && <span className="tag" style={{ background: "#fef3c7", color: "#92400e" }}>결석</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="sec">
           <h2>🛬 오늘 체크인 <span className="cnt">{checkins.length}건</span></h2>
           {checkins.length === 0 ? <div className="empty">오늘 체크인 예약이 없습니다.</div> : checkins.map((b) => (
