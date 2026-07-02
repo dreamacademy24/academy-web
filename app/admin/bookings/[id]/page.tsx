@@ -511,7 +511,7 @@ export default function BookingDetailPage() {
       </div>
 
       <div className="tabs">
-        {([["info","기본정보"],["pickup","픽업/체크인"],["students","학생"],["invoice","인보이스"],["tutor","튜터"],["shuttle","셔틀"],["comments","코멘트"]] as const).map(([k,v]) => (
+        {([["info","기본정보"],["pickup","픽업/체크인"],["students","학생"],["tutor","튜터"],["shuttle","셔틀"],["comments","코멘트"]] as const).map(([k,v]) => (
           <button key={k} className={`tab${tab===k?" ac":""}`} onClick={() => setTab(k as Tab)}>{v}</button>
         ))}
       </div>
@@ -1154,38 +1154,6 @@ export default function BookingDetailPage() {
         </div>
       </>)}
 
-      {/* 탭4: 인보이스 */}
-      {tab === "invoice" && (
-        <div className="sec">
-          <h2>인보이스 ({invoices.length}건)</h2>
-          {invoices.length === 0 ? (
-            <div className="empty">
-              발행된 인보이스가 없습니다
-              <div style={{ marginTop: 12, display: "flex", gap: 8, justifyContent: "center" }}>
-                <button className="btn btn-sm btn-blue" onClick={() => router.push(`/invoice?id=${id}&type=guest`)}>손님용 생성</button>
-                <button className="btn btn-sm btn-gray" onClick={() => router.push(`/invoice?id=${id}&type=resort`)}>리조트용 생성</button>
-              </div>
-            </div>
-          ) : (<>
-            {invoices.map((inv: any) => {
-              const typeLabel: Record<string, string> = { guest_kr: "손님용 (한국어)", resort_en_jaypark: "리조트용 (제이파크)", resort_en_cubenine: "리조트용 (큐브나인)" };
-              return (
-                <div key={inv.id} className="inv-card">
-                  <div className="inv-info">
-                    <div className="tp">{typeLabel[inv.invoice_type] || inv.invoice_type}</div>
-                    <div style={{ color: "#6b7c93", fontSize: 12 }}>발행: {inv.issued_at?.slice(0, 10) || "-"} {inv.sent_at ? `· 발송: ${inv.sent_at.slice(0, 10)}` : ""}</div>
-                  </div>
-                  <button className="btn btn-sm btn-gray" onClick={() => window.print()}>PDF</button>
-                </div>
-              );
-            })}
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <button className="btn btn-sm btn-blue" onClick={() => router.push(`/invoice?id=${id}&type=guest`)}>손님용 생성</button>
-              <button className="btn btn-sm btn-gray" onClick={() => router.push(`/invoice?id=${id}&type=resort`)}>리조트용 생성</button>
-            </div>
-          </>)}
-        </div>
-      )}
 
       {/* 탭5: 튜터 */}
       {tab === "tutor" && (
