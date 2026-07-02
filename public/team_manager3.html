@@ -1321,6 +1321,38 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .sortable-ghost{opacity:.5;}
 .sortable-chosen{cursor:grabbing;}
 .sortable-drag{opacity:1;box-shadow:0 4px 14px rgba(0,0,0,.12);}
+/* ── 🕐 내 하루 타임라인 (내 업무 홈) ── */
+.empb-wrap{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+@media(max-width:1150px){.empb-wrap{grid-template-columns:1fr}}
+.tlw{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:16px}
+.tlw-h{font-size:13.5px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tlw-h .tl-import{font-size:11px;color:var(--primary);cursor:pointer;font-weight:700;white-space:nowrap}
+.tl-hint{font-size:10.5px;color:var(--text3);margin-bottom:12px}
+.tl-empty{font-size:12px;color:var(--text3);background:var(--surface2);border-radius:10px;padding:18px 12px;text-align:center;line-height:1.7}
+.tl-line{position:relative;padding-left:24px}
+.tl-line:before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tstop{position:relative;margin-bottom:11px}
+.tstop .dot{position:absolute;left:-24px;top:6px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:2.5px solid #cbd5e1;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff}
+.tstop.done .dot{background:#16a34a;border-color:#16a34a}
+.tstop.now .dot{border-color:var(--primary);background:var(--primary);box-shadow:0 0 0 4px #e0e7ff}
+.tcard{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:8px}
+.tstop.now .tcard{background:var(--surface);border:1.5px solid var(--primary)}
+.tstop.done .tcard{opacity:.55}
+.tcard .tm{font-size:10.5px;font-weight:800;color:var(--primary);background:#eef2ff;border-radius:6px;padding:2px 7px;cursor:pointer;white-space:nowrap}
+.tcard b{font-size:12.5px;flex:1;min-width:0;word-break:break-word}
+.tcard .grip{color:#cbd5e1;cursor:grab;font-size:13px}
+.tcard .ed{color:var(--text3);cursor:pointer;font-size:12px}
+.tl-ck-badge{font-size:9px;font-weight:800;background:#dcfce7;color:#15803d;border-radius:5px;padding:1px 5px;vertical-align:middle}
+.tladd{display:flex;gap:6px;margin-top:10px}
+.tladd input{padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text)}
+.tladd input.tl-tm-in{width:92px}
+.tladd input:not(.tl-tm-in){flex:1;min-width:0}
+.tladd button{padding:7px 14px;border:none;border-radius:8px;background:var(--primary);color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+.tl-time-in{width:92px;padding:4px 6px;border:1px solid var(--primary);border-radius:6px;font-size:11px;font-family:inherit}
+.tl-tit-in{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--primary);border-radius:6px;font-size:12px;font-family:inherit}
+.tl-mini-btn{padding:4px 8px;border:1px solid var(--border);background:var(--surface);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap}
+.tl-mini-btn.danger{color:#dc2626;border-color:#fecaca}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
@@ -6672,7 +6704,8 @@ function renderEmpDetailEmpty(emp){
   html+='</div>';
   if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
   html+='</div>';
-  d.innerHTML=html;
+  d.innerHTML='<div class="empb-wrap">'+html+'<div id="tlWidget"></div></div>';
+  renderMyTimeline(empId);
 }
 function _renderEmpChecklist(empId){
   var box=document.getElementById('empChecklistBox');if(!box)return;
@@ -6725,6 +6758,161 @@ function toggleEmpCheck(key,date,el){
   if(el.checked){_dailyUpsert({check_date:date,item_key:key,checked:true,checked_by:who,checked_at:new Date().toISOString()}).then(function(){if(curEmpId)_renderEmpChecklist(curEmpId);}).catch(function(e){el.checked=false;});}
   else{sbDel('staff_daily_check','check_date=eq.'+date+'&item_key=eq.'+key).then(function(){if(curEmpId)_renderEmpChecklist(curEmpId);}).catch(function(e){el.checked=true;});}
 }
+/* ── 🕐 내 하루 타임라인 (내 업무 홈 우측) — 저장: app_settings key=staff_timeline_<empId> ── */
+var _tlItems=[];var _tlEmpId=null;var _tlChecks={};var _tlEditId=null;var _tlDragId=null;
+function _tlKey(id){return 'staff_timeline_'+id;}
+function _tlNewId(){return 'tl'+Date.now().toString(36)+Math.floor(Math.random()*10000);}
+function _tlOwner(){return !!(CU&&CU.id===_tlEmpId);}
+function _tlNowHM(){var u=new Date(Date.now()+8*3600000);return _dailyP2(u.getUTCHours())+':'+_dailyP2(u.getUTCMinutes());}
+function _tlFind(id){for(var i=0;i<_tlItems.length;i++)if(_tlItems[i].id===id)return _tlItems[i];return null;}
+function _tlIsDone(it){if(it.ck)return !!_tlChecks[it.ck];return it.doneDate===_dailyToday();}
+function _tlAttr(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function _tlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderMyTimeline(empId){
+  var box=document.getElementById('tlWidget');if(!box)return;
+  _tlEmpId=empId;_tlEditId=null;
+  box.innerHTML='<div class="tlw"><div class="tlw-h"><span>🕐 내 하루 타임라인</span></div><div class="tl-hint">불러오는 중…</div></div>';
+  var today=_dailyToday();
+  Promise.all([
+    sbGet('app_settings','key=eq.'+_tlKey(empId)),
+    sbGet('staff_daily_check','check_date=eq.'+today)
+  ]).then(function(res){
+    if(_tlEmpId!==empId)return;
+    var row=(res[0]||[])[0];
+    _tlItems=(row&&Array.isArray(row.value))?row.value:[];
+    _tlChecks={};(res[1]||[]).forEach(function(r){_tlChecks[r.item_key]=r;});
+    _tlRender();
+  }).catch(function(){var b=document.getElementById('tlWidget');if(b)b.innerHTML='<div class="tlw"><div class="tl-hint" style="color:#dc2626;margin:0">타임라인을 불러오지 못했어요 — 새로고침 해주세요</div></div>';});
+}
+function _tlSave(){
+  return fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:_tlKey(_tlEmpId),value:_tlItems,updated_at:new Date().toISOString()})}).then(function(r){if(!r.ok)throw new Error('save '+r.status);}).catch(function(){toast('타임라인 저장 실패 — 네트워크 확인');});
+}
+function _tlReposition(it){
+  var idx=_tlItems.indexOf(it);if(idx<0)return;_tlItems.splice(idx,1);
+  var ins=_tlItems.length;
+  if(it.time){for(var i=0;i<_tlItems.length;i++){var o=_tlItems[i];if(!o.time||o.time>it.time){ins=i;break;}}}
+  _tlItems.splice(ins,0,it);
+}
+function _tlRender(){
+  var box=document.getElementById('tlWidget');if(!box)return;
+  var own=_tlOwner();var now=_tlNowHM();var nowId=null;
+  for(var i=0;i<_tlItems.length;i++){var x=_tlItems[i];if(x.time&&x.time<=now)nowId=x.id;}
+  var h='<div class="tlw">';
+  h+='<div class="tlw-h"><span>🕐 내 하루 타임라인</span>'+(own?'<span class="tl-import" onclick="_tlImport()" title="내 데일리 체크리스트 항목을 타임라인에 추가">📋 체크리스트 가져오기</span>':'')+'</div>';
+  var pnm=(typeof getP==='function'&&getP(_tlEmpId))?getP(_tlEmpId).name:'';
+  h+='<div class="tl-hint">'+(own?'시간 클릭=변경 · ⠿ 드래그=순서 · ✎=수정 — 내 일과는 내가 설계':_tlEsc(pnm)+'님의 하루 일과 (본인만 수정 가능)')+'</div>';
+  if(!_tlItems.length){
+    h+='<div class="tl-empty">아직 일과가 없어요'+(own?'<br>아래에 시간·내용을 적고 <b>추가</b>를 누르거나,<br>위 <b>📋 체크리스트 가져오기</b>로 시작해보세요':'')+'</div>';
+  }else{
+    h+='<div class="tl-line">';
+    for(var j=0;j<_tlItems.length;j++){
+      var it=_tlItems[j];var dn=_tlIsDone(it);var isNow=(!dn&&it.id===nowId);
+      var editing=(_tlEditId===it.id);
+      h+='<div class="tstop'+(dn?' done':'')+(isNow?' now':'')+'" data-tlid="'+it.id+'"'+(own&&!editing?' draggable="true" ondragstart="_tlDragStart(event)" ondragover="_tlDragOver(event)" ondrop="_tlDrop(event)" ondragend="_tlDragEnd(event)"':'')+'>';
+      h+='<span class="dot"'+(own?' style="cursor:pointer" onclick="_tlToggle(\''+it.id+'\')" title="'+(dn?'완료 취소':'완료 체크')+'"':'')+'>'+(dn?'✓':(isNow?'▶':''))+'</span>';
+      if(editing){
+        h+='<div class="tcard"><input type="time" class="tl-time-in" id="tlEtm" value="'+_tlAttr(it.time)+'">'
+          +'<input class="tl-tit-in" id="tlEti" value="'+_tlAttr(it.title)+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_tlEditSave(\''+it.id+'\')}">'
+          +'<button class="tl-mini-btn" onclick="_tlEditSave(\''+it.id+'\')">저장</button>'
+          +'<button class="tl-mini-btn danger" onclick="_tlDel(\''+it.id+'\')" title="삭제">🗑</button></div>';
+      }else{
+        h+='<div class="tcard">'
+          +'<span class="tm"'+(own?' onclick="_tlEdit(\''+it.id+'\',1)" title="시간 변경"':'')+'>'+(it.time?_tlEsc(it.time):'--:--')+'</span>'
+          +'<b>'+_tlEsc(it.title)+(it.ck?' <span class="tl-ck-badge" title="데일리 체크리스트와 연동 — 여기서 체크하면 체크리스트에도 반영">체크연동</span>':'')+'</b>'
+          +(own?'<span class="grip" title="드래그로 순서 변경">⠿</span><span class="ed" onclick="_tlEdit(\''+it.id+'\')" title="수정">✎</span>':'')
+          +'</div>';
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+  if(own){
+    h+='<div class="tladd"><input type="time" id="tlAddTm" class="tl-tm-in"><input id="tlAddTi" placeholder="새 일과 (예: 인스타 업로드)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();_tlAdd()}"><button onclick="_tlAdd()">추가</button></div>';
+  }
+  h+='</div>';
+  box.innerHTML=h;
+}
+function _tlAdd(){
+  if(!_tlOwner())return;
+  var tmEl=document.getElementById('tlAddTm'),tiEl=document.getElementById('tlAddTi');
+  var title=((tiEl&&tiEl.value)||'').trim();
+  if(!title){toast('일과 내용을 입력하세요');if(tiEl)tiEl.focus();return;}
+  var it={id:_tlNewId(),time:(tmEl&&tmEl.value)||'',title:title,ck:null,doneDate:null};
+  _tlItems.push(it);_tlReposition(it);_tlSave();_tlRender();
+  var ni=document.getElementById('tlAddTi');if(ni)ni.focus();
+}
+function _tlEdit(id,focusTime){
+  if(!_tlOwner())return;
+  _tlEditId=id;_tlRender();
+  var e=document.getElementById(focusTime?'tlEtm':'tlEti');if(e)e.focus();
+}
+function _tlEditSave(id){
+  var it=_tlFind(id);if(!it){_tlEditId=null;_tlRender();return;}
+  var tm=document.getElementById('tlEtm'),ti=document.getElementById('tlEti');
+  if(ti){var v=ti.value.trim();if(v)it.title=v;}
+  var nt=tm?tm.value:it.time;var moved=(nt!==it.time);it.time=nt;
+  _tlEditId=null;
+  if(moved)_tlReposition(it);
+  _tlSave();_tlRender();
+}
+function _tlDel(id){
+  if(!confirm('이 일과를 타임라인에서 삭제할까요?'))return;
+  _tlItems=_tlItems.filter(function(x){return x.id!==id;});
+  _tlEditId=null;_tlSave();_tlRender();
+}
+function _tlToggle(id){
+  if(!_tlOwner())return;
+  var it=_tlFind(id);if(!it)return;
+  var today=_dailyToday();
+  if(it.ck){
+    var who=(CU&&(CU.name||CU.id))||'';
+    if(_tlChecks[it.ck]){
+      delete _tlChecks[it.ck];_tlRender();
+      sbDel('staff_daily_check','check_date=eq.'+today+'&item_key=eq.'+it.ck).catch(function(){renderMyTimeline(_tlEmpId);});
+    }else{
+      _tlChecks[it.ck]={checked:true};_tlRender();
+      _dailyUpsert({check_date:today,item_key:it.ck,checked:true,checked_by:who,checked_at:new Date().toISOString()}).catch(function(){renderMyTimeline(_tlEmpId);});
+    }
+  }else{
+    it.doneDate=(it.doneDate===today)?null:today;
+    _tlSave();_tlRender();
+  }
+}
+function _tlImport(){
+  if(!_tlOwner())return;
+  var ready=(CHECKLIST_ITEMS&&CHECKLIST_ITEMS.length)?Promise.resolve(CHECKLIST_ITEMS):loadChecklistItems();
+  ready.then(function(items){
+    var mine=(items||[]).filter(function(it){return it.kind==='daily'&&(it.assignee===_tlEmpId||it.assignee==='all');});
+    var have={};_tlItems.forEach(function(x){if(x.ck)have[x.ck]=1;});
+    var added=0;
+    mine.forEach(function(ci){
+      if(have[ci.id])return;
+      _tlItems.push({id:_tlNewId(),time:'',title:ci.content||'',ck:ci.id,doneDate:null});added++;
+    });
+    if(!added){toast('가져올 새 항목이 없어요 (데일리 항목이 이미 다 있음)');return;}
+    _tlSave();_tlRender();
+    toast(added+'개 항목을 가져왔어요 — --:-- 를 눌러 시간을 정해보세요');
+  });
+}
+function _tlDragStart(e){
+  var el=e.currentTarget;_tlDragId=el.getAttribute('data-tlid');
+  try{e.dataTransfer.setData('text/plain',_tlDragId);e.dataTransfer.effectAllowed='move';}catch(err){}
+  el.style.opacity='.4';
+}
+function _tlDragOver(e){e.preventDefault();try{e.dataTransfer.dropEffect='move';}catch(err){}}
+function _tlDrop(e){
+  e.preventDefault();
+  var tgt=e.currentTarget.getAttribute('data-tlid');
+  if(!_tlDragId||_tlDragId===tgt)return;
+  var from=-1,to=-1;
+  for(var i=0;i<_tlItems.length;i++){if(_tlItems[i].id===_tlDragId)from=i;if(_tlItems[i].id===tgt)to=i;}
+  if(from<0||to<0)return;
+  var mv=_tlItems.splice(from,1)[0];
+  _tlItems.splice(to,0,mv);
+  _tlDragId=null;_tlSave();_tlRender();
+}
+function _tlDragEnd(e){e.currentTarget.style.opacity='';_tlDragId=null;}
+
 function renderEmpDetail(taskId){
   var d=document.getElementById('empDetail');if(!d)return;
   var t=tasks.find(function(x){return x.id===taskId;});
