@@ -36,6 +36,29 @@ function parseArr(v: unknown): Record<string, string>[] {
   try { const p = typeof v === "string" ? JSON.parse(v) : v; return Array.isArray(p) ? p : []; } catch { return []; }
 }
 
+// 손님 인보이스 한글 항목 → 리조트용 영어 라벨 자동 변환 (규칙 기반)
+const MONTH_EN = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function koLabelToEn(t: string): string {
+  let s = String(t || "");
+  s = s.replace(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/g, (_m, m1, d1, m2, d2) => `${MONTH_EN[+m1]} ${d1} ~ ${MONTH_EN[+m2]} ${d2}`);
+  s = s.replace(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})일/g, (_m, m1, d1, d2) => `${MONTH_EN[+m1]} ${d1}~${d2}`);
+  s = s.replace(/(\d{1,2})월\s*(\d{1,2})일/g, (_m, m1, d1) => `${MONTH_EN[+m1]} ${d1}`);
+  s = s.replace(/(\d+)\s*박/g, (_m, n) => `${n} night${+n > 1 ? "s" : ""}`);
+  s = s.replace(/(\d+)\s*인/g, (_m, n) => `${n} person${+n > 1 ? "s" : ""}`);
+  const dict: [RegExp, string][] = [
+    [/조식/g, "Breakfast"], [/중식|점심/g, "Lunch"], [/석식|저녁/g, "Dinner"],
+    [/오션디럭스/g, "Ocean Deluxe"], [/디럭스/g, "Deluxe"], [/프리미어/g, "Premier"],
+    [/오션뷰/g, "Ocean View"], [/풀사이드/g, "Poolside"], [/마운틴/g, "Mountain"], [/스위트/g, "Suite"],
+    [/레이트\s*체크아웃/g, "Late check-out"], [/얼리\s*체크인/g, "Early check-in"],
+    [/추가/g, "extra"], [/객실|룸/g, "Room"],
+  ];
+  dict.forEach(([re, en]) => { s = s.replace(re, en); });
+  // "15 nights Breakfast 1 person extra" → "Breakfast for 1 person × 15 nights"
+  s = s.replace(/(\d+ nights?)\s+Breakfast\s+(\d+ persons?)\s+extra/g, "Breakfast for $2 × $1");
+  s = s.replace(/\s*\/\s*/g, " · ").replace(/\s{2,}/g, " ").trim();
+  return s;
+}
+
 export default function ResortInvoicePage() {
   const [authed, setAuthed] = useState(false);
   useEffect(() => {
@@ -149,7 +172,7 @@ export default function ResortInvoicePage() {
         setRefInfo({ items: items2, additions, discounts, special, lateCheckout });
       }
       // 추가 항목(조식·1박 추가 등)은 라벨만 복사 — 리조트 지불 금액(₱)은 직접 입력
-      if (additions.length) setCustomItems(additions.map((x: { name: string }) => ({ label: x.name, amount: 0 })));
+      if (additions.length) setCustomItems(additions.map((x: { name: string }) => ({ label: koLabelToEn(x.name), amount: 0 })));
       if (special) setSpecialReq(special);
     }).catch(() => {});
     // 투숙객 명단 = 예약자 + 추가 보호자 + 학생
