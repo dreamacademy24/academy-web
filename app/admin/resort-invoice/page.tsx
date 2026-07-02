@@ -6,12 +6,13 @@ import { JPARK_ROOMS, JPARK_EXTRA_PERSON, JPARK_TIER_LABEL, jparkTier, CUBENINE_
 
 type Resort = "jaypark" | "cubenine";
 const RESORT_LABEL: Record<Resort, string> = { jaypark: "제이파크", cubenine: "큐브나인" };
-const RESORT_EN: Record<Resort, string> = { jaypark: "Jpark Island Resort & Waterpark, Mactan, Cebu", cubenine: "Cube Nine Residence, Cebu" };
+const RESORT_X: Record<Resort, string> = { jaypark: "Dream Academy X J-park", cubenine: "Dream Academy X Cube Nine" };
 
+interface Item { label: string; amount: number }
 interface BookingLite {
-  id: string; booker_name: string; booker_english: string | null; status: string;
+  id: string; reservation_no: string | null; booker_name: string; booker_english: string | null; status: string;
   checkin_date: string | null; checkout_date: string | null; accom_type: string | null;
-  jp_room_type: string | null; cn_room_type: string | null;
+  students: unknown; extra_guardians: unknown;
   seg1_type: string | null; seg1_checkin: string | null; seg1_checkout: string | null;
   seg2_type: string | null; seg2_checkin: string | null; seg2_checkout: string | null;
 }
@@ -21,14 +22,17 @@ interface InvRow {
   unit_price: number; extra_person: number; extra_price: number; amount: number;
   currency: string; rate_tier: string | null; memo: string | null; status: string;
   paid_date: string | null; created_at: string;
+  items: Item[] | null; guests_kr: string | null; guests_en: string | null;
+  reservation_no: string | null; res_status: string | null; special_request: string | null;
 }
 
-function fmtMoney(n: number, cur: string) {
-  return (cur === "PHP" ? "₱" : "₩") + Number(n || 0).toLocaleString();
-}
+function num(n: number) { return Number(n || 0).toLocaleString(); }
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parseArr(v: unknown): Record<string, string>[] {
+  try { const p = typeof v === "string" ? JSON.parse(v) : v; return Array.isArray(p) ? p : []; } catch { return []; }
 }
 
 export default function ResortInvoicePage() {
@@ -42,23 +46,34 @@ export default function ResortInvoicePage() {
   const [bookings, setBookings] = useState<BookingLite[]>([]);
   const [invoices, setInvoices] = useState<InvRow[]>([]);
   const [selBooking, setSelBooking] = useState("");
-  const [guest, setGuest] = useState("");
+  const [guest, setGuest] = useState("");           // Reservation Name (영문)
+  const [resNo, setResNo] = useState("");
+  const [resStatus, setResStatus] = useState("tentatively");
+  const [guestsKr, setGuestsKr] = useState("");
+  const [guestsEn, setGuestsEn] = useState("");
   const [roomKey, setRoomKey] = useState("");
   const [ps, setPs] = useState(""); const [pe, setPe] = useState("");
   const [unit, setUnit] = useState<string>("");
   const [extraP, setExtraP] = useState<string>("0");
-  const [memo, setMemo] = useState("");
+  const [customItems, setCustomItems] = useState<Item[]>([]);
+  const [specialReq, setSpecialReq] = useState("");
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<InvRow | null>(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [sending, setSending] = useState(false);
+  const [savingImg, setSavingImg] = useState(false);
+
+  useEffect(() => {
+    try { setEmailTo(localStorage.getItem("resortEmail_" + resort) || ""); } catch {}
+  }, [resort]);
 
   const nights = calcNights(ps, pe);
   const isJp = resort === "jaypark";
   const tier = isJp ? jparkTier(nights) : null;
   const currency = isJp ? "PHP" : "KRW";
-  const extraPrice = isJp ? JPARK_EXTRA_PERSON : 0;
-  const rooms = isJp ? JPARK_ROOMS.map(r => ({ key: r.key, label: `${r.label} (${r.location})` })) : CUBENINE_ROOMS.map(r => ({ key: r.key, label: r.label }));
+  const rooms = isJp ? JPARK_ROOMS.map(r => ({ key: r.key, label: r.label })) : CUBENINE_ROOMS.map(r => ({ key: r.key, label: r.label }));
+  const roomLabel = rooms.find(r => r.key === roomKey)?.label || "";
 
-  // 룸/기간 바뀌면 단가 자동 제안
   useEffect(() => {
     if (!roomKey) return;
     if (isJp) {
@@ -71,11 +86,22 @@ export default function ResortInvoicePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomKey, tier, isJp]);
 
-  const amount = nights * (Number(unit) || 0) + nights * (Number(extraP) || 0) * extraPrice;
+  // 자동 항목 + 커스텀 항목 합치기
+  const items: Item[] = useMemo(() => {
+    const list: Item[] = [];
+    if (nights > 0 && Number(unit) > 0 && roomLabel) {
+      list.push({ label: `${nights} nights in a ${roomLabel} Room`, amount: nights * Number(unit) });
+    }
+    if (isJp && Number(extraP) > 0 && nights > 0) {
+      list.push({ label: `Extra Person × ${extraP} (${nights} nights)`, amount: Number(extraP) * JPARK_EXTRA_PERSON * nights });
+    }
+    return [...list, ...customItems];
+  }, [nights, unit, roomLabel, isJp, extraP, customItems]);
+  const amount = items.reduce((a, i) => a + (Number(i.amount) || 0), 0);
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,students,extra_guardians,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .order("checkin_date", { ascending: false }).limit(300);
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
@@ -98,27 +124,39 @@ export default function ResortInvoicePage() {
     setSelBooking(id);
     const b = bookings.find(x => x.id === id);
     if (!b) return;
-    setGuest(b.booker_english || b.booker_name || "");
+    setGuest((b.booker_english || b.booker_name || "").toUpperCase());
+    setResNo(b.reservation_no || "");
     const kw = resort === "jaypark" ? "jaypark" : "cubenine";
     let s = b.checkin_date || "", e = b.checkout_date || "";
     if ((b.seg1_type || "") === kw && b.seg1_checkin) { s = b.seg1_checkin; e = b.seg1_checkout || e; }
     else if ((b.seg2_type || "") === kw && b.seg2_checkin) { s = b.seg2_checkin; e = b.seg2_checkout || e; }
     setPs((s || "").slice(0, 10)); setPe((e || "").slice(0, 10));
+    // 투숙객 명단 = 예약자 + 추가 보호자 + 학생
+    const kr: string[] = [], en: string[] = [];
+    if (b.booker_name) kr.push(b.booker_name);
+    if (b.booker_english) en.push(b.booker_english.toUpperCase());
+    parseArr(b.extra_guardians).forEach(g => { if (g.kor) kr.push(g.kor); if (g.eng) en.push(String(g.eng).toUpperCase()); });
+    parseArr(b.students).forEach(st => {
+      const k = st.korName || st.name_kr || st.name || ""; const e2 = st.engName || st.name_en || "";
+      if (k && k !== "-") kr.push(k); if (e2 && e2 !== "-") en.push(String(e2).toUpperCase());
+    });
+    setGuestsKr(kr.join(", ")); setGuestsEn(en.join(", "));
   }
 
   async function generate() {
-    if (!guest.trim()) { alert("손님 이름을 입력해주세요."); return; }
-    if (!ps || !pe || nights <= 0) { alert("기간을 확인해주세요."); return; }
+    if (!guest.trim()) { alert("Reservation Name(영문 이름)을 입력해주세요."); return; }
+    if (!ps || !pe || nights <= 0) { alert("체크인/체크아웃 날짜를 확인해주세요."); return; }
     if (!roomKey) { alert("룸 타입을 선택해주세요."); return; }
-    if (!Number(unit)) { alert("단가를 입력해주세요."); return; }
+    if (items.length === 0) { alert("금액 항목이 없습니다. 단가를 확인해주세요."); return; }
     setSaving(true);
-    const roomLabel = rooms.find(r => r.key === roomKey)?.label || roomKey;
     const invoiceNo = `RI-${today().replace(/-/g, "")}-${String(Math.floor(Math.random() * 900) + 100)}`;
     const payload = {
       invoice_no: invoiceNo, resort, booking_id: selBooking || null, guest_name: guest.trim(),
       room_type: roomLabel, period_start: ps, period_end: pe, nights,
-      unit_price: Number(unit), extra_person: Number(extraP) || 0, extra_price: extraPrice,
-      amount, currency, rate_tier: tier, memo: memo.trim() || null, status: "unpaid",
+      unit_price: Number(unit) || 0, extra_person: Number(extraP) || 0, extra_price: isJp ? JPARK_EXTRA_PERSON : 0,
+      amount, currency, rate_tier: tier, status: "unpaid",
+      items, guests_kr: guestsKr.trim() || null, guests_en: guestsEn.trim() || null,
+      reservation_no: resNo.trim() || null, res_status: resStatus, special_request: specialReq.trim() || null,
     };
     const { data, error } = await supabase.from("resort_invoices").insert(payload).select().single();
     setSaving(false);
@@ -135,9 +173,53 @@ export default function ResortInvoicePage() {
     loadInvoices();
   }
 
-  const recent = useMemo(() => invoices.filter(v => v.resort === resort), [invoices, resort]);
+  async function captureDoc(): Promise<string | null> {
+    const el = document.getElementById("resort-inv-doc");
+    if (!el) return null;
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
+    return canvas.toDataURL("image/png");
+  }
 
+  async function saveImage() {
+    if (!preview) return;
+    setSavingImg(true);
+    try {
+      const url = await captureDoc();
+      if (!url) return;
+      const a = document.createElement("a");
+      a.href = url; a.download = `invoice_${preview.invoice_no}.png`; a.click();
+    } finally { setSavingImg(false); }
+  }
+
+  async function sendEmail() {
+    if (!preview) return;
+    const to = emailTo.trim();
+    if (!to) { alert("받는 이메일 주소를 입력해주세요."); return; }
+    if (!confirm(`${RESORT_LABEL[preview.resort as Resort]} (${to})로 인보이스 이미지를 보낼까요?`)) return;
+    setSending(true);
+    try {
+      try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
+      const img = await captureDoc();
+      const r = await fetch("/api/resort-invoice/email", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          subject: `[Dream Company] Invoice ${preview.invoice_no} — ${preview.guest_name}`,
+          text: `Hello,\n\nPlease find the attached invoice for the reservation below.\n\nGuest: ${preview.guest_name}\nRoom: ${preview.room_type}\nPeriod: ${preview.period_start} ~ ${preview.period_end} (${preview.nights} nights)\nTotal: ${num(preview.amount)} ${preview.currency}\n\nThank you.\nDream Company (Dream Academy)`,
+          imageBase64: img, filename: `invoice_${preview.invoice_no}.png`,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) { alert("발송 실패: " + (d.error || r.status)); return; }
+      alert("이메일을 보냈습니다. ✅");
+    } finally { setSending(false); }
+  }
+
+  const recent = useMemo(() => invoices.filter(v => v.resort === resort), [invoices, resort]);
   if (!authed) return null;
+
+  const pvItems: Item[] = preview ? (Array.isArray(preview.items) && preview.items.length > 0 ? preview.items : [{ label: `${preview.nights} nights in a ${preview.room_type} Room`, amount: preview.amount }]) : [];
 
   return (<>
     <style>{`
@@ -160,16 +242,30 @@ export default function ResortInvoicePage() {
 .tbl th{background:#f8fafc;text-align:left;padding:8px 10px;font-size:11.5px;color:#475569;border-bottom:1px solid #e5e7eb}
 .tbl td{padding:8px 10px;border-bottom:1px solid #f3f4f6}
 .badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
-.inv-doc{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:34px 38px;max-width:640px;margin:0 auto}
-.inv-doc h3{font-size:22px;letter-spacing:2px;margin-bottom:4px}
-.inv-kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;font-size:13.5px;margin:16px 0}
-.inv-kv .k{color:#6b7c93;font-weight:700}
-.inv-total{display:flex;justify-content:space-between;align-items:center;border-top:2px solid #1a1a2e;margin-top:14px;padding-top:12px;font-size:16px;font-weight:900}
+/* ── 인보이스 문서 (샘플 양식) ── */
+.inv-doc{background:#fff;padding:36px 40px;max-width:820px;margin:0 auto;font-family:'Noto Sans KR',Arial,sans-serif;color:#111}
+.inv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:12px}
+.inv-title{background:#fdf6dd;padding:12px 34px;font-size:30px;font-weight:800;letter-spacing:4px;font-family:Georgia,serif}
+.inv-x{font-size:14px;font-weight:800;margin-bottom:4px}
+.inv-h2{font-size:24px;font-weight:900;margin-bottom:8px}
+.ci{width:100%;border-collapse:collapse;font-size:13.5px}
+.ci th{background:#f3f4f6;border:1px solid #cbd5e1;padding:9px 10px;font-weight:800;width:170px;text-align:center}
+.ci td{border:1px solid #cbd5e1;padding:9px 12px;text-align:center}
+.po{border:1px solid #cbd5e1;margin-top:8px}
+.po-h{border-bottom:1px solid #cbd5e1;padding:9px 12px;font-size:17px;font-weight:900}
+.po-items{min-height:130px;padding:12px}
+.po-item{display:flex;justify-content:space-between;font-size:14px;padding:4px 2px}
+.po-foot{display:grid;grid-template-columns:170px 1fr 170px 1fr;border-top:1px solid #cbd5e1;font-size:14px}
+.po-foot .k{background:#f3f4f6;padding:10px;font-weight:800;text-align:center;border-right:1px solid #cbd5e1}
+.po-foot .v{padding:10px 14px;text-align:right;font-weight:700;border-right:1px solid #cbd5e1}
+.oc{display:grid;grid-template-columns:170px 1fr;border:1px solid #cbd5e1;margin-top:8px;font-size:14px}
+.oc .k{background:#f3f4f6;padding:12px;font-weight:800;text-align:center;border-right:1px solid #cbd5e1}
+.oc .v{padding:12px 14px}
 @media print{
   body{background:#fff!important}
   .no-print{display:none!important}
   .rw{padding:0!important;max-width:none!important}
-  .inv-doc{border:none!important;max-width:none!important}
+  .card{box-shadow:none!important;border:none!important}
 }
     `}</style>
     <div className="rw">
@@ -177,7 +273,7 @@ export default function ResortInvoicePage() {
         <h1>🏨 리조트 인보이스 생성</h1>
         <div className="rtabs">
           {(["jaypark", "cubenine"] as Resort[]).map(r => (
-            <button key={r} className={`rtab${resort === r ? " ac" : ""}`} onClick={() => { setResort(r); setRoomKey(""); setUnit(""); setPreview(null); }}>{RESORT_LABEL[r]}</button>
+            <button key={r} className={`rtab${resort === r ? " ac" : ""}`} onClick={() => { setResort(r); setRoomKey(""); setUnit(""); setPreview(null); setCustomItems([]); }}>{RESORT_LABEL[r]}</button>
           ))}
         </div>
       </div>
@@ -192,65 +288,109 @@ export default function ResortInvoicePage() {
             </option>
           ))}
         </select>
-        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 6 }}>{RESORT_LABEL[resort]} 포함 예약 {bookings.length}건</div>
+        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 6 }}>{RESORT_LABEL[resort]} 포함 예약 {bookings.length}건 — 선택하면 이름·기간·투숙객 명단 자동 입력</div>
       </div>
 
       <div className="card no-print">
         <h2>2. 인보이스 내용</h2>
         <div className="fr">
-          <div><span className="fl">손님 이름 (영문 권장)</span><input className="fi" value={guest} onChange={e => setGuest(e.target.value)} placeholder="HONG GILDONG" /></div>
-          <div><span className="fl">룸 타입</span>
-            <select className="fsl" value={roomKey} onChange={e => setRoomKey(e.target.value)}>
-              <option value="">— 선택 —</option>
-              {rooms.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+          <div><span className="fl">Reservation Name (영문)</span><input className="fi" value={guest} onChange={e => setGuest(e.target.value)} placeholder="JIN HUI SU" /></div>
+          <div><span className="fl">Reservation Number</span><input className="fi" value={resNo} onChange={e => setResNo(e.target.value)} placeholder="(선택)" /></div>
+          <div><span className="fl">Reservation Status</span>
+            <select className="fsl" value={resStatus} onChange={e => setResStatus(e.target.value)}>
+              <option value="tentatively">tentatively</option>
+              <option value="confirmed">confirmed</option>
             </select>
           </div>
         </div>
         <div className="fr">
           <div><span className="fl">체크인</span><input className="fi" type="date" value={ps} onChange={e => setPs(e.target.value)} /></div>
           <div><span className="fl">체크아웃</span><input className="fi" type="date" value={pe} onChange={e => setPe(e.target.value)} /></div>
-          <div><span className="fl">박 수 (자동)</span><input className="fi" value={nights ? `${nights}박` : "-"} readOnly style={{ background: "#f3f4f6" }} /></div>
-          {isJp && <div><span className="fl">요금 단계 (자동)</span><input className="fi" value={tier ? JPARK_TIER_LABEL[tier] : "-"} readOnly style={{ background: "#f3f4f6" }} /></div>}
+          <div><span className="fl">룸 타입</span>
+            <select className="fsl" value={roomKey} onChange={e => setRoomKey(e.target.value)}>
+              <option value="">— 선택 —</option>
+              {rooms.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+            </select>
+          </div>
+          <div><span className="fl">박 수 {isJp && tier ? `· ${JPARK_TIER_LABEL[tier]}` : ""}</span><input className="fi" value={nights ? `${nights} nights` : "-"} readOnly style={{ background: "#f3f4f6" }} /></div>
         </div>
         <div className="fr">
-          <div><span className="fl">1박 단가 ({currency === "PHP" ? "₱ 페소" : "₩ 원화"}) — 수정 가능</span><input className="fi" type="number" value={unit} onChange={e => setUnit(e.target.value)} /></div>
-          {isJp && <div><span className="fl">Extra Person (₱{JPARK_EXTRA_PERSON.toLocaleString()}/박)</span>
+          <div><span className="fl">1박 단가 ({currency}) — 수정 가능</span><input className="fi" type="number" value={unit} onChange={e => setUnit(e.target.value)} /></div>
+          {isJp && <div><span className="fl">Extra Person (₱{num(JPARK_EXTRA_PERSON)}/박)</span>
             <select className="fsl" value={extraP} onChange={e => setExtraP(e.target.value)}>
               {[0, 1, 2, 3].map(n => <option key={n} value={n}>{n}명</option>)}
             </select>
           </div>}
-          <div><span className="fl">메모 (선택)</span><input className="fi" value={memo} onChange={e => setMemo(e.target.value)} placeholder="예: B동 요청, 얼리체크인" /></div>
+        </div>
+        <div className="fr">
+          <div><span className="fl">Guest Name (korean) — 쉼표로 구분</span><input className="fi" value={guestsKr} onChange={e => setGuestsKr(e.target.value)} placeholder="서지영, 정승연, 진희수" /></div>
+        </div>
+        <div className="fr">
+          <div><span className="fl">Guest Name (En)</span><input className="fi" value={guestsEn} onChange={e => setGuestsEn(e.target.value)} placeholder="SEO JI YOUNG, JUNG SEUNG YEON" /></div>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <span className="fl">추가 항목 (조식 등)</span>
+          {customItems.map((it, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+              <input className="fi" style={{ flex: 2 }} value={it.label} onChange={e => setCustomItems(cs => cs.map((c, j) => j === i ? { ...c, label: e.target.value } : c))} placeholder="Breakfast - 7 Days (2 Kids)" />
+              <input className="fi" style={{ flex: 1 }} type="number" value={it.amount || ""} onChange={e => setCustomItems(cs => cs.map((c, j) => j === i ? { ...c, amount: Number(e.target.value) } : c))} placeholder="금액" />
+              <button className="rtab" style={{ color: "#dc2626" }} onClick={() => setCustomItems(cs => cs.filter((_, j) => j !== i))}>✕</button>
+            </div>
+          ))}
+          <button className="rtab" style={{ padding: "6px 14px", fontSize: 12 }} onClick={() => setCustomItems(cs => [...cs, { label: "", amount: 0 }])}>+ 항목 추가</button>
+        </div>
+        <div className="fr">
+          <div><span className="fl">Special Requests (영문)</span><input className="fi" value={specialReq} onChange={e => setSpecialReq(e.target.value)} placeholder="If possible, we would like to request a room with twin beds" /></div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6 }}>
-          <div style={{ fontSize: 15, fontWeight: 900 }}>합계: <span style={{ color: "#7c3aed" }}>{fmtMoney(amount, currency)}</span>
-            {nights > 0 && Number(unit) > 0 && <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginLeft: 8 }}>({fmtMoney(Number(unit), currency)} × {nights}박{isJp && Number(extraP) > 0 ? ` + Extra ${extraP}명` : ""})</span>}
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 900 }}>Total: <span style={{ color: "#7c3aed" }}>{num(amount)} {currency}</span></div>
           <button className="gen" disabled={saving} onClick={generate}>{saving ? "생성 중..." : "🧾 인보이스 생성"}</button>
         </div>
       </div>
 
       {preview && (
         <div className="card" style={{ background: "#f8fafc" }}>
-          <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 10 }}>
-            <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄 / PDF</button>
+          <div className="no-print" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <input className="fi" style={{ maxWidth: 260 }} value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="받는 이메일 (리조트)" />
+            <button className="rtab" disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📧 이메일 보내기"}</button>
+            <button className="rtab" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
+            <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄</button>
             <button className="rtab" onClick={() => setPreview(null)}>닫기</button>
           </div>
-          <div className="inv-doc">
-            <h3>INVOICE</h3>
-            <div style={{ fontSize: 12.5, color: "#6b7c93" }}>No. {preview.invoice_no} · Issued {preview.created_at?.slice(0, 10)}</div>
-            <div className="inv-kv">
-              <span className="k">From</span><span>Dream Company (Dream Academy)</span>
-              <span className="k">To</span><span>{RESORT_EN[preview.resort as Resort]}</span>
-              <span className="k">Guest</span><span style={{ fontWeight: 800 }}>{preview.guest_name}</span>
-              <span className="k">Room Type</span><span>{preview.room_type}</span>
-              <span className="k">Period</span><span>{preview.period_start} ~ {preview.period_end} ({preview.nights} nights)</span>
-              <span className="k">Rate / Night</span><span>{fmtMoney(preview.unit_price, preview.currency)}</span>
-              {preview.extra_person > 0 && (<>
-                <span className="k">Extra Person</span><span>{preview.extra_person} × {fmtMoney(preview.extra_price, preview.currency)} / night</span>
-              </>)}
-              {preview.memo && (<><span className="k">Note</span><span>{preview.memo}</span></>)}
+          <div className="inv-doc" id="resort-inv-doc">
+            <div className="inv-top">
+              <img src="/dream-academy-logo.png" alt="Dream Company" style={{ height: 54, width: "auto" }} />
+              <div className="inv-title">INVOICE</div>
             </div>
-            <div className="inv-total"><span>TOTAL</span><span>{fmtMoney(preview.amount, preview.currency)}</span></div>
+            <div className="inv-x">{RESORT_X[preview.resort as Resort]}</div>
+            <div className="inv-h2">Customer Information</div>
+            <table className="ci"><tbody>
+              <tr><th>Reservation Name</th><td>{preview.guest_name}</td><th>Reservation Number</th><td>{preview.reservation_no || ""}</td></tr>
+              <tr><th>Reservation Date</th><td>{preview.created_at?.slice(0, 10)}</td><th>Reservation Status</th><td style={{ fontWeight: 800 }}>{preview.res_status || "tentatively"}</td></tr>
+              <tr><th>Check-In</th><td>{preview.period_start}</td><th>time</th><td>오후 3:00</td></tr>
+              <tr><th>Check-Out</th><td>{preview.period_end}</td><th>time</th><td style={{ color: "#dc2626", fontWeight: 700 }}>12:00 noon</td></tr>
+              <tr><th>Room Type</th><td>{preview.room_type}</td><th>Nights</th><td>{preview.nights} nights</td></tr>
+              <tr><th>Guest Name(korean)</th><td colSpan={3} style={{ textAlign: "left" }}>{preview.guests_kr || ""}</td></tr>
+              <tr><th>Guest Name(En)</th><td colSpan={3} style={{ textAlign: "left" }}>{preview.guests_en || ""}</td></tr>
+            </tbody></table>
+            <div className="inv-h2" style={{ marginTop: 26 }}>Invoice Details</div>
+            <div className="po">
+              <div className="po-h">Purchase Order</div>
+              <div className="po-items">
+                {pvItems.map((it, i) => (
+                  <div key={i} className="po-item"><span>{it.label}</span><span style={{ fontWeight: i === 0 ? 500 : 800 }}>{num(it.amount)}</span></div>
+                ))}
+              </div>
+              <div className="po-foot">
+                <div className="k">Total Amount</div><div className="v">{num(preview.amount)}</div>
+                <div className="k">Payment Amount</div><div className="v" style={{ borderRight: "none" }}>{num(preview.amount)}</div>
+              </div>
+            </div>
+            <div className="inv-h2" style={{ marginTop: 26, fontSize: 19 }}>Other Confirmation Items</div>
+            <div className="oc">
+              <div className="k">Special Requests</div>
+              <div className="v">{preview.special_request || "-"}</div>
+            </div>
           </div>
         </div>
       )}
@@ -268,7 +408,7 @@ export default function ResortInvoicePage() {
                 <td>{v.room_type}</td>
                 <td>{v.period_start} ~ {v.period_end}</td>
                 <td>{v.nights}</td>
-                <td style={{ fontWeight: 800 }}>{fmtMoney(v.amount, v.currency)}</td>
+                <td style={{ fontWeight: 800 }}>{num(v.amount)} {v.currency}</td>
                 <td>{v.status === "paid"
                   ? <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>결제완료</span>
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
