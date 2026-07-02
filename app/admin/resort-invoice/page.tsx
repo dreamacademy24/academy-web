@@ -90,6 +90,7 @@ export default function ResortInvoicePage() {
   const [sending, setSending] = useState(false);
   const [emailModal, setEmailModal] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
+  const [emailCc, setEmailCc] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [savingImg, setSavingImg] = useState(false);
 
@@ -276,6 +277,7 @@ Total: ${num(preview.amount)} ${preview.currency}
 Kindly send us the confirmation number for this booking.
 
 ${signature}`);
+    try { setEmailCc(localStorage.getItem("resortEmailCc") || "deskor112@gmail.com"); } catch { setEmailCc("deskor112@gmail.com"); }
     setEmailModal(true);
   }
 
@@ -290,11 +292,13 @@ ${signature}`);
       if (!(preview.resort === "jaypark" && jpDefaults.includes(to))) {
         try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
       }
+      const cc = emailCc.trim();
+      try { if (cc) localStorage.setItem("resortEmailCc", cc); } catch {}
       const img = await captureDoc();
       const r = await fetch("/api/resort-invoice/email", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to,
+          to, cc: cc || undefined,
           subject: emailSubject.trim() || `[Dream Company] Invoice ${preview.invoice_no}`,
           text: emailBody,
           imageBase64: img, filename: `invoice_${preview.invoice_no}.png`,
@@ -483,6 +487,10 @@ ${signature}`);
           <div style={{ marginBottom: 10 }}>
             <span className="fl">받는 사람 {preview.resort === "jaypark" && <span style={{ color: "#94a3b8", fontWeight: 500 }}>({preview.nights < 7 ? "단기 7박 미만 → rsvn@" : "장기 7박~ → travel@"})</span>}</span>
             <input className="fi" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <span className="fl">참조 (CC) — 항상 내 메일이 기본으로 들어갑니다</span>
+            <input className="fi" value={emailCc} onChange={e => setEmailCc(e.target.value)} placeholder="deskor112@gmail.com" />
           </div>
           <div style={{ marginBottom: 10 }}>
             <span className="fl">제목</span>

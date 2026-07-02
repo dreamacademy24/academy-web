@@ -5,7 +5,7 @@ import nodemailer from "nodemailer";
 // 환경변수: MAIL_USER / MAIL_PASS (Namecheap Private Email, 예: admin@dreamacademyph.com)
 export async function POST(req: Request) {
   try {
-    const { to, subject, text, imageBase64, filename } = await req.json();
+    const { to, cc, subject, text, imageBase64, filename } = await req.json();
     const user = process.env.MAIL_USER;
     const pass = process.env.MAIL_PASS;
     if (!user || !pass) {
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     await transporter.sendMail({
       from: `Dream Company <${user}>`,
       to,
+      cc: cc || undefined,
       subject: subject || "Invoice from Dream Company",
       text: text || "Please find the attached invoice.",
       attachments,
