@@ -451,7 +451,6 @@ export default function BookingDetailPage() {
   const students = data.students || [];
   const pickups = data.pickups || [];
   const checkin = data.checkin;
-  const invoices = data.invoices || [];
   const accoms = data.accommodations || [];
   const tutorReqs = data.tutor_requests || [];
   const shuttleReqs = data.shuttle_requests || [];
