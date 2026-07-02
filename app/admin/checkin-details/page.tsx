@@ -453,23 +453,23 @@ function CheckinDetailsInner() {
   .fld .val .sub{font-weight:400;color:#6b7280;}
 
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;}
-  .card{box-shadow:inset 0 0 0 1000px #f8fafc !important;border:1px solid #eef2f6;border-radius:8px;padding:9px 8px;text-align:center;}
+  .card{box-shadow:inset 0 0 0 1000px #f8fafc !important;border:1.5px solid #94a3b8;border-radius:8px;padding:9px 8px;text-align:center;}
   .card .ct{font-size:11px;color:#475569;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;}
   .card .cv{font-size:23px;font-weight:800;color:#1f2937;}
   .card .cv.sm{font-size:15px;}
 
-  .line{display:flex;gap:12px;border:1px solid #eef2f6;border-radius:8px;padding:9px 12px;margin-bottom:8px;align-items:baseline;}
+  .line{display:flex;gap:12px;border:1.5px solid #94a3b8;border-radius:8px;padding:9px 12px;margin-bottom:8px;align-items:baseline;}
   .line .k{font-size:11px;color:#64748b;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;width:80px;}
   .line .v{font-size:14px;color:#1f2937;font-weight:600;flex:1;}
   .line.memo .v{color:#374151;font-weight:400;}
   .metxt{font-size:13px;color:#374151;margin-bottom:4px;}
-  .mline{border-bottom:1px solid #e5e7eb;height:22px;}
+  .mline{border-bottom:1.5px solid #64748b;height:22px;}
 
   .settle-hd{font-size:12px;font-weight:800;letter-spacing:0.08em;color:#1f2937;margin:6px 0 8px;display:flex;justify-content:space-between;align-items:center;}
   .dep-pill{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:13px;font-weight:800;padding:4px 14px;border-radius:6px;}
   .settle-tbl{width:100%;border-collapse:collapse;}
-  .settle-tbl th{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#475569 !important;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:left;padding:9px 10px;border-bottom:1px solid #e5e7eb;}
-  .settle-tbl td{padding:11px 10px;border-bottom:1px solid #eef2f6;font-size:13px;height:38px;}
+  .settle-tbl th{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#475569 !important;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:left;padding:9px 10px;border-bottom:2px solid #475569;}
+  .settle-tbl td{padding:11px 10px;border-bottom:1.5px solid #94a3b8;font-size:13px;height:38px;}
   .settle-tbl th.samt,.settle-tbl td.samt{text-align:right;}
   .sdate{width:18%;} .sitem{width:42%;} .samt{width:18%;} .snote{width:22%;}
 
