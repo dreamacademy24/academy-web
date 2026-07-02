@@ -1785,3 +1785,16 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - .git/*.lock 삭제 불가 시 Cowork 파일삭제 권한 도구 필요
 - 샌드박스에서 supabase.co/api.github.com 프록시 차단 → DDL은 브라우저 fetch + exec_sql RPC(service_role) + NOTIFY pgrst
 - Vercel 상태 확인: vercel.com 탭에서 /api/v6/deployments fetch (세션 쿠키), 빌드 로그 /api/v2/deployments/{dpl}/events?builds=1
+
+## 2026-07-02 세션 후반 추가 (전부 배포·라이브 검증·실발송 테스트 완료)
+- ✅ 리조트 인보이스 완성판:
+  · Reservation Number = 리조트 컨펌넘버 자리 (발송 시 공란 → 결제내역에서 수기 입력 → 최종 인보이스)
+  · 결제내역: 번호 클릭=인보이스 모달, 컨펌넘버 컬럼, 영수증 사진 업로드(staff-files/resort-receipts)
+  · 예약 불러오기 시 손님 인보이스(invoice_snapshots) 참고 패널 + 추가항목 한→영 자동변환(koLabelToEn) 프리필
+  · 이메일: 전체 화면 작성 페이지(받는사람 자동분기 7박미만 rsvn@/이상 travel@, CC 기본 deskor112@gmail.com, 첨부 이미지 미리보기), MAIL_USER/PASS 등록 완료·실발송 성공
+- ✅ 직원 계정 Sora/Sera (admin-sora/sora2026!, admin-sera/sera2026!) — staff_accounts INSERT
+- ✅ 케어담당 시스템: bookings.care_assignee + 부킹리스트 케어담당 컬럼, student_daily_logs(출석/컨디션/투약/메모), 내업무 학생탭 데일리 케어 보드, 오늘한눈에 케어 이상 카드
+- ✅ 주담당 체크리스트: booking_checklists + app_settings(care_checklist_items, ⚙️ 관리자 편집), 학생탭 예약카드에 칩+비고
+- ✅ 직원 프로필: 직원업무 설정>👤프로필 탭 (색깔·이메일 서명, staff_accounts.signature) → 리조트 이메일 서명 자동 (staffId admin- 접두사 정규화 주의)
+- ✅ 체크인디테일 GUEST DETAILS 인쇄 선 강화 / 통학형 12주 가격표 이미지 생성(프로젝트 폴더)
+- 신규 테이블: resort_invoices(+confirm_no,receipt_url,items,guests_kr/en,res_status,special_request), student_daily_logs, booking_checklists, app_settings
