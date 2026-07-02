@@ -473,10 +473,12 @@ function autoSeason(d:string):Season{ return d?(isPeak(d)?"peak":"off"):"list"; 
 
 function lookup(t:AccomLocal,r:string,w:number,p:number,k:number):P3|null{
   const half=(e:P3):P3=>[Math.round(e[0]/2),Math.round(e[1]/2),Math.round(e[2]/2)];
-  // 통학형: 학원만 (인원/룸타입 무관, 주수만 사용). 1주 미지원 시 2주의 절반 fallback.
+  // 통학형: 학원만 (룸타입 무관). 가격표는 아이 1명 기준 → 아이 수만큼 곱함. 1주 미지원 시 2주의 절반 fallback.
   if(t==="commute"){
-    if(COMMUTE[w]) return COMMUTE[w];
-    if(w===1&&COMMUTE[2]) return half(COMMUTE[2]);
+    const kids=Math.max(1,k||1);
+    const mul=(e:P3):P3=>[e[0]*kids,e[1]*kids,e[2]*kids];
+    if(COMMUTE[w]) return mul(COMMUTE[w]);
+    if(w===1&&COMMUTE[2]) return mul(half(COMMUTE[2]));
     return null;
   }
   // 단독 jaypark은 jpark 가격 테이블의 별칭
@@ -1034,4 +1036,4 @@ const lbl:React.CSSProperties={display:"block",fontSize:11,fontWeight:600,color:
 const sel:React.CSSProperties={width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none",background:"#fff"};
 const inp:React.CSSProperties={padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"};
 const addBtnS:React.CSSProperties={padding:"3px 10px",fontSize:11,fontWeight:600,color:"#1a6fc4",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"};
-const delBtnS:React.CSSProperties={padding:"3px 8px",fontSize:14,color:"#dc2626",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",lineHeight:1};
+const delBtnS:React.CSSProperties={padd
