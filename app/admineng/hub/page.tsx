@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { fetchStudentCalFingerprint, SC_SEEN_KEY } from "@/lib/scFingerprint";
 
 type Staff = {
   username: string;
@@ -18,6 +20,20 @@ export default function EngHubPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scNew, setScNew] = useState(false); // Student Calendar 업데이트 뱃지
+
+  useEffect(() => {
+    if (!staff) return;
+    let cancelled = false;
+    fetchStudentCalFingerprint(supabase).then(fp => {
+      if (cancelled || !fp) return;
+      try {
+        const seen = localStorage.getItem(SC_SEEN_KEY);
+        setScNew(seen !== fp);
+      } catch {}
+    });
+    return () => { cancelled = true; };
+  }, [staff]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -186,7 +202,10 @@ export default function EngHubPage() {
 
       <div className="hub-grid">
         {cards.map((c, i) => (
-          <div key={i} className="hub-card" onClick={() => router.push(c.href)}>
+          <div key={i} className="hub-card" style={{ position: "relative" }} onClick={() => router.push(c.href)}>
+            {c.href === "/admineng/student-calendar" && scNew && (
+              <span title="New update (new student / schedule change)" style={{ position: "absolute", top: 10, right: 12, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 0 3px #fee2e2" }} />
+            )}
             <div className="ic">{c.icon}</div>
             <div className="tx">
               <h2>{c.title}</h2>

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isCommuteBooking } from "@/lib/bookingTypes";
+import { fetchStudentCalFingerprint, SC_SEEN_KEY } from "@/lib/scFingerprint";
 
 interface Booking {
   check_in: string | null;
@@ -169,6 +170,10 @@ export default function EngStudentCalendarPage() {
     rows.sort((a, b) => (a.academy_start || "9999").localeCompare(b.academy_start || "9999"));
     setStudents(rows);
     setLoading(false);
+    // 읽음 처리: 현재 fingerprint 저장 → Teacher Hub 빨간 점 해제
+    fetchStudentCalFingerprint(supabase).then(fp => {
+      try { if (fp) localStorage.setItem(SC_SEEN_KEY, fp); } catch {}
+    });
   }, []);
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
