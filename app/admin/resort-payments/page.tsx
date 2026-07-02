@@ -10,6 +10,7 @@ const RESORT_LABEL: Record<string, string> = { jaypark: "제이파크", cubenine
 interface InvRow extends ResortInvDocRow {
   id: string; memo: string | null;
   status: string; paid_date: string | null; paid_memo: string | null;
+  receipt_url: string | null;
 }
 
 function fmtMoney(n: number, cur: string) {
@@ -106,6 +107,19 @@ export default function ResortPaymentsPage() {
     } finally { setSavingImg(false); }
   }
 
+  // 결제 영수증 사진 업로드 → Supabase Storage(staff-files) → receipt_url 저장
+  async function uploadReceipt(r: InvRow, file: File) {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `resort-receipts/${r.invoice_no}_${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("staff-files").upload(path, file, { upsert: true });
+    if (upErr) { alert("업로드 실패: " + upErr.message); return; }
+    const { data: pub } = supabase.storage.from("staff-files").getPublicUrl(path);
+    const url = pub?.publicUrl || "";
+    const { error } = await supabase.from("resort_invoices").update({ receipt_url: url, updated_at: new Date().toISOString() }).eq("id", r.id);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    load();
+  }
+
   if (!authed) return null;
 
   const months = Array.from(new Set(rows.map(r => (r.period_start || "").slice(0, 7)).filter(Boolean))).sort().reverse();
@@ -172,7 +186,7 @@ export default function ResortPaymentsPage() {
       <div className="card">
         {loading ? <div className="empty">불러오는 중...</div> : filtered.length === 0 ? <div className="empty">내역이 없습니다. 인보이스 생성 페이지에서 먼저 인보이스를 만들어주세요.</div> : (
           <table className="tbl"><thead><tr>
-            <th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>메모</th><th style={{ width: 110 }}></th>
+            <th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
           </tr></thead><tbody>
             {filtered.map(r => (
               <tr key={r.id}>
@@ -192,6 +206,13 @@ export default function ResortPaymentsPage() {
                   ? <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>결제완료</span>
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
                 <td>{r.paid_date || "-"}</td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  {r.receipt_url && <a href={r.receipt_url} target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: "#16a34a", marginRight: 6 }}>📷 보기</a>}
+                  <label style={{ fontSize: 11, color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>
+                    {r.receipt_url ? "재업로드" : "+ 업로드"}
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadReceipt(r, f); e.target.value = ""; }} />
+                  </label>
+                </td>
                 <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.paid_memo || r.memo || ""}>{r.paid_memo || r.memo || ""}</td>
                 <td style={{ textAlign: "right" }}>
                   {r.status === "paid"

@@ -273,10 +273,9 @@ export default function ResortInvoicePage() {
       </div>
 
       <div className="card no-print">
-        <h2>2. 인보이스 내용</h2>
+        <h2>2. 인보이스 내용 <span style={{ fontWeight: 500, fontSize: 11.5, color: "#94a3b8" }}>— 인보이스의 Reservation Number는 리조트가 주는 컨펌넘버 자리입니다 (발송 시 비워두고, 회신 오면 결제내역에서 입력)</span></h2>
         <div className="fr">
           <div><span className="fl">Reservation Name (영문)</span><input className="fi" value={guest} onChange={e => setGuest(e.target.value)} placeholder="JIN HUI SU" /></div>
-          <div><span className="fl">Reservation Number</span><input className="fi" value={resNo} onChange={e => setResNo(e.target.value)} placeholder="(선택)" /></div>
           <div><span className="fl">Reservation Status</span>
             <select className="fsl" value={resStatus} onChange={e => setResStatus(e.target.value)}>
               <option value="tentatively">tentatively</option>

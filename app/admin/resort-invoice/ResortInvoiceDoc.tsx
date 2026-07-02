@@ -50,11 +50,8 @@ export default function ResortInvoiceDoc({ inv, domId }: { inv: ResortInvDocRow;
       <div className="inv-x">{RESORT_X[inv.resort] || ""}</div>
       <div className="inv-h2">Customer Information</div>
       <table className="ci"><tbody>
-        <tr><th>Reservation Name</th><td>{inv.guest_name}</td><th>Reservation Number</th><td>{inv.reservation_no || ""}</td></tr>
+        <tr><th>Reservation Name</th><td>{inv.guest_name}</td><th>Reservation Number</th><td style={inv.confirm_no ? { fontWeight: 900, fontSize: 15, color: "#b45309", background: "#fffbeb" } : {}}>{inv.confirm_no || ""}</td></tr>
         <tr><th>Reservation Date</th><td>{inv.created_at?.slice(0, 10)}</td><th>Reservation Status</th><td style={{ fontWeight: 800 }}>{inv.confirm_no ? "confirmed" : (inv.res_status || "tentatively")}</td></tr>
-        {inv.confirm_no && (
-          <tr><th style={{ background: "#fdf6dd" }}>Confirmation No</th><td colSpan={3} style={{ fontWeight: 900, fontSize: 15, color: "#b45309", background: "#fffbeb" }}>{inv.confirm_no}</td></tr>
-        )}
         <tr><th>Check-In</th><td>{inv.period_start}</td><th>time</th><td>오후 3:00</td></tr>
         <tr><th>Check-Out</th><td>{inv.period_end}</td><th>time</th><td style={{ color: "#dc2626", fontWeight: 700 }}>12:00 noon</td></tr>
         <tr><th>Room Type</th><td>{inv.room_type}</td><th>Nights</th><td>{inv.nights} nights</td></tr>
