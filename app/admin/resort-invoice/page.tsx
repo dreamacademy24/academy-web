@@ -252,7 +252,11 @@ export default function ResortInvoicePage() {
     if (!confirm(`${RESORT_LABEL[preview.resort as Resort]} (${to})로 인보이스 이미지를 보낼까요?`)) return;
     setSending(true);
     try {
-      try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
+      // 제이파크 기본 주소 2종(rsvn/travel)은 저장하지 않음 — 박 수 자동 분기가 계속 작동하도록
+      const jpDefaults = ["rsvn@jparkislandresort.com", "travel@jparkislandresort.com"];
+      if (!(preview.resort === "jaypark" && jpDefaults.includes(to))) {
+        try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
+      }
       const img = await captureDoc();
       const r = await fetch("/api/resort-invoice/email", {
         method: "POST", headers: { "Content-Type": "application/json" },
