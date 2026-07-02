@@ -144,7 +144,7 @@ export default function ResortInvoicePage() {
       const discounts = (Array.isArray(bl.discounts) ? bl.discounts : []).map((x: { name?: string; amount?: number }) => ({ name: String(x.name || "").trim(), amount: Number(x.amount) || 0 })).filter((x: { name: string }) => x.name);
       const items2 = (Array.isArray(bl.items) ? bl.items : []).map((x: { label?: string; price?: number }) => ({ label: String(x.label || ""), price: Number(x.price) || 0 }));
       const special = String(b.special_request || "").trim();
-      const lateCheckout = String(sd.lateCheckout || "").trim();
+      const lateCheckout = sd.lateCheckout === true ? "있음" : (typeof sd.lateCheckout === "string" ? sd.lateCheckout.trim() : "");
       if (items2.length || additions.length || discounts.length || special || lateCheckout) {
         setRefInfo({ items: items2, additions, discounts, special, lateCheckout });
       }
