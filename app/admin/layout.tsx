@@ -36,6 +36,10 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "체크인 디테일", href: "/admin/checkin-details" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
   ]},
+  { title: "리조트", items: [
+    { label: "인보이스 생성", href: "/admin/resort-invoice" },
+    { label: "결제내역", href: "/admin/resort-payments" },
+  ]},
   { title: "현지직원", items: [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },
     { label: "Shuttle Schedule", href: "/ashuttle", ext: true },
