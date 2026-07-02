@@ -111,6 +111,7 @@ export default function EngStudentCalendarPage() {
   const [stuYear, setStuYear] = useState<string>(String(_now.getFullYear()));
   const [stuMonth, setStuMonth] = useState<string>(pad2(_now.getMonth() + 1));
   const [listLevel, setListLevel] = useState<"all" | "kinder" | "junior">("all");
+  const [calPrintHalf, setCalPrintHalf] = useState<"all" | "1st" | "2nd">("all"); // 인쇄: 한 장 / 2주씩 분할
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -202,7 +203,14 @@ export default function EngStudentCalendarPage() {
 
   const calYear = Number(stuYear) || _now.getFullYear();
   const calMonth = Number(stuMonth) || (_now.getMonth() + 1);
-  const weeks = genCalWeeks(calYear, calMonth);
+  const allWeeks = genCalWeeks(calYear, calMonth);
+  // 2주 분할 인쇄: 전반(1~15일 포함 주) / 후반(16~말일 포함 주) — 한국인 학생관리와 동일
+  const weeks = calPrintHalf === "all" ? allWeeks : allWeeks.filter(wk => wk.some(d => {
+    if (d.getMonth() !== calMonth - 1) return false;
+    const dd = d.getDate();
+    return calPrintHalf === "1st" ? dd <= 15 : dd >= 16;
+  }));
+  const halfLabel = calPrintHalf === "1st" ? " (Days 1–15)" : calPrintHalf === "2nd" ? " (Days 16–end)" : "";
 
   // 통과: 학생 startMonday + endDate 캐시
   const enriched = filtered
@@ -265,13 +273,21 @@ export default function EngStudentCalendarPage() {
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
 
 @media print{
-  body{background:#fff!important}
+  @page{size:A4 landscape;margin:8mm}
+  body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .no-print{display:none!important}
   .sc-w{padding:0!important;max-width:none!important}
   .sc-card{box-shadow:none!important;border:none!important;padding:0!important}
+  .cal-tbl{min-width:0!important;width:100%!important;table-layout:fixed!important}
   .cal-tbl td,.cal-tbl th{border:1px solid #999!important}
-  .cal-newin,.cal-out{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  @page{size:A4 landscape;margin:10mm}
+  .cal-tbl th{font-size:9px!important;padding:4px 3px!important}
+  .cal-tbl td{font-size:8px!important;padding:3px!important;height:auto!important;min-height:60px}
+  .cal-tbl .cal-side{width:80px!important}
+  .cal-d{font-size:9px!important;margin-bottom:2px!important}
+  .cal-newin,.cal-out{font-size:7px!important;padding:1px 3px!important;margin-bottom:2px!important}
+  .cal-stu-in,.cal-stu-out{font-size:8px!important;line-height:1.25!important;white-space:normal!important}
+  .sc-month-title{text-align:center!important;width:100%;font-size:14px!important;margin-bottom:6mm!important}
 }
     `}</style>
 
@@ -287,6 +303,14 @@ export default function EngStudentCalendarPage() {
           <button className={view === "list" ? "ac" : ""} onClick={() => setView("list")}>List</button>
           <button className={view === "cal" ? "ac" : ""} onClick={() => setView("cal")}>Calendar</button>
         </div>
+        {view === "cal" && (
+          <select className="no-print" value={calPrintHalf} onChange={e => setCalPrintHalf(e.target.value as "all" | "1st" | "2nd")}
+            style={{ padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 12.5, fontFamily: "inherit", cursor: "pointer", background: "#fff" }}>
+            <option value="all">All (1 page)</option>
+            <option value="1st">Days 1–15 (page 1)</option>
+            <option value="2nd">Days 16–end (page 2)</option>
+          </select>
+        )}
         <button className="sc-print" onClick={() => window.print()}>🖨️ Print (A4 Landscape)</button>
       </div>
 
@@ -313,7 +337,7 @@ export default function EngStudentCalendarPage() {
               if (m < 1) { y -= 1; m = 12; }
               setStuYear(String(y)); setStuMonth(pad2(m));
             }}>← Prev Month</button>
-            <div className="sc-month-title">{calYear} {MONTHS_EN[calMonth - 1]} Student Calendar</div>
+            <div className="sc-month-title">{calYear} {MONTHS_EN[calMonth - 1]} Student Calendar{halfLabel}</div>
             <button className="no-print" onClick={() => {
               let y = calYear, m = calMonth + 1;
               if (m > 12) { y += 1; m = 1; }
