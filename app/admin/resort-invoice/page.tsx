@@ -13,6 +13,7 @@ interface BookingLite {
   id: string; reservation_no: string | null; booker_name: string; booker_english: string | null; status: string;
   checkin_date: string | null; checkout_date: string | null; accom_type: string | null;
   students: unknown; extra_guardians: unknown; special_request?: string | null;
+  jp_room_type?: string | null; cn_room_type?: string | null;
   seg1_type: string | null; seg1_checkin: string | null; seg1_checkout: string | null;
   seg2_type: string | null; seg2_checkin: string | null; seg2_checkout: string | null;
 }
@@ -142,7 +143,7 @@ export default function ResortInvoicePage() {
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .order("checkin_date", { ascending: false }).limit(300);
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
@@ -172,6 +173,21 @@ export default function ResortInvoicePage() {
     if ((b.seg1_type || "") === kw && b.seg1_checkin) { s = b.seg1_checkin; e = b.seg1_checkout || e; }
     else if ((b.seg2_type || "") === kw && b.seg2_checkin) { s = b.seg2_checkin; e = b.seg2_checkout || e; }
     setPs((s || "").slice(0, 10)); setPe((e || "").slice(0, 10));
+    // 룸 타입 자동 선택 (예약의 한글 룸타입 → 리조트 룸 키 매핑)
+    const rtRaw = ((resort === "jaypark" ? b.jp_room_type : b.cn_room_type) || b.accom_type || "");
+    let rk = "";
+    if (resort === "jaypark") {
+      if (/(오션.*디럭스|디럭스.*오션)/.test(rtRaw)) rk = "deluxe_ov";
+      else if (/(프리미어.*오션|오션.*프리미어)/.test(rtRaw)) rk = "premier_ov";
+      else if (/프리미어/.test(rtRaw)) rk = "premier";
+      else if (/마운틴/.test(rtRaw)) rk = "mountain_suite";
+      else if (/오션\s*스위트/.test(rtRaw)) rk = "ocean_suite";
+      else if (/디럭스/.test(rtRaw)) rk = "deluxe";
+    } else {
+      if (/오션/.test(rtRaw)) rk = "ocean_deluxe";
+      else if (/풀/.test(rtRaw)) rk = "poolside";
+    }
+    if (rk) setRoomKey(rk);
     // 손님 인보이스 스냅샷 → 참고 내역 + 추가 항목 프리필 (금액은 페소로 직접 입력)
     setRefInfo(null); setCustomItems([]);
     fetch("/api/invoice/snapshot?booking_id=" + id).then(r => r.json()).then(d => {
