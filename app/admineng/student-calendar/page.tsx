@@ -148,12 +148,13 @@ export default function EngStudentCalendarPage() {
         const korName = st.korName || st.name_kr || st.name || "";
         const engName = st.engName || st.name_en || "";
         if (!korName && !engName) return;
+        if (korName === "-" && (engName === "-" || !engName)) return; // guardian placeholder 제외 (한국인 화면과 동일)
         rows.push({
           id: b.id + "_" + i,
           name_kr: korName,
           name_en: engName,
           age: st.age || "",
-          level: grade === "킨더" ? "kinder" : "junior",
+          level: grade === "킨더" ? "kinder" : grade === "주니어" ? "junior" : "",
           class_type: isCommute ? "commute" : "",
           academy_start: calStart || null,
           academy_end: calEnd || null,
@@ -216,7 +217,7 @@ export default function EngStudentCalendarPage() {
   const enriched = filtered
     .filter(s => s.name_en || s.name_kr)
     .map(s => {
-      const start = s.academy_start ? getNextMonday(s.academy_start) : null;
+      const start = s.academy_start || null; // 한국인 학생관리와 동일: 저장값 그대로 비교
       const end = getEndDate(s);
       return { s, start, end };
     });
@@ -355,15 +356,14 @@ export default function EngStudentCalendarPage() {
               {weeks.map((week, wi) => {
                 const wsStr = ymd(week[0]);
                 const weStr = ymd(week[6]);
-                // 해당 주에 재원 중인 학생 (startMonday <= weekFri && endDate >= weekMon)
-                const friStr = ymd(week[4]);
+                // 해당 주에 재원 중인 학생 (start <= weekEnd(일) && end >= weekMon) — 한국인 학생관리와 동일
                 const active = enriched.filter(({ start, end }) => {
                   if (!start) return false;
                   const e = end || start;
-                  return start <= friStr && e >= wsStr;
+                  return start <= weStr && e >= wsStr;
                 });
                 const kCount = active.filter(({ s }) => (s.level || "").toLowerCase() === "kinder").length;
-                const jCount = active.length - kCount;
+                const jCount = active.filter(({ s }) => (s.level || "").toLowerCase() === "junior").length;
                 const newIns = enriched.filter(({ start }) => start && start >= wsStr && start <= weStr);
                 const outs = enriched.filter(({ end }) => end && end >= wsStr && end <= weStr);
                 return (
