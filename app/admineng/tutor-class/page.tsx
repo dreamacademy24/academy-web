@@ -200,7 +200,7 @@ type ScheduleEntry = {
 export default function EngTutorClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"inbox" | "mine" | "classes" | "weekly" | "invoice">("inbox");
+  const [tab, setTab] = useState<"inbox" | "mine" | "classes" | "weekly" | "invoice" | "past">("inbox");
   const [myLessons, setMyLessons] = useState<any[]>([]);
   const [loadingLessons, setLoadingLessons] = useState(false);
   const [reqs, setReqs] = useState<TutorReq[]>([]);
@@ -1049,17 +1049,22 @@ export default function EngTutorClassPage() {
         <button className={`etab${tab==="classes"?" ac":""}`} onClick={() => setTab("classes")}>🎓 My Classes</button>
         <button className={`etab${tab==="weekly"?" ac":""}`} onClick={() => setTab("weekly")}>🗓 Weekly View</button>
         <button className={`etab${tab==="invoice"?" ac":""}`} onClick={() => setTab("invoice")}>💰 Invoice</button>
+        <button className={`etab${tab==="past"?" ac":""}`} onClick={() => setTab("past")}>🗂 Past</button>
       </div>
 
-      {tab === "inbox" && (
+      {(tab === "inbox" || tab === "past") && (() => {
+        const todayIso = ymd(new Date());
+        // Confirmed/Completed/Cancelled 또는 기간이 지난 신청은 Past 탭으로
+        const isPastReq = (r: TutorReq) => ["confirmed", "completed", "cancelled"].includes(r.status || "") || (!!r.end_date && r.end_date < todayIso);
+        const shown = reqs.filter(r => tab === "past" ? isPastReq(r) : !isPastReq(r));
+        return (
         <div className="tbl-w">
-          {loading ? <div className="eempty">Loading...</div> : reqs.length === 0 ? <div className="eempty">No requests yet.</div> : (
+          {loading ? <div className="eempty">Loading...</div> : shown.length === 0 ? <div className="eempty">{tab === "past" ? "No past requests." : "No active requests."}</div> : (
             <table className="tbl">
               <thead><tr>
                 <th style={{width:"5%"}}>Date</th>
                 <th style={{width:"10%",whiteSpace:"nowrap"}}>House</th>
-                <th style={{width:"9%"}}>Reserver</th>
-                <th style={{width:"16%"}}>Student</th>
+                <th style={{width:"25%"}}>Student</th>
                 <th style={{width:"4%"}}>Age</th>
                 <th style={{width:"4%"}}>Type</th>
                 <th style={{width:"4%"}}>Time</th>
@@ -1070,13 +1075,12 @@ export default function EngTutorClassPage() {
                 <th style={{width:"13%",textAlign:"center"}}>Action</th>
               </tr></thead>
               <tbody>
-                {reqs.map(r => {
+                {shown.map(r => {
                   const st = STATUS_META[r.status] || STATUS_META.pending;
                   return (
                     <tr key={r.id} onClick={() => openDetail(r)}>
                       <td style={{color:"#6b7c93",fontSize:11}}>{fmtDate(r.created_at)}</td>
                       <td style={{color:"#1a6fc4",fontWeight:700,whiteSpace:"nowrap"}}>{r.house_number || "-"}</td>
-                      <td>{r.guest_name || "-"}</td>
                       <td style={{fontWeight:600}}>
                         {r.student_name_en || r.student_name_kr || ""}
                         {(r as any).slot_label && (
@@ -1123,7 +1127,8 @@ export default function EngTutorClassPage() {
             </table>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {tab === "mine" && (() => {
         if (!me) {
@@ -1378,7 +1383,7 @@ export default function EngTutorClassPage() {
                   >
                     <span style={{flex:1,minWidth:0}}>
                       <span style={{fontWeight:700,color:isMine?"#1a6fc4":"#475569",marginRight:8}}>{tName}{isMine?" (me)":""}</span>
-                      <span style={{fontWeight:700,color:"#1a1a2e"}}>{l.student_names || "-"}</span>
+                      <span style={{fontWeight:700,color:"#1a1a2e"}}>{pickEnFirst(l) || "-"}</span>
                       <span style={{fontWeight:400,color:"#6b7c93",marginLeft:6}}>· {l.class_type || ""} · {fmtDate(l.start_date)}~{fmtDate(l.end_date)}</span>
                     </span>
                     <span style={{color:"#16a34a",fontWeight:700,whiteSpace:"nowrap"}}>{l.total_amount != null ? `₱${l.total_amount.toLocaleString()}` : ""} →</span>
@@ -1404,7 +1409,6 @@ export default function EngTutorClassPage() {
               <h4>STUDENT INFO</h4>
               <div className="ekv">
                 <span className="k">House</span><span className="v" style={{color:"#1a6fc4",fontWeight:700}}>{detail.house_number || "-"}</span>
-                <span className="k">Reserver</span><span className="v">{detail.guest_name || "-"}</span>
                 <span className="k">Student</span><span className="v">{detail.student_name_en || detail.student_name_kr || ""}</span>
                 <span className="k">Age</span><span className="v">{detail.student_age?.replace(/\d{4}\.\d{2}\.\d{2}\s*/g,"") || "-"}</span>
               </div>
