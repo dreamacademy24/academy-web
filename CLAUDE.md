@@ -1798,3 +1798,15 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - ✅ 직원 프로필: 직원업무 설정>👤프로필 탭 (색깔·이메일 서명, staff_accounts.signature) → 리조트 이메일 서명 자동 (staffId admin- 접두사 정규화 주의)
 - ✅ 체크인디테일 GUEST DETAILS 인쇄 선 강화 / 통학형 12주 가격표 이미지 생성(프로젝트 폴더)
 - 신규 테이블: resort_invoices(+confirm_no,receipt_url,items,guests_kr/en,res_status,special_request), student_daily_logs, booking_checklists, app_settings
+
+## 2026-07-03 세션 (직원업무 개편 ② 내 하루 타임라인)
+- ✅ 내 업무 홈 탭: 좌측 "🕐 내 하루 타임라인" + 우측 기존 보드 (.empb-wrap grid 330px+1fr, 1150px 이하 1열 — team_manager3.html)
+- 저장 구조: app_settings key=staff_timeline_<empId>, value=jsonb 배열 [{id,time,title,ck,doneDate}] — 직원별 분리, 본인만 수정(타인은 읽기전용)
+- 기능: 시간(--:--) 클릭=수정모드 · ✎ 수정/🗑 삭제 · ⠿ HTML5 드래그 순서 · 하단 시간+내용 추가(Enter) · 📋 체크리스트 가져오기(내 데일리 항목을 ck=item.id로 연결)
+- 데일리 체크 연동: ck 항목 dot 토글 → staff_daily_check upsert/delete (홈 체크리스트와 양방향 동기화). 일반 항목은 doneDate=오늘 문자열 → 날짜 바뀌면 자동 리셋
+- ▶ 현재 진행 위치 표시(시간<=now 마지막 미완료, UTC+8 _dailyToday 기준), 완료=초록 ✓
+- 시간 변경/추가 시 시간순 자동 재배치(_tlReposition), 무시간 항목은 뒤쪽 유지
+- 커밋: tm-timeline 브랜치 → 프리뷰 검증 → main 머지 350707b (좌측 배치 e8ea0c2 포함), 라이브 검증 완료 (추가·수정·드래그·체크연동 왕복·새로고침 유지)
+- 메이(ceo) 타임라인에 데일리 9개 항목 프리로드됨 (시간 미지정 상태)
+- ⚠️ 메이 로컬 저장소(C:/Users/desko/academy-web) git pull 필요 — 샌드박스 마운트 git이 "unknown error reading configuration files"로 계속 실패 (지난 세션과 동일 증상, /tmp 클론으로 작업함)
+- 다음 순서: ③ 전체 업무 테이블형(+보드 토글) → 애프터스쿨 월별 달력 그리드+개편 → booking/booking2 휴무 안내 미표시 버그
