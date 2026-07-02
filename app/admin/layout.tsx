@@ -104,8 +104,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+      <style>{`@media print{.admin-noprint{display:none!important}.admin-main{height:auto!important;overflow:visible!important}}`}</style>
       {!hidden && (
-        <aside style={{ width: 224, flexShrink: 0, background: "#3a47a8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
+        <aside className="admin-noprint" style={{ width: 224, flexShrink: 0, background: "#3a47a8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.16)" }}>
             <Link href="/admin/today" style={{ fontSize: 15, fontWeight: 800, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFD54A" }}>WORKSPACE</span></Link>
             <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#c5cbf2", cursor: "pointer", fontSize: 18 }}>‹</button>
@@ -134,12 +135,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div style={{ height: 24 }} />
         </aside>
       )}
-      <main style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
+      <main className="admin-main" style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
         {hidden && (
-          <button onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#3a47a8", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
-        )}
-        {children}
-      </main>
-    </div>
-  );
-}
+          <button className="admin-noprint" onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, backgr
