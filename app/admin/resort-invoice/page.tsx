@@ -248,10 +248,17 @@ export default function ResortInvoicePage() {
     } finally { setSavingImg(false); }
   }
 
-  // 이메일 작성 화면 열기 (제목·본문 기본값 채움 — 담당자 서명 포함)
-  function openEmailModal() {
+  // 이메일 작성 화면 열기 — 직원 프로필(직원업무 설정 > 프로필)에 저장한 서명 자동 사용
+  async function openEmailModal() {
     if (!preview) return;
-    const staff = getAdminInfo()?.name || "Dream Company Staff";
+    const info = getAdminInfo();
+    const staff = info?.name || "Dream Company Staff";
+    let signature = `Best regards,\n${staff}\nDream Company (Dream Academy)`;
+    try {
+      const d = await fetch("/api/admin/staff-accounts?role=korean_admin").then(r => r.json());
+      const row = (d.staff || []).find((x: { username: string }) => x.username === "admin-" + (info?.staffId || ""));
+      if (row?.signature?.trim()) signature = row.signature.trim();
+    } catch {}
     setEmailSubject(`[Dream Company] Reservation Request — ${preview.guest_name} (${preview.period_start} ~ ${preview.period_end})`);
     setEmailBody(
 `Dear ${preview.resort === "jaypark" ? "Jpark Reservations Team" : "Cube Nine Team"},
@@ -266,9 +273,7 @@ Total: ${num(preview.amount)} ${preview.currency}
 
 Kindly send us the confirmation number for this booking.
 
-Best regards,
-${staff}
-Dream Company (Dream Academy)`);
+${signature}`);
     setEmailModal(true);
   }
 

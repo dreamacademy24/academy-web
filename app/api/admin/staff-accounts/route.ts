@@ -7,7 +7,7 @@ const supabase = createClient(
 )
 
 // password_hash 제외 — 클라이언트에 해시 노출 금지
-const PUBLIC_COLS = 'id,username,role,name,is_active,created_at,color,initial'
+const PUBLIC_COLS = 'id,username,role,name,is_active,created_at,color,initial,signature'
 
 // Postgres 단일따옴표 문자열 리터럴 이스케이프 (exec_sql 인터폴레이션 시 SQL injection 방지)
 function sqlStr(v: unknown): string {
@@ -74,6 +74,16 @@ export async function PATCH(req: Request) {
       const sql = `UPDATE staff_accounts SET password_hash = crypt(${sqlStr(newPassword)}, gen_salt('bf')) ` +
         `WHERE username = ${sqlStr(username)}`
       const { error } = await supabase.rpc('exec_sql', { sql })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'profile') {
+      // 본인 프로필 (색깔·이메일 서명) 업데이트 — password 등은 건드리지 않음
+      const patch: Record<string, string> = {}
+      if (typeof body.color === 'string' && body.color) patch.color = body.color
+      if (typeof body.signature === 'string') patch.signature = body.signature
+      if (Object.keys(patch).length === 0) return NextResponse.json({ error: '변경할 내용이 없습니다.' }, { status: 400 })
+      const { error } = await supabase.from('staff_accounts').update(patch).eq('username', username)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
     }

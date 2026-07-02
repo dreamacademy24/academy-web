@@ -3215,12 +3215,14 @@ async function saveGuideMsg() {
       <button class="settings-tab" onclick="setSettingsTab(2,this)">🎯 월간 목표</button>
       <button class="settings-tab" onclick="setSettingsTab(3,this)">🔔 알림</button>
       <button class="settings-tab" onclick="setSettingsTab(4,this)">🔑 비밀번호</button>
+      <button class="settings-tab" onclick="setSettingsTab(5,this)">👤 프로필</button>
     </div>
     <div class="settings-panel active" id="sp0"></div>
     <div class="settings-panel" id="sp1"></div>
     <div class="settings-panel" id="sp2"></div>
     <div class="settings-panel" id="sp3"></div>
     <div class="settings-panel" id="sp4"></div>
+    <div class="settings-panel" id="sp5"></div>
   </div>
 </div>
 
@@ -9572,9 +9574,41 @@ function openSettings(){renderAllSettingsTabs();openM('settingsModal');}
 function setSettingsTab(idx,el){
   document.querySelectorAll('#settingsTabs .settings-tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
-  for(var i=0;i<5;i++)document.getElementById('sp'+i).classList.toggle('active',i===idx);
+  for(var i=0;i<6;i++)document.getElementById('sp'+i).classList.toggle('active',i===idx);
 }
-function renderAllSettingsTabs(){renderSettingsTab0();renderSettingsTab1();renderSettingsTab2();renderSettingsTab3();renderSettingsTab4();}
+function renderAllSettingsTabs(){renderSettingsTab0();renderSettingsTab1();renderSettingsTab2();renderSettingsTab3();renderSettingsTab4();renderSettingsTab5();}
+function renderSettingsTab5(){
+  var panel=document.getElementById('sp5');if(!panel)return;
+  var me=getP(CU.id)||{};
+  var h='<div style="font-size:13px;font-weight:700;margin-bottom:12px">👤 내 프로필</div>';
+  h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">';
+  h+='<span style="font-size:12.5px;font-weight:700;width:80px">내 색깔</span>';
+  h+='<input type="color" id="profColor" value="'+(me.color||'#6366f1')+'" style="width:44px;height:32px;border:1px solid var(--border);border-radius:7px;cursor:pointer;background:var(--surface)"/>';
+  h+='<span style="font-size:11.5px;color:var(--text3)">아바타·업무 카드 색상</span></div>';
+  h+='<div style="margin-bottom:6px"><span style="font-size:12.5px;font-weight:700">이메일 서명</span> <span style="font-size:11px;color:var(--text3)">— 리조트 인보이스 등 이메일 발송 시 본문 끝에 자동으로 들어갑니다</span></div>';
+  h+='<textarea id="profSig" rows="5" placeholder="예)\nBest regards,\nCEO/PRESIDENT\nCHOHEE OH / MAY OH\n+63 0929-293-2991" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical"></textarea>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveMyProfile()">저장</button></div>';
+  panel.innerHTML=h;
+  // 서명 현재값 로드
+  fetch('/api/admin/staff-accounts?role=korean_admin').then(function(r){return r.json();}).then(function(d){
+    var row=(d.staff||[]).find(function(x){return x.username==='admin-'+CU.id;});
+    var ta=document.getElementById('profSig');
+    if(row&&ta&&!ta.value)ta.value=row.signature||'';
+    if(row&&row.color){var c=document.getElementById('profColor');if(c)c.value=row.color;}
+  }).catch(function(){});
+}
+function saveMyProfile(){
+  var color=(document.getElementById('profColor')||{}).value||'';
+  var sig=(document.getElementById('profSig')||{}).value||'';
+  fetch('/api/admin/staff-accounts',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'admin-'+CU.id,action:'profile',color:color,signature:sig})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok){alert('저장 실패: '+((res.d&&res.d.error)||''));return;}
+      var me=getP(CU.id);if(me&&color)me.color=color;
+      alert('프로필이 저장됐어요 ✅');
+    })
+    .catch(function(e){alert('저장 실패: '+e.message);});
+}
 function renderSettingsTab0(){
   var panel=document.getElementById('sp0');
   var empId=CU.id,data=getDailyData(empId);
