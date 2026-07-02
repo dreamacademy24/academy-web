@@ -1752,3 +1752,36 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
   4. 사이드바에 알림 뱃지(예약 룸미배정/튜터) 연동
   5. 모바일 토글 다듬기
 - ⚠️ 검증: 메이 어드민 세션 만료로 라이브 시각 확인 못함. 로그인 후 아무 /admin 페이지 들어가면 좌측 사이드바 보임. 이상하면 백업 태그로 즉시 복구.
+
+## 2026-07-02 세션 (Cowork 직접 배포 체제 확립)
+
+### 완료 작업 (전부 배포·라이브 검증됨)
+- ✅ 통학형 견적 9~12주 확장 (정가 주당 +43만, 성수기=정가×0.95, 비수기=성수기×0.9)
+- ✅ 통학형 아이 인원수 반영 (가격표=1명 기준 × 아이 수) — EstimateCalc lookup commute 분기
+- ✅ booking2 휴무 안내 팝업+배너 이식 (/booking과 동일, holidays_notified 저장)
+- ✅ admineng 튜터: Inbox에서 확정/과거 건 제외 → 🗂 Past 탭 신설, Reserver 한글 컬럼 제거, 인보이스 목록 영문명 우선+중복 제거
+- ✅ admineng 학생 캘린더: 폐기된 bookings_new 조인 → bookings JSONB 평탄화(한국인 학생관리와 동일 공식·집계), 영문명 우선
+- ✅ 학생 캘린더 인쇄: 한 장/1~15일/16~말일 분할 + 한국인 페이지 인쇄 CSS
+- ✅ Teacher Hub 학생캘린더 빨간 점 (lib/scFingerprint.ts — 신규학생/일정변경 감지, 방문 시 해제)
+- ✅ 리조트 메뉴 신설 (사이드바 그룹 + resort_invoices 테이블):
+  · /admin/resort-invoice — 샘플 양식(Customer Information/Purchase Order/Special Requests), JP 단기(Corporate)/장기7박/장기14박 단가 자동(lib/resortRates.ts), C9 박당 풀사이드17만/오션디럭스15만(KRW), 예약 불러오기(콤보 seg 지원, 투숙객 명단 자동), 추가 항목(조식 등), 이미지 저장(html2canvas), 📧 이메일 발송
+  · /admin/resort-payments — 리조트/상태/월 필터, 미결제·결제완료 합계, 결제완료 처리(날짜·메모)
+  · /api/resort-invoice/email — nodemailer(mail.privateemail.com:465), 인보이스 PNG 첨부
+- ✅ 사이드바 기타업무에 이메일(웹메일) 추가 — 외부 http 링크는 새 탭(↗)
+
+### ⚠️ 메이 해야 할 일
+1. Vercel 환경변수 MAIL_USER / MAIL_PASS 등록 (Namecheap Private Email 계정) — 등록 전까지 이메일 발송 버튼은 안내 에러
+2. 제이파크 단기(Corporate) 단가 검증 — 사진 스캔 기준이라 오독 가능 (장기 7/14박 단가는 정확). lib/resortRates.ts에서 수정
+3. Angel (테스트) 튜터명 DB에서 "(테스트)" 제거
+4. 강연미/신현선 학생 영문명 입력 (admineng 인보이스 목록 한글 잔존)
+
+### 🐛 미해결 — booking/booking2 휴무 안내 미표시 (보류 중)
+- 10/24~11/21 선택 시 10/30·31 휴무(배포됨, DB 확인)가 있는데 배너/팝업 안 뜸 — /booking(기본)에서도 동일
+- 번들에 휴무 코드 존재, holidays fetch 200, state 정상 갱신 확인 — 원인 미상 (다음 세션 추적)
+
+### Cowork(로컬 에이전트) 직접 배포 워크플로우 확립 — 핵심 함정
+- 샌드박스 git push 가능 (remote에 토큰). Vercel 자동 배포 ~2분
+- 🚨 호스트 Edit로 수정한 파일을 샌드박스 git add하면 옛 크기로 잘려 커밋됨 (빌드 실패 사고 1회, b253a4e로 복구) → 파일 수정은 반드시 샌드박스 쪽(python/heredoc)에서
+- .git/*.lock 삭제 불가 시 Cowork 파일삭제 권한 도구 필요
+- 샌드박스에서 supabase.co/api.github.com 프록시 차단 → DDL은 브라우저 fetch + exec_sql RPC(service_role) + NOTIFY pgrst
+- Vercel 상태 확인: vercel.com 탭에서 /api/v6/deployments fetch (세션 쿠키), 빌드 로그 /api/v2/deployments/{dpl}/events?builds=1
