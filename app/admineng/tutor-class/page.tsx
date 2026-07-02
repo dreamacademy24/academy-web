@@ -72,9 +72,12 @@ function pickEnFirst(l: any): string {
     for (const t of g.split(",").map(s => s.trim()).filter(Boolean)) tokens.push(t);
   }
   const en = tokens.map(_toEn);
-  const latin = en.filter(t => /[A-Za-z]/.test(t));
+  // 중복 제거 (한글/영문이 같은 사람으로 변환된 경우: "Kim minsol / Kim minsol" 방지)
+  const seen = new Set<string>();
+  const uniq = en.filter(t => { const k = t.toLowerCase().replace(/\s+/g, ""); if (seen.has(k)) return false; seen.add(k); return true; });
+  const latin = uniq.filter(t => /[A-Za-z]/.test(t));
   if (latin.length > 0) return latin.slice(0, 2).join(" / ");
-  return en[0] || "-";
+  return uniq[0] || "-";
 }
 
 // students 테이블에서 한글→영문 이름 맵을 1회 로드 (현지직원 화면 영문 표시)
