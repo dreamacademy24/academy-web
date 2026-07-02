@@ -2,15 +2,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import ResortInvoiceDoc, { type ResortInvDocRow } from "../resort-invoice/ResortInvoiceDoc";
 
 type Resort = "all" | "jaypark" | "cubenine";
 const RESORT_LABEL: Record<string, string> = { jaypark: "제이파크", cubenine: "큐브나인" };
 
-interface InvRow {
-  id: string; invoice_no: string; resort: string; guest_name: string;
-  room_type: string; period_start: string; period_end: string; nights: number;
-  amount: number; currency: string; memo: string | null;
-  status: string; paid_date: string | null; paid_memo: string | null; created_at: string;
+interface InvRow extends ResortInvDocRow {
+  id: string; memo: string | null;
+  status: string; paid_date: string | null; paid_memo: string | null;
 }
 
 function fmtMoney(n: number, cur: string) {
@@ -33,6 +32,8 @@ export default function ResortPaymentsPage() {
   const [resort, setResort] = useState<Resort>("all");
   const [status, setStatus] = useState<"all" | "unpaid" | "paid">("all");
   const [month, setMonth] = useState(""); // YYYY-MM, ""=전체
+  const [viewInv, setViewInv] = useState<InvRow | null>(null);
+  const [savingImg, setSavingImg] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +78,34 @@ export default function ResortPaymentsPage() {
     load();
   }
 
+  // 리조트가 준 최종 컨펌넘버 입력 → 인보이스에 Confirmation No 표시 (status도 confirmed로)
+  async function setConfirmNo(r: InvRow) {
+    const v = prompt("리조트 컨펌넘버를 입력하세요:", r.confirm_no || "");
+    if (v === null) return;
+    const confirm_no = v.trim() || null;
+    const { error } = await supabase.from("resort_invoices")
+      .update({ confirm_no, res_status: confirm_no ? "confirmed" : "tentatively", updated_at: new Date().toISOString() })
+      .eq("id", r.id);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    if (viewInv?.id === r.id) setViewInv({ ...viewInv, confirm_no, res_status: confirm_no ? "confirmed" : "tentatively" });
+    load();
+  }
+
+  async function saveImage() {
+    if (!viewInv) return;
+    setSavingImg(true);
+    try {
+      const el = document.getElementById("pay-inv-doc");
+      if (!el) return;
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `invoice_${viewInv.invoice_no}${viewInv.confirm_no ? "_" + viewInv.confirm_no : ""}.png`;
+      a.click();
+    } finally { setSavingImg(false); }
+  }
+
   if (!authed) return null;
 
   const months = Array.from(new Set(rows.map(r => (r.period_start || "").slice(0, 7)).filter(Boolean))).sort().reverse();
@@ -100,6 +129,14 @@ export default function ResortPaymentsPage() {
 .badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
 .abtn{padding:5px 12px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
+.inv-ov{position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}
+.inv-box{background:#f8fafc;border-radius:12px;padding:14px;max-width:900px;width:100%}
+@media print{
+  body{background:#fff!important}
+  .no-print,.rw{display:none!important}
+  .inv-ov{position:static!important;background:#fff!important;padding:0!important;overflow:visible!important}
+  .inv-box{box-shadow:none!important;padding:0!important;max-width:none!important;border-radius:0!important}
+}
     `}</style>
     <div className="rw">
       <div className="rh"><h1>💳 리조트 결제내역</h1></div>
@@ -135,16 +172,22 @@ export default function ResortPaymentsPage() {
       <div className="card">
         {loading ? <div className="empty">불러오는 중...</div> : filtered.length === 0 ? <div className="empty">내역이 없습니다. 인보이스 생성 페이지에서 먼저 인보이스를 만들어주세요.</div> : (
           <table className="tbl"><thead><tr>
-            <th>번호</th><th>리조트</th><th>손님</th><th>룸</th><th>기간</th><th>금액</th><th>상태</th><th>결제일</th><th>메모</th><th style={{ width: 110 }}></th>
+            <th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>메모</th><th style={{ width: 110 }}></th>
           </tr></thead><tbody>
             {filtered.map(r => (
               <tr key={r.id}>
-                <td style={{ fontWeight: 700, color: "#1a6fc4", whiteSpace: "nowrap" }}>{r.invoice_no}</td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  <button onClick={() => setViewInv(r)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, textDecoration: "underline" }}>{r.invoice_no}</button>
+                </td>
                 <td>{RESORT_LABEL[r.resort] || r.resort}</td>
                 <td style={{ fontWeight: 700 }}>{r.guest_name}</td>
-                <td>{r.room_type}</td>
                 <td style={{ whiteSpace: "nowrap" }}>{r.period_start} ~ {r.period_end} ({r.nights}박)</td>
                 <td style={{ fontWeight: 800 }}>{fmtMoney(r.amount, r.currency)}</td>
+                <td onClick={() => setConfirmNo(r)} style={{ cursor: "pointer", whiteSpace: "nowrap" }} title="클릭해서 입력/수정">
+                  {r.confirm_no
+                    ? <span style={{ fontWeight: 800, color: "#b45309", background: "#fffbeb", padding: "2px 8px", borderRadius: 6 }}>{r.confirm_no}</span>
+                    : <span style={{ color: "#94a3b8", fontSize: 11.5, textDecoration: "underline" }}>+ 입력</span>}
+                </td>
                 <td>{r.status === "paid"
                   ? <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>결제완료</span>
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
@@ -161,5 +204,18 @@ export default function ResortPaymentsPage() {
         )}
       </div>
     </div>
+    {viewInv && (
+      <div className="inv-ov" onClick={() => setViewInv(null)}>
+        <div className="inv-box" onClick={e => e.stopPropagation()}>
+          <div className="no-print" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <button className="chip" onClick={() => setConfirmNo(viewInv)}>{viewInv.confirm_no ? `컨펌넘버: ${viewInv.confirm_no} (수정)` : "🔖 컨펌넘버 입력"}</button>
+            <button className="chip" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
+            <button className="chip" onClick={() => window.print()}>🖨️ 인쇄</button>
+            <button className="chip" onClick={() => setViewInv(null)}>닫기</button>
+          </div>
+          <ResortInvoiceDoc inv={viewInv} domId="pay-inv-doc" />
+        </div>
+      </div>
+    )}
   </>);
 }

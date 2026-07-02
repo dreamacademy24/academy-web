@@ -3,10 +3,10 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { JPARK_ROOMS, JPARK_EXTRA_PERSON, JPARK_TIER_LABEL, jparkTier, CUBENINE_ROOMS, calcNights } from "@/lib/resortRates";
+import ResortInvoiceDoc from "./ResortInvoiceDoc";
 
 type Resort = "jaypark" | "cubenine";
 const RESORT_LABEL: Record<Resort, string> = { jaypark: "제이파크", cubenine: "큐브나인" };
-const RESORT_X: Record<Resort, string> = { jaypark: "Dream Academy X J-park", cubenine: "Dream Academy X Cube Nine" };
 
 interface Item { label: string; amount: number }
 interface BookingLite {
@@ -24,6 +24,7 @@ interface InvRow {
   paid_date: string | null; created_at: string;
   items: Item[] | null; guests_kr: string | null; guests_en: string | null;
   reservation_no: string | null; res_status: string | null; special_request: string | null;
+  confirm_no: string | null;
 }
 
 function num(n: number) { return Number(n || 0).toLocaleString(); }
@@ -219,7 +220,6 @@ export default function ResortInvoicePage() {
   const recent = useMemo(() => invoices.filter(v => v.resort === resort), [invoices, resort]);
   if (!authed) return null;
 
-  const pvItems: Item[] = preview ? (Array.isArray(preview.items) && preview.items.length > 0 ? preview.items : [{ label: `${preview.nights} nights in a ${preview.room_type} Room`, amount: preview.amount }]) : [];
 
   return (<>
     <style>{`
@@ -242,25 +242,6 @@ export default function ResortInvoicePage() {
 .tbl th{background:#f8fafc;text-align:left;padding:8px 10px;font-size:11.5px;color:#475569;border-bottom:1px solid #e5e7eb}
 .tbl td{padding:8px 10px;border-bottom:1px solid #f3f4f6}
 .badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
-/* ── 인보이스 문서 (샘플 양식) ── */
-.inv-doc{background:#fff;padding:36px 40px;max-width:820px;margin:0 auto;font-family:'Noto Sans KR',Arial,sans-serif;color:#111}
-.inv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:12px}
-.inv-title{background:#fdf6dd;padding:12px 34px;font-size:30px;font-weight:800;letter-spacing:4px;font-family:Georgia,serif}
-.inv-x{font-size:14px;font-weight:800;margin-bottom:4px}
-.inv-h2{font-size:24px;font-weight:900;margin-bottom:8px}
-.ci{width:100%;border-collapse:collapse;font-size:13.5px}
-.ci th{background:#f3f4f6;border:1px solid #cbd5e1;padding:9px 10px;font-weight:800;width:170px;text-align:center}
-.ci td{border:1px solid #cbd5e1;padding:9px 12px;text-align:center}
-.po{border:1px solid #cbd5e1;margin-top:8px}
-.po-h{border-bottom:1px solid #cbd5e1;padding:9px 12px;font-size:17px;font-weight:900}
-.po-items{min-height:130px;padding:12px}
-.po-item{display:flex;justify-content:space-between;font-size:14px;padding:4px 2px}
-.po-foot{display:grid;grid-template-columns:170px 1fr 170px 1fr;border-top:1px solid #cbd5e1;font-size:14px}
-.po-foot .k{background:#f3f4f6;padding:10px;font-weight:800;text-align:center;border-right:1px solid #cbd5e1}
-.po-foot .v{padding:10px 14px;text-align:right;font-weight:700;border-right:1px solid #cbd5e1}
-.oc{display:grid;grid-template-columns:170px 1fr;border:1px solid #cbd5e1;margin-top:8px;font-size:14px}
-.oc .k{background:#f3f4f6;padding:12px;font-weight:800;text-align:center;border-right:1px solid #cbd5e1}
-.oc .v{padding:12px 14px}
 @media print{
   body{background:#fff!important}
   .no-print{display:none!important}
@@ -357,41 +338,7 @@ export default function ResortInvoicePage() {
             <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄</button>
             <button className="rtab" onClick={() => setPreview(null)}>닫기</button>
           </div>
-          <div className="inv-doc" id="resort-inv-doc">
-            <div className="inv-top">
-              <img src="/dream-academy-logo.png" alt="Dream Company" style={{ height: 54, width: "auto" }} />
-              <div className="inv-title">INVOICE</div>
-            </div>
-            <div className="inv-x">{RESORT_X[preview.resort as Resort]}</div>
-            <div className="inv-h2">Customer Information</div>
-            <table className="ci"><tbody>
-              <tr><th>Reservation Name</th><td>{preview.guest_name}</td><th>Reservation Number</th><td>{preview.reservation_no || ""}</td></tr>
-              <tr><th>Reservation Date</th><td>{preview.created_at?.slice(0, 10)}</td><th>Reservation Status</th><td style={{ fontWeight: 800 }}>{preview.res_status || "tentatively"}</td></tr>
-              <tr><th>Check-In</th><td>{preview.period_start}</td><th>time</th><td>오후 3:00</td></tr>
-              <tr><th>Check-Out</th><td>{preview.period_end}</td><th>time</th><td style={{ color: "#dc2626", fontWeight: 700 }}>12:00 noon</td></tr>
-              <tr><th>Room Type</th><td>{preview.room_type}</td><th>Nights</th><td>{preview.nights} nights</td></tr>
-              <tr><th>Guest Name(korean)</th><td colSpan={3} style={{ textAlign: "left" }}>{preview.guests_kr || ""}</td></tr>
-              <tr><th>Guest Name(En)</th><td colSpan={3} style={{ textAlign: "left" }}>{preview.guests_en || ""}</td></tr>
-            </tbody></table>
-            <div className="inv-h2" style={{ marginTop: 26 }}>Invoice Details</div>
-            <div className="po">
-              <div className="po-h">Purchase Order</div>
-              <div className="po-items">
-                {pvItems.map((it, i) => (
-                  <div key={i} className="po-item"><span>{it.label}</span><span style={{ fontWeight: i === 0 ? 500 : 800 }}>{num(it.amount)}</span></div>
-                ))}
-              </div>
-              <div className="po-foot">
-                <div className="k">Total Amount</div><div className="v">{num(preview.amount)}</div>
-                <div className="k">Payment Amount</div><div className="v" style={{ borderRight: "none" }}>{num(preview.amount)}</div>
-              </div>
-            </div>
-            <div className="inv-h2" style={{ marginTop: 26, fontSize: 19 }}>Other Confirmation Items</div>
-            <div className="oc">
-              <div className="k">Special Requests</div>
-              <div className="v">{preview.special_request || "-"}</div>
-            </div>
-          </div>
+          <ResortInvoiceDoc inv={preview} />
         </div>
       )}
 
