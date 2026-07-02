@@ -49,6 +49,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "자료모음", href: "/admin/resources" },
     { label: "사이트 관리", href: "/admin/site" },
     { label: "민에듀 공구", href: "/admin/minedu" },
+    { label: "이메일", href: "https://privateemail.com/appsuite/", ext: true },
   ]},
 ];
 
@@ -126,6 +127,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const on = active(it);
                 const bdg = badgeFor(it);
                 const style: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 18px 11px 30px", fontSize: 14.5, fontWeight: on ? 700 : 500, textDecoration: "none", color: on ? "#fff" : "#dfe2fa", background: on ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.07)", borderBottom: "1px solid rgba(255,255,255,0.06)" };
+                // 외부 도메인(https)은 iframe 불가 — 새 탭으로 연다
+                if (it.href.startsWith("http")) {
+                  return (
+                    <a key={it.href} href={it.href} target="_blank" rel="noreferrer" style={style}>
+                      <span>{it.label} ↗</span>
+                    </a>
+                  );
+                }
                 const to = it.ext ? `/admin/view?src=${encodeURIComponent(it.href)}` : it.href;
                 return (
                   <Link key={it.href} href={to} onClick={() => it.ext && setViewSrc(it.href)} style={style}>
