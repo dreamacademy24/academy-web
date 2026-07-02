@@ -159,7 +159,6 @@ export default function CashLedgerPage() {
     <div style={{ maxWidth: 1020, margin: "0 auto", padding: "24px 20px" }}>
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <button onClick={() => router.push("/admin/hub")} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600, fontFamily: "inherit" }}>← 관리자 홈</button>
         <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>💰 시재 관리</h1>
       </div>
       <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>보증금 입금, 지출 내역, 영수증을 기록하고 관리합니다.</p>

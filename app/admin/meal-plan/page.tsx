@@ -387,7 +387,6 @@ export default function MealPlanPage() {
 
     <div className="mp-w">
       <div className="mp-top">
-        <a className="mp-back" href="/admin/hub">← 관리자 홈</a>
         <h1>🍽 식단 관련 업무</h1>
         <span style={{ fontSize: 12.5, color: "#64748b" }}>올인원 패키지 · 드림하우스 체류 구간 자동 추출</span>
       </div>

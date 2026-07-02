@@ -437,7 +437,6 @@ export default function AdminPage() {
       <div className="admin-header">
         <span className="admin-title">Dream Academy Admin</span>
         <div className="admin-nav">
-          <a href="/admin">← 관리자 홈</a>
           <a href="/">홈</a>
           <a href="/notice">공지사항</a>
           <button className="logout-btn" onClick={() => { if (typeof window !== "undefined") localStorage.removeItem("adminAuthed"); setAuthed(false); }}>로그아웃</button>

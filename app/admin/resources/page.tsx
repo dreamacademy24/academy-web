@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { toastOk, toastErr } from '@/lib/toast'
 import { BASE_URL, PUBLIC_PAGES } from '@/lib/publicPages'
@@ -118,7 +117,6 @@ export default function ResourcesPage() {
   return (
     <div style={{maxWidth:1100,margin:'0 auto',padding:'32px 24px'}}>
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
-        <Link href="/admin/hub" style={{color:'#6b7280',textDecoration:'none',fontSize:14}}>← 관리자 홈</Link>
         <h1 style={{fontSize:24,fontWeight:700,margin:0}}>📂 자료모음</h1>
       </div>
 

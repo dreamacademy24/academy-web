@@ -393,7 +393,6 @@ td.empty{color:#cbd5e1;text-align:center}
   return (
     <div style={{ maxWidth: 1020, margin: "0 auto", padding: "28px 20px 60px", fontFamily: "'Noto Sans KR',sans-serif", color: "#1a1a2e" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <button onClick={() => router.push("/admin/hub")} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600 }}>← 관리자 홈</button>
         <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>🧾 정산 관리</h1>
         <button onClick={() => setPresetMgr(true)} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 12px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⚙️ 자주 쓰는 항목</button>
       </div>

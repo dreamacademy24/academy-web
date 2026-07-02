@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
@@ -16,7 +15,6 @@ interface Bk { id: string; booker_name: string | null; reservation_no: string | 
 const fmt = (iso?: string | null) => { if (!iso) return "–"; const d = new Date(iso); return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()} ${("0" + d.getHours()).slice(-2)}:${("0" + d.getMinutes()).slice(-2)}`; };
 
 export default function ConsentsAdminPage() {
-  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<"experience" | "booking">("experience");
   const [rows, setRows] = useState<Row[]>([]);
@@ -116,18 +114,15 @@ export default function ConsentsAdminPage() {
 @media(max-width:720px){.cadmin aside{display:none}.cadmin main{padding:16px}}
     `}</style>
     <div className="cadmin"><div className="app">
-      <aside>
-        <div className="logo" onClick={() => router.push("/admin/hub")} style={{ cursor: "pointer" }}>DREAM <span>ADMIN</span> · 동의서함</div>
-        <h4>동의서 종류</h4>
-        <div className={`navitem${tab === "experience" ? " active" : ""}`} onClick={() => switchTab("experience")}>체험단 동의서 <span className="cnt">{tab === "experience" ? rows.length : ""}</span></div>
-        <div className={`navitem${tab === "booking" ? " active" : ""}`} onClick={() => switchTab("booking")}>부킹 동의 <span className="cnt">{tab === "booking" ? rows.length : ""}</span></div>
-        <h4>향후 추가 예정</h4>
-        <div className="navitem add">개인정보 수집 동의 <span className="cnt">–</span></div>
-        <div className="navitem add">초상권 사용 동의 <span className="cnt">–</span></div>
-        <div className="navitem add">+ 새 동의서 양식</div>
-      </aside>
-
       <main>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          {([["experience", "체험단 동의서"], ["booking", "부킹 동의"]] as const).map(([k, label]) => (
+            <button key={k} className="btn" onClick={() => switchTab(k)}
+              style={tab === k ? { background: "#2E75B6", color: "#fff", border: "none", fontWeight: 700 } : {}}>
+              {label}{tab === k ? ` (${rows.length})` : ""}
+            </button>
+          ))}
+        </div>
         <div className="top">
           <h1>{tab === "experience" ? "체험단 동의서" : "부킹 동의"} <small>{tab === "experience" ? "1:1 발송 · 제출 현황" : "부킹 폼 동의 (읽기전용)"}</small></h1>
           <div className="tools">
