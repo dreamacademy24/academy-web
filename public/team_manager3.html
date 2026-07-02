@@ -1322,7 +1322,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .sortable-chosen{cursor:grabbing;}
 .sortable-drag{opacity:1;box-shadow:0 4px 14px rgba(0,0,0,.12);}
 /* ── 🕐 내 하루 타임라인 (내 업무 홈) ── */
-.empb-wrap{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+.empb-wrap{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
 @media(max-width:1150px){.empb-wrap{grid-template-columns:1fr}}
 .tlw{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:16px}
 .tlw-h{font-size:13.5px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -6704,7 +6704,7 @@ function renderEmpDetailEmpty(emp){
   html+='</div>';
   if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
   html+='</div>';
-  d.innerHTML='<div class="empb-wrap">'+html+'<div id="tlWidget"></div></div>';
+  d.innerHTML='<div class="empb-wrap"><div id="tlWidget"></div>'+html+'</div>';
   renderMyTimeline(empId);
 }
 function _renderEmpChecklist(empId){
