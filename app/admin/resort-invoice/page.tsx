@@ -256,7 +256,9 @@ export default function ResortInvoicePage() {
     let signature = `Best regards,\n${staff}\nDream Company (Dream Academy)`;
     try {
       const d = await fetch("/api/admin/staff-accounts?role=korean_admin").then(r => r.json());
-      const row = (d.staff || []).find((x: { username: string }) => x.username === "admin-" + (info?.staffId || ""));
+      const sid = info?.staffId || "";
+      const uname = sid.startsWith("admin-") ? sid : "admin-" + sid; // staffId가 이미 admin- 접두사를 가진 경우 대응
+      const row = (d.staff || []).find((x: { username: string }) => x.username === uname);
       if (row?.signature?.trim()) signature = row.signature.trim();
     } catch {}
     setEmailSubject(`[Dream Company] Reservation Request — ${preview.guest_name} (${preview.period_start} ~ ${preview.period_end})`);
