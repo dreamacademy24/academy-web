@@ -12,7 +12,7 @@ interface Item { label: string; amount: number }
 interface BookingLite {
   id: string; reservation_no: string | null; booker_name: string; booker_english: string | null; status: string;
   checkin_date: string | null; checkout_date: string | null; accom_type: string | null;
-  students: unknown; extra_guardians: unknown;
+  students: unknown; extra_guardians: unknown; special_request?: string | null;
   seg1_type: string | null; seg1_checkin: string | null; seg1_checkout: string | null;
   seg2_type: string | null; seg2_checkin: string | null; seg2_checkout: string | null;
 }
@@ -61,6 +61,9 @@ export default function ResortInvoicePage() {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<InvRow | null>(null);
   const [emailTo, setEmailTo] = useState("");
+  // 손님 인보이스(스냅샷) 참고 내역 — 예약 선택 시 로드
+  interface RefInfo { items: { label: string; price: number }[]; additions: { name: string; amount: number }[]; discounts: { name: string; amount: number }[]; special: string; lateCheckout: string }
+  const [refInfo, setRefInfo] = useState<RefInfo | null>(null);
   const [sending, setSending] = useState(false);
   const [savingImg, setSavingImg] = useState(false);
 
@@ -102,7 +105,7 @@ export default function ResortInvoicePage() {
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,students,extra_guardians,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .order("checkin_date", { ascending: false }).limit(300);
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
@@ -132,6 +135,23 @@ export default function ResortInvoicePage() {
     if ((b.seg1_type || "") === kw && b.seg1_checkin) { s = b.seg1_checkin; e = b.seg1_checkout || e; }
     else if ((b.seg2_type || "") === kw && b.seg2_checkin) { s = b.seg2_checkin; e = b.seg2_checkout || e; }
     setPs((s || "").slice(0, 10)); setPe((e || "").slice(0, 10));
+    // 손님 인보이스 스냅샷 → 참고 내역 + 추가 항목 프리필 (금액은 페소로 직접 입력)
+    setRefInfo(null); setCustomItems([]);
+    fetch("/api/invoice/snapshot?booking_id=" + id).then(r => r.json()).then(d => {
+      const sd = d?.snapshot?.saved_data || {};
+      const bl = sd.billing || {};
+      const additions = (Array.isArray(bl.additions) ? bl.additions : []).map((x: { name?: string; amount?: number }) => ({ name: String(x.name || "").trim(), amount: Number(x.amount) || 0 })).filter((x: { name: string }) => x.name);
+      const discounts = (Array.isArray(bl.discounts) ? bl.discounts : []).map((x: { name?: string; amount?: number }) => ({ name: String(x.name || "").trim(), amount: Number(x.amount) || 0 })).filter((x: { name: string }) => x.name);
+      const items2 = (Array.isArray(bl.items) ? bl.items : []).map((x: { label?: string; price?: number }) => ({ label: String(x.label || ""), price: Number(x.price) || 0 }));
+      const special = String(b.special_request || "").trim();
+      const lateCheckout = String(sd.lateCheckout || "").trim();
+      if (items2.length || additions.length || discounts.length || special || lateCheckout) {
+        setRefInfo({ items: items2, additions, discounts, special, lateCheckout });
+      }
+      // 추가 항목(조식·1박 추가 등)은 라벨만 복사 — 리조트 지불 금액(₱)은 직접 입력
+      if (additions.length) setCustomItems(additions.map((x: { name: string }) => ({ label: x.name, amount: 0 })));
+      if (special) setSpecialReq(special);
+    }).catch(() => {});
     // 투숙객 명단 = 예약자 + 추가 보호자 + 학생
     const kr: string[] = [], en: string[] = [];
     if (b.booker_name) kr.push(b.booker_name);
@@ -269,7 +289,24 @@ export default function ResortInvoicePage() {
             </option>
           ))}
         </select>
-        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 6 }}>{RESORT_LABEL[resort]} 포함 예약 {bookings.length}건 — 선택하면 이름·기간·투숙객 명단 자동 입력</div>
+        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 6 }}>{RESORT_LABEL[resort]} 포함 예약 {bookings.length}건 — 선택하면 이름·기간·투숙객 명단·추가항목·요청사항 자동 입력</div>
+        {refInfo && (
+          <div style={{ marginTop: 10, padding: "11px 14px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 9, fontSize: 12.5 }}>
+            <div style={{ fontWeight: 800, color: "#1e40af", marginBottom: 6 }}>📋 손님 인보이스 내역 (참고 — 금액은 손님 청구 원화)</div>
+            {refInfo.items.map((it, i) => (
+              <div key={"i" + i} style={{ display: "flex", justifyContent: "space-between", padding: "1px 0" }}><span>{it.label}</span><span>{it.price.toLocaleString()}원</span></div>
+            ))}
+            {refInfo.discounts.map((it, i) => (
+              <div key={"d" + i} style={{ display: "flex", justifyContent: "space-between", padding: "1px 0", color: "#dc2626" }}><span>↓ {it.name}</span><span>-{it.amount.toLocaleString()}원</span></div>
+            ))}
+            {refInfo.additions.map((it, i) => (
+              <div key={"a" + i} style={{ display: "flex", justifyContent: "space-between", padding: "1px 0", color: "#15803d", fontWeight: 700 }}><span>↑ {it.name}</span><span>+{it.amount.toLocaleString()}원</span></div>
+            ))}
+            {refInfo.lateCheckout && <div style={{ padding: "1px 0", color: "#b45309", fontWeight: 700 }}>레이트 체크아웃: {refInfo.lateCheckout}</div>}
+            {refInfo.special && <div style={{ padding: "1px 0", color: "#b45309" }}>요청사항: {refInfo.special}</div>}
+            {refInfo.additions.length > 0 && <div style={{ marginTop: 6, fontSize: 11, color: "#64748b" }}>↑ 추가 항목이 아래 "추가 항목" 줄에 자동으로 들어갔어요 — 리조트에 지불할 금액({currency === "PHP" ? "₱" : "₩"})만 입력하세요</div>}
+          </div>
+        )}
       </div>
 
       <div className="card no-print">
