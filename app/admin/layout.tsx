@@ -137,4 +137,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
       <main className="admin-main" style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
         {hidden && (
-          <button className="admin-noprint" onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, backgr
+          <button className="admin-noprint" onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#3a47a8", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
+        )}
+        {children}
+      </main>
+    </div>
+  );
+}
