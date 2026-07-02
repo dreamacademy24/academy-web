@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { JPARK_ROOMS, JPARK_EXTRA_PERSON, JPARK_TIER_LABEL, jparkTier, CUBENINE_ROOMS, calcNights } from "@/lib/resortRates";
 import ResortInvoiceDoc from "./ResortInvoiceDoc";
 
@@ -88,6 +88,9 @@ export default function ResortInvoicePage() {
   interface RefInfo { items: { label: string; price: number }[]; additions: { name: string; amount: number }[]; discounts: { name: string; amount: number }[]; special: string; lateCheckout: string }
   const [refInfo, setRefInfo] = useState<RefInfo | null>(null);
   const [sending, setSending] = useState(false);
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
   const [savingImg, setSavingImg] = useState(false);
 
   useEffect(() => {
@@ -245,11 +248,34 @@ export default function ResortInvoicePage() {
     } finally { setSavingImg(false); }
   }
 
+  // 이메일 작성 화면 열기 (제목·본문 기본값 채움 — 담당자 서명 포함)
+  function openEmailModal() {
+    if (!preview) return;
+    const staff = getAdminInfo()?.name || "Dream Company Staff";
+    setEmailSubject(`[Dream Company] Reservation Request — ${preview.guest_name} (${preview.period_start} ~ ${preview.period_end})`);
+    setEmailBody(
+`Dear ${preview.resort === "jaypark" ? "Jpark Reservations Team" : "Cube Nine Team"},
+
+Greetings from Dream Company (Dream Academy).
+Please find the attached invoice for the reservation below.
+
+Guest: ${preview.guest_name}
+Room: ${preview.room_type}
+Period: ${preview.period_start} ~ ${preview.period_end} (${preview.nights} nights)
+Total: ${num(preview.amount)} ${preview.currency}
+
+Kindly send us the confirmation number for this booking.
+
+Best regards,
+${staff}
+Dream Company (Dream Academy)`);
+    setEmailModal(true);
+  }
+
   async function sendEmail() {
     if (!preview) return;
     const to = emailTo.trim();
     if (!to) { alert("받는 이메일 주소를 입력해주세요."); return; }
-    if (!confirm(`${RESORT_LABEL[preview.resort as Resort]} (${to})로 인보이스 이미지를 보낼까요?`)) return;
     setSending(true);
     try {
       // 제이파크 기본 주소 2종(rsvn/travel)은 저장하지 않음 — 박 수 자동 분기가 계속 작동하도록
@@ -262,13 +288,14 @@ export default function ResortInvoicePage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           to,
-          subject: `[Dream Company] Invoice ${preview.invoice_no} — ${preview.guest_name}`,
-          text: `Hello,\n\nPlease find the attached invoice for the reservation below.\n\nGuest: ${preview.guest_name}\nRoom: ${preview.room_type}\nPeriod: ${preview.period_start} ~ ${preview.period_end} (${preview.nights} nights)\nTotal: ${num(preview.amount)} ${preview.currency}\n\nThank you.\nDream Company (Dream Academy)`,
+          subject: emailSubject.trim() || `[Dream Company] Invoice ${preview.invoice_no}`,
+          text: emailBody,
           imageBase64: img, filename: `invoice_${preview.invoice_no}.png`,
         }),
       });
       const d = await r.json();
       if (!r.ok) { alert("발송 실패: " + (d.error || r.status)); return; }
+      setEmailModal(false);
       alert("이메일을 보냈습니다. ✅");
     } finally { setSending(false); }
   }
@@ -406,7 +433,7 @@ export default function ResortInvoicePage() {
           <div className="no-print" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 11, color: "#94a3b8" }}>{preview.resort === "jaypark" ? (preview.nights < 7 ? "단기(7박 미만) → rsvn@" : "장기(7박~) → travel@") : ""}</span>
             <input className="fi" style={{ maxWidth: 260 }} value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="받는 이메일 (리조트)" />
-            <button className="rtab" disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📧 이메일 보내기"}</button>
+            <button className="rtab" onClick={openEmailModal}>📧 이메일 보내기</button>
             <button className="rtab" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
             <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄</button>
             <button className="rtab" onClick={() => setPreview(null)}>닫기</button>
@@ -442,5 +469,28 @@ export default function ResortInvoicePage() {
         )}
       </div>
     </div>
+    {emailModal && preview && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => !sending && setEmailModal(false)}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 22, maxWidth: 620, width: "100%", maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>📧 이메일 작성 — {RESORT_LABEL[preview.resort as Resort]}</div>
+          <div style={{ marginBottom: 10 }}>
+            <span className="fl">받는 사람 {preview.resort === "jaypark" && <span style={{ color: "#94a3b8", fontWeight: 500 }}>({preview.nights < 7 ? "단기 7박 미만 → rsvn@" : "장기 7박~ → travel@"})</span>}</span>
+            <input className="fi" value={emailTo} onChange={e => setEmailTo(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <span className="fl">제목</span>
+            <input className="fi" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <span className="fl">본문 (인보이스 이미지가 자동 첨부됩니다)</span>
+            <textarea className="fi" value={emailBody} onChange={e => setEmailBody(e.target.value)} rows={14} style={{ resize: "vertical", lineHeight: 1.5 }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button className="rtab" disabled={sending} onClick={() => setEmailModal(false)}>취소</button>
+            <button className="gen" style={{ padding: "10px 22px" }} disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📨 보내기"}</button>
+          </div>
+        </div>
+      </div>
+    )}
   </>);
 }
