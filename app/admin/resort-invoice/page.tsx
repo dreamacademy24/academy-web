@@ -94,6 +94,15 @@ export default function ResortInvoicePage() {
     try { setEmailTo(localStorage.getItem("resortEmail_" + resort) || ""); } catch {}
   }, [resort]);
 
+  // 제이파크 수신처 자동 분기: 7박 미만(단기) → rsvn@ / 7박 이상(장기) → travel@ (저장된 수동 입력이 있으면 그대로)
+  useEffect(() => {
+    if (!preview || preview.resort !== "jaypark") return;
+    let saved = "";
+    try { saved = localStorage.getItem("resortEmail_jaypark") || ""; } catch {}
+    if (saved) return; // 메이가 직접 저장한 주소 우선
+    setEmailTo(preview.nights < 7 ? "rsvn@jparkislandresort.com" : "travel@jparkislandresort.com");
+  }, [preview]);
+
   const nights = calcNights(ps, pe);
   const isJp = resort === "jaypark";
   const tier = isJp ? jparkTier(nights) : null;
@@ -391,6 +400,7 @@ export default function ResortInvoicePage() {
       {preview && (
         <div className="card" style={{ background: "#f8fafc" }}>
           <div className="no-print" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>{preview.resort === "jaypark" ? (preview.nights < 7 ? "단기(7박 미만) → rsvn@" : "장기(7박~) → travel@") : ""}</span>
             <input className="fi" style={{ maxWidth: 260 }} value={emailTo} onChange={e => setEmailTo(e.target.value)} placeholder="받는 이메일 (리조트)" />
             <button className="rtab" disabled={sending} onClick={sendEmail}>{sending ? "발송 중..." : "📧 이메일 보내기"}</button>
             <button className="rtab" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
