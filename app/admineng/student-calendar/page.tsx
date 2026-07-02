@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { isCommuteBooking } from "@/lib/bookingTypes";
 
 interface Booking {
   check_in: string | null;
@@ -31,7 +32,24 @@ function getNextMonday(d: string) {
   if (day === 1) return d;
   const diff = day === 0 ? 1 : 8 - day;
   dt.setDate(dt.getDate() + diff);
-  return dt.toISOString().split("T")[0];
+  return ymd(dt); // timezone-safe (toISOString은 PHT/KST에서 하루 밀림)
+}
+
+// ── 한국인 학생관리 탭(admin/bookings)과 동일한 파생 공식 ──
+function nextMondayOf(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr.split("T")[0]);
+  if (isNaN(d.getTime())) return "";
+  const day = d.getDay();
+  const offset = (8 - day) % 7;
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+function academyEndOf(startStr: string, weeks: number): string {
+  if (!startStr || !weeks || weeks < 1) return "";
+  const d = new Date(startStr);
+  d.setDate(d.getDate() + (weeks - 1) * 7 + 4);
+  return d.toISOString().slice(0, 10);
 }
 
 // 학생의 실제 종료일 (commute는 booking.checkout_date 우선)
@@ -105,16 +123,49 @@ export default function EngStudentCalendarPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    // 한국인 학생관리 탭(admin/bookings)과 동일 소스: bookings.students JSONB 평탄화
+    // (기존 bookings_new 조인은 폐기된 테이블이라 항상 0건이었음)
     const { data } = await supabase
-      .from("students")
-      .select(`id, name_kr, name_en, age, level, class_type, academy_start, academy_end, bookings_new(check_in, checkout_date, booking_type)`)
-      .order("academy_start");
-    // bookings_new 조인 결과는 객체 또는 배열일 수 있음 — 객체 단일 normalize
-    const normalized: Student[] = (data || []).map((row: any) => ({
-      ...row,
-      bookings_new: Array.isArray(row.bookings_new) ? (row.bookings_new[0] || null) : row.bookings_new,
-    }));
-    setStudents(normalized);
+      .from("bookings")
+      .select("id, status, students, checkin_date, checkout_date, accom_type, booking_type, accom_weeks, academy_start, academy_end")
+      .in("status", ["영수증발행", "결제완료", "완료"]);
+    const rows: Student[] = [];
+    (data || []).forEach((b: any) => {
+      let arr: any[] = [];
+      try {
+        const parsed = typeof b.students === "string" ? JSON.parse(b.students) : b.students;
+        if (Array.isArray(parsed)) arr = parsed;
+      } catch { return; }
+      const isCommute = isCommuteBooking(b);
+      arr.forEach((st: any, i: number) => {
+        const weeks = Number(st.academyWeeks || b.accom_weeks || 0);
+        const storedStart = String(st.academyStart || st.academy_start || b.academy_start || "").split("T")[0];
+        const storedEnd = String(st.academyEnd || st.academy_end || b.academy_end || "").split("T")[0];
+        const calStart = storedStart || (isCommute ? String(b.checkin_date || "").split("T")[0] : nextMondayOf(String(b.checkin_date || "")));
+        const calEnd = storedEnd || (isCommute ? String(b.checkout_date || "").split("T")[0] : (weeks > 0 ? academyEndOf(calStart, weeks) : ""));
+        const grade = st.grade || (st.level === "kinder" ? "킨더" : st.level === "junior" ? "주니어" : "");
+        const korName = st.korName || st.name_kr || st.name || "";
+        const engName = st.engName || st.name_en || "";
+        if (!korName && !engName) return;
+        rows.push({
+          id: b.id + "_" + i,
+          name_kr: korName,
+          name_en: engName,
+          age: st.age || "",
+          level: grade === "킨더" ? "kinder" : "junior",
+          class_type: isCommute ? "commute" : "",
+          academy_start: calStart || null,
+          academy_end: calEnd || null,
+          bookings_new: {
+            check_in: String(b.checkin_date || "").split("T")[0] || null,
+            checkout_date: String(b.checkout_date || "").split("T")[0] || null,
+            booking_type: b.booking_type || null,
+          },
+        });
+      });
+    });
+    rows.sort((a, b) => (a.academy_start || "9999").localeCompare(b.academy_start || "9999"));
+    setStudents(rows);
     setLoading(false);
   }, []);
 
