@@ -20,11 +20,19 @@ function parseBookingStudents(raw: unknown): Array<Record<string, unknown>> {
   return arr
     .filter((s) => s && (s.korName || s.name_kr))
     .map((s) => ({
+      ...s, // 원본 JSONB 필드 보존 (academyStart/ssp/address 등 유실 방지)
       booking_id: null,
       name_kr: (s.korName ?? s.name_kr ?? '') as string,
       name_en: (s.engName ?? s.name_en ?? null) as string | null,
       age: s.age ?? null,
       level: (s.level ?? (s.grade === '킨더' ? 'kinder' : 'junior')) as string,
+      academy_start: (s.academy_start ?? s.academyStart ?? null) as string | null,
+      academy_end: (s.academy_end ?? s.academyEnd ?? null) as string | null,
+      ssp: s.ssp ?? null,
+      class_type: s.class_type ?? null,
+      pickup_location: (s.pickup_location ?? s.pickup ?? null) as string | null,
+      address_detail: (s.address_detail ?? s.address ?? null) as string | null,
+      special_request: (s.special_request ?? s.request ?? null) as string | null,
       photo_allowed: (s.photo_allowed ?? s.photo === 'O') as boolean,
       _source: 'booking_json',
     }))
