@@ -1810,3 +1810,9 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 메이(ceo) 타임라인에 데일리 9개 항목 프리로드됨 (시간 미지정 상태)
 - ⚠️ 메이 로컬 저장소(C:/Users/desko/academy-web) git pull 필요 — 샌드박스 마운트 git이 "unknown error reading configuration files"로 계속 실패 (지난 세션과 동일 증상, /tmp 클론으로 작업함)
 - 다음 순서: ③ 전체 업무 테이블형(+보드 토글) → 애프터스쿨 월별 달력 그리드+개편 → booking/booking2 휴무 안내 미표시 버그
+
+## 2026-07-03 추가 — 학생 아카데미 시작일 "저장 안 됨" 신고 조사
+- 황우연(DA-20260630-503217, booking a328b413) 라이브 재현 테스트: **학생 탭 저장 경로(PATCH students + PUT JSONB)·기본정보 탭 저장 경로 모두 정상 동작 확인** (01-05/01-06으로 변경→저장→화면·DB 반영 확인 후 원상복구: booking 01-04/01-29, student 01-04/01-27)
+- 기본정보 아카데미 시작 변경 시 종료일은 시작+기간으로 자동 재계산됨 (설계 의도)
+- ✅ 조사 중 잠복 버그 수정 (816950d): /api/bookings/[id] parseBookingStudents가 JSONB-only 학생 변환 시 academy_start/end·ssp·class_type·픽드롭·주소·특이사항 필드를 누락 → 학생 탭에서 수정해도 표시 안 되고, 저장 시 타 필드 유실 위험. {...s} 스프레드 + 정규화 필드 추가로 보존
+- 메이 증상 재현 안 됨 — 유력 원인: 브라우저 캐시(구 번들) 또는 학생탭 저장값과 기본정보(예약 레벨) 아카데미 시작 필드 혼동 (두 값은 별개)
