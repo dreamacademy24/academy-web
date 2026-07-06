@@ -13,7 +13,7 @@ interface Pickup {
   id: string; booking_id: string; request_type: string;
   request_date: string; request_time: string; location: string; destination: string;
   num_people: number; flight_info: string; driver_id: string | null;
-  status: string; notes: string;
+  status: string; notes: string; ticket_url?: string | null;
   bookings: BookingMeta | null;
 }
 interface Driver { id: string; name: string }
