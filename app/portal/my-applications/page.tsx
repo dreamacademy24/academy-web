@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-import { parseToken, programNameOf, KR_DOW } from "@/lib/fieldtripPrograms";
+import { parseToken, programNameOf, KR_DOW, FT_PROGRAMS, ftProgramsAsItems, type DeployedScheduleItem } from "@/lib/fieldtripPrograms";
 
 type Tab = "shuttle" | "fieldtrip" | "tutor" | "pickup";
 type AnyRow = Record<string, unknown>;
@@ -57,6 +57,19 @@ export default function MyApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("shuttle");
   const [data, setData] = useState<Buckets>({ shuttle: [], fieldtrip: [], tutor: [], pickup: [] });
+  // 배포된 애프터스쿨/필드트립 일정 (날짜→프로그램명) — "as/ft" 일반 토큰의 실제 프로그램명 조회용
+  const [schedMap, setSchedMap] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      const map: Record<string, string> = {};
+      ftProgramsAsItems().forEach((it: DeployedScheduleItem) => { map[`${it.date}|${it.type}`] = it.title; });
+      try {
+        const { data: rows } = await supabase.from("schedule_items").select("type,date,title").eq("is_deployed", true);
+        (rows || []).forEach((it: { type: string; date: string; title: string }) => { if (it.date && it.title) map[`${it.date}|${it.type}`] = it.title; });
+      } catch {}
+      setSchedMap(map);
+    })();
+  }, []);
   const [cancelModal, setCancelModal] = useState<CancelModalState>({ open: false, table: "", id: "", title: "" });
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSaving, setCancelSaving] = useState(false);
@@ -424,7 +437,16 @@ export default function MyApplicationsPage() {
                 const pt = parseToken(tok);
                 if (!pt) return { md: 99_99, label: tok, name: "" };
                 const dow = KR_DOW[new Date(yearNow, pt.month - 1, pt.day).getDay()];
-                return { md: pt.month * 100 + pt.day, label: `${pt.month}/${pt.day} (${dow})`, name: programNameOf(tok, pt.key) };
+                // 프로그램명: 토큰 매핑 → (as/ft 일반 토큰이면) 배포 일정에서 날짜로 조회 → 폴백
+                let nm = FT_PROGRAMS[tok]?.name || "";
+                if (!nm) {
+                  const dateStr = `${yearNow}-${String(pt.month).padStart(2, "0")}-${String(pt.day).padStart(2, "0")}`;
+                  const tKey = pt.key === "ft" ? "fieldtrip" : "afterschool";
+                  nm = schedMap[`${dateStr}|${tKey}`] || schedMap[`${dateStr}|afterschool`] || schedMap[`${dateStr}|fieldtrip`] || "";
+                }
+                if (!nm) nm = pt.key === "as" ? "애프터스쿨" : pt.key === "ft" ? "필드트립 🚌" : programNameOf(tok, pt.key);
+                else if (pt.key === "ft" || FT_PROGRAMS[tok]?.isFieldtrip) nm += " 🚌";
+                return { md: pt.month * 100 + pt.day, label: `${pt.month}/${pt.day} (${dow})`, name: nm };
               }).sort((a2, b2) => a2.md - b2.md);
               return (
                 <div key={String(r.id)} className="ma-card">
