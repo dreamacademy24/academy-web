@@ -1069,9 +1069,17 @@ export default function BookingDetailPage() {
               return (
               <div key={p.id} className={`pk-card${p.request_type === "dropoff" ? " drop" : ""}`}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, alignItems:"center", gap:8 }}>
-                  <span className="badge" style={{ background: p.request_type === "pickup" ? "#dbeafe" : "#dcfce7", color: p.request_type === "pickup" ? "#1e40af" : "#166534" }}>
-                    {p.request_type === "pickup" ? "픽업" : "드랍"}
-                  </span>
+                  {(() => {
+                    const PK_TYPES: Record<string, { label: string; bg: string; color: string }> = {
+                      pickup: { label: "픽업", bg: "#dbeafe", color: "#1e40af" },
+                      dropoff: { label: "드랍", bg: "#dcfce7", color: "#166534" },
+                      extra_pickup: { label: "➕ 추가 픽업", bg: "#ede9fe", color: "#6d28d9" },
+                      extra_drop: { label: "➕ 추가 드랍", bg: "#ede9fe", color: "#6d28d9" },
+                      transfer: { label: "🔄 환승", bg: "#fef3c7", color: "#92400e" },
+                    };
+                    const tp = PK_TYPES[p.request_type] || { label: p.request_type || "픽드랍", bg: "#f1f5f9", color: "#475569" };
+                    return <span className="badge" style={{ background: tp.bg, color: tp.color }}>{tp.label}</span>;
+                  })()}
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     <span className="badge" style={{ background: p.status === "confirmed" ? "#dcfce7" : "#fef3c7", color: p.status === "confirmed" ? "#166534" : "#92400e" }}>{p.status}</span>
                     {!isEditing
