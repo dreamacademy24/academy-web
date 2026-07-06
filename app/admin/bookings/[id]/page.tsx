@@ -259,16 +259,37 @@ export default function BookingDetailPage() {
   const [pkAdding, setPkAdding] = useState(false);
   const [pkSaving, setPkSaving] = useState(false);
   const [pkForm, setPkForm] = useState({ request_type: "extra_pickup", request_date: "", request_time: "", location: "공항", destination: "", num_people: 1, notes: "" });
+  const [pkTicket, setPkTicket] = useState<File | null>(null);
+  // 항공권 업로드 (사진/PDF) → staff-files/flight/{bookingId}/ → public URL
+  async function uploadTicketFile(file: File): Promise<string | null> {
+    const fd = new FormData();
+    fd.append("image", file);
+    fd.append("bookingId", String(id));
+    fd.append("target", "pickup");
+    const r = await fetch("/api/upload-flight-image", { method: "POST", body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.publicUrl) { toastErr("항공권 업로드 실패: " + (j.error || r.status)); return null; }
+    return j.publicUrl as string;
+  }
   async function savePkAdd() {
     if (!pkForm.request_date) { toastErr("날짜를 입력해주세요."); return; }
     setPkSaving(true);
     try {
-      const r = await fetch(`/api/bookings/${id}/update-row`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "pickup_requests", fields: pkForm }) });
+      let ticket_url = "";
+      if (pkTicket) {
+        const u = await uploadTicketFile(pkTicket);
+        if (!u) return;
+        ticket_url = u;
+      }
+      const fields: Record<string, unknown> = { ...pkForm };
+      if (ticket_url) fields.ticket_url = ticket_url;
+      const r = await fetch(`/api/bookings/${id}/update-row`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "pickup_requests", fields }) });
       const d = await r.json();
       if (!r.ok) { toastErr("등록 실패: " + (d.error || r.status)); return; }
       setPkAdding(false);
       setPkForm({ request_type: "extra_pickup", request_date: "", request_time: "", location: "공항", destination: "", num_people: 1, notes: "" });
-      toastOk("픽드랍이 등록됐어요.");
+      setPkTicket(null);
+      toastOk("픽드랍이 등록됐어요." + (ticket_url ? " (항공권 첨부됨)" : ""));
       load();
     } finally { setPkSaving(false); }
   }
@@ -278,7 +299,7 @@ export default function BookingDetailPage() {
     setRowSaving(true);
     const fieldsByTable: Record<string, string[]> = {
       students: ["name_kr","name_en","age","level","class_type","academy_start","academy_end","ssp","photo_allowed","pickup_location","address_detail","special_request"],
-      pickup_requests: ["request_date","request_time","location","destination","num_people","notes","status"],
+      pickup_requests: ["request_date","request_time","location","destination","num_people","notes","status","ticket_url"],
       shuttle_requests: ["request_date","request_time","destination","num_people","round_trip","notes","status"],
     };
     const allowed = fieldsByTable[rowEditing.table] || [];
@@ -1102,6 +1123,16 @@ export default function BookingDetailPage() {
                 <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>인원</div><input className="ed-inp" type="number" min={1} value={pkForm.num_people} onChange={e=>setPkForm({...pkForm,num_people:Number(e.target.value)||1})}/></div>
               </div>
               <div style={{ marginBottom: 10 }}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>메모</div><input className="ed-inp" style={{width:"100%"}} value={pkForm.notes} onChange={e=>setPkForm({...pkForm,notes:e.target.value})} placeholder="예: 아버님 1명 추가 입국 (KE631 14:30 도착)"/></div>
+              <div style={{ marginBottom: 10 }}>
+                <div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>🎫 항공권 첨부 (사진/PDF · 선택)</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <label style={{display:"inline-flex",alignItems:"center",gap:6,background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,color:"#475569",cursor:"pointer"}}>
+                    📎 파일 선택
+                    <input type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={e=>setPkTicket(e.target.files?.[0]||null)} />
+                  </label>
+                  {pkTicket && <span style={{fontSize:12,color:"#1e40af",fontWeight:700}}>{pkTicket.name} <button onClick={()=>setPkTicket(null)} style={{border:"none",background:"none",color:"#94a3b8",cursor:"pointer",fontSize:13}}>✕</button></span>}
+                </div>
+              </div>
               <button className="btn btn-sm btn-blue" onClick={savePkAdd} disabled={pkSaving}>{pkSaving ? "등록 중..." : "💾 등록"}</button>
             </div>
           )}
@@ -1138,6 +1169,7 @@ export default function BookingDetailPage() {
                   <div className="pk-row"><span className="lbl">출발</span>{p.location || "-"}</div>
                   <div className="pk-row"><span className="lbl">도착</span>{p.destination || "-"}</div>
                   <div className="pk-row"><span className="lbl">인원</span>{p.num_people || 0}명</div>
+                  {p.ticket_url && <div className="pk-row"><span className="lbl">항공권</span><a href={p.ticket_url} target="_blank" rel="noreferrer" style={{color:"#4f46e5",fontWeight:700,textDecoration:"none"}}>🎫 항공권 보기</a></div>}
                   {p.notes && <div className="pk-row"><span className="lbl">메모</span>{String(p.notes).replace(/portal_booking_id:[a-f0-9-]+/gi,"").trim() || "-"}</div>}
                 </>) : (
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12}}>
@@ -1154,6 +1186,20 @@ export default function BookingDetailPage() {
                       </select>
                     </div>
                     <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>메모</div><textarea className="ed-inp" style={{minHeight:50,resize:"vertical"}} value={rowForm.notes||""} onChange={e=>setRowForm({...rowForm,notes:e.target.value})}/></div>
+                    <div style={{gridColumn:"1/3"}}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>🎫 항공권</div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        {rowForm.ticket_url ? <a href={rowForm.ticket_url} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#4f46e5",fontWeight:700}}>🎫 현재 항공권 보기</a> : <span style={{fontSize:12,color:"#94a3b8"}}>첨부 없음</span>}
+                        <label style={{display:"inline-flex",alignItems:"center",gap:4,background:"#fff",border:"1px solid #cbd5e1",borderRadius:8,padding:"4px 10px",fontSize:11.5,fontWeight:700,color:"#475569",cursor:"pointer"}}>
+                          📎 {rowForm.ticket_url ? "교체" : "첨부"}
+                          <input type="file" accept="image/*,application/pdf" style={{display:"none"}} onChange={async e=>{
+                            const f=e.target.files?.[0]; if(!f) return;
+                            const u=await uploadTicketFile(f);
+                            if(u) setRowForm((prev:Record<string,unknown>)=>({...prev,ticket_url:u}));
+                          }} />
+                        </label>
+                        {rowForm.ticket_url && <button onClick={()=>setRowForm((prev:Record<string,unknown>)=>({...prev,ticket_url:""}))} style={{border:"none",background:"none",color:"#ef4444",cursor:"pointer",fontSize:11.5,fontWeight:700}}>제거</button>}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

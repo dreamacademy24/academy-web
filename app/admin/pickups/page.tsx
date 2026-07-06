@@ -239,7 +239,7 @@ export default function PickupsPage() {
                       <td style={{ whiteSpace: "nowrap" }}>{fDate(p.request_date)}</td>
                       <td>{p.request_time || "-"}</td>
                       <td>{bookerOf(p)}</td>
-                      <td style={{ fontSize: 12, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={flightTxt || ""}>{flightTxt || "-"}</td>
+                      <td style={{ fontSize: 12, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={flightTxt || ""}>{flightTxt || "-"}{p.ticket_url && <a href={p.ticket_url} target="_blank" rel="noreferrer" title="항공권 보기" style={{ marginLeft: 4, textDecoration: "none" }}>🎫</a>}</td>
                       <td>{p.location || "-"}</td>
                       <td>{p.destination || "-"}</td>
                       <td>

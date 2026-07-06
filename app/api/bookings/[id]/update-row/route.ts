@@ -9,7 +9,7 @@ const supabase = createClient(
 const ALLOWED_TABLES = new Set(['students', 'pickup_requests', 'shuttle_requests'])
 
 // POST: { table: 'pickup_requests', fields: {...} } — 직원이 손님 대신 직접 등록 (채팅 신청 등)
-const PK_INSERT_FIELDS = new Set(['request_type', 'request_date', 'request_time', 'location', 'destination', 'num_people', 'notes', 'status'])
+const PK_INSERT_FIELDS = new Set(['request_type', 'request_date', 'request_time', 'location', 'destination', 'num_people', 'notes', 'status', 'ticket_url'])
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: bookingId } = await params
   const body = await req.json().catch(() => null)

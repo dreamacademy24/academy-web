@@ -22,6 +22,7 @@ export async function POST(req: Request) {
     const image = formData.get("image") as File | null;
     const bookingId = formData.get("bookingId") as string | null;
     const token = formData.get("token") as string | null;
+    const target = formData.get("target") as string | null; // "pickup" = 픽드랍 항공권 (flight_images에 추가 안 함)
 
     if (!image) {
       return NextResponse.json({ error: "image required" }, { status: 400 });
@@ -60,6 +61,11 @@ export async function POST(req: Request) {
     const publicUrl = pub?.publicUrl;
     if (!publicUrl) {
       return NextResponse.json({ error: "failed to get public url" }, { status: 500 });
+    }
+
+    // target=pickup: URL만 반환 (픽드랍 행에 저장)
+    if (target === "pickup") {
+      return NextResponse.json({ ok: true, publicUrl });
     }
 
     // 3) bookings.flight_images 배열에 추가
