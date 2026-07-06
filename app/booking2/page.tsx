@@ -70,7 +70,7 @@ export default function BookingNonPackagePage() {
       const g = extraGuardians[i];
       if (!g.kor.trim() || !g.eng.trim()) { alert(`보호자 ${i + 2}번의 한글/영문 이름을 모두 입력해주세요.`); return; }
     }
-    if (!students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; }
+    if (isCommute && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만 이용은 학생 불필요
     if (!dates.checkIn) { alert(isCommute ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (!dates.checkOut) { alert(isCommute ? "수업종료 날짜를 입력해주세요." : "체크아웃 날짜를 입력해주세요."); return; }
     if (isCommute && !dates.pickupUndecided && !dates.pickupAddr.trim()) { alert("픽드랍 주소를 입력하거나 '미정'을 선택해주세요."); return; }
@@ -338,8 +338,9 @@ export default function BookingNonPackagePage() {
           </div>
         )}
 
+        {isCommute && (
         <div className="bs">
-          <h2>{isCommute ? "4️⃣" : "5️⃣"} 학생 정보 ({students.length}/5)</h2>
+          <h2>4️⃣ 학생 정보 ({students.length}/5)</h2>
           {students.map((s, idx) => (
             <div className="sc" key={s.id}>
               {students.length > 1 && <button className="sc-del" onClick={() => rmStudent(s.id)}>삭제</button>}
@@ -378,9 +379,10 @@ export default function BookingNonPackagePage() {
           ))}
           {students.length < 5 && <button className="ab" onClick={addStudent}>+ 학생 추가</button>}
         </div>
+        )}
 
         <div className="bs">
-          <h2>{isCommute ? "5️⃣" : "6️⃣"} 특이사항</h2>
+          <h2>{isCommute ? "5️⃣" : "5️⃣"} 특이사항</h2>
           <div className="warn">
             <div className="wt">⚠️ 주의</div>
             아이의 특이사항(알레르기, 약 복용 등)은 꼭 기재해주세요. 미 안내 시 발생하는 문제에 대해 보호자가 책임지게 됩니다.
