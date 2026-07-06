@@ -130,15 +130,19 @@ export default function DreamhouseRooms() {
     }
   }
 
+  // accom_room 대소문자 정규화 (DB에 B17L14/b17L14 혼재 대응)
+  const normalizeRoom = (r: string) => ROOMS.find(rm => rm.toLowerCase() === r.toLowerCase()) || r
+  const normalizedBookings = bookings.map(b => ({ ...b, accom_room: normalizeRoom(b.accom_room) }))
+  // ⚠ 목록에 없는 룸(오타·폐지 룸)에 배정된 예약도 사라지지 않게 별도 행으로 표시
+  const unknownRooms = Array.from(new Set(normalizedBookings.map(b => b.accom_room).filter(r => r && !ROOMS.includes(r))))
+  const displayRooms = [...ROOMS, ...unknownRooms]
+
   // 날짜별 룸별 예약 매핑
   const cellMap: Record<string, Record<string, Booking[]>> = {}
   dates.forEach(({dateStr}) => {
     cellMap[dateStr] = {}
-    ROOMS.forEach(r => { cellMap[dateStr][r] = [] })
+    displayRooms.forEach(r => { cellMap[dateStr][r] = [] })
   })
-  // accom_room 대소문자 정규화 (DB에 B17L14/b17L14 혼재 대응)
-  const normalizeRoom = (r: string) => ROOMS.find(rm => rm.toLowerCase() === r.toLowerCase()) || r
-  const normalizedBookings = bookings.map(b => ({ ...b, accom_room: normalizeRoom(b.accom_room) }))
 
   normalizedBookings.forEach(b => {
     // 문자열 직접 비교 (YYYY-MM-DD는 lexicographic 정렬이 시간순과 동일, timezone 영향 없음)
@@ -310,9 +314,9 @@ export default function DreamhouseRooms() {
             <thead>
               <tr>
                 <th style={{position:'sticky',left:0,top:0,zIndex:20,background:'#1e293b',padding:'10px 8px',fontSize:12,color:'#f1f5f9',borderRight:'2px solid #334155',borderBottom:'2px solid #334155',minWidth:70,textAlign:'center'}}>날짜</th>
-                {ROOMS.map((room, ri) => (
+                {displayRooms.map((room, ri) => (
                   <th key={room} style={{position:'sticky',top:0,zIndex:15,background:'#1e293b',padding:'8px 6px 6px',fontSize:11,color:'#f1f5f9',borderRight:'1px solid #334155',borderBottom:'2px solid #334155',minWidth:68,textAlign:'center',fontWeight:700}}>
-                    <span style={{display:'inline-block',borderBottom:`3px solid ${ROOM_COLORS[ri]}`,paddingBottom:3}}>{room}</span>
+                    <span style={{display:'inline-block',borderBottom:`3px solid ${ROOM_COLORS[ri % ROOM_COLORS.length]}`,paddingBottom:3,color:ROOMS.includes(room)?undefined:'#fbbf24'}}>{ROOMS.includes(room)?room:`⚠ ${room}`}</span>
                   </th>
                 ))}
               </tr>
@@ -346,7 +350,7 @@ export default function DreamhouseRooms() {
                         : <>{day}일 {DOW_KO[dow]}</>
                       }
                     </td>
-                    {ROOMS.map((room, ri) => {
+                    {displayRooms.map((room, ri) => {
                       const cellBookings = cellMap[dateStr][room] || []
                       const hasBooking = cellBookings.length > 0
                       const isDouble = cellBookings.length > 1
