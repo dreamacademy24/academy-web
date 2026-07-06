@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import { supabase } from "@/lib/supabase";
 
 interface Entry {
   id: string; entry_date: string; type: "in" | "out";
@@ -68,6 +69,7 @@ export default function CashLedgerPage() {
     setReady(true);
   }, [router]);
 
+  const [allItems, setAllItems] = useState<Entry[]>([]);
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/cash-ledger?year=${year}&month=${String(month).padStart(2, "0")}`);
     const j = await res.json();
@@ -75,6 +77,11 @@ export default function CashLedgerPage() {
     setTotalIn(j.totalIn || 0);
     setTotalOut(j.totalOut || 0);
     setBalance(j.balance || 0);
+    // 전체 내역 (이월 잔액·보증금 보유현황) — 클라이언트에서 직접 조회
+    try {
+      const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name").order("entry_date");
+      setAllItems((data || []) as Entry[]);
+    } catch {}
   }, [year, month]);
 
   useEffect(() => { if (ready) load(); }, [ready, load]);
@@ -84,15 +91,30 @@ export default function CashLedgerPage() {
     return items.filter(i => i.category === filterCat);
   }, [items, filterCat]);
 
-  // 카테고리별 집계
-  const catSummary = useMemo(() => {
-    const map: Record<string, { in: number; out: number }> = {};
-    for (const i of items) {
-      if (!map[i.category]) map[i.category] = { in: 0, out: 0 };
-      map[i.category][i.type] += Number(i.amount || 0);
-    }
-    return map;
-  }, [items]);
+
+  // 이월 잔액 = 이번 달 이전 모든 내역의 순액
+  const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+  const carryOver = useMemo(() => allItems.filter(i => (i.entry_date || "") < monthStart)
+    .reduce((a2, i) => a2 + (i.type === "in" ? 1 : -1) * Number(i.amount || 0), 0), [allItems, monthStart]);
+  const grandTotal = carryOver + balance;
+  // 보증금 보유현황: 보증금 입금 − 같은 사람(guest_name) 보증금반환 매칭
+  const heldDeposits = useMemo(() => {
+    const key = (i: Entry) => String(i.guest_name || i.description || "").trim();
+    const returned = new Map<string, number>();
+    allItems.filter(i => i.category === "보증금반환" && i.type === "out").forEach(i => {
+      const k = key(i); returned.set(k, (returned.get(k) || 0) + Number(i.amount || 0));
+    });
+    const list: { name: string; date: string; amount: number; desc: string }[] = [];
+    allItems.filter(i => i.category === "보증금" && i.type === "in").forEach(i => {
+      const k = key(i); const amt = Number(i.amount || 0);
+      const ret = returned.get(k) || 0;
+      if (ret >= amt) { returned.set(k, ret - amt); return; } // 반환 완료분 제외
+      if (ret > 0) returned.set(k, 0);
+      list.push({ name: k || "(이름 없음)", date: (i.entry_date || "").slice(5, 10).replace("-", "/"), amount: amt - ret, desc: String(i.description || "") });
+    });
+    return list.reverse();
+  }, [allItems]);
+  const heldTotal = heldDeposits.reduce((a2, d) => a2 + d.amount, 0);
 
   function prevMonth() { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); }
   function nextMonth() { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); }
@@ -176,10 +198,18 @@ export default function CashLedgerPage() {
               <button onClick={nextMonth} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 8, padding: "5px 10px", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}>▶</button>
             </div>
 
-            {/* 잔액 */}
-            <div style={{ background: balance >= 0 ? "#f0fdf4" : "#fef2f2", borderRadius: 10, padding: "12px 14px", marginBottom: 10, border: `1px solid ${balance >= 0 ? "#bbf7d0" : "#fecaca"}` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: balance >= 0 ? "#16a34a" : "#dc2626" }}>이번 달 잔액</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: balance >= 0 ? "#16a34a" : "#dc2626" }}>{peso(balance)}</div>
+            {/* 잔액: 이월 → 이번 달 → 총 잔액 */}
+            <div style={{ background: "#f1f5f9", borderRadius: 10, padding: "9px 14px", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>이월 잔액 (지난달까지)</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "#334155" }}>{peso(carryOver)}</div>
+            </div>
+            <div style={{ background: "#fff", border: "1px dashed #e2e8f0", borderRadius: 10, padding: "8px 14px", marginBottom: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b" }}>이번 달 증감</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: balance >= 0 ? "#16a34a" : "#dc2626" }}>{balance >= 0 ? "+" : ""}{peso(balance)}</div>
+            </div>
+            <div style={{ background: grandTotal >= 0 ? "#f0fdf4" : "#fef2f2", borderRadius: 10, padding: "12px 14px", marginBottom: 10, border: `1.5px solid ${grandTotal >= 0 ? "#86efac" : "#fecaca"}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: grandTotal >= 0 ? "#16a34a" : "#dc2626" }}>현재 총 잔액 (금고 실제)</div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: grandTotal >= 0 ? "#16a34a" : "#dc2626" }}>{peso(grandTotal)}</div>
             </div>
 
             {/* 입금/출금 */}
@@ -195,19 +225,21 @@ export default function CashLedgerPage() {
             </div>
           </div>
 
-          {/* 분류별 필터 */}
+          {/* 🔒 보증금 보유현황 */}
           <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8 }}>분류별 보기</div>
-            <div onClick={() => setFilterCat("all")} style={{ padding: "7px 10px", borderRadius: 8, cursor: "pointer", marginBottom: 3, fontSize: 13, fontWeight: 700, background: filterCat === "all" ? "#eff6ff" : "transparent", color: filterCat === "all" ? "#1a6fc4" : "#64748b" }}>
-              전체 ({items.length}건)
+            <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+              🔒 보증금 보유현황
+              <span style={{ fontSize: 10.5, fontWeight: 800, background: "#eef2ff", color: "#4338ca", borderRadius: 6, padding: "2px 8px" }}>{heldDeposits.length}건 · {peso(heldTotal)}</span>
             </div>
-            {Object.entries(catSummary).map(([cat, v]) => (
-              <div key={cat} onClick={() => setFilterCat(cat)} style={{ padding: "6px 10px", borderRadius: 8, cursor: "pointer", marginBottom: 2, fontSize: 12, display: "flex", alignItems: "center", gap: 6, background: filterCat === cat ? "#eff6ff" : "transparent", color: filterCat === cat ? "#1a6fc4" : "#475569" }}>
-                <span style={{ flex: 1, fontWeight: 600 }}>{cat}</span>
-                {v.in > 0 && <span style={{ color: "#1a6fc4", fontWeight: 700, fontSize: 11 }}>+{peso(v.in)}</span>}
-                {v.out > 0 && <span style={{ color: "#dc2626", fontWeight: 700, fontSize: 11 }}>-{peso(v.out)}</span>}
-              </div>
-            ))}
+            {heldDeposits.length === 0 ? <div style={{ fontSize: 12, color: "#94a3b8", padding: "8px 0" }}>보관 중인 보증금이 없습니다</div> :
+              heldDeposits.map((d, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 8px", borderRadius: 8, background: "#f8fafc", marginBottom: 4, fontSize: 12 }}>
+                  <span style={{ fontWeight: 800, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.desc}>{d.name}</span>
+                  <span style={{ color: "#94a3b8", fontSize: 10.5, whiteSpace: "nowrap" }}>{d.date} 입금</span>
+                  <span style={{ fontWeight: 800, color: "#1d4ed8", whiteSpace: "nowrap" }}>{peso(d.amount)}</span>
+                </div>
+              ))}
+            <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 6, lineHeight: 1.6 }}>보증금 입금 − 같은 이름의 보증금반환 자동 매칭 (반환 완료분은 숨김)</div>
           </div>
         </div>
 
