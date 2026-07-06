@@ -5356,10 +5356,37 @@ function _btCleanBanner(staleCnt){
     '<button onclick="bulkRescheduleTasks()" style="border:1px solid #4f46e5;background:#fff;color:#4f46e5;font-weight:800;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">📅 마감 재설정</button>'+
     '<button onclick="_toggleCleanMode()" style="border:1px solid var(--border);background:#fff;color:var(--text3);font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">취소</button></div>';
 }
+function bulkDeleteDoneTasks(){
+  if(!isManagerCU()){alert('관리자만 가능합니다');return;}
+  var doneT=tasks.filter(isDoneTask);
+  if(!doneT.length){alert('완료 업무가 없습니다');return;}
+  if(!confirm('완료 업무 '+doneT.length+'건을 영구 삭제합니다.\n(백업 JSON이 자동 다운로드됩니다)\n계속할까요?'))return;
+  if(!confirm('정말 삭제할까요? 복구할 수 없습니다.'))return;
+  try{
+    var blob=new Blob([JSON.stringify(doneT,null,1)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='staff_tasks_완료백업_'+_dailyToday()+'.json';document.body.appendChild(a);a.click();a.remove();
+  }catch(e){}
+  var ids=doneT.map(function(t){return String(t.id);});
+  var chunks=[];for(var i=0;i<ids.length;i+=30)chunks.push(ids.slice(i,i+30));
+  var seq=Promise.resolve();
+  chunks.forEach(function(ch){
+    var inq='id=in.('+ch.map(function(x){return '"'+x+'"';}).join(',')+')';
+    var cq='task_id=in.('+ch.map(function(x){return '"'+x+'"';}).join(',')+')';
+    seq=seq.then(function(){return sbDel('staff_task_comments',cq).catch(function(){});})
+           .then(function(){return sbDel('staff_tasks',inq);});
+  });
+  seq.then(function(){
+    tasks=tasks.filter(function(t){return !isDoneTask(t);});
+    rebuildIdx();svTasks();
+    toast('🗑 완료 업무 '+ids.length+'건 삭제됨 (백업 다운로드됨)');
+    renderBoardTable();refreshAll();
+  }).catch(function(e){alert('삭제 중 오류: '+(e&&e.message||e));loadTasksFromSB();});
+}
 function _btFbar(c){
   var chips=[['all','전체 '+c.all],['unassigned','📢 지시 '+c.un],['urgent','🚨 긴급 '+c.urg],['stale','🧹 방치 '+c.stale],['done','완료 '+c.done],['archived','🗄 보관함 '+c.arch]];
   var h='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">';
   chips.forEach(function(p){h+='<button class="bt-chip'+(boardFilter===p[0]?' on':'')+'" onclick="_setBoardFilter(\''+p[0]+'\')">'+p[1]+'</button>';});
+  if(isManagerCU())h+='<button class="bt-chip" style="border-color:#fca5a5;color:#b91c1c" onclick="bulkDeleteDoneTasks()">🗑 완료 전체 삭제</button>';
   h+='<input type="text" id="btSearch" placeholder="🔍 검색..." value="'+esc(_boardSearch||'')+'" oninput="_boardSearch=(this.value||\'\').trim().toLowerCase();_btSearchDebounce()" style="margin-left:auto;padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;min-width:170px">';
   h+='<button class="bt-chip" onclick="_setBoardUIMode(\'md\')" title="기존 좌우 분할 보드로 전환">🗂 보드 뷰</button>';
   h+='</div>';
