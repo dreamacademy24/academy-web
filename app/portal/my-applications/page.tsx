@@ -9,6 +9,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+import { parseToken, programNameOf } from "@/lib/fieldtripPrograms";
+
 type Tab = "shuttle" | "fieldtrip" | "tutor" | "pickup";
 type AnyRow = Record<string, unknown>;
 
@@ -406,7 +408,14 @@ export default function MyApplicationsPage() {
           ) : data.fieldtrip.map((r: AnyRow) => {
             const meta = statusMeta(String(r.status || ""));
             const id = String(r.id || "");
-            const title = String(r.request || r.title || "애프터스쿨/필드트립");
+            const child = String(r.name || "").trim();
+            const title = child ? `${child} · 애프터스쿨/필드트립` : "애프터스쿨/필드트립";
+            // date = "월-일-프로그램키" 토큰 콤마결합 → 날짜·프로그램명으로 풀어서 표시
+            const progs = String(r.date || "").split(",").map(t => t.trim()).filter(Boolean).map(tok => {
+              const pt = parseToken(tok);
+              if (!pt) return tok;
+              return `${pt.month}/${pt.day} ${programNameOf(tok, pt.key)}`;
+            });
             return (
               <div key={id} className="ma-card">
                 <div className="ma-row1">
@@ -414,10 +423,12 @@ export default function MyApplicationsPage() {
                   <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                 </div>
                 <div className="ma-title-line">{title}</div>
-                <div className="ma-meta">
-                  <b>📅 날짜:</b> {fmtDate(String(r.date || ""))}{" "}
-                  <b style={{ marginLeft: 8 }}>👥 인원:</b> {String(r.people_count ?? r.num_people ?? "-")}명
+                <div className="ma-meta" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {progs.length === 0 ? <span>-</span> : progs.map((pg, i) => (
+                    <span key={i} style={{ background: "#eef2ff", color: "#4338ca", borderRadius: 8, padding: "3px 10px", fontSize: 12.5, fontWeight: 700 }}>📅 {pg}</span>
+                  ))}
                 </div>
+                {String(r.request || "").trim() && <div className="ma-meta" style={{ marginTop: 6 }}>📝 {String(r.request)}</div>}
                 {canCancel(String(r.status || "")) && (
                   <div className="ma-actions">
                     <button className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", id, title)}>취소요청</button>
