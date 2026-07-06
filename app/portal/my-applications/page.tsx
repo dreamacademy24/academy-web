@@ -405,43 +405,57 @@ export default function MyApplicationsPage() {
         <div>
           {data.fieldtrip.length === 0 ? (
             <div className="ma-empty">신청 내역이 없습니다.</div>
-          ) : data.fieldtrip.map((r: AnyRow) => {
-            const meta = statusMeta(String(r.status || ""));
-            const id = String(r.id || "");
-            const child = String(r.name || "").trim();
-            const title = child ? `${child} · 애프터스쿨/필드트립` : "애프터스쿨/필드트립";
-            // date = "월-일-프로그램키" 토큰 콤마결합 → 요일 포함 날짜 + 프로그램명 줄로 표시
+          ) : (() => {
+            // 형제 합치기: 프로그램 구성(date 토큰)과 상태가 완전히 같으면 카드 1장으로
+            const normTokens = (r: AnyRow) => String(r.date || "").split(",").map(t => t.trim()).filter(Boolean).sort().join(",");
+            const groups = new Map<string, AnyRow[]>();
+            data.fieldtrip.forEach((r: AnyRow) => {
+              const k = normTokens(r) + "|" + String(r.status || "");
+              if (!groups.has(k)) groups.set(k, []);
+              groups.get(k)!.push(r);
+            });
             const yearNow = new Date().getFullYear();
-            const progs = String(r.date || "").split(",").map(t => t.trim()).filter(Boolean).map(tok => {
-              const pt = parseToken(tok);
-              if (!pt) return { md: 99_99, label: tok, name: "" };
-              const dow = KR_DOW[new Date(yearNow, pt.month - 1, pt.day).getDay()];
-              return { md: pt.month * 100 + pt.day, label: `${pt.month}/${pt.day} (${dow})`, name: programNameOf(tok, pt.key) };
-            }).sort((a2, b2) => a2.md - b2.md);
-            return (
-              <div key={id} className="ma-card">
-                <div className="ma-row1">
-                  <span className="ma-date">신청일 {fmtDate(String(r.created_at || ""))}</span>
-                  <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
-                </div>
-                <div className="ma-title-line">{title}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-                  {progs.length === 0 ? <span className="ma-meta">-</span> : progs.map((pg, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1px solid #eef1f6", borderRadius: 9, padding: "7px 11px" }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "#4338ca", background: "#eef2ff", borderRadius: 6, padding: "2px 8px", whiteSpace: "nowrap" }}>📅 {pg.label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e" }}>{pg.name || pg.label}</span>
-                    </div>
-                  ))}
-                </div>
-                {String(r.request || "").trim() && <div className="ma-meta" style={{ marginTop: 6 }}>📝 {String(r.request)}</div>}
-                {canCancel(String(r.status || "")) && (
-                  <div className="ma-actions">
-                    <button className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", id, title)}>취소요청</button>
+            return Array.from(groups.values()).map(grp => {
+              const r = grp[0];
+              const meta = statusMeta(String(r.status || ""));
+              const names = grp.map(x => String(x.name || "").trim()).filter(Boolean);
+              const title = names.length ? `${names.join(", ")} · 애프터스쿨/필드트립` : "애프터스쿨/필드트립";
+              const progs = String(r.date || "").split(",").map(t => t.trim()).filter(Boolean).map(tok => {
+                const pt = parseToken(tok);
+                if (!pt) return { md: 99_99, label: tok, name: "" };
+                const dow = KR_DOW[new Date(yearNow, pt.month - 1, pt.day).getDay()];
+                return { md: pt.month * 100 + pt.day, label: `${pt.month}/${pt.day} (${dow})`, name: programNameOf(tok, pt.key) };
+              }).sort((a2, b2) => a2.md - b2.md);
+              return (
+                <div key={String(r.id)} className="ma-card">
+                  <div className="ma-row1">
+                    <span className="ma-date">신청일 {fmtDate(String(r.created_at || ""))}</span>
+                    <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                  <div className="ma-title-line">{title}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
+                    {progs.length === 0 ? <span className="ma-meta">-</span> : progs.map((pg, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1px solid #eef1f6", borderRadius: 9, padding: "7px 11px" }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: "#4338ca", background: "#eef2ff", borderRadius: 6, padding: "2px 8px", whiteSpace: "nowrap" }}>📅 {pg.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e", flex: 1 }}>{pg.name || pg.label}</span>
+                        {grp.length > 1 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#0d9488", background: "#f0fdfa", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>👧 {grp.length}명</span>}
+                      </div>
+                    ))}
+                  </div>
+                  {String(r.request || "").trim() && <div className="ma-meta" style={{ marginTop: 6 }}>📝 {String(r.request)}</div>}
+                  {canCancel(String(r.status || "")) && (
+                    <div className="ma-actions" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {grp.length > 1
+                        ? grp.map(x => (
+                            <button key={String(x.id)} className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", String(x.id), `${String(x.name || "").trim()} · 애프터스쿨/필드트립`)}>취소요청({String(x.name || "").trim() || "아이"})</button>
+                          ))
+                        : <button className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", String(r.id), title)}>취소요청</button>}
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </div>
       )}
 
