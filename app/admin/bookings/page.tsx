@@ -858,7 +858,16 @@ export default function AdminBookingsPage(){
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{b.reservation_no}</td>
-            <td><span className="badge" style={{background:sc.bg,color:sc.color}}>{b.status}</span></td>
+            <td onClick={e=>e.stopPropagation()}>
+              <select className="asg" value={b.status||"접수"} style={{background:sc.bg,color:sc.color,fontWeight:700,borderRadius:8,border:"none",padding:"3px 6px"}}
+                onChange={async e=>{const v=e.target.value;
+                  if(v==="취소"&&!confirm(`"${b.booker_name}" 예약을 취소 처리할까요?\n(지난 내역 보관함 > 취소예약 탭에서 조회됩니다)`)){e.target.value=b.status;return;}
+                  await supabase.from("bookings").update({status:v,updated_at:new Date().toISOString()}).eq("id",b.id);
+                  setBookings(prev=>prev.map(x=>x.id===b.id?{...x,status:v}:x));}}>
+                {["접수","인보이스발행","영수증발행","결제완료","완료","취소"].map(st=><option key={st} value={st}>{st}</option>)}
+                {!["접수","인보이스발행","영수증발행","결제완료","완료","취소"].includes(b.status||"")&&<option value={b.status}>{b.status}</option>}
+              </select>
+            </td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td><select className="asg" value={b.care_assignee||""} style={{color:b.care_assignee?"#0d9488":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({care_assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,care_assignee:v}:x));}} title="학생 케어 담당 (컨디션·출석·투약 체크)"><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
