@@ -70,6 +70,23 @@ export default function MyApplicationsPage() {
       setSchedMap(map);
     })();
   }, []);
+  // 프로그램(날짜) 단위 취소 시트: ✕ 누른 줄 아래에 펼쳐짐
+  const [cxSheet, setCxSheet] = useState<{ gkey: string; token: string } | null>(null);
+  const [cxSending, setCxSending] = useState(false);
+  async function requestTokenCancel(rowIds: string[], token: string) {
+    setCxSending(true);
+    try {
+      for (const rid of rowIds) {
+        await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token }) });
+      }
+      // 로컬 반영
+      setData(prev => ({ ...prev, fieldtrip: prev.fieldtrip.map((r: AnyRow) => rowIds.includes(String(r.id))
+        ? { ...r, cancel_requested_dates: [String(r.cancel_requested_dates || "").trim(), token].filter(Boolean).join(", ") }
+        : r) }));
+      setCxSheet(null);
+      setToast("취소 요청이 접수됐어요. 직원 확인 후 처리됩니다.");
+    } finally { setCxSending(false); }
+  }
   const [cancelModal, setCancelModal] = useState<CancelModalState>({ open: false, table: "", id: "", title: "" });
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSaving, setCancelSaving] = useState(false);
@@ -448,32 +465,54 @@ export default function MyApplicationsPage() {
                 else if (pt.key === "ft" || FT_PROGRAMS[tok]?.isFieldtrip) nm += " 🚌";
                 return { md: pt.month * 100 + pt.day, label: `${pt.month}/${pt.day} (${dow})`, name: nm };
               }).sort((a2, b2) => a2.md - b2.md);
+              void meta;
+              const normTok2 = (v: unknown) => String(v || "").split(",").map(t => t.trim()).filter(Boolean);
+              const isCx = (x: AnyRow, tok: string) => normTok2(x.cancelled_dates).includes(tok) || String(x.status || "") === "cancelled";
+              const isReq = (x: AnyRow, tok: string) => !isCx(x, tok) && (normTok2(x.cancel_requested_dates).includes(tok) || String(x.status || "") === "cancel_requested");
+              const gkey = String(r.id);
               return (
-                <div key={String(r.id)} className="ma-card">
+                <div key={gkey} className="ma-card">
                   <div className="ma-row1">
                     <span className="ma-date">신청일 {fmtDate(String(r.created_at || ""))}</span>
-                    <span className="ma-badge" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                   </div>
                   <div className="ma-title-line">{title}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 4 }}>
-                    {progs.length === 0 ? <span className="ma-meta">-</span> : progs.map((pg, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8fafc", border: "1px solid #eef1f6", borderRadius: 9, padding: "7px 11px" }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: "#4338ca", background: "#eef2ff", borderRadius: 6, padding: "2px 8px", whiteSpace: "nowrap" }}>📅 {pg.label}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a2e", flex: 1 }}>{pg.name || pg.label}</span>
-                        {grp.length > 1 && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#0d9488", background: "#f0fdfa", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>👧 {grp.length}명</span>}
-                      </div>
-                    ))}
+                    {progs.length === 0 ? <span className="ma-meta">-</span> : progs.map((pg, i) => {
+                      const tok = String(r.date || "").split(",").map(t => t.trim()).filter(Boolean).find(t => { const pt = parseToken(t); return pt && pt.month * 100 + pt.day === pg.md; }) || "";
+                      const active = grp.filter(x => !isCx(x, tok));
+                      const reqRows = active.filter(x => isReq(x, tok));
+                      const cancellable = active.filter(x => !isReq(x, tok));
+                      const allCx = active.length === 0;
+                      const sheetOpen = cxSheet && cxSheet.gkey === gkey && cxSheet.token === tok;
+                      return (
+                        <div key={i}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, background: allCx ? "#f1f5f9" : "#f8fafc", border: "1px solid #eef1f6", borderRadius: 9, padding: "7px 11px", opacity: allCx ? 0.55 : 1 }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: "#4338ca", background: "#eef2ff", borderRadius: 6, padding: "2px 8px", whiteSpace: "nowrap" }}>📅 {pg.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: allCx ? "#94a3b8" : "#1a1a2e", flex: 1, textDecoration: allCx ? "line-through" : "none" }}>{pg.name || pg.label}</span>
+                            {allCx && <span style={{ fontSize: 10, fontWeight: 800, color: "#94a3b8", background: "#e2e8f0", borderRadius: 6, padding: "2px 7px" }}>취소됨</span>}
+                            {reqRows.length > 0 && <span style={{ fontSize: 10, fontWeight: 800, color: "#92400e", background: "#fef3c7", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>{grp.length > 1 ? reqRows.map(x => String(x.name || "").trim()).join("·") + " " : ""}취소 접수</span>}
+                            {grp.length > 1 && !allCx && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#0d9488", background: "#f0fdfa", borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>👧 {active.length}명</span>}
+                            {cancellable.length > 0 && (
+                              <button onClick={() => setCxSheet(sheetOpen ? null : { gkey, token: tok })} style={{ width: 26, height: 26, borderRadius: 8, border: "1px solid #fecaca", background: "#fff5f5", color: "#dc2626", fontSize: 13, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                            )}
+                          </div>
+                          {sheetOpen && (
+                            <div style={{ border: "1.5px dashed #93c5fd", background: "#f0f7ff", borderRadius: 10, padding: "11px 13px", margin: "6px 0 2px" }}>
+                              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 8 }}>{pg.label} {pg.name} — {cancellable.length > 1 ? "누구를 취소할까요?" : "취소할까요?"}</div>
+                              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                                {cancellable.length > 1 && cancellable.map(x => (
+                                  <button key={String(x.id)} disabled={cxSending} onClick={() => requestTokenCancel([String(x.id)], tok)} style={{ padding: "7px 15px", borderRadius: 9, border: "1px solid #cbd5e1", background: "#fff", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{String(x.name || "").trim() || "아이"}만</button>
+                                ))}
+                                <button disabled={cxSending} onClick={() => requestTokenCancel(cancellable.map(x => String(x.id)), tok)} style={{ padding: "7px 15px", borderRadius: 9, border: "1px solid #fca5a5", background: "#fff", color: "#dc2626", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>{cancellable.length > 1 ? "모두 취소" : "취소하기"}</button>
+                                <button disabled={cxSending} onClick={() => setCxSheet(null)} style={{ padding: "7px 15px", borderRadius: 9, border: "1px solid #cbd5e1", background: "#fff", color: "#64748b", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>닫기</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   {String(r.request || "").trim() && <div className="ma-meta" style={{ marginTop: 6 }}>📝 {String(r.request)}</div>}
-                  {canCancel(String(r.status || "")) && (
-                    <div className="ma-actions" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {grp.length > 1
-                        ? grp.map(x => (
-                            <button key={String(x.id)} className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", String(x.id), `${String(x.name || "").trim()} · 애프터스쿨/필드트립`)}>취소요청({String(x.name || "").trim() || "아이"})</button>
-                          ))
-                        : <button className="ma-cancel-btn" onClick={() => openCancel("fieldtrip_applications", String(r.id), title)}>취소요청</button>}
-                    </div>
-                  )}
                 </div>
               );
             });

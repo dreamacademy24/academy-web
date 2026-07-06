@@ -49,6 +49,8 @@ interface FlatRow {
   request: string;
   status: string;
   token: string;
+  cancelReq: boolean;
+  cancelled: boolean;
   month: number;
   day: number;
   programName: string;
@@ -155,6 +157,22 @@ export default function AfterschoolFieldtripAdminPage() {
     load();
   }
 
+  // 취소요청 승인: 해당 토큰을 cancelled_dates로 이동 (전 토큰 취소되면 row status도 cancelled)
+  async function approveCancel(appId: number, token: string) {
+    const { data: row } = await supabase.from("fieldtrip_applications").select("date,cancel_requested_dates,cancelled_dates,status").eq("id", appId).maybeSingle();
+    if (!row) return;
+    const norm = (v: unknown) => String(v || "").split(",").map(t => t.trim()).filter(Boolean);
+    const req = norm(row.cancel_requested_dates).filter(t => t !== token);
+    const cx = norm(row.cancelled_dates); if (!cx.includes(token)) cx.push(token);
+    const all = norm(row.date);
+    const patch: Record<string, unknown> = { cancel_requested_dates: req.join(", "), cancelled_dates: cx.join(", ") };
+    if (all.length > 0 && all.every(t => cx.includes(t))) patch.status = "cancelled";
+    else if (row.status === "cancel_requested" && req.length === 0) patch.status = "confirmed";
+    const { error } = await supabase.from("fieldtrip_applications").update(patch).eq("id", appId);
+    if (error) { alert("승인 실패: " + error.message); return; }
+    load();
+  }
+
   async function changeStatus(appId: number, status: string) {
     const prev = apps;
     setApps(p => p.map(a => a.id === appId ? { ...a, status } : a));
@@ -205,6 +223,8 @@ export default function AfterschoolFieldtripAdminPage() {
     const bk = a.booking_id ? bookingMap[a.booking_id] : null;
     const request = (a.request || a.message || "").trim();
     const status = a.status || "pending";
+    const reqSet = new Set(String((a as Row).cancel_requested_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
+    const cxSet = new Set(String((a as Row).cancelled_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
     let pushedAny = false;
     for (const token of tokens) {
       const r = resolveProgram(token, scheduleByMd);
@@ -219,6 +239,8 @@ export default function AfterschoolFieldtripAdminPage() {
       }
       flat.push({
         appId: a.id, childName, reserver, room, request, status, token,
+        cancelled: cxSet.has(token) || status === "cancelled",
+        cancelReq: !cxSet.has(token) && (reqSet.has(token) || status === "cancel_requested"),
         month: r.month, day: r.day,
         programName: r.name,
         isFieldtrip: r.isFieldtrip,
@@ -413,7 +435,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:12}}>
                   {mGroups.map(([token, rows]) => {
                     const r0 = rows[0];
-                    const total = rows.length;
+                    const total = rows.filter(r => !r.cancelled).length;
                     const dt = new Date(new Date().getFullYear(), r0.month - 1, r0.day);
                     const dowStr = isNaN(dt.getTime()) ? "" : ` (${KR_DOW[dt.getDay()]})`;
                     return (
@@ -431,7 +453,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                         {/* 컴팩트 칩 — 아이 이름 위주 가로 나열, 집 번호는 작게 (예약자 생략, 마우스 올리면 표시) */}
                         <div style={{display:"flex", flexWrap:"wrap", gap:6, padding:"10px 14px"}}>
                           {rows.map((r, i) => {
-                            const meta = STATUS_META[r.status] || STATUS_META.pending;
                             const lot = (r.room || "").replace(/^b?17/i, "").replace(/^[-_ ]/, "").toUpperCase() || "-";
                             return (
                               <div key={r.appId + "-" + r.token + "-" + i}
@@ -440,16 +461,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                                 <span style={{fontWeight:800, whiteSpace:"nowrap"}}>{r.childName || "-"}</span>
                                 <span style={{color:"#94a3b8", fontSize:10.5, fontWeight:700, whiteSpace:"nowrap"}}>{lot}</span>
                                 {r.request && <span style={{fontSize:11}} title={r.request}>💬</span>}
-                                <select
-                                  className="af-sel"
-                                  style={{background:meta.bg, color:meta.color, borderColor:meta.bg, padding:"2px 4px", fontSize:11}}
-                                  value={r.status}
-                                  onChange={e => changeStatus(r.appId, e.target.value)}
-                                >
-                                  <option value="pending">대기</option>
-                                  <option value="confirmed">확정</option>
-                                  <option value="cancelled">취소</option>
-                                </select>
+                                {r.cancelled && <span style={{fontSize:10.5, fontWeight:800, color:"#94a3b8", background:"#f1f5f9", borderRadius:6, padding:"2px 7px"}}>취소됨</span>}
+                                {r.cancelReq && (<>
+                                  <span style={{fontSize:10.5, fontWeight:800, color:"#b91c1c", background:"#fee2e2", borderRadius:6, padding:"2px 7px"}}>취소요청</span>
+                                  <button onClick={() => approveCancel(r.appId, r.token)} style={{border:"none", background:"#16a34a", color:"#fff", borderRadius:6, padding:"3px 9px", fontSize:11, fontWeight:800, cursor:"pointer"}}>승인</button>
+                                </>)}
                                 <button
                                   onClick={() => deleteToken(r.appId, r.token, r.childName, r.programName)}
                                   title="이 신청 삭제 (티쳐 표에도 반영)"

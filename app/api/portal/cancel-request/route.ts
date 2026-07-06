@@ -13,13 +13,20 @@ type AllowedTable = (typeof ALLOWED_TABLES)[number];
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { table, id, reason } = body || {};
+    const { table, id, reason, token } = body || {};
     if (!table || !ALLOWED_TABLES.includes(table as AllowedTable)) {
       return NextResponse.json({ error: "invalid table" }, { status: 400 });
     }
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-    const update: Record<string, unknown> = { status: "cancel_requested" };
+    let update: Record<string, unknown> = { status: "cancel_requested" };
+    if (table === "fieldtrip_applications" && token) {
+      // 날짜(프로그램) 단위 취소요청 — 전체 status는 건드리지 않음
+      const { data: row0 } = await supabase.from(table).select("cancel_requested_dates").eq("id", id).maybeSingle();
+      const cur = String(row0?.cancel_requested_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean);
+      if (!cur.includes(String(token))) cur.push(String(token));
+      update = { cancel_requested_dates: cur.join(", ") };
+    }
     if (reason && String(reason).trim()) update.cancel_reason = String(reason).trim();
 
     const { error } = await supabase.from(table).update(update).eq("id", id);
