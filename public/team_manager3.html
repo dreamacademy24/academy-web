@@ -5377,8 +5377,9 @@ function _btFilteredRows(pool,arch){
 }
 function _btRow(t){
   var emp=t.assignee?getP(t.assignee):null;
+  var unknownEmp=!!(t.assignee&&!emp);
   var extra=(t.assignees||[]).filter(function(id){return id&&id!==t.assignee;}).length;
-  var ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'미배정',ei=emp?emp.initial:'?';
+  var ec=emp?emp.color:(unknownEmp?'#f59e0b':'#9ca3af'),en=emp?emp.name:(unknownEmp?'⚠ '+t.assignee+' (계정없음)':'미배정'),ei=emp?emp.initial:(unknownEmp?'!':'?');
   var dueT=t.due?dL(t.due):null;
   var prog=t.progress||0;if(prog==='완료')prog=100;prog=parseInt(prog,10)||0;
   var cmt=(taskComments[t.id]||[]).length;
