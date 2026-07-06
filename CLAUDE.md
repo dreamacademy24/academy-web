@@ -1816,3 +1816,17 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 기본정보 아카데미 시작 변경 시 종료일은 시작+기간으로 자동 재계산됨 (설계 의도)
 - ✅ 조사 중 잠복 버그 수정 (816950d): /api/bookings/[id] parseBookingStudents가 JSONB-only 학생 변환 시 academy_start/end·ssp·class_type·픽드롭·주소·특이사항 필드를 누락 → 학생 탭에서 수정해도 표시 안 되고, 저장 시 타 필드 유실 위험. {...s} 스프레드 + 정규화 필드 추가로 보존
 - 메이 증상 재현 안 됨 — 유력 원인: 브라우저 캐시(구 번들) 또는 학생탭 저장값과 기본정보(예약 레벨) 아카데미 시작 필드 혼동 (두 값은 별개)
+
+## 2026-07-06 세션 (직원업무 개편 ③ 전체 업무 테이블형 — 시안 A 확장판)
+- ✅ 전체 업무 기본 뷰 = 풀와이드 테이블 (localStorage tmBoardUI, '보드 뷰' 버튼으로 기존 master-detail 전환 가능·양방향)
+- 구성: ①직원 현황 스트립(직원별 진행/긴급/완료 + 👁 마지막 접속, 카드 클릭=그 직원 필터) ②방치 배너+정리 모드(체크→보관함/완료/마감 재설정) ③필터 칩(전체/지시/긴급/방치/완료/보관함)+검색 ④섹션: 긴급·지시 → 진행중 → 방치(마감30일+ 또는 무마감 60일+, opacity .62) → 완료(20개)
+- 행 클릭 = 우측 슬라이드 drawer(#boardDrawer) — 기존 #boardDetail 노드를 drawer로 이동시켜 renderBoardTaskDetail 재사용, 닫으면 boardMD로 복귀
+- 확인(열람) 기록: app_settings key=task_views_<empId> value={taskId:iso,_board:iso}. 전체업무/내업무 열람·업무 상세 오픈 시 자동 기록. 테이블 '확인' 컬럼=담당자 미확인 표시, 미배정='N명 봄/아무도 안 봄'
+- 보관함: app_settings key=board_archived_tasks (id 배열). 삭제 아님, 보관함 칩에서 ↩ 복구. 모든 뷰(보드/홈)에서 제외
+- 지시 노출: 홈 확인필요 영역 상단에 '📢 확인 필요한 업무' 밴드 — 내게 배정+미열람='! 새 업무', 미배정='지시'+[내가 맡기](직원만, claimTask→배정+ceo 알림). kOps1에 합산
+- 알림: 업무 생성 시 미배정→전직원 unassigned_task 알림, 배정→담당자(들) 알림 (기존: ceo에게만)
+- ! 뱃지(unseenBadgeHtml): 내게 배정됐는데 안 열어본 업무에 표시 — 보드/홈/내업무 아이템 공통
+- ⚠ 계정없음: 존재하지 않는 직원 id(jenna 등)에 배정된 업무는 '⚠ id (계정없음)' 주황 표시 — 마이그레이션 필요 시 담당자 재지정
+- 커밋: 3f57557(본체), 2d2e250(⚠ 표시). 라이브 검증 완료 (테이블 43행·스트립 8카드·drawer 왕복·정리모드 체크박스·홈 밴드·jamie 시점 [내가 맡기] 렌더)
+- 푸시 토큰: 메이 로컬 저장소(C:/Users/desko/academy-web) .git/config remote URL에 포함 — Cowork에서 폴더 마운트 승인받아 사용
+- 다음 대기: 픽업/드랍 신청 항공권 업로드 + 추가 픽드랍 직원 달력 자동 표시(그 주 체크인과 함께) → 애프터스쿨 월별 달력 개편 → booking 휴무 안내 버그
