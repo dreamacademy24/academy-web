@@ -8,7 +8,7 @@ import { toastOk, toastErr } from "@/lib/toast";
 /* 지난 내역 보관함 — 날짜가 지난 신청을 모아 보고, 오래된 것은 기간 선택 후 일괄 삭제
    데이터는 옮기지 않고 그대로 둔 채 "지난 것"만 여기서 조회 (참석 아이 내역 보존용) */
 
-type TabKey = "booking" | "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq" | "consent";
+type TabKey = "booking" | "cancelled" | "shuttle" | "fieldtrip" | "tutor" | "pickup" | "ocreq" | "consent";
 type Row = Record<string, any>;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -18,6 +18,7 @@ const fD = (s: string | null | undefined) => (s || "").slice(0, 10);
 
 const TABS: { key: TabKey; label: string; dateLabel: string }[] = [
   { key: "booking", label: "📋 예약", dateLabel: "체크아웃" },
+  { key: "cancelled", label: "🚫 취소예약", dateLabel: "체크인 예정일" },
   { key: "shuttle", label: "🚌 투어셔틀", dateLabel: "투어일" },
   { key: "fieldtrip", label: "🎒 애프터스쿨/필드트립", dateLabel: "신청일" },
   { key: "tutor", label: "👩‍🏫 튜터 수업", dateLabel: "종료일" },
@@ -30,7 +31,7 @@ export default function ArchivePage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<TabKey>("shuttle");
-  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ booking: [], shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [], consent: [] });
+  const [rows, setRows] = useState<Record<TabKey, Row[]>>({ booking: [], cancelled: [], shuttle: [], fieldtrip: [], tutor: [], pickup: [], ocreq: [], consent: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   /* 삭제 도구 */
@@ -46,8 +47,9 @@ export default function ArchivePage() {
   const load = useCallback(async () => {
     setLoading(true);
     const today = todayStr();
-    const [bk, sh, ft, tu, pk, oc, cs] = await Promise.all([
+    const [bk, cx, sh, ft, tu, pk, oc, cs] = await Promise.all([
       supabase.from("bookings").select("id, reservation_no, booker_name, checkin_date, checkout_date, accom_type, status, students").lt("checkout_date", today).order("checkout_date", { ascending: false }).limit(1000),
+      supabase.from("bookings").select("id, reservation_no, booker_name, booker_phone, checkin_date, checkout_date, accom_type, status, students, updated_at").ilike("status", "%취소%").order("checkin_date", { ascending: false }).limit(1000),
       supabase.from("shuttle_applications").select("*").lt("tour_date", today).order("tour_date", { ascending: false }).limit(1000),
       supabase.from("fieldtrip_applications").select("*").order("created_at", { ascending: false }).limit(1000),
       supabase.from("tutor_requests").select("id, student_name_kr, student_name_en, class_type, start_date, end_date, status, created_at, house_or_reserver").lt("end_date", today).order("end_date", { ascending: false }).limit(1000),
@@ -56,7 +58,8 @@ export default function ArchivePage() {
       supabase.from("booking_consents").select("*").order("created_at", { ascending: false }).limit(1000),
     ]);
     setRows({
-      booking: bk.data || [],
+      booking: (bk.data || []).filter((r: Row) => String(r.status || "").indexOf("취소") < 0),
+      cancelled: cx.data || [],
       shuttle: sh.data || [],
       fieldtrip: (ft.data || []).filter((r: Row) => fD(r.created_at) < today),
       tutor: tu.data || [],
@@ -73,6 +76,11 @@ export default function ArchivePage() {
     if (t === "consent") {
       const hol = Array.isArray(r.holidays_notified) ? r.holidays_notified.map((h: Row) => h.date).join(", ") : "";
       return { date: fD(r.created_at), who: `${r.booker_name || "-"} (${(r.reservation_no || "").slice(-6)})`, detail: `규정 v${r.policy_version || "-"} · ${(r.policy_keys || []).join("+")} · "${(r.agreed_text || "").slice(0, 30)}…"${hol ? ` · 휴일안내: ${hol}` : ""}`, status: "동의" };
+    }
+    if (t === "cancelled") {
+      let stu = "";
+      try { const a2 = typeof r.students === "string" ? JSON.parse(r.students) : r.students; if (Array.isArray(a2)) stu = a2.map((s: Row) => s.korName || s.name_kr || "").filter(Boolean).join(", "); } catch {}
+      return { date: fD(r.checkin_date), who: `${r.booker_name || "-"} (${(r.reservation_no || "").slice(-6)})`, detail: `${stu ? `👧 ${stu} · ` : ""}${r.accom_type || ""} · ${fD(r.checkin_date)}~${fD(r.checkout_date)}${r.booker_phone ? ` · 📞${r.booker_phone}` : ""}`, status: r.status || "취소" };
     }
     if (t === "booking") {
       let stu = "";
