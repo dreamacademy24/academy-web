@@ -223,8 +223,8 @@ export default function AfterschoolFieldtripAdminPage() {
     const bk = a.booking_id ? bookingMap[a.booking_id] : null;
     const request = (a.request || a.message || "").trim();
     const status = a.status || "pending";
-    const reqSet = new Set(String((a as Row).cancel_requested_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
-    const cxSet = new Set(String((a as Row).cancelled_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
+    const reqSet = new Set(String((a as unknown as Record<string, unknown>).cancel_requested_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
+    const cxSet = new Set(String((a as unknown as Record<string, unknown>).cancelled_dates || "").split(",").map((t: string) => t.trim()).filter(Boolean));
     let pushedAny = false;
     for (const token of tokens) {
       const r = resolveProgram(token, scheduleByMd);
