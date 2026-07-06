@@ -255,6 +255,24 @@ export default function BookingDetailPage() {
       setRowForm({ ...row });
     }
   }
+  // 직원 직접 픽드랍 등록 (손님이 채팅으로 신청한 건 — 예: 아빠 추가 입국 공항 픽업)
+  const [pkAdding, setPkAdding] = useState(false);
+  const [pkSaving, setPkSaving] = useState(false);
+  const [pkForm, setPkForm] = useState({ request_type: "extra_pickup", request_date: "", request_time: "", location: "공항", destination: "", num_people: 1, notes: "" });
+  async function savePkAdd() {
+    if (!pkForm.request_date) { toastErr("날짜를 입력해주세요."); return; }
+    setPkSaving(true);
+    try {
+      const r = await fetch(`/api/bookings/${id}/update-row`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "pickup_requests", fields: pkForm }) });
+      const d = await r.json();
+      if (!r.ok) { toastErr("등록 실패: " + (d.error || r.status)); return; }
+      setPkAdding(false);
+      setPkForm({ request_type: "extra_pickup", request_date: "", request_time: "", location: "공항", destination: "", num_people: 1, notes: "" });
+      toastOk("픽드랍이 등록됐어요.");
+      load();
+    } finally { setPkSaving(false); }
+  }
+
   async function saveRowEdit() {
     if (!rowEditing) return;
     setRowSaving(true);
@@ -1062,7 +1080,31 @@ export default function BookingDetailPage() {
           </div>
         </div>
         <div className="sec">
-          <h2>픽업/드랍 신청 ({pickups.length}건) <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(손님 포털 신청)</span></h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h2 style={{ flex: 1 }}>픽업/드랍 신청 ({pickups.length}건) <span style={{fontSize:11,fontWeight:500,color:"#94a3b8"}}>(포털 신청 + 직원 등록)</span></h2>
+            <button className="btn btn-sm btn-blue" onClick={() => setPkAdding(v => !v)}>{pkAdding ? "닫기" : "+ 직접 등록"}</button>
+          </div>
+          {pkAdding && (
+            <div style={{ background: "#f8fafc", border: "1.5px dashed #93c5fd", borderRadius: 10, padding: 14, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>손님이 채팅으로 신청한 픽드랍을 대신 등록합니다 (예: 아빠 추가 입국 공항 픽업)</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>유형</div>
+                  <select className="ed-inp" value={pkForm.request_type} onChange={e=>setPkForm({...pkForm,request_type:e.target.value})}>
+                    <option value="extra_pickup">➕ 추가 픽업</option>
+                    <option value="extra_drop">➕ 추가 드랍</option>
+                    <option value="pickup">픽업</option>
+                    <option value="dropoff">드랍</option>
+                  </select></div>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>날짜 *</div><input className="ed-inp" type="date" value={pkForm.request_date} onChange={e=>setPkForm({...pkForm,request_date:e.target.value})}/></div>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={pkForm.request_time} onChange={e=>setPkForm({...pkForm,request_time:e.target.value})}/></div>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>출발</div><input className="ed-inp" value={pkForm.location} onChange={e=>setPkForm({...pkForm,location:e.target.value})} placeholder="공항"/></div>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>도착</div><input className="ed-inp" value={pkForm.destination} onChange={e=>setPkForm({...pkForm,destination:e.target.value})} placeholder="드림하우스 / 제이파크"/></div>
+                <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>인원</div><input className="ed-inp" type="number" min={1} value={pkForm.num_people} onChange={e=>setPkForm({...pkForm,num_people:Number(e.target.value)||1})}/></div>
+              </div>
+              <div style={{ marginBottom: 10 }}><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>메모</div><input className="ed-inp" style={{width:"100%"}} value={pkForm.notes} onChange={e=>setPkForm({...pkForm,notes:e.target.value})} placeholder="예: 아버님 1명 추가 입국 (KE631 14:30 도착)"/></div>
+              <button className="btn btn-sm btn-blue" onClick={savePkAdd} disabled={pkSaving}>{pkSaving ? "등록 중..." : "💾 등록"}</button>
+            </div>
+          )}
           {pickups.length === 0 ? <div className="empty">픽업 일정이 없습니다</div> :
             pickups.map((p: any) => {
               const isEditing = rowEditing?.table === "pickup_requests" && rowEditing.id === p.id;
