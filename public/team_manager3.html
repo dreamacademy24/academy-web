@@ -1479,6 +1479,13 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- BOARD -->
       <div id="page-board" class="hidden">
+        <!-- TABLE VIEW (2026-07 개편) -->
+        <div id="boardTableWrap" class="hidden"></div>
+        <div id="boardDrawerDim" onclick="closeBoardDrawer()" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.25);z-index:955"></div>
+        <div id="boardDrawer" style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(600px,94vw);background:#fff;box-shadow:-8px 0 30px rgba(15,23,42,.18);z-index:960;overflow-y:auto">
+          <div style="position:sticky;top:0;background:#fff;padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end;z-index:5"><button onclick="closeBoardDrawer()" style="border:none;background:#f1f5f9;border-radius:8px;padding:6px 14px;font-weight:800;cursor:pointer;font-family:inherit;font-size:12px">✕ 닫기</button></div>
+          <div id="boardDrawerBody" style="padding:16px 20px 40px"></div>
+        </div>
         <!-- NEW MASTER-DETAIL LAYOUT -->
         <div id="boardMD" style="display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px);background:var(--bg);margin:-24px -24px 0 -24px">
           <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);background:#fff;min-width:0">
@@ -3917,7 +3924,7 @@ function showPage(p){
   document.getElementById('btnProj').style.display='none';
   if(p==='home'){renderHome();markNotifsRead('all');}
   if(p==='announcements'){renderAnnouncementsPage();document.getElementById('btnTask').style.display='none';markNotifsRead('notice');}
-  if(p==='board'){renderBoard();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
+  if(p==='board'){renderBoard();recordBoardView();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
@@ -3929,7 +3936,7 @@ function showPage(p){
   if(p==='sboard'){renderSBoard();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC';document.getElementById('topS').textContent='\uACC4\uC815\u00B7\uBCC0\uACBD\u00B7\uB9C1\uD06C\u00B7\uBA54\uBAA8 \uACF5\uC6A9';}
   if(typeof updateNavBadges==='function')updateNavBadges();
 }
-function showEmpPage(empId){
+function showEmpPage(empId){if(CU&&CU.id===empId){try{recordBoardView();}catch(e){}}
   var emp=getP(empId);
   if(!emp){console.error('[showEmpPage] unknown empId:',empId);return;}
   var isOwner=isAdmin()||(CU&&CU.id===empId);
@@ -4446,10 +4453,10 @@ function loadHomeOps(){
 function loadHomeIssues(){
   var box=document.getElementById('homeIssuesBox');if(!box)return;
   var today=_dailyToday();
-  Promise.all([
+  loadBoardMeta().then(function(){return Promise.all([
     sbGet('bookings','select=id,reservation_no,booker_name,accom_type,house_no,accom_room,checkin_date,checkout_date,status,students'),
     sbGet('staff_issue_dismissals','select=booking_id').catch(function(){return [];})
-  ]).then(function(res){
+  ]);}).then(function(res){
     var rows=Array.isArray(res[0])?res[0]:[];
     var dis={};(Array.isArray(res[1])?res[1]:[]).forEach(function(d){dis[d.booking_id]=true;});
     var items=[];
@@ -4468,8 +4475,9 @@ function loadHomeIssues(){
       if(flags.length)items.push({b:b,ci:ci,dday:dday,flags:flags});
     });
     items.sort(function(a,b){return (a.ci||'9999').localeCompare(b.ci||'9999');});
-    var k1=document.getElementById('kOps1');if(k1)k1.textContent=items.length;
-    box.innerHTML=_homeIssuesHtml(items,Object.keys(dis).length);
+    var dirHtml=_homeDirectivesHtml();
+    var k1=document.getElementById('kOps1');if(k1)k1.textContent=items.length+_homeDirCount;
+    box.innerHTML=dirHtml+_homeIssuesHtml(items,Object.keys(dis).length);
   }).catch(function(){box.innerHTML='';});
 }
 function dismissHomeIssue(id,ev){
@@ -4615,7 +4623,7 @@ function _homeRenderWeekStrip(){
 }
 function _homeUnassignedRow(t){
   return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;font-size:12px;margin-bottom:3px;background:#fafafa">'+
-    '<span onclick="_homeGotoBoardTask(\''+t.id+'\')" style="flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+newBadgeHtml(t)+'</span>'+
+    '<span onclick="_homeGotoBoardTask(\''+t.id+'\')" style="flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</span>'+
     '<button onclick="event.stopPropagation();openTaskEdit(\''+t.id+'\')" style="background:#10b981;color:#fff;border:none;font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;cursor:pointer;flex-shrink:0">+ 배정</button>'+
     '</div>';
 }
@@ -4625,7 +4633,7 @@ function _homeUrgentRow(t){
   var dueT=t.due?dL(t.due):null;
   return '<div onclick="_homeGotoBoardTask(\''+t.id+'\')" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12px;margin-bottom:3px;background:#fafafa">'+
     (t.priority==='high'?'<span style="font-size:11px">🚨</span>':'')+
-    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+newBadgeHtml(t)+'</span>'+
+    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</span>'+
     '<span style="background:'+ec+'18;color:'+ec+';font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px">'+esc(en)+'</span>'+
     (dueT?'<span style="font-size:10px;color:'+(dueT.cls==='tag-red'||dueT.cls==='tag-orange'?'#ef4444':'var(--text3)')+'">'+dueT.text+'</span>':'')+
     '</div>';
@@ -5022,6 +5030,16 @@ function _setBoardFilter(f){boardFilter=f;_boardSelTaskId=null;renderBoard();}
 function _setBoardView(v){boardView=v;_boardSelTaskId=null;_boardSelEmpId=null;renderBoard();}
 function _setBoardSearch(v){_boardSearch=(v||'').trim().toLowerCase();renderBoardSidebar();}
 function renderBoard(){
+  var _twEl=document.getElementById('boardTableWrap'),_mdEl=document.getElementById('boardMD');
+  if(_boardUIMode()==='table'&&_twEl){
+    _twEl.classList.remove('hidden');
+    if(_mdEl)_mdEl.style.display='none';
+    renderBoardTable();
+    var grid0=document.getElementById('boardGrid');if(grid0)grid0.innerHTML='';
+    return;
+  }
+  if(_twEl)_twEl.classList.add('hidden');
+  if(_mdEl)_mdEl.style.display='grid';
   // Render new master-detail UI
   renderBoardSidebar();
   if(boardView==='emp'){
@@ -5053,6 +5071,7 @@ function _boardFiltered(){
   if(_boardSearch){
     f=f.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0||(t.note||'').toLowerCase().indexOf(_boardSearch)>=0;});
   }
+  f=f.filter(function(t){return !_isArchivedTask(t.id);});
   return f;
 }
 function renderBoardSidebar(){
@@ -5066,6 +5085,7 @@ function renderBoardSidebar(){
   h+='<button onclick="_setBoardView(\'task\')" style="padding:4px 8px;border:none;background:'+(boardView!=='emp'?'#fff':'transparent')+';color:'+(boardView!=='emp'?'var(--primary)':'var(--text3)')+';border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">📋 업무별</button>';
   h+='<button onclick="_setBoardView(\'emp\')" style="padding:4px 8px;border:none;background:'+(boardView==='emp'?'#fff':'transparent')+';color:'+(boardView==='emp'?'var(--primary)':'var(--text3)')+';border-radius:4px;font-weight:700;cursor:pointer;font-family:inherit">👤 직원별</button>';
   h+='</div></div>';
+  h+='<button onclick="_setBoardUIMode(\'table\')" style="width:100%;margin-bottom:8px;padding:6px 0;border:1px solid var(--border);background:#fff;color:var(--text2);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📊 테이블 뷰로 전환</button>';
   if(boardView!=='emp'){
     h+='<div style="display:flex;gap:3px;margin-bottom:8px;flex-wrap:wrap">';
     [['all','전체'],['unassigned','미배정'],['active','진행중'],['done','완료']].forEach(function(p){
@@ -5090,7 +5110,7 @@ function _renderBoardTaskItem(t,color){
   var bgSel=sel?'background:#f3f4f6;border-left:2px solid #534AB7':'border-left:2px solid transparent';
   return '<div onclick="selectBoardTask(\''+t.id+'\')" style="padding:7px 8px;cursor:pointer;border-radius:5px;margin-bottom:3px;'+bgSel+';display:flex;flex-direction:column;gap:2px">'+
     '<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="width:6px;height:6px;border-radius:50%;background:'+(color||ec)+';flex-shrink:0"></span>'+
-    '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+newBadgeHtml(t)+'</span>'+
+    '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</span>'+
     (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0">'+cmt+'</span>':'')+
     '</div>'+
     '<div style="font-size:10.5px;color:var(--text3);margin-left:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+
@@ -5165,6 +5185,7 @@ function _renderBoardEmpList(){
 function selectBoardTask(taskId){
   try{
     _boardSelTaskId=taskId;
+    recordTaskView(taskId);
     renderBoardSidebar();
     renderBoardTaskDetail(taskId);
   }catch(err){
@@ -5179,6 +5200,350 @@ function _boardGotoTaskFromEmp(taskId){
   renderBoard();
 }
 function selectBoardEmp(empId){_boardSelEmpId=empId;renderBoardSidebar();renderBoardEmpDetail(empId);}
+// ══════════ 전체 업무 개편 (2026-07-06): 테이블 뷰 + 직원 스트립 + 방치 정리 + 확인(열람) 기록 ══════════
+var _boardEmpFilter=null;
+var _boardCleanMode=false;
+var _taskViews={};
+var _archivedIds=[];
+var _boardMetaP=null;
+var _btRestoreFocus=false;
+var _btSearchT=null;
+function _boardUIMode(){try{return localStorage.getItem('tmBoardUI')||'table';}catch(e){return 'table';}}
+function _setBoardUIMode(m){
+  try{localStorage.setItem('tmBoardUI',m);}catch(e){}
+  _boardCleanMode=false;
+  if(m==='md'&&['stale','archived','urgent'].indexOf(boardFilter)>=0)boardFilter='all';
+  closeBoardDrawer();
+  renderBoard();
+}
+function loadBoardMeta(force){
+  if(_boardMetaP&&!force)return _boardMetaP;
+  _boardMetaP=Promise.all([
+    sbGet('app_settings','key=eq.board_archived_tasks&select=value').catch(function(){return [];}),
+    sbGet('app_settings','key=like.task_views_*&select=key,value').catch(function(){return [];})
+  ]).then(function(res){
+    var a=res[0]&&res[0][0]&&res[0][0].value;
+    _archivedIds=Array.isArray(a)?a.map(String):[];
+    _taskViews={};
+    (res[1]||[]).forEach(function(r){
+      var emp=String(r.key||'').replace('task_views_','');
+      _taskViews[emp]=(r.value&&typeof r.value==='object')?r.value:{};
+    });
+  }).catch(function(){});
+  return _boardMetaP;
+}
+function _isArchivedTask(id){return _archivedIds.indexOf(String(id))>=0;}
+function _saveArchived(){
+  return fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'board_archived_tasks',value:_archivedIds,updated_at:new Date().toISOString()})}).catch(function(){toast('보관 저장 실패 — 네트워크 확인');});
+}
+function _myViews(){if(!CU)return {};if(!_taskViews[CU.id])_taskViews[CU.id]={};return _taskViews[CU.id];}
+function _saveMyViews(){
+  if(!CU)return;
+  fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'task_views_'+CU.id,value:_myViews(),updated_at:new Date().toISOString()})}).catch(function(){});
+}
+function recordBoardView(){loadBoardMeta().then(function(){if(!CU)return;var v=_myViews();v._board=new Date().toISOString();_saveMyViews();});}
+function recordTaskView(taskId){
+  loadBoardMeta().then(function(){
+    if(!CU)return;var v=_myViews();
+    v[String(taskId)]=new Date().toISOString();v._board=new Date().toISOString();
+    _saveMyViews();
+  });
+}
+function unseenBadgeHtml(t){
+  try{
+    if(!CU||!t||isDoneTask(t))return '';
+    var mine=t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0);
+    if(!mine)return '';
+    if(_myViews()[String(t.id)])return '';
+    return '<span title="아직 열어보지 않았어요" style="background:#ef4444;color:#fff;font-size:9.5px;font-weight:900;padding:2px 6px;border-radius:8px;margin-left:4px;vertical-align:middle">!</span>';
+  }catch(e){return '';}
+}
+function isStaleTask(t){
+  if(isDoneTask(t))return false;
+  var now=Date.now();
+  if(t.due){var d=parseLocalDate(t.due);return !!(d&&(now-d.getTime())>30*86400000);}
+  var c=t.createdAt||t.created_at;
+  if(c){var cd=new Date(c);if(!isNaN(cd.getTime())&&(now-cd.getTime())>60*86400000)return true;}
+  return false;
+}
+function _lastSeenLabel(iso){
+  if(!iso)return null;
+  var d=new Date(iso);if(isNaN(d.getTime()))return null;
+  var today=_dailyToday();
+  var u=new Date(d.getTime()+8*3600000);
+  var p2=function(n){return (n<10?'0':'')+n;};
+  var ds=u.getUTCFullYear()+'-'+p2(u.getUTCMonth()+1)+'-'+p2(u.getUTCDate());
+  var hm=p2(u.getUTCHours())+':'+p2(u.getUTCMinutes());
+  if(ds===today)return {txt:'오늘 '+hm,ok:true};
+  var days=Math.round((new Date(today+'T00:00:00')-new Date(ds+'T00:00:00'))/86400000);
+  return {txt:days<=1?'어제':(u.getUTCMonth()+1)+'/'+u.getUTCDate(),ok:days<=1};
+}
+function _tablePool(){
+  var pool=tasks.filter(function(t){
+    if(t.shared) return true;
+    return CU && (t.assignee===CU.id || (t.assignees&&t.assignees.indexOf(CU.id)>=0));
+  });
+  tasks.forEach(function(t){if(isUnassignedTask(t)&&pool.indexOf(t)<0)pool.push(t);});
+  if(_boardSearch)pool=pool.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0||(t.note||'').toLowerCase().indexOf(_boardSearch)>=0;});
+  return pool;
+}
+function _setBoardEmpFilter(id){_boardEmpFilter=(_boardEmpFilter===id)?null:id;renderBoardTable();}
+function _toggleCleanMode(){_boardCleanMode=!_boardCleanMode;if(_boardCleanMode&&boardFilter==='done')boardFilter='all';renderBoardTable();}
+function _btSearchDebounce(){clearTimeout(_btSearchT);_btSearchT=setTimeout(function(){_btRestoreFocus=true;renderBoardTable();},350);}
+function renderBoardTable(){
+  var wrap=document.getElementById('boardTableWrap');if(!wrap)return;
+  loadBoardMeta().then(function(){
+    wrap.innerHTML=_boardTableHtml();
+    if(_btRestoreFocus){_btRestoreFocus=false;var i=document.getElementById('btSearch');if(i){i.focus();try{i.setSelectionRange(i.value.length,i.value.length);}catch(e){}}}
+  });
+}
+function _btSeenCell(t){
+  var ids=[];
+  if(t.assignee)ids.push(t.assignee);
+  (t.assignees||[]).forEach(function(id){if(id&&ids.indexOf(id)<0)ids.push(id);});
+  if(!ids.length){
+    var n=0;
+    Object.keys(_taskViews).forEach(function(emp){if(emp!=='ceo'&&_taskViews[emp]&&_taskViews[emp][String(t.id)])n++;});
+    return n?'<span style="color:#16a34a;font-weight:700;font-size:11px">'+n+'명 봄</span>':'<span style="color:#dc2626;font-weight:800;font-size:11px">아무도 안 봄</span>';
+  }
+  if(isDoneTask(t))return '<span style="color:var(--text3);font-size:11px">—</span>';
+  var unseen=[];
+  ids.forEach(function(id){
+    var v=_taskViews[id]&&_taskViews[id][String(t.id)];
+    if(!v){var p=getP(id);unseen.push(p?p.name:id);}
+  });
+  if(!unseen.length)return '<span style="color:#16a34a;font-weight:700;font-size:11px">👁 확인함</span>';
+  return '<span style="color:#dc2626;font-weight:800;font-size:11px" title="'+esc(unseen.join(', '))+' 미확인">'+esc(unseen[0])+(unseen.length>1?' 외 '+(unseen.length-1):'')+' 미확인</span>';
+}
+function _btStrip(tasksAll){
+  var eod=new Date(new Date().setHours(23,59,59,999));
+  var urg=function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=eod);};
+  var h='<div style="display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;margin-bottom:6px">';
+  var unAll=tasksAll.filter(function(t){return isUnassignedTask(t)&&!isDoneTask(t)&&!_isArchivedTask(t.id);});
+  var unUrg=unAll.filter(urg).length;
+  var seenCnt=0;
+  Object.keys(_taskViews).forEach(function(emp){if(emp!=='ceo'&&_taskViews[emp]){if(unAll.some(function(t){return _taskViews[emp][String(t.id)];}))seenCnt++;}});
+  h+='<button class="bt-emp'+(_boardEmpFilter==='_un'?' on':'')+'" onclick="_setBoardEmpFilter(\'_un\')">'+
+    '<span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:#9ca3af;color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-bottom:5px">?</span>'+
+    '<div style="font-size:12.5px;font-weight:800;color:var(--text)">📢 지시·미배정</div>'+
+    '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">'+unAll.length+'건 대기'+(unUrg?' · 🚨 '+unUrg:'')+'</div>'+
+    '<div style="font-size:10px;font-weight:800;margin-top:3px;color:'+(seenCnt?'#16a34a':'#dc2626')+'">'+(unAll.length?(seenCnt?seenCnt+'명이 봄':'아무도 안 봄'):'—')+'</div></button>';
+  ALL.forEach(function(e){
+    var et=tasksAll.filter(function(t){return !_isArchivedTask(t.id)&&(t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0));});
+    if(!isManagerCU()&&CU&&CU.id!==e.id)et=et.filter(function(t){return t.shared;});
+    var nd=et.filter(function(t){return !isDoneTask(t);});
+    var dn=et.length-nd.length;
+    var eu=nd.filter(urg).length;
+    var ls=_lastSeenLabel(_taskViews[e.id]&&_taskViews[e.id]._board);
+    h+='<button class="bt-emp'+(_boardEmpFilter===e.id?' on':'')+'" onclick="_setBoardEmpFilter(\''+e.id+'\')">'+
+      '<span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:'+e.color+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-bottom:5px">'+e.initial+'</span>'+
+      '<div style="font-size:12.5px;font-weight:800;color:var(--text)">'+esc(e.name)+'</div>'+
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">진행 '+nd.length+(eu?' · 🚨 '+eu:'')+' · 완료 '+dn+'</div>'+
+      '<div style="font-size:10px;font-weight:800;margin-top:3px;color:'+(ls&&ls.ok?'#16a34a':'#dc2626')+'">'+(ls?'👁 '+ls.txt+' 접속':'접속 기록 없음')+'</div></button>';
+  });
+  h+='</div>';
+  return h;
+}
+function _btCleanBanner(staleCnt){
+  if(boardFilter==='archived')return '';
+  if(!_boardCleanMode){
+    if(!staleCnt)return '';
+    return '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:11px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">🧹 <b style="color:#92400e;font-size:13px">방치 업무 '+staleCnt+'건</b><span style="font-size:12px;color:#92400e">마감 30일 이상 지났거나 60일간 변화 없음</span><button onclick="_toggleCleanMode()" style="border:1px solid #d97706;background:#fff;color:#92400e;font-weight:800;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">선택해서 한번에 정리 →</button></div>';
+  }
+  return '<div style="background:#fffbeb;border:1.5px solid #d97706;border-radius:12px;padding:11px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><b style="color:#92400e;font-size:13px">🧹 정리 모드</b><span style="font-size:12px;color:#92400e">체크 후 실행 —</span>'+
+    '<button onclick="bulkArchiveTasks()" style="border:none;background:#d97706;color:#fff;font-weight:800;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">🗄 보관함으로</button>'+
+    '<button onclick="bulkCompleteTasks()" style="border:1px solid #16a34a;background:#fff;color:#166534;font-weight:800;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">✅ 완료 처리</button>'+
+    '<button onclick="bulkRescheduleTasks()" style="border:1px solid #4f46e5;background:#fff;color:#4f46e5;font-weight:800;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">📅 마감 재설정</button>'+
+    '<button onclick="_toggleCleanMode()" style="border:1px solid var(--border);background:#fff;color:var(--text3);font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;font-family:inherit">취소</button></div>';
+}
+function _btFbar(c){
+  var chips=[['all','전체 '+c.all],['unassigned','📢 지시 '+c.un],['urgent','🚨 긴급 '+c.urg],['stale','🧹 방치 '+c.stale],['done','완료 '+c.done],['archived','🗄 보관함 '+c.arch]];
+  var h='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px">';
+  chips.forEach(function(p){h+='<button class="bt-chip'+(boardFilter===p[0]?' on':'')+'" onclick="_setBoardFilter(\''+p[0]+'\')">'+p[1]+'</button>';});
+  h+='<input type="text" id="btSearch" placeholder="🔍 검색..." value="'+esc(_boardSearch||'')+'" oninput="_boardSearch=(this.value||\'\').trim().toLowerCase();_btSearchDebounce()" style="margin-left:auto;padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;outline:none;min-width:170px">';
+  h+='<button class="bt-chip" onclick="_setBoardUIMode(\'md\')" title="기존 좌우 분할 보드로 전환">🗂 보드 뷰</button>';
+  h+='</div>';
+  return h;
+}
+function _btFilteredRows(pool,arch){
+  var eod=new Date(new Date().setHours(23,59,59,999));
+  var urg=function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=eod);};
+  if(boardFilter==='archived')return arch;
+  if(boardFilter==='unassigned')return pool.filter(function(t){return isUnassignedTask(t)&&!isDoneTask(t);});
+  if(boardFilter==='urgent')return pool.filter(function(t){return !isDoneTask(t)&&urg(t);});
+  if(boardFilter==='stale')return pool.filter(isStaleTask);
+  if(boardFilter==='done')return pool.filter(isDoneTask);
+  return null;
+}
+function _btRow(t){
+  var emp=t.assignee?getP(t.assignee):null;
+  var extra=(t.assignees||[]).filter(function(id){return id&&id!==t.assignee;}).length;
+  var ec=emp?emp.color:'#9ca3af',en=emp?emp.name:'미배정',ei=emp?emp.initial:'?';
+  var dueT=t.due?dL(t.due):null;
+  var prog=t.progress||0;if(prog==='완료')prog=100;prog=parseInt(prog,10)||0;
+  var cmt=(taskComments[t.id]||[]).length;
+  var un=isUnassignedTask(t),dn=isDoneTask(t),stale=isStaleTask(t);
+  var isArch=_isArchivedTask(t.id);
+  var overdue=!dn&&t.due&&parseLocalDate(t.due)<new Date(new Date().setHours(0,0,0,0));
+  var st=dn?['완료','#dcfce7','#166534']:(overdue?['지연','#fee2e2','#b91c1c']:(un?['배정 대기','#f1f5f9','#475569']:['진행중','#dbeafe','#1e40af']));
+  var chk=_boardCleanMode&&!isArch?'<td onclick="event.stopPropagation()"><input type="checkbox" class="btChk" value="'+t.id+'" style="width:15px;height:15px;accent-color:#d97706"></td>':(_boardCleanMode?'<td></td>':'');
+  var dueBad=dueT&&(dueT.cls==='tag-red'||dueT.cls==='tag-orange');
+  return '<tr class="bt-row" '+(isArch?'':'onclick="openBoardTask(\''+t.id+'\')" ')+'style="'+(stale&&!dn?'opacity:.62':'')+'">'+chk+
+    '<td style="max-width:340px"><span style="font-weight:'+((un||t.priority==='high')?'800':'600')+';'+(dn?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+((un&&!dn)?' <span class="bt-badge" style="background:#ede9fe;color:#6d28d9">지시</span>':'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</td>'+
+    '<td style="white-space:nowrap"><span style="display:inline-flex;width:20px;height:20px;border-radius:6px;background:'+ec+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:9.5px;vertical-align:middle;margin-right:5px">'+ei+'</span><span style="font-size:12px;font-weight:700;color:var(--text2)">'+esc(en)+(extra?' 외 '+extra:'')+'</span></td>'+
+    '<td>'+(dueT?'<span class="bt-badge" style="background:'+(dueBad?'#fee2e2':'#f1f5f9')+';color:'+(dueBad?'#b91c1c':'#475569')+'">'+dueT.text+'</span>':'<span style="color:var(--text3)">—</span>')+'</td>'+
+    '<td class="bt-hm"><span class="bt-pbar"><i style="width:'+Math.min(100,prog)+'%"></i></span><span style="font-size:11px;color:var(--text3)">'+prog+'%</span></td>'+
+    '<td><span class="bt-badge" style="background:'+st[1]+';color:'+st[2]+'">'+st[0]+'</span></td>'+
+    '<td>'+(isArch?'<button onclick="event.stopPropagation();unarchiveTask(\''+t.id+'\')" style="border:1px solid var(--border);background:#fff;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">↩ 복구</button>':_btSeenCell(t))+'</td>'+
+    '<td class="bt-hm" style="font-size:11px;color:var(--text3)">'+(cmt?'💬 '+cmt:'—')+'</td></tr>';
+}
+function _boardTableHtml(){
+  var allPool=_tablePool();
+  var arch=allPool.filter(function(t){return _isArchivedTask(t.id);});
+  var pool=allPool.filter(function(t){return !_isArchivedTask(t.id);});
+  var poolNoEmp=pool;
+  if(_boardEmpFilter==='_un')pool=pool.filter(isUnassignedTask);
+  else if(_boardEmpFilter)pool=pool.filter(function(t){return t.assignee===_boardEmpFilter||(t.assignees&&t.assignees.indexOf(_boardEmpFilter)>=0);});
+  var eod=new Date(new Date().setHours(23,59,59,999));
+  var urg=function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=eod);};
+  var counts={
+    all:pool.filter(function(t){return !isDoneTask(t);}).length,
+    un:pool.filter(function(t){return isUnassignedTask(t)&&!isDoneTask(t);}).length,
+    urg:pool.filter(function(t){return !isDoneTask(t)&&urg(t);}).length,
+    stale:pool.filter(isStaleTask).length,
+    done:pool.filter(isDoneTask).length,
+    arch:arch.length
+  };
+  var h='<style>#boardTableWrap{padding-bottom:60px}.bt-tbl{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;min-width:720px}.bt-tbl th{text-align:left;font-size:11px;color:var(--text3);font-weight:800;padding:9px 10px;border-bottom:2px solid var(--border);background:#fafbfd;white-space:nowrap}.bt-tbl td{padding:9px 10px;border-bottom:1px solid #f1f3f8;vertical-align:middle}.bt-row:hover{background:#f8faff;cursor:pointer}.bt-sec td{background:#fafbfd;font-size:11px;font-weight:800;color:var(--text2);padding:6px 10px}.bt-badge{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;white-space:nowrap;display:inline-block}.bt-pbar{display:inline-block;width:64px;height:6px;background:#eef0f5;border-radius:3px;vertical-align:middle;margin-right:6px}.bt-pbar i{display:block;height:100%;border-radius:3px;background:var(--primary)}.bt-chip{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}.bt-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}.bt-emp{min-width:118px;background:#fff;border:1.5px solid #e6ebf5;border-radius:12px;padding:9px 11px;cursor:pointer;flex-shrink:0;font-family:inherit;text-align:left}.bt-emp.on{border-color:var(--primary);background:#f6f5ff}@media(max-width:860px){.bt-hm{display:none}.bt-tbl{min-width:0}}</style>';
+  h+=_btStrip(tasks);
+  h+=_btCleanBanner(poolNoEmp.filter(isStaleTask).length);
+  h+=_btFbar(counts);
+  var cols=7+(_boardCleanMode?1:0);
+  var head='<tr>'+(_boardCleanMode?'<th style="width:30px"></th>':'')+'<th>업무명</th><th>담당자</th><th>마감</th><th class="bt-hm" style="width:120px">진행률</th><th>상태</th><th>확인</th><th class="bt-hm">💬</th></tr>';
+  var body='';
+  var secRow=function(label){return '<tr class="bt-sec"><td colspan="'+cols+'">'+label+'</td></tr>';};
+  var byDue=function(a,b){return String(a.due||'9999').localeCompare(String(b.due||'9999'));};
+  var flat=_btFilteredRows(pool,arch);
+  if(flat){
+    if(!flat.length)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
+    else body=flat.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+  } else {
+    var done=pool.filter(isDoneTask);
+    var stale=pool.filter(function(t){return !isDoneTask(t)&&isStaleTask(t);});
+    var top=pool.filter(function(t){return !isDoneTask(t)&&!isStaleTask(t)&&(urg(t)||isUnassignedTask(t));});
+    var mid=pool.filter(function(t){return !isDoneTask(t)&&!isStaleTask(t)&&top.indexOf(t)<0;});
+    if(top.length)body+=secRow('🚨 긴급 · 📢 지시(미배정) — 먼저 확인 ('+top.length+')')+top.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+    if(mid.length)body+=secRow('📋 진행 중 ('+mid.length+')')+mid.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+    if(stale.length)body+=secRow('🧹 방치 — 마감 30일+ 지남 · 정리 대상 ('+stale.length+')')+stale.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+    if(!body)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
+    if(done.length)body+=secRow('✅ 완료 ('+done.length+') — 최근 20개')+done.slice(0,20).map(function(t){return _btRow(t);}).join('');
+  }
+  h+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow-x:auto"><table class="bt-tbl">'+head+body+'</table></div>';
+  h+='<div style="font-size:11px;color:var(--text3);margin-top:8px">행 클릭 = 상세(댓글·체크리스트) · 직원 카드 클릭 = 그 직원 업무만 보기 · 보관함은 삭제가 아니라 숨김이에요</div>';
+  return h;
+}
+function openBoardTask(taskId){
+  recordTaskView(taskId);
+  _boardSelTaskId=taskId;
+  var drawer=document.getElementById('boardDrawer'),dim=document.getElementById('boardDrawerDim'),body=document.getElementById('boardDrawerBody'),det=document.getElementById('boardDetail');
+  if(!drawer||!det||!body){selectBoardTask(taskId);return;}
+  if(det.parentNode!==body){body.appendChild(det);det.style.padding='0';}
+  drawer.style.display='block';if(dim)dim.style.display='block';
+  renderBoardTaskDetail(taskId);
+  setTimeout(function(){try{if(_boardUIMode()==='table')renderBoardTable();}catch(e){}},600);
+}
+function closeBoardDrawer(){
+  var drawer=document.getElementById('boardDrawer'),dim=document.getElementById('boardDrawerDim'),det=document.getElementById('boardDetail'),md=document.getElementById('boardMD');
+  if(drawer)drawer.style.display='none';
+  if(dim)dim.style.display='none';
+  if(det&&md&&det.parentNode&&det.parentNode.id==='boardDrawerBody'){md.appendChild(det);det.style.padding='24px';}
+  _boardSelTaskId=null;
+  if(_boardUIMode()==='table'){try{renderBoardTable();}catch(e){}}
+}
+function _btSelIds(){return Array.prototype.slice.call(document.querySelectorAll('.btChk:checked')).map(function(c){return c.value;});}
+function bulkArchiveTasks(){
+  var ids=_btSelIds();if(!ids.length){alert('정리할 업무를 체크하세요');return;}
+  if(!confirm(ids.length+'개 업무를 보관함으로 옮길까요?\n(삭제 아님 — 🗄 보관함 칩에서 언제든 복구)'))return;
+  ids.forEach(function(id){if(_archivedIds.indexOf(String(id))<0)_archivedIds.push(String(id));});
+  _saveArchived();_boardCleanMode=false;renderBoardTable();
+  toast('🗄 '+ids.length+'개 보관됨');
+}
+function bulkCompleteTasks(){
+  var ids=_btSelIds();if(!ids.length){alert('업무를 체크하세요');return;}
+  if(!confirm(ids.length+'개 업무를 완료 처리할까요?'))return;
+  ids.forEach(function(id){var t=tasks.find(function(x){return String(x.id)===String(id);});if(t){t.done=true;t.progress=100;syncTaskToSB(t);}});
+  svTasks();_boardCleanMode=false;renderBoardTable();
+  toast('✅ '+ids.length+'개 완료 처리됨');
+}
+function bulkRescheduleTasks(){
+  var ids=_btSelIds();if(!ids.length){alert('업무를 체크하세요');return;}
+  var d=new Date(Date.now()+7*86400000);
+  var p2=function(n){return (n<10?'0':'')+n;};
+  var def=d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  var nd=prompt('새 마감일 (YYYY-MM-DD)',def);
+  if(!nd)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){alert('YYYY-MM-DD 형식으로 입력하세요');return;}
+  ids.forEach(function(id){var t=tasks.find(function(x){return String(x.id)===String(id);});if(t){t.due=nd;syncTaskToSB(t);}});
+  svTasks();_boardCleanMode=false;renderBoardTable();
+  toast('📅 '+ids.length+'개 마감 재설정됨');
+}
+function unarchiveTask(id){
+  _archivedIds=_archivedIds.filter(function(x){return x!==String(id);});
+  _saveArchived();renderBoardTable();
+  toast('↩ 복구됨');
+}
+function claimTask(id,ev){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  if(!CU)return;
+  var t=tasks.find(function(x){return String(x.id)===String(id);});
+  if(!t)return;
+  if(!isUnassignedTask(t)){alert('이미 '+(((getP(t.assignee)||{}).name)||'다른 직원')+'님이 맡았어요');refreshAll();return;}
+  if(!confirm('"'+(t.title||'')+'" 업무를 맡을까요?'))return;
+  t.assignee=CU.id;
+  syncTaskToSB(t);svTasks();
+  recordTaskView(id);
+  createNotif('ceo','unassigned_task',t.id,'✋ '+(CU.name||CU.id)+'님이 지시 업무를 맡았습니다: '+String(t.title||'').slice(0,30));
+  toast('✅ 내 업무로 가져왔어요');
+  refreshAll();
+  try{loadHomeIssues();}catch(e){}
+}
+var _homeDirCount=0;
+function _homeDirectivesHtml(){
+  _homeDirCount=0;
+  if(typeof tasks==='undefined'||!Array.isArray(tasks))return '';
+  var un=tasks.filter(function(t){return isUnassignedTask(t)&&!isDoneTask(t)&&!_isArchivedTask(t.id);});
+  var mineNew=CU?tasks.filter(function(t){
+    if(isDoneTask(t)||_isArchivedTask(t.id))return false;
+    var mine=t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0);
+    return mine&&!_myViews()[String(t.id)];
+  }):[];
+  if(!un.length&&!mineNew.length)return '';
+  _homeDirCount=un.length+mineNew.length;
+  var rows='';
+  mineNew.slice(0,8).forEach(function(t){
+    var dd=t.due?dL(t.due):null;
+    rows+='<div class="hrow" style="background:#fef2f2;margin-bottom:4px;cursor:pointer" onclick="_homeGotoBoardTask(\''+t.id+'\')">'+
+      '<span style="background:#ef4444;color:#fff;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;flex-shrink:0">! 새 업무</span>'+
+      '<span style="flex:1;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+'</span>'+
+      (dd?'<span style="font-size:11px;font-weight:800;color:#dc2626;flex-shrink:0">'+dd.text+'</span>':'')+
+      '<span style="font-size:11.5px;color:#4f46e5;font-weight:800;flex-shrink:0">열어보기 →</span></div>';
+  });
+  un.slice(0,8).forEach(function(t){
+    var dd=t.due?dL(t.due):null;
+    rows+='<div class="hrow" style="background:#fdf4f4;margin-bottom:4px">'+
+      '<span style="background:#ede9fe;color:#6d28d9;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;flex-shrink:0">📢 지시</span>'+
+      '<span onclick="_homeGotoBoardTask(\''+t.id+'\')" style="flex:1;font-size:13px;font-weight:700;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">'+esc(t.title||'')+'</span>'+
+      (dd?'<span style="font-size:11px;font-weight:800;color:#dc2626;flex-shrink:0">'+dd.text+'</span>':'')+
+      (CU&&CU.id!=='ceo'?'<button onclick="claimTask(\''+t.id+'\',event)" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0">내가 맡기</button>':'')+
+      '</div>';
+  });
+  var more=_homeDirCount>16?'<div style="font-size:11px;color:var(--text3);padding:4px 11px">외 '+(_homeDirCount-16)+'건 — 전체 업무에서 확인</div>':'';
+  return '<div style="margin-bottom:16px">'+
+    '<div class="hcard-h"><div class="hcard-t"><span class="hdot" style="background:#ef4444"></span>📢 확인 필요한 업무 <span style="font-weight:700;color:#ef4444;font-size:13px">'+_homeDirCount+'건</span></div>'+
+    '<button onclick="showPage(\'board\')" style="font-size:12px;font-weight:700;color:#4f46e5;background:#fff;border:1px solid #dbe3f5;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:inherit">전체 업무 →</button></div>'+
+    rows+more+'</div>';
+}
+
 function renderBoardDetailEmpty(msg){
   var d=document.getElementById('boardDetail');if(!d)return;
   d.innerHTML='<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:14px;font-weight:600">'+esc(msg||'')+'</div></div>';
@@ -5335,7 +5700,7 @@ function _boardEmpTaskCard(t){
   var emp=t.assignee?getP(t.assignee):null;
   var ec=emp?emp.color:'#9ca3af';
   return '<div onclick="_boardGotoTaskFromEmp(\''+t.id+'\')" style="background:#fff;border:1px solid var(--border);border-left:3px solid '+ec+';border-radius:8px;padding:10px 12px;cursor:pointer">'+
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="flex:1;font-size:13px;font-weight:700;color:var(--text);'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+newBadgeHtml(t)+'</span>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="flex:1;font-size:13px;font-weight:700;color:var(--text);'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</span>'+
     (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 4px">'+cmt+'</span>':'')+'</div>'+
     '<div style="display:flex;gap:6px;font-size:11px;color:var(--text3);align-items:center;flex-wrap:wrap">'+
     (dueT?'<span class="tag '+dueT.cls+'" style="font-size:10px">📅 '+dueT.text+'</span>':'')+
@@ -6619,7 +6984,7 @@ function _renderEmpSection(label, list, color, collapsed, secKey){
     var dragAttrs=secKey?(' draggable="true" data-tid="'+t.id+'" data-sec="'+secKey+'" data-emp="'+esc(curEmpId||'')+'" ondragstart="_empDragStart(event)" ondragover="_empDragOver(event)" ondragleave="_empDragLeave(event)" ondrop="_empDrop(event)" ondragend="_empDragEnd(event)"'):'';
     return '<div'+dragAttrs+' onclick="selectEmpTask(\''+t.id+'\')" style="padding:7px 8px;cursor:'+(secKey?'grab':'pointer')+';border-radius:5px;margin-bottom:3px;'+bgSel+';display:flex;flex-direction:column;gap:2px">'+
       '<div style="display:flex;align-items:center;gap:6px;min-width:0"><input type="checkbox" '+(isDoneTask(t)?'checked':'')+' onclick="event.stopPropagation();qTog(\''+t.id+'\',event)" title="완료 체크" style="width:13px;height:13px;accent-color:var(--green);cursor:pointer;flex-shrink:0;margin:0">'+
-      '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+'</span>'+
+      '<span style="flex:1;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(isDoneTask(t)?';text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+unseenBadgeHtml(t)+'</span>'+
       (cmt>0?'<span style="background:#ef4444;color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;padding:0 3px;flex-shrink:0">'+cmt+'</span>':'')+
       '</div>'+
       '<div style="font-size:10.5px;color:var(--text3);margin-left:12px;display:flex;gap:6px">'+
@@ -6629,7 +6994,7 @@ function _renderEmpSection(label, list, color, collapsed, secKey){
   }).join('');
   return '<details '+open+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--text2);padding:4px 0;letter-spacing:.3px;list-style:none">'+label+' <span style="color:var(--text3);font-weight:600">('+list.length+')</span></summary><div style="margin-top:4px">'+items+'</div></details>';
 }
-function selectEmpTask(taskId){
+function selectEmpTask(taskId){try{recordTaskView(taskId);}catch(e){}
   _empSelTaskId=taskId;
   renderEmpSidebar(curEmpId);
   renderEmpDetail(taskId);
@@ -8707,7 +9072,13 @@ function saveTask(){
       var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null,priority:_priority};
       _newTaskId=_newT.id;
       tasks.unshift(_newT);
-      if(!assignee)createNotifMultiple(['ceo'],'unassigned_task',_newT.id,'미배정 업무가 생성되었습니다: '+title.slice(0,20));
+      if(!assignee){
+        var _nIds=ALL.map(function(e){return e.id;}).filter(function(id){return !CU||id!==CU.id;});
+        createNotifMultiple(_nIds,'unassigned_task',_newT.id,'📢 새 지시(미배정) 업무: '+title.slice(0,30));
+      } else {
+        var _aIds=[assignee].concat(assignees||[]).filter(function(id,i,a){return id&&a.indexOf(id)===i&&(!CU||id!==CU.id);});
+        if(_aIds.length)createNotifMultiple(_aIds,'unassigned_task',_newT.id,'새 업무가 배정되었습니다: '+title.slice(0,30));
+      }
     }
     rebuildIdx();svTasks();
   }catch(err){
