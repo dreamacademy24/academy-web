@@ -294,7 +294,12 @@ Total: ${num(preview.amount)} ${preview.currency}
 Kindly send us the confirmation number for this booking.
 
 ${signature}`);
-    try { setEmailCc(localStorage.getItem("resortEmailCc") || "deskor112@gmail.com"); } catch { setEmailCc("deskor112@gmail.com"); }
+    try {
+      const savedCc = localStorage.getItem("resortEmailCc") || "deskor112@gmail.com";
+      // britney.na는 항상 참조에 포함 (메이 지시 2026-07-07)
+      const withB = savedCc.includes("britney.na@jparkislandresort.com") ? savedCc : savedCc + ", britney.na@jparkislandresort.com";
+      setEmailCc(withB);
+    } catch { setEmailCc("deskor112@gmail.com, britney.na@jparkislandresort.com"); }
     setAttachImg("");
     setEmailModal(true);
     // 첨부될 인보이스 이미지를 미리 만들어 우측에 보여줌 (발송 시 이 이미지가 그대로 첨부됨)

@@ -39,6 +39,7 @@ const NAV: { title: string; items: Item[] }[] = [
   { title: "리조트", items: [
     { label: "인보이스 생성", href: "/admin/resort-invoice" },
     { label: "결제내역", href: "/admin/resort-payments" },
+    { label: "제이파크 계약서", href: "/admin/resort-contract" },
   ]},
   { title: "현지직원", items: [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },
