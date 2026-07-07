@@ -53,6 +53,7 @@ export default function MoriPage() {
   const [busy, setBusy] = useState("");
   const [itemFilter, setItemFilter] = useState({ q: "", role: "" });
   const [newItem, setNewItem] = useState({ name: "", role: "side", protein: "", meals: ["저녁"] as string[] });
+  const [quickAdd, setQuickAdd] = useState({ name: "", role: "side" });
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
@@ -372,6 +373,16 @@ export default function MoriPage() {
     setNewItem({ name: "", role: "side", protein: "", meals: ["저녁"] });
   }
 
+  async function quickAddItem() {
+    const name = quickAdd.name.trim();
+    if (!name) return;
+    const meals = ["breakfast_main", "fruit", "dairy"].includes(quickAdd.role) ? ["아침"] : ["점심", "저녁"];
+    const { data, error } = await supabase.from("mori_items").insert({ name, role: quickAdd.role, meals, is_staple: false }).select("*").single();
+    if (error) { alert(error.message); return; }
+    setItems(prev => [...prev, data as Item].sort((a, b) => a.name.localeCompare(b.name)));
+    setQuickAdd(q => ({ name: "", role: q.role }));
+  }
+
   if (!authed) return null;
 
   const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" });
@@ -545,8 +556,39 @@ export default function MoriPage() {
                 {!((day as any)[meal] || []).length && <div style={{ color: "#aab", fontSize: 13, padding: "6px 2px" }}>비어 있음 — + 추가로 채워주세요</div>}
               </div>
             );
+            const inPlanAll = new Set<string>();
+            for (const dd of Object.values(plan)) for (const m of MEALS) for (const it of (dd as any)[m] || []) inPlanAll.add(nk(it));
+            const recPool = items
+              .filter(i => i.active && !i.is_staple && !inPlanAll.has(nk(i.name)))
+              .map(i => ({ i, ago: agoFor(i.name, d) }))
+              .filter(x => x.ago === null || windowDays === 0 || x.ago > windowDays)
+              .sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999));
+            const recGroups: { label: string; roles: string[] }[] = [
+              { label: "국 · 찌개", roles: ["soup"] },
+              { label: "메인", roles: ["main"] },
+              { label: "반찬 · 샐러드", roles: ["side", "salad"] },
+              { label: "아침거리", roles: ["breakfast_main", "fruit", "dairy"] },
+            ];
+            const addRec = (it: Item) => {
+              if (["breakfast_main", "fruit", "dairy"].includes(it.role)) {
+                setPlan({ ...plan, [d]: { ...day, 아침: [...day.아침, it.name] } });
+              } else {
+                setPlan({ ...plan, [d]: { ...day, 저녁어른: [...day.저녁어른, it.name], 저녁아동: [...day.저녁아동, mildOf(items, it.name)] } });
+              }
+            };
             return (
-              <div style={{ maxWidth: 560, margin: "0 auto", background: "#fff", border: "1px solid #dde", borderRadius: 16, padding: "18px 20px" }}>
+              <div style={{ display: "flex", gap: 14, alignItems: "flex-start", justifyContent: "center", flexWrap: "wrap" }}>
+                <div style={{ width: 200, flexShrink: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#556" }}>✅ 확정한 날</div>
+                  {dates.map((x, i) => plan[x]?.done ? (
+                    <div key={x} onClick={() => setDayIdx(i)} style={{ background: "#fff", border: i === dayIdx ? "2px solid #3a47a8" : "1px solid #cfe3d4", borderRadius: 12, padding: "10px 12px", cursor: "pointer" }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 800, color: "#1d7a35", marginBottom: 3 }}>✓ {x.slice(5).replace("-", "/")} ({dowOf(x)})</div>
+                      <div style={{ fontSize: 12, color: "#667", lineHeight: 1.5 }}>{(plan[x]?.저녁어른 || []).slice(0, 3).join(" · ")}</div>
+                    </div>
+                  ) : null)}
+                  {!dates.some(x => plan[x]?.done) && <div style={{ fontSize: 12.5, color: "#99a", border: "1px dashed #ccd", borderRadius: 10, padding: "12px 10px", textAlign: "center" }}>하루 확정하면<br />여기에 쌓여요</div>}
+                </div>
+                <div style={{ flex: "1 1 460px", maxWidth: 560, background: "#fff", border: "1px solid #dde", borderRadius: 16, padding: "18px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontSize: 18, fontWeight: 800 }}>{d.slice(5).replace("-", "/")} ({dowOf(d)})</span>
                   <span style={{ fontSize: 13, color: "#667" }}>{doneCnt} / 5일 확정</span>
@@ -573,6 +615,43 @@ export default function MoriPage() {
                     style={{ flex: 2, border: "none", background: "#3a47a8", color: "#fff", borderRadius: 10, padding: "12px 0", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>
                     {dayIdx < 4 ? "이 날 확정, 다음 날 ▶" : "다 됐어요 — 전체 검토하기 ▶"}
                   </button>
+                </div>
+                </div>
+                <div style={{ width: 252, flexShrink: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#556" }}>💡 그외 추천 <span style={{ fontWeight: 400, fontSize: 12, color: "#99a" }}>(중복 없는 것만 · 누르면 추가)</span></div>
+                  <div style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: "#556", marginBottom: 6 }}>➕ 새 메뉴 등록</div>
+                    <input placeholder="메뉴 이름" value={quickAdd.name} onChange={e => setQuickAdd(q => ({ ...q, name: e.target.value }))} onKeyDown={e => { if (e.key === "Enter") quickAddItem(); }}
+                      style={{ width: "100%", padding: "6px 8px", border: "1px solid #ccd", borderRadius: 8, fontSize: 13, marginBottom: 6, boxSizing: "border-box" }} />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <select value={quickAdd.role} onChange={e => setQuickAdd(q => ({ ...q, role: e.target.value }))} style={{ flex: 1, padding: "5px 6px", border: "1px solid #ccd", borderRadius: 8, fontSize: 12.5 }}>
+                        <option value="main">메인</option>
+                        <option value="side">반찬</option>
+                        <option value="soup">국·찌개</option>
+                        <option value="salad">샐러드</option>
+                        <option value="breakfast_main">아침주식</option>
+                        <option value="fruit">과일</option>
+                        <option value="dairy">유제품·음료</option>
+                      </select>
+                      <button onClick={quickAddItem} style={{ border: "none", background: "#3a47a8", color: "#fff", borderRadius: 8, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>등록</button>
+                    </div>
+                  </div>
+                  {recGroups.map(g => {
+                    const rows = recPool.filter(x => g.roles.includes(x.i.role)).slice(0, 5);
+                    if (!rows.length) return null;
+                    return (
+                      <div key={g.label} style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "8px 10px" }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#556", marginBottom: 4 }}>{g.label}</div>
+                        {rows.map(({ i, ago }) => (
+                          <div key={i.id} onClick={() => addRec(i)} title="누르면 이 날에 추가돼요"
+                            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "6px 6px", borderBottom: "1px solid #f0f2fa", cursor: "pointer", fontSize: 13 }}>
+                            <span>{i.spicy ? "🌶 " : ""}{i.name}</span>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: ago === null ? "#0f766e" : "#8a94b8", flexShrink: 0 }}>{ago === null ? "처음" : `${ago}d`} ＋</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
