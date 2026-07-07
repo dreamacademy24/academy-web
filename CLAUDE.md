@@ -1892,3 +1892,8 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 안전장치: 날짜 불일치 🔴❗ 검사가 비통학형만 커버하던 것 → **통학형 포함** (학생 날짜 vs 예약 academy_start/end·체크인/아웃 비교). 경고 배너에 학생 이름 나열 + "달력이 틀릴 수 있어요" 문구
 - 배포 직후 실데이터에서 불일치 4명 검출: 한지운, 민소영, 김이안, 추이찬 — 메이 확인 필요 (의도적 수동조정인지 오류인지)
 - 참고: /api/bookings/[id] PATCH에 academy_start/end 변경 시 students 테이블+JSONB 동기화는 기존 존재
+
+## 2026-07-07 — 학생 캘린더 확인 처리 + 제이파크 조식 문의
+- ✅ 날짜 불일치 확인 처리 (1c412d5): 🔴❗ 클릭 → "의도된 날짜(중도입학/아웃)" 확인 → ✓중도 표시로 전환 (달력엔 ✓). app_settings key=stu_mismatch_ack (booking_id|이름|시작|종료 키 — 날짜 바뀌면 경고 자동 부활)
+- 민소영·추이찬 = 중도입학/아웃 확정 (메이) → 확인 처리 시드 완료. 잔여 불일치: 한지운, 김이안 (메이 확인 대기)
+- 제이파크 조식 요금 모순 발견: 장기 계약 "아발론 뷔페 50% 할인"(조식 1,300→650 직접결제) vs TA 계약 조식가 1,100 — 메이가 확인 메일 발송 예정 (영문 초안 전달함, britney.na/rodan.segovia 앞). 회신 결과에 따라 /admin/resort-contract 식사 표 수정 필요
