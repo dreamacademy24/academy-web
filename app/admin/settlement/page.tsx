@@ -202,6 +202,12 @@ export default function SettlementPage() {
         const bkName = (sel.booker_name || "").trim();
         const stuNames = studentNames(sel).split(",").map(s => s.trim()).filter(Boolean);
         const candidates = [bkName, ...stuNames].filter(Boolean);
+        // 동명이인 접미사(장수진B) 예약은 손님이 신청서에 원래 이름(장수진)으로 적었을 수 있음
+        // → 접미사 뗀 이름도 후보에 추가 (체류기간 겹침 필터가 있어 타 가족 섞임 최소화)
+        [...candidates].forEach(n => {
+          const m = n.match(/^(.+[가-힣])[A-Z]$/);
+          if (m && !candidates.includes(m[1])) candidates.push(m[1]);
+        });
         if (candidates.length) {
           const orFilters = candidates.map(n => `house_or_reserver.ilike.%${n}%,student_names.ilike.%${n}%`).join(",");
           let q = supabase.from("tutor_lessons").select("*").or(orFilters);
