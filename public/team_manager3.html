@@ -4457,7 +4457,7 @@ function loadHomeIssues(){
   var box=document.getElementById('homeIssuesBox');if(!box)return;
   var today=_dailyToday();
   loadBoardMeta().then(function(){return Promise.all([
-    sbGet('bookings','select=id,reservation_no,booker_name,accom_type,house_no,accom_room,checkin_date,checkout_date,status,students'),
+    sbGet('bookings','select=id,reservation_no,booker_name,accom_type,house_no,accom_room,checkin_date,checkout_date,status,students,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout'),
     sbGet('staff_issue_dismissals','select=booking_id').catch(function(){return [];})
   ]);}).then(function(res){
     var rows=Array.isArray(res[0])?res[0]:[];
@@ -4479,9 +4479,53 @@ function loadHomeIssues(){
     });
     items.sort(function(a,b){return (a.ci||'9999').localeCompare(b.ci||'9999');});
     var dirHtml=_homeDirectivesHtml();
-    var k1=document.getElementById('kOps1');if(k1)k1.textContent=items.length+_homeDirCount;
-    box.innerHTML=dirHtml+_homeIssuesHtml(items,Object.keys(dis).length);
+    var roomHtml=_homeRoomConflictsHtml(rows,today);
+    var k1=document.getElementById('kOps1');if(k1)k1.textContent=items.length+_homeDirCount+_homeRoomConflictCount;
+    box.innerHTML=roomHtml+dirHtml+_homeIssuesHtml(items,Object.keys(dis).length);
   }).catch(function(){box.innerHTML='';});
+}
+// 🚨 드림하우스 룸 중복(오버부킹) 감시 — 같은 룸에 기간 겹치는 활성 예약 (당일 전환 제외)
+var _homeRoomConflictCount=0;
+function _homeRoomConflictsHtml(rows,today){
+  _homeRoomConflictCount=0;
+  try{
+    var occ=[];
+    (rows||[]).forEach(function(b){
+      if((b.status||'').indexOf('취소')>=0)return;
+      var room=String(b.house_no||b.accom_room||'').replace(/\s+/g,'').toLowerCase();
+      if(!room)return;
+      var ci=String(b.checkin_date||'').slice(0,10),co=String(b.checkout_date||'').slice(0,10);
+      var segs=[[b.seg1_type,b.seg1_checkin,b.seg1_checkout],[b.seg2_type,b.seg2_checkin,b.seg2_checkout]].filter(function(x){return x[0];});
+      if(segs.length){
+        var dh=null;segs.forEach(function(x){if(String(x[0])==='dreamhouse')dh=x;});
+        if(!dh)return; // 콤보인데 드림하우스 구간 없음 = 룸 점유 아님
+        ci=String(dh[1]||ci).slice(0,10);co=String(dh[2]||co).slice(0,10);
+      }
+      if(!ci||!co)return;
+      if(co<today)return; // 이미 끝난 예약 제외
+      occ.push({b:b,room:room,ci:ci,co:co});
+    });
+    var pairs=[];
+    for(var i=0;i<occ.length;i++)for(var j=i+1;j<occ.length;j++){
+      var A=occ[i],B=occ[j];
+      if(A.room!==B.room)continue;
+      var from=A.ci>B.ci?A.ci:B.ci, to=A.co<B.co?A.co:B.co;
+      if(from<to)pairs.push({room:A.room,a:A,b:B,from:from,to:to});
+    }
+    _homeRoomConflictCount=pairs.length;
+    if(!pairs.length)return '';
+    var md=function(d){return String(d).slice(5).replace('-','/');};
+    var rows2=pairs.slice(0,6).map(function(p){
+      return '<div onclick="location.href=\'/dreamhouse-rooms\'" class="hrow" style="cursor:pointer;background:#fee2e2;margin-bottom:4px;flex-wrap:wrap;border:1px solid #fca5a5">'+
+        '<span style="font-size:11px;font-weight:900;color:#fff;background:#dc2626;border-radius:6px;padding:2px 8px;flex-shrink:0">'+esc(p.room.toUpperCase())+'</span>'+
+        '<span style="flex:1;min-width:120px;font-size:12.5px;font-weight:800;color:#7f1d1d">'+esc(p.a.b.booker_name||'')+'('+md(p.a.ci)+'~'+md(p.a.co)+') ↔ '+esc(p.b.b.booker_name||'')+'('+md(p.b.ci)+'~'+md(p.b.co)+')</span>'+
+        '<span style="font-size:11.5px;font-weight:900;color:#dc2626">겹침 '+md(p.from)+'~'+md(p.to)+'</span></div>';
+    }).join('');
+    return '<div style="margin-bottom:16px">'+
+      '<div class="hcard-h"><div class="hcard-t"><span class="hdot" style="background:#dc2626"></span>🚨 드림하우스 룸 중복 — 오버부킹! <span style="font-weight:700;color:#dc2626;font-size:13px">'+pairs.length+'건</span></div>'+
+      '<button onclick="location.href=\'/dreamhouse-rooms\'" style="font-size:12px;font-weight:700;color:#b91c1c;background:#fff;border:1px solid #fecaca;border-radius:7px;padding:5px 10px;cursor:pointer;font-family:inherit">룸 캘린더에서 조정 →</button></div>'+
+      rows2+(pairs.length>6?'<div style="font-size:11px;color:#991b1b;padding:2px 11px">외 '+(pairs.length-6)+'건</div>':'')+'</div>';
+  }catch(e){console.error('[roomConflict]',e);return '';}
 }
 function dismissHomeIssue(id,ev){
   if(ev&&ev.stopPropagation)ev.stopPropagation();

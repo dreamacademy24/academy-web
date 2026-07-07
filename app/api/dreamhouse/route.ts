@@ -50,8 +50,53 @@ export async function PATCH(request: Request) {
     if (!room) return NextResponse.json({ error: 'room 필수' }, { status: 400 })
 
     // 잠금 여부 확인
-    const { data: check } = await supabase.from('bookings').select('room_locked').eq('id', id).single()
+    const { data: check } = await supabase.from('bookings').select('room_locked, checkin_date, checkout_date, booker_name, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout').eq('id', id).single()
     if (check?.room_locked) return NextResponse.json({ error: '🔒 이 예약은 룸이 잠겨있어 변경할 수 없습니다.' }, { status: 403 })
+
+    // ⛔ 오버부킹 차단: 같은 룸에 기간 겹치는 활성 예약이 있으면 저장 거부 (force=true로만 예외)
+    if (!body.force) {
+      // 내 점유 기간 (콤보면 드림하우스 seg 구간)
+      let myCi = String(check?.checkin_date || '').slice(0, 10)
+      let myCo = String(check?.checkout_date || '').slice(0, 10)
+      const segs = [
+        [check?.seg1_type, check?.seg1_checkin, check?.seg1_checkout],
+        [check?.seg2_type, check?.seg2_checkin, check?.seg2_checkout],
+      ].filter(x => x[0])
+      if (segs.length) {
+        const dh = segs.find(x => String(x[0]) === 'dreamhouse')
+        if (dh) { myCi = String(dh[1] || myCi).slice(0, 10); myCo = String(dh[2] || myCo).slice(0, 10) }
+      }
+      if (myCi && myCo) {
+        const { data: others } = await supabase
+          .from('bookings')
+          .select('id, booker_name, reservation_no, checkin_date, checkout_date, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+          .neq('id', id)
+          .ilike('accom_room', room)
+          .not('status', 'ilike', '%취소%')
+        const conflicts = (others || []).filter(o => {
+          let ci = String(o.checkin_date || '').slice(0, 10)
+          let co = String(o.checkout_date || '').slice(0, 10)
+          const os = [
+            [o.seg1_type, o.seg1_checkin, o.seg1_checkout],
+            [o.seg2_type, o.seg2_checkin, o.seg2_checkout],
+          ].filter(x => x[0])
+          if (os.length) {
+            const dh = os.find(x => String(x[0]) === 'dreamhouse')
+            if (!dh) return false
+            ci = String(dh[1] || ci).slice(0, 10); co = String(dh[2] || co).slice(0, 10)
+          }
+          if (!ci || !co) return false
+          // 당일 전환(체크아웃=체크인)은 허용 → 진짜 겹침만 (ci < myCo && co > myCi)
+          return ci < myCo && co > myCi
+        })
+        if (conflicts.length) {
+          return NextResponse.json({
+            error: 'room_conflict',
+            conflicts: conflicts.map(c => ({ booker_name: c.booker_name, reservation_no: c.reservation_no, checkin: c.checkin_date, checkout: c.checkout_date })),
+          }, { status: 409 })
+        }
+      }
+    }
 
     const { data, error } = await supabase
       .from('bookings')

@@ -191,6 +191,19 @@ export default function DreamhouseRooms() {
 
   const emptyRooms = ROOMS.filter(r => !normalizedBookings.some(b => b.accom_room === r))
 
+  // 🚨 오버부킹(겹침) 페어 — 월과 무관하게 전체 예약 기준, 당일 전환(체크아웃=체크인)은 제외
+  const overlapPairs: {room:string; a:Booking; b:Booking; from:string; to:string}[] = []
+  displayRooms.forEach(room => {
+    const rb = normalizedBookings.filter(b => b.accom_room === room)
+    for (let i = 0; i < rb.length; i++) for (let j = i + 1; j < rb.length; j++) {
+      const A = rb[i], B = rb[j]
+      if (!A.checkin_date || !A.checkout_date || !B.checkin_date || !B.checkout_date) continue
+      const from = A.checkin_date > B.checkin_date ? A.checkin_date : B.checkin_date
+      const to = A.checkout_date < B.checkout_date ? A.checkout_date : B.checkout_date
+      if (from < to) overlapPairs.push({ room, a: A, b: B, from, to })
+    }
+  })
+
   const prevMonth = () => {
     if (month === 0) { setYear(y=>y-1); setMonth(11) }
     else setMonth(m=>m-1)
@@ -285,6 +298,18 @@ export default function DreamhouseRooms() {
 
       {/* 캘린더 영역 */}
       <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+        {/* 🚨 오버부킹 경고 배너 — 월과 무관, 전체 예약 기준 */}
+        {overlapPairs.length > 0 && (
+          <div style={{background:'#fef2f2',borderBottom:'2px solid #dc2626',padding:'10px 24px'}}>
+            <div style={{fontSize:13.5,fontWeight:800,color:'#991b1b',marginBottom:4}}>🚨 룸 중복(오버부킹) {overlapPairs.length}건 — 즉시 확인 필요!</div>
+            {overlapPairs.slice(0,6).map((p,i)=>(
+              <div key={i} style={{fontSize:12.5,color:'#7f1d1d',marginBottom:2,cursor:'pointer'}} onClick={()=>{setModal(p.a);setModalRoom(ROOMS.includes(p.a.accom_room)?p.a.accom_room:'')}}>
+                <b>{p.room}</b> · {p.a.booker_name||p.a.reservation_no}({p.a.checkin_date.slice(5)}~{p.a.checkout_date.slice(5)}) ↔ {p.b.booker_name||p.b.reservation_no}({p.b.checkin_date.slice(5)}~{p.b.checkout_date.slice(5)}) — <b>겹침 {p.from.slice(5)}~{p.to.slice(5)}</b> <span style={{color:'#1d4ed8',fontWeight:700}}>클릭해서 룸 조정 →</span>
+              </div>
+            ))}
+            {overlapPairs.length>6&&<div style={{fontSize:11.5,color:'#991b1b'}}>외 {overlapPairs.length-6}건</div>}
+          </div>
+        )}
         {/* 월 네비게이션 */}
         <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'14px 24px',borderBottom:'1px solid #e2e8f0',background:'#ffffff'}}>
           <button onClick={prevMonth} style={{background:'#f1f5f9',border:'1px solid #cbd5e1',color:'#475569',padding:'7px 14px',borderRadius:8,cursor:'pointer',fontSize:14}}>‹</button>
@@ -564,7 +589,13 @@ export default function DreamhouseRooms() {
                 try{
                   const res=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room:modalRoom})});
                   const json=await res.json();
-                  if(!res.ok){alert('변경 실패: '+(json.error||res.statusText));return;}
+                  if(res.status===409&&json.error==='room_conflict'){
+                    const list=(json.conflicts||[]).map((c:any)=>`· ${c.booker_name||c.reservation_no} (${c.checkin} ~ ${c.checkout})`).join('\n');
+                    if(!confirm(`⛔ ${modalRoom}에 기간이 겹치는 예약이 있어요 — 오버부킹!\n\n${list}\n\n그래도 강제로 변경할까요? (권장하지 않음)`))return;
+                    const res2=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room:modalRoom,force:true})});
+                    const j2=await res2.json();
+                    if(!res2.ok){alert('변경 실패: '+(j2.error||res2.statusText));return;}
+                  } else if(!res.ok){alert('변경 실패: '+(json.error||res.statusText));return;}
                 }catch(e:any){alert('변경 실패: '+e.message);return;}
                 alert('✅ 룸이 '+modalRoom+'으로 변경되었습니다.');
                 setModal(null);fetchBookings();
