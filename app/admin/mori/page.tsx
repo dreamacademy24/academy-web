@@ -37,6 +37,8 @@ export default function MoriPage() {
   const [weekId, setWeekId] = useState<string | null>(null);
   const [allWeeks, setAllWeeks] = useState<{ week_start: string; plan: WeekPlan }[]>([]);
   const [picker, setPicker] = useState<Picker>(null);
+  const [pickerTab, setPickerTab] = useState<"suggest" | "fresh">("suggest");
+  const [pickerPage, setPickerPage] = useState(0);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState("");
   const [itemFilter, setItemFilter] = useState({ q: "", role: "" });
@@ -204,19 +206,18 @@ export default function MoriPage() {
 
   function exportXlsx() {
     if (!plan) return;
-    const header = ["날짜", "아침", "점심 (픽스)", "간식", "저녁"];
+    const header = ["날짜", "아침", "점심 (픽스)", "저녁"];
     const rows = dates.map(d => {
       const day = plan[d];
       return [
         `${d.slice(5).replace("-", "/")} (${dowOf(d)})`,
         (day?.아침 || []).join("\n"),
         (day?.점심 || []).join("\n"),
-        (day?.간식 || []).join("\n"),
         (day?.저녁 || []).join("\n"),
       ];
     });
     const ws = XLSX.utils.aoa_to_sheet([[`${roundNo}회 식단표 (${weekStart} ~ ${addD(weekStart, 4)})`], header, ...rows]);
-    ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 28 }, { wch: 18 }, { wch: 28 }];
+    ws["!cols"] = [{ wch: 12 }, { wch: 26 }, { wch: 30 }, { wch: 30 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `${roundNo}회`);
     XLSX.writeFile(wb, `${roundNo}회 식단표_${weekStart}.xlsx`);
@@ -248,17 +249,21 @@ export default function MoriPage() {
     color: "#333",
   });
 
-  const pickerCandidates = () => {
+  /* 후보 풀: 교체 대상과 같은 분류(추가면 그 끼니에 맞는 것), '오래 안 나온 순' 정렬 (처음 → 오래된 순) */
+  const pickerPool = () => {
     if (!picker) return [];
     const cur = picker.index !== null && plan ? (plan[picker.date] as any)[picker.meal][picker.index] : null;
     const curItem = cur ? items.find(i => nk(i.name) === nk(cur)) : null;
+    const inPlan = new Set<string>();
+    if (plan) for (const day of Object.values(plan)) for (const m of MEALS) for (const it of (day as any)[m] || []) inPlan.add(nk(it));
     return items
-      .filter(i => i.active)
-      .filter(i => !search ? (curItem ? i.role === curItem.role : i.meals.includes(picker.meal)) : i.name.includes(search))
+      .filter(i => i.active && !inPlan.has(nk(i.name)))
+      .filter(i => (curItem ? i.role === curItem.role : i.meals.includes(picker.meal)))
       .map(i => ({ i, ago: agoFor(i.name, picker.date) }))
-      .sort((a, b) => (b.ago ?? 9999) - (a.ago ?? 9999))
-      .slice(0, 60);
+      .sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999));
   };
+
+  const openPicker = (p: Picker) => { setPicker(p); setPickerTab("suggest"); setPickerPage(0); setSearch(""); };
 
   return (
     <div style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1300 }}>
@@ -304,7 +309,7 @@ export default function MoriPage() {
               <thead>
                 <tr>
                   <th style={{ width: 90, background: "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>날짜</th>
-                  {["아침", "점심", "간식", "저녁"].map(m => (
+                  {["아침", "점심", "저녁"].map(m => (
                     <th key={m} style={{ background: "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>{m}{m === "점심" && " (픽스)"}</th>
                   ))}
                 </tr>
@@ -317,7 +322,7 @@ export default function MoriPage() {
                       <td style={{ border: "1px solid #dde", padding: 8, textAlign: "center", fontWeight: 800, fontSize: 14, background: "#f7f8fd" }}>
                         {d.slice(5).replace("-", "/")}<br /><span style={{ fontSize: 12, color: "#667" }}>({dowOf(d)})</span>
                       </td>
-                      {MEALS.map(meal => (
+                      {(["아침", "점심", "저녁"] as const).map(meal => (
                         <td key={meal} style={{ border: "1px solid #dde", padding: 8, verticalAlign: "top", minWidth: 180 }}>
                           {meal === "점심" && (
                             <select value={day.fixedSet ?? ""} onChange={e => setFixedSet(d, +e.target.value)}
@@ -337,7 +342,7 @@ export default function MoriPage() {
                             const warn = isStaple ? null : ago;
                             return (
                               <span key={idx} style={chipWarnStyle(warn, dupInWeek)} title={ago !== null ? `마지막 제공: ${ago}일 전` : "제공 이력 없음"}
-                                onClick={() => { setPicker({ date: d, meal, index: idx }); setSearch(""); }}>
+                                onClick={() => openPicker({ date: d, meal, index: idx })}>
                                 {it}
                                 {warn !== null && warn <= DUP_WINDOW && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
                                 {dupInWeek && <b style={{ color: "#c33", fontSize: 11 }}>중복</b>}
@@ -346,7 +351,7 @@ export default function MoriPage() {
                             );
                           })}
                           <div style={{ marginTop: 4, display: "flex", gap: 6 }}>
-                            <button onClick={() => { setPicker({ date: d, meal, index: null }); setSearch(""); }}
+                            <button onClick={() => openPicker({ date: d, meal, index: null })}
                               style={{ background: "none", border: "1px dashed #aab", borderRadius: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>+ 추가</button>
                             {(meal === "아침" || meal === "저녁") && (
                               <button onClick={() => regenCell(d, meal)} title="이 끼니만 다시 추천"
@@ -425,28 +430,67 @@ export default function MoriPage() {
         </div>
       )}
 
-      {picker && (
-        <div onClick={() => setPicker(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 18, width: 460, maxHeight: "72vh", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>
-              {picker.date.slice(5).replace("-", "/")} {picker.meal} — {picker.index === null ? "메뉴 추가" : "메뉴 교체"}
-            </div>
-            <input autoFocus placeholder="검색 (비우면 같은 분류 추천순)" value={search} onChange={e => setSearch(e.target.value)}
-              style={{ padding: "8px 10px", border: "1px solid #ccd", borderRadius: 8, fontSize: 14 }} />
-            <div style={{ overflowY: "auto", flex: 1 }}>
-              {pickerCandidates().map(({ i, ago }) => (
-                <div key={i.id} onClick={() => applyPick(i.name)}
-                  style={{ display: "flex", justifyContent: "space-between", padding: "7px 10px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
-                  <span>{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
-                  <span style={{ fontSize: 12.5, color: ago !== null && ago <= DUP_WINDOW ? "#c60" : "#7a9", fontWeight: 700 }}>
-                    {ago !== null ? `${ago}일 전` : "처음"}
-                  </span>
-                </div>
-              ))}
+      {picker && (() => {
+        const pool = pickerPool();
+        const pageCount = Math.max(1, Math.ceil(pool.length / 3));
+        const suggests = pool.slice((pickerPage % pageCount) * 3, (pickerPage % pageCount) * 3 + 3);
+        const freshList = (search ? items.filter(i => i.active && i.name.includes(search)).map(i => ({ i, ago: agoFor(i.name, picker.date) })).sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999)) : pool).slice(0, 80);
+        const agoBadge = (ago: number | null) => (
+          <span style={{ fontSize: 13, fontWeight: 700, color: ago === null ? "#0f766e" : ago <= DUP_WINDOW ? "#c2660a" : "#64748b", flexShrink: 0 }}>
+            {ago === null ? "처음" : `${ago}일 만에`}
+          </span>
+        );
+        return (
+          <div onClick={() => setPicker(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: 480, maxHeight: "76vh", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>
+                {picker.date.slice(5).replace("-", "/")} ({dowOf(picker.date)}) {picker.meal} — {picker.index === null ? "메뉴 추가" : "메뉴 교체"}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => setPickerTab("suggest")} style={{ ...{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }, background: pickerTab === "suggest" ? "#3a47a8" : "#eef0f8", color: pickerTab === "suggest" ? "#fff" : "#556" }}>추천 후보</button>
+                <button onClick={() => setPickerTab("fresh")} style={{ ...{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }, background: pickerTab === "fresh" ? "#3a47a8" : "#eef0f8", color: pickerTab === "fresh" ? "#fff" : "#556" }}>오래 안 나온 순</button>
+              </div>
+
+              {pickerTab === "suggest" && (
+                <>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {suggests.map(({ i, ago }) => (
+                      <div key={i.id} onClick={() => applyPick(i.name)}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "13px 16px", border: "1.5px solid #d5d9ee", borderRadius: 12, cursor: "pointer", fontSize: 15 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#eef2ff"; (e.currentTarget as HTMLElement).style.borderColor = "#3a47a8"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = "#d5d9ee"; }}>
+                        <span style={{ fontWeight: 600 }}>{i.name} <span style={{ fontSize: 11.5, fontWeight: 400, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                        {agoBadge(ago)}
+                      </div>
+                    ))}
+                    {!suggests.length && <div style={{ padding: 20, textAlign: "center", color: "#99a", fontSize: 14 }}>후보가 없어요 — '오래 안 나온 순' 탭에서 골라보세요</div>}
+                  </div>
+                  <button onClick={() => setPickerPage(p => p + 1)}
+                    style={{ border: "1px solid #ccd", background: "#fff", borderRadius: 10, padding: "10px 0", fontSize: 14, fontWeight: 700, color: "#3a47a8", cursor: "pointer" }}>
+                    🔄 보기 변경 ({(pickerPage % pageCount) + 1}/{pageCount})
+                  </button>
+                </>
+              )}
+
+              {pickerTab === "fresh" && (
+                <>
+                  <input autoFocus placeholder="검색 (비우면 같은 분류만)" value={search} onChange={e => setSearch(e.target.value)}
+                    style={{ padding: "9px 12px", border: "1px solid #ccd", borderRadius: 10, fontSize: 14 }} />
+                  <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                    {freshList.map(({ i, ago }) => (
+                      <div key={i.id} onClick={() => applyPick(i.name)}
+                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
+                        <span>{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                        {agoBadge(ago)}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
