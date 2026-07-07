@@ -1588,7 +1588,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         <!-- NEW MASTER-DETAIL LAYOUT -->
         <div style="height:calc(100vh - 60px);overflow-y:auto;background:var(--bg);margin:-24px -24px 0 -24px">
           <div style="padding:6px 28px 40px">
-            <div id="empSubNav" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 16px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5">
+            <div id="empSubNav" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 16px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5;align-items:center">
+              <div id="empSubNavTitle" style="font-size:17px;font-weight:800;color:var(--text);padding:6px 16px 6px 2px;margin-right:4px;white-space:nowrap">내 업무 <span id="empSubNavSub" style="font-size:11px;color:var(--text3);font-weight:600"></span></div>
               <button id="empTab-home" onclick="setEmpTab('home')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🏠 홈</button>
               <button id="empTab-checklist" onclick="setEmpTab('checklist')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 체크리스트</button>
               <button id="empTab-student" onclick="setEmpTab('student')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 학생</button>
@@ -3918,6 +3919,8 @@ function showPage(p){
   }
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
   var _pgEl=document.getElementById('page-'+p);if(_pgEl)_pgEl.classList.remove('hidden');
+  var _tT=document.getElementById('topT');if(_tT)_tT.style.display='';
+  var _tS=document.getElementById('topS');if(_tS)_tS.style.display='';
   curEmpId=null;curProjId=null;setNav(p,null);
   const tt={home:'홈',announcements:'📢 공지사항',board:'전체 업무',calendar:'달력',projects:'🚀 프로젝트',approval:'⚖️ 결재'};
   document.getElementById('topT').textContent=tt[p]||'';
@@ -3948,8 +3951,10 @@ function showEmpPage(empId){if(CU&&CU.id===empId){try{recordBoardView();}catch(e
   PAGES.forEach(function(id){var el=document.getElementById('page-'+id);if(el)el.classList.add('hidden');});
   var pg=document.getElementById('page-emp');if(pg)pg.classList.remove('hidden');
   curEmpId=empId;setNav(null,empId);
-  var topT=document.getElementById('topT');if(topT)topT.textContent=emp.name+'의 업무 공간';
-  var topS=document.getElementById('topS');if(topS)topS.textContent=isOwner?'개인 업무 보드':'공유 업무 보기 (읽기전용)';
+  var topT=document.getElementById('topT');if(topT){topT.textContent='';topT.style.display='none';}
+  var topS=document.getElementById('topS');if(topS){topS.textContent='';topS.style.display='none';}
+  var _snT=document.getElementById('empSubNavTitle');
+  if(_snT)_snT.innerHTML=esc(isOwner&&CU&&CU.id===empId?'내 업무':emp.name+'의 업무')+' <span style="font-size:11px;color:var(--text3);font-weight:600">'+(isOwner?'개인 업무 보드':'공유 보기(읽기전용)')+'</span>';
   var btnTask=document.getElementById('btnTask');
   if(btnTask){btnTask.textContent='+ '+emp.name+' 업무 추가';btnTask.onclick=function(){openTaskModal(empId);};btnTask.style.display=isOwner?'inline-flex':'none';}
   var btnProj=document.getElementById('btnProj');if(btnProj)btnProj.style.display='none';
