@@ -10,6 +10,7 @@ interface Entry {
   guest_name: string | null; booking_id: string | null;
   receipt_files: { name: string; url: string }[];
   recorded_by: string | null; created_at: string;
+  ref_id?: string | null;
 }
 
 const CATEGORIES_IN = ["보증금", "현금수입", "기타입금"];
@@ -48,6 +49,10 @@ export default function CashLedgerPage() {
   const [aDate, setADate] = useState(today10());
   const [aGuest, setAGuest] = useState("");
   const [aFiles, setAFiles] = useState<{ name: string; url: string }[]>([]);
+  const [aRefId, setARefId] = useState<string>("");
+  // 반환 처리 모달 (보유 보증금 → 기존 반환 기록 연결 or 새 출금 생성)
+  const [retModal, setRetModal] = useState<{ id: string; name: string; date: string; amount: number } | null>(null);
+  const [retSel, setRetSel] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -79,7 +84,7 @@ export default function CashLedgerPage() {
     setBalance(j.balance || 0);
     // 전체 내역 (이월 잔액·보증금 보유현황) — 클라이언트에서 직접 조회
     try {
-      const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name").order("entry_date");
+      const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name,ref_id").order("entry_date");
       setAllItems((data || []) as Entry[]);
     } catch {}
   }, [year, month]);
@@ -97,22 +102,44 @@ export default function CashLedgerPage() {
   const carryOver = useMemo(() => allItems.filter(i => (i.entry_date || "") < monthStart)
     .reduce((a2, i) => a2 + (i.type === "in" ? 1 : -1) * Number(i.amount || 0), 0), [allItems, monthStart]);
   const grandTotal = carryOver + balance;
-  // 보증금 보유현황: 보증금 입금 − 같은 사람(guest_name) 보증금반환 매칭
-  const heldDeposits = useMemo(() => {
+  // 보증금 보유현황: ① ref_id 정확 매칭 → ② 같은 이름 매칭 (반환 완료분 숨김)
+  const { heldDeposits, unmatchedReturns } = useMemo(() => {
     const key = (i: Entry) => String(i.guest_name || i.description || "").trim();
-    const returned = new Map<string, number>();
-    allItems.filter(i => i.category === "보증금반환" && i.type === "out").forEach(i => {
-      const k = key(i); returned.set(k, (returned.get(k) || 0) + Number(i.amount || 0));
+    const deposits = allItems.filter(i => i.category === "보증금" && i.type === "in");
+    const returns = allItems.filter(i => i.category === "보증금반환" && i.type === "out");
+    const remaining = new Map<string, number>();
+    deposits.forEach(d => remaining.set(d.id, Number(d.amount || 0)));
+    const usedReturn = new Set<string>();
+    // ① ref_id 정확 매칭
+    returns.forEach(r => {
+      if (r.ref_id && remaining.has(r.ref_id)) {
+        remaining.set(r.ref_id, Math.max(0, (remaining.get(r.ref_id) || 0) - Number(r.amount || 0)));
+        usedReturn.add(r.id);
+      }
     });
-    const list: { name: string; date: string; amount: number; desc: string }[] = [];
-    allItems.filter(i => i.category === "보증금" && i.type === "in").forEach(i => {
-      const k = key(i); const amt = Number(i.amount || 0);
-      const ret = returned.get(k) || 0;
-      if (ret >= amt) { returned.set(k, ret - amt); return; } // 반환 완료분 제외
-      if (ret > 0) returned.set(k, 0);
-      list.push({ name: k || "(이름 없음)", date: (i.entry_date || "").slice(5, 10).replace("-", "/"), amount: amt - ret, desc: String(i.description || "") });
+    // ② 이름 매칭 풀 (ref 없는 반환)
+    const nameReturned = new Map<string, number>();
+    returns.forEach(r => {
+      if (usedReturn.has(r.id)) return;
+      const k = key(r); nameReturned.set(k, (nameReturned.get(k) || 0) + Number(r.amount || 0));
     });
-    return list.reverse();
+    const list: { id: string; name: string; date: string; amount: number; desc: string }[] = [];
+    deposits.forEach(d => {
+      let amt = remaining.get(d.id) || 0;
+      if (amt <= 0) return;
+      const k = key(d);
+      const ret = nameReturned.get(k) || 0;
+      if (ret > 0) {
+        const use = Math.min(ret, amt);
+        nameReturned.set(k, ret - use);
+        amt -= use;
+      }
+      if (amt <= 0) return;
+      list.push({ id: d.id, name: k || "(이름 없음)", date: (d.entry_date || "").slice(5, 10).replace("-", "/"), amount: amt, desc: String(d.description || "") });
+    });
+    // 어느 보증금과도 매칭 안 된 반환 기록 (이름 불일치 등)
+    const um = returns.filter(r => !usedReturn.has(r.id) && (nameReturned.get(key(r)) || 0) > 0);
+    return { heldDeposits: list.reverse(), unmatchedReturns: um };
   }, [allItems]);
   const heldTotal = heldDeposits.reduce((a2, d) => a2 + d.amount, 0);
 
@@ -147,7 +174,7 @@ export default function CashLedgerPage() {
           entry_date: aDate, type: aType, category: aCat,
           description: aDesc || null, amount: Number(aAmount),
           guest_name: aGuest || null, receipt_files: aFiles,
-          recorded_by: staffName,
+          recorded_by: staffName, ref_id: aRefId || null,
         }),
       });
       if (!res.ok) { const j = await res.json(); alert(j.error || "저장 실패"); return; }
@@ -161,7 +188,22 @@ export default function CashLedgerPage() {
     if (res.ok) load();
   }
 
-  function resetForm() { setAddOpen(false); setAType("in"); setACat("보증금"); setADesc(""); setAAmount(""); setADate(today10()); setAGuest(""); setAFiles([]); }
+  function resetForm() { setAddOpen(false); setAType("in"); setACat("보증금"); setADesc(""); setAAmount(""); setADate(today10()); setAGuest(""); setAFiles([]); setARefId(""); }
+  // 기존 반환 기록 ↔ 보증금 연결
+  async function linkReturn() {
+    if (!retModal || !retSel) return;
+    const res = await fetch("/api/admin/cash-ledger", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: retSel, ref_id: retModal.id }) });
+    if (!res.ok) { const j = await res.json().catch(() => ({})); alert(j.error || "연결 실패"); return; }
+    setRetModal(null); setRetSel("");
+    load();
+  }
+  // 보유 보증금에서 바로 반환 출금 만들기
+  function newReturnFromDeposit(d: { id: string; name: string; amount: number }) {
+    setRetModal(null); setRetSel("");
+    setAType("out"); setACat("보증금반환"); setAGuest(d.name); setAAmount(String(d.amount)); setADate(today10()); setADesc("보증금 반환 — " + d.name); setAFiles([]); setARefId(d.id);
+    setAddOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   if (!ready) return null;
 
@@ -237,9 +279,11 @@ export default function CashLedgerPage() {
                   <span style={{ fontWeight: 800, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.desc}>{d.name}</span>
                   <span style={{ color: "#94a3b8", fontSize: 10.5, whiteSpace: "nowrap" }}>{d.date} 입금</span>
                   <span style={{ fontWeight: 800, color: "#1d4ed8", whiteSpace: "nowrap" }}>{peso(d.amount)}</span>
+                  <button onClick={() => { setRetModal(d); setRetSel(""); }} title="반환 처리"
+                    style={{ border: "1px solid #cbd5e1", background: "#fff", borderRadius: 7, padding: "3px 8px", fontSize: 10.5, fontWeight: 800, color: "#475569", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>↩ 반환</button>
                 </div>
               ))}
-            <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 6, lineHeight: 1.6 }}>보증금 입금 − 같은 이름의 보증금반환 자동 매칭 (반환 완료분은 숨김)</div>
+            <div style={{ fontSize: 10.5, color: "#94a3b8", marginTop: 6, lineHeight: 1.6 }}>↩ 반환 버튼으로 정확히 매칭하세요 · 같은 이름의 반환 기록은 자동 매칭 (반환 완료분은 숨김)</div>
           </div>
         </div>
 
@@ -277,6 +321,20 @@ export default function CashLedgerPage() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                {aType === "out" && aCat === "보증금반환" && (
+                  <div style={{ gridColumn: "1 / 3" }}>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 3 }}>🔒 어느 보증금의 반환인가요? (보유현황에서 선택)</label>
+                    <select value={aRefId} onChange={e => {
+                      const v = e.target.value; setARefId(v);
+                      const d = heldDeposits.find(x => x.id === v);
+                      if (d) { setAGuest(d.name); if (!aAmount) setAAmount(String(d.amount)); }
+                    }}
+                      style={{ width: "100%", padding: "8px 10px", border: "1.5px solid #4338ca", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", background: "#f5f6ff" }}>
+                      <option value="">— 선택 안 함 (이름으로 자동 매칭) —</option>
+                      {heldDeposits.map(d => <option key={d.id} value={d.id}>{d.name} · {d.date} 입금 · {peso(d.amount)}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 3 }}>금액 (PHP) *</label>
                   <input type="number" value={aAmount} onChange={e => setAAmount(e.target.value)} placeholder="0"
@@ -371,6 +429,45 @@ export default function CashLedgerPage() {
     {lightbox && (
       <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, cursor: "pointer" }}>
         <img src={lightbox} alt="receipt" style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }} />
+      </div>
+    )}
+
+    {/* 반환 처리 모달 */}
+    {retModal && (
+      <div onClick={() => setRetModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9998 }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: "20px 22px", width: "min(460px, 92vw)", boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
+          <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>↩ 보증금 반환 처리</div>
+          <div style={{ fontSize: 13, color: "#475569", marginBottom: 14 }}>
+            <b>{retModal.name}</b> · {retModal.date} 입금 · <b style={{ color: "#1d4ed8" }}>{peso(retModal.amount)}</b>
+          </div>
+
+          <button onClick={() => newReturnFromDeposit(retModal)}
+            style={{ width: "100%", padding: "10px 0", border: "none", borderRadius: 9, background: "#dc2626", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 14 }}>
+            💸 새 출금(반환) 기록 만들기 — 이름·금액 자동 입력
+          </button>
+
+          {unmatchedReturns.length > 0 && (<>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: "#92400e", marginBottom: 6 }}>
+              이미 출금 기록이 있다면 — 매칭 안 된 반환 기록과 연결 (이름이 달라서 남은 경우)
+            </div>
+            <div style={{ maxHeight: 180, overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 9, padding: 6, marginBottom: 10 }}>
+              {unmatchedReturns.map(r => (
+                <label key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, background: retSel === r.id ? "#eef2ff" : "transparent", cursor: "pointer", fontSize: 12 }}>
+                  <input type="radio" name="retSel" checked={retSel === r.id} onChange={() => setRetSel(r.id)} />
+                  <span style={{ flex: 1, fontWeight: 700 }}>{String(r.guest_name || r.description || "(이름 없음)")}</span>
+                  <span style={{ color: "#94a3b8", fontSize: 10.5 }}>{(r.entry_date || "").slice(5, 10).replace("-", "/")} 출금</span>
+                  <span style={{ fontWeight: 800, color: "#dc2626" }}>{peso(Number(r.amount) || 0)}</span>
+                </label>
+              ))}
+            </div>
+            <button onClick={linkReturn} disabled={!retSel}
+              style={{ width: "100%", padding: "9px 0", border: "1.5px solid #4338ca", borderRadius: 9, background: retSel ? "#4338ca" : "#fff", color: retSel ? "#fff" : "#94a3b8", fontWeight: 800, fontSize: 13, cursor: retSel ? "pointer" : "default", fontFamily: "inherit", marginBottom: 10 }}>
+              🔗 선택한 반환 기록과 연결 (장부에 새 출금 안 생김)
+            </button>
+          </>)}
+
+          <button onClick={() => setRetModal(null)} style={{ width: "100%", padding: "8px 0", border: "1px solid #e2e8f0", borderRadius: 9, background: "#fff", color: "#64748b", fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>닫기</button>
+        </div>
       </div>
     )}
   </>);

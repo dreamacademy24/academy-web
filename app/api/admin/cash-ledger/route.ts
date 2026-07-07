@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { entry_date, type, category, description, amount, guest_name, booking_id, receipt_files, recorded_by } = body;
+    const { entry_date, type, category, description, amount, guest_name, booking_id, receipt_files, recorded_by, ref_id } = body;
 
     if (!type || !amount) return NextResponse.json({ error: "유형과 금액은 필수입니다" }, { status: 400 });
 
@@ -52,12 +52,26 @@ export async function POST(req: Request) {
         booking_id: booking_id || null,
         receipt_files: receipt_files || [],
         recorded_by: recorded_by || null,
+        ref_id: ref_id || null,
       })
       .select()
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data, { status: 201 });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
+// PATCH — 반환 기록을 특정 보증금과 연결 (ref_id 지정)
+export async function PATCH(req: Request) {
+  try {
+    const { id, ref_id } = await req.json();
+    if (!id) return NextResponse.json({ error: "id는 필수입니다" }, { status: 400 });
+    const { error } = await sb.from("cash_ledger").update({ ref_id: ref_id || null }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "unknown" }, { status: 500 });
   }
