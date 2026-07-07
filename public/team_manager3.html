@@ -5027,7 +5027,20 @@ function renderHomeSG(){
     grid.appendChild(div);
   });
 }
-function qTog(id,e){e&&e.stopPropagation();const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;svTasks();syncTaskToSB(t);refreshAll();}}
+function qTog(id,e){
+  e&&e.stopPropagation();
+  const t=tasks.find(t=>t.id===id);
+  if(!t)return;
+  t.done=!t.done;
+  svTasks();syncTaskToSB(t);
+  // 완료 시 만든 사람(지시자)에게 알림 — "제이미가 준 업무를 메이가 완료" 확인용
+  try{
+    if(t.done&&t.createdBy&&CU&&t.createdBy!==CU.id){
+      createNotif(t.createdBy,'unassigned_task',t.id,'✅ '+(CU.name||CU.id)+'님이 완료했어요: '+String(t.title||'').slice(0,30));
+    }
+  }catch(err){}
+  refreshAll();
+}
 
 // ── BATCH DELETE ──
 let batchSelected=new Set();
