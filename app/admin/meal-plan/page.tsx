@@ -24,8 +24,10 @@ const mealAnomalies = (b: { checkin_date?: string | null; checkout_date?: string
   const weekEnd = addD(weekMon, 6); // 월~일
   const inWeek = (d: string) => d >= weekMon && d <= weekEnd;
   const ci = String(b.checkin_date || "").slice(0, 10), co = String(b.checkout_date || "").slice(0, 10);
-  if (ci && inWeek(ci) && pD(ci).getDay() !== 6) out.push(`${dowKo(ci)}요일 체크인`);
-  if (co && inWeek(co) && pD(co).getDay() !== 6) out.push(`${dowKo(co)}요일 퇴소`);
+  // 평일(월~금) 입·퇴소만 이슈 — 주중 식수 인원이 바뀌는 경우. 토·일은 표준이라 표시 안 함 (퇴소 주는 Last week 뱃지로 충분)
+  const isWeekday = (d: string) => { const w = pD(d).getDay(); return w >= 1 && w <= 5; };
+  if (ci && inWeek(ci) && isWeekday(ci)) out.push(`${dowKo(ci)}요일 체크인`);
+  if (co && inWeek(co) && isWeekday(co)) out.push(`${dowKo(co)}요일 퇴소`);
   return out;
 };
 /* 체크인이 월요일이면 그대로, 아니면 다음 월요일 (주차 기산점) */
@@ -247,8 +249,9 @@ export default function MealPlanPage() {
       if (String(b.status || "").includes("취소")) return;
       const segs = mealSegs(b); if (segs.length === 0) return;
       const mIn = segs[0].from, mOut = segs[segs.length - 1].to;
-      if (mIn > weekFri && mIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(mIn)} ${dowKo(mIn)}${pD(mIn).getDay() !== 6 ? "⚠" : ""})`);
-      if (mOut >= weekMon && mOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(mOut)} ${dowKo(mOut)}${pD(mOut).getDay() !== 6 ? "⚠" : ""})`);
+      const wd = (d: string) => { const w = pD(d).getDay(); return w >= 1 && w <= 5; };
+      if (mIn > weekFri && mIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(mIn)} ${dowKo(mIn)}${wd(mIn) ? "⚠" : ""})`);
+      if (mOut >= weekMon && mOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(mOut)} ${dowKo(mOut)}${wd(mOut) ? "⚠" : ""})`);
     });
     return { incoming, outgoing };
   }, [bookings, weekMon, weekFri]);
