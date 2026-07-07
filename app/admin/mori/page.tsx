@@ -1,8 +1,9 @@
 "use client";
 
-/* 모리칸 — 주간 식단 조합 생성기
-   과거 제공 이력(mori_servings) 기반으로 최근 3주 중복을 피해 아침·저녁 조합을 자동 생성.
-   점심·간식은 픽스 세트(mori_fixed_sets)를 오래 안 쓴 순서로 자동 배치. */
+/* 모리칸 — 주간 식단 조합 생성기 v2
+   · 회피 기준: 이번 주 식사 손님(올인원)의 체류 기간 — 손님이 먹은 메뉴만 회피
+   · 손님이 전원 신규면 과거 회차 재사용 추천
+   · 저녁은 어른(매운)/아동(순한) 2열 */
 
 import React, { useEffect, useMemo, useState } from "react";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -11,6 +12,7 @@ import * as XLSX from "xlsx";
 import {
   Item, FixedSet, Serving, WeekPlan, DayPlan, MEALS, DUP_WINDOW,
   addD, diffDays, mondayOf, dowOf, nk, genWeek, genBreakfast, genDinner, planOccurrences,
+  emptyDay, migrateDay,
 } from "./gen";
 
 const ROUND_EPOCH = "2026-05-04"; // 1회차 시작 월요일
@@ -22,8 +24,11 @@ const ROLE_LABEL: Record<string, string> = {
   fruit: "과일", dairy: "유제품·음료", breakfast_main: "아침주식", staple: "기본찬",
 };
 const PROTEINS = ["닭", "돼지", "소", "생선해물", "계란", "두부"];
+const MEAL_COLS = ["아침", "점심", "저녁어른", "저녁아동"] as const;
+const MEAL_LABEL: Record<string, string> = { 아침: "아침", 점심: "점심 (픽스)", 저녁어른: "저녁 · 어른", 저녁아동: "저녁 · 아동" };
 
-type Picker = { date: string; meal: string; index: number | null } | null; // index null = 추가
+type Picker = { date: string; meal: string; index: number | null } | null;
+type Guest = { name: string; from: string; to: string };
 
 export default function MoriPage() {
   const [authed, setAuthed] = useState(false);
@@ -36,6 +41,8 @@ export default function MoriPage() {
   const [status, setStatus] = useState<"none" | "draft" | "confirmed">("none");
   const [weekId, setWeekId] = useState<string | null>(null);
   const [allWeeks, setAllWeeks] = useState<{ week_start: string; plan: WeekPlan }[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [guestsLoaded, setGuestsLoaded] = useState(false);
   const [picker, setPicker] = useState<Picker>(null);
   const [pickerTab, setPickerTab] = useState<"suggest" | "fresh">("suggest");
   const [pickerPage, setPickerPage] = useState(0);
@@ -50,13 +57,13 @@ export default function MoriPage() {
   }, []);
 
   useEffect(() => { if (authed) loadBase(); }, [authed]);
-  useEffect(() => { if (authed) loadWeek(weekStart); }, [authed, weekStart]);
+  useEffect(() => { if (authed) { loadWeek(weekStart); loadGuests(); } }, [authed, weekStart]);
 
   async function loadBase() {
     const [it, fs, sv, wk] = await Promise.all([
       supabase.from("mori_items").select("*").order("name"),
       supabase.from("mori_fixed_sets").select("*").order("set_no"),
-      supabase.from("mori_servings").select("serve_date, meal, item_name").order("serve_date", { ascending: false }).limit(3000),
+      supabase.from("mori_servings").select("serve_date, meal, item_name").order("serve_date", { ascending: false }).limit(4000),
       supabase.from("mori_weeks").select("week_start, plan"),
     ]);
     setItems((it.data || []) as Item[]);
@@ -67,14 +74,54 @@ export default function MoriPage() {
 
   async function loadWeek(ws: string) {
     const { data } = await supabase.from("mori_weeks").select("*").eq("week_start", ws).maybeSingle();
-    if (data) { setPlan(data.plan as WeekPlan); setStatus(data.status); setWeekId(data.id); }
+    if (data) {
+      const migrated: WeekPlan = {};
+      for (const [d, day] of Object.entries((data.plan || {}) as Record<string, any>)) migrated[d] = migrateDay(day) || emptyDay();
+      setPlan(migrated); setStatus(data.status); setWeekId(data.id);
+    }
     else { setPlan(null); setStatus("none"); setWeekId(null); }
+  }
+
+  /* 이번 주에 식사 나가는 손님 (올인원, 드하/제이파크 구간) — 식단 관련 업무와 같은 규칙 */
+  async function loadGuests() {
+    try {
+      const { data } = await supabase.from("bookings").select("booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout");
+      const weekEnd = addD(weekStart, 4);
+      const gs: Guest[] = [];
+      for (const b of (data || []) as any[]) {
+        if (!b.is_all_in_one) continue;
+        if (String(b.status || "").includes("취소")) continue;
+        const eat = (t?: string | null) => t === "dreamhouse" || t === "jaypark";
+        const segs: { from: string; to: string }[] = [];
+        if (b.seg1_type || b.seg2_type) {
+          if (eat(b.seg1_type) && b.seg1_checkin && b.seg1_checkout) segs.push({ from: String(b.seg1_checkin).slice(0, 10), to: String(b.seg1_checkout).slice(0, 10) });
+          if (eat(b.seg2_type) && b.seg2_checkin && b.seg2_checkout) segs.push({ from: String(b.seg2_checkin).slice(0, 10), to: String(b.seg2_checkout).slice(0, 10) });
+        } else if (b.checkin_date && b.checkout_date && !String(b.accom_type || "").includes("큐브")) {
+          segs.push({ from: String(b.checkin_date).slice(0, 10), to: String(b.checkout_date).slice(0, 10) });
+        }
+        if (!segs.length) continue;
+        if (!segs.some(s => s.from <= weekEnd && s.to >= weekStart)) continue;
+        const from = segs.reduce((m, s) => (s.from < m ? s.from : m), segs[0].from);
+        const to = segs.reduce((m, s) => (s.to > m ? s.to : m), segs[0].to);
+        gs.push({ name: b.booker_name || "손님", from, to });
+      }
+      gs.sort((a, b) => (a.from < b.from ? -1 : 1));
+      setGuests(gs);
+    } catch { setGuests([]); }
+    setGuestsLoaded(true);
   }
 
   const roundNo = useMemo(() => Math.floor(diffDays(ROUND_EPOCH, weekStart) / 7) + 1, [weekStart]);
   const dates = useMemo(() => [0, 1, 2, 3, 4].map(d => addD(weekStart, d)), [weekStart]);
 
-  /* 아이템별 제공일 목록 (내림차순) — "n일 전" 계산용 */
+  /* 회피 창: 이번 주 손님 중 가장 일찍 먹기 시작한 날부터 */
+  const avoidStart = useMemo(() => {
+    const olds = guests.filter(g => g.from < weekStart);
+    if (!olds.length) return null;
+    return olds.reduce((m, g) => (g.from < m ? g.from : m), olds[0].from);
+  }, [guests, weekStart]);
+  const windowDays = avoidStart ? Math.max(0, diffDays(avoidStart, weekStart)) : guests.length > 0 ? 0 : DUP_WINDOW;
+
   const servedDates = useMemo(() => {
     const m = new Map<string, string[]>();
     for (const s of servings) {
@@ -93,7 +140,6 @@ export default function MoriPage() {
     return d ? diffDays(d, onDate) : null;
   };
 
-  /* 픽스 세트 마지막 사용일 추정: 세트의 비(非)기본찬 점심 2개 이상이 같은 날 점심에 나왔으면 사용으로 간주 */
   const setLastUsed = useMemo(() => {
     const lunchByDate = new Map<string, Set<string>>();
     for (const s of servings) {
@@ -120,20 +166,60 @@ export default function MoriPage() {
 
   const occ = useMemo(() => (plan ? planOccurrences(plan) : new Map()), [plan]);
 
+  /* 재사용 가능한 과거 회차: 회차 전체 날짜가 회피 창 이전이면 OK. 오래 안 나온 순 추천 */
+  const reuse = useMemo(() => {
+    if (!guestsLoaded || !guests.length || !servings.length) return { rec: null as number | null, list: [] as number[] };
+    const list: { r: number; avgAgo: number }[] = [];
+    for (let r = 1; r < roundNo; r++) {
+      const rs = addD(ROUND_EPOCH, (r - 1) * 7), re = addD(rs, 4);
+      if (avoidStart && re >= avoidStart) continue;
+      const names = new Set(servings.filter(s => s.serve_date >= rs && s.serve_date <= re).map(s => nk(s.item_name)));
+      if (names.size < 5) continue;
+      let sum = 0, n = 0;
+      names.forEach(k => { const arr = servedDates.get(k); const d = arr?.find(x => x < weekStart); sum += d ? diffDays(d, weekStart) : 999; n++; });
+      list.push({ r, avgAgo: sum / Math.max(1, n) });
+    }
+    list.sort((a, b) => b.avgAgo - a.avgAgo);
+    return { rec: list.length ? list[0].r : null, list: list.map(x => x.r).sort((a, b) => a - b) };
+  }, [guestsLoaded, guests, servings, roundNo, avoidStart, weekStart, servedDates]);
+
   /* ───────── 액션 ───────── */
   function generate() {
-    const p = genWeek(weekStart, items, servings, sets, setLastUsed);
-    setPlan(p);
+    setPlan(genWeek(weekStart, items, servings, sets, setLastUsed, windowDays));
   }
 
-  function regenCell(date: string, meal: "아침" | "저녁") {
+  async function loadRound(r: number) {
+    const rs = addD(ROUND_EPOCH, (r - 1) * 7);
+    let src: WeekPlan | null = null;
+    try {
+      const { data } = await supabase.from("mori_weeks").select("plan").eq("week_start", rs).maybeSingle();
+      if (data?.plan && Object.keys(data.plan).length) src = data.plan as WeekPlan;
+    } catch {}
+    const newPlan: WeekPlan = {};
+    for (let i = 0; i < 5; i++) {
+      const from = addD(rs, i), to = addD(weekStart, i);
+      if (src) newPlan[to] = migrateDay(src[from]) || emptyDay();
+      else {
+        const day = emptyDay();
+        for (const s of servings.filter(x => x.serve_date === from)) {
+          const m = s.meal === "저녁" ? "저녁어른" : s.meal;
+          if ((day as any)[m]) (day as any)[m].push(s.item_name);
+        }
+        if (!day.저녁아동.length) day.저녁아동 = [...day.저녁어른];
+        newPlan[to] = day;
+      }
+    }
+    setPlan(newPlan);
+  }
+
+  function regenCell(date: string, kind: "아침" | "저녁") {
     if (!plan) return;
     const used = new Set<string>();
     const usedProteinByDate = new Map<string, Set<string>>();
     for (const [d, day] of Object.entries(plan)) {
       for (const m of MEALS) {
-        if (d === date && m === meal) continue;
-        for (const it of day[m] || []) {
+        if (d === date && ((kind === "아침" && m === "아침") || (kind === "저녁" && m.startsWith("저녁")))) continue;
+        for (const it of (day as any)[m] || []) {
           used.add(nk(it));
           const f = items.find(i => nk(i.name) === nk(it));
           if (f?.protein) {
@@ -145,18 +231,21 @@ export default function MoriPage() {
     }
     const last = new Map<string, string>();
     for (const s of servings) if (s.serve_date < weekStart) { const k = nk(s.item_name); if (!last.has(k) || last.get(k)! < s.serve_date) last.set(k, s.serve_date); }
-    const ctx = { items, last, used, usedProteinByDate };
+    const ctx = { items, last, used, usedProteinByDate, dupWindow: windowDays };
     const lunchProteins = new Set<string>();
     for (const it of plan[date].점심) { const f = items.find(i => nk(i.name) === nk(it)); if (f?.protein) lunchProteins.add(f.protein); }
-    const next = { ...plan, [date]: { ...plan[date], [meal]: meal === "아침" ? genBreakfast(ctx as any, date) : genDinner(ctx as any, date, lunchProteins) } };
-    setPlan(next);
+    if (kind === "아침") setPlan({ ...plan, [date]: { ...plan[date], 아침: genBreakfast(ctx as any, date) } });
+    else {
+      const dn = genDinner(ctx as any, date, lunchProteins);
+      setPlan({ ...plan, [date]: { ...plan[date], 저녁어른: dn.adult, 저녁아동: dn.child } });
+    }
   }
 
   function setFixedSet(date: string, setNo: number) {
     if (!plan) return;
     const fs = sets.find(s => s.set_no === setNo);
     if (!fs) return;
-    setPlan({ ...plan, [date]: { ...plan[date], 점심: [...fs.lunch, "김치"], 간식: fs.snack ? [fs.snack] : [], fixedSet: setNo } });
+    setPlan({ ...plan, [date]: { ...plan[date], 점심: [...fs.lunch, "김치"], fixedSet: setNo } });
   }
 
   function removeItem(date: string, meal: string, idx: number) {
@@ -191,7 +280,7 @@ export default function MoriPage() {
       for (const [date, day] of Object.entries(plan)) {
         for (const meal of MEALS) {
           const seen = new Set<string>();
-          for (const it of day[meal] || []) {
+          for (const it of (day as any)[meal] || []) {
             if (seen.has(nk(it))) continue; seen.add(nk(it));
             rows.push({ serve_date: date, meal, item_name: it, source: "plan" });
           }
@@ -206,18 +295,19 @@ export default function MoriPage() {
 
   function exportXlsx() {
     if (!plan) return;
-    const header = ["날짜", "아침", "점심 (픽스)", "저녁"];
+    const header = ["날짜", "아침", "점심 (픽스)", "저녁 (어른)", "저녁 (아동)"];
     const rows = dates.map(d => {
       const day = plan[d];
       return [
         `${d.slice(5).replace("-", "/")} (${dowOf(d)})`,
         (day?.아침 || []).join("\n"),
         (day?.점심 || []).join("\n"),
-        (day?.저녁 || []).join("\n"),
+        (day?.저녁어른 || []).join("\n"),
+        (day?.저녁아동 || []).join("\n"),
       ];
     });
     const ws = XLSX.utils.aoa_to_sheet([[`${roundNo}회 식단표 (${weekStart} ~ ${addD(weekStart, 4)})`], header, ...rows]);
-    ws["!cols"] = [{ wch: 12 }, { wch: 26 }, { wch: 30 }, { wch: 30 }];
+    ws["!cols"] = [{ wch: 12 }, { wch: 24 }, { wch: 28 }, { wch: 26 }, { wch: 26 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, `${roundNo}회`);
     XLSX.writeFile(wb, `${roundNo}회 식단표_${weekStart}.xlsx`);
@@ -239,34 +329,34 @@ export default function MoriPage() {
 
   if (!authed) return null;
 
-  /* ───────── 스타일 ───────── */
   const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" });
   const chipWarnStyle = (warn: number | null, dupInWeek: boolean): React.CSSProperties => ({
     display: "inline-flex", alignItems: "center", gap: 4, margin: "2px 4px 2px 0", padding: "3px 8px",
     borderRadius: 12, fontSize: 12.5, cursor: "pointer", border: "1px solid",
-    background: dupInWeek ? "#ffe3e3" : warn !== null && warn <= DUP_WINDOW ? "#fff3d6" : "#f1f3fa",
-    borderColor: dupInWeek ? "#e88" : warn !== null && warn <= DUP_WINDOW ? "#e6b84c" : "#d5d9ee",
+    background: dupInWeek ? "#ffe3e3" : warn !== null && windowDays > 0 && warn <= windowDays ? "#fff3d6" : "#f1f3fa",
+    borderColor: dupInWeek ? "#e88" : warn !== null && windowDays > 0 && warn <= windowDays ? "#e6b84c" : "#d5d9ee",
     color: "#333",
   });
 
-  /* 후보 풀: 교체 대상과 같은 분류(추가면 그 끼니에 맞는 것), '오래 안 나온 순' 정렬 (처음 → 오래된 순) */
   const pickerPool = () => {
     if (!picker) return [];
+    const mealKey = picker.meal.startsWith("저녁") ? "저녁" : picker.meal;
     const cur = picker.index !== null && plan ? (plan[picker.date] as any)[picker.meal][picker.index] : null;
     const curItem = cur ? items.find(i => nk(i.name) === nk(cur)) : null;
     const inPlan = new Set<string>();
     if (plan) for (const day of Object.values(plan)) for (const m of MEALS) for (const it of (day as any)[m] || []) inPlan.add(nk(it));
     return items
       .filter(i => i.active && !inPlan.has(nk(i.name)))
-      .filter(i => (curItem ? i.role === curItem.role : i.meals.includes(picker.meal)))
+      .filter(i => (curItem ? i.role === curItem.role : i.meals.some(m => m === mealKey || m.startsWith(mealKey))))
       .map(i => ({ i, ago: agoFor(i.name, picker.date) }))
       .sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999));
   };
 
   const openPicker = (p: Picker) => { setPicker(p); setPickerTab("suggest"); setPickerPage(0); setSearch(""); };
+  const weekOf = (g: Guest) => { const w = Math.floor(diffDays(g.from, weekStart) / 7) + 1; return w <= 0 ? "신규" : `${w}주차`; };
 
   return (
-    <div style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1300 }}>
+    <div style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1400 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>🍱 모리칸 — 식단 조합</h1>
         <div style={{ display: "flex", gap: 6 }}>
@@ -278,12 +368,12 @@ export default function MoriPage() {
         </div>
       </div>
       <div style={{ fontSize: 13, color: "#667", marginBottom: 14 }}>
-        최근 {DUP_WINDOW}일 내 나온 메뉴는 피해서 자동 조합해요. 노란 칩 = 최근 {DUP_WINDOW}일 내 제공, 빨간 칩 = 이번 주 안에서 중복. 칩을 누르면 교체할 수 있어요.
+        지금 묵는 손님이 먹은 메뉴만 피해요. 노란 칩 = 회피 범위 안에서 이미 나옴, 빨간 칩 = 이번 주 안에서 중복. 칩을 누르면 교체 후보가 떠요.
       </div>
 
       {tab === "plan" && (
         <>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <button onClick={() => setWeekStart(addD(weekStart, -7))} style={btn("#8892c8")}>◀ 전주</button>
             <input type="date" value={weekStart} onChange={e => setWeekStart(mondayOf(e.target.value))} style={{ padding: "7px 10px", border: "1px solid #ccd", borderRadius: 8, fontSize: 14 }} />
             <button onClick={() => setWeekStart(addD(weekStart, 7))} style={btn("#8892c8")}>다음주 ▶</button>
@@ -292,15 +382,44 @@ export default function MoriPage() {
               {status === "confirmed" ? "✅ 확정됨" : status === "draft" ? "📝 임시저장" : "미작성"}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={generate} style={btn("#3a47a8")}>⚡ 자동 생성</button>
+            <button onClick={generate} style={btn("#3a47a8")}>⚡ 새로 조합</button>
             {plan && <button onClick={() => save()} style={btn("#5a67c8")}>{busy || "저장"}</button>}
             {plan && status !== "confirmed" && <button onClick={() => { if (confirm("확정하면 제공 이력에 반영되어 이후 주차 중복 검사에 사용돼요. 확정할까요?")) save("confirmed"); }} style={btn("#2e9e52")}>확정</button>}
             {plan && <button onClick={exportXlsx} style={btn("#1d6f42")}>📥 엑셀</button>}
           </div>
 
+          <div style={{ background: "#f7f8fd", border: "1px solid #dde", borderRadius: 12, padding: "10px 14px", marginBottom: 10, fontSize: 13.5, lineHeight: 1.7 }}>
+            {guests.length > 0 ? (
+              <>
+                <b>이번 주 식사 손님 {guests.length}팀</b> — {guests.map(g => `${g.name}(${weekOf(g)})`).join(", ")}
+                <span style={{ marginLeft: 10, background: windowDays > 0 ? "#fff3d6" : "#d9f2dd", padding: "2px 10px", borderRadius: 8, whiteSpace: "nowrap" }}>
+                  {windowDays > 0 ? `회피 범위: ${avoidStart} 이후 ${windowDays}일치 메뉴` : "전원 신규 — 과거 식단 그대로 재사용 가능"}
+                </span>
+              </>
+            ) : guestsLoaded ? (
+              <>이번 주 식사 손님(올인원)을 찾지 못했어요 — 기본 {DUP_WINDOW}일 회피로 동작해요.</>
+            ) : (
+              <>손님 정보 불러오는 중…</>
+            )}
+          </div>
+
+          {reuse.rec !== null && status !== "confirmed" && (
+            <div style={{ border: "2px solid #3a47a8", background: "#eef2ff", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 13.5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <b>💡 {reuse.rec}회차 식단을 그대로 재사용할 수 있어요</b>
+              <span style={{ color: "#556" }}>지금 손님 중 아무도 안 먹은 주간이에요 (가장 오래 안 나온 회차 순 추천)</span>
+              <button onClick={() => loadRound(reuse.rec!)} style={btn("#3a47a8")}>{reuse.rec}회차 불러오기</button>
+              {reuse.list.length > 1 && (
+                <select defaultValue="" onChange={e => { if (e.target.value) loadRound(+e.target.value); }} style={{ padding: "6px 8px", border: "1px solid #ccd", borderRadius: 8, fontSize: 13 }}>
+                  <option value="">다른 회차…</option>
+                  {reuse.list.map(r => <option key={r} value={r}>{r}회차</option>)}
+                </select>
+              )}
+            </div>
+          )}
+
           {!plan && (
             <div style={{ padding: 60, textAlign: "center", color: "#889", border: "2px dashed #ccd", borderRadius: 14, fontSize: 15 }}>
-              아직 이 주차 식단이 없어요. <b>⚡ 자동 생성</b>을 누르면 과거 이력을 피해 초안을 만들어줘요.
+              아직 이 주차 식단이 없어요. {reuse.rec !== null ? <>위의 <b>재사용 추천</b>을 쓰거나 </> : null}<b>⚡ 새로 조합</b>을 눌러 초안을 만들어보세요.
             </div>
           )}
 
@@ -308,22 +427,22 @@ export default function MoriPage() {
             <table style={{ borderCollapse: "collapse", width: "100%" }}>
               <thead>
                 <tr>
-                  <th style={{ width: 90, background: "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>날짜</th>
-                  {["아침", "점심", "저녁"].map(m => (
-                    <th key={m} style={{ background: "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>{m}{m === "점심" && " (픽스)"}</th>
+                  <th style={{ width: 80, background: "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>날짜</th>
+                  {MEAL_COLS.map(m => (
+                    <th key={m} style={{ background: m.startsWith("저녁") ? "#2f3b8f" : "#3a47a8", color: "#fff", padding: 8, fontSize: 14 }}>{MEAL_LABEL[m]}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {dates.map(d => {
-                  const day = plan[d] || { 아침: [], 점심: [], 간식: [], 저녁: [], fixedSet: null };
+                  const day = plan[d] || emptyDay();
                   return (
                     <tr key={d}>
                       <td style={{ border: "1px solid #dde", padding: 8, textAlign: "center", fontWeight: 800, fontSize: 14, background: "#f7f8fd" }}>
                         {d.slice(5).replace("-", "/")}<br /><span style={{ fontSize: 12, color: "#667" }}>({dowOf(d)})</span>
                       </td>
-                      {(["아침", "점심", "저녁"] as const).map(meal => (
-                        <td key={meal} style={{ border: "1px solid #dde", padding: 8, verticalAlign: "top", minWidth: 180 }}>
+                      {MEAL_COLS.map(meal => (
+                        <td key={meal} style={{ border: "1px solid #dde", padding: 8, verticalAlign: "top", minWidth: 160 }}>
                           {meal === "점심" && (
                             <select value={day.fixedSet ?? ""} onChange={e => setFixedSet(d, +e.target.value)}
                               style={{ width: "100%", marginBottom: 6, padding: "4px 6px", fontSize: 12.5, border: "1px solid #ccd", borderRadius: 6 }}>
@@ -344,7 +463,7 @@ export default function MoriPage() {
                               <span key={idx} style={chipWarnStyle(warn, dupInWeek)} title={ago !== null ? `마지막 제공: ${ago}일 전` : "제공 이력 없음"}
                                 onClick={() => openPicker({ date: d, meal, index: idx })}>
                                 {it}
-                                {warn !== null && warn <= DUP_WINDOW && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
+                                {warn !== null && windowDays > 0 && warn <= windowDays && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
                                 {dupInWeek && <b style={{ color: "#c33", fontSize: 11 }}>중복</b>}
                                 <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#99a", fontWeight: 700 }}>×</span>
                               </span>
@@ -353,8 +472,8 @@ export default function MoriPage() {
                           <div style={{ marginTop: 4, display: "flex", gap: 6 }}>
                             <button onClick={() => openPicker({ date: d, meal, index: null })}
                               style={{ background: "none", border: "1px dashed #aab", borderRadius: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>+ 추가</button>
-                            {(meal === "아침" || meal === "저녁") && (
-                              <button onClick={() => regenCell(d, meal)} title="이 끼니만 다시 추천"
+                            {(meal === "아침" || meal === "저녁어른") && (
+                              <button onClick={() => regenCell(d, meal === "아침" ? "아침" : "저녁")} title={meal === "아침" ? "아침 다시 추천" : "저녁(어른+아동) 다시 추천"}
                                 style={{ background: "none", border: "1px solid #aab", borderRadius: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>🔄</button>
                             )}
                           </div>
@@ -386,7 +505,7 @@ export default function MoriPage() {
           </div>
           <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13.5 }}>
             <thead>
-              <tr>{["메뉴", "분류", "단백질", "끼니", "기본찬", "사용", "마지막 제공"].map(h => <th key={h} style={{ background: "#f0f2fa", border: "1px solid #dde", padding: 6 }}>{h}</th>)}</tr>
+              <tr>{["메뉴", "분류", "단백질", "끼니", "순한 짝꿍(아동용)", "기본찬", "사용", "마지막 제공"].map(h => <th key={h} style={{ background: "#f0f2fa", border: "1px solid #dde", padding: 6 }}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {items
@@ -396,7 +515,7 @@ export default function MoriPage() {
                   const ago = agoFor(i.name, fD(new Date()));
                   return (
                     <tr key={i.id} style={{ opacity: i.active ? 1 : 0.45 }}>
-                      <td style={{ border: "1px solid #e3e6f2", padding: "4px 8px" }}>{i.name}</td>
+                      <td style={{ border: "1px solid #e3e6f2", padding: "4px 8px" }}>{i.spicy ? "🌶 " : ""}{i.name}</td>
                       <td style={{ border: "1px solid #e3e6f2", padding: 4 }}>
                         <select value={i.role} onChange={e => updateItem(i.id, { role: e.target.value, is_staple: e.target.value === "staple" })} style={{ border: "none", background: "none", fontSize: 13 }}>
                           {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -409,11 +528,15 @@ export default function MoriPage() {
                         </select>
                       </td>
                       <td style={{ border: "1px solid #e3e6f2", padding: 4, textAlign: "center" }}>
-                        {["아침", "점심", "저녁", "간식"].map(m => (
+                        {["아침", "점심", "저녁"].map(m => (
                           <label key={m} style={{ marginRight: 6, fontSize: 12, whiteSpace: "nowrap" }}>
-                            <input type="checkbox" checked={i.meals.includes(m)} onChange={e => updateItem(i.id, { meals: e.target.checked ? [...i.meals, m] : i.meals.filter(x => x !== m) })} />{m}
+                            <input type="checkbox" checked={i.meals.some(x => x === m || (m === "저녁" && x.startsWith("저녁")))} onChange={e => updateItem(i.id, { meals: e.target.checked ? [...i.meals.filter(x => x !== m), m] : i.meals.filter(x => x !== m && !(m === "저녁" && x.startsWith("저녁"))) })} />{m}
                           </label>
                         ))}
+                      </td>
+                      <td style={{ border: "1px solid #e3e6f2", padding: 4 }}>
+                        <input defaultValue={i.mild_pair || ""} placeholder="예: 간장제육볶음" onBlur={e => { const v = e.target.value.trim(); if (v !== (i.mild_pair || "")) updateItem(i.id, { mild_pair: v || null, spicy: !!v || i.spicy }); }}
+                          style={{ width: "100%", border: "none", background: "none", fontSize: 13 }} />
                       </td>
                       <td style={{ border: "1px solid #e3e6f2", padding: 4, textAlign: "center" }}>
                         <input type="checkbox" checked={i.is_staple} onChange={e => updateItem(i.id, { is_staple: e.target.checked })} />
@@ -436,7 +559,7 @@ export default function MoriPage() {
         const suggests = pool.slice((pickerPage % pageCount) * 3, (pickerPage % pageCount) * 3 + 3);
         const freshList = (search ? items.filter(i => i.active && i.name.includes(search)).map(i => ({ i, ago: agoFor(i.name, picker.date) })).sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999)) : pool).slice(0, 80);
         const agoBadge = (ago: number | null) => (
-          <span style={{ fontSize: 13, fontWeight: 700, color: ago === null ? "#0f766e" : ago <= DUP_WINDOW ? "#c2660a" : "#64748b", flexShrink: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: ago === null ? "#0f766e" : windowDays > 0 && ago <= windowDays ? "#c2660a" : "#64748b", flexShrink: 0 }}>
             {ago === null ? "처음" : `${ago}일 만에`}
           </span>
         );
@@ -444,7 +567,7 @@ export default function MoriPage() {
           <div onClick={() => setPicker(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: 480, maxHeight: "76vh", display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ fontWeight: 800, fontSize: 16 }}>
-                {picker.date.slice(5).replace("-", "/")} ({dowOf(picker.date)}) {picker.meal} — {picker.index === null ? "메뉴 추가" : "메뉴 교체"}
+                {picker.date.slice(5).replace("-", "/")} ({dowOf(picker.date)}) {MEAL_LABEL[picker.meal] || picker.meal} — {picker.index === null ? "메뉴 추가" : "메뉴 교체"}
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => setPickerTab("suggest")} style={{ ...{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }, background: pickerTab === "suggest" ? "#3a47a8" : "#eef0f8", color: pickerTab === "suggest" ? "#fff" : "#556" }}>추천 후보</button>
@@ -459,7 +582,7 @@ export default function MoriPage() {
                         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "13px 16px", border: "1.5px solid #d5d9ee", borderRadius: 12, cursor: "pointer", fontSize: 15 }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#eef2ff"; (e.currentTarget as HTMLElement).style.borderColor = "#3a47a8"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = "#d5d9ee"; }}>
-                        <span style={{ fontWeight: 600 }}>{i.name} <span style={{ fontSize: 11.5, fontWeight: 400, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                        <span style={{ fontWeight: 600 }}>{i.spicy ? "🌶 " : ""}{i.name} <span style={{ fontSize: 11.5, fontWeight: 400, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
                         {agoBadge(ago)}
                       </div>
                     ))}
@@ -480,7 +603,7 @@ export default function MoriPage() {
                     {freshList.map(({ i, ago }) => (
                       <div key={i.id} onClick={() => applyPick(i.name)}
                         style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
-                        <span>{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                        <span>{i.spicy ? "🌶 " : ""}{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
                         {agoBadge(ago)}
                       </div>
                     ))}
