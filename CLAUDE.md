@@ -1830,3 +1830,19 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 커밋: 3f57557(본체), 2d2e250(⚠ 표시). 라이브 검증 완료 (테이블 43행·스트립 8카드·drawer 왕복·정리모드 체크박스·홈 밴드·jamie 시점 [내가 맡기] 렌더)
 - 푸시 토큰: 메이 로컬 저장소(C:/Users/desko/academy-web) .git/config remote URL에 포함 — Cowork에서 폴더 마운트 승인받아 사용
 - 다음 대기: 픽업/드랍 신청 항공권 업로드 + 추가 픽드랍 직원 달력 자동 표시(그 주 체크인과 함께) → 애프터스쿨 월별 달력 개편 → booking 휴무 안내 버그
+
+## 2026-07-06/07 세션 후반 (완료 일괄삭제 · 항공권 첨부 · 보증금 반환 매칭)
+- ✅ 직원업무 완료 업무 78건 영구 삭제 (백업 JSON 다운로드 후 staff_tasks+댓글 연쇄 삭제) + 테이블 뷰에 "🗑 완료 전체 삭제" 버튼(CEO 전용, 백업 자동 다운로드+2중 확인)
+- ✅ 픽드랍 직원 등록 항공권 첨부 (예약상세 픽업/체크인 탭):
+  · DDL: pickup_requests.ticket_url text (exec_sql)
+  · /api/upload-flight-image에 target=pickup (flight_images에 안 넣고 URL만 반환)
+  · 등록 폼 📎 파일 선택(사진/PDF) → staff-files/flight/{bid}/ 업로드 → ticket_url 저장
+  · 카드 "🎫 항공권 보기" + 수정 모드 교체/제거 + /admin/pickups 항공편 컬럼 🎫 링크 (Pickup 타입에 ticket_url 추가 — 빌드픽스 a7c2387)
+  · E2E 검증: 업로드→생성→표시→정리 전부 통과 (커밋 8abcd8d, a7c2387)
+- ✅ 시재관리 보증금 반환 정확 매칭 (94bc619):
+  · DDL: cash_ledger.ref_id text — 반환 출금이 어느 보증금 입금(id)의 반환인지 연결
+  · 매칭 로직: ① ref_id 정확 매칭 → ② 같은 이름 자동 매칭 (기존)
+  · 보유현황 행 "↩ 반환" 버튼 → 모달: ⓐ 새 출금(반환) 기록 만들기(이름·금액 자동) ⓑ 이미 장부에 있는 미매칭 반환 기록 라디오 선택 → 🔗 연결 (PATCH /api/admin/cash-ledger {id,ref_id})
+  · 출금 폼: 분류=보증금반환이면 "어느 보증금의 반환인가요?" 보유현황 select (이름·금액 자동 채움)
+  · 라이브 확인: 보유 9건 전부 ↩ 버튼, 미매칭 반환 6건+ 목록 노출 (송은영/안소현/신현선 등 — 메이가 연결하면 정리됨)
+- 다음 대기: 추가 픽드랍 → 직원업무 달력 자동 표시 (그 주 체크인과 함께), 애프터스쿨 월별 달력 개편, booking 휴무 안내 버그
