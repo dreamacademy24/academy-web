@@ -99,7 +99,7 @@ export default function ResortContractPage() {
           <div className="rc-h">📄 {doc === "long" ? "장기 계약 원본 (5장)" : "단기 계약 원본 (3장)"} <span className="rc-badge">클릭하면 크게 보기</span></div>
           {scans.map(src => (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img key={src} src={src} alt={src} className="rc-scan" loading="lazy" onClick={() => setLightbox(src)} />
+            <img key={src} src={src} alt={src} className="rc-scan" onClick={() => setLightbox(src)} />
           ))}
         </div>
       ) : doc === "long" ? (
