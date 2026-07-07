@@ -17,13 +17,15 @@ const fShort = (s: string) => `${MONS[+s.slice(5, 7) - 1]} ${+s.slice(8, 10)}`;
 const mondayOf = (s: string) => { const d = pD(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return fD(d); };
 const KO_DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const dowKo = (s: string) => KO_DOW[pD(s.slice(0, 10)).getDay()];
-/* 이상 감지: 표준(토요일)이 아닌 체크인/퇴소 → 자동 비고 */
-const mealAnomalies = (b: { checkin_date?: string | null; checkout_date?: string | null; booking_type?: string | null; accom_type?: string | null }): string[] => {
+/* 이상 감지: 표시 중인 주(월~일)에 실제 발생하는 비표준(토요일 아님) 체크인/퇴소만 자동 비고 */
+const mealAnomalies = (b: { checkin_date?: string | null; checkout_date?: string | null; booking_type?: string | null; accom_type?: string | null }, weekMon: string): string[] => {
   const out: string[] = [];
   if (String(b.booking_type || "").includes("commute") || String(b.accom_type || "").includes("통학")) return out;
+  const weekEnd = addD(weekMon, 6); // 월~일
+  const inWeek = (d: string) => d >= weekMon && d <= weekEnd;
   const ci = String(b.checkin_date || "").slice(0, 10), co = String(b.checkout_date || "").slice(0, 10);
-  if (ci && pD(ci).getDay() !== 6) out.push(`${dowKo(ci)}요일 체크인`);
-  if (co && pD(co).getDay() !== 6) out.push(`${dowKo(co)}요일 퇴소`);
+  if (ci && inWeek(ci) && pD(ci).getDay() !== 6) out.push(`${dowKo(ci)}요일 체크인`);
+  if (co && inWeek(co) && pD(co).getDay() !== 6) out.push(`${dowKo(co)}요일 퇴소`);
   return out;
 };
 /* 체크인이 월요일이면 그대로, 아니면 다음 월요일 (주차 기산점) */
@@ -480,7 +482,7 @@ export default function MealPlanPage() {
                       {g.note.includes("Last") && <span className="badge b-last">⚠ Last week</span>}{" "}
                       {g.note.includes("New") && <span className="badge b-new">🆕 New</span>}{" "}
                       {g.note.includes("콤보") && <span className="badge b-combo">{g.note.split("·").find(s => s.includes("콤보"))?.trim()}</span>}{" "}
-                      {mealAnomalies(g.b).map(a => <span key={a} className="badge" style={{ background: "#fee2e2", color: "#b91c1c" }}>⚠ {a}</span>)}
+                      {mealAnomalies(g.b, weekMon).map(a => <span key={a} className="badge" style={{ background: "#fee2e2", color: "#b91c1c" }}>⚠ {a}</span>)}
                       <input value={noteDraft[g.b.id] ?? (g.b.meal_note || "")} onChange={e => setNoteDraft(p => ({ ...p, [g.b.id]: e.target.value }))} onBlur={e => saveNote(g.b.id, e.target.value)} placeholder="비고 입력" style={{ display: "block", marginTop: 4, width: "100%", fontSize: 11.5, fontFamily: "inherit", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 6px", boxSizing: "border-box" }} />
                     </td>
                     <td className="no-print" style={{ padding: "4px 2px" }}>
