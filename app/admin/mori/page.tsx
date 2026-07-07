@@ -453,11 +453,15 @@ export default function MoriPage() {
                     const total = Math.max(1, diffDays(g.from, g.to));
                     const eaten = Math.min(Math.max(diffDays(g.from, weekStart), 0), total);
                     const isNew = g.from >= weekStart;
+                    const totalW = Math.max(1, Math.round(total / 7));
+                    const eatenW = isNew ? 0 : Math.min(Math.floor(eaten / 7), totalW);
                     return (
                       <div key={gi} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ width: 130, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name} {Math.round(total / 7)}주</span>
-                        <div style={{ flex: 1, height: 12, borderRadius: 6, background: "#eceef8", overflow: "hidden" }}>
-                          <div style={{ width: `${Math.max((eaten / total) * 100, isNew ? 3 : 0)}%`, height: "100%", background: isNew ? "#2e9e52" : "#5a67c8" }} />
+                        <span style={{ width: 130, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name} {totalW}주</span>
+                        <div style={{ flex: 1, display: "flex", gap: 3 }}>
+                          {Array.from({ length: totalW }).map((_, wi) => (
+                            <div key={wi} style={{ flex: 1, height: 13, borderRadius: 4, background: wi < eatenW ? "#5a67c8" : isNew ? "#e2f3e6" : "#eceef8", border: wi < eatenW ? "none" : "1px solid #dfe3f2" }} />
+                          ))}
                         </div>
                         <span style={{ width: 140, fontSize: 12, color: isNew ? "#2e9e52" : "#667", fontWeight: isNew ? 700 : 400 }}>
                           {isNew ? "신규 · 이력 없음" : `${weekOf(g)} · ${Math.floor(eaten / 7)}주치 먹음`}
