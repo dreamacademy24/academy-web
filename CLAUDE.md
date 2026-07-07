@@ -1878,3 +1878,17 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
   · 정산 1차 경로는 이미 booking_id 기반, 이름 매칭은 폴백뿐
   · 폴백 보강: 접미사 이름(장수진B)이면 원래 이름(장수진)도 후보에 추가 — 손님이 신청서에 원래 이름으로 적은 과거 기록과 매칭 유지 (체류기간 겹침 필터 병행)
 - 잔여: 도유민/장보운/오초희 쌍은 메이 지시 대기. /api/portal/verify의 bookings_new 죽은 코드 정리 후보
+
+## 2026-07-07 후반 — 제이파크 계약서 페이지 + 학생 캘린더 안전장치
+### 제이파크 계약서 (4e598ce, 81f46d9)
+- /admin/resort-contract 신설 (사이드바 리조트 그룹 "제이파크 계약서")
+- 장기(Long Stay 2026.4~2027.3, 7박↑, room only, 외국여권 전용) / 단기(Corporate 2026.1~12, 2박↑, 조식포함, 회사 ID 필수) 탭 × 한글 번역 / English 원본 스캔 토글
+- 스캔: public/resort-contracts/ (jlong 1~5, jshort 1~5 커밋, English 탭엔 jlong 5장·jshort 3장 노출). lazy 로딩 미발화 → eager 수정
+- 조식 정리: 장기 투숙객 현장결제 = 아발론 뷔페 50% (조식 1,300→650) / TA 계약가(드림 예약·결제) = 성인 1,100·아동 440 / 단기는 객실료에 조식 포함
+- 리조트 이메일 CC: britney.na@jparkislandresort.com 상시 포함 (localStorage 저장값에도 자동 추가)
+### 학생 캘린더 (8788c1c)
+- 사건: 매니저/이현(통학형) 학생 종료일 7/3 vs 예약 수업종료 7/31 불일치 → 달력에 7/3 졸업 오표시 (메이 신고: 최건 삭제 후 발견. 최건 예약은 완전 삭제돼 원인 로그 없음)
+- 데이터 복구: 이현 students.academy_end + JSONB academyEnd → 2026-07-31 (service key PATCH)
+- 안전장치: 날짜 불일치 🔴❗ 검사가 비통학형만 커버하던 것 → **통학형 포함** (학생 날짜 vs 예약 academy_start/end·체크인/아웃 비교). 경고 배너에 학생 이름 나열 + "달력이 틀릴 수 있어요" 문구
+- 배포 직후 실데이터에서 불일치 4명 검출: 한지운, 민소영, 김이안, 추이찬 — 메이 확인 필요 (의도적 수동조정인지 오류인지)
+- 참고: /api/bookings/[id] PATCH에 academy_start/end 변경 시 students 테이블+JSONB 동기화는 기존 존재
