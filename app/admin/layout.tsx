@@ -27,10 +27,6 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "공지 배포", href: "/admin/notices" },
     { label: "지난 내역 보관함", href: "/admin/archive" },
   ]},
-  { title: "식단 관련 업무", items: [
-    { label: "식단 관련 업무", href: "/admin/meal-plan" },
-    { label: "모리칸 (식단 조합)", href: "/admin/mori" },
-  ]},
   { title: "드림하우스", items: [
     { label: "드림하우스 룸", href: "/dreamhouse-rooms", ext: true },
     { label: "하우스 보고", href: "/admin/house-reports" },
@@ -43,6 +39,10 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "인보이스 생성", href: "/admin/resort-invoice" },
     { label: "결제내역", href: "/admin/resort-payments" },
     { label: "제이파크 계약서", href: "/admin/resort-contract" },
+  ]},
+  { title: "식단 관련 업무", items: [
+    { label: "식단 관련 업무", href: "/admin/meal-plan" },
+    { label: "모리칸 (식단 조합)", href: "/admin/mori" },
   ]},
   { title: "현지직원", items: [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },
