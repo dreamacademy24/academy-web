@@ -10,7 +10,7 @@ const supabase = createClient(
 export async function GET() {
   const [pickupsRes, bookingsRes, driversRes] = await Promise.all([
     supabase.from('pickup_requests').select('*').order('request_date', { ascending: true }),
-    supabase.from('bookings').select('id, booker_name, booker_phone, flight_in, flight_out, adults, children, accom_type, reservation_no').limit(2000),
+    supabase.from('bookings').select('id, booker_name, booker_phone, flight_in, flight_out, adults, children, accom_type, reservation_no, house_no, accom_room').limit(2000),
     supabase.from('drivers').select('id, name').eq('is_active', true),
   ])
   if (pickupsRes.error) return NextResponse.json({ error: pickupsRes.error.message }, { status: 500 })
