@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 import MealMenuPublish from "./MealMenuPublish";
@@ -15,6 +15,17 @@ const MONS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OC
 const DAYS_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const fShort = (s: string) => `${MONS[+s.slice(5, 7) - 1]} ${+s.slice(8, 10)}`;
 const mondayOf = (s: string) => { const d = pD(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return fD(d); };
+const KO_DOW = ["일", "월", "화", "수", "목", "금", "토"];
+const dowKo = (s: string) => KO_DOW[pD(s.slice(0, 10)).getDay()];
+/* 이상 감지: 표준(토요일)이 아닌 체크인/퇴소 → 자동 비고 */
+const mealAnomalies = (b: { checkin_date?: string | null; checkout_date?: string | null; booking_type?: string | null; accom_type?: string | null }): string[] => {
+  const out: string[] = [];
+  if (String(b.booking_type || "").includes("commute") || String(b.accom_type || "").includes("통학")) return out;
+  const ci = String(b.checkin_date || "").slice(0, 10), co = String(b.checkout_date || "").slice(0, 10);
+  if (ci && pD(ci).getDay() !== 6) out.push(`${dowKo(ci)}요일 체크인`);
+  if (co && pD(co).getDay() !== 6) out.push(`${dowKo(co)}요일 퇴소`);
+  return out;
+};
 /* 체크인이 월요일이면 그대로, 아니면 다음 월요일 (주차 기산점) */
 const firstMonday = (s: string) => { const d = pD(s); const dow = d.getDay(); if (dow === 1) return s; const add = dow === 0 ? 1 : 8 - dow; d.setDate(d.getDate() + add); return fD(d); };
 
@@ -131,6 +142,28 @@ export default function MealPlanPage() {
 
   /* 이번 주 월~금 */
   const weekMon = mondayOf(baseDate);
+  /* 주간 명단 마감 — app_settings meal_week_close: { [weekMon]: {by,at} } */
+  const [weekClose, setWeekClose] = useState<Record<string, { by: string; at: string }>>({});
+  useEffect(() => {
+    if (!authed) return;
+    supabase.from("app_settings").select("value").eq("key", "meal_week_close").maybeSingle()
+      .then(({ data }) => { if (data && data.value && typeof data.value === "object") setWeekClose(data.value as Record<string, { by: string; at: string }>); });
+  }, [authed]);
+  const closedInfo = weekClose[weekMon];
+  async function saveWeekClose(next: Record<string, { by: string; at: string }>) {
+    setWeekClose(next);
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, { method: "POST", headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "", Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ key: "meal_week_close", value: next, updated_at: new Date().toISOString() }) }).catch(() => {});
+  }
+  function closeWeek() {
+    if (!window.confirm(`이번 주(${weekMon} 시작) 명단을 최종 확인·마감할까요?\n마감 후에는 수정이 잠기고, 식단생성으로 진행할 수 있어요.`)) return;
+    const who = (getAdminInfo()?.name) || "관리자";
+    saveWeekClose({ ...weekClose, [weekMon]: { by: who, at: new Date().toISOString() } });
+  }
+  function reopenWeek() {
+    if (!window.confirm("마감을 해제할까요? 다시 수정할 수 있게 됩니다.")) return;
+    const next = { ...weekClose }; delete next[weekMon];
+    saveWeekClose(next);
+  }
 
   /* 주 변경 시 exclusions 새로 로드 */
   useEffect(() => {
@@ -212,8 +245,8 @@ export default function MealPlanPage() {
       if (String(b.status || "").includes("취소")) return;
       const segs = mealSegs(b); if (segs.length === 0) return;
       const mIn = segs[0].from, mOut = segs[segs.length - 1].to;
-      if (mIn > weekFri && mIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(mIn)})`);
-      if (mOut >= weekMon && mOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(mOut)})`);
+      if (mIn > weekFri && mIn <= nextFri) incoming.push(`${b.booker_name}(${fShort(mIn)} ${dowKo(mIn)}${pD(mIn).getDay() !== 6 ? "⚠" : ""})`);
+      if (mOut >= weekMon && mOut < nextMon) outgoing.push(`${b.booker_name}(${fShort(mOut)} ${dowKo(mOut)}${pD(mOut).getDay() !== 6 ? "⚠" : ""})`);
     });
     return { incoming, outgoing };
   }, [bookings, weekMon, weekFri]);
@@ -420,7 +453,20 @@ export default function MealPlanPage() {
           <div className="day-block">
             <div className="day-title">Dream Academy  |  Meal Attendance Overview  |  {weekLabel}</div>
             <div className="day-sub">GUEST REFERENCE LIST · 보호자 숫자 클릭 → 체류 기간 수정 · ✕ 이번 주만 제외</div>
-            <table className="mp">
+            <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: "10px 0 12px" }}>
+              {!closedInfo ? (
+                <button onClick={closeWeek} style={{ background: "#16a34a", color: "#fff", border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>✅ 최종 확인 · 이번 주 마감</button>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#f0fdf4", border: "1.5px solid #16a34a", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 800, color: "#166534" }}>
+                  ✅ 마감됨 · {closedInfo.at.slice(5, 10).replace("-", "/")} {closedInfo.at.slice(11, 16)} · {closedInfo.by}
+                  <button onClick={reopenWeek} style={{ background: "none", border: "1px solid #bbf7d0", borderRadius: 7, padding: "3px 9px", fontSize: 11, color: "#166534", cursor: "pointer", fontFamily: "inherit" }}>마감 해제</button>
+                </span>
+              )}
+              <button disabled={!closedInfo} onClick={() => { window.location.href = "/admin/mori"; }} title={closedInfo ? "식단생성으로 이동" : "명단을 먼저 마감해야 진행할 수 있어요"}
+                style={{ background: closedInfo ? "#1a6fc4" : "#e2e8f0", color: closedInfo ? "#fff" : "#94a3b8", border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13.5, cursor: closedInfo ? "pointer" : "not-allowed", fontFamily: "inherit" }}>🍽 식단생성으로 →</button>
+              {!closedInfo && <span style={{ fontSize: 11.5, color: "#94a3b8" }}>명단 확인이 끝나면 마감 → 식단생성 순서로 진행하세요</span>}
+            </div>
+            <table className="mp" style={closedInfo ? { pointerEvents: "none", opacity: 0.96 } : undefined}>
               <thead><tr><th style={{ minWidth: 150 }}>Name</th><th>Address</th><th>Adults</th><th>Kids</th><th>Stay</th><th>Note</th><th className="no-print" style={{ width: 50 }}></th></tr></thead>
               <tbody>
                 {guests.map(g => (
@@ -433,7 +479,8 @@ export default function MealPlanPage() {
                     <td style={{ fontSize: 11.5 }}>
                       {g.note.includes("Last") && <span className="badge b-last">⚠ Last week</span>}{" "}
                       {g.note.includes("New") && <span className="badge b-new">🆕 New</span>}{" "}
-                      {g.note.includes("콤보") && <span className="badge b-combo">{g.note.split("·").find(s => s.includes("콤보"))?.trim()}</span>}
+                      {g.note.includes("콤보") && <span className="badge b-combo">{g.note.split("·").find(s => s.includes("콤보"))?.trim()}</span>}{" "}
+                      {mealAnomalies(g.b).map(a => <span key={a} className="badge" style={{ background: "#fee2e2", color: "#b91c1c" }}>⚠ {a}</span>)}
                       <input value={noteDraft[g.b.id] ?? (g.b.meal_note || "")} onChange={e => setNoteDraft(p => ({ ...p, [g.b.id]: e.target.value }))} onBlur={e => saveNote(g.b.id, e.target.value)} placeholder="비고 입력" style={{ display: "block", marginTop: 4, width: "100%", fontSize: 11.5, fontFamily: "inherit", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 6px", boxSizing: "border-box" }} />
                     </td>
                     <td className="no-print" style={{ padding: "4px 2px" }}>
