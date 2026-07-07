@@ -309,9 +309,12 @@ export default function AdminBookingsPage(){
       const refEndC=String((b as any).academy_end||b.checkout_date||"").split("T")[0];
       const refStart=isCommute?refStartC:refStartNC;
       const refEnd=isCommute?refEndC:refEndNC;
-      const mismatch=isCommute
+      // 이미 끝난 예약(종료일·체크아웃 모두 과거)은 경고 제외 — 과거 예약 소음 방지
+      const _mmToday=new Date();const _mmTodayStr=`${_mmToday.getFullYear()}-${String(_mmToday.getMonth()+1).padStart(2,"0")}-${String(_mmToday.getDate()).padStart(2,"0")}`;
+      const _mmPast=(calEnd||"") < _mmTodayStr && (String(b.checkout_date||"").split("T")[0]||"") < _mmTodayStr;
+      const mismatch=!_mmPast&&(isCommute
         ?!!((refStartC&&calStart&&calStart!==refStartC)||(refEndC&&calEnd&&calEnd!==refEndC))
-        :(weeks>0&&!!storedStart&&(calStart!==refStartNC||calEnd!==refEndNC));
+        :(weeks>0&&!!storedStart&&(calStart!==refStartNC||calEnd!==refEndNC)));
       // 달력 표시용 주수: student JSON → booking accom_weeks → start/end 역산 → "?"
       const calWeeks=(()=>{
         if(s.academyWeeks)return String(s.academyWeeks);
