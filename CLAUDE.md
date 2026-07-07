@@ -1846,3 +1846,10 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
   · 출금 폼: 분류=보증금반환이면 "어느 보증금의 반환인가요?" 보유현황 select (이름·금액 자동 채움)
   · 라이브 확인: 보유 9건 전부 ↩ 버튼, 미매칭 반환 6건+ 목록 노출 (송은영/안소현/신현선 등 — 메이가 연결하면 정리됨)
 - 다음 대기: 추가 픽드랍 → 직원업무 달력 자동 표시 (그 주 체크인과 함께), 애프터스쿨 월별 달력 개편, booking 휴무 안내 버그
+
+## 2026-07-07 — 직원업무 달력 추가 픽드랍 자동 표시 (4956e39 → d649229)
+- 달력(team_manager3.html)에 pickup_requests의 extra_pickup/extra_drop/transfer/additional 자동 표시 — 보라색 ev-pickup 이벤트 (🚐 추가픽업/추가드랍 · 🔄 환승 + 이름 + 시간)
+- ⚠️ pickup_requests는 RLS로 anon SELECT 불가 → 정적 페이지에서 /api/admin/pickups (service_role, bookings 이름 조인 포함) 경유로 조회. anon DELETE도 204 뜨지만 실제 삭제 안 됨 주의 (테스트 행이 안 지워졌던 원인)
+- 필터 "학생 인·아웃" → "인·아웃·픽드랍" (pickup 타입 포함), 월별 통계 student에 합산
+- 라이브 검증: 7월 달력에 7/11 🔄 환승 양지나 · 7/25 🚐 추가픽업 이현미 23:30 · 7/31 🚐 추가드랍 이현미 22:00 표시 확인
+- 기본(자동추출) pickup/dropoff는 체크인/아웃 이벤트와 중복이라 제외 — 필요 시 유형 확장
