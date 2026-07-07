@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -549,6 +550,11 @@ export default function AdminBookingsPage(){
       special_request:newForm.special_request.trim()||null,
     };
     if(isCommuteNP)payload.booking_type='commute';
+    // 동명이인 자동 구분 — 활성 예약에 같은 이름 있으면 B, C… 자동 부여
+    try{
+      const uniq=await ensureUniqueBookerName(supabase as never,payload.booker_name);
+      if(uniq.changed){payload.booker_name=uniq.name;toastOk(`동명이인 예약이 있어 "${uniq.name}"(으)로 등록합니다`);}
+    }catch{/* 실패해도 등록은 진행 */}
     const {data:inserted,error}=await supabase.from("bookings").insert(payload).select();
     if(error){toastErr("저장 실패: "+error.message);setSavingNew(false);return;}
     const bookingId=inserted?.[0]?.id;

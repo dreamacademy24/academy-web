@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { supabase } from "@/lib/supabase";
 import RefundPolicyModal from "@/components/RefundPolicyModal";
 import { getRefundPolicyKeys, REFUND_POLICY_VERSION } from "@/lib/refundPolicy";
@@ -176,9 +177,12 @@ export default function BookingPage() {
     const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark";
     const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine";
 
+    // 동명이인 자동 구분 (활성 예약에 같은 이름 있으면 B, C… 자동 부여)
+    const uniq = await ensureUniqueBookerName(supabase as never, booker.name);
+    if (uniq.changed) alert(`같은 이름의 예약이 이미 있어 "${uniq.name}"(으)로 접수됩니다.\n(동명이인 구분용 — 서비스는 동일하게 제공돼요)`);
     const { data: booking, error } = await supabase.from("bookings").insert({
       reservation_no: rno,
-      booker_name: booker.name.trim(),
+      booker_name: uniq.name,
       booker_english: booker.nameEng.trim(),
       booker_phone: booker.phone.trim() || null,
       extra_guardians: cleanGuardians,

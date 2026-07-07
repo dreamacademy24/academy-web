@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { supabase } from "@/lib/supabase";
 import { fetchDeployedHolidays, holidaysInRange, type HolidayItem } from "@/lib/holidays";
 import { HolidayBanner, HolidayPopup } from "@/components/HolidayNotice";
@@ -97,9 +98,11 @@ export default function BookingNonPackagePage() {
     const cleanGuardians = extraGuardians.filter(g => g.kor.trim() && g.eng.trim()).map(g => ({kor: g.kor.trim(), eng: g.eng.trim()}));
     const childrenCount = students.filter(s => s.korName.trim()).length;
 
+    const uniq = await ensureUniqueBookerName(supabase as never, booker.name);
+    if (uniq.changed) alert(`같은 이름의 예약이 이미 있어 "${uniq.name}"(으)로 접수됩니다.\n(동명이인 구분용 — 서비스는 동일하게 제공돼요)`);
     const payload: any = {
       reservation_no: rno,
-      booker_name: booker.name.trim(),
+      booker_name: uniq.name,
       booker_english: booker.nameEng.trim(),
       booker_phone: booker.phone.trim() || null,
       extra_guardians: cleanGuardians,
