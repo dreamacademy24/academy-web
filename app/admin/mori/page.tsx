@@ -660,7 +660,7 @@ export default function MoriPage() {
                           <div key={i.id} onClick={() => addRec(i)} title="누르면 이 날에 추가돼요"
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "6px 6px", borderBottom: "1px solid #f0f2fa", cursor: "pointer", fontSize: 13 }}>
                             <span>{i.spicy ? "🌶 " : ""}{i.name}</span>
-                            <span style={{ fontSize: 11.5, fontWeight: 700, color: ago === null ? "#0f766e" : "#8a94b8", flexShrink: 0 }}>{ago === null ? "처음" : `${ago}d`} ＋</span>
+                            <span style={{ fontSize: 11.5, fontWeight: 800, color: ago === null ? "#0f766e" : ago >= 56 ? "#16a34a" : "#8a94b8", flexShrink: 0 }}>{ago === null ? "NEW" : ago < 7 ? `${ago}d` : ago < 56 ? `${Math.round(ago / 7)}w` : `${Math.round(ago / 30)}mo`} ＋</span>
                           </div>
                         ))}
                       </div>
