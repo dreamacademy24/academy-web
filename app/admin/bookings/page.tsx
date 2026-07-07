@@ -282,10 +282,18 @@ export default function AdminBookingsPage(){
       const storedEnd=(s.academyEnd||s.academy_end||(b as any).academy_end||"").split("T")[0];
       const calStart=storedStart||(isCommute?(b.checkin_date||"").split("T")[0]:getNextMonday(b.checkin_date||""));
       const calEnd=storedEnd||(isCommute?(b.checkout_date||"").split("T")[0]:(weeks>0?calcAcademyEnd(calStart,weeks):""));
-      // 정보용 경고: 비통학형에서 저장값이 "체크인 기준 기대값"과 어긋나면 표시(자동 변경은 안 함)
-      const refStart=getNextMonday(b.checkin_date||"");
-      const refEnd=weeks>0?calcAcademyEnd(refStart,weeks):"";
-      const mismatch=(!isCommute)&&weeks>0&&!!storedStart&&(calStart!==refStart||calEnd!==refEnd);
+      // 정보용 경고: 저장값이 "예약 기준 기대값"과 어긋나면 표시(자동 변경은 안 함)
+      //  · 비통학형: 체크인 다음 월요일 + 주수 계산값과 비교
+      //  · 통학형: 예약의 수업시작/종료(academy_start/end, 없으면 체크인/아웃)와 비교 — 달력 오표시 방지
+      const refStartNC=getNextMonday(b.checkin_date||"");
+      const refEndNC=weeks>0?calcAcademyEnd(refStartNC,weeks):"";
+      const refStartC=String((b as any).academy_start||b.checkin_date||"").split("T")[0];
+      const refEndC=String((b as any).academy_end||b.checkout_date||"").split("T")[0];
+      const refStart=isCommute?refStartC:refStartNC;
+      const refEnd=isCommute?refEndC:refEndNC;
+      const mismatch=isCommute
+        ?!!((refStartC&&calStart&&calStart!==refStartC)||(refEndC&&calEnd&&calEnd!==refEndC))
+        :(weeks>0&&!!storedStart&&(calStart!==refStartNC||calEnd!==refEndNC));
       // 달력 표시용 주수: student JSON → booking accom_weeks → start/end 역산 → "?"
       const calWeeks=(()=>{
         if(s.academyWeeks)return String(s.academyWeeks);
@@ -1176,7 +1184,7 @@ export default function AdminBookingsPage(){
         </div>
         {mismatchCount>0&&(
           <div style={{margin:"6px 0 10px",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #dc2626",borderRadius:8,fontSize:13,color:"#991b1b",fontWeight:700}}>
-            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약 상세의 아카데미 시작/종료와 달력 값이 다릅니다
+            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약과 달력 값이 다릅니다 (달력이 틀릴 수 있어요!): {sorted.filter(s=>s.mismatch).slice(0,10).map(s=>s.korName||s.engName).join(", ")}{mismatchCount>10?" 외":""} · 학생 이름의 🔴❗에 마우스를 올리면 예약 기준 날짜가 보여요
           </div>
         )}
         <div className="sub-tabs" style={{marginBottom:8}}>
