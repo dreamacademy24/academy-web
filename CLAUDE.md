@@ -1936,3 +1936,8 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 업무 상세 첨부: 이미지 파일은 파일명 대신 바로 큰 미리보기(최대 360px, 클릭 확대) (0773af6)
 - 주간 체크리스트 담당자 복수 선택: 칩 토글 UI, assignee에 콤마 저장("candice,eric"), 기존 단일값·'all' 호환. _clAssignees/_clHasEmp/_clBadge(복수 뱃지) — 담당자별 보드는 각 담당자 그룹에 모두 표시, 개인 화면 필터 포함 판정
 - 고객 자동표시에 "3주뒤 체크인 고객"(checkin_3w, +21~27일) 추가 — 기존 '3주전 고객 전달' 항목은 수정에서 이 옵션으로 바꿔야 정확한 날짜 칩이 뜸
+
+## 2026-07-07 — booking2 접수 실패 원인 해결
+- 원인: bookings.holidays_notified 컬럼이 실제로 없었음 (PGRST204) — booking/booking2가 payload에 항상 포함해서 접수 자체가 실패. exec_sql로 jsonb 컬럼 추가 + 스키마 리로드 → 즉시 해결 (배포 불필요)
+- booking2 통학형: 아이언맨(도로통제·투어셔틀 = 패키지 전용) 휴무 안내 제외 (a6af9c4)
+- 예약내역 테이블 액션 잘림 수정 (0ca8c38), 주간보드 요일순 정렬 (334b340)
