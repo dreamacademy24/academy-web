@@ -1897,3 +1897,9 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - ✅ 날짜 불일치 확인 처리 (1c412d5): 🔴❗ 클릭 → "의도된 날짜(중도입학/아웃)" 확인 → ✓중도 표시로 전환 (달력엔 ✓). app_settings key=stu_mismatch_ack (booking_id|이름|시작|종료 키 — 날짜 바뀌면 경고 자동 부활)
 - 민소영·추이찬 = 중도입학/아웃 확정 (메이) → 확인 처리 시드 완료. 잔여 불일치: 한지운, 김이안 (메이 확인 대기)
 - 제이파크 조식 요금 모순 발견: 장기 계약 "아발론 뷔페 50% 할인"(조식 1,300→650 직접결제) vs TA 계약 조식가 1,100 — 메이가 확인 메일 발송 예정 (영문 초안 전달함, britney.na/rodan.segovia 앞). 회신 결과에 따라 /admin/resort-contract 식사 표 수정 필요
+
+## 2026-07-07 — 지불내역 저장 결제상태 미반영 버그 (8c12f91)
+- 버그: 인보이스 영수증 탭 "지불내역 저장"(saveReceiptPayments)이 invoice_snapshots에만 저장하고 bookings.payment_status/paid_amount/final_price 미갱신 → 예약상세·엄마 포털이 계속 "미납" 표시
+- 수정: 저장 시 스냅샷 지불내역 합계로 paid_amount·payment_status(paid/partial/unpaid)·final_price 동기화 + alert에 완납/부분납 표시
+- 데이터 일괄 보정: 스냅샷 결제합 > DB paid_amount인 **36건** 전부 서비스키로 보정 (완납 다수 + 부분납: 김두선 100/800만, 신인혜 505/539만, 김유정 100/997만, 박경숙 448/896만, 양지나 1,310/1,680만, 임윤미 100/566만 등)
+- 이현미(이서준) 건: paid 5,760,000 / final 5,760,000 확인
