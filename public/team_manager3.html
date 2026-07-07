@@ -4047,10 +4047,21 @@ function setWkView(v){_wkView=v;try{localStorage.setItem('tmWkView',v);}catch(e)
 function loadChecklistItems(){
   return sbGet('staff_checklist_items','active=eq.true&order=sort_idx.asc,created_at.asc').then(function(rows){CHECKLIST_ITEMS=Array.isArray(rows)?rows:[];return CHECKLIST_ITEMS;}).catch(function(){CHECKLIST_ITEMS=[];return [];});
 }
+function _clAssignees(assignee){
+  if(!assignee||assignee==='all')return ['all'];
+  return String(assignee).split(',').map(function(x){return x.trim();}).filter(Boolean);
+}
+function _clHasEmp(assignee,empId){
+  var a=_clAssignees(assignee);
+  return a.indexOf('all')>=0||a.indexOf(empId)>=0;
+}
 function _clBadge(assignee){
-  if(!assignee||assignee==='all')return '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#64748b;white-space:nowrap">전체</span>';
-  var p=getP(assignee);var nm=p?p.name:assignee,col=p?p.color:'#6366f1';
-  return '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:'+col+'1a;color:'+col+';white-space:nowrap">'+esc(nm)+'</span>';
+  var ids=_clAssignees(assignee);
+  if(ids.indexOf('all')>=0)return '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:#f1f5f9;color:#64748b;white-space:nowrap">전체</span>';
+  return ids.map(function(id){
+    var p=getP(id);var nm=p?p.name:id,col=p?p.color:'#6366f1';
+    return '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:'+col+'1a;color:'+col+';white-space:nowrap;margin-left:2px">'+esc(nm)+'</span>';
+  }).join('');
 }
 function _empOptionsHtml(sel){
   var h='<option value="all"'+(!sel||sel==='all'?' selected':'')+'>전체</option>';
@@ -4182,6 +4193,7 @@ function _smartNames(smartKey,occYmd,bookings){
   else if(smartKey==='checkin_week'||smartKey==='checkout_week'){_wk();}
   else if(smartKey==='checkin_1w'){loS=_off(7);hiS=_off(13);}
   else if(smartKey==='checkin_2w'){loS=_off(14);hiS=_off(20);}
+  else if(smartKey==='checkin_3w'){loS=_off(21);hiS=_off(27);}
   else if(smartKey==='checkin_4w'){loS=_off(28);hiS=_off(34);}
   else return [];
   return (bookings||[]).filter(function(b){var c=(b[field]||'').slice(0,10);return c>=loS&&c<=hiS;}).map(function(b){
@@ -4243,7 +4255,11 @@ function _wkBoardHtml(dates,checkSet,bookings){
   var dows=['일','월','화','수','목','금','토'];
   var dowYmd={};dates.forEach(function(ymd){dowYmd[new Date(ymd+'T00:00:00').getDay()]=ymd;});
   var weekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly';});
-  var byA={};weekly.forEach(function(it){var k=(!it.assignee||it.assignee==='all')?'all':it.assignee;(byA[k]=byA[k]||[]).push(it);});
+  var byA={};weekly.forEach(function(it){
+    var ids=_clAssignees(it.assignee);
+    if(ids.indexOf('all')>=0){(byA['all']=byA['all']||[]).push(it);}
+    else ids.forEach(function(id){(byA[id]=byA[id]||[]).push(it);});
+  });
   var cols=[];
   if(byA['all'])cols.push({id:'all',name:'전체',color:'#64748b'});
   ALL.forEach(function(e){if(byA[e.id])cols.push({id:e.id,name:e.name,color:e.color});});
@@ -4302,13 +4318,13 @@ function openWeeklyForm(presetDow,editItem){
     '<div style="font-size:15px;font-weight:800;margin-bottom:14px">주간 체크리스트 '+(editItem?'수정':'등록')+'</div>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">내용</div>'+
     '<input id="wkContent" style="width:100%;padding:9px 11px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;box-sizing:border-box" placeholder="예: 2주뒤 체크인 디테일 확인하기">'+
-    '<div style="font-size:12px;color:#64748b;margin-bottom:4px">담당자</div>'+
-    '<select id="wkAssignee" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:12px;box-sizing:border-box">'+_empOptionsHtml(editItem?editItem.assignee:'all')+'</select>'+
+    '<div style="font-size:12px;color:#64748b;margin-bottom:4px">담당자 <span style="color:#94a3b8">(여러 명 선택 가능)</span></div>'+
+    '<div id="wkAssRow" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+_wkAssChipsHtml(editItem?editItem.assignee:'all')+'</div>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">요일</div>'+
     '<div id="wkDowRow" style="display:flex;gap:4px;margin-bottom:12px">'+dowChips+'</div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
-    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option></select>'+
+    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option></select>'+
     '<div style="display:flex;justify-content:flex-end;gap:8px"><button onclick="var o=document.getElementById(\'wkFormOv\');if(o)o.remove();" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-family:inherit">취소</button>'+
     '<button onclick="submitWeeklyItem()" style="padding:8px 16px;border:none;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">'+(editItem?'저장':'등록')+'</button></div></div>';
   document.body.appendChild(ov);
@@ -4319,10 +4335,46 @@ function openWeeklyForm(presetDow,editItem){
   }
   _wkPickDow(editItem?Number(editItem.weekday):(presetDow!=null?presetDow:new Date().getDay()));
 }
+function _wkAssChipsHtml(sel){
+  var selected=_clAssignees(sel);
+  var chips=[{id:'all',name:'전체',color:'#64748b'}].concat(ALL.map(function(e){return {id:e.id,name:e.name,color:e.color};}));
+  return chips.map(function(c){
+    var on=selected.indexOf(c.id)>=0;
+    return '<span class="wk-ass-chip" data-emp="'+c.id+'" data-on="'+(on?'1':'0')+'" onclick="_wkToggleAss(this)" style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(on?c.color:'#e2e8f0')+';background:'+(on?c.color+'1a':'#fff')+';color:'+(on?c.color:'#64748b')+'">'+esc(c.name)+'</span>';
+  }).join('');
+}
+function _wkToggleAss(el){
+  var id=el.getAttribute('data-emp');
+  var row=document.getElementById('wkAssRow');if(!row)return;
+  var on=el.getAttribute('data-on')==='1';
+  if(id==='all'){
+    // 전체 선택 시 나머지 해제
+    Array.prototype.forEach.call(row.children,function(c){_wkSetChip(c,c.getAttribute('data-emp')==='all'?!on:false);});
+    if(on)_wkSetChip(el,false); // 전체 해제만 한 경우
+    return;
+  }
+  _wkSetChip(el,!on);
+  // 개인 선택하면 전체 해제
+  Array.prototype.forEach.call(row.children,function(c){if(c.getAttribute('data-emp')==='all')_wkSetChip(c,false);});
+}
+function _wkSetChip(el,on){
+  var id=el.getAttribute('data-emp');
+  var col=id==='all'?'#64748b':((getP(id)||{}).color||'#6366f1');
+  el.setAttribute('data-on',on?'1':'0');
+  el.style.border='1.5px solid '+(on?col:'#e2e8f0');
+  el.style.background=on?col+'1a':'#fff';
+  el.style.color=on?col:'#64748b';
+}
+function _wkCollectAss(){
+  var row=document.getElementById('wkAssRow');if(!row)return 'all';
+  var ids=[];Array.prototype.forEach.call(row.children,function(c){if(c.getAttribute('data-on')==='1')ids.push(c.getAttribute('data-emp'));});
+  if(!ids.length||ids.indexOf('all')>=0)return 'all';
+  return ids.join(',');
+}
 function submitWeeklyItem(){
   var content=(document.getElementById('wkContent').value||'').trim();if(!content){alert('내용을 입력해주세요');return;}
   if(_wkSelDow==null){alert('요일을 선택해주세요');return;}
-  var assignee=document.getElementById('wkAssignee').value||'all';
+  var assignee=_wkCollectAss();
   var recurring=document.getElementById('wkRecurring').checked;
   var smart=document.getElementById('wkSmart').value||null;
   var who=(CU&&(CU.name||CU.id))||'';
@@ -7198,8 +7250,8 @@ function _renderEmpChecklist(empId){
 function _empChecklistHtml(empId,dates,today,checkSet,bookings){
   var dows=['일','월','화','수','목','금','토'];
   var dowYmd={};dates.forEach(function(ymd){dowYmd[new Date(ymd+'T00:00:00').getDay()]=ymd;});
-  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&(it.assignee===empId||it.assignee==='all');});
-  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&(it.assignee===empId||it.assignee==='all');});
+  var mineDaily=CHECKLIST_ITEMS.filter(function(it){return it.kind==='daily'&&_clHasEmp(it.assignee,empId);});
+  var mineWeekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&_clHasEmp(it.assignee,empId);});
   if(!mineDaily.length&&!mineWeekly.length)return '';
   var h='<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid #4f46e5;border-radius:10px;padding:14px 16px">';
   h+='<div style="font-size:14px;font-weight:800;margin-bottom:10px">📋 내 체크리스트 <span style="font-size:11px;color:var(--text3);font-weight:600">(담당 배정된 항목)</span></div>';
@@ -7355,7 +7407,7 @@ function _tlImport(){
   if(!_tlOwner())return;
   var ready=(CHECKLIST_ITEMS&&CHECKLIST_ITEMS.length)?Promise.resolve(CHECKLIST_ITEMS):loadChecklistItems();
   ready.then(function(items){
-    var mine=(items||[]).filter(function(it){return it.kind==='daily'&&(it.assignee===_tlEmpId||it.assignee==='all');});
+    var mine=(items||[]).filter(function(it){return it.kind==='daily'&&_clHasEmp(it.assignee,_tlEmpId);});
     var have={};_tlItems.forEach(function(x){if(x.ck)have[x.ck]=1;});
     var added=0;
     mine.forEach(function(ci){
