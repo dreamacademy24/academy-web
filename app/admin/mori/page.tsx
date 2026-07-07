@@ -608,13 +608,9 @@ export default function MoriPage() {
             const recPool = items
               .filter(i => i.active && !i.is_staple && !inPlanAll.has(nk(i.name)))
               .map(i => ({ i, ago: agoFor(i.name, d) }))
-              // 회피 기간 내(최근 제공) 메뉴도 숨기지 않고 ⚠로 보여줌 — 단, 정렬은 맨 뒤로
-              .sort((a, b) => {
-                const aw = a.ago !== null && windowDays > 0 && a.ago <= windowDays ? 1 : 0;
-                const bw = b.ago !== null && windowDays > 0 && b.ago <= windowDays ? 1 : 0;
-                if (aw !== bw) return aw - bw;
-                return (b.ago ?? 99999) - (a.ago ?? 99999);
-              });
+              // 회피 기간 내(최근 제공) 메뉴는 제외 — NEW와 기간 지난 것만 추천
+              .filter(x => x.ago === null || windowDays === 0 || x.ago > windowDays)
+              .sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999));
             const recGroups: { label: string; roles: string[] }[] = [
               { label: "국 · 찌개", roles: ["soup"] },
               { label: "메인", roles: ["main"] },
@@ -708,7 +704,7 @@ export default function MoriPage() {
                           <div key={i.id} onClick={() => addRec(i)} title="누르면 이 날에 추가돼요"
                             style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "6px 6px", borderBottom: "1px solid #f0f2fa", cursor: "pointer", fontSize: 13 }}>
                             <span>{i.spicy ? "🌶 " : ""}{i.name}</span>
-                            <span style={{ fontSize: 11.5, fontWeight: 800, color: ago !== null && windowDays > 0 && ago <= windowDays ? "#c2660a" : ago === null ? "#0f766e" : ago >= 56 ? "#16a34a" : "#8a94b8", flexShrink: 0 }}>{ago === null ? "NEW" : (ago < 7 ? `${ago}d` : ago < 56 ? `${Math.round(ago / 7)}w` : `${Math.round(ago / 30)}mo`) + (windowDays > 0 && ago <= windowDays ? "⚠" : "")} ＋</span>
+                            <span style={{ fontSize: 11.5, fontWeight: 800, color: ago === null ? "#0f766e" : ago >= 56 ? "#16a34a" : "#8a94b8", flexShrink: 0 }}>{ago === null ? "NEW" : ago < 7 ? `${ago}d` : ago < 56 ? `${Math.round(ago / 7)}w` : `${Math.round(ago / 30)}mo`} ＋</span>
                           </div>
                         ))}
                       </div>
