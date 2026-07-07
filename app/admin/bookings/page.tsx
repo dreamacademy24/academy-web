@@ -248,6 +248,24 @@ export default function AdminBookingsPage(){
   }
   const [stuSearch,setStuSearch]=useState("");
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
+  // 날짜 불일치 "확인 처리" — 중도입학/중도아웃 등 의도된 날짜는 확인하면 빨간 표시 해제
+  // 키에 날짜가 포함돼 있어 날짜가 또 바뀌면 경고가 다시 살아남 (안전 유지)
+  const [stuAck,setStuAck]=useState<string[]>([]);
+  const stuAckKey=(s:{booking_id:string;korName:string;engName:string;academyStart:string;academyEnd:string})=>`${s.booking_id}|${s.korName||s.engName}|${s.academyStart}|${s.academyEnd}`;
+  useEffect(()=>{
+    supabase.from("app_settings").select("value").eq("key","stu_mismatch_ack").maybeSingle()
+      .then(({data})=>{if(data&&Array.isArray(data.value))setStuAck(data.value as string[]);});
+  },[]);
+  async function toggleStuAck(s:{booking_id:string;korName:string;engName:string;academyStart:string;academyEnd:string;refStart?:string;refEnd?:string},on:boolean){
+    const key=stuAckKey(s);
+    const msg=on
+      ?`${s.korName||s.engName} — 이 날짜(${s.academyStart}~${s.academyEnd})가 의도된 값(중도입학/아웃 등)인가요?\n확인 처리하면 빨간 표시가 사라집니다. (날짜가 또 바뀌면 경고가 다시 떠요)`
+      :`${s.korName||s.engName} — 확인 처리를 해제할까요? 빨간 경고가 다시 표시됩니다.`;
+    if(!confirm(msg))return;
+    const next=on?[...stuAck.filter(k=>k!==key),key]:stuAck.filter(k=>k!==key);
+    setStuAck(next);
+    await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`,{method:"POST",headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||"",Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||""}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify({key:"stu_mismatch_ack",value:next,updated_at:new Date().toISOString()})}).catch(()=>{});
+  }
   const [stuView,setStuView]=useState<"list"|"cal">("list");
   const [calPrintHalf,setCalPrintHalf]=useState<"all"|"1st"|"2nd">("all");
   const _now=new Date();
@@ -1163,7 +1181,9 @@ export default function AdminBookingsPage(){
       const toggleStuSort=(k:string)=>setStuSort(p=>p.key===k?{key:k,asc:!p.asc}:{key:k,asc:true});
       const arr=(k:string)=>stuSort.key===k?(stuSort.asc?"▲":"▼"):"⇅";
       const arrCls=(k:string)=>stuSort.key===k?"arr ac":"arr";
-      const mismatchCount=sorted.filter(s=>s.mismatch).length;
+      const liveWarn=(s:StudentRow)=>s.mismatch&&!stuAck.includes(stuAckKey(s));
+      const ackedWarn=(s:StudentRow)=>s.mismatch&&stuAck.includes(stuAckKey(s));
+      const mismatchCount=sorted.filter(liveWarn).length;
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
@@ -1184,7 +1204,7 @@ export default function AdminBookingsPage(){
         </div>
         {mismatchCount>0&&(
           <div style={{margin:"6px 0 10px",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #dc2626",borderRadius:8,fontSize:13,color:"#991b1b",fontWeight:700}}>
-            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약과 달력 값이 다릅니다 (달력이 틀릴 수 있어요!): {sorted.filter(s=>s.mismatch).slice(0,10).map(s=>s.korName||s.engName).join(", ")}{mismatchCount>10?" 외":""} · 학생 이름의 🔴❗에 마우스를 올리면 예약 기준 날짜가 보여요
+            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약과 달력 값이 다릅니다 (달력이 틀릴 수 있어요!): {sorted.filter(liveWarn).slice(0,10).map(s=>s.korName||s.engName).join(", ")}{mismatchCount>10?" 외":""} · 🔴❗ 클릭 = 의도된 날짜로 확인 처리 (중도입학/아웃)
           </div>
         )}
         <div className="sub-tabs" style={{marginBottom:8}}>
@@ -1212,7 +1232,10 @@ export default function AdminBookingsPage(){
               <td>{s.academyEnd||"-"}</td>
               <td>{s.academyWeeks?s.academyWeeks+"주":"-"}</td>
               <td>{s.grade||"-"}</td>
-              <td style={{fontWeight:700}}>{s.korName||"-"}{s.mismatch&&<span title={`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`} style={{marginLeft:4,cursor:"help"}}>🔴❗</span>}</td>
+              <td style={{fontWeight:700}}>{s.korName||"-"}
+                {liveWarn(s)&&<span onClick={e=>{e.stopPropagation();toggleStuAck(s,true);}} title={`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd} — 클릭하면 "의도된 날짜(중도입학/아웃)"로 확인 처리`} style={{marginLeft:4,cursor:"pointer"}}>🔴❗</span>}
+                {ackedWarn(s)&&<span onClick={e=>{e.stopPropagation();toggleStuAck(s,false);}} title={`중도입학/아웃으로 확인됨 (예약기준 ${s.refStart}~${s.refEnd}) — 클릭하면 해제`} style={{marginLeft:4,cursor:"pointer",color:"#16a34a",fontSize:11,fontWeight:800}}>✓중도</span>}
+              </td>
               <td>{s.engName
                 ? s.engName
                 : <span title="영문명 없음 — 현지직원 화면에 한글로 표시됩니다. 예약 상세 > 학생 탭에서 입력해주세요" style={{background:"#fee2e2",color:"#dc2626",fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:8,cursor:"help",whiteSpace:"nowrap"}}>❗ 영문명 없음</span>}
@@ -1308,8 +1331,8 @@ export default function AdminBookingsPage(){
                                 {isMon&&newIns.length>0&&<span className="cal-newin">{newIns.length} New in</span>}
                                 {isFri&&outs.length>0&&<span className="cal-out">Graduation / {outs.length} out</span>}
                                 <div className="cal-stu-list">
-                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`s${s.key}`} className="cal-stu-in" title={mmTitle}><span className="pm">＋</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{s.mismatch&&<span> 🔴❗</span>}</div>);})}
-                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const mmTitle=s.mismatch?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`e${s.key}`} className="cal-stu-out" title={mmTitle}><span className="pm">－</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{s.mismatch&&<span> 🔴❗</span>}</div>);})}
+                                {startList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const warn=liveWarn(s);const mmTitle=warn?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`s${s.key}`} className="cal-stu-in" title={mmTitle}><span className="pm">＋</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{warn&&<span> 🔴❗</span>}{ackedWarn(s)&&<span title="중도입학/아웃 확인됨" style={{color:"#16a34a",fontSize:10,fontWeight:800}}> ✓</span>}</div>);})}
+                                {endList.map(s=>{const isKinder=s.grade==="킨더";const age=getStudentAge(s);const warn=liveWarn(s);const mmTitle=warn?`예약기준 ${s.refStart}~${s.refEnd} ≠ 달력값 ${s.academyStart}~${s.academyEnd}, 확인 필요`:`${s.korName||""} ${s.engName||""}`.trim();return (<div key={`e${s.key}`} className="cal-stu-out" title={mmTitle}><span className="pm">－</span>{isKinder&&<span className="kbadge">K</span>}<b>{s.korName||""}</b>{s.engName&&<span className="en"> {s.engName}</span>}<span className="meta"> 만{age||"-"}·{s.calWeeks}w</span>{warn&&<span> 🔴❗</span>}{ackedWarn(s)&&<span title="중도입학/아웃 확인됨" style={{color:"#16a34a",fontSize:10,fontWeight:800}}> ✓</span>}</div>);})}
                                 </div>
                               </td>
                             );
