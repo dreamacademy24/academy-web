@@ -5952,11 +5952,12 @@ async function loadStudentEvents(year,month){
     const [r1,r2,r3]=await Promise.all([
       fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type&checkin_date=gte.'+startDate+'&checkin_date=lte.'+endDate+'&order=checkin_date',{headers:hdr}),
       fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type&checkout_date=gte.'+startDate+'&checkout_date=lte.'+endDate+'&order=checkout_date',{headers:hdr}),
-      fetch(SB_URL2+'/rest/v1/pickup_requests?select=booking_id,request_date,request_time,request_type,location,destination,status&request_date=gte.'+startDate+'&request_date=lte.'+endDate+'&request_type=in.(extra_pickup,extra_drop,transfer)&status=neq.cancelled&order=request_date',{headers:hdr}),
+      fetch('/api/admin/pickups').catch(function(){return null;}),
     ]);
     const data=await r1.json();
     const data2=await r2.json();
-    const data3=await r3.json().catch(function(){return [];});
+    var data3=[];
+    try{var pk3=r3?await r3.json():null;data3=(pk3&&Array.isArray(pk3.pickups))?pk3.pickups:[];}catch(e){}
     _studentEvents=[];
     const extractNames=function(b){
       const stus=Array.isArray(b.students)?b.students:[];
@@ -5972,22 +5973,16 @@ async function loadStudentEvents(year,month){
       if(_isCommute(b))return;
       if(b.checkout_date)_studentEvents.push({date:String(b.checkout_date).slice(0,10),type:'checkout',title:'체크아웃 '+extractNames(b)});
     });
-    // 추가 픽드랍·환승 (pickup_requests) — 그 주 체크인 일정과 함께 자동 표시
-    var pkRows=Array.isArray(data3)?data3:[];
-    var pkNames={};
-    try{
-      var bids=pkRows.map(function(p){return p.booking_id;}).filter(function(v,i,a){return v&&a.indexOf(v)===i;});
-      if(bids.length){
-        var nr=await fetch(SB_URL2+'/rest/v1/bookings?select=id,booker_name&id=in.('+bids.map(function(x){return '"'+x+'"';}).join(',')+')',{headers:hdr});
-        (await nr.json()).forEach(function(b){pkNames[b.id]=b.booker_name||'';});
-      }
-    }catch(e){}
-    pkRows.forEach(function(p){
-      if(!p.request_date)return;
-      var lbl=p.request_type==='extra_pickup'?'🚐 추가픽업':(p.request_type==='extra_drop'?'🚐 추가드랍':'🔄 환승');
-      var nm=pkNames[p.booking_id]||'';
+    // 추가 픽드랍·환승 — /api/admin/pickups 경유 (RLS로 anon 직접 조회 불가), 그 달만 필터
+    (Array.isArray(data3)?data3:[]).forEach(function(p){
+      var d=String(p.request_date||'').slice(0,10);
+      if(!d||d<startDate||d>endDate)return;
+      if(['extra_pickup','extra_drop','transfer','additional'].indexOf(p.request_type)<0)return;
+      if(p.status==='cancelled')return;
+      var lbl=p.request_type==='transfer'?'🔄 환승':(p.request_type==='extra_drop'?'🚐 추가드랍':'🚐 추가픽업');
+      var nm=(p.bookings&&p.bookings.booker_name)||'';
       var tm=p.request_time?' '+String(p.request_time).slice(0,5):'';
-      _studentEvents.push({date:String(p.request_date).slice(0,10),type:'pickup',title:lbl+' '+nm+tm});
+      _studentEvents.push({date:d,type:'pickup',title:lbl+' '+nm+tm});
     });
   }catch(e){console.log('student events load err',e);_studentEvents=[];}
 }
