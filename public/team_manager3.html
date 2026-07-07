@@ -4266,7 +4266,11 @@ function _wkBoardHtml(dates,checkSet,bookings){
   if(!cols.length)return '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">등록된 주간 체크리스트가 없습니다</div>';
   var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">';
   cols.forEach(function(c){
-    var items=byA[c.id]||[];
+    var items=(byA[c.id]||[]).slice().sort(function(a,b){
+      // 월~일 순서 정렬 (월=0 … 일=6)
+      var ka=(Number(a.weekday)+6)%7, kb=(Number(b.weekday)+6)%7;
+      return ka-kb;
+    });
     var done=0;items.forEach(function(it){var oc=dowYmd[Number(it.weekday)];if(oc&&checkSet[oc+'|'+it.id])done++;});
     var ini=(c.name||'?').slice(0,1);
     h+='<div style="background:#f8fafc;border-radius:9px;padding:8px">'+
