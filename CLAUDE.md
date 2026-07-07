@@ -1930,3 +1930,9 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - ✅ 박경숙(DA-20260506-614192, b17L12) 콤보 구간 보정: seg1 dreamhouse 8/1~8/8 + seg2 jaypark 8/8~8/22 (dh_weeks=1·jp_weeks=2는 원래 정상, seg가 비어 3주 전체 점유로 보이던 것). 검증: b17L12 8월 = 김나래 ~8/1 → 박경숙 8/1~8/8 ✓
 - ✅ b17L4 잔존 조회: 활성 1건 = 오초희(7/13~9/4, 영수증발행) — 재배정 필요. 김장미(4~5월)는 완료라 무해. 정선희는 메이가 이미 재배정한 듯 (조회에 없음)
 - ✅ 주간 체크리스트 7칸 화면 잘림 수정 (ad9cf34): grid minmax(0,1fr)+칸 min-width:0
+
+## 2026-07-07 심야 2 — 체크리스트·달력·첨부 개선
+- 달력 "+N 더" 클릭 = 그 칸 전체 펼침/▲접기 (_calExpandedDays) (0773af6)
+- 업무 상세 첨부: 이미지 파일은 파일명 대신 바로 큰 미리보기(최대 360px, 클릭 확대) (0773af6)
+- 주간 체크리스트 담당자 복수 선택: 칩 토글 UI, assignee에 콤마 저장("candice,eric"), 기존 단일값·'all' 호환. _clAssignees/_clHasEmp/_clBadge(복수 뱃지) — 담당자별 보드는 각 담당자 그룹에 모두 표시, 개인 화면 필터 포함 판정
+- 고객 자동표시에 "3주뒤 체크인 고객"(checkin_3w, +21~27일) 추가 — 기존 '3주전 고객 전달' 항목은 수정에서 이 옵션으로 바꿔야 정확한 날짜 칩이 뜸
