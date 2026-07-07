@@ -1865,3 +1865,9 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 ### 남은 이름 매칭 (다음 작업 후보)
 - 정산 관리(app/admin/settlement) 206·216행: 이름 후보 ilike로 튜터/셔틀 비용 취합 — 동명이인 시 타 가족 비용 섞임 → booking_id 기반 전환 필요
 - /api/portal/verify의 bookings_new(드랍된 테이블) 이름 ilike 조회 — 죽은 코드 정리
+
+## 2026-07-07 — 동명이인 자동 접미사 (5f6612d)
+- 신규 예약 3개 진입점(손님 /booking·/booking2, 어드민 신규 예약 모달)에 lib/bookerName.ts ensureUniqueBookerName 적용
+- 규칙: 활성 예약(체크아웃 안 지남·미취소)에 같은 이름 있으면 새 예약자명에 B→C→D… 자동 접미사. 기존 예약 이름은 불변(발행 인보이스 보호). 손님 폼은 alert, 어드민은 토스트 안내
+- 같은 이름 판정: 정확 일치 또는 이름+영문 1글자(장수진B)만 — "장수진아" 같은 다른 이름 오탐 방지. 조회 실패 시 원래 이름으로 등록 진행(등록 차단 안 함)
+- 라이브 시뮬 검증: 장수진→장수진B, 오초희→오초희B, 유일 이름→변경 없음
