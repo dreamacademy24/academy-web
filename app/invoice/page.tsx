@@ -1228,13 +1228,21 @@ function InvoicePageInner(){
       const j=await res.json().catch(()=>null);
       if(!res.ok){alert("저장 실패: "+(j?.error||res.status));setSavingReceipt(false);return;}
       setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
-      // 지불내역이 하나라도 있으면 상태를 "영수증발행"으로 업데이트
+      // 지불내역 저장 시 예약(bookings)의 결제상태·납부금액·총금액도 함께 동기화
+      //  (스냅샷에만 저장되면 예약상세·엄마 포털이 계속 미납으로 보이는 버그 방지)
       const hasPayments=receiptPayments.some(p=>(p.amount||"").trim()!=="");
       if(hasPayments){
-        const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+        const _tDisc=billing.discounts.reduce((s2,d)=>s2+(Number(d.amount)||0),0);
+        const _tAdd=billing.additions.reduce((s2,a)=>s2+(Number(a.amount)||0),0);
+        const _final=billing.basePrice+_tAdd-_tDisc;
+        const _paid=receiptPayments.reduce((s2,p)=>{const n=Number(String(p.amount||"").replace(/[,\s원]/g,""));return s2+(isNaN(n)?0:n);},0);
+        const _pStatus=_final>0&&_paid>=_final?"paid":_paid>0?"partial":"unpaid";
+        const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",payment_status:_pStatus,paid_amount:_paid,final_price:_final,updated_at:new Date().toISOString()}).eq("id",bookingId);
         if(stErr){console.error("[receipt status update]",stErr);alert("⚠️ 지불내역은 저장되었으나 예약 상태 변경 실패: "+stErr.message);setSavingReceipt(false);return;}
+        alert("✅ 지불내역이 저장되었습니다.\n예약 상태: 영수증발행 · 결제: "+(_pStatus==="paid"?"완납":_pStatus==="partial"?"부분납":"미납")+" ("+_paid.toLocaleString()+"원 / "+_final.toLocaleString()+"원)");
+      } else {
+        alert("✅ 지불내역이 저장되었습니다.");
       }
-      alert("✅ 지불내역이 저장되었습니다."+(hasPayments?" (예약 상태: 영수증발행)":""));
     }catch{alert("저장 실패");}
     setSavingReceipt(false);
   }
