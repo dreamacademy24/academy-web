@@ -379,7 +379,7 @@ export default function DreamhouseRooms() {
                       return (
                         <td
                           key={room}
-                          onClick={() => { if(b){setModal(b);setModalRoom(b.accom_room);setTooltip(null);} }}
+                          onClick={() => { if(b){setModal(b);setModalRoom(ROOMS.includes(b.accom_room)?b.accom_room:'');setTooltip(null);} }}
                           onMouseEnter={e => b && setTooltip({x:(e.target as HTMLElement).getBoundingClientRect().left, y:(e.target as HTMLElement).getBoundingClientRect().top, booking:b})}
                           onMouseLeave={() => setTooltip(null)}
                           style={{
@@ -469,12 +469,12 @@ export default function DreamhouseRooms() {
                             </div>
                             <div style={{display:'flex',flexDirection:'column',gap:2}}>
                               {checkins.map(b => (
-                                <div key={'in'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크인`} style={{cursor:'pointer',background:'#dcfce7',color:'#166534',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                <div key={'in'+b.id} onClick={()=>{setModal(b);setModalRoom(ROOMS.includes(b.accom_room)?b.accom_room:'')}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크인`} style={{cursor:'pointer',background:'#dcfce7',color:'#166534',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                   {b.accom_room} {b.booker_name || b.reservation_no || ''}{stuNames(b) ? ` (${stuNames(b)})` : ''} in
                                 </div>
                               ))}
                               {checkouts.map(b => (
-                                <div key={'out'+b.id} onClick={()=>{setModal(b);setModalRoom(b.accom_room)}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크아웃`} style={{cursor:'pointer',background:'#ffedd5',color:'#9a3412',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                <div key={'out'+b.id} onClick={()=>{setModal(b);setModalRoom(ROOMS.includes(b.accom_room)?b.accom_room:'')}} title={`${b.accom_room} ${b.booker_name||''} ${stuNames(b)?'('+stuNames(b)+')':''} 체크아웃`} style={{cursor:'pointer',background:'#ffedd5',color:'#9a3412',fontSize:11,borderRadius:4,padding:'1px 5px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
                                   {b.accom_room} {b.booker_name || b.reservation_no || ''}{stuNames(b) ? ` (${stuNames(b)})` : ''} out
                                 </div>
                               ))}
@@ -551,13 +551,15 @@ export default function DreamhouseRooms() {
                 <span style={{color:'#64748b'}}>룸 변경</span>
                 <select value={modalRoom} onChange={e=>setModalRoom(e.target.value)} disabled={!!modal.room_locked}
                   style={{padding:'6px 12px',border:'1px solid #cbd5e1',borderRadius:8,fontSize:13,color:'#1e293b',fontWeight:600,cursor:modal.room_locked?'not-allowed':'pointer'}}>
-                  {ROOMS.map(r=><option key={r} value={r}>{r}</option>)}
+                  <option value="">— 새 룸 선택 —</option>
+                  {ROOMS.map(r=><option key={r} value={r}>{r}{r===modal.accom_room?' (현재)':''}</option>)}
                 </select>
               </div>
             </div>
             <div style={{display:'flex',gap:8}}>
               <button disabled={!!modal.room_locked} onClick={async()=>{
                 if(modal.room_locked){alert('🔒 룸이 잠겨있어 변경할 수 없습니다.');return;}
+                if(!modalRoom){alert('변경할 룸을 먼저 선택하세요.');return;}
                 if(modalRoom===modal.accom_room){alert('동일한 룸입니다.');return;}
                 try{
                   const res=await fetch('/api/dreamhouse',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:modal.id,room:modalRoom})});
