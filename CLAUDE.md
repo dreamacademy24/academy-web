@@ -1903,3 +1903,9 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 수정: 저장 시 스냅샷 지불내역 합계로 paid_amount·payment_status(paid/partial/unpaid)·final_price 동기화 + alert에 완납/부분납 표시
 - 데이터 일괄 보정: 스냅샷 결제합 > DB paid_amount인 **36건** 전부 서비스키로 보정 (완납 다수 + 부분납: 김두선 100/800만, 신인혜 505/539만, 김유정 100/997만, 박경숙 448/896만, 양지나 1,310/1,680만, 임윤미 100/566만 등)
 - 이현미(이서준) 건: paid 5,760,000 / final 5,760,000 확인
+
+## 2026-07-07 — 직원 달력 표기 통일 (970d99c + 5cc3de0)
+- 체크인/체크아웃: "체크인 아이이름들/예약자" (학생 없으면 예약자만, 이름 같으면 중복 표기 안 함)
+- 추가픽업/추가드랍/환승: "🚐 추가픽업/예약자 B17L13 23:30" — 숙소는 룸번호 우선 → 리조트명(제이파크/큐브나인/드림하우스/통학형) → 도착지 폴백
+- /api/admin/pickups bookings select에 house_no, accom_room 추가
+- ⚠️ 배포 후 라이브 캡처는 Chrome 확장 연결 끊김으로 미완 — 코드 구문검사 통과, 다음 세션에서 확인 or 메이 직접 확인
