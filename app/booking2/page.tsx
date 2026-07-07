@@ -39,8 +39,10 @@ export default function BookingNonPackagePage() {
   const [holidayPopupKey, setHolidayPopupKey] = useState("");
   useEffect(() => { fetchDeployedHolidays(supabase).then(setDeployedHolidays); }, []);
   const holidayHits = useMemo(
-    () => holidaysInRange(deployedHolidays, dates.checkIn, dates.checkOut),
-    [deployedHolidays, dates.checkIn, dates.checkOut]
+    () => holidaysInRange(deployedHolidays, dates.checkIn, dates.checkOut)
+      // 아이언맨(도로통제·투어셔틀)은 패키지 전용 안내 — 통학형에는 표시 안 함
+      .filter(h => !(bType === "commute" && String(h.name || "").includes("아이언맨"))),
+    [deployedHolidays, dates.checkIn, dates.checkOut, bType]
   );
   useEffect(() => {
     if (holidayHits.length === 0) return;
