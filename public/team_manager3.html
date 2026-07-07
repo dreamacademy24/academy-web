@@ -5959,9 +5959,13 @@ async function loadStudentEvents(year,month){
     var data3=[];
     try{var pk3=r3?await r3.json():null;data3=(pk3&&Array.isArray(pk3.pickups))?pk3.pickups:[];}catch(e){}
     _studentEvents=[];
+    // 표기 통일: "체크인 아이이름/예약자" — 같은 예약건임을 바로 알 수 있게
     const extractNames=function(b){
       const stus=Array.isArray(b.students)?b.students:[];
-      return stus.map(function(s){return s.kor_name||s.name_kr||s.name||'';}).filter(Boolean).join(', ')||b.booker_name||'';
+      const names=stus.map(function(s){return s.kor_name||s.name_kr||s.name||s.korName||'';}).filter(Boolean).join(', ');
+      const bk=(b.booker_name||'').trim();
+      if(names&&bk&&names!==bk)return names+'/'+bk;
+      return names||bk||'';
     };
     // 통학형(숙소 없음)은 체크인/체크아웃 없음 → 제외
     var _isCommute=function(b){return String(b.booking_type||'').toLowerCase().includes('commute')||String(b.accom_type||'').includes('통학');};
@@ -5980,9 +5984,17 @@ async function loadStudentEvents(year,month){
       if(['extra_pickup','extra_drop','transfer','additional'].indexOf(p.request_type)<0)return;
       if(p.status==='cancelled')return;
       var lbl=p.request_type==='transfer'?'🔄 환승':(p.request_type==='extra_drop'?'🚐 추가드랍':'🚐 추가픽업');
-      var nm=(p.bookings&&p.bookings.booker_name)||'';
+      var bkMeta=p.bookings||{};
+      var nm=(bkMeta.booker_name||'').trim();
+      // 숙소 표기: 룸번호(B17L13) 우선 → 없으면 리조트명 → 없으면 도착/출발지
+      var place=String(bkMeta.house_no||bkMeta.accom_room||'').replace(/\s+/g,'').toUpperCase();
+      if(!place){
+        var at=String(bkMeta.accom_type||'');
+        place=at.indexOf('제이파크')>=0?'제이파크':(at.indexOf('큐브')>=0?'큐브나인':(at.indexOf('드림하우스')>=0?'드림하우스':(at.indexOf('통학')>=0?'통학형':'')));
+      }
+      if(!place)place=String(p.request_type==='extra_drop'?(p.location||''):(p.destination||'')).slice(0,8);
       var tm=p.request_time?' '+String(p.request_time).slice(0,5):'';
-      _studentEvents.push({date:d,type:'pickup',title:lbl+' '+nm+tm});
+      _studentEvents.push({date:d,type:'pickup',title:lbl+'/'+nm+(place?' '+place:'')+tm});
     });
   }catch(e){console.log('student events load err',e);_studentEvents=[];}
 }
