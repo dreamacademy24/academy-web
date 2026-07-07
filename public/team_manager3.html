@@ -5169,9 +5169,9 @@ function _boardFiltered(){
     // 미배정은 권한 무관, 모든 task에서 isUnassigned 체크 (홈/사이드바와 동일)
     f=tasks.filter(isUnassigned);
   } else {
-    // 비관리자도 타인의 shared 업무는 읽기 허용 — pool 전체, shared 필터로 노출 제어
+    // 관리자는 전부, 비관리자는 shared + 본인 업무
     var pool=tasks.slice();
-    f=pool.filter(function(t){
+    f=isManagerCU()?pool:pool.filter(function(t){
       if(t.shared) return true;
       // 본인 업무는 shared 아니어도 포함 (개인 업무 노출)
       return CU && (t.assignee===CU.id || (t.assignees&&t.assignees.indexOf(CU.id)>=0));
@@ -5390,7 +5390,8 @@ function _lastSeenLabel(iso){
   return {txt:days<=1?'어제':(u.getUTCMonth()+1)+'/'+u.getUTCDate(),ok:days<=1};
 }
 function _tablePool(){
-  var pool=tasks.filter(function(t){
+  // 관리자(메이)는 공유 여부와 무관하게 전 직원 업무 모두 표시 — 지시·댓글 확인용
+  var pool=isManagerCU()?tasks.slice():tasks.filter(function(t){
     if(t.shared) return true;
     return CU && (t.assignee===CU.id || (t.assignees&&t.assignees.indexOf(CU.id)>=0));
   });
