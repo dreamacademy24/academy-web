@@ -4205,14 +4205,14 @@ function _weeklyHtml(dates,checkSet,bookings){
   var dows=['일','월','화','수','목','금','토'];var todayS=_dailyToday();
   var weekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly';});
   function itemsForDate(ymd){var dow=new Date(ymd+'T00:00:00').getDay();return weekly.filter(function(it){return Number(it.weekday)===dow;});}
-  var strip='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">달력 — 전체 항목 표시 (칸 클릭 = 아래 해당 요일로 이동)</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:14px">';
+  var strip='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">달력 — 전체 항목 표시 (칸 클릭 = 아래 해당 요일로 이동)</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:14px">';
   dates.forEach(function(ymd){
     var d=new Date(ymd+'T00:00:00');var dow=d.getDay();var isToday=ymd===todayS;var its=itemsForDate(ymd);
     var col=dow===0?'#ef4444':(dow===6?'#4f46e5':'#94a3b8');
     var body='';
     its.forEach(function(it){var done=!!checkSet[ymd+'|'+it.id];var sm=it.smart_key?';background:#eef2ff;color:#4338ca;border-radius:4px;padding:1px 4px':'';
       body+='<div style="font-size:12px;line-height:1.4;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:'+(done?'#94a3b8':'var(--text2)')+';'+(done?'text-decoration:line-through':'')+sm+'" title="'+esc(it.content||'')+'">'+esc(it.content||'')+'</div>';});
-    strip+='<div onclick="_wkScrollTo(\''+ymd+'\')" style="border:'+(isToday?'2px solid #4f46e5':'1px solid #edeff5')+';border-radius:10px;padding:7px;min-height:88px;cursor:pointer;background:'+(isToday?'#eef2ff':'#fafbfe')+'">'+
+    strip+='<div onclick="_wkScrollTo(\''+ymd+'\')" style="border:'+(isToday?'2px solid #4f46e5':'1px solid #edeff5')+';border-radius:10px;padding:7px;min-height:88px;cursor:pointer;background:'+(isToday?'#eef2ff':'#fafbfe')+';min-width:0;overflow:hidden">'+
       '<div style="font-size:12px;font-weight:800;color:'+(isToday?'#4338ca':col)+';margin-bottom:3px">'+dows[dow]+' '+d.getDate()+(isToday?'·오늘':'')+'</div>'+body+'</div>';
   });
   strip+='</div>';
