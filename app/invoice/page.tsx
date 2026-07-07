@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import { fetchDhAvailRooms } from "@/lib/dhRooms";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
@@ -1192,27 +1193,27 @@ function InvoicePageInner(){
     link.click();
   }
 
-  /* ── 영수증 탭: 드림하우스 룸 자동 배정 ── */
-  const DH_ROOMS=['b13L10','b16L19','b17L4','b17L7','b17L8','b17L9','b17L10','b17L11','b17L12','b17L13','b17L14','b17L15','b17L16','b17L17','b17L18'];
+  /* ── 영수증 탭: 드림하우스 등록 — 자동(랜덤) 배정 제거, 직접 선택 or 미배정 등록 ── */
+  const [dhModal,setDhModal]=useState<{avail:string[];current:string;ci:string;co:string}|null>(null);
   async function registerDreamhouse(){
     if(!bookingId){alert("예약 ID가 없습니다.");return;}
     const ci=overallCI?.trim()||null;
     const co=overallCO?.trim()||null;
     if(!ci||!co){alert("⚠️ 체크인/체크아웃 날짜가 필요합니다.");return;}
-    const {data:ov}=await supabase.from("bookings").select("accom_room")
-      .neq("id",bookingId).not("accom_room","is",null).neq("accom_room","")
-      .lt("checkin_date",co).gt("checkout_date",ci);
-    const occ=(ov||[]).map((b:any)=>b.accom_room);
-    const avail=DH_ROOMS.filter(r=>!occ.includes(r));
-    if(!avail.length){alert("⚠️ 가용 룸이 없습니다!");return;}
-    const assigned=avail[Math.floor(Math.random()*avail.length)];
-    const {error}=await supabase.from("bookings").update({
-      accom_room:assigned,checkin_date:ci,checkout_date:co,status:"영수증발행",
-    }).eq("id",bookingId);
+    const avail=await fetchDhAvailRooms(supabase as never,bookingId,ci,co);
+    setDhModal({avail,current:(checkin.houseNo||"").trim(),ci,co});
+  }
+  async function finishDhRegister(room:string|null){
+    if(!dhModal)return;
+    const {ci,co}=dhModal;
+    const upd:Record<string,unknown>={checkin_date:ci,checkout_date:co,status:"영수증발행"};
+    if(room!==null){upd.accom_room=room;upd.house_no=room;}
+    const {error}=await supabase.from("bookings").update(upd).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
     setDhRegistered(true);
-    setCheckin(c=>({...c,houseNo:assigned}));
-    alert("✅ 드림하우스 예약 완료!\n배정 룸: "+assigned);
+    if(room!==null)setCheckin(c=>({...c,houseNo:room}));
+    setDhModal(null);
+    alert(room?("✅ 드림하우스 예약 완료!\n배정 룸: "+room):"✅ 등록 완료 — 룸은 미배정 상태예요.\n직원업무 홈 '확인 필요'와 룸 캘린더에서 배정해주세요.");
   }
 
   /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) + 상태→영수증발행 ── */
@@ -1813,6 +1814,25 @@ function InvoicePageInner(){
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
           <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
           <button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?"✅ 등록 완료":"🏠 드림하우스 등록"}</button>
+          {dhModal&&(
+            <div onClick={()=>setDhModal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(480px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
+                <div style={{fontSize:15,fontWeight:800,marginBottom:4}}>🏠 드림하우스 룸 배정</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>자동 배정이 없어졌어요 — 룸을 직접 선택하거나, 미배정으로 등록 후 룸 캘린더에서 배정하세요. ({dhModal.ci} ~ {dhModal.co} 기준 가용 룸)</div>
+                {dhModal.current&&(
+                  <button onClick={()=>finishDhRegister(dhModal.current)} style={{width:"100%",padding:"9px 0",border:"1.5px solid #16a34a",borderRadius:9,background:"#f0fdf4",color:"#166534",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>현재 룸 유지하고 등록 — {dhModal.current}</button>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
+                  {dhModal.avail.length===0?<div style={{gridColumn:"1/5",fontSize:12,color:"#dc2626",fontWeight:700}}>⚠️ 이 기간 가용 룸이 없습니다 (미배정으로 등록 후 조정하세요)</div>:
+                    dhModal.avail.map(r=>(
+                      <button key={r} onClick={()=>finishDhRegister(r)} style={{padding:"8px 0",border:"1px solid #cbd5e1",borderRadius:8,background:"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{r.toUpperCase().replace(/^B/,"B")}</button>
+                    ))}
+                </div>
+                <button onClick={()=>finishDhRegister(null)} style={{width:"100%",padding:"9px 0",border:"1px solid #4338ca",borderRadius:9,background:"#eef2ff",color:"#4338ca",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>룸 미배정으로 등록 (나중에 룸 캘린더에서 배정)</button>
+                <button onClick={()=>setDhModal(null)} style={{width:"100%",padding:"8px 0",border:"1px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#64748b",fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+              </div>
+            </div>
+          )}
           <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
           <button style={{padding:"12px 24px",background:"#7c3aed",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("receipt-content")}>📷 이미지 저장</button>
         </div>
