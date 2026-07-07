@@ -43,6 +43,7 @@ export default function MoriPage() {
   const [allWeeks, setAllWeeks] = useState<{ week_start: string; plan: WeekPlan }[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [guestsLoaded, setGuestsLoaded] = useState(false);
+  const [weekClosed, setWeekClosed] = useState<{ by: string; at: string } | null>(null);
   const [viewMode, setViewMode] = useState<"day" | "table">("table");
   const [dayIdx, setDayIdx] = useState(0);
   const [autoFixed, setAutoFixed] = useState(0);
@@ -89,11 +90,21 @@ export default function MoriPage() {
   /* 이번 주에 식사 나가는 손님 (올인원, 드하/제이파크 구간) — 식단 관련 업무와 같은 규칙 */
   async function loadGuests() {
     try {
-      const { data } = await supabase.from("bookings").select("booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout");
+      const { data } = await supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout");
+      // 주간 명단(식단 관련 업무)에서 이번 주 제외한 손님은 여기서도 제외
+      const { data: exRows } = await supabase.from("meal_exclusions").select("booking_id").eq("week_start", weekStart);
+      const excluded = new Set((exRows || []).map((r: any) => String(r.booking_id)));
+      // 주간 명단 마감 여부
+      try {
+        const { data: wc } = await supabase.from("app_settings").select("value").eq("key", "meal_week_close").maybeSingle();
+        const map = (wc && wc.value && typeof wc.value === "object") ? wc.value as Record<string, { by: string; at: string }> : {};
+        setWeekClosed(map[weekStart] || null);
+      } catch { setWeekClosed(null); }
       const weekEnd = addD(weekStart, 4);
       const gs: Guest[] = [];
       for (const b of (data || []) as any[]) {
         if (!b.is_all_in_one) continue;
+        if (excluded.has(String(b.id))) continue;
         if (String(b.status || "").includes("취소")) continue;
         const eat = (t?: string | null) => t === "dreamhouse" || t === "jaypark";
         const segs: { from: string; to: string }[] = [];
@@ -455,6 +466,9 @@ export default function MoriPage() {
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
                   <b>👥 이번 주({roundNo}회차) 식사 손님 {guests.length}팀</b>
+                  {weekClosed
+                    ? <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 800, color: "#166534", background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 7, padding: "2px 9px" }}>✅ 명단 마감됨 · {weekClosed.by}</span>
+                    : <span style={{ marginLeft: 8, fontSize: 11.5, fontWeight: 800, color: "#b91c1c", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 7, padding: "2px 9px", cursor: "pointer" }} onClick={() => { window.location.href = "/admin/meal-plan"; }} title="주간 명단에서 최종 확인·마감 후 진행하세요">⚠ 명단 미마감 — 먼저 마감하세요</span>}
                   <span style={{ background: windowDays > 0 ? "#fff3d6" : "#d9f2dd", padding: "2px 10px", borderRadius: 8, fontSize: 12.5 }}>
                     {windowDays > 0 ? `회피 범위: ${avoidStart} 이후 ${windowDays}일치 메뉴` : "전원 신규 — 과거 식단 그대로 재사용 가능"}
                   </span>
