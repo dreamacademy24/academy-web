@@ -42,7 +42,7 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "식단 관련 업무", items: [
     { label: "식단 관련 업무", href: "/admin/meal-plan" },
-    { label: "모리칸 (식단 조합)", href: "/admin/mori" },
+    { label: "식단생성", href: "/admin/mori" },
   ]},
   { title: "현지직원", items: [
     { label: "Local Staff Hub", href: "/admineng/hub", ext: true },

@@ -358,7 +358,7 @@ export default function MoriPage() {
   return (
     <div style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1400 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>🍱 모리칸 — 식단 조합</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>🍱 식단생성</h1>
         <div style={{ display: "flex", gap: 6 }}>
           {(["plan", "items"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ ...btn(tab === t ? "#3a47a8" : "#aab"), padding: "6px 12px" }}>
