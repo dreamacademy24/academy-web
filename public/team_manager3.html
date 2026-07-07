@@ -4074,7 +4074,7 @@ function loadDailyCheck(){
   var today=_dailyToday();
   var far=new Date(today+'T00:00:00');far.setDate(far.getDate()+56);
   Promise.all([sbGet('staff_daily_check','check_date=eq.'+today),loadChecklistItems(),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students&checkout_date=gte.'+today+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+today+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
   ]).then(function(res){
     var rows=res[0]||[];var byKey={};rows.forEach(function(r){byKey[r.item_key]=r;});
     sec.innerHTML=_dailyCheckHtml(byKey,today,res[2]||[]);
@@ -4177,7 +4177,7 @@ function loadWeeklyCheck(){
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.join(',')+')'),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students&checkout_date=gte.'+weekStart+'&checkin_date=lte.'+farStr).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+weekStart+'&checkin_date=lte.'+farStr).catch(function(){return [];})
   ]).then(function(res){
     var checks=res[1]||[];var bookings=res[2]||[];var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
     sec.innerHTML=_weeklyHtml(dates,checkSet,bookings);
@@ -4196,7 +4196,13 @@ function _smartNames(smartKey,occYmd,bookings){
   else if(smartKey==='checkin_3w'){loS=_off(21);hiS=_off(27);}
   else if(smartKey==='checkin_4w'){loS=_off(28);hiS=_off(34);}
   else return [];
-  return (bookings||[]).filter(function(b){var c=(b[field]||'').slice(0,10);return c>=loS&&c<=hiS;}).map(function(b){
+  return (bookings||[]).filter(function(b){
+    if(String(b.status||'').indexOf('취소')>=0)return false;
+    // 통학형은 드림하우스 룸이 있는 경우만 체크인/아웃 관리 대상 (룸 없으면 제외 — 예: 김광진)
+    var isC=String(b.booking_type||'').indexOf('commute')>=0||String(b.accom_type||'').indexOf('통학')>=0;
+    if(isC&&!String(b.house_no||b.accom_room||'').trim())return false;
+    var c=(b[field]||'').slice(0,10);return c>=loS&&c<=hiS;
+  }).map(function(b){
     var nm=(b.booker_name||'').trim();
     if(!nm&&b.students){try{var arr=typeof b.students==='string'?JSON.parse(b.students):b.students;if(Array.isArray(arr)&&arr[0])nm=arr[0].name_kr||arr[0].korName||arr[0].name||'';}catch(e){}}
     return ((b[field]||'').slice(5,10).replace('-','/'))+' '+(nm||b.reservation_no||'고객');
@@ -7245,7 +7251,7 @@ function _renderEmpChecklist(empId){
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.concat([today]).join(',')+')'),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students&checkout_date=gte.'+dates[0]+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+dates[0]+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
   ]).then(function(res){
     var checks=res[1]||[];var bookings=res[2]||[];var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
     box.innerHTML=_empChecklistHtml(empId,dates,today,checkSet,bookings);
