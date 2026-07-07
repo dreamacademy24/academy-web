@@ -4524,7 +4524,7 @@ function loadHomeTutorIssues(){
   var box=document.getElementById('homeTutorBox');if(!box)return;
   Promise.all([
     sbGet('tutor_requests','select=id,status'),
-    sbGet('tutor_lessons','select=id,student_names,house_or_reserver,class_type,sessions_per_day,total_sessions,total_amount,session_overrides,type_overrides'),
+    sbGet('tutor_lessons','select=id,student_names,house_or_reserver,class_type,sessions_per_day,total_sessions,total_amount,session_overrides,type_overrides,end_date'),
     fetch('/api/admin/tutor/cancel-requests?status=pending').then(function(r){return r.ok?r.json():[];}).catch(function(){return [];}),
     sbGet('staff_issue_dismissals','select=booking_id').catch(function(){return [];})
   ]).then(function(res){
@@ -4535,8 +4535,10 @@ function loadHomeTutorIssues(){
     var newCnt=reqs.filter(function(r){return r.status==='pending'||r.status==='reviewing';}).length;
     var chgCnt=reqs.filter(function(r){return r.status==='cancel_requested';}).length+(Array.isArray(cancelReqs)?cancelReqs.length:0);
     var mism=[];
+    var _tToday=_dailyToday();
     lessons.forEach(function(l){
       if(dis['tlesson:'+l.id])return;
+      if(l.end_date&&String(l.end_date).slice(0,10)<_tToday)return; // 종료된 수업은 표시 안 함
       var ta=Number(l.total_amount);var ts=Number(l.total_sessions);
       if(!ta||!ts||!l.class_type)return;
       var hasOv=(l.session_overrides&&typeof l.session_overrides==='object'&&Object.keys(l.session_overrides).length>0)||(l.type_overrides&&typeof l.type_overrides==='object'&&Object.keys(l.type_overrides).length>0);
@@ -5306,7 +5308,7 @@ function _btSeenCell(t){
   if(!ids.length){
     var n=0;
     Object.keys(_taskViews).forEach(function(emp){if(emp!=='ceo'&&_taskViews[emp]&&_taskViews[emp][String(t.id)])n++;});
-    return n?'<span style="color:#16a34a;font-weight:700;font-size:11px">'+n+'명 봄</span>':'<span style="color:#dc2626;font-weight:800;font-size:11px">아무도 안 봄</span>';
+    return n?'<span style="color:#16a34a;font-weight:700;font-size:12.5px">'+n+'명 봄</span>':'<span style="color:#dc2626;font-weight:800;font-size:12.5px">아무도 안 봄</span>';
   }
   if(isDoneTask(t))return '<span style="color:var(--text3);font-size:11px">—</span>';
   var unseen=[];
@@ -5314,8 +5316,8 @@ function _btSeenCell(t){
     var v=_taskViews[id]&&_taskViews[id][String(t.id)];
     if(!v){var p=getP(id);unseen.push(p?p.name:id);}
   });
-  if(!unseen.length)return '<span style="color:#16a34a;font-weight:700;font-size:11px">👁 확인함</span>';
-  return '<span style="color:#dc2626;font-weight:800;font-size:11px" title="'+esc(unseen.join(', '))+' 미확인">'+esc(unseen[0])+(unseen.length>1?' 외 '+(unseen.length-1):'')+' 미확인</span>';
+  if(!unseen.length)return '<span style="color:#16a34a;font-weight:700;font-size:12.5px">👁 확인함</span>';
+  return '<span style="color:#dc2626;font-weight:800;font-size:12.5px" title="'+esc(unseen.join(', '))+' 미확인">'+esc(unseen[0])+(unseen.length>1?' 외 '+(unseen.length-1):'')+' 미확인</span>';
 }
 function _btStrip(tasksAll){
   var eod=new Date(new Date().setHours(23,59,59,999));
@@ -5326,10 +5328,10 @@ function _btStrip(tasksAll){
   var seenCnt=0;
   Object.keys(_taskViews).forEach(function(emp){if(emp!=='ceo'&&_taskViews[emp]){if(unAll.some(function(t){return _taskViews[emp][String(t.id)];}))seenCnt++;}});
   h+='<button class="bt-emp'+(_boardEmpFilter==='_un'?' on':'')+'" onclick="_setBoardEmpFilter(\'_un\')">'+
-    '<span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:#9ca3af;color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-bottom:5px">?</span>'+
-    '<div style="font-size:12.5px;font-weight:800;color:var(--text)">📢 지시·미배정</div>'+
-    '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">'+unAll.length+'건 대기'+(unUrg?' · 🚨 '+unUrg:'')+'</div>'+
-    '<div style="font-size:10px;font-weight:800;margin-top:3px;color:'+(seenCnt?'#16a34a':'#dc2626')+'">'+(unAll.length?(seenCnt?seenCnt+'명이 봄':'아무도 안 봄'):'—')+'</div></button>';
+    '<span style="display:inline-flex;width:30px;height:30px;border-radius:9px;background:#9ca3af;color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-bottom:5px">?</span>'+
+    '<div style="font-size:14px;font-weight:800;color:var(--text)">📢 지시·미배정</div>'+
+    '<div style="font-size:12px;color:var(--text3);margin-top:2px">'+unAll.length+'건 대기'+(unUrg?' · 🚨 '+unUrg:'')+'</div>'+
+    '<div style="font-size:11.5px;font-weight:800;margin-top:3px;color:'+(seenCnt?'#16a34a':'#dc2626')+'">'+(unAll.length?(seenCnt?seenCnt+'명이 봄':'아무도 안 봄'):'—')+'</div></button>';
   ALL.forEach(function(e){
     var et=tasksAll.filter(function(t){return !_isArchivedTask(t.id)&&(t.assignee===e.id||(t.assignees&&t.assignees.indexOf(e.id)>=0));});
     if(!isManagerCU()&&CU&&CU.id!==e.id)et=et.filter(function(t){return t.shared;});
@@ -5338,10 +5340,10 @@ function _btStrip(tasksAll){
     var eu=nd.filter(urg).length;
     var ls=_lastSeenLabel(_taskViews[e.id]&&_taskViews[e.id]._board);
     h+='<button class="bt-emp'+(_boardEmpFilter===e.id?' on':'')+'" onclick="_setBoardEmpFilter(\''+e.id+'\')">'+
-      '<span style="display:inline-flex;width:26px;height:26px;border-radius:8px;background:'+e.color+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;margin-bottom:5px">'+e.initial+'</span>'+
-      '<div style="font-size:12.5px;font-weight:800;color:var(--text)">'+esc(e.name)+'</div>'+
-      '<div style="font-size:10.5px;color:var(--text3);margin-top:2px">진행 '+nd.length+(eu?' · 🚨 '+eu:'')+' · 완료 '+dn+'</div>'+
-      '<div style="font-size:10px;font-weight:800;margin-top:3px;color:'+(ls&&ls.ok?'#16a34a':'#dc2626')+'">'+(ls?'👁 '+ls.txt+' 접속':'접속 기록 없음')+'</div></button>';
+      '<span style="display:inline-flex;width:30px;height:30px;border-radius:9px;background:'+e.color+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-bottom:5px">'+e.initial+'</span>'+
+      '<div style="font-size:14px;font-weight:800;color:var(--text)">'+esc(e.name)+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-top:2px">진행 '+nd.length+(eu?' · 🚨 '+eu:'')+' · 완료 '+dn+'</div>'+
+      '<div style="font-size:11.5px;font-weight:800;margin-top:3px;color:'+(ls&&ls.ok?'#16a34a':'#dc2626')+'">'+(ls?'👁 '+ls.txt+' 접속':'접속 기록 없음')+'</div></button>';
   });
   h+='</div>';
   return h;
@@ -5420,12 +5422,12 @@ function _btRow(t){
   var dueBad=dueT&&(dueT.cls==='tag-red'||dueT.cls==='tag-orange');
   return '<tr class="bt-row" '+(isArch?'':'onclick="openBoardTask(\''+t.id+'\')" ')+'style="'+(stale&&!dn?'opacity:.62':'')+'">'+chk+
     '<td style="max-width:340px"><span style="font-weight:'+((un||t.priority==='high')?'800':'600')+';'+(dn?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+((un&&!dn)?' <span class="bt-badge" style="background:#ede9fe;color:#6d28d9">지시</span>':'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</td>'+
-    '<td style="white-space:nowrap"><span style="display:inline-flex;width:20px;height:20px;border-radius:6px;background:'+ec+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:9.5px;vertical-align:middle;margin-right:5px">'+ei+'</span><span style="font-size:12px;font-weight:700;color:var(--text2)">'+esc(en)+(extra?' 외 '+extra:'')+'</span></td>'+
+    '<td style="white-space:nowrap"><span style="display:inline-flex;width:24px;height:24px;border-radius:7px;background:'+ec+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;vertical-align:middle;margin-right:6px">'+ei+'</span><span style="font-size:13.5px;font-weight:700;color:var(--text2)">'+esc(en)+(extra?' 외 '+extra:'')+'</span></td>'+
     '<td>'+(dueT?'<span class="bt-badge" style="background:'+(dueBad?'#fee2e2':'#f1f5f9')+';color:'+(dueBad?'#b91c1c':'#475569')+'">'+dueT.text+'</span>':'<span style="color:var(--text3)">—</span>')+'</td>'+
-    '<td class="bt-hm"><span class="bt-pbar"><i style="width:'+Math.min(100,prog)+'%"></i></span><span style="font-size:11px;color:var(--text3)">'+prog+'%</span></td>'+
+    '<td class="bt-hm"><span class="bt-pbar"><i style="width:'+Math.min(100,prog)+'%"></i></span><span style="font-size:12.5px;color:var(--text3)">'+prog+'%</span></td>'+
     '<td><span class="bt-badge" style="background:'+st[1]+';color:'+st[2]+'">'+st[0]+'</span></td>'+
     '<td>'+(isArch?'<button onclick="event.stopPropagation();unarchiveTask(\''+t.id+'\')" style="border:1px solid var(--border);background:#fff;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">↩ 복구</button>':_btSeenCell(t))+'</td>'+
-    '<td class="bt-hm" style="font-size:11px;color:var(--text3)">'+(cmt?'💬 '+cmt:'—')+'</td></tr>';
+    '<td class="bt-hm" style="font-size:13px;color:var(--text3)">'+(cmt?'💬 '+cmt:'—')+'</td></tr>';
 }
 function _boardTableHtml(){
   var allPool=_tablePool();
@@ -5444,7 +5446,7 @@ function _boardTableHtml(){
     done:pool.filter(isDoneTask).length,
     arch:arch.length
   };
-  var h='<style>#boardTableWrap{padding-bottom:60px}.bt-tbl{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;min-width:720px}.bt-tbl th{text-align:left;font-size:11px;color:var(--text3);font-weight:800;padding:9px 10px;border-bottom:2px solid var(--border);background:#fafbfd;white-space:nowrap}.bt-tbl td{padding:9px 10px;border-bottom:1px solid #f1f3f8;vertical-align:middle}.bt-row:hover{background:#f8faff;cursor:pointer}.bt-sec td{background:#fafbfd;font-size:11px;font-weight:800;color:var(--text2);padding:6px 10px}.bt-badge{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;white-space:nowrap;display:inline-block}.bt-pbar{display:inline-block;width:64px;height:6px;background:#eef0f5;border-radius:3px;vertical-align:middle;margin-right:6px}.bt-pbar i{display:block;height:100%;border-radius:3px;background:var(--primary)}.bt-chip{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}.bt-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}.bt-emp{min-width:118px;background:#fff;border:1.5px solid #e6ebf5;border-radius:12px;padding:9px 11px;cursor:pointer;flex-shrink:0;font-family:inherit;text-align:left}.bt-emp.on{border-color:var(--primary);background:#f6f5ff}@media(max-width:860px){.bt-hm{display:none}.bt-tbl{min-width:0}}</style>';
+  var h='<style>#boardTableWrap{padding-bottom:60px}.bt-tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff;min-width:720px}.bt-tbl th{text-align:left;font-size:12.5px;color:var(--text3);font-weight:800;padding:10px 12px;border-bottom:2px solid var(--border);background:#fafbfd;white-space:nowrap}.bt-tbl td{padding:12px;border-bottom:1px solid #f1f3f8;vertical-align:middle}.bt-row:hover{background:#f8faff;cursor:pointer}.bt-sec td{background:#fafbfd;font-size:12.5px;font-weight:800;color:var(--text2);padding:7px 12px}.bt-badge{font-size:12px;font-weight:800;border-radius:6px;padding:3px 9px;white-space:nowrap;display:inline-block}.bt-pbar{display:inline-block;width:80px;height:7px;background:#eef0f5;border-radius:3px;vertical-align:middle;margin-right:6px}.bt-pbar i{display:block;height:100%;border-radius:3px;background:var(--primary)}.bt-chip{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;font-size:13.5px;font-weight:700;color:var(--text2);cursor:pointer;font-family:inherit}.bt-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}.bt-emp{min-width:134px;background:#fff;border:1.5px solid #e6ebf5;border-radius:12px;padding:10px 13px;cursor:pointer;flex-shrink:0;font-family:inherit;text-align:left}.bt-emp.on{border-color:var(--primary);background:#f6f5ff}@media(max-width:860px){.bt-hm{display:none}.bt-tbl{min-width:0}}</style>';
   h+=_btStrip(tasks);
   h+=_btCleanBanner(poolNoEmp.filter(isStaleTask).length);
   h+=_btFbar(counts);
