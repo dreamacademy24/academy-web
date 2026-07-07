@@ -892,8 +892,8 @@ export default function AdminBookingsPage(){
         </span>
       </div>
       {(()=>{const un=searchedList.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
-      <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%'}}><thead><tr>
-        <th style={{width:180}}>예약번호</th><th style={{width:110}}>상태</th><th style={{width:100}}>담당자</th><th style={{width:100}}>케어담당</th><th style={{width:140}}>예약자명</th><th style={{width:180}}>학생이름</th><th style={{width:100}}>체크인</th><th style={{width:100}}>숙소</th><th style={{width:90}}>접수일</th><th>액션</th>
+      <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%',minWidth:1360}}><thead><tr>
+        <th style={{width:170}}>예약번호</th><th style={{width:105}}>상태</th><th style={{width:95}}>담당자</th><th style={{width:95}}>케어담당</th><th style={{width:130}}>예약자명</th><th style={{width:170}}>학생이름</th><th style={{width:95}}>체크인</th><th style={{width:95}}>숙소</th><th style={{width:85}}>접수일</th><th style={{width:320}}>액션</th>
       </tr></thead><tbody>
         {searchedList.length===0?<tr><td colSpan={9} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
         searchedList.map(b=>{
