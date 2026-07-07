@@ -44,6 +44,33 @@ export default function MoriPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [guestsLoaded, setGuestsLoaded] = useState(false);
   const [weekClosed, setWeekClosed] = useState<{ by: string; at: string } | null>(null);
+  const [acadWeek, setAcadWeek] = useState<Record<string, { lunch: string[]; snack: string[] }>>({});
+  const [recShuffle, setRecShuffle] = useState(0);
+  /* 아카데미 월식단(학생 식단)에서 이번 주 점심·간식 가져오기 */
+  async function loadAcadWeek(ws: string): Promise<Record<string, { lunch: string[]; snack: string[] }>> {
+    try {
+      const dates = Array.from({ length: 5 }, (_, i) => addD(ws, i));
+      const monthKeys = Array.from(new Set(dates.map(d => d.slice(0, 7)))).map(m => m + "-01");
+      const { data } = await supabase.from("meal_menus").select("menu_date, meal_data").eq("kind", "academy").in("menu_date", monthKeys);
+      const map: Record<string, { lunch: string[]; snack: string[] }> = {};
+      for (const m of (data || []) as any[]) {
+        const ym = String(m.menu_date).slice(0, 7);
+        for (const day of (m.meal_data || []) as any[]) {
+          const ds = ym + "-" + String(day.date).padStart(2, "0");
+          if (dates.includes(ds)) map[ds] = { lunch: Array.isArray(day.lunch) ? day.lunch : [], snack: Array.isArray(day.snack) ? day.snack : [] };
+        }
+      }
+      setAcadWeek(map);
+      return map;
+    } catch { setAcadWeek({}); return {}; }
+  }
+  function applyAcadLunch(p: any, acad: Record<string, { lunch: string[]; snack: string[] }>) {
+    for (const [dt, day] of Object.entries(p as Record<string, any>)) {
+      const a = acad[dt];
+      if (a && a.lunch && a.lunch.length) { day.점심 = [...a.lunch]; day.acadLunch = true; }
+    }
+    return p;
+  }
   const [viewMode, setViewMode] = useState<"day" | "table">("table");
   const [dayIdx, setDayIdx] = useState(0);
   const [autoFixed, setAutoFixed] = useState(0);
@@ -62,7 +89,7 @@ export default function MoriPage() {
   }, []);
 
   useEffect(() => { if (authed) loadBase(); }, [authed]);
-  useEffect(() => { if (authed) { loadWeek(weekStart); loadGuests(); } }, [authed, weekStart]);
+  useEffect(() => { if (authed) { loadWeek(weekStart); loadGuests(); loadAcadWeek(weekStart); } }, [authed, weekStart]);
 
   async function loadBase() {
     const [it, fs, sv, wk] = await Promise.all([
@@ -199,8 +226,10 @@ export default function MoriPage() {
   }, [guestsLoaded, guests, servings, roundNo, avoidStart, weekStart, servedDates]);
 
   /* ───────── 액션 ───────── */
-  function generate() {
-    setPlan(genWeek(weekStart, items, servings, sets, setLastUsed, windowDays));
+  async function generate() {
+    const p = genWeek(weekStart, items, servings, sets, setLastUsed, windowDays);
+    const acad = Object.keys(acadWeek).length ? acadWeek : await loadAcadWeek(weekStart);
+    setPlan(applyAcadLunch(p, acad));
     setAutoFixed(0); setViewMode("day"); setDayIdx(0);
   }
 
@@ -265,6 +294,9 @@ export default function MoriPage() {
       }
     }
     setAutoFixed(fixed);
+    // 재사용 시에도 점심은 이번 주 아카데미 월식단으로 교체
+    const acad = Object.keys(acadWeek).length ? acadWeek : await loadAcadWeek(weekStart);
+    applyAcadLunch(newPlan, acad);
     setPlan(newPlan);
     setViewMode("day"); setDayIdx(0);
   }
@@ -614,7 +646,13 @@ export default function MoriPage() {
                   ))}
                 </div>
                 {section("아침", "아침")}
-                {section("점심", "점심 (픽스 세트)")}
+                {section("점심", (day as any).acadLunch ? "점심 (🎓 아카데미 월식단 · 수정 가능)" : "점심 (픽스 세트)")}
+                {acadWeek[d] && acadWeek[d].snack.length > 0 && (
+                  <div style={{ margin: "-10px 0 14px", fontSize: 12.5, fontWeight: 700, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "6px 10px" }}>🍪 간식데이 (아카데미 월식단): {acadWeek[d].snack.join(", ")}</div>
+                )}
+                {!(day as any).acadLunch && Object.keys(acadWeek).length === 0 && (
+                  <div style={{ margin: "-10px 0 14px", fontSize: 11.5, color: "#99a" }}>이 주 아카데미 월식단이 없어 픽스 세트를 사용해요 (학생 식단 업로드·인식 후 다시 조합)</div>
+                )}
                 {section("저녁어른", "저녁 · 어른", true)}
                 {section("저녁아동", "저녁 · 아동 (어른 재추천 시 자동 연동)")}
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
@@ -632,7 +670,9 @@ export default function MoriPage() {
                 </div>
                 </div>
                 <div style={{ width: 252, flexShrink: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#556" }}>💡 그외 추천 <span style={{ fontWeight: 400, fontSize: 12, color: "#99a" }}>(중복 없는 것만 · 누르면 추가)</span></div>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: "#556", display: "flex", alignItems: "center", gap: 8 }}>💡 그외 추천 <span style={{ fontWeight: 400, fontSize: 12, color: "#99a" }}>(중복 없는 것만 · 누르면 추가)</span>
+                    <button onClick={() => setRecShuffle(v => v + 1)} title="다른 메뉴 추천 보기" style={{ border: "1px solid #ccd", background: "#fff", borderRadius: 8, padding: "2px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", color: "#3a47a8" }}>🔄 다른 추천</button>
+                  </div>
                   <div style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "10px 12px" }}>
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: "#556", marginBottom: 6 }}>➕ 새 메뉴 등록</div>
                     <input placeholder="메뉴 이름" value={quickAdd.name} onChange={e => setQuickAdd(q => ({ ...q, name: e.target.value }))} onKeyDown={e => { if (e.key === "Enter") quickAddItem(); }}
@@ -651,7 +691,9 @@ export default function MoriPage() {
                     </div>
                   </div>
                   {recGroups.map(g => {
-                    const rows = recPool.filter(x => g.roles.includes(x.i.role)).slice(0, 5);
+                    const all = recPool.filter(x => g.roles.includes(x.i.role));
+                    const off = all.length > 5 ? (recShuffle * 5) % all.length : 0;
+                    const rows = all.slice(off).concat(all.slice(0, off)).slice(0, 5);
                     if (!rows.length) return null;
                     return (
                       <div key={g.label} style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "8px 10px" }}>
