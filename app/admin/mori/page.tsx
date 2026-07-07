@@ -12,7 +12,7 @@ import * as XLSX from "xlsx";
 import {
   Item, FixedSet, Serving, WeekPlan, DayPlan, MEALS, DUP_WINDOW,
   addD, diffDays, mondayOf, dowOf, nk, genWeek, genBreakfast, genDinner, planOccurrences,
-  emptyDay, migrateDay,
+  emptyDay, migrateDay, mildOf,
 } from "./gen";
 
 const ROUND_EPOCH = "2026-05-04"; // 1회차 시작 월요일
@@ -43,6 +43,9 @@ export default function MoriPage() {
   const [allWeeks, setAllWeeks] = useState<{ week_start: string; plan: WeekPlan }[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
   const [guestsLoaded, setGuestsLoaded] = useState(false);
+  const [viewMode, setViewMode] = useState<"day" | "table">("table");
+  const [dayIdx, setDayIdx] = useState(0);
+  const [autoFixed, setAutoFixed] = useState(0);
   const [picker, setPicker] = useState<Picker>(null);
   const [pickerTab, setPickerTab] = useState<"suggest" | "fresh">("suggest");
   const [pickerPage, setPickerPage] = useState(0);
@@ -186,6 +189,7 @@ export default function MoriPage() {
   /* ───────── 액션 ───────── */
   function generate() {
     setPlan(genWeek(weekStart, items, servings, sets, setLastUsed, windowDays));
+    setAutoFixed(0); setViewMode("day"); setDayIdx(0);
   }
 
   async function loadRound(r: number) {
@@ -209,7 +213,48 @@ export default function MoriPage() {
         newPlan[to] = day;
       }
     }
+    // 회피 창 안에서 이미 나온 메뉴는 자동 교체 (아침/저녁, 점심 픽스는 유지)
+    let fixed = 0;
+    if (windowDays > 0) {
+      const inPlan = new Set<string>();
+      for (const day of Object.values(newPlan)) for (const m of MEALS) for (const it of (day as any)[m] || []) inPlan.add(nk(it));
+      for (const date of Object.keys(newPlan)) {
+        const day = newPlan[date];
+        for (const meal of ["아침", "저녁어른"] as const) {
+          const arr = (day as any)[meal] as string[];
+          for (let idx = 0; idx < arr.length; idx++) {
+            const oldName = arr[idx];
+            const raw = oldName.startsWith("밥/") ? oldName.slice(2) : oldName;
+            const item = items.find(i => nk(i.name) === nk(raw));
+            if (item?.is_staple) continue;
+            const ago = agoFor(raw, date);
+            if (ago === null || ago > windowDays) continue;
+            const cands = items
+              .filter(c => c.active && !c.is_staple && (item ? c.role === item.role : false) && !inPlan.has(nk(c.name)))
+              .map(c => ({ c, a: agoFor(c.name, date) }))
+              .filter(x => x.a === null || x.a > windowDays)
+              .sort((x, y) => (y.a ?? 99999) - (x.a ?? 99999));
+            if (!cands.length) continue;
+            const nn = cands[0].c.name;
+            inPlan.add(nk(nn));
+            arr[idx] = oldName.startsWith("밥/") ? `밥/${nn}` : nn;
+            fixed++;
+            if (meal === "저녁어른") {
+              const carr = day.저녁아동;
+              const oldMild = mildOf(items, raw);
+              const ci = carr.findIndex(x => nk(x.replace(/^밥\//, "")) === nk(raw) || nk(x.replace(/^밥\//, "")) === nk(oldMild));
+              if (ci >= 0) {
+                const nm = mildOf(items, nn);
+                carr[ci] = arr[idx].startsWith("밥/") ? `밥/${nm}` : nm;
+              }
+            }
+          }
+        }
+      }
+    }
+    setAutoFixed(fixed);
     setPlan(newPlan);
+    setViewMode("day"); setDayIdx(0);
   }
 
   function regenCell(date: string, kind: "아침" | "저녁") {
@@ -381,6 +426,12 @@ export default function MoriPage() {
             <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 10, background: status === "confirmed" ? "#d9f2dd" : status === "draft" ? "#fff3d6" : "#eee", color: "#333" }}>
               {status === "confirmed" ? "✅ 확정됨" : status === "draft" ? "📝 임시저장" : "미작성"}
             </span>
+            {plan && (
+              <span style={{ display: "inline-flex", gap: 4, marginLeft: 4 }}>
+                <button onClick={() => setViewMode("day")} style={{ ...btn(viewMode === "day" ? "#3a47a8" : "#c3c8e4"), padding: "5px 10px", fontSize: 13 }}>📅 하루씩</button>
+                <button onClick={() => setViewMode("table")} style={{ ...btn(viewMode === "table" ? "#3a47a8" : "#c3c8e4"), padding: "5px 10px", fontSize: 13 }}>📋 전체 표</button>
+              </span>
+            )}
             <div style={{ flex: 1 }} />
             <button onClick={generate} style={btn("#3a47a8")}>⚡ 새로 조합</button>
             {plan && <button onClick={() => save()} style={btn("#5a67c8")}>{busy || "저장"}</button>}
@@ -388,13 +439,33 @@ export default function MoriPage() {
             {plan && <button onClick={exportXlsx} style={btn("#1d6f42")}>📥 엑셀</button>}
           </div>
 
-          <div style={{ background: "#f7f8fd", border: "1px solid #dde", borderRadius: 12, padding: "10px 14px", marginBottom: 10, fontSize: 13.5, lineHeight: 1.7 }}>
+          <div style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "12px 16px", marginBottom: 10, fontSize: 13.5 }}>
             {guests.length > 0 ? (
               <>
-                <b>이번 주 식사 손님 {guests.length}팀</b> — {guests.map(g => `${g.name}(${weekOf(g)})`).join(", ")}
-                <span style={{ marginLeft: 10, background: windowDays > 0 ? "#fff3d6" : "#d9f2dd", padding: "2px 10px", borderRadius: 8, whiteSpace: "nowrap" }}>
-                  {windowDays > 0 ? `회피 범위: ${avoidStart} 이후 ${windowDays}일치 메뉴` : "전원 신규 — 과거 식단 그대로 재사용 가능"}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                  <b>👥 이번 주({roundNo}회차) 식사 손님 {guests.length}팀</b>
+                  <span style={{ background: windowDays > 0 ? "#fff3d6" : "#d9f2dd", padding: "2px 10px", borderRadius: 8, fontSize: 12.5 }}>
+                    {windowDays > 0 ? `회피 범위: ${avoidStart} 이후 ${windowDays}일치 메뉴` : "전원 신규 — 과거 식단 그대로 재사용 가능"}
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {guests.map((g, gi) => {
+                    const total = Math.max(1, diffDays(g.from, g.to));
+                    const eaten = Math.min(Math.max(diffDays(g.from, weekStart), 0), total);
+                    const isNew = g.from >= weekStart;
+                    return (
+                      <div key={gi} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 130, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name} {Math.round(total / 7)}주</span>
+                        <div style={{ flex: 1, height: 12, borderRadius: 6, background: "#eceef8", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.max((eaten / total) * 100, isNew ? 3 : 0)}%`, height: "100%", background: isNew ? "#2e9e52" : "#5a67c8" }} />
+                        </div>
+                        <span style={{ width: 140, fontSize: 12, color: isNew ? "#2e9e52" : "#667", fontWeight: isNew ? 700 : 400 }}>
+                          {isNew ? "신규 · 이력 없음" : `${weekOf(g)} · ${Math.floor(eaten / 7)}주치 먹음`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             ) : guestsLoaded ? (
               <>이번 주 식사 손님(올인원)을 찾지 못했어요 — 기본 {DUP_WINDOW}일 회피로 동작해요.</>
@@ -402,6 +473,12 @@ export default function MoriPage() {
               <>손님 정보 불러오는 중…</>
             )}
           </div>
+
+          {autoFixed > 0 && (
+            <div style={{ background: "#eefaf0", border: "1px solid #bfe5c8", color: "#1d7a35", borderRadius: 10, padding: "8px 14px", marginBottom: 10, fontSize: 13.5 }}>
+              ✅ 회피 범위 안에서 최근에 또 나왔던 메뉴 {autoFixed}개를 자동으로 교체했어요. 노란 칩이 남아 있으면 점심 픽스 세트 항목이에요.
+            </div>
+          )}
 
           {reuse.rec !== null && status !== "confirmed" && (
             <div style={{ border: "2px solid #3a47a8", background: "#eef2ff", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 13.5, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -423,7 +500,87 @@ export default function MoriPage() {
             </div>
           )}
 
-          {plan && (
+          {plan && viewMode === "day" && (() => {
+            const d = dates[Math.min(dayIdx, 4)];
+            const day = plan[d] || emptyDay();
+            const doneCnt = dates.filter(x => plan[x]?.done).length;
+            const bigRow = (meal: string, it: string, idx: number) => {
+              const raw = it.startsWith("밥/") ? it.slice(2) : it;
+              const item = items.find(x => nk(x.name) === nk(raw));
+              const ago = item?.is_staple ? null : agoFor(raw, d);
+              const warn = ago !== null && windowDays > 0 && ago <= windowDays;
+              return (
+                <div key={idx} onClick={() => openPicker({ date: d, meal, index: idx })}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "12px 16px", border: warn ? "1.5px solid #e6b84c" : "1.5px solid #d5d9ee", background: warn ? "#fffaf0" : "#fff", borderRadius: 12, cursor: "pointer", fontSize: 15, marginBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{item?.spicy ? "🌶 " : ""}{it}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: ago === null ? "#9aa" : warn ? "#c2660a" : "#64748b" }}>{item?.is_staple ? "기본찬" : ago === null ? "처음" : `${ago}일 만에`}</span>
+                    <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#bbc", fontWeight: 700 }}>×</span>
+                  </span>
+                </div>
+              );
+            };
+            const section = (meal: string, label: string, regen?: boolean) => (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 800, color: "#556" }}>{label}</span>
+                  <button onClick={() => openPicker({ date: d, meal, index: null })} style={{ background: "none", border: "1px dashed #aab", borderRadius: 8, padding: "1px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>+ 추가</button>
+                  {regen && <button onClick={() => regenCell(d, meal === "아침" ? "아침" : "저녁")} style={{ background: "none", border: "1px solid #aab", borderRadius: 8, padding: "1px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>🔄 다시 추천</button>}
+                </div>
+                {meal === "점심" && (
+                  <select value={day.fixedSet ?? ""} onChange={e => setFixedSet(d, +e.target.value)}
+                    style={{ width: "100%", marginBottom: 8, padding: "6px 8px", fontSize: 13, border: "1px solid #ccd", borderRadius: 8 }}>
+                    <option value="">픽스 세트 선택…</option>
+                    {sets.map(s => {
+                      const lu = setLastUsed.get(s.set_no);
+                      return <option key={s.set_no} value={s.set_no}>{s.set_no}회 — {s.lunch[1] || s.lunch[0]}{lu ? ` (${lu.slice(5)})` : " (미사용)"}</option>;
+                    })}
+                  </select>
+                )}
+                {((day as any)[meal] || []).map((it: string, idx: number) => bigRow(meal, it, idx))}
+                {!((day as any)[meal] || []).length && <div style={{ color: "#aab", fontSize: 13, padding: "6px 2px" }}>비어 있음 — + 추가로 채워주세요</div>}
+              </div>
+            );
+            return (
+              <div style={{ maxWidth: 560, margin: "0 auto", background: "#fff", border: "1px solid #dde", borderRadius: 16, padding: "18px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{d.slice(5).replace("-", "/")} ({dowOf(d)})</span>
+                  <span style={{ fontSize: 13, color: "#667" }}>{doneCnt} / 5일 확정</span>
+                </div>
+                <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+                  {dates.map((x, i) => (
+                    <div key={x} onClick={() => setDayIdx(i)} title={x}
+                      style={{ flex: 1, height: 8, borderRadius: 4, cursor: "pointer", background: plan[x]?.done ? "#2e9e52" : i === dayIdx ? "#3a47a8" : "#dde" }} />
+                  ))}
+                </div>
+                {section("아침", "아침")}
+                {section("점심", "점심 (픽스 세트)")}
+                {section("저녁어른", "저녁 · 어른", true)}
+                {section("저녁아동", "저녁 · 아동 (어른 재추천 시 자동 연동)")}
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  <button onClick={() => setDayIdx(i => Math.max(0, i - 1))} disabled={dayIdx === 0}
+                    style={{ flex: 1, border: "1px solid #ccd", background: "#fff", borderRadius: 10, padding: "12px 0", fontSize: 14.5, fontWeight: 700, color: dayIdx === 0 ? "#bbc" : "#3a47a8", cursor: "pointer" }}>◀ 이전 날</button>
+                  <button onClick={() => {
+                    const np = { ...plan, [d]: { ...day, done: true } };
+                    setPlan(np);
+                    if (dayIdx < 4) setDayIdx(dayIdx + 1);
+                    else setViewMode("table");
+                  }}
+                    style={{ flex: 2, border: "none", background: "#3a47a8", color: "#fff", borderRadius: 10, padding: "12px 0", fontSize: 14.5, fontWeight: 800, cursor: "pointer" }}>
+                    {dayIdx < 4 ? "이 날 확정, 다음 날 ▶" : "다 됐어요 — 전체 검토하기 ▶"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {plan && viewMode === "table" && dates.every(x => plan[x]?.done) && status !== "confirmed" && (
+            <div style={{ background: "#eef2ff", border: "1px solid #c5cdf0", borderRadius: 10, padding: "8px 14px", marginBottom: 10, fontSize: 13.5, color: "#3a47a8", fontWeight: 700 }}>
+              5일 모두 하루 확정이 끝났어요 — 전체 표를 검토하고 위의 <b>확정</b> 버튼을 눌러 마무리하세요.
+            </div>
+          )}
+
+          {plan && viewMode === "table" && (
             <table style={{ borderCollapse: "collapse", width: "100%" }}>
               <thead>
                 <tr>
