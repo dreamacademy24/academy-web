@@ -576,6 +576,16 @@ export default function AdminBookingsPage(){
       special_request:newForm.special_request.trim()||null,
     };
     if(isCommuteNP)payload.booking_type='commute';
+    // 🏠 드림하우스 만실 경고 (어드민은 확인 후 진행 가능)
+    if(!isCommuteNP&&String(payload.accom_type||"").includes("드림하우스")&&payload.checkin_date&&payload.checkout_date){
+      try{
+        const av=await fetch(`/api/dreamhouse/availability?ci=${payload.checkin_date}&co=${payload.checkout_date}`).then(r=>r.json());
+        if(Array.isArray(av.fullDates)&&av.fullDates.length>0){
+          const list=av.fullDates.slice(0,5).map((d:string)=>d.slice(5).replace("-","/")).join(", ")+(av.fullDates.length>5?` 외 ${av.fullDates.length-5}일`:"");
+          if(!confirm(`⚠️ 만실 경고 — 이 기간 드림하우스가 가득 찼습니다!\n만실 날짜: ${list}\n\n그래도 접수할까요? (오버부킹 주의)`)){setSavingNew(false);return;}
+        }
+      }catch{/* 확인 실패 시 진행 */}
+    }
     // 동명이인 자동 구분 — 활성 예약에 같은 이름 있으면 B, C… 자동 부여
     try{
       const uniq=await ensureUniqueBookerName(supabase as never,payload.booker_name);

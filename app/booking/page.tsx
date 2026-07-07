@@ -177,6 +177,18 @@ export default function BookingPage() {
     const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark";
     const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine";
 
+    // 🏠 드림하우스 만실 체크 — 접수 단계에서 오버부킹 예방
+    if (usesDH && dates.checkIn && dates.checkOut) {
+      try {
+        const av = await fetch(`/api/dreamhouse/availability?ci=${dates.checkIn}&co=${dates.checkOut}`).then(r => r.json());
+        if (Array.isArray(av.fullDates) && av.fullDates.length > 0) {
+          const list = av.fullDates.slice(0, 5).map((d: string) => d.slice(5).replace("-", "/")).join(", ") + (av.fullDates.length > 5 ? ` 외 ${av.fullDates.length - 5}일` : "");
+          alert(`⚠️ 죄송합니다 — 선택하신 기간 중 아래 날짜는 드림하우스 예약이 가득 찼습니다.\n\n만실: ${list}\n\n접수 전에 관리자에게 확인을 부탁드려요.\n(카카오 채널 또는 드림아카데미 상담 창구로 문의해주세요)`);
+          setLoading(false);
+          return;
+        }
+      } catch { /* 확인 실패 시 접수는 진행 (차단하지 않음) */ }
+    }
     // 동명이인 자동 구분 (활성 예약에 같은 이름 있으면 B, C… 자동 부여)
     const uniq = await ensureUniqueBookerName(supabase as never, booker.name);
     if (uniq.changed) alert(`같은 이름의 예약이 이미 있어 "${uniq.name}"(으)로 접수됩니다.\n(동명이인 구분용 — 서비스는 동일하게 제공돼요)`);
