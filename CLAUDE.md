@@ -2008,3 +2008,7 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 원인: 직원 등록 폼 유형 기본값이 '추가 픽업'이라, 드랍(드림하우스→공항 22:30) 등록 시 유형을 안 바꿔 extra_pickup으로 저장됨
 - 데이터: 45acab2d… 건 extra_pickup → extra_drop 수정 완료 (달력 표기 정상화)
 - 예방(e81faed): 등록 시 도착=공항인데 픽업 / 출발=공항인데 드랍이면 확인창으로 자동 교정 제안
+
+## 2026-07-07 — 포털 튜터 신청 기간 제한 (9ffc8a3)
+- 규칙: 방문 튜터 = 드림하우스 체류 중에만. 리조트(제이파크·큐브) 단독 = 신청 차단(빨간 배너+버튼 비활성), 콤보 = 드하 seg 구간 날짜만 (min/max·제출 가드·파란 안내 배너)
+- 구현: /api/bookings/[id]로 accom_type·seg 조회 → bookingInfo.tutor_allowed/tutor_start/tutor_end. 통학형은 현행 유지 (메이 확인 필요 시 조정)
