@@ -96,6 +96,28 @@ export default function ResortContractPage() {
 
       {lang === "en" ? (
         <div className="rc-card">
+          {doc === "long" && (
+            <div style={{ border: "1.5px solid #f59e0b", background: "#fffbeb", borderRadius: 12, padding: "16px 18px", marginBottom: 16 }}>
+              <div className="rc-h" style={{ marginBottom: 4 }}>📌 AMENDMENT — Dated July 9, 2026 <span className="rc-badge" style={{ background: "#fef3c7", color: "#92400e" }}>Valid Jul 8, 2026 ~ Mar 31, 2027</span></div>
+              <p style={{ fontSize: 12, color: "#92400e", margin: "0 0 10px", fontWeight: 700 }}>Mutually amended meal rates — forms part of the original Long Stay contract. All other arrangements remain the same.</p>
+              <div style={{ overflowX: "auto" }}>
+                <table className="rc-t">
+                  <thead><tr><th>ABALONE BUFFET (NETT)</th><th>Walk-in Adult</th><th>Walk-in Kids 7~12</th><th style={{ color: "#1a6fc4" }}>Long Stay Adult</th><th style={{ color: "#1a6fc4" }}>Long Stay Kids 7~12</th></tr></thead>
+                  <tbody>
+                    <tr><td>Breakfast (daily)</td><td>{peso(1300)}</td><td>{peso(650)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(650)}</td><td>{peso(325)}</td></tr>
+                    <tr><td>Lunch (Sat &amp; Sun only)</td><td>{peso(2000)}</td><td>{peso(1000)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1000)}</td><td>{peso(500)}</td></tr>
+                    <tr><td>Dinner (daily)</td><td>{peso(2500)}</td><td>{peso(1250)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1250)}</td><td>{peso(625)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <ul className="rc-ul" style={{ marginTop: 8, fontSize: 12.5 }}>
+                <li>Kids 0~6 yrs free of charge</li>
+                <li>PEAK SURCHARGE — Dec 28, 2026 ~ Jan 2, 2027 (New Year): PHP 4,500/night · Dec 31, 2026 Gala dinner (compulsory): PHP 5,500 Adult / PHP 2,750 Child</li>
+                <li>Long Stay rates are exempt from all surcharges, except the year-end surcharge (applied equally across all markets)</li>
+              </ul>
+              <p style={{ fontSize: 11.5, color: "#a16207", margin: "8px 0 0" }}>Confirmed by Ms. Britney Na (Director of Sales, Jpark) · Accepted by Ms. Chohee Oh (President, Dream Academy) — Jul 09, 2026</p>
+            </div>
+          )}
           <div className="rc-h">📄 {doc === "long" ? "장기 계약 원본 (5장)" : "단기 계약 원본 (3장)"} <span className="rc-badge">클릭하면 크게 보기</span></div>
           {scans.map(src => (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -181,20 +203,23 @@ export default function ResortContractPage() {
             </ul>
           </div>
           <div className="rc-card">
-            <div className="rc-h">🍽 식사 계약 요금 (Abalone 뷔페 · TA 요금 / 1인)</div>
+            <div className="rc-h">🍽 식사 계약 요금 (Abalone 뷔페 · NETT / 1인) <span className="rc-badge" style={{ background: "#fef3c7", color: "#92400e" }}>📌 2026-07-09 상호 수정(Amendment) 반영</span></div>
+            <p style={{ fontSize: 12, color: "#92400e", fontWeight: 700, margin: "0 0 8px" }}>수정 요금 유효기간: 2026-07-08 ~ 2027-03-31 · 그 외 계약 조건은 기존과 동일</p>
             <div style={{ overflowX: "auto" }}>
               <table className="rc-t">
-                <thead><tr><th>구분</th><th></th><th>일반가 성인</th><th>계약가 성인</th><th>계약가 어린이 7~12세</th></tr></thead>
+                <thead><tr><th>Abalone 뷔페</th><th>일반가 성인</th><th>일반가 어린이 7~12세</th><th style={{ color: "#1a6fc4" }}>장기투숙 성인</th><th style={{ color: "#1a6fc4" }}>장기투숙 어린이 7~12세</th></tr></thead>
                 <tbody>
-                  <tr><td>조식 (매일)</td><td></td><td>{peso(1300)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1100)}</td><td>{peso(440)}</td></tr>
-                  <tr><td>중식 (주말만)</td><td></td><td>{peso(2000)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1650)}</td><td>{peso(660)}</td></tr>
-                  <tr><td>석식 (매일)</td><td></td><td>{peso(2500)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1925)}</td><td>{peso(825)}</td></tr>
-                  <tr><td>세트메뉴 (Coral·Maru·Ching Hai)</td><td></td><td>{peso(2000)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1375)}</td><td>{peso(660)}</td></tr>
+                  <tr><td>조식 (매일)</td><td>{peso(1300)}</td><td>{peso(650)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(650)}</td><td>{peso(325)}</td></tr>
+                  <tr><td>중식 (토·일만)</td><td>{peso(2000)}</td><td>{peso(1000)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1000)}</td><td>{peso(500)}</td></tr>
+                  <tr><td>석식 (매일)</td><td>{peso(2500)}</td><td>{peso(1250)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1250)}</td><td>{peso(625)}</td></tr>
+                  <tr><td>세트메뉴 (Coral·Maru·Ching Hai) — 기존 계약 유지</td><td>{peso(2000)}</td><td>{peso(660)}</td><td style={{ fontWeight: 800, color: "#1a6fc4" }}>{peso(1375)}</td><td>{peso(660)}</td></tr>
                 </tbody>
               </table>
             </div>
             <ul className="rc-ul" style={{ marginTop: 8 }}>
-              <li>0~6세 무료 · 블랙아웃: 크리스마스(12/24·25), 연말연시(12/31·1/1)</li>
+              <li>0~6세 무료 · 어린이 요금 = 7~12세 기준</li>
+              <li><b>연말 성수기 서차지</b>: 2026-12-28 ~ 2027-01-02 (New Year) 1박 PHP 4,500 · 2026-12-31 갈라디너 의무 참석 성인 PHP 5,500 / 어린이 PHP 2,750</li>
+              <li>장기투숙(Long Stay) 요금은 연말 서차지를 제외한 모든 서차지 면제</li>
               <li>TA 계약 식사요금은 여행사(드림)가 예약·결제한 경우만 적용, 성인 15명당 1명 무료(가이드·기사 등)</li>
               <li>Maru 화요일 휴무 · Ching Hai 목요일 휴무 · Abalone/Coral/Galo 매일 운영</li>
             </ul>
