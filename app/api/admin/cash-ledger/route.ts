@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { entry_date, type, category, description, amount, guest_name, booking_id, receipt_files, recorded_by, ref_id } = body;
+    const { entry_date, type, category, description, amount, guest_name, booking_id, receipt_files, recorded_by, ref_id, house_no } = body;
 
     if (!type || !amount) return NextResponse.json({ error: "유형과 금액은 필수입니다" }, { status: 400 });
 
@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         receipt_files: receipt_files || [],
         recorded_by: recorded_by || null,
         ref_id: ref_id || null,
+        house_no: house_no || null,
       })
       .select()
       .single();

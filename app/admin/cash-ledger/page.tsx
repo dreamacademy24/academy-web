@@ -10,7 +10,7 @@ interface Entry {
   guest_name: string | null; booking_id: string | null;
   receipt_files: { name: string; url: string }[];
   recorded_by: string | null; created_at: string;
-  ref_id?: string | null;
+  ref_id?: string | null; house_no?: string | null;
 }
 
 const CATEGORIES_IN = ["보증금", "현금수입", "기타입금"];
@@ -50,6 +50,8 @@ export default function CashLedgerPage() {
   const [aGuest, setAGuest] = useState("");
   const [aFiles, setAFiles] = useState<{ name: string; url: string }[]>([]);
   const [aRefId, setARefId] = useState<string>("");
+  const [aHouse, setAHouse] = useState<string>("");
+  const DH_HOUSES = ["17/7","17/8","17/9","17/10","17/11","17/12","17/13","17/14","17/15","17/16","17/17","17/18","13/10","16/19"];
   // 반환 처리 모달 (보유 보증금 → 기존 반환 기록 연결 or 새 출금 생성)
   const [retModal, setRetModal] = useState<{ id: string; name: string; date: string; amount: number } | null>(null);
   const [retSel, setRetSel] = useState<string>("");
@@ -84,7 +86,7 @@ export default function CashLedgerPage() {
     setBalance(j.balance || 0);
     // 전체 내역 (이월 잔액·보증금 보유현황) — 클라이언트에서 직접 조회
     try {
-      const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name,ref_id").order("entry_date");
+      const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name,ref_id,house_no").order("entry_date");
       setAllItems((data || []) as Entry[]);
     } catch {}
   }, [year, month]);
@@ -104,7 +106,11 @@ export default function CashLedgerPage() {
   const grandTotal = carryOver + balance;
   // 보증금 보유현황: ① ref_id 정확 매칭 → ② 같은 이름 매칭 (반환 완료분 숨김)
   const { heldDeposits, unmatchedReturns } = useMemo(() => {
-    const key = (i: Entry) => String(i.guest_name || i.description || "").trim();
+    const key = (i: Entry) => {
+      const nm = String(i.guest_name || i.description || "").trim();
+      const h = String(i.house_no || "").replace(/\s+/g, "");
+      return h ? h + "|" + nm : nm;
+    };
     const deposits = allItems.filter(i => i.category === "보증금" && i.type === "in");
     const returns = allItems.filter(i => i.category === "보증금반환" && i.type === "out");
     const remaining = new Map<string, number>();
@@ -122,20 +128,26 @@ export default function CashLedgerPage() {
     returns.forEach(r => {
       if (usedReturn.has(r.id)) return;
       const k = key(r); nameReturned.set(k, (nameReturned.get(k) || 0) + Number(r.amount || 0));
+      // 이름-only 폴백 키 (하우스 정보가 한쪽에만 있는 과거 기록 호환)
+      const nm = String(r.guest_name || r.description || "").trim();
+      if (k !== nm) nameReturned.set(nm, (nameReturned.get(nm) || 0) + Number(r.amount || 0));
     });
-    const list: { id: string; name: string; date: string; amount: number; desc: string }[] = [];
+    const list: { id: string; name: string; house: string; date: string; amount: number; desc: string }[] = [];
     deposits.forEach(d => {
       let amt = remaining.get(d.id) || 0;
       if (amt <= 0) return;
       const k = key(d);
-      const ret = nameReturned.get(k) || 0;
+      const nmOnly = String(d.guest_name || d.description || "").trim();
+      let ret = nameReturned.get(k) || 0;
+      let useKey = k;
+      if (ret <= 0 && k !== nmOnly) { ret = nameReturned.get(nmOnly) || 0; useKey = nmOnly; }
       if (ret > 0) {
         const use = Math.min(ret, amt);
-        nameReturned.set(k, ret - use);
+        nameReturned.set(useKey, ret - use);
         amt -= use;
       }
       if (amt <= 0) return;
-      list.push({ id: d.id, name: k || "(이름 없음)", date: (d.entry_date || "").slice(5, 10).replace("-", "/"), amount: amt, desc: String(d.description || "") });
+      list.push({ id: d.id, name: String(d.guest_name || d.description || "").trim() || "(이름 없음)", house: String(d.house_no || "").trim(), date: (d.entry_date || "").slice(5, 10).replace("-", "/"), amount: amt, desc: String(d.description || "") });
     });
     // 어느 보증금과도 매칭 안 된 반환 기록 (이름 불일치 등)
     const um = returns.filter(r => !usedReturn.has(r.id) && (nameReturned.get(key(r)) || 0) > 0);
@@ -174,7 +186,7 @@ export default function CashLedgerPage() {
           entry_date: aDate, type: aType, category: aCat,
           description: aDesc || null, amount: Number(aAmount),
           guest_name: aGuest || null, receipt_files: aFiles,
-          recorded_by: staffName, ref_id: aRefId || null,
+          recorded_by: staffName, ref_id: aRefId || null, house_no: aHouse.trim() || null,
         }),
       });
       if (!res.ok) { const j = await res.json(); alert(j.error || "저장 실패"); return; }
@@ -188,7 +200,7 @@ export default function CashLedgerPage() {
     if (res.ok) load();
   }
 
-  function resetForm() { setAddOpen(false); setAType("in"); setACat("보증금"); setADesc(""); setAAmount(""); setADate(today10()); setAGuest(""); setAFiles([]); setARefId(""); }
+  function resetForm() { setAddOpen(false); setAType("in"); setACat("보증금"); setADesc(""); setAAmount(""); setADate(today10()); setAGuest(""); setAFiles([]); setARefId(""); setAHouse(""); }
   // 기존 반환 기록 ↔ 보증금 연결
   async function linkReturn() {
     if (!retModal || !retSel) return;
@@ -198,9 +210,9 @@ export default function CashLedgerPage() {
     load();
   }
   // 보유 보증금에서 바로 반환 출금 만들기
-  function newReturnFromDeposit(d: { id: string; name: string; amount: number }) {
+  function newReturnFromDeposit(d: { id: string; name: string; amount: number; house?: string }) {
     setRetModal(null); setRetSel("");
-    setAType("out"); setACat("보증금반환"); setAGuest(d.name); setAAmount(String(d.amount)); setADate(today10()); setADesc("보증금 반환 — " + d.name); setAFiles([]); setARefId(d.id);
+    setAType("out"); setACat("보증금반환"); setAGuest(d.name); setAHouse(d.house || ""); setAAmount(String(d.amount)); setADate(today10()); setADesc("보증금 반환 — " + d.name); setAFiles([]); setARefId(d.id);
     setAddOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -276,7 +288,7 @@ export default function CashLedgerPage() {
             {heldDeposits.length === 0 ? <div style={{ fontSize: 12, color: "#94a3b8", padding: "8px 0" }}>보관 중인 보증금이 없습니다</div> :
               heldDeposits.map((d, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 8px", borderRadius: 8, background: "#f8fafc", marginBottom: 4, fontSize: 12 }}>
-                  <span style={{ fontWeight: 800, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.desc}>{d.name}</span>
+                  <span style={{ fontWeight: 800, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={d.desc}>{d.house && <span style={{ background: "#eef2ff", color: "#4338ca", borderRadius: 5, padding: "1px 5px", fontSize: 10.5, marginRight: 4 }}>{d.house}</span>}{d.name}</span>
                   <span style={{ color: "#94a3b8", fontSize: 10.5, whiteSpace: "nowrap" }}>{d.date} 입금</span>
                   <span style={{ fontWeight: 800, color: "#1d4ed8", whiteSpace: "nowrap" }}>{peso(d.amount)}</span>
                   <button onClick={() => { setRetModal(d); setRetSel(""); }} title="반환 처리"
@@ -340,10 +352,18 @@ export default function CashLedgerPage() {
                   <input type="number" value={aAmount} onChange={e => setAAmount(e.target.value)} placeholder="0"
                     style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 3 }}>관련 손님 (선택)</label>
-                  <input value={aGuest} onChange={e => setAGuest(e.target.value)} placeholder="손님 이름"
-                    style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 3 }}>관련 손님 (선택)</label>
+                    <input value={aGuest} onChange={e => setAGuest(e.target.value)} placeholder="손님 이름"
+                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 3 }}>하우스</label>
+                    <input list="dhHouseList" value={aHouse} onChange={e => setAHouse(e.target.value)} placeholder="17/16"
+                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                    <datalist id="dhHouseList">{DH_HOUSES.map(h => <option key={h} value={h} />)}</datalist>
+                  </div>
                 </div>
               </div>
 
