@@ -445,12 +445,13 @@ export default function MoriPage() {
   if (!authed) return null;
 
   const btn = (bg: string): React.CSSProperties => ({ background: bg, color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", fontSize: 14, fontWeight: 700, cursor: "pointer" });
+  // 엑셀 스타일: 메뉴 1개 = 1행, 둥근 칩 대신 평평한 행 + 가는 구분선
   const chipWarnStyle = (warn: number | null, dupInWeek: boolean): React.CSSProperties => ({
-    display: "inline-flex", alignItems: "center", gap: 4, margin: "2px 4px 2px 0", padding: "3px 8px",
-    borderRadius: 12, fontSize: 12.5, cursor: "pointer", border: "1px solid",
-    background: dupInWeek ? "#ffe3e3" : warn !== null && windowDays > 0 && warn <= windowDays ? "#fff3d6" : "#f1f3fa",
-    borderColor: dupInWeek ? "#e88" : warn !== null && windowDays > 0 && warn <= windowDays ? "#e6b84c" : "#d5d9ee",
-    color: "#333",
+    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6,
+    padding: "3px 6px", fontSize: 13, cursor: "pointer", lineHeight: 1.5,
+    borderBottom: "1px solid #e8eaf2",
+    background: dupInWeek ? "#ffe9e9" : warn !== null && windowDays > 0 && warn <= windowDays ? "#fff7df" : "transparent",
+    color: "#222",
   });
 
   const pickerPool = () => {
@@ -756,7 +757,7 @@ export default function MoriPage() {
                         {d.slice(5).replace("-", "/")}<br /><span style={{ fontSize: 12, color: "#667" }}>({dowOf(d)})</span>
                       </td>
                       {MEAL_COLS.map(meal => (
-                        <td key={meal} style={{ border: "1px solid #dde", padding: 8, verticalAlign: "top", minWidth: 160 }}>
+                        <td key={meal} style={{ border: "1px solid #cfd4e6", padding: "4px 6px", verticalAlign: "top", minWidth: 160 }}>
                           {meal === "점심" && (
                             <select value={day.fixedSet ?? ""} onChange={e => setFixedSet(d, +e.target.value)}
                               style={{ width: "100%", marginBottom: 6, padding: "4px 6px", fontSize: 12.5, border: "1px solid #ccd", borderRadius: 6 }}>
@@ -774,21 +775,23 @@ export default function MoriPage() {
                             const dupInWeek = !isStaple && (occ.get(nk(it)) || []).length > 1;
                             const warn = isStaple ? null : ago;
                             return (
-                              <span key={idx} style={chipWarnStyle(warn, dupInWeek)} title={ago !== null ? `마지막 제공: ${ago}일 전` : "제공 이력 없음"}
+                              <div key={idx} style={chipWarnStyle(warn, dupInWeek)} title={ago !== null ? `마지막 제공: ${ago}일 전` : "제공 이력 없음"}
                                 onClick={() => openPicker({ date: d, meal, index: idx })}>
-                                {it}
-                                {warn !== null && windowDays > 0 && warn <= windowDays && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
-                                {dupInWeek && <b style={{ color: "#c33", fontSize: 11 }}>중복</b>}
-                                <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#99a", fontWeight: 700 }}>×</span>
-                              </span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it}</span>
+                                <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                                  {warn !== null && windowDays > 0 && warn <= windowDays && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
+                                  {dupInWeek && <b style={{ color: "#c33", fontSize: 11 }}>중복</b>}
+                                  <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#99a", fontWeight: 700, padding: "0 2px" }}>×</span>
+                                </span>
+                              </div>
                             );
                           })}
-                          <div style={{ marginTop: 4, display: "flex", gap: 6 }}>
-                            <button onClick={() => openPicker({ date: d, meal, index: null })}
-                              style={{ background: "none", border: "1px dashed #aab", borderRadius: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>+ 추가</button>
+                          <div style={{ marginTop: 2, display: "flex", gap: 8, padding: "2px 6px" }}>
+                            <span onClick={() => openPicker({ date: d, meal, index: null })}
+                              style={{ fontSize: 12, cursor: "pointer", color: "#8891b3", fontWeight: 700 }}>+ 추가</span>
                             {(meal === "아침" || meal === "저녁어른") && (
-                              <button onClick={() => regenCell(d, meal === "아침" ? "아침" : "저녁")} title={meal === "아침" ? "아침 다시 추천" : "저녁(어른+아동) 다시 추천"}
-                                style={{ background: "none", border: "1px solid #aab", borderRadius: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer", color: "#667" }}>🔄</button>
+                              <span onClick={() => regenCell(d, meal === "아침" ? "아침" : "저녁")} title={meal === "아침" ? "아침 다시 추천" : "저녁(어른+아동) 다시 추천"}
+                                style={{ fontSize: 12, cursor: "pointer", color: "#8891b3" }}>🔄</span>
                             )}
                           </div>
                         </td>
