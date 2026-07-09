@@ -278,13 +278,21 @@ export default function EngStudentCalendarPage() {
 
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
 
+/* print simulation for one-page auto-fit measurement */
+.print-sim .cal-tbl th{font-size:9px!important;padding:4px 3px!important}
+.print-sim .cal-tbl td{font-size:8px!important;padding:3px!important;height:auto!important;min-height:60px}
+.print-sim .cal-tbl .cal-side{width:80px!important}
+.print-sim .cal-d{font-size:9px!important;margin-bottom:2px!important}
+.print-sim .cal-newin,.print-sim .cal-out{font-size:7px!important;padding:1px 3px!important;margin-bottom:2px!important}
+.print-sim .cal-stu-in,.print-sim .cal-stu-out{font-size:8px!important;line-height:1.25!important;white-space:normal!important}
+.print-sim .sc-month-title{font-size:14px!important}
 @media print{
   @page{size:A4 landscape;margin:8mm}
   body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .no-print{display:none!important}
   .sc-w{padding:0!important;max-width:none!important}
-  .sc-card{box-shadow:none!important;border:none!important;padding:0!important}
+  .sc-card{box-shadow:none!important;border:none!important;padding:0!important;zoom:var(--cal-print-zoom,1)}
   .cal-tbl{min-width:0!important;width:100%!important;table-layout:fixed!important}
   .cal-tbl td,.cal-tbl th{border:1px solid #999!important}
   .cal-tbl th{font-size:9px!important;padding:4px 3px!important}
@@ -317,7 +325,19 @@ export default function EngStudentCalendarPage() {
             <option value="2nd">Days 16–end (page 2)</option>
           </select>
         )}
-        <button className="sc-print" onClick={() => window.print()}>🖨️ Print (A4 Landscape)</button>
+        <button className="sc-print" onClick={() => {
+          const wrap = document.querySelector(".sc-card") as HTMLElement | null;
+          if (!wrap) { window.print(); return; }
+          const prevW = wrap.style.width;
+          wrap.classList.add("print-sim");
+          wrap.style.width = "1062px";
+          const h = wrap.scrollHeight;
+          wrap.classList.remove("print-sim");
+          wrap.style.width = prevW;
+          const z = Math.max(0.4, Math.min(1, 733 / Math.max(1, h)));
+          document.documentElement.style.setProperty("--cal-print-zoom", z.toFixed(3));
+          setTimeout(() => window.print(), 60);
+        }}>🖨️ Print (A4 Landscape)</button>
       </div>
 
       <div className="sc-filter no-print">

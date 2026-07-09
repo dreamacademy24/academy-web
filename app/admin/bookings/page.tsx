@@ -808,6 +808,15 @@ export default function AdminBookingsPage(){
 .cal-stu-in .meta,.cal-stu-out .meta{color:#64748b;font-weight:500;font-size:10.5px;}
 .cal-stu-in .kbadge,.cal-stu-out .kbadge{display:inline-block;color:#1a1a2e;font-weight:800;margin-right:1px;}
 @media(max-width:700px){.main-tabs{display:grid;grid-template-columns:1fr 1fr;}.main-tab{font-size:11px;padding:10px 4px;}.aw{padding:16px 12px;}.ah{flex-direction:column;align-items:stretch;}.ah h1{text-align:center;font-size:18px;}.ah-right{justify-content:center;flex-wrap:wrap;}.tbl-w{display:none;}.mob-cards{display:flex !important;}.ah-btn,.ah-new,.sub-tab{min-height:44px;display:inline-flex;align-items:center;justify-content:center;}.pw-b{min-height:44px;}}
+/* 인쇄 측정용 시뮬레이션 (한 장 자동 축소 계산) */
+.print-sim .cal-tbl th{font-size:9px !important;padding:4px 3px !important;}
+.print-sim .cal-tbl td{font-size:8px !important;padding:3px !important;height:auto !important;min-height:60px;}
+.print-sim .cal-side{width:80px !important;}
+.print-sim .cal-cell .cal-d{font-size:9px !important;margin-bottom:2px !important;}
+.print-sim .cal-newin,.print-sim .cal-out{font-size:7px !important;padding:1px 3px !important;margin-bottom:2px !important;}
+.print-sim .cal-stu-in,.print-sim .cal-stu-out{font-size:8px !important;line-height:1.25 !important;white-space:normal !important;}
+.print-sim .cal-stu-list{max-height:none !important;overflow:visible !important;}
+.print-sim .cal-title{font-size:14px !important;}
 @media print{
   @page{size:A4 landscape;margin:8mm;}
   body{background:#fff !important;font-size:9px !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
@@ -817,7 +826,7 @@ export default function AdminBookingsPage(){
   /* 페이지 컨테이너 padding/max-width 제거 */
   .aw{padding:0 !important;max-width:none !important;}
   /* 달력 컨테이너 — 그림자/보더 제거 */
-  .cal-wrap{box-shadow:none !important;border:none !important;padding:0 !important;overflow:visible !important;}
+  .cal-wrap{box-shadow:none !important;border:none !important;padding:0 !important;overflow:visible !important;zoom:var(--cal-print-zoom,1);}
   /* 7열이 A4 가로에 꽉 차도록 min-width 해제 */
   .cal-tbl{min-width:0 !important;width:100% !important;table-layout:fixed !important;}
   .cal-tbl th{font-size:9px !important;padding:4px 3px !important;}
@@ -1212,7 +1221,21 @@ export default function AdminBookingsPage(){
               <option value="1st">1~15일 (전반)</option>
               <option value="2nd">16~말일 (후반)</option>
             </select>
-            <button className="sub-tab" style={{background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄</button>
+            <button className="sub-tab" style={{background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>{
+              // 한 장 자동 축소: 인쇄 폰트로 시뮬레이션해 높이 측정 → A4 가로 1장에 맞는 zoom 계산
+              const wrap=document.querySelector(".cal-wrap") as HTMLElement|null;
+              if(!wrap){window.print();return;}
+              const prevW=wrap.style.width;
+              wrap.classList.add("print-sim");
+              wrap.style.width="1062px"; // A4 landscape 사용폭(297-16mm) @96dpi
+              const h=wrap.scrollHeight;
+              wrap.classList.remove("print-sim");
+              wrap.style.width=prevW;
+              const avail=733; // A4 landscape 사용높이(210-16mm) @96dpi
+              const z=Math.max(0.4,Math.min(1,avail/Math.max(1,h)));
+              document.documentElement.style.setProperty("--cal-print-zoom",z.toFixed(3));
+              setTimeout(()=>window.print(),60);
+            }}>🖨️ 인쇄</button>
           </div>}
         </div>
         {mismatchCount>0&&(
