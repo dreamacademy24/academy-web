@@ -2003,3 +2003,8 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 - 달력 셀 접힘(+N 더) 완전 제거 — 전 일정 항상 표시 (달력 길어져도 OK, 메이 확정)
 - 투어셔틀/부가일정에 신청 인원 자동 표기: shuttle_applications 날짜+투어명 매칭 → "H-Mart 10:00 +4명"
 - 라이브 검증 ✓ (IN/OUT+룸, 접힘 없음, +N명 4건 표시)
+
+## 2026-07-07 — 양지나 8/9 픽드랍 유형 오류 (데이터+예방)
+- 원인: 직원 등록 폼 유형 기본값이 '추가 픽업'이라, 드랍(드림하우스→공항 22:30) 등록 시 유형을 안 바꿔 extra_pickup으로 저장됨
+- 데이터: 45acab2d… 건 extra_pickup → extra_drop 수정 완료 (달력 표기 정상화)
+- 예방(e81faed): 등록 시 도착=공항인데 픽업 / 출발=공항인데 드랍이면 확인창으로 자동 교정 제안
