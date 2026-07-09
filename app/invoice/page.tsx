@@ -1237,7 +1237,9 @@ function InvoicePageInner(){
         const _final=billing.basePrice+_tAdd-_tDisc;
         const _paid=receiptPayments.reduce((s2,p)=>{const n=Number(String(p.amount||"").replace(/[,\s원]/g,""));return s2+(isNaN(n)?0:n);},0);
         const _pStatus=_final>0&&_paid>=_final?"paid":_paid>0?"partial":"unpaid";
-        const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",payment_status:_pStatus,paid_amount:_paid,final_price:_final,updated_at:new Date().toISOString()}).eq("id",bookingId);
+        const _upd:Record<string,unknown>={status:"영수증발행",payment_status:_pStatus,paid_amount:_paid,updated_at:new Date().toISOString()};
+        if(_final>0)_upd.final_price=_final; // 음수/0 총액은 저장하지 않음 (엄마 포털 마이너스 표시 방지)
+        const {error:stErr}=await supabase.from("bookings").update(_upd).eq("id",bookingId);
         if(stErr){console.error("[receipt status update]",stErr);alert("⚠️ 지불내역은 저장되었으나 예약 상태 변경 실패: "+stErr.message);setSavingReceipt(false);return;}
         alert("✅ 지불내역이 저장되었습니다.\n예약 상태: 영수증발행 · 결제: "+(_pStatus==="paid"?"완납":_pStatus==="partial"?"부분납":"미납")+" ("+_paid.toLocaleString()+"원 / "+_final.toLocaleString()+"원)");
       } else {

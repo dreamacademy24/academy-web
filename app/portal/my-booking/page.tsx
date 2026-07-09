@@ -181,15 +181,17 @@ export default function MyBookingPage() {
     </div>
   );
 
-  // payment_status가 없으면 예약 status에서 유도: 영수증발행/결제완료/완료 = 결제완료
-  const derivedPay = b.payment_status || (
-    ["영수증발행","결제완료","완료"].includes(b.status) ? "paid" :
-    b.status === "인보이스발행" ? "unpaid" : "unpaid"
-  );
+  // 결제상태 방어 로직:
+  //  - 예약 status가 영수증발행/결제완료/완료면 payment_status가 'unpaid'로 남아있어도 완납으로 표시 (동기화 누락 데이터 방어)
+  //  - 금액은 0/음수 값을 무시하고 첫 번째 양수만 사용 (마이너스 잔금 표시 방지)
+  const statusPaid = ["영수증발행", "결제완료", "완료"].includes(b.status || "");
+  const rawPay = b.payment_status;
+  const derivedPay = rawPay === "paid" || rawPay === "partial" ? rawPay : (statusPaid ? "paid" : "unpaid");
   const pay = PAY[derivedPay] || PAY.unpaid;
-  const totalAmt = b.total_amount || b.final_price || b.base_price || 0;
-  const paidAmt = b.paid_amount || 0;
-  const balance = totalAmt - paidAmt;
+  const posAmt = (v: unknown) => { const n = Number(v); return isFinite(n) && n > 0 ? n : 0; };
+  const totalAmt = posAmt(b.total_amount) || posAmt(b.final_price) || posAmt(b.base_price);
+  const paidAmt = posAmt(b.paid_amount) || (derivedPay === "paid" ? totalAmt : 0);
+  const balance = Math.max(0, totalAmt - paidAmt);
 
   // 콤보 예약(숙소 2곳 순서) 표시용
   const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };

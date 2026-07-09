@@ -136,7 +136,7 @@ function ReceiptPageInner(){
       const n=Number(String(p.amount).replace(/[,\s]/g,""));
       return sum+(isNaN(n)?0:n);
     },0);
-    const status=total>=data.finalPrice?"paid":total>0?"partial":"unpaid";
+    const status=(data.finalPrice>0&&total>=data.finalPrice)?"paid":total>0?"partial":"unpaid";
     const{error}=await supabase.from("bookings").update({
       payment_status:status,
       paid_amount:total,
