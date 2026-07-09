@@ -273,6 +273,17 @@ export default function BookingDetailPage() {
   }
   async function savePkAdd() {
     if (!pkForm.request_date) { toastErr("날짜를 입력해주세요."); return; }
+    // 유형 자동 감지: 도착=공항인데 픽업 / 출발=공항인데 드랍이면 확인 후 자동 교정 (기본값 실수 방지)
+    const _dst = (pkForm.destination || "") + "", _src = (pkForm.location || "") + "";
+    const airport = (v: string) => /공항|airport|막탄|mcia/i.test(v);
+    let fixedType = pkForm.request_type;
+    if (airport(_dst) && !airport(_src) && pkForm.request_type.includes("pickup")) {
+      if (window.confirm("도착지가 공항이에요 — '추가 드랍'이 맞는 것 같아요.\n추가 드랍으로 바꿔서 등록할까요?")) fixedType = "extra_drop";
+    } else if (airport(_src) && !airport(_dst) && pkForm.request_type.includes("drop")) {
+      if (window.confirm("출발지가 공항이에요 — '추가 픽업'이 맞는 것 같아요.\n추가 픽업으로 바꿔서 등록할까요?")) fixedType = "extra_pickup";
+    }
+    if (fixedType !== pkForm.request_type) setPkForm(p => ({ ...p, request_type: fixedType }));
+    const _typeToSave = fixedType;
     setPkSaving(true);
     try {
       let ticket_url = "";
@@ -281,7 +292,7 @@ export default function BookingDetailPage() {
         if (!u) return;
         ticket_url = u;
       }
-      const fields: Record<string, unknown> = { ...pkForm };
+      const fields: Record<string, unknown> = { ...pkForm, request_type: _typeToSave };
       if (ticket_url) fields.ticket_url = ticket_url;
       const r = await fetch(`/api/bookings/${id}/update-row`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "pickup_requests", fields }) });
       const d = await r.json();
