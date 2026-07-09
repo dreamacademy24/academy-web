@@ -6092,8 +6092,8 @@ async function loadStudentEvents(year,month){
     const endDate=year+'-'+String(month).padStart(2,'0')+'-'+String(_lastDay).padStart(2,'0');
     const hdr={'apikey':SB_KEY2,'Authorization':'Bearer '+SB_KEY2};
     const [r1,r2,r3]=await Promise.all([
-      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type&checkin_date=gte.'+startDate+'&checkin_date=lte.'+endDate+'&order=checkin_date',{headers:hdr}),
-      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type&checkout_date=gte.'+startDate+'&checkout_date=lte.'+endDate+'&order=checkout_date',{headers:hdr}),
+      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type,house_no,accom_room&checkin_date=gte.'+startDate+'&checkin_date=lte.'+endDate+'&order=checkin_date',{headers:hdr}),
+      fetch(SB_URL2+'/rest/v1/bookings?select=checkin_date,checkout_date,students,booker_name,booking_type,accom_type,house_no,accom_room&checkout_date=gte.'+startDate+'&checkout_date=lte.'+endDate+'&order=checkout_date',{headers:hdr}),
       fetch('/api/admin/pickups').catch(function(){return null;}),
     ]);
     const data=await r1.json();
@@ -6101,7 +6101,7 @@ async function loadStudentEvents(year,month){
     var data3=[];
     try{var pk3=r3?await r3.json():null;data3=(pk3&&Array.isArray(pk3.pickups))?pk3.pickups:[];}catch(e){}
     _studentEvents=[];
-    // 표기 통일: "체크인 아이이름/예약자" — 같은 예약건임을 바로 알 수 있게
+    // 표기 통일: "IN 아이이름/예약자 룸번호" — 같은 예약건 + 숙소까지 한눈에
     const extractNames=function(b){
       const stus=Array.isArray(b.students)?b.students:[];
       const names=stus.map(function(s){return s.kor_name||s.name_kr||s.name||s.korName||'';}).filter(Boolean).join(', ');
@@ -6109,16 +6109,35 @@ async function loadStudentEvents(year,month){
       if(names&&bk&&names!==bk)return names+'/'+bk;
       return names||bk||'';
     };
+    const placeOf=function(b){
+      var room=String(b.house_no||b.accom_room||'').replace(/\s+/g,'').toUpperCase();
+      if(room)return room;
+      var at=String(b.accom_type||'');
+      if(at.indexOf('제이파크')>=0)return 'JPARK';
+      if(at.indexOf('큐브')>=0)return 'CUBE9';
+      if(at.indexOf('통학')>=0)return '통학';
+      return '';
+    };
     // 통학형(숙소 없음)은 체크인/체크아웃 없음 → 제외
     var _isCommute=function(b){return String(b.booking_type||'').toLowerCase().includes('commute')||String(b.accom_type||'').includes('통학');};
     (Array.isArray(data)?data:[]).forEach(function(b){
       if(_isCommute(b))return;
-      if(b.checkin_date)_studentEvents.push({date:String(b.checkin_date).slice(0,10),type:'checkin',title:'체크인 '+extractNames(b)});
+      if(b.checkin_date)_studentEvents.push({date:String(b.checkin_date).slice(0,10),type:'checkin',title:'IN '+extractNames(b)+(placeOf(b)?' '+placeOf(b):'')});
     });
     (Array.isArray(data2)?data2:[]).forEach(function(b){
       if(_isCommute(b))return;
-      if(b.checkout_date)_studentEvents.push({date:String(b.checkout_date).slice(0,10),type:'checkout',title:'체크아웃 '+extractNames(b)});
+      if(b.checkout_date)_studentEvents.push({date:String(b.checkout_date).slice(0,10),type:'checkout',title:'OUT '+extractNames(b)+(placeOf(b)?' '+placeOf(b):'')});
     });
+    // 투어셔틀 신청 인원 집계 (+N명 표기용)
+    try{
+      var sa=await fetch(SB_URL2+'/rest/v1/shuttle_applications?select=tour_date,tour_name,people_count,status&tour_date=gte.'+startDate+'&tour_date=lte.'+endDate,{headers:hdr}).then(function(r){return r.json();});
+      _shuttleAppCounts={};
+      (Array.isArray(sa)?sa:[]).forEach(function(a){
+        if(String(a.status||'').indexOf('cancel')>=0||String(a.status||'').indexOf('취소')>=0)return;
+        var kk=String(a.tour_date).slice(0,10)+'|'+String(a.tour_name||'').replace(/\s+/g,'').toLowerCase();
+        _shuttleAppCounts[kk]=(_shuttleAppCounts[kk]||0)+(Number(a.people_count)||0);
+      });
+    }catch(e){_shuttleAppCounts={};}
     // 추가 픽드랍·환승 — /api/admin/pickups 경유 (RLS로 anon 직접 조회 불가), 그 달만 필터
     (Array.isArray(data3)?data3:[]).forEach(function(p){
       var d=String(p.request_date||'').slice(0,10);
@@ -6158,6 +6177,19 @@ function _calIncludeType(type){
 }
 
 let _shuttleCache={key:'',events:[]};
+var _shuttleAppCounts={};
+function _shuttleCountFor(ds,title){
+  var base=String(title||'').replace(/\d{1,2}:\d{2}/g,'').replace(/[⚠️()]/g,'').replace(/\s+/g,'').toLowerCase();
+  var n=0;
+  Object.keys(_shuttleAppCounts).forEach(function(kk){
+    var parts=kk.split('|');
+    if(parts[0]!==ds)return;
+    var an=parts[1];
+    if(!an)return;
+    if(base.indexOf(an)>=0||an.indexOf(base)>=0)n+=_shuttleAppCounts[kk];
+  });
+  return n;
+}
 function _shuttleEventsForMonth(year,month){
   const k=year+'-'+month;
   if(_shuttleCache.key!==k){_shuttleCache={key:k,events:getShuttleEvents(year,month)};}
@@ -6181,7 +6213,8 @@ function _gatherEventsForDate(ds){
     const parts=ds.split('-');
     const y=parseInt(parts[0],10),m=parseInt(parts[1],10);
     _shuttleEventsForMonth(y,m).filter(function(e){return e.date===ds;}).forEach(function(e){
-      evs.push({type:'shuttle',title:e.title});
+      var n=_shuttleCountFor(ds,e.title);
+      evs.push({type:'shuttle',title:e.title+(n>0?' +'+n+'명':'')});
     });
   }
   /* 고정업무 (반복) */
@@ -6451,16 +6484,8 @@ function renderMonthCal(){
     if(hasField)cell.classList.add('has-field');
     if(hasCheckInOut)cell.classList.add('has-checkinout');
     if(hasStudent&&!hasCheckInOut)cell.classList.add('has-student');
-    const _exp=_calExpandedDays.has(ds);
-    (_exp?evs:evs.slice(0,2)).forEach(function(ev){_appendCalEvent(cell,ev);});
-    const extra=evs.length-2;
-    if(extra>0){
-      const m2=document.createElement('div');m2.className='cal-more-events';
-      m2.textContent=_exp?'▲ 접기':'+'+extra+' 더 · 전체 보기';
-      m2.style.fontWeight='700';m2.style.color='#4f46e5';
-      m2.onclick=function(e){e.stopPropagation();if(_exp)_calExpandedDays.delete(ds);else _calExpandedDays.add(ds);renderCal();};
-      cell.appendChild(m2);
-    }
+    // 접힘 없이 전부 표시 (달력이 길어져도 OK — 메이 확정)
+    evs.forEach(function(ev){_appendCalEvent(cell,ev);});
     g.appendChild(cell);
   });
   wrap.appendChild(g);body.appendChild(wrap);
