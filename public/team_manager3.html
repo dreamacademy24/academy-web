@@ -1740,6 +1740,23 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <script>
 const MANUAL_TREE = [
   {
+    cat: '🔗 운영 정보',
+    items: [
+      { id:'ops_addr', title:'접속 주소 (앱 설치·시작)', html:`
+        <h2>🔗 접속 주소</h2>
+        <p>앱별 <strong>설치 링크</strong>와 <strong>시작(로그인) 화면</strong> 주소입니다.</p>
+        <table class="manual-table"><tr><th>대상</th><th>설치</th><th>시작</th></tr><tr><td>손님 (드림게스트)</td><td>dreamacademyph.com/install?app=guest</td><td>dreamacademyph.com/portal</td></tr><tr><td>한국 관리자 (드림 관리자)</td><td>dreamacademyph.com/install?app=admin</td><td>dreamacademyph.com/admin/hub</td></tr><tr><td>현지직원·튜터 (Dream Staff)</td><td>dreamacademyph.com/install?app=staff</td><td>dreamacademyph.com/admineng/hub</td></tr><tr><td>직원업무 (Team Manager)</td><td>—</td><td>dreamacademyph.com/staff</td></tr></table>
+        <div class="manual-box blue" style="margin-top:14px">📱 <strong>드림게스트</strong>=손님용, <strong>드림 관리자</strong>=한국 관리자용, <strong>Dream Staff</strong>=현지직원·튜터용. 직원업무는 설치 없이 <strong>/staff</strong> 로 접속합니다.</div>
+      ` },
+      { id:'ops_public', title:'공개 페이지 주소', html:`
+        <h2>🌐 공개 페이지 주소</h2>
+        <p>손님에게 공유 가능한 공개 페이지입니다. 앞에 <strong>dreamacademyph.com</strong> 을 붙이세요.</p>
+        <table class="manual-table"><tr><th>페이지</th><th>주소</th><th>설명</th></tr><tr><td>메인 홈</td><td>dreamacademyph.com/</td><td>드림아카데미 메인 랜딩</td></tr><tr><td>여름 캠프</td><td>dreamacademyph.com/summer</td><td>여름 프로그램 소개</td></tr><tr><td>올인원 예약</td><td>dreamacademyph.com/booking</td><td>패키지 예약 접수 폼</td></tr><tr><td>비패키지 예약</td><td>dreamacademyph.com/booking2</td><td>자유 일정 예약 폼</td></tr><tr><td>숙소 안내</td><td>dreamacademyph.com/accommodation</td><td>숙소 종류·요금</td></tr><tr><td>드림하우스 룸</td><td>dreamacademyph.com/dreamhouse-rooms</td><td>룸 상세 안내</td></tr><tr><td>PlayDream</td><td>dreamacademyph.com/playdream</td><td>PlayDream 브랜드</td></tr><tr><td>PlayDream 올데이</td><td>dreamacademyph.com/pdallday</td><td>올데이 프로그램</td></tr><tr><td>주니어</td><td>dreamacademyph.com/junior</td><td>주니어 수업 안내</td></tr><tr><td>킨더</td><td>dreamacademyph.com/kinder</td><td>킨더 수업 안내</td></tr><tr><td>패키지 안내</td><td>dreamacademyph.com/package</td><td>전체 요금 안내</td></tr><tr><td>결제 (상품)</td><td>dreamacademyph.com/products</td><td>상품 카드·결제</td></tr><tr><td>방과후/필드트립</td><td>dreamacademyph.com/after-school-fieldtrip</td><td>방과후·필드트립</td></tr><tr><td>커뮤니티</td><td>dreamacademyph.com/community</td><td>커뮤니티 게시판</td></tr><tr><td>공지사항</td><td>dreamacademyph.com/notice</td><td>공지사항</td></tr><tr><td>가이드</td><td>dreamacademyph.com/guide</td><td>이용 가이드</td></tr><tr><td>튜터 지원</td><td>dreamacademyph.com/tutor-apply</td><td>튜터 채용 폼</td></tr><tr><td>앱 설치</td><td>dreamacademyph.com/install</td><td>PWA 설치 안내</td></tr><tr><td>QR 페이지</td><td>dreamacademyph.com/qr</td><td>QR 코드 랜딩</td></tr><tr><td>다온맘 (손님용 공구)</td><td>dreamacademyph.com/daonmam</td><td>다온맘 팔로워 전용 공동구매 ⭐</td></tr><tr><td>다온맘 (검토용)</td><td>dreamacademyph.com/daon</td><td>다온맘 협업 구성안 (내부용)</td></tr></table>
+        <div class="manual-box yellow" style="margin-top:14px">⭐ <strong>/daonmam</strong> — 다온맘 팔로워 전용 공동구매(손님용). 다온맘 협업 손님에게 이 주소를 보내세요.</div>
+      ` },
+    ]
+  },
+  {
     cat: '1️⃣ 상품 안내',
     items: [
       { id:'p1', title:'패키지 한눈에 보기', html:`
