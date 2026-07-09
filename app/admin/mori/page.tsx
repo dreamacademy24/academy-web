@@ -359,6 +359,16 @@ export default function MoriPage() {
     setPlan({ ...plan, [date]: { ...plan[date], [meal]: arr } });
   }
 
+  // 셀 안에서 메뉴 순서 이동 (↑=-1, ↓=+1)
+  function moveItem(date: string, meal: string, idx: number, dir: number) {
+    if (!plan) return;
+    const arr = [...(plan[date] as any)[meal]];
+    const to = idx + dir;
+    if (to < 0 || to >= arr.length) return;
+    [arr[idx], arr[to]] = [arr[to], arr[idx]];
+    setPlan({ ...plan, [date]: { ...plan[date], [meal]: arr } });
+  }
+
   function applyPick(name: string) {
     if (!plan || !picker) return;
     const { date, meal, index } = picker;
@@ -778,10 +788,12 @@ export default function MoriPage() {
                               <div key={idx} style={chipWarnStyle(warn, dupInWeek)} title={ago !== null ? `마지막 제공: ${ago}일 전` : "제공 이력 없음"}
                                 onClick={() => openPicker({ date: d, meal, index: idx })}>
                                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it}</span>
-                                <span style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
                                   {warn !== null && windowDays > 0 && warn <= windowDays && <b style={{ color: "#b8860b", fontSize: 11 }}>{warn}d</b>}
                                   {dupInWeek && <b style={{ color: "#c33", fontSize: 11 }}>중복</b>}
-                                  <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#99a", fontWeight: 700, padding: "0 2px" }}>×</span>
+                                  <span onClick={e => { e.stopPropagation(); moveItem(d, meal, idx, -1); }} title="위로" style={{ color: idx === 0 ? "#dde" : "#8891b3", fontWeight: 800, fontSize: 11, padding: "0 2px", cursor: idx === 0 ? "default" : "pointer" }}>▲</span>
+                                  <span onClick={e => { e.stopPropagation(); moveItem(d, meal, idx, 1); }} title="아래로" style={{ color: idx === ((day as any)[meal] || []).length - 1 ? "#dde" : "#8891b3", fontWeight: 800, fontSize: 11, padding: "0 2px", cursor: idx === ((day as any)[meal] || []).length - 1 ? "default" : "pointer" }}>▼</span>
+                                  <span onClick={e => { e.stopPropagation(); removeItem(d, meal, idx); }} style={{ color: "#99a", fontWeight: 700, padding: "0 3px" }}>×</span>
                                 </span>
                               </div>
                             );
