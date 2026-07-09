@@ -11,6 +11,7 @@ interface InvRow extends ResortInvDocRow {
   id: string; memo: string | null;
   status: string; paid_date: string | null; paid_memo: string | null;
   receipt_url: string | null;
+  receipt_urls?: string[] | null;
 }
 
 function fmtMoney(n: number, cur: string) {
@@ -107,15 +108,33 @@ export default function ResortPaymentsPage() {
     } finally { setSavingImg(false); }
   }
 
-  // 결제 영수증 사진 업로드 → Supabase Storage(staff-files) → receipt_url 저장
-  async function uploadReceipt(r: InvRow, file: File) {
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-    const path = `resort-receipts/${r.invoice_no}_${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("staff-files").upload(path, file, { upsert: true });
-    if (upErr) { alert("업로드 실패: " + upErr.message); return; }
-    const { data: pub } = supabase.storage.from("staff-files").getPublicUrl(path);
-    const url = pub?.publicUrl || "";
-    const { error } = await supabase.from("resort_invoices").update({ receipt_url: url, updated_at: new Date().toISOString() }).eq("id", r.id);
+  // 결제 영수증 사진 업로드 (여러 장) → Supabase Storage(staff-files) → receipt_urls 배열 저장
+  const receiptList = (r: InvRow): string[] => {
+    const arr = Array.isArray(r.receipt_urls) ? r.receipt_urls.filter(Boolean) : [];
+    if (arr.length) return arr;
+    return r.receipt_url ? [r.receipt_url] : [];
+  };
+  async function uploadReceipt(r: InvRow, files: File[]) {
+    const existing = receiptList(r);
+    if (existing.length + files.length > 4) { alert("영수증 사진은 최대 4장까지예요."); files = files.slice(0, Math.max(0, 4 - existing.length)); }
+    const urls: string[] = [];
+    for (const file of files) {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `resort-receipts/${r.invoice_no}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("staff-files").upload(path, file, { upsert: true });
+      if (upErr) { alert("업로드 실패: " + upErr.message); return; }
+      const { data: pub } = supabase.storage.from("staff-files").getPublicUrl(path);
+      if (pub?.publicUrl) urls.push(pub.publicUrl);
+    }
+    const merged = [...existing, ...urls];
+    const { error } = await supabase.from("resort_invoices").update({ receipt_urls: merged, receipt_url: merged[0] || null, updated_at: new Date().toISOString() }).eq("id", r.id);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    load();
+  }
+  async function removeReceipt(r: InvRow, idx: number) {
+    if (!confirm("이 영수증 사진을 삭제할까요?")) return;
+    const merged = receiptList(r).filter((_, i) => i !== idx);
+    const { error } = await supabase.from("resort_invoices").update({ receipt_urls: merged, receipt_url: merged[0] || null, updated_at: new Date().toISOString() }).eq("id", r.id);
     if (error) { alert("저장 실패: " + error.message); return; }
     load();
   }
@@ -207,10 +226,15 @@ export default function ResortPaymentsPage() {
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
                 <td>{r.paid_date || "-"}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
-                  {r.receipt_url && <a href={r.receipt_url} target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: "#16a34a", marginRight: 6 }}>📷 보기</a>}
+                  {receiptList(r).map((u, i) => (
+                    <span key={i} style={{ marginRight: 6, whiteSpace: "nowrap" }}>
+                      <a href={u} target="_blank" rel="noreferrer" style={{ fontWeight: 700, color: "#16a34a" }}>📷{receiptList(r).length > 1 ? i + 1 : ""}</a>
+                      <span onClick={() => removeReceipt(r, i)} title="삭제" style={{ color: "#cbd5e1", cursor: "pointer", marginLeft: 1, fontSize: 11 }}>✕</span>
+                    </span>
+                  ))}
                   <label style={{ fontSize: 11, color: "#64748b", textDecoration: "underline", cursor: "pointer" }}>
-                    {r.receipt_url ? "재업로드" : "+ 업로드"}
-                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadReceipt(r, f); e.target.value = ""; }} />
+                    {receiptList(r).length ? "+ 추가" : "+ 업로드"}
+                    <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) uploadReceipt(r, fs); e.target.value = ""; }} />
                   </label>
                 </td>
                 <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.paid_memo || r.memo || ""}>{r.paid_memo || r.memo || ""}</td>
