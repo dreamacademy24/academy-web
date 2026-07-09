@@ -886,7 +886,9 @@ export default function MoriPage() {
         const pool = pickerPool();
         const pageCount = Math.max(1, Math.ceil(pool.length / 3));
         const suggests = pool.slice((pickerPage % pageCount) * 3, (pickerPage % pageCount) * 3 + 3);
-        const freshList = (search ? items.filter(i => i.active && i.name.includes(search)).map(i => ({ i, ago: agoFor(i.name, picker.date) })).sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999)) : pool).slice(0, 80);
+        const freshList = pool.slice(0, 80);
+        const q = search.trim().replace(/\s+/g, "");
+        const searchList = q ? items.filter(i => i.active && i.name.replace(/\s+/g, "").includes(q)).map(i => ({ i, ago: agoFor(i.name, picker.date) })).sort((a, b) => (b.ago ?? 99999) - (a.ago ?? 99999)).slice(0, 80) : [];
         const agoBadge = (ago: number | null) => (
           <span style={{ fontSize: 13, fontWeight: 700, color: ago === null ? "#0f766e" : windowDays > 0 && ago <= windowDays ? "#c2660a" : "#64748b", flexShrink: 0 }}>
             {ago === null ? "처음" : `${ago}일 만에`}
@@ -898,6 +900,20 @@ export default function MoriPage() {
               <div style={{ fontWeight: 800, fontSize: 16 }}>
                 {picker.date.slice(5).replace("-", "/")} ({dowOf(picker.date)}) {MEAL_LABEL[picker.meal] || picker.meal} — {picker.index === null ? "메뉴 추가" : "메뉴 교체"}
               </div>
+              <input autoFocus placeholder="🔍 메뉴 이름 검색 (전체 메뉴에서 찾기)" value={search} onChange={e => setSearch(e.target.value)}
+                style={{ padding: "9px 12px", border: "1px solid #ccd", borderRadius: 10, fontSize: 14 }} />
+              {search.trim() ? (
+                <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                  {searchList.map(({ i, ago }) => (
+                    <div key={i.id} onClick={() => applyPick(i.name)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
+                      <span>{i.spicy ? "🌶 " : ""}{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                      {agoBadge(ago)}
+                    </div>
+                  ))}
+                  {!searchList.length && <div style={{ padding: 20, textAlign: "center", color: "#99a", fontSize: 14 }}>"{search}" 검색 결과가 없어요 — 메뉴 풀에 새로 등록할 수 있어요</div>}
+                </div>
+              ) : (<>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => setPickerTab("suggest")} style={{ ...{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }, background: pickerTab === "suggest" ? "#3a47a8" : "#eef0f8", color: pickerTab === "suggest" ? "#fff" : "#556" }}>추천 후보</button>
                 <button onClick={() => setPickerTab("fresh")} style={{ ...{ border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }, background: pickerTab === "fresh" ? "#3a47a8" : "#eef0f8", color: pickerTab === "fresh" ? "#fff" : "#556" }}>오래 안 나온 순</button>
@@ -925,20 +941,17 @@ export default function MoriPage() {
               )}
 
               {pickerTab === "fresh" && (
-                <>
-                  <input autoFocus placeholder="검색 (비우면 같은 분류만)" value={search} onChange={e => setSearch(e.target.value)}
-                    style={{ padding: "9px 12px", border: "1px solid #ccd", borderRadius: 10, fontSize: 14 }} />
-                  <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
-                    {freshList.map(({ i, ago }) => (
-                      <div key={i.id} onClick={() => applyPick(i.name)}
-                        style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
-                        <span>{i.spicy ? "🌶 " : ""}{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
-                        {agoBadge(ago)}
-                      </div>
-                    ))}
-                  </div>
-                </>
+                <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+                  {freshList.map(({ i, ago }) => (
+                    <div key={i.id} onClick={() => applyPick(i.name)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", borderBottom: "1px solid #eef", cursor: "pointer", fontSize: 14 }}>
+                      <span>{i.spicy ? "🌶 " : ""}{i.name} <span style={{ fontSize: 11.5, color: "#99a" }}>{ROLE_LABEL[i.role]}{i.protein ? ` · ${i.protein}` : ""}</span></span>
+                      {agoBadge(ago)}
+                    </div>
+                  ))}
+                </div>
               )}
+              </>)}
             </div>
           </div>
         );
