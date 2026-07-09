@@ -310,7 +310,7 @@ export default function BookingDetailPage() {
     setRowSaving(true);
     const fieldsByTable: Record<string, string[]> = {
       students: ["name_kr","name_en","age","level","class_type","academy_start","academy_end","ssp","photo_allowed","pickup_location","address_detail","special_request"],
-      pickup_requests: ["request_date","request_time","location","destination","num_people","notes","status","ticket_url"],
+      pickup_requests: ["request_type","request_date","request_time","location","destination","num_people","notes","status","ticket_url"],
       shuttle_requests: ["request_date","request_time","destination","num_people","round_trip","notes","status"],
     };
     const allowed = fieldsByTable[rowEditing.table] || [];
@@ -1184,6 +1184,15 @@ export default function BookingDetailPage() {
                   {p.notes && <div className="pk-row"><span className="lbl">메모</span>{String(p.notes).replace(/portal_booking_id:[a-f0-9-]+/gi,"").trim() || "-"}</div>}
                 </>) : (
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12}}>
+                    <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>유형</div>
+                      <select className="ed-inp" value={rowForm.request_type||"extra_pickup"} onChange={e=>setRowForm({...rowForm,request_type:e.target.value})}>
+                        <option value="pickup">픽업</option>
+                        <option value="dropoff">드랍</option>
+                        <option value="extra_pickup">➕ 추가 픽업</option>
+                        <option value="extra_drop">➕ 추가 드랍</option>
+                        <option value="transfer">🔄 환승</option>
+                      </select>
+                    </div>
                     <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>날짜</div><input className="ed-inp" type="date" value={rowForm.request_date||""} onChange={e=>setRowForm({...rowForm,request_date:e.target.value})}/></div>
                     <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>시간</div><input className="ed-inp" type="time" value={rowForm.request_time||""} onChange={e=>setRowForm({...rowForm,request_time:e.target.value})}/></div>
                     <div><div style={{fontSize:11,color:"#6b7c93",fontWeight:700,marginBottom:3}}>출발(픽업장소)</div><input className="ed-inp" value={rowForm.location||""} onChange={e=>setRowForm({...rowForm,location:e.target.value})}/></div>
