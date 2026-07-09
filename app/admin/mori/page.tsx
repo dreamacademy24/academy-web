@@ -28,7 +28,7 @@ const MEAL_COLS = ["아침", "점심", "저녁어른", "저녁아동"] as const;
 const MEAL_LABEL: Record<string, string> = { 아침: "아침", 점심: "점심 (픽스)", 저녁어른: "저녁 · 어른", 저녁아동: "저녁 · 아동" };
 
 type Picker = { date: string; meal: string; index: number | null } | null;
-type Guest = { name: string; from: string; to: string };
+type Guest = { name: string; from: string; to: string; ppl: string };
 
 export default function MoriPage() {
   const [authed, setAuthed] = useState(false);
@@ -117,7 +117,7 @@ export default function MoriPage() {
   /* 이번 주에 식사 나가는 손님 (올인원, 드하/제이파크 구간) — 식단 관련 업무와 같은 규칙 */
   async function loadGuests() {
     try {
-      const { data } = await supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout");
+      const { data } = await supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout, adults, children, students, guardian_stays");
       // 주간 명단(식단 관련 업무)에서 이번 주 제외한 손님은 여기서도 제외
       const { data: exRows } = await supabase.from("meal_exclusions").select("booking_id").eq("week_start", weekStart);
       const excluded = new Set((exRows || []).map((r: any) => String(r.booking_id)));
@@ -145,7 +145,23 @@ export default function MoriPage() {
         if (!segs.some(s => s.from <= weekEnd && s.to >= weekStart)) continue;
         const from = segs.reduce((m, s) => (s.from < m ? s.from : m), segs[0].from);
         const to = segs.reduce((m, s) => (s.to > m ? s.to : m), segs[0].to);
-        gs.push({ name: b.booker_name || "손님", from, to });
+        // 인원: 성인(이번 주 기준 guardian_stays 겹침 수, 없으면 adults) + 아이(children 또는 students 수)
+        let ad = Number(b.adults) || 1;
+        try {
+          const stays = Array.isArray(b.guardian_stays) ? b.guardian_stays : (typeof b.guardian_stays === "string" ? JSON.parse(b.guardian_stays) : []);
+          if (Array.isArray(stays) && stays.length) {
+            const n = stays.filter((g2: any) => g2 && g2.from && g2.to && String(g2.from).slice(0, 10) <= weekEnd && String(g2.to).slice(0, 10) >= weekStart).length;
+            if (n > 0) ad = n;
+          }
+        } catch { /* ignore */ }
+        let kid = b.children != null ? Number(b.children) || 0 : 0;
+        if (!kid) {
+          try {
+            const st = Array.isArray(b.students) ? b.students : (typeof b.students === "string" ? JSON.parse(b.students) : []);
+            if (Array.isArray(st)) kid = st.length;
+          } catch { /* ignore */ }
+        }
+        gs.push({ name: b.booker_name || "손님", from, to, ppl: `${ad}+${kid}` });
       }
       gs.sort((a, b) => (a.from < b.from ? -1 : 1));
       setGuests(gs);
@@ -514,7 +530,7 @@ export default function MoriPage() {
                     const eatenW = isNew ? 0 : Math.min(Math.floor(eaten / 7), totalW);
                     return (
                       <div key={gi} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ width: 130, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name} {totalW}주</span>
+                        <span style={{ width: 170, fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name} {totalW}주 <span style={{ fontSize: 11.5, fontWeight: 800, color: "#5a67c8", background: "#eef0fb", borderRadius: 6, padding: "1px 7px", marginLeft: 2 }} title="성인+아이">{g.ppl}</span></span>
                         <div style={{ flex: 1, display: "flex", gap: 3 }}>
                           {Array.from({ length: totalW }).map((_, wi) => (
                             <div key={wi} style={{ flex: 1, height: 13, borderRadius: 4, background: wi < eatenW ? "#5a67c8" : isNew ? "#e2f3e6" : "#eceef8", border: wi < eatenW ? "none" : "1px solid #dfe3f2" }} />
