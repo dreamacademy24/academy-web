@@ -287,7 +287,28 @@ export default function PortalTutorPage() {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
           if (sd.booker) setBookerInfo(sd.booker);
-          setBookingInfo({ _loaded: true, checkin_date: sd.checkin_date, checkout_date: sd.checkout_date }); // 모달 로딩 상태 해제 + 날짜 input min/max 바인딩
+          // 튜터 가능 구간 = 드림하우스 체류 구간 (제이파크·큐브 리조트 단독은 방문 튜터 불가)
+          let tStart = sd.checkin_date || "", tEnd = sd.checkout_date || "", tAllowed = true;
+          try {
+            const bRes = await fetch(`/api/bookings/${session.booking_id}`);
+            if (bRes.ok) {
+              const bj = await bRes.json();
+              const b = bj.booking || bj;
+              const at = String(b.accom_type || "");
+              const segs = [
+                [b.seg1_type, b.seg1_checkin, b.seg1_checkout],
+                [b.seg2_type, b.seg2_checkin, b.seg2_checkout],
+              ].filter((x: any[]) => x[0]);
+              if (segs.length) {
+                const dh = segs.find((x: any[]) => String(x[0]) === "dreamhouse");
+                if (dh) { tStart = String(dh[1] || tStart).slice(0, 10); tEnd = String(dh[2] || tEnd).slice(0, 10); }
+                else tAllowed = false; // 콤보인데 드림하우스 구간 없음 = 리조트 단독
+              } else if (at.includes("제이파크") || at.includes("큐브")) {
+                tAllowed = false; // 리조트 단독 투숙
+              }
+            }
+          } catch { /* 확인 실패 시 기존 규칙(투숙 기간) 유지 */ }
+          setBookingInfo({ _loaded: true, checkin_date: sd.checkin_date, checkout_date: sd.checkout_date, tutor_allowed: tAllowed, tutor_start: tStart, tutor_end: tEnd });
         }
       }
     })();
@@ -452,14 +473,15 @@ export default function PortalTutorPage() {
     const validBlocks = blocks.filter(b => Array.isArray(b.days) && b.days.length > 0 && (b.time || "").trim() !== "");
     if (validBlocks.length === 0) { setMsg("수업 일정에 요일과 시간을 최소 1개 입력해주세요."); return; }
 
-    // 예약(투숙) 기간 + 종료일<시작일 가드
+    // 튜터 가능 기간(드림하우스 체류 구간) + 종료일<시작일 가드
     {
-      const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
-      const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
+      if (bookingInfo && bookingInfo.tutor_allowed === false) { setMsg("리조트(제이파크·큐브나인) 단독 투숙은 방문 튜터 수업 신청이 불가해요."); return; }
+      const bs = bookingInfo?.tutor_start || bookingInfo?.check_in || bookingInfo?.checkin_date || "";
+      const be = bookingInfo?.tutor_end || bookingInfo?.check_out || bookingInfo?.checkout_date || "";
       if (!form.start_date || !form.end_date) { setMsg("수업 시작일과 종료일을 모두 선택해주세요."); return; }
       if (form.end_date < form.start_date) { setMsg("종료일은 시작일 이후여야 해요."); return; }
       if ((bs && form.start_date < bs) || (be && form.end_date > be)) {
-        setMsg("예약(투숙) 기간 안에서만 선택할 수 있어요."); return;
+        setMsg(`튜터 수업은 드림하우스 체류 기간(${bs} ~ ${be}) 안에서만 신청할 수 있어요.`); return;
       }
     }
 
@@ -956,8 +978,8 @@ export default function PortalTutorPage() {
         <div className="q">
           <label className="q-label"><span className="num">3</span>수업 시작일</label>
           <input className="inp" type="date" value={form.start_date}
-            min={bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
-            max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
+            min={bookingInfo?.tutor_start || bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
+            max={bookingInfo?.tutor_end || bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
             onChange={e => {
               const v = e.target.value;
               setForm({ ...form, start_date: v });
@@ -974,8 +996,8 @@ export default function PortalTutorPage() {
         <div className="q">
           <label className="q-label"><span className="num">4</span>수업 종료일</label>
           <input className="inp" type="date" value={form.end_date}
-            min={form.start_date || bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
-            max={bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
+            min={form.start_date || bookingInfo?.tutor_start || bookingInfo?.check_in || bookingInfo?.checkin_date || undefined}
+            max={bookingInfo?.tutor_end || bookingInfo?.check_out || bookingInfo?.checkout_date || undefined}
             onChange={e => setForm({ ...form, end_date: e.target.value })} />
         </div>
 
@@ -1417,15 +1439,28 @@ export default function PortalTutorPage() {
         </div>
 
         {(() => {
-          const bs = bookingInfo?.check_in || bookingInfo?.checkin_date || "";
-          const be = bookingInfo?.check_out || bookingInfo?.checkout_date || "";
+          const notAllowed = bookingInfo && bookingInfo.tutor_allowed === false;
+          const bs = bookingInfo?.tutor_start || bookingInfo?.check_in || bookingInfo?.checkin_date || "";
+          const be = bookingInfo?.tutor_end || bookingInfo?.check_out || bookingInfo?.checkout_date || "";
           const outOfRange =
             (!!form.start_date && !!bs && form.start_date < bs) ||
             (!!form.end_date   && !!be && form.end_date   > be) ||
             (!!form.start_date && !!form.end_date && form.end_date < form.start_date);
+          const isCombo = !!bookingInfo && bookingInfo.tutor_allowed !== false && !!bookingInfo.tutor_start && (bookingInfo.tutor_start !== (bookingInfo.checkin_date || "") || bookingInfo.tutor_end !== (bookingInfo.checkout_date || ""));
           return (<>
-            <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange}>
-              {saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "예약 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
+            {notAllowed && (
+              <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, color: "#991b1b", marginBottom: 10 }}>
+                🙏 방문 튜터 수업은 <b>드림하우스 체류 중에만</b> 진행돼요.<br />
+                <span style={{ fontWeight: 500 }}>리조트(제이파크·큐브나인) 단독 투숙은 신청이 불가합니다. 궁금하신 점은 카카오 채널로 문의해주세요.</span>
+              </div>
+            )}
+            {isCombo && (
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "10px 14px", fontSize: 12.5, fontWeight: 700, color: "#1e40af", marginBottom: 10 }}>
+                ℹ️ 콤보 예약은 <b>드림하우스 체류 기간({bs} ~ {be})</b>에만 튜터 수업을 신청할 수 있어요.
+              </div>
+            )}
+            <button className="btn" onClick={submit} disabled={saving || !form.agreed_rules || outOfRange || notAllowed}>
+              {notAllowed ? "리조트 단독 투숙은 신청 불가" : saving ? (editingId ? "수정 중..." : "신청 중...") : outOfRange ? "드림하우스 체류 기간을 벗어났습니다" : (editingId ? "✏️ 수정 저장" : "튜터 수업 신청하기")}
             </button>
             {editingId && <button className="btn" style={{background:'#e2e8f0',color:'#475569',marginTop:8}} onClick={() => { setEditingId(''); setForm({ ...INIT_FORM }); setBlocks([{ ...INIT_BLOCK }]); setSkipDates([]); }}>수정 취소</button>}
           </>);
