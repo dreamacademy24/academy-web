@@ -60,6 +60,24 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#26303f;
 .gcard{background:#fff;border:1px solid #e6dfcd;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
 .gcard-h{background:#1f2d5a;color:#fff;font-weight:700;font-size:15px;padding:11px 16px}
 .gcard-b{padding:13px 16px} .gcard-b p{font-size:13.5px;color:#3a4553}
+.reel{background:#fff;border:1px solid #e6dfcd;border-radius:12px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.reel.highlight{border:2px solid #e0b352}
+.reel-h{background:#1f2d5a;color:#fff;font-weight:700;font-size:15px;padding:11px 16px}
+.reel-no{background:#0e7c86;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;margin-right:8px}
+.reel-no.gold{background:#e0b352;color:#3a2c07}
+.reel-sub{font-size:11px;font-weight:400;color:#c7d0e0;margin-left:6px}
+.reel-b{padding:13px 16px}
+.rl-row{display:flex;gap:10px;font-size:13px;color:#3a4553;padding:5px 0;line-height:1.6}
+.rl-k{flex-shrink:0;font-weight:700;color:#1f2d5a;width:74px}
+.rl-tags{margin-top:8px;font-size:12px;color:#0e7c86;font-weight:600}
+.tl{border-left:2px solid #e0b352;margin:8px 0 8px 6px;padding-left:14px}
+.tl-i{font-size:13px;color:#3a4553;padding:6px 0;line-height:1.5}
+.sg-row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f1ece0;font-size:13px}
+.sg-row:last-child{border-bottom:none}
+.sg-t{flex-shrink:0;font-weight:700;color:#0e7c86;width:104px}
+.sg-d{color:#3a4553;line-height:1.55}
+.tipbox{background:#eef6f4;border:1px solid #cfe6e2;border-radius:10px;padding:12px 16px}
+.tipbox ul{list-style:none} .tipbox li{font-size:13px;color:#2b4a4a;padding:4px 0;line-height:1.55}
 .gkey{background:linear-gradient(135deg,#1f2d5a,#0e7c86);color:#fff;border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.75;margin-top:20px}
 .flowwrap{display:flex;flex-direction:column;gap:10px}
 .flowstep{display:flex;gap:12px;background:#fff;border:1px solid #e6dfcd;border-radius:11px;padding:13px 15px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
@@ -118,28 +136,35 @@ footer{text-align:center;color:#9b9c8f;font-size:12px;margin-top:24px}
 <div class="bsub"><div class="bsub-h navy">🏠 드림하우스 단독 <span>· 숙소별</span></div><div class="muted" style="font-size:13px;padding:4px 0">공통·얼리버드·추첨 혜택이 그대로 적용됩니다.</div></div><div class="bsub"><div class="bsub-h navy">🌊 제이파크 아일랜드 단독 <span>· 숙소별</span></div><ul class="perks"><li><span class="pe">🎪</span><b>뽀로로파크 이용권 지급</b> <span class="pd">— 아동 1인당 1매</span></li><li><span class="pe">🥐</span><b>주말 조식 50% 할인</b> <span class="pd">— 보호자 1인 650페소 · 아동 6세 미만 무료</span></li></ul></div><div class="bsub"><div class="bsub-h navy">🐬 큐브나인 리조트 단독 <span>· 숙소별</span></div><ul class="perks"><li><span class="pe">💰</span><b>전 기간 1인 10만원 할인</b> <span class="pd">— 2주 기간도 10만원</span></li><li style="background:#fff3f1;border-radius:6px;padding:8px 10px;border-bottom:none;margin:3px 0"><span class="pe">🍽️</span><b style="color:#d92d20">식사 바우처 10만원 추가 지급</b> <span style="color:#d92d20;font-weight:800">— 주당</span> <span style="background:#d92d20;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px">강력추천</span></li><li><span class="pe">💆</span><b>1인 1회 마사지 60분</b></li></ul></div>
 </div></div></section>
   <section id="guide" class="tab">
-<div class="gsec">1 · 콘텐츠 핵심 방향 <span>(공통)</span></div>
-<div class="gintro">Dream Academy는 단순한 숙소 소개나 영어학원 광고보다, <b>가족이 세부에서 실제로 생활하는 모습을 자연스럽게 담은 라이프스타일 콘텐츠</b>를 지향합니다. 과장된 광고보다 진정성 있는 경험 중심으로 제작해 주세요.</div>
+<div class="gintro"><b>이번 협업 한 줄 컨셉</b><br>영어캠프 광고가 아니라 <b>"다온맘네가 세부에서 진짜 한 달 사는 일상"</b>. 판단 기준은 <b>"광고 같나, 우리 가족 브이로그 같나?"</b> 입니다.</div>
 <div class="ynrow">
   <div class="ybox no"><div class="yb-h">❌ 이런 콘텐츠보다</div><div class="yb-item">영어학원 홍보 영상</div><div class="yb-item">가격·할인 중심 콘텐츠</div><div class="yb-item">시설 소개 위주 영상</div><div class="yb-item">설명 많은 광고형 콘텐츠</div><div class="yb-item">과장된 후기·홍보성 표현</div></div>
   <div class="ybox yes"><div class="yb-h">⭕ 이런 콘텐츠를 추천</div><div class="yb-item">세부 가족 한달살기 브이로그</div><div class="yb-item">아이와 함께하는 해외살기</div><div class="yb-item">부모도 함께 쉬는 가족 라이프</div><div class="yb-item">영어+휴양+생활이 함께</div><div class="yb-item">실제 현지 사는 듯한 자연스러운 일상</div><div class="yb-item">아이가 즐겁게 영어 경험</div></div>
 </div>
-<div class="gsec">2 · 영어수업 & 드림아카데미 방향</div>
+<div class="gsec">📹 릴스 구성 <span>(기본 3편 + 킬러 1편)</span></div>
+<div class="reel"><div class="reel-h"><span class="reel-no">REEL 1</span> 전체 숙소 릴스</div><div class="reel-b"><div class="rl-row"><span class="rl-k">🎣 훅</span><span>"세부에서 한 달 살 집 공개 🏡 (기숙사 아니에요)"</span></div><div class="rl-row"><span class="rl-k">🎬 구성·샷</span><span>본인 숙소 룸투어 중심 + 제이파크·큐브나인 옵션 짧게 · 대문→거실→방3개→주방→뒷마당 · 헬퍼 요리 손 · 3식 도시락 탑뷰</span></div><div class="rl-row"><span class="rl-k">✍️ 자막</span><span>"3룸 독채 · 평일 3식 · 헬퍼까지 다 포함"</span></div><div class="rl-tags">#세부한달살기 #독채숙소 #세부어학연수</div></div></div><div class="reel"><div class="reel-h"><span class="reel-no">REEL 2</span> 학원 수업 + 애프터스쿨 + 필드트립</div><div class="reel-b"><div class="rl-row"><span class="rl-k">🎣 훅</span><span>"어학연수 하루 = 수업 반, 노는 게 반"</span></div><div class="rl-row"><span class="rl-k">🎬 구성·샷</span><span>1:1 수업 → 그룹 발표(아이 영어 리얼) → 애프터스쿨 물총 → 필드트립 쉬라인 · 아이 발표 정면 5초 · 물총 슬로우모션 · 도슨트 컷</span></div><div class="rl-row"><span class="rl-k">✍️ 자막</span><span>"정규수업 + 애프터스쿨 + 필드트립 전부 포함"</span></div><div class="rl-tags">#세부영어연수 #아이영어 #프리미엄영어연수</div></div></div><div class="reel"><div class="reel-h"><span class="reel-no">REEL 3</span> 투어셔틀 활용</div><div class="reel-b"><div class="rl-row"><span class="rl-k">🎣 훅</span><span>"어학연수 왔는데 매일 세부 여행 다니는 이유 🚐"</span></div><div class="rl-row"><span class="rl-k">🎬 구성·샷</span><span>셔틀 시간표 화면 → 사파리 기린 먹이주기 → SM Seaside → 씨사이드 선셋</span></div><div class="rl-row"><span class="rl-k">✍️ 자막</span><span>"매일 무료 투어셔틀 · 어학+휴양 동시에"</span></div><div class="rl-tags">#세부가족여행 #세부한달살기 #투어셔틀</div></div></div><div class="reel highlight"><div class="reel-h"><span class="reel-no gold">⭐ REEL 4</span> 우리 가족 세부 하루 루틴 <span class="reel-sub">A Day in the Life</span></div><div class="reel-b"><div class="rl-row"><span class="rl-k">🎣 훅</span><span>"아이는 영어 배우고, 엄마는 쉬고. 세부 한 달 살기 진짜 하루 🌴"</span></div><div class="tl"><div class="tl-i"><b>🌅 아침</b> 아이 학원 셔틀 타고 등원 — 손 흔들며 배웅</div><div class="tl-i"><b>☕ 오전</b> 엄마는 투어셔틀 타고 씨사이드에서 자유시간 (커피·쇼핑·바다)</div><div class="tl-i"><b>🎨 오후</b> 아이 하원 → 애프터스쿨 물총놀이</div><div class="tl-i"><b>🍱 저녁</b> 도시락 배달 → 가족 저녁밥</div><div class="tl-i"><b>📚 밤</b> 튜터 수업 (선택 옵션)</div></div><div class="rl-row"><span class="rl-k">✍️ 자막</span><span>시간대별 타임라인 자막(07:30 / 10:00 …)으로 하루를 쭉. 마지막: "이게 다 포함이라니 😳"</span></div><div class="rl-tags">#세부한달살기 #워킹맘세부 #아이영어 #엄마도쉬는여행</div></div></div>
+<div class="gsec">🎥 숙소별 씬 단위 촬영 가이드</div>
+<div class="gcard"><div class="gcard-h">🏠 드림하우스</div><div class="gcard-b"><p style="margin-bottom:8px"><b>핵심 컨셉</b> · 기숙사가 아닌 프라이빗 하우스형 세부 라이프</p><div class="sg-row"><span class="sg-t">식사</span><span class="sg-d">식탁 세팅 탑뷰 3초 → 아이 먹는 컷 → 헬퍼 요리하는 손 클로즈업 → 가족 함께 와이드</span></div><div class="sg-row"><span class="sg-t">집·룸투어</span><span class="sg-d">문 여는 1인칭 룸투어 / 아침 햇살 든 거실 팬 / 방마다 1.5초 / 뒷마당 아이</span></div><div class="sg-row"><span class="sg-t">로컬 감성</span><span class="sg-d">빌리지 산책 / 현지 이웃과 인사 / 미니마트 가는 길</span></div><div class="sg-row"><span class="sg-t">골든타임</span><span class="sg-d">오전 집 자연광 · 저녁 빌리지 산책</span></div></div></div><div class="gcard"><div class="gcard-h">🌊 제이파크</div><div class="gcard-b"><p style="margin-bottom:8px"><b>핵심 컨셉</b> · 5성급 리조트에서 즐기는 프리미엄 한 달 살기</p><div class="sg-row"><span class="sg-t">워터파크</span><span class="sg-d">슬라이드 타는 아이 정면+후면 / 물 튀는 슬로우모션 / 수영장 탑뷰</span></div><div class="sg-row"><span class="sg-t">조식·룸</span><span class="sg-d">룸서비스 언박싱 / 발코니 조식 / 리조트 전경 팬</span></div><div class="sg-row"><span class="sg-t">부모 힐링</span><span class="sg-d">선베드 발치+음료 / 마사지 / 카페</span></div><div class="sg-row"><span class="sg-t">골든타임</span><span class="sg-d">오전 워터파크 · 낮 수영장 반짝임</span></div></div></div><div class="gcard"><div class="gcard-h">🐬 큐브나인</div><div class="gcard-b"><p style="margin-bottom:8px"><b>핵심 컨셉</b> · 프라이빗 오션뷰 리조트 영어 스테이</p><div class="sg-row"><span class="sg-t">인피니티풀+선셋 ★</span><span class="sg-d">풀 너머 바다 와이드 / 물 위 반영 / 선셋 실루엣</span></div><div class="sg-row"><span class="sg-t">오션뷰 룸</span><span class="sg-d">커튼 여는 순간 오션뷰 / 테라스 선셋베드 / 룸뷰 아침</span></div><div class="sg-row"><span class="sg-t">액티비티</span><span class="sg-d">패들·카약 / 오션뷰 레스토랑 / 조용한 힐링 무드</span></div><div class="sg-row"><span class="sg-t">골든타임</span><span class="sg-d">해질녘 30분 선셋 집중</span></div></div></div>
+<div class="gsec">🎓 수업·프로그램 촬영 포인트</div>
 <div class="gcard"><div class="gcard-b"><ul class="perks">
-<li><b>🎓 UCLA 출신 원장 커리큘럼</b> <span class="pd">— 교재팀 티쳐가 직접 자체제작한 교재</span></li>
-<li><b>🧩 놀이형·참여형·액티비티형 수업</b></li>
-<li><b>🗺️ 필드트립 & 애프터스쿨</b></li>
-<li><b>🌱 자연스러운 영어 노출 환경</b></li>
+<li><b>1:1 수업</b> <span class="pd">— 교실 창 너머 수업 / 아이 집중 표정 (광고 자막 최소)</span></li>
+<li><b>그룹 발표</b> <span class="pd">— 아이 영어 발표 정면 5초, 표정·목소리 중심</span></li>
+<li><b>애프터스쿨</b> <span class="pd">— 물총 슬로우모션 / 꽃꽂이·만들기 손 컷</span></li>
+<li><b>필드트립</b> <span class="pd">— 아이가 도슨트 하는 컷 / 명소 배경 와이드</span></li>
 </ul></div></div>
-<div class="gsec">3 · 숙소별 핵심 컨셉 & 추천 멘트</div>
-<div class="gcard"><div class="gcard-h">🏠 드림하우스</div><div class="gcard-b"><p><b>핵심 컨셉</b> · 기숙사가 아닌 프라이빗 하우스형 세부 라이프</p><div class="sgl-t" style="margin-top:8px">💬 추천 멘트</div><div class="ment"><div class="ment-i">“기숙사보다 진짜 그냥 해외살기 느낌”</div><div class="ment-i">“아이와 함께 생활하기 정말 편한 환경”</div><div class="ment-i">“세부에서 실제로 살아보는 느낌”</div></div></div></div>
-<div class="gcard"><div class="gcard-h">🌊 제이파크</div><div class="gcard-b"><p><b>핵심 컨셉</b> · 5성급 리조트에서 즐기는 프리미엄 한 달 살기</p><div class="sgl-t" style="margin-top:8px">💬 추천 멘트</div><div class="ment"><div class="ment-i">“아이도 즐겁고 부모도 쉬는 한 달”</div><div class="ment-i">“호텔이 아니라 리조트에서 살아보는 경험”</div><div class="ment-i">“영어교육과 휴양을 함께”</div><div class="ment-i">“가족 모두 만족하는 프리미엄 한달살기”</div></div></div></div>
-<div class="gcard"><div class="gcard-h">🐬 큐브나인</div><div class="gcard-b"><p><b>핵심 컨셉</b> · 프라이빗 오션뷰 리조트 영어 스테이</p><div class="sgl-t" style="margin-top:8px">💬 추천 멘트</div><div class="ment"><div class="ment-i">“조용하게 힐링하는 오션뷰 한 달”</div><div class="ment-i">“프라이빗 리조트에서 가족끼리 여유롭게”</div><div class="ment-i">“선셋 보며 보내는 세부 라이프”</div></div></div></div>
-<div class="gsec">4 · 필수 스토리 업로드 <span>(공통)</span></div>
+<div class="gsec">📱 데일리 스토리 <span>(매일 1~3개)</span></div>
 <div class="gcard"><div class="gcard-b"><div class="tags"><span>식사</span><span>물놀이</span><span>수업</span><span>셔틀</span><span>선셋</span><span>마사지 등 연계 혜택</span><span>아이 활동</span><span>필드트립</span><span>실제 생활 루틴</span></div></div></div>
-<div class="gsec">5 · 콘텐츠 키워드</div>
-<div class="gcard"><div class="gcard-b"><div class="tags"><span>#세부한달살기</span><span>#세부가족여행</span><span>#세부영어연수</span><span>#프리미엄영어연수</span><span>#리조트라이프</span><span>#가족해외살기</span><span>#올인원패키지</span><span>#부모도편한여행</span><span>#영어휴양라이프</span></div></div></div>
-<div class="gkey">💡 가장 중요한 포인트 — Dream Academy 패키지는 단순히 영어를 배우는 공간이 아니라, <b>아이와 부모가 함께 세부 라이프를 경험하는 프리미엄 가족형 해외살기 패키지</b>입니다.</div>
+<div class="gsec">🏷️ 해시태그 & 위치 태그</div>
+<div class="gcard"><div class="gcard-b"><div class="tags"><span>#세부한달살기</span><span>#세부가족여행</span><span>#세부영어연수</span><span>#프리미엄영어연수</span><span>#리조트라이프</span><span>#가족해외살기</span><span>#올인원패키지</span><span>#부모도편한여행</span><span>#영어휴양라이프</span></div><div class="rl-row" style="margin-top:8px"><span class="rl-k">위치태그</span><span>제이파크 아일랜드 · SM Seaside · 세부 사파리 등 실제 방문 장소</span></div></div></div>
+<div class="gsec">💡 촬영 실전 팁</div>
+<div class="tipbox"><ul>
+<li>🎬 첫 <b>2초 안에 훅</b> — 스크롤 멈추게. 세로 9:16 필수</li>
+<li>😊 광고 자막보다 <b>아이 표정·리액션</b> 중심으로</li>
+<li>🌅 <b>황금시간대</b>(오전 자연광·해질녘)에 예쁜 컷 몰아 찍기</li>
+<li>🐢 물놀이·셔틀 출발엔 <b>슬로우모션</b>, 일상엔 빠른 컷</li>
+<li>🎵 잔잔한 브이로그 BGM — 과한 예능 자막·효과음 지양</li>
+</ul></div>
+<div class="gkey">💡 가장 중요한 포인트 — Dream Academy는 단순히 영어를 배우는 곳이 아니라, <b>아이와 부모가 함께 세부 라이프를 경험하는 프리미엄 가족형 해외살기</b>입니다. 릴스 4편이 그걸 자연스럽게 보여주면 됩니다.</div>
 </section>
   <section id="pay" class="tab">
 <div class="gsec">진행 흐름</div>
