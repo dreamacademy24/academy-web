@@ -20,43 +20,30 @@ interface ScheduleItem {
 }
 
 // ─────────────────────────────────────────────────────────────
-// A/B 주차 패턴
+// 투어 패턴 — ⚠️ 손님 신청 화면(app/portal/shuttle, app/shuttle)과 동일 규칙 유지 필수!
+// 규칙: "그 달의 몇 번째 요일"(nthWeekday) 홀/짝 — 격주 기준주(BASE_A) 방식 아님
 // ─────────────────────────────────────────────────────────────
-const BASE_A = new Date("2026-05-04T00:00:00"); // A주 기준 월요일
-
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
-function mondayOf(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  const dow = d.getDay(); // 0=Sun..6=Sat
-  const diff = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + diff);
-  return d;
+// 손님 화면과 동일: 그 달의 n번째 요일이 홀수/짝수인지로 판별
+function nthWeekday(d: Date) { return Math.ceil(d.getDate() / 7); }
+function tourSlotsFor(d: Date): { title: string; desc: string }[] {
+  const dow = d.getDay();
+  const odd = nthWeekday(d) % 2 === 1;
+  if (dow === 2) return odd
+    ? [{ title: "파롤라 (Parola)", desc: "04:40pm" }]
+    : [{ title: "SM 씨사이드 쇼핑", desc: "10:30am" }];
+  if (dow === 4) return odd
+    ? [{ title: "SM 씨사이드 쇼핑", desc: "10:30am" }]
+    : [{ title: "막탄 쉬라인", desc: "05:30pm" }];
+  if (dow === 6) return odd
+    ? [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }]
+    : [{ title: "펀파크 (Fun Park)", desc: "02:00pm" }, { title: "란타우 (Lantaw)", desc: "04:00pm" }];
+  if (dow === 0) return odd
+    ? [{ title: "안조 월드 (Anjo World)", desc: "01:00pm" }, { title: "란타우 (Lantaw)", desc: "04:00pm" }]
+    : [{ title: "세부 사파리", desc: "08:30am" }, { title: "일콜소 (Il Corso)", desc: "04:00pm" }];
+  return [];
 }
-function getPattern(date: Date): "A" | "B" {
-  const mon = mondayOf(date);
-  const weeks = Math.floor((mon.getTime() - BASE_A.getTime()) / (7 * 86400000));
-  const mod = ((weeks % 2) + 2) % 2;
-  return mod === 0 ? "A" : "B";
-}
-
-const PATTERN_A: { dow: number; title: string; desc: string }[] = [
-  { dow: 2, title: "파롤라 (Parola)",  desc: "04:40pm" },
-  { dow: 4, title: "SM 씨사이드 쇼핑", desc: "10:30am" },
-  { dow: 6, title: "펀파크 (Fun Park)", desc: "02:00pm" },
-  { dow: 6, title: "란타우 (Lantaw)",   desc: "04:00pm" },
-  { dow: 0, title: "세부 사파리",       desc: "08:30am" },
-  { dow: 0, title: "일콜소 (Il Corso)", desc: "04:00pm" },
-];
-const PATTERN_B: { dow: number; title: string; desc: string }[] = [
-  { dow: 2, title: "SM 씨사이드 쇼핑", desc: "10:30am" },
-  { dow: 4, title: "막탄 쉬라인",       desc: "05:30pm" },
-  { dow: 6, title: "세부 사파리",       desc: "08:30am" },
-  { dow: 6, title: "일콜소 (Il Corso)", desc: "04:00pm" },
-  { dow: 0, title: "안조 월드 (Anjo World)", desc: "01:00pm" },
-  { dow: 0, title: "란타우 (Lantaw)",   desc: "04:00pm" },
-];
 const HMART_DOWS = [1, 3, 5]; // 월/수/금
 const HMART_TITLE = "H-Mart 쇼핑";
 const HMART_DESC = "10:00am";
@@ -81,18 +68,15 @@ function generateItems(month: string): Omit<ScheduleItem, "id" | "created_at">[]
         deploy_month: month,
       });
     }
-    const pattern = getPattern(d) === "A" ? PATTERN_A : PATTERN_B;
-    for (const p of pattern) {
-      if (p.dow === dow) {
-        out.push({
-          type: "shuttle",
-          date: ds,
-          title: p.title,
-          description: p.desc,
-          is_deployed: false,
-          deploy_month: month,
-        });
-      }
+    for (const p of tourSlotsFor(d)) {
+      out.push({
+        type: "shuttle",
+        date: ds,
+        title: p.title,
+        description: p.desc,
+        is_deployed: false,
+        deploy_month: month,
+      });
     }
   }
   return out;
