@@ -118,6 +118,12 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#26303f;
 .purpose{background:#fff7e6;border:1px solid #f0d9a8;border-radius:11px;padding:12px 15px;font-size:13px;color:#7a5b1e;line-height:1.6;margin-bottom:18px}
 footer{text-align:center;color:#9b9c8f;font-size:12px;margin-top:24px}
 @media(max-width:620px){.hero h1{font-size:23px} .daycard-h{font-size:13px} .dc-stay{font-size:12.5px} .tb{font-size:12.5px} .tb-t{width:auto;min-width:40px} .grid{grid-template-columns:repeat(2,1fr)} .stay-h{font-size:16px} .ynrow{grid-template-columns:1fr} .tabbar button{padding:9px 12px;font-size:13px}}
+@media print{
+  body.print-sched .hero,body.print-sched .tabbar,body.print-sched .purpose,body.print-sched .sched-print-btn{display:none!important}
+  body.print-sched .tab{display:none!important}
+  body.print-sched #sched{display:block!important}
+  body.print-sched{background:#fff!important}
+}
 </style></head><body>
 <div class="hero"><div class="eyebrow">DREAM ACADEMY × 다온맘</div><h1>다온맘 전용 페이지</h1><div class="sub">세부드림아카데미 올인원 어학연수</div></div>
 <div class="tabbar">
@@ -163,6 +169,7 @@ footer{text-align:center;color:#9b9c8f;font-size:12px;margin-top:24px}
 <div class="bsub"><div class="bsub-h navy">🏠 드림하우스 단독 <span>· 숙소별</span></div><div class="muted" style="font-size:13px;padding:4px 0">공통·얼리버드·추첨 혜택이 그대로 적용됩니다.</div></div><div class="bsub"><div class="bsub-h navy">🌊 제이파크 아일랜드 단독 <span>· 숙소별</span></div><ul class="perks"><li><span class="pe">🎪</span><b>뽀로로파크 이용권 지급</b> <span class="pd">— 아동 1인당 1매</span></li><li><span class="pe">🥐</span><b>주말 조식 50% 할인</b> <span class="pd">— 보호자 1인 650페소 · 아동 6세 미만 무료</span></li></ul></div><div class="bsub"><div class="bsub-h navy">🐬 큐브나인 리조트 단독 <span>· 숙소별</span></div><ul class="perks"><li><span class="pe">💰</span><b>전 기간 1인 10만원 할인</b> <span class="pd">— 2주 기간도 10만원</span></li><li style="background:#fff3f1;border-radius:6px;padding:8px 10px;border-bottom:none;margin:3px 0"><span class="pe">🍽️</span><b style="color:#d92d20">식사 바우처 10만원 추가 지급</b> <span style="color:#d92d20;font-weight:800">— 주당</span> <span style="background:#d92d20;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px">강력추천</span></li><li><span class="pe">💆</span><b>1인 1회 마사지 60분</b></li></ul></div>
 </div></div></section>
   <section id="sched" class="tab">
+<div class="sched-print-btn" style="text-align:right;margin-bottom:10px"><button onclick="document.body.classList.add('print-sched');setTimeout(function(){window.print();setTimeout(function(){document.body.classList.remove('print-sched')},500)},50)" style="background:#1e3a5f;color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit">🖨️ 일정만 인쇄 / PDF 저장</button></div>
 <div class="gintro"><b>다온맘님 실제 방문 일정(7/12 체크인 ~ 7/24 출국)</b> 기준, 하루를 <b>아침·점심·저녁·🎬릴스·🚐차량</b>으로 정리한 예시예요. <b>큐브나인 → 제이파크 → 드림하우스</b> 순으로 머무시고, 아이는 평일 수업 · 부모는 전용 차량으로 자유시간이에요. <b>13일은 학원 오리엔테이션(원장님 미팅)</b>부터 시작해요.<br><b>전체 일정은 모두 대략적인 예시</b>라, 원하시는 일정으로 편하게 조율 가능해요. 저희가 준비할 부분(차량 등)만 미리 알려주시면 됩니다 😊</div>
 <div class="gsec">✈️ 항공</div>
 <div class="gcard"><div class="gcard-b"><div class="sg-row"><span class="sg-t" style="width:56px">출발</span><span class="sg-d">7/12(일) 21:40 인천 출발 → 7/13(월) 01:20 세부 도착</span></div><div class="sg-row"><span class="sg-t" style="width:56px">출국</span><span class="sg-d">7/24(금) 02:20 세부 출국</span></div></div></div>
