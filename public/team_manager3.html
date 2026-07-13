@@ -4441,6 +4441,20 @@ function toggleDailyCheck(key,el){
       .catch(function(e){console.error('daily uncheck err',e);el.checked=true;});
   }
 }
+// 주간 체크리스트 체크 저장 (오늘 체크리스트와 동일한 staff_daily_check upsert — 함수 누락으로 저장 안 되던 버그 fix)
+function toggleWeeklyCheck(key,date,el){
+  if(!date){el.checked=!el.checked;return;}
+  var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  if(el.checked){
+    _dailyUpsert({check_date:date,item_key:key,checked:true,checked_by:who,checked_at:new Date().toISOString()})
+      .then(function(){loadWeeklyCheck();if(typeof loadDailyCheck==='function')loadDailyCheck();})
+      .catch(function(e){console.error('weekly check err',e);el.checked=false;});
+  } else {
+    sbDel('staff_daily_check','check_date=eq.'+date+'&item_key=eq.'+key)
+      .then(function(){loadWeeklyCheck();if(typeof loadDailyCheck==='function')loadDailyCheck();})
+      .catch(function(e){console.error('weekly uncheck err',e);el.checked=true;});
+  }
+}
 // ── 공유 보드 (staff_board, 공용) ──
 const BOARD_CATS = [
   { key:'account', label:'🔑 계정·아이디' },
