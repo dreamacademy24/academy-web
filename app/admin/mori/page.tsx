@@ -403,6 +403,21 @@ export default function MoriPage() {
       }
       const { error: e2 } = await supabase.from("mori_servings").insert(rows);
       if (e2) alert("이력 반영 실패: " + e2.message);
+      // 식단 관련 업무 > 올인원 식단(엄마용)으로 자동 연결 (meal_menus kind=dreamhouse)
+      try {
+        const mealData = dates.map(d => {
+          const day = (plan[d] || {}) as any;
+          return {
+            date: Number(d.slice(8, 10)), weekday: dowOf(d),
+            breakfast: day.아침 || [], lunch: day.점심 || [],
+            dinner_adult: day.저녁어른 || [], dinner_child: day.저녁아동 || [],
+          };
+        });
+        const { data: ex } = await supabase.from("meal_menus").select("id,published").eq("kind", "dreamhouse").eq("menu_date", weekStart).maybeSingle();
+        if (ex) await supabase.from("meal_menus").update({ meal_data: mealData, updated_at: new Date().toISOString() }).eq("id", ex.id);
+        else await supabase.from("meal_menus").insert({ kind: "dreamhouse", menu_date: weekStart, image_url: "", meal_data: mealData, published: false });
+        alert("✅ 확정 완료!\n식단 관련 업무 > 🏠 올인원 식단(엄마용) 탭으로 전달됐어요.\n거기서 검토 후 배포하면 엄마들에게 보여요." + (ex?.published ? "\n(이미 배포된 주라 내용만 갱신됐어요)" : ""));
+      } catch (e) { console.error("[meal_menus sync]", e); }
       await loadBase();
     }
     setBusy("");
