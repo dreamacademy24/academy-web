@@ -1592,9 +1592,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
               <div id="empSubNavTitle" style="font-size:17px;font-weight:800;color:var(--text);padding:6px 16px 6px 2px;margin-right:4px;white-space:nowrap">내 업무 <span id="empSubNavSub" style="font-size:11px;color:var(--text3);font-weight:600"></span></div>
               <button id="empTab-home" onclick="setEmpTab('home')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🏠 홈</button>
               <button id="empTab-checklist" onclick="setEmpTab('checklist')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 체크리스트</button>
-              <button id="empTab-student" onclick="setEmpTab('student')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 학생</button>
+              <button id="empTab-guest" onclick="setEmpTab('guest')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 손님</button>
               <button id="empTab-calendar" onclick="setEmpTab('calendar')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📅 달력</button>
-              <button id="empTab-booking" onclick="setEmpTab('booking')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🔍 예약</button>
               <button id="empTab-approval" onclick="setEmpTab('approval')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">⚖️ 결재<span id="empApvDot" style="display:none;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-left:3px;vertical-align:middle"></span></button>
             </div>
             <div id="empDetail" style="min-width:0"></div>
@@ -6679,37 +6678,49 @@ function setEmpTab(tab){
   if(tab==='work')tab='home';
   if(tab==='daily')tab='checklist';
   if(tab==='apv')tab='approval';
+  if(tab==='student'||tab==='booking')tab='guest';
   _empTab=tab;
-  ['home','checklist','student','calendar','booking','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
+  ['home','checklist','guest','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
   var empId=curEmpId||(CU&&CU.id);
   var d=document.getElementById('empDetail');
   if(tab==='home'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId));}
   else if(tab==='checklist'){renderEmpChecklistTab(empId);}
-  else if(tab==='student'){renderEmpStudentTab(empId);}
+  else if(tab==='guest'){renderEmpGuestTab(empId);}
   else if(tab==='calendar'){renderEmpCalendarTab(empId);}
-  else if(tab==='booking'){renderEmpBookingTab();}
   else if(tab==='approval'){if(d)d.innerHTML='<div id="empSbApv" style="max-width:920px"></div>';renderEmpApvTab(empId);}
 }
-/* ── 🔍 내 업무 > 예약 검색 탭 (읽기 전용 — 예약관리와 같은 bookings 실시간 조회) ── */
-var _bsRows=null,_bsLoadedAt=0,_bsSelId=null,_bsChip='stay',_bsQ='';
-function renderEmpBookingTab(){
+/* ── 🎓 내 업무 > 손님 탭 (예약 검색 + 내 담당 케어 체크 통합) ── */
+var _bsRows=null,_bsLoadedAt=0,_bsSelId=null,_bsChip='mine',_bsQ='',_bsMyName='',_bsEmpId='';
+function renderEmpGuestTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
+  _bsEmpId=empId;
+  var p=getP(empId);_bsMyName=(p&&p.name)||empId;
   d.innerHTML='<div style="display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start">'+
     '<div><input id="bsQ" placeholder="🔍 이름·학생·하우스·예약번호" oninput="_bsQ=this.value;_bsRenderList()" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;font-size:12.5px;font-family:inherit;box-sizing:border-box;margin-bottom:8px">'+
     '<div id="bsChips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px"></div>'+
     '<div id="bsList" style="max-height:70vh;overflow-y:auto"></div></div>'+
-    '<div id="bsDetail"><div style="background:var(--surface2);border-radius:12px;padding:34px;text-align:center;color:var(--text3);font-size:13px">왼쪽에서 예약을 선택하세요</div></div></div>';
+    '<div id="bsDetail"><div style="background:var(--surface2);border-radius:12px;padding:34px;text-align:center;color:var(--text3);font-size:13px">왼쪽에서 손님을 선택하세요</div></div></div>';
   var now=Date.now();
-  if(_bsRows&&now-_bsLoadedAt<60000){_bsRenderChips();_bsRenderList();if(_bsSelId)_bsSelect(_bsSelId);return;}
-  sbGet('bookings','select=id,reservation_no,booker_name,booker_phone,status,payment_status,checkin_date,checkout_date,accom_type,booking_type,house_no,accom_room,students,adults,children,special_request,final_price,base_price,paid_amount,agency,flight_in,flight_out,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout&order=checkin_date.desc&limit=500')
-    .then(function(rows){_bsRows=rows||[];_bsLoadedAt=Date.now();_bsRenderChips();_bsRenderList();})
+  var after=function(){
+    _bsRenderChips();_bsRenderList();
+    if(_bsSelId&&(_bsRows||[]).some(function(x){return x.id===_bsSelId;})){_bsSelect(_bsSelId);return;}
+    // 내 담당이 있으면 첫 손님 자동 선택
+    var mine=_bsFiltered();
+    if(_bsChip==='mine'&&!mine.length){_bsChip='stay';_bsRenderChips();_bsRenderList();mine=_bsFiltered();}
+    if(mine.length)_bsSelect(mine[0].id);
+  };
+  if(_bsRows&&now-_bsLoadedAt<60000){after();return;}
+  sbGet('bookings','select=id,reservation_no,booker_name,booker_phone,status,payment_status,checkin_date,checkout_date,accom_type,booking_type,house_no,accom_room,students,adults,children,special_request,final_price,base_price,paid_amount,agency,assignee,care_assignee,flight_in,flight_out,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout&order=checkin_date.desc&limit=500')
+    .then(function(rows){_bsRows=rows||[];_bsLoadedAt=Date.now();after();})
     .catch(function(e){var l=document.getElementById('bsList');if(l)l.innerHTML='<div style="color:#b91c1c;font-size:12px">불러오기 실패: '+esc(e&&e.message||e)+'</div>';});
 }
+function renderEmpBookingTab(){renderEmpGuestTab(curEmpId||(CU&&CU.id));}
+function _bsIsMine(b){return !!(_bsMyName&&(b.assignee===_bsMyName||b.care_assignee===_bsMyName));}
 function _bsStudents(b){var st=b.students;if(typeof st==='string'){try{st=JSON.parse(st);}catch(e){st=[];}}return Array.isArray(st)?st:[];}
 function _bsSetChip(c){_bsChip=c;_bsRenderChips();_bsRenderList();}
 function _bsRenderChips(){
   var el=document.getElementById('bsChips');if(!el)return;
-  var chips=[['stay','🏠 체류 중'],['in','이번주 IN'],['out','이번주 OUT'],['all','전체']];
+  var chips=[['mine','⭐ 내 담당'],['stay','🏠 체류 중'],['in','이번주 IN'],['out','이번주 OUT'],['all','전체']];
   el.innerHTML=chips.map(function(c){var on=_bsChip===c[0];
     return '<span onclick="_bsSetChip(\''+c[0]+'\')" style="font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;cursor:pointer;background:'+(on?'#ede9fe':'var(--surface2)')+';color:'+(on?'#5b21b6':'var(--text3)')+'">'+c[1]+'</span>';}).join('');
 }
@@ -6728,6 +6739,7 @@ function _bsFiltered(){
       return true;
     }
     var ci=String(b.checkin_date||'').slice(0,10),co=String(b.checkout_date||'').slice(0,10);
+    if(_bsChip==='mine')return _bsIsMine(b)&&co>=today;
     if(_bsChip==='stay')return ci&&co&&ci<=today&&co>=today;
     if(_bsChip==='in')return ci>=wS&&ci<=wE;
     if(_bsChip==='out')return co>=wS&&co<=wE;
@@ -6752,7 +6764,7 @@ function _bsRenderList(){
     var room=(b.house_no||b.accom_room||'').toUpperCase();
     var cxl=String(b.status||'').indexOf('취소')>=0;
     return '<div onclick="_bsSelect(\''+b.id+'\')" style="border-radius:9px;padding:8px 10px;margin-bottom:4px;cursor:pointer;background:'+(on?'#ede9fe':'transparent')+'">'+
-      '<div style="font-size:13px;font-weight:700;color:'+(cxl?'#b91c1c':(on?'#4c1d95':'var(--text)'))+'">'+esc(b.booker_name||'-')+(cxl?' <span style="font-size:10px">취소</span>':'')+' <span style="font-size:10.5px;font-weight:600;color:'+(on?'#7c3aed':'var(--text3)')+'">'+esc(room||_bsAccomShort(b))+'</span></div>'+
+      '<div style="font-size:13px;font-weight:700;color:'+(cxl?'#b91c1c':(on?'#4c1d95':'var(--text)'))+'">'+(_bsIsMine(b)?'⭐ ':'')+esc(b.booker_name||'-')+(cxl?' <span style="font-size:10px">취소</span>':'')+' <span style="font-size:10.5px;font-weight:600;color:'+(on?'#7c3aed':'var(--text3)')+'">'+esc(room||_bsAccomShort(b))+'</span></div>'+
       '<div style="font-size:11px;color:'+(on?'#7c3aed':'var(--text3)')+'">'+String(b.checkin_date||'').slice(5).replace('-','/')+' ~ '+String(b.checkout_date||'').slice(5).replace('-','/')+' · '+_bsAccomShort(b)+'</div></div>';
   }).join('');
 }
@@ -6792,6 +6804,7 @@ function _bsSelect(id){
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'+
       '<span style="font-size:17px;font-weight:800">'+esc(b.booker_name||'-')+'</span>'+_bsPayBadge(b)+
       '<span style="font-size:11px;font-weight:800;background:#ede9fe;color:#5b21b6;border-radius:6px;padding:2px 8px">'+esc(_bsAccomShort(b))+'</span>'+
+      (_bsIsMine(b)?'<span style="font-size:11px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px">⭐ 내 담당</span>':'')+
       '<span style="font-size:11px;color:var(--text3)">'+esc(b.reservation_no||'')+'</span>'+
       '<button onclick="window.open(\'/admin/bookings/'+b.id+'\',\'_blank\')" style="margin-left:auto;padding:5px 12px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">예약 상세 열기 ↗</button></div>'+
     _bsSegLine(b)+payLine+
@@ -6804,6 +6817,7 @@ function _bsSelect(id){
     '<div style="font-size:11px;color:var(--text3);margin-bottom:5px">🎓 학생 '+sts.length+'명</div><div style="margin-bottom:10px">'+stuHtml+'</div>'+
     '<div id="bsApps" style="font-size:12px;color:var(--text2);line-height:1.9;border-top:1px solid var(--border);padding-top:10px">신청 현황 불러오는 중…</div>'+
     (b.special_request?'<div style="margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#78350f">📝 '+esc(b.special_request)+'</div>':'')+
+    (_bsIsMine(b)?'<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:12px;font-weight:800;color:#b45309">⭐ 내 담당 — 오늘 케어 체크</span><span id="empStuSum" style="font-size:11px;font-weight:800;color:var(--primary)"></span><div style="flex:1"></div>'+(isAdmin()?'<button onclick="_clEditItems()" style="padding:3px 9px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">⚙️ 체크 항목 편집</button>':'')+'</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>':'')+
   '</div>';
   Promise.all([
     sbGet('shuttle_applications','booking_id=eq.'+id+'&select=tour_name,tour_date,people_count,status&order=tour_date').catch(function(){return null;}),
@@ -6819,6 +6833,20 @@ function _bsSelect(id){
     else if(tu)parts.push('👩‍🏫 튜터 신청 없음');
     box.innerHTML=parts.length?parts.join('<br>'):'신청 내역 없음';
   });
+  if(_bsIsMine(b)){
+    var today=todayStr();
+    Promise.all([
+      sbGet('student_daily_logs','log_date=eq.'+today+'&booking_id=eq.'+id).catch(function(){return [];}),
+      sbGet('booking_checklists','booking_id=eq.'+id).catch(function(){return [];}),
+      sbGet('app_settings','key=eq.care_checklist_items').catch(function(){return [];})
+    ]).then(function(res){
+      window._stuLogMap={};(res[0]||[]).forEach(function(l){window._stuLogMap[l.booking_id+'_'+l.student_idx]=l;});
+      window._stuClMap={};(res[1]||[]).forEach(function(c){window._stuClMap[c.booking_id]=c;});
+      window._stuClItems=((res[2]||[])[0]&&(res[2])[0].value)||[];
+      window._stuBookings=[b];window._stuToday=today;window._stuStaff=_bsEmpId;
+      _stuRender();
+    });
+  }
 }
 function renderEmpChecklistTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
