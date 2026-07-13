@@ -119,6 +119,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#26303f;
 footer{text-align:center;color:#9b9c8f;font-size:12px;margin-top:24px}
 @media(max-width:620px){.hero h1{font-size:23px} .daycard-h{font-size:13px} .dc-stay{font-size:12.5px} .tb{font-size:12.5px} .tb-t{width:auto;min-width:40px} .grid{grid-template-columns:repeat(2,1fr)} .stay-h{font-size:16px} .ynrow{grid-template-columns:1fr} .tabbar button{padding:9px 12px;font-size:13px}}
 @media print{
+  .daycard,.tb{break-inside:avoid;page-break-inside:avoid}
   body.print-sched .hero,body.print-sched .tabbar,body.print-sched .purpose,body.print-sched .sched-print-btn{display:none!important}
   body.print-sched .tab{display:none!important}
   body.print-sched #sched{display:block!important}
