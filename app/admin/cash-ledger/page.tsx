@@ -158,6 +158,30 @@ export default function CashLedgerPage() {
   function prevMonth() { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); }
   function nextMonth() { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); }
 
+  // 사진 압축 (폰 카메라 원본이 4.5MB 초과 시 서버가 413으로 거부 → 업로드 전 리사이즈)
+  function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith("image/")) { resolve(file); return; }
+      const r = new FileReader();
+      r.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 1800; let w = img.width, h = img.height;
+          if (Math.max(w, h) > max) { const k = max / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+          const c = document.createElement("canvas"); c.width = w; c.height = h;
+          const ctx = c.getContext("2d");
+          if (!ctx) { resolve(file); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          c.toBlob(b => resolve(b || file), "image/jpeg", 0.85);
+        };
+        img.onerror = () => resolve(file);
+        img.src = r.result as string;
+      };
+      r.onerror = () => resolve(file);
+      r.readAsDataURL(file);
+    });
+  }
+
   // 파일 업로드
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -165,13 +189,18 @@ export default function CashLedgerPage() {
     setUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
+        const orig = files[i];
+        const blob = await compressImage(orig);
+        const fname = orig.name.replace(/\.[^.]+$/, "") + ".jpg";
         const fd = new FormData();
-        fd.append("file", files[i]);
+        fd.append("file", new File([blob], fname, { type: "image/jpeg" }));
         const res = await fetch("/api/admin/cash-ledger/upload", { method: "POST", body: fd });
-        const j = await res.json();
-        if (res.ok && j.url) setAFiles(prev => [...prev, { name: j.name, url: j.url }]);
-        else alert(`업로드 실패: ${j.error || "unknown"}`);
+        const j = await res.json().catch(() => null);
+        if (res.ok && j?.url) setAFiles(prev => [...prev, { name: j.name, url: j.url }]);
+        else alert(`업로드 실패 (${res.status}): ${j?.error || "사진이 너무 크거나 네트워크 오류예요. 다시 시도해주세요."}`);
       }
+    } catch (err) {
+      alert("업로드 실패: " + (err instanceof Error ? err.message : "알 수 없는 오류"));
     } finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   }
 
