@@ -112,14 +112,21 @@ export default function MoriPage() {
   function doPrint(lang: "ko" | "en") {
     setPrintLang(lang);
     document.body.classList.add("mori-printing");
-    setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove("mori-printing"); setPrintLang(null); }, 400); }, 150);
+    setTimeout(() => {
+      const el = document.getElementById("moriPrint") as HTMLElement | null;
+      if (el) {
+        (el.style as any).zoom = "1";
+        const avail = 700; // A4 가로 1장 인쇄영역 높이(px)
+        const h = el.scrollHeight;
+        (el.style as any).zoom = h > avail ? String(Math.max(0.45, avail / h)) : "1";
+      }
+      window.print();
+      setTimeout(() => { document.body.classList.remove("mori-printing"); setPrintLang(null); }, 400);
+    }, 150);
   }
   function printMenu(lang: "ko" | "en") {
     if (!plan) return;
-    if (lang === "en") {
-      const missing = collectPlanNames().filter(n => !enNames[nk(n)]);
-      if (missing.length) { setEnInputs({}); setEnModal(missing); return; }
-    }
+    if (lang === "en") { setEnInputs({}); setEnModal(["preview"]); return; }
     doPrint(lang);
   }
   async function saveEnNames(andPrint: boolean) {
@@ -1017,11 +1024,12 @@ export default function MoriPage() {
 
       {/* ── 식단표 인쇄 전용 영역 (인쇄 시에만 표시) ── */}
       <style>{`
-        #moriPrint{display:none}
+        #moriPrint{position:absolute;left:-10000px;top:0;width:277mm;background:#fff}
         @media print{
           @page{size:A4 landscape;margin:10mm}
           body.mori-printing #moriRoot>*:not(#moriPrint){display:none!important}
-          body.mori-printing #moriPrint{display:block!important}
+          body.mori-printing #moriPrint{position:static!important;left:auto!important;width:auto!important}
+          #moriPrint table, #moriPrint tr{page-break-inside:avoid}
         }
       `}</style>
       {printLang && plan && (() => {
@@ -1029,7 +1037,7 @@ export default function MoriPage() {
         const en = printLang === "en";
         const heads = en ? ["Date", "Breakfast", "Lunch", "Dinner (Adult)", "Dinner (Kids)"] : ["날짜", "아침", "점심", "저녁 · 어른", "저녁 · 아동"];
         const th: React.CSSProperties = { background: "#3a47a8", color: "#fff", padding: "7px 6px", fontSize: 13, border: "1px solid #2f3b8f" };
-        const td: React.CSSProperties = { border: "1px solid #cbd2ea", padding: "6px 8px", fontSize: 12, verticalAlign: "top", lineHeight: 1.7 };
+        const td: React.CSSProperties = { border: "1px solid #cbd2ea", padding: "4px 7px", fontSize: 11.5, verticalAlign: "top", lineHeight: 1.45 };
         return (
           <div id="moriPrint">
             <div style={{ textAlign: "center", fontWeight: 800, fontSize: 16, marginBottom: 10 }}>
@@ -1060,28 +1068,61 @@ export default function MoriPage() {
         );
       })()}
 
-      {/* ── 영문명 등록 모달 ── */}
-      {enModal && (
-        <div onClick={() => setEnModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: 520, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>🌐 영문명 등록 <span style={{ fontWeight: 400, fontSize: 12.5, color: "#889" }}>— 영문명이 없는 메뉴 {enModal.length}개 · 한 번 저장하면 다음부터 자동으로 쓰여요</span></div>
-            <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-              {enModal.map(name => (
-                <div key={name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 170, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{name}</span>
-                  <input value={enInputs[name] || ""} onChange={e => setEnInputs(p => ({ ...p, [name]: e.target.value }))} placeholder="English name"
-                    style={{ flex: 1, padding: "7px 10px", border: "1px solid #ccd", borderRadius: 8, fontSize: 13 }} />
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize: 11.5, color: "#99a" }}>비워두면 그 메뉴는 한글 그대로 인쇄돼요.</div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => { setEnModal(null); doPrint("en"); }} style={{ ...btn("#aab"), background: "#fff", color: "#667", border: "1px solid #ccd" }}>건너뛰고 인쇄</button>
-              <button onClick={() => saveEnNames(true)} style={btn("#0e7490")}>저장 후 인쇄</button>
+      {/* ── 영문 식단표 미리보기·편집 (표 그대로, 빈칸만 채우기) ── */}
+      {enModal && plan && (() => {
+        const val = (n: string) => (enInputs[n] !== undefined ? enInputs[n] : (enNames[nk(n)] || ""));
+        const missingCnt = collectPlanNames().filter(n => !val(n).trim()).length;
+        const EN_DOW2 = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const eth: React.CSSProperties = { background: "#0e7490", color: "#fff", padding: "7px 6px", fontSize: 13, border: "1px solid #0c6377", position: "sticky", top: 0 };
+        const etd: React.CSSProperties = { border: "1px solid #d5dcea", padding: "6px 8px", verticalAlign: "top", minWidth: 150 };
+        const cellItems = (arr: string[]) => (arr || []).map((n, i) => (
+          <div key={i} style={{ marginBottom: 7 }}>
+            <div style={{ fontSize: 11, color: "#8a94a8", lineHeight: 1.3 }}>{n}</div>
+            <input value={val(n)} placeholder="English…"
+              onChange={e => setEnInputs(prev => ({ ...prev, [n]: e.target.value }))}
+              style={{ width: "100%", boxSizing: "border-box", padding: "3px 7px", borderRadius: 6, fontSize: 12.5,
+                border: val(n).trim() ? "1px solid #cfd6ee" : "1.5px solid #e6b84c",
+                background: val(n).trim() ? "#fff" : "#fffaf0" }} />
+          </div>
+        ));
+        return (
+          <div onClick={() => setEnModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 18, width: "min(1240px, 95vw)", maxHeight: "90vh", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 800, fontSize: 16 }}>🌐 영문 식단표</span>
+                <span style={{ fontSize: 12.5, color: "#889" }}>한글 밑 칸에 영문을 쓰면 저장돼서 다음부터 자동으로 채워져요 · 비운 칸은 한글로 인쇄</span>
+                {missingCnt > 0 && <span style={{ fontSize: 12.5, fontWeight: 700, color: "#b8860b", background: "#fff3d6", padding: "2px 10px", borderRadius: 8 }}>빈칸 {missingCnt}개</span>}
+                <div style={{ flex: 1 }} />
+                <button onClick={() => setEnModal(null)} style={{ background: "#fff", color: "#667", border: "1px solid #ccd", borderRadius: 8, padding: "7px 14px", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>닫기</button>
+                <button onClick={() => saveEnNames(false)} style={btn("#475569")}>저장</button>
+                <button onClick={() => saveEnNames(true)} style={btn("#0e7490")}>저장 후 인쇄</button>
+              </div>
+              <div style={{ overflow: "auto", flex: 1, minHeight: 0 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr>{["Date", "Breakfast", "Lunch", "Dinner (Adult)", "Dinner (Kids)"].map(h => <th key={h} style={eth}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {dates.map(d => {
+                      const day = (plan[d] || {}) as any;
+                      const dowIdx = new Date(d + "T00:00:00").getDay();
+                      return (
+                        <tr key={d}>
+                          <td style={{ ...etd, textAlign: "center", fontWeight: 800, whiteSpace: "nowrap", background: "#f7f8fd", minWidth: 70 }}>
+                            {d.slice(5).replace("-", "/")}<br /><span style={{ fontWeight: 500, color: "#667" }}>({EN_DOW2[dowIdx]})</span>
+                          </td>
+                          <td style={etd}>{cellItems(day.아침)}</td>
+                          <td style={etd}>{cellItems(day.점심)}</td>
+                          <td style={etd}>{cellItems(day.저녁어른)}</td>
+                          <td style={etd}>{cellItems(day.저녁아동)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
