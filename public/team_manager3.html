@@ -1401,7 +1401,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     <div class="th-center">
       <button class="tab-item tab-active" data-page="home" onclick="showPage('home')">홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span><span id="badge-notif" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="announcements" onclick="showPage('announcements')">공지사항</button>
-      <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무</button>
+      <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무<span id="notif-dot-mywork" class="notif-dot" style="display:none"></span><span id="badge-mywork" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="board" onclick="showPage('board')">전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
@@ -3569,9 +3569,20 @@ function createNotif(toId,type,refId,message){
 function createNotifMultiple(toIds,type,refId,message){
   toIds.forEach(function(id){createNotif(id,type,refId,message);});
 }
+var _notifSeenIds={};var _notifFirstLoad=true;
 function loadMyNotifs(){
   if(!CU)return Promise.resolve();
-  return sbGet('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false&order=created_at.desc&limit=200').then(function(rows){myNotifs=rows;renderNotifBadges();});
+  return sbGet('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false&order=created_at.desc&limit=200').then(function(rows){
+    myNotifs=rows;
+    // 새로 도착한 알림 토스트 (첫 로드는 제외 — 로그인 직후 폭탄 방지)
+    if(!_notifFirstLoad){
+      var fresh=(rows||[]).filter(function(n){return !_notifSeenIds[n.id];}).slice(0,3);
+      fresh.forEach(function(n){try{toast('🔔 '+String(n.message||'새 알림').slice(0,60));}catch(e){}});
+    }
+    (rows||[]).forEach(function(n){_notifSeenIds[n.id]=1;});
+    _notifFirstLoad=false;
+    renderNotifBadges();
+  });
 }
 function markNotifsRead(type){
   if(!CU)return;
@@ -3592,7 +3603,7 @@ function markNotifsRead(type){
 function renderNotifBadges(){
   var counts={};
   myNotifs.forEach(function(n){counts[n.type]=(counts[n.type]||0)+1;});
-  var map={board:['task_comment','unassigned_task'],projects:['thread'],opinions:['opinion'],approval:['approval'],notice:['notice']};
+  var map={mywork:['task_comment','unassigned_task','task','task_assigned'],board:['task_comment','unassigned_task','task','task_assigned'],projects:['thread'],opinions:['opinion'],approval:['approval'],notice:['notice']};
   Object.keys(map).forEach(function(key){
     var total=0;map[key].forEach(function(t){total+=(counts[t]||0);});
     var dot=document.getElementById('notif-dot-'+key);
@@ -3607,9 +3618,11 @@ function _setNavBadge(id,count){
   el.style.display='inline-flex';
 }
 function updateNavBadges(){
-  // 전체 업무: 미읽은 업무 관련 알림 수 (task_comment + unassigned_task)
-  var boardNotif=myNotifs.filter(function(n){return n.type==='task_comment'||n.type==='unassigned_task';}).length;
+  // 업무 관련 알림 (댓글 + 새 배정): 내 업무 + 전체 업무 뱃지
+  var _taskTypes=['task_comment','unassigned_task','task','task_assigned'];
+  var boardNotif=myNotifs.filter(function(n){return _taskTypes.indexOf(n.type)>=0;}).length;
   _setNavBadge('badge-board',boardNotif);
+  _setNavBadge('badge-mywork',boardNotif);
   // 의견요청: myNotifs 중 type='opinion'
   var opCount=myNotifs.filter(function(n){return n.type==='opinion';}).length;
   _setNavBadge('badge-opinions',opCount);
@@ -3954,7 +3967,8 @@ function showPage(p){
   document.getElementById('btnProj').style.display='none';
   if(p==='home'){renderHome();markNotifsRead('all');}
   if(p==='announcements'){renderAnnouncementsPage();document.getElementById('btnTask').style.display='none';markNotifsRead('notice');}
-  if(p==='board'){renderBoard();recordBoardView();markNotifsRead('task_comment');markNotifsRead('unassigned_task');}
+  if(p==='board'){renderBoard();recordBoardView();markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
+  if(p==='mywork'){markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
