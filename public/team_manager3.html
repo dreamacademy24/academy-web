@@ -5870,7 +5870,7 @@ function _boardSendCmt(taskId){
   taskComments[taskId].push(nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,nc);
   var ct=tasks.find(function(t){return t.id===taskId;});
-  if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
+  if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).concat([ct.createdBy]).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
   inp.value='';renderBoardTaskDetail(taskId);renderBoardSidebar();
 }
 function renderBoardEmpDetail(empId){
@@ -7643,7 +7643,7 @@ function _empSendCmt(taskId){
   taskComments[taskId].push(nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,nc);
   var ct=tasks.find(function(t){return t.id===taskId;});
-  if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
+  if(ct){var msg=CU.name+'님이 "'+(ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).concat([ct.createdBy]).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
   inp.value='';renderEmpDetail(taskId);renderEmpSidebar(curEmpId);
 }
 function _subTaskToggle(taskId, idx, e){
@@ -9043,7 +9043,7 @@ function sendInlineCmt(taskId){
   taskComments[taskId].push(_nc);
   sv('tm_tc',taskComments);syncTcToSB(taskId,_nc);inp.value='';inp.style.height='auto';
   var _ct=tasks.find(function(t){return t.id===taskId;});
-  if(_ct){var _cmtMsg=CU.name+'님이 "'+(_ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets=(_ct.assignees&&_ct.assignees.length?_ct.assignees:[_ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(_cmtTargets.length)createNotifMultiple(_cmtTargets,'task_comment',taskId,_cmtMsg);}
+  if(_ct){var _cmtMsg=CU.name+'님이 "'+(_ct.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets=(_ct.assignees&&_ct.assignees.length?_ct.assignees:[_ct.assignee]).concat([_ct.createdBy]).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;});if(_cmtTargets.length)createNotifMultiple(_cmtTargets,'task_comment',taskId,_cmtMsg);}
   const sec=document.getElementById('tcmt-'+taskId);if(sec)renderInlineCmt(sec,taskId);
   renderEmpList(curEmpId);
   if(document.getElementById('taskCmtModal').classList.contains('open')&&curCmtTaskId===taskId)renderTaskCmtBody(taskId);
@@ -9741,7 +9741,7 @@ function sendFocusCmt(taskId){
   var nc={id:uid(),author:CU.id,text:text,date:new Date().toISOString()};
   taskComments[taskId].push(nc);sv('tm_tc',taskComments);syncTcToSB(taskId,nc);
   var ct=tasks.find(function(t){return t.id===taskId;});
-  if(ct){var msg=CU.name+'님이 "'+((ct.title||'업무').slice(0,20))+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).filter(function(id){return id&&id!==CU.id;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
+  if(ct){var msg=CU.name+'님이 "'+((ct.title||'업무').slice(0,20))+'"에 댓글: '+text.slice(0,30);var targets=(ct.assignees&&ct.assignees.length?ct.assignees:[ct.assignee]).concat([ct.createdBy]).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;});if(targets.length)createNotifMultiple(targets,'task_comment',taskId,msg);}
   inp.value='';showProjTaskFocus(taskId);refreshAll();
 }
 function toggleClInFocus(taskId,ci){
