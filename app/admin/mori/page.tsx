@@ -91,6 +91,47 @@ export default function MoriPage() {
   useEffect(() => { if (authed) loadBase(); }, [authed]);
   useEffect(() => { if (authed) { loadWeek(weekStart); loadGuests(); loadAcadWeek(weekStart); } }, [authed, weekStart]);
 
+  // ── 식단표 인쇄 (한/영) ──
+  const [printLang, setPrintLang] = useState<"ko" | "en" | null>(null);
+  const [enNames, setEnNames] = useState<Record<string, string>>({});
+  const [enModal, setEnModal] = useState<string[] | null>(null);
+  const [enInputs, setEnInputs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!authed) return;
+    supabase.from("app_settings").select("value").eq("key", "mori_en_names").maybeSingle()
+      .then(({ data }) => { if (data?.value && typeof data.value === "object") setEnNames(data.value as Record<string, string>); });
+  }, [authed]);
+  function collectPlanNames(): string[] {
+    if (!plan) return [];
+    const seen = new Set<string>(); const out: string[] = [];
+    for (const d of dates) for (const m of MEAL_COLS) for (const it of ((plan[d] as any)?.[m] || [])) {
+      if (!seen.has(nk(it))) { seen.add(nk(it)); out.push(it); }
+    }
+    return out;
+  }
+  function doPrint(lang: "ko" | "en") {
+    setPrintLang(lang);
+    document.body.classList.add("mori-printing");
+    setTimeout(() => { window.print(); setTimeout(() => { document.body.classList.remove("mori-printing"); setPrintLang(null); }, 400); }, 150);
+  }
+  function printMenu(lang: "ko" | "en") {
+    if (!plan) return;
+    if (lang === "en") {
+      const missing = collectPlanNames().filter(n => !enNames[nk(n)]);
+      if (missing.length) { setEnInputs({}); setEnModal(missing); return; }
+    }
+    doPrint(lang);
+  }
+  async function saveEnNames(andPrint: boolean) {
+    const merged = { ...enNames };
+    for (const [name, v] of Object.entries(enInputs)) if (v.trim()) merged[nk(name)] = v.trim();
+    const { error } = await supabase.from("app_settings").upsert({ key: "mori_en_names", value: merged }, { onConflict: "key" });
+    if (error) { alert("영문명 저장 실패: " + error.message); return; }
+    setEnNames(merged); setEnModal(null);
+    if (andPrint) doPrint("en");
+  }
+  const trEn = (n: string) => enNames[nk(n)] || n;
+
   async function loadBase() {
     const [it, fs, sv, wk] = await Promise.all([
       supabase.from("mori_items").select("*").order("name"),
@@ -497,7 +538,7 @@ export default function MoriPage() {
   const weekOf = (g: Guest) => { const w = Math.floor(diffDays(g.from, weekStart) / 7) + 1; return w <= 0 ? "신규" : `${w}주차`; };
 
   return (
-    <div style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1400 }}>
+    <div id="moriRoot" style={{ padding: 20, fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif", maxWidth: 1400 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>🍱 식단생성</h1>
         <div style={{ display: "flex", gap: 6 }}>
@@ -533,6 +574,8 @@ export default function MoriPage() {
             {plan && <button onClick={() => save()} style={btn("#5a67c8")}>{busy || "저장"}</button>}
             {plan && status !== "confirmed" && <button onClick={() => { if (confirm("확정하면 제공 이력에 반영되어 이후 주차 중복 검사에 사용돼요. 확정할까요?")) save("confirmed"); }} style={btn("#2e9e52")}>확정</button>}
             {plan && <button onClick={exportXlsx} style={btn("#1d6f42")}>📥 엑셀</button>}
+            {plan && <button onClick={() => printMenu("ko")} style={btn("#475569")} title="식단 표만 A4 가로 1장으로 인쇄">🖨️ 식단 인쇄</button>}
+            {plan && <button onClick={() => printMenu("en")} style={btn("#0e7490")} title="영문 식단표 인쇄 (영문명 없는 메뉴는 등록 후 인쇄)">🖨️ English</button>}
           </div>
 
           <div style={{ background: "#fff", border: "1px solid #dde", borderRadius: 12, padding: "12px 16px", marginBottom: 10, fontSize: 13.5 }}>
@@ -971,6 +1014,74 @@ export default function MoriPage() {
           </div>
         );
       })()}
+
+      {/* ── 식단표 인쇄 전용 영역 (인쇄 시에만 표시) ── */}
+      <style>{`
+        #moriPrint{display:none}
+        @media print{
+          @page{size:A4 landscape;margin:10mm}
+          body.mori-printing #moriRoot>*:not(#moriPrint){display:none!important}
+          body.mori-printing #moriPrint{display:block!important}
+        }
+      `}</style>
+      {printLang && plan && (() => {
+        const EN_DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const en = printLang === "en";
+        const heads = en ? ["Date", "Breakfast", "Lunch", "Dinner (Adult)", "Dinner (Kids)"] : ["날짜", "아침", "점심", "저녁 · 어른", "저녁 · 아동"];
+        const th: React.CSSProperties = { background: "#3a47a8", color: "#fff", padding: "7px 6px", fontSize: 13, border: "1px solid #2f3b8f" };
+        const td: React.CSSProperties = { border: "1px solid #cbd2ea", padding: "6px 8px", fontSize: 12, verticalAlign: "top", lineHeight: 1.7 };
+        return (
+          <div id="moriPrint">
+            <div style={{ textAlign: "center", fontWeight: 800, fontSize: 16, marginBottom: 10 }}>
+              {en ? "Dream House Weekly Menu" : "드림하우스 주간 식단표"} ({dates[0].slice(5).replace("-", "/")} ~ {dates[dates.length - 1].slice(5).replace("-", "/")})
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead><tr>{heads.map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {dates.map(d => {
+                  const day = (plan[d] || {}) as any;
+                  const dowIdx = new Date(d + "T00:00:00").getDay();
+                  const cell = (arr: string[]) => (arr || []).map((n, i) => <div key={i}>{en ? trEn(n) : n}</div>);
+                  return (
+                    <tr key={d}>
+                      <td style={{ ...td, textAlign: "center", fontWeight: 800, whiteSpace: "nowrap", background: "#f7f8fd" }}>
+                        {d.slice(5).replace("-", "/")}<br /><span style={{ fontWeight: 500, color: "#667" }}>({en ? EN_DOW[dowIdx] : dowOf(d)})</span>
+                      </td>
+                      <td style={td}>{cell(day.아침)}</td>
+                      <td style={td}>{cell(day.점심)}</td>
+                      <td style={td}>{cell(day.저녁어른)}</td>
+                      <td style={td}>{cell(day.저녁아동)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
+      {/* ── 영문명 등록 모달 ── */}
+      {enModal && (
+        <div onClick={() => setEnModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: 520, maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>🌐 영문명 등록 <span style={{ fontWeight: 400, fontSize: 12.5, color: "#889" }}>— 영문명이 없는 메뉴 {enModal.length}개 · 한 번 저장하면 다음부터 자동으로 쓰여요</span></div>
+            <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+              {enModal.map(name => (
+                <div key={name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ width: 170, fontSize: 13, fontWeight: 600, flexShrink: 0 }}>{name}</span>
+                  <input value={enInputs[name] || ""} onChange={e => setEnInputs(p => ({ ...p, [name]: e.target.value }))} placeholder="English name"
+                    style={{ flex: 1, padding: "7px 10px", border: "1px solid #ccd", borderRadius: 8, fontSize: 13 }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#99a" }}>비워두면 그 메뉴는 한글 그대로 인쇄돼요.</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => { setEnModal(null); doPrint("en"); }} style={{ ...btn("#aab"), background: "#fff", color: "#667", border: "1px solid #ccd" }}>건너뛰고 인쇄</button>
+              <button onClick={() => saveEnNames(true)} style={btn("#0e7490")}>저장 후 인쇄</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
