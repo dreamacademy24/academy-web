@@ -20,6 +20,7 @@ interface TutorApp {
   agreed_privacy: boolean; agreed_tutor_rules?: boolean; agreed_tutor_rules_bool?: boolean;
   status: string; assigned_tutor_id: string | null;
   booking_id: string | null;
+  staff_assignee: string;
   total_sessions: number | null; total_amount: number | null; admin_memo: string | null;
   schedule_blocks?: Array<{ days: string[]; time: string; sessions_per_day: number }> | null;
 }
@@ -112,10 +113,10 @@ export default function TutorApplications() {
 
     // booking_id 기준 bookings 일괄 조회 (FK 의존 없이 in() 으로)
     const bookingIds = Array.from(new Set((data || []).map((r: any) => r.booking_id).filter(Boolean)));
-    const bookingMap: Record<string, { house_no?: string; accom_room?: string }> = {};
+    const bookingMap: Record<string, { house_no?: string; accom_room?: string; assignee?: string; care_assignee?: string }> = {};
     if (bookingIds.length > 0) {
-      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room").in("id", bookingIds);
-      (bs || []).forEach((b: any) => { bookingMap[b.id] = { house_no: b.house_no, accom_room: b.accom_room }; });
+      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room, assignee, care_assignee").in("id", bookingIds);
+      (bs || []).forEach((b: any) => { bookingMap[b.id] = { house_no: b.house_no, accom_room: b.accom_room, assignee: b.assignee, care_assignee: b.care_assignee }; });
     }
 
     const mapped: TutorApp[] = (data || []).map((r: any) => ({
@@ -123,6 +124,12 @@ export default function TutorApplications() {
       created_at: r.created_at,
       updated_at: r.updated_at || null,
       booking_id: r.booking_id || null,
+      staff_assignee: (() => {
+        const b = bookingMap[r.booking_id] || {} as any;
+        const a = (b.assignee || '').trim(), c = (b.care_assignee || '').trim();
+        if (a && c && a !== c) return a + '·' + c;
+        return a || c || '';
+      })(),
       reserver_type: 'portal',
       house_or_reserver: r.guest_name || r.house_number || '',
       house_number: (() => {
@@ -800,9 +807,10 @@ export default function TutorApplications() {
               <thead>
                 <tr>
                   <th style={{ width: '6%' }}>접수</th>
-                  <th style={{ width: '9%' }}>하우스</th>
-                  <th style={{ width: '10%' }}>예약자</th>
-                  <th style={{ width: '18%' }}>수강자</th>
+                  <th style={{ width: '8%' }}>하우스</th>
+                  <th style={{ width: '9%' }}>예약자</th>
+                  <th style={{ width: '7%' }}>담당자</th>
+                  <th style={{ width: '13%' }}>수강자</th>
                   <th style={{ width: '6%' }}>나이</th>
                   <th style={{ width: '5%' }}>유형</th>
                   <th style={{ width: '5%' }}>타임</th>
@@ -822,6 +830,11 @@ export default function TutorApplications() {
                       <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(a.created_at)}</td>
                       <td style={{ fontSize: 12, fontWeight: 700, color: "#1a6fc4", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.house_number || "-"}</td>
                       <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.house_or_reserver}>{a.house_or_reserver}</td>
+                      <td style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={a.staff_assignee ? `담당 직원: ${a.staff_assignee}` : "담당 직원 미지정"}>
+                        {a.staff_assignee
+                          ? <span style={{ fontSize: 11, fontWeight: 700, background: "#eef2ff", color: "#4338ca", borderRadius: 6, padding: "2px 7px" }}>{a.staff_assignee}</span>
+                          : <span style={{ fontSize: 11, color: "#cbd5e1" }}>-</span>}
+                      </td>
                       <td style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.children_names}>
                         {a.children_names}
                         {(a as any).slot_label && (
