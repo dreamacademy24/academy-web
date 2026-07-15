@@ -6,6 +6,12 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// 마지막 일마감 날짜 (그 이전 날짜는 잠김)
+async function lastClosedDate(): Promise<string | null> {
+  const { data } = await sb.from("cash_daily_closings").select("close_date").order("close_date", { ascending: false }).limit(1);
+  return data && data[0] ? data[0].close_date : null;
+}
+
 // GET — 월별 목록 + 합계
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -39,6 +45,10 @@ export async function POST(req: Request) {
     const { entry_date, type, category, description, amount, guest_name, booking_id, receipt_files, recorded_by, ref_id, house_no } = body;
 
     if (!type || !amount) return NextResponse.json({ error: "유형과 금액은 필수입니다" }, { status: 400 });
+
+    const ed = entry_date || new Date().toISOString().slice(0, 10);
+    const locked = await lastClosedDate();
+    if (locked && ed <= locked) return NextResponse.json({ error: `${locked}까지 일마감되어 잠겨 있어요. 관리자가 마감 해제 후 기록할 수 있어요.` }, { status: 409 });
 
     const { data, error } = await sb
       .from("cash_ledger")
@@ -78,11 +88,17 @@ export async function PATCH(req: Request) {
   }
 }
 
-// DELETE — 항목 삭제
+// DELETE — 항목 삭제 (마감된 날짜는 잠김)
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id 필수" }, { status: 400 });
+
+  const { data: row } = await sb.from("cash_ledger").select("entry_date").eq("id", id).maybeSingle();
+  const locked = await lastClosedDate();
+  if (row && locked && row.entry_date <= locked) {
+    return NextResponse.json({ error: `${locked}까지 일마감되어 잠겨 있어요. 관리자가 마감 해제 후 삭제할 수 있어요.` }, { status: 409 });
+  }
 
   const { error } = await sb.from("cash_ledger").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

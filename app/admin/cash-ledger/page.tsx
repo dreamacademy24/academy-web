@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 
+interface Closing { close_date: string; ledger_balance: number; actual_amount: number | null; diff: number | null; memo: string | null; closed_by: string | null; closed_at: string; }
+
 interface Entry {
   id: string; entry_date: string; type: "in" | "out";
   category: string; description: string | null; amount: number;
@@ -70,6 +72,7 @@ export default function CashLedgerPage() {
     const info = getAdminInfo();
     if (info) {
       setStaffName(info.name);
+      setStaffId(info.staffId || "");
       // 허용된 계정만 접근 가능
       if (!CASH_ALLOWED.includes(info.staffId)) { setDenied(true); setReady(true); return; }
     }
@@ -77,6 +80,13 @@ export default function CashLedgerPage() {
   }, [router]);
 
   const [allItems, setAllItems] = useState<Entry[]>([]);
+  const [closings, setClosings] = useState<Closing[]>([]);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const [closePanel, setClosePanel] = useState<string | null>(null);
+  const [closeActual, setCloseActual] = useState("");
+  const [closeMemo, setCloseMemo] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [staffId, setStaffId] = useState("");
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/cash-ledger?year=${year}&month=${String(month).padStart(2, "0")}`);
     const j = await res.json();
@@ -88,6 +98,10 @@ export default function CashLedgerPage() {
     try {
       const { data } = await supabase.from("cash_ledger").select("id,entry_date,type,category,description,amount,guest_name,ref_id,house_no").order("entry_date");
       setAllItems((data || []) as Entry[]);
+    } catch {}
+    try {
+      const cr = await fetch("/api/admin/cash-ledger/close").then(r => r.json());
+      setClosings((cr.closings || []) as Closing[]);
     } catch {}
   }, [year, month]);
 
@@ -104,6 +118,41 @@ export default function CashLedgerPage() {
   const carryOver = useMemo(() => allItems.filter(i => (i.entry_date || "") < monthStart)
     .reduce((a2, i) => a2 + (i.type === "in" ? 1 : -1) * Number(i.amount || 0), 0), [allItems, monthStart]);
   const grandTotal = carryOver + balance;
+
+  /* ── 일마감 ── */
+  const closingMap = useMemo(() => { const m: Record<string, Closing> = {}; closings.forEach(c => { m[c.close_date] = c; }); return m; }, [closings]);
+  const lastClosed = useMemo(() => closings.reduce((mx, c) => (c.close_date > mx ? c.close_date : mx), ""), [closings]);
+  // 특정 날짜까지의 장부 잔액 (전체 기준)
+  const balAt = useCallback((d: string) => allItems.filter(i => (i.entry_date || "") <= d).reduce((a2, i) => a2 + (i.type === "in" ? 1 : -1) * Number(i.amount || 0), 0), [allItems]);
+  // 미마감 (기록 있는 지난 날짜, 마지막 마감 이후 ~ 어제)
+  const unclosedDays = useMemo(() => {
+    const t = today10();
+    const days = [...new Set(allItems.map(i => i.entry_date))].filter(d => d && d < t && (!lastClosed || d > lastClosed));
+    return days.sort();
+  }, [allItems, lastClosed]);
+  const canUnlock = staffId === "admin-ceo";
+
+  async function submitClose(d: string) {
+    if (closing) return;
+    setClosing(true);
+    try {
+      const res = await fetch("/api/admin/cash-ledger/close", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ close_date: d, actual_amount: closeActual.trim() === "" ? null : Number(closeActual.replace(/[,\s]/g, "")), memo: closeMemo.trim() || null, closed_by: staffName }),
+      });
+      const j = await res.json();
+      if (!res.ok) { alert(j.error || "마감 실패"); return; }
+      setClosePanel(null); setCloseActual(""); setCloseMemo("");
+      load();
+    } finally { setClosing(false); }
+  }
+  async function unlockClose(d: string) {
+    if (!confirm(d + " 마감을 해제할까요?\n해제하면 그 날짜 기록을 수정할 수 있어요.")) return;
+    const res = await fetch("/api/admin/cash-ledger/close?date=" + d, { method: "DELETE" });
+    const j = await res.json();
+    if (!res.ok) { alert(j.error || "해제 실패"); return; }
+    load();
+  }
   // 보증금 보유현황: ① ref_id 정확 매칭 → ② 같은 이름 매칭 (반환 완료분 숨김)
   const { heldDeposits, unmatchedReturns } = useMemo(() => {
     const key = (i: Entry) => {
@@ -264,9 +313,14 @@ export default function CashLedgerPage() {
     <div style={{ maxWidth: 1020, margin: "0 auto", padding: "24px 20px" }}>
       {/* 헤더 */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, flex: 1 }}>💰 시재 관리</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800 }}>💰 시재 관리</h1>
+        {unclosedDays.length > 0 && (
+          <span title={"미마감: " + unclosedDays.join(", ")} style={{ fontSize: 11.5, fontWeight: 800, background: "#fee2e2", color: "#b91c1c", borderRadius: 8, padding: "3px 10px" }}>⚠ 미마감 {unclosedDays.length}일</span>
+        )}
+        {lastClosed && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#166534", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>🔒 {fmtD(lastClosed)}까지 마감됨</span>}
+        <span style={{ flex: 1 }} />
       </div>
-      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>보증금 입금, 지출 내역, 영수증을 기록하고 관리합니다.</p>
+      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>하루 기록이 끝나면 금고와 대조하고 일마감하세요 — 마감된 날짜는 잠깁니다.</p>
 
       {/* 좌우 분할 */}
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18, alignItems: "start" }}>
@@ -435,12 +489,40 @@ export default function CashLedgerPage() {
               {items.length === 0 ? `${year}년 ${month}월 기록이 없습니다` : "해당 분류 기록이 없습니다"}
             </div>
           ) : (
-            <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, overflow: "hidden" }}>
-              {/* 테이블 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "70px 60px 80px 1fr 100px 50px", padding: "10px 14px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", fontSize: 11, fontWeight: 700, color: "#64748b" }}>
-                <span>날짜</span><span>유형</span><span>분류</span><span>내용</span><span style={{ textAlign: "right" }}>금액</span><span></span>
-              </div>
-              {filtered.map(item => (
+            <div>
+              {(() => {
+                const dayList = [...new Set(filtered.map(i => i.entry_date))].sort().reverse();
+                const t = today10();
+                return dayList.map(d => {
+                  const dayItems = filtered.filter(i => i.entry_date === d);
+                  const dIn = dayItems.filter(i => i.type === "in").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
+                  const dOut = dayItems.filter(i => i.type === "out").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
+                  const cl = closingMap[d];
+                  const isToday = d === t;
+                  const collapsed = !!cl && !expandedDays.has(d);
+                  const dow = ["일","월","화","수","목","금","토"][new Date(d + "T00:00:00").getDay()];
+                  const canClose = !cl && d <= t && (!lastClosed || d > lastClosed);
+                  return (
+                    <div key={d} style={{ background: "#fff", border: isToday && !cl ? "2px solid #6366f1" : cl ? "1px solid #e2e8f0" : "1px solid #fca5a5", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+                      <div onClick={() => { if (cl) setExpandedDays(p => { const n = new Set(p); if (n.has(d)) n.delete(d); else n.add(d); return n; }); }}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: isToday && !cl ? "#eef2ff" : "#f8fafc", cursor: cl ? "pointer" : "default", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 800, color: isToday ? "#3730a3" : "#334155" }}>{fmtD(d)} ({dow}){isToday ? " · 오늘" : ""}</span>
+                        <span style={{ fontSize: 11.5, color: "#64748b" }}>{dayItems.length}건 · 입금 {peso(dIn)} · 출금 {peso(dOut)}</span>
+                        <span style={{ fontSize: 11.5, color: "#475569", fontWeight: 700 }}>잔액 {peso(cl ? Number(cl.ledger_balance) : balAt(d))}</span>
+                        {cl && cl.diff != null && cl.diff !== 0 && <span style={{ fontSize: 11, fontWeight: 800, color: "#b45309" }}>실사 차액 {cl.diff > 0 ? "+" : ""}{peso(Number(cl.diff))}{cl.memo ? ` "${cl.memo}"` : ""}</span>}
+                        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                          {cl
+                            ? <><span style={{ fontSize: 11, fontWeight: 800, background: "#dcfce7", color: "#166534", borderRadius: 7, padding: "2px 9px" }}>🔒 마감 · {cl.closed_by || ""} {String(cl.closed_at || "").slice(11, 16)}</span>
+                                {canUnlock && d === lastClosed && <button onClick={e => { e.stopPropagation(); unlockClose(d); }} title="마감 해제 (관리자)" style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 10, padding: "2px 7px", cursor: "pointer", color: "#94a3b8", fontFamily: "inherit" }}>해제</button>}
+                                <span style={{ fontSize: 10.5, color: "#94a3b8" }}>{collapsed ? "▸ 펼치기" : "▾ 접기"}</span></>
+                            : isToday
+                            ? <span style={{ fontSize: 11, fontWeight: 800, background: "#fef3c7", color: "#92400e", borderRadius: 7, padding: "2px 9px" }}>진행 중</span>
+                            : <span style={{ fontSize: 11, fontWeight: 800, background: "#fee2e2", color: "#b91c1c", borderRadius: 7, padding: "2px 9px" }}>⚠ 미마감</span>}
+                          {canClose && closePanel !== d && <button onClick={e => { e.stopPropagation(); setClosePanel(d); setCloseActual(String(balAt(d))); setCloseMemo(""); }}
+                            style={{ background: isToday ? "#4f46e5" : "#fff", color: isToday ? "#fff" : "#4f46e5", border: isToday ? "none" : "1px solid #c7d2fe", borderRadius: 8, padding: "5px 13px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>🔒 {isToday ? "오늘 마감" : "마감하기"}</button>}
+                        </span>
+                      </div>
+                      {!collapsed && dayItems.map(item => (
                 <div key={item.id} style={{ display: "grid", gridTemplateColumns: "70px 60px 80px 1fr 100px 50px", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", alignItems: "center", fontSize: 13 }}>
                   <span style={{ color: "#64748b", fontSize: 12 }}>{fmtD(item.entry_date)}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textAlign: "center",
@@ -464,10 +546,31 @@ export default function CashLedgerPage() {
                   <span style={{ textAlign: "right", fontWeight: 800, fontSize: 14, color: item.type === "in" ? "#1a6fc4" : "#dc2626" }}>
                     {item.type === "in" ? "+" : "-"}{peso(item.amount)}
                   </span>
-                  <button onClick={() => deleteEntry(item.id)} title="삭제"
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#cbd5e1", fontFamily: "inherit" }}>🗑</button>
+                  {closingMap[item.entry_date]
+                    ? <span title="마감된 날짜 (잠김)" style={{ fontSize: 12, color: "#cbd5e1", textAlign: "center" }}>🔒</span>
+                    : <button onClick={() => deleteEntry(item.id)} title="삭제"
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#cbd5e1", fontFamily: "inherit" }}>🗑</button>}
                 </div>
-              ))}
+                      ))}
+                      {closePanel === d && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "1px dashed #c7d2fe", background: "#fafbff", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 12, color: "#475569" }}>마감 잔액 <b style={{ fontSize: 14 }}>{peso(balAt(d))}</b></span>
+                          <span style={{ fontSize: 11.5, color: "#94a3b8" }}>금고 실사:</span>
+                          <input value={closeActual} onChange={e => setCloseActual(e.target.value)} placeholder="실제 센 금액"
+                            style={{ width: 110, padding: "5px 9px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 12.5, fontFamily: "inherit" }} />
+                          {(() => { const a = Number(String(closeActual).replace(/[,\s]/g, "")); const df = closeActual.trim() === "" || isNaN(a) ? null : Math.round((a - balAt(d)) * 100) / 100;
+                            return df === null ? null : <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 6, padding: "2px 8px", background: df === 0 ? "#dcfce7" : "#fef3c7", color: df === 0 ? "#166534" : "#92400e" }}>차액 {df > 0 ? "+" : ""}{peso(df)}</span>; })()}
+                          <input value={closeMemo} onChange={e => setCloseMemo(e.target.value)} placeholder="메모 (차액 있으면 필수)"
+                            style={{ flex: 1, minWidth: 130, padding: "5px 9px", border: "1px solid #e2e8f0", borderRadius: 7, fontSize: 12, fontFamily: "inherit" }} />
+                          <button onClick={() => setClosePanel(null)} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 7, padding: "5px 11px", fontSize: 11.5, cursor: "pointer", fontFamily: "inherit", color: "#64748b" }}>취소</button>
+                          <button onClick={() => submitClose(d)} disabled={closing}
+                            style={{ background: "#4f46e5", color: "#fff", border: "none", borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: closing ? 0.6 : 1 }}>{closing ? "마감 중…" : "마감 확정"}</button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>
