@@ -90,10 +90,14 @@ function kidsCount(b: Bk): number {
   try { const a = typeof b.students === "string" ? JSON.parse(b.students) : b.students; return Array.isArray(a) ? a.length : 0; } catch { return 0; }
 }
 
-/* 특정 날짜의 성인 수: guardian_stays가 있으면 그 기준, 없으면 예약 adults */
+/* 특정 날짜의 성인 수: guardian_stays에 겹치는 인원이 있으면 그 수, 없으면 예약 adults 폴백
+   (체류 기간을 일부만 입력한 경우 나머지 기간이 0으로 비어 보이던 버그 방지 — 아이만 체류하는 경우는 없음) */
 function adultsOn(b: Bk, date: string): number {
   const stays = parseStays(b);
-  if (stays.length > 0) return stays.filter(g => g.from <= date && date <= g.to).length;
+  if (stays.length > 0) {
+    const n = stays.filter(g => g.from <= date && date <= g.to).length;
+    if (n > 0) return n;
+  }
   return Number(b.adults) || 1;
 }
 
