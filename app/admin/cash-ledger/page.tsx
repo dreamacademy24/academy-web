@@ -320,7 +320,21 @@ export default function CashLedgerPage() {
         {lastClosed && <span style={{ fontSize: 11.5, fontWeight: 700, color: "#166534", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "3px 10px" }}>🔒 {fmtD(lastClosed)}까지 마감됨</span>}
         <span style={{ flex: 1 }} />
       </div>
-      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 18 }}>하루 기록이 끝나면 금고와 대조하고 일마감하세요 — 마감된 날짜는 잠깁니다.</p>
+      <p style={{ fontSize: 13, color: "#6b7c93", marginBottom: 12 }}>하루 기록이 끝나면 금고와 대조하고 일마감하세요 — 마감된 날짜는 잠깁니다.</p>
+      {(() => {
+        const t = today10();
+        const tIn = allItems.filter(i => i.entry_date === t && i.type === "in").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
+        const tOut = allItems.filter(i => i.entry_date === t && i.type === "out").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
+        const nowBal = balAt(t);
+        const startBal = nowBal - (tIn - tOut);
+        return (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "8px 14px" }}><div style={{ fontSize: 10.5, color: "#94a3b8" }}>오늘 시작 잔액</div><div style={{ fontSize: 15, fontWeight: 800 }}>{peso(startBal)}</div></div>
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "8px 14px" }}><div style={{ fontSize: 10.5, color: "#94a3b8" }}>오늘 증감</div><div style={{ fontSize: 15, fontWeight: 800, color: tIn - tOut >= 0 ? "#1a6fc4" : "#dc2626" }}>{tIn - tOut >= 0 ? "+" : "-"}{peso(Math.abs(tIn - tOut))}</div></div>
+            <div style={{ background: "#eefaf1", border: "1px solid #bfe5c8", borderRadius: 10, padding: "8px 14px" }}><div style={{ fontSize: 10.5, color: "#1d7a35" }}>현재 장부 잔액</div><div style={{ fontSize: 15, fontWeight: 800, color: "#166534" }}>{peso(nowBal)}</div></div>
+          </div>
+        );
+      })()}
 
       {/* 좌우 분할 */}
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18, alignItems: "start" }}>
@@ -497,6 +511,10 @@ export default function CashLedgerPage() {
                   const dayItems = filtered.filter(i => i.entry_date === d);
                   const dIn = dayItems.filter(i => i.type === "in").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
                   const dOut = dayItems.filter(i => i.type === "out").reduce((a2, i) => a2 + Number(i.amount || 0), 0);
+                  // 줄마다 잔액 (통장 스타일): 그날 시작 잔액에서 시간순 누적
+                  const dayStart = balAt(d) - (dIn - dOut);
+                  const runMap: Record<string, number> = {};
+                  { let acc = dayStart; [...dayItems].reverse().forEach(i => { acc += (i.type === "in" ? 1 : -1) * Number(i.amount || 0); runMap[i.id] = acc; }); }
                   const cl = closingMap[d];
                   const isToday = d === t;
                   const collapsed = !!cl && !expandedDays.has(d);
@@ -523,7 +541,7 @@ export default function CashLedgerPage() {
                         </span>
                       </div>
                       {!collapsed && dayItems.map(item => (
-                <div key={item.id} style={{ display: "grid", gridTemplateColumns: "70px 60px 80px 1fr 100px 50px", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", alignItems: "center", fontSize: 13 }}>
+                <div key={item.id} style={{ display: "grid", gridTemplateColumns: "70px 60px 80px 1fr 100px 90px 50px", padding: "10px 14px", borderBottom: "1px solid #f1f5f9", alignItems: "center", fontSize: 13 }}>
                   <span style={{ color: "#64748b", fontSize: 12 }}>{fmtD(item.entry_date)}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 6, textAlign: "center",
                     background: item.type === "in" ? "#eff6ff" : "#fef2f2", color: item.type === "in" ? "#1a6fc4" : "#dc2626" }}>
@@ -546,6 +564,7 @@ export default function CashLedgerPage() {
                   <span style={{ textAlign: "right", fontWeight: 800, fontSize: 14, color: item.type === "in" ? "#1a6fc4" : "#dc2626" }}>
                     {item.type === "in" ? "+" : "-"}{peso(item.amount)}
                   </span>
+                  <span style={{ textAlign: "right", fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }} title="이 기록 직후 잔액">{peso(runMap[item.id] ?? 0)}</span>
                   {closingMap[item.entry_date]
                     ? <span title="마감된 날짜 (잠김)" style={{ fontSize: 12, color: "#cbd5e1", textAlign: "center" }}>🔒</span>
                     : <button onClick={() => deleteEntry(item.id)} title="삭제"
