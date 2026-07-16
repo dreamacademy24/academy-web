@@ -3333,7 +3333,20 @@ function rowToProj(r){return{id:r.id,name:r.name||'',desc:r.description||'',colo
 function tryParse(v,d){if(!v)return d;if(typeof v!=='string')return v;try{return JSON.parse(v);}catch(e){return d;}}
 
 function svTasks(){
-  sv('tm_t',tasks);
+  try{sv('tm_t',tasks);}
+  catch(e){
+    // 용량 초과 → 캐시에는 base64 데이터 제거본 저장 (Supabase에 원본 유지)
+    try{
+      var slim=tasks.map(function(t){
+        if(!t.files||!t.files.length)return t;
+        var c=Object.assign({},t);
+        c.files=t.files.map(function(f){if(f&&f.data&&String(f.data).length>50000){var g=Object.assign({},f);delete g.data;return g;}return f;});
+        return c;
+      });
+      sv('tm_t',slim);
+      console.warn('svTasks: quota 초과 → base64 제거본으로 캐시 저장');
+    }catch(e2){console.error('svTasks 저장 실패',e2);}
+  }
 }
 function syncTaskToSB(t){
   sbUpsert('staff_tasks',taskToRow(t)).catch(function(e){console.error('task sync err',e);});
@@ -9332,8 +9345,9 @@ function toggleQA(){
 function handleQAF(e){
   var added=Array.from(e.target.files).filter(_validateFile);
   if(qaFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-qaFiles.length);}
-  Promise.all(added.map(function(f){return new Promise(function(res){var r=new FileReader();r.onload=function(ev){res({name:f.name,size:f.size,type:f.type,data:ev.target.result});};r.readAsDataURL(f);});}))
-    .then(function(list){list.forEach(function(x){qaFiles.push(x);});renderQAFL();});
+  if(!added.length)return;
+  toast('📎 업로드 중…');
+  _taskFilesUpload(added).then(function(list){list.forEach(function(x){qaFiles.push(x);});renderQAFL();if(list.length)toast('📎 '+list.length+'개 첨부됨');});
 }
 function renderQAFL(){document.getElementById('qaFL').innerHTML=qaFiles.map(function(f,i){return '<div class="file-item"><span>📄</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmQAF('+i+')">✕</button></div>';}).join('');}
 function rmQAF(i){qaFiles.splice(i,1);renderQAFL();}
@@ -9475,13 +9489,29 @@ function toggleAssignPicker(){
   if(p.style.display==='none'){renderAssignPicker();p.style.display='block';}
   else p.style.display='none';
 }
+// 업무 첨부 = Supabase Storage 업로드 (base64 localStorage 용량 초과 방지)
+async function _taskFilesUpload(files){
+  var out=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    try{
+      var ext=(f.name.split('.').pop()||'bin');
+      var path='task-files/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.'+ext;
+      var resp=await fetch(SB_URL+'/storage/v1/object/staff-files/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});
+      if(!resp.ok)throw new Error('http '+resp.status);
+      out.push({name:f.name,url:SB_URL+'/storage/v1/object/public/staff-files/'+path,type:f.type,size:f.size});
+    }catch(err){console.error('task file upload',err);toast(f.name+': 업로드 실패 — 다시 시도해주세요','#ef4444');}
+  }
+  return out;
+}
 function handleTMF(e){
   var added=Array.from(e.target.files).filter(_validateFile);
-  if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,MAX_FILES-mFiles.length);}
-  Promise.all(added.map(function(f){return new Promise(function(res){var r=new FileReader();r.onload=function(ev){res({name:f.name,size:f.size,type:f.type,data:ev.target.result});};r.readAsDataURL(f);});}))
-    .then(function(list){list.forEach(function(x){mFiles.push(x);});renderTMFL();});
+  if(mFiles.length+added.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');added=added.slice(0,Math.max(0,MAX_FILES-mFiles.length));}
+  if(!added.length)return;
+  toast('📎 업로드 중…');
+  _taskFilesUpload(added).then(function(list){list.forEach(function(x){mFiles.push(x);});renderTMFL();if(list.length)toast('📎 '+list.length+'개 첨부됨');});
 }
-function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){var _th=(f.data&&fileKind(f)==='image')?'<img src="'+f.data+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px">':'📄';return '<div class="file-item"><span>'+_th+'</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
+function renderTMFL(){document.getElementById('tmFL').innerHTML=mFiles.map(function(f,i){var _src=f.url||f.data;var _th=(_src&&fileKind(f)==='image')?'<img src="'+_src+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px">':'📄';return '<div class="file-item"><span>'+_th+'</span><span class="file-name">'+f.name+'</span><span style="color:var(--text3);font-size:11px">'+(f.size?(f.size/1024).toFixed(1)+'KB':'')+'</span><button class="file-del" onclick="rmMF('+i+')">✕</button></div>';}).join('');}
 function rmMF(i){mFiles.splice(i,1);renderTMFL();}
 function showTaskErr(msg){var el=document.getElementById('tmErr');if(!el)return;el.textContent='⚠️ '+msg;el.style.display='block';}
 function clearTaskErr(){var el=document.getElementById('tmErr');if(el){el.textContent='';el.style.display='none';}}
