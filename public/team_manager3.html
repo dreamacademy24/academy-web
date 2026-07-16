@@ -3517,14 +3517,30 @@ function syncTcToSB(taskId,c){
       sv('tm_tc',taskComments);
     }
     return data;
-  }).catch(function(e){console.error('tc sync err',e);});
+  }).catch(function(e){console.error('tc sync err',e);try{toast('⚠️ 댓글 서버 저장 실패 — 새로고침 후 다시 시도해주세요','#ef4444');}catch(e2){}});
 }
 function delTcFromSB(id){if(id==null||id==='')return;sbDel('staff_task_comments','id=eq.'+encodeURIComponent(id)).catch(function(e){console.error('tc del err',e);});}
+// 서버 목록에 없는 로컬 전용 댓글(id 없음 = 저장 실패했던 것) 병합 + 재업로드
+function _mergeLocalOnlyTc(local){
+  var up=0;
+  Object.keys(local||{}).forEach(function(tid){(local[tid]||[]).forEach(function(c){
+    if(c.id!=null&&c.id!=='')return;
+    var dup=(taskComments[tid]||[]).some(function(x){return x.text===c.text&&x.author===c.author;});
+    if(dup)return;
+    if(!taskComments[tid])taskComments[tid]=[];
+    taskComments[tid].push(c);
+    syncTcToSB(tid,c);up++;
+  });});
+  if(up)console.log('[SB] 로컬 전용 댓글 재업로드:',up);
+  return up;
+}
 function loadTaskCommentsFromSB(){
   return sbGet('staff_task_comments','order=ts.asc').then(function(rows){
     if(rows&&rows.length>0){
+      var _local=taskComments;
       taskComments={};
       rows.forEach(function(r){var tc=rowToTc(r);if(!taskComments[r.task_id])taskComments[r.task_id]=[];taskComments[r.task_id].push(tc);});
+      _mergeLocalOnlyTc(_local);
       sv('tm_tc',taskComments);
       console.log('[SB] taskComments loaded:',rows.length);
     } else if(Object.keys(taskComments).length>0){
@@ -3676,8 +3692,9 @@ function pollForUpdates(){
     // taskComments
     var tch=newTc.length+'';
     if(tch!==_pollHash.tc&&newTc.length>0){
-      _pollHash.tc=tch;taskComments={};
+      _pollHash.tc=tch;var _localTc=taskComments;taskComments={};
       newTc.forEach(function(r){var c=rowToTc(r);if(!taskComments[r.task_id])taskComments[r.task_id]=[];taskComments[r.task_id].push(c);});
+      _mergeLocalOnlyTc(_localTc);
       sv('tm_tc',taskComments);changed=true;
     }
     // threads
