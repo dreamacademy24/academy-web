@@ -31,6 +31,22 @@ export default function BookingNonPackagePage() {
   // 숙소 단독 + 아카데미 별도 등록 옵션
   const [academyOpt, setAcademyOpt] = useState(false);
   const [acadDates, setAcadDates] = useState({ start: "", end: "" });
+  // 수업 시작=월요일 / 종료=금요일로 자동 보정
+  const snapAcadDate = (v: string, kind: "start" | "end") => {
+    if (!v) return v;
+    const d = new Date(v + "T00:00:00");
+    const dow = d.getDay();
+    if (kind === "start") {
+      if (dow === 0) d.setDate(d.getDate() + 1);            // 일 → 다음날 월
+      else if (dow > 1) d.setDate(d.getDate() - (dow - 1)); // 화~토 → 그 주 월
+    } else {
+      if (dow === 6) d.setDate(d.getDate() - 1);            // 토 → 그 주 금
+      else if (dow === 0) d.setDate(d.getDate() - 2);       // 일 → 지난 금
+      else if (dow !== 5) d.setDate(d.getDate() + (5 - dow)); // 월~목 → 그 주 금
+    }
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
   const [specialRequest, setSpecialRequest] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -78,6 +94,11 @@ export default function BookingNonPackagePage() {
     }
     if ((isCommute || academyOpt) && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만(옵션 없음)은 학생 불필요
     if (!isCommute && academyOpt && (!acadDates.start || !acadDates.end)) { alert("아카데미 수업 시작/종료 날짜를 입력해주세요."); return; }
+    if (!isCommute && academyOpt) {
+      const sd = new Date(acadDates.start + "T00:00:00").getDay(), ed = new Date(acadDates.end + "T00:00:00").getDay();
+      if (sd !== 1 || ed !== 5) { alert("수업 시작은 월요일, 종료는 금요일이어야 해요."); return; }
+      if (acadDates.end <= acadDates.start) { alert("수업 종료가 시작보다 빠를 수 없어요."); return; }
+    }
     if (!dates.checkIn) { alert(isCommute ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (!dates.checkOut) { alert(isCommute ? "수업종료 날짜를 입력해주세요." : "체크아웃 날짜를 입력해주세요."); return; }
     if (isCommute && !dates.pickupUndecided && !dates.pickupAddr.trim()) { alert("픽드랍 주소를 입력하거나 '미정'을 선택해주세요."); return; }
@@ -369,18 +390,21 @@ export default function BookingNonPackagePage() {
                 <span style={{ fontSize: 12.5, color: "#6b7c93" }}>숙소와 별도로 등록·결제되는 통학 수업이에요. 체크하면 수업 기간과 학생 정보를 입력해요. (수업료는 상담 시 안내)</span>
               </span>
             </label>
-            {academyOpt && (
+            {academyOpt && (<>
               <div className="fr" style={{ marginTop: 12 }}>
                 <div className="fg">
-                  <label className="fl">수업 시작<span className="req">*</span></label>
-                  <input className="fi" type="date" value={acadDates.start} onChange={e => setAcadDates({ ...acadDates, start: e.target.value })} />
+                  <label className="fl">수업 시작 (월요일)<span className="req">*</span></label>
+                  <input className="fi" type="date" value={acadDates.start} onChange={e => setAcadDates({ ...acadDates, start: snapAcadDate(e.target.value, "start") })} />
                 </div>
                 <div className="fg">
-                  <label className="fl">수업 종료<span className="req">*</span></label>
-                  <input className="fi" type="date" value={acadDates.end} onChange={e => setAcadDates({ ...acadDates, end: e.target.value })} />
+                  <label className="fl">수업 종료 (금요일)<span className="req">*</span></label>
+                  <input className="fi" type="date" value={acadDates.end} onChange={e => setAcadDates({ ...acadDates, end: snapAcadDate(e.target.value, "end") })} />
                 </div>
               </div>
-            )}
+              <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 6 }}>
+                📅 수업은 <b>월요일 시작 · 금요일 종료</b> 기준이에요. 다른 요일을 고르면 가장 가까운 월/금으로 자동 조정됩니다.
+              </div>
+            </>)}
           </div>
         )}
 
