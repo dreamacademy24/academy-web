@@ -1488,7 +1488,9 @@
     .tab-wrap { padding: 0 16px; }
     .hero-inner, .inner { padding-left: 16px; padding-right: 16px; }
     /* 표는 가로 스크롤 허용 (잘림 방지) */
-    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+    .schedule th:first-child, .schedule td:first-child { width: auto !important; white-space: normal !important; }
+    .schedule th, .schedule td { padding: 10px 8px !important; font-size: 12px !important; }
     .refund-table table, .panel table { min-width: 480px; }
     /* 그리드류 1열 */
     .grid-2, .grid-3, .daon-grid2, .facility-grid, .notice-grid, .pkg-grid, .mini-grid, .form-grid, .brochure-row { grid-template-columns: 1fr !important; }
