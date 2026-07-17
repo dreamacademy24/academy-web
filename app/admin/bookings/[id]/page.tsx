@@ -668,7 +668,7 @@ export default function BookingDetailPage() {
                     <option value="큐브나인 단독">큐브나인 단독</option>
                     <option value="통학형">통학형</option>
                   </select>
-                : <div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}</div>}
+                : <div className="val">{BT_LABEL[b.booking_type] || b.accom_type || "-"}{(b as any).academy_option && <span title="숙소 단독 + 아카데미 별도 등록 손님" style={{marginLeft:6,fontSize:11,fontWeight:800,background:"#eef2ff",color:"#4338ca",borderRadius:6,padding:"2px 8px"}}>🏫 아카데미 별도 등록</span>}</div>}
             </div>
             {((editing && ((editForm.accom_type || "").includes("+") || (editForm as any).seg1_type)) || b.seg1_type) && (
               <div className="item" style={{ gridColumn: "1 / -1" }}>

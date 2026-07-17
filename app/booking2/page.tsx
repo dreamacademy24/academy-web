@@ -28,6 +28,9 @@ export default function BookingNonPackagePage() {
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
   const [students, setStudents] = useState<Student[]>([{ id: 1, korName: "", engName: "", age: "", grade: "주니어", photo: "O" }]);
+  // 숙소 단독 + 아카데미 별도 등록 옵션
+  const [academyOpt, setAcademyOpt] = useState(false);
+  const [acadDates, setAcadDates] = useState({ start: "", end: "" });
   const [specialRequest, setSpecialRequest] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -73,7 +76,8 @@ export default function BookingNonPackagePage() {
       const g = extraGuardians[i];
       if (!g.kor.trim() || !g.eng.trim()) { alert(`보호자 ${i + 2}번의 한글/영문 이름을 모두 입력해주세요.`); return; }
     }
-    if (isCommute && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만 이용은 학생 불필요
+    if ((isCommute || academyOpt) && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만(옵션 없음)은 학생 불필요
+    if (!isCommute && academyOpt && (!acadDates.start || !acadDates.end)) { alert("아카데미 수업 시작/종료 날짜를 입력해주세요."); return; }
     if (!dates.checkIn) { alert(isCommute ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (!dates.checkOut) { alert(isCommute ? "수업종료 날짜를 입력해주세요." : "체크아웃 날짜를 입력해주세요."); return; }
     if (isCommute && !dates.pickupUndecided && !dates.pickupAddr.trim()) { alert("픽드랍 주소를 입력하거나 '미정'을 선택해주세요."); return; }
@@ -90,9 +94,9 @@ export default function BookingNonPackagePage() {
     const flightInStr = isCommute ? "" : (flightIn.undecided ? "미정" : [flightIn.airline, flightIn.flightNo, flightIn.date, flightIn.time].filter(Boolean).join(" "));
     const flightOutStr = isCommute ? "" : (flightOut.undecided ? "미정" : [flightOut.airline, flightOut.flightNo, flightOut.date, flightOut.time].filter(Boolean).join(" "));
 
-    // 통학형: 사용자 입력 그대로 academyStart/End. 비통학형: 단독 숙소도 사용자가 직접 입력한 날짜 사용.
-    const academyStart = dates.checkIn;
-    const academyEnd = dates.checkOut;
+    // 통학형: 사용자 입력 그대로. 숙소 단독 + 아카데미 옵션: 별도 입력한 수업 기간 사용.
+    const academyStart = (!isCommute && academyOpt && acadDates.start) ? acadDates.start : dates.checkIn;
+    const academyEnd = (!isCommute && academyOpt && acadDates.end) ? acadDates.end : dates.checkOut;
     const enrichedStudents = students.filter(s => s.korName.trim()).map(s => ({
       ...s, academyStart, academyEnd, academyWeeks: "",
     }));
@@ -137,6 +141,7 @@ export default function BookingNonPackagePage() {
       status: "접수",
     };
     if (isCommute) payload.booking_type = "commute";
+    payload.academy_option = !isCommute && academyOpt;
 
     const { data: booking, error } = await supabase.from("bookings").insert(payload).select().single();
     if (error) { setLoading(false); alert("접수 실패: " + error.message); return; }
@@ -355,7 +360,31 @@ export default function BookingNonPackagePage() {
           </div>
         )}
 
-        {isCommute && (
+        {!isCommute && (
+          <div className="bs">
+            <label className="fl-checkbox" style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input type="checkbox" checked={academyOpt} onChange={e => setAcademyOpt(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+              <span style={{ fontSize: 14, lineHeight: 1.6 }}>
+                <b>🏫 드림아카데미 수업도 함께 등록해요</b><br />
+                <span style={{ fontSize: 12.5, color: "#6b7c93" }}>숙소와 별도로 등록·결제되는 통학 수업이에요. 체크하면 수업 기간과 학생 정보를 입력해요. (수업료는 상담 시 안내)</span>
+              </span>
+            </label>
+            {academyOpt && (
+              <div className="fr" style={{ marginTop: 12 }}>
+                <div className="fg">
+                  <label className="fl">수업 시작<span className="req">*</span></label>
+                  <input className="fi" type="date" value={acadDates.start} onChange={e => setAcadDates({ ...acadDates, start: e.target.value })} />
+                </div>
+                <div className="fg">
+                  <label className="fl">수업 종료<span className="req">*</span></label>
+                  <input className="fi" type="date" value={acadDates.end} onChange={e => setAcadDates({ ...acadDates, end: e.target.value })} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(isCommute || academyOpt) && (
         <div className="bs">
           <h2>4️⃣ 학생 정보 ({students.length}/5)</h2>
           {students.map((s, idx) => (
