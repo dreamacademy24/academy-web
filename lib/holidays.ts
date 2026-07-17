@@ -55,6 +55,12 @@ export const HOLIDAY_NOTICE_LINES = [
   { icon: "!", text: "휴무일에 대한 별도 환불 · 보강은 없습니다", bg: "#fffbeb", color: "#92400e", ic: "#b45309" },
 ] as const;
 
+/* 비패키지(숙소만/booking2)용 — 수업·식사 언급 없이 드림센터 휴무만 안내 */
+export const HOLIDAY_NOTICE_LINES_ROOMONLY = [
+  { icon: "🏖", text: "드림센터(헬퍼 · 셔틀 · 관리실) 휴무일입니다", bg: "#fef2f2", color: "#b91c1c", ic: "#dc2626" },
+  { icon: "!", text: "휴무일에 대한 별도 환불 · 보강은 없습니다", bg: "#fffbeb", color: "#92400e", ic: "#b45309" },
+] as const;
+
 /* 튜터 수업 날짜 전개(lib/lessonDates)에 배포 휴일을 주입 — 페이지 mount 시 1회 호출 */
 export async function applyDeployedHolidaysToLessons(_sb?: SupabaseClient): Promise<HolidayItem[]> {
   const list = await fetchDeployedHolidays();

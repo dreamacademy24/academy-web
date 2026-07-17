@@ -408,7 +408,7 @@ export default function BookingNonPackagePage() {
         </div>
 
         {/* 기간 내 휴무일 안내 배너 (공용 컴포넌트) */}
-        <HolidayBanner hits={holidayHits} />
+        <HolidayBanner hits={holidayHits} variant="roomonly" />
 
         <div style={{
           marginTop: 16, padding: 14, background: "#fff",
@@ -428,6 +428,6 @@ export default function BookingNonPackagePage() {
       </div>
     </div>
     {/* 휴무일 안내 팝업 (공용 컴포넌트) */}
-    <HolidayPopup hits={holidayPopup} onClose={() => setHolidayPopup(null)} />
+    <HolidayPopup hits={holidayPopup} onClose={() => setHolidayPopup(null)} variant="roomonly" />
   </>);
 }
