@@ -98,6 +98,7 @@ function CheckinDetailsInner() {
   const autoSelectedRef = useRef(false);
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [listView, setListView] = useState<"upcoming"|"past">("upcoming");
   const [checkinStatus, setCheckinStatus] = useState<Record<string, { submitted: boolean; saved: boolean }>>({});
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -627,6 +628,11 @@ function CheckinDetailsInner() {
         const groups: Record<string, Booking[]> = {};
         upcoming.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (groups[k] = groups[k] || []).push(b); });
         const months = Object.keys(groups).sort();
+        // 지난 건 — 월별 최신순
+        const pastGroups: Record<string, Booking[]> = {};
+        past.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (pastGroups[k] = pastGroups[k] || []).push(b); });
+        const pastMonths = Object.keys(pastGroups).sort().reverse();
+        pastMonths.forEach(k => pastGroups[k].sort((a,b2) => ci(b2).localeCompare(ci(a))));
         const stOf = (b: Booking) => checkinStatus[b.id] || { submitted:false, saved:false };
         const badge = (b: Booking) => {
           const s = stOf(b);
@@ -639,6 +645,8 @@ function CheckinDetailsInner() {
           const diff = Math.round((new Date(d+"T00:00:00").getTime() - today.getTime())/86400000);
           if (diff === 0) return "오늘";
           if (diff > 0) return `D-${diff}`;
+          const out = co(b);
+          if (out && out < todayStr) return "완료";
           return "체류중";
         };
         const row = (b: Booking) => (
@@ -651,25 +659,32 @@ function CheckinDetailsInner() {
           </div>
         );
         const MON = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+        const tabBtn = (v: "upcoming"|"past", label: string) => (
+          <button onClick={()=>setListView(v)} style={{padding:"7px 16px",borderRadius:9,border:"1px solid",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
+            borderColor:listView===v?"#1a6fc4":"#e2e8f0",background:listView===v?"#1a6fc4":"#fff",color:listView===v?"#fff":"#64748b"}}>{label}</button>
+        );
         return (<div className="sec">
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <h2 style={{margin:0}}>체크인 예정 ({upcoming.length})</h2>
-            <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 작성 →</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+            {tabBtn("upcoming", `체크인 예정 (${upcoming.length})`)}
+            {tabBtn("past", `🗂 지난 체크인 (${past.length})`)}
+            <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 {listView==="past"?"확인":"작성"} →</span>
           </div>
-          {upcoming.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>예정된 체크인이 없습니다</div> :
+          {listView === "upcoming" && (upcoming.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>예정된 체크인이 없습니다</div> :
             months.map(mk => {
               const [yy,mm] = mk.split("-").map(Number);
               return (<div key={mk} style={{marginBottom:8}}>
                 <div style={{fontSize:12.5,fontWeight:800,color:"#1a6fc4",padding:"8px 4px"}}>📅 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {groups[mk].length}팀</span></div>
                 <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{groups[mk].map(row)}</div>
               </div>);
-            })}
-          {past.length > 0 && (
-            <details style={{marginTop:12}}>
-              <summary style={{cursor:"pointer",fontSize:12.5,fontWeight:700,color:"#94a3b8",padding:"6px 2px"}}>🗂 도착 완료 · 지난 체크인 ({past.length})</summary>
-              <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden",marginTop:6,opacity:0.7}}>{past.slice().reverse().map(row)}</div>
-            </details>
-          )}
+            }))}
+          {listView === "past" && (past.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>지난 체크인이 없습니다</div> :
+            pastMonths.map(mk => {
+              const [yy,mm] = mk.split("-").map(Number);
+              return (<div key={mk} style={{marginBottom:8}}>
+                <div style={{fontSize:12.5,fontWeight:800,color:"#64748b",padding:"8px 4px"}}>🗂 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {pastGroups[mk].length}팀</span></div>
+                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{pastGroups[mk].map(row)}</div>
+              </div>);
+            }))}
         </div>);
       })()}
 
