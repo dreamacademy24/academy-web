@@ -3736,7 +3736,6 @@ let EMPS=[
   {id:'eric', name:'Eric',  color:'#f97316',initial:'E'},
   {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU'},
   {id:'candice',name:'Candice', color:'#14b8a6',initial:'CA'},
-  {id:'judy',name:'Judy', color:'#8b5cf6',initial:'JD'},
 ];
 let CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
 let ALL=[...EMPS,CEO];
@@ -3786,7 +3785,7 @@ let goals=ld('tm_goals',[]);
 let noticeReads=ld('tm_read',{});
 
 
-const DEFAULT_PASSWORDS={jamie:'jamie1234',vivace:'vivace1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',judy:'Judy2026!',ceo:'ceo1234'};
+const DEFAULT_PASSWORDS={jamie:'jamie1234',vivace:'vivace1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',ceo:'ceo1234'};
 let PASSWORDS=ld('tm_pw',DEFAULT_PASSWORDS);
 Object.keys(DEFAULT_PASSWORDS).forEach(function(k){if(!PASSWORDS[k])PASSWORDS[k]=DEFAULT_PASSWORDS[k];});
 sv('tm_pw',PASSWORDS);
