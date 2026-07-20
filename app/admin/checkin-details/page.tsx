@@ -521,7 +521,10 @@ function CheckinDetailsInner() {
 </div></div>
   <script>(function(){function fit(){var w=document.getElementById('cdwrap'),s=document.getElementById('cdsheet');if(!w||!s)return;s.style.transform='';w.style.height='';var maxH=Math.round(277/25.4*96);var h=s.scrollHeight;if(h>maxH){var f=maxH/h;s.style.transform='scale('+f+')';w.style.height=(h*f)+'px';}}if(document.readyState!=='loading')fit();else document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load',fit);})();</script>
   <script>window.onload=function(){window.print();};</script>
-</body></html>`;
+${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
+  <div style="font-size:15px;font-weight:800;color:#1a6fc4;border-bottom:2px solid #1a6fc4;padding-bottom:6px;margin-bottom:14px">${isEn ? "FLIGHT TICKETS" : "항공권 사진"} (${flightImages.length})</div>
+  ${flightImages.map(u => `<img src="${u}" style="width:100%;max-height:46vh;object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px"/>`).join("")}
+</div>` : ""}</body></html>`;
     // <script>autoprint 제거 후 state에 저장 → 오버레이 iframe으로 표시
     setPrintHtml(html.replace(/<script>window\.onload[^<]*<\/script>/g, ""));
   }

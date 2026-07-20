@@ -264,6 +264,16 @@ export default function CheckinFormPage() {
 
   async function submit() {
     // 2번(투숙자 전체 영문이름)만 필수 — 나머지(예약자명·항공편·유심 등)는 비워도 제출됩니다.
+    {
+      const ff = flightForm;
+      const inHas = !ff.flight_in_undecided && (ff.flight_in_airline || ff.flight_in_no || ff.flight_in_date);
+      const outHas = !ff.flight_out_undecided && (ff.flight_out_airline || ff.flight_out_no || ff.flight_out_date);
+      if ((inHas || outHas) && flightImages.length === 0) {
+        setTab("flight");
+        alert("항공권 사진을 업로드해 주세요.\n📷 '항공권 사진으로 자동입력' 버튼으로 항공권 사진을 올리면 정보 확인에 사용됩니다.");
+        return;
+      }
+    }
     if (simCards.some(sc => !sc.plan)) { setTab("checkin"); alert("요금제를 선택하지 않은 유심이 있습니다.\n유심 항목에서 요금제를 선택하시거나, 필요 없으면 ✕ 버튼으로 삭제해 주세요."); return; }
     if (!form.q2.trim()) { setTab("checkin"); alert("2번 '투숙자 전체인원 영문이름'을 입력해 주세요.\n나머지 항목은 비워두셔도 제출됩니다."); return; }
     setSubmitting(true);

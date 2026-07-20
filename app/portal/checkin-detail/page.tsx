@@ -17,6 +17,7 @@ export default function PortalCheckinDetailPage() {
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [flightImages, setFlightImages] = useState<string[]>([]);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({ q1:'', q2:'', q6:'' });
   const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:""});
@@ -148,6 +149,14 @@ export default function PortalCheckinDetailPage() {
     setFlightOcrLoading(true);
     setFlightOcrMsg("");
     try {
+      try {
+        const ufd = new FormData();
+        ufd.append("image", file);
+        ufd.append("bookingId", bookingId);
+        const ur = await fetch("/api/upload-flight-image", { method: "POST", body: ufd });
+        const uj = await ur.json().catch(()=>({}));
+        if (Array.isArray(uj.flight_images)) setFlightImages(uj.flight_images);
+      } catch {}
       const fd = new FormData();
       fd.append("image", file);
       const res = await fetch("/api/ocr/flight", { method: "POST", body: fd });
@@ -183,6 +192,10 @@ export default function PortalCheckinDetailPage() {
     const bid = s.booking_id;
     setBookingId(bid);
     loadPickups(bid);
+    fetch(`/api/bookings/${bid}`).then(r=>r.json()).then(j=>{
+      const fi = j?.booking?.flight_images ?? j?.flight_images;
+      if (Array.isArray(fi)) setFlightImages(fi);
+    }).catch(()=>{});
     // 예약자 성함·입실일자 자동 채움 (입력칸 제거 — 예약현황 정보 사용)
     const sAny = s as typeof s & { check_in_date?: string };
     setForm(prev => prev.q1 ? prev : { ...prev, q1: `${s.guest_name || ""}${sAny.check_in_date ? `, ${sAny.check_in_date} 입실` : ""}`.trim() });
@@ -237,6 +250,13 @@ export default function PortalCheckinDetailPage() {
 
   async function submit() {
     // 예약자 성함·입실일자는 예약 정보에서 자동 포함 (입력 제거됨)
+    const ff = flightForm;
+    const inHas = !ff.flight_in_undecided && (ff.flight_in_airline || ff.flight_in_no || ff.flight_in_date);
+    const outHas = !ff.flight_out_undecided && (ff.flight_out_airline || ff.flight_out_no || ff.flight_out_date);
+    if ((inHas || outHas) && flightImages.length === 0) {
+      toastErr("항공권 사진을 업로드해 주세요.\n📷 '항공권 사진 업로드' 버튼으로 올리면 정보 확인에 사용됩니다.");
+      return;
+    }
     setSubmitting(true);
     const res = await fetch('/api/checkin-portal', {
       method: 'POST',
@@ -430,11 +450,15 @@ export default function PortalCheckinDetailPage() {
           <div className="q">
             <div className="q-title">✈️ 항공편 등록</div>
             <div className="q-hint">입국·출국 항공편 정보를 입력해 주세요. 미정인 경우 체크박스를 선택해 주세요.</div>
+            <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"9px 12px",margin:"8px 0",fontSize:12.5,color:"#b91c1c",fontWeight:600}}>
+              ❗ 항공편 입력 시 <b>항공권 사진 업로드가 필수</b>예요. 아래 📷 버튼으로 올려주세요.
+              {flightImages.length > 0 && <span style={{color:"#166534"}}> — ✅ 현재 {flightImages.length}장 등록됨</span>}
+            </div>
             <div style={{marginBottom:12}}>
               <input ref={flightFileRef} type="file" accept="image/*" onChange={handleFlightOcr} style={{display:"none"}}/>
               <button type="button" onClick={()=>flightFileRef.current?.click()} disabled={flightOcrLoading}
                 style={{display:"inline-flex",alignItems:"center",gap:6,padding:"10px 14px",background:"#4f6ef7",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:600,cursor:flightOcrLoading?"wait":"pointer",opacity:flightOcrLoading?0.7:1}}>
-                {flightOcrLoading?"⏳ 분석 중...":"📷 항공권 사진으로 자동입력"}
+                {flightOcrLoading?"⏳ 분석 중...":"📷 항공권 사진 업로드 (자동입력)"}
               </button>
               {flightOcrMsg && <div style={{marginTop:6,fontSize:12,color:flightOcrMsg.startsWith("✅")?"#16a34a":"#dc2626"}}>{flightOcrMsg}</div>}
             </div>

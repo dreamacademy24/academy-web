@@ -64,6 +64,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     flightUpdate[k] = (v === '' || v === undefined) ? null : v
   }
   if (Object.keys(flightUpdate).length > 0 && data.booking_id) {
+    const g = (k: string) => { const v = flightUpdate[k]; return v == null ? '' : String(v); };
+    if (g('flight_in_airline') || g('flight_in_no') || g('flight_in_date') || g('flight_in_time'))
+      flightUpdate.flight_in = [g('flight_in_airline'), g('flight_in_no'), g('flight_in_date'), g('flight_in_time')].filter(Boolean).join(' ');
+    if (g('flight_out_airline') || g('flight_out_no') || g('flight_out_date') || g('flight_out_time'))
+      flightUpdate.flight_out = [g('flight_out_airline'), g('flight_out_no'), g('flight_out_date'), g('flight_out_time')].filter(Boolean).join(' ');
     const { error: bErr } = await supabase
       .from('bookings')
       .update(flightUpdate)
