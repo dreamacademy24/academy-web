@@ -127,6 +127,18 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   const [payDate, setPayDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [payMemo, setPayMemo] = useState("");
   const [paySaving, setPaySaving] = useState(false);
+  // 결합 인보이스 (집/예약자 단위)
+  const [tutors, setTutors] = useState<Record<string, string>>({});
+  const [grpSessions, setGrpSessions] = useState<Record<string, SessionRow[]>>({});
+  const [grpPays, setGrpPays] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase.from("tutors").select("id,name").then(({ data }) => {
+      const m: Record<string, string> = {};
+      (data || []).forEach((t: any) => { m[String(t.id)] = t.name; });
+      setTutors(m);
+    });
+  }, []);
 
   const loadLessons = useCallback(async () => {
     setLoading(true);
@@ -296,6 +308,70 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     return parseSessionTime(stripTimeSuffix(raw));
   };
 
+  // ── 결합 인보이스: 예약자(집) 단위 그룹 ──
+  const groups = useMemo(() => {
+    const m = new Map<string, Lesson[]>();
+    for (const l of lessons) {
+      const key = (l.house_or_reserver || "").trim() || (l.booking_id ? `b:${l.booking_id}` : "");
+      if (!key) continue;
+      if (!m.has(key)) m.set(key, []);
+      m.get(key)!.push(l);
+    }
+    return [...m.entries()].filter(([, ls]) => ls.length >= 2);
+  }, [lessons]);
+  const isGroup = selectedId.startsWith("grp:");
+  const groupKey = isGroup ? selectedId.slice(4) : "";
+  const groupLessons = useMemo(() => (groups.find(([k]) => k === groupKey)?.[1]) || [], [groups, groupKey]);
+  const grpBookingIds = useMemo(() => [...new Set(groupLessons.map(l => l.booking_id).filter(Boolean))] as string[], [groupLessons]);
+
+  useEffect(() => {
+    if (!isGroup) { setGrpSessions({}); setGrpPays([]); return; }
+    let cancelled = false;
+    (async () => {
+      const realIds = groupLessons.filter(l => !String(l.id).startsWith("req:")).map(l => l.id);
+      if (realIds.length) {
+        const { data } = await supabase.from("tutor_lesson_sessions").select("*").in("lesson_id", realIds).order("session_date", { ascending: true });
+        if (!cancelled) {
+          const m: Record<string, SessionRow[]> = {};
+          (data || []).forEach((sr: any) => { (m[sr.lesson_id] = m[sr.lesson_id] || []).push(sr as SessionRow); });
+          setGrpSessions(m);
+        }
+      } else if (!cancelled) setGrpSessions({});
+      if (grpBookingIds.length) {
+        const { data } = await supabase.from("settlement_items").select("*").in("booking_id", grpBookingIds).eq("kind", "payment").order("item_date", { ascending: true });
+        if (!cancelled) setGrpPays((data || []).filter((pr: any) => /튜터|tutor/i.test(pr.label || "")));
+      } else if (!cancelled) setGrpPays([]);
+    })();
+    return () => { cancelled = true; };
+  }, [isGroup, groupKey, groupLessons, grpBookingIds]);
+
+  // 한 수업의 청구 날짜·회차·총액 (단일 인보이스와 동일 규칙)
+  const calcLesson = (l: Lesson, sess: SessionRow[]) => {
+    const cMap = cancelMap(l as any);
+    const wks = getWeeksBetween(l.start_date, l.end_date);
+    let dates: string[];
+    if (sess.length > 0) dates = sess.filter(sr => cMap[sr.session_date] !== "deduct").map(sr => sr.session_date);
+    else {
+      dates = [];
+      for (const week of wks) for (const date of week) {
+        if (!date || cMap[date] === "deduct") continue;
+        const dow = new Date(date + "T00:00:00").getDay();
+        if (Array.isArray(l.class_days) && l.class_days.some(d => DAY_CODE_INV[String(d).trim()] === dow)) dates.push(date);
+      }
+    }
+    const dcount = dates.length || (sess.length === 0 ? (l.total_sessions || 0) : 0);
+    const fee = tutorDailyRate(l.class_type, l.sessions_per_day || 1);
+    const tot = dates.length > 0 ? tutorTotalForDates(l, dates) : fee * dcount;
+    return { dates, days: dcount, fee, total: tot, cMap };
+  };
+  const timeForLessonDate = (l: Lesson, date: string) => {
+    const ov = (l.time_overrides || {}) as Record<string, string>;
+    const dow = new Date(date + "T00:00:00").getDay();
+    const raw = ov[date] || ov[_KR_DOW[dow]] || l.confirmed_time || l.class_time || "";
+    return parseSessionTime(stripTimeSuffix(raw));
+  };
+  const tutorName = (l: Lesson) => tutors[String(l.tutor_id || "")] || (englishMode ? "TBD" : "미배정");
+
   const optionLabel = (l: Lesson) => {
     const typeMatch = (l.class_type || "").match(/1\s*[:：]\s*[12]/);
     const typeBase = typeMatch ? typeMatch[0].replace(/\s+/g, "") : (l.class_type || "-");
@@ -309,13 +385,13 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   };
 
   async function recordPayment() {
-    if (!lesson) return;
-    const bid = lesson.booking_id || null;
+    if (!lesson && !isGroup) return;
+    const bid = (isGroup ? (grpBookingIds[0] || null) : lesson?.booking_id) || null;
     if (!bid) { toastErr(englishMode ? "No booking linked. Ask Korea staff." : "예약 연결이 없어 기록할 수 없습니다. 한국 직원에게 문의하세요."); return; }
     const amt = Number(payAmt);
     if (!amt || amt <= 0) { toastErr(englishMode ? "Enter an amount" : "금액을 입력하세요"); return; }
     setPaySaving(true);
-    const who = lesson.student_names || lesson.house_or_reserver || "";
+    const who = isGroup ? (groupLessons[0]?.house_or_reserver || "") : (lesson?.student_names || lesson?.house_or_reserver || "");
     const label = (englishMode ? "Tutor payment" : "튜터비 납부") + (who ? ` · ${who}` : "") + (payMemo.trim() ? ` (${payMemo.trim()})` : "");
     const { error } = await supabase.from("settlement_items").insert({
       booking_id: bid, kind: "payment", label, amount: amt, item_date: payDate,
@@ -361,7 +437,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
   }
 
   async function saveAsImage() {
-    if (!invoiceRef.current || !lesson) return;
+    if (!invoiceRef.current || (!lesson && !isGroup)) return;
     setSaving(true);
     try {
       const html2canvas = (await import("html2canvas")).default;
@@ -372,8 +448,8 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
       });
       const dataUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      const base = filenameSafe(lesson.student_names);
-      link.download = `TutorInfo_${base}_${lesson.start_date || todayStr()}.png`;
+      const base = filenameSafe(isGroup ? (groupLessons[0]?.house_or_reserver || "combined") : (lesson?.student_names || ""));
+      link.download = `TutorInfo_${base}_${lesson?.start_date || todayStr()}.png`;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
@@ -479,21 +555,30 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
       >
         {lessons.length === 0 ? (
           <option value="">{loading ? (englishMode ? "Loading..." : "로딩 중...") : (englishMode ? "No classes" : "수업 없음")}</option>
-        ) : (
-          lessons.map(l => (
+        ) : (<>
+          {groups.length > 0 && (
+            <optgroup label={englishMode ? "🏠 Combined by house" : "🏠 집(예약자) 단위 결합"}>
+              {groups.map(([k, ls]) => (
+                <option key={"grp:" + k} value={"grp:" + k}>
+                  {`🏠 ${ls[0].house_or_reserver || k} — ${ls.length}${englishMode ? " classes combined" : "건 결합"}`}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {lessons.map(l => (
             <option key={l.id} value={l.id}>{optionLabel(l)}</option>
-          ))
-        )}
+          ))}
+        </>)}
       </select>
-      <button className="ti-btn ti-btn-print" onClick={handlePrint} disabled={!lesson}>
+      <button className="ti-btn ti-btn-print" onClick={handlePrint} disabled={!lesson && !isGroup}>
         📄 {englishMode ? "Print/PDF" : "인쇄/PDF"}
       </button>
-      <button className="ti-btn ti-btn-img" onClick={saveAsImage} disabled={!lesson || saving}>
+      <button className="ti-btn ti-btn-img" onClick={saveAsImage} disabled={(!lesson && !isGroup) || saving}>
         {saving ? (englishMode ? "Saving..." : "저장 중...") : `🖼️ ${englishMode ? "Save Image" : "이미지 저장"}`}
       </button>
     </div>
 
-    {lesson && (
+    {(lesson || (isGroup && groupLessons.length > 0)) && (
       <div style={{ border: "1px solid #ddd6fe", background: "#faf5ff", borderRadius: 10, padding: "12px 14px", margin: "10px 0 4px" }}>
         <div onClick={() => setPayOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13.5, fontWeight: 800, color: "#6d28d9" }}>
           💵 {englishMode ? "Record Payment Received" : "납부 받음 기록"}
@@ -501,7 +586,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         </div>
         {payOpen && (
           <div style={{ marginTop: 10 }}>
-            {!lesson.booking_id && (
+            {!(isGroup ? grpBookingIds[0] : lesson?.booking_id) && (
               <div style={{ fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 7, padding: "7px 10px", marginBottom: 9 }}>
                 ⚠ {englishMode ? "No booking linked to this lesson — cannot record. Please tell Korea staff." : "이 수업에 예약이 연결되어 있지 않아 기록할 수 없습니다. 한국 직원에게 알려주세요."}
               </div>
@@ -510,7 +595,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
               <input value={payAmt} onChange={e => setPayAmt(e.target.value)} type="number" placeholder={englishMode ? "Amount ₱" : "금액 ₱"} style={{ width: 120, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
               <input value={payDate} onChange={e => setPayDate(e.target.value)} type="date" style={{ padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
               <input value={payMemo} onChange={e => setPayMemo(e.target.value)} placeholder={englishMode ? "Memo (optional)" : "메모 (선택)"} style={{ flex: 1, minWidth: 120, padding: "8px 10px", border: "1px solid #cbd5e1", borderRadius: 7, fontSize: 13 }} />
-              <button onClick={recordPayment} disabled={paySaving || !lesson.booking_id} style={{ border: "none", background: "#7c3aed", color: "#fff", borderRadius: 7, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: lesson.booking_id ? "pointer" : "not-allowed", opacity: paySaving || !lesson.booking_id ? 0.6 : 1 }}>{paySaving ? (englishMode ? "Saving…" : "저장 중…") : (englishMode ? "Record" : "기록")}</button>
+              <button onClick={recordPayment} disabled={paySaving || !(isGroup ? grpBookingIds[0] : lesson?.booking_id)} style={{ border: "none", background: "#7c3aed", color: "#fff", borderRadius: 7, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: (isGroup ? grpBookingIds[0] : lesson?.booking_id) ? "pointer" : "not-allowed", opacity: paySaving || !(isGroup ? grpBookingIds[0] : lesson?.booking_id) ? 0.6 : 1 }}>{paySaving ? (englishMode ? "Saving…" : "저장 중…") : (englishMode ? "Record" : "기록")}</button>
             </div>
             <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>{englishMode ? "Korea staff will review and approve before it appears to the parent." : "한국 직원 승인 후 학부모 화면에 반영됩니다."}</div>
           </div>
@@ -520,7 +605,135 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
 
     {loading ? (
       <div className="ti-empty">로딩 중...</div>
-    ) : !lesson ? (
+    ) : isGroup ? (() => {
+      const infos = groupLessons.map(l => ({ l, ...calcLesson(l, grpSessions[String(l.id)] || []) }));
+      const grand = infos.reduce((a, i) => a + i.total, 0);
+      const starts = groupLessons.map(l => l.start_date).filter(Boolean).sort();
+      const ends = groupLessons.map(l => l.end_date).filter(Boolean).sort();
+      const gStart = starts[0] || ""; const gEnd = ends[ends.length - 1] || "";
+      const gWeeks = getWeeksBetween(gStart, gEnd);
+      const reserver = groupLessons[0]?.house_or_reserver || "";
+      const approvedPays = grpPays.filter(pr => pr.status === "approved");
+      const pendingPays = grpPays.filter(pr => pr.status !== "approved");
+      const paidSum = approvedPays.reduce((a, pr) => a + Number(pr.amount || 0), 0);
+      const pendingSum = pendingPays.reduce((a, pr) => a + Number(pr.amount || 0), 0);
+      const balance = grand - paidSum;
+      const typeBg = (ct: string) => ct === "1:2" ? "#ede9fe" : "#dbeafe";
+      return (
+      <div className="tutor-info-container" ref={invoiceRef}>
+        <div className="ti-head">
+          <div className="ti-logo">
+            <span className="dream">Dream</span>
+            <span className="academy">Academy</span>
+            <span className="tag">by Dream company</span>
+          </div>
+          <div className="ti-title">TUTOR INVOICE</div>
+        </div>
+
+        <div className="ti-info">
+          <table><tbody>
+            <tr><td className="k">{englishMode ? "RESERVER" : "예약자"}</td><td className="v">{reserver}</td></tr>
+            <tr><td className="k">{englishMode ? "PERIOD" : "기간"}</td><td className="v">{fmtMD(gStart)} ~ {fmtMD(gEnd)}</td></tr>
+            <tr><td className="k">{englishMode ? "CLASSES" : "수업 수"}</td><td className="v">{groupLessons.length}{englishMode ? "" : "건 (결합)"}</td></tr>
+          </tbody></table>
+          <table><tbody>
+            <tr><td className="k">TOTAL</td><td className="v total">₱{grand.toLocaleString()}</td></tr>
+            <tr><td className="k">{englishMode ? "PAID" : "납부됨"}</td><td className="v" style={{ color: "#166534" }}>₱{paidSum.toLocaleString()}{pendingSum > 0 ? ` (+₱${pendingSum.toLocaleString()} ${englishMode ? "pending" : "승인대기"})` : ""}</td></tr>
+            <tr><td className="k">{englishMode ? "BALANCE" : "잔액"}</td><td className="v" style={{ color: balance > 0 ? "#dc2626" : "#166534", fontWeight: 900 }}>₱{balance.toLocaleString()}</td></tr>
+          </tbody></table>
+        </div>
+
+        <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: 12.5, marginBottom: 20 }}>
+          <thead>
+            <tr>
+              {[englishMode ? "STUDENT" : "수강자", englishMode ? "TUTOR" : "튜터", englishMode ? "TYPE" : "유형", englishMode ? "DAYS" : "요일", englishMode ? "COUNT" : "회차", englishMode ? "FEE/DAY" : "일단가", englishMode ? "AMOUNT" : "금액"].map(h => (
+                <th key={h} style={{ background: "#fef9c3", border: "1px solid #000", padding: "6px 8px", fontWeight: 800 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {infos.map(i => (
+              <tr key={String(i.l.id)}>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", fontWeight: 700 }}>{i.l.student_names || "-"}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "center", fontWeight: 800, color: "#1e40af" }}>{tutorName(i.l)}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "center" }}>{i.l.class_type} · {(i.l.sessions_per_day || 1) === 2 ? "2T" : "1T"}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "center", fontSize: 11.5 }}>{Array.isArray(i.l.class_days) ? i.l.class_days.map(d => DAY_SHORT[d] || DAY_SHORT[String(d).toLowerCase()] || d).join("/") : "-"}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "center" }}>{i.days}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>₱{i.fee.toLocaleString()}</td>
+                <td style={{ border: "1px solid #000", padding: "6px 8px", textAlign: "right", fontWeight: 800 }}>₱{i.total.toLocaleString()}</td>
+              </tr>
+            ))}
+            <tr>
+              <td colSpan={6} style={{ border: "1px solid #000", padding: "7px 8px", fontWeight: 900, background: "#fef9c3" }}>{englishMode ? "TOTAL" : "합계"}</td>
+              <td style={{ border: "1px solid #000", padding: "7px 8px", textAlign: "right", fontWeight: 900, background: "#fef9c3", fontSize: 14 }}>₱{grand.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="ti-wtable">
+          <thead>
+            <tr><th>SUN</th><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th></tr>
+          </thead>
+          <tbody>
+            {gWeeks.map((week, wi) => (
+              <Fragment key={`gw-${wi}`}>
+                <tr className="date-row">
+                  {week.map((date, di) => (<td key={`gd-${wi}-${di}`}>{date ? fmtDayMon(date) : ""}</td>))}
+                </tr>
+                <tr className="content-row">
+                  {week.map((date, di) => (
+                    <td key={`gc-${wi}-${di}`}>
+                      {date ? infos.filter(i => i.dates.includes(date)).map(i => (
+                        <div key={String(i.l.id)} className="ti-wsess" style={{ background: typeBg(i.l.class_type), marginBottom: 2 }}>
+                          <div className="ct">{tutorName(i.l)}</div>
+                          <div className="tm">{i.l.class_type} · {timeForLessonDate(i.l, date)}</div>
+                        </div>
+                      )) : null}
+                    </td>
+                  ))}
+                </tr>
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+
+        {grpPays.length > 0 && (
+          <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: 12, marginBottom: 20 }}>
+            <thead>
+              <tr><th colSpan={3} style={{ background: "#dcfce7", border: "1px solid #000", padding: "6px 8px", fontWeight: 800 }}>{englishMode ? "PAYMENTS RECEIVED" : "납부 내역 (튜터 기록)"}</th></tr>
+            </thead>
+            <tbody>
+              {grpPays.map((pr: any) => (
+                <tr key={pr.id}>
+                  <td style={{ border: "1px solid #000", padding: "5px 8px", width: 90 }}>{fmtMD(pr.item_date || "")}</td>
+                  <td style={{ border: "1px solid #000", padding: "5px 8px" }}>{pr.label}</td>
+                  <td style={{ border: "1px solid #000", padding: "5px 8px", textAlign: "right", fontWeight: 700, width: 130 }}>
+                    ₱{Number(pr.amount || 0).toLocaleString()} {pr.status === "approved" ? "✓" : <span style={{ color: "#b45309", fontSize: 11 }}>{englishMode ? "(pending)" : "(승인대기)"}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="ti-rules">
+          <p className="title">★ {englishMode ? "Tutor Class Rules" : "튜터수업 규정 안내"} ★</p>
+          {englishMode ? (
+            <>
+              <p className="warn">Please read the rules carefully. Any violations are the sole responsibility of the guest.</p>
+              <p className="red">Changes/cancellations allowed 4+ days before class. After that, no refunds or changes.</p>
+              <p>* Same-day no-show and 2+ same-day changes: class forfeited</p>
+            </>
+          ) : (
+            <>
+              <p className="warn">규정 미 확인으로 인한 불이익은 센터에서 책임지지 않습니다. 꼭 !! 확인 해주세요.</p>
+              <p className="red">최소 4일 전 인폼 시 변경 및 취소 가능 / 그 외의 변경 및 취소는 회차 차감, 변경 및 환불 불가</p>
+              <p>* 당일 노쇼 및 당일 변경 2회 이상 시 튜터수업 불가</p>
+            </>
+          )}
+        </div>
+      </div>);
+    })() : !lesson ? (
       <div className="ti-empty">확정된 수업이 없습니다.<br />수강생 목록 탭에서 신청을 확정 처리해주세요.</div>
     ) : (
       <div className="tutor-info-container" ref={invoiceRef}>
@@ -626,7 +839,7 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
                           </div>
                         ) : show ? (
                           <div className="ti-wsess" style={{ background: blockBg }} title={s ? `${date} · ${s.session_idx}회차 · ${s.status}` : `${date} · 예정`}>
-                            <div className="ct">{lesson.class_type} tutor</div>
+                            <div className="ct">{tutorName(lesson)} · {lesson.class_type}</div>
                             <div className="tm">{resolveTimeForDate(date)}</div>
                           </div>
                         ) : null}
