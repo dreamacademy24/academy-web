@@ -41,7 +41,7 @@ const SHORT_RATES = [
 export default function ResortContractPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [doc, setDoc] = useState<"long" | "short">("long");
+  const [doc, setDoc] = useState<"long" | "short" | "waiver">("long");
   const [lang, setLang] = useState<"ko" | "en">("ko");
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -52,8 +52,10 @@ export default function ResortContractPage() {
   if (!ready) return null;
 
   const scans = doc === "long"
-    ? [1, 2, 3, 4, 5].map(n => `/resort-contracts/jlong-${n}.jpg`)
-    : [1, 2, 3].map(n => `/resort-contracts/jshort-${n}.jpg`);
+    ? [...[1, 2, 3, 4, 5].map(n => `/resort-contracts/jlong-${n}.jpg`), "/resort-contracts/jamend-1.jpg"]
+    : doc === "short"
+    ? [1, 2, 3].map(n => `/resort-contracts/jshort-${n}.jpg`)
+    : [1, 2].map(n => `/resort-contracts/jwaiver-${n}.jpg`);
 
   return (<>
     <style>{`
@@ -88,6 +90,7 @@ export default function ResortContractPage() {
       <div className="rc-tabs">
         <button className={`rc-tab${doc === "long" ? " on" : ""}`} onClick={() => setDoc("long")}>🌙 장기 계약 (Long Stay · 7박↑)</button>
         <button className={`rc-tab${doc === "short" ? " on" : ""}`} onClick={() => setDoc("short")}>☀️ 단기 계약 (Corporate · 2박↑)</button>
+        <button className={`rc-tab${doc === "waiver" ? " on" : ""}`} onClick={() => setDoc("waiver")}>📸 외부촬영 서류 (Data Privacy)</button>
         <div className="rc-lang">
           <button className={`rc-lbtn${lang === "ko" ? " on" : ""}`} onClick={() => setLang("ko")}>🇰🇷 한글</button>
           <button className={`rc-lbtn${lang === "en" ? " on" : ""}`} onClick={() => setLang("en")}>🇬🇧 English (원본)</button>
@@ -118,7 +121,31 @@ export default function ResortContractPage() {
               <p style={{ fontSize: 11.5, color: "#a16207", margin: "8px 0 0" }}>Confirmed by Ms. Britney Na (Director of Sales, Jpark) · Accepted by Ms. Chohee Oh (President, Dream Academy) — Jul 09, 2026</p>
             </div>
           )}
-          <div className="rc-h">📄 {doc === "long" ? "장기 계약 원본 (5장)" : "단기 계약 원본 (3장)"} <span className="rc-badge">클릭하면 크게 보기</span></div>
+          <div className="rc-h">📄 {doc === "long" ? "장기 계약 원본 (5장) + 수정계약서 Amendment (1장)" : doc === "short" ? "단기 계약 원본 (3장)" : "외부촬영 책임면제·개인정보 동의서 원본 (2장)"} <span className="rc-badge">클릭하면 크게 보기</span></div>
+          {scans.map(src => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img key={src} src={src} alt={src} className="rc-scan" onClick={() => setLightbox(src)} />
+          ))}
+        </div>
+      ) : doc === "waiver" ? (
+        <div className="rc-card">
+          <div className="rc-h">📸 외부촬영 신청 서류 — Release of Liability, Data Privacy Waiver &amp; Indemnity Agreement</div>
+          <p style={{ fontSize: 13, color: "#475569", margin: "0 0 12px", lineHeight: 1.7 }}>
+            제이파크 리조트 <b>안에서 외부 촬영</b>(사진 촬영 · 영상 · 콘텐츠 제작)을 진행할 때, 호텔(PHIL. BXT CORP. / 대표 Jason Uy)에 제출하는 서류입니다.
+            인플루언서 촬영, 홍보 영상 등 촬영 일정이 잡히면 <b>이 서류를 작성해서 제이파크에 미리 제출</b>하세요.
+          </p>
+          <div className="rc-h" style={{ fontSize: 14 }}>핵심 내용</div>
+          <ul className="rc-ul">
+            <li><b>촬영 주체(Second Party = 드림/촬영팀)가 개인정보 처리 책임자</b> — 촬영 중 수집되는 사진·영상·개인정보의 관리 책임은 전부 촬영 주체에게 있음</li>
+            <li>촬영 대상(직원·투숙객 등)의 <b>동의·허가는 촬영 주체가 직접</b> 받아야 함 — 호텔은 장소만 제공</li>
+            <li>개인정보보호법(필리핀 Data Privacy Act 2012, RA 10173) 위반 등 문제가 생기면 <b>호텔은 면책, 촬영 주체가 배상</b></li>
+            <li>분쟁 시 세부시 법원 관할</li>
+            <li>Second Party 란에 <b>회사(단체)명 · 주소 · 대표자</b> 기입 + <b>대표 서명</b> + <b>공증(Notary)</b> 필요</li>
+          </ul>
+          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 10, padding: "10px 14px", marginTop: 10, fontSize: 12.5, color: "#92400e", fontWeight: 600 }}>
+            📌 사용 시점: 제이파크 내 외부 촬영(인플루언서 공구 촬영 등) 확정 시 → 작성·공증 → 제이파크 Sales(Britney) 제출
+          </div>
+          <div className="rc-h" style={{ marginTop: 16 }}>📄 원본 (2장) <span className="rc-badge">클릭하면 크게 보기</span></div>
           {scans.map(src => (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img key={src} src={src} alt={src} className="rc-scan" onClick={() => setLightbox(src)} />
