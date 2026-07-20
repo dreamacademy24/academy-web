@@ -26,6 +26,8 @@ export default function CheckinFormPage() {
   const [form, setForm] = useState<FormState>({ q1: "", q2: "", q6: "" });
   const [bedConfig, setBedConfig] = useState({room1:"",room2:"",room3:""});
   const [simCards, setSimCards] = useState<{plan:string}[]>([]);
+  const [accomType, setAccomType] = useState("");
+  const isDH = !accomType || accomType.includes("드림하우스");
   const [extraPickups, setExtraPickups] = useState<{type:string;date:string;airline:string;flight:string;time:string}[]>([]);
   const [flightForm, setFlightForm] = useState({
     flight_in_airline:"", flight_in_no:"", flight_in_date:"", flight_in_time:"", flight_in_origin:"", flight_in_undecided:false,
@@ -230,6 +232,7 @@ export default function CheckinFormPage() {
         // 항공편 정보 pre-fill (booking 기본 데이터에서)
         if (d.booking) {
           const bk = d.booking;
+          setAccomType(String(bk.accom_type || ""));
           // 합산 텍스트에서 날짜/시간 폴백 파싱 (flight_in = "대한항공 Ke601 2026-06-26 20:05")
           const inParsed = parseFlightText(bk.flight_in || "");
           const outParsed = parseFlightText(bk.flight_out || "");
@@ -261,6 +264,7 @@ export default function CheckinFormPage() {
 
   async function submit() {
     // 2번(투숙자 전체 영문이름)만 필수 — 나머지(예약자명·항공편·유심 등)는 비워도 제출됩니다.
+    if (simCards.some(sc => !sc.plan)) { setTab("checkin"); alert("요금제를 선택하지 않은 유심이 있습니다.\n유심 항목에서 요금제를 선택하시거나, 필요 없으면 ✕ 버튼으로 삭제해 주세요."); return; }
     if (!form.q2.trim()) { setTab("checkin"); alert("2번 '투숙자 전체인원 영문이름'을 입력해 주세요.\n나머지 항목은 비워두셔도 제출됩니다."); return; }
     setSubmitting(true);
     const res = await fetch(`/api/checkin/${token}`, {
@@ -358,13 +362,15 @@ export default function CheckinFormPage() {
           <input className="fi" value={form.q2} onChange={e=>up("q2",e.target.value)} placeholder="kim ooo / yoo ooo ooo"/>
         </div>
 
+        {isDH && (
         <div className="q">
-          <div className="q-title"><span className="q-num">3</span>🛏️ 베드 세팅</div>
+          <div className="q-title"><span className="q-num">3</span>🛏️ 베드 세팅 <span style={{fontSize:12,fontWeight:600,color:"#64748b"}}>(드림하우스 전용)</span></div>
           <div style={{background:"#f0f7ff",border:"1px solid #bfdbfe",borderRadius:10,padding:"14px 16px",marginBottom:14,lineHeight:1.7}}>
             <div style={{fontSize:14,fontWeight:800,color:"#1e40af",marginBottom:6}}>베드 세팅 안내</div>
             <div style={{fontSize:13,color:"#334155"}}>
               방마다 매트리스를 요청하시는 대로 넣어드리고 있습니다.<br/>
-              <b>투숙 인원에 맞게 각 방별로 선택</b>해 주세요.
+              <b>실제 사용하실 방만 선택</b>해 주세요. 선택하지 않은 방은 기본 세팅으로 준비됩니다.<br/>
+              <span style={{color:"#2563eb",fontWeight:600}}>잘못 눌러졌다면 한 번 더 누르면 선택이 해제돼요.</span>
             </div>
             <div style={{fontSize:12,color:"#64748b",marginTop:6}}>
               보통 2~3인: 마스터룸 베드 2개 / 4인 이상: 마스터룸 베드 2개 + 작은방 베드 1개
@@ -377,7 +383,7 @@ export default function CheckinFormPage() {
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {["더블베드 1개 (2인 스테이)","더블베드 2개 (3~4인 스테이)"].map(opt=>(
                   <button key={opt} type="button"
-                    onClick={()=>setBedConfig(p=>({...p,room1:opt}))}
+                    onClick={()=>setBedConfig(p=>({...p,room1:p.room1===opt?"":opt}))}
                     style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
                       borderColor:bedConfig.room1===opt?"#4f6ef7":"#dde3f0",
                       background:bedConfig.room1===opt?"#4f6ef7":"#fff",
@@ -390,7 +396,7 @@ export default function CheckinFormPage() {
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {["더블베드 1개 (2인 스테이)","더블베드+싱글 (3인 스테이)","사용하지 않음"].map(opt=>(
                   <button key={opt} type="button"
-                    onClick={()=>setBedConfig(p=>({...p,room2:opt}))}
+                    onClick={()=>setBedConfig(p=>({...p,room2:p.room2===opt?"":opt}))}
                     style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
                       borderColor:bedConfig.room2===opt?"#4f6ef7":"#dde3f0",
                       background:bedConfig.room2===opt?"#4f6ef7":"#fff",
@@ -403,7 +409,7 @@ export default function CheckinFormPage() {
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {["더블베드 1개 (1~2인 스테이)","사용하지 않음"].map(opt=>(
                   <button key={opt} type="button"
-                    onClick={()=>setBedConfig(p=>({...p,room3:opt}))}
+                    onClick={()=>setBedConfig(p=>({...p,room3:p.room3===opt?"":opt}))}
                     style={{padding:"8px 16px",borderRadius:20,border:"2px solid",fontSize:13,cursor:"pointer",
                       borderColor:bedConfig.room3===opt?"#4f6ef7":"#dde3f0",
                       background:bedConfig.room3===opt?"#4f6ef7":"#fff",
@@ -415,6 +421,7 @@ export default function CheckinFormPage() {
             </div>
           </div>
         </div>
+        )}
 
         <div className="q">
           <div className="q-title"><span className="q-num">4</span>유심 대여 신청 (GB 수량)</div>
@@ -648,61 +655,20 @@ export default function CheckinFormPage() {
           )}
         </div>
 
-        {/* 기존 JSON 기반 Q6 — 호환 유지 */}
+        {/* 과거 접수분(구버전) 읽기 전용 표시 */}
+        {extraPickups.length > 0 && (
         <div className="q">
-          <div className="q-title"><span className="q-num">6</span>추가 픽드랍 신청</div>
-          <div className="q-hint">기본 픽업/드랍 외 추가 필요 시 작성해 주세요. (선택)</div>
+          <div className="q-title"><span className="q-num">6</span>이전에 접수된 추가 픽드랍</div>
+          <div className="q-hint">이전 방식으로 접수된 내역입니다. 변경·추가는 위의 “추가 픽드랍 신청”을 이용해 주세요.</div>
           <div>
             {extraPickups.map((ep,i)=>(
-              <div key={i} style={{border:"1px solid #e0e4ef",borderRadius:10,padding:12,marginBottom:10,background:"#fafafe"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div style={{display:"flex",gap:6}}>
-                    {["픽업","드랍"].map(t=>(
-                      <button key={t} type="button"
-                        onClick={()=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],type:t};return n;})}
-                        style={{padding:"6px 14px",borderRadius:18,border:"2px solid",fontSize:13,cursor:"pointer",
-                          borderColor:ep.type===t?"#4f6ef7":"#dde3f0",
-                          background:ep.type===t?"#4f6ef7":"#fff",
-                          color:ep.type===t?"#fff":"#556"}}>{t}</button>
-                    ))}
-                  </div>
-                  <button type="button" onClick={()=>setExtraPickups(prev=>prev.filter((_,j)=>j!==i))}
-                    style={{fontSize:12,color:"#e53",background:"none",border:"none",cursor:"pointer"}}>✕ 삭제</button>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div>
-                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>날짜</div>
-                    <input type="date" value={ep.date}
-                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],date:e.target.value};return n;})}
-                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>시간</div>
-                    <input type="time" value={ep.time}
-                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],time:e.target.value};return n;})}
-                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>항공사</div>
-                    <input type="text" value={ep.airline} placeholder="예: 대한항공"
-                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],airline:e.target.value};return n;})}
-                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
-                  </div>
-                  <div>
-                    <div style={{fontSize:11,color:"#889",marginBottom:3}}>편명</div>
-                    <input type="text" value={ep.flight} placeholder="예: KE601"
-                      onChange={e=>setExtraPickups(prev=>{const n=[...prev];n[i]={...n[i],flight:e.target.value};return n;})}
-                      style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #dde",fontSize:13}}/>
-                  </div>
-                </div>
+              <div key={i} style={{border:"1px solid #e0e4ef",borderRadius:10,padding:"10px 14px",marginBottom:8,background:"#fafafe",fontSize:13,color:"#334155"}}>
+                <b>{ep.type}</b> · {ep.date || "날짜 미정"} {ep.time || ""}{ep.airline ? ` · ${ep.airline}` : ""}{ep.flight ? ` ${ep.flight}` : ""}
               </div>
             ))}
-            <button type="button" onClick={()=>setExtraPickups(prev=>[...prev,{type:"픽업",date:"",airline:"",flight:"",time:""}])}
-              style={{width:"100%",padding:"10px",borderRadius:8,border:"2px dashed #4f6ef7",background:"#f5f7ff",color:"#4f6ef7",fontSize:14,cursor:"pointer"}}>
-              + 픽드랍 추가
-            </button>
           </div>
         </div>
+        )}
         </>)}
 
         {tab === "checkin" && (<>
