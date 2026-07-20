@@ -619,7 +619,16 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
       const pendingSum = pendingPays.reduce((a, pr) => a + Number(pr.amount || 0), 0);
       const balance = grand - paidSum;
       const typeBg = (ct: string) => ct === "1:2" ? "#ede9fe" : "#dbeafe";
-      return (
+      return (<>
+      <div className="no-print" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}>
+        <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 700 }}>{englishMode ? "View single:" : "🔍 개별 인보이스 보기:"}</span>
+        {groupLessons.map(l => (
+          <button key={String(l.id)} onClick={() => setSelectedId(String(l.id))}
+            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            {tutorName(l)} · {(l.student_names || "").split("/")[0].trim() || l.class_type}
+          </button>
+        ))}
+      </div>
       <div className="tutor-info-container" ref={invoiceRef}>
         <div className="ti-head">
           <div className="ti-logo">
@@ -732,7 +741,8 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
             </>
           )}
         </div>
-      </div>);
+      </div>
+      </>);
     })() : !lesson ? (
       <div className="ti-empty">확정된 수업이 없습니다.<br />수강생 목록 탭에서 신청을 확정 처리해주세요.</div>
     ) : (
