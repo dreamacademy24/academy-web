@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment, type CSSProperties } from "react";
 import { toastErr, toastOk } from "@/lib/toast";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -319,10 +319,32 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     }
     return [...m.entries()].filter(([, ls]) => ls.length >= 2);
   }, [lessons]);
+  const houses = useMemo(() => {
+    const m = new Map<string, Lesson[]>();
+    for (const l of lessons) {
+      const k = (l.house_or_reserver || "").trim() || "(미지정)";
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(l);
+    }
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "ko"));
+  }, [lessons]);
+  const [selHouse, setSelHouse] = useState("");
   const isGroup = selectedId.startsWith("grp:");
   const groupKey = isGroup ? selectedId.slice(4) : "";
   const groupLessons = useMemo(() => (groups.find(([k]) => k === groupKey)?.[1]) || [], [groups, groupKey]);
   const grpBookingIds = useMemo(() => [...new Set(groupLessons.map(l => l.booking_id).filter(Boolean))] as string[], [groupLessons]);
+
+  useEffect(() => {
+    if (!lessons.length || selHouse) return;
+    let h = "";
+    if (isGroup) h = groupKey;
+    else {
+      const l = lessons.find(x => String(x.id) === selectedId);
+      h = (l?.house_or_reserver || "").trim();
+    }
+    if (!h) h = houses[0]?.[0] || "";
+    if (h) setSelHouse(h);
+  }, [lessons, selectedId, isGroup, groupKey, houses, selHouse]);
 
   useEffect(() => {
     if (!isGroup) { setGrpSessions({}); setGrpPays([]); return; }
@@ -548,27 +570,21 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
 
     <div className="ti-bar no-print">
       <select
-        value={selectedId}
-        onChange={e => setSelectedId(e.target.value)}
+        value={selHouse}
+        onChange={e => {
+          const h = e.target.value;
+          setSelHouse(h);
+          const ls = houses.find(([k]) => k === h)?.[1] || [];
+          setSelectedId(ls.length >= 2 ? "grp:" + h : (ls[0] ? String(ls[0].id) : ""));
+        }}
         disabled={loading || lessons.length === 0}
-        aria-label={englishMode ? "Select student" : "수강생 선택"}
+        aria-label={englishMode ? "Select house" : "예약자(집) 선택"}
       >
-        {lessons.length === 0 ? (
+        {houses.length === 0 ? (
           <option value="">{loading ? (englishMode ? "Loading..." : "로딩 중...") : (englishMode ? "No classes" : "수업 없음")}</option>
-        ) : (<>
-          {groups.length > 0 && (
-            <optgroup label={englishMode ? "🏠 Combined by house" : "🏠 집(예약자) 단위 결합"}>
-              {groups.map(([k, ls]) => (
-                <option key={"grp:" + k} value={"grp:" + k}>
-                  {`🏠 ${ls[0].house_or_reserver || k} — ${ls.length}${englishMode ? " classes combined" : "건 결합"}`}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {lessons.map(l => (
-            <option key={l.id} value={l.id}>{optionLabel(l)}</option>
-          ))}
-        </>)}
+        ) : houses.map(([k, ls]) => (
+          <option key={k} value={k}>{`🏠 ${k} (${ls.length}${englishMode ? "" : "건"})`}</option>
+        ))}
       </select>
       <button className="ti-btn ti-btn-print" onClick={handlePrint} disabled={!lesson && !isGroup}>
         📄 {englishMode ? "Print/PDF" : "인쇄/PDF"}
@@ -577,6 +593,31 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
         {saving ? (englishMode ? "Saving..." : "저장 중...") : `🖼️ ${englishMode ? "Save Image" : "이미지 저장"}`}
       </button>
     </div>
+
+    {(() => {
+      const ls = houses.find(([k]) => k === selHouse)?.[1] || [];
+      if (ls.length === 0) return null;
+      const chip = (active: boolean): CSSProperties => ({
+        padding: "7px 14px", borderRadius: 18, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+        border: active ? "2px solid #1a6fc4" : "1px solid #dde3f0",
+        background: active ? "#1a6fc4" : "#fff", color: active ? "#fff" : "#475569",
+      });
+      return (
+        <div className="no-print" style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", margin: "0 0 12px" }}>
+          {ls.length >= 2 && (
+            <button style={chip(isGroup)} onClick={() => setSelectedId("grp:" + selHouse)}>
+              🏠 {englishMode ? `Combined (${ls.length})` : `결합 (${ls.length}건)`}
+            </button>
+          )}
+          {ls.map(l => (
+            <button key={String(l.id)} style={chip(selectedId === String(l.id))} onClick={() => setSelectedId(String(l.id))}>
+              {tutorName(l)} · {(l.student_names || "").split("/")[0].trim() || l.class_type}
+              <span style={{ opacity: 0.75, fontWeight: 500 }}>{l.start_date ? ` ${fmtMD(l.start_date)}~${fmtMD(l.end_date)}` : ""}</span>
+            </button>
+          ))}
+        </div>
+      );
+    })()}
 
     {(lesson || (isGroup && groupLessons.length > 0)) && (
       <div style={{ border: "1px solid #ddd6fe", background: "#faf5ff", borderRadius: 10, padding: "12px 14px", margin: "10px 0 4px" }}>
@@ -620,15 +661,6 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
       const balance = grand - paidSum;
       const typeBg = (ct: string) => ct === "1:2" ? "#ede9fe" : "#dbeafe";
       return (<>
-      <div className="no-print" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", margin: "0 0 10px" }}>
-        <span style={{ fontSize: 12.5, color: "#64748b", fontWeight: 700 }}>{englishMode ? "View single:" : "🔍 개별 인보이스 보기:"}</span>
-        {groupLessons.map(l => (
-          <button key={String(l.id)} onClick={() => setSelectedId(String(l.id))}
-            style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            {tutorName(l)} · {(l.student_names || "").split("/")[0].trim() || l.class_type}
-          </button>
-        ))}
-      </div>
       <div className="tutor-info-container" ref={invoiceRef}>
         <div className="ti-head">
           <div className="ti-logo">

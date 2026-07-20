@@ -162,6 +162,14 @@ function classTypeBase(ct: string | null | undefined): string {
 
 export default function TutorWeeklySchedule() {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [enMode, setEnMode] = useState(false);
+  const dispStudent = (names: string | null | undefined): string => {
+    if (!names) return "-";
+    const parts = names.split("/").map(x => x.trim()).filter(Boolean);
+    if (enMode && parts.length > 1) return (parts[parts.length - 1].split(",")[0].trim() || parts[0]);
+    return firstStudent(names);
+  };
+  const EN_ST: Record<string, string> = { "예정": "Plan", "출석": "Attended", "노쇼": "No-show", "재조정": "Resched" };
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [sessions, setSessions] = useState<Enriched[]>([]);
   const [tutorFilter, setTutorFilter] = useState<string>("all");
@@ -380,9 +388,9 @@ export default function TutorWeeklySchedule() {
                         onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(s); } }}
                       >
                         <div className="time">{resolveTime(s)}</div>
-                        <div className="stu">{firstStudent(s.lesson.student_names)}</div>
+                        <div className="stu">{dispStudent(s.lesson.student_names)}</div>
                         <div className={`tut${s.lesson.tutor_id ? "" : " unassigned"}`} style={s.lesson.tutor_id ? { color: s.tutor_color } : undefined}>
-                          {s.tutor_name || (s.lesson.tutor_id ? "(이름 없음)" : "미배정")}
+                          {s.tutor_name || (s.lesson.tutor_id ? "(이름 없음)" : (enMode ? "Unassigned" : "미배정"))}
                         </div>
                         <div className="badges">
                           <span className="b b-type">{typeBase}</span>
@@ -395,7 +403,7 @@ export default function TutorWeeklySchedule() {
                               textDecoration: t.strike ? "line-through" : "none",
                             }}
                           >
-                            {t.label}
+                            {enMode ? (EN_ST[t.label] || t.label) : t.label}
                           </span>
                         </div>
                       </div>
@@ -513,6 +521,10 @@ export default function TutorWeeklySchedule() {
         <button onClick={() => setWeekOffset(o => o + 1)}>다음 주 ▶</button>
       </div>
       <button className="tws-print-btn" onClick={openPreview} title="인쇄 미리보기 (A4 가로 1페이지)">🖨 출력</button>
+      <button onClick={() => setEnMode(v => !v)} title="티쳐 전달용 영문 이름 보기"
+        style={{padding:"8px 14px",borderRadius:8,border:enMode?"2px solid #1a6fc4":"1px solid #e2e8f0",background:enMode?"#eff6ff":"#fff",color:enMode?"#1a6fc4":"#64748b",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+        🇬🇧 English{enMode ? " ✓" : ""}
+      </button>
       <div className="tws-label">
         {weekLabelKR(weekOffset)}
         <span className="sub">{formatWeekRange(week.startDate, week.endDate)}</span>
