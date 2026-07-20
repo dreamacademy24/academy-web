@@ -99,6 +99,7 @@ function CheckinDetailsInner() {
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [listView, setListView] = useState<"upcoming"|"past">("upcoming");
+  const [listQ, setListQ] = useState("");
   const [checkinStatus, setCheckinStatus] = useState<Record<string, { submitted: boolean; saved: boolean }>>({});
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -620,7 +621,8 @@ function CheckinDetailsInner() {
           if ((b.house_no && b.house_no.trim()) || (b.accom_room && b.accom_room.trim())) return true; // 룸번호 있으면 드하
           return false;
         };
-        const dh = bookings.filter(needsCheckin);
+        const dhAll = bookings.filter(needsCheckin);
+        const dh = listQ.trim() ? dhAll.filter(b => String(b.booker_name||"").includes(listQ.trim())) : dhAll;
         // 예정 = 아직 도착 안 한(체크인 날짜가 오늘 이후) 예약만. 이미 도착(체류중)·체크아웃 완료는 아래 접힘
         const upcoming = dh.filter(b => ci(b) && ci(b) >= todayStr);
         const past = dh.filter(b => ci(b) && ci(b) < todayStr);
@@ -649,15 +651,40 @@ function CheckinDetailsInner() {
           if (out && out < todayStr) return "완료";
           return "체류중";
         };
-        const row = (b: Booking) => (
-          <div key={b.id} onClick={() => selectBooking(b.id)}
-            style={{display:"grid",gridTemplateColumns:"70px 1fr 130px 92px",gap:10,alignItems:"center",padding:"12px 14px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",background:selId===b.id?"#eff6ff":""}}>
-            <span style={{fontSize:12,fontWeight:700,color:dday(b)==="오늘"?"#dc2626":"#64748b",textAlign:"center"}}>{dday(b)}</span>
-            <span style={{minWidth:0}}><b style={{fontSize:14}}>{b.booker_name}</b> <span style={{fontSize:11.5,color:"#94a3b8"}}>{b.accom_type||""}</span></span>
-            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fDate(b.checkin_date)}</span>
-            <span style={{textAlign:"right"}}>{badge(b)}</span>
+        const GRID = "56px minmax(90px,1fr) 118px 64px 78px 78px 150px 92px";
+        const fD2 = (d?: string|null) => { const v=(d||"").slice(0,10); return v ? v.slice(5).replace("-",".") : "-"; };
+        const flightInTxt = (b: Booking) => {
+          const f=[b.flight_in_airline,b.flight_in_no].filter(Boolean).join(" ") || (b.flight_in||"");
+          const w=[((b.flight_in_date||"").slice(0,10)||"").slice(5).replace("-","."),b.flight_in_time].filter(Boolean).join(" ");
+          return [f,w].filter(Boolean).join(" · ");
+        };
+        const roomTxt = (b: Booking) => {
+          const r=(b.house_no||b.accom_room||"").trim();
+          return r ? r.replace(/^(드림하우스|DH)\s*/i,"").toUpperCase() : "-";
+        };
+        const headerRow = (
+          <div style={{display:"grid",gridTemplateColumns:GRID,gap:8,alignItems:"center",padding:"9px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",fontSize:11.5,fontWeight:800,color:"#64748b"}}>
+            <span style={{textAlign:"center"}}>D-day</span><span>예약자</span><span>숙소</span><span style={{textAlign:"center"}}>룸</span>
+            <span style={{textAlign:"center"}}>체크인</span><span style={{textAlign:"center"}}>체크아웃</span><span>항공 IN</span><span style={{textAlign:"right"}}>상태</span>
           </div>
         );
+        const row = (b: Booking) => {
+          const st=stOf(b); const notDone=!st.saved && !st.submitted;
+          const fin=flightInTxt(b);
+          return (
+          <div key={b.id} onClick={() => selectBooking(b.id)}
+            style={{display:"grid",gridTemplateColumns:GRID,gap:8,alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",
+              background:selId===b.id?"#eff6ff":(notDone?"#fef2f2":"")}}>
+            <span style={{fontSize:12,fontWeight:700,color:dday(b)==="오늘"?"#dc2626":(String(dday(b)).startsWith("D-")&&parseInt(String(dday(b)).slice(2))<=7?"#dc2626":"#64748b"),textAlign:"center"}}>{dday(b)}</span>
+            <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><b style={{fontSize:13.5}}>{b.booker_name}</b></span>
+            <span style={{fontSize:11.5,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.accom_type||""}>{b.accom_type||"-"}</span>
+            <span style={{fontSize:12,fontWeight:700,color:"#334155",textAlign:"center"}}>{roomTxt(b)}</span>
+            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fD2(b.checkin_date)}</span>
+            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fD2(b.checkout_date)}</span>
+            <span style={{fontSize:11.5,color:fin?"#475569":"#cbd5e1",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={fin}>{fin||"미입력"}</span>
+            <span style={{textAlign:"right"}}>{badge(b)}</span>
+          </div>);
+        };
         const MON = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
         const tabBtn = (v: "upcoming"|"past", label: string) => (
           <button onClick={()=>setListView(v)} style={{padding:"7px 16px",borderRadius:9,border:"1px solid",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
@@ -667,14 +694,16 @@ function CheckinDetailsInner() {
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             {tabBtn("upcoming", `체크인 예정 (${upcoming.length})`)}
             {tabBtn("past", `🗂 지난 체크인 (${past.length})`)}
-            <span style={{marginLeft:"auto",fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 {listView==="past"?"확인":"작성"} →</span>
+            <input value={listQ} onChange={e=>setListQ(e.target.value)} placeholder="🔍 이름 검색"
+              style={{marginLeft:"auto",padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,width:150,fontFamily:"inherit"}}/>
+            <span style={{fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 {listView==="past"?"확인":"작성"} →</span>
           </div>
           {listView === "upcoming" && (upcoming.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>예정된 체크인이 없습니다</div> :
             months.map(mk => {
               const [yy,mm] = mk.split("-").map(Number);
               return (<div key={mk} style={{marginBottom:8}}>
                 <div style={{fontSize:12.5,fontWeight:800,color:"#1a6fc4",padding:"8px 4px"}}>📅 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {groups[mk].length}팀</span></div>
-                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{groups[mk].map(row)}</div>
+                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{headerRow}{groups[mk].map(row)}</div>
               </div>);
             }))}
           {listView === "past" && (past.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>지난 체크인이 없습니다</div> :
@@ -682,7 +711,7 @@ function CheckinDetailsInner() {
               const [yy,mm] = mk.split("-").map(Number);
               return (<div key={mk} style={{marginBottom:8}}>
                 <div style={{fontSize:12.5,fontWeight:800,color:"#64748b",padding:"8px 4px"}}>🗂 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {pastGroups[mk].length}팀</span></div>
-                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{pastGroups[mk].map(row)}</div>
+                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{headerRow}{pastGroups[mk].map(row)}</div>
               </div>);
             }))}
         </div>);
