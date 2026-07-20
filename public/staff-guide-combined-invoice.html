@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>직원 안내 — 튜터 결합 인보이스</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard',-apple-system,'Malgun Gothic',sans-serif}
+body{background:#f5f6fa;color:#1f2433;padding:28px;line-height:1.7}
+.wrap{max-width:860px;margin:0 auto}
+h1{font-size:21px;margin-bottom:6px}
+.sub{font-size:13.5px;color:#64748b;margin-bottom:22px}
+.card{background:#fff;border:1px solid #e6e9f2;border-radius:14px;padding:20px 22px;margin-bottom:16px}
+h2{font-size:16px;margin-bottom:10px;color:#3a47a8}
+img{max-width:100%;border:1px solid #e2e8f0;border-radius:10px;margin:10px 0}
+.badge{display:inline-block;font-size:12px;font-weight:800;background:#eef2ff;color:#4338ca;border-radius:6px;padding:2px 8px}
+ul{padding-left:20px;font-size:14px}
+li{margin-bottom:6px}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;font-size:13.5px;color:#92400e}
+.en{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;font-size:13.5px;color:#075985}
+.step{font-weight:800;color:#3a47a8}
+</style></head><body><div class="wrap">
+<h1>💰 튜터 결합 인보이스 안내</h1>
+<div class="sub">2026-07-20 신규 기능 · 한 집(예약자)에 튜터 수업이 여러 건일 때, 인보이스를 한 장으로 합쳐서 보여주는 기능입니다.</div>
+
+<div class="card">
+<h2>1. 왜 생겼어요?</h2>
+<ul>
+<li>한 집에서 아이별·튜터별로 수업을 여러 건 신청하면 (예: 양지나 집 4건) 인보이스가 각각 따로 생겨 헷갈렸어요.</li>
+<li>이제 <span class="badge">🏠 집 단위 결합</span>으로 한 장에 전부 합산됩니다. <b>기존 개별 수업 인보이스도 그대로 있어요.</b></li>
+</ul>
+</div>
+
+<div class="card">
+<h2>2. 사용 방법</h2>
+<ul>
+<li><span class="step">튜터 수업 관리 → 인보이스 탭</span> → 수업 선택 드롭다운 맨 위 <b>"🏠 집(예약자) 단위 결합"</b> 그룹에서 선택 (예: "🏠 양지나 — 4건 결합")</li>
+<li>수업이 2건 이상인 집만 자동으로 나타나요. 1건뿐인 집은 기존 개별 인보이스를 쓰면 됩니다.</li>
+<li>인쇄/PDF · 이미지 저장 버튼도 그대로 사용 가능.</li>
+</ul>
+<img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/design-mockups/guide-combined-invoice-1784545616753.jpg" alt="결합 인보이스 화면">
+</div>
+
+<div class="card">
+<h2>3. 화면 읽는 법</h2>
+<ul>
+<li><b>TOTAL / 납부됨 / 잔액</b> — 수업 전체 합계에서, 티쳐들이 기록하고 <b>한국 직원이 승인한 납부</b>를 뺀 잔액이 자동 계산돼요. 승인 대기 금액은 괄호로 따로 표시.</li>
+<li><b>수업별 표</b> — 수강자 / 튜터 / 유형(1:1·1:2, 타임) / 요일 / 회차 / 일단가 / 금액.</li>
+<li><b>달력</b> — 날짜마다 <b>어느 튜터가 몇 시에 오는지</b> 표시 (예: Cristel · 1:1 · 17:30). 취소된 날은 자동 제외.</li>
+<li><b>납부 내역</b> — 티쳐가 기록한 수령 건이 날짜·내용·금액으로 나열, ✓=승인됨 / (승인대기)=아직 미승인.</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>4. 티쳐 납부 기록 흐름 (같이 알아두기)</h2>
+<ul>
+<li>티쳐: <span class="step">Dream Staff → Tutor Class → 💰 Invoice 탭</span> → 보라색 <b>"💵 Record Payment Received"</b>에 금액·날짜 입력 → Record</li>
+<li>한국 직원: 정산 관리에서 해당 건 <b>승인</b> → 그때부터 결합 인보이스 "납부됨"에 반영</li>
+<li>회차·금액은 출석(Attendance) 기준 자동 계산이라, 출결 기록이 정확해야 인보이스도 정확해요.</li>
+</ul>
+<div class="warn">⚠️ 잔액이 0이 아닌데 손님이 "다 냈다"고 하면 → 티쳐 기록이 승인 대기 중이거나 누락된 것. 정산 관리에서 승인 여부부터 확인하세요.</div>
+</div>
+
+<div class="card">
+<h2>5. For Tutors (English)</h2>
+<div class="en">
+<b>Combined invoice</b>: In the Invoice tab, the dropdown now has "🏠 Combined by house" — one invoice for all classes of the same family, with TOTAL / PAID / BALANCE.
+The calendar shows <b>which tutor comes on each date</b>. When you receive payment, record it via <b>💵 Record Payment Received</b> — it appears on the invoice after Korea staff approval.
+</div>
+</div>
+</div></body></html>
