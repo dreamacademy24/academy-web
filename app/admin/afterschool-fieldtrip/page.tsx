@@ -424,12 +424,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
               <div key={month}>
                 <div
                   onClick={() => toggleMonth(month)}
-                  style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#16a34a", color:"#fff", borderRadius:12, cursor:"pointer", boxShadow:"0 2px 8px rgba(22,163,74,0.18)"}}
+                  style={{display:"flex", alignItems:"center", gap:10, padding:"11px 16px", background:"#fff", border:"1px solid #e2e8f0", borderRadius:12, cursor:"pointer"}}
                 >
-                  <div style={{fontSize:16, fontWeight:800, display:"flex", alignItems:"center", gap:8}}>
-                    <span style={{fontSize:13}}>{open ? "▼" : "▶"}</span>📅 {month}월 <span style={{fontWeight:600, opacity:0.85}}>({mCount}건)</span>
-                  </div>
-                  <div style={{fontSize:13, fontWeight:700, color:"#15803d", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
+                  <span style={{fontSize:11, color:"#94a3b8"}}>{open ? "▼" : "▶"}</span>
+                  <span style={{width:8, height:8, borderRadius:"50%", background:"#16a34a"}}></span>
+                  <span style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>{month}월</span>
+                  <span style={{fontSize:12.5, color:"#94a3b8", fontWeight:600}}>{mCount}건</span>
+                  <span style={{marginLeft:"auto", fontSize:12, fontWeight:800, color:"#15803d", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"3px 12px", borderRadius:999}}>총 {mPeople}명</span>
                 </div>
                 {open && (
                 <div style={{display:"flex", flexDirection:"column", gap:14, marginTop:12}}>
@@ -439,38 +440,36 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                     const dt = new Date(new Date().getFullYear(), r0.month - 1, r0.day);
                     const dowStr = isNaN(dt.getTime()) ? "" : ` (${KR_DOW[dt.getDay()]})`;
                     return (
-                      <div key={token} className="af-card">
-                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background: r0.isFieldtrip ? "#fff7ed" : "#eff6ff", borderBottom: r0.isFieldtrip ? "1px solid #fed7aa" : "1px solid #bfdbfe"}}>
-                          <div style={{fontSize:15, fontWeight:800, color:"#1a1a2e", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
-                            📅 {r0.month}/{r0.day}{dowStr} · {toKR(r0.programName)}
-                            {r0.isFieldtrip && <span style={{fontSize:11, fontWeight:700, background:"#c2410c", color:"#fff", padding:"2px 8px", borderRadius:999}}>필드트립</span>}
-                            {r0.time && <span style={{fontWeight:600, color:"#475569"}}>· {r0.time}</span>}
-                          </div>
-                          <div style={{fontSize:13, fontWeight:700, color: r0.isFieldtrip ? "#c2410c" : "#1d4ed8", background:"#fff", border: r0.isFieldtrip ? "1px solid #fed7aa" : "1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>
-                            총 {total}명
-                          </div>
+                      <div key={token} style={{background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, padding:"12px 16px", boxShadow:"0 1px 4px rgba(15,23,42,0.04)"}}>
+                        <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                          {(() => { const d = isNaN(dt.getTime()) ? -1 : dt.getDay(); const st = d === 0 ? {bg:"#FCEBEB", c:"#A32D2D"} : d === 6 ? {bg:"#FAEEDA", c:"#854F0B"} : {bg:"#E6F1FB", c:"#185FA5"}; return d >= 0 ? <span style={{background:st.bg, color:st.c, fontSize:11, fontWeight:800, borderRadius:8, padding:"2px 9px", flexShrink:0}}>{KR_DOW[d]}</span> : null; })()}
+                          <span style={{fontSize:14, fontWeight:800, color:"#1a1a2e"}}>{r0.month}/{r0.day} · {toKR(r0.programName)}</span>
+                          {r0.isFieldtrip && <span style={{fontSize:10.5, fontWeight:800, background:"#fff7ed", color:"#c2410c", border:"1px solid #fed7aa", padding:"1px 8px", borderRadius:999}}>필드트립</span>}
+                          {r0.time && <span style={{fontSize:12, color:"#94a3b8", fontWeight:600}}>{r0.time}</span>}
+                          <span style={{marginLeft:"auto", fontSize:12.5, fontWeight:800, color: r0.isFieldtrip ? "#c2410c" : "#1d4ed8", background: r0.isFieldtrip ? "#fff7ed" : "#eff6ff", border: r0.isFieldtrip ? "1px solid #fed7aa" : "1px solid #bfdbfe", padding:"3px 12px", borderRadius:999}}>총 {total}명</span>
                         </div>
                         {/* 컴팩트 칩 — 아이 이름 위주 가로 나열, 집 번호는 작게 (예약자 생략, 마우스 올리면 표시) */}
-                        <div style={{display:"flex", flexWrap:"wrap", gap:6, padding:"10px 14px"}}>
-                          {rows.map((r, i) => {
+                        <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:9}}>
+                          {[...rows].sort((a, b) => Number(!!a.cancelled) - Number(!!b.cancelled)).map((r, i) => {
                             const lot = (r.room || "").replace(/^b?17/i, "").replace(/^[-_ ]/, "").toUpperCase() || "-";
+                            const canc = !!r.cancelled;
                             return (
                               <div key={r.appId + "-" + r.token + "-" + i}
                                 title={`예약자: ${r.reserver || "-"} · 방: ${r.room || "-"}${r.request ? `\n요청: ${r.request}` : ""}`}
-                                style={{display:"inline-flex", alignItems:"center", gap:6, padding:"6px 9px", background:"#f8fafc", border:"1px solid #eef2f7", borderRadius:9, fontSize:13}}>
-                                <span style={{fontWeight:800, whiteSpace:"nowrap"}}>{r.childName || "-"}</span>
-                                <span style={{color:"#94a3b8", fontSize:10.5, fontWeight:700, whiteSpace:"nowrap"}}>{lot}</span>
+                                style={{display:"inline-flex", alignItems:"center", gap:5, padding:"4px 11px", background: canc ? "#fef2f2" : "#f8fafc", border: canc ? "1px solid #fecaca" : "1px solid #e2e8f0", borderRadius:999, fontSize:12.5, opacity: canc ? 0.75 : 1}}>
+                                <span style={{fontWeight:700, whiteSpace:"nowrap", color: canc ? "#b91c1c" : "#1a1a2e", textDecoration: canc ? "line-through" : "none"}}>{r.childName || "-"}</span>
+                                <span style={{color:"#94a3b8", fontSize:11, fontWeight:600, whiteSpace:"nowrap"}}>{lot}</span>
                                 {r.request && <span style={{fontSize:11}} title={r.request}>💬</span>}
-                                {r.cancelled && <span style={{fontSize:10.5, fontWeight:800, color:"#94a3b8", background:"#f1f5f9", borderRadius:6, padding:"2px 7px"}}>취소됨</span>}
+                                {canc && <span style={{fontSize:10.5, fontWeight:700, color:"#b91c1c"}}>취소</span>}
                                 {r.cancelReq && (<>
-                                  <span style={{fontSize:10.5, fontWeight:800, color:"#b91c1c", background:"#fee2e2", borderRadius:6, padding:"2px 7px"}}>취소요청</span>
-                                  <button onClick={() => approveCancel(r.appId, r.token)} style={{border:"none", background:"#16a34a", color:"#fff", borderRadius:6, padding:"3px 9px", fontSize:11, fontWeight:800, cursor:"pointer"}}>승인</button>
+                                  <span style={{fontSize:10.5, fontWeight:800, color:"#92400e", background:"#fef3c7", borderRadius:999, padding:"1px 7px"}}>취소요청</span>
+                                  <button onClick={() => approveCancel(r.appId, r.token)} style={{border:"none", background:"#16a34a", color:"#fff", borderRadius:999, fontSize:10.5, padding:"1px 8px", fontWeight:800, cursor:"pointer", fontFamily:"inherit"}}>승인</button>
                                 </>)}
                                 <button
                                   onClick={() => deleteToken(r.appId, r.token, r.childName, r.programName)}
                                   title="이 신청 삭제 (티쳐 표에도 반영)"
-                                  style={{border:"none", background:"none", color:"#cbd5e1", cursor:"pointer", fontSize:13, padding:"0 2px", lineHeight:1}}
-                                >🗑</button>
+                                  style={{border:"none", background:"none", color:"#e2e8f0", cursor:"pointer", fontSize:11, padding:"0 1px", lineHeight:1}}
+                                >✕</button>
                               </div>
                             );
                           })}
