@@ -23,6 +23,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "SSP 관리", href: "/admin/ssp" },
     { label: "상담 예약", href: "/admin/consultations" },
     { label: "애프터스쿨/필드트립", href: "/admin/afterschool-fieldtrip" },
+    { label: "유학원 관리", href: "/admin/agencies" },
     { label: "동의서함", href: "/admin/consents" },
     { label: "공지 배포", href: "/admin/notices" },
     { label: "지난 내역 보관함", href: "/admin/archive" },

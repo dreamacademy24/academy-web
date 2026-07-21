@@ -701,7 +701,7 @@ export default function BookingDetailPage() {
             )}
             <div className="item"><div className="lbl">유학원</div>
               {editing
-                ? <input className="ed-inp" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/>
+                ? <><input className="ed-inp" list="agencyOpts2" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/><datalist id="agencyOpts2"><option value="이젠유학"/><option value="영리쉬"/><option value="코코키즈"/></datalist></>
                 : <div className="val">{b.agency || "-"}</div>}
             </div>
             <div className="item"><div className="lbl">전체 인원</div>

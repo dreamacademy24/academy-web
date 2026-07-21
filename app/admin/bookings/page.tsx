@@ -9,6 +9,7 @@ import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
 import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue, isCommuteBooking } from "@/lib/bookingTypes";
 import { fmtAge, ageNum } from "@/lib/format";
+import { agencyShort, AGENCY_PRESETS } from "@/lib/agencies";
 
 interface Booking {
   id:string; reservation_no:string; status:string; booker_name:string; students:any;
@@ -749,7 +750,8 @@ export default function AdminBookingsPage(){
     return null;
   }
 
-  return(<><style>{`
+  return(<><datalist id="agencyOpts">{AGENCY_PRESETS.map(a=><option key={a.name} value={a.name}/>)}</datalist>
+    <style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
 .aw{max-width:1400px;margin:0 auto;padding:24px;}
 .ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;}.ah h1{font-size:22px;font-weight:800;}
@@ -924,7 +926,7 @@ export default function AdminBookingsPage(){
             </td>
             <td><select className="asg" value={b.assignee||""} style={{color:b.assignee?"#1a6fc4":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,assignee:v}:x));}}><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
             <td><select className="asg" value={b.care_assignee||""} style={{color:b.care_assignee?"#0d9488":"#94a3b8"}} onClick={e=>e.stopPropagation()} onChange={async e=>{const v=e.target.value;await supabase.from("bookings").update({care_assignee:v}).eq("id",b.id);setBookings(prev=>prev.map(x=>x.id===b.id?{...x,care_assignee:v}:x));}} title="학생 케어 담당 (컨디션·출석·투약 체크)"><option value="">미지정</option>{assignees.map(a=><option key={a} value={a}>{a}</option>)}</select></td>
-            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}</td>
+            <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.booker_name}>{b.booker_name}{(b as any).is_all_in_one&&<span style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700,verticalAlign:"middle"}}>🌟 올인원</span>}{agencyShort(b.agency)!==""&&<span title={"유학원: "+(b.agency||"")} style={{display:"inline-block",marginLeft:4,fontSize:11,background:"#eeedfe",color:"#3c3489",padding:"1px 6px",borderRadius:10,fontWeight:800,verticalAlign:"middle"}}>🏢 {agencyShort(b.agency)}</span>}</td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
             <td style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={(b.accom_type||"미정")+(((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())?" · 드림하우스 룸 미배정(오버부킹 주의)":"")}>{((b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim())&&<span style={{color:"#dc2626",fontWeight:800,marginRight:3}}>❗</span>}{b.accom_type||"미정"}{(b as any).academy_option&&<span title="숙소 단독 + 아카데미 별도 등록" style={{marginLeft:4,fontSize:10,fontWeight:800,background:"#eef2ff",color:"#4338ca",borderRadius:6,padding:"1px 6px",whiteSpace:"nowrap"}}>🏫+아카데미</span>}</td>
@@ -1544,7 +1546,7 @@ export default function AdminBookingsPage(){
       ].map(f=>(
         <div key={f.key} style={{marginBottom:10}}>
           <label style={{fontSize:12,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>{f.label}</label>
-          <input type={f.type} placeholder={f.ph} value={(newForm as Record<string,any>)[f.key]}
+          <input type={f.type} placeholder={f.ph} list={f.key==="agency"?"agencyOpts":undefined} value={(newForm as Record<string,any>)[f.key]}
             onChange={e=>setNewForm({...newForm,[f.key]:e.target.value})}
             style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
         </div>
@@ -1685,7 +1687,7 @@ export default function AdminBookingsPage(){
         ].map(f=>(
           <div key={f.key} style={{marginBottom:10}}>
             <label style={{fontSize:12,fontWeight:600,color:"#475569",display:"block",marginBottom:3}}>{f.label}</label>
-            <input type={f.type} placeholder={f.ph} value={(newForm as Record<string,any>)[f.key]}
+            <input type={f.type} placeholder={f.ph} list={f.key==="agency"?"agencyOpts":undefined} value={(newForm as Record<string,any>)[f.key]}
               onChange={e=>setNewForm({...newForm,[f.key]:e.target.value})}
               style={{width:"100%",padding:"8px 10px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
           </div>
