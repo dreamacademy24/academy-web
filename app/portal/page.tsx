@@ -10,10 +10,44 @@ const supabase = createClient(
 
 export default function PortalPage() {
   const router = useRouter();
-  const [bookingNo, setBookingNo] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [portalId, setPortalId] = useState('');
+  const [portalPw, setPortalPw] = useState('');
+
+  async function loginWithId() {
+    if (!portalId.trim() || !portalPw.trim()) {
+      setError('아이디와 비밀번호를 입력해주세요.'); return;
+    }
+    setLoading(true); setError('');
+    const email = `${portalId.trim()}@dreamacademyph.com`;
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password: portalPw });
+    if (authError) {
+      setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+      setLoading(false); return;
+    }
+    const bookingRes = await fetch('/api/portal/find-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: data.user.id })
+    });
+    const bookingData = bookingRes.ok ? await bookingRes.json() : null;
+    const booking = bookingData?.booking;
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('portalSession', JSON.stringify({
+        booking_id: booking?.id || '',
+        booking_number: booking?.reservation_no || '',
+        guest_name: booking?.booker_name || portalId,
+        check_in_date: booking?.check_in || '',
+        status: booking?.status || '',
+        auth_type: 'supabase',
+        expires: Date.now() + 24 * 60 * 60 * 1000
+      }));
+    }
+    setLoading(false);
+    router.push('/portal/dashboard');
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -22,30 +56,6 @@ export default function PortalPage() {
       }
     });
   }, [router]);
-
-  async function verify() {
-    if (!bookingNo.trim() || !name.trim()) { setError("예약번호와 이름을 모두 입력해주세요."); return; }
-    setLoading(true); setError("");
-    const res = await fetch("/api/portal/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_number: bookingNo.trim(), guest_name: name.trim() }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error || "예약 정보를 찾을 수 없습니다."); return; }
-    if (typeof window !== "undefined") {
-      localStorage.setItem("portalSession", JSON.stringify({
-        booking_id: data.booking_id,
-        booking_number: data.booking_number,
-        guest_name: data.guest_name,
-        check_in_date: data.check_in_date,
-        status: data.status,
-        expires: Date.now() + 24 * 60 * 60 * 1000,
-      }));
-    }
-    router.push("/portal/dashboard");
-  }
 
   return (<>
     <style>{`
@@ -72,25 +82,40 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(135deg,#0f
       <div className="pt-card">
         <div className="pt-logo">DREAM ACADEMY</div>
         <div className="pt-sub">예약 조회 포털</div>
+        <div style={{fontSize:'12px',color:'#94a3b8',marginTop:'4px',marginBottom:'14px'}}>
+          드림아카데미에서 발급받은 아이디로 로그인하세요
+        </div>
 
-        <>
-          <label className="pt-label">예약번호</label>
-          <input className="pt-input" placeholder="DA-20260407-765432" value={bookingNo}
-            onChange={e => setBookingNo(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") document.getElementById("pt-name")?.focus(); }} />
-          <div className="pt-hint">인보이스에 기재된 예약번호를 입력하세요</div>
-
-          <label className="pt-label">예약자 이름</label>
-          <input id="pt-name" className="pt-input" placeholder="홍길동" value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") verify(); }} />
-
-          <button className="pt-btn" onClick={verify} disabled={loading}>
-            {loading ? "확인 중..." : "예약 확인하기"}
-          </button>
-
-          {error && <div className="pt-err">{error}</div>}
-        </>
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+            <div>
+              <label style={{fontSize:13, color:'#374151', display:'block', marginBottom:4}}>아이디</label>
+              <input
+                value={portalId}
+                onChange={e => setPortalId(e.target.value)}
+                placeholder="예) SJH0105"
+                style={{width:'100%', padding:'10px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:15, boxSizing:'border-box'}}
+              />
+            </div>
+            <div>
+              <label style={{fontSize:13, color:'#374151', display:'block', marginBottom:4}}>비밀번호</label>
+              <input
+                type="password"
+                value={portalPw}
+                onChange={e => setPortalPw(e.target.value)}
+                onKeyDown={e => e.key==='Enter' && loginWithId()}
+                placeholder="비밀번호 입력"
+                style={{width:'100%', padding:'10px 12px', border:'1px solid #d1d5db', borderRadius:8, fontSize:15, boxSizing:'border-box'}}
+              />
+            </div>
+            {error && <p style={{color:'#dc2626', fontSize:13, margin:0}}>{error}</p>}
+            <button
+              onClick={loginWithId}
+              disabled={loading}
+              style={{width:'100%', padding:'12px', background:'#7c3aed', color:'white', border:'none', borderRadius:8, fontSize:16, fontWeight:600, cursor:'pointer'}}
+            >
+              {loading ? '로그인 중...' : '로그인'}
+            </button>
+          </div>
 
         <div className="pt-footer">
           <a href="/">← 드림아카데미 홈으로</a>
