@@ -20,6 +20,7 @@ const ADMIN_ACCOUNTS = [
   { id: 'admin-vivace', pw: 'h_5ytroi', role: 'staff', name: 'Vivace', staffId: 'vivace' },
   { id: 'admin-eric',  pw: 'h_im0z0p', role: 'staff', name: 'Eric',  staffId: 'eric'  },
   { id: 'admin-jun',   pw: 'h_krvnp7', role: 'staff', name: 'Jun',   staffId: 'jun'   },
+  { id: 'admin-song',  pw: 'h_58uq22', role: 'staff', name: 'Song',  staffId: 'song'  },
 ];
 
 export default function AdminPage() {
