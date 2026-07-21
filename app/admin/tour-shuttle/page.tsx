@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import ScheduleDeploy from "./ScheduleDeploy";
+import OpsCalendar from "./OpsCalendar";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +70,7 @@ export default function TourShuttleAdminPage() {
   const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
   const [bookingRooms, setBookingRooms] = useState<Record<string, { room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; accom_type?: string }>>({});
   const [loading, setLoading] = useState(true);
-  const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
+  const [mainTab, setMainTab] = useState<"ops" | "list" | "deploy">("ops");
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [addSaving, setAddSaving] = useState(false);
@@ -209,12 +210,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <span className="ts-sub">총 {futureCount}건</span>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={() => setMainTab("ops")} style={{padding:"7px 15px",border:mainTab==="ops"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="ops"?"#1a6fc4":"#fff",color:mainTab==="ops"?"#fff":"#64748b"}}>🗓 운영달력</button>
           <button onClick={() => setMainTab("list")} style={{padding:"7px 15px",border:mainTab==="list"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"#fff",color:mainTab==="list"?"#fff":"#64748b"}}>신청목록</button>
           <button onClick={() => setMainTab("deploy")} style={{padding:"7px 15px",border:mainTab==="deploy"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"#fff",color:mainTab==="deploy"?"#fff":"#64748b"}}>배포</button>
         </div>
       </div>
 
-      {mainTab === "deploy" ? (
+      {mainTab === "ops" ? (
+        <OpsCalendar />
+      ) : mainTab === "deploy" ? (
         <ScheduleDeploy />
       ) : (
       <>

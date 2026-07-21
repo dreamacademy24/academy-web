@@ -48,7 +48,7 @@ const HMART_DOWS = [1, 3, 5]; // 월/수/금
 const HMART_TITLE = "H-Mart 쇼핑";
 const HMART_DESC = "10:00am";
 
-function generateItems(month: string): Omit<ScheduleItem, "id" | "created_at">[] {
+export function generateItems(month: string): Omit<ScheduleItem, "id" | "created_at">[] {
   const [yStr, mStr] = month.split("-");
   const year = Number(yStr);
   const monthIdx = Number(mStr) - 1;
