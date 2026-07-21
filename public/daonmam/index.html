@@ -2202,40 +2202,80 @@
         상스몰 <b>도보 1분</b> · 드림아카데미 <b>차량 10~13분</b> · 막탄 공항 <b>차량 약 20분</b>
       </div>
 
-      <!-- 제이파크 상세 안내 브로슈어 -->
-      <h3 class="section-heading" style="margin-top: 40px;">📸 제이파크 상세 안내</h3>
-      <p class="section-sub">리조트 규모와 위치, 7개 테마 수영장, 야외 액티비티 &amp; 부대시설, 객실 타입까지 한눈에 확인하세요.</p>
+      <!-- 제이파크 상세 (웹 네이티브 재구성) -->
+<style>
+.jpx-h3{font-weight:800;font-size:17px;margin:36px 0 4px;color:var(--ink)}
+.jpx-sub{font-size:13px;color:var(--ink-3);margin:0 0 14px}
+.jpx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.jpx-grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(max-width:640px){.jpx-grid{grid-template-columns:repeat(2,1fr)}.jpx-grid2{grid-template-columns:1fr}}
+.jpx-pc{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.jpx-pc img{width:100%;height:130px;object-fit:cover;display:block}
+.jpx-pl{font-size:13.5px;font-weight:800;padding:9px 12px 2px}
+.jpx-ps{font-size:11.5px;color:var(--ink-3);padding:0 12px 10px}
+.jpx-pc:not(:has(.jpx-ps)) .jpx-pl{padding-bottom:10px}
+.jpx-loc{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+@media(max-width:640px){.jpx-loc{grid-template-columns:1fr}}
+.jpx-loc img{width:100%;border-radius:10px;display:block}
+.jpx-dl{display:flex;justify-content:space-between;padding:7px 2px;border-bottom:1px solid var(--line-2);font-size:13.5px}
+.jpx-dl b{color:#2E7D74}
+.jpx-chip{display:inline-block;background:#EAF3F6;color:#2E5D74;font-size:12px;font-weight:700;border-radius:999px;padding:4px 12px;margin:3px 3px 0 0}
+</style>
 
-      <div class="brochure-section">
-        <!-- About J-Park (위치 & 주변 시설) -->
-        <div class="brochure-item">
-          <img src="https://www.dreamacademyph.com/mf-2025/jpark-about.jpg" alt="About J-Park · 위치 및 주변 시설" loading="lazy" />
-        </div>
+<h3 class="jpx-h3">📍 위치 · 이동 시간</h3>
+<p class="jpx-sub">M.L. Quezon Highway, Barangay Maribago, Lapu-Lapu City, Cebu · Mactan</p>
+<div class="jpx-loc">
+  <img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-map.jpg" alt="제이파크 위치 지도" loading="lazy"/>
+  <div>
+    <div class="jpx-dl"><span>샹스몰</span><b>도보 1분</b></div>
+    <div class="jpx-dl"><span>베이스워터</span><b>차량 5~7분</b></div>
+    <div class="jpx-dl"><span>드림아카데미</span><b>차량 10~13분</b></div>
+    <div class="jpx-dl"><span>막탄 공항</span><b>차량 20분</b></div>
+    <div class="jpx-dl" style="border-bottom:none"><span>뉴타운</span><b>차량 15~20분</b></div>
+  </div>
+</div>
 
-        <!-- Water Park (7+ 테마 수영장) -->
-        <div class="brochure-item">
-          <img src="https://www.dreamacademyph.com/mf-2025/jpark-waterpark.jpg" alt="J-Park Water Park · 7개 테마 수영장" loading="lazy" />
-        </div>
+<h3 class="jpx-h3">🚶 도보 1~3분 주변 시설</h3>
+<p class="jpx-sub">리조트 바로 앞에서 장보기·마사지·식사·병원까지 해결돼요.</p>
+<div class="jpx-grid">
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n1.jpg" alt="메트로 마트" loading="lazy"/><div class="jpx-pl">메트로 마트</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n2.jpg" alt="마사지샵" loading="lazy"/><div class="jpx-pl">마사지샵</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n3.jpg" alt="식당 · 상점가" loading="lazy"/><div class="jpx-pl">식당 · 상점가</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n4.jpg" alt="한인병원" loading="lazy"/><div class="jpx-pl">한인병원</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n5.jpg" alt="현지 종합병원" loading="lazy"/><div class="jpx-pl">현지 종합병원</div><div class="jpx-ps">차량 3분</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-n6.jpg" alt="Mang Inasal" loading="lazy"/><div class="jpx-pl">Mang Inasal</div><div class="jpx-ps">치킨 바베큐</div></div>
+</div>
 
-        <!-- Activities & Other Facilities -->
-        <div class="brochure-item">
-          <img src="https://www.dreamacademyph.com/mf-2025/jpark-activities.jpg" alt="J-Park Outside Activities &amp; Other Facilities" loading="lazy" />
-        </div>
+<h3 class="jpx-h3">💦 워터파크 — 7개 테마 수영장</h3>
+<p class="jpx-sub">워터슬라이드 · 전용 비치 보유, 투숙객 자유 이용</p>
+<div class="jpx-grid" style="grid-template-columns:repeat(4,1fr)">
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-w1.jpg" alt="Wave Pool" loading="lazy"/><div class="jpx-pl">Wave Pool</div><div class="jpx-ps">파도 10:30~12:00 · 2:30~4:00</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-w2.jpg" alt="Captain Hook's" loading="lazy"/><div class="jpx-pl">Captain Hook's</div><div class="jpx-ps">9AM ~ 6PM</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-w3.jpg" alt="Toddler's Pool" loading="lazy"/><div class="jpx-pl">Toddler's Pool</div><div class="jpx-ps">유아 전용 · 9AM ~ 6PM</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-w4.jpg" alt="Amazon River" loading="lazy"/><div class="jpx-pl">Amazon River</div><div class="jpx-ps">유수풀 · 9AM ~ 6PM</div></div>
+</div>
+<div style="margin-top:8px">
+  <span class="jpx-chip">Island Pool</span><span class="jpx-chip">Beach Pool</span><span class="jpx-chip">Sunset Pool</span><span class="jpx-chip">Tube Slide</span><span class="jpx-chip">전용 비치</span>
+</div>
 
-        <!-- 객실 타입 3종 -->
-        <h4 style="font-size:17px; font-weight:800; letter-spacing:-0.015em; margin: 28px 0 14px;">🛏️ 객실 타입 상세 (Deluxe · Premier · Mactan Suite)</h4>
-        <div class="brochure-row">
-          <div class="brochure-item">
-            <img src="https://www.dreamacademyph.com/mf-2025/jpark-room-deluxe.jpg" alt="Deluxe Room · Tower B · 38㎡" loading="lazy" />
-          </div>
-          <div class="brochure-item">
-            <img src="https://www.dreamacademyph.com/mf-2025/jpark-room-premier.jpg" alt="Premier Room · Tower G 신축 · 32㎡" loading="lazy" />
-          </div>
-          <div class="brochure-item">
-            <img src="https://www.dreamacademyph.com/mf-2025/jpark-room-mactan.jpg" alt="Mactan Suite · Tower A,C · 76㎡" loading="lazy" />
-          </div>
-        </div>
-      </div>
+<h3 class="jpx-h3">🏇 액티비티 · 부대시설</h3>
+<div class="jpx-grid" style="grid-template-columns:repeat(4,1fr)">
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-a1.jpg" alt="고카트 바이크" loading="lazy"/><div class="jpx-pl">고카트 바이크</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-a2.jpg" alt="미니 골프" loading="lazy"/><div class="jpx-pl">미니 골프</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-a3.jpg" alt="J Activity Zone" loading="lazy"/><div class="jpx-pl">J Activity Zone</div><div class="jpx-ps">당구 · 풋볼 · 다트 · 아케이드</div></div>
+<div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-a4.jpg" alt="Cara Spa" loading="lazy"/><div class="jpx-pl">Cara Spa</div></div>
+</div>
+<div style="margin-top:8px">
+  <span class="jpx-chip">Gym</span><span class="jpx-chip">디저트 카페</span><span class="jpx-chip">메디컬 센터</span><span class="jpx-chip">뽀로로파크 (이용권 별도)</span>
+</div>
+
+<h3 class="jpx-h3">🛏 객실 타입</h3>
+<p class="jpx-sub">요금은 가든뷰 기준 · 오션뷰 변경 시 1박 25,000원 추가 · 전 타입 최대 4인 (성인 최대 2인)</p>
+<div class="jpx-grid">
+  <div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-r1.jpg" alt="디럭스룸" loading="lazy"/><div class="jpx-pl">디럭스</div><div class="jpx-ps">38㎡ (11.5평) · Tower B — 메인 로비 최근접<br/>침실 · 욕실 · 카펫 바닥</div></div>
+  <div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-r2.jpg" alt="프리미어룸" loading="lazy"/><div class="jpx-pl">프리미어</div><div class="jpx-ps">32㎡ (9.6평) · Tower G 신축<br/>같은 건물 카페 · 뉴 수영장</div></div>
+  <div class="jpx-pc"><img src="https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/daonmam/jp-r3.jpg" alt="막탄 스윗" loading="lazy"/><div class="jpx-pl">막탄 스윗</div><div class="jpx-ps">76㎡ (23평) · Tower A·C<br/>침실 1 · 거실 1 · 욕실 1 · 화장실 2</div></div>
+</div>
     </section>
 
     <!-- 5. 큐브나인 -->
