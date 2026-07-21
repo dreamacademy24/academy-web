@@ -230,24 +230,6 @@ export default function OpsCalendar() {
     await load();
   }
 
-  async function runDeployAll() {
-    if (busy) return;
-    if (items.length === 0) { toastErr("배포할 항목이 없습니다. 먼저 자동 생성하세요."); return; }
-    if (!confirm(`${monthLabel(month)} 투어셔틀 ${items.length}건을 배포합니다. 포털에서 보이게 됩니다. 계속할까요?`)) return;
-    setBusy("deploy");
-    const { error } = await supabase.from("schedule_items").update({ is_deployed: true }).eq("deploy_month", month).eq("type", "shuttle");
-    setBusy("");
-    if (error) { toastErr("배포 실패: " + error.message); return; }
-    await load();
-  }
-
-  async function deployOne(g: TourGroup) {
-    if (!g.item) return;
-    const { error } = await supabase.from("schedule_items").update({ is_deployed: true }).eq("id", g.item.id);
-    if (error) { toastErr("배포 실패: " + error.message); return; }
-    await load();
-  }
-
   function openEdit(g: TourGroup) {
     setEditForm({ title: g.title, desc: g.item ? (g.item.description || "") : g.time });
     setEditOpen(true);
@@ -383,13 +365,11 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
 
   const cells = useMemo(() => calendarCells(month), [month]);
   const today = ymd(new Date());
-  const isDeployedMonth = items.some(i => i.is_deployed);
 
   function chipStyle(g: TourGroup): CSSProperties {
     const isSel = g.key === selKey;
     let bg = "#f1f5f9", fg = "#64748b";
-    if (g.item && !g.item.is_deployed) { bg = "#dbeafe"; fg = "#1e40af"; }
-    else if (g.people > 0) { bg = "#dcfce7"; fg = "#15803d"; }
+    if (g.people > 0) { bg = "#dcfce7"; fg = "#15803d"; }
     return {
       background: bg, color: fg,
       border: isSel ? "2px solid #1a6fc4" : "2px solid transparent",
@@ -415,9 +395,6 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
           <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>이달 총 {stats.people}명</span>
           <div style={{ flex: 1 }} />
           <button onClick={runGenerate} disabled={!!busy} style={{ ...btnBase, background: "#fff7ed", borderColor: "#fed7aa", color: "#c2410c", opacity: busy ? 0.6 : 1 }}>⚡ {busy === "generate" ? "생성중..." : "자동생성"}</button>
-          {!isDeployedMonth && items.length > 0 && (
-            <button onClick={runDeployAll} disabled={!!busy} style={{ ...btnBase, background: "#16a34a", borderColor: "#16a34a", color: "#fff", opacity: busy ? 0.6 : 1 }}>🚀 {busy === "deploy" ? "배포중..." : "이번 달 배포"}</button>
-          )}
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>
@@ -448,7 +425,6 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                     <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title}${g.time ? " · " + g.time : ""} · ${g.people}명`} style={chipStyle(g)}>
                       {g.cancelReq.length > 0 && <span style={{ color: "#dc2626" }}>● </span>}
                       {g.title.length > 8 ? g.title.slice(0, 8) + "…" : g.title} <b>{g.people}명</b>
-                      {g.item && !g.item.is_deployed && <span style={{ fontWeight: 600, opacity: 0.8 }}> (미배포)</span>}
                     </button>
                   ))}
                 </div>
@@ -460,7 +436,6 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
         <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8", display: "flex", gap: 14, flexWrap: "wrap" }}>
           <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#dcfce7", borderRadius: 3, marginRight: 4 }} />신청 있음</span>
           <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 3, marginRight: 4 }} />신청 0명 (교체 가능)</span>
-          <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#dbeafe", borderRadius: 3, marginRight: 4 }} />미배포</span>
           <span><span style={{ color: "#dc2626" }}>●</span> 취소요청 있음</span>
           <span>날짜의 ＋ = 그 날에 투어 추가 배포</span>
         </div>
@@ -476,12 +451,8 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             <span style={{ fontSize: 12.5, fontWeight: 700, padding: "3px 11px", borderRadius: 999, background: sel.people > 0 ? "#dcfce7" : "#f1f5f9", color: sel.people > 0 ? "#15803d" : "#64748b" }}>
               {sel.people > 0 ? `${sel.people}명 · ${sel.active.length}팀` : "신청 0명"}
             </span>
-            {sel.item && !sel.item.is_deployed && <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#dbeafe", color: "#1e40af" }}>미배포</span>}
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {sel.item && !sel.item.is_deployed && (
-                <button onClick={() => deployOne(sel)} style={{ ...btnBase, background: "#16a34a", borderColor: "#16a34a", color: "#fff" }}>🚀 배포</button>
-              )}
               <button onClick={() => openEdit(sel)} style={btnBase}>✏️ 수정·교체</button>
               <button onClick={openAddApp} style={btnBase}>＋ 신청 추가</button>
               <button onClick={() => printRoster(sel)} style={btnBase}>🖨 기사 명단</button>
@@ -580,9 +551,9 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             <input value={placeForm.back} onChange={e => setPlaceForm(p => ({ ...p, back: e.target.value }))} placeholder='예: "15:00"' style={{ ...inp, marginBottom: 16 }} />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setPlaceOpen(false)} disabled={placeSaving} style={btnBase}>취소</button>
-              <button onClick={saveAddPlace} disabled={placeSaving || !placeForm.date || !placeForm.title.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (placeSaving || !placeForm.date || !placeForm.title.trim()) ? 0.6 : 1 }}>{placeSaving ? "저장중..." : "🚀 즉시 배포"}</button>
+              <button onClick={saveAddPlace} disabled={placeSaving || !placeForm.date || !placeForm.title.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (placeSaving || !placeForm.date || !placeForm.title.trim()) ? 0.6 : 1 }}>{placeSaving ? "저장중..." : "💾 저장"}</button>
             </div>
-            <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>저장 즉시 배포되어 손님 신청 화면에 표시됩니다.</div>
+            <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>운영 달력과 직원 일정에 추가됩니다. 손님 신청 화면은 정해진 주간 패턴 기반이라, 손님에게도 열려면 별도 안내가 필요해요.</div>
           </div>
         </div>
       )}
