@@ -208,18 +208,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <span className="ts-title">🚌 투어셔틀 관리</span>
           <span className="ts-sub">총 {futureCount}건</span>
         </div>
-        <div style={{ width: 100 }} />
-      </div>
-
-      <div style={{display:"flex",gap:6,background:"#fff",padding:4,borderRadius:12,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
-        <button
-          onClick={() => setMainTab("list")}
-          style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"transparent",color:mainTab==="list"?"#fff":"#6b7c93"}}
-        >📋 신청목록</button>
-        <button
-          onClick={() => setMainTab("deploy")}
-          style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"transparent",color:mainTab==="deploy"?"#fff":"#6b7c93"}}
-        >📅 배포</button>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <button onClick={() => setMainTab("list")} style={{padding:"7px 15px",border:mainTab==="list"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"#fff",color:mainTab==="list"?"#fff":"#64748b"}}>신청목록</button>
+          <button onClick={() => setMainTab("deploy")} style={{padding:"7px 15px",border:mainTab==="deploy"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"#fff",color:mainTab==="deploy"?"#fff":"#64748b"}}>배포</button>
+        </div>
       </div>
 
       {mainTab === "deploy" ? (
@@ -363,9 +355,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         const dayDetail: [string, ShuttleApp[]][] = selectedDay ? (byDate.get(selectedDay) || []) : [];
         return (
           <div style={{display:"flex", flexDirection:"column", gap:14}}>
-            <div style={{display:"flex", gap:6, background:"#fff", padding:4, borderRadius:12, boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
-              <button onClick={() => setViewMode("list")} style={{flex:1, padding:"9px 14px", border:"none", borderRadius:9, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="list" ? "#1a6fc4" : "transparent", color: viewMode==="list" ? "#fff" : "#6b7c93"}}>📋 일자목록</button>
-              <button onClick={() => setViewMode("week")} style={{flex:1, padding:"9px 14px", border:"none", borderRadius:9, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="week" ? "#1a6fc4" : "transparent", color: viewMode==="week" ? "#fff" : "#6b7c93"}}>📅 주간보드</button>
+            <div style={{display:"flex", gap:6, alignItems:"center"}}>
+              <span style={{fontSize:12, color:"#94a3b8", fontWeight:600}}>보기</span>
+              <button onClick={() => setViewMode("list")} style={{padding:"5px 13px", border: viewMode==="list" ? "none" : "1px solid #e2e8f0", borderRadius:999, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="list" ? "#1a6fc4" : "#fff", color: viewMode==="list" ? "#fff" : "#64748b"}}>일자목록</button>
+              <button onClick={() => setViewMode("week")} style={{padding:"5px 13px", border: viewMode==="week" ? "none" : "1px solid #e2e8f0", borderRadius:999, fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: viewMode==="week" ? "#1a6fc4" : "#fff", color: viewMode==="week" ? "#fff" : "#64748b"}}>주간보드</button>
             </div>
             {viewMode === "list" ? (
             <>
