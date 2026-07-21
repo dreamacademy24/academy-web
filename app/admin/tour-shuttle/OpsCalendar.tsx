@@ -2,22 +2,14 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
-import { generateItems } from "./ScheduleDeploy";
+import { getShSlots, SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
+import { fetchDeployedHolidays } from "@/lib/holidays";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-interface ScheduleItem {
-  id: string;
-  type: string;
-  date: string;
-  title: string;
-  description: string | null;
-  is_deployed: boolean;
-  deploy_month: string | null;
-}
 interface ShuttleApp {
   id: string;
   created_at: string;
@@ -89,7 +81,9 @@ interface TourGroup {
   date: string;
   title: string;
   time: string;
-  item: ScheduleItem | null;
+  ret: string;
+  note: string;
+  isPattern: boolean;
   active: ShuttleApp[];
   cancelReq: ShuttleApp[];
   cancelled: ShuttleApp[];
@@ -102,39 +96,36 @@ const btnBase: CSSProperties = { padding: "8px 13px", borderRadius: 8, fontSize:
 
 export default function OpsCalendar() {
   const [month, setMonth] = useState<string>(curMonth(0));
-  const [items, setItems] = useState<ScheduleItem[]>([]);
   const [apps, setApps] = useState<ShuttleApp[]>([]);
+  const [extraHolidays, setExtraHolidays] = useState<Set<string>>(new Set());
   const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
   const [bookingRooms, setBookingRooms] = useState<Record<string, RoomInfo>>({});
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"" | "generate" | "deploy">("");
   const [selKey, setSelKey] = useState<string>("");
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ title: "", desc: "" });
+  const [editForm, setEditForm] = useState({ title: "", time: "" });
   const [editSaving, setEditSaving] = useState(false);
 
-  const [placeOpen, setPlaceOpen] = useState(false);
-  const [placeForm, setPlaceForm] = useState({ date: "", title: "", desc: "", back: "" });
-  const [placeSaving, setPlaceSaving] = useState(false);
-
   const [appOpen, setAppOpen] = useState(false);
-  const [appForm, setAppForm] = useState({ portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
+  const [appForm, setAppForm] = useState({ tour_date: "", tour_name: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [appSaving, setAppSaving] = useState(false);
+
+  useEffect(() => {
+    fetchDeployedHolidays().then(list => {
+      if (list.length > 0) setExtraHolidays(new Set(list.map(h => h.date)));
+    }).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const monthStart = `${month}-01`;
-    const monthEnd = `${month}-31`;
-    const [itemRes, appRes] = await Promise.all([
-      supabase.from("schedule_items").select("*").eq("deploy_month", month).eq("type", "shuttle").order("date"),
-      supabase.from("shuttle_applications").select("*").gte("tour_date", monthStart).lte("tour_date", monthEnd).order("created_at"),
-    ]);
-    if (itemRes.error) console.error("[ops] items load 실패:", itemRes.error);
-    if (appRes.error) console.error("[ops] apps load 실패:", appRes.error);
-    const appData = (appRes.data || []) as ShuttleApp[];
-    setItems((itemRes.data || []) as ScheduleItem[]);
+    const { data, error } = await supabase
+      .from("shuttle_applications").select("*")
+      .gte("tour_date", `${month}-01`).lte("tour_date", `${month}-31`)
+      .order("created_at");
+    if (error) console.error("[ops] apps load 실패:", error);
+    const appData = (data || []) as ShuttleApp[];
     setApps(appData);
     const ids = Array.from(new Set(appData.map(d => d.booking_id).filter(Boolean) as string[]));
     if (ids.length > 0) {
@@ -165,19 +156,27 @@ export default function OpsCalendar() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { setSelKey(""); }, [month]);
 
-  const groups = useMemo(() => {
+  const { groups, holidaySet } = useMemo(() => {
     const map = new Map<string, TourGroup>();
+    const holi = new Set<string>();
     const mk = (date: string, title: string) => `${date}|${title.trim()}`;
-    for (const it of items) {
-      const key = mk(it.date, it.title);
-      map.set(key, { key, date: it.date, title: it.title.trim(), time: (it.description || "").split("·")[0].trim(), item: it, active: [], cancelReq: [], cancelled: [], people: 0 });
+    const [y, mm] = month.split("-").map(Number);
+    const lastDay = new Date(y, mm, 0).getDate();
+    for (let d = 1; d <= lastDay; d++) {
+      const ds = `${month}-${pad2(d)}`;
+      const slots = getShSlots(ds, extraHolidays);
+      if (slots === "holiday") { holi.add(ds); continue; }
+      for (const sl of slots) {
+        const key = mk(ds, sl.name);
+        map.set(key, { key, date: ds, title: sl.name, time: sl.time, ret: sl.return, note: sl.note || "", isPattern: true, active: [], cancelReq: [], cancelled: [], people: 0 });
+      }
     }
     for (const a of apps) {
       if (!(a.tour_name || "").trim() || !(a.tour_date || "").trim()) continue;
       const key = mk(a.tour_date!, a.tour_name!);
       let g = map.get(key);
       if (!g) {
-        g = { key, date: a.tour_date!, title: a.tour_name!.trim(), time: (a.depart_time || "").trim(), item: null, active: [], cancelReq: [], cancelled: [], people: 0 };
+        g = { key, date: a.tour_date!, title: a.tour_name!.trim(), time: (a.depart_time || "").trim(), ret: "", note: "", isPattern: false, active: [], cancelReq: [], cancelled: [], people: 0 };
         map.set(key, g);
       }
       if (!g.time && (a.depart_time || "").trim()) g.time = a.depart_time!.trim();
@@ -186,8 +185,8 @@ export default function OpsCalendar() {
       else if (st === "cancelled" || st === "cancel") g.cancelled.push(a);
       else { g.active.push(a); g.people += a.people_count || 0; }
     }
-    return map;
-  }, [items, apps]);
+    return { groups: map, holidaySet: holi };
+  }, [apps, month, extraHolidays]);
 
   const groupsByDate = useMemo(() => {
     const m = new Map<string, TourGroup[]>();
@@ -206,7 +205,7 @@ export default function OpsCalendar() {
       if (g.people > 0) { recruiting++; people += g.people; } else zero++;
       cancelReq += g.cancelReq.length;
     }
-    return { recruiting, zero, cancelReq, people, tours: groups.size };
+    return { recruiting, zero, cancelReq, people };
   }, [groups]);
 
   const sel = selKey ? groups.get(selKey) || null : null;
@@ -216,22 +215,8 @@ export default function OpsCalendar() {
     setTimeout(() => { panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 60);
   }
 
-  async function runGenerate() {
-    if (busy) return;
-    const gen = generateItems(month);
-    if (gen.length === 0) { toastErr("생성할 항목이 없습니다."); return; }
-    if (!confirm(`${monthLabel(month)} 투어셔틀 ${gen.length}건을 자동 생성합니다.\n해당 월의 기존 셔틀 항목은 모두 삭제됩니다. (신청 내역은 유지) 계속할까요?`)) return;
-    setBusy("generate");
-    const { error: delErr } = await supabase.from("schedule_items").delete().eq("deploy_month", month).eq("type", "shuttle");
-    if (delErr) { setBusy(""); toastErr("기존 항목 삭제 실패: " + delErr.message); return; }
-    const { error: insErr } = await supabase.from("schedule_items").insert(gen);
-    setBusy("");
-    if (insErr) { toastErr("생성 실패: " + insErr.message); return; }
-    await load();
-  }
-
   function openEdit(g: TourGroup) {
-    setEditForm({ title: g.title, desc: g.item ? (g.item.description || "") : g.time });
+    setEditForm({ title: g.title, time: g.time });
     setEditOpen(true);
   }
 
@@ -240,38 +225,16 @@ export default function OpsCalendar() {
     const newTitle = editForm.title.trim();
     if (!newTitle) { toastErr("투어명은 필수입니다."); return; }
     const appCount = sel.active.length + sel.cancelReq.length + sel.cancelled.length;
-    if (appCount > 0 && newTitle !== sel.title) {
-      if (!confirm(`이미 신청 ${appCount}건이 있는 투어입니다.\n"${sel.title}" → "${newTitle}" 으로 교체하면 신청 내역도 새 투어명으로 함께 이동합니다. 계속할까요?`)) return;
-    }
+    if (appCount === 0) { toastErr("이동할 신청 내역이 없습니다. (기본 투어 패턴은 코드 규칙이라 여기서 바뀌지 않아요)"); return; }
+    if (!confirm(`신청 ${appCount}건을 "${sel.title}" → "${newTitle}" 으로 이동합니다.\n⚠️ 손님 신청 화면의 기본 투어 목록은 고정 규칙이라 바뀌지 않습니다. 계속할까요?`)) return;
     setEditSaving(true);
-    let err: string | null = null;
-    if (sel.item) {
-      const { error } = await supabase.from("schedule_items").update({ title: newTitle, description: editForm.desc.trim() || null }).eq("id", sel.item.id);
-      if (error) err = error.message;
-    }
-    if (!err && appCount > 0) {
-      const newTime = editForm.desc.trim().split("·")[0].trim() || null;
-      const { error } = await supabase.from("shuttle_applications").update({ tour_name: newTitle, depart_time: newTime }).eq("tour_date", sel.date).eq("tour_name", sel.title);
-      if (error) err = error.message;
-    }
+    const { error } = await supabase.from("shuttle_applications")
+      .update({ tour_name: newTitle, depart_time: editForm.time.trim() || null })
+      .eq("tour_date", sel.date).eq("tour_name", sel.title);
     setEditSaving(false);
-    if (err) { toastErr("저장 실패: " + err); return; }
+    if (error) { toastErr("저장 실패: " + error.message); return; }
     setEditOpen(false);
     setSelKey(`${sel.date}|${newTitle}`);
-    await load();
-  }
-
-  async function deleteTour(g: TourGroup) {
-    const appCount = g.active.length + g.cancelReq.length;
-    const msg = appCount > 0
-      ? `⚠️ 이 투어에 신청 ${appCount}건이 있습니다.\n투어 일정만 삭제되고 신청 내역은 남습니다. 정말 삭제할까요?`
-      : "이 투어 일정을 삭제할까요?";
-    if (!confirm(msg)) return;
-    if (g.item) {
-      const { error } = await supabase.from("schedule_items").delete().eq("id", g.item.id);
-      if (error) { toastErr("삭제 실패: " + error.message); return; }
-    }
-    setSelKey("");
     await load();
   }
 
@@ -288,43 +251,19 @@ export default function OpsCalendar() {
     await load();
   }
 
-  function openAddPlace(date: string) {
-    setPlaceForm({ date, title: "", desc: "", back: "" });
-    setPlaceOpen(true);
-  }
-
-  async function saveAddPlace() {
-    if (!placeForm.date || !placeForm.title.trim()) { toastErr("날짜와 장소명은 필수입니다."); return; }
-    setPlaceSaving(true);
-    const dm = placeForm.date.slice(0, 7);
-    const depart = placeForm.desc.trim();
-    const back = placeForm.back.trim();
-    let description: string | null = null;
-    if (depart && back) description = `출발 ${depart} · 복귀 ${back}`;
-    else if (depart) description = depart;
-    else if (back) description = `복귀 ${back}`;
-    const { error } = await supabase.from("schedule_items").insert({
-      type: "shuttle", date: placeForm.date, title: placeForm.title.trim(),
-      description, is_deployed: true, deploy_month: dm,
-    });
-    setPlaceSaving(false);
-    if (error) { toastErr("저장 실패: " + error.message); return; }
-    setPlaceOpen(false);
-    if (dm !== month) setMonth(dm);
-    else await load();
-  }
-
-  function openAddApp() {
-    setAppForm({ portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
+  function openAddApp(date: string, tourName: string, time: string) {
+    setAppForm({ tour_date: date, tour_name: tourName, depart_time: time, portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
     setAppOpen(true);
   }
 
   async function saveAddApp() {
-    if (!sel) return;
-    if (!appForm.portal_name.trim()) { toastErr("예약자명은 필수입니다."); return; }
+    if (!appForm.tour_name.trim() || !appForm.tour_date || !appForm.portal_name.trim()) {
+      toastErr("투어명, 날짜, 예약자명은 필수입니다."); return;
+    }
     setAppSaving(true);
     const { error } = await supabase.from("shuttle_applications").insert({
-      tour_name: sel.title, tour_date: sel.date, depart_time: sel.time || null,
+      tour_name: appForm.tour_name.trim(), tour_date: appForm.tour_date,
+      depart_time: appForm.depart_time.trim() || null,
       portal_name: appForm.portal_name.trim(), name: appForm.portal_name.trim(),
       room_number: appForm.room_number.trim() || null,
       riders: appForm.riders.trim() || null,
@@ -335,7 +274,8 @@ export default function OpsCalendar() {
     setAppSaving(false);
     if (error) { toastErr("저장 실패: " + error.message); return; }
     setAppOpen(false);
-    await load();
+    if (appForm.tour_date.slice(0, 7) !== month) setMonth(appForm.tour_date.slice(0, 7));
+    else await load();
   }
 
   function printRoster(g: TourGroup) {
@@ -352,7 +292,7 @@ export default function OpsCalendar() {
 th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5f9}
 .tot{margin-top:12px;font-size:14px;font-weight:bold}</style></head><body>
 <h1>🚌 ${g.title}</h1>
-<div class="sub">${fmtDateKR(g.date)}${g.time ? " · 출발 " + g.time : ""} · Dream Academy 투어셔틀</div>
+<div class="sub">${fmtDateKR(g.date)}${g.time ? " · 출발 " + g.time : ""}${g.ret ? " · 복귀 " + g.ret : ""} · Dream Academy 투어셔틀</div>
 <table><thead><tr><th style="width:110px">픽업(룸)</th><th style="width:90px">예약자</th><th style="width:60px">인원</th><th>탑승자</th><th>요청사항</th></tr></thead>
 <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#999">신청자 없음</td></tr>'}</tbody></table>
 <div class="tot">총 ${g.people}명 · ${g.active.length}팀</div>
@@ -370,13 +310,14 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
     const isSel = g.key === selKey;
     let bg = "#f1f5f9", fg = "#64748b";
     if (g.people > 0) { bg = "#dcfce7"; fg = "#15803d"; }
+    if (!g.isPattern) { bg = "#f5f3ff"; fg = "#6d28d9"; }
     return {
       background: bg, color: fg,
       border: isSel ? "2px solid #1a6fc4" : "2px solid transparent",
       borderRadius: 6, padding: "3px 5px", fontSize: 10.5, fontWeight: 700,
       textAlign: "left", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.3,
       whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-      display: "block", width: "100%", position: "relative",
+      display: "block", width: "100%",
     };
   }
 
@@ -394,7 +335,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
           {stats.cancelReq > 0 && <span style={{ padding: "4px 11px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: "#fef2f2", color: "#dc2626" }}>취소요청 {stats.cancelReq}</span>}
           <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>이달 총 {stats.people}명</span>
           <div style={{ flex: 1 }} />
-          <button onClick={runGenerate} disabled={!!busy} style={{ ...btnBase, background: "#fff7ed", borderColor: "#fed7aa", color: "#c2410c", opacity: busy ? 0.6 : 1 }}>⚡ {busy === "generate" ? "생성중..." : "자동생성"}</button>
+          <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>손님 신청 화면과 동일 규칙 · 휴무 자동 반영</span>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>
@@ -413,16 +354,20 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
               const isToday = c.date === today;
               const dow = dt.getDay();
               const dayGroups = c.inMonth ? (groupsByDate.get(c.date) || []) : [];
+              const isHoliday = c.inMonth && holidaySet.has(c.date);
               return (
-                <div key={i} style={{ minHeight: 100, background: c.inMonth ? "#fff" : "#f8fafc", border: isToday ? "1.5px solid #1a6fc4" : "1px solid #e2e8f0", borderRadius: 8, padding: 5, opacity: c.inMonth ? 1 : 0.45, display: "flex", flexDirection: "column", gap: 3 }}>
+                <div key={i} style={{ minHeight: 100, background: c.inMonth ? (isHoliday ? "#fffbeb" : "#fff") : "#f8fafc", border: isToday ? "1.5px solid #1a6fc4" : "1px solid #e2e8f0", borderRadius: 8, padding: 5, opacity: c.inMonth ? 1 : 0.45, display: "flex", flexDirection: "column", gap: 3 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: dow === 0 ? "#dc2626" : dow === 6 ? "#1a6fc4" : "#1a1a2e" }}>{dayNum}</span>
-                    {c.inMonth && (
-                      <button onClick={() => openAddPlace(c.date)} title="이 날짜에 투어 배포" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", padding: "0 2px", lineHeight: 1 }}>＋</button>
+                    {c.inMonth && !isHoliday && (
+                      <button onClick={() => openAddApp(c.date, "", "")} title="이 날짜에 신청 직접 추가" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", padding: "0 2px", lineHeight: 1 }}>＋</button>
                     )}
                   </div>
+                  {isHoliday && (
+                    <div title={SHUTTLE_SPECIAL_MSG[c.date] || "셔틀 휴무"} style={{ fontSize: 10.5, fontWeight: 700, color: "#b45309", background: "#fef3c7", borderRadius: 6, padding: "3px 5px", textAlign: "center" }}>🚫 휴무</div>
+                  )}
                   {dayGroups.map(g => (
-                    <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title}${g.time ? " · " + g.time : ""} · ${g.people}명`} style={chipStyle(g)}>
+                    <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title} · 출발 ${g.time || "-"}${g.ret ? " · 복귀 " + g.ret : ""}${g.note ? " · " + g.note : ""} · ${g.people}명`} style={chipStyle(g)}>
                       {g.cancelReq.length > 0 && <span style={{ color: "#dc2626" }}>● </span>}
                       {g.title.length > 8 ? g.title.slice(0, 8) + "…" : g.title} <b>{g.people}명</b>
                     </button>
@@ -435,9 +380,10 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
 
         <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8", display: "flex", gap: 14, flexWrap: "wrap" }}>
           <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#dcfce7", borderRadius: 3, marginRight: 4 }} />신청 있음</span>
-          <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 3, marginRight: 4 }} />신청 0명 (교체 가능)</span>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 3, marginRight: 4 }} />신청 0명</span>
+          <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 3, marginRight: 4 }} />수동 추가 (손님 화면 밖)</span>
           <span><span style={{ color: "#dc2626" }}>●</span> 취소요청 있음</span>
-          <span>날짜의 ＋ = 그 날에 투어 추가 배포</span>
+          <span>🚫 휴무 = 손님 화면에서도 자동 차단</span>
         </div>
       </div>
 
@@ -447,23 +393,27 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a2e" }}>
               📅 {fmtDateKR(sel.date)} · {sel.title}
               {sel.time && <span style={{ fontWeight: 600, color: "#475569", marginLeft: 6 }}>· 출발 {sel.time}</span>}
+              {sel.ret && <span style={{ fontWeight: 600, color: "#94a3b8", marginLeft: 6, fontSize: 13 }}>· 복귀 {sel.ret}</span>}
             </div>
+            {sel.note && <span style={{ fontSize: 12, fontWeight: 600, color: "#b45309", background: "#fef3c7", padding: "2px 9px", borderRadius: 999 }}>{sel.note}</span>}
+            {!sel.isPattern && <span style={{ fontSize: 12, fontWeight: 700, color: "#6d28d9", background: "#f5f3ff", padding: "3px 10px", borderRadius: 999 }}>수동 추가</span>}
             <span style={{ fontSize: 12.5, fontWeight: 700, padding: "3px 11px", borderRadius: 999, background: sel.people > 0 ? "#dcfce7" : "#f1f5f9", color: sel.people > 0 ? "#15803d" : "#64748b" }}>
               {sel.people > 0 ? `${sel.people}명 · ${sel.active.length}팀` : "신청 0명"}
             </span>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button onClick={() => openEdit(sel)} style={btnBase}>✏️ 수정·교체</button>
-              <button onClick={openAddApp} style={btnBase}>＋ 신청 추가</button>
+              <button onClick={() => openAddApp(sel.date, sel.title, sel.time)} style={btnBase}>＋ 신청 추가</button>
+              {(sel.active.length + sel.cancelReq.length + sel.cancelled.length) > 0 && (
+                <button onClick={() => openEdit(sel)} style={btnBase} title="신청 내역을 다른 투어명/시간으로 이동">✏️ 신청 이동</button>
+              )}
               <button onClick={() => printRoster(sel)} style={btnBase}>🖨 기사 명단</button>
-              <button onClick={() => deleteTour(sel)} style={{ ...btnBase, background: "#fef2f2", borderColor: "#fecaca", color: "#dc2626" }}>삭제</button>
               <button onClick={() => setSelKey("")} style={btnBase}>✕</button>
             </div>
           </div>
 
           {sel.people === 0 && sel.cancelReq.length === 0 && sel.cancelled.length === 0 && (
             <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8", background: "#fafafa" }}>
-              아직 신청자가 없습니다. 인기가 없으면 <b>✏️ 수정·교체</b>로 다른 투어(장소·시간)로 바꿀 수 있어요.
+              아직 신청자가 없습니다. 필요하면 <b>＋ 신청 추가</b>로 직접 등록할 수 있어요.
             </div>
           )}
 
@@ -518,55 +468,45 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
         <div onClick={() => setEditOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>✏️ 투어 수정·교체</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>✏️ 신청 이동</h3>
               <button onClick={() => setEditOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7c93" }}>✕</button>
             </div>
-            <div style={{ fontSize: 11.5, color: "#6b7c93", marginBottom: 10 }}>날짜: <b style={{ color: "#1a1a2e" }}>{fmtDateKR(sel.date)}</b> · 투어명을 바꾸면 다른 투어로 교체됩니다.</div>
+            <div style={{ fontSize: 11.5, color: "#6b7c93", marginBottom: 10, lineHeight: 1.5 }}>
+              {fmtDateKR(sel.date)}의 신청 내역을 다른 투어명·시간으로 옮깁니다.<br />
+              ⚠️ 손님 신청 화면의 기본 투어 목록은 고정 규칙이라 여기서 바뀌지 않아요.
+            </div>
             <label style={lbl}>투어명</label>
             <input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} style={{ ...inp, marginBottom: 12 }} />
-            <label style={lbl}>출발시간 / 설명 (예: 10:00am)</label>
-            <input value={editForm.desc} onChange={e => setEditForm(p => ({ ...p, desc: e.target.value }))} style={{ ...inp, marginBottom: 16 }} />
+            <label style={lbl}>출발시간 (예: 10:00am)</label>
+            <input value={editForm.time} onChange={e => setEditForm(p => ({ ...p, time: e.target.value }))} style={{ ...inp, marginBottom: 16 }} />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setEditOpen(false)} disabled={editSaving} style={btnBase}>취소</button>
-              <button onClick={saveEdit} disabled={editSaving || !editForm.title.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (editSaving || !editForm.title.trim()) ? 0.6 : 1 }}>{editSaving ? "저장중..." : "💾 저장"}</button>
+              <button onClick={saveEdit} disabled={editSaving || !editForm.title.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (editSaving || !editForm.title.trim()) ? 0.6 : 1 }}>{editSaving ? "저장중..." : "💾 이동"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {placeOpen && (
-        <div onClick={() => setPlaceOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>📍 투어 배포 — {fmtDateKR(placeForm.date)}</h3>
-              <button onClick={() => setPlaceOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7c93" }}>✕</button>
-            </div>
-            <label style={lbl}>날짜 <span style={{ color: "#dc2626" }}>*</span></label>
-            <input type="date" value={placeForm.date} onChange={e => setPlaceForm(p => ({ ...p, date: e.target.value }))} style={{ ...inp, marginBottom: 12 }} />
-            <label style={lbl}>장소명 <span style={{ color: "#dc2626" }}>*</span></label>
-            <input value={placeForm.title} onChange={e => setPlaceForm(p => ({ ...p, title: e.target.value }))} placeholder="예: 세부 사파리" style={{ ...inp, marginBottom: 12 }} />
-            <label style={lbl}>출발시간</label>
-            <input value={placeForm.desc} onChange={e => setPlaceForm(p => ({ ...p, desc: e.target.value }))} placeholder="예: 08:30am" style={{ ...inp, marginBottom: 12 }} />
-            <label style={lbl}>복귀 시간 (선택)</label>
-            <input value={placeForm.back} onChange={e => setPlaceForm(p => ({ ...p, back: e.target.value }))} placeholder='예: "15:00"' style={{ ...inp, marginBottom: 16 }} />
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => setPlaceOpen(false)} disabled={placeSaving} style={btnBase}>취소</button>
-              <button onClick={saveAddPlace} disabled={placeSaving || !placeForm.date || !placeForm.title.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (placeSaving || !placeForm.date || !placeForm.title.trim()) ? 0.6 : 1 }}>{placeSaving ? "저장중..." : "💾 저장"}</button>
-            </div>
-            <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>운영 달력과 직원 일정에 추가됩니다. 손님 신청 화면은 정해진 주간 패턴 기반이라, 손님에게도 열려면 별도 안내가 필요해요.</div>
-          </div>
-        </div>
-      )}
-
-      {appOpen && sel && (
+      {appOpen && (
         <div onClick={() => setAppOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 440, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 460, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>＋ 신청 직접 추가</h3>
               <button onClick={() => setAppOpen(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7c93" }}>✕</button>
             </div>
-            <div style={{ fontSize: 12, color: "#6b7c93", marginBottom: 12 }}>{fmtDateKR(sel.date)} · <b style={{ color: "#1a1a2e" }}>{sel.title}</b>{sel.time ? ` · ${sel.time}` : ""}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ gridColumn: "1 / 3" }}>
+                <label style={lbl}>투어명 <span style={{ color: "#dc2626" }}>*</span></label>
+                <input value={appForm.tour_name} onChange={e => setAppForm(p => ({ ...p, tour_name: e.target.value }))} placeholder="예: 세부 사파리" style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>날짜 <span style={{ color: "#dc2626" }}>*</span></label>
+                <input type="date" value={appForm.tour_date} onChange={e => setAppForm(p => ({ ...p, tour_date: e.target.value }))} style={inp} />
+              </div>
+              <div>
+                <label style={lbl}>출발 시간</label>
+                <input value={appForm.depart_time} onChange={e => setAppForm(p => ({ ...p, depart_time: e.target.value }))} placeholder="예: 8:30am" style={inp} />
+              </div>
               <div>
                 <label style={lbl}>예약자 <span style={{ color: "#dc2626" }}>*</span></label>
                 <input value={appForm.portal_name} onChange={e => setAppForm(p => ({ ...p, portal_name: e.target.value }))} placeholder="홍길동" style={inp} />
@@ -590,8 +530,9 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
               <button onClick={() => setAppOpen(false)} disabled={appSaving} style={btnBase}>취소</button>
-              <button onClick={saveAddApp} disabled={appSaving || !appForm.portal_name.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (appSaving || !appForm.portal_name.trim()) ? 0.6 : 1 }}>{appSaving ? "저장중..." : "💾 저장"}</button>
+              <button onClick={saveAddApp} disabled={appSaving || !appForm.tour_name.trim() || !appForm.portal_name.trim()} style={{ ...btnBase, background: "#1a6fc4", borderColor: "#1a6fc4", color: "#fff", opacity: (appSaving || !appForm.tour_name.trim() || !appForm.portal_name.trim()) ? 0.6 : 1 }}>{appSaving ? "저장중..." : "💾 저장"}</button>
             </div>
+            <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>기본 패턴에 없는 투어명으로 저장하면 달력에 보라색 &quot;수동 추가&quot; 칩으로 표시됩니다. (손님 화면에는 안 보임)</div>
           </div>
         </div>
       )}
