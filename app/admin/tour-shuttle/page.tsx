@@ -374,15 +374,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 const tabCount = mGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
                 const active = ym === selKey;
                 return (
-                  <button key={ym} onClick={() => setSelectedMonth(ym)} style={{padding:"10px 16px", borderRadius:10, border: active ? "none" : "1px solid #cbd5e1", background: active ? "#1a6fc4" : "#fff", color: active ? "#fff" : "#475569", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow: active ? "0 2px 8px rgba(26,111,196,0.25)" : "none"}}>
-                    {monthLabelKR(ym)} <span style={{fontWeight:600, opacity:0.85, fontSize:12}}>({tabCount})</span>
+                  <button key={ym} onClick={() => setSelectedMonth(ym)} style={{padding:"6px 15px", borderRadius:999, border: active ? "none" : "1px solid #e2e8f0", background: active ? "#1a6fc4" : "#fff", color: active ? "#fff" : "#64748b", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
+                    {monthLabelKR(ym)} {tabCount}
                   </button>
                 );
               })}
             </div>
-            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", background:"#1a6fc4", color:"#fff", borderRadius:12, boxShadow:"0 2px 8px rgba(26,111,196,0.18)"}}>
-              <div style={{fontSize:16, fontWeight:800}}>📅 {monthLabelKR(selKey)} <span style={{fontWeight:600, opacity:0.85}}>({mCount}건)</span></div>
-              <div style={{fontSize:13, fontWeight:700, color:"#1a6fc4", background:"#fff", padding:"4px 14px", borderRadius:999}}>총 {mPeople}명</div>
+            <div style={{display:"flex", alignItems:"center", gap:10, padding:"11px 16px", background:"#fff", border:"1px solid #e2e8f0", borderRadius:12}}>
+              <span style={{width:8, height:8, borderRadius:"50%", background:"#1a6fc4"}}></span>
+              <span style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>{monthLabelKR(selKey)}</span>
+              <span style={{fontSize:12.5, color:"#94a3b8", fontWeight:600}}>{mCount}건</span>
+              <span style={{marginLeft:"auto", fontSize:12, fontWeight:800, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"3px 12px", borderRadius:999}}>총 {mPeople}명</span>
             </div>
             {selGroups.length === 0 ? (
               <div className="ts-card"><div className="ts-empty">이 달은 신청 내역이 없습니다.</div></div>
