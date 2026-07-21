@@ -10,6 +10,7 @@ import {
   type AccomType,
   type PkgItem,
 } from "@/lib/packageInfo";
+import { fetchDeployedHolidays, holidaysInRange, fmtHolidayList, type HolidayItem } from "@/lib/holidays";
 
 /* ── 가격 테이블 (invoice 동일, [정가, 비수기, 성수기]) ── */
 type P3=[number,number,number];
@@ -616,6 +617,8 @@ export default function EstimateCalc(){
   const MAX_PLANS = 5;
   const DEFAULT_ACCOM_ROTATION: AccomLocal[] = ["dreamhouse","jaypark","cubenine","dreamhouse","jaypark"];
   const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
+  const [holidays,setHolidays]=useState<HolidayItem[]>([]);
+  useEffect(()=>{ fetchDeployedHolidays().then(setHolidays).catch(()=>{}); },[]);
 
   function up(idx:number,patch:Partial<PlanState>){
     setPlans(prev=>prev.map((p,i)=>{
@@ -1050,6 +1053,22 @@ export default function EstimateCalc(){
             ))}
           </div>
         </div>
+
+        {(()=>{
+          const hits = plans.flatMap(p=>p.checkin?holidaysInRange(holidays,p.checkin,calcCheckout(p.checkin,totalWeeks(p))):[]);
+          const uniq=[...new Map(hits.map(h=>[h.date,h])).values()].sort((a,b)=>a.date.localeCompare(b.date));
+          if(uniq.length===0) return null;
+          return (
+            <div style={{marginBottom:12,padding:"14px 18px",background:"#fffbeb",border:"1.5px solid #fcd34d",borderRadius:10}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#b45309",marginBottom:7}}>🏖 체류 기간 중 휴무일 안내 — {fmtHolidayList(uniq)}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{fontSize:12,color:"#b91c1c",background:"#fef2f2",borderRadius:6,padding:"6px 10px",fontWeight:600}}>✕ 휴무일에는 수업 · 헬퍼 · 셔틀 · 관리실이 운영되지 않아요</div>
+                <div style={{fontSize:12,color:"#065f46",background:"#ecfdf5",borderRadius:6,padding:"6px 10px",fontWeight:600}}>✓ 식사는 정상 제공됩니다</div>
+                <div style={{fontSize:12,color:"#92400e",background:"#fff7ed",borderRadius:6,padding:"6px 10px",fontWeight:600}}>! 휴무일에 대한 별도 환불 · 보강은 없습니다</div>
+              </div>
+            </div>
+          );
+        })()}
 
         <div style={{padding:"14px 20px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
           ※ 할인 금액은 언제든 변경될 수 있습니다.
