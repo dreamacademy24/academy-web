@@ -492,7 +492,7 @@ function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
 function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
-function mp(t:AT){return t==="dreamhouse"?6:4;}
+function mp(t:AT){return t==="dreamhouse"?6:t==="jaypark"?5:4;} // 제이파크 5인(성인2+아이3, 2026-07-21)
 function extraRate(t:AT){return t==="cubenine"?250000:340000;}
 
 /* ── 타입 ── */
