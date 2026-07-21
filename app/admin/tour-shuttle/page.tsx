@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -53,7 +53,11 @@ function resolveComboRoom(
   // 콤보: tourDate >= seg2_checkin → 둘째 숙소
   const td = (tourDate || "").slice(0, 10);
   const s2 = (info.seg2_checkin || "").slice(0, 10);
-  if (td && s2 && td >= s2) return ACC_KR[info.seg2_type!] || info.seg2_type || info.room;
+  if (td && s2 && td >= s2) {
+    if (info.seg2_type === "dreamhouse" && info.room) return info.room;
+    return ACC_KR[info.seg2_type!] || info.seg2_type || info.room;
+  }
+  if (info.seg1_type === "dreamhouse" && info.room) return info.room;
   return ACC_KR[info.seg1_type!] || info.seg1_type || info.room;
 }
 
@@ -281,6 +285,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         const selGroups: [string, ShuttleApp[]][] = selChapter ? selChapter[1] : [];
         const mPeople = selGroups.reduce((s, [, l]) => s + l.filter(isActive).reduce((ss, a) => ss + (a.people_count || 0), 0), 0);
         const mCount = selGroups.reduce((s, [, l]) => s + l.filter(isActive).length, 0);
+        const DOW_BADGE = (date: string) => {
+          const d = new Date(date + "T00:00:00").getDay();
+          const nm = ["일","월","화","수","목","금","토"][d];
+          const st = d === 0 ? {bg:"#FCEBEB", c:"#A32D2D"} : d === 6 ? {bg:"#FAEEDA", c:"#854F0B"} : {bg:"#E6F1FB", c:"#185FA5"};
+          return <span style={{background:st.bg, color:st.c, fontSize:11, fontWeight:800, borderRadius:8, padding:"2px 9px", flexShrink:0}}>{nm}</span>;
+        };
+        const chipS: React.CSSProperties = {display:"inline-flex", alignItems:"center", gap:5, background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:999, padding:"4px 12px", fontSize:12.5, whiteSpace:"nowrap"};
         const renderTourCard = ([key, list]: [string, ShuttleApp[]]) => {
           const date = key.split("|")[0];
           const tour = key.split("|").slice(1).join("|");
@@ -288,53 +299,55 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           const activeList = list.filter(isActive);
           const reqList = list.filter(isReq);
           const cancList = list.filter(isCanc);
-          const tourTotal = activeList.reduce((s, a) => s + (a.people_count || 0), 0);
+          const tourTotal = activeList.reduce((s2, a) => s2 + (a.people_count || 0), 0);
+          const chipInfo = (a: ShuttleApp) => {
+            const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
+            const room = liveRoom || a.room_number || "";
+            const nm = (a.booking_id ? bookingNames[a.booking_id] : "") || a.portal_name || "";
+            return { room, nm };
+          };
+          const reqNotes = activeList.map(a => a.request || a.message || "").filter(Boolean);
           return (
-            <div key={key} className="ts-card">
-              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#f8fafc", borderBottom:"1px solid #e2e8f0"}}>
-                <div style={{fontSize:14.5, fontWeight:800, color:"#1a1a2e"}}>📅 {fmtDateKR(date)} · {tour}{depart && <span style={{fontWeight:600, color:"#475569", marginLeft:6}}>· 출발 {depart}</span>}</div>
-                <div style={{fontSize:13, fontWeight:700, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 12px", borderRadius:999}}>총 {tourTotal}명</div>
+            <div key={key} style={{background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, padding:"12px 16px", boxShadow:"0 1px 4px rgba(15,23,42,0.04)"}}>
+              <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                {DOW_BADGE(date)}
+                <span style={{fontSize:14, fontWeight:800, color:"#1a1a2e"}}>{fmtDateKR(date)} · {tour}</span>
+                {depart && <span style={{fontSize:12, color:"#94a3b8", fontWeight:600}}>출발 {depart}</span>}
+                <span style={{marginLeft:"auto", fontSize:12.5, fontWeight:800, color:"#1d4ed8", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"3px 12px", borderRadius:999}}>총 {tourTotal}명</span>
               </div>
-              {activeList.map(a => {
-                const req = a.request || a.message || "";
-                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
-                const displayRoom = liveRoom || a.room_number || "-";
-                const bookerName = a.booking_id ? bookingNames[a.booking_id] : "";
-                return (
-                  <div key={a.id} style={{display:"flex", alignItems:"center", gap:14, padding:"10px 16px", borderTop:"1px solid #f1f5f9", fontSize:14}}>
-                    <span style={{width:90, fontWeight:700, color:"#1a1a2e"}}>🏠 {displayRoom}</span>
-                    {bookerName && <span style={{width:70, fontSize:13, color:"#6366f1", fontWeight:600}} title={bookerName}>{bookerName.length > 5 ? bookerName.slice(0,5)+"…" : bookerName}</span>}
-                    <span style={{width:50, color:"#475569", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                    <span style={{flex:1, color: req ? "#475569" : "#94a3b8"}}>{req ? `📝 ${req}` : "—"}</span>
-                  </div>
-                );
-              })}
-              {reqList.map(a => {
-                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
-                const displayRoom = liveRoom || a.room_number || "-";
-                const bookerName = a.booking_id ? bookingNames[a.booking_id] : "";
-                return (
-                <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderTop:"1px solid #f1f5f9", background:"#fffbeb", fontSize:14}}>
-                  <span style={{width:90, fontWeight:700, color:"#92400e"}}>🏠 {displayRoom}</span>
-                  {bookerName && <span style={{width:70, fontSize:13, color:"#92400e", fontWeight:600}}>{bookerName.length > 5 ? bookerName.slice(0,5)+"…" : bookerName}</span>}
-                  <span style={{width:50, color:"#92400e", fontWeight:600}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                  <span style={{flex:1, color:"#92400e", fontSize:13}}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
-                  <button onClick={() => changeStatus(a.id, "cancelled")} style={{fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #cbd5e1", background:"#fff", color:"#1a1a2e", fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>취소 확정</button>
-                </div>
-                );
-              })}
-              {cancList.map(a => {
-                const liveRoom = a.booking_id && bookingRooms[a.booking_id] ? resolveComboRoom(a.tour_date, bookingRooms[a.booking_id]) : "";
-                const displayRoom = liveRoom || a.room_number || "-";
-                return (
-                <div key={a.id} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 16px", borderTop:"1px solid #f1f5f9", fontSize:13, color:"#94a3b8"}}>
-                  <span style={{width:90, textDecoration:"line-through"}}>{displayRoom}</span>
-                  <span style={{width:50, textDecoration:"line-through"}}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
-                  <span style={{flex:1}}>취소됨</span>
-                  <button onClick={() => changeStatus(a.id, "confirmed")} style={{fontSize:12, padding:"5px 10px", borderRadius:8, border:"1px solid #e2e8f0", background:"#fff", color:"#64748b", fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap"}}>되돌리기</button>
-                </div>
-                );
-              })}
+              <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:9}}>
+                {activeList.map(a => {
+                  const { room, nm } = chipInfo(a);
+                  return (
+                    <span key={a.id} style={chipS} title={a.request || a.message || ""}>
+                      {nm && <b style={{fontWeight:700, color:"#1a1a2e"}}>{nm}</b>}
+                      {room && <span style={{color:"#94a3b8", fontSize:11.5}}>{room}</span>}
+                      <b style={{fontWeight:800, color:"#1d4ed8"}}>{a.people_count ?? "-"}</b>
+                    </span>
+                  );
+                })}
+                {reqList.map(a => {
+                  const { room, nm } = chipInfo(a);
+                  return (
+                    <span key={a.id} style={{...chipS, background:"#fffbeb", borderColor:"#fde68a", color:"#92400e"}} title={a.cancel_reason ? `사유: ${a.cancel_reason}` : "취소요청"}>
+                      <b style={{fontWeight:700}}>{nm || room}</b> {a.people_count ?? ""} · 취소요청
+                      <button onClick={() => changeStatus(a.id, "cancelled")} style={{border:"none", background:"#92400e", color:"#fff", borderRadius:999, fontSize:11, padding:"1px 8px", cursor:"pointer", fontFamily:"inherit"}}>확정</button>
+                    </span>
+                  );
+                })}
+                {cancList.map(a => {
+                  const { room, nm } = chipInfo(a);
+                  return (
+                    <span key={a.id} style={{...chipS, background:"#fef2f2", borderColor:"#fecaca", color:"#b91c1c"}}>
+                      <s>{nm || room} · {a.people_count ?? ""}</s> 취소
+                      <button onClick={() => changeStatus(a.id, "confirmed")} style={{border:"none", background:"transparent", color:"#b91c1c", textDecoration:"underline", fontSize:11, cursor:"pointer", fontFamily:"inherit", padding:0}}>되돌리기</button>
+                    </span>
+                  );
+                })}
+              </div>
+              {reqNotes.length > 0 && (
+                <div style={{marginTop:7, fontSize:12, color:"#64748b"}}>📝 {reqNotes.join(" · ")}</div>
+              )}
             </div>
           );
         };
