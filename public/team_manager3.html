@@ -1723,17 +1723,26 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .badge-gray{background:#f1f5f9;color:#475569;}
 .manual-placeholder{background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;padding:40px;text-align:center;color:#94a3b8;font-size:14px;margin:20px 0;}
 .manual-edit-btn-wrap{display:flex;justify-content:flex-end;margin-bottom:16px;}
+.manual-wrap2{display:flex;flex-direction:column;height:calc(100vh - 100px);overflow:hidden;}
+.manual-tabs{display:flex;gap:2px;padding:14px 40px 0;border-bottom:2px solid #e2e8f0;overflow-x:auto;flex-shrink:0;}
+.manual-tab{padding:10px 18px;border:none;background:none;cursor:pointer;font-size:14.5px;font-weight:700;color:#64748b;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;font-family:inherit;}
+.manual-tab:hover{color:#334155;}
+.manual-tab.mt-active{color:#2563eb;border-bottom-color:#2563eb;}
+.manual-chips{display:flex;gap:8px;flex-wrap:wrap;padding:14px 40px;background:#f8fafc;border-bottom:1px solid #e2e8f0;flex-shrink:0;}
+.manual-chip{padding:7px 15px;border:1.5px solid #cbd5e1;background:#fff;border-radius:18px;cursor:pointer;font-size:13px;color:#475569;font-family:inherit;}
+.manual-chip:hover{border-color:#94a3b8;}
+.manual-chip.mc-active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600;}
+@media(max-width:640px){.manual-tabs{padding:10px 16px 0}.manual-chips{padding:10px 16px}.manual-content{padding:20px 16px}}
 </style>
 
-<div class="manual-wrap">
-  <div class="manual-sidebar" id="manualSidebar"></div>
-  <div style="flex:1;overflow-y:auto;">
-    <div class="manual-edit-btn-wrap" style="padding:16px 40px 0;">
-      <button id="manualEditBtn" onclick="openManualEditor()" style="display:none;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">✏️ 편집</button>
-    </div>
-    <div class="manual-content" id="manualContent">
-      <div style="text-align:center;padding:60px;color:#94a3b8;">항목을 선택하세요</div>
-    </div>
+<div class="manual-wrap2">
+  <div class="manual-tabs" id="manualTabs"></div>
+  <div class="manual-chips" id="manualChips"></div>
+  <div class="manual-edit-btn-wrap" style="padding:12px 40px 0;">
+    <button id="manualEditBtn" onclick="openManualEditor()" style="display:none;padding:8px 16px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">✏️ 편집</button>
+  </div>
+  <div class="manual-content" id="manualContent">
+    <div style="text-align:center;padding:60px;color:#94a3b8;">불러오는 중…</div>
   </div>
 </div>
 
@@ -2461,64 +2470,7 @@ const MANUAL_TREE = [
   {
     cat: '5️⃣ 자주 묻는 질문',
     items: [
-      { id:'faq1', title:'패키지 & 가격', html:`
-        <h2>❓ 자주 묻는 질문 — 패키지 & 가격</h2>
-        <h3>Q1. 패키지에 어떤 것들이 포함되나요?</h3>
-        <div class="manual-box">네네 ^^ 저희 드림아카데미 패키지는 숙소 / 수업 / 평일 3식 도시락 / 주말 투어셔틀 / 애프터스쿨 / 필드트립 / 화상영어 / 주 6일 헬퍼 서비스(드림하우스만 해당)가 모두 포함된 올인원 패키지입니다 ^^ 주말 식사는 개별 식사이며, 항공권 및 비자 비용은 별도입니다.</div>
-        <h3>Q2. 비수기/성수기 가격이 궁금합니다.</h3>
-        <div class="manual-box">안녕하세요 ^^ 성수기 기간은 7월 15일~8월 31일 / 12월 15일~2월 29일이며, 그 외는 비수기입니다 ^^ 원하시는 기간·인원·숙소를 말씀 주시면 상세 견적 안내해 드릴게요 ^^</div>
-        <h3>Q3. 성수기/비수기 가격을 둘 다 알고 싶어요.</h3>
-        <div class="manual-box">네네 ^^ 인원과 기간 말씀 주시면 두 가지 모두 함께 안내드리겠습니다 😊 성수기가 비수기 대비 전반적으로 높으며, 비수기는 더 여유롭게 연수를 즐기실 수 있는 장점이 있답니다 ^^</div>
-        <h3>Q4. 재방문 할인이 있나요?</h3>
-        <div class="manual-box">네네 ^^ 재방문이신 경우 패키지 고객 기준 1인당 10만원 할인이 적용됩니다 😊 견적 안내 시 재방문 할인 적용해서 보내드릴게요 ^^</div>
-        <h3>Q5. 지인/소개 할인도 있나요?</h3>
-        <div class="manual-box">네네 ^^ 지인 소개로 예약해 주시는 경우에도 혜택을 드리고 있습니다 ^^ 자세한 내용은 문의 주시면 현재 운영 중인 혜택 안내드리겠습니다 😊</div>
-      `},
-      { id:'faq2', title:'숙소', html:`
-        <h2>❓ 자주 묻는 질문 — 숙소</h2>
-        <h3>Q6. 드림하우스/제이파크/큐브나인 차이가 뭔가요?</h3>
-        <div class="manual-box">안녕하세요 ^^ 드림하우스는 방 3개짜리 독채 숙소(최대 6인, 주 6일 헬퍼 포함), 제이파크·큐브나인은 리조트형 숙소(최대 4인, 성인 2인)입니다 ^^ 가족 구성에 따라 추천 숙소가 달라지니 인원 말씀 주시면 맞춤 안내 드릴게요 ^^</div>
-        <h3>Q7. 드림하우스를 아카데미 없이 숙소만 예약할 수 있나요?</h3>
-        <div class="manual-box">네에 ^^ 드림하우스 단독 예약은 비수기 기간에만 가능합니다! 단독 예약 시 투어셔틀·튜터 서비스 등은 이용 불가한 점 참고 부탁드립니다 😊 성수기에는 아카데미 패키지로만 예약받고 있습니다.</div>
-        <h3>Q8. 5인 가족인데 어떤 숙소가 좋을까요?</h3>
-        <div class="manual-box">안녕하세요 ^^ 제이파크·큐브나인은 최대 4인(성인 2인) 정원이라 5인은 어렵습니다 ㅠㅠ 5인 가족이시라면 드림하우스 독채가 훨씬 편하고 좋으실 거예요 ^^ 최대 6인까지 프라이빗하게 지낼 수 있어서 만족도가 정말 높답니다 😊</div>
-        <h3>Q9. 체크인/체크아웃 시간이 어떻게 되나요?</h3>
-        <div class="manual-box">네네 ^^ 체크인은 토요일 오후 3시, 체크아웃은 토요일 낮 12시로 고정되어 있습니다 ^^ 수업 시작은 월요일, 수료일은 금요일입니다. 밤 비행기 도착 시 체크인 전날 1박 추가도 가능합니다(+10만원).</div>
-        <h3>Q10. 체크아웃 후에도 머물 수 있나요? 짐 보관도 되나요?</h3>
-        <div class="manual-box">네네 ^^ 체크아웃 후 귀국 전까지 머물러 계시는 것 가능합니다 ^^ 짐 보관도 해드리고 있으니 여행 일정 있으시면 미리 말씀 주세요 😊</div>
-      `},
-      { id:'faq3', title:'수업 & 생활', html:`
-        <h2>❓ 자주 묻는 질문 — 수업 & 생활</h2>
-        <h3>Q11. 아이가 영어를 전혀 못 해도 괜찮을까요?</h3>
-        <div class="manual-box">네에 ^^ 걱정 안 하셔도 됩니다 😊 저희 킨더라인은 UCLA 출신 원장님이 직접 설계한 커리큘럼으로, 영어 노출이 없는 아이들도 즐겁게 적응할 수 있도록 운영하고 있어요 ^^ 입학 첫날 레벨테스트로 수준에 맞는 반에 배정됩니다.</div>
-        <h3>Q12. 교재는 어떤 걸 쓰나요?</h3>
-        <div class="manual-box">네네 ^^ UCLA 출신 원장님과 교재팀이 직접 만든 자체 교재를 사용하고 있습니다 ^^ 레벨테스트 결과를 바탕으로 각 아이 수준에 맞는 교재로 수업이 진행됩니다.</div>
-        <h3>Q13. 수업 시간표와 픽업/하원 시간?</h3>
-        <div class="manual-box">안녕하세요 ^^ 수업은 월~금요일 9:00~16:00 진행됩니다 ^^ 픽업 오전 8시 40분, 하원 오후 4시 10분~ 순차 드랍. 애프터스쿨은 월/수요일이며, 자세한 스케줄은 입국 4주 전에 안내드립니다 😊</div>
-        <h3>Q14. 수업 중 부모님이 참관할 수 있나요?</h3>
-        <div class="manual-box">네에 ^^ 아카데미 수업 중 부모님 참관은 어렵습니다 ㅠㅠ 수업의 원활한 진행과 아이들의 집중력을 위해 참관을 제한하고 있는 점 양해 부탁드립니다 🙏 대신 수업 사진을 구글 드라이브로 정기 공유해 드리고 있습니다.</div>
-        <h3>Q15. 준비물은 뭘 챙겨야 하나요?</h3>
-        <div class="manual-box">안녕하세요 ^^ 기본 준비물 안내드립니다 😊<br>✔ 실내화 (발 감싸는 실내화 권장 – 바닥이 대리석!)<br>✔ 개인 물병 · 필기구<br>✔ 공책 2권 (킨더 1권)<br>석회 걱정되시는 분들은 샤워기 필터 개별 지참 추천드려요 ^^</div>
-        <h3>Q16. 식사는 어떻게 제공되나요?</h3>
-        <div class="manual-box">네네 ^^ 평일 3식(아침/점심/저녁)은 도시락으로 제공됩니다 ^^ 제이파크는 조식 및 식사 바우처로 제공되며, 주말은 개별 식사입니다 😊</div>
-      `},
-      { id:'faq4', title:'예약 & 기타', html:`
-        <h2>❓ 자주 묻는 질문 — 예약 & 기타</h2>
-        <h3>Q17. 통학형(수업만)도 있나요?</h3>
-        <div class="manual-box">네네 ^^ 통학형 프로그램도 운영하고 있습니다 ^^ 다만 비수기 기간에만 운영되며, 성수기에는 패키지로만 예약받습니다. 차량비(1인 4주 5만원), 교재비(1권 350페소) 별도이며, 애프터스쿨 참여 불가, 필드트립 유료(1회 3,000페소)입니다.</div>
-        <h3>Q18. 예약 절차가 어떻게 되나요?</h3>
-        <div class="manual-box">안녕하세요 ^^ 예약 절차 안내드립니다 😊<br>① 상담(인원/기간/숙소) → ② 확정서 전송 → ③ 입금 → ④ 송금화면 캡처 전송 → ⑤ 입금확인 영수증 발송 & 최종 확정</div>
-        <h3>Q19. 예약 후 날짜 변경이나 취소가 되나요?</h3>
-        <div class="manual-box">네에 ^^ 예약 확정 후 일정 변경은 원칙적으로 어렵습니다 ㅠㅠ 취소, 기간 단축, 연도 이월 모두 불가합니다. 다만 상황에 따라 예외적으로 검토해 드릴 수 있으니 먼저 말씀해 주세요 ^^ 항공권 결제 전 반드시 예약 가능 여부 먼저 확인 부탁드립니다 😊</div>
-        <h3>Q20. 공항 픽업/드랍 서비스가 있나요?</h3>
-        <div class="manual-box">네네 ^^ 공항 픽드랍 서비스 제공하고 있습니다 ^^ 항공권 발권하시면 저희 채널로 캡처 전송 부탁드립니다! 드랍은 공항뿐 아니라 막탄 내 리조트로도 가능합니다 😊</div>
-        <h3>Q21. 비자 연장은 어떻게 하나요?</h3>
-        <div class="manual-box">안녕하세요 ^^ 비자 연장 대행 서비스를 제공하고 있습니다 ^^ 무비자 30일 초과 체류 시 필요하며, 비자 연장비 4,060페소 + 대행 수수료 500페소 = 총 1인당 4,560페소입니다.</div>
-        <h3>Q22. SSP 카드가 뭔가요?</h3>
-        <div class="manual-box">안녕하세요 ^^ SSP는 필리핀 어학연수 학습 허가증, SSP-I Card는 신분증 역할을 합니다 ^^ SSP 유효기간 6개월 / I-Card 1년이며, 사진은 여권 사진으로 대체 가능합니다 ^^ 발급 비용 및 절차는 입실 전 상세히 안내드리겠습니다 😊</div>
-        <h3>Q23. 아이가 아프거나 응급상황이 생기면?</h3>
-        <div class="manual-box">안녕하세요 ^^ 아이 건강 관련해서 저희가 현지에서 잘 챙기고 있습니다 ^^ 약 복용 중이거나 건강 이슈가 있으면 미리 채널로 말씀해 주시면 세심하게 케어해 드립니다 😊 응급 시에는 숙소 내부 비치된 안내문의 투숙자 전용 응급 연락처(09292932991)로 연락 부탁드립니다.</div>
-      `},
+      { id:'faqApp', title:'자주 묻는 질문 (검색·편집)', html:`<div id="faqApp">불러오는 중…</div>` },
     ]
   },
 ];
@@ -2527,53 +2479,66 @@ let _manualCat = null;
 let _manualItem = null;
 
 function initManual() {
-  const sb = document.getElementById('manualSidebar');
-  if (!sb) return;
-  sb.innerHTML = '';
+  const tabs = document.getElementById('manualTabs');
+  if (!tabs) return;
+  tabs.innerHTML = '';
   MANUAL_TREE.forEach((catObj, ci) => {
-    const hdr = document.createElement('button');
-    hdr.className = 'manual-cat-header';
-    hdr.innerHTML = catObj.cat + '<span class="manual-cat-arrow" id="mca-'+ci+'">▶</span>';
-    const subList = document.createElement('div');
-    subList.className = 'manual-sub-list';
-    subList.id = 'msl-' + ci;
-    catObj.items.forEach((item, ii) => {
-      const btn = document.createElement('button');
-      btn.className = 'manual-sub-btn';
-      btn.textContent = item.title;
-      btn.onclick = () => selectManualItem(ci, ii, btn);
-      subList.appendChild(btn);
-    });
-    hdr.onclick = () => {
-      const isOpen = subList.classList.contains('open');
-      document.querySelectorAll('.manual-sub-list').forEach(s => s.classList.remove('open'));
-      document.querySelectorAll('.manual-cat-arrow').forEach(a => a.classList.remove('open'));
-      document.querySelectorAll('.manual-cat-header').forEach(h => h.classList.remove('mc-open'));
-      if (!isOpen) {
-        subList.classList.add('open');
-        document.getElementById('mca-'+ci).classList.add('open');
-        hdr.classList.add('mc-open');
-      }
-    };
-    sb.appendChild(hdr);
-    sb.appendChild(subList);
+    const b = document.createElement('button');
+    b.className = 'manual-tab';
+    b.textContent = catObj.cat;
+    b.onclick = () => selectManualCat(ci);
+    tabs.appendChild(b);
   });
+  selectManualCat(_manualCat != null ? _manualCat : 0);
+}
+function selectManualCat(ci) {
+  _manualCat = ci; _manualItem = 0;
+  document.querySelectorAll('.manual-tab').forEach((t, i) => t.classList.toggle('mt-active', i === ci));
+  const chips = document.getElementById('manualChips');
+  if (!chips) return;
+  chips.innerHTML = '';
+  MANUAL_TREE[ci].items.forEach((item, ii) => {
+    const c = document.createElement('button');
+    c.className = 'manual-chip';
+    c.textContent = item.title;
+    c.onclick = () => selectManualItem(ci, ii, c);
+    chips.appendChild(c);
+  });
+  const first = chips.querySelector('.manual-chip');
+  if (first) selectManualItem(ci, 0, first);
 }
 
 function selectManualItem(ci, ii, btn) {
   _manualCat = ci; _manualItem = ii;
-  document.querySelectorAll('.manual-sub-btn').forEach(b => b.classList.remove('ms-active'));
-  btn.classList.add('ms-active');
+  document.querySelectorAll('.manual-chip').forEach(b => b.classList.remove('mc-active'));
+  if (btn) btn.classList.add('mc-active');
   const item = MANUAL_TREE[ci].items[ii];
   document.getElementById('manualContent').innerHTML = item.html;
+  if(item.id==='faqApp'){ try{renderFAQ();}catch(e){console.error(e);} }
   const u = (typeof CU !== 'undefined' && CU) ? CU.id : '';
   const editBtn = document.getElementById('manualEditBtn');
   if (editBtn) editBtn.style.display = (u==='ceo'||u==='jenna') ? 'inline-flex' : 'none';
   window._manualCurrentIdx = ci * 100 + ii;
 }
 
+/* ── FAQ (Supabase staff_faq · 검색·카테고리·전 직원 편집) ── */
+var _faqData=[], _faqCat='전체', _faqKw='';
+function _faqEsc(t){return (t==null?'':(''+t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _faqCss(){ if(document.getElementById('faqCss'))return; var st=document.createElement('style'); st.id='faqCss'; st.textContent="#faqApp{padding:18px 26px;max-width:900px;margin:0 auto}.fqhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.fqhead h2{font-size:20px;color:#1e293b;margin:0;border:none;padding:0}.fqadd{background:#0e7c86;color:#fff;border:none;border-radius:8px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer}.fqsearch{position:relative;margin-bottom:6px}.fqsearch input{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:22px;font-size:14px;outline:none;font-family:inherit}.fqsearch input:focus{border-color:#0e7c86}.fqchips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 4px}.fqchip{border:1.5px solid #e2e8f0;background:#fff;color:#5a6478;font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:18px;cursor:pointer;font-family:inherit}.fqchip.on{background:#1f2d5a;border-color:#1f2d5a;color:#fff}.fqcnt{font-size:12px;color:#9aa0b0;margin:8px 2px 12px}.fqi{background:#fff;border:1px solid #e6eaf2;border-radius:12px;margin-bottom:9px;overflow:hidden}.fqrow{display:flex;align-items:stretch}.fqq{flex:1;border:none;background:none;display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;text-align:left;font-family:inherit}.fqcat{flex-shrink:0;font-size:11px;font-weight:700;color:#0e7c86;background:#eef6f4;padding:3px 8px;border-radius:8px;white-space:nowrap}.fqtx{flex:1;font-size:14.5px;font-weight:600;color:#26303f;line-height:1.45}.fqarw{flex-shrink:0;font-size:19px;color:#b5bccb}.fqi.op .fqarw{color:#0e7c86}.fqedit{border:none;background:none;cursor:pointer;font-size:15px;padding:0 15px;color:#aab0c0}.fqedit:hover{color:#0e7c86}.fqa{display:none;padding:2px 18px 16px 44px;font-size:13.5px;line-height:1.7;color:#4a5468}.fqi.op .fqa{display:block}.fqa b{color:#c0392b}.fqed{padding:14px 16px;border-top:1px solid #f1f5f9;background:#fafbfd}.fqed select,.fqed input,.fqed textarea{width:100%;border:1.5px solid #dfe4ee;border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit;margin-bottom:8px;background:#fff}.fqed textarea{min-height:96px;resize:vertical;line-height:1.6}.fqed .lb{font-size:11.5px;font-weight:700;color:#8a90a0;margin-bottom:3px}.fqbtns{display:flex;gap:8px;align-items:center}.fqb{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}.fqsave{background:#0e7c86;color:#fff}.fqcancel{background:#eef1f6;color:#5a6478}.fqdel{background:#fdece9;color:#c0392b;margin-right:auto}.fqnone{text-align:center;color:#9aa0b0;padding:40px;font-size:14px}"; document.head.appendChild(st); }
+function renderFAQ(){ var root=document.getElementById('faqApp'); if(!root)return; _faqCss(); root.innerHTML='<div style="padding:36px;color:#94a3b8;text-align:center">불러오는 중…</div>'; sbGet('staff_faq','select=*&order=idx.asc').then(function(d){_faqData=Array.isArray(d)?d:[]; _faqDraw();}).catch(function(e){root.innerHTML='<div style="padding:36px;color:#c0392b;text-align:center">FAQ를 불러오지 못했어요 ('+(e&&e.message||e)+')</div>';}); }
+function _faqCats(){ var out=[]; _faqData.forEach(function(x){ if(x.cat && out.indexOf(x.cat)<0) out.push(x.cat); }); return out; }
+function _faqDraw(){ var root=document.getElementById('faqApp'); if(!root)return; var chips='<button class="fqchip'+(_faqCat==="전체"?" on":"")+'" data-c="전체">전체</button>'+_faqCats().map(function(c){return '<button class="fqchip'+(_faqCat===c?" on":"")+'" data-c="'+_faqEsc(c)+'">'+_faqEsc(c)+'</button>';}).join(''); root.innerHTML='<div class="fqhead"><h2>❓ 자주 묻는 질문</h2><button class="fqadd" onclick="_faqAdd()">+ 질문 추가</button></div><div class="fqsearch"><input id="fqs" placeholder="🔍 궁금한 단어 검색 (예: SSP, 보증금, 세탁, 뽀로로)" value="'+_faqEsc(_faqKw)+'"></div><div class="fqchips">'+chips+'</div><div class="fqcnt" id="fqcnt"></div><div id="fqlist"></div>'; root.querySelectorAll('.fqchip').forEach(function(b){b.onclick=function(){_faqCat=b.getAttribute('data-c');_faqDraw();};}); var s=document.getElementById('fqs'); s.oninput=function(){_faqKw=s.value.trim().toLowerCase();_faqList();}; s.focus(); if(_faqKw)s.setSelectionRange(_faqKw.length,_faqKw.length); _faqList(); }
+function _faqList(){ var box=document.getElementById('fqlist'); if(!box)return; var list=_faqData.filter(function(x){ var okc=_faqCat==="전체"||x.cat===_faqCat; var okk=!_faqKw||(((x.q||'')+' '+(x.a||'')).toLowerCase().indexOf(_faqKw)>=0); return okc&&okk; }); document.getElementById('fqcnt').textContent=list.length+'개 질문'; if(!list.length){ box.innerHTML='<div class="fqnone">결과가 없어요. 다른 단어로 찾아보세요.</div>'; return; } box.innerHTML=list.map(function(x){ return '<div class="fqi" data-id="'+x.id+'"><div class="fqrow"><button class="fqq" onclick="_faqTog('+x.id+')"><span class="fqcat">'+_faqEsc(x.cat)+'</span><span class="fqtx">'+_faqEsc(x.q)+'</span><span class="fqarw">+</span></button><button class="fqedit" title="수정" onclick="_faqEdit('+x.id+')">✏️</button></div><div class="fqa">'+(x.a||'')+'</div></div>'; }).join(''); }
+function _faqTog(id){ var el=document.querySelector('.fqi[data-id="'+id+'"]'); if(!el)return; var op=el.classList.toggle('op'); el.querySelector('.fqarw').textContent=op?'−':'+'; }
+function _faqEdit(id){ var x=_faqData.filter(function(r){return r.id==id;})[0]; if(!x)return; var el=document.querySelector('.fqi[data-id="'+id+'"]'); if(!el)return; el.classList.add('op'); el.querySelector('.fqa').innerHTML=_faqForm(x); }
+function _faqForm(x){ var cats=_faqCats(); if(x.cat&&cats.indexOf(x.cat)<0)cats.unshift(x.cat); var opts=cats.map(function(c){return '<option'+(c===x.cat?' selected':'')+'>'+_faqEsc(c)+'</option>';}).join(''); return '<div class="fqed"><div class="lb">카테고리</div><select class="fqf-cat">'+opts+'</select><div class="lb">질문</div><input class="fqf-q" value="'+_faqEsc(x.q)+'"><div class="lb">답변 (HTML 태그 &lt;b&gt; 사용 가능)</div><textarea class="fqf-a">'+_faqEsc(x.a)+'</textarea><div class="fqbtns">'+(x.id?'<button class="fqb fqdel" onclick="_faqDel('+x.id+')">삭제</button>':'')+'<button class="fqb fqcancel" onclick="'+(x.id?'_faqList()':'_faqDraw()')+'">취소</button><button class="fqb fqsave" onclick="_faqSave('+(x.id||'0')+',this)">저장</button></div></div>'; }
+function _faqAdd(){ var root=document.getElementById('faqApp'); var box=document.getElementById('fqlist'); var d=document.createElement('div'); d.className='fqi op'; d.innerHTML='<div class="fqrow"><div class="fqq" style="cursor:default"><span class="fqcat">새 질문</span><span class="fqtx">새 질문 추가</span></div></div><div class="fqa">'+_faqForm({cat:_faqCat==="전체"?(_faqCats()[0]||"기타"):_faqCat,q:'',a:''})+'</div>'; box.insertBefore(d,box.firstChild); d.scrollIntoView({block:'center'}); }
+function _faqSave(id,btn){ var wrap=btn.closest('.fqa')||btn.closest('.fqi'); var cat=wrap.querySelector('.fqf-cat').value; var q=wrap.querySelector('.fqf-q').value.trim(); var a=wrap.querySelector('.fqf-a').value.trim(); if(!q){alert('질문을 입력하세요');return;} btn.textContent='저장 중…'; btn.disabled=true; var body={cat:cat,q:q,a:a,updated_at:new Date().toISOString()}; var p; if(id&&id!='0'){ p=sbPatch('staff_faq','id=eq.'+id,body); } else { var mx=0; _faqData.forEach(function(r){if((r.idx||0)>mx)mx=r.idx;}); body.idx=mx+1; p=sbPost('staff_faq',body); } p.then(function(){ return sbGet('staff_faq','select=*&order=idx.asc'); }).then(function(d){ _faqData=Array.isArray(d)?d:_faqData; _faqDraw(); if(typeof toast==='function')toast('저장됐어요'); }).catch(function(e){ alert('저장 실패: '+(e&&e.message||e)); btn.textContent='저장'; btn.disabled=false; }); }
+function _faqDel(id){ if(!confirm('이 질문을 삭제할까요?'))return; sbDel('staff_faq','id=eq.'+id).then(function(){ _faqData=_faqData.filter(function(r){return r.id!=id;}); _faqList(); if(typeof toast==='function')toast('삭제됐어요'); }).catch(function(e){ alert('삭제 실패: '+(e&&e.message||e)); }); }
+
+
 (function waitManual() {
-  if (document.getElementById('manualSidebar')) initManual();
+  if (document.getElementById('manualTabs')) initManual();
   else setTimeout(waitManual, 200);
 })();
 </script>
