@@ -176,18 +176,34 @@ export default function DreamhouseRooms() {
   const monthlyCheckins = normalizedBookings.filter(b => b.checkin_date >= monthFirstDay && b.checkin_date <= monthLastDay).length
   const monthlyCheckouts = normalizedBookings.filter(b => b.checkout_date >= monthFirstDay && b.checkout_date <= monthLastDay).length
 
-  const duplicates: {date:string,room:string,count:number}[] = []
-  Object.entries(cellMap).forEach(([date, rooms]) => {
-    Object.entries(rooms).forEach(([room, bs]) => {
-      if (bs.length > 1) duplicates.push({date, room, count: bs.length})
-    })
-  })
-
+  // 정의: 충돌 = 당일 하루만 겹침(체크아웃일 = 체크인일, 당일 전환) / 중복 = 여러 날 겹침(진짜 오버부킹)
+  const duplicates: {room:string,from:string,to:string,days:number}[] = []
   const conflicts: {date:string,room:string}[] = []
-  conflictSet.forEach(key => {
-    const idx = key.indexOf('_')
-    conflicts.push({date: key.slice(0,idx), room: key.slice(idx+1)})
-  })
+  {
+    const seenDup = new Set<string>()
+    const seenCon = new Set<string>()
+    displayRooms.forEach(room => {
+      const rb = normalizedBookings.filter(b => b.accom_room === room)
+      for (let i = 0; i < rb.length; i++) for (let j = i + 1; j < rb.length; j++) {
+        const A = rb[i], B = rb[j]
+        if (!A.checkin_date || !A.checkout_date || !B.checkin_date || !B.checkout_date) continue
+        const s0 = A.checkin_date > B.checkin_date ? A.checkin_date : B.checkin_date
+        const e0 = A.checkout_date < B.checkout_date ? A.checkout_date : B.checkout_date
+        if (s0 > e0) continue
+        if (s0 === e0) {
+          const k = `${s0}_${room}`
+          if (!seenCon.has(k)) { seenCon.add(k); conflicts.push({date: s0, room}) }
+        } else {
+          const k = `${s0}_${e0}_${room}`
+          if (!seenDup.has(k)) {
+            seenDup.add(k)
+            const days = Math.round((new Date(e0+"T00:00:00").getTime() - new Date(s0+"T00:00:00").getTime())/86400000) + 1
+            duplicates.push({room, from: s0, to: e0, days})
+          }
+        }
+      }
+    })
+  }
 
   const emptyRooms = ROOMS.filter(r => !normalizedBookings.some(b => b.accom_room === r))
 
@@ -231,8 +247,8 @@ export default function DreamhouseRooms() {
           <div style={{fontSize:11,fontWeight:700,color:'#64748b',marginBottom:8,letterSpacing:0.5}}>범례</div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#3b82f6'}}></div><span style={{fontSize:11,color:'#475569'}}>예약 있음</span></div>
-            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:11,color:'#475569'}}>중복 예약</span></div>
-            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:11,color:'#475569'}}>⚠️ 시간 충돌</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#ef4444'}}></div><span style={{fontSize:11,color:'#475569'}}>중복 (여러 날 겹침)</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#f59e0b',border:'2px solid #fbbf24'}}></div><span style={{fontSize:11,color:'#475569'}}>⚠️ 충돌 (당일 전환 하루 겹침)</span></div>
             <div style={{display:'flex',alignItems:'center',gap:6}}><div style={{width:12,height:12,borderRadius:3,background:'#f1f5f9',border:'1px solid #cbd5e1'}}></div><span style={{fontSize:11,color:'#475569'}}>빈 날</span></div>
           </div>
         </div>
@@ -257,7 +273,7 @@ export default function DreamhouseRooms() {
               {duplicates.map((d,i)=>(
                 <div key={`dup-${i}`} style={{display:'flex',alignItems:'center',gap:6,fontSize:11}}>
                   <span style={{background:'#dc2626',color:'#fff',padding:'2px 6px',borderRadius:4,fontWeight:700,fontSize:10,flexShrink:0}}>중복</span>
-                  <span style={{color:'#475569'}}>{d.date} · {d.room}</span>
+                  <span style={{color:'#475569'}}>{d.from} ~ {d.to.slice(5)} ({d.days}일) · {d.room}</span>
                 </div>
               ))}
               {conflicts.map((c,i)=>(
@@ -378,8 +394,8 @@ export default function DreamhouseRooms() {
                     {displayRooms.map((room, ri) => {
                       const cellBookings = cellMap[dateStr][room] || []
                       const hasBooking = cellBookings.length > 0
-                      const isDouble = cellBookings.length > 1
                       const isConflict = conflictSet.has(`${dateStr}_${room}`)
+                      const isDouble = cellBookings.length > 1 && !isConflict
                       const isCheckin = cellBookings.some(b => b.checkin_date === dateStr)
                       const isCheckout = cellBookings.some(b => b.checkout_date === dateStr)
 
