@@ -2936,6 +2936,13 @@
                   <option>4명 이상</option>
                 </select>
               </div>
+              <div class="form-field" id="f-ocean-wrap" style="display:none">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+                  <input type="checkbox" id="f-oceanview" name="oceanview" style="width:17px;height:17px;accent-color:#2E7D74"/>
+                  🌊 오션뷰로 변경 <span style="color:#D85A30;font-weight:800">+1박 25,000원</span>
+                </label>
+                <div style="font-size:11.5px;color:#8a8a7a;margin-top:3px">제이파크 기본 요금은 가든뷰(디럭스) 기준이에요</div>
+              </div>
               <div class="form-field">
                 <label for="f-ages">자녀 연령 <span class="req">*</span></label>
                 <input type="text" id="f-ages" name="ages" required placeholder="예: 7세, 초등 3학년" />
@@ -3166,6 +3173,7 @@
       rooms: { 'deluxe': '디럭스룸', 'premier': '프리미어룸', 'mactan': '막탄 스윗' },
       includes: [
         { i: '🏨', t: '<b>제이파크 리조트 객실</b> · 워터파크 & 비치 자유 이용 (뽀로로 파크 제외)' },
+        { i: '🌊', t: '<b>요금은 가든뷰 기준</b> · 오션뷰 변경 시 1박 25,000원 추가' },
         { i: '🍽️', t: '<b>리조트 내 모든 레스토랑 30% 할인</b> (논끼 제외)' },
         { i: '🥐', t: '<b>아발론 조식 50% 할인</b> · 보호자 1인 결제 시 6세 미만 무료' },
         { i: '🍱', t: '<b>평일 3식 프리미엄 도시락</b> · 아침/점심/저녁' },
@@ -3648,6 +3656,9 @@
     var aTxt=(el('f-adults')||{}).value||'';var a=parseInt(aTxt,10);
     var kTxt=(el('f-children')||{}).value||'';var k=parseInt(kTxt,10);if(kTxt.indexOf('이상')>=0)k=4;
     var dep=(el('f-depart')||{}).value||'';
+    // 오션뷰 옵션: 제이파크만 표시
+    var ovWrap=el('f-ocean-wrap'),ovChk=el('f-oceanview');
+    if(ovWrap){ovWrap.style.display=(lk==='jp')?'block':'none';if(lk!=='jp'&&ovChk)ovChk.checked=false;}
     // 예약금 버튼: 숙소만 정해지면 표시
     if(lk){btn.href=DEPOSIT_LINKS[lk];btn.style.display='block';note.style.display='block';hint.style.display='none';}
     else{btn.style.display='none';note.style.display='none';hint.style.display='block';}
@@ -3657,16 +3668,20 @@
       if(p){
         var peak=isPeak(dep);
         var idx=peak===false?1:peak===true?2:1; // 날짜 없으면 비수기 기준
+        var ovOn=(lk==='jp'&&ovChk&&ovChk.checked);
+        var ovWon=ovOn?w*7*25000:0;
+        var totWon=p[idx]*10000+ovWon;
+        var totMan=Math.round(totWon/1000)/10;
         el('est-list').textContent='정가 '+p[0].toLocaleString()+'만원';
-        el('est-price').textContent=p[idx].toLocaleString()+'만원';
-        el('est-season').textContent='('+(peak===true?'성수기':'비수기')+(lk==='dh'?'':' · 디럭스룸')+' 기준)';
+        el('est-price').textContent=(ovOn?totMan.toLocaleString():p[idx].toLocaleString())+'만원';
+        el('est-season').textContent='('+(peak===true?'성수기':'비수기')+(lk==='dh'?'':(ovOn?' · 오션뷰(+'+(w*7)+'박×2.5만)':' · 디럭스 가든뷰'))+' 기준)';
         card.style.display='block';
         return;
       }
     }
     card.style.display='none';
   }
-  ['f-lodging','f-duration','f-adults','f-children','f-depart'].forEach(function(id){var e=el(id);if(e)e.addEventListener('change',update);});
+  ['f-lodging','f-duration','f-adults','f-children','f-depart','f-oceanview'].forEach(function(id){var e=el(id);if(e)e.addEventListener('change',update);});
   update();
 })();
 </script>
