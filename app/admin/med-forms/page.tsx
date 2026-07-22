@@ -39,6 +39,8 @@ export default function MedFormsAdminPage() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [showDone, setShowDone] = useState(false);
+  const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
+  const curMonthKey = ymd(new Date()).slice(0, 7);
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -189,6 +191,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .stat .n{font-size:24px;font-weight:800;line-height:1.2}
 .stat .l{font-size:11.5px;font-weight:700}
 .mon{font-size:13.5px;font-weight:800;color:#334155;margin:16px 0 8px}
+.monBtn{display:flex;align-items:center;justify-content:space-between;width:100%;margin:14px 0 8px;padding:10px 14px;border:1px solid #dbe1ea;border-radius:10px;background:#fff;font-size:13.5px;font-weight:800;color:#334155;cursor:pointer;font-family:inherit}
+.monBtn:hover{background:#f8fafc}
+.monBtn .mc{font-size:12px;font-weight:700;color:#64748b}
 .fam{background:#fff;border:1px solid #e2e8f0;border-radius:11px;margin-bottom:8px;overflow:hidden}
 .fam.urg{border-color:#fecaca;border-left:3.5px solid #dc2626}
 .fh{display:flex;align-items:center;gap:10px;padding:9px 14px;background:#f8fafc;border-bottom:1px solid #eef0f4;flex-wrap:wrap}
@@ -230,12 +235,19 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <div className="empty">불러오는 중...</div>
       ) : pendingFams.length === 0 ? (
         <div className="empty">🎉 미제출 학생이 없습니다.</div>
-      ) : byMonth.map(([mon, list]) => (
-        <div key={mon}>
-          <div className="mon">📅 {Number(mon.slice(0, 4))}년 {Number(mon.slice(5, 7))}월 체크인 · {list.length}가족</div>
-          {list.map(famCard)}
-        </div>
-      ))}
+      ) : byMonth.map(([mon, list]) => {
+        const isOpen = openMonths[mon] !== undefined ? openMonths[mon] : mon === curMonthKey;
+        const pendCnt = list.reduce((n, f) => n + f.students.filter(st => !sub[st.key]).length, 0);
+        return (
+          <div key={mon}>
+            <button className="monBtn" onClick={() => setOpenMonths(p => ({ ...p, [mon]: !isOpen }))}>
+              <span>{isOpen ? "▾" : "▸"} 📅 {Number(mon.slice(0, 4))}년 {Number(mon.slice(5, 7))}월 체크인</span>
+              <span className="mc">{list.length}가족 · <span style={{ color: "#dc2626" }}>미제출 {pendCnt}명</span></span>
+            </button>
+            {isOpen && list.map(famCard)}
+          </div>
+        );
+      })}
 
       {doneFams.length > 0 && (
         <div className="doneSec">
