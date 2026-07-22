@@ -590,6 +590,8 @@ function InvoicePageInner(){
     {id:1,type:"예약금",date:todayStr,amount:""}
   ]);
   const [dhRegistered,setDhRegistered]=useState(false);
+  // 이미 룸이 배정된 예약(B17L10 등)은 처음부터 "하우스 등록완료"로 표시
+  useEffect(()=>{ if(/^B\d/i.test((checkin.houseNo||"").trim())) setDhRegistered(true); },[checkin.houseNo]);
   const [savingReceipt,setSavingReceipt]=useState(false);
 
   // 현재 폼 상태 전체를 스냅샷 객체로 수집
@@ -1929,7 +1931,7 @@ function InvoicePageInner(){
         <div className="pb no-print">
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
           <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
-          <button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?"✅ 등록 완료":"🏠 드림하우스 등록"}</button>
+          <button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?`✅ 하우스 등록완료${(checkin.houseNo||"").trim()?" · "+checkin.houseNo:""}`:"🏠 드림하우스 등록"}</button>
           {dhModal&&(
             <div onClick={()=>setDhModal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
               <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(480px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
