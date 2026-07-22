@@ -34,6 +34,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
     { label: "체크인 디테일", href: "/admin/checkin-details" },
+    { label: "상비약 관리", href: "/admin/med-forms" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
   ]},
   { title: "리조트", items: [

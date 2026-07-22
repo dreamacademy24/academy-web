@@ -698,10 +698,15 @@ function InvoicePageInner(){
 
   /* ── 학생 academyStart 자동동기화 (다음 월요일) — academyEnd는 DB값 우선 보존 ── */
   useEffect(()=>{
+    // 드하 단독(숙소만, 아카데미 미등록): 아카데미 날짜 자동값 없음 + 이미 채워진 자동값 제거
+    if(dhOnly&&!acadOpt){
+      setStudents(prev=>prev.some(s=>s.academyStart||s.academyEnd)?prev.map(s=>({...s,academyStart:"",academyEnd:""})):prev);
+      return;
+    }
     if(!a1CI) return;
     const monday=getNextMonday(a1CI);
     setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyEnd||calcAcademyEnd(monday,s.academyWeeks)})));
-  },[a1CI]);
+  },[a1CI,dhOnly,acadOpt]);
 
   /* ── 스냅샷 우선 조회 — 있으면 뷰 모드, 없으면 예약 로드로 진행 ── */
   useEffect(()=>{
@@ -1213,7 +1218,7 @@ function InvoicePageInner(){
   }
 
   /* ── 학생 헬퍼 ── */
-  function addStudent(){if(students.length>=6)return;const monday=a1CI?getNextMonday(a1CI):"";setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:calcAcademyEnd(monday,2),academyWeeks:"2",photo:"O"}]);}
+  function addStudent(){if(students.length>=6)return;const monday=(dhOnly&&!acadOpt)?"":(a1CI?getNextMonday(a1CI):"");setStudents([...students,{id:Date.now(),korName:"",engName:"",age:"",grade:"주니어",academyStart:monday,academyEnd:calcAcademyEnd(monday,2),academyWeeks:"2",photo:"O"}]);}
   function rmStudent(id:number){setStudents(students.filter(s=>s.id!==id));}
   function upStudent(id:number,f:string,v:string){
     setStudents(students.map(s=>{
