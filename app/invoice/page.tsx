@@ -1070,6 +1070,20 @@ function InvoicePageInner(){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[autoLocals, hasSnapshot]);
 
+  /* ── 드하 단독(숙소만): 예약 플래그가 늦게 로드돼 이미 붙은 수업 관련 자동항목 제거 ── */
+  useEffect(()=>{
+    if(hasSnapshot) return;
+    if(!(dhOnly&&!acadOpt)) return;
+    setBilling(prev=>{
+      const filtered=prev.locals.filter(l=>{
+        const n=l.name||"";
+        return !(n.includes("SSP")||n.includes("교재비")||(n.includes("킨더")&&n.includes("재료비")));
+      });
+      if(filtered.length===prev.locals.length) return prev;
+      return {...prev,locals:filtered};
+    });
+  },[dhOnly,acadOpt,hasSnapshot]);
+
   /* ── 견적 useMemo (100% 기존 유지) ── */
   const est=useMemo(()=>{
     const extras:{label:string;price:number}[]=[];
