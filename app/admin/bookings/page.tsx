@@ -1273,11 +1273,7 @@ export default function AdminBookingsPage(){
             if(!(s.academyStart<=_tds&&s.academyEnd>=_tds))return false;
             if(!q)return true;
             return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
-          }).sort((a,b)=>{
-            const g=(x:StudentRow)=>x.grade==="킨더"?0:1;
-            if(g(a)!==g(b))return g(a)-g(b);
-            return (a.academyEnd||"").localeCompare(b.academyEnd||"");
-          });
+          }).sort((a,b)=>(a.academyEnd||"9999").localeCompare(b.academyEnd||"9999"));
           const kN=att.filter(s=>s.grade==="킨더").length;
           const jN=att.length-kN;
           const dd=(s:StudentRow)=>{const d=Math.round((new Date(s.academyEnd).getTime()-new Date(_tds).getTime())/86400000);return d<=0?"오늘 종료":`D-${d}`;};
