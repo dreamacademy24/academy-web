@@ -58,31 +58,31 @@ body{background:#e8eaf1}
 .bar .info{font-size:12.5px;opacity:.85}
 .bar button{margin-left:auto;padding:9px 22px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 .page{width:210mm;min-height:297mm;background:#fff;margin:16px auto;position:relative;page-break-after:always}
-.hd{background:#fff;color:#212a59;padding:9mm 12mm 5mm;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #212a59}
-.hd h1{font-size:27px;font-weight:900}
+.hd{background:#fff;color:#212a59;padding:6mm 12mm 3.5mm;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #212a59}
+.hd h1{font-size:24px;font-weight:900}
 .hd .sub{font-size:13px;color:#6a7183;margin-top:2.5mm}
 .hd .brand{text-align:right}
 .hd .brand b{font-size:15px;letter-spacing:1px}
 .hd .brand div{font-size:10px;color:#8a91a3}
-.wrap{padding:7mm 12mm}
-.notice{background:#fdf3d7;border:1.5px solid #f3dfa0;border-radius:3mm;padding:4mm 5.5mm;font-size:13px;color:#7a5104;line-height:1.7}
+.wrap{padding:4.5mm 12mm 0}
+.notice{background:#fdf3d7;border:1.5px solid #f3dfa0;border-radius:3mm;padding:2.8mm 5mm;font-size:12.5px;color:#7a5104;line-height:1.55}
 .notice .tt{font-size:15px;font-weight:900;color:#dc2626}
 .notice .sm{font-size:11px;color:#9a7a2e}
-h2{font-size:16.5px;color:#212a59;border-bottom:2px solid #212a59;padding-bottom:2mm;margin:6mm 0 3.5mm}
+h2{font-size:15.5px;color:#212a59;border-bottom:2px solid #212a59;padding-bottom:1.4mm;margin:4.2mm 0 2.6mm}
 h2 span{font-weight:400;font-size:12.5px;color:#6a7183}
 table{width:100%;border-collapse:collapse}
-.info-t td{border:1px solid #ccd2dc;padding:3mm;font-size:13.5px;height:12.5mm;vertical-align:middle}
+.info-t td{border:1px solid #ccd2dc;padding:2.2mm 2.6mm;font-size:13px;height:10mm;vertical-align:middle}
 .info-t td.l{background:#f2f4f8;color:#4a5162;width:33mm;font-weight:800;font-size:12.5px}
 .info-t td.v{font-weight:700;font-size:14.5px}
 .hint{color:#98a0ad;font-size:10px;font-weight:400}
-.med th{background:#eef0f6;color:#212a59;font-size:12px;padding:3mm 1mm;font-weight:800;border:1px solid #ccd2dc}
-.med td{border:1px solid #ccd2dc;height:13mm;font-size:12.5px;text-align:center;vertical-align:middle}
+.med th{background:#eef0f6;color:#212a59;font-size:11.5px;padding:2.2mm 1mm;font-weight:800;border:1px solid #ccd2dc}
+.med td{border:1px solid #ccd2dc;height:10mm;font-size:12px;text-align:center;vertical-align:middle}
 .med tr.ex td{background:#eceef5;color:#6a7183;height:9mm;font-size:11px}
 .exb{font-size:9px;font-weight:800;color:#8a91a3;margin-right:1.5mm}
-.notes{font-size:12.5px;line-height:1.85;color:#333a4b}
-.sign{display:flex;gap:9mm;align-items:flex-end;font-size:13.5px;margin-top:5mm}
+.notes{font-size:12px;line-height:1.62;color:#333a4b}
+.sign{display:flex;gap:9mm;align-items:flex-end;font-size:13px;margin-top:3mm}
 .sign .ln{border-bottom:1px solid #6a7183;min-width:42mm;display:inline-block;height:6mm}
-.ft{margin:9mm 0 0;text-align:center;font-size:10px;color:#98a0ad}
+.ft{margin:4.5mm 0 0;text-align:center;font-size:9.5px;color:#98a0ad}
 .wline{display:inline-block;border-bottom:1px solid #8a91a3;height:5.5mm;vertical-align:bottom}
 @media print{
   @page{size:A4;margin:0}
