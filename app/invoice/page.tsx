@@ -544,6 +544,7 @@ function InvoicePageInner(){
   const [a1T,setA1T]=useState<AT>("dreamhouse");
   const [a1R,setA1R]=useState("디럭스");
   const [dhOnly,setDhOnly]=useState(false);
+  const [acadOpt,setAcadOpt]=useState(false);
   const [a1W,setA1W]=useState(2);
   const [a1CI,setA1CI]=useState("");
   const [a2T,setA2T]=useState<AT>("jpark");
@@ -728,10 +729,11 @@ function InvoicePageInner(){
   /* ── isCommute는 스냅샷 유무와 무관하게 항상 실제 예약에서 판정 (stale 스냅샷이 통학형을 가리는 문제 방지) ── */
   useEffect(()=>{
     if(!bookingId) return;
-    supabase.from("bookings").select("booking_type,accom_type").eq("id",bookingId).maybeSingle().then(({data})=>{
+    supabase.from("bookings").select("booking_type,accom_type,academy_option").eq("id",bookingId).maybeSingle().then(({data})=>{
       if(data){
         setIsCommute(isCommuteBooking(data));
         setDhOnly((data.accom_type||"").includes("드림하우스 단독"));
+        setAcadOpt(!!data.academy_option);
       }
     });
   },[bookingId]);
@@ -1001,6 +1003,8 @@ function InvoicePageInner(){
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
     const items:{name:string;amount:string;_auto:string}[]=[];
+    // 드림하우스 단독(숙소만, 아카데미 미등록): 수업 관련 현지비용(SSP/교재비/킨더 재료비) 없음 — 보증금만
+    if(dhOnly&&!acadOpt) return items;
     // SSP: '항상 표시' — cP가 0/NaN/undefined여도 최소 1줄 보장
     const adultCount=Math.max(1,Number(cP)||1);
     for(let i=0;i<adultCount;i++){
@@ -1023,7 +1027,7 @@ function InvoicePageInner(){
       }
     }
     return items;
-  },[cP,students,a1W,a2W,cm]);
+  },[cP,students,a1W,a2W,cm,dhOnly,acadOpt]);
 
   /* ── 자동 항목 → locals 동기화 (최초 append + 주수 변경 시 킨더 재료비 업데이트) ── */
   const autoLocalsApplied=useRef(false);
