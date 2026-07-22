@@ -482,6 +482,14 @@ const C9:Record<string,P3>={
 };
 
 /* ── 견적 계산 함수 (100% 기존 유지) ── */
+// 드림하우스 단독(비패키지·숙소만, booking2) 요금 — 시즌 무관 단일가 (2026-07-22 메이 확정)
+// 1주 724,500 / 2주 1,285,200 / 3주 1,927,800 / 4주 2,318,400 (5주+ = 4주 주당가 579,600/주 연장)
+const DH_ONLY_TOTAL:Record<number,number>={1:724500,2:1285200,3:1927800,4:2318400};
+function dhOnlyPrice(w:number):number{
+  if(DH_ONLY_TOTAL[w])return DH_ONLY_TOTAL[w];
+  if(w>4)return 579600*w;
+  return 0;
+}
 type AT=""| "dreamhouse"|"jpark"|"cubenine";
 function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
   const half=(e:P3):P3=>[Math.round(e[0]/2),Math.round(e[1]/2),Math.round(e[2]/2)];
@@ -535,6 +543,7 @@ function InvoicePageInner(){
   const [cm,setCm]=useState<"single"|"combo">("single");
   const [a1T,setA1T]=useState<AT>("dreamhouse");
   const [a1R,setA1R]=useState("디럭스");
+  const [dhOnly,setDhOnly]=useState(false);
   const [a1W,setA1W]=useState(2);
   const [a1CI,setA1CI]=useState("");
   const [a2T,setA2T]=useState<AT>("jpark");
@@ -720,7 +729,10 @@ function InvoicePageInner(){
   useEffect(()=>{
     if(!bookingId) return;
     supabase.from("bookings").select("booking_type,accom_type").eq("id",bookingId).maybeSingle().then(({data})=>{
-      if(data) setIsCommute(isCommuteBooking(data));
+      if(data){
+        setIsCommute(isCommuteBooking(data));
+        setDhOnly((data.accom_type||"").includes("드림하우스 단독"));
+      }
     });
   },[bookingId]);
 
@@ -1077,6 +1089,13 @@ function InvoicePageInner(){
       });
       return{total,extras,items};
     }
+    // 드림하우스 단독(숙소만): 인원·시즌 무관 단일 요금표
+    if(dhOnly&&cm==="single"&&a1T==="dreamhouse"){
+      const price=dhOnlyPrice(a1W);
+      if(price>0){
+        return{total:price,extras,items:[{label:`Dream House 단독 ${a1W}주`,price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:"숙소만",accom:"dreamhouse",roomType:"",weeks:a1W,parents:cP,kids:cK}]};
+      }
+    }
     if(cm==="single"){
       const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
       const pk=isPeak(a1CI);const price=sp(e,pk);
@@ -1096,7 +1115,7 @@ function InvoicePageInner(){
       {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK},
       {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기",accom:a2T,roomType:a2R,weeks:a2W,parents:cP,kids:cK},
     ]};
-  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt,isCommute,students]);
+  },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt,isCommute,dhOnly,students]);
 
   function applyInv(){
     if(!est)return;
