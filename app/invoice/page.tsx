@@ -484,7 +484,7 @@ const C9:Record<string,P3>={
 /* ── 견적 계산 함수 (100% 기존 유지) ── */
 // 드림하우스 단독(비패키지·숙소만, booking2) 요금 — 시즌 무관 단일가 (2026-07-22 메이 확정)
 // 1주 724,500 / 2주 1,285,200 / 3주 1,927,800 / 4주 2,318,400 (5주+ = 4주 주당가 579,600/주 연장)
-const DH_ONLY_TOTAL:Record<number,number>={1:724500,2:1285200,3:1927800,4:2318400};
+const DH_ONLY_TOTAL:Record<number,number>={1:724500,2:1285200,3:1927800,4:2318400,5:2898000,6:3477600,7:4057200,8:4636800,9:5216400,10:5796000,11:6375600,12:6955200};
 function dhOnlyPrice(w:number):number{
   if(DH_ONLY_TOTAL[w])return DH_ONLY_TOTAL[w];
   if(w>4)return 579600*w;
