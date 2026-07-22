@@ -9,16 +9,16 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-interface Row {
-  id: string;
+interface StuRow {
+  key: string;           // booking_id|이름 — 제출 상태 저장 키
+  booking_id: string;
+  kor: string;
+  eng: string;
+  booker: string;
   reservation_no: string;
-  booker_name: string;
   accom_type: string;
   room: string;
   checkin_date: string;
-  checkout_date: string;
-  academy_option: boolean;
-  students: { kor: string; eng: string }[];
 }
 type SubMap = Record<string, { at: string; by?: string }>;
 
@@ -29,14 +29,13 @@ function fmtMD(s: string) { if (!s) return "-"; const d = new Date(s + "T00:00:0
 function dday(s: string) {
   if (!s) return null;
   const t = new Date(); t.setHours(0, 0, 0, 0);
-  const d = Math.round((new Date(s + "T00:00:00").getTime() - t.getTime()) / 86400000);
-  return d;
+  return Math.round((new Date(s + "T00:00:00").getTime() - t.getTime()) / 86400000);
 }
 
 export default function MedFormsAdminPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<StuRow[]>([]);
   const [sub, setSub] = useState<SubMap>({});
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -52,12 +51,12 @@ export default function MedFormsAdminPage() {
     const today = ymd(new Date());
     const [bRes, sRes] = await Promise.all([
       supabase.from("bookings")
-        .select("id,reservation_no,booker_name,students,accom_type,house_no,accom_room,checkin_date,checkout_date,status,academy_option")
+        .select("id,reservation_no,booker_name,students,accom_type,house_no,accom_room,checkin_date,checkout_date,status")
         .gte("checkout_date", today)
         .order("checkin_date", { ascending: true }),
       supabase.from("app_settings").select("value").eq("key", KEY).maybeSingle(),
     ]);
-    const out: Row[] = [];
+    const out: StuRow[] = [];
     (bRes.data || []).forEach((b: any) => {
       if (String(b.status || "").includes("취소")) return;
       let sts: { kor: string; eng: string }[] = [];
@@ -69,13 +68,16 @@ export default function MedFormsAdminPage() {
             .map((s: any) => ({ kor: (s.korName || s.name_kr || "").trim(), eng: (s.engName || s.name_en || "").trim() }));
         }
       } catch { /* ignore */ }
-      if (sts.length === 0) return; // 학생 없는 예약은 상비약 대상 아님
+      if (sts.length === 0) return;
       const room = String(b.house_no || b.accom_room || "").trim().replace(/^DH[\s-]*/i, "").toUpperCase();
-      out.push({
-        id: b.id, reservation_no: b.reservation_no || "", booker_name: b.booker_name || "",
-        accom_type: b.accom_type || "", room,
-        checkin_date: (b.checkin_date || "").slice(0, 10), checkout_date: (b.checkout_date || "").slice(0, 10),
-        academy_option: !!b.academy_option, students: sts,
+      sts.forEach(s => {
+        out.push({
+          key: `${b.id}|${s.kor || s.eng}`,
+          booking_id: b.id, kor: s.kor, eng: s.eng,
+          booker: b.booker_name || "", reservation_no: b.reservation_no || "",
+          accom_type: b.accom_type || "", room,
+          checkin_date: (b.checkin_date || "").slice(0, 10),
+        });
       });
     });
     setRows(out);
@@ -99,34 +101,34 @@ export default function MedFormsAdminPage() {
     }).catch(() => {});
   }
 
-  function toggle(r: Row) {
+  function toggle(r: StuRow) {
     const next = { ...sub };
-    if (next[r.id]) delete next[r.id];
-    else next[r.id] = { at: new Date().toISOString() };
+    if (next[r.key]) delete next[r.key];
+    else next[r.key] = { at: new Date().toISOString() };
     saveSub(next);
   }
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return rows.filter(r => {
-      const done = !!sub[r.id];
+      const done = !!sub[r.key];
       if (tab === "pending" && done) return false;
       if (tab === "done" && !done) return false;
       if (!query) return true;
-      return [r.booker_name, r.reservation_no, ...r.students.map(s => s.kor), ...r.students.map(s => s.eng)]
-        .some(v => v && v.toLowerCase().includes(query));
+      return [r.kor, r.eng, r.booker, r.reservation_no].some(v => v && v.toLowerCase().includes(query));
     });
   }, [rows, sub, q, tab]);
 
-  const doneCount = rows.filter(r => !!sub[r.id]).length;
+  const doneCount = rows.filter(r => !!sub[r.key]).length;
   const pendingCount = rows.length - doneCount;
 
   const byMonth = useMemo(() => {
-    const m = new Map<string, Row[]>();
+    const m = new Map<string, StuRow[]>();
     for (const r of filtered) {
       const k = r.checkin_date.slice(0, 7) || "기타";
       const arr = m.get(k) || []; arr.push(r); m.set(k, arr);
     }
+    for (const arr of m.values()) arr.sort((a, b) => (a.kor || a.eng).localeCompare(b.kor || b.eng, "ko"));
     return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
 
@@ -145,14 +147,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .tabs button.ac{background:#1a6fc4;border-color:#1a6fc4;color:#fff}
 .srch{padding:9px 13px;border:1px solid #cbd5e1;border-radius:9px;font-size:13px;font-family:inherit;width:220px;outline:none}
 .mon{font-size:14px;font-weight:800;color:#334155;margin:18px 0 8px}
-.card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:8px}
-.row{display:flex;align-items:center;gap:14px;padding:12px 16px;flex-wrap:wrap}
-.dd{min-width:44px;font-weight:800;font-size:13px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);overflow:hidden;margin-bottom:6px}
+.row{display:flex;align-items:center;gap:14px;padding:11px 16px;flex-wrap:wrap}
+.dd{min-width:48px;font-weight:800;font-size:12.5px}
 .dd.red{color:#dc2626}.dd.org{color:#d97706}.dd.grn{color:#16a34a}
-.bk{min-width:90px;font-weight:800;font-size:14.5px}
-.rm{min-width:120px;font-size:12.5px;color:#475569;font-weight:600}
-.stu{flex:1;display:flex;gap:5px;flex-wrap:wrap}
-.stu span{font-size:12px;background:#eef2ff;color:#4338ca;border-radius:7px;padding:3px 9px;font-weight:700}
+.stuN{min-width:80px;font-weight:800;font-size:15px}
+.stuE{min-width:110px;font-size:12px;color:#6366f1;font-weight:600}
+.bk{min-width:110px;font-size:12.5px;color:#64748b}
+.rm{flex:1;font-size:12.5px;color:#475569;font-weight:600}
 .st-done{background:#dcfce7;color:#166534}
 .st-pend{background:#fef2f2;color:#dc2626}
 .btn{padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid #cbd5e1;background:#fff;color:#475569;white-space:nowrap}
@@ -171,40 +173,37 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <button className={tab === "pending" ? "ac" : ""} onClick={() => setTab("pending")}>미제출</button>
           <button className={tab === "done" ? "ac" : ""} onClick={() => setTab("done")}>제출완료</button>
         </div>
-        <input className="srch" placeholder="🔍 예약자·학생 이름 검색" value={q} onChange={e => setQ(e.target.value)} />
+        <input className="srch" placeholder="🔍 학생·예약자 이름 검색" value={q} onChange={e => setQ(e.target.value)} />
       </div>
       <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>
-        체크인(수업 시작) 예정~진행 중이면서 학생이 있는 예약만 표시됩니다 · [안내서 출력] = 아이별 1장 자동 생성
+        학생 1명 = 1행 · 체크인(수업) 예정~진행 중인 학생만 표시 · 제출 체크는 아이별로 저장됩니다
       </div>
 
       {loading ? (
         <div className="empty">불러오는 중...</div>
       ) : filtered.length === 0 ? (
-        <div className="empty">해당하는 예약이 없습니다.</div>
+        <div className="empty">해당하는 학생이 없습니다.</div>
       ) : byMonth.map(([mon, list]) => (
         <div key={mon}>
-          <div className="mon">📅 {Number(mon.slice(0, 4))}년 {Number(mon.slice(5, 7))}월 · {list.length}가족</div>
+          <div className="mon">📅 {Number(mon.slice(0, 4))}년 {Number(mon.slice(5, 7))}월 체크인 · 학생 {list.length}명</div>
           {list.map(r => {
             const d = dday(r.checkin_date);
             const started = d != null && d <= 0;
             const ddCls = d == null ? "" : d <= 7 ? "red" : d <= 30 ? "org" : "grn";
-            const done = !!sub[r.id];
+            const done = !!sub[r.key];
             return (
-              <div className="card" key={r.id}>
+              <div className="card" key={r.key}>
                 <div className="row">
                   <span className={`dd ${ddCls}`}>{d == null ? "-" : started ? "체류중" : `D-${d}`}</span>
-                  <span className="bk" title={r.reservation_no}>{r.booker_name || "-"}</span>
-                  <span className="rm">🏠 {r.room || r.accom_type}{r.academy_option ? " · 🏫" : ""}</span>
-                  <div className="stu">
-                    {r.students.map((s, i) => <span key={i}>{s.kor || s.eng}</span>)}
-                  </div>
-                  <span className="chip" style={{ fontSize: 11.5 }} >
-                    <span className={`chip ${done ? "st-done" : "st-pend"}`} style={{ padding: "4px 12px" }}>
-                      {done ? `✓ 제출완료${sub[r.id]?.at ? " · " + fmtMD(sub[r.id].at.slice(0, 10)) : ""}` : "미제출"}
-                    </span>
+                  <span className="stuN">{r.kor || r.eng}</span>
+                  <span className="stuE">{r.eng}</span>
+                  <span className="bk" title={r.reservation_no}>👩 {r.booker || "-"}</span>
+                  <span className="rm">🏠 {r.room || r.accom_type}</span>
+                  <span className={`chip ${done ? "st-done" : "st-pend"}`} style={{ fontSize: 11.5, padding: "4px 12px" }}>
+                    {done ? `✓ 제출완료${sub[r.key]?.at ? " · " + fmtMD(sub[r.key].at.slice(0, 10)) : ""}` : "미제출"}
                   </span>
                   <button className="btn" onClick={() => toggle(r)}>{done ? "↩ 미제출로" : "✓ 제출 처리"}</button>
-                  <button className="btn pr" onClick={() => window.open(`/admin/med-form?bookingId=${r.id}`, "_blank")}>🖨 안내서 출력</button>
+                  <button className="btn pr" onClick={() => window.open(`/admin/med-form?bookingId=${r.booking_id}`, "_blank")}>🖨 안내서</button>
                 </div>
               </div>
             );
