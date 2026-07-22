@@ -768,6 +768,32 @@ function InvoicePageInner(){
       const normalizedRoom=rawRoom.replace(/^dh/i,"").replace(/\s+/g,"").toUpperCase();
       setCheckin(c=>({...c,pickup:data.pickup||"O",drop:data.drop_off||"O",pickupPlace:data.pickup_place||"",flightIn:data.flight_in||"",flightOut:data.flight_out||"",houseNo:normalizedRoom,specialRequest:data.special_request||""}));
       setAdminOnly({agency:data.agency||"개인",ssp:data.ssp||"O"});
+      // 🏫 숙소 단독 + 아카데미 별도 등록(academy_option): 수업료(통학형 요금표)를 추가 항목으로 자동 세팅
+      if(data.academy_option&&(data.accom_type||"").includes("단독")){
+        try{
+          const kidsN=Math.max(1,(sts.filter((st:any)=>String(st?.korName||st?.name_kr||"").trim()).length)||Number(data.children)||1);
+          const s0:any=sts[0]||{};
+          const aStart=s0.academyStart||data.academy_start||data.checkin_date||"";
+          const aEnd=s0.academyEnd||data.academy_end||data.checkout_date||"";
+          let aw=0;
+          if(aStart&&aEnd){
+            const diff=Math.round((new Date(aEnd).getTime()-new Date(aStart).getTime())/86400000);
+            aw=Math.max(1,Math.round((diff+3)/7));
+          }
+          if(!aw&&data.accom_weeks)aw=Number(data.accom_weeks)||0;
+          if(aw>0){
+            const pk=isPeak(aStart);
+            const amt=commuteUnitPrice(aw,pk?"peak":"off")*kidsN;
+            const label=`아카데미 수업료 ${aw}주 × 학생 ${kidsN}명 (${pk?"성수기":"비수기"})`;
+            setBilling(b=>{
+              if(b.additions.some(x=>(x.name||"").startsWith("아카데미 수업료")))return b;
+              const item={id:Date.now(),name:label,amount:amt};
+              const empty=b.additions.length===1&&!b.additions[0].name&&!b.additions[0].amount;
+              return {...b,additions:empty?[item]:[...b.additions,item]};
+            });
+          }
+        }catch{/* 자동 추가 실패해도 인보이스는 정상 진행 */}
+      }
       if(data.checkin_date) setA1CI(data.checkin_date);
       // accom_type 매핑 (booking → calculator)
       const _at = data.accom_type as string | undefined;

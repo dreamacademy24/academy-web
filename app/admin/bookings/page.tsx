@@ -267,7 +267,7 @@ export default function AdminBookingsPage(){
     setStuAck(next);
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`,{method:"POST",headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||"",Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||""}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify({key:"stu_mismatch_ack",value:next,updated_at:new Date().toISOString()})}).catch(()=>{});
   }
-  const [stuView,setStuView]=useState<"list"|"cal">("list");
+  const [stuView,setStuView]=useState<"list"|"cal"|"now">("list");
   const [calPrintHalf,setCalPrintHalf]=useState<"all"|"1st"|"2nd">("all");
   const _now=new Date();
   const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
@@ -841,6 +841,10 @@ export default function AdminBookingsPage(){
   .cal-stu-in .en,.cal-stu-out .en{font-size:7.5px !important;}.cal-stu-in .meta,.cal-stu-out .meta{font-size:7px !important;}
   /* 월 타이틀 가운데 정렬 */
   .cal-title{text-align:center !important;width:100%;font-size:14px !important;margin-bottom:6mm !important;}
+  /* 등원중 리스트 인쇄 */
+  .att-wrap .ss{min-width:0 !important;width:100% !important;font-size:10.5px !important;}
+  .att-wrap .ss th,.att-wrap .ss td{padding:5px 6px !important;}
+  .att-wrap .ss-w{box-shadow:none !important;border:1px solid #ddd !important;overflow:visible !important;}
 }
   `}</style>
 
@@ -1214,9 +1218,11 @@ export default function AdminBookingsPage(){
           <div style={{display:"flex",gap:4}}>
             <button className={`sub-tab${stuView==="list"?" ac":""}`} onClick={()=>setStuView("list")}>📋 리스트</button>
             <button className={`sub-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
+            <button className={`sub-tab${stuView==="now"?" ac":""}`} onClick={()=>setStuView("now")}>🏫 등원중</button>
           </div>
           <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
+          {stuView==="now"&&<button className="sub-tab no-print" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄</button>}
           {stuView==="cal"&&<div style={{display:"flex",gap:4,marginLeft:"auto",alignItems:"center"}}>
             <select className="no-print" value={calPrintHalf} onChange={e=>setCalPrintHalf(e.target.value as any)} style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,fontFamily:"inherit",cursor:"pointer"}}>
               <option value="all">전체 (한 장)</option>
@@ -1245,6 +1251,7 @@ export default function AdminBookingsPage(){
             ⚠️ 날짜 불일치 {mismatchCount}명 — 예약과 달력 값이 다릅니다 (달력이 틀릴 수 있어요!): {sorted.filter(liveWarn).slice(0,10).map(s=>s.korName||s.engName).join(", ")}{mismatchCount>10?" 외":""} · 🔴❗ 클릭 = 의도된 날짜로 확인 처리 (중도입학/아웃)
           </div>
         )}
+        {stuView!=="now"&&(<>
         <div className="sub-tabs" style={{marginBottom:8}}>
           <span style={{fontSize:11,color:"#6b7c93",fontWeight:700,padding:"6px 8px"}}>년도:</span>
           {["",String(_now.getFullYear()-1),String(_now.getFullYear()),String(_now.getFullYear()+1)].map(y=>(
@@ -1257,7 +1264,49 @@ export default function AdminBookingsPage(){
             <button key={m||"all-m"} className={`sub-tab${stuMonthNum===m?" ac":""}`} onClick={()=>setStuMonthNum(m)}>{m?parseInt(m)+"월":"전체"}</button>
           ))}
         </div>
-        {stuView==="list"?(
+        </>)}
+        {stuView==="now"?(()=>{
+          const _tds=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;})();
+          const att=studentsList.filter(s=>{
+            if((s.status||"").includes("취소"))return false;
+            if(!s.academyStart||!s.academyEnd)return false;
+            if(!(s.academyStart<=_tds&&s.academyEnd>=_tds))return false;
+            if(!q)return true;
+            return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
+          }).sort((a,b)=>{
+            const g=(x:StudentRow)=>x.grade==="킨더"?0:1;
+            if(g(a)!==g(b))return g(a)-g(b);
+            return (a.academyEnd||"").localeCompare(b.academyEnd||"");
+          });
+          const kN=att.filter(s=>s.grade==="킨더").length;
+          const jN=att.length-kN;
+          const dd=(s:StudentRow)=>{const d=Math.round((new Date(s.academyEnd).getTime()-new Date(_tds).getTime())/86400000);return d<=0?"오늘 종료":`D-${d}`;};
+          const KRD=["일","월","화","수","목","금","토"];
+          const tdd=new Date(_tds+"T00:00:00");
+          return(<div className="att-wrap">
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"4px 0 10px",flexWrap:"wrap"}}>
+              <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>🏫 오늘 등원중 학생 · {tdd.getFullYear()}.{tdd.getMonth()+1}.{tdd.getDate()} ({KRD[tdd.getDay()]})</div>
+              <span style={{fontSize:12.5,fontWeight:700,background:"#eef2ff",color:"#4338ca",borderRadius:999,padding:"3px 12px"}}>총 {att.length}명 · 킨더 {kN} · 주니어 {jN}</span>
+            </div>
+            <div className="ss-w"><table className="ss"><thead><tr>
+              <th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>
+            </tr></thead><tbody>
+              {att.length===0?<tr><td colSpan={10} className="empty">오늘 등원 중인 학생이 없습니다.</td></tr>:
+              att.map(s=>(<tr key={s.key}>
+                <td>{s.grade||"-"}</td>
+                <td style={{fontWeight:700}}>{s.korName||"-"}</td>
+                <td>{s.engName||"-"}</td>
+                <td>{s.age||"-"}</td>
+                <td>{fmtAccom(s as unknown as Record<string,string>)}</td>
+                <td>{s.academyStart}</td>
+                <td>{s.academyEnd}</td>
+                <td style={{fontWeight:700,color:dd(s)==="오늘 종료"?"#dc2626":"#166534"}}>{dd(s)}</td>
+                <td>{s.booker_name||"-"}</td>
+                <td>{s.photo||""}</td>
+              </tr>))}
+            </tbody></table></div>
+          </div>);
+        })():stuView==="list"?(
         <div className="ss-w"><table className="ss"><thead><tr>
           {stuCols.map(c=><th key={c.key} onClick={()=>toggleStuSort(c.key)}>{c.label}<span className={arrCls(c.key)}>{arr(c.key)}</span></th>)}
         </tr></thead><tbody>
