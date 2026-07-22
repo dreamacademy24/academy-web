@@ -82,7 +82,8 @@ table{width:100%;border-collapse:collapse}
 .notes{font-size:12.5px;line-height:1.85;color:#333a4b}
 .sign{display:flex;gap:9mm;align-items:flex-end;font-size:13.5px;margin-top:5mm}
 .sign .ln{border-bottom:1px solid #6a7183;min-width:42mm;display:inline-block;height:6mm}
-.ft{position:absolute;bottom:6mm;left:0;right:0;text-align:center;font-size:10px;color:#98a0ad}
+.ft{margin:9mm 0 0;text-align:center;font-size:10px;color:#98a0ad}
+.wline{display:inline-block;border-bottom:1px solid #8a91a3;height:5.5mm;vertical-align:bottom}
 @media print{
   @page{size:A4;margin:0}
   body{background:#fff}
@@ -120,7 +121,7 @@ table{width:100%;border-collapse:collapse}
               </tr>
               <tr>
                 <td className="l">생년월일</td><td className="v">{st.birth}</td>
-                <td className="l">체중</td><td>kg &nbsp;<span className="hint">※ 용량 확인에 중요해요</span></td>
+                <td className="l">체중</td><td><span className="wline" style={{ width: "22mm" }}></span> kg &nbsp;<span className="hint">※ 용량 확인에 중요해요</span></td>
               </tr>
               <tr>
                 <td className="l">약물 알레르기</td>
@@ -128,7 +129,7 @@ table{width:100%;border-collapse:collapse}
               </tr>
               <tr>
                 <td className="l">해열제 복용 기준</td>
-                <td colSpan={3}>체온 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ℃ 이상일 때 복용을 원해요 &nbsp;<span className="hint">※ 아이마다 기준이 달라 꼭 적어주세요</span></td>
+                <td colSpan={3}>체온 <span className="wline" style={{ width: "18mm" }}></span> ℃ 이상일 때 복용을 원해요 &nbsp;<span className="hint">※ 아이마다 기준이 달라 꼭 적어주세요</span></td>
               </tr>
               <tr>
                 <td className="l">비상연락처</td>
@@ -173,8 +174,8 @@ table{width:100%;border-collapse:collapse}
             <span>보호자 성함 : <span className="ln"></span></span>
             <span>서명 : <span className="ln"></span></span>
           </div>
+          <div className="ft">DREAM ACADEMY · 아이 1명당 1장씩 작성해 주세요 · 문의: 카카오톡 채널</div>
         </div>
-        <div className="ft">DREAM ACADEMY · 아이 1명당 1장씩 작성해 주세요 · 문의: 카카오톡 채널</div>
       </div>
     ))}
   </>);
