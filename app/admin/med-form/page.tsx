@@ -57,6 +57,7 @@ body{background:#e8eaf1}
 .bar b{font-size:15px}
 .bar .info{font-size:12.5px;opacity:.85}
 .bar button{margin-left:auto;padding:9px 22px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.bar .backb{margin-left:0;padding:8px 14px;background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.35)}
 .page{width:210mm;min-height:297mm;background:#fff;margin:16px auto;position:relative;page-break-after:always}
 .hd{background:#fff;color:#212a59;padding:6mm 12mm 3.5mm;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #212a59}
 .hd h1{font-size:24px;font-weight:900}
@@ -93,6 +94,7 @@ table{width:100%;border-collapse:collapse}
     `}</style>
 
     <div className="bar">
+      <button className="backb" onClick={() => { if (window.history.length > 1) window.history.back(); else window.close(); }}>← 뒤로</button>
       <b>💊 상비약 복용 안내서</b>
       <span className="info">{booker && `${booker}님 예약 · `}학생 {students.length}명 · 1명당 1장</span>
       <button onClick={() => window.print()}>🖨️ 인쇄</button>

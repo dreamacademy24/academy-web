@@ -161,7 +161,7 @@ export default function MedFormsAdminPage() {
             {d == null ? "" : started ? "체류중" : `D-${d}`}{urgent ? " ⚠ 체크인 임박" : ""}
           </span>
           <span style={{ flex: 1 }} />
-          <button className="pbtn" onClick={() => window.open(`/admin/med-form?bookingId=${f.booking_id}`, "_blank")}>
+          <button className="pbtn" onClick={() => { window.location.href = `/admin/med-form?bookingId=${f.booking_id}`; }}>
             🖨 안내서 {f.students.length}장
           </button>
         </div>
