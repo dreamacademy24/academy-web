@@ -1490,6 +1490,7 @@ function InvoicePageInner(){
           </tbody></table>
         </div>
 
+        {!(dhOnly&&!acadOpt)&&(
         <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div>
           <table className="tb"><thead><tr><th>No.</th><th>Name</th><th>Age</th><th>Course</th><th>Start</th><th>End</th></tr></thead><tbody>
             {students.map((s,i)=>{
@@ -1502,6 +1503,7 @@ function InvoicePageInner(){
             })}
           </tbody></table>
         </div>
+        )}
 
         {!isCommute&&<><div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>
           {billing.items.length>0&&(
@@ -1637,7 +1639,8 @@ function InvoicePageInner(){
     <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>setLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
   </div>
 
-  {/* ── 섹션3: 학생 정보 ── */}
+  {/* ── 섹션3: 학생 정보 — 드하 단독(숙소만·아카데미 미등록)은 숨김 ── */}
+  {!(dhOnly&&!acadOpt)&&(
   <div className="fs"><h2>학생 정보</h2>
     {students.map((s,idx)=>(
       <div className="sc" key={s.id}>
@@ -1651,6 +1654,7 @@ function InvoicePageInner(){
     ))}
     {students.length<6&&<button className="bs bd" onClick={addStudent}>+ 학생 추가</button>}
   </div>
+  )}
 
   {/* ── 섹션4: 결제 정보 ── */}
   <div className="fs"><h2>결제 정보</h2>
@@ -1731,9 +1735,9 @@ function InvoicePageInner(){
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
-      <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
+      {!(dhOnly&&!acadOpt)&&(<div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div><table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>기간</th><th>사진허용</th></tr></thead><tbody>
         {students.map((s,i)=>{const endVal=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks);return <tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(endVal)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>;})}
-      </tbody></table></div>
+      </tbody></table></div>)}
 
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
         {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
@@ -1833,7 +1837,7 @@ function InvoicePageInner(){
             </tbody></table>
           </div>
 
-          {students.length>0&&(
+          {students.length>0&&!(dhOnly&&!acadOpt)&&(
             <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Student Information</div>
               <table className="tb"><thead><tr><th>이름(한글)</th><th>영문이름</th><th>나이</th><th>킨더/주니어</th><th>아카데미 기간</th><th>사진허용</th></tr></thead><tbody>
                 {students.map((s,i)=>{const endVal=s.academyEnd||calcAcademyEnd(s.academyStart,s.academyWeeks);return <tr key={i}><td>{s.korName}</td><td>{s.engName}</td><td>{s.age}</td><td>{s.grade}</td><td>{s.academyStart?`${fmtDate(s.academyStart)}~${fmtDate(endVal)} (${s.academyWeeks}주)`:s.academyWeeks+"주"}</td><td>{s.photo}</td></tr>;})}
