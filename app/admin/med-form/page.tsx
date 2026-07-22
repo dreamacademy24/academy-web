@@ -58,15 +58,15 @@ body{background:#e8eaf1}
 .bar .info{font-size:12.5px;opacity:.85}
 .bar button{margin-left:auto;padding:9px 22px;border:none;border-radius:8px;background:#22c55e;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 .page{width:210mm;min-height:297mm;background:#fff;margin:16px auto;position:relative;page-break-after:always}
-.hd{background:#212a59;color:#fff;padding:10mm 12mm 8mm;display:flex;justify-content:space-between;align-items:flex-end}
+.hd{background:#fff;color:#212a59;padding:9mm 12mm 5mm;display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #212a59}
 .hd h1{font-size:27px;font-weight:900}
-.hd .sub{font-size:13px;opacity:.85;margin-top:2.5mm}
+.hd .sub{font-size:13px;color:#6a7183;margin-top:2.5mm}
 .hd .brand{text-align:right}
 .hd .brand b{font-size:15px;letter-spacing:1px}
-.hd .brand div{font-size:10px;opacity:.8}
+.hd .brand div{font-size:10px;color:#8a91a3}
 .wrap{padding:7mm 12mm}
 .notice{background:#fdf3d7;border:1.5px solid #f3dfa0;border-radius:3mm;padding:4mm 5.5mm;font-size:13px;color:#7a5104;line-height:1.7}
-.notice .tt{font-size:14.5px;font-weight:900}
+.notice .tt{font-size:15px;font-weight:900;color:#dc2626}
 .notice .sm{font-size:11px;color:#9a7a2e}
 h2{font-size:16.5px;color:#212a59;border-bottom:2px solid #212a59;padding-bottom:2mm;margin:6mm 0 3.5mm}
 h2 span{font-weight:400;font-size:12.5px;color:#6a7183}
@@ -75,7 +75,7 @@ table{width:100%;border-collapse:collapse}
 .info-t td.l{background:#f2f4f8;color:#4a5162;width:33mm;font-weight:800;font-size:12.5px}
 .info-t td.v{font-weight:700;font-size:14.5px}
 .hint{color:#98a0ad;font-size:10px;font-weight:400}
-.med th{background:#212a59;color:#fff;font-size:12px;padding:3mm 1mm;font-weight:800}
+.med th{background:#eef0f6;color:#212a59;font-size:12px;padding:3mm 1mm;font-weight:800;border:1px solid #ccd2dc}
 .med td{border:1px solid #ccd2dc;height:13mm;font-size:12.5px;text-align:center;vertical-align:middle}
 .med tr.ex td{background:#eceef5;color:#6a7183;height:9mm;font-size:11px}
 .exb{font-size:9px;font-weight:800;color:#8a91a3;margin-right:1.5mm}
@@ -160,15 +160,15 @@ table{width:100%;border-collapse:collapse}
 
           <h2>3. 복용 케어 안내</h2>
           <div className="notes">
-            · 아이가 열이나 복통을 호소하면 <b>보호자님께 먼저 안내(연락) 드린 후</b> 기재된 용량으로 복용을 도와드립니다.<br />
-            · 단, <b>38℃ 이상 고열</b> 또는 <b>심한 복통</b>을 호소하는 경우에는 연락이 닿지 않아도 <b>학원 판단하에 즉시 복용</b>시켜 드립니다.<br />
-            · <b>38℃ 이상 발열 시에는 해열제 복용 후 하원(조퇴)</b>해야 하며, 가정에서 회복 후 등원해 주세요.<br />
-            · 기재된 용량·간격 안에서만 복용을 도와드리며, 병원 처방약은 처방전(복약안내문) 사본을 함께 전달해 주세요.<br />
-            · 보내주신 상비약은 <b>원에서 보관</b>하며, <b>졸업식 때 돌려드립니다.</b>
+            · 아이가 열이나 복통을 호소하면 <b>보호자님께 먼저 연락드린 후</b>, 기재해 주신 용량에 맞춰 약을 챙겨 먹입니다.<br />
+            · 단, <b>38℃ 이상 고열</b>이나 <b>심한 복통</b>일 때는 연락이 닿지 않아도 <b>학원 판단으로 먼저 약을 먹인 뒤</b> 안내드립니다.<br />
+            · <b>38℃ 이상 발열 시에는 해열제를 먹인 후 하원(조퇴)</b>하게 되며, 가정에서 회복한 뒤 등원해 주세요.<br />
+            · 약은 기재해 주신 <b>용량과 간격 안에서만</b> 챙겨드리며, 병원 처방약은 처방전(복약안내문) 사본을 함께 보내주세요.<br />
+            · 보내주신 상비약은 <b>원에서 보관</b>하고, <b>졸업식 때 돌려드립니다.</b>
           </div>
 
           <h2>4. 보호자 확인</h2>
-          <div className="notes">위 기재 내용과 3번 복용 케어 방침(고열·심한 복통 시 선복용, 38℃ 이상 발열 시 하원)에 동의합니다.</div>
+          <div className="notes">위 기재 내용과 3번 복용 케어 안내(고열·심한 복통 시 약을 먼저 먹인 뒤 안내, 38℃ 이상 발열 시 하원)에 동의합니다.</div>
           <div className="sign">
             <span>날짜 : &nbsp;20&nbsp;&nbsp;&nbsp;&nbsp;. &nbsp;&nbsp;&nbsp;&nbsp;. &nbsp;&nbsp;&nbsp;&nbsp;</span>
             <span>보호자 성함 : <span className="ln"></span></span>
