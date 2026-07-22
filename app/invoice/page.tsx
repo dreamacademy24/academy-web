@@ -646,10 +646,15 @@ function InvoicePageInner(){
       setConfirmedAt(j?.snapshot?.confirmed_at||new Date().toISOString());
       setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
       setHasSnapshot(true);
-      // 인보이스 확정 시 예약 상태를 "영수증발행"으로 변경 → 확정예약 탭에 표시
-      const {error:stErr}=await supabase.from("bookings").update({status:"영수증발행",updated_at:new Date().toISOString()}).eq("id",bookingId);
+      // 인보이스 확정 시 예약 상태 변경 + 체크인/체크아웃 자동 동기화 (인보이스에서 조정한 날짜가 예약 원본에 반영)
+      const upd:Record<string,unknown>={status:"영수증발행",updated_at:new Date().toISOString()};
+      if(!isCommute){
+        if(a1CI) upd.checkin_date=a1CI;
+        if(overallCO) upd.checkout_date=overallCO;
+      }
+      const {error:stErr}=await supabase.from("bookings").update(upd).eq("id",bookingId);
       if(stErr) console.error("[confirmInvoice status]",stErr);
-      alert("✅ 인보이스가 확정되었습니다."+(stErr?"":"\n(예약 상태: 영수증발행)"));
+      alert("✅ 인보이스가 확정되었습니다."+(stErr?"":"\n(예약 상태: 영수증발행 · 체크인/아웃 동기화)"));
     }catch(e){console.error(e);alert("확정 실패 — 네트워크/서버 확인");}
   }
   // "수정하기" 진입 — 확정 상태면 경고 후 confirmed_at = null로 풀고 편집 모드 진입
@@ -1174,7 +1179,7 @@ function InvoicePageInner(){
   const daysUntilCheckin=a1CI?Math.floor((new Date(a1CI).getTime()-Date.now())/86400000):999;
   const isFullPayment=daysUntilCheckin<60;
   const [forceFullPayment, setForceFullPayment] = useState(false);
-  const effectiveFullPayment = isFullPayment || forceFullPayment;
+  const effectiveFullPayment = isFullPayment || forceFullPayment || dhOnly; // 드림하우스 단독은 전액입금 정책
   function addD(){setBilling(b=>({...b,discounts:[...b.discounts,{id:Date.now(),name:"",amount:0}]}));}
   function rmD(id:number){setBilling(b=>({...b,discounts:b.discounts.filter(d=>d.id!==id)}));}
   function upD(id:number,f:string,v:string|number){setBilling(b=>({...b,discounts:b.discounts.map(d=>d.id===id?{...d,[f]:v}:d)}));}
