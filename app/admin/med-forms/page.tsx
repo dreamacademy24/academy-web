@@ -121,6 +121,12 @@ export default function MedFormsAdminPage() {
 
   const pendingFams = useMemo(() => searched.filter(f => !famDone(f)), [searched, famDone]);
   const doneFams = useMemo(() => searched.filter(f => famDone(f)), [searched, famDone]);
+  const submittedStus = useMemo(() => {
+    const out: { fam: Fam; stu: Stu }[] = [];
+    for (const f of fams) for (const st of f.students) if (sub[st.key]) out.push({ fam: f, stu: st });
+    out.sort((a, b) => (sub[b.stu.key]?.at || "").localeCompare(sub[a.stu.key]?.at || ""));
+    return out;
+  }, [fams, sub]);
 
   const totalStu = fams.reduce((n, f) => n + f.students.length, 0);
   const doneStu = fams.reduce((n, f) => n + f.students.filter(s => !!sub[s.key]).length, 0);
@@ -162,15 +168,18 @@ export default function MedFormsAdminPage() {
         {f.students.map(s => {
           const done = !!sub[s.key];
           return (
-            <label className={`srow${done ? " ok" : ""}`} key={s.key}>
-              <input type="checkbox" checked={done} onChange={() => toggleStu(s.key)} />
+            <div className={`srow${done ? " ok" : ""}`} key={s.key}>
               <b>{s.kor || s.eng}</b>
               {s.eng && <span className="en">{s.eng}</span>}
               <span style={{ flex: 1 }} />
-              {done
-                ? <span className="st ok">✓ {sub[s.key]?.at ? fmtMD(sub[s.key].at.slice(0, 10)) + " 제출" : "제출"}</span>
-                : <span className="st no">미제출</span>}
-            </label>
+              {done ? (<>
+                <span className="st ok">✓ {sub[s.key]?.at ? fmtMD(sub[s.key].at.slice(0, 10)) + " 제출완료" : "제출완료"}</span>
+                <button className="ubtn" onClick={() => toggleStu(s.key)}>↩ 되돌리기</button>
+              </>) : (<>
+                <span className="st no">미제출</span>
+                <button className="sbtn" onClick={() => toggleStu(s.key)}>✓ 제출완료</button>
+              </>)}
+            </div>
           );
         })}
       </div>
@@ -202,7 +211,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .dd{font-size:11.5px;font-weight:800}
 .dd.red{color:#dc2626}.dd.org{color:#d97706}.dd.grn{color:#16a34a}
 .pbtn{padding:5px 11px;border-radius:7px;border:1px solid #99b8b3;background:#fff;color:#0f766e;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.srow{display:flex;align-items:center;gap:10px;padding:7px 14px;border-top:1px solid #f6f7fa;cursor:pointer}
+.srow{display:flex;align-items:center;gap:10px;padding:6px 14px;border-top:1px solid #f6f7fa}
 .srow:first-of-type{border-top:none}
 .srow.ok{background:#f7fdf9}
 .srow input{width:17px;height:17px;accent-color:#16a34a;cursor:pointer;flex-shrink:0}
@@ -213,6 +222,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .st{font-size:11.5px;font-weight:700}
 .st.ok{color:#16a34a}
 .st.no{color:#dc2626}
+.sbtn{padding:5px 12px;border-radius:7px;border:none;background:#16a34a;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.sbtn:hover{background:#15803d}
+.ubtn{padding:4px 9px;border-radius:7px;border:1px solid #e2e8f0;background:#fff;color:#94a3b8;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .doneSec{margin-top:20px;background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:12px 16px}
 .doneHd{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;color:#166534}
 .doneHd .names{font-weight:400;color:#94a3b8;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -228,7 +240,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       <div className="stats">
         <div className="stat" style={{ background: "#fef2f2" }}><div className="n" style={{ color: "#dc2626" }}>{pendStu}</div><div className="l" style={{ color: "#991b1b" }}>미제출 학생</div></div>
         <div className="stat" style={{ background: "#fff7ed" }}><div className="n" style={{ color: "#d97706" }}>{weekPendStu}</div><div className="l" style={{ color: "#92400e" }}>이번주 체크인 미제출</div></div>
-        <div className="stat" style={{ background: "#f0fdf4" }}><div className="n" style={{ color: "#16a34a" }}>{doneStu}</div><div className="l" style={{ color: "#166534" }}>제출완료</div></div>
+        <div className="stat" style={{ background: "#f0fdf4", cursor: "pointer" }} onClick={() => { setShowDone(true); setTimeout(() => document.getElementById("doneSec")?.scrollIntoView({ behavior: "smooth" }), 80); }}><div className="n" style={{ color: "#16a34a" }}>{doneStu}</div><div className="l" style={{ color: "#166534" }}>제출완료 (클릭해서 보기)</div></div>
       </div>
 
       {loading ? (
@@ -249,14 +261,27 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         );
       })}
 
-      {doneFams.length > 0 && (
-        <div className="doneSec">
+      {doneStu > 0 && (
+        <div className="doneSec" id="doneSec">
           <div className="doneHd" onClick={() => setShowDone(v => !v)}>
-            <span>✓ 제출완료 {doneFams.length}가족</span>
-            <span className="names">— {doneFams.slice(0, 8).map(f => f.students.map(s => s.kor || s.eng).join("·")).join(" · ")}{doneFams.length > 8 ? " 외" : ""}</span>
+            <span>✓ 제출완료 학생 {doneStu}명</span>
+            <span className="names">— {submittedStus.slice(0, 10).map(x => x.stu.kor || x.stu.eng).join(" · ")}{submittedStus.length > 10 ? " 외" : ""}</span>
             <span style={{ color: "#64748b", fontSize: 12 }}>{showDone ? "▲ 접기" : "▼ 펼치기"}</span>
           </div>
-          {showDone && <div style={{ marginTop: 10 }}>{doneFams.map(famCard)}</div>}
+          {showDone && (
+            <div style={{ marginTop: 10 }}>
+              {submittedStus.map(x => (
+                <div className="srow ok" key={x.stu.key} style={{ borderTop: "1px solid #eef0f4" }}>
+                  <b>{x.stu.kor || x.stu.eng}</b>
+                  {x.stu.eng && <span className="en">{x.stu.eng}</span>}
+                  <span style={{ fontSize: 11.5, color: "#64748b" }}>👩 {x.fam.booker} · 🏠 {x.fam.room || x.fam.accom_type}</span>
+                  <span style={{ flex: 1 }} />
+                  <span className="st ok">✓ {sub[x.stu.key]?.at ? fmtMD(sub[x.stu.key].at.slice(0, 10)) + " 제출완료" : "제출완료"}</span>
+                  <button className="ubtn" onClick={() => toggleStu(x.stu.key)}>↩ 되돌리기</button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
