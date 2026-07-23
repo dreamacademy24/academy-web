@@ -93,6 +93,7 @@ export default function ResortPaymentsPage() {
     load();
   }
 
+  const [guestView, setGuestView] = useState(false);
   async function saveImage() {
     if (!viewInv) return;
     setSavingImg(true);
@@ -103,7 +104,7 @@ export default function ResortPaymentsPage() {
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
-      a.download = `invoice_${viewInv.invoice_no}${viewInv.confirm_no ? "_" + viewInv.confirm_no : ""}.png`;
+      a.download = `invoice_${viewInv.invoice_no}${viewInv.confirm_no ? "_" + viewInv.confirm_no : ""}${guestView ? "_guest" : ""}.png`;
       a.click();
     } finally { setSavingImg(false); }
   }
@@ -254,11 +255,12 @@ export default function ResortPaymentsPage() {
         <div className="inv-box" onClick={e => e.stopPropagation()}>
           <div className="no-print" style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 10 }}>
             <button className="chip" onClick={() => setConfirmNo(viewInv)}>{viewInv.confirm_no ? `컨펌넘버: ${viewInv.confirm_no} (수정)` : "🔖 컨펌넘버 입력"}</button>
+            <button className="chip" style={guestView ? { background: "#0f766e", color: "#fff", borderColor: "#0f766e" } : {}} onClick={() => setGuestView(v => !v)}>{guestView ? "👤 손님용 인보이스 (금액 숨김) ✓" : "👤 손님용 인보이스"}</button>
             <button className="chip" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
             <button className="chip" onClick={() => window.print()}>🖨️ 인쇄</button>
             <button className="chip" onClick={() => setViewInv(null)}>닫기</button>
           </div>
-          <ResortInvoiceDoc inv={viewInv} domId="pay-inv-doc" />
+          <ResortInvoiceDoc inv={viewInv} domId="pay-inv-doc" guestMode={guestView} />
         </div>
       </div>
     )}

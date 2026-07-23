@@ -84,6 +84,7 @@ export default function ResortInvoicePage() {
   const [specialReq, setSpecialReq] = useState("");
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<InvRow | null>(null);
+  const [guestView, setGuestView] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   // 손님 인보이스(스냅샷) 참고 내역 — 예약 선택 시 로드
   interface RefInfo { items: { label: string; price: number }[]; additions: { name: string; amount: number }[]; discounts: { name: string; amount: number }[]; special: string; lateCheckout: string }
@@ -472,9 +473,10 @@ ${signature}`);
             <button className="rtab" onClick={openEmailModal}>📧 이메일 보내기</button>
             <button className="rtab" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
             <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄</button>
+            <button className="rtab" style={guestView ? { background: "#0f766e", color: "#fff" } : {}} onClick={() => setGuestView(v => !v)}>{guestView ? "👤 손님용 ✓" : "👤 손님용 인보이스"}</button>
             <button className="rtab" onClick={() => setPreview(null)}>닫기</button>
           </div>
-          <ResortInvoiceDoc inv={preview} />
+          <ResortInvoiceDoc inv={preview} guestMode={guestView} />
         </div>
       )}
 

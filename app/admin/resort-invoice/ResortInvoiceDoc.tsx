@@ -16,7 +16,7 @@ const RESORT_X: Record<string, string> = { jaypark: "Dream Academy X J-park", cu
 
 function num(n: number) { return Number(n || 0).toLocaleString(); }
 
-export default function ResortInvoiceDoc({ inv, domId }: { inv: ResortInvDocRow; domId?: string }) {
+export default function ResortInvoiceDoc({ inv, domId, guestMode }: { inv: ResortInvDocRow; domId?: string; guestMode?: boolean }) {
   const items = Array.isArray(inv.items) && inv.items.length > 0
     ? inv.items
     : [{ label: `${inv.nights} nights in a ${inv.room_type} Room`, amount: inv.amount }];
@@ -45,7 +45,7 @@ export default function ResortInvoiceDoc({ inv, domId }: { inv: ResortInvDocRow;
       <div className="inv-top">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/dream-academy-logo.png" alt="Dream Company" style={{ height: 54, width: "auto" }} />
-        <div className="inv-title">INVOICE</div>
+        <div className="inv-title">INVOICE{guestMode && <div style={{ fontSize: 12, letterSpacing: 2, fontWeight: 700, textAlign: "center", color: "#92400e" }}>GUEST COPY</div>}</div>
       </div>
       <div className="inv-x">{RESORT_X[inv.resort] || ""}</div>
       <div className="inv-h2">Customer Information</div>
@@ -63,13 +63,19 @@ export default function ResortInvoiceDoc({ inv, domId }: { inv: ResortInvDocRow;
         <div className="po-h">Purchase Order</div>
         <div className="po-items">
           {items.map((it, i) => (
-            <div key={i} className="po-item"><span>{it.label}</span><span style={{ fontWeight: i === 0 ? 500 : 800 }}>{num(it.amount)}</span></div>
+            <div key={i} className="po-item"><span>{it.label}</span>{!guestMode && <span style={{ fontWeight: i === 0 ? 500 : 800 }}>{num(it.amount)}</span>}</div>
           ))}
         </div>
-        <div className="po-foot">
-          <div className="k">Total Amount</div><div className="v">{num(inv.amount)}</div>
-          <div className="k">Payment Amount</div><div className="v" style={{ borderRight: "none" }}>{num(inv.amount)}</div>
-        </div>
+        {guestMode ? (
+          <div className="po-foot" style={{ gridTemplateColumns: "170px 1fr" }}>
+            <div className="k">Payment</div><div className="v" style={{ textAlign: "left", borderRight: "none" }}>Fully settled by Dream Company (Travel Agency)</div>
+          </div>
+        ) : (
+          <div className="po-foot">
+            <div className="k">Total Amount</div><div className="v">{num(inv.amount)}</div>
+            <div className="k">Payment Amount</div><div className="v" style={{ borderRight: "none" }}>{num(inv.amount)}</div>
+          </div>
+        )}
       </div>
       <div className="inv-h2" style={{ marginTop: 26, fontSize: 19 }}>Other Confirmation Items</div>
       <div className="oc">
