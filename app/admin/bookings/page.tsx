@@ -268,6 +268,7 @@ export default function AdminBookingsPage(){
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`,{method:"POST",headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||"",Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||""}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify({key:"stu_mismatch_ack",value:next,updated_at:new Date().toISOString()})}).catch(()=>{});
   }
   const [stuView,setStuView]=useState<"list"|"cal"|"now">("list");
+  const [attWeekOff,setAttWeekOff]=useState<number|null>(null); // null=오늘, n=이번주 기준 주 오프셋
   const [calPrintHalf,setCalPrintHalf]=useState<"all"|"1st"|"2nd">("all");
   const _now=new Date();
   const [stuYear,setStuYear]=useState<string>(String(_now.getFullYear())); // "" = 전체, "2026" 등
@@ -1266,11 +1267,19 @@ export default function AdminBookingsPage(){
         </div>
         </>)}
         {stuView==="now"?(()=>{
-          const _tds=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;})();
+          const _fmt=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          const _tds=_fmt(new Date());
+          const _mon=(()=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;})();
+          let rangeS=_tds,rangeE=_tds;
+          if(attWeekOff!=null){
+            const ws=new Date(_mon);ws.setDate(ws.getDate()+attWeekOff*7);
+            const we=new Date(ws);we.setDate(ws.getDate()+6);
+            rangeS=_fmt(ws);rangeE=_fmt(we);
+          }
           const att=studentsList.filter(s=>{
             if((s.status||"").includes("취소"))return false;
             if(!s.academyStart||!s.academyEnd)return false;
-            if(!(s.academyStart<=_tds&&s.academyEnd>=_tds))return false;
+            if(!(s.academyStart<=rangeE&&s.academyEnd>=rangeS))return false;
             if(!q)return true;
             return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
           }).sort((a,b)=>(a.academyEnd||"9999").localeCompare(b.academyEnd||"9999"));
@@ -1279,10 +1288,23 @@ export default function AdminBookingsPage(){
           const dd=(s:StudentRow)=>{const d=Math.round((new Date(s.academyEnd).getTime()-new Date(_tds).getTime())/86400000);return d<=0?"오늘 종료":`D-${d}`;};
           const KRD=["일","월","화","수","목","금","토"];
           const tdd=new Date(_tds+"T00:00:00");
+          const _lbl=(ds:string)=>{const d=new Date(ds+"T00:00:00");return `${d.getMonth()+1}/${d.getDate()}(${KRD[d.getDay()]})`;};
+          const navBtn={padding:"5px 11px",borderRadius:8,border:"1px solid #cbd5e1",background:"#fff",color:"#475569",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"} as const;
+          const navAc={...navBtn,background:"#4f46e5",borderColor:"#4f46e5",color:"#fff"} as const;
           return(<div className="att-wrap">
             <div style={{display:"flex",alignItems:"center",gap:10,margin:"4px 0 10px",flexWrap:"wrap"}}>
-              <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>🏫 오늘 등원중 학생 · {tdd.getFullYear()}.{tdd.getMonth()+1}.{tdd.getDate()} ({KRD[tdd.getDay()]})</div>
+              <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e"}}>
+                {attWeekOff==null
+                  ?`🏫 오늘 등원중 학생 · ${tdd.getFullYear()}.${tdd.getMonth()+1}.${tdd.getDate()} (${KRD[tdd.getDay()]})`
+                  :`🏫 재학중 학생 · ${_lbl(rangeS)} ~ ${_lbl(rangeE)}`}
+              </div>
               <span style={{fontSize:12.5,fontWeight:700,background:"#eef2ff",color:"#4338ca",borderRadius:999,padding:"3px 12px"}}>총 {att.length}명 · 킨더 {kN} · 주니어 {jN}</span>
+              <div className="no-print" style={{display:"flex",gap:5,marginLeft:"auto",alignItems:"center"}}>
+                <button style={attWeekOff==null?navAc:navBtn} onClick={()=>setAttWeekOff(null)}>오늘</button>
+                <button style={attWeekOff===0?navAc:navBtn} onClick={()=>setAttWeekOff(0)}>이번주</button>
+                <button style={navBtn} onClick={()=>setAttWeekOff(o=>(o==null?0:o)-1)}>◀ 이전주</button>
+                <button style={navBtn} onClick={()=>setAttWeekOff(o=>(o==null?0:o)+1)}>다음주 ▶</button>
+              </div>
             </div>
             <div className="ss-w"><table className="ss"><thead><tr>
               <th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>
