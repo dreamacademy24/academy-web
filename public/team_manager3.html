@@ -6114,6 +6114,24 @@ const EXTRA_EVENTS=[
   {date:'2026-06-27',type:'field',title:'필드트립 마젤란십자가'},
 ];
 
+// 배포된 애프터스쿨/필드트립 (schedule_items) — 하드코딩 대신 실시간. 배포 데이터가 있는 달은 배포분 우선.
+let _extraDeployed=[];
+function loadDeployedExtras(){
+  return sbGet('schedule_items','type=in.(afterschool,fieldtrip)&is_deployed=eq.true&select=type,date,title').then(function(rows){
+    _extraDeployed=(rows||[]).filter(function(r){return r.date&&r.title;}).map(function(r){
+      var isF=r.type==='fieldtrip';
+      var t=String(r.title||'');
+      var pref=isF?'필드트립 ':'애프터스쿨 ';
+      return {date:String(r.date).slice(0,10),type:isF?'field':'after',title:(t.indexOf('필드트립')===0||t.indexOf('애프터스쿨')===0)?t:pref+t};
+    });
+  }).catch(function(){/* 오프라인 시 하드코딩 폴백 유지 */});
+}
+function getExtraEvents(){
+  var covered={};
+  _extraDeployed.forEach(function(e){covered[e.date.slice(0,7)+'|'+e.type]=1;});
+  return EXTRA_EVENTS.filter(function(e){return !covered[e.date.slice(0,7)+'|'+e.type];}).concat(_extraDeployed);
+}
+
 function isWeekA(date){
   var ref=new Date('2026-05-04');
   var d=new Date(date);
@@ -6297,7 +6315,7 @@ function _gatherEventsForDate(ds){
   _studentEvents.filter(function(e){return e.date===ds;}).forEach(function(e){
     if(_calIncludeType(e.type))evs.push({type:e.type,title:e.title});
   });
-  EXTRA_EVENTS.filter(function(e){return e.date===ds;}).forEach(function(e){
+  getExtraEvents().filter(function(e){return e.date===ds;}).forEach(function(e){
     if(_calIncludeType(e.type))evs.push({type:e.type,title:e.title});
   });
   if(_calIncludeType('shuttle')){
@@ -6325,7 +6343,11 @@ function calNav(dir){
 }
 function setCV(v,el){calView=v;document.querySelectorAll('.cal-vtb').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderCal();}
 var _calExpandedDays=new Set();
-function renderCal(){calView==='month'?renderMonthCal():renderWeekCal();}
+function renderCal(){
+  if(!_extraDeployedLoaded){_extraDeployedLoaded=true;loadDeployedExtras().then(function(){try{renderCal();}catch(e){}});}
+  calView==='month'?renderMonthCal():renderWeekCal();
+}
+let _extraDeployedLoaded=false;
 function calVis(){return tasks.filter(t=>t.shared);}
 
 function _appendCalEvent(cell,ev){
@@ -6366,7 +6388,7 @@ function _computeMonthStats(year,month){
         if(e.type==='checkin'||e.type==='checkout'||e.type==='pickup')stats.student++;
       }
     });
-    EXTRA_EVENTS.forEach(function(e){
+    getExtraEvents().forEach(function(e){
       if(e.date===ds){
         if(e.type==='field')stats.field++;
         else if(e.type==='after')stats.extra++;
@@ -6465,7 +6487,7 @@ function updateCalSidePanel(year,month){
   // 필드트립
   const ftEl=document.getElementById('calSideFieldtrip');
   if(ftEl){
-    const ftEvents=(typeof EXTRA_EVENTS!=='undefined'?EXTRA_EVENTS:[])
+    const ftEvents=getExtraEvents()
       .filter(function(e){return e.type==='field'&&e.date.startsWith(prefix);})
       .map(function(e){
         const day=parseInt(e.date.split('-')[2],10);
