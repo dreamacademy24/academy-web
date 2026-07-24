@@ -6782,6 +6782,28 @@ function renderEmpGuestTab(empId){
     .catch(function(e){var l=document.getElementById('bsList');if(l)l.innerHTML='<div style="color:#b91c1c;font-size:12px">불러오기 실패: '+esc(e&&e.message||e)+'</div>';});
 }
 function renderEmpBookingTab(){renderEmpGuestTab(curEmpId||(CU&&CU.id));}
+function _bsCmtFmt(ts){try{var t=new Date(new Date(ts).getTime()+8*3600000);return (t.getUTCMonth()+1)+'/'+t.getUTCDate()+' '+_dailyP2(t.getUTCHours())+':'+_dailyP2(t.getUTCMinutes());}catch(e){return '';}}
+function _bsCmtLoad(id){var box=document.getElementById('bsCmtList');if(!box)return;
+  fetch('/api/bookings/'+id+'/comments').then(function(r){return r.json();}).then(function(d){
+    var list=(d&&d.comments)||[];var box2=document.getElementById('bsCmtList');if(!box2)return;
+    if(!list.length){box2.innerHTML='<div style="color:var(--text3);font-size:12px">아직 코멘트가 없어요 — 첫 코멘트를 남겨보세요.</div>';return;}
+    var me=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+    box2.innerHTML=list.map(function(c){var mine=c.author===me;
+      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:8px 11px;margin-bottom:6px">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><b style="font-size:11.5px;color:#4f46e5">'+esc(c.author||'')+'</b>'+
+        '<span style="font-size:10.5px;color:var(--text3)">'+_bsCmtFmt(c.created_at)+'</span><div style="flex:1"></div>'+
+        (mine?'<button onclick="_bsCmtDel(\''+id+'\',\''+c.id+'\')" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:11px" title="삭제">🗑</button>':'')+
+        '</div><div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;line-height:1.55">'+esc(c.content||'')+'</div></div>';
+    }).join('');
+  }).catch(function(){var b2=document.getElementById('bsCmtList');if(b2)b2.innerHTML='<div style="color:#c0392b;font-size:12px">코멘트를 불러오지 못했어요</div>';});}
+function _bsCmtAdd(id){var inp=document.getElementById('bsCmtInp');var v=(inp&&inp.value||'').trim();if(!v)return;
+  var me=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||'직원'):'직원';inp.value='';
+  fetch('/api/bookings/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({author:me,content:v})})
+    .then(function(r){if(!r.ok)throw 0;_bsCmtLoad(id);}).catch(function(){alert('등록 실패 — 다시 시도해주세요');if(inp)inp.value=v;});}
+function _bsCmtDel(id,cid){if(!confirm('이 코멘트를 삭제할까요?'))return;
+  var me=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  fetch('/api/bookings/'+id+'/comments?comment_id='+encodeURIComponent(cid)+'&author='+encodeURIComponent(me),{method:'DELETE'})
+    .then(function(){_bsCmtLoad(id);}).catch(function(){});}
 function _bsIsMine(b){return !!(_bsMyName&&(b.assignee===_bsMyName||b.care_assignee===_bsMyName));}
 function _bsStudents(b){var st=b.students;if(typeof st==='string'){try{st=JSON.parse(st);}catch(e){st=[];}}return Array.isArray(st)?st:[];}
 function _bsSetChip(c){_bsChip=c;_bsRenderChips();_bsRenderList();}
@@ -6884,8 +6906,10 @@ function _bsSelect(id){
     '<div style="font-size:11px;color:var(--text3);margin-bottom:5px">🎓 학생 '+sts.length+'명</div><div style="margin-bottom:10px">'+stuHtml+'</div>'+
     '<div id="bsApps" style="font-size:12px;color:var(--text2);line-height:1.9;border-top:1px solid var(--border);padding-top:10px">신청 현황 불러오는 중…</div>'+
     (b.special_request?'<div style="margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:9px 12px;font-size:12.5px;color:#78350f">📝 '+esc(b.special_request)+'</div>':'')+
+    '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:12px;font-weight:800;color:var(--text2)">💬 손님 코멘트</span><span style="font-size:10.5px;color:var(--text3)">아이 특성·보호자 예민 포인트 등 — 누구나 작성, 모든 담당자에게 보여요</span></div><div id="bsCmtList" style="font-size:12.5px;color:var(--text3)">불러오는 중…</div><div style="display:flex;gap:6px;margin-top:8px"><input id="bsCmtInp" placeholder="코멘트 입력 후 Enter (예: 땅콩 알러지 주의, 사진 요청 많으심)" style="flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--surface)" onkeydown="if(event.key===\'Enter\')_bsCmtAdd(\''+id+'\')"><button onclick="_bsCmtAdd(\''+id+'\')" style="padding:8px 15px;border:none;background:#4f46e5;color:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">등록</button></div></div>'+
     (_bsIsMine(b)?'<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:12px;font-weight:800;color:#b45309">⭐ 내 담당 — 오늘 케어 체크</span><span id="empStuSum" style="font-size:11px;font-weight:800;color:var(--primary)"></span><div style="flex:1"></div>'+(isAdmin()?'<button onclick="_clEditItems()" style="padding:3px 9px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">⚙️ 체크 항목 편집</button>':'')+'</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>':'')+
   '</div>';
+  _bsCmtLoad(id);
   Promise.all([
     sbGet('shuttle_applications','booking_id=eq.'+id+'&select=tour_name,tour_date,people_count,status&order=tour_date').catch(function(){return null;}),
     sbGet('tutor_requests','booking_id=eq.'+id+'&select=status,children_names&limit=10').catch(function(){return null;}),
