@@ -101,13 +101,13 @@ export default function ResortInvoicePage() {
     try { setEmailTo(localStorage.getItem("resortEmail_" + resort) || ""); } catch {}
   }, [resort]);
 
-  // 제이파크 수신처 자동 분기: 7박 미만(단기) → rsvn@ / 7박 이상(장기) → travel@ (저장된 수동 입력이 있으면 그대로)
+  // 제이파크 수신처 자동 입력: rsvn@ + travel@ 두 곳 동시 발송 (저장된 수동 입력이 있으면 그대로)
   useEffect(() => {
     if (!preview || preview.resort !== "jaypark") return;
     let saved = "";
     try { saved = localStorage.getItem("resortEmail_jaypark") || ""; } catch {}
     if (saved) return; // 메이가 직접 저장한 주소 우선
-    setEmailTo(preview.nights < 7 ? "rsvn@jparkislandresort.com" : "travel@jparkislandresort.com");
+    setEmailTo("rsvn@jparkislandresort.com, travel@jparkislandresort.com");
   }, [preview]);
 
   const nights = calcNights(ps, pe);
@@ -314,7 +314,7 @@ ${signature}`);
     setSending(true);
     try {
       // 제이파크 기본 주소 2종(rsvn/travel)은 저장하지 않음 — 박 수 자동 분기가 계속 작동하도록
-      const jpDefaults = ["rsvn@jparkislandresort.com", "travel@jparkislandresort.com"];
+      const jpDefaults = ["rsvn@jparkislandresort.com", "travel@jparkislandresort.com", "rsvn@jparkislandresort.com, travel@jparkislandresort.com"];
       if (!(preview.resort === "jaypark" && jpDefaults.includes(to))) {
         try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
       }
