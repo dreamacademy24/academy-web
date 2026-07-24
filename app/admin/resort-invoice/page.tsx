@@ -84,6 +84,8 @@ export default function ResortInvoicePage() {
   const [specialReq, setSpecialReq] = useState("");
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<InvRow | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editNo, setEditNo] = useState<string>("");
   const [guestView, setGuestView] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   // 손님 인보이스(스냅샷) 참고 내역 — 예약 선택 시 로드
@@ -218,12 +220,48 @@ export default function ResortInvoicePage() {
     setGuestsKr(kr.join(", ")); setGuestsEn(en.join(", "));
   }
 
+  function loadForEdit(v: InvRow) {
+    setResort(v.resort as Resort);
+    setSelBooking("");
+    setGuest(v.guest_name || "");
+    setResNo(v.reservation_no || "");
+    setResStatus(v.res_status || "tentatively");
+    setGuestsKr(v.guests_kr || ""); setGuestsEn(v.guests_en || "");
+    setPs(v.period_start || ""); setPe(v.period_end || "");
+    setExtraP(String(v.extra_person || 0));
+    setSpecialReq(v.special_request || "");
+    const rk = (v.resort === "jaypark" ? JPARK_ROOMS : CUBENINE_ROOMS).find(r => r.label === v.room_type)?.key || "";
+    setRoomKey(rk);
+    const custom = (Array.isArray(v.items) ? v.items : []).filter(it =>
+      !/nights in a /.test(it.label) && !/^Extra Person/.test(it.label));
+    setCustomItems(custom);
+    setEditId(v.id); setEditNo(v.invoice_no);
+    setPreview(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function generate() {
     if (!guest.trim()) { alert("Reservation Name(영문 이름)을 입력해주세요."); return; }
     if (!ps || !pe || nights <= 0) { alert("체크인/체크아웃 날짜를 확인해주세요."); return; }
     if (!roomKey) { alert("룸 타입을 선택해주세요."); return; }
     if (items.length === 0) { alert("금액 항목이 없습니다. 단가를 확인해주세요."); return; }
     setSaving(true);
+    if (editId) {
+      const upd = {
+        resort, guest_name: guest.trim(), room_type: roomLabel, period_start: ps, period_end: pe, nights,
+        unit_price: Number(unit) || 0, extra_person: Number(extraP) || 0, extra_price: isJp ? JPARK_EXTRA_PERSON : 0,
+        amount, currency, rate_tier: tier,
+        items, guests_kr: guestsKr.trim() || null, guests_en: guestsEn.trim() || null,
+        reservation_no: resNo.trim() || null, res_status: resStatus, special_request: specialReq.trim() || null,
+      };
+      const { data, error } = await supabase.from("resort_invoices").update(upd).eq("id", editId).select().single();
+      setSaving(false);
+      if (error) { alert("수정 실패: " + error.message); return; }
+      setEditId(null); setEditNo("");
+      setPreview(data as InvRow);
+      loadInvoices();
+      return;
+    }
     const invoiceNo = `RI-${today().replace(/-/g, "")}-${String(Math.floor(Math.random() * 900) + 100)}`;
     const payload = {
       invoice_no: invoiceNo, resort, booking_id: selBooking || null, guest_name: guest.trim(),
@@ -461,7 +499,9 @@ ${signature}`);
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6 }}>
           <div style={{ fontSize: 15, fontWeight: 900 }}>Total: <span style={{ color: "#7c3aed" }}>{num(amount)} {currency}</span></div>
-          <button className="gen" disabled={saving} onClick={generate}>{saving ? "생성 중..." : "🧾 인보이스 생성"}</button>
+          {editId && <span style={{ fontSize: 12, fontWeight: 800, color: "#b45309", background: "#fef3c7", borderRadius: 8, padding: "5px 12px" }}>✏️ {editNo} 수정 중</span>}
+          {editId && <button className="rtab" onClick={() => { setEditId(null); setEditNo(""); }}>수정 취소</button>}
+          <button className="gen" disabled={saving} onClick={generate}>{saving ? "저장 중..." : (editId ? "💾 수정 저장" : "🧾 인보이스 생성")}</button>
         </div>
       </div>
 
@@ -474,6 +514,7 @@ ${signature}`);
             <button className="rtab" disabled={savingImg} onClick={saveImage}>{savingImg ? "저장 중..." : "📷 이미지 저장"}</button>
             <button className="rtab" onClick={() => window.print()}>🖨️ 인쇄</button>
             <button className="rtab" style={guestView ? { background: "#0f766e", color: "#fff" } : {}} onClick={() => setGuestView(v => !v)}>{guestView ? "👤 손님용 ✓" : "👤 손님용 인보이스"}</button>
+            <button className="rtab" style={{ color: "#b45309" }} onClick={() => preview && loadForEdit(preview)}>✏️ 수정</button>
             <button className="rtab" onClick={() => setPreview(null)}>닫기</button>
           </div>
           <ResortInvoiceDoc inv={preview} guestMode={guestView} />
@@ -488,7 +529,7 @@ ${signature}`);
           </tr></thead><tbody>
             {recent.map(v => (
               <tr key={v.id}>
-                <td style={{ fontWeight: 700, color: "#1a6fc4" }}>{v.invoice_no}</td>
+                <td><button onClick={() => setPreview(v)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", textDecoration: "underline" }}>{v.invoice_no}</button></td>
                 <td style={{ fontWeight: 700 }}>{v.guest_name}</td>
                 <td>{v.room_type}</td>
                 <td>{v.period_start} ~ {v.period_end}</td>
@@ -499,6 +540,7 @@ ${signature}`);
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, marginRight: 4 }} onClick={() => setPreview(v)}>보기</button>
+                  <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, marginRight: 4, color: "#b45309" }} onClick={() => loadForEdit(v)}>✏️ 수정</button>
                   <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, color: "#dc2626" }} onClick={() => removeInvoice(v.id)}>삭제</button>
                 </td>
               </tr>
