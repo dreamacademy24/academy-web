@@ -176,21 +176,27 @@ export default function ResortInvoicePage() {
     if ((b.seg1_type || "") === kw && b.seg1_checkin) { s = b.seg1_checkin; e = b.seg1_checkout || e; }
     else if ((b.seg2_type || "") === kw && b.seg2_checkin) { s = b.seg2_checkin; e = b.seg2_checkout || e; }
     setPs((s || "").slice(0, 10)); setPe((e || "").slice(0, 10));
-    // 룸 타입 자동 선택 (예약의 한글 룸타입 → 리조트 룸 키 매핑)
-    const rtRaw = ((resort === "jaypark" ? b.jp_room_type : b.cn_room_type) || b.accom_type || "");
-    let rk = "";
-    if (resort === "jaypark") {
-      if (/(오션.*디럭스|디럭스.*오션)/.test(rtRaw)) rk = "deluxe_ov";
-      else if (/(프리미어.*오션|오션.*프리미어)/.test(rtRaw)) rk = "premier_ov";
-      else if (/프리미어/.test(rtRaw)) rk = "premier";
-      else if (/마운틴/.test(rtRaw)) rk = "mountain_suite";
-      else if (/오션\s*스위트/.test(rtRaw)) rk = "ocean_suite";
-      else if (/디럭스/.test(rtRaw)) rk = "deluxe";
-    } else {
-      if (/오션/.test(rtRaw)) rk = "ocean_deluxe";
-      else if (/풀/.test(rtRaw)) rk = "poolside";
-    }
-    if (rk) setRoomKey(rk);
+    // 룸 타입 자동 선택 (예약의 한글 룸타입/텍스트 → 리조트 룸 키 매핑)
+    const roomKeyFromText = (txt: string): string => {
+      if (!txt) return "";
+      if (resort === "jaypark") {
+        if (/(막탄).*(오션)|(오션).*(막탄)/.test(txt)) return "mactan_suite_ov";
+        if (/막탄/.test(txt)) return "mactan_suite";
+        if (/(오션.*디럭스|디럭스.*오션)/.test(txt)) return "deluxe_ov";
+        if (/(프리미어.*오션|오션.*프리미어)/.test(txt)) return "premier_ov";
+        if (/프리미어/.test(txt)) return "premier";
+        if (/마운틴/.test(txt)) return "mountain_suite";
+        if (/오션\s*스(위|윗)트?/.test(txt)) return "ocean_suite";
+        if (/디럭스/.test(txt)) return "deluxe";
+        return "";
+      }
+      if (/오션/.test(txt)) return "ocean_deluxe";
+      if (/풀/.test(txt)) return "poolside";
+      return "";
+    };
+    const rtRaw = ((resort === "jaypark" ? b.jp_room_type : b.cn_room_type) || "");
+    const rk = roomKeyFromText(rtRaw) || roomKeyFromText(String(b.special_request || ""));
+    if (rk) setRoomKey(rk); else setRoomKey("");
     // 손님 인보이스 스냅샷 → 참고 내역 + 추가 항목 프리필 (금액은 페소로 직접 입력)
     setRefInfo(null); setCustomItems([]);
     fetch("/api/invoice/snapshot?booking_id=" + id).then(r => r.json()).then(d => {
@@ -207,6 +213,12 @@ export default function ResortInvoicePage() {
       // 추가 항목(조식·1박 추가 등)은 라벨만 복사 — 리조트 지불 금액(₱)은 직접 입력
       if (additions.length) setCustomItems(additions.map((x: { name: string }) => ({ label: koLabelToEn(x.name), amount: 0 })));
       if (special) setSpecialReq(special);
+      // 예약에 룸타입이 없으면 손님 인보이스 항목/추가항목 텍스트에서 룸 추정 (예: "제이파크 막탄스윗 1박 추가")
+      if (!rk) {
+        const joined = additions.map((x: { name: string }) => x.name).join(" ") + " " + items2.map((x: { label: string }) => x.label).join(" ");
+        const rk2 = roomKeyFromText(joined);
+        if (rk2) setRoomKey(rk2);
+      }
     }).catch(() => {});
     // 투숙객 명단 = 예약자 + 추가 보호자 + 학생
     const kr: string[] = [], en: string[] = [];
