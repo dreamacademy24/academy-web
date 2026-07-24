@@ -82,6 +82,19 @@ export default function ResortInvoicePage() {
   const [extraP, setExtraP] = useState<string>("0");
   const [customItems, setCustomItems] = useState<Item[]>([]);
   const [specialReq, setSpecialReq] = useState("");
+  const [srModal, setSrModal] = useState(false);
+  const [srSel, setSrSel] = useState<string[]>([]);
+  const SR_PRESETS: { key: string; ko: string; en: string }[] = [
+    { key: "tile",    ko: "타일룸",        en: "a tiled-floor room" },
+    { key: "twin",    ko: "트윈베드",      en: "twin beds" },
+    { key: "king",    ko: "킹사이즈 베드", en: "a king-size bed" },
+    { key: "extra",   ko: "엑스트라 베드", en: "an extra bed" },
+    { key: "high",    ko: "고층",          en: "a high floor" },
+    { key: "low",     ko: "저층",          en: "a low floor" },
+    { key: "crib",    ko: "아기 침대",     en: "a baby crib" },
+    { key: "connect", ko: "커넥팅 룸",     en: "connecting rooms" },
+  ];
+  const srText = srSel.length === 0 ? "" : `If possible, we would like to request ${srSel.map(k => SR_PRESETS.find(p2 => p2.key === k)?.en).filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1")}.`;
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<InvRow | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -507,7 +520,32 @@ ${signature}`);
           <button className="rtab" style={{ padding: "6px 14px", fontSize: 12 }} onClick={() => setCustomItems(cs => [...cs, { label: "", amount: 0 }])}>+ 항목 추가</button>
         </div>
         <div className="fr">
-          <div><span className="fl">Special Requests (영문)</span><input className="fi" value={specialReq} onChange={e => setSpecialReq(e.target.value)} placeholder="If possible, we would like to request a room with twin beds" /></div>
+          <div>
+            <span className="fl">Special Requests (영문) <button className="rtab" style={{ padding: "3px 10px", fontSize: 11, marginLeft: 6 }} onClick={() => { setSrSel([]); setSrModal(true); }}>📋 자주 쓰는 요청 선택</button></span>
+            <input className="fi" value={specialReq} onChange={e => setSpecialReq(e.target.value)} placeholder="If possible, we would like to request a room with twin beds" />
+          </div>
+          {srModal && (
+            <div onClick={() => setSrModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 460, padding: 20 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>📋 자주 쓰는 요청 선택</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12 }}>여러 개 선택하면 영문 한 문장으로 합쳐져요</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 14 }}>
+                  {SR_PRESETS.map(p2 => {
+                    const on = srSel.includes(p2.key);
+                    return <button key={p2.key} onClick={() => setSrSel(v => on ? v.filter(x => x !== p2.key) : [...v, p2.key])}
+                      style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1.5px solid #7c3aed" : "1.5px solid #e2e8f0", background: on ? "#f5f3ff" : "#fff", color: on ? "#6d28d9" : "#475569" }}>{p2.ko}</button>;
+                  })}
+                </div>
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 9, padding: "10px 12px", fontSize: 12.5, color: srText ? "#1a1a2e" : "#94a3b8", minHeight: 42, marginBottom: 14 }}>
+                  {srText || "선택하면 영문 문장 미리보기가 여기 표시돼요"}
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button className="rtab" onClick={() => setSrModal(false)}>취소</button>
+                  <button className="rtab" disabled={!srText} style={{ background: "#7c3aed", borderColor: "#7c3aed", color: "#fff", opacity: srText ? 1 : 0.5 }} onClick={() => { setSpecialReq(srText); setSrModal(false); }}>적용</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6 }}>
           <div style={{ fontSize: 15, fontWeight: 900 }}>Total: <span style={{ color: "#7c3aed" }}>{num(amount)} {currency}</span></div>
