@@ -184,6 +184,11 @@ export default function AdminBookingsPage(){
   const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
+  useEffect(()=>{ // 사이드바 "학생 관리" 진입 (?tab=students)
+    try{const t=new URLSearchParams(window.location.search).get("tab");
+      if(t==="students"||t==="estimate"||t==="list"||t==="receipt"||t==="confirm")setMainTab(t as never);
+    }catch{/* ignore */}
+  },[]);
   const [confirmSearch,setConfirmSearch]=useState("");
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const [showAllCols,setShowAllCols]=useState(false); // 확정예약 전체 컬럼 토글
