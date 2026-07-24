@@ -184,8 +184,11 @@ export default function AdminBookingsPage(){
   const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
-  useEffect(()=>{ // 사이드바 "학생 관리" 진입 (?tab=students)
-    try{const t=new URLSearchParams(window.location.search).get("tab");
+  const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
+  useEffect(()=>{
+    try{
+      if(window.location.pathname.startsWith("/admin/students")){setStuOnly(true);setMainTab("students");return;}
+      const t=new URLSearchParams(window.location.search).get("tab");
       if(t==="students"||t==="estimate"||t==="list"||t==="receipt"||t==="confirm")setMainTab(t as never);
     }catch{/* ignore */}
   },[]);
@@ -856,22 +859,29 @@ export default function AdminBookingsPage(){
 
   <div className="aw">
     <div className="ah">
-      <h1>예약 관리</h1>
+      <h1>{stuOnly?"📚 학생 관리":"예약 관리"}</h1>
       <div className="ah-right">
-        <a className="ah-btn" href="/booking" target="_blank" rel="noopener noreferrer" style={{background:"#7c3aed",color:"#fff",border:"none",textDecoration:"none"}}>📋 패키지</a>
-        <a className="ah-btn" href="/booking2" target="_blank" rel="noopener noreferrer" style={{background:"#fff",color:"#475569",border:"1px solid #cbd5e1",textDecoration:"none"}}>📋 비패키지</a>
+        {!stuOnly&&<a className="ah-btn" href="/booking" target="_blank" rel="noopener noreferrer" style={{background:"#7c3aed",color:"#fff",border:"none",textDecoration:"none"}}>📋 패키지</a>}
+        {!stuOnly&&<a className="ah-btn" href="/booking2" target="_blank" rel="noopener noreferrer" style={{background:"#fff",color:"#475569",border:"1px solid #cbd5e1",textDecoration:"none"}}>📋 비패키지</a>}
         <button className="ah-btn ah-ref" onClick={load} disabled={loading}>{loading?"로딩...":"새로고침"}</button>
       </div>
     </div>
 
+    {stuOnly?(
+    <div className="main-tabs">
+      <button className={`main-tab${stuView==="list"?" ac":""}`} onClick={()=>setStuView("list")}>📋 학생 리스트</button>
+      <button className={`main-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
+      <button className={`main-tab${stuView==="now"?" ac":""}`} onClick={()=>setStuView("now")}>🏫 등원중 · 재학</button>
+    </div>
+    ):(
     <div className="main-tabs">
       <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적</button>
       <button className={`main-tab${mainTab==="newlist"?" ac":""}`} onClick={()=>setMainTab("newlist")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수"||b.status==="접수중").length;return n>0&&<span style={{background:"#e85d35",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>{n}</span>;})()}</button>
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 예약내역{(()=>{const _t=calYmd(new Date());const n=bookings.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim()&&!(b.status||"").includes("취소")&&(!b.checkout_date||String(b.checkout_date).slice(0,10)>=_t)).length;return n>0?<span style={{background:"#dc2626",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>❗{n}</span>:null;})()}</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
       <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
-      <button className={`main-tab${mainTab==="students"?" ac":""}`} onClick={()=>setMainTab("students")}>📚 학생관리</button>
     </div>
+    )}
 
     {/* ── 탭0: 신규 접수 예약 ── */}
     {mainTab==="newlist"&&(()=>{
@@ -1221,11 +1231,11 @@ export default function AdminBookingsPage(){
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
-          <div style={{display:"flex",gap:4}}>
+          {!stuOnly&&<div style={{display:"flex",gap:4}}>
             <button className={`sub-tab${stuView==="list"?" ac":""}`} onClick={()=>setStuView("list")}>📋 리스트</button>
             <button className={`sub-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
             <button className={`sub-tab${stuView==="now"?" ac":""}`} onClick={()=>setStuView("now")}>🏫 등원중</button>
-          </div>
+          </div>}
           <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
           {stuView==="now"&&<button className="sub-tab no-print" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄</button>}
