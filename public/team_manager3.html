@@ -4165,7 +4165,7 @@ function loadDailyCheck(targetId){
   var today=_dailyToday();
   var far=new Date(today+'T00:00:00');far.setDate(far.getDate()+56);
   Promise.all([sbGet('staff_daily_check','check_date=eq.'+today),loadChecklistItems(),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+today+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status,seg1_type,seg1_checkin,seg2_type,seg2_checkin&checkout_date=gte.'+today+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
   ]).then(function(res){
     var rows=res[0]||[];var byKey={};rows.forEach(function(r){byKey[r.item_key]=r;});
     sec.innerHTML=_dailyCheckHtml(byKey,today,res[2]||[]);
@@ -4270,7 +4270,7 @@ function loadWeeklyCheck(){
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.join(',')+')'),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+weekStart+'&checkin_date=lte.'+farStr).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status,seg1_type,seg1_checkin,seg2_type,seg2_checkin&checkout_date=gte.'+weekStart+'&checkin_date=lte.'+farStr).catch(function(){return [];})
   ]).then(function(res){
     var checks=res[1]||[];var bookings=res[2]||[];var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
     sec.innerHTML=_weeklyHtml(dates,checkSet,bookings);
@@ -4288,6 +4288,25 @@ function _smartNames(smartKey,occYmd,bookings){
   else if(smartKey==='checkin_2w'){loS=_off(14);hiS=_off(20);}
   else if(smartKey==='checkin_3w'){loS=_off(21);hiS=_off(27);}
   else if(smartKey==='checkin_4w'){loS=_off(28);hiS=_off(34);}
+  else if(smartKey==='checkin_week_jp'||smartKey==='checkin_week_c9'){
+    _wk();
+    var wantJP=(smartKey==='checkin_week_jp');var segT=wantJP?'jaypark':'cubenine';
+    var out=[];
+    (bookings||[]).forEach(function(b){
+      if(String(b.status||'').indexOf('취소')>=0)return;
+      var at=String(b.accom_type||'');
+      if(wantJP?at.indexOf('제이파크')<0:(at.indexOf('큐브')<0))return;
+      var d='';
+      if(b.seg1_type===segT)d=String(b.seg1_checkin||'').slice(0,10);
+      else if(b.seg2_type===segT)d=String(b.seg2_checkin||'').slice(0,10);
+      if(!d)d=String(b.checkin_date||'').slice(0,10);
+      if(!(d>=loS&&d<=hiS))return;
+      var nm=(b.booker_name||'').trim();
+      if(!nm&&b.students){try{var arr=typeof b.students==='string'?JSON.parse(b.students):b.students;if(Array.isArray(arr)&&arr[0])nm=arr[0].name_kr||arr[0].korName||arr[0].name||'';}catch(e){}}
+      out.push(d.slice(5,10).replace('-','/')+' '+(nm||b.reservation_no||'고객'));
+    });
+    return out;
+  }
   else return [];
   return (bookings||[]).filter(function(b){
     if(String(b.status||'').indexOf('취소')>=0)return false;
@@ -4427,7 +4446,7 @@ function openWeeklyForm(presetDow,editItem){
     '<div id="wkDowRow" style="display:flex;gap:4px;margin-bottom:12px">'+dowChips+'</div>'+
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
-    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option></select>'+
+    '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option></select>'+
     '<div style="display:flex;justify-content:flex-end;gap:8px"><button onclick="var o=document.getElementById(\'wkFormOv\');if(o)o.remove();" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-family:inherit">취소</button>'+
     '<button onclick="submitWeeklyItem()" style="padding:8px 16px;border:none;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">'+(editItem?'저장':'등록')+'</button></div></div>';
   document.body.appendChild(ov);
@@ -7633,7 +7652,7 @@ function _renderEmpChecklist(empId){
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.concat([today]).join(',')+')'),
-    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status&checkout_date=gte.'+dates[0]+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
+    sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status,seg1_type,seg1_checkin,seg2_type,seg2_checkin&checkout_date=gte.'+dates[0]+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
   ]).then(function(res){
     var checks=res[1]||[];var bookings=res[2]||[];var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
     box.innerHTML=_empChecklistHtml(empId,dates,today,checkSet,bookings);
