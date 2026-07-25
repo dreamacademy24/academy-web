@@ -2552,7 +2552,7 @@ function _faqClean(h){ if(!h)return '';
    var und=(tag==='U');
    if(inner){ if(bold)inner='<b>'+inner+'</b>'; if(ital)inner='<i>'+inner+'</i>'; if(und)inner='<u>'+inner+'</u>'; }
    var block=/^(DIV|P|LI|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|HEADER|FOOTER|ASIDE|NAV|TR|TABLE|UL|OL|PRE|FIGURE|FIGCAPTION|FORM|MAIN|ADDRESS|DETAILS|SUMMARY)$/.test(tag);
-   out+=inner+(block&&inner?'<br>':'');
+   if(block&&inner){ if(out&&!/(<br>\s*)$/i.test(out)) out+='<br>'; out+=inner+'<br>'; } else { out+=inner; }
   }
   return out; }
  var res=walk(root).replace(/&nbsp;/gi,' ').replace(/(<br>\s*){3,}/gi,'<br><br>');
