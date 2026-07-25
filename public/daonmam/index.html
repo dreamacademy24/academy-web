@@ -3040,14 +3040,9 @@
               </div>
             </div>
 
-            <div class="form-info">
-              ✓ 신청 정보가 <b>자동으로 접수</b>되며 카카오 채널이 새 탭에서 열립니다.<br />
-              ✓ 채널에서 담당 매니저와 <b>바로 상담</b>을 시작하실 수 있어요.
+            <div id="deposit-preview" style="text-align:center;margin-top:4px;background:#fff;color:#03C75A;font-weight:800;font-size:15px;padding:14px;border-radius:12px;border:2px dashed #03C75A;opacity:.85">
+              💳 예약금 100만원 결제하고 자리 확보하기 <span style="font-size:11px;font-weight:700;color:#8aa">N Pay</span>
             </div>
-
-            <button type="submit" class="btn-apply" id="btn-apply">
-              💛 카카오 채널로 상담 신청하기
-            </button>
             <div id="est-card" style="display:none;margin-top:14px;background:#FDF3EE;border:1px solid #F0C9B8;border-radius:12px;padding:14px 16px">
               <div style="font-size:12px;font-weight:700;color:#993C1D">💰 예상 총 금액 <span id="est-season" style="font-weight:600"></span> · 참고용</div>
               <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
@@ -3061,7 +3056,16 @@
               💳 예약금 100만원 결제하고 자리 확보하기
             </a>
             <p id="deposit-note" style="display:none;text-align:center;font-size:12px;color:var(--ink-3);margin-top:6px">예약금 100만원은 총 금액에서 차감돼요. <b style="color:#993C1D">예약금 결제만으로는 예약 확정이 아니에요</b> — 상담을 통해 꼭 최종 날짜와 예약을 마무리해 주세요.</p>
-            <p id="deposit-hint" style="text-align:center;font-size:12px;color:var(--ink-3);margin-top:8px">희망 숙소·기간·인원을 선택하면 예상 금액과 예약금 결제 버튼이 열려요.</p>
+            <p id="deposit-hint" style="text-align:center;font-size:12px;color:var(--ink-3);margin-top:8px">원하시는 숙소·기간을 선택하시면 <b style="color:#03C75A">네이버페이 자동결제</b>로 넘어갑니다.</p>
+            <div class="form-info">
+              ✓ 신청 정보가 <b>자동으로 접수</b>되며 카카오 채널이 새 탭에서 열립니다.<br />
+              ✓ 채널에서 담당 매니저와 <b>바로 상담</b>을 시작하실 수 있어요.
+            </div>
+
+            <button type="submit" class="btn-apply" id="btn-apply">
+              💛 카카오 채널로 상담 신청하기
+            </button>
+            
           </form>
 
           <div class="apply-meta">
@@ -3719,8 +3723,9 @@
     var ovWrap=el('f-ocean-wrap'),ovChk=el('f-oceanview');
     if(ovWrap){ovWrap.style.display=(lk==='jp')?'block':'none';if(lk!=='jp'&&ovChk)ovChk.checked=false;}
     // 예약금 버튼: 숙소만 정해지면 표시
-    if(lk){btn.href=DEPOSIT_LINKS[lk];btn.style.display='block';note.style.display='block';hint.style.display='none';}
-    else{btn.style.display='none';note.style.display='none';hint.style.display='block';}
+    var pv=el('deposit-preview');
+    if(lk){btn.href=DEPOSIT_LINKS[lk];btn.style.display='block';note.style.display='block';hint.style.display='none';if(pv)pv.style.display='none';}
+    else{btn.style.display='none';note.style.display='none';hint.style.display='block';if(pv)pv.style.display='block';}
     // 예상 금액: 숙소+주+인원 모두 있어야
     if(lk&&w&&a&&k&&PRICE[lk]){
       var key=w+'-'+a+'-'+k;var p=PRICE[lk][key];
