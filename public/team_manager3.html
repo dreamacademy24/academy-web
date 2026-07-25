@@ -2534,7 +2534,31 @@ function _faqEdit(id){ var x=_faqData.filter(function(r){return r.id==id;})[0]; 
 function _faqForm(x){ var cats=_faqCats(); if(x.cat&&cats.indexOf(x.cat)<0)cats.unshift(x.cat); var opts=cats.map(function(c){return '<option'+(c===x.cat?' selected':'')+'>'+_faqEsc(c)+'</option>';}).join(''); return '<div class="fqed"><div class="lb">카테고리</div><select class="fqf-cat">'+opts+'</select><div class="lb">질문</div><input class="fqf-q" value="'+_faqEsc(x.q)+'"><div class="lb">답변</div><div class="fqtoolbar"><button type="button" class="fqtb" onmousedown="return _faqBold(event)"><b>가</b> 굵게·빨강</button><span class="fqtbhint">엔터=줄바꿈 · 한 번 더 엔터=한 줄 띄우기</span></div><div class="fqf-a fqrich" contenteditable="true">'+(x.a||'')+'</div><div class="fqbtns">'+(x.id?'<button class="fqb fqdel" onclick="_faqDel('+x.id+')">삭제</button>':'')+'<button class="fqb fqcancel" onclick="'+(x.id?'_faqList()':'_faqDraw()')+'">취소</button><button class="fqb fqsave" onclick="_faqSave('+(x.id||'0')+',this)">저장</button></div></div>'; }
 function _faqAdd(){ var root=document.getElementById('faqApp'); var box=document.getElementById('fqlist'); var d=document.createElement('div'); d.className='fqi op'; d.innerHTML='<div class="fqrow"><div class="fqq" style="cursor:default"><span class="fqcat">새 질문</span><span class="fqtx">새 질문 추가</span></div></div><div class="fqa">'+_faqForm({cat:_faqCat==="전체"?(_faqCats()[0]||"기타"):_faqCat,q:'',a:''})+'</div>'; box.insertBefore(d,box.firstChild); d.scrollIntoView({block:'center'}); }
 function _faqBold(e){ e.preventDefault(); try{document.execCommand('bold',false,null);}catch(x){} return false; }
-function _faqClean(h){ if(!h)return ''; try{var _t=document.createElement('div');_t.innerHTML=h;_t.querySelectorAll('section,style,svg,script,button,input,iframe,meta,link').forEach(function(n){n.remove();});h=_t.innerHTML;}catch(e){} h=h.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/ on\w+="[^"]*"/gi,'').replace(/ on\w+='[^']*'/gi,'').replace(/javascript:/gi,''); h=h.replace(/<div><br\s*\/?><\/div>/gi,'<br>').replace(/<div>/gi,'<br>').replace(/<\/div>/gi,''); h=h.replace(/<span[^>]*font-weight:\s*(?:bold|700)[^>]*>([\s\S]*?)<\/span>/gi,'<b>$1</b>'); h=h.replace(/&nbsp;/gi,' '); return h.replace(/^(<br>)+/,'').trim(); }
+function _faqClean(h){ if(!h)return '';
+ var root=document.createElement('div'); root.innerHTML=String(h).replace(/<script[\s\S]*?<\/script>/gi,'');
+ var DROP={SCRIPT:1,STYLE:1,SVG:1,IFRAME:1,META:1,LINK:1,TITLE:1,NOSCRIPT:1,HEAD:1,OBJECT:1,EMBED:1};
+ function escT(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+ function walk(node){ var out=''; var cs=node.childNodes;
+  for(var i2=0;i2<cs.length;i2++){ var c=cs[i2];
+   if(c.nodeType===3){ out+=escT(c.nodeValue); continue; }
+   if(c.nodeType!==1) continue;
+   var tag=c.tagName;
+   if(DROP[tag]) continue;
+   if(tag==='BR'){ out+='<br>'; continue; }
+   var inner=walk(c);
+   var st=c.getAttribute('style')||'';
+   var bold=(tag==='B'||tag==='STRONG'||/font-weight\s*:\s*(bold|[6-9]00)/i.test(st));
+   var ital=(tag==='I'||tag==='EM'||/font-style\s*:\s*italic/i.test(st));
+   var und=(tag==='U');
+   if(inner){ if(bold)inner='<b>'+inner+'</b>'; if(ital)inner='<i>'+inner+'</i>'; if(und)inner='<u>'+inner+'</u>'; }
+   var block=/^(DIV|P|LI|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|HEADER|FOOTER|ASIDE|NAV|TR|TABLE|UL|OL|PRE|FIGURE|FIGCAPTION|FORM|MAIN|ADDRESS|DETAILS|SUMMARY)$/.test(tag);
+   out+=inner+(block&&inner?'<br>':'');
+  }
+  return out; }
+ var res=walk(root).replace(/&nbsp;/gi,' ').replace(/(<br>\s*){3,}/gi,'<br><br>');
+ res=res.replace(/^(\s*<br>)+/i,'').replace(/(<br>\s*)+$/i,'').trim();
+ if(!res){ var plain=(root.textContent||'').replace(/\s+/g,' ').trim(); if(plain) res=escT(plain); }
+ return res; }
 function _faqSave(id,btn){ var wrap=btn.closest('.fqa')||btn.closest('.fqi'); var cat=wrap.querySelector('.fqf-cat').value; var q=wrap.querySelector('.fqf-q').value.trim(); var aEl=wrap.querySelector('.fqf-a'); var a=(aEl.tagName==='TEXTAREA'?aEl.value:_faqClean(aEl.innerHTML)).trim(); if(!q){alert('질문을 입력하세요');return;} btn.textContent='저장 중…'; btn.disabled=true; var body={cat:cat,q:q,a:a,updated_at:new Date().toISOString()}; var p; if(id&&id!='0'){ p=sbPatch('staff_faq','id=eq.'+id,body); } else { var mx=0; _faqData.forEach(function(r){if((r.idx||0)>mx)mx=r.idx;}); body.idx=mx+1; p=sbPost('staff_faq',body); } p.then(function(){ return sbGet('staff_faq','select=*&order=idx.asc'); }).then(function(d){ _faqData=Array.isArray(d)?d:_faqData; _faqDraw(); if(typeof toast==='function')toast('저장됐어요'); }).catch(function(e){ alert('저장 실패: '+(e&&e.message||e)); btn.textContent='저장'; btn.disabled=false; }); }
 function _faqDel(id){ if(!confirm('이 질문을 삭제할까요?'))return; sbDel('staff_faq','id=eq.'+id).then(function(){ _faqData=_faqData.filter(function(r){return r.id!=id;}); _faqList(); if(typeof toast==='function')toast('삭제됐어요'); }).catch(function(e){ alert('삭제 실패: '+(e&&e.message||e)); }); }
 
