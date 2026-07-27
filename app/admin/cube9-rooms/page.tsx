@@ -5,27 +5,25 @@ const SB = "https://yiglafscjvjgkxpycevk.supabase.co";
 const AK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODgzMjcsImV4cCI6MjA4OTY2NDMyN30.k_HErGsz5oYkILWvUGRaU3x1IXKMQOuO5X312tDcXe4";
 const H = { apikey: AK, Authorization: `Bearer ${AK}`, "Content-Type": "application/json" };
 const KEY = "cube9_room_blocks";
+const MEMO_KEY = "cube9_month_memo";
 
 const FULL_ACCESS = ["103", "104", "105", "106"];
 const DELUXE = ["204", "205", "206", "207", "208", "209", "210"];
+const ROOMS = [...FULL_ACCESS, ...DELUXE];
 
-type Kind = "dream" | "resort" | "hold";
-interface Block { id: string; room: string; name: string; ci: string; co: string; kind: Kind; memo?: string; }
-
-const KIND_STYLE: Record<Kind, { bg: string; label: string }> = {
-  dream: { bg: "#7c3aed", label: "드림 예약" },
-  resort: { bg: "#f97316", label: "리조트 손님" },
-  hold: { bg: "#0ea5e9", label: "가예약/홀드" },
-};
+interface Block { id: string; room: string; name: string; ci: string; co: string; kind?: string; memo?: string; }
 
 function ymd(y: number, m: number, d: number) { return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; }
 function daysIn(y: number, m: number) { return new Date(y, m, 0).getDate(); }
 function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
 export default function Cube9Rooms() {
   const now = new Date();
+  const todayStr = ymd(now.getFullYear(), now.getMonth() + 1, now.getDate());
   const [ym, setYm] = useState<[number, number]>([now.getFullYear(), now.getMonth() + 1]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [memos, setMemos] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [edit, setEdit] = useState<Block | null>(null);
@@ -33,143 +31,182 @@ export default function Cube9Rooms() {
   const [y, m] = ym;
   const dim = daysIn(y, m);
   const monthS = ymd(y, m, 1), monthE = ymd(y, m, dim);
+  const ymKey = `${y}-${String(m).padStart(2, "0")}`;
 
   useEffect(() => { (async () => {
     try {
-      const r = await fetch(`${SB}/rest/v1/app_settings?key=eq.${KEY}&select=value`, { headers: H });
+      const r = await fetch(`${SB}/rest/v1/app_settings?key=in.(${KEY},${MEMO_KEY})&select=key,value`, { headers: H });
       const rows = await r.json();
-      if (Array.isArray(rows) && rows[0]?.value) setBlocks(rows[0].value as Block[]);
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (row.key === KEY && row.value) setBlocks(row.value as Block[]);
+          if (row.key === MEMO_KEY && row.value) setMemos(row.value as Record<string, string>);
+        }
+      }
     } catch {}
     setLoaded(true);
   })(); }, []);
 
-  async function persist(next: Block[]) {
-    setBlocks(next); setSaving(true);
+  async function saveSetting(key: string, value: unknown) {
+    setSaving(true);
     try {
       const r = await fetch(`${SB}/rest/v1/app_settings?on_conflict=key`, {
         method: "POST",
         headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify([{ key: KEY, value: next }]),
+        body: JSON.stringify([{ key, value }]),
       });
-      if (!r.ok) alert("저장 실패 — 새로고침 후 다시 시도해 주세요 (" + r.status + ")");
+      if (!r.ok) alert("저장 실패 (" + r.status + ") — 새로고침 후 다시 시도해 주세요");
     } catch { alert("저장 실패 — 네트워크 확인"); }
     setSaving(false);
   }
+  const persist = (next: Block[]) => { setBlocks(next); saveSetting(KEY, next); };
 
   const monthBlocks = useMemo(() => blocks.filter(b => b.ci <= monthE && b.co >= monthS), [blocks, monthS, monthE]);
+  const checkins = monthBlocks.filter(b => b.ci >= monthS && b.ci <= monthE).length;
+  const checkouts = monthBlocks.filter(b => b.co >= monthS && b.co <= monthE).length;
+  const emptyRooms = ROOMS.filter(r => !monthBlocks.some(b => b.room === r));
+  const conflicts = useMemo(() => {
+    const out: { room: string; date: string }[] = [];
+    for (const r of ROOMS) {
+      const bs = blocks.filter(b => b.room === r).sort((a, b2) => a.ci.localeCompare(b2.ci));
+      for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) {
+        if (bs[i].ci < bs[j].co && bs[j].ci < bs[i].co) out.push({ room: r, date: bs[j].ci > bs[i].ci ? bs[j].ci : bs[i].ci });
+      }
+    }
+    return out.filter(c => c.date >= monthS && c.date <= monthE);
+  }, [blocks, monthS, monthE]);
 
-  function barsFor(room: string) {
-    return monthBlocks.filter(b => b.room === room).map(b => {
-      const s = b.ci < monthS ? 1 : Number(b.ci.slice(8, 10));
-      const e = b.co > monthE ? dim : Number(b.co.slice(8, 10));
-      return { ...b, s, e: Math.max(s, e) };
-    });
+  function cellBlock(room: string, dateStr: string) {
+    return monthBlocks.find(b => b.room === room && b.ci <= dateStr && b.co >= dateStr) || null;
   }
-
-  function openNew(room: string, day: number) {
-    const ci = ymd(y, m, day);
-    const co = ymd(y, m, Math.min(day + 1, dim));
-    setEdit({ id: uid(), room, name: "", ci, co, kind: "resort", memo: "" });
+  function openNew(room: string, dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + 1);
+    setEdit({ id: uid(), room, name: "", ci: dateStr, co: ymd(d.getFullYear(), d.getMonth() + 1, d.getDate()), memo: "" });
     setIsNew(true);
   }
   function saveEdit() {
     if (!edit) return;
     if (!edit.name.trim()) { alert("이름을 입력해 주세요"); return; }
     if (!edit.ci || !edit.co || edit.co < edit.ci) { alert("날짜를 확인해 주세요"); return; }
-    const next = isNew ? [...blocks, edit] : blocks.map(b => b.id === edit.id ? edit : b);
-    persist(next); setEdit(null);
+    persist(isNew ? [...blocks, edit] : blocks.map(b => b.id === edit.id ? edit : b));
+    setEdit(null);
   }
   function delEdit() {
-    if (!edit) return;
-    if (!confirm(`'${edit.name}' 삭제할까요?`)) return;
+    if (!edit || !confirm(`'${edit.name}' 삭제할까요?`)) return;
     persist(blocks.filter(b => b.id !== edit.id)); setEdit(null);
   }
 
-  const cellW = 34, nameW = 66;
-  const roomRow = (room: string) => {
-    const bars = barsFor(room);
-    return (
-      <div key={room} style={{ display: "flex", position: "relative", borderBottom: "1px solid #e2e8f0", height: 38 }}>
-        <div style={{ flex: `0 0 ${nameW}px`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, background: "#f8fafc", borderRight: "1px solid #e2e8f0" }}>{room}호</div>
-        <div style={{ position: "relative", width: cellW * dim }}>
-          {Array.from({ length: dim }, (_, i) => (
-            <div key={i} onClick={() => openNew(room, i + 1)} title={`${m}/${i + 1} 등록`}
-              style={{ position: "absolute", left: i * cellW, top: 0, width: cellW, height: "100%", borderRight: "1px solid #f1f5f9", cursor: "pointer", background: new Date(y, m - 1, i + 1).getDay() === 0 ? "#fef2f2" : new Date(y, m - 1, i + 1).getDay() === 6 ? "#eff6ff" : undefined }} />
-          ))}
-          {bars.map(b => (
-            <div key={b.id} onClick={(e) => { e.stopPropagation(); setEdit({ ...b }); setIsNew(false); }}
-              title={`${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}`}
-              style={{ position: "absolute", left: (b.s - 1) * cellW + 2, width: (b.e - b.s + 1) * cellW - 4, top: 6, height: 26, background: KIND_STYLE[b.kind].bg, color: "#fff", borderRadius: 6, fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden", whiteSpace: "nowrap", cursor: "pointer", zIndex: 2 }}>
-              {b.name}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const groupHeader = (t: string) => (
-    <div style={{ display: "flex", background: "#1e3a5f", color: "#fff", fontSize: 12.5, fontWeight: 800 }}>
-      <div style={{ flex: `0 0 ${nameW}px`, padding: "6px 0", textAlign: "center" }}>{t.slice(0, 4)}</div>
-      <div style={{ padding: "6px 10px" }}>{t}</div>
-    </div>
-  );
-
+  const colW = 96, dateW = 86;
   return (
-    <div style={{ padding: 20, fontFamily: "'Malgun Gothic','Noto Sans KR',sans-serif", overflowX: "auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
-        <h1 style={{ fontSize: 21, fontWeight: 900, margin: 0 }}>🐬 큐브나인 예약현황</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={() => setYm(([yy, mm]) => mm === 1 ? [yy - 1, 12] : [yy, mm - 1])} style={navBtn}>◀</button>
-          <b style={{ fontSize: 16 }}>{y}년 {m}월</b>
-          <button onClick={() => setYm(([yy, mm]) => mm === 12 ? [yy + 1, 1] : [yy, mm + 1])} style={navBtn}>▶</button>
-          <button onClick={() => setYm([now.getFullYear(), now.getMonth() + 1])} style={{ ...navBtn, width: "auto", padding: "0 10px" }}>오늘</button>
+    <div style={{ display: "flex", gap: 16, padding: 18, fontFamily: "'Malgun Gothic','Noto Sans KR',sans-serif", alignItems: "flex-start" }}>
+      <div style={{ flex: "0 0 218px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <h1 style={{ fontSize: 19, fontWeight: 900, margin: "2px 0 2px" }}>🐬 Cube Nine 예약현황</h1>
+        <div style={panel}>
+          <b style={pTitle}>범례</b>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 6 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#c7d8f7", border: "1px solid #7ba3e0", display: "inline-block" }} />큐브 예약</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fff", border: "1px solid #cbd5e1", display: "inline-block" }} />빈 날</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fde8e8", border: "1px solid #ef4444", display: "inline-block" }} />⚠ 중복 (기간 겹침)</div>
         </div>
-        <div style={{ display: "flex", gap: 10, fontSize: 12, alignItems: "center" }}>
-          {(Object.keys(KIND_STYLE) as Kind[]).map(k => (
-            <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <span style={{ width: 12, height: 12, borderRadius: 3, background: KIND_STYLE[k].bg, display: "inline-block" }} />{KIND_STYLE[k].label}
-            </span>
-          ))}
+        <div style={panel}>
+          <b style={pTitle}>📋 이번 달 요약</b>
+          <div style={sumRow}><span>총 예약</span><b style={{ color: "#1d4ed8" }}>{monthBlocks.length}건</b></div>
+          <div style={sumRow}><span>체크인 예정</span><b style={{ color: "#059669" }}>{checkins}건</b></div>
+          <div style={sumRow}><span>체크아웃 예정</span><b style={{ color: "#dc2626" }}>{checkouts}건</b></div>
         </div>
-        <span style={{ fontSize: 12, color: "#64748b" }}>빈 칸 클릭 = 등록 · 막대 클릭 = 수정/삭제 {saving && "· 저장 중…"}</span>
+        {conflicts.length > 0 && (
+          <div style={{ ...panel, borderColor: "#fca5a5", background: "#fff7f7" }}>
+            <b style={{ ...pTitle, color: "#b91c1c" }}>⚠ 확인 필요 (중복)</b>
+            {conflicts.map((c, i) => <div key={i} style={{ fontSize: 12, marginTop: 5, color: "#7f1d1d" }}><span style={{ background: "#fecaca", borderRadius: 4, padding: "1px 6px", fontWeight: 800, marginRight: 5 }}>중복</span>{c.date} · {c.room}호</div>)}
+          </div>
+        )}
+        <div style={panel}>
+          <b style={pTitle}>🏨 이번 달 빈 방</b>
+          <div style={{ fontSize: 12.5, marginTop: 6, color: emptyRooms.length ? "#334155" : "#94a3b8", lineHeight: 1.7 }}>
+            {emptyRooms.length ? emptyRooms.map(r => r + "호").join(" · ") : "모든 룸 예약 있음"}
+          </div>
+        </div>
+        <div style={panel}>
+          <b style={pTitle}>📝 이달 메모</b>
+          <textarea value={memos[ymKey] || ""} onChange={e => setMemos({ ...memos, [ymKey]: e.target.value })}
+            onBlur={() => saveSetting(MEMO_KEY, memos)}
+            placeholder="메모를 입력하세요…" style={{ width: "100%", minHeight: 84, marginTop: 6, border: "1px solid #e2e8f0", borderRadius: 8, padding: 8, fontSize: 12.5, fontFamily: "inherit", boxSizing: "border-box", resize: "vertical" }} />
+        </div>
+        {saving && <div style={{ fontSize: 12, color: "#64748b" }}>저장 중…</div>}
       </div>
 
-      {!loaded ? <div style={{ color: "#94a3b8", padding: 40 }}>불러오는 중…</div> : (
-        <div style={{ border: "1px solid #cbd5e1", borderRadius: 10, overflow: "hidden", width: nameW + cellW * dim }}>
-          <div style={{ display: "flex", background: "#f1f5f9", borderBottom: "1px solid #cbd5e1" }}>
-            <div style={{ flex: `0 0 ${nameW}px`, fontSize: 11, fontWeight: 700, color: "#64748b", display: "flex", alignItems: "center", justifyContent: "center" }}>룸</div>
-            <div style={{ position: "relative", width: cellW * dim, height: 26 }}>
-              {Array.from({ length: dim }, (_, i) => (
-                <div key={i} style={{ position: "absolute", left: i * cellW, width: cellW, textAlign: "center", fontSize: 11.5, fontWeight: 700, lineHeight: "26px", color: new Date(y, m - 1, i + 1).getDay() === 0 ? "#dc2626" : new Date(y, m - 1, i + 1).getDay() === 6 ? "#2563eb" : "#334155" }}>{i + 1}</div>
-              ))}
-            </div>
-          </div>
-          {groupHeader("풀 억세스 룸")}
-          {FULL_ACCESS.map(roomRow)}
-          {groupHeader("디럭스 오션뷰 룸")}
-          {DELUXE.map(roomRow)}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+          <button onClick={() => setYm(([yy, mm]) => mm === 1 ? [yy - 1, 12] : [yy, mm - 1])} style={navBtn}>◀</button>
+          <b style={{ fontSize: 17 }}>{y}년 {m}월</b>
+          <button onClick={() => setYm(([yy, mm]) => mm === 12 ? [yy + 1, 1] : [yy, mm + 1])} style={navBtn}>▶</button>
+          <button onClick={() => setYm([now.getFullYear(), now.getMonth() + 1])} style={{ ...navBtn, width: "auto", padding: "0 12px", background: "#1e3a5f", color: "#fff", border: "none" }}>오늘</button>
+          <span style={{ fontSize: 12, color: "#64748b" }}>빈 칸 클릭 = 등록 · 예약 칸 클릭 = 수정/삭제</span>
         </div>
-      )}
+        {!loaded ? <div style={{ color: "#94a3b8", padding: 40 }}>불러오는 중…</div> : (
+          <div style={{ overflowX: "auto", border: "1px solid #cbd5e1", borderRadius: 10 }}>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: dateW + colW * ROOMS.length }}>
+              <thead>
+                <tr>
+                  <th rowSpan={2} style={{ ...th, width: dateW, background: "#1e293b", color: "#fff" }}>날짜</th>
+                  <th colSpan={FULL_ACCESS.length} style={{ ...th, background: "#1e3a5f", color: "#fff" }}>풀 억세스 룸</th>
+                  <th colSpan={DELUXE.length} style={{ ...th, background: "#155e63", color: "#fff" }}>디럭스 오션뷰 룸</th>
+                </tr>
+                <tr>
+                  {ROOMS.map(r => <th key={r} style={{ ...th, width: colW, background: FULL_ACCESS.includes(r) ? "#28517f" : "#1f7078", color: "#fff" }}>{r}호</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: dim }, (_, i) => {
+                  const d = i + 1;
+                  const dateStr = ymd(y, m, d);
+                  const dow = new Date(y, m - 1, d).getDay();
+                  const isToday = dateStr === todayStr;
+                  return (
+                    <tr key={d} style={{ background: isToday ? "#eef4ff" : undefined }}>
+                      <td style={{ ...dateTd, color: dow === 0 ? "#dc2626" : dow === 6 ? "#2563eb" : "#334155", background: isToday ? "#dbe7ff" : "#f8fafc", fontWeight: isToday ? 900 : 700 }}>
+                        {isToday && <div style={{ fontSize: 9, color: "#1d4ed8", fontWeight: 900 }}>TODAY</div>}
+                        {d}일 {DOW[dow]}
+                      </td>
+                      {ROOMS.map(r => {
+                        const b = cellBlock(r, dateStr);
+                        const isCi = b && b.ci === dateStr;
+                        const dup = b && conflicts.some(c => c.room === r && b.ci <= c.date && b.co >= c.date);
+                        return (
+                          <td key={r}
+                            onClick={() => b ? (setEdit({ ...b }), setIsNew(false)) : openNew(r, dateStr)}
+                            title={b ? `${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}` : `${m}/${d} ${r}호 등록`}
+                            style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? "2px solid #3b6cc7" : cellTd.borderTop }}>
+                            {isCi && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e3a8a", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup && "⚠ "}{b!.name}</div>}
+                            {isCi && b!.memo && <div style={{ fontSize: 10, color: "#3b5b94", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b!.memo}</div>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {edit && (
         <div onClick={() => setEdit(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 22, width: 360, maxWidth: "92vw" }}>
-            <h3 style={{ margin: "0 0 14px", fontSize: 17 }}>{isNew ? "예약 등록" : "예약 수정"} — {edit.room}호</h3>
+            <h3 style={{ margin: "0 0 6px", fontSize: 17 }}>{isNew ? "큐브 예약 등록" : "큐브 예약 수정"}</h3>
+            <label style={lb}>룸</label>
+            <select style={inp} value={edit.room} onChange={e => setEdit({ ...edit, room: e.target.value })}>
+              <optgroup label="풀 억세스 룸">{FULL_ACCESS.map(r => <option key={r} value={r}>{r}호</option>)}</optgroup>
+              <optgroup label="디럭스 오션뷰 룸">{DELUXE.map(r => <option key={r} value={r}>{r}호</option>)}</optgroup>
+            </select>
             <label style={lb}>이름</label>
             <input style={inp} value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} placeholder="게스트명 / 단체명" />
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ flex: 1 }}><label style={lb}>체크인</label><input type="date" style={inp} value={edit.ci} onChange={e => setEdit({ ...edit, ci: e.target.value })} /></div>
               <div style={{ flex: 1 }}><label style={lb}>체크아웃</label><input type="date" style={inp} value={edit.co} onChange={e => setEdit({ ...edit, co: e.target.value })} /></div>
             </div>
-            <label style={lb}>구분</label>
-            <select style={inp} value={edit.kind} onChange={e => setEdit({ ...edit, kind: e.target.value as Kind })}>
-              <option value="dream">드림 예약 (보라)</option>
-              <option value="resort">리조트 손님 (주황)</option>
-              <option value="hold">가예약/홀드 (하늘)</option>
-            </select>
             <label style={lb}>메모</label>
-            <input style={inp} value={edit.memo || ""} onChange={e => setEdit({ ...edit, memo: e.target.value })} placeholder="선택" />
+            <input style={inp} value={edit.memo || ""} onChange={e => setEdit({ ...edit, memo: e.target.value })} placeholder="선택 (예: 105·106 함께)" />
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
               {!isNew && <button onClick={delEdit} style={{ ...btn, background: "#fee2e2", color: "#b91c1c", border: "none" }}>삭제</button>}
               <div style={{ flex: 1 }} />
@@ -183,7 +220,13 @@ export default function Cube9Rooms() {
   );
 }
 
+const panel: React.CSSProperties = { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12, padding: "12px 14px" };
+const pTitle: React.CSSProperties = { fontSize: 13, fontWeight: 800, color: "#334155" };
+const sumRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", fontSize: 13, marginTop: 7 };
 const navBtn: React.CSSProperties = { width: 30, height: 30, border: "1px solid #cbd5e1", background: "#fff", borderRadius: 7, cursor: "pointer", fontSize: 12 };
+const th: React.CSSProperties = { padding: "7px 4px", fontSize: 12.5, fontWeight: 800, border: "1px solid rgba(255,255,255,.15)" };
+const dateTd: React.CSSProperties = { padding: "5px 8px", fontSize: 12.5, borderBottom: "1px solid #e2e8f0", borderRight: "1px solid #cbd5e1", textAlign: "center", whiteSpace: "nowrap" };
+const cellTd: React.CSSProperties = { padding: "3px 5px", height: 30, borderBottom: "1px solid #eef2f7", borderRight: "1px solid #eef2f7", verticalAlign: "top", maxWidth: 96, borderTop: "1px solid transparent" };
 const lb: React.CSSProperties = { display: "block", fontSize: 12, color: "#64748b", margin: "10px 0 4px", fontWeight: 700 };
 const inp: React.CSSProperties = { width: "100%", padding: "9px 10px", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 14, boxSizing: "border-box", fontFamily: "inherit" };
 const btn: React.CSSProperties = { padding: "9px 16px", border: "1px solid #cbd5e1", background: "#fff", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", fontSize: 14 };
