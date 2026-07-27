@@ -73,11 +73,11 @@ export default function Cube9Rooms() {
         if (bs[i].ci < bs[j].co && bs[j].ci < bs[i].co) out.push({ room: r, date: bs[j].ci > bs[i].ci ? bs[j].ci : bs[i].ci });
       }
     }
-    return out.filter(c => c.date >= monthS && c.date <= monthE);
-  }, [blocks, monthS, monthE]);
+    return out;
+  }, [blocks]);
 
   function cellBlock(room: string, dateStr: string) {
-    return monthBlocks.find(b => b.room === room && b.ci <= dateStr && b.co >= dateStr) || null;
+    return blocks.find(b => b.room === room && b.ci <= dateStr && b.co >= dateStr) || null;
   }
   function openNew(room: string, dateStr: string) {
     const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + 1);
@@ -113,10 +113,10 @@ export default function Cube9Rooms() {
           <div style={sumRow}><span>체크인 예정</span><b style={{ color: "#059669" }}>{checkins}건</b></div>
           <div style={sumRow}><span>체크아웃 예정</span><b style={{ color: "#dc2626" }}>{checkouts}건</b></div>
         </div>
-        {conflicts.length > 0 && (
+        {conflicts.filter(c => c.date >= monthS).length > 0 && (
           <div style={{ ...panel, borderColor: "#fca5a5", background: "#fff7f7" }}>
             <b style={{ ...pTitle, color: "#b91c1c" }}>⚠ 확인 필요 (중복)</b>
-            {conflicts.map((c, i) => <div key={i} style={{ fontSize: 12, marginTop: 5, color: "#7f1d1d" }}><span style={{ background: "#fecaca", borderRadius: 4, padding: "1px 6px", fontWeight: 800, marginRight: 5 }}>중복</span>{c.date} · {c.room}호</div>)}
+            {conflicts.filter(c => c.date >= monthS).map((c, i) => <div key={i} style={{ fontSize: 12, marginTop: 5, color: "#7f1d1d" }}><span style={{ background: "#fecaca", borderRadius: 4, padding: "1px 6px", fontWeight: 800, marginRight: 5 }}>중복</span>{c.date} · {c.room}호</div>)}
           </div>
         )}
         <div style={panel}>
@@ -156,13 +156,23 @@ export default function Cube9Rooms() {
                 </tr>
               </thead>
               <tbody>
-                {Array.from({ length: dim }, (_, i) => {
-                  const d = i + 1;
-                  const dateStr = ymd(y, m, d);
-                  const dow = new Date(y, m - 1, d).getDay();
+                {(() => {
+                  const nm = m === 12 ? 1 : m + 1, ny = m === 12 ? y + 1 : y;
+                  const rows: { y: number; m: number; d: number; sep?: boolean }[] = [];
+                  for (let d = 1; d <= dim; d++) rows.push({ y, m, d });
+                  rows.push({ y: ny, m: nm, d: 0, sep: true });
+                  for (let d = 1; d <= daysIn(ny, nm); d++) rows.push({ y: ny, m: nm, d });
+                  return rows;
+                })().map((row, ri) => {
+                  if (row.sep) return (
+                    <tr key={"sep" + ri}><td colSpan={ROOMS.length + 1} style={{ background: "#1e293b", color: "#fff", textAlign: "center", fontWeight: 900, fontSize: 13, padding: "7px 0" }}>{row.y}년 {row.m}월</td></tr>
+                  );
+                  const d = row.d;
+                  const dateStr = ymd(row.y, row.m, d);
+                  const dow = new Date(row.y, row.m - 1, d).getDay();
                   const isToday = dateStr === todayStr;
                   return (
-                    <tr key={d} style={{ background: isToday ? "#eef4ff" : undefined }}>
+                    <tr key={dateStr} style={{ background: isToday ? "#eef4ff" : undefined }}>
                       <td style={{ ...dateTd, color: dow === 0 ? "#dc2626" : dow === 6 ? "#2563eb" : "#334155", background: isToday ? "#dbe7ff" : "#f8fafc", fontWeight: isToday ? 900 : 700 }}>
                         {isToday && <div style={{ fontSize: 9, color: "#1d4ed8", fontWeight: 900 }}>TODAY</div>}
                         {d}일 {DOW[dow]}
@@ -174,7 +184,7 @@ export default function Cube9Rooms() {
                         return (
                           <td key={r}
                             onClick={() => b ? (setEdit({ ...b }), setIsNew(false)) : openNew(r, dateStr)}
-                            title={b ? `${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}` : `${m}/${d} ${r}호 등록`}
+                            title={b ? `${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}` : `${row.m}/${d} ${r}호 등록`}
                             style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? "2px solid #3b6cc7" : cellTd.borderTop }}>
                             {isCi && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e3a8a", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup && "⚠ "}{b!.name}</div>}
                             {isCi && b!.memo && <div style={{ fontSize: 10, color: "#3b5b94", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b!.memo}</div>}
