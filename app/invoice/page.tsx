@@ -10,7 +10,9 @@ import html2canvas from "html2canvas";
 /* ── 유틸 함수 (100% 기존 유지) ── */
 function isPeak(d: string): boolean {
   if (!d) return false;
-  const dt = new Date(d), m = dt.getMonth()+1, day = dt.getDate();
+  const dt = new Date(d), y = dt.getFullYear(), m = dt.getMonth()+1, day = dt.getDate();
+  if (y === 2027) return (m===7&&day>=17)||(m===8&&day<=30)||(m===12&&day>=20)||m===1||m===2;
+  if (y === 2028) return m===1||(m===2&&day<=28)||(m===7&&day>=15)||m===8||(m===12&&day>=15);
   return (m===7&&day>=15)||m===8||(m===12&&day>=15)||m===1||m===2;
 }
 function addDays(d: string, n: number): string {

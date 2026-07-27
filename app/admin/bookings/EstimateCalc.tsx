@@ -501,7 +501,9 @@ const seasonLabel:Record<Season,string>={list:"정가",off:"비수기",peak:"성
 
 function isPeak(d:string):boolean{
   if(!d) return false;
-  const dt=new Date(d),m=dt.getMonth()+1,day=dt.getDate();
+  const dt=new Date(d),y=dt.getFullYear(),m=dt.getMonth()+1,day=dt.getDate();
+  if(y===2027) return (m===7&&day>=17)||(m===8&&day<=30)||(m===12&&day>=20)||m===1||m===2;
+  if(y===2028) return m===1||(m===2&&day<=28)||(m===7&&day>=15)||m===8||(m===12&&day>=15);
   return (m===7&&day>=15)||m===8||(m===12&&day>=15)||m===1||m===2;
 }
 function autoSeason(d:string):Season{ return d?(isPeak(d)?"peak":"off"):"list"; }
