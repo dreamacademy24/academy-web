@@ -52,16 +52,16 @@ h1 .q{color:#c9962e}
 <script>
 var SB='https://yiglafscjvjgkxpycevk.supabase.co';
 var K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xhZnNjanZqZ2t4cHljZXZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODgzMjcsImV4cCI6MjA4OTY2NDMyN30.k_HErGsz5oYkILWvUGRaU3x1IXKMQOuO5X312tDcXe4';
-var DATA=[],CAT='전체',KW='';
+var DATA=[],CAT='전체',KW='';var FIRE='🔥 가장 많이 하는 질문';
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function clean(h){var d=document.createElement('div');d.innerHTML=String(h||'');d.querySelectorAll('script,style,iframe,object').forEach(function(x){x.remove();});d.querySelectorAll('*').forEach(function(el){for(var i=el.attributes.length-1;i>=0;i--){var a=el.attributes[i];if(/^on/i.test(a.name)||(a.name==='href'&&/^javascript:/i.test(a.value)))el.removeAttribute(a.name);}});return d.innerHTML;}
 function cats(){var seen=[],out=[];DATA.forEach(function(r){if(r.cat&&seen.indexOf(r.cat)<0){seen.push(r.cat);out.push(r.cat);}});return out;}
 function drawChips(){var el=document.getElementById('chips');var h='<button class="chip'+(CAT==='전체'?' on':'')+'" data-c="전체">전체</button>';cats().forEach(function(c){h+='<button class="chip'+(CAT===c?' on':'')+'" data-c="'+esc(c)+'">'+esc(c)+'</button>';});el.innerHTML=h;el.querySelectorAll('.chip').forEach(function(b){b.onclick=function(){CAT=b.getAttribute('data-c');drawChips();drawList();};});}
-function drawList(){var rows=DATA.filter(function(r){if(CAT!=='전체'&&r.cat!==CAT)return false;if(KW){var t=((r.q||'')+' '+(r.a||'')+' '+(r.cat||'')).toLowerCase();if(t.indexOf(KW)<0)return false;}return true;});
+function drawList(){var rows=DATA.filter(function(r){if(CAT!=='전체'&&r.cat!==CAT&&!(CAT===FIRE&&r.starred))return false;if(KW){var t=((r.q||'')+' '+(r.a||'')+' '+(r.cat||'')).toLowerCase();if(t.indexOf(KW)<0)return false;}return true;});
 document.getElementById('cnt').textContent=rows.length+'개 질문';
 var el=document.getElementById('list');
 if(!rows.length){el.innerHTML='<div class="none">검색 결과가 없어요.<br>다른 단어로 검색해 보시거나 채널로 문의 주세요 :)</div>';return;}
-el.innerHTML=rows.map(function(r,i){return '<div class="fqi" data-i="'+i+'"><button class="fqq"><span class="fqcat">'+esc(r.cat||'')+'</span><span class="fqtx">'+esc(r.q||'')+'</span><span class="arw">+</span></button><div class="fqa">'+clean(r.a)+'</div></div>';}).join('');
+el.innerHTML=rows.map(function(r,i){return '<div class="fqi" data-i="'+i+'"><button class="fqq"><span class="fqcat">'+(r.starred&&r.cat!==FIRE?'🔥 ':'')+esc(r.cat||'')+'</span><span class="fqtx">'+esc(r.q||'')+'</span><span class="arw">+</span></button><div class="fqa">'+clean(r.a)+'</div></div>';}).join('');
 el.querySelectorAll('.fqq').forEach(function(b){b.onclick=function(){b.parentElement.classList.toggle('op');};});}
 document.getElementById('s').oninput=function(){KW=this.value.trim().toLowerCase();drawList();};
 fetch(SB+'/rest/v1/daon_faq?select=*&order=idx.asc',{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).then(function(d){DATA=Array.isArray(d)?d:[];drawChips();drawList();}).catch(function(){document.getElementById('list').innerHTML='<div class="none">불러오지 못했어요. 새로고침 해주세요.</div>';});
