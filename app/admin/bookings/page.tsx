@@ -725,7 +725,7 @@ export default function AdminBookingsPage(){
   }
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
   const statusFiltered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
-  const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):statusFiltered.filter(b=>isPast(b));
+  const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
   const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
