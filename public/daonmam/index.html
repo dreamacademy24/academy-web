@@ -3165,7 +3165,13 @@
 
       <div class="apply-simple">
         <div class="apply-card">
-          <form id="apply-form" class="inline-form" autocomplete="off">
+          <div id="apply-locked" style="display:none;background:#fff;border:1.5px solid #F0C9B8;border-radius:16px;padding:34px 24px;text-align:center">
+            <div style="font-size:34px">🛠️</div>
+            <h3 style="font-size:20px;margin:10px 0 8px">예약 신청 오픈 준비 중이에요</h3>
+            <p style="color:var(--ink-2);font-size:14.5px;line-height:1.75;margin:0 0 18px">공구 시작과 함께 <b>바로 예약 · 결제</b>가 이곳에서 열립니다.<br/>그 전에 궁금한 점은 카카오 채널로 편하게 문의해 주세요!</p>
+            <a href="https://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#FEE500;color:#191919;font-weight:800;font-size:15px;padding:13px 34px;border-radius:12px;text-decoration:none">💛 카카오 채널로 문의하기</a>
+          </div>
+          <form id="apply-form" class="inline-form" autocomplete="off" style="display:none">
             <div class="form-grid">
               <div class="form-field">
                 <label for="f-name">예약자 성함 <span class="req">*</span></label>
@@ -3962,6 +3968,13 @@
   }
   ['f-lodging','f-duration','f-adults','f-children','f-depart','f-oceanview'].forEach(function(id){var e=el(id);if(e)e.addEventListener('change',update);});
   update();
+})();
+</script>
+<script>
+(function(){
+  var locked=!/preview=dream/.test(location.search);
+  var f=document.getElementById('apply-form'),n=document.getElementById('apply-locked');
+  if(f&&n){ if(locked){n.style.display='block';f.style.display='none';} else {n.style.display='none';f.style.display='';} }
 })();
 </script>
 </body>
