@@ -2572,7 +2572,14 @@
               <!-- JS가 동적으로 채움 -->
             </select>
           </div>
-          <div class="calc-field calc-field-wide">
+          <div class="calc-field">
+            <label>🗓️ 입실 시기</label>
+            <select id="calc-entry">
+              <option value="y2027">2027년 3월 ~ 2028년 2월</option>
+              <option value="y2026">2026년 (올해 입실)</option>
+            </select>
+          </div>
+          <div class="calc-field">
             <label>👨‍👩‍👧 인원 구성</label>
             <select id="calc-people">
               <!-- JS가 동적으로 채움 -->
@@ -3568,8 +3575,7 @@
     lodging: 'dh',        // 'dh', 'jp', 'c9'
     duration: '4주',
     room: '',
-    people: 'p3a',
-  };
+    people: 'p3a', entry: 'y2027' };
 
   function getCurrentDataset() {
     const lodging = PRICE_DATA[calcState.lodging];
@@ -3715,12 +3721,15 @@
         const n = parseInt((calcState.people || '').replace(/\D/g, ''), 10) || 0;
         const w = parseInt(calcState.duration, 10) || 0;
         const factor = Math.min(Math.max(w, 0), 4) / 4;
-        const per = calcState.season === 'off' ? 30 : 20;
+        const is27 = calcState.entry !== 'y2026';
+        const per = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
         const disc = Math.round(per * factor * n);
         if (n > 0 && w > 0 && disc > 0 && price > disc) {
           ev.style.display = 'block';
           document.getElementById('result-event-price').textContent = (price - disc).toLocaleString() + '만원';
-          document.getElementById('result-event-sub').textContent = '얼리버드 현금할인 −' + disc.toLocaleString() + '만원 (27년 3월~28년 2월 입실 · 전액입금 기준)';
+          document.getElementById('result-event-sub').textContent = is27
+            ? '2027 얼리버드 현금할인 −' + disc.toLocaleString() + '만원 (27년 3월~28년 2월 입실 · 전액입금 기준)'
+            : '2026 입실 · 전액입금 할인 −' + disc.toLocaleString() + '만원 (전액 선입금 기준)';
         } else { ev.style.display = 'none'; }
       } else { ev.style.display = 'none'; }
     }
@@ -3813,6 +3822,9 @@
   });
   document.getElementById('calc-room').addEventListener('change', e => {
     calcState.room = e.target.value; updateResult();
+  });
+  document.getElementById('calc-entry').addEventListener('change', e => {
+    calcState.entry = e.target.value; updateResult();
   });
   document.getElementById('calc-people').addEventListener('change', e => {
     calcState.people = e.target.value; updateResult();
