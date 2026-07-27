@@ -39,6 +39,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "시재 관리", href: "/admin/cash-ledger" },
   ]},
   { title: "리조트", items: [
+    { label: "큐브나인 예약현황", href: "/admin/cube9-rooms" },
     { label: "인보이스 생성", href: "/admin/resort-invoice" },
     { label: "결제내역", href: "/admin/resort-payments" },
     { label: "제이파크 계약서", href: "/admin/resort-contract" },
