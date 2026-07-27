@@ -3875,11 +3875,21 @@
       function card(y,m,list,label){
         if(!list.length)return '<div class="hm-card hm-empty"><div class="hm-month">'+label+' <span>'+EN[m-1]+'</span></div><div class="hm-none">휴무 없음</div></div>';
         var s='<div class="hm-card"><div class="hm-month">'+label+' <span>'+EN[m-1]+'</span></div><ul class="hm-list">';
+        var groups=[];
         list.forEach(function(h){
-          var d=new Date(h.date+'T00:00:00');
           var nm=(h.name||'').trim();
-          var warn=nm.indexOf('아이언맨')>=0||nm.indexOf('셔틀')>=0;
-          s+='<li><span class="hm-dot yel"></span><b>'+d.getDate()+'일</b><span class="hm-day">('+DOW[d.getDay()]+')</span>'+(nm?' <span class="hm-tag">'+nm.replace(/</g,'&lt;')+'</span>':'')+'</li>';
+          var day=parseInt(h.date.slice(8,10),10);
+          var g=groups[groups.length-1];
+          if(g&&g.nm===nm&&day===g.end+1){g.end=day;g.endDate=h.date;}
+          else groups.push({nm:nm,start:day,end:day,startDate:h.date,endDate:h.date});
+        });
+        groups.forEach(function(g){
+          var warn=g.nm.indexOf('아이언맨')>=0||g.nm.indexOf('셔틀 X')>=0;
+          var d1=new Date(g.startDate+'T00:00:00'),d2=new Date(g.endDate+'T00:00:00');
+          var dayTxt=g.start===g.end
+            ? '<b>'+g.start+'일</b><span class="hm-day">('+DOW[d1.getDay()]+')</span>'
+            : '<b>'+g.start+'일~'+g.end+'일</b><span class="hm-day">('+DOW[d1.getDay()]+'~'+DOW[d2.getDay()]+')</span>';
+          s+='<li><span class="hm-dot yel"></span>'+dayTxt+(g.nm?' <span class="hm-tag">'+g.nm.replace(/</g,'&lt;')+'</span>':'')+'</li>';
           if(warn)s+='<li class="hm-warn">⚠️ 도로통제로 투어셔틀 미운영</li>';
         });
         return s+'</ul></div>';
