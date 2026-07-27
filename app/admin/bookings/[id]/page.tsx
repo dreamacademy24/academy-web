@@ -71,6 +71,12 @@ export default function BookingDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [agencyModal, setAgencyModal] = useState(false);
+  const [agencyList, setAgencyList] = useState<string[]>([]);
+  async function openAgencyModal(){
+    try{ const {data}=await supabase.from("agencies").select("name").order("name"); setAgencyList((data||[]).map((r:any)=>r.name).filter(Boolean)); }catch{}
+    setAgencyModal(true);
+  }
 
   // 학생/픽업/셔틀 row 편집 (단일 row만 동시 편집 가능)
   // students는 booking_json 학생(DB row 없음)도 idx로 식별 가능하게
@@ -701,7 +707,7 @@ export default function BookingDetailPage() {
             )}
             <div className="item"><div className="lbl">유학원</div>
               {editing
-                ? <><input className="ed-inp" list="agencyOpts2" value={editForm.agency||""} onChange={e=>setEditForm({...editForm,agency:e.target.value})}/><datalist id="agencyOpts2"><option value="이젠유학"/><option value="영리쉬"/><option value="코코키즈"/></datalist></>
+                ? <button type="button" onClick={openAgencyModal} className="ed-inp" style={{textAlign:"left",cursor:"pointer",background:"#fff"}}>{editForm.agency||"개인 (선택하려면 클릭)"} ▾</button>
                 : <div className="val">{b.agency || "-"}</div>}
             </div>
             <div className="item"><div className="lbl">전체 인원</div>
@@ -1411,6 +1417,24 @@ export default function BookingDetailPage() {
               );
             })
           }
+        </div>
+      )}
+      {agencyModal&&(
+        <div onClick={()=>setAgencyModal(false)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,.45)",zIndex:9990,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:20,width:340,maxWidth:"92vw",maxHeight:"80vh",overflowY:"auto"}}>
+            <h3 style={{margin:"0 0 12px",fontSize:16,fontWeight:800}}>유학원 선택</h3>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              <button onClick={()=>{setEditForm(f=>({...f,agency:"개인"}));setAgencyModal(false);}} style={{padding:"10px 12px",border:"1.5px solid #94a3b8",borderRadius:9,background:(editForm.agency||"")==="개인"?"#eef2ff":"#fff",cursor:"pointer",textAlign:"left",fontWeight:700,fontFamily:"inherit"}}>👤 개인 (유학원 없음)</button>
+              {agencyList.map(n=>(
+                <button key={n} onClick={()=>{setEditForm(f=>({...f,agency:n}));setAgencyModal(false);}} style={{padding:"10px 12px",border:"1px solid #cbd5e1",borderRadius:9,background:(editForm.agency||"")===n?"#eef2ff":"#fff",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>🏢 {n}</button>
+              ))}
+              <div style={{display:"flex",gap:6,marginTop:4}}>
+                <input placeholder="직접 입력" id="agencyCustomInp" style={{flex:1,padding:"9px 10px",border:"1px solid #cbd5e1",borderRadius:9,fontFamily:"inherit"}} onKeyDown={e=>{if(e.key==="Enter"){const v=(e.target as HTMLInputElement).value.trim();if(v){setEditForm(f=>({...f,agency:v}));setAgencyModal(false);}}}}/>
+                <button onClick={()=>{const el=document.getElementById("agencyCustomInp") as HTMLInputElement;const v=(el&&el.value||"").trim();if(v){setEditForm(f=>({...f,agency:v}));setAgencyModal(false);}}} style={{padding:"9px 14px",border:"none",background:"#1a6fc4",color:"#fff",borderRadius:9,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>입력</button>
+              </div>
+              <button onClick={()=>{setEditForm(f=>({...f,agency:""}));setAgencyModal(false);}} style={{padding:"8px 12px",border:"1px solid #fecaca",borderRadius:9,background:"#fff5f5",color:"#b91c1c",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>지우기 (미지정)</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
