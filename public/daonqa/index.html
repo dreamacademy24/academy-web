@@ -64,7 +64,7 @@ if(!rows.length){el.innerHTML='<div class="none">검색 결과가 없어요.<br>
 el.innerHTML=rows.map(function(r,i){return '<div class="fqi" data-i="'+i+'"><button class="fqq"><span class="fqcat">'+esc(r.cat||'')+'</span><span class="fqtx">'+esc(r.q||'')+'</span><span class="arw">+</span></button><div class="fqa">'+clean(r.a)+'</div></div>';}).join('');
 el.querySelectorAll('.fqq').forEach(function(b){b.onclick=function(){b.parentElement.classList.toggle('op');};});}
 document.getElementById('s').oninput=function(){KW=this.value.trim().toLowerCase();drawList();};
-fetch(SB+'/rest/v1/staff_faq?select=*&order=idx.asc',{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).then(function(d){DATA=Array.isArray(d)?d:[];drawChips();drawList();}).catch(function(){document.getElementById('list').innerHTML='<div class="none">불러오지 못했어요. 새로고침 해주세요.</div>';});
+fetch(SB+'/rest/v1/daon_faq?select=*&order=idx.asc',{headers:{apikey:K,Authorization:'Bearer '+K}}).then(function(r){return r.json();}).then(function(d){DATA=Array.isArray(d)?d:[];drawChips();drawList();}).catch(function(){document.getElementById('list').innerHTML='<div class="none">불러오지 못했어요. 새로고침 해주세요.</div>';});
 </script>
 </body>
 </html>
