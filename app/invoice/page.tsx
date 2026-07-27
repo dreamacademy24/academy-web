@@ -500,6 +500,8 @@ function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
   const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
 }
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
+const RESORT_LOGO:Record<string,string>={jpark:"https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/logos/jpark-logo.png",cubenine:"https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/logos/cube9-logo.png"};
+function ResortLogo({t}:{t:AT}){ if(t!=="jpark"&&t!=="cubenine")return null; return <img src={RESORT_LOGO[t]} alt="" style={{height:15,verticalAlign:"middle",marginRight:6,...(t==="jpark"?{filter:"brightness(0)"}:{})}}/>; }
 function alKo(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크${r?" "+r:""}`:`큐브나인${r?" "+r:""}`;}
 function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
@@ -1744,7 +1746,7 @@ function InvoicePageInner(){
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
         <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
-        <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+        <tr><td className="lb">패키지</td><td><ResortLogo t={a1T}/>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
@@ -1844,7 +1846,7 @@ function InvoicePageInner(){
               <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
               <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
               <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${lateCheckout?"22:30pm":"12noon"}`):"-"}</td></tr>
-              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+              <tr><td className="lb">패키지</td><td><ResortLogo t={a1T}/>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
               <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
               {checkin.specialRequest&&<tr><td className="lb">특이사항</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
             </tbody></table>
