@@ -221,7 +221,7 @@
     scrollbar-width: none;
   }
   .tab-nav::-webkit-scrollbar { display: none; }
-  .tab-nav-inner { display: inline-flex; gap: 6px; }
+  .tab-nav-inner { display: inline-flex; gap: 6px; flex-wrap: wrap; row-gap: 6px; }
   .tab-btn {
     white-space: nowrap;
     padding: 10px 16px;
@@ -1624,15 +1624,14 @@
   <div class="tab-nav">
     <div class="tab-nav-inner">
       <button class="tab-btn active" data-tab="0"><span class="num">00</span>한눈에 보기</button>
-      <button class="tab-btn" data-tab="1"><span class="num">01</span>주니어 커리큘럼</button>
-      <button class="tab-btn" data-tab="2"><span class="num">02</span>킨더 커리큘럼</button>
-      <button class="tab-btn" data-tab="3"><span class="num">03</span>드림하우스 (독채)</button>
-      <button class="tab-btn" data-tab="4"><span class="num">04</span>제이파크</button>
-      <button class="tab-btn" data-tab="5"><span class="num">05</span>큐브나인</button>
-      <button class="tab-btn" data-tab="6"><span class="num">06</span>패키지 금액</button>
-      <button class="tab-btn" data-tab="7"><span class="num">07</span>중요 안내사항</button>
-      <button class="tab-btn" data-tab="9"><span class="num">08</span>패키지 혜택</button>
-      <button class="tab-btn" data-tab="8"><span class="num">09</span>예약 신청</button>
+      <button class="tab-btn" data-tab="1"><span class="num">01</span>커리큘럼</button>
+      <button class="tab-btn" data-tab="3"><span class="num">02</span>드림하우스 (독채)</button>
+      <button class="tab-btn" data-tab="4"><span class="num">03</span>제이파크</button>
+      <button class="tab-btn" data-tab="5"><span class="num">04</span>큐브나인</button>
+      <button class="tab-btn" data-tab="6"><span class="num">05</span>패키지 금액</button>
+      <button class="tab-btn" data-tab="7"><span class="num">06</span>중요 안내사항</button>
+      <button class="tab-btn" data-tab="9"><span class="num">07</span>패키지 혜택</button>
+      <button class="tab-btn" data-tab="8"><span class="num">08</span>예약 신청</button>
     </div>
   </div>
 
@@ -1714,6 +1713,11 @@
     </section>
 
     <section class="panel" id="panel-1">
+      <div style="display:flex;justify-content:center;gap:8px;margin:4px 0 22px">
+        <button type="button" id="curriBtnJr" onclick="curriShow('jr')" style="padding:10px 26px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit">주니어 (초1~중2)</button>
+        <button type="button" id="curriBtnKd" onclick="curriShow('kd')" style="padding:10px 26px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit">킨더 (5~7세)</button>
+      </div>
+      <div id="curriJr">
       <div class="panel-head">
         <div>
           <div class="panel-eyebrow">Junior Curriculum · 초1 ~ 중2</div>
@@ -1896,10 +1900,8 @@
         <b>⚠️ 유의사항</b><br />
         분리 가능한 아이만 수업 참여 가능합니다. 분리 불가능으로 인한 환불은 불가합니다. 학원 내 부모님 대기 및 수업 참관은 허용되지 않습니다. 수업 규정 및 환불 규정은 반드시 확인해 주세요.
       </div>
-    </section>
-
-    <!-- 2. 킨더 커리큘럼 -->
-    <section class="panel" id="panel-2">
+    </div>
+      <div id="curriKd" style="display:none">
       <div class="panel-head">
         <div>
           <div class="panel-eyebrow">Kinder Curriculum · 5세 ~ 7세</div>
@@ -2069,6 +2071,19 @@
           </div>
         </div>
       </div>
+    </div>
+      <script>
+      function curriShow(w){
+        var jr=document.getElementById('curriJr'),kd=document.getElementById('curriKd');
+        var bj=document.getElementById('curriBtnJr'),bk=document.getElementById('curriBtnKd');
+        var on='padding:10px 26px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit';
+        var off='padding:10px 26px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-2);font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit';
+        jr.style.display=w==='jr'?'':'none';
+        kd.style.display=w==='kd'?'':'none';
+        bj.style.cssText=w==='jr'?on:off;
+        bk.style.cssText=w==='kd'?on:off;
+      }
+      </script>
     </section>
 
     <!-- 3. 드림하우스 (독채) -->
@@ -3329,7 +3344,7 @@
   // 해시로 바로 진입
   (function handleHash() {
     const m = location.hash.match(/^#tab-(\d)$/);
-    if (m) activateTab(m[1]);
+    if (m) activateTab(m[1]==='2'?'1':m[1]);
   })();
 
   // ===== 패키지 금액 계산기 (panel-6) =====
