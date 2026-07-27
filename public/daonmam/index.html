@@ -2594,19 +2594,21 @@
             <span class="result-label" id="result-label">드림하우스 · 4주 · 3인</span>
           </div>
           <div class="result-price-wrap">
-            <div class="result-price" id="result-price">- 만원</div>
-            <div class="result-discount" id="result-discount" style="display:none;">
+            <div class="result-discount" id="result-discount" style="display:none;margin-bottom:4px;">
               정가 <span class="strike" id="result-regular">-</span>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap">
+              <div class="result-price" id="result-price" style="font-size:30px">- 만원</div>
               <span class="save-amount" id="result-save"></span>
             </div>
           </div>
-          <div id="result-event" style="display:none;margin:10px 0 4px">
-              <span style="background:#0F6E56;color:#fff;font-size:12px;font-weight:800;padding:4px 14px;border-radius:999px">🎁 이벤트 적용가</span>
-              <div id="result-event-price" style="font-size:26px;font-weight:900;color:#0F6E56;margin-top:6px"></div>
-              <div id="result-event-sub" style="font-size:12.5px;color:#2E7D74;margin-top:2px"></div>
+          <div id="result-event" style="display:none;margin:12px 0 4px">
+              <span style="background:#0F6E56;color:#fff;font-size:13px;font-weight:800;padding:5px 16px;border-radius:999px">🎁 다온맘 특별 추가 할인</span>
+              <div id="result-event-price" style="font-size:44px;font-weight:900;color:#0F6E56;margin-top:8px;line-height:1.1"></div>
+              <div id="result-event-sub" style="display:none"></div>
             </div>
             <div class="result-note">
-            🎁 표기된 금액은 <b>1차 할인가</b>이며, 상단의 <b>공구 단독 혜택</b>은 별도 적용됩니다.<br />* 별도 적용되어서 결제 시에 <b>추가 할인가</b>로 적용됩니다.<br />* 자세한 내용은 <b>예약 신청</b>에서 기간을 입력하시면 해당 기간에 맞는 할인가로 적용됩니다.
+            * 자세한 내용은 <b>예약 신청</b>에서 기간과 결제 방식을 입력하시면 맞는 할인가로 적용됩니다.
           </div>
         </div>
 
@@ -3704,7 +3706,7 @@
       if (regularPrice && regularPrice > price) {
         const save = regularPrice - price;
         document.getElementById('result-regular').textContent = regularPrice.toLocaleString() + '만원';
-        document.getElementById('result-save').textContent = `${save.toLocaleString()}만원 절약!`;
+        document.getElementById('result-save').textContent = `${save.toLocaleString()}만원 1차 할인!`;
         document.getElementById('result-discount').style.display = 'block';
       } else {
         document.getElementById('result-discount').style.display = 'none';
