@@ -2593,7 +2593,12 @@
               <span class="save-amount" id="result-save"></span>
             </div>
           </div>
-          <div class="result-note">
+          <div id="result-event" style="display:none;margin:10px 0 4px">
+              <span style="background:#0F6E56;color:#fff;font-size:12px;font-weight:800;padding:4px 14px;border-radius:999px">🎁 이벤트 적용가</span>
+              <div id="result-event-price" style="font-size:26px;font-weight:900;color:#0F6E56;margin-top:6px"></div>
+              <div id="result-event-sub" style="font-size:12.5px;color:#2E7D74;margin-top:2px"></div>
+            </div>
+            <div class="result-note">
             🎁 표기된 금액은 <b>1차 할인가</b>이며, 상단의 <b>공구 단독 혜택</b>은 별도 적용됩니다.<br />* 별도 적용되어서 결제 시에 <b>추가 할인가</b>로 적용됩니다.
           </div>
         </div>
@@ -3701,6 +3706,23 @@
       }
     } else {
       document.getElementById('result-discount').style.display = 'none';
+    }
+
+    // 이벤트(얼리버드 현금할인) 적용가
+    const ev = document.getElementById('result-event');
+    if (ev) {
+      if (!isRegular) {
+        const n = parseInt((calcState.people || '').replace(/\D/g, ''), 10) || 0;
+        const w = parseInt(calcState.duration, 10) || 0;
+        const factor = Math.min(Math.max(w, 0), 4) / 4;
+        const per = calcState.season === 'off' ? 30 : 20;
+        const disc = Math.round(per * factor * n);
+        if (n > 0 && w > 0 && disc > 0 && price > disc) {
+          ev.style.display = 'block';
+          document.getElementById('result-event-price').textContent = (price - disc).toLocaleString() + '만원';
+          document.getElementById('result-event-sub').textContent = '얼리버드 현금할인 −' + disc.toLocaleString() + '만원 (27년 3월~28년 2월 입실 · 전액입금 기준)';
+        } else { ev.style.display = 'none'; }
+      } else { ev.style.display = 'none'; }
     }
   }
 
