@@ -500,6 +500,7 @@ function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
   const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
 }
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
+function alKo(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크${r?" "+r:""}`:`큐브나인${r?" "+r:""}`;}
 function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function mp(t:AT){return t==="dreamhouse"?6:t==="jpark"?5:4;} // 제이파크 5인(성인2+아이3, 2026-07-21)
@@ -1743,7 +1744,7 @@ function InvoicePageInner(){
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
         <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
-        <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"수동입력"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+        <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
@@ -1752,7 +1753,7 @@ function InvoicePageInner(){
       </tbody></table></div>)}
 
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<><table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
-        {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
+        {billing.items.length>0?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>):<tr><td>패키지 금액{!isCommute&&` (${alKo(a1T,a1R)} ${a1W}주)`}</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
         {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={i}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
         {td>0&&<tr className="tr"><td>총 할인</td><td style={{textAlign:"right",color:"#dc2626"}}>-{fmt(td)}원</td></tr>}
         {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
@@ -1843,7 +1844,7 @@ function InvoicePageInner(){
               <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
               <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
               <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${lateCheckout?"22:30pm":"12noon"}`):"-"}</td></tr>
-              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||"-"}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
               <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
               {checkin.specialRequest&&<tr><td className="lb">특이사항</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
             </tbody></table>
@@ -1861,7 +1862,7 @@ function InvoicePageInner(){
             <table className="tb"><thead><tr><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
               {billing.items.length>0
                 ?billing.items.map((item,i)=><tr key={i}><td>{item.label}{item.season?` (${item.season})`:""}</td><td style={{textAlign:"right"}}>{fmt(item.price)}원</td></tr>)
-                :<tr><td>패키지 금액</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
+                :<tr><td>패키지 금액{!isCommute&&` (${alKo(a1T,a1R)} ${a1W}주)`}</td><td style={{textAlign:"right"}}>{fmt(billing.basePrice)}원</td></tr>}
               {billing.discounts.filter(d=>d.name).map((d,i)=><tr key={`d${i}`}><td className="dc">↓ {d.name}</td><td className="dc" style={{textAlign:"right"}}>-{fmt(Number(d.amount))}원</td></tr>)}
               {td>0&&<tr><td style={{fontWeight:600}}>총 할인</td><td style={{textAlign:"right",color:"#dc2626",fontWeight:600}}>-{fmt(td)}원</td></tr>}
               {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
@@ -1941,7 +1942,7 @@ function InvoicePageInner(){
         <div className="pb no-print">
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
           <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
-          <button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?`✅ 하우스 등록완료${(checkin.houseNo||"").trim()?" · "+checkin.houseNo:""}`:"🏠 드림하우스 등록"}</button>
+          {(a1T==="dreamhouse"||(cm==="combo"&&a2T==="dreamhouse"))&&<button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?`✅ 하우스 등록완료${(checkin.houseNo||"").trim()?" · "+checkin.houseNo:""}`:"🏠 드림하우스 등록"}</button>}
           {dhModal&&(
             <div onClick={()=>setDhModal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
               <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(480px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
