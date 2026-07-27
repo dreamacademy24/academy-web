@@ -2583,7 +2583,7 @@
         <!-- 결과 표시 -->
         <div class="calc-result" id="calc-result">
           <div class="result-header">
-            <span class="result-tag" id="result-tag">다온맘 할인가</span>
+            <span class="result-tag" id="result-tag">다온맘 1차 할인가</span>
             <span class="result-label" id="result-label">드림하우스 · 4주 · 3인</span>
           </div>
           <div class="result-price-wrap">
@@ -3665,7 +3665,7 @@
     // 라벨
     const seasonLabel = isRegular ? '' : (calcState.season === 'off' ? '비수기 · ' : '성수기 · ');
     const roomLabel = lodging.hasRoom && calcState.room ? ` · ${lodging.rooms[calcState.room].split(' ')[0]}` : '';
-    document.getElementById('result-tag').textContent = isRegular ? '정가' : '다온맘 할인가';
+    document.getElementById('result-tag').textContent = isRegular ? '정가' : '다온맘 1차 할인가';
     document.getElementById('result-tag').style.background = isRegular ? '#888' : 'var(--coral)';
     document.getElementById('result-label').textContent =
       `${seasonLabel}${lodging.name} · ${calcState.duration}${roomLabel} · ${peopleLabel}`;
