@@ -726,7 +726,7 @@ export default function AdminBookingsPage(){
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
   const statusFiltered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):statusFiltered.filter(b=>isPast(b));
-  const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));});
+  const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
   const rcpList=bookings.filter(b=>{
     if(!["영수증발행","완료"].includes(b.status))return false;
@@ -922,6 +922,7 @@ export default function AdminBookingsPage(){
           {listSearch&&<button onClick={()=>setListSearch("")} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#9ca3af",padding:"2px 4px"}}>✕</button>}
           <button className={`sub-tab${listPeriod==="현재"?" ac":""}`} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setListPeriod("현재")}>현재+예정</button>
           <button className={`sub-tab${listPeriod==="지난"?" ac":""}`} style={{fontSize:12,padding:"4px 10px",background:listPeriod==="지난"?"#fef3c7":"",color:listPeriod==="지난"?"#92400e":""}} onClick={()=>setListPeriod("지난")}>지난 예약 {pastCount>0&&<span style={{background:"#fbbf24",color:"#78350f",borderRadius:10,padding:"0 6px",fontSize:10,marginLeft:3,fontWeight:700}}>{pastCount}</span>}</button>
+          <button className={`sub-tab${listPeriod==="전체"?" ac":""}`} style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setListPeriod("전체")}>전체 기간</button>
           <button className="sub-tab" style={{background:"#dcfce7",color:"#166534"}} onClick={()=>exportListXlsx(searchedList)}>📥 엑셀</button>
         </span>
       </div>
