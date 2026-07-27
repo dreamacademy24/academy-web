@@ -3779,15 +3779,8 @@
     const desc = document.getElementById('schedule-desc');
     if (!title || !desc) return;
 
-    if (calcState.lodging === 'dh') {
-      // 드림하우스: 1월 4일 개강 고정
-      title.innerHTML = '드림하우스는 <span class="hl">1월 4일 개강만 가능</span>합니다';
-      desc.innerHTML = '독채 운영 특성상 <b>1월 4일 시작</b> 일정으로만 운영됩니다.<br />📍 학원 방학 기간 <b>12월 24일 ~ 1월 3일</b> 직후 개강이니 참고해 주세요.';
-    } else {
-      // 제이파크 / 큐브나인: 매주 월요일
-      title.innerHTML = '중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다';
-      desc.innerHTML = '출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.<br />🗓️ 학원 방학 기간: <b>12월 24일 ~ 1월 3일</b> (해당 기간 수업 없음)';
-    }
+    title.innerHTML = '중요! 수업은 <span class="hl">매주 월요일</span>에만 시작됩니다';
+    desc.innerHTML = '출국일을 정하실 때 반드시 확인해 주세요. <b>일요일 입실 → 월요일 수업 시작</b>이 가장 일반적입니다.<br />🗓️ 학원 방학 기간: <b>12월 24일 ~ 1월 3일</b> (해당 기간 수업 없음)';
   }
 
   // 메인 탭 (정가 / 할인가)
