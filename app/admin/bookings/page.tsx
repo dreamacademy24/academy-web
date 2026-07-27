@@ -176,7 +176,7 @@ export default function AdminBookingsPage(){
   const [authed,setAuthed]=useState(false);
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
-  const [listPeriod,setListPeriod]=useState<"현재"|"지난">("현재");
+  const [listPeriod,setListPeriod]=useState<"현재"|"지난"|"전체">("현재");
   const [listSearch,setListSearch]=useState("");
   const [confirmFilter]=useState("전체");
   const [confirmAssignee,setConfirmAssignee]=useState("전체");
