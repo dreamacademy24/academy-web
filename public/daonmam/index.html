@@ -4080,12 +4080,12 @@
 /* ── 모바일 가독성 (2026-07-28) ── */
 @media (max-width: 640px) {
   /* 탭바: 여러 줄 래핑 → 한 줄 가로 스크롤 */
-  .tab-nav-inner { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .tab-nav-inner { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
   .tab-nav-inner::-webkit-scrollbar { display: none; }
   .tab-btn { flex: 0 0 auto; white-space: nowrap; }
   /* 표: 화면보다 넓으면 가로 스크롤 (잘림 방지) */
-  .panel table { display: block; overflow-x: auto; max-width: 100%; }
-  .panel table thead, .panel table tbody { display: table; width: 100%; min-width: 480px; }
+  .panel table { width: 100% !important; table-layout: fixed; }
+  .panel th, .panel td { font-size: 12px !important; padding: 7px 6px !important; word-break: keep-all; overflow-wrap: break-word; }
   /* 사진·카드 그리드: 4열/3열 → 2열 */
   .jpx-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .ov0-ph { grid-template-columns: repeat(2, 1fr) !important; }
