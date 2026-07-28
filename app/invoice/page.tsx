@@ -1335,6 +1335,44 @@ function InvoicePageInner(){
     alert(room?("✅ 드림하우스 예약 완료!\n배정 룸: "+room):"✅ 등록 완료 — 룸은 미배정 상태예요.\n직원업무 홈 '확인 필요'와 룸 캘린더에서 배정해주세요.");
   }
 
+  /* ── 영수증 탭: 큐브나인 등록 — 풀억세스/디럭스오션 가용 룸 선택 배정 ── */
+  const C9_FA=["103","104","105","106"];
+  const C9_DX=["204","205","206","207","208","209","210"];
+  const [c9Registered,setC9Registered]=useState(false);
+  const [c9Modal,setC9Modal]=useState<{availFA:string[];availDX:string[];assigned:string;ci:string;co:string;prefer:string;blocks:{id:string;room:string;name:string;ci:string;co:string;kind?:string;memo?:string;booking_id?:string}[]}|null>(null);
+  async function registerCubenine(){
+    if(!bookingId){alert("예약 ID가 없습니다.");return;}
+    // 예약의 큐브 구간·룸타입 확인 (콤보면 cubenine seg 기준)
+    const {data:bk}=await supabase.from("bookings").select("cn_room_type,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,checkin_date,checkout_date,booker_name").eq("id",bookingId).single();
+    if(!bk){alert("예약 정보를 불러오지 못했습니다.");return;}
+    let ci=String(bk.checkin_date||"").slice(0,10), co=String(bk.checkout_date||"").slice(0,10);
+    if(bk.seg1_type==="cubenine"){ci=String(bk.seg1_checkin||ci).slice(0,10);co=String(bk.seg1_checkout||co).slice(0,10);}
+    else if(bk.seg2_type==="cubenine"){ci=String(bk.seg2_checkin||ci).slice(0,10);co=String(bk.seg2_checkout||co).slice(0,10);}
+    if(!ci||!co){alert("⚠️ 체크인/체크아웃 날짜가 필요합니다.");return;}
+    const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();
+    const blocks:(typeof c9Modal extends null?never:never)|{id:string;room:string;name:string;ci:string;co:string;kind?:string;memo?:string;booking_id?:string}[]=Array.isArray(st?.value)?st!.value as never:[];
+    const mine=blocks.find(x=>x.booking_id===bookingId);
+    const occupied=(room:string)=>blocks.some(x=>x.room===room&&x.booking_id!==bookingId&&x.ci<co&&ci<x.co);
+    const availFA=C9_FA.filter(r=>!occupied(r));
+    const availDX=C9_DX.filter(r=>!occupied(r));
+    const prefer=String(bk.cn_room_type||"").includes("풀")?"FA":"DX";
+    setC9Modal({availFA,availDX,assigned:mine?.room||"",ci,co,prefer,blocks});
+  }
+  async function finishC9Register(room:string|null){
+    if(!c9Modal||!bookingId)return;
+    const {ci,co,blocks}=c9Modal;
+    if(room!==null){
+      const next=blocks.filter(x=>x.booking_id!==bookingId);
+      next.push({id:Math.random().toString(36).slice(2,10)+Date.now().toString(36),room,name:booker.name||"드림 예약",ci,co,kind:"dream",memo:room&&C9_FA.includes(room)?"풀억세스":"디럭스오션",booking_id:bookingId});
+      const {error:e1}=await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:next},{onConflict:"key"});
+      if(e1){alert("룸 배정 저장 실패: "+e1.message);return;}
+    }
+    const {error}=await supabase.from("bookings").update({status:"영수증발행"}).eq("id",bookingId);
+    if(error){alert("등록 실패: "+error.message);return;}
+    setC9Registered(true);setC9Modal(null);
+    alert(room?("✅ 큐브나인 예약 완료!\n배정 룸: "+room+"호 ("+(C9_FA.includes(room)?"풀억세스":"디럭스오션")+")"):"✅ 등록 완료 — 룸은 미배정 상태예요.\n큐브나인 예약현황의 '룸 배정 대기'에서 배정해주세요.");
+  }
+
   /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) + 상태→영수증발행 ── */
   async function saveReceiptPayments(){
     if(!bookingId){alert("예약 ID가 없습니다.");return;}
@@ -1878,7 +1916,7 @@ function InvoicePageInner(){
                 </tr>
                 {additionalDue>0?(
                   <tr style={{background:"#fff7ed"}}>
-                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 잔금 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(잔금 = 새 총액 − 기납부액)</span></td>
+                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 추가 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(추가금 = 새 총액 − 기납부액)</span></td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
                   </tr>
                 ):(
@@ -1947,6 +1985,7 @@ function InvoicePageInner(){
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
           <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
           {(a1T==="dreamhouse"||(cm==="combo"&&a2T==="dreamhouse"))&&<button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?`✅ 하우스 등록완료${(checkin.houseNo||"").trim()?" · "+checkin.houseNo:""}`:"🏠 드림하우스 등록"}</button>}
+          {(a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine"))&&<button onClick={registerCubenine} disabled={c9Registered} style={{padding:"12px 24px",background:c9Registered?"#93c5fd":"#0e7490",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:c9Registered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{c9Registered?"✅ 큐브 등록완료":"🐬 큐브나인 등록"}</button>}
           {dhModal&&(
             <div onClick={()=>setDhModal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
               <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(480px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
@@ -1963,6 +2002,33 @@ function InvoicePageInner(){
                 </div>
                 <button onClick={()=>finishDhRegister(null)} style={{width:"100%",padding:"9px 0",border:"1px solid #4338ca",borderRadius:9,background:"#eef2ff",color:"#4338ca",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>룸 미배정으로 등록 (나중에 룸 캘린더에서 배정)</button>
                 <button onClick={()=>setDhModal(null)} style={{width:"100%",padding:"8px 0",border:"1px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#64748b",fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
+              </div>
+            </div>
+          )}
+          {c9Modal&&(
+            <div onClick={()=>setC9Modal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(500px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
+                <div style={{fontSize:15,fontWeight:800,marginBottom:4}}>🐬 큐브나인 룸 배정</div>
+                <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>{c9Modal.ci} ~ {c9Modal.co} 기준 가용 룸 · 예약 룸타입: <b style={{color:c9Modal.prefer==="FA"?"#1d4ed8":"#0e7490"}}>{c9Modal.prefer==="FA"?"풀억세스":"디럭스오션"}</b></div>
+                {c9Modal.assigned&&(
+                  <div style={{fontSize:12.5,fontWeight:700,color:"#166534",background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"7px 10px",marginBottom:10}}>현재 배정: {c9Modal.assigned}호 — 다른 룸을 누르면 재배정돼요</div>
+                )}
+                <div style={{fontSize:12,fontWeight:800,color:"#1d4ed8",margin:"4px 0 6px"}}>풀 억세스 룸 (103~106){c9Modal.prefer==="FA"?" ← 예약 룸타입":""}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+                  {c9Modal.availFA.length===0?<div style={{gridColumn:"1/5",fontSize:12,color:"#dc2626",fontWeight:700}}>이 기간 풀억세스 가용 룸 없음</div>:
+                    c9Modal.availFA.map(r=>(
+                      <button key={r} onClick={()=>finishC9Register(r)} style={{padding:"8px 0",border:c9Modal.prefer==="FA"?"1.5px solid #1d4ed8":"1px solid #cbd5e1",borderRadius:8,background:c9Modal.assigned===r?"#dbeafe":"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{r}호</button>
+                    ))}
+                </div>
+                <div style={{fontSize:12,fontWeight:800,color:"#0e7490",margin:"4px 0 6px"}}>디럭스 오션뷰 룸 (204~210){c9Modal.prefer==="DX"?" ← 예약 룸타입":""}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
+                  {c9Modal.availDX.length===0?<div style={{gridColumn:"1/5",fontSize:12,color:"#dc2626",fontWeight:700}}>이 기간 디럭스오션 가용 룸 없음</div>:
+                    c9Modal.availDX.map(r=>(
+                      <button key={r} onClick={()=>finishC9Register(r)} style={{padding:"8px 0",border:c9Modal.prefer==="DX"?"1.5px solid #0e7490":"1px solid #cbd5e1",borderRadius:8,background:c9Modal.assigned===r?"#cffafe":"#fff",fontWeight:800,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{r}호</button>
+                    ))}
+                </div>
+                <button onClick={()=>finishC9Register(null)} style={{width:"100%",padding:"9px 0",border:"1px solid #4338ca",borderRadius:9,background:"#eef2ff",color:"#4338ca",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>룸 미배정으로 등록 (예약현황에서 배정)</button>
+                <button onClick={()=>setC9Modal(null)} style={{width:"100%",padding:"8px 0",border:"1px solid #e2e8f0",borderRadius:9,background:"#fff",color:"#64748b",fontWeight:700,fontSize:12.5,cursor:"pointer",fontFamily:"inherit"}}>취소</button>
               </div>
             </div>
           )}

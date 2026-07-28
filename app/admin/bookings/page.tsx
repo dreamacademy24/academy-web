@@ -896,9 +896,11 @@ export default function AdminBookingsPage(){
         ):(<div className="tbl-w"><table className="tbl"><thead><tr>
           <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>숙소</th><th>접수일</th><th>액션</th>
         </tr></thead><tbody>
-          {newBookings.map(b=>(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
+          {newBookings.map(b=>{
+            const unpaid30=(()=>{try{const created=new Date(String(b.created_at)).getTime();const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;return paid<=0&&Date.now()-created>30*60*1000;}catch{return false;}})();
+            return (<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={unpaid30?{background:"#fff7f7"}:undefined}>
             <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>
-            <td>{b.booker_name||"-"}</td>
+            <td>{b.booker_name||"-"}{unpaid30&&<span style={{marginLeft:6,background:"#fee2e2",color:"#b91c1c",fontSize:10.5,fontWeight:800,borderRadius:8,padding:"1px 7px",verticalAlign:"middle"}}>❗미입금</span>}</td>
             <td style={{fontSize:12,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"-"}</td>
             <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
@@ -908,7 +910,7 @@ export default function AdminBookingsPage(){
               <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
               <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no+"\n\n⚠️ 학생·픽드랍·셔틀·튜터·체크인 등 모든 연결 데이터가 함께 삭제됩니다.")){const res=await fetch("/api/bookings/"+b.id+"/delete",{method:"DELETE"});if(!res.ok){alert("삭제 실패");return;}load();}}}>삭제</button>
             </td>
-          </tr>))}
+          </tr>);})}
         </tbody></table></div>)}
       </div>);
     })()}
