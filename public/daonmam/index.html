@@ -4110,16 +4110,16 @@
       드림아카데미는 <b>2016년부터 운영된 세부플레이드림의 자회사</b>로 같은 대표님이 운영하며, 팬데믹 기간에도 예약된 모든 금액을 환불해 드렸고 현재까지 잘 운영하고 있으니 안심하셔도 됩니다.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <figure style="margin:0;"><img src="/daonmam/docs/business-permit.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="Business Permit"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">사업허가증 (Mayor's Business Permit)</figcaption></figure>
-      <figure style="margin:0;"><img src="/daonmam/docs/sec-aoi-1.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 법인등록"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 1</figcaption></figure>
-      <figure style="margin:0;"><img src="/daonmam/docs/sec-aoi-2.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 주주명부"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 2 (대표자 주주 기재)</figcaption></figure>
-      <figure style="margin:0;"><img src="/daonmam/docs/passport.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="대표 여권"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">대표자(오초희) 여권 사본 · 예금주 동일</figcaption></figure>
+      <figure style="margin:0;"><img data-src="/daonmam/docs/business-permit.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="Business Permit"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">사업허가증 (Mayor's Business Permit)</figcaption></figure>
+      <figure style="margin:0;"><img data-src="/daonmam/docs/sec-aoi-1.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 법인등록"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 1</figcaption></figure>
+      <figure style="margin:0;"><img data-src="/daonmam/docs/sec-aoi-2.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 주주명부"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 2 (대표자 주주 기재)</figcaption></figure>
+      <figure style="margin:0;"><img data-src="/daonmam/docs/passport.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="대표 여권"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">대표자(오초희) 여권 사본 · 예금주 동일</figcaption></figure>
     </div>
   </div>
 </div>
 <script>
 function daonCopyAcct(btn){var t='카카오뱅크 3333-11-3947821 오초희';(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){btn.textContent='✅ 복사됐어요';setTimeout(function(){btn.textContent='📋 계좌번호 복사';},1600);}).catch(function(){prompt('아래 계좌를 복사하세요',t);});}
-function daonCorpOpen(){document.getElementById('daonCorpModal').style.display='block';document.body.style.overflow='hidden';}
+function daonCorpOpen(){var md=document.getElementById('daonCorpModal');md.querySelectorAll('img[data-src]').forEach(function(im){im.src=im.getAttribute('data-src');im.removeAttribute('data-src');});md.style.display='block';document.body.style.overflow='hidden';}
 function daonCorpClose(){document.getElementById('daonCorpModal').style.display='none';document.body.style.overflow='';}
 </script>
 </body>
