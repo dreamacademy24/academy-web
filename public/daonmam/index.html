@@ -4076,5 +4076,28 @@
 })();
 </script>
 
+<style>
+/* ── 모바일 가독성 (2026-07-28) ── */
+@media (max-width: 640px) {
+  /* 탭바: 여러 줄 래핑 → 한 줄 가로 스크롤 */
+  .tab-nav-inner { flex-wrap: nowrap !important; overflow-x: auto; justify-content: flex-start !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .tab-nav-inner::-webkit-scrollbar { display: none; }
+  .tab-btn { flex: 0 0 auto; white-space: nowrap; }
+  /* 표: 화면보다 넓으면 가로 스크롤 (잘림 방지) */
+  .panel table { display: block; overflow-x: auto; max-width: 100%; }
+  .panel table thead, .panel table tbody { display: table; width: 100%; min-width: 480px; }
+  /* 사진·카드 그리드: 4열/3열 → 2열 */
+  .jpx-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .ov0-ph { grid-template-columns: repeat(2, 1fr) !important; }
+  .ov0-2col { grid-template-columns: 1fr !important; }
+  /* 계산기: 컨트롤 1열로 */
+  .calc-controls { grid-template-columns: 1fr !important; }
+  /* 패널 좌우 여백 살짝 축소 + 제목 크기 조정 */
+  .panel { padding-left: 14px !important; padding-right: 14px !important; }
+  .panel-head h2, .panel-title { font-size: 21px !important; }
+  /* 작은 보조 글씨 최소 12px 확보 */
+  .note, .excl-sub, figcaption { font-size: 12px !important; }
+}
+</style>
 </body>
 </html>
