@@ -4084,7 +4084,7 @@
   .tab-nav-inner::-webkit-scrollbar { display: none; }
   .tab-btn { flex: 0 0 auto; white-space: nowrap; }
   /* 표: 화면보다 넓으면 가로 스크롤 (잘림 방지) */
-  .panel table { width: 100% !important; table-layout: fixed; }
+  .panel table { width: 100% !important; min-width: 0 !important; table-layout: fixed; }
   .panel th, .panel td { font-size: 12px !important; padding: 7px 6px !important; word-break: keep-all; overflow-wrap: break-word; }
   /* 사진·카드 그리드: 4열/3열 → 2열 */
   .jpx-grid { grid-template-columns: repeat(2, 1fr) !important; }
