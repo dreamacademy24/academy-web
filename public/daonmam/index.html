@@ -4097,6 +4097,10 @@
   .panel-head h2, .panel-title { font-size: 21px !important; }
   /* 작은 보조 글씨 최소 12px 확보 */
   .note, .excl-sub, figcaption { font-size: 12px !important; }
+  /* 휴무 달력 카드: 칸 넘침 방지 */
+  .holiday-months-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .hm-card { min-width: 0; }
+  .hm-card * { white-space: normal !important; }
 }
 </style>
 </body>
