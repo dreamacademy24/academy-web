@@ -1878,7 +1878,7 @@ function InvoicePageInner(){
                 </tr>
                 {additionalDue>0?(
                   <tr style={{background:"#fff7ed"}}>
-                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 추가 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(추가금 = 새 총액 − 기납부액)</span></td>
+                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 잔금 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(잔금 = 새 총액 − 기납부액)</span></td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
                   </tr>
                 ):(

@@ -11,7 +11,8 @@ const FULL_ACCESS = ["103", "104", "105", "106"];
 const DELUXE = ["204", "205", "206", "207", "208", "209", "210"];
 const ROOMS = [...FULL_ACCESS, ...DELUXE];
 
-interface Block { id: string; room: string; name: string; ci: string; co: string; kind?: string; memo?: string; }
+interface Block { id: string; room: string; name: string; ci: string; co: string; kind?: string; memo?: string; booking_id?: string; }
+interface DreamBk { id: string; name: string; ci: string; co: string; roomType: string; people: string; accom: string; }
 
 function ymd(y: number, m: number, d: number) { return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; }
 function daysIn(y: number, m: number) { return new Date(y, m, 0).getDate(); }
@@ -28,6 +29,7 @@ export default function Cube9Rooms() {
   const [saving, setSaving] = useState(false);
   const [edit, setEdit] = useState<Block | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [dreamBks, setDreamBks] = useState<DreamBk[]>([]);
   const [y, m] = ym;
   const dim = daysIn(y, m);
   const monthS = ymd(y, m, 1), monthE = ymd(y, m, dim);
@@ -42,6 +44,25 @@ export default function Cube9Rooms() {
           if (row.key === KEY && row.value) setBlocks(row.value as Block[]);
           if (row.key === MEMO_KEY && row.value) setMemos(row.value as Record<string, string>);
         }
+      }
+    } catch {}
+    // 우리 시스템 큐브나인 예약 로드 (단독 + 콤보 seg)
+    try {
+      const q = "select=id,booker_name,checkin_date,checkout_date,accom_type,cn_room_type,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status,adults,children&accom_type=ilike.*" + encodeURIComponent("큐브") + "*&order=checkin_date.asc";
+      const r2 = await fetch(`${SB}/rest/v1/bookings?${q}`, { headers: H });
+      const rows2 = await r2.json();
+      if (Array.isArray(rows2)) {
+        const out: DreamBk[] = [];
+        for (const b of rows2) {
+          if (String(b.status || "").includes("취소")) continue;
+          let ci = b.checkin_date, co = b.checkout_date;
+          if (b.seg1_type === "cubenine") { ci = b.seg1_checkin; co = b.seg1_checkout; }
+          else if (b.seg2_type === "cubenine") { ci = b.seg2_checkin; co = b.seg2_checkout; }
+          if (!ci || !co) continue;
+          if (String(co) < "2026-01-01") continue;
+          out.push({ id: String(b.id), name: b.booker_name || "?", ci: String(ci).slice(0, 10), co: String(co).slice(0, 10), roomType: b.cn_room_type || "", people: `${b.adults || 0}+${b.children || 0}`, accom: b.accom_type || "" });
+        }
+        setDreamBks(out);
       }
     } catch {}
     setLoaded(true);
@@ -76,6 +97,13 @@ export default function Cube9Rooms() {
     return out;
   }, [blocks]);
 
+  const assignedIds = useMemo(() => new Set(blocks.map(b => b.booking_id).filter(Boolean)), [blocks]);
+  const unassigned = useMemo(() => dreamBks.filter(d => !assignedIds.has(d.id) && d.co >= todayStr), [dreamBks, assignedIds, todayStr]);
+  function assignDream(d: DreamBk) {
+    const defRoom = (d.roomType || "").includes("풀") ? FULL_ACCESS[0] : DELUXE[0];
+    setEdit({ id: uid(), room: defRoom, name: d.name, ci: d.ci, co: d.co, kind: "dream", memo: (d.accom.includes("+") ? "콤보 · " : "") + (d.roomType || ""), booking_id: d.id });
+    setIsNew(true);
+  }
   function cellBlock(room: string, dateStr: string) {
     return blocks.find(b => b.room === room && b.ci <= dateStr && b.co >= dateStr) || null;
   }
@@ -104,9 +132,22 @@ export default function Cube9Rooms() {
         <div style={panel}>
           <b style={pTitle}>범례</b>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 6 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#c7d8f7", border: "1px solid #7ba3e0", display: "inline-block" }} />큐브 예약</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#c9f2d6", border: "1px solid #34a06b", display: "inline-block" }} />드림 예약 (우리 손님)</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fff", border: "1px solid #cbd5e1", display: "inline-block" }} />빈 날</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fde8e8", border: "1px solid #ef4444", display: "inline-block" }} />⚠ 중복 (기간 겹침)</div>
         </div>
+        {unassigned.length > 0 && (
+          <div style={{ ...panel, borderColor: "#86efac", background: "#f0fdf4" }}>
+            <b style={{ ...pTitle, color: "#166534" }}>🏷 우리 예약 · 룸 배정 대기 ({unassigned.length})</b>
+            {unassigned.map(d => (
+              <div key={d.id} style={{ marginTop: 8, padding: "8px 9px", background: "#fff", border: "1px solid #d1fae5", borderRadius: 8 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800 }}>{d.name} <span style={{ fontWeight: 500, color: "#64748b" }}>({d.people}명)</span></div>
+                <div style={{ fontSize: 11.5, color: "#475569", marginTop: 2 }}>{d.ci.slice(5)} ~ {d.co.slice(5)} · {d.roomType || "룸타입 미정"}{d.accom.includes("+") ? " · 콤보" : ""}</div>
+                <button onClick={() => assignDream(d)} style={{ marginTop: 6, width: "100%", padding: "6px 0", background: "#16a34a", color: "#fff", border: "none", borderRadius: 7, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>룸 배정하기</button>
+              </div>
+            ))}
+          </div>
+        )}
         <div style={panel}>
           <b style={pTitle}>📋 이번 달 요약</b>
           <div style={sumRow}><span>총 예약</span><b style={{ color: "#1d4ed8" }}>{monthBlocks.length}건</b></div>
@@ -185,8 +226,8 @@ export default function Cube9Rooms() {
                           <td key={r}
                             onClick={() => b ? (setEdit({ ...b }), setIsNew(false)) : openNew(r, dateStr)}
                             title={b ? `${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}` : `${row.m}/${d} ${r}호 등록`}
-                            style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? "2px solid #3b6cc7" : cellTd.borderTop }}>
-                            {isCi && <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e3a8a", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup && "⚠ "}{b!.name}</div>}
+                            style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : b.kind === "dream" ? "#c9f2d6" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? (b!.kind === "dream" ? "2px solid #16a34a" : "2px solid #3b6cc7") : cellTd.borderTop }}>
+                            {isCi && <div style={{ fontSize: 11.5, fontWeight: 800, color: b!.kind === "dream" ? "#14532d" : "#1e3a8a", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup && "⚠ "}{b!.kind === "dream" ? "🏷 " : ""}{b!.name}</div>}
                             {isCi && b!.memo && <div style={{ fontSize: 10, color: "#3b5b94", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b!.memo}</div>}
                           </td>
                         );
