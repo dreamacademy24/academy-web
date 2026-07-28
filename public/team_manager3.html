@@ -2988,6 +2988,9 @@ async function saveGuideMsg() {
       <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;padding:3px 8px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;font-size:11px;font-weight:600;color:#1e40af">
         <input type="checkbox" id="tmShare" style="width:11px;height:11px;accent-color:#2563eb" /> 팀공유
       </label>
+      <label title="지시한 사람과 담당자만 볼 수 있어요" style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;padding:3px 8px;border:1px solid #e9d5ff;border-radius:14px;background:#faf5ff;font-size:11px;font-weight:600;color:#7e22ce">
+        <input type="checkbox" id="tmSecret" style="width:11px;height:11px;accent-color:#9333ea" /> 🔒 비밀
+      </label>
       <button class="btn btn-primary btn-sm" id="tmSaveBtn" onclick="saveTask()" style="padding:5px 18px;font-size:13px;border-radius:8px">저장</button>
     </div>
 
@@ -3345,8 +3348,8 @@ async function sbUpsert(table,body){
 }
 
 // ── Supabase sync helpers for tasks & projects ──
-function taskToRow(t){return{id:t.id,title:t.title||'',created_by:t.createdBy||null,assignee:t.assignee||null,assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||new Date().toISOString(),note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,proj_id:t.projId||null,idx:t.idx||null,priority:t.priority||'normal'};}
-function rowToTask(r){return{id:r.id,title:r.title||'',createdBy:r.created_by||'',assignee:r.assignee||'',assignees:tryParse(r.assignees,[]),due:r.due||'',createdAt:r.created_at||'',note:r.note||'',done:!!r.done,files:tryParse(r.files,[]),checklist:tryParse(r.checklist,[]),progress:r.progress||0,shared:!!r.shared,projId:r.proj_id||null,idx:r.idx||null,priority:r.priority||'normal',sortIdx:(r.sort_idx==null?null:r.sort_idx)};}
+function taskToRow(t){return{id:t.id,title:t.title||'',created_by:t.createdBy||null,assignee:t.assignee||null,assignees:JSON.stringify(t.assignees||[]),due:t.due||null,created_at:t.createdAt||new Date().toISOString(),note:t.note||'',done:!!t.done,files:JSON.stringify(t.files||[]),checklist:JSON.stringify(t.checklist||[]),progress:t.progress||0,shared:!!t.shared,secret:!!t.secret,proj_id:t.projId||null,idx:t.idx||null,priority:t.priority||'normal'};}
+function rowToTask(r){return{id:r.id,title:r.title||'',createdBy:r.created_by||'',assignee:r.assignee||'',assignees:tryParse(r.assignees,[]),due:r.due||'',createdAt:r.created_at||'',note:r.note||'',done:!!r.done,files:tryParse(r.files,[]),checklist:tryParse(r.checklist,[]),progress:r.progress||0,shared:!!r.shared,secret:!!r.secret,projId:r.proj_id||null,idx:r.idx||null,priority:r.priority||'normal',sortIdx:(r.sort_idx==null?null:r.sort_idx)};}
 function projToRow(p){return{id:p.id,name:p.name||'',description:p.desc||'',color:p.color||'#4361ee',members:JSON.stringify(p.members||[]),due:p.due||null,created_at:p.createdAt||'',progress:p.progress||0};}
 function rowToProj(r){return{id:r.id,name:r.name||'',desc:r.description||'',color:r.color||'#4361ee',members:tryParse(r.members,[]),due:r.due||'',createdAt:r.created_at||'',progress:r.progress||0};}
 function tryParse(v,d){if(!v)return d;if(typeof v!=='string')return v;try{return JSON.parse(v);}catch(e){return d;}}
@@ -3499,10 +3502,19 @@ function _recDel(id){
   }).catch(function(e){alert('삭제 실패: '+e.message);});
 }
 
+function taskVisible(t){
+  if(!t||!t.secret) return true;
+  var me=(typeof CU!=='undefined'&&CU)?CU.id:null;
+  if(!me) return false;
+  if(t.createdBy===me) return true;
+  if(t.assignee===me) return true;
+  if(Array.isArray(t.assignees)&&t.assignees.indexOf(me)>=0) return true;
+  return false;
+}
 function loadTasksFromSB(){
   return sbGet('staff_tasks','order=created_at.desc').then(function(rows){
     if(rows&&rows.length>0){
-      tasks=rows.map(rowToTask);
+      tasks=rows.map(rowToTask).filter(taskVisible);
       rebuildIdx();sv('tm_t',tasks);
       refreshAll();
       console.log('[SB] tasks loaded:',tasks.length);
@@ -3701,7 +3713,7 @@ function pollForUpdates(){
     // tasks
     var th1=newTasks.length+'-'+(newTasks[0]?newTasks[0].id:'');
     if(th1!==_pollHash.tasks&&newTasks.length>0){
-      _pollHash.tasks=th1;tasks=newTasks.map(rowToTask);rebuildIdx();sv('tm_t',tasks);changed=true;
+      _pollHash.tasks=th1;tasks=newTasks.map(rowToTask).filter(taskVisible);rebuildIdx();sv('tm_t',tasks);changed=true;
     }
     // projects
     var ph1=newProjs.length+'-'+(newProjs[0]?newProjs[0].id:'');
@@ -9505,7 +9517,7 @@ function openTaskModal(pre){
   buildAssignSel(pre!==undefined?pre:(!isAdmin()?CU.id:''));
   var _tmSub=document.getElementById('tmSubToggle');_tmSub.checked=false;_tmSub.parentElement.querySelector('span').style.background='#cbd5e1';_tmSub.parentElement.querySelector('i').style.transform='translateX(0)';
   document.getElementById('tmClSection').style.display='';document.getElementById('tmSubSection').style.display='none';renderTMSubList();
-  var _tmSh=document.getElementById('tmShare');if(_tmSh)_tmSh.checked=false;
+  var _tmSh=document.getElementById('tmShare');if(_tmSh)_tmSh.checked=false;var _tmSc=document.getElementById('tmSecret');if(_tmSc)_tmSc.checked=false;
   var _tmUrg=document.getElementById('tmUrgent');if(_tmUrg)_tmUrg.checked=false;
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -9557,7 +9569,7 @@ function openTaskEdit(id){
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
   const di=document.getElementById('tmDue');di.style.display=hD?'inline-block':'none';di.value=t.due||'';
   buildAssignSel(t.assignees||[t.assignee].filter(function(x){return x;}));
-  var _tmSh2=document.getElementById('tmShare');if(_tmSh2)_tmSh2.checked=!!t.shared;
+  var _tmSh2=document.getElementById('tmShare');if(_tmSh2)_tmSh2.checked=!!t.shared;var _tmSc2=document.getElementById('tmSecret');if(_tmSc2)_tmSc2.checked=!!t.secret;
   var _isHigh=t.priority==='high';var _tmUrg2=document.getElementById('tmUrgent');if(_tmUrg2)_tmUrg2.checked=_isHigh;
   renderTMFL();renderTMChecklist();openM('taskModal');
 }
@@ -9669,6 +9681,7 @@ function saveTask(){
     clProg=tmChecklist.length?Math.round(tmChecklist.filter(function(c){return c.done;}).length/tmChecklist.length*100):null;
   }
   const _tmShared=document.getElementById('tmShare').checked;
+  const _tmSecret=(document.getElementById('tmSecret')||{}).checked||false;
   const _tmUrgent=document.getElementById('tmUrgent').checked;
   const _priority=_tmUrgent?'high':'normal';
   var _prevSnapshot=null,_isNew=!editTaskId,_newTaskId=null;
@@ -9677,10 +9690,10 @@ function saveTask(){
       const t=tasks.find(function(t){return t.id===editTaskId;});
       if(t){
         _prevSnapshot=JSON.parse(JSON.stringify(t));
-        t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmShared;t.priority=_priority;
+        t.title=title;t.assignee=assignee;t.assignees=assignees;t.due=due;t.note=note;t.files=mFiles;t.createdAt=t.createdAt||createdAt;t.checklist=_clData;if(clProg!==null)t.progress=clProg;t.projId=tmProjId||null;t.shared=_tmSecret?false:_tmShared;t.secret=_tmSecret;t.priority=_priority;
       }
     } else {
-      var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmShared,projId:tmProjId||null,priority:_priority,createdBy:(typeof CU!=='undefined'&&CU?CU.id:null)};
+      var _newT={id:uid(),title,assignee,assignees,due,note,createdAt,done:false,files:mFiles,checklist:_clData,progress:clProg||0,shared:_tmSecret?false:_tmShared,secret:_tmSecret,projId:tmProjId||null,priority:_priority,createdBy:(typeof CU!=='undefined'&&CU?CU.id:null)};
       _newTaskId=_newT.id;
       tasks.unshift(_newT);
       if(!assignee){
