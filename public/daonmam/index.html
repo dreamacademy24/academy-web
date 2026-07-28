@@ -2688,15 +2688,7 @@
           <span class="step-num">2</span>
           <h5>① 전액입금 코스 — 할인 최대</h5>
           <p>신청 즉시 <b>전액 입금 계좌</b>가 안내되고, 예약자 성함으로 입금하면 끝!<br /><span style="color:#993C1D;font-weight:700;font-size:13px">💰 현금 할인 + 전액입금 할인 모두 적용 (최대 혜택)</span></p>
-          <div style="margin-top:12px;background:#fff;border:1.5px solid #e5d9bd;border-radius:14px;padding:14px 16px;">
-            <div style="font-size:12px;font-weight:800;color:#8a6414;letter-spacing:.5px;margin-bottom:8px;">PAYMENT INFORMATION · 입금 계좌</div>
-            <div style="font-size:15px;font-weight:800;color:#1f2937;line-height:1.9;">카카오뱅크 <span id="daonAcctNo" style="letter-spacing:.5px;">3333-11-3947821</span><br/><span style="font-weight:600;font-size:13.5px;color:#4a5468;">예금주 : 오초희 (드림아카데미 대표)</span></div>
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-              <button type="button" onclick="daonCopyAcct(this)" style="background:#1f2937;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">📋 계좌번호 복사</button>
-              <button type="button" onclick="daonCorpOpen()" style="background:#fff;color:#8a6414;border:1.5px solid #c9962e;border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">🏢 해외법인 자료 보기</button>
-            </div>
-            <div style="font-size:12px;color:#8a7c5e;margin-top:8px;line-height:1.6;">※ 반드시 <b>예약자 성함</b>으로 입금해 주세요. 입금 확인 후 카카오 채널로 확정 안내를 드려요.</div>
-          </div>
+          
         </div>
         <div class="step-item">
           <span class="step-num">3</span>
@@ -4097,30 +4089,6 @@
   }).catch(function(){var box=document.getElementById('dqFireList');if(box)box.innerHTML='<div style="text-align:center;color:#a89a78;padding:30px;">불러오지 못했어요. 새로고침 해주세요.</div>';});
 })();
 </script>
-<div id="daonCorpModal" style="display:none;position:fixed;inset:0;background:rgba(20,20,30,.6);z-index:9000;overflow-y:auto;padding:30px 14px;" onclick="if(event.target===this)daonCorpClose()">
-  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:18px;padding:26px 22px;position:relative;">
-    <button onclick="daonCorpClose()" style="position:absolute;top:14px;right:16px;border:none;background:#f1f5f9;border-radius:99px;width:32px;height:32px;font-size:15px;cursor:pointer;">✕</button>
-    <h3 style="font-size:19px;font-weight:900;color:#1f2937;margin:0 0 4px;">🏢 해외법인 안내</h3>
-    <p style="font-size:12.5px;color:#8a7c5e;margin:0 0 14px;">Dream Academy · PD DREAM ACADEMY INC.</p>
-    <div style="font-size:13.5px;color:#374151;line-height:1.85;background:#faf6ef;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-      세부 드림아카데미는 <b>필리핀 현지에 사업자 등록된 법인(PD DREAM ACADEMY INC.)</b>입니다.<br/>
-      한국에 대행사 없이 현지에서 직접 판매하며, 재화와 용역 모두 필리핀 현지에서 제공되기 때문에 한국에는 사업자가 없습니다. 따라서 한국 국세청 현금영수증 발급과 카드 결제가 불가합니다.<br/><br/>
-      <b>왜 한국 계좌로 받나요?</b><br/>
-      해외 송금은 매일 달라지는 환율·이체 확인 지연 등의 문제가 있어, <b>한국인 대표님 계좌</b>로 받아 페소로 인출해 필리핀 BIR(국세청)에 신고합니다. 현지 OR(현지법인 정규영수증) 발급이 가능합니다.<br/><br/>
-      드림아카데미는 <b>2016년부터 운영된 세부플레이드림의 자회사</b>로 같은 대표님이 운영하며, 팬데믹 기간에도 예약된 모든 금액을 환불해 드렸고 현재까지 잘 운영하고 있으니 안심하셔도 됩니다.
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <figure style="margin:0;"><img data-src="/daonmam/docs/business-permit.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="Business Permit"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">사업허가증 (Mayor's Business Permit)</figcaption></figure>
-      <figure style="margin:0;"><img data-src="/daonmam/docs/sec-aoi-1.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 법인등록"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 1</figcaption></figure>
-      <figure style="margin:0;"><img data-src="/daonmam/docs/sec-aoi-2.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="SEC 주주명부"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">SEC 법인 정관 2 (대표자 주주 기재)</figcaption></figure>
-      <figure style="margin:0;"><img data-src="/daonmam/docs/passport.jpg" loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e5e7eb;" alt="대표 여권"/><figcaption style="font-size:11.5px;color:#8a7c5e;text-align:center;margin-top:4px;">대표자(오초희) 여권 사본 · 예금주 동일</figcaption></figure>
-    </div>
-  </div>
-</div>
-<script>
-function daonCopyAcct(btn){var t='카카오뱅크 3333-11-3947821 오초희';(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){btn.textContent='✅ 복사됐어요';setTimeout(function(){btn.textContent='📋 계좌번호 복사';},1600);}).catch(function(){prompt('아래 계좌를 복사하세요',t);});}
-function daonCorpOpen(){var md=document.getElementById('daonCorpModal');md.querySelectorAll('img[data-src]').forEach(function(im){im.loading='eager';im.src=im.getAttribute('data-src');im.removeAttribute('data-src');});md.style.display='block';document.body.style.overflow='hidden';}
-function daonCorpClose(){document.getElementById('daonCorpModal').style.display='none';document.body.style.overflow='';}
-</script>
+
 </body>
 </html>
