@@ -3206,8 +3206,8 @@
           <h2 class="panel-title">예약 신청</h2>
         </div>
         <p class="panel-sub">
-          아래 정보를 입력하신 후 <b>"카카오 채널로 상담 신청하기"</b>를 누르시면<br />
-          드림아카데미 카카오 채널로 자동 연결됩니다.
+          아래 정보를 입력하신 후 <b>"예약서 작성하러 가기"</b>를 누르시면<br />
+          입력하신 정보가 자동으로 채워진 예약서 작성 화면으로 이동합니다.
         </p>
       </div>
 
@@ -3315,7 +3315,7 @@
             </div>
 
             <button type="submit" class="btn-apply" id="btn-apply">
-              💛 카카오 채널로 상담 신청하기
+              📝 예약서 작성하러 가기
             </button>
             
           </form>
@@ -3935,16 +3935,11 @@
         alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
       }
 
-      // ② 카카오 채널 새 탭 열기
-      window.open(KAKAO_CHANNEL_URL, '_blank', 'noopener,noreferrer');
-
-      // ③ 폼 초기화 + 버튼 복구
-      applyForm.reset();
-      btnApply.disabled = false;
-      btnApply.innerHTML = '💛 카카오 채널로 상담 신청하기';
-
-      // ④ 안내 토스트
-      showToast('✓ 신청이 접수되었습니다. 카카오 채널에서 상담을 이어가세요!');
+      // ② 예약서 작성 페이지로 이동 (입력값 자동 이어받기)
+      const pfObj = { ...payload, adults: (data.get('adults') || '').trim(), oceanview: !!data.get('oceanview') };
+      const pf = btoa(unescape(encodeURIComponent(JSON.stringify(pfObj)))).replace(/\+/g, '-').replace(/\//g, '_');
+      showToast('✓ 접수됐어요! 예약서 작성으로 이동합니다…');
+      setTimeout(() => { window.location.href = '/booking?src=daonmam&pf=' + encodeURIComponent(pf); }, 600);
     });
   }
 

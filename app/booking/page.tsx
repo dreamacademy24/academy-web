@@ -79,7 +79,39 @@ export default function BookingPage() {
   const [isDaon, setIsDaon] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (new URLSearchParams(window.location.search).get("src") === "daonmam") setIsDaon(true);
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("src") === "daonmam") setIsDaon(true);
+    // 다온맘 신청 폼에서 넘어온 프리필 (pf = base64 JSON)
+    const pf = sp.get("pf");
+    if (!pf) return;
+    try {
+      const d = JSON.parse(decodeURIComponent(escape(atob(pf.replace(/-/g, "+").replace(/_/g, "/")))));
+      if (d.name || d.phone) setBooker(prev => ({ ...prev, name: d.name || "", phone: d.phone || "" }));
+      const lodging = String(d.lodging || "");
+      const w = parseInt(String(d.duration_weeks || ""), 10) || 0;
+      if (lodging.includes("드림하우스")) {
+        setBType("dreamhouse");
+        if (w && DH_WEEKS.includes(w)) setAccom(prev => ({ ...prev, dh_weeks: w }));
+      } else if (lodging.includes("제이파크")) {
+        setBType("jaypark");
+        if (w >= 1 && w <= 4) setAccom(prev => ({ ...prev, jp_weeks: w }));
+      } else if (lodging.includes("큐브나인")) {
+        setBType("cubenine");
+        if (CN_PERIODS.includes(w + "주")) setAccom(prev => ({ ...prev, cn_period: w + "주" }));
+      }
+      if (d.depart_date) setDates(prev => ({ ...prev, checkIn: String(d.depart_date) }));
+      const n = parseInt(String(d.children || ""), 10) || 0;
+      if (n > 0) {
+        const ages = String(d.ages || "").split(/[,/·\s]+/).filter(Boolean);
+        setStudents(Array.from({ length: Math.min(n, 5) }, (_, i) => ({ id: Date.now() + i, korName: "", engName: "", age: ages[i] || "", grade: "주니어", photo: "O" })));
+      }
+      const notes: string[] = ["[다온맘 신청 정보]"];
+      if (d.adults) notes.push(`보호자 ${d.adults}명`);
+      if (d.children) notes.push(`아이 ${d.children}명${d.ages ? ` (${d.ages})` : ""}`);
+      if (d.duration_weeks) notes.push(`희망 기간 ${d.duration_weeks}주`);
+      if (d.oceanview) notes.push("오션뷰 변경 희망");
+      if (notes.length > 1) setSpecialRequest(prev => prev ? prev : notes.join(" · "));
+    } catch { /* 무시 */ }
   }, []);
   // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
   const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
