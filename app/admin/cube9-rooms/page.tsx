@@ -132,7 +132,7 @@ export default function Cube9Rooms() {
         <div style={panel}>
           <b style={pTitle}>범례</b>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 6 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#c7d8f7", border: "1px solid #7ba3e0", display: "inline-block" }} />큐브 예약</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fdf0b8", border: "1px solid #ca8a04", display: "inline-block" }} />드림 예약 (우리 손님)</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#ffe93b", border: "1px solid #d4a900", display: "inline-block" }} />드림 예약 (우리 손님)</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fff", border: "1px solid #cbd5e1", display: "inline-block" }} />빈 날</div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 4 }}><span style={{ width: 13, height: 13, borderRadius: 3, background: "#fde8e8", border: "1px solid #ef4444", display: "inline-block" }} />⚠ 중복 (기간 겹침)</div>
         </div>
@@ -226,7 +226,7 @@ export default function Cube9Rooms() {
                           <td key={r}
                             onClick={() => b ? (setEdit({ ...b }), setIsNew(false)) : openNew(r, dateStr)}
                             title={b ? `${b.name} ${b.ci}~${b.co}${b.memo ? " · " + b.memo : ""}` : `${row.m}/${d} ${r}호 등록`}
-                            style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : b.kind === "dream" ? "#fdf0b8" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? (b!.kind === "dream" ? "2px solid #ca8a04" : "2px solid #3b6cc7") : cellTd.borderTop }}>
+                            style={{ ...cellTd, cursor: "pointer", background: b ? (dup ? "#fde8e8" : b.kind === "dream" ? "#ffe93b" : "#c7d8f7") : (dow === 0 ? "#fff8f8" : dow === 6 ? "#f6faff" : "#fff"), borderTop: isCi ? (b!.kind === "dream" ? "2px solid #d4a900" : "2px solid #3b6cc7") : cellTd.borderTop }}>
                             {isCi && <div style={{ fontSize: 11.5, fontWeight: 800, color: b!.kind === "dream" ? "#713f12" : "#1e3a8a", lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup && "⚠ "}{b!.kind === "dream" ? "🏷 " : ""}{b!.name}</div>}
                             {isCi && b!.memo && <div style={{ fontSize: 10, color: "#3b5b94", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b!.memo}</div>}
                           </td>
