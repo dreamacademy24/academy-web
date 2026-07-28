@@ -106,9 +106,10 @@ export default function BookingPage() {
         setStudents(Array.from({ length: Math.min(n, 5) }, (_, i) => ({ id: Date.now() + i, korName: "", engName: "", age: ages[i] || "", grade: "주니어", photo: "O" })));
       }
       const notes: string[] = ["[다온맘 신청 정보]"];
-      if (d.adults) notes.push(`보호자 ${d.adults}명`);
-      if (d.children) notes.push(`아이 ${d.children}명${d.ages ? ` (${d.ages})` : ""}`);
-      if (d.duration_weeks) notes.push(`희망 기간 ${d.duration_weeks}주`);
+      const numOf = (v: unknown) => { const p = parseInt(String(v || ""), 10); return p > 0 ? String(p) : String(v || ""); };
+      if (d.adults) notes.push(`보호자 ${numOf(d.adults)}명`);
+      if (d.children) notes.push(`아이 ${numOf(d.children)}명${d.ages ? ` (${d.ages})` : ""}`);
+      if (d.duration_weeks) notes.push(`희망 기간 ${numOf(d.duration_weeks)}주`);
       if (d.oceanview) notes.push("오션뷰 변경 희망");
       if (notes.length > 1) setSpecialRequest(prev => prev ? prev : notes.join(" · "));
     } catch { /* 무시 */ }
