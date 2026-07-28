@@ -4119,7 +4119,7 @@
 </div>
 <script>
 function daonCopyAcct(btn){var t='카카오뱅크 3333-11-3947821 오초희';(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){btn.textContent='✅ 복사됐어요';setTimeout(function(){btn.textContent='📋 계좌번호 복사';},1600);}).catch(function(){prompt('아래 계좌를 복사하세요',t);});}
-function daonCorpOpen(){var md=document.getElementById('daonCorpModal');md.querySelectorAll('img[data-src]').forEach(function(im){im.src=im.getAttribute('data-src');im.removeAttribute('data-src');});md.style.display='block';document.body.style.overflow='hidden';}
+function daonCorpOpen(){var md=document.getElementById('daonCorpModal');md.querySelectorAll('img[data-src]').forEach(function(im){im.loading='eager';im.src=im.getAttribute('data-src');im.removeAttribute('data-src');});md.style.display='block';document.body.style.overflow='hidden';}
 function daonCorpClose(){document.getElementById('daonCorpModal').style.display='none';document.body.style.overflow='';}
 </script>
 </body>
