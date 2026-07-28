@@ -49,7 +49,7 @@ function koLabelToEn(t: string): string {
   const dict: [RegExp, string][] = [
     [/조식/g, "Breakfast"], [/중식|점심/g, "Lunch"], [/석식|저녁/g, "Dinner"],
     [/오션디럭스/g, "Ocean Deluxe"], [/디럭스/g, "Deluxe"], [/프리미어/g, "Premier"],
-    [/오션뷰/g, "Ocean View"], [/풀사이드/g, "Poolside"], [/마운틴/g, "Mountain"], [/스위트/g, "Suite"],
+    [/오션뷰/g, "Ocean View"], [/풀사이드/g, "Poolside"], [/풀억세스(룸)?/g, "Pool Access"], [/마운틴/g, "Mountain"], [/스위트/g, "Suite"],
     [/레이트\s*체크아웃/g, "Late check-out"], [/얼리\s*체크인/g, "Early check-in"],
     [/추가/g, "extra"], [/객실|룸/g, "Room"],
   ];
@@ -203,8 +203,8 @@ export default function ResortInvoicePage() {
         if (/디럭스/.test(txt)) return "deluxe";
         return "";
       }
-      if (/오션/.test(txt)) return "ocean_deluxe";
       if (/풀/.test(txt)) return "poolside";
+      if (/오션|디럭스/.test(txt)) return "ocean_deluxe";
       return "";
     };
     const rtRaw = ((resort === "jaypark" ? b.jp_room_type : b.cn_room_type) || "");

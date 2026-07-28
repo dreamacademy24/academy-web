@@ -1,7 +1,7 @@
 // 리조트 지불 단가 — 리조트용 인보이스 생성에 사용
 // 제이파크: PHP/박. 단기(Corporate, 2박~) / 장기 7박~ / 장기 14박~ 3단계
 // ⚠️ Corporate 단가는 2026 단가표 스캔 기준 — 발행 전 화면에서 수정 가능
-// 큐브나인: KRW/박 (풀사이드 17만 / 오션디럭스 15만)
+// 큐브나인: KRW/박 · 3인 기준 (풀억세스 15만 / 디럭스오션 13만) — 2026-07-28 갱신
 
 export interface JparkRoom {
   key: string; label: string; location: string;
@@ -37,8 +37,8 @@ export const JPARK_TIER_LABEL: Record<JparkTier, string> = {
 
 export interface CubenineRoom { key: string; label: string; nightly: number } // KRW/박
 export const CUBENINE_ROOMS: CubenineRoom[] = [
-  { key: "poolside",     label: "풀사이드 (Poolside)",       nightly: 170000 },
-  { key: "ocean_deluxe", label: "오션디럭스 (Ocean Deluxe)", nightly: 150000 },
+  { key: "poolside",     label: "풀억세스 (Pool Access)",     nightly: 150000 },
+  { key: "ocean_deluxe", label: "디럭스오션 (Ocean Deluxe)",  nightly: 130000 },
 ];
 
 export function calcNights(start: string, end: string): number {
