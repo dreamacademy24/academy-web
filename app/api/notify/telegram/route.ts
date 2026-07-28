@@ -54,6 +54,15 @@ export async function POST(req: Request) {
       } catch { /* noop */ }
     }
 
+    if (type === 'booking') {
+      const lines = [`🆕 <b>신규 예약 접수${p.daon ? ' · 다온맘 공구' : ''}</b>`, `예약자: ${escapeHtml(p.name || '')}`]
+      if (p.accomType) lines.push(`상품: ${escapeHtml(p.accomType)}${p.weeks ? ` ${escapeHtml(p.weeks)}주` : ''}`)
+      if (p.payMethod) lines.push(`결제: ${escapeHtml(p.payMethod)}`)
+      if (p.rno) lines.push(`예약번호: ${escapeHtml(p.rno)}`)
+      const tl = localTimeLine(); if (tl) lines.push(tl)
+      await sendTelegram(lines.join('\n'))
+    }
+
     if (type === 'note') {
       const lines = [`📝 <b>현지직원 코멘트</b>`]
       if (p.who) lines.push(`담당/집: ${escapeHtml(p.who)}`)

@@ -75,6 +75,12 @@ export default function BookingPage() {
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
   const [agreed, setAgreed] = useState<boolean>(false);
+  const [payMethod, setPayMethod] = useState<string>("");
+  const [isDaon, setIsDaon] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("src") === "daonmam") setIsDaon(true);
+  }, []);
   // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
   const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
   const [holidayPopup, setHolidayPopup] = useState<HolidayItem[] | null>(null);
@@ -94,8 +100,8 @@ export default function BookingPage() {
   const [policyOpen, setPolicyOpen] = useState<boolean>(false);
 
   // 자동 체크아웃 계산
-  const isCombo = bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine";
-  const comboAccs = bType === "dreamhouse_cubenine" ? ["cubenine", "dreamhouse"] : ["jaypark", "dreamhouse"];
+  const isCombo = bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine" || bType === "jaypark_cubenine";
+  const comboAccs = bType === "jaypark_cubenine" ? ["jaypark", "cubenine"] : bType === "dreamhouse_cubenine" ? ["cubenine", "dreamhouse"] : ["jaypark", "dreamhouse"];
 
   // 콤보 전환 시 구간 숙소 기본값(패키지 먼저 → 드림하우스)
   useEffect(() => {
@@ -144,6 +150,7 @@ export default function BookingPage() {
     if (!dates.checkIn) { alert(bType === "commute" ? "수업시작 날짜를 입력해주세요." : "체크인 날짜를 입력해주세요."); return; }
     if (bType === "commute" && !dates.checkOut) { alert("수업종료 날짜를 입력해주세요."); return; }
     if (!agreed) { alert("포함/불포함 사항 및 환불규정 확인 동의가 필요합니다."); return; }
+    if (!payMethod) { alert("결제 방식을 선택해주세요."); return; }
     if (isCombo && (!segs[0].checkin || !segs[0].checkout || !segs[1].checkin || !segs[1].checkout)) {
       alert("콤보 예약은 각 숙소 구간의 체크인/체크아웃을 모두 입력해주세요."); return;
     }
@@ -157,6 +164,7 @@ export default function BookingPage() {
     else if (bType === "dreamhouse_cubenine") { accomType = "드림하우스+큐브나인"; accomWeeks = accom.dh_weeks + (accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period)); }
     else if (bType === "jaypark") { accomType = "제이파크 패키지"; accomWeeks = accom.jp_weeks; }
     else if (bType === "cubenine") { accomType = "큐브나인 패키지"; accomWeeks = accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period); }
+    else if (bType === "jaypark_cubenine") { accomType = "제이파크+큐브나인"; accomWeeks = accom.jp_weeks + (accom.cn_period === "6일" ? 1 : parseInt(accom.cn_period)); }
     else { accomType = "통학형"; accomWeeks = 0; }
 
     const flightInStr = flightIn.undecided ? "미정" : [flightIn.airline, flightIn.flightNo, flightIn.date, flightIn.time].filter(Boolean).join(" ");
@@ -174,8 +182,8 @@ export default function BookingPage() {
     const cleanGuardians = extraGuardians.filter(g => g.kor.trim() && g.eng.trim()).map(g => ({kor: g.kor.trim(), eng: g.eng.trim()}));
     const childrenCount = students.filter(s => s.korName.trim()).length;
     const usesDH = bType === "dreamhouse" || bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine";
-    const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark";
-    const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine";
+    const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark" || bType === "jaypark_cubenine";
+    const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine" || bType === "jaypark_cubenine";
 
     // 🏠 드림하우스 만실 체크 — 접수 단계에서 오버부킹 예방
     if (usesDH && dates.checkIn && dates.checkOut) {
@@ -223,6 +231,8 @@ export default function BookingPage() {
       flight_out: flightOutStr,
       special_request: specialRequest,
       status: "접수",
+      payment_method: payMethod || null,
+      agency: isDaon ? "다온맘" : null,
     }).select().single();
 
     if (error) { setLoading(false); alert("접수 실패: " + error.message); return; }
@@ -259,6 +269,11 @@ export default function BookingPage() {
       }
     }
 
+    try {
+      const pmLabel = payMethod === "cash_full" ? "현금 전액입금" : payMethod === "card_deposit" ? "카드 예약금 50만" : payMethod === "card_full" ? "카드 전액" : "예약금 후 상담";
+      fetch("/api/notify/telegram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "booking", payload: { name: uniq.name, accomType, weeks: accomWeeks, payMethod: pmLabel, daon: isDaon, rno } }) });
+    } catch { /* noop */ }
+
     setLoading(false);
     setReservationNo(rno);
     setDone(true);
@@ -278,7 +293,28 @@ export default function BookingPage() {
       <div className="dc">✅</div>
       <div className="dh">예약 접수 완료!</div>
       <div className="drn">{reservationNo}</div>
-      <div className="dp">담당자가 확인 후 인보이스를 발송해드립니다.<br/>문의사항은 카카오톡으로 연락주세요.</div>
+      {payMethod === "cash_full" && (
+        <div style={{ textAlign: "left", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "18px 18px", margin: "0 0 18px" }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#8a6414", letterSpacing: 0.5, marginBottom: 8 }}>PAYMENT INFORMATION · 입금 계좌</div>
+          <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.9 }}>카카오뱅크 3333-11-3947821<br/><span style={{ fontWeight: 600, fontSize: 13.5, color: "#4a5468" }}>예금주 : 오초희 (드림아카데미 대표)</span></div>
+          <button type="button" onClick={() => { navigator.clipboard?.writeText("카카오뱅크 3333-11-3947821 오초희"); alert("계좌가 복사됐어요"); }} style={{ marginTop: 10, background: "#1f2937", color: "#fff", border: "none", borderRadius: 9, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>📋 계좌번호 복사</button>
+          <div style={{ fontSize: 13, color: "#b91c1c", fontWeight: 700, marginTop: 12, lineHeight: 1.7 }}>⚠️ 입금자명은 반드시 예약자명과 동일해야 해요.</div>
+          <div style={{ fontSize: 12.5, color: "#6b7c93", marginTop: 6, lineHeight: 1.7 }}>정확한 결제 금액과 입금 확인은 카카오 채널로 안내드립니다.<br/>해외법인 사업자 자료(사업허가증·법인등록·대표자 여권)가 필요하시면 채널로 요청해주세요.</div>
+        </div>
+      )}
+      {(payMethod === "card_deposit" || payMethod === "consult") && (
+        <div style={{ textAlign: "left", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "18px 18px", margin: "0 0 18px" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>💳 예약금 50만원 결제 안내</div>
+          <div style={{ fontSize: 13, color: "#4a5468", lineHeight: 1.8 }}>스마트스토어에서 예약금 50만원을 카드로 결제해주세요.<br/>결제 링크는 카카오 채널로 바로 보내드려요.{payMethod === "consult" ? " 결제 후 매니저 상담으로 일정·인원·숙소를 확정합니다." : " 잔금은 인보이스로 안내드립니다."}</div>
+        </div>
+      )}
+      {payMethod === "card_full" && (
+        <div style={{ textAlign: "left", background: "#fff", border: "1.5px solid #e2e8f0", borderRadius: 14, padding: "18px 18px", margin: "0 0 18px" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 6 }}>💳 카드 전액결제 안내</div>
+          <div style={{ fontSize: 13, color: "#4a5468", lineHeight: 1.8 }}>전액 카드결제 링크를 카카오 채널로 바로 보내드려요.<br/>결제 확인 후 예약이 확정됩니다.</div>
+        </div>
+      )}
+      <div className="dp">담당자가 확인 후 상세 안내를 드립니다.<br/>문의사항은 카카오톡으로 연락주세요.</div>
       <a className="dk" href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">카카오톡 문의하기</a>
     </div>
   </>);
@@ -354,7 +390,7 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
-              {(bType === "dreamhouse_jaypark" || bType === "jaypark") && (
+              {(bType === "dreamhouse_jaypark" || bType === "jaypark" || bType === "jaypark_cubenine") && (
                 <div className="fg">
                   <label className="fl">제이파크 기간</label>
                   <select className="fsl" value={accom.jp_weeks} onChange={e => setAccom({ ...accom, jp_weeks: parseInt(e.target.value) })}>
@@ -362,7 +398,7 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
-              {(bType === "dreamhouse_jaypark" || bType === "jaypark") && (
+              {(bType === "dreamhouse_jaypark" || bType === "jaypark" || bType === "jaypark_cubenine") && (
                 <div className="fg">
                   <label className="fl">제이파크 룸타입</label>
                   <select className="fsl" value={accom.jp_room_type} onChange={e => setAccom({ ...accom, jp_room_type: e.target.value })}>
@@ -370,7 +406,7 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
-              {(bType === "dreamhouse_cubenine" || bType === "cubenine") && (
+              {(bType === "dreamhouse_cubenine" || bType === "cubenine" || bType === "jaypark_cubenine") && (
                 <div className="fg">
                   <label className="fl">큐브나인 기간</label>
                   <select className="fsl" value={accom.cn_period} onChange={e => setAccom({ ...accom, cn_period: e.target.value })}>
@@ -378,7 +414,7 @@ export default function BookingPage() {
                   </select>
                 </div>
               )}
-              {(bType === "dreamhouse_cubenine" || bType === "cubenine") && (
+              {(bType === "dreamhouse_cubenine" || bType === "cubenine" || bType === "jaypark_cubenine") && (
                 <div className="fg">
                   <label className="fl">큐브나인 룸타입</label>
                   <select className="fsl" value={accom.cn_room_type} onChange={e => setAccom({ ...accom, cn_room_type: e.target.value })}>
@@ -678,6 +714,32 @@ export default function BookingPage() {
 
         {/* 기간 내 휴무일 안내 배너 (공용 컴포넌트) */}
         <HolidayBanner hits={holidayHits} />
+
+        {/* 결제 방식 선택 */}
+        <div className="bs">
+          <h2>💳 결제 방식 선택<span className="req">*</span></h2>
+          <div className="type-grid">
+            <button type="button" className={"type-card" + (payMethod === "cash_full" ? " on" : "")} onClick={() => setPayMethod("cash_full")}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>💵 현금 전액입금</div>
+              <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 4 }}>현금가 + 전액입금 할인 최대 적용 · 접수 후 입금 계좌 안내</div>
+            </button>
+            <button type="button" className={"type-card" + (payMethod === "card_full" ? " on" : "")} onClick={() => setPayMethod("card_full")}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>💳 카드 전액결제</div>
+              <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 4 }}>전액을 카드로 · 결제 링크 안내</div>
+            </button>
+            <button type="button" className={"type-card" + (payMethod === "card_deposit" ? " on" : "")} onClick={() => setPayMethod("card_deposit")}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>💳 카드 예약금 (50만원)</div>
+              <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 4 }}>예약금만 카드로 · 잔금은 인보이스 안내</div>
+            </button>
+            <button type="button" className={"type-card" + (payMethod === "consult" ? " on" : "")} onClick={() => setPayMethod("consult")}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>🗓 예약금 결제 후 상담</div>
+              <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 4 }}>예약금 50만원 결제 후 매니저 상담으로 확정</div>
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: "#6b7c93", marginTop: 10, lineHeight: 1.7 }}>
+            💡 현금(계좌이체) 결제는 <b>전액입금 할인</b>이 추가 적용돼요. 정확한 금액은 접수 후 안내드립니다.
+          </div>
+        </div>
 
         {/* 동의 체크박스 + 환불규정 보기 */}
         <div style={{

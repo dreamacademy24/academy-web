@@ -6,6 +6,7 @@ export type BookingTypeValue =
   | "dreamhouse_cubenine"
   | "jaypark"
   | "cubenine"
+  | "jaypark_cubenine"
   | "commute"
   | "room_only";
 
@@ -23,6 +24,7 @@ export const PUBLIC_BOOKING_TYPES: BookingTypeDef[] = [
   { value: "dreamhouse_cubenine", icon: "🏢", label: "드하 + 큐브나인", desc: "드림하우스 + 큐브나인 조합" },
   { value: "jaypark",             icon: "🏨", label: "제이파크 단독",    desc: "제이파크 패키지" },
   { value: "cubenine",            icon: "🏢", label: "큐브나인 단독",    desc: "큐브나인 패키지" },
+  { value: "jaypark_cubenine",    icon: "🌊", label: "제이파크 + 큐브나인", desc: "제이파크 + 큐브나인 조합" },
 ];
 
 // 어드민 전용 추가 옵션 (통학형 + 숙소만)
