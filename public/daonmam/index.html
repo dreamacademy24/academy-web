@@ -3441,8 +3441,8 @@
       ],
       excludes: [
         { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
-        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
-        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)', minW: 3 },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)', minW: 3 },
         { i: '💰', t: '<b>보증금</b> · 8,000페소/4주 기준 (현지)' },
         { i: '⚡', t: '<b>전기세</b> · 14페소/KW (실사용량)' },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
@@ -3512,8 +3512,8 @@
       ],
       excludes: [
         { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
-        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
-        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)', minW: 3 },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)', minW: 3 },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
         { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500페소/월' },
         { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
@@ -3570,8 +3570,8 @@
       ],
       excludes: [
         { i: '✈️', t: '<b>왕복 항공권</b> · 별도 구매 필요' },
-        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)' },
-        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)' },
+        { i: '📋', t: '<b>SSP (필수)</b> · 7,000페소/인 (유효 6개월)', minW: 3 },
+        { i: '🪪', t: '<b>SSP-i Card</b> · 4,000페소/인 (유효 1년)', minW: 3 },
         { i: '📖', t: '<b>교재비 (주니어)</b> · 350페소/권' },
         { i: '🎨', t: '<b>재료비 (킨더)</b> · 2,500페소/월' },
         { i: '🛡️', t: '<b>해외여행자 보험</b> · 별도 가입 필수' },
@@ -3795,7 +3795,10 @@
     const exGrid = document.getElementById('excludes-grid');
     exGrid.innerHTML = '';
     if (lodging.excludes && lodging.excludes.length) {
+      const curW = parseInt(String(calcState.duration||'').replace(/[^0-9]/g,''),10) || 0;
+      const curWeeks = String(calcState.duration||'').includes('일') ? 1 : curW;
       lodging.excludes.forEach(item => {
+        if (item.minW && curWeeks < item.minW) return;
         const div = document.createElement('div');
         div.className = 'inc-item exc-item';
         div.innerHTML = `<span class="inc-icon">${item.i}</span><span>${item.t}</span>`;
@@ -3856,7 +3859,7 @@
   });
   // 드롭다운
   document.getElementById('calc-duration').addEventListener('change', e => {
-    calcState.duration = e.target.value; updateResult();
+    calcState.duration = e.target.value; updateResult(); updateIncludes();
   });
   document.getElementById('calc-room').addEventListener('change', e => {
     calcState.room = e.target.value; updateResult();
