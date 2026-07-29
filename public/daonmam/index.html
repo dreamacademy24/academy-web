@@ -4065,10 +4065,16 @@
 </script>
 <script>
 (function(){
-  var OPEN_AT=new Date('2026-07-29T19:00:00+09:00').getTime();
-  var locked=(Date.now()<OPEN_AT&&!/preview=dream/.test(location.search))||/preview=locked/.test(location.search);
-  var f=document.getElementById('apply-form'),n=document.getElementById('apply-locked');
-  if(f&&n){ if(locked){n.style.display='block';f.style.display='none';} else {n.style.display='none';f.style.display='';} }
+  var OPEN_AT=new Date('2026-07-30T09:00:00+09:00').getTime();
+  var CLOSE_AT=new Date('2026-07-30T00:00:00+09:00').getTime();
+  function applyLockState(){
+    var now=Date.now();
+    var locked=(now>=CLOSE_AT&&now<OPEN_AT&&!/preview=dream/.test(location.search))||/preview=locked/.test(location.search);
+    var f=document.getElementById('apply-form'),n=document.getElementById('apply-locked');
+    if(f&&n){ if(locked){n.style.display='block';f.style.display='none';} else {n.style.display='none';f.style.display='';} }
+  }
+  applyLockState();
+  setInterval(applyLockState,30000);
 })();
 </script>
 <style>
