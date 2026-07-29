@@ -186,6 +186,7 @@ export default function AdminBookingsPage(){
   const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
   const [mainTab,setMainTab]=useState<"newlist"|"daon"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
+  const [newSearch,setNewSearch]=useState("");
   const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
   useEffect(()=>{
     try{
@@ -926,10 +927,10 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭0: 신규 접수 예약 ── */}
     {mainTab==="newlist"&&(()=>{
-      const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중").slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+      const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no,b.accom_type].some(v=>v&&String(v).toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
       return(<div>
         <div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:14,fontWeight:700}}>📋 신규 접수 예약</span>
+          <span style={{fontSize:14,fontWeight:700}}>📋 신규 접수 예약</span><input type="text" placeholder="🔍 예약자, 학생, 예약번호" value={newSearch} onChange={e=>setNewSearch(e.target.value)} style={{marginLeft:10,fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:200,outline:"none"}}/>{newSearch&&<button onClick={()=>setNewSearch("")} style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:"#9ca3af"}}>✕</button>}
           <span style={{background:"#e85d35",color:"#fff",borderRadius:20,padding:"2px 10px",fontSize:12,fontWeight:700}}>{newBookings.length}건</span>
         </div>
         {newBookings.length===0?(
@@ -958,10 +959,10 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭1: 예약내역 (전체 부킹 리스트) ── */}
     {mainTab==="daon"&&(()=>{
-      const rows=bookings.filter(b=>b.agency==="다온맘").sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+      const rows=bookings.filter(b=>b.agency==="다온맘").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no].some(v=>v&&String(v).toLowerCase().includes(q));}).sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
       return (<div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #f1e2b8"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <span style={{fontSize:14,fontWeight:800}}>💛 다온맘 공구 예약 (접수 순)</span>
+          <span style={{fontSize:14,fontWeight:800}}>💛 다온맘 공구 예약 (접수 순)</span><input type="text" placeholder="🔍 검색" value={newSearch} onChange={ev=>setNewSearch(ev.target.value)} style={{marginLeft:6,fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:160,outline:"none"}}/>
           <span style={{fontSize:12,color:"#92400e",background:"#fef3c7",borderRadius:8,padding:"2px 8px",fontWeight:700}}>{rows.length}건</span>
           <span style={{fontSize:11.5,color:"#94a3b8"}}>선착순 판정 = 접수시간 기준 · ❗미입금 30분 규칙 동일</span>
         </div>
