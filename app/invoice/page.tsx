@@ -1007,15 +1007,16 @@ function InvoicePageInner(){
 
   /* ── 드림하우스 보증금 자동계산 (통학형은 보증금 없음) ── */
   useEffect(()=>{
-    if(isCommute){
-      // 통학형이면 드림하우스 보증금 항목 제거
+    const hasDH=cm==="combo"?(a1T==="dreamhouse"||a2T==="dreamhouse"):a1T==="dreamhouse";
+    if(isCommute||!hasDH){
+      // 통학형·리조트형(드림하우스 없음)이면 드림하우스 보증금 항목 제거
       setBilling(b=>({...b,locals:b.locals.filter(l=>l.name!=="드림하우스 보증금")}));
       return;
     }
-    const totalWeeks=cm==="combo"?a1W+a2W:a1W;
-    const deposit=totalWeeks*2000;
+    const dhWeeks=cm==="combo"?(a1T==="dreamhouse"?a1W:a2W):a1W;
+    const deposit=dhWeeks*2000;
     setBilling(b=>({...b,locals:b.locals.map(l=>l.name==="드림하우스 보증금"?{...l,amount:String(deposit)}:l)}));
-  },[a1W,a2W,cm,isCommute,hasSnapshot]);
+  },[a1W,a2W,cm,a1T,a2T,isCommute,hasSnapshot]);
 
   /* ── 현지 지불 자동 항목 (SSP × 보호자 / 주니어 교재비 / 킨더 재료비) ── */
   const autoLocals=useMemo(()=>{
@@ -1340,6 +1341,15 @@ function InvoicePageInner(){
   const C9_FA=["103","104","105","106"];
   const C9_DX=["204","205","206","207","208","209","210"];
   const [c9Registered,setC9Registered]=useState(false);
+  const [c9Room,setC9Room]=useState("");
+  useEffect(()=>{(async()=>{
+    if(!bookingId)return;
+    if(!(a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine")))return;
+    const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();
+    const arr=(Array.isArray(st?.value)?st!.value:[]) as {room:string;booking_id?:string}[];
+    const mine=arr.find(x=>x.booking_id===bookingId);
+    setC9Room(mine?.room||"");
+  })();},[bookingId,a1T,a2T,cm]);
   const [c9Modal,setC9Modal]=useState<{availFA:string[];availDX:string[];assigned:string;ci:string;co:string;prefer:string;blocks:{id:string;room:string;name:string;ci:string;co:string;kind?:string;memo?:string;booking_id?:string}[]}|null>(null);
   async function registerCubenine(){
     if(!bookingId){alert("예약 ID가 없습니다.");return;}
@@ -1370,7 +1380,7 @@ function InvoicePageInner(){
     }
     const {error}=await supabase.from("bookings").update({status:"영수증발행"}).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
-    setC9Registered(true);setC9Modal(null);
+    setC9Registered(true);if(room!==null)setC9Room(room);setC9Modal(null);
     alert(room?("✅ 큐브나인 예약 완료!\n배정 룸: "+room+"호 ("+(C9_FA.includes(room)?"풀억세스":"디럭스오션")+")"):"✅ 등록 완료 — 룸은 미배정 상태예요.\n큐브나인 예약현황의 '룸 배정 대기'에서 배정해주세요.");
   }
 
@@ -2000,8 +2010,8 @@ function InvoicePageInner(){
             <div style={{fontSize:12,color:"#6b7c93",lineHeight:1.9,marginTop:20}}>
               안내받으신 종합안내 이용금액 및 환불 규정을 꼭 확인해주세요<br/>
               미확인으로 인한 문제는 책임 지지않습니다<br/>
-              드림하우스 숙박료등 전체 결제하였음을 증명합니다<br/>
-              해당영수증에 대한 문의사항이 있으시면 드림하우스로 문의주세요<br/>
+              {isCommute?"통학형 프로그램":a1T==="dreamhouse"||cm==="combo"?"드림아카데미 패키지":a1T==="jpark"?"제이파크 패키지":a1T==="cubenine"?"큐브나인 패키지":"드림아카데미 패키지"} 이용금액 전체 결제하였음을 증명합니다<br/>
+              해당영수증에 대한 문의사항이 있으시면 드림아카데미로 문의주세요<br/>
               감사합니다
             </div>
           </div>
@@ -2012,7 +2022,7 @@ function InvoicePageInner(){
           <button className="pbk" onClick={()=>setTab("invoice")}>← 인보이스 탭</button>
           <button onClick={saveReceiptPayments} disabled={savingReceipt} style={{padding:"12px 24px",background:"#1a6fc4",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:savingReceipt?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif",opacity:savingReceipt?0.6:1}}>💾 {savingReceipt?"저장중...":"지불내역 저장"}</button>
           {(a1T==="dreamhouse"||(cm==="combo"&&a2T==="dreamhouse"))&&<button onClick={registerDreamhouse} disabled={dhRegistered} style={{padding:"12px 24px",background:dhRegistered?"#86efac":"#16a34a",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:dhRegistered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{dhRegistered?`✅ 하우스 등록완료${(checkin.houseNo||"").trim()?" · "+checkin.houseNo:""}`:"🏠 드림하우스 등록"}</button>}
-          {(a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine"))&&<button onClick={registerCubenine} disabled={c9Registered} style={{padding:"12px 24px",background:c9Registered?"#93c5fd":"#0e7490",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:c9Registered?"not-allowed":"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>{c9Registered?"✅ 큐브 등록완료":"🐬 큐브나인 등록"}</button>}
+          {(a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine"))&&<button onClick={registerCubenine} style={{padding:"12px 24px",background:c9Room?"#059669":"#0e7490",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} title={c9Room?"클릭하면 룸 재배정 가능":""}>{c9Room?`✅ 큐브 ${c9Room}호 배정됨`:(c9Registered?"✅ 큐브 등록완료":"🐬 큐브나인 등록")}</button>}
           {dhModal&&(
             <div onClick={()=>setDhModal(null)} style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9990}}>
               <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:14,padding:"20px 22px",width:"min(480px,92vw)",boxShadow:"0 12px 40px rgba(0,0,0,0.25)",fontFamily:"'Noto Sans KR',sans-serif",textAlign:"left"}}>
