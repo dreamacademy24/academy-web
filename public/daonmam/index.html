@@ -3909,22 +3909,15 @@
       btnApply.disabled = true;
       btnApply.textContent = '신청 접수 중...';
 
-      // ① Supabase에 저장 (드림아카데미 API 호출)
+      // ① Supabase에 저장 — 백그라운드 (이동을 막지 않음)
       try {
-        const res = await fetch('/api/minedu-apply', {
+        fetch('/api/minedu-apply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || '신청 저장 실패');
-        }
-      } catch (err) {
-        console.error('[apply] save failed:', err);
-        alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
-      }
+          keepalive: true,
+        }).catch(function(err){ console.error('[apply] save failed:', err); });
+      } catch (err) { console.error('[apply] save failed:', err); }
 
       // ② 예약서 작성 페이지로 이동 (입력값 자동 이어받기)
       const pfObj = { ...payload, adults: (data.get('adults') || '').trim(), oceanview: !!data.get('oceanview') };
