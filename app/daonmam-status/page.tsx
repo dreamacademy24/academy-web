@@ -39,10 +39,10 @@ export default function DaonmamStatusPage() {
     const { error } = await supabase.from("bookings").update({ daon_stage: v }).eq("id", id);
     if (error) { alert("저장 실패: " + error.message); load(); }
   }
-  const effStage = (r: Bk) => /영수증발행|결제완료|완료/.test(String(r.status || "")) ? "예약 확정" : (r.daon_stage || "신청서 접수");
+  const effStage = (r: Bk) => String(r.status || "").includes("취소") ? "취소" : /영수증발행|결제완료|완료/.test(String(r.status || "")) ? "예약 확정" : (r.daon_stage || "신청서 접수");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayCnt = rows.filter(r => r.created_at && new Date(r.created_at) >= today).length;
-  const paidCnt = rows.filter(r => effStage(r) !== "신청서 접수" || (r.paid_amount || 0) > 0).length;
+  const paidCnt = rows.filter(r => effStage(r) !== "취소" && (effStage(r) !== "신청서 접수" || (r.paid_amount || 0) > 0)).length;
   const confirmedCnt = rows.filter(r => effStage(r) === "예약 확정").length;
   return (
     <div style={{ fontFamily: "'Noto Sans KR',sans-serif", background: "#faf6ef", minHeight: "100vh", padding: "30px 16px" }}>
@@ -68,17 +68,19 @@ export default function DaonmamStatusPage() {
             <tbody>
               {!loaded ? (<tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#a89a78" }}>불러오는 중…</td></tr>)
               : rows.length === 0 ? (<tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#a89a78" }}>아직 접수된 예약이 없어요</td></tr>)
-              : rows.map(b => { const st = effStage(b); const confirmed = /영수증발행|결제완료|완료/.test(String(b.status || "")); const sc = STAGE_C[st] || STAGE_C["신청서 접수"]; return (
-                <tr key={b.id} style={{ borderTop: "1px solid #f5edd9", textAlign: "center" }}>
+              : rows.map(b => { const st = effStage(b); const cancelled = String(b.status || "").includes("취소"); const confirmed = !cancelled && /영수증발행|결제완료|완료/.test(String(b.status || "")); const sc = cancelled ? { bg: "#fee2e2", c: "#dc2626" } : (STAGE_C[st] || STAGE_C["신청서 접수"]); return (
+                <tr key={b.id} style={{ borderTop: "1px solid #f5edd9", textAlign: "center", opacity: cancelled ? 0.55 : 1 }}>
                   <td style={{ padding: "9px 6px", fontWeight: 700, color: "#8a6414" }}>{shortNo(b.reservation_no)}</td>
-                  <td style={{ padding: "9px 6px", fontWeight: 700 }}>{mask(b.booker_name)}</td>
+                  <td style={{ padding: "9px 6px", fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>{mask(b.booker_name)}</td>
                   <td style={{ padding: "9px 6px" }}>{b.accom_type || "-"}</td>
                   <td style={{ padding: "9px 6px", fontWeight: 700 }}>{b.accom_weeks ? b.accom_weeks + "주" : "-"}</td>
                   <td style={{ padding: "9px 6px" }}>{b.checkin_date || "-"}</td>
                   <td style={{ padding: "9px 6px" }}>{b.checkout_date || "-"}</td>
                   <td style={{ padding: "9px 6px" }}>{(b.adults || 0) + (b.children || 0)}명</td>
                   <td style={{ padding: "9px 6px" }}>
-                    {confirmed
+                    {cancelled
+                      ? <span style={{ display: "inline-block", background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 800 }}>취소</span>
+                      : confirmed
                       ? <span style={{ display: "inline-block", background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 800 }}>✅ 예약 확정</span>
                       : <select value={st} onChange={e => setStage(b.id, e.target.value)}
                           style={{ background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 8px", fontSize: 12, fontWeight: 800, fontFamily: "inherit" }}>
