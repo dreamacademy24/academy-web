@@ -47,6 +47,7 @@ function stuCount(s:any):number{
   try{const a=typeof s==="string"?JSON.parse(s):s;if(!Array.isArray(a))return 0;return a.length;}catch{return 0;}
 }
 function fmt(n?:number){return n?n.toLocaleString("ko-KR")+"원":"-";}
+function fDateTime(d?:string){ if(!d)return""; const dt=new Date(d); return isNaN(dt.getTime())?d:`${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")} ${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`; }
 function fDate(d?:string){ if(!d)return""; const dt=new Date(d); return isNaN(dt.getTime())?d:`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
 function shortNo(no:string){return no?no.replace("DA-","").slice(-7):"-";}
 function addWeeks(dateStr:string,weeks:number):string{
@@ -184,7 +185,7 @@ export default function AdminBookingsPage(){
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
   const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
-  const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
+  const [mainTab,setMainTab]=useState<"newlist"|"daon"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
   useEffect(()=>{
     try{
@@ -916,6 +917,7 @@ export default function AdminBookingsPage(){
     <div className="main-tabs">
       <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적</button>
       <button className={`main-tab${mainTab==="newlist"?" ac":""}`} onClick={()=>setMainTab("newlist")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수"||b.status==="접수중").length;return n>0&&<span style={{background:"#e85d35",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>{n}</span>;})()}</button>
+      <button className={`main-tab${mainTab==="daon"?" ac":""}`} onClick={()=>setMainTab("daon")}>💛 다온맘{(()=>{const n=bookings.filter(b=>b.agency==="다온맘").length;return n>0&&<span style={{background:"#eab308",color:"#3c1e1e",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:800}}>{n}</span>;})()}</button>
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 예약내역{(()=>{const _t=calYmd(new Date());const n=bookings.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim()&&!(b.status||"").includes("취소")&&(!b.checkout_date||String(b.checkout_date).slice(0,10)>=_t)).length;return n>0?<span style={{background:"#dc2626",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>❗{n}</span>:null;})()}</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
       <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
@@ -943,7 +945,7 @@ export default function AdminBookingsPage(){
             <td style={{fontSize:12,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"-"}</td>
             <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
-            <td style={{fontSize:12,color:"#888"}}>{fDate(b.created_at)}</td>
+            <td style={{fontSize:12,color:"#888",whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()} style={{display:"flex",gap:4}}>
               <button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button><button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
@@ -955,6 +957,40 @@ export default function AdminBookingsPage(){
     })()}
 
     {/* ── 탭1: 예약내역 (전체 부킹 리스트) ── */}
+    {mainTab==="daon"&&(()=>{
+      const rows=bookings.filter(b=>b.agency==="다온맘").sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+      return (<div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #f1e2b8"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+          <span style={{fontSize:14,fontWeight:800}}>💛 다온맘 공구 예약 (접수 순)</span>
+          <span style={{fontSize:12,color:"#92400e",background:"#fef3c7",borderRadius:8,padding:"2px 8px",fontWeight:700}}>{rows.length}건</span>
+          <span style={{fontSize:11.5,color:"#94a3b8"}}>선착순 판정 = 접수시간 기준 · ❗미입금 30분 규칙 동일</span>
+        </div>
+        {rows.length===0?<div style={{textAlign:"center",padding:"50px 0",color:"#aaa",fontSize:14}}>아직 다온맘 예약이 없습니다</div>:
+        (<div className="tbl-w"><table className="tbl"><thead><tr>
+          <th>순번</th><th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>진행</th><th>액션</th>
+        </tr></thead><tbody>
+          {rows.map((b,ix)=>{
+            const unpaid30=(()=>{try{const created=new Date(String(b.created_at)).getTime();const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;return paid<=0&&Date.now()-created>30*60*1000;}catch{return false;}})();
+            const stage=String((b as unknown as Record<string,unknown>).daon_stage||"신청서 접수");
+            return (<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={unpaid30?{background:"#fff7f7"}:undefined}>
+            <td style={{fontWeight:800,color:"#92400e"}}>{ix+1}</td>
+            <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>
+            <td>{b.booker_name||"-"}{unpaid30&&<span style={{marginLeft:6,background:"#fee2e2",color:"#b91c1c",fontSize:10.5,fontWeight:800,borderRadius:8,padding:"1px 7px"}}>❗미입금</span>}</td>
+            <td style={{fontSize:12,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{stuNames(b.students)}</td>
+            <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
+            <td>{b.checkin_date||"-"}</td>
+            <td style={{fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
+            <td style={{fontSize:11.5,fontWeight:800,color:stage==="예약 확정"?"#166534":stage==="예약금 입금"?"#1e40af":"#92400e"}}>{stage}</td>
+            <td onClick={ev=>ev.stopPropagation()} style={{display:"flex",gap:4}}>
+              <button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button>
+              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
+              <button className="act act-r" onClick={async()=>{if(confirm("삭제할까요? "+(b.booker_name||""))){const res=await fetch("/api/bookings/"+b.id+"/delete",{method:"DELETE"});if(!res.ok){alert("삭제 실패");return;}load();}}}>삭제</button>
+            </td>
+          </tr>);})}
+        </tbody></table></div>)}
+      </div>);
+    })()}
+
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
