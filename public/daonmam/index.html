@@ -3796,15 +3796,20 @@
         const w = parseInt(calcState.duration, 10) || 0;
         const factor = Math.min(Math.max(w, 0), 4) / 4;
         const is27 = calcState.entry !== 'y2026';
-        let per = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
-        if (calcState.lodging === 'c9') per += 10; // 큐브나인 전 기간 1인 10만 추가
-        const disc = Math.round(per * factor * n);
+        const basePer = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
+        const c9Per = calcState.lodging === 'c9' ? 10 : 0; // 큐브나인 전 기간 1인 10만 추가
+        const baseDisc = Math.round(basePer * factor * n);
+        const c9Disc = Math.round(c9Per * factor * n);
+        const disc = baseDisc + c9Disc;
         if (n > 0 && w > 0 && disc > 0 && price > disc) {
           ev.style.display = 'block';
           document.getElementById('result-event-price').textContent = (price - disc).toLocaleString() + '만원';
-          document.getElementById('result-event-sub').textContent = is27
-            ? '2027 얼리버드 현금할인 −' + disc.toLocaleString() + '만원 (27년 3월~28년 2월 입실 · 전액입금 기준)'
-            : '2026 입실 · 전액입금 할인 −' + disc.toLocaleString() + '만원 (전액 선입금 기준)';
+          const lines = [];
+          lines.push(is27
+            ? '얼리버드 현금 전액입금 할인 −' + baseDisc.toLocaleString() + '만원 (27년 3월~28년 2월 입실)'
+            : '현금 전액입금 할인 −' + baseDisc.toLocaleString() + '만원 (2026 입실 · 전액 선입금 기준)');
+          if (c9Disc > 0) lines.push('다온맘 큐브나인 추가 할인 −' + c9Disc.toLocaleString() + '만원 (전 기간)');
+          document.getElementById('result-event-sub').innerHTML = lines.join('<br/>');
         } else { ev.style.display = 'none'; }
       } else { ev.style.display = 'none'; }
     }
