@@ -217,6 +217,20 @@ export default function BookingPage() {
     const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark" || bType === "jaypark_cubenine";
     const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine" || bType === "jaypark_cubenine";
 
+    // 🏠 드림하우스 체크인 요일 제한 — 토/일만 가능
+    {
+      let dhCI = "";
+      if (bType === "dreamhouse") dhCI = dates.checkIn;
+      else if (isCombo) { const sg = segs.find(g => g.type === "dreamhouse"); if (sg) dhCI = sg.checkin; }
+      if (dhCI) {
+        const dow = new Date(dhCI + "T00:00:00").getDay();
+        if (dow !== 0 && dow !== 6) {
+          alert("⚠️ 드림하우스 체크인은 토요일 또는 일요일만 가능해요.\n(체크아웃도 체크인과 같은 요일이 됩니다)\n\n날짜를 토/일로 조정해 주세요. 다른 요일이 꼭 필요하시면 카카오 채널로 상담 부탁드려요!");
+          setLoading(false);
+          return;
+        }
+      }
+    }
     // 🐬 큐브나인 만실 체크 — 접수 = 수량 선점 (블록 + 기존 예약 합산)
     if (usesCN && dates.checkIn && dates.checkOut) {
       try {
