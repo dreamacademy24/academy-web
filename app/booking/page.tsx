@@ -328,9 +328,13 @@ export default function BookingPage() {
       <div style={{ textAlign: "left", background: "#fff", border: "1.5px solid #86efac", borderRadius: 14, padding: "18px 18px", margin: "0 0 18px" }}>
         <div style={{ fontSize: 14.5, fontWeight: 800, color: "#166534", marginBottom: 6 }}>💳 다음 단계 — 예약금 50만원으로 자리 확보</div>
         <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.85 }}>
-          결제 링크는 <b>카카오 채널로 바로 보내드려요.</b><br/>
-          예약금 결제가 확인되면 자리가 확보되고, 이후 상담에서 최종 결제 방식(💵 현금 전액입금 최대 할인 / 💳 카드)을 정하시면 됩니다.<br/>
-          <span style={{ color: "#6b7c93", fontSize: 12 }}>예약금은 총 금액에서 차감돼요. 예약금 결제만으로는 최종 확정이 아니며, 상담으로 날짜·구성을 마무리해 주세요.</span>
+          아래 버튼에서 <b>예약금 50만원</b>을 결제하시면 자리가 확보돼요.<br/>
+          이후 상담에서 최종 결제 방식(💵 현금 전액입금 최대 할인 / 💳 카드)을 정하시면 됩니다.
+        </div>
+        <a href={(() => { const L: Record<string, string> = { dh: "https://smartstore.naver.com/dreamacademy/products/13641857512", jp: "https://smartstore.naver.com/dreamacademy/products/13641860281", c9: "https://smartstore.naver.com/dreamacademy/products/13641861583" }; const bt = String(bType); return bt.includes("jaypark") ? L.jp : bt.includes("cubenine") ? L.c9 : L.dh; })()} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", marginTop: 12, background: "#03C75A", color: "#fff", fontWeight: 800, fontSize: 15, padding: "13px 0", borderRadius: 10, textDecoration: "none" }}>💳 네이버 스토어에서 예약금 결제하기</a>
+        <div style={{ fontSize: 12, color: "#6b7c93", lineHeight: 1.7, marginTop: 10 }}>
+          결제 후 <b>카카오 채널로 알려주시면</b> 바로 확인해 드려요.<br/>
+          예약금은 총 금액에서 차감돼요. 예약금 결제만으로는 최종 확정이 아니며, 상담으로 날짜·구성을 마무리해 주세요.
         </div>
       </div>
       <div className="dp">담당자가 확인 후 상세 안내를 드립니다.<br/>문의사항은 카카오톡으로 연락주세요.</div>
