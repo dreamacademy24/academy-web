@@ -186,6 +186,21 @@ export default function BookingPage() {
     if (isCombo && (!segs[0].checkin || !segs[0].checkout || !segs[1].checkin || !segs[1].checkout)) {
       alert("콤보 예약은 각 숙소 구간의 체크인/체크아웃을 모두 입력해주세요."); return;
     }
+    if (isCombo) {
+      const nm = (t: string) => t === "dreamhouse" ? "드림하우스" : t === "jaypark" ? "제이파크" : "큐브나인";
+      const today = new Date(); const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+      for (const g of segs) {
+        if (g.checkout <= g.checkin) { alert(`⚠️ ${nm(g.type)} 구간의 체크아웃 날짜가 체크인보다 빠르거나 같습니다.\n날짜(연도 포함)를 다시 확인해주세요.`); return; }
+        const days = (new Date(g.checkout).getTime() - new Date(g.checkin).getTime()) / 86400000;
+        if (days > 70) { alert(`⚠️ ${nm(g.type)} 구간이 10주를 초과합니다.\n연도 입력 오타가 아닌지 확인해주세요.`); return; }
+        if (g.checkin < todayStr) { alert(`⚠️ ${nm(g.type)} 구간 체크인이 과거 날짜입니다. 다시 확인해주세요.`); return; }
+      }
+      if (segs[1].checkin < segs[0].checkout) {
+        if (segs[0].checkin < segs[1].checkout) { alert("⚠️ 두 숙소 구간의 기간이 서로 겹칩니다. 이어지는 일정으로 입력해주세요."); return; }
+      }
+    }
+    // 시간순 정렬 (앞 구간이 먼저 오도록) — 저장/검사 모두 이 순서 사용
+    const oseg = isCombo && segs[1].checkin < segs[0].checkin ? [segs[1], segs[0]] : segs;
 
     setLoading(true);
     const rno = "DA-" + todayCompact + "-" + Math.floor(Math.random() * 900000 + 100000);
@@ -263,7 +278,10 @@ export default function BookingPage() {
     // 🏠 드림하우스 만실 체크 — 접수 단계에서 오버부킹 예방
     if (usesDH && dates.checkIn && dates.checkOut) {
       try {
-        const av = await fetch(`/api/dreamhouse/availability?ci=${dates.checkIn}&co=${dates.checkOut}`).then(r => r.json());
+        let dci = dates.checkIn, dco = dates.checkOut;
+        if (isCombo) { const sg = oseg.find(g => g.type === "dreamhouse"); if (sg) { dci = sg.checkin; dco = sg.checkout; } }
+        if (!dci || !dco || dci >= dco) throw new Error("bad-range");
+        const av = await fetch(`/api/dreamhouse/availability?ci=${dci}&co=${dco}`).then(r => r.json());
         if (Array.isArray(av.fullDates) && av.fullDates.length > 0) {
           const list = av.fullDates.slice(0, 5).map((d: string) => d.slice(5).replace("-", "/")).join(", ") + (av.fullDates.length > 5 ? ` 외 ${av.fullDates.length - 5}일` : "");
           alert(`⚠️ 죄송합니다 — 선택하신 기간 중 아래 날짜는 드림하우스 예약이 가득 찼습니다.\n\n만실: ${list}\n\n접수 전에 관리자에게 확인을 부탁드려요.\n(카카오 채널 또는 드림아카데미 상담 창구로 문의해주세요)`);
@@ -291,14 +309,14 @@ export default function BookingPage() {
       cn_period: usesCN ? accom.cn_period : null,
       jp_room_type: usesJP ? accom.jp_room_type : null,
       cn_room_type: usesCN ? accom.cn_room_type : null,
-      seg1_type: isCombo ? segs[0].type : null,
-      seg1_checkin: isCombo ? (segs[0].checkin || null) : null,
-      seg1_checkout: isCombo ? (segs[0].checkout || null) : null,
-      seg2_type: isCombo ? segs[1].type : null,
-      seg2_checkin: isCombo ? (segs[1].checkin || null) : null,
-      seg2_checkout: isCombo ? (segs[1].checkout || null) : null,
-      checkin_date: isCombo ? (segs[0].checkin || null) : (dates.checkIn || null),
-      checkout_date: isCombo ? (segs[1].checkout || null) : (dates.checkOut || null),
+      seg1_type: isCombo ? oseg[0].type : null,
+      seg1_checkin: isCombo ? (oseg[0].checkin || null) : null,
+      seg1_checkout: isCombo ? (oseg[0].checkout || null) : null,
+      seg2_type: isCombo ? oseg[1].type : null,
+      seg2_checkin: isCombo ? (oseg[1].checkin || null) : null,
+      seg2_checkout: isCombo ? (oseg[1].checkout || null) : null,
+      checkin_date: isCombo ? (oseg[0].checkin || null) : (dates.checkIn || null),
+      checkout_date: isCombo ? (oseg[1].checkout || null) : (dates.checkOut || null),
       pickup: bType === "commute" ? "불필요함" : "필요함",
       drop_off: bType === "commute" ? "불필요함" : "필요함",
       pickup_place: dates.pickupPlace,
