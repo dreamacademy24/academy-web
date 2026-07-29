@@ -926,7 +926,7 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭0: 신규 접수 예약 ── */}
     {mainTab==="newlist"&&(()=>{
-      const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중");
+      const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중").slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
       return(<div>
         <div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:14,fontWeight:700}}>📋 신규 접수 예약</span>
