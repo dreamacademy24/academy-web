@@ -350,6 +350,9 @@ export default function BookingPage() {
       </div>
       <div className="dp">담당자가 확인 후 상세 안내를 드립니다.<br/>문의사항은 카카오톡으로 연락주세요.</div>
       <a className="dk" href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">카카오톡 문의하기</a>
+      <div style={{ marginTop: 14 }}>
+        <button onClick={() => { if (isDaon) window.location.href = "/daonmam/#tab-8"; else window.location.reload(); }} style={{ background: "#fff", border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>↩ 새 예약 다시 신청하기</button>
+      </div>
     </div>
   </>);
 
