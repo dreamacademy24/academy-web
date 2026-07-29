@@ -972,7 +972,7 @@ export default function AdminBookingsPage(){
         </tr></thead><tbody>
           {rows.map((b,ix)=>{
             const unpaid30=(()=>{try{const created=new Date(String(b.created_at)).getTime();const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;return paid<=0&&Date.now()-created>30*60*1000;}catch{return false;}})();
-            const stage=String((b as unknown as Record<string,unknown>).daon_stage||"신청서 접수");
+            const stage=/영수증발행|결제완료|완료/.test(String(b.status||""))?"예약 확정":String((b as unknown as Record<string,unknown>).daon_stage||"신청서 접수");
             return (<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={unpaid30?{background:"#fff7f7"}:undefined}>
             <td style={{fontWeight:800,color:"#92400e"}}>{ix+1}</td>
             <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>

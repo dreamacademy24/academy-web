@@ -10,7 +10,7 @@ type Bk = {
   checkin_date: string | null; checkout_date: string | null;
   adults: number | null; children: number | null;
   payment_status: string | null; paid_amount: number | null;
-  daon_stage: string | null; created_at: string | null;
+  daon_stage: string | null; created_at: string | null; status: string | null;
 };
 
 const STAGES = ["신청서 접수", "예약금 입금", "확정예약 진행중", "예약 확정"];
@@ -29,7 +29,7 @@ export default function DaonmamStatusPage() {
   const [loaded, setLoaded] = useState(false);
   async function load() {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,accom_type,accom_weeks,checkin_date,checkout_date,adults,children,payment_status,paid_amount,daon_stage,created_at")
+      .select("id,reservation_no,booker_name,accom_type,accom_weeks,checkin_date,checkout_date,adults,children,payment_status,paid_amount,daon_stage,created_at,status")
       .eq("agency", "다온맘").order("created_at", { ascending: false });
     setRows((data as Bk[]) || []); setLoaded(true);
   }
@@ -39,10 +39,11 @@ export default function DaonmamStatusPage() {
     const { error } = await supabase.from("bookings").update({ daon_stage: v }).eq("id", id);
     if (error) { alert("저장 실패: " + error.message); load(); }
   }
+  const effStage = (r: Bk) => /영수증발행|결제완료|완료/.test(String(r.status || "")) ? "예약 확정" : (r.daon_stage || "신청서 접수");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayCnt = rows.filter(r => r.created_at && new Date(r.created_at) >= today).length;
-  const paidCnt = rows.filter(r => (r.daon_stage && r.daon_stage !== "신청서 접수") || (r.paid_amount || 0) > 0).length;
-  const confirmedCnt = rows.filter(r => r.daon_stage === "예약 확정").length;
+  const paidCnt = rows.filter(r => effStage(r) !== "신청서 접수" || (r.paid_amount || 0) > 0).length;
+  const confirmedCnt = rows.filter(r => effStage(r) === "예약 확정").length;
   return (
     <div style={{ fontFamily: "'Noto Sans KR',sans-serif", background: "#faf6ef", minHeight: "100vh", padding: "30px 16px" }}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
@@ -67,7 +68,7 @@ export default function DaonmamStatusPage() {
             <tbody>
               {!loaded ? (<tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#a89a78" }}>불러오는 중…</td></tr>)
               : rows.length === 0 ? (<tr><td colSpan={9} style={{ textAlign: "center", padding: 40, color: "#a89a78" }}>아직 접수된 예약이 없어요</td></tr>)
-              : rows.map(b => { const st = b.daon_stage || "신청서 접수"; const sc = STAGE_C[st] || STAGE_C["신청서 접수"]; return (
+              : rows.map(b => { const st = effStage(b); const confirmed = /영수증발행|결제완료|완료/.test(String(b.status || "")); const sc = STAGE_C[st] || STAGE_C["신청서 접수"]; return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f5edd9", textAlign: "center" }}>
                   <td style={{ padding: "9px 6px", fontWeight: 700, color: "#8a6414" }}>{shortNo(b.reservation_no)}</td>
                   <td style={{ padding: "9px 6px", fontWeight: 700 }}>{mask(b.booker_name)}</td>
@@ -77,10 +78,12 @@ export default function DaonmamStatusPage() {
                   <td style={{ padding: "9px 6px" }}>{b.checkout_date || "-"}</td>
                   <td style={{ padding: "9px 6px" }}>{(b.adults || 0) + (b.children || 0)}명</td>
                   <td style={{ padding: "9px 6px" }}>
-                    <select value={st} onChange={e => setStage(b.id, e.target.value)}
-                      style={{ background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 8px", fontSize: 12, fontWeight: 800, fontFamily: "inherit" }}>
-                      {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    {confirmed
+                      ? <span style={{ display: "inline-block", background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 800 }}>✅ 예약 확정</span>
+                      : <select value={st} onChange={e => setStage(b.id, e.target.value)}
+                          style={{ background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 8px", fontSize: 12, fontWeight: 800, fontFamily: "inherit" }}>
+                          {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>}
                   </td>
                   <td style={{ padding: "9px 6px", color: "#a89a78", fontSize: 12 }}>{(b.created_at || "").slice(5, 10)}</td>
                 </tr>
