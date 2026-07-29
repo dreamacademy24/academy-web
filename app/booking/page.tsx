@@ -318,6 +318,11 @@ export default function BookingPage() {
 
     setLoading(false);
     setReservationNo(rno);
+    if (isDaon) {
+      alert("✅ 접수 완료! 예약번호 " + rno + "\n\n예약금 50만원 결제 페이지(네이버 스토어)로 이동합니다.\n결제 후 카카오 채널로 결제자 이름을 꼭 알려주세요 (결제자 = 예약자 동일).\n⏰ 30분 이내 미결제 시 자리 확보가 취소될 수 있어요.");
+      window.location.href = "https://smartstore.naver.com/dreamacademy/products/13686581910";
+      return;
+    }
     setDone(true);
   }
 
@@ -657,7 +662,7 @@ export default function BookingPage() {
                 </div>
               </div>
               <div className="fg">
-                <label className="fl">사진촬영 허용{s.photo === "X" && <span style={{marginLeft:8,fontSize:11,color:"#dc2626",fontWeight:500}}>⚠️ 사진촬영 자체가 없습니다</span>}</label>
+                <label className="fl">사진촬영 허용{s.photo === "X" && <span style={{marginLeft:8,fontSize:11,color:"#dc2626",fontWeight:500}}>⚠️ 미허용 시 별도의 사진 촬영에서 제외됩니다</span>}</label>
                 <select className="fsl" value={s.photo} onChange={e => upStudent(s.id, "photo", e.target.value)}>
                   <option value="O">O (SNS 활용 허용)</option>
                   <option value="X">X (미허용)</option>
