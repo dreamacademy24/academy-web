@@ -40,6 +40,9 @@ export default function DaonmamStatusPage() {
     if (error) { alert("저장 실패: " + error.message); load(); }
   }
   const effStage = (r: Bk) => String(r.status || "").includes("취소") ? "취소" : /영수증발행|결제완료|완료/.test(String(r.status || "")) ? "예약 확정" : (r.daon_stage || "신청서 접수");
+  const baseName = (n: string | null) => String(n || "").replace(/\s/g, "").replace(/[A-Z]$/, "");
+  const nameCnt: { [k: string]: number } = {};
+  rows.forEach(r => { const k = baseName(r.booker_name); if (k) nameCnt[k] = (nameCnt[k] || 0) + 1; });
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayCnt = rows.filter(r => r.created_at && new Date(r.created_at) >= today).length;
   const paidCnt = rows.filter(r => effStage(r) !== "취소" && (effStage(r) !== "신청서 접수" || (r.paid_amount || 0) > 0)).length;
@@ -71,7 +74,7 @@ export default function DaonmamStatusPage() {
               : rows.map(b => { const st = effStage(b); const cancelled = String(b.status || "").includes("취소"); const confirmed = !cancelled && /영수증발행|결제완료|완료/.test(String(b.status || "")); const sc = cancelled ? { bg: "#fee2e2", c: "#dc2626" } : (STAGE_C[st] || STAGE_C["신청서 접수"]); return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f5edd9", textAlign: "center", opacity: cancelled ? 0.55 : 1 }}>
                   <td style={{ padding: "9px 6px", fontWeight: 700, color: "#8a6414" }}>{shortNo(b.reservation_no)}</td>
-                  <td style={{ padding: "9px 6px", fontWeight: 700, textDecoration: cancelled ? "line-through" : "none" }}>{mask(b.booker_name)}</td>
+                  <td style={{ padding: "9px 6px", fontWeight: 700, textDecoration: cancelled ? "line-through" : "none", whiteSpace: "nowrap" }}>{mask(b.booker_name)}{nameCnt[baseName(b.booker_name)] > 1 && <span style={{ marginLeft: 4, background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 6, padding: "1px 6px", fontSize: 10.5, fontWeight: 800, verticalAlign: "middle" }}>중복</span>}</td>
                   <td style={{ padding: "9px 6px" }}>{b.accom_type || "-"}</td>
                   <td style={{ padding: "9px 6px", fontWeight: 700 }}>{b.accom_weeks ? b.accom_weeks + "주" : "-"}</td>
                   <td style={{ padding: "9px 6px" }}>{b.checkin_date || "-"}</td>

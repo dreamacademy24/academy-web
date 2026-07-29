@@ -966,6 +966,8 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭1: 예약내역 (전체 부킹 리스트) ── */}
     {mainTab==="daon"&&(()=>{
+      const _bn=(n:string|null|undefined)=>String(n||"").replace(/\s/g,"").replace(/[A-Z]$/,"");
+      const _nc:{[k:string]:number}={};bookings.filter(b=>b.agency==="다온맘").forEach(b=>{const k=_bn(b.booker_name);if(k)_nc[k]=(_nc[k]||0)+1;});
       const rows=bookings.filter(b=>b.agency==="다온맘").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no].some(v=>v&&String(v).toLowerCase().includes(q));}).sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
       return (<div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #f1e2b8"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -983,7 +985,7 @@ export default function AdminBookingsPage(){
             return (<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={unpaid30?{background:"#fff7f7"}:undefined}>
             <td style={{fontWeight:800,color:"#92400e"}}>{ix+1}</td>
             <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>
-            <td>{b.booker_name||"-"}{unpaid30&&<span style={{marginLeft:6,background:"#fee2e2",color:"#b91c1c",fontSize:10.5,fontWeight:800,borderRadius:8,padding:"1px 7px"}}>❗미입금</span>}</td>
+            <td style={{whiteSpace:"nowrap"}}>{b.booker_name||"-"}{_nc[_bn(b.booker_name)]>1&&<span style={{marginLeft:5,background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",fontSize:10,fontWeight:800,borderRadius:6,padding:"1px 6px"}}>중복</span>}{unpaid30&&<span style={{marginLeft:6,background:"#fee2e2",color:"#b91c1c",fontSize:10.5,fontWeight:800,borderRadius:8,padding:"1px 7px"}}>❗미입금</span>}</td>
             <td style={{fontSize:12,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{stuNames(b.students)}</td>
             <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
             <td>{b.checkin_date||"-"}</td>
