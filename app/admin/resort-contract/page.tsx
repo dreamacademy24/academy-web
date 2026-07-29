@@ -223,7 +223,7 @@ export default function ResortContractPage() {
             <div className="rc-h">📮 예약 절차 · 컨택</div>
             <ul className="rc-ul">
               <li>모든 예약은 Dream Academy 공식 부킹오더로 직접 접수 — FIT 3일 전 / 단체(GIT) 5일 전까지 호텔 바우처 제출</li>
-              <li>예약부: <b>travel@jparkislandresort.com</b></li>
+              <li>예약부: <b>rsvn@jparkislandresort.com</b></li>
               <li>세일즈: <b>britney.na@jparkislandresort.com</b> · rodan.segovia@jparkislandresort.com · genrov.rabusa@jparkislandresort.com</li>
               <li>미결제 예약은 옵션 날짜 18시까지만 홀드 → 자동 해제</li>
               <li>체크인 시 현장 추가 예약은 계약 요금 미적용 (OTC 요금)</li>

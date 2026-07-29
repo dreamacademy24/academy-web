@@ -121,8 +121,8 @@ export default function ResortInvoicePage() {
     if (!preview || preview.resort !== "jaypark") return;
     let saved = "";
     try { saved = localStorage.getItem("resortEmail_jaypark") || ""; } catch {}
-    if (saved) return; // 메이가 직접 저장한 주소 우선
-    setEmailTo("rsvn@jparkislandresort.com, travel@jparkislandresort.com");
+    if (saved && !saved.includes("travel@jparkislandresort.com")) return; // 메이가 직접 저장한 주소 우선 (travel@ 포함 옛 저장값은 무시)
+    setEmailTo("rsvn@jparkislandresort.com");
   }, [preview]);
 
   const nights = calcNights(ps, pe);
@@ -377,7 +377,7 @@ ${signature}`);
     setSending(true);
     try {
       // 제이파크 기본 주소 2종(rsvn/travel)은 저장하지 않음 — 박 수 자동 분기가 계속 작동하도록
-      const jpDefaults = ["rsvn@jparkislandresort.com", "travel@jparkislandresort.com", "rsvn@jparkislandresort.com, travel@jparkislandresort.com"];
+      const jpDefaults = ["rsvn@jparkislandresort.com", "travel@jparkislandresort.com", "rsvn@jparkislandresort.com, travel@jparkislandresort.com"]; // travel@ 제외됨(2026-07-28) — 과거 저장값 호환용으로만 유지
       if (!(preview.resort === "jaypark" && jpDefaults.includes(to))) {
         try { localStorage.setItem("resortEmail_" + preview.resort, to); } catch {}
       }
