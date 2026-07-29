@@ -492,6 +492,7 @@ export default function BookingPage() {
           <div className="fr">
             <div className="fg">
               <label className="fl">예약자명 (한글)<span className="req">*</span></label>
+              <div style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700, marginBottom: 4 }}>* 예약금 구매자(결제자)와 동일한 이름이어야 합니다</div>
               <input className="fi" placeholder="홍길동" value={booker.name} onChange={e => setBooker({ ...booker, name: e.target.value })} />
             </div>
             <div className="fg">
