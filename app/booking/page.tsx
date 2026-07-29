@@ -246,16 +246,6 @@ export default function BookingPage() {
         }
       } catch { /* 확인 실패 시 접수 진행 */ }
     }
-    // 🏠 성수기 드림하우스 단독 = 3주 프로그램만 (콤보는 허용)
-    if (bType === "dreamhouse" && dates.checkIn) {
-      const md = dates.checkIn.slice(5, 10);
-      const isPk = (md >= "07-15" && md <= "08-31") || md >= "12-15" || md <= "02-28";
-      if (isPk && accom.dh_weeks !== 3) {
-        alert("⚠️ 성수기 드림하우스 단독은 3주 프로그램만 접수 가능해요.\n\n4주 이상을 원하시면 '드하 + 제이파크' 또는 '드하 + 큐브나인' 콤보(리조트 1주 + 드림하우스 3주)로 신청해 주세요.\n자세한 상담은 카카오 채널로 부탁드려요!");
-        setLoading(false);
-        return;
-      }
-    }
     // 🏠 드림하우스 만실 체크 — 접수 단계에서 오버부킹 예방
     if (usesDH && dates.checkIn && dates.checkOut) {
       try {

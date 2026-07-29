@@ -3741,16 +3741,14 @@
       `${seasonLabel}${lodging.name} · ${calcState.duration}${roomLabel} · ${peopleLabel}`;
 
     // 별도상담 체크
-    let consultOnly = dataset.consultOnly && dataset.consultOnly[calcState.duration];
-    const dhPeakLimit = calcState.lodging === 'dh' && calcState.season === 'peak' && calcState.mainTab !== 'regular' && calcState.duration !== '3주';
-    if (dhPeakLimit) consultOnly = true;
+    const consultOnly = dataset.consultOnly && dataset.consultOnly[calcState.duration];
     const warning = document.getElementById('calc-warning');
     const result = document.getElementById('calc-result');
 
     if (consultOnly) {
       result.style.display = 'none';
       warning.style.display = 'block';
-      warning.innerHTML = dhPeakLimit ? `⚠️ 성수기 드림하우스 단독은 <b>3주 프로그램만</b> 가능해요.<br />4주 이상을 원하시면 <b>리조트 1주 + 드림하우스 3주 콤보</b>로 가능합니다 — 카카오 채널로 상담해 주세요.` : `⚠️ 성수기 2주 프로그램은 <b>8월 마지막 2주 · 2월 마지막 2주</b>에만 가능해요.<br />정확한 시작일은 <b>카카오 채널 상담</b>으로 확정해 주세요.`;
+      warning.innerHTML = `⚠️ 성수기 2주 프로그램은 <b>8월 마지막 2주 · 2월 마지막 2주</b>에만 가능해요.<br />정확한 시작일은 <b>카카오 채널 상담</b>으로 확정해 주세요.`;
       return;
     }
     result.style.display = 'block';
