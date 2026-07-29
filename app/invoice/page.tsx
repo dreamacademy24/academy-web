@@ -1714,7 +1714,10 @@ function InvoicePageInner(){
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 A")}
       <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
       <div className="cp">+</div>
-      {rSel(a2T,setA2T,a2R,setA2R,a2W,setA2W,a2CI,null,a2CO,"숙소 B")}
+      <div style={{position:"relative"}}>
+        <button type="button" onClick={()=>{if(!confirm("숙소 B를 삭제하고 숙소 1개 모드로 전환할까요?"))return;setCm("single");setA2W(2);setA2R("디럭스");setEx2Cnt(0);}} style={{position:"absolute",top:14,right:14,zIndex:2,background:"#fee2e2",color:"#dc2626",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>🗑 숙소 B 삭제</button>
+        {rSel(a2T,setA2T,a2R,setA2R,a2W,setA2W,a2CI,null,a2CO,"숙소 B")}
+      </div>
       <div className="ex-box"><div className="ex-title">숙소 B 추가 인원 (1주일 고정 · {fmt(extraRate(a2T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex2Cnt} onChange={e=>setEx2Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex2Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a2T)*ex2Cnt)}원</div>}</div></div>
       {cm==="combo"&&(a1W===0||a2W===0)&&(
         <div style={{marginTop:12,padding:12,background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #ef4444",borderRadius:8,color:"#991b1b",fontSize:13,fontWeight:600}}>
