@@ -638,6 +638,26 @@ export default function EstimateCalc(){
   function setCheckinAndSeason(idx:number,date:string){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
+  function applyDaon(idx:number,cash:boolean){
+    const p=plans[idx];
+    const w=totalWeeks(p);
+    const n=(p.parents||0)+(p.kids||0);
+    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
+    const ci=(p.checkin||"").slice(0,10);
+    const is27=ci>="2027-03-01"&&ci<="2028-02-29";
+    if(!ci){alert("체크인 날짜를 입력하면 입실 시기(얼리버드 대상)가 자동 판정돼요.");}
+    const season=p.season;
+    if(season==="list"){alert("시즌(비수기/성수기)을 먼저 선택해주세요.");return;}
+    const factor=Math.min(w,4)/4;
+    const eb=is27?(season==="peak"?10:20):0;
+    const lines:{name:string;amount:number}[]=[];
+    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${eb}만×${n}명)`,amount:Math.round(eb*factor*n)*10000});
+    if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
+    const kept=p.discounts.filter(d=>!d.name.startsWith("다온맘"));
+    const added=lines.map((l,i)=>({id:Date.now()+i,name:l.name,amount:l.amount}));
+    up(idx,{discounts:[...kept,...added]});
+    if(lines.length===0)alert("이 조건(2026 입실·카드)은 다온맘 이벤트 할인이 없어요.\n(1차 시즌가는 이미 견적 가격에 반영돼 있습니다)");
+  }
   function addItem(idx:number,field:"extras"|"discounts"){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:[...p[field],{id:Date.now()+Math.floor(Math.random()*1000),name:"",amount:0}]}:p));
   }
@@ -825,7 +845,11 @@ export default function EstimateCalc(){
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <span style={{fontSize:12,fontWeight:600,color:"#dc2626"}}>할인항목</span>
-            <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
+            <span style={{display:"flex",gap:4}}>
+              <button style={{...addBtnS,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,true)}>💛 다온맘 현금</button>
+              <button style={{...addBtnS,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,false)}>💛 다온맘 카드</button>
+              <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
+            </span>
           </div>
           {plan.discounts.map((item)=>(
             <div key={item.id} style={{display:"flex",gap:6,marginBottom:4,flexWrap:"wrap"}}>
