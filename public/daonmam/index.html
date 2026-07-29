@@ -3223,6 +3223,16 @@
           </div>
           <form id="apply-form" class="inline-form" autocomplete="off" style="display:none">
             <div class="form-grid">
+              <div class="form-field form-field-full">
+                <label for="f-lodging">희망 숙소 <span class="req">*</span></label>
+                <select id="f-lodging" name="lodging" required>
+                  <option value="">선택해 주세요</option>
+                  <option>드림하우스 (독채)</option>
+                  <option>제이파크 리조트</option>
+                  <option>큐브나인 리조트</option>
+                  
+                </select>
+              </div>
               <div class="form-field">
                 <label for="f-name">예약자 성함 <span class="req">*</span></label>
                 <input type="text" id="f-name" name="name" required placeholder="홍길동" />
@@ -3283,16 +3293,7 @@
                   <option>12주 이상</option>
                 </select>
               </div>
-              <div class="form-field form-field-full">
-                <label for="f-lodging">희망 숙소</label>
-                <select id="f-lodging" name="lodging">
-                  <option value="">선택해 주세요</option>
-                  <option>드림하우스 (독채)</option>
-                  <option>제이파크 리조트</option>
-                  <option>큐브나인 리조트</option>
-                  
-                </select>
-              </div>
+              
             </div>
 
             <div style="margin-top:14px;background:#1f2937;color:#fff;border-radius:12px;padding:14px 16px;text-align:center;">
@@ -4113,5 +4114,17 @@
 }
 </style>
 <script>window.addEventListener('pageshow',function(){var b=document.getElementById('btn-apply');if(b){b.disabled=false;b.innerHTML='\uD83D\uDCDD 예약서 작성하러 가기';}});</script>
+<script>
+(function(){
+  var lod=document.getElementById('f-lodging'),ad=document.getElementById('f-adults'),ch=document.getElementById('f-children');
+  if(!lod||!ad||!ch)return;
+  function fill(sel,arr){var cur=sel.value;sel.innerHTML='<option value="">선택</option>'+arr.map(function(v){return '<option'+(v===cur?' selected':'')+'>'+v+'</option>';}).join('');}
+  function upd(){var v=lod.value||'';var dh=v.indexOf('드림하우스')>=0;
+    fill(ad,dh?['1명','2명','3명']:['1명','2명']);
+    fill(ch,dh?['1명','2명','3명','4명','5명']:['1명','2명','3명']);
+  }
+  lod.addEventListener('change',upd);upd();
+})();
+</script>
 </body>
 </html>
