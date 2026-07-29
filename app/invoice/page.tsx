@@ -1175,8 +1175,9 @@ function InvoicePageInner(){
   const td=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
   const ta=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
   const fp=billing.basePrice+ta-td;
-  // 예약금 정책: 리조트 단독 패키지(제이파크/큐브나인) = 총액의 50% (천원 반올림), 그 외 = 100만원
-  const isResortSingle=!isCommute&&!dhOnly&&cm==="single"&&(a1T==="jpark"||a1T==="cubenine");
+  // 예약금 정책: 리조트형(드림하우스 없이 제이파크/큐브나인만 — 단독·리조트 콤보) = 총액의 50% (천원 반올림), 그 외 = 100만원
+  const _isResort=(t:string)=>t==="jpark"||t==="cubenine";
+  const isResortSingle=!isCommute&&!dhOnly&&(cm==="combo"?(_isResort(a1T)&&_isResort(a2T)):_isResort(a1T));
   const depositAmt=isResortSingle?Math.round(fp/2/1000)*1000:1000000;
   const receiptPaidTotal=useMemo(()=>receiptPayments
     .filter(p=>(p.amount||"").trim()!=="")
