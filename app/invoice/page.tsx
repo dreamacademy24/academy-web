@@ -717,7 +717,7 @@ function InvoicePageInner(){
     }
     if(!a1CI) return;
     const monday=getNextMonday(a1CI);
-    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:s.academyEnd||calcAcademyEnd(monday,s.academyWeeks)})));
+    setStudents(prev=>prev.map(s=>({...s,academyStart:monday,academyEnd:(s.academyStart===monday&&s.academyEnd)?s.academyEnd:calcAcademyEnd(monday,s.academyWeeks)})));
   },[a1CI,dhOnly,acadOpt]);
 
   /* ── 스냅샷 우선 조회 — 있으면 뷰 모드, 없으면 예약 로드로 진행 ── */
@@ -989,7 +989,7 @@ function InvoicePageInner(){
     setStudents(prev=>prev.map(s=>({
       ...s,
       academyWeeks:String(totalWeeks),
-      academyEnd:s.academyEnd||calcAcademyEnd(s.academyStart,totalWeeks)
+      academyEnd:(String(s.academyWeeks)===String(totalWeeks)&&s.academyEnd)?s.academyEnd:calcAcademyEnd(s.academyStart,totalWeeks)
     })));
   },[a1W,a2W,cm]);
 
