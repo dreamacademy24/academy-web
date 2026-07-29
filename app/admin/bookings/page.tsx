@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { fetchDhAvailRooms } from "@/lib/dhRooms";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -668,6 +669,44 @@ export default function AdminBookingsPage(){
       .catch(()=>setAssignees(["May","Jamie","Candice"]));
   },[]);
 
+  async function secureRoom(b: Booking){
+    const at=String(b.accom_type||"");
+    const isDH=at.includes("드림하우스"); const isCN=at.includes("큐브");
+    try{
+      let roomMsg="";
+      const bb=b as unknown as Record<string,string>;
+      if(isDH){
+        let ci=b.checkin_date||"", co=b.checkout_date||"";
+        if(bb.seg1_type==="dreamhouse"){ci=bb.seg1_checkin||ci;co=bb.seg1_checkout||co;}
+        else if(bb.seg2_type==="dreamhouse"){ci=bb.seg2_checkin||ci;co=bb.seg2_checkout||co;}
+        const avail=await fetchDhAvailRooms(supabase as never,b.id,ci,co);
+        if(!avail.length){alert("⚠️ 이 기간 드림하우스 가용 룸이 없습니다 — 룸 캘린더에서 확인해주세요.");return;}
+        const room=avail[0];
+        await supabase.from("bookings").update({house_no:room,accom_room:room,paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
+        roomMsg="드림하우스 "+room.toUpperCase();
+      } else if(isCN){
+        let ci=b.checkin_date||"", co=b.checkout_date||"";
+        if(bb.seg1_type==="cubenine"){ci=bb.seg1_checkin||ci;co=bb.seg1_checkout||co;}
+        else if(bb.seg2_type==="cubenine"){ci=bb.seg2_checkin||ci;co=bb.seg2_checkout||co;}
+        const rt=String(bb.cn_room_type||"디럭스");
+        const grp=rt.includes("풀")?["103","104","105","106"]:["204","205","206","207","208","209","210"];
+        const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();
+        const blocks=(Array.isArray(st?.value)?st!.value:[]) as {id:string;room:string;name:string;ci:string;co:string;kind?:string;booking_id?:string}[];
+        const free=grp.find(r=>!blocks.some(x=>x.room===r&&x.booking_id!==b.id&&x.ci<co&&ci<x.co));
+        if(!free){alert("⚠️ 이 기간 큐브나인 "+(rt.includes("풀")?"풀억세스":"디럭스오션")+" 가용 룸이 없습니다.");return;}
+        const next=blocks.filter(x=>x.booking_id!==b.id);
+        next.push({id:Math.random().toString(36).slice(2,10)+Date.now().toString(36),room:free,name:b.booker_name||"드림 예약",ci,co,kind:"dream",booking_id:b.id});
+        await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:next},{onConflict:"key"});
+        await supabase.from("bookings").update({paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
+        roomMsg="큐브나인 "+free+"호 ("+(rt.includes("풀")?"풀억세스":"디럭스오션")+")";
+      } else {
+        await supabase.from("bookings").update({paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
+        roomMsg="(숙소 배정 불필요 유형)";
+      }
+      alert("✅ 룸확보 완료!\n"+(b.booker_name||"")+" · "+roomMsg+"\n사전 예약금 50만원 입금 처리 · 상태: 예약금 입금");
+      load();
+    }catch(e){alert("룸확보 실패: "+(e as Error).message);}
+  }
   const load=useCallback(async()=>{
     setLoading(true);
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
@@ -906,7 +945,7 @@ export default function AdminBookingsPage(){
             <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
             <td style={{fontSize:12,color:"#888"}}>{fDate(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()} style={{display:"flex",gap:4}}>
-              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
+              <button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button><button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
               <button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no+"\n\n⚠️ 학생·픽드랍·셔틀·튜터·체크인 등 모든 연결 데이터가 함께 삭제됩니다.")){const res=await fetch("/api/bookings/"+b.id+"/delete",{method:"DELETE"});if(!res.ok){alert("삭제 실패");return;}load();}}}>삭제</button>
             </td>
