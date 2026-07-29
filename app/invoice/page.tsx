@@ -1373,6 +1373,29 @@ function InvoicePageInner(){
     alert(room?("✅ 큐브나인 예약 완료!\n배정 룸: "+room+"호 ("+(C9_FA.includes(room)?"풀억세스":"디럭스오션")+")"):"✅ 등록 완료 — 룸은 미배정 상태예요.\n큐브나인 예약현황의 '룸 배정 대기'에서 배정해주세요.");
   }
 
+  /* ── 다온맘 공구 할인 자동 추가 (견적 탭과 동일 규칙) ── */
+  function applyDaonInv(cash:boolean){
+    const w=cm==="combo"?(a1W+a2W):a1W;
+    const n=(cP||0)+(cK||0);
+    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
+    if(!a1CI){alert("체크인 날짜를 입력해주세요 (입실 시기·시즌 자동 판정).");return;}
+    const is27=a1CI>="2027-03-01"&&a1CI<="2028-02-29";
+    const pk=isPeak(a1CI);
+    const factor=Math.min(w,4)/4;
+    const eb=is27?(pk?10:20):0;
+    const isC9=a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine");
+    const lines:{name:string;amount:number}[]=[];
+    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${eb}만×${n}명)`,amount:Math.round(eb*factor*n)*10000});
+    if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
+    if(isC9)lines.push({name:`다온맘 큐브나인 추가 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
+    setBilling(bl=>{
+      const kept=bl.discounts.filter(d=>!String(d.name||"").startsWith("다온맘")&&(d.name||d.amount));
+      const added=lines.map((l,i)=>({id:Date.now()+i,name:l.name,amount:l.amount}));
+      return {...bl,discounts:[...kept,...added].length?[...kept,...added]:[{id:1,name:"",amount:0}]};
+    });
+    if(lines.length===0)alert("이 조건(2026 입실·카드)은 다온맘 이벤트 할인이 없어요.\n(1차 시즌가는 패키지 금액에 이미 반영)");
+  }
+
   /* ── 영수증 탭: 지불내역만 저장 (confirmed_at 유지) + 상태→영수증발행 ── */
   async function saveReceiptPayments(){
     if(!bookingId){alert("예약 ID가 없습니다.");return;}
@@ -1727,7 +1750,10 @@ function InvoicePageInner(){
     {billing.items.length>0&&(<div style={{marginBottom:"14px"}}>{billing.items.map((item,i)=><div key={i} style={{fontSize:"13px",color:"#374151",marginBottom:"4px"}}>{item.label} ({item.season}): <strong style={{color:"#1a6fc4"}}>{fmt(item.price)}원</strong></div>)}<div style={{fontSize:"14px",fontWeight:800,marginTop:"8px"}}>합계: {fmt(billing.basePrice)}원</div></div>)}
     {/* 패키지 금액 수동 입력 — applied/items 여부와 무관하게 항상 표시 (수정 모드에서 금액 편집 가능) */}
     <div className="f-row"><div className="f-group"><label className="f-label">패키지 금액 (원)</label><input className="f-input" type="number" value={billing.basePrice||""} onChange={e=>setBilling(b=>({...b,basePrice:Number(e.target.value),items:[]}))}/></div></div>
-    <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목</label>
+    <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목
+      <button type="button" onClick={()=>applyDaonInv(true)} style={{marginLeft:10,padding:"4px 10px",fontSize:11.5,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e",borderRadius:6,cursor:"pointer",fontWeight:800}}>💛 다온맘 현금</button>
+      <button type="button" onClick={()=>applyDaonInv(false)} style={{marginLeft:4,padding:"4px 10px",fontSize:11.5,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e",borderRadius:6,cursor:"pointer",fontWeight:800}}>💛 다온맘 카드</button>
+    </label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>
     <label className="f-label" style={{marginTop:"16px",marginBottom:"8px"}}>추가 금액 항목</label>
