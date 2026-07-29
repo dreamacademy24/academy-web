@@ -333,7 +333,8 @@ export default function BookingPage() {
         </div>
         <a href={(() => { const L: Record<string, string> = { dh: "https://smartstore.naver.com/dreamacademy/products/13641857512", jp: "https://smartstore.naver.com/dreamacademy/products/13641860281", c9: "https://smartstore.naver.com/dreamacademy/products/13641861583" }; const bt = String(bType); return bt.includes("jaypark") ? L.jp : bt.includes("cubenine") ? L.c9 : L.dh; })()} target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", marginTop: 12, background: "#03C75A", color: "#fff", fontWeight: 800, fontSize: 15, padding: "13px 0", borderRadius: 10, textDecoration: "none" }}>💳 네이버 스토어에서 예약금 결제하기</a>
         <div style={{ fontSize: 12, color: "#6b7c93", lineHeight: 1.7, marginTop: 10 }}>
-          결제 후 <b>카카오 채널로 알려주시면</b> 바로 확인해 드려요.<br/>
+          <span style={{ color: "#b91c1c", fontWeight: 700 }}>⏰ 접수 후 30분 이내 미결제 시 자리 확보가 취소될 수 있어요.</span><br/>
+          결제 후 <b>카카오 채널로 결제자 이름을 꼭 알려주세요</b> (결제자 이름 = 예약자 이름 동일).<br/>
           예약금은 총 금액에서 차감돼요. 예약금 결제만으로는 최종 확정이 아니며, 상담으로 날짜·구성을 마무리해 주세요.
         </div>
       </div>
@@ -746,6 +747,7 @@ export default function BookingPage() {
             <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8, marginTop: 6 }}>
               접수 후 <b>예약금 50만원</b>을 결제하시면 자리가 확보됩니다.<br/>
               최종 결제 방식(💵 현금 전액입금 최대 할인 / 💳 카드)은 <b>상담에서 편하게 정하시면 돼요.</b><br/>
+              <span style={{ color: "#b91c1c", fontSize: 12.5, fontWeight: 700 }}>⏰ 접수 후 30분 이내에 예약금 결제가 없으면 자리 확보(접수)가 취소될 수 있어요.</span><br/>
               <span style={{ color: "#6b7c93", fontSize: 12 }}>예약금은 총 금액에서 차감되며, 상담 후 확정 전까지는 취소·조정 부담이 없어요.</span>
             </div>
           </div>
