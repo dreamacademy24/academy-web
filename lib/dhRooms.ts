@@ -15,7 +15,7 @@ type SbLike = {
         not: (c: string, op: string, v: null) => {
           neq: (c: string, v: string) => {
             lt: (c: string, v: string) => {
-              gt: (c: string, v: string) => PromiseLike<{ data: unknown[] | null }>;
+              gte: (c: string, v: string) => PromiseLike<{ data: unknown[] | null }>;
             };
           };
         };
