@@ -50,7 +50,7 @@ export async function PATCH(request: Request) {
     if (!room) return NextResponse.json({ error: 'room 필수' }, { status: 400 })
 
     // 잠금 여부 확인
-    const { data: check } = await supabase.from('bookings').select('room_locked, checkin_date, checkout_date, booker_name, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout').eq('id', id).single()
+    const { data: check } = await supabase.from('bookings').select('room_locked, checkin_date, checkout_date, late_checkout, booker_name, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout').eq('id', id).single()
     if (check?.room_locked) return NextResponse.json({ error: '🔒 이 예약은 룸이 잠겨있어 변경할 수 없습니다.' }, { status: 403 })
 
     // ⛔ 오버부킹 차단: 같은 룸에 기간 겹치는 활성 예약이 있으면 저장 거부 (force=true로만 예외)
@@ -69,7 +69,7 @@ export async function PATCH(request: Request) {
       if (myCi && myCo) {
         const { data: others } = await supabase
           .from('bookings')
-          .select('id, booker_name, reservation_no, checkin_date, checkout_date, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+          .select('id, booker_name, reservation_no, checkin_date, checkout_date, late_checkout, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
           .neq('id', id)
           .ilike('accom_room', room)
           .not('status', 'ilike', '%취소%')
@@ -86,8 +86,11 @@ export async function PATCH(request: Request) {
             ci = String(dh[1] || ci).slice(0, 10); co = String(dh[2] || co).slice(0, 10)
           }
           if (!ci || !co) return false
-          // 당일 전환(체크아웃=체크인)은 허용 → 진짜 겹침만 (ci < myCo && co > myCi)
-          return ci < myCo && co > myCi
+          // 당일 전환(체크아웃=체크인)은 허용 — 단, 레이트 체크아웃(22:30)이면 당일도 점유로 간주 (+1일)
+          const addDay = (d: string) => { const t = new Date(d + 'T00:00:00'); t.setDate(t.getDate() + 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}` }
+          const oCoEff = (o.late_checkout && co === String(o.checkout_date || '').slice(0, 10)) ? addDay(co) : co
+          const myCoEff = (check?.late_checkout && myCo === String(check?.checkout_date || '').slice(0, 10)) ? addDay(myCo) : myCo
+          return ci < myCoEff && oCoEff > myCi
         })
         if (conflicts.length) {
           return NextResponse.json({

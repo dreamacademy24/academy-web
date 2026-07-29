@@ -569,6 +569,10 @@ function InvoicePageInner(){
   // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
   const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
   const coTimeText=lateCheckout?"22:30pm":"12noon"; // 체크아웃 시간 표기
+  async function syncLateCheckout(v:boolean){
+    setLateCheckout(v);
+    if(bookingId){try{await supabase.from("bookings").update({late_checkout:v}).eq("id",bookingId);}catch{}}
+  }
 
   /* ── 새 상태 ── */
   const [preview,setPreview]=useState(false);
@@ -1725,7 +1729,7 @@ function InvoicePageInner(){
   <div className="fs"><h2>예약자 정보</h2>
     <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input auto" value={reservationNo} readOnly/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value})}/></div></div>
-    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>setLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
+    <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>syncLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
   </div>
 
   {/* ── 섹션3: 학생 정보 — 드하 단독(숙소만·아카데미 미등록)은 숨김 ── */}
@@ -1807,7 +1811,7 @@ function InvoicePageInner(){
           }
         </span>
         <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>{const v=e.target.checked;setLateCheckout(v);saveSnapshot({lateCheckout:v});}}/>Late Check-out (22:30pm)</label>
+          <label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>{const v=e.target.checked;syncLateCheckout(v);saveSnapshot({lateCheckout:v});}}/>Late Check-out (22:30pm)</label>
           <button onClick={requestEdit} style={{padding:"7px 16px",background:"#fff",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>✏️ 수정하기</button>
           <button onClick={resetInvoice} style={{padding:"7px 14px",background:"#fff",color:"#dc2626",border:"1px solid #fecaca",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>🗑 초기화</button>
           {!confirmedAt&&(

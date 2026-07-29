@@ -30,13 +30,17 @@ type SbLike = {
    - 대소문자/공백 정규화 */
 export async function fetchDhAvailRooms(sb: SbLike, bookingId: string, ci: string, co: string): Promise<string[]> {
   const { data: ov } = await sb.from('bookings')
-    .select('accom_room,status,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout')
+    .select('accom_room,status,checkout_date,late_checkout,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout')
     .neq('id', bookingId)
     .not('accom_room', 'is', null)
     .neq('accom_room', '')
     .lt('checkin_date', co)
-    .gt('checkout_date', ci);
+    .gte('checkout_date', ci);
   const rows = (ov || []) as Record<string, unknown>[];
+  const addDay = (d: string) => { const t = new Date(d + 'T00:00:00'); t.setDate(t.getDate() + 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+  // 레이트 체크아웃(22:30)이면 체크아웃 당일도 점유 → 실효 체크아웃 +1일 (예약 최종 체크아웃 구간에만 적용)
+  const effCo = (b: Record<string, unknown>, segCo: string) =>
+    (b.late_checkout && segCo === String(b.checkout_date || '').slice(0, 10)) ? addDay(segCo) : segCo;
   const occ = rows
     .filter(b => !String(b.status || '').includes('취소'))
     .filter(b => {
@@ -47,9 +51,9 @@ export async function fetchDhAvailRooms(sb: SbLike, bookingId: string, ci: strin
       if (segs.length) {
         const dh = segs.filter(s => String(s[0]) === 'dreamhouse');
         if (!dh.length) return false; // 드림하우스 구간 없으면 점유 아님
-        return dh.some(s => String(s[1] || '') < co && String(s[2] || '') > ci);
+        return dh.some(s => String(s[1] || '') < co && effCo(b, String(s[2] || '').slice(0, 10)) > ci);
       }
-      return true;
+      return effCo(b, String(b.checkout_date || '').slice(0, 10)) > ci;
     })
     .map(b => normRoom(b.accom_room));
   return DH_ROOMS.filter(r => !occ.includes(normRoom(r)));
