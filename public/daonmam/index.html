@@ -3787,7 +3787,8 @@
         const w = parseInt(calcState.duration, 10) || 0;
         const factor = Math.min(Math.max(w, 0), 4) / 4;
         const is27 = calcState.entry !== 'y2026';
-        const per = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
+        let per = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
+        if (calcState.lodging === 'c9') per += 10; // 큐브나인 전 기간 1인 10만 추가
         const disc = Math.round(per * factor * n);
         if (n > 0 && w > 0 && disc > 0 && price > disc) {
           ev.style.display = 'block';

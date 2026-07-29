@@ -653,6 +653,7 @@ export default function EstimateCalc(){
     const lines:{name:string;amount:number}[]=[];
     if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${eb}만×${n}명)`,amount:Math.round(eb*factor*n)*10000});
     if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
+    if(String(p.accom).includes("cubenine"))lines.push({name:`다온맘 큐브나인 추가 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
     const kept=p.discounts.filter(d=>!d.name.startsWith("다온맘"));
     const added=lines.map((l,i)=>({id:Date.now()+i,name:l.name,amount:l.amount}));
     up(idx,{discounts:[...kept,...added]});
