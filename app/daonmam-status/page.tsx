@@ -19,7 +19,10 @@ const STAGE_C: Record<string, { c: string; bg: string }> = {
   "예약금 입금": { c: "#1e40af", bg: "#dbeafe" },
   "확정예약 진행중": { c: "#6b21a8", bg: "#f3e8ff" },
   "예약 확정": { c: "#166534", bg: "#dcfce7" },
+  "취소": { c: "#dc2626", bg: "#fee2e2" },
 };
+// 수동 선택 가능 단계 — "예약 확정"은 영수증 발행 시 자동 표시 (수동 선택 불가)
+const SEL_STAGES = ["신청서 접수", "예약금 입금", "확정예약 진행중", "취소"];
 
 function shortNo(no: string | null) { return no ? no.split("-").pop() : "-"; }
 function mask(name: string | null) { const n = (name || "").trim(); return n.length <= 1 ? (n || "-") : n[0] + "*" + n.slice(2); }
@@ -35,6 +38,18 @@ export default function DaonmamStatusPage() {
   }
   useEffect(() => { load(); }, []);
   async function setStage(id: string, v: string) {
+    if (v === "취소") {
+      if (!confirm("이 예약을 취소 처리할까요?\n예약 기록은 보존되고 자리는 반환됩니다.")) { load(); return; }
+      setRows(rs => rs.map(r => r.id === id ? { ...r, daon_stage: "취소", status: "취소" } : r));
+      const { error } = await supabase.from("bookings").update({ daon_stage: "취소", status: "취소" }).eq("id", id);
+      if (error) { alert("저장 실패: " + error.message); load(); return; }
+      try {
+        const { data: st } = await supabase.from("app_settings").select("value").eq("key", "cube9_room_blocks").maybeSingle();
+        const bl = (Array.isArray(st?.value) ? st!.value : []) as { booking_id?: string }[];
+        if (bl.some(x => x.booking_id === id)) { await supabase.from("app_settings").upsert({ key: "cube9_room_blocks", value: bl.filter(x => x.booking_id !== id) }, { onConflict: "key" }); }
+      } catch { /* noop */ }
+      return;
+    }
     setRows(rs => rs.map(r => r.id === id ? { ...r, daon_stage: v } : r));
     const { error } = await supabase.from("bookings").update({ daon_stage: v }).eq("id", id);
     if (error) { alert("저장 실패: " + error.message); load(); }
@@ -87,7 +102,7 @@ export default function DaonmamStatusPage() {
                       ? <span style={{ display: "inline-block", background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 800 }}>✅ 예약 확정</span>
                       : <select value={st} onChange={e => setStage(b.id, e.target.value)}
                           style={{ background: sc.bg, color: sc.c, border: "1px solid " + sc.c + "33", borderRadius: 8, padding: "4px 8px", fontSize: 12, fontWeight: 800, fontFamily: "inherit" }}>
-                          {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          {SEL_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>}
                   </td>
                   <td style={{ padding: "9px 6px", color: "#a89a78", fontSize: 12 }}>{(b.created_at || "").slice(5, 10)}</td>
