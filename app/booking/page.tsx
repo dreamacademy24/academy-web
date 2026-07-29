@@ -217,6 +217,35 @@ export default function BookingPage() {
     const usesJP = bType === "jaypark" || bType === "dreamhouse_jaypark" || bType === "jaypark_cubenine";
     const usesCN = bType === "cubenine" || bType === "dreamhouse_cubenine" || bType === "jaypark_cubenine";
 
+    // 🐬 큐브나인 만실 체크 — 접수 = 수량 선점 (블록 + 기존 예약 합산)
+    if (usesCN && dates.checkIn && dates.checkOut) {
+      try {
+        const rt = (accom.cn_room_type || "디럭스");
+        const cap = rt.includes("풀") ? 4 : 7;
+        let ci2 = dates.checkIn, co2 = dates.checkOut;
+        if (isCombo) { const seg = segs.find(g => g.type === "cubenine"); if (seg) { ci2 = seg.checkin; co2 = seg.checkout; } }
+        const { data: st } = await supabase.from("app_settings").select("value").eq("key", "cube9_room_blocks").maybeSingle();
+        const blocks = (Array.isArray(st?.value) ? st!.value : []) as { room: string; ci: string; co: string; booking_id?: string }[];
+        const grp = rt.includes("풀") ? ["103","104","105","106"] : ["204","205","206","207","208","209","210"];
+        const blk = blocks.filter(b => grp.includes(b.room) && b.ci < co2 && ci2 < b.co);
+        const linked = new Set(blocks.map(b => b.booking_id).filter(Boolean));
+        const { data: bks } = await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status").ilike("accom_type", "%큐브%");
+        let cnt = blk.length;
+        for (const b of (bks || [])) {
+          if (String(b.status || "").includes("취소") || linked.has(b.id)) continue;
+          if ((b.cn_room_type || "디럭스").includes("풀") !== rt.includes("풀")) continue;
+          let bci = b.checkin_date, bco = b.checkout_date;
+          if (b.seg1_type === "cubenine") { bci = b.seg1_checkin; bco = b.seg1_checkout; }
+          else if (b.seg2_type === "cubenine") { bci = b.seg2_checkin; bco = b.seg2_checkout; }
+          if (bci && bco && String(bci) < co2 && ci2 < String(bco)) cnt++;
+        }
+        if (cnt >= cap) {
+          alert(`⚠️ 죄송합니다 — 선택하신 기간의 큐브나인 ${rt.includes("풀") ? "풀억세스" : "디럭스오션"} 룸이 모두 예약되었습니다.\n\n다른 기간 또는 다른 룸타입을 선택하시거나, 카카오 채널로 문의해 주세요.`);
+          setLoading(false);
+          return;
+        }
+      } catch { /* 확인 실패 시 접수 진행 */ }
+    }
     // 🏠 성수기 드림하우스 단독 = 3주 프로그램만 (콤보는 허용)
     if (bType === "dreamhouse" && dates.checkIn) {
       const md = dates.checkIn.slice(5, 10);
