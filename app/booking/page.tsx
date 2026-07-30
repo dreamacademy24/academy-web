@@ -246,6 +246,23 @@ export default function BookingPage() {
         }
       }
     }
+    // 🏨 제이파크/큐브나인 체크인 요일 제한 — 금/토/일만 가능
+    {
+      const segCk = (type: string, label: string) => {
+        let ci = "";
+        if ((type === "jaypark" && bType === "jaypark") || (type === "cubenine" && bType === "cubenine")) ci = dates.checkIn;
+        else if (isCombo) { const sg = segs.find(g => g.type === type); if (sg) ci = sg.checkin; }
+        if (!ci) return true;
+        const dow = new Date(ci + "T00:00:00").getDay();
+        if (dow !== 5 && dow !== 6 && dow !== 0) {
+          alert(`⚠️ ${label} 체크인은 금·토·일요일만 가능해요.\n(체크아웃도 체크인과 같은 요일이 됩니다)\n\n날짜를 금~일로 조정해 주세요. 다른 요일이 꼭 필요하시면 카카오 채널로 상담 부탁드려요!`);
+          return false;
+        }
+        return true;
+      };
+      if (usesJP && !segCk("jaypark", "제이파크")) { setLoading(false); return; }
+      if (usesCN && !segCk("cubenine", "큐브나인")) { setLoading(false); return; }
+    }
     // 🐬 큐브나인 만실 체크 — 접수 = 수량 선점 (블록 + 기존 예약 합산)
     if (usesCN && dates.checkIn && dates.checkOut) {
       try {
