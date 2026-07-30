@@ -733,9 +733,9 @@ export default function EstimateCalc(){
   function planName(p:PlanState){
     if(isCombo(p.accom)){
       const subLabel = p.accom==="dreamhouse_jaypark"?"제이파크":"큐브나인";
-      return `드림하우스 ${p.dhRoom} ${p.dhWeeks}주 + ${subLabel} ${p.subRoom} ${p.subWeeks}주`;
+      return `드림하우스 ${p.dhWeeks}주 + ${subLabel} ${subLabel==="제이파크"?p.subRoom+" 가든뷰":p.subRoom} ${p.subWeeks}주`;
     }
-    return accomLabel[p.accom]+(p.roomType?` ${p.roomType}`:"");
+    return accomLabel[p.accom]+(p.roomType?` ${p.roomType}${(p.accom==="jaypark"||p.accom==="jpark")?" 가든뷰":""}`:"");
   }
   function fmtDate(d:string){if(!d)return"";const dt=new Date(d);return `${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;}
   function calcCheckout(checkin:string, weeks:number){
@@ -789,7 +789,7 @@ export default function EstimateCalc(){
           {/* 단독: 룸타입 한 칸 */}
           {(plan.accom==="jpark"||plan.accom==="jaypark")&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
-              <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
+              <option value="디럭스">디럭스 가든뷰</option><option value="프리미어">프리미어 가든뷰</option><option value="막탄스윗">막탄스윗 가든뷰</option>
             </select></label>}
           {plan.accom==="cubenine"&&<label style={{flex:1}}><span style={lbl}>룸타입</span>
             <select style={sel} value={plan.roomType} onChange={e=>up(idx,{roomType:e.target.value})}>
@@ -820,7 +820,7 @@ export default function EstimateCalc(){
               <label style={{flex:1}}><span style={lbl}>룸타입</span>
                 <select style={sel} value={plan.subRoom} onChange={e=>up(idx,{subRoom:e.target.value})}>
                   {plan.accom==="dreamhouse_jaypark" ? (<>
-                    <option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option>
+                    <option value="디럭스">디럭스 가든뷰</option><option value="프리미어">프리미어 가든뷰</option><option value="막탄스윗">막탄스윗 가든뷰</option>
                   </>) : (<>
                     <option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option>
                   </>)}
@@ -947,7 +947,7 @@ export default function EstimateCalc(){
             </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",padding:"4px 0",fontSize:13}}>
               <span style={{color:"#374151"}}>
-                {r.breakdown.sub.label} {r.breakdown.sub.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.sub.weeks}주</span>
+                {r.breakdown.sub.label} {r.breakdown.sub.label==="제이파크"?r.breakdown.sub.room+" 가든뷰":r.breakdown.sub.room} <span style={{color:"#94a3b8",fontWeight:500}}>· {r.breakdown.sub.weeks}주</span>
               </span>
               <span style={{fontWeight:700,color:"#1a1a2e"}}>{won(r.breakdown.sub.price)}</span>
             </div>

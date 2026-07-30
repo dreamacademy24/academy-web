@@ -1661,7 +1661,7 @@ export default function AdminBookingsPage(){
             </select>
             <select value={newForm.jp_room_type} onChange={e=>setNewForm({...newForm,jp_room_type:e.target.value})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
-              {["디럭스","프리미어","막탄스윗"].map(r=><option key={r} value={r}>{r}</option>)}
+              {["디럭스","프리미어","막탄스윗"].map(r=><option key={r} value={r}>{r} 가든뷰</option>)}
             </select>
           </div>
         )}

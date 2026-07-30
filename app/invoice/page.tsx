@@ -503,8 +503,8 @@ function lk(t:AT,r:string,w:number,p:number,k:number):P3|null{
 function sp(e:P3,pk:boolean){return pk?e[2]:e[1];}
 const RESORT_LOGO:Record<string,string>={jpark:"https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/logos/jpark-logo.png",cubenine:"https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/logos/cube9-logo.png"};
 function ResortLogo({t}:{t:AT}){ if(t!=="jpark"&&t!=="cubenine")return null; return <img src={RESORT_LOGO[t]} alt="" style={{height:15,verticalAlign:"middle",marginRight:6,...(t==="jpark"?{filter:"brightness(0)"}:{})}}/>; }
-function alKo(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크${r?" "+r:""}`:`큐브나인${r?" "+r:""}`;}
-function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r}`:`큐브나인 ${r}`;}
+function alKo(t:AT,r:string){return t==="dreamhouse"?"드림하우스":t==="jpark"?`제이파크${r?" "+r+" 가든뷰":""}`:`큐브나인${r?" "+r:""}`;}
+function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`제이파크 ${r} 가든뷰`:`큐브나인 ${r}`;}
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function mp(t:AT){return t==="dreamhouse"?6:t==="jpark"?5:4;} // 제이파크 5인(성인2+아이3, 2026-07-21)
 function extraRate(t:AT){return t==="cubenine"?250000:340000;}
@@ -1242,7 +1242,7 @@ function InvoicePageInner(){
   function rSel(t:AT,sT:(v:AT)=>void,r:string,sR:(v:string)=>void,w:number,sW:(v:number)=>void,ciVal:string,sCI:((v:string)=>void)|null,coVal:string,label:string){
     return(<div className="ab"><div className="ab-l">{label}</div><div className="f-row">
       <div className="f-group"><label className="f-label">숙소</label><select className="f-select" value={t} onChange={e=>{const v=e.target.value as AT;sT(v);sR(v==="jpark"?"디럭스":v==="cubenine"?"디럭스":"");sW(2);}}><option value="dreamhouse">드림하우스</option><option value="jpark">제이파크</option><option value="cubenine">큐브나인</option></select></div>
-      {(t==="jpark"||t==="cubenine")&&<div className="f-group"><label className="f-label">룸타입</label><select className="f-select" value={r} onChange={e=>sR(e.target.value)}>{t==="jpark"?<><option value="디럭스">디럭스</option><option value="프리미어">프리미어</option><option value="막탄스윗">막탄스윗</option></>:<><option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option></>}</select></div>}
+      {(t==="jpark"||t==="cubenine")&&<div className="f-group"><label className="f-label">룸타입</label><select className="f-select" value={r} onChange={e=>sR(e.target.value)}>{t==="jpark"?<><option value="디럭스">디럭스 가든뷰</option><option value="프리미어">프리미어 가든뷰</option><option value="막탄스윗">막탄스윗 가든뷰</option></>:<><option value="디럭스">디럭스</option><option value="풀억세스룸">풀억세스룸</option></>}</select></div>}
       <div className="f-group"><label className="f-label">기간</label><select className="f-select" value={w} onChange={e=>sW(Number(e.target.value))}>{Array.from({length:12},(_,i)=>i+1).map(v=><option key={v} value={v}>{v}주</option>)}</select></div>
     </div><div className="f-row">
       <div className="f-group"><label className="f-label">체크인</label>{sCI?<input className="f-input" type="date" value={ciVal} onChange={e=>sCI(e.target.value)}/>:<input className="f-input auto" type="date" value={ciVal} readOnly/>}</div>
