@@ -715,6 +715,25 @@ function InvoicePageInner(){
       if(!isCommute){
         if(a1CI) upd.checkin_date=a1CI;
         if(overallCO) upd.checkout_date=overallCO;
+        // 숙소 구성 동기화 — 인보이스에서 콤보/단독 구성을 바꾼 경우 예약 레코드도 일치시킴 (2026-07-30)
+        const KO:Record<string,string>={dreamhouse:"드림하우스",jpark:"제이파크",cubenine:"큐브나인"};
+        const SEG:Record<string,string>={dreamhouse:"dreamhouse",jpark:"jaypark",cubenine:"cubenine"};
+        if(cm==="combo"&&a1CI&&a1CO&&a2CO){
+          upd.accom_type=`${KO[a1T]||a1T}+${KO[a2T]||a2T}`;
+          upd.seg1_type=SEG[a1T]||a1T;upd.seg1_checkin=a1CI;upd.seg1_checkout=a1CO;
+          upd.seg2_type=SEG[a2T]||a2T;upd.seg2_checkin=a2CI;upd.seg2_checkout=overallCO||a2CO;
+          if(a1T==="dreamhouse")upd.dh_weeks=a1W;if(a2T==="dreamhouse")upd.dh_weeks=a2W;
+          if(a1T==="jpark")upd.jp_weeks=a1W;if(a2T==="jpark")upd.jp_weeks=a2W;
+          if(a1T==="cubenine"){upd.cn_period=`${a1W}주`;upd.cn_room_type=a1R;}
+          if(a2T==="cubenine"){upd.cn_period=`${a2W}주`;upd.cn_room_type=a2R;}
+        }else if(cm==="single"&&!dhOnly){
+          upd.accom_type=a1T==="dreamhouse"?"드림하우스":`${KO[a1T]||a1T} 패키지`;
+          upd.seg1_type=null;upd.seg1_checkin=null;upd.seg1_checkout=null;
+          upd.seg2_type=null;upd.seg2_checkin=null;upd.seg2_checkout=null;
+          if(a1T==="cubenine"){upd.cn_period=`${a1W}주`;upd.cn_room_type=a1R;}
+          if(a1T==="jpark")upd.jp_weeks=a1W;
+          if(a1T==="dreamhouse")upd.dh_weeks=a1W;
+        }
       }
       const {error:stErr}=await supabase.from("bookings").update(upd).eq("id",bookingId);
       if(stErr) console.error("[confirmInvoice status]",stErr);
