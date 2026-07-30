@@ -125,6 +125,16 @@ export default function ResortInvoicePage() {
     setEmailTo("rsvn@jparkislandresort.com");
   }, [preview]);
 
+  // 큐브나인 수신처 자동 입력: 담당자 2곳 동시 발송 (2026-07-30 메이 지정)
+  useEffect(() => {
+    if (!preview || preview.resort !== "cubenine") return;
+    const C9_TO = "kimkimsky123@naver.com, cube9resort@gmail.com";
+    let saved = "";
+    try { saved = localStorage.getItem("resortEmail_cubenine") || ""; } catch {}
+    if (saved && saved.includes("kimkimsky123") && saved.includes("cube9resort")) return; // 이미 최신 주소면 유지
+    setEmailTo(C9_TO);
+  }, [preview]);
+
   const nights = calcNights(ps, pe);
   const isJp = resort === "jaypark";
   const tier = isJp ? jparkTier(nights) : null;
