@@ -2588,13 +2588,13 @@
           <div class="calc-field">
             <label>🗓️ 입실 시기</label>
             <select id="calc-entry">
-              <option value="y2027-off1" data-season="off">2027년 3/1 ~ 7/17 · 비수기</option>
-              <option value="y2027-peak1" data-season="peak">2027년 7/18 ~ 8/30 · 성수기</option>
-              <option value="y2027-off2" data-season="off">2027년 8/31 ~ 12/18 · 비수기</option>
-              <option value="y2027-peak2" data-season="peak">2027년 12/19 ~ 28년 2/28 · 성수기</option>
-              <option value="y2026-peak1" data-season="peak">2026년 8월 (~8/31) · 성수기</option>
-              <option value="y2026-off1" data-season="off">2026년 9/1 ~ 12/14 · 비수기</option>
-              <option value="y2026-peak2" data-season="peak">2026년 12/15 ~ 27년 2월 말 · 성수기</option>
+              <option value="y2026-peak1" data-season="peak">🔥 2026년 8월 1일 ~ 8월 31일 (성수기)</option>
+              <option value="y2026-off1" data-season="off">💎 2026년 9월 1일 ~ 12월 14일 (비수기)</option>
+              <option value="y2026-peak2" data-season="peak">🔥 2026년 12월 15일 ~ 2027년 2월 28일 (성수기)</option>
+              <option value="y2027-off1" data-season="off" selected>💎 2027년 3월 1일 ~ 7월 17일 (비수기)</option>
+              <option value="y2027-peak1" data-season="peak">🔥 2027년 7월 18일 ~ 8월 30일 (성수기)</option>
+              <option value="y2027-off2" data-season="off">💎 2027년 8월 31일 ~ 12월 18일 (비수기)</option>
+              <option value="y2027-peak2" data-season="peak">🔥 2027년 12월 19일 ~ 2028년 2월 28일 (성수기)</option>
             </select>
           </div>
           <div class="calc-field">
@@ -3661,7 +3661,7 @@
     lodging: 'dh',        // 'dh', 'jp', 'c9'
     duration: '4주',
     room: '',
-    people: 'p3a', entry: 'y2027' };
+    people: 'p3a', entry: 'y2027-off1' };
 
   // ─── 제이파크 1주 + 큐브나인 1주 콤보 (1주 가격 = 각 2주가의 절반, 만원 반올림) ───
   (function () {
