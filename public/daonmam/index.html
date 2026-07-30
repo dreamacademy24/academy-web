@@ -608,7 +608,7 @@
 
   /* 숙소 탭 */
   .lodging-tabs {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
     margin-bottom: 20px;
   }
   @media (max-width: 600px) {
@@ -2563,6 +2563,11 @@
           <span class="ltab-name">큐브나인</span>
           <span class="ltab-sub">오션뷰 리조트</span>
         </button>
+        <button class="lodging-tab" data-lodging="jpc9">
+          <span class="ltab-icon">🌊🐬</span>
+          <span class="ltab-name">제이파크+큐브나인</span>
+          <span class="ltab-sub">1주 + 1주 콤보</span>
+        </button>
       </div>
 
       <!-- ─── 가격 계산기 ─── -->
@@ -3653,6 +3658,41 @@
     room: '',
     people: 'p3a', entry: 'y2027' };
 
+  // ─── 제이파크 1주 + 큐브나인 1주 콤보 (1주 가격 = 각 2주가의 절반, 만원 반올림) ───
+  (function () {
+    const wk1 = (arr) => Math.round(arr[0] / 2);
+    const PP = ['p2', 'p3a', 'p3b', 'p4a', 'p4b'];
+    function mk(jpD, c9D) {
+      const prices = {};
+      PP.forEach(p => {
+        if (!jpD.prices[p] || !c9D.prices[p]) return;
+        prices[p] = {
+          'ocean': [wk1(jpD.prices[p]['deluxe']) + wk1(c9D.prices[p]['ocean'])],
+          'pool': [wk1(jpD.prices[p]['deluxe']) + wk1(c9D.prices[p]['pool'])],
+        };
+      });
+      return { durations: ['2주 (각 1주)'], people: PP, rooms: ['ocean', 'pool'], prices };
+    }
+    PRICE_DATA.jpc9 = {
+      name: '🌊🐬 제이파크 1주 + 큐브나인 1주',
+      hasRoom: true,
+      rooms: { 'ocean': '제이파크 디럭스 + 큐브 디럭스오션', 'pool': '제이파크 디럭스 + 큐브 풀억세스' },
+      includes: [
+        { i: '🌊', t: '<b>제이파크 1주</b> · 디럭스 가든뷰 기준 · 워터파크 & 비치 이용 · 평일 3식 도시락' },
+        { i: '🐬', t: '<b>큐브나인 1주</b> · 조식 포함 + 평일 저녁 도시락 (다온맘 혜택) · 인피니티 풀' },
+        { i: '🎓', t: '<b>드림아카데미 정규 수업</b> · 평일 매일 (두 숙소 기간 내내 동일)' },
+        { i: '🎨', t: '<b>애프터스쿨</b> 매주 월·수 + <b>필드트립</b> 둘째·넷째 토요일' },
+        { i: '🚐', t: '<b>공항 픽업 & 드랍</b> + 숙소 간 이동(환승) 차량 + 주말 투어 셔틀' },
+      ],
+      excludes: PRICE_DATA.c9.excludes,
+      regular: mk(PRICE_DATA.jp.regular, PRICE_DATA.c9.regular),
+      discount: {
+        off: mk(PRICE_DATA.jp.discount.off, PRICE_DATA.c9.discount.off),
+        peak: mk(PRICE_DATA.jp.discount.peak, PRICE_DATA.c9.discount.peak),
+      },
+    };
+  })();
+
   function getCurrentDataset() {
     const lodging = PRICE_DATA[calcState.lodging];
     if (calcState.mainTab === 'regular') {
@@ -3799,7 +3839,7 @@
         const factor = Math.min(Math.max(w, 0), 4) / 4;
         const is27 = calcState.entry !== 'y2026';
         const basePer = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
-        const c9Per = calcState.lodging === 'c9' ? 10 : 0; // 큐브나인 전 기간 1인 10만 추가
+        const c9Per = (calcState.lodging === 'c9' || calcState.lodging === 'jpc9') ? 10 : 0; // 큐브나인 전 기간 1인 10만 추가
         const baseDisc = Math.round(basePer * factor * n);
         const c9Disc = Math.round(c9Per * factor * n);
         const disc = baseDisc + c9Disc;
