@@ -106,16 +106,17 @@ export default function DaonmamStatusPage() {
           {secTitle("예약 확정 (영수증 발급 완료)", confirmed.length, "#047857")}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
-              <thead><tr><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>전체 금액</th><th style={th}>입금액</th><th style={th}>납부 현황</th></tr></thead>
+              <thead><tr><th style={th}>#</th><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>전체 금액</th><th style={th}>입금액</th><th style={th}>납부 현황</th></tr></thead>
               <tbody>
-                {!loaded ? <tr><td colSpan={8} style={{ ...td, padding: 30, color: "#94a3b8" }}>불러오는 중…</td></tr>
-                : confirmed.length === 0 ? <tr><td colSpan={8} style={{ ...td, padding: 30, color: "#94a3b8" }}>확정된 예약이 없습니다</td></tr>
-                : confirmed.map(b => {
+                {!loaded ? <tr><td colSpan={10} style={{ ...td, padding: 30, color: "#94a3b8" }}>불러오는 중…</td></tr>
+                : confirmed.length === 0 ? <tr><td colSpan={9} style={{ ...td, padding: 30, color: "#94a3b8" }}>확정된 예약이 없습니다</td></tr>
+                : confirmed.map((b, _i) => {
                   const fp = Number(b.final_price) || 0, paid = Number(b.paid_amount) || 0;
                   const bal = Math.max(0, fp - paid);
                   const full = fp > 0 && paid >= fp;
                   return (
                     <tr key={b.id}>
+                      <td style={{ ...td, fontWeight: 800, color: "#0f172a" }}>{_i + 1}</td>
                       <td style={{ ...td, color: "#94a3b8", fontSize: 12 }}>{shortNo(b.reservation_no)}</td>
                       <td style={td}>{nameCell(b)}</td>
                       <td style={td}>{b.accom_type || "-"}</td>
@@ -147,12 +148,13 @@ export default function DaonmamStatusPage() {
           {secTitle("진행 중 (접수 · 상담)", active.length, "#1d4ed8")}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
-              <thead><tr><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>체크아웃</th><th style={th}>인원</th><th style={th}>진행 상태</th><th style={th}>접수일</th></tr></thead>
+              <thead><tr><th style={th}>#</th><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>체크아웃</th><th style={th}>인원</th><th style={th}>진행 상태</th><th style={th}>접수일</th></tr></thead>
               <tbody>
                 {!loaded ? <tr><td colSpan={9} style={{ ...td, padding: 30, color: "#94a3b8" }}>불러오는 중…</td></tr>
-                : active.length === 0 ? <tr><td colSpan={9} style={{ ...td, padding: 30, color: "#94a3b8" }}>진행 중 예약이 없습니다</td></tr>
-                : active.map(b => { const st = effStage(b); const sc = STAGE_C[st] || STAGE_C["신청서 접수"]; return (
+                : active.length === 0 ? <tr><td colSpan={10} style={{ ...td, padding: 30, color: "#94a3b8" }}>진행 중 예약이 없습니다</td></tr>
+                : active.map((b, _i) => { const st = effStage(b); const sc = STAGE_C[st] || STAGE_C["신청서 접수"]; return (
                   <tr key={b.id}>
+                    <td style={{ ...td, fontWeight: 800, color: "#0f172a" }}>{_i + 1}</td>
                     <td style={{ ...td, color: "#94a3b8", fontSize: 12 }}>{shortNo(b.reservation_no)}</td>
                     <td style={td}>{nameCell(b)}</td>
                     <td style={td}>{b.accom_type || "-"}</td>
@@ -187,9 +189,10 @@ export default function DaonmamStatusPage() {
             </button>
             {showCancel && <div style={{ overflowX: "auto", borderTop: "1px solid #fecaca" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
-                <thead><tr><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>접수일</th></tr></thead>
-                <tbody>{cancelled.map(b => (
+                <thead><tr><th style={th}>#</th><th style={th}>번호</th><th style={th}>예약자</th><th style={th}>숙소</th><th style={th}>기간</th><th style={th}>체크인</th><th style={th}>접수일</th></tr></thead>
+                <tbody>{cancelled.map((b, _i) => (
                   <tr key={b.id} style={{ opacity: 0.6 }}>
+                    <td style={{ ...td, fontWeight: 700, color: "#94a3b8" }}>{_i + 1}</td>
                     <td style={{ ...td, color: "#94a3b8", fontSize: 12 }}>{shortNo(b.reservation_no)}</td>
                     <td style={{ ...td, textDecoration: "line-through", color: "#6b7280" }}>{mask(b.booker_name)}</td>
                     <td style={td}>{b.accom_type || "-"}</td>
