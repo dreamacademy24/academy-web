@@ -25,7 +25,7 @@ interface InvRow {
   paid_date: string | null; created_at: string;
   items: Item[] | null; guests_kr: string | null; guests_en: string | null;
   reservation_no: string | null; res_status: string | null; special_request: string | null;
-  confirm_no: string | null;
+  confirm_no: string | null; email_sent_at: string | null;
 }
 
 function num(n: number) { return Number(n || 0).toLocaleString(); }
@@ -412,6 +412,7 @@ ${signature}`);
       const d = await r.json();
       if (!r.ok) { alert("발송 실패: " + (d.error || r.status)); return; }
       setEmailModal(false);
+      try { await supabase.from("resort_invoices").update({ email_sent_at: new Date().toISOString() }).eq("id", preview.id); loadInvoices(); } catch { /* noop */ }
       alert("이메일을 보냈습니다. ✅");
     } finally { setSending(false); }
   }
@@ -605,6 +606,7 @@ ${signature}`);
                   ? <span className="badge" style={{ background: "#dcfce7", color: "#166534" }}>결제완료</span>
                   : <span className="badge" style={{ background: "#fef3c7", color: "#92400e" }}>미결제</span>}</td>
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  {v.email_sent_at && <span title={"발송: " + String(v.email_sent_at).slice(0, 16).replace("T", " ")} style={{ display: "inline-block", background: "#dcfce7", color: "#166534", border: "1px solid #86efac", borderRadius: 6, padding: "3px 8px", fontSize: 11, fontWeight: 800, marginRight: 4 }}>📨 발송완료</span>}
                   <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, marginRight: 4 }} onClick={() => setPreview(v)}>보기</button>
                   <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, marginRight: 4, color: "#b45309" }} onClick={() => loadForEdit(v)}>✏️ 수정</button>
                   <button className="rtab" style={{ padding: "4px 10px", fontSize: 11, color: "#dc2626" }} onClick={() => removeInvoice(v.id)}>삭제</button>
