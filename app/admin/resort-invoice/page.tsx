@@ -169,7 +169,7 @@ export default function ResortInvoicePage() {
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,paid_amount,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,paid_amount,final_price,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .order("checkin_date", { ascending: false }).limit(300);
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
@@ -465,7 +465,7 @@ ${signature}`);
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
           {bookings.map(b => (
             <option key={b.id} value={b.id}>
-              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {/영수증발행|결제완료|완료/.test(b.status || "") ? "영수증발행 ✅" : "확보(예약금 입금)"}
+              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}
             </option>
           ))}
         </select>
