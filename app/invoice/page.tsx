@@ -1987,16 +1987,22 @@ function InvoicePageInner(){
             <span style={{fontSize:12,color:"#6b7c93"}}>입금받은 내역을 입력하세요. 영수증 하단에 자동으로 표시됩니다.</span>
             <span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>✏️ 금액·날짜·구분 직접 수정 가능 | ✕ 로 삭제</span>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"130px 160px 1fr auto",gap:8,marginBottom:6,fontSize:11,color:"#6b7c93",fontWeight:600}}>
-            <span>구분</span><span>날짜</span><span>금액 (원)</span><span></span>
+          <div style={{display:"grid",gridTemplateColumns:"110px 110px 150px 1fr auto",gap:8,marginBottom:6,fontSize:11,color:"#6b7c93",fontWeight:600}}>
+            <span>구분</span><span>결제수단</span><span>날짜</span><span>금액 (원)</span><span></span>
           </div>
           {receiptPayments.map(p=>(
-            <div key={p.id} style={{display:"grid",gridTemplateColumns:"130px 160px 1fr auto",gap:8,alignItems:"center",marginBottom:8}}>
+            <div key={p.id} style={{display:"grid",gridTemplateColumns:"110px 110px 150px 1fr auto",gap:8,alignItems:"center",marginBottom:8}}>
               <select value={p.type} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,type:e.target.value,amount:(x.amount||"").trim()===""?(e.target.value==="예약금"?depositAmt.toLocaleString("ko-KR"):e.target.value==="잔금"&&fp>depositAmt?(fp-depositAmt).toLocaleString("ko-KR"):x.amount):x.amount}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none",background:"#fff",cursor:"pointer"}}>
                 <option value="예약금">예약금</option>
                 <option value="잔금">잔금</option>
                 <option value="추가입금">추가입금</option>
                 <option value="현지결제">현지결제</option>
+              </select>
+              <select value={(p as unknown as Record<string,string>).method||"무통장"} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,method:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none",background:"#fff",cursor:"pointer"}}>
+                <option value="무통장">무통장</option>
+                <option value="카드">카드</option>
+                <option value="현금">현금</option>
+                <option value="페이팔">페이팔</option>
               </select>
               <input type="date" value={p.date} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,date:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
               <input type="text" placeholder="예: 1,000,000" value={p.amount} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,amount:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
@@ -2090,7 +2096,7 @@ function InvoicePageInner(){
             <table className="tb"><thead><tr><th style={{width:"25%"}}>구분</th><th style={{width:"35%"}}>결제일</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>
               {receiptPayments.filter(p=>p.amount.trim()!=="").length>0
                 ?receiptPayments.filter(p=>p.amount.trim()!=="").map(p=>(
-                  <tr key={p.id}><td style={{fontWeight:700}}>{p.type}</td><td>{p.date}</td><td style={{textAlign:"right",fontWeight:700,color:"#1a6fc4"}}>{p.amount}원</td></tr>
+                  <tr key={p.id}><td style={{fontWeight:700}}>{p.type}{(p as unknown as Record<string,string>).method&&<span style={{marginLeft:6,fontSize:11,fontWeight:600,color:"#64748b",background:"#f1f5f9",borderRadius:6,padding:"1px 7px"}}>{(p as unknown as Record<string,string>).method}</span>}</td><td>{p.date}</td><td style={{textAlign:"right",fontWeight:700,color:"#1a6fc4"}}>{p.amount}원</td></tr>
                 ))
                 :<tr><td colSpan={3} style={{textAlign:"center",color:"#94a3b8",fontSize:12,padding:16}}>위 입력란에서 지불내역을 입력해주세요</td></tr>
               }
