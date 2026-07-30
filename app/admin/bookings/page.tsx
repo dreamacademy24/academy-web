@@ -968,7 +968,9 @@ export default function AdminBookingsPage(){
     {mainTab==="daon"&&(()=>{
       const _bn=(n:string|null|undefined)=>String(n||"").replace(/\s/g,"").replace(/[A-Z]$/,"");
       const _nc:{[k:string]:number}={};bookings.filter(b=>b.agency==="다온맘").forEach(b=>{const k=_bn(b.booker_name);if(k)_nc[k]=(_nc[k]||0)+1;});
-      const rows=bookings.filter(b=>b.agency==="다온맘").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no].some(v=>v&&String(v).toLowerCase().includes(q));}).sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+      const daonAll=bookings.filter(b=>b.agency==="다온맘").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no].some(v=>v&&String(v).toLowerCase().includes(q));}).sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
+      const rows=daonAll.filter(b=>!String(b.status||"").includes("취소"));
+      const cancelledRows=daonAll.filter(b=>String(b.status||"").includes("취소"));
       return (<div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #f1e2b8"}}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
           <span style={{fontSize:14,fontWeight:800}}>💛 다온맘 공구 예약 (접수 순)</span><input type="text" placeholder="🔍 검색" value={newSearch} onChange={ev=>setNewSearch(ev.target.value)} style={{marginLeft:6,fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:160,outline:"none"}}/>
@@ -994,10 +996,33 @@ export default function AdminBookingsPage(){
             <td onClick={ev=>ev.stopPropagation()} style={{display:"flex",gap:4}}>
               {(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?<span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:11.5,fontWeight:800,alignSelf:"center"}}>✅확보</span>:<button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button>}
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
-              {String(b.status||"").includes("취소")?<button className="act" style={{background:"#f1f5f9",color:"#475569"}} onClick={async()=>{if(confirm("취소를 되돌려 접수 상태로 복구할까요?")){await supabase.from("bookings").update({status:"접수",daon_stage:(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?"예약금 입금":"신청서 접수"}).eq("id",b.id);load();}}}>↩ 복구</button>:<button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>}
+              <button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>
             </td>
           </tr>);})}
         </tbody></table></div>)}
+
+        {cancelledRows.length>0&&<div style={{marginTop:18,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+            <span style={{fontSize:13.5,fontWeight:800,color:"#b91c1c"}}>🗑 취소된 예약</span>
+            <span style={{fontSize:12,color:"#b91c1c",background:"#fee2e2",borderRadius:8,padding:"1px 8px",fontWeight:700}}>{cancelledRows.length}건</span>
+            <span style={{fontSize:11.5,color:"#94a3b8"}}>기록 보존 · 자리는 반환됨 · 다온맘 현황 페이지에도 취소로 표시</span>
+          </div>
+          <div className="tbl-w"><table className="tbl"><thead><tr>
+            <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>액션</th>
+          </tr></thead><tbody>
+            {cancelledRows.map(b=>(<tr key={b.id} style={{opacity:.7}} onClick={()=>router.push("/admin/bookings/"+b.id)}>
+              <td style={{fontWeight:600,color:"#94a3b8"}}>{shortNo(b.reservation_no)}</td>
+              <td style={{textDecoration:"line-through",color:"#6b7280"}}>{b.booker_name||"-"}</td>
+              <td style={{fontSize:12,color:"#9ca3af"}}>{stuNames(b.students)}</td>
+              <td style={{color:"#9ca3af"}}>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
+              <td style={{color:"#9ca3af"}}>{b.checkin_date||"-"}</td>
+              <td style={{fontSize:12,color:"#9ca3af",whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
+              <td onClick={ev=>ev.stopPropagation()}>
+                <button className="act" style={{background:"#f1f5f9",color:"#475569"}} onClick={async()=>{if(confirm("취소를 되돌려 접수 상태로 복구할까요?\n"+(b.booker_name||""))){await supabase.from("bookings").update({status:"접수",daon_stage:(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?"예약금 입금":"신청서 접수"}).eq("id",b.id);load();}}}>↩ 복구</button>
+              </td>
+            </tr>))}
+          </tbody></table></div>
+        </div>}
       </div>);
     })()}
 
