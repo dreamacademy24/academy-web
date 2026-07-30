@@ -147,7 +147,7 @@ export default function ResortPaymentsPage() {
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.rw{max-width:1200px;margin:0 auto;padding:24px 18px 60px}
+.rw{max-width:1560px;margin:0 auto;padding:24px 18px 60px}
 .rh h1{font-size:20px;font-weight:800;margin-bottom:14px}
 .fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .chip{padding:7px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569}
@@ -157,9 +157,11 @@ export default function ResortPaymentsPage() {
 .sumcard{background:#fff;border-radius:10px;padding:12px 18px;box-shadow:0 1px 6px rgba(0,0,0,0.05);font-size:13px}
 .sumcard b{display:block;font-size:16px;margin-top:2px}
 .card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 12px rgba(0,0,0,0.05)}
-.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tblw{overflow-x:auto}
+.tbl{width:100%;min-width:1280px;border-collapse:collapse;font-size:12.5px}
 .tbl th{background:#f8fafc;text-align:left;padding:9px 10px;font-size:11.5px;color:#475569;border-bottom:1px solid #e5e7eb}
-.tbl td{padding:9px 10px;border-bottom:1px solid #f3f4f6}
+.tbl td{padding:9px 10px;border-bottom:1px solid #f3f4f6;white-space:nowrap}
+.tbl td:last-child{white-space:nowrap}
 .badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800}
 .abtn{padding:5px 12px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit}
 .empty{text-align:center;padding:40px;color:#9ca3af;font-size:13px}
@@ -205,7 +207,7 @@ export default function ResortPaymentsPage() {
 
       <div className="card">
         {loading ? <div className="empty">불러오는 중...</div> : filtered.length === 0 ? <div className="empty">내역이 없습니다. 인보이스 생성 페이지에서 먼저 인보이스를 만들어주세요.</div> : (
-          <table className="tbl"><thead><tr>
+          <div className="tblw"><table className="tbl"><thead><tr>
             <th style={{ width: 34 }}>#</th><th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
           </tr></thead><tbody>
             {filtered.map((r, _ix) => (
@@ -246,7 +248,7 @@ export default function ResortPaymentsPage() {
                 </td>
               </tr>
             ))}
-          </tbody></table>
+          </tbody></table></div>
         )}
       </div>
     </div>
