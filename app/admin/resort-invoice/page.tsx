@@ -169,12 +169,13 @@ export default function ResortInvoicePage() {
 
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,booker_english,status,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
+      .select("id,reservation_no,booker_name,booker_english,status,paid_amount,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
       .order("checkin_date", { ascending: false }).limit(300);
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
       if ((b.status || "").includes("취소")) return false;
-      if (!/영수증발행|결제완료|완료/.test(b.status || "")) return false; // 영수증 발행(예약 확정)된 손님만 리조트 인보이스 대상
+      const paid = Number((b as unknown as Record<string, unknown>).paid_amount) || 0;
+      if (!/영수증발행|결제완료|완료/.test(b.status || "") && paid <= 0) return false; // 영수증 발행 또는 확보(입금)된 손님만
       const at = (b.accom_type || "").toLowerCase();
       return kw.some(k => at.includes(k)) || [b.seg1_type, b.seg2_type].some(t => kw.some(k => (t || "").toLowerCase().includes(k)));
     });
@@ -371,10 +372,14 @@ Kindly send us the confirmation number for this booking.
 ${signature}`);
     try {
       const savedCc = localStorage.getItem("resortEmailCc") || "deskor112@gmail.com";
-      // britney.na는 항상 참조에 포함 (메이 지시 2026-07-07)
-      const withB = savedCc.includes("britney.na@jparkislandresort.com") ? savedCc : savedCc + ", britney.na@jparkislandresort.com";
-      setEmailCc(withB);
-    } catch { setEmailCc("deskor112@gmail.com, britney.na@jparkislandresort.com"); }
+      // britney.na는 제이파크 발송에만 참조 포함 (큐브나인은 제외 — 2026-07-30 메이 지시)
+      const noB = savedCc.split(",").map(x => x.trim()).filter(x => x && x !== "britney.na@jparkislandresort.com").join(", ");
+      if (preview && preview.resort === "jaypark") {
+        setEmailCc(noB ? noB + ", britney.na@jparkislandresort.com" : "deskor112@gmail.com, britney.na@jparkislandresort.com");
+      } else {
+        setEmailCc(noB || "deskor112@gmail.com");
+      }
+    } catch { setEmailCc("deskor112@gmail.com"); }
     setAttachImg("");
     setEmailModal(true);
     // 첨부될 인보이스 이미지를 미리 만들어 우측에 보여줌 (발송 시 이 이미지가 그대로 첨부됨)
@@ -459,7 +464,7 @@ ${signature}`);
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
           {bookings.map(b => (
             <option key={b.id} value={b.id}>
-              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""}
+              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {/영수증발행|결제완료|완료/.test(b.status || "") ? "영수증발행 ✅" : "확보(예약금 입금)"}
             </option>
           ))}
         </select>
