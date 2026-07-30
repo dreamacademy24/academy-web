@@ -3856,7 +3856,7 @@
           lines.push(is27
             ? '얼리버드 현금 전액입금 할인 −' + baseDisc.toLocaleString() + '만원 (27년 3월~28년 2월 입실)'
             : '현금 전액입금 할인 −' + baseDisc.toLocaleString() + '만원 (2026 입실 · 전액 선입금 기준)');
-          if (!is27) lines.push('8월 중 입실(마감임박)은 현금 시 1인 10만원 추가 할인 — 예약 신청에서 자동 적용');
+          if (calcState.entry === 'y2026-peak1') lines.push('8월 중 입실(마감임박)은 현금 시 1인 10만원 추가 할인 — 예약 신청에서 자동 적용');
           if (c9Disc > 0) lines.push('다온맘 큐브나인 추가 할인 −' + c9Disc.toLocaleString() + '만원 (전 기간)');
           document.getElementById('result-event-sub').innerHTML = lines.join('<br/>');
         } else { ev.style.display = 'none'; }
