@@ -1397,12 +1397,14 @@ function InvoicePageInner(){
     const is27=a1CI>="2027-03-01"&&a1CI<="2028-02-29";
     const pk=isPeak(a1CI);
     const factor=Math.min(w,4)/4;
+    const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
+    const _wk=w<4?` · ${w}주 적용`:"";
     const eb=is27?(pk?10:20):0;
     const isC9=a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine");
     const lines:{name:string;amount:number}[]=[];
-    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${eb}만×${n}명)`,amount:Math.round(eb*factor*n)*10000});
-    if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
-    if(isC9)lines.push({name:`다온맘 큐브나인 추가 할인 (1인 10만×${n}명)`,amount:Math.round(10*factor*n)*10000});
+    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${_ep(eb)}×${n}명${_wk})`,amount:Math.round(eb*factor*n)*10000});
+    if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
+    if(isC9)lines.push({name:`다온맘 큐브나인 추가 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
     setBilling(bl=>{
       const kept=bl.discounts.filter(d=>!String(d.name||"").startsWith("다온맘")&&(d.name||d.amount));
       const added=lines.map((l,i)=>({id:Date.now()+i,name:l.name,amount:l.amount}));
