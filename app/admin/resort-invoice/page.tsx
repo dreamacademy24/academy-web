@@ -463,7 +463,7 @@ ${signature}`);
         <h2>1. 예약 불러오기 (선택)</h2>
         <select className="fsl" value={selBooking} onChange={e => pickBooking(e.target.value)}>
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
-          {bookings.map(b => (
+          {bookings.filter(b => !invoices.some(v => v.booking_id === b.id && v.email_sent_at)).map(b => (
             <option key={b.id} value={b.id}>
               {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}
             </option>
