@@ -710,7 +710,8 @@ function InvoicePageInner(){
       setSnapshotSavedAt(j?.snapshot?.saved_at||new Date().toISOString());
       setHasSnapshot(true);
       // 인보이스 확정 시 예약 상태 변경 + 체크인/체크아웃 자동 동기화 (인보이스에서 조정한 날짜가 예약 원본에 반영)
-      const upd:Record<string,unknown>={status:"영수증발행",updated_at:new Date().toISOString()};
+      // 영수증발행은 실제 지불내역 금액이 있을 때만 — 없으면 인보이스발행까지만 (2026-07-30 메이 지시)
+      const upd:Record<string,unknown>={status:receiptPaidTotal>0?"영수증발행":"인보이스발행",updated_at:new Date().toISOString()};
       if(!isCommute){
         if(a1CI) upd.checkin_date=a1CI;
         if(overallCO) upd.checkout_date=overallCO;
@@ -1385,7 +1386,8 @@ function InvoicePageInner(){
   async function finishDhRegister(room:string|null){
     if(!dhModal)return;
     const {ci,co}=dhModal;
-    const upd:Record<string,unknown>={checkin_date:ci,checkout_date:co,status:"영수증발행"};
+    const upd:Record<string,unknown>={checkin_date:ci,checkout_date:co};
+    if(receiptPaidTotal>0)upd.status="영수증발행"; // 금액 미입력 시 상태 유지
     if(room!==null){upd.accom_room=room;upd.house_no=room;}
     const {error}=await supabase.from("bookings").update(upd).eq("id",bookingId);
     if(error){alert("등록 실패: "+error.message);return;}
@@ -1436,8 +1438,10 @@ function InvoicePageInner(){
       const {error:e1}=await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:next},{onConflict:"key"});
       if(e1){alert("룸 배정 저장 실패: "+e1.message);return;}
     }
-    const {error}=await supabase.from("bookings").update({status:"영수증발행"}).eq("id",bookingId);
-    if(error){alert("등록 실패: "+error.message);return;}
+    if(receiptPaidTotal>0){
+      const {error}=await supabase.from("bookings").update({status:"영수증발행"}).eq("id",bookingId);
+      if(error){alert("등록 실패: "+error.message);return;}
+    }
     setC9Registered(true);if(room!==null)setC9Room(room);setC9Modal(null);
     alert(room?("✅ 큐브나인 예약 완료!\n배정 룸: "+room+"호 ("+(C9_FA.includes(room)?"풀억세스":"디럭스오션")+")"):"✅ 등록 완료 — 룸은 미배정 상태예요.\n큐브나인 예약현황의 '룸 배정 대기'에서 배정해주세요.");
   }
