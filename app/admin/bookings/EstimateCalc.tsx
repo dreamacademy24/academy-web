@@ -680,14 +680,17 @@ export default function EstimateCalc(){
     // 평일(월~금) 휴무일만 수업 손실 — 주말 휴무는 원래 수업 없음
     const hs=holidaysInRange(holidays,p.checkin,co).filter(h=>{const d=new Date(h.date+"T00:00:00").getDay();return d>=1&&d<=5;});
     if(!hs.length){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
+    // 일할 단가 = 등록 주수의 통학형 표 ÷ (주수×5일) — 예: 2주 비9만/성10만, 4주 비76,050/성84,500
+    const base=COMMUTE[w]||(w===1?[500000,450000,500000]:COMMUTE[12]);
+    const days=w*5;
+    const perOff=Math.round(base[1]/days), perPeak=Math.round(base[2]/days);
     let sum=0;const parts:string[]=[];
     for(const h of hs){
       const pk=isPeak(h.date);
-      const rate=pk?100000:90000; // 통학형 2주표(성수기 100만/비수기 90만) ÷ 10일
-      sum+=rate*kids;
+      sum+=(pk?perPeak:perOff)*kids;
       parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));
     }
-    const line={id:Date.now(),name:`학원 휴무 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명)`,amount:sum};
+    const line={id:Date.now(),name:`학원 휴무 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
     const kept=p.discounts.filter(d=>!d.name.startsWith("학원 휴무 수업료 제외"));
     up(idx,{discounts:[...kept,line]});
   }
