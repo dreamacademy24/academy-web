@@ -206,11 +206,11 @@ export default function ResortPaymentsPage() {
       <div className="card">
         {loading ? <div className="empty">불러오는 중...</div> : filtered.length === 0 ? <div className="empty">내역이 없습니다. 인보이스 생성 페이지에서 먼저 인보이스를 만들어주세요.</div> : (
           <table className="tbl"><thead><tr>
-            <th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
+            <th style={{ width: 34 }}>#</th><th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
           </tr></thead><tbody>
-            {filtered.map(r => (
+            {filtered.map((r, _ix) => (
               <tr key={r.id}>
-                <td style={{ whiteSpace: "nowrap" }}>
+                <td style={{ fontWeight: 800, color: "#92400e" }}>{_ix + 1}</td><td style={{ whiteSpace: "nowrap" }}>
                   <button onClick={() => setViewInv(r)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, textDecoration: "underline" }}>{r.invoice_no}</button>
                 </td>
                 <td>{RESORT_LABEL[r.resort] || r.resort}</td>

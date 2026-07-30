@@ -592,11 +592,11 @@ ${signature}`);
         <h2>최근 생성된 인보이스 — {RESORT_LABEL[resort]} ({recent.length})</h2>
         {recent.length === 0 ? <div style={{ color: "#9ca3af", fontSize: 13, padding: 14, textAlign: "center" }}>아직 없습니다.</div> : (
           <table className="tbl"><thead><tr>
-            <th>번호</th><th>손님</th><th>룸</th><th>기간</th><th>박</th><th>금액</th><th>상태</th><th style={{ width: 120 }}></th>
+            <th style={{ width: 30 }}>#</th><th>번호</th><th>손님</th><th>룸</th><th>기간</th><th>박</th><th>금액</th><th>상태</th><th style={{ width: 120 }}></th>
           </tr></thead><tbody>
-            {recent.map(v => (
+            {recent.map((v, _ix) => (
               <tr key={v.id}>
-                <td><button onClick={() => setPreview(v)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", textDecoration: "underline" }}>{v.invoice_no}</button></td>
+                <td style={{ fontWeight: 800, color: "#92400e" }}>{_ix + 1}</td><td><button onClick={() => setPreview(v)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", textDecoration: "underline" }}>{v.invoice_no}</button></td>
                 <td style={{ fontWeight: 700 }}>{v.guest_name}</td>
                 <td>{v.room_type}</td>
                 <td>{v.period_start} ~ {v.period_end}</td>
