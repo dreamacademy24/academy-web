@@ -669,6 +669,28 @@ export default function EstimateCalc(){
   function setCheckinAndSeason(idx:number,date:string){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
+  function applyHolidayDeduct(idx:number){
+    const p=plans[idx];
+    if(!p.checkin){alert("체크인 날짜를 먼저 입력해주세요.");return;}
+    const w=totalWeeks(p);
+    if(!w){alert("기간을 먼저 설정해주세요.");return;}
+    const kids=Number(p.kids)||0;
+    if(!kids){alert("아이 인원을 먼저 설정해주세요 (수업료는 아이 기준).");return;}
+    const co=(()=>{const t=new Date(p.checkin+"T00:00:00");t.setDate(t.getDate()+w*7);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;})();
+    // 평일(월~금) 휴무일만 수업 손실 — 주말 휴무는 원래 수업 없음
+    const hs=holidaysInRange(holidays,p.checkin,co).filter(h=>{const d=new Date(h.date+"T00:00:00").getDay();return d>=1&&d<=5;});
+    if(!hs.length){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
+    let sum=0;const parts:string[]=[];
+    for(const h of hs){
+      const pk=isPeak(h.date);
+      const rate=pk?100000:90000; // 통학형 2주표(성수기 100만/비수기 90만) ÷ 10일
+      sum+=rate*kids;
+      parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));
+    }
+    const line={id:Date.now(),name:`학원 휴무 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명)`,amount:sum};
+    const kept=p.discounts.filter(d=>!d.name.startsWith("학원 휴무 수업료 제외"));
+    up(idx,{discounts:[...kept,line]});
+  }
   function applyClosing(idx:number){
     const p=plans[idx];
     const w=totalWeeks(p);
@@ -896,6 +918,7 @@ export default function EstimateCalc(){
               <button style={{...addBtnS,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,true)}>💛 다온맘 현금</button>
               <button style={{...addBtnS,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,false)}>💛 다온맘 카드</button>
               <button style={{...addBtnS,background:"#fee2e2",border:"1px solid #f87171",color:"#991b1b"}} onClick={()=>applyClosing(idx)}>⏰ 마감임박</button>
+              <button style={{...addBtnS,background:"#e0f2fe",border:"1px solid #38bdf8",color:"#075985"}} onClick={()=>applyHolidayDeduct(idx)}>🏫 휴무 수업료</button>
               <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
             </span>
           </div>
