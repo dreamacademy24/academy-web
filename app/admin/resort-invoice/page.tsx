@@ -174,6 +174,7 @@ export default function ResortInvoicePage() {
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
       if ((b.status || "").includes("취소")) return false;
+      if (!/영수증발행|결제완료|완료/.test(b.status || "")) return false; // 영수증 발행(예약 확정)된 손님만 리조트 인보이스 대상
       const at = (b.accom_type || "").toLowerCase();
       return kw.some(k => at.includes(k)) || [b.seg1_type, b.seg2_type].some(t => kw.some(k => (t || "").toLowerCase().includes(k)));
     });
