@@ -3660,18 +3660,19 @@
 
   // ─── 제이파크 1주 + 큐브나인 1주 콤보 (1주 가격 = 각 2주가의 절반, 만원 반올림) ───
   (function () {
-    const wk1 = (arr) => Math.round(arr[0] / 2);
+    const wk1 = (arr) => Math.round(arr[0] / 2); // 1주 = 2주가의 절반
     const PP = ['p2', 'p3a', 'p3b', 'p4a', 'p4b'];
     function mk(jpD, c9D) {
       const prices = {};
       PP.forEach(p => {
         if (!jpD.prices[p] || !c9D.prices[p]) return;
+        const jd = jpD.prices[p]['deluxe'];
         prices[p] = {
-          'ocean': [wk1(jpD.prices[p]['deluxe']) + wk1(c9D.prices[p]['ocean'])],
-          'pool': [wk1(jpD.prices[p]['deluxe']) + wk1(c9D.prices[p]['pool'])],
+          'ocean': [wk1(jd) + wk1(c9D.prices[p]['ocean']), jd[0] + c9D.prices[p]['ocean'][0]],
+          'pool': [wk1(jd) + wk1(c9D.prices[p]['pool']), jd[0] + c9D.prices[p]['pool'][0]],
         };
       });
-      return { durations: ['2주 (각 1주)'], people: PP, rooms: ['ocean', 'pool'], prices };
+      return { durations: ['2주 (각 1주)', '4주 (각 2주)'], people: PP, rooms: ['ocean', 'pool'], prices };
     }
     PRICE_DATA.jpc9 = {
       name: '🌊🐬 제이파크 1주 + 큐브나인 1주',
