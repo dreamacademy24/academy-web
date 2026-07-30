@@ -1894,8 +1894,8 @@
         <div class="notice teal">
           <h4>🔥 성수기 기간 안내</h4>
           <ul>
-            <li><b>여름</b> · 7/15 ~ 8/30 <span style="color:#993C1D;font-weight:700">(27년 : 7/17 ~ 8/30)</span></li>
-            <li><b>겨울</b> · 12/15 ~ 2/29 <span style="color:#993C1D;font-weight:700">(27년 : 12/20 ~ 28년 2/28)</span></li>
+            <li><b>여름</b> · 7/15 ~ 8/30 <span style="color:#993C1D;font-weight:700">(27년 : 7/18 ~ 8/30)</span></li>
+            <li><b>겨울</b> · 12/15 ~ 2/29 <span style="color:#993C1D;font-weight:700">(27년 : 12/19 ~ 28년 2/28)</span></li>
             <li><b>성수기 등록</b> · 3주 이상 필수</li>
             <li><b>종료 시점</b> · 2주 가능 (상담 필수)</li>
             <li><b>7세 예비초1</b> · 킨더 / 주니어 선택 가능</li>
@@ -2543,7 +2543,7 @@
 
       <!-- 성수기 안내 (성수기 선택 시만 표시) -->
       <div class="peak-notice" id="peak-notice" style="display:none;">
-        <span>📌 <b>성수기 기간</b> — 2026년: <b>7/15~8/31 · 12/15~27년 2월 말</b> / 2027년: <b>7/17~8/30 · 12/20~28년 2/28</b><br/>체크인 날짜가 이 기간이면 <b style="color:#c2410c">성수기</b>, 그 외는 <b style="color:#1a6fc4">비수기</b> 탭 금액을 봐주세요.</span>
+        <span>📌 <b>성수기 기간</b> — 2026년: <b>7/15~8/31 · 12/15~27년 2월 말</b> / 2027년: <b>7/18~8/30 · 12/19~28년 2/28</b><br/>체크인 날짜가 이 기간이면 <b style="color:#c2410c">성수기</b>, 그 외는 <b style="color:#1a6fc4">비수기</b> 탭 금액을 봐주세요.</span>
       </div>
 
       <!-- ─── 숙소 선택 탭 ─── -->
@@ -2588,8 +2588,13 @@
           <div class="calc-field">
             <label>🗓️ 입실 시기</label>
             <select id="calc-entry">
-              <option value="y2027">2027년 3월 ~ 2028년 2월</option>
-              <option value="y2026">2026년 8월 ~ 2027년 2월 28일</option>
+              <option value="y2027-off1" data-season="off">2027년 3/1 ~ 7/17 · 비수기</option>
+              <option value="y2027-peak1" data-season="peak">2027년 7/18 ~ 8/30 · 성수기</option>
+              <option value="y2027-off2" data-season="off">2027년 8/31 ~ 12/18 · 비수기</option>
+              <option value="y2027-peak2" data-season="peak">2027년 12/19 ~ 28년 2/28 · 성수기</option>
+              <option value="y2026-peak1" data-season="peak">2026년 8월 (~8/31) · 성수기</option>
+              <option value="y2026-off1" data-season="off">2026년 9/1 ~ 12/14 · 비수기</option>
+              <option value="y2026-peak2" data-season="peak">2026년 12/15 ~ 27년 2월 말 · 성수기</option>
             </select>
           </div>
           <div class="calc-field">
@@ -3838,7 +3843,7 @@
         const n = parseInt((calcState.people || '').replace(/\D/g, ''), 10) || 0;
         const w = parseInt(calcState.duration, 10) || 0;
         const factor = Math.min(Math.max(w, 0), 4) / 4;
-        const is27 = calcState.entry !== 'y2026';
+        const is27 = !String(calcState.entry).indexOf('y2026') ? false : true;
         const basePer = is27 ? (calcState.season === 'off' ? 30 : 20) : 10;
         const c9Per = (calcState.lodging === 'c9' || calcState.lodging === 'jpc9') ? 10 : 0; // 큐브나인 전 기간 1인 10만 추가
         const baseDisc = Math.round(basePer * factor * n);
@@ -3944,7 +3949,14 @@
     calcState.room = e.target.value; updateResult();
   });
   document.getElementById('calc-entry').addEventListener('change', e => {
-    calcState.entry = e.target.value; updateResult();
+    calcState.entry = e.target.value;
+    var opt = e.target.selectedOptions[0];
+    var season = opt && opt.dataset.season;
+    if (season && calcState.mainTab === 'discount' && calcState.season !== season) {
+      calcState.season = season;
+      document.querySelectorAll('.price-sub-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.season === season); });
+      refreshAll();
+    } else { updateResult(); }
   });
   document.getElementById('calc-people').addEventListener('change', e => {
     calcState.people = e.target.value; updateResult();
@@ -4073,7 +4085,7 @@
   var DEPOSIT_LINKS={dh:'https://smartstore.naver.com/dreamacademy/products/13641857512',jp:'https://smartstore.naver.com/dreamacademy/products/13641860281',c9:'https://smartstore.naver.com/dreamacademy/products/13641861583'};
   function el(id){return document.getElementById(id);}
   function lodgeKey(){var v=(el('f-lodging')||{}).value||'';if(v.indexOf('드림하우스')>=0)return 'dh';if(v.indexOf('제이파크')>=0)return 'jp';if(v.indexOf('큐브나인')>=0)return 'c9';return null;}
-  function isPeak(dateStr){if(!dateStr)return null;var y=parseInt(dateStr.slice(0,4),10);var md=dateStr.slice(5);if(y===2027)return (md<='02-28')||(md>='07-17'&&md<='08-30')||(md>='12-20');if(y===2028)return (md<='02-28')||(md>='07-15'&&md<='08-31')||(md>='12-15');return (md>='07-15'&&md<='08-31')||(md>='12-15')||(md<='02-29');}
+  function isPeak(dateStr){if(!dateStr)return null;var y=parseInt(dateStr.slice(0,4),10);var md=dateStr.slice(5);if(y===2027)return (md<='02-28')||(md>='07-18'&&md<='08-30')||(md>='12-19');if(y===2028)return (md<='02-28')||(md>='07-15'&&md<='08-31')||(md>='12-15');return (md>='07-15'&&md<='08-31')||(md>='12-15')||(md<='02-29');}
   function update(){
     var card=el('est-card'),btn=el('deposit-btn'),note=el('deposit-note'),hint=el('deposit-hint');
     if(!card)return;
