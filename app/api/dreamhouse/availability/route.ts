@@ -15,16 +15,19 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const ci = String(searchParams.get('ci') || '').slice(0, 10)
     const co = String(searchParams.get('co') || '').slice(0, 10)
+    const exclude = String(searchParams.get('exclude') || '')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(ci) || !/^\d{4}-\d{2}-\d{2}$/.test(co) || ci >= co) {
       return NextResponse.json({ error: 'ci/co(YYYY-MM-DD, ci<co) 필요' }, { status: 400 })
     }
     const CAP = DH_ROOMS.length
-    const { data } = await supabase
+    let q = supabase
       .from('bookings')
       .select('id, accom_type, booking_type, checkin_date, checkout_date, late_checkout, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
       .lt('checkin_date', co)
       .gte('checkout_date', ci)
       .not('status', 'ilike', '%취소%')
+    if (exclude) q = q.neq('id', exclude)
+    const { data } = await q
 
     type Range = { ci: string; co: string }
     const ranges: Range[] = []

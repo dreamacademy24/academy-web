@@ -565,6 +565,51 @@ function InvoicePageInner(){
   const a1CO=a1CI?addDays(a1CI,a1W*7):"";
   const a2CI=cm==="combo"?a1CO:"";
   const a2CO=a2CI?addDays(a2CI,a2W*7):"";
+
+  /* ── 날짜/기간 변경 시 드림하우스·큐브나인 가용성 가드 (오버부킹 방지) ── */
+  const availGuard=useRef<{ci:string;w:number;w2:number;m:string;t1:string;t2:string}|null>(null);
+  useEffect(()=>{(async()=>{
+    if(isCommute||!a1CI)return;
+    const cur={ci:a1CI,w:a1W,w2:a2W,m:cm,t1:a1T,t2:a2T};
+    const prev=availGuard.current;
+    availGuard.current=cur;
+    if(!prev)return; // 최초 로드는 기록만
+    if(prev.ci===cur.ci&&prev.w===cur.w&&prev.w2===cur.w2&&prev.m===cur.m&&prev.t1===cur.t1&&prev.t2===cur.t2)return;
+    const warns:string[]=[];
+    try{
+      // 드림하우스 구간
+      const dhSeg=a1T==="dreamhouse"?[a1CI,a1CO]:(cm==="combo"&&a2T==="dreamhouse"?[a2CI,a2CO]:null);
+      if(dhSeg&&dhSeg[0]&&dhSeg[1]&&dhSeg[0]<dhSeg[1]){
+        const av=await fetch(`/api/dreamhouse/availability?ci=${dhSeg[0]}&co=${dhSeg[1]}${bookingId?`&exclude=${bookingId}`:""}`).then(r=>r.json());
+        if(Array.isArray(av.fullDates)&&av.fullDates.length>0)warns.push("드림하우스 만실: "+av.fullDates.slice(0,4).map((d:string)=>d.slice(5)).join(", ")+(av.fullDates.length>4?` 외 ${av.fullDates.length-4}일`:""));
+      }
+      // 큐브나인 구간 (룸타입별 수량)
+      const cnSeg=a1T==="cubenine"?[a1CI,a1CO,a1R]:(cm==="combo"&&a2T==="cubenine"?[a2CI,a2CO,a2R]:null);
+      if(cnSeg&&cnSeg[0]&&cnSeg[1]&&cnSeg[0]<cnSeg[1]){
+        const rt=String(cnSeg[2]||"디럭스");const isFA=rt.includes("풀");const cap=isFA?4:7;
+        const grp=isFA?["103","104","105","106"]:["204","205","206","207","208","209","210"];
+        const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();
+        const blocks=(Array.isArray(st?.value)?st!.value:[]) as {room:string;ci:string;co:string;booking_id?:string}[];
+        const blk=blocks.filter(x=>grp.includes(x.room)&&x.booking_id!==bookingId&&x.ci<cnSeg[1]&&cnSeg[0]<x.co);
+        const linked=new Set(blocks.map(x=>x.booking_id).filter(Boolean));
+        const {data:bks}=await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status").ilike("accom_type","%큐브%");
+        let cnt=blk.length;
+        for(const b of (bks||[])){
+          if(b.id===bookingId||String(b.status||"").includes("취소")||linked.has(b.id))continue;
+          if((b.cn_room_type||"디럭스").includes("풀")!==isFA)continue;
+          let bci=b.checkin_date,bco=b.checkout_date;
+          if(b.seg1_type==="cubenine"){bci=b.seg1_checkin;bco=b.seg1_checkout;}
+          else if(b.seg2_type==="cubenine"){bci=b.seg2_checkin;bco=b.seg2_checkout;}
+          if(bci&&bco&&String(bci)<cnSeg[1]&&cnSeg[0]<String(bco))cnt++;
+        }
+        if(cnt>=cap)warns.push(`큐브나인 ${isFA?"풀억세스":"디럭스오션"} 만실 (${cnt}/${cap}팀)`);
+      }
+    }catch{/* 확인 실패 시 차단하지 않음 */}
+    if(warns.length){
+      const go=confirm("🚨 오버부킹 경고 — 변경하려는 기간에 자리가 없습니다!\n\n"+warns.join("\n")+"\n\n[취소] = 이전 날짜로 되돌리기 (권장)\n[확인] = 만실 무시하고 강제 변경 (오버부킹 위험)");
+      if(!go){availGuard.current=prev;setA1CI(prev.ci);setA1W(prev.w);setA2W(prev.w2);}
+    }
+  })();},[a1CI,a1W,a2W,cm,a1T,a2T]);
   const overallCI=a1CI;
   // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
   const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
