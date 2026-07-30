@@ -1439,6 +1439,19 @@ function InvoicePageInner(){
   }
 
   /* ── 다온맘 공구 할인 자동 추가 (견적 탭과 동일 규칙) ── */
+  function applyClosingInv(){
+    const w=cm==="combo"?(a1W+a2W):a1W;
+    const n=(cP||0)+(cK||0);
+    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
+    const factor=Math.min(w,4)/4;
+    const e=10*factor;const ep=(Number.isInteger(e)?e:e.toFixed(1))+"만";
+    const wk=w<4?` · ${w}주 적용`:"";
+    const line={id:Date.now(),name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${ep}×${n}명${wk})`,amount:Math.round(10*factor*n)*10000};
+    setBilling(bl=>{
+      const kept=bl.discounts.filter(d=>!String(d.name||"").startsWith("다온맘 마감임박")&&(d.name||d.amount));
+      return {...bl,discounts:[...kept,line]};
+    });
+  }
   function applyDaonInv(cash:boolean){
     const w=cm==="combo"?(a1W+a2W):a1W;
     const n=(cP||0)+(cK||0);
@@ -1824,6 +1837,7 @@ function InvoicePageInner(){
     <label className="f-label" style={{marginTop:"12px",marginBottom:"8px"}}>할인 항목
       <button type="button" onClick={()=>applyDaonInv(true)} style={{marginLeft:10,padding:"4px 10px",fontSize:11.5,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e",borderRadius:6,cursor:"pointer",fontWeight:800}}>💛 다온맘 현금</button>
       <button type="button" onClick={()=>applyDaonInv(false)} style={{marginLeft:4,padding:"4px 10px",fontSize:11.5,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e",borderRadius:6,cursor:"pointer",fontWeight:800}}>💛 다온맘 카드</button>
+      <button type="button" onClick={applyClosingInv} style={{marginLeft:4,padding:"4px 10px",fontSize:11.5,background:"#fee2e2",border:"1px solid #f87171",color:"#991b1b",borderRadius:6,cursor:"pointer",fontWeight:800}}>⏰ 마감임박</button>
     </label>
     {billing.discounts.map(d=><div className="dr" key={d.id}><div className="f-group"><input className="f-input" placeholder="할인 이름" value={d.name} onChange={e=>upD(d.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" type="number" placeholder="금액" value={d.amount||""} onChange={e=>upD(d.id,"amount",Number(e.target.value))}/></div><button className="bs br" onClick={()=>rmD(d.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addD}>+ 할인 추가</button>

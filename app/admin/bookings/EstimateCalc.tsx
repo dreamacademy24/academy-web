@@ -638,6 +638,18 @@ export default function EstimateCalc(){
   function setCheckinAndSeason(idx:number,date:string){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
+  function applyClosing(idx:number){
+    const p=plans[idx];
+    const w=totalWeeks(p);
+    const n=(p.parents||0)+(p.kids||0);
+    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
+    const factor=Math.min(w,4)/4;
+    const e=10*factor;const ep=(Number.isInteger(e)?e:e.toFixed(1))+"만";
+    const wk=w<4?` · ${w}주 적용`:"";
+    const line={id:Date.now(),name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${ep}×${n}명${wk})`,amount:Math.round(10*factor*n)*10000};
+    const kept=p.discounts.filter(d=>!d.name.startsWith("다온맘 마감임박"));
+    up(idx,{discounts:[...kept,line]});
+  }
   function applyDaon(idx:number,cash:boolean){
     const p=plans[idx];
     const w=totalWeeks(p);
@@ -852,6 +864,7 @@ export default function EstimateCalc(){
             <span style={{display:"flex",gap:4}}>
               <button style={{...addBtnS,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,true)}>💛 다온맘 현금</button>
               <button style={{...addBtnS,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,false)}>💛 다온맘 카드</button>
+              <button style={{...addBtnS,background:"#fee2e2",border:"1px solid #f87171",color:"#991b1b"}} onClick={()=>applyClosing(idx)}>⏰ 마감임박</button>
               <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
             </span>
           </div>
