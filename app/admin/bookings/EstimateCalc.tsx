@@ -539,6 +539,25 @@ function lookup(t:AccomLocal,r:string,w:number,p:number,k:number):P3|null{
   const e=C9[`${r}-${w}-${p}-${k}`];if(e)return e;if(w===1){const e2=C9[`${r}-2-${p}-${k}`];if(e2)return half(e2);}return null;
 }
 function pickPrice(e:P3,s:Season):number{ return s==="off"?e[1]:s==="peak"?e[2]:e[0]; }
+/* 주 시작일 기준 혼합 시즌: 각 주(체크인+7i)의 시즌 판정. 섞이면 {off,peak} 주수 반환 */
+function seasonMix(checkin:string,w:number):{off:number;peak:number}|null{
+  if(!checkin||!w||w<1) return null;
+  let off=0,peak=0;
+  for(let i=0;i<w;i++){
+    const d=new Date(checkin+"T00:00:00"); d.setDate(d.getDate()+i*7);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    if(isPeak(ds)) peak++; else off++;
+  }
+  return (off>0&&peak>0)?{off,peak}:null;
+}
+/* 혼합 시즌 가격: 주당가(해당 주수 시즌가/주수) × 시즌별 주수 합 */
+function blendPrice(e:P3,checkin:string,w:number,season:Season):{price:number;mix:{off:number;peak:number}|null}{
+  if(season==="list") return {price:e[0],mix:null};
+  const mix=seasonMix(checkin,w);
+  if(!mix) return {price:pickPrice(e,season),mix:null};
+  const offWk=Math.round(e[1]/w), peakWk=Math.round(e[2]/w);
+  return {price:offWk*mix.off+peakWk*mix.peak,mix};
+}
 function won(n:number){return n.toLocaleString("ko-KR")+"원";}
 
 interface ExtraItem{id:number;name:string;amount:number;}
@@ -573,6 +592,7 @@ interface ComboBreakdown{
 interface CalcResult{
   listPrice:number; seasonPrice:number; extraSum:number; discountSum:number;
   finalPrice:number; saving:number;
+  mix?:{off:number;peak:number}|null;
   breakdown?:{ dh:ComboBreakdown; sub:ComboBreakdown };
 }
 
@@ -587,18 +607,28 @@ function calcPlan(p:PlanState):CalcResult|null{
     const subFour = lookup(subType,p.subRoom,4,p.parents,p.kids);
     if(!dhFour||!subFour) return null;
     const sIdx = p.season==="off"?1:p.season==="peak"?2:0;
-    const dhWeekly = Math.round(dhFour[sIdx]/4);
-    const subWeekly = Math.round(subFour[sIdx]/4);
     const dhWeeklyList = Math.round(dhFour[0]/4);
     const subWeeklyList = Math.round(subFour[0]/4);
-    const dhPrice = dhWeekly*p.dhWeeks;
-    const subPrice = subWeekly*p.subWeeks;
+    // 구간별 주 시작일로 시즌 판정 (드하 먼저 → 서브 숙소)
+    const wkOf=(four:P3,ds:string)=>Math.round(four[p.season==="list"?0:(isPeak(ds)?2:1)]/4);
+    const dAt=(base:string,off:number)=>{const t=new Date(base+"T00:00:00");t.setDate(t.getDate()+off*7);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;};
+    let dhPrice=0, subPrice=0, mixOff=0, mixPeak=0;
+    if(p.checkin&&p.season!=="list"){
+      for(let i=0;i<p.dhWeeks;i++){const ds=dAt(p.checkin,i);dhPrice+=wkOf(dhFour,ds);isPeak(ds)?mixPeak++:mixOff++;}
+      for(let i=0;i<p.subWeeks;i++){const ds=dAt(p.checkin,p.dhWeeks+i);subPrice+=wkOf(subFour,ds);isPeak(ds)?mixPeak++:mixOff++;}
+    }else{
+      dhPrice=Math.round(dhFour[sIdx]/4)*p.dhWeeks;
+      subPrice=Math.round(subFour[sIdx]/4)*p.subWeeks;
+    }
+    const comboMix=(mixOff>0&&mixPeak>0)?{off:mixOff,peak:mixPeak}:null;
+    const dhWeekly=p.dhWeeks?Math.round(dhPrice/p.dhWeeks):0;
+    const subWeekly=p.subWeeks?Math.round(subPrice/p.subWeeks):0;
     const seasonPrice = dhPrice+subPrice;
     const listPrice = dhWeeklyList*p.dhWeeks + subWeeklyList*p.subWeeks;
     const finalPrice = seasonPrice+extraSum-discountSum;
     return {
       listPrice, seasonPrice, extraSum, discountSum, finalPrice,
-      saving:listPrice-finalPrice,
+      saving:listPrice-finalPrice, mix:comboMix,
       breakdown:{
         dh:{weeks:p.dhWeeks,weekly:dhWeekly,price:dhPrice,label:"드림하우스",room:p.dhRoom},
         sub:{weeks:p.subWeeks,weekly:subWeekly,price:subPrice,label:subLabel,room:p.subRoom},
@@ -609,9 +639,10 @@ function calcPlan(p:PlanState):CalcResult|null{
   const e=lookup(p.accom,p.roomType,p.weeks,p.parents,p.kids);
   if(!e) return null;
   const listPrice=e[0];
-  const seasonPrice=pickPrice(e,p.season);
+  const bl=blendPrice(e,p.checkin,p.weeks,p.season);
+  const seasonPrice=bl.price;
   const finalPrice=seasonPrice+extraSum-discountSum;
-  return {listPrice,seasonPrice,extraSum,discountSum,finalPrice,saving:listPrice-finalPrice};
+  return {listPrice,seasonPrice,extraSum,discountSum,finalPrice,saving:listPrice-finalPrice,mix:bl.mix};
 }
 
 export default function EstimateCalc(){
@@ -936,7 +967,7 @@ export default function EstimateCalc(){
 
         {/* 시즌가 */}
         <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",fontSize:14}}>
-          <span style={{color:"#374151"}}>{seasonLabel[plan.season]} 가격</span>
+          <span style={{color:"#374151"}}>{r.mix?`혼합 시즌 (비수기 ${r.mix.off}주 + 성수기 ${r.mix.peak}주)`:seasonLabel[plan.season]+" 가격"}</span>
           <span style={{fontWeight:600,color:"#1a1a2e"}}>{won(r.seasonPrice)}</span>
         </div>
 
