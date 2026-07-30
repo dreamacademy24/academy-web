@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
+import { fetchDeployedHolidays, holidaysInRange, HOLIDAY_GUEST_NOTICE, type HolidayItem } from "@/lib/holidays";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
@@ -611,8 +612,12 @@ function InvoicePageInner(){
     }
   })();},[a1CI,a1W,a2W,cm,a1T,a2T]);
   const overallCI=a1CI;
+  /* ── 체류 기간 휴무일 (배포된 휴일, 인보이스에 자동 표시 — 날짜 변경 시 갱신) ── */
+  const [allHolidays,setAllHolidays]=useState<HolidayItem[]>([]);
+  useEffect(()=>{fetchDeployedHolidays().then(setAllHolidays);},[]);
   // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
   const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
+  const stayHolidays=holidaysInRange(allHolidays,overallCI,overallCO);
   const coTimeText=lateCheckout?"22:30pm":"12noon"; // 체크아웃 시간 표기
   async function syncLateCheckout(v:boolean){
     setLateCheckout(v);
@@ -1914,6 +1919,13 @@ function InvoicePageInner(){
         {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
       </tbody></table>
       <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>}
+
+      {stayHolidays.length>0&&<div className="is"><div className="ist" style={{color:"#b45309",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Holiday Notice · 휴무일 안내</div>
+        <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:13,lineHeight:1.8,color:"#78350f"}}>
+          <div style={{fontWeight:800,marginBottom:4}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
+          <div style={{fontWeight:700}}>{stayHolidays.map(h=>{const d=new Date(h.date+"T00:00:00");const DOW=["일","월","화","수","목","금","토"];return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})${h.name?" "+h.name:""}`;}).join(" · ")}</div>
+          <div style={{fontSize:12,marginTop:6,color:"#92400e"}}>{HOLIDAY_GUEST_NOTICE}</div>
+        </div></div>}
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
