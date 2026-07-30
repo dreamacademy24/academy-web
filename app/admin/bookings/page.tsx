@@ -178,6 +178,7 @@ export default function AdminBookingsPage(){
   const [authed,setAuthed]=useState(false);
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
+  const [listAgency,setListAgency]=useState<"전체"|"다온맘">("전체");
   const [listPeriod,setListPeriod]=useState<"현재"|"지난"|"전체">("현재");
   const [listSearch,setListSearch]=useState("");
   const [confirmFilter]=useState("전체");
@@ -199,7 +200,7 @@ export default function AdminBookingsPage(){
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const [showAllCols,setShowAllCols]=useState(false); // 확정예약 전체 컬럼 토글
   const [assignees,setAssignees]=useState<string[]>([]);
-  const statusFilters=["전체","접수","인보이스발행","영수증발행","완료"];
+  const statusFilters=["전체","접수","인보이스발행","영수증발행","완료","취소"];
 
   /* ── STEP 22: 예약 유형 선택 모달 ── */
   const [showNewBooking,setShowNewBooking]=useState(false);
@@ -772,7 +773,8 @@ export default function AdminBookingsPage(){
     return "9999-12-31";
   }
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
-  const statusFiltered=filter==="전체"?bookings.filter(b=>b.status!=="완료"):bookings.filter(b=>b.status===filter);
+  const _stBase=filter==="전체"?bookings.filter(b=>b.status!=="완료"&&!String(b.status||"").includes("취소")):filter==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")):bookings.filter(b=>b.status===filter);
+  const statusFiltered=listAgency==="다온맘"?_stBase.filter(b=>b.agency==="다온맘"):_stBase;
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
   const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
@@ -1028,7 +1030,8 @@ export default function AdminBookingsPage(){
 
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
-        {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({bookings.filter(b=>b.status===t).length})</>}</button>)}
+        {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} style={t==="취소"?{color:"#b91c1c"}:undefined} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({t==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")).length:bookings.filter(b=>b.status===t).length})</>}</button>)}
+        <button className={`sub-tab${listAgency==="다온맘"?" ac":""}`} style={{background:listAgency==="다온맘"?"#f59e0b":"#fef3c7",color:listAgency==="다온맘"?"#fff":"#92400e",fontWeight:800}} onClick={()=>setListAgency(listAgency==="다온맘"?"전체":"다온맘")}>💛 다온맘만 ({bookings.filter(b=>b.agency==="다온맘").length})</button>
         <span style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           <input type="text" placeholder="🔍 예약자, 학생, 예약번호, 숙소..." value={listSearch} onChange={e=>setListSearch(e.target.value)} style={{fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:220,outline:"none"}}/>
           {listSearch&&<button onClick={()=>setListSearch("")} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#9ca3af",padding:"2px 4px"}}>✕</button>}
