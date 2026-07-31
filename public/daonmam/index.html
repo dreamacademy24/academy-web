@@ -3672,9 +3672,10 @@
       PP.forEach(p => {
         if (!jpD.prices[p] || !c9D.prices[p]) return;
         const jd = jpD.prices[p]['deluxe'];
+        const h4 = (arr) => Math.round(arr[2] / 2); // 4주가의 절반 = 총 4주 콤보의 각 2주치
         prices[p] = {
-          'ocean': [wk1(jd) + wk1(c9D.prices[p]['ocean']), jd[0] + c9D.prices[p]['ocean'][0]],
-          'pool': [wk1(jd) + wk1(c9D.prices[p]['pool']), jd[0] + c9D.prices[p]['pool'][0]],
+          'ocean': [wk1(jd) + wk1(c9D.prices[p]['ocean']), h4(jd) + h4(c9D.prices[p]['ocean'])],
+          'pool': [wk1(jd) + wk1(c9D.prices[p]['pool']), h4(jd) + h4(c9D.prices[p]['pool'])],
         };
       });
       return { durations: ['2주 (각 1주)', '4주 (각 2주)'], people: PP, rooms: ['ocean', 'pool'], prices };
