@@ -774,7 +774,9 @@ export default function AdminBookingsPage(){
   }
   const isPast=(b:Booking)=>estimateEnd(b)<_todayStr;
   const _stBase=filter==="전체"?bookings.filter(b=>b.status!=="완료"&&!String(b.status||"").includes("취소")):filter==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")):bookings.filter(b=>b.status===filter);
-  const statusFiltered=listAgency==="다온맘"?_stBase.filter(b=>b.agency==="다온맘"):_stBase;
+  // 다온맘 미입금(룸확보 전) 건은 예약내역에서 제외 — 부킹리스트·다온맘 탭에서만 관리 (취소 필터는 예외)
+  const _stBase2=filter==="취소"?_stBase:_stBase.filter(b=>!(b.agency==="다온맘"&&!(Number((b as unknown as Record<string,unknown>).paid_amount)>0)));
+  const statusFiltered=listAgency==="다온맘"?_stBase2.filter(b=>b.agency==="다온맘"):_stBase2;
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
   const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
