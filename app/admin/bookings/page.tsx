@@ -981,7 +981,7 @@ export default function AdminBookingsPage(){
         </div>
         {rows.length===0?<div style={{textAlign:"center",padding:"50px 0",color:"#aaa",fontSize:14}}>아직 다온맘 예약이 없습니다</div>:
         (<div className="tbl-w"><table className="tbl"><thead><tr>
-          <th>순번</th><th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>진행</th><th>액션</th>
+          <th>순번</th><th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>진행</th><th>액션</th><th style={{minWidth:150}}>비고</th>
         </tr></thead><tbody>
           {rows.map((b,ix)=>{
             const unpaid30=(()=>{try{const created=new Date(String(b.created_at)).getTime();const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;return paid<=0&&Date.now()-created>30*60*1000;}catch{return false;}})();
@@ -999,6 +999,12 @@ export default function AdminBookingsPage(){
               {(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?<span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:11.5,fontWeight:800,alignSelf:"center"}}>✅확보</span>:<button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button>}
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>
+            </td>
+            <td onClick={ev=>ev.stopPropagation()}>
+              <input key={b.id+"_"+String((b as unknown as Record<string,unknown>).daon_memo||"")} type="text" defaultValue={String((b as unknown as Record<string,unknown>).daon_memo||"")} placeholder="메모"
+                onBlur={async ev=>{const v=ev.target.value.trim();if(v===String((b as unknown as Record<string,unknown>).daon_memo||""))return;await supabase.from("bookings").update({daon_memo:v||null}).eq("id",b.id);load();}}
+                onKeyDown={ev=>{if(ev.key==="Enter")(ev.target as HTMLInputElement).blur();}}
+                style={{width:150,padding:"6px 8px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
             </td>
           </tr>);})}
         </tbody></table></div>)}
