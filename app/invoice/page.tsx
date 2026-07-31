@@ -1597,7 +1597,7 @@ function InvoicePageInner(){
   {invoiceType==="resort"?(
     <div className="iw">
       <div className="no-print" style={{marginBottom:12}}>
-        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← Back to Bookings</button>
       </div>
       <div className="iv" id="resort-confirmation">
         <div className="it">
@@ -1650,7 +1650,7 @@ function InvoicePageInner(){
         </div>
       </div>
       <div className="pb no-print">
-        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back</button>
+        <button className="pbk" onClick={()=>router.push("/admin/bookings?tab=list")}>← Back</button>
         <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
         <button style={{padding:"12px 24px",background:"#ea580c",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}
           onClick={()=>{const subject=encodeURIComponent("Reservation Confirmation - "+booker.name+" ("+reservationNo+")");const ciLbl=isCommute?"Class Start":"Check-in";const coLbl=isCommute?"Class End":"Check-out";const body=encodeURIComponent("Dear Resort Team,\n\nPlease find the reservation confirmation for:\n\nGuest: "+(booker.englishName||booker.name)+"\nReservation No: "+reservationNo+"\n"+ciLbl+": "+(overallCI||"TBA")+"\n"+coLbl+": "+(overallCO||"TBA")+"\n\nPlease confirm the booking.\n\nBest regards,\nDream Company Philippines");window.open("mailto:?subject="+subject+"&body="+body);}}>
@@ -1661,7 +1661,7 @@ function InvoicePageInner(){
   ):invoiceType==="guest"?(
     <div className="iw">
       <div className="no-print" style={{marginBottom:12}}>
-        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+        <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← Back to Bookings</button>
       </div>
       <div className="iv" id="guest-invoice">
         <div className="it">
@@ -1775,7 +1775,7 @@ function InvoicePageInner(){
         )}
       </div>
       <div className="pb no-print">
-        <button className="pbk" onClick={()=>router.push("/admin/bookings")}>← Back to Bookings</button>
+        <button className="pbk" onClick={()=>router.push("/admin/bookings?tab=list")}>← Back to Bookings</button>
         <button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:10,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("guest-invoice")}>📷 이미지 저장</button>
         <button className="pp" onClick={()=>window.print()}>Print / PDF</button>
       </div>
@@ -1791,7 +1791,7 @@ function InvoicePageInner(){
   </div>
 
   {tab==="invoice"?(<>
-  {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
+  {!preview?(<div className="fw"><div style={{marginBottom:"12px"}}><button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:"13px",fontWeight:600,borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button></div><div className="fh"><h1>인보이스 생성</h1><p>숙소를 선택하면 시즌 요금이 자동 계산됩니다.</p></div>
 
   {/* ── 섹션1: 패키지 견적 (기존 UI 100% 유지) ── */}
   <div className="fs"><h2>{isCommute?"🚶 통학형 학원비":"패키지 견적 계산"}</h2>
@@ -1898,7 +1898,7 @@ function InvoicePageInner(){
   </div>
 
   <button className="bg" onClick={gen}>인보이스 미리보기</button>
-  <a href="/" className="bl">← 홈으로 돌아가기</a>
+  <a href="/admin/bookings?tab=list" className="bl">← 예약내역으로 돌아가기</a>
   </div>):(
 
   /* ── 인보이스 미리보기 ── */
@@ -1977,7 +1977,7 @@ function InvoicePageInner(){
 
       <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
     </div>
-    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings")}>← 예약 목록</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
+    <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
   </div>)}
   </>):(
     /* ── 영수증 탭 ── */
