@@ -1996,6 +1996,7 @@ function InvoicePageInner(){
         {/* 확정 배너 */}
         <div className="no-print" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:8}}>
           <span style={{fontSize:12.5,color:"#065f46",fontWeight:700}}>🔒 확정된 인보이스 기준 · <span style={{color:"#047857"}}>{fmtSavedAt(confirmedAt)}</span></span>
+          <button onClick={()=>router.push("/admin/bookings?tab=list")} style={{padding:"7px 14px",background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>← 예약내역으로</button>
           <button onClick={()=>setTab("invoice")} style={{padding:"7px 14px",background:"#fff",color:"#1a6fc4",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>📄 인보이스 탭으로</button>
         </div>
 
