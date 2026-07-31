@@ -32,7 +32,8 @@ export default function AgenciesPage() {
     ]);
     setAgencies((a.data || []) as Agency[]);
     setPayouts((p.data || []) as Payout[]);
-    setBookings(((b.data || []) as Bk[]).filter(x => !String(x.status || "").includes("취소") && String(x.agency || "").trim() !== "개인"));
+    // 정산 대상 = 영수증 발행(예약 확정) + 금액(final_price) 기록된 예약만 (2026-07-31 메이 지시)
+    setBookings(((b.data || []) as Bk[]).filter(x => !String(x.status || "").includes("취소") && String(x.agency || "").trim() !== "개인" && /영수증발행|결제완료|완료/.test(String(x.status || "")) && Number((x as unknown as Record<string, unknown>).final_price) > 0));
   }, []);
   useEffect(() => { if (ready) load(); }, [ready, load]);
 
