@@ -540,13 +540,19 @@ function lookup(t:AccomLocal,r:string,w:number,p:number,k:number):P3|null{
 }
 function pickPrice(e:P3,s:Season):number{ return s==="off"?e[1]:s==="peak"?e[2]:e[0]; }
 /* 주 시작일 기준 혼합 시즌: 각 주(체크인+7i)의 시즌 판정. 섞이면 {off,peak} 주수 반환 */
+function weekAllPeak(ds:string):boolean{
+  // 주 시작~끝(6일 뒤)이 모두 성수기일 때만 성수기 주 — 걸친 주는 비수기 적용 (2026-07-30 메이 확정)
+  const e=new Date(ds+"T00:00:00"); e.setDate(e.getDate()+6);
+  const es=`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,"0")}-${String(e.getDate()).padStart(2,"0")}`;
+  return isPeak(ds)&&isPeak(es);
+}
 function seasonMix(checkin:string,w:number):{off:number;peak:number}|null{
   if(!checkin||!w||w<1) return null;
   let off=0,peak=0;
   for(let i=0;i<w;i++){
     const d=new Date(checkin+"T00:00:00"); d.setDate(d.getDate()+i*7);
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    if(isPeak(ds)) peak++; else off++;
+    if(weekAllPeak(ds)) peak++; else off++;
   }
   return (off>0&&peak>0)?{off,peak}:null;
 }
@@ -554,7 +560,11 @@ function seasonMix(checkin:string,w:number):{off:number;peak:number}|null{
 function blendPrice(e:P3,checkin:string,w:number,season:Season):{price:number;mix:{off:number;peak:number}|null}{
   if(season==="list") return {price:e[0],mix:null};
   const mix=seasonMix(checkin,w);
-  if(!mix) return {price:pickPrice(e,season),mix:null};
+  if(!mix){
+    // 혼합 아님 — 단, 체크인 있으면 주 단위 판정으로 시즌 재확정 (걸친 주만 있으면 비수기)
+    if(checkin&&w>=1){const allPeak=weekAllPeak(checkin);return {price:pickPrice(e,allPeak?"peak":"off"),mix:null};}
+    return {price:pickPrice(e,season),mix:null};
+  }
   const offWk=Math.round(e[1]/w), peakWk=Math.round(e[2]/w);
   return {price:offWk*mix.off+peakWk*mix.peak,mix};
 }
@@ -610,12 +620,12 @@ function calcPlan(p:PlanState):CalcResult|null{
     const dhWeeklyList = Math.round(dhFour[0]/4);
     const subWeeklyList = Math.round(subFour[0]/4);
     // 구간별 주 시작일로 시즌 판정 (드하 먼저 → 서브 숙소)
-    const wkOf=(four:P3,ds:string)=>Math.round(four[p.season==="list"?0:(isPeak(ds)?2:1)]/4);
+    const wkOf=(four:P3,ds:string)=>Math.round(four[p.season==="list"?0:(weekAllPeak(ds)?2:1)]/4);
     const dAt=(base:string,off:number)=>{const t=new Date(base+"T00:00:00");t.setDate(t.getDate()+off*7);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;};
     let dhPrice=0, subPrice=0, mixOff=0, mixPeak=0;
     if(p.checkin&&p.season!=="list"){
-      for(let i=0;i<p.dhWeeks;i++){const ds=dAt(p.checkin,i);dhPrice+=wkOf(dhFour,ds);isPeak(ds)?mixPeak++:mixOff++;}
-      for(let i=0;i<p.subWeeks;i++){const ds=dAt(p.checkin,p.dhWeeks+i);subPrice+=wkOf(subFour,ds);isPeak(ds)?mixPeak++:mixOff++;}
+      for(let i=0;i<p.dhWeeks;i++){const ds=dAt(p.checkin,i);dhPrice+=wkOf(dhFour,ds);weekAllPeak(ds)?mixPeak++:mixOff++;}
+      for(let i=0;i<p.subWeeks;i++){const ds=dAt(p.checkin,p.dhWeeks+i);subPrice+=wkOf(subFour,ds);weekAllPeak(ds)?mixPeak++:mixOff++;}
     }else{
       dhPrice=Math.round(dhFour[sIdx]/4)*p.dhWeeks;
       subPrice=Math.round(subFour[sIdx]/4)*p.subWeeks;
