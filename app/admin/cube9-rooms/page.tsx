@@ -105,7 +105,9 @@ export default function Cube9Rooms() {
     setIsNew(true);
   }
   function cellBlock(room: string, dateStr: string) {
-    return blocks.find(b => b.room === room && b.ci <= dateStr && b.co >= dateStr) || null;
+    const arr = blocks.filter(b => b.room === room && b.ci <= dateStr && b.co >= dateStr);
+    if (!arr.length) return null;
+    return arr.find(b => b.ci === dateStr) || arr[0];
   }
   function openNew(room: string, dateStr: string) {
     const d = new Date(dateStr + "T00:00:00"); d.setDate(d.getDate() + 1);
