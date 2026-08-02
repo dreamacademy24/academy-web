@@ -2083,16 +2083,28 @@ function InvoicePageInner(){
                   <td style={{padding:"10px 12px",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>✅ 납부 완료 <span style={{fontSize:11,fontWeight:500}}>(누적 {receiptPayments.filter(p=>(p.amount||"").trim()!=="").length}건)</span></td>
                   <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(receiptPaidTotal)}원</td>
                 </tr>
-                {additionalDue>0?(
+                {additionalDue>0&&depositStage&&(
+                  <tr style={{background:"#fff7ed"}}>
+                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 예약금 잔여 <span style={{fontSize:11,fontWeight:500}}>(잔금 납부 시 함께)</span></td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
+                  </tr>
+                )}
+                {additionalDue>0&&!depositStage&&(
                   <tr style={{background:"#fff7ed"}}>
                     <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 추가 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(추가금 = 새 총액 − 기납부액)</span></td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
                   </tr>
-                ):(
+                )}
+                {fp-receiptPaidTotal>0&&(depositStage||additionalDue===0)?(
+                  <tr style={{background:"#eef2ff"}}>
+                    <td style={{padding:"10px 12px",fontWeight:800,color:"#3730a3",boxShadow:"inset 0 0 0 1000px #eef2ff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>📌 잔금 최종 금액 <span style={{fontSize:11,fontWeight:500}}>(총 청구금액 − 납부액{additionalDue>0&&depositStage?" · 예약금 잔여 포함":""})</span></td>
+                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#3730a3",boxShadow:"inset 0 0 0 1000px #eef2ff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(fp-receiptPaidTotal)}원</td>
+                  </tr>
+                ):fp-receiptPaidTotal<=0?(
                   <tr style={{background:"#f0fdf4"}}>
                     <td colSpan={2} style={{padding:"10px 12px",fontWeight:800,color:"#15803d",textAlign:"center",boxShadow:"inset 0 0 0 1000px #f0fdf4",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>🎉 전액 납부 완료</td>
                   </tr>
-                )}
+                ):null}
               </>):effectiveFullPayment?(
                 <tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:13,textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원 즉시 납부</td></tr>
               ):(<>
