@@ -593,17 +593,26 @@ function InvoicePageInner(){
         const blocks=(Array.isArray(st?.value)?st!.value:[]) as {room:string;ci:string;co:string;booking_id?:string}[];
         const blk=blocks.filter(x=>grp.includes(x.room)&&x.booking_id!==bookingId&&x.ci<cnSeg[1]&&cnSeg[0]<x.co);
         const linked=new Set(blocks.map(x=>x.booking_id).filter(Boolean));
-        const {data:bks}=await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status").ilike("accom_type","%큐브%");
-        let cnt=blk.length;
+        const {data:bks}=await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status,paid_amount").ilike("accom_type","%큐브%");
+        // 날짜별 실제 동시 점유로 판정 (미입금 접수 건은 제외)
+        const ivs:{ci:string;co:string}[]=blk.map(x=>({ci:String(x.ci),co:String(x.co)}));
         for(const b of (bks||[])){
           if(b.id===bookingId||String(b.status||"").includes("취소")||linked.has(b.id))continue;
           if((b.cn_room_type||"디럭스").includes("풀")!==isFA)continue;
+          const confirmed=Number((b as {paid_amount?:number}).paid_amount||0)>0||/영수증발행|결제완료|완료|인보이스발행/.test(String(b.status||""));
+          if(!confirmed)continue;
           let bci=b.checkin_date,bco=b.checkout_date;
           if(b.seg1_type==="cubenine"){bci=b.seg1_checkin;bco=b.seg1_checkout;}
           else if(b.seg2_type==="cubenine"){bci=b.seg2_checkin;bco=b.seg2_checkout;}
-          if(bci&&bco&&String(bci)<cnSeg[1]&&cnSeg[0]<String(bco))cnt++;
+          if(bci&&bco&&String(bci)<cnSeg[1]&&cnSeg[0]<String(bco))ivs.push({ci:String(bci),co:String(bco)});
         }
-        if(cnt>=cap)warns.push(`큐브나인 ${isFA?"풀억세스":"디럭스오션"} 만실 (${cnt}/${cap}팀)`);
+        const _pad=(n:number)=>String(n).padStart(2,"0");
+        const fullD:string[]=[];
+        {const d=new Date(cnSeg[0]+"T00:00:00");const end=new Date(cnSeg[1]+"T00:00:00");
+         while(d<end){const dsr=`${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}`;
+           const n=ivs.filter(v=>v.ci<=dsr&&dsr<v.co).length;
+           if(n>=cap)fullD.push(dsr);d.setDate(d.getDate()+1);}}
+        if(fullD.length)warns.push(`큐브나인 ${isFA?"풀억세스":"디럭스오션"} 만실 날짜: `+fullD.slice(0,5).map(x=>x.slice(5)).join(", ")+(fullD.length>5?` 외 ${fullD.length-5}일`:"")+` (정원 ${cap}팀)`);
       }
     }catch{/* 확인 실패 시 차단하지 않음 */}
     if(warns.length){
