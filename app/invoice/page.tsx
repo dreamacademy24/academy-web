@@ -16,6 +16,22 @@ function isPeak(d: string): boolean {
   if (y === 2028) return m===1||(m===2&&day<=28)||(m===7&&day>=15)||m===8||(m===12&&day>=15);
   return (m===7&&day>=15)||m===8||(m===12&&day>=15)||m===1||m===2;
 }
+/* 주 전체(7일)가 성수기여야 성수기 주 — 주별 시즌 판정 */
+function weekAllPeak(ds: string): boolean {
+  if (!ds) return false;
+  const dt = new Date(ds + "T00:00:00"); dt.setDate(dt.getDate() + 6);
+  const es = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  return isPeak(ds) && isPeak(es);
+}
+function seasonMixInv(ci: string, w: number): { off: number; peak: number } {
+  let off = 0, peak = 0;
+  for (let i = 0; i < w; i++) {
+    const dt = new Date(ci + "T00:00:00"); dt.setDate(dt.getDate() + i * 7);
+    const ds = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    if (weekAllPeak(ds)) peak++; else off++;
+  }
+  return { off, peak };
+}
 function addDays(d: string, n: number): string {
   if (!d) return "";
   const dt = new Date(d);
@@ -1221,22 +1237,28 @@ function InvoicePageInner(){
     }
     if(cm==="single"){
       const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
-      const pk=isPeak(a1CI);const price=sp(e,pk);
+      const mx=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
+      const price=mx.peak===0?e[1]:mx.off===0?e[2]:Math.round((e[1]/a1W*mx.off+e[2]/a1W*mx.peak)/10000)*10000;
+      const pk=mx.peak>0&&mx.off===0;
+      const seasonLb=mx.peak===0?"비수기":mx.off===0?"성수기":`혼합 (비수기 ${mx.off}주+성수기 ${mx.peak}주)`;
       if(ex1Cnt>0)extras.push({label:`추가 인원 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
       const extTotal=extras.reduce((s,x)=>s+x.price,0);
-      return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:pk?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK}]};
+      return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:seasonLb,accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK}]};
     }
     const tw=a1W+a2W;
     const e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);if(!e1||!e2)return null;
-    const pk1=isPeak(a1CI),pk2=isPeak(a2CI);
-    const f1=sp(e1,pk1),f2=sp(e2,pk2);
-    const p1=Math.round(f1*(a1W/tw)),p2=Math.round(f2*(a2W/tw));
+    const mx1=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
+    const mx2=a2CI?seasonMixInv(a2CI,a2W):{off:a2W,peak:0};
+    const segPrice=(e:P3,mx:{off:number;peak:number})=>Math.round((e[1]/tw*mx.off+e[2]/tw*mx.peak)/10000)*10000;
+    const p1=segPrice(e1,mx1),p2=segPrice(e2,mx2);
+    const f1=sp(e1,mx1.peak>mx1.off),f2=sp(e2,mx2.peak>mx2.off);
+    const sLb=(mx:{off:number;peak:number})=>mx.peak===0?"비수기":mx.off===0?"성수기":`혼합 (비${mx.off}+성${mx.peak})`;
     if(ex1Cnt>0)extras.push({label:`${al(a1T,a1R)} 추가 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
     if(ex2Cnt>0)extras.push({label:`${al(a2T,a2R)} 추가 ${ex2Cnt}명 × 1주`,price:extraRate(a2T)*ex2Cnt});
     const extTotal=extras.reduce((s,x)=>s+x.price,0);
     return{total:p1+p2+extTotal,extras,items:[
-      {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:pk1?"성수기":"비수기",accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK},
-      {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:pk2?"성수기":"비수기",accom:a2T,roomType:a2R,weeks:a2W,parents:cP,kids:cK},
+      {label:al(a1T,a1R)+" "+a1W+"주",price:p1,fullPrice:f1,ratio:a1W/tw,totalW:tw,ci:a1CI,co:a1CO,season:sLb(mx1),accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK},
+      {label:al(a2T,a2R)+" "+a2W+"주",price:p2,fullPrice:f2,ratio:a2W/tw,totalW:tw,ci:a2CI,co:a2CO,season:sLb(mx2),accom:a2T,roomType:a2R,weeks:a2W,parents:cP,kids:cK},
     ]};
   },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt,isCommute,dhOnly,students]);
 
@@ -1493,8 +1515,13 @@ function InvoicePageInner(){
     const n=(cP||0)+(cK||0);
     if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
     if(!a1CI){alert("체크인 날짜를 입력해주세요 (입실 시기·시즌 자동 판정).");return;}
-    const is27=a1CI>="2027-03-01"&&a1CI<="2028-02-29";
-    const pk=isPeak(a1CI);
+    /* 얼리버드·시즌 = 체류 기준 (체류 중간점이 27.3~28.2면 얼리버드, 성수기 주가 과반이면 성수기 단가) */
+    const _co=(cm==="combo"?a2CO:a1CO)||a1CI;
+    const _midN=Math.floor((new Date(_co).getTime()-new Date(a1CI).getTime())/864e5/2);
+    const mid=addDays(a1CI,Math.max(0,_midN));
+    const is27=mid>="2027-03-01"&&mid<="2028-02-29";
+    const _mx=seasonMixInv(a1CI,Math.max(1,w));
+    const pk=_mx.peak>_mx.off;
     const factor=Math.min(w,4)/4;
     const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
     const _wk=w<4?` · ${w}주 적용`:"";
@@ -2083,28 +2110,16 @@ function InvoicePageInner(){
                   <td style={{padding:"10px 12px",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>✅ 납부 완료 <span style={{fontSize:11,fontWeight:500}}>(누적 {receiptPayments.filter(p=>(p.amount||"").trim()!=="").length}건)</span></td>
                   <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(receiptPaidTotal)}원</td>
                 </tr>
-                {additionalDue>0&&depositStage&&(
-                  <tr style={{background:"#fff7ed"}}>
-                    <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 예약금 잔여 <span style={{fontSize:11,fontWeight:500}}>(잔금 납부 시 함께)</span></td>
-                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
-                  </tr>
-                )}
-                {additionalDue>0&&!depositStage&&(
+                {additionalDue>0?(
                   <tr style={{background:"#fff7ed"}}>
                     <td style={{padding:"10px 12px",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>💰 추가 결제 필요 <span style={{fontSize:11,fontWeight:500}}>(추가금 = 새 총액 − 기납부액)</span></td>
                     <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#c2410c",boxShadow:"inset 0 0 0 1000px #fff7ed",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(additionalDue)}원</td>
                   </tr>
-                )}
-                {fp-receiptPaidTotal>0&&(depositStage||additionalDue===0)?(
-                  <tr style={{background:"#eef2ff"}}>
-                    <td style={{padding:"10px 12px",fontWeight:800,color:"#3730a3",boxShadow:"inset 0 0 0 1000px #eef2ff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>📌 잔금 최종 금액 <span style={{fontSize:11,fontWeight:500}}>(총 청구금액 − 납부액{additionalDue>0&&depositStage?" · 예약금 잔여 포함":""})</span></td>
-                    <td style={{padding:"10px 12px",textAlign:"right",fontWeight:800,color:"#3730a3",boxShadow:"inset 0 0 0 1000px #eef2ff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(fp-receiptPaidTotal)}원</td>
-                  </tr>
-                ):fp-receiptPaidTotal<=0?(
+                ):(
                   <tr style={{background:"#f0fdf4"}}>
                     <td colSpan={2} style={{padding:"10px 12px",fontWeight:800,color:"#15803d",textAlign:"center",boxShadow:"inset 0 0 0 1000px #f0fdf4",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>🎉 전액 납부 완료</td>
                   </tr>
-                ):null}
+                )}
               </>):effectiveFullPayment?(
                 <tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:13,textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원 즉시 납부</td></tr>
               ):(<>

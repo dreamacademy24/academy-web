@@ -722,14 +722,17 @@ export default function EstimateCalc(){
     const n=(p.parents||0)+(p.kids||0);
     if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
     const ci=(p.checkin||"").slice(0,10);
-    const is27=ci>="2027-03-01"&&ci<="2028-02-29";
+    /* 얼리버드 = 체류 중간점 기준 (2/28 입실 등 경계 케이스 포함) */
+    const _mid=(()=>{if(!ci)return ci;const dt=new Date(ci+"T00:00:00");dt.setDate(dt.getDate()+Math.floor(w*7/2));return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;})();
+    const is27=_mid>="2027-03-01"&&_mid<="2028-02-29";
     if(!ci){alert("체크인 날짜를 입력하면 입실 시기(얼리버드 대상)가 자동 판정돼요.");}
     const season=p.season;
     if(season==="list"){alert("시즌(비수기/성수기)을 먼저 선택해주세요.");return;}
     const factor=Math.min(w,4)/4;
     const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
     const _wk=w<4?` · ${w}주 적용`:"";
-    const eb=is27?(season==="peak"?10:20):0;
+    const _sm=ci?seasonMix(ci,w):null;
+    const eb=is27?((_sm?_sm.peak>_sm.off:season==="peak")?10:20):0;
     const lines:{name:string;amount:number}[]=[];
     if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${_ep(eb)}×${n}명${_wk})`,amount:Math.round(eb*factor*n)*10000});
     if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
