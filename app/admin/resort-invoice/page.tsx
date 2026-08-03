@@ -69,6 +69,23 @@ export default function ResortInvoicePage() {
 
   const [resort, setResort] = useState<Resort>("jaypark");
   const [bookings, setBookings] = useState<BookingLite[]>([]);
+  /* 예약 변경 감지: 인보이스 기간 vs 현재 예약의 해당 리조트 구간 */
+  const curSeg = (b: BookingLite): [string, string] => {
+    const kw = resort === "jaypark" ? "jaypark" : "cubenine";
+    let s = (b.checkin_date || "").slice(0, 10), e = (b.checkout_date || "").slice(0, 10);
+    if ((b.seg1_type || "") === kw && b.seg1_checkin) { s = b.seg1_checkin.slice(0, 10); e = (b.seg1_checkout || e).slice(0, 10); }
+    else if ((b.seg2_type || "") === kw && b.seg2_checkin) { s = b.seg2_checkin.slice(0, 10); e = (b.seg2_checkout || e).slice(0, 10); }
+    return [s, e];
+  };
+  const invChange = (v: InvRow): string | null => {
+    if (!v.booking_id) return null;
+    const b = bookings.find(x => x.id === v.booking_id);
+    if (!b) return null;
+    if (/취소/.test(b.status || "")) return "예약 취소됨";
+    const [s, e] = curSeg(b);
+    if (s && e && ((v.period_start || "").slice(0, 10) !== s || (v.period_end || "").slice(0, 10) !== e)) return `현재 예약 ${s} ~ ${e}`;
+    return null;
+  };
   const [invoices, setInvoices] = useState<InvRow[]>([]);
   const [selBooking, setSelBooking] = useState("");
   const [guest, setGuest] = useState("");           // Reservation Name (영문)
@@ -463,9 +480,9 @@ ${signature}`);
         <h2>1. 예약 불러오기 (선택)</h2>
         <select className="fsl" value={selBooking} onChange={e => pickBooking(e.target.value)}>
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
-          {bookings.filter(b => !invoices.some(v => v.booking_id === b.id && v.email_sent_at)).map(b => (
+          {bookings.filter(b => !invoices.some(v => v.booking_id === b.id && v.email_sent_at && !invChange(v))).map(b => (
             <option key={b.id} value={b.id}>
-              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}
+              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}{invoices.some(v => v.booking_id === b.id && v.email_sent_at && invChange(v)) ? " · 🔁 변경됨 — 재발송 필요" : ""}
             </option>
           ))}
         </select>
@@ -599,7 +616,7 @@ ${signature}`);
                 <td style={{ fontWeight: 800, color: "#92400e" }}>{_ix + 1}</td><td><button onClick={() => setPreview(v)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit", textDecoration: "underline" }}>{v.invoice_no}</button></td>
                 <td style={{ fontWeight: 700 }}>{v.guest_name}</td>
                 <td>{v.room_type}</td>
-                <td>{v.period_start} ~ {v.period_end}</td>
+                <td>{v.period_start} ~ {v.period_end}{(() => { const ch = invChange(v); return ch ? <div title={ch} style={{ display: "inline-block", marginLeft: 6, background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", borderRadius: 6, padding: "2px 7px", fontSize: 10.5, fontWeight: 800 }}>⚠ {ch}</div> : null; })()}</td>
                 <td>{v.nights}</td>
                 <td style={{ fontWeight: 800 }}>{num(v.amount)} {v.currency}</td>
                 <td>{v.status === "paid"
