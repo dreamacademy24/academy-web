@@ -17,6 +17,20 @@ interface InvRow extends ResortInvDocRow {
 function fmtMoney(n: number, cur: string) {
   return (cur === "PHP" ? "₱" : "₩") + Number(n || 0).toLocaleString();
 }
+function downloadExcel(rows: InvRow[]) {
+  const heads = ["인보이스 번호","리조트","손님(영문)","투숙자(한글)","투숙자(영문)","룸타입","체크인","체크아웃","박수","금액","통화","컨펌넘버","상태","결제일","이메일발송","메모"];
+  const esc = (v: unknown) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const lines = [heads.join(",")];
+  rows.forEach(r => {
+    const x = r as unknown as { guests_kr?: string; guests_en?: string };
+    lines.push([r.invoice_no, RESORT_LABEL[r.resort] || r.resort, r.guest_name, x.guests_kr || "", x.guests_en || "", r.room_type, r.period_start, r.period_end, r.nights, r.amount, r.currency, r.confirm_no || "", r.status === "paid" ? "결제완료" : "미결제", r.paid_date || "", (r as unknown as { email_sent_at?: string }).email_sent_at ? "발송" : "", r.paid_memo || ""].map(esc).join(","));
+  });
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "리조트_결제내역_" + new Date().toISOString().slice(0, 10).replace(/-/g, "") + ".csv";
+  a.click(); URL.revokeObjectURL(a.href);
+}
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -190,6 +204,7 @@ export default function ResortPaymentsPage() {
           {months.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <span style={{ marginLeft: "auto", fontSize: 12.5, color: "#6b7280", fontWeight: 700 }}>{filtered.length}건</span>
+        <button className="chip" style={{ background: "#166534", color: "#fff", borderColor: "#166534", fontWeight: 800 }} onClick={() => downloadExcel(filtered)}>📥 엑셀 다운</button>
       </div>
 
       <div className="sumbar">
