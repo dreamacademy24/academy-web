@@ -37,7 +37,7 @@ function deriveAcademyEnd(checkin: string, weeks: number | string | null | undef
   return addDaysISO(start, (w - 1) * 7 + 4);
 }
 
-const DH_WEEKS = [1, 2, 3, 4, 6, 8, 10];
+const DH_WEEKS = [2, 3, 4, 6, 8, 10];
 const CN_PERIODS = ["1주", "2주", "4주", "6일"];
 
 // BookingType → 표시할 패키지 박스 accom 키 배열

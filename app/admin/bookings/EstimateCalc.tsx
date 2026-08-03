@@ -849,7 +849,7 @@ export default function EstimateCalc(){
                 </select></label>
               <label style={{flex:1}}><span style={lbl}>기간</span>
                 <select style={sel} value={plan.dhWeeks} onChange={e=>up(idx,{dhWeeks:Number(e.target.value)})}>
-                  {Array.from({length:12},(_,i)=>i+1).map(w=><option key={w} value={w}>{w}주</option>)}
+                  {Array.from({length:12},(_,i)=>i+1).filter(w=>w>=2).map(w=><option key={w} value={w}>{w}주</option>)}
                 </select></label>
             </div>
             {/* 제이파크 or 큐브나인 */}

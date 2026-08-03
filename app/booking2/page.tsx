@@ -262,7 +262,7 @@ export default function BookingNonPackagePage() {
             <div className="fg" style={{ marginBottom: 10 }}>
               <label className="fl">숙소 이용 기간<span className="req">*</span></label>
               <select className="fsl" value={weeks} onChange={e => setWeeks(Number(e.target.value))}>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(w => <option key={w} value={w}>{w}주</option>)}
+                {Array.from({ length: 12 }, (_, i) => i + 1).filter(w => bType !== "dh_only" || w >= 2).map(w => <option key={w} value={w}>{w}주</option>)}
               </select>
             </div>
           )}
