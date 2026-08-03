@@ -2061,7 +2061,7 @@ function InvoicePageInner(){
                 <option value="페이팔">페이팔</option>
               </select>
               <input type="date" value={p.date} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,date:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
-              <input type="text" placeholder="예: 1,000,000" value={p.amount} onChange={e=>setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,amount:e.target.value}:x))} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
+              <input type="text" inputMode="numeric" placeholder="예: 1,000,000" value={p.amount} onChange={e=>{const raw=e.target.value.replace(/[^\d]/g,"");const fmtV=raw?Number(raw).toLocaleString():"";setReceiptPayments(prev=>prev.map(x=>x.id===p.id?{...x,amount:fmtV}:x));}} style={{width:"100%",padding:"9px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"}}/>
               <button onClick={()=>setReceiptPayments(prev=>{const next=prev.filter(x=>x.id!==p.id);return next.length>0?next:[{id:Date.now(),type:"예약금",date:todayStr,amount:""}];})} style={{background:"#fee2e2",color:"#dc2626",border:"none",borderRadius:6,padding:"8px 12px",cursor:"pointer",fontSize:14}}>✕</button>
             </div>
           ))}
