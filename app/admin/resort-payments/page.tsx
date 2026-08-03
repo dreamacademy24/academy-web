@@ -194,8 +194,8 @@ export default function ResortPaymentsPage() {
 
       <div className="sumbar">
         {Object.entries(sums).map(([cur, v]) => (
-          <div key={cur} className="sumcard">
-            <span style={{ color: "#92400e", fontWeight: 700 }}>미결제</span><b>{fmtMoney(v.unpaid, cur)}</b>
+          <div key={cur} className="sumcard" style={{ background: "#fef2f2", border: "2px solid #fca5a5", padding: "14px 26px" }}>
+            <span style={{ color: "#b91c1c", fontWeight: 900, fontSize: 14 }}>미결제</span><b style={{ fontSize: 28, color: "#dc2626" }}>{fmtMoney(v.unpaid, cur)}</b>
           </div>
         ))}
         {Object.entries(sums).map(([cur, v]) => (
@@ -208,7 +208,7 @@ export default function ResortPaymentsPage() {
       <div className="card">
         {loading ? <div className="empty">불러오는 중...</div> : filtered.length === 0 ? <div className="empty">내역이 없습니다. 인보이스 생성 페이지에서 먼저 인보이스를 만들어주세요.</div> : (
           <div className="tblw"><table className="tbl"><thead><tr>
-            <th style={{ width: 34 }}>#</th><th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>기간</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
+            <th style={{ width: 34 }}>#</th><th>번호 (클릭=인보이스)</th><th>리조트</th><th>손님</th><th>체크인</th><th>체크아웃</th><th>박</th><th>투숙자</th><th>금액</th><th>컨펌넘버</th><th>상태</th><th>결제일</th><th>영수증</th><th>메모</th><th style={{ width: 110 }}></th>
           </tr></thead><tbody>
             {filtered.map((r, _ix) => (
               <tr key={r.id}>
@@ -216,8 +216,16 @@ export default function ResortPaymentsPage() {
                   <button onClick={() => setViewInv(r)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, textDecoration: "underline" }}>{r.invoice_no}</button>
                 </td>
                 <td>{RESORT_LABEL[r.resort] || r.resort}</td>
-                <td style={{ fontWeight: 700 }}>{r.guest_name}</td>
-                <td style={{ whiteSpace: "nowrap" }}>{r.period_start} ~ {r.period_end} ({r.nights}박)</td>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  {(() => { const kr = String((r as unknown as { guests_kr?: string }).guests_kr || "").split(",")[0]?.trim(); return kr ? <div style={{ fontWeight: 800 }}>{kr}</div> : null; })()}
+                  <div style={{ fontWeight: 700, fontSize: 11.5, color: "#475569" }}>{r.guest_name}</div>
+                </td>
+                <td style={{ whiteSpace: "nowrap", fontWeight: 700 }}>{r.period_start}</td>
+                <td style={{ whiteSpace: "nowrap", fontWeight: 700 }}>{r.period_end}</td>
+                <td style={{ fontWeight: 800, color: "#0f766e" }}>{r.nights}박</td>
+                <td style={{ maxWidth: 170 }} title={String((r as unknown as { guests_en?: string }).guests_en || "")}>
+                  <div style={{ fontSize: 11.5, color: "#334155", lineHeight: 1.5, whiteSpace: "normal" }}>{String((r as unknown as { guests_kr?: string }).guests_kr || "-")}</div>
+                </td>
                 <td style={{ fontWeight: 800 }}>{fmtMoney(r.amount, r.currency)}</td>
                 <td onClick={() => setConfirmNo(r)} style={{ cursor: "pointer", whiteSpace: "nowrap" }} title="클릭해서 입력/수정">
                   {r.confirm_no
