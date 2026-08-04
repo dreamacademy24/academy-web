@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
 /* ── Class Schedule Builder (weekly base + per-day override) ──
@@ -157,7 +157,7 @@ export default function ClassSchedule() {
           const es = m[i] || [];
           const groups: Record<string, Ev[]> = {}; const ones: Ev[] = [];
           es.forEach(e => { if (e.kind === "Group") { const k = e.subj + "|" + e.room + "|" + (e.cover || ""); (groups[k] = groups[k] || []).push(e) } else ones.push(e) });
-          const cells: JSX.Element[] = [];
+          const cells: ReactNode[] = [];
           Object.entries(groups).forEach(([k, arr], gi) => {
             const [subj, room, cov] = k.split("|");
             cells.push(<div key={"g" + gi}><span className="pill pg">GROUP</span><b>{subj}</b><span className="rm"> {room}</span> — {arr.map(x => x.who).join(", ")}{cov && <span className="cov"> ({cov})</span>}</div>);
