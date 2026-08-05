@@ -104,6 +104,7 @@ export default function EngHubPage() {
   }
 
   const cards = [
+    { icon: "🗓", title: "Class Schedule", desc: "By teacher · By student · Print", href: "/admineng/class-schedule" },
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
     { icon: "🎓", title: "Tutor Classes", desc: "Requests · My Schedule · Weekly", href: "/admineng/tutor-class" },
     { icon: "📅", title: "Student Calendar", desc: "Weekly schedule · New in · Graduation", href: "/admineng/student-calendar" },

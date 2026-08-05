@@ -60,9 +60,10 @@ export default function ClassSchedule() {
   const [view, setView] = useState<"teacher" | "student" | "room" | "master" | "edit">("teacher");
   const [selT, setSelT] = useState("");
   const [selR, setSelR] = useState("ROOM 1");
+  const [selStu, setSelStu] = useState("");
   const [draft, setDraft] = useState<Base | null>(null);
   const [busy, setBusy] = useState("");
-  const [printAll, setPrintAll] = useState(false);
+  const [printAll, setPrintAll] = useState<null | "t" | "s">(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function ClassSchedule() {
     supabase.from("app_settings").select("value").eq("key", "class_sched_editors").maybeSingle()
       .then(({ data }) => { if (Array.isArray(data?.value)) setEditors(data!.value as string[]) });
   }, []);
-  const canEdit = editors.includes(me);
+  const canEdit = editors.includes(me) || me === "admin-ceo" || me === "admin-jun"; // CEO·관리자 상시 허용
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +101,7 @@ export default function ClassSchedule() {
   }, [data, events]);
   const rooms = useMemo(() => [...new Set(events.filter(e => e.room).map(e => e.room))].sort(), [events]);
   useEffect(() => { if (!selT && teachers.length) setSelT(teachers[0]) }, [teachers, selT]);
+  useEffect(() => { if (!selStu && data?.students?.length) setSelStu(data.students[0].name) }, [data, selStu]);
 
   /* ── save helpers ── */
   async function saveDraft() {
@@ -194,18 +196,18 @@ export default function ClassSchedule() {
     <div className="wrap">
       <style>{`
       *{box-sizing:border-box}.wrap{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:#f1f5f9;min-height:100vh;padding-bottom:60px}
-      .top{background:#123c4a;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-      .top h1{font-size:18px;margin:0}.top a{color:#9fc3d0;text-decoration:none;font-weight:700;font-size:13px}
+      .top{background:#fff;color:#1e293b;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0}
+      .top h1{font-size:18px;margin:0}.top a{color:#3b5bdb;text-decoration:none;font-weight:700;font-size:13px}
       .bar{max-width:1250px;margin:14px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
       .btn{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:7px 14px;font-weight:800;font-size:13px;cursor:pointer}
-      .btn.on{background:#123c4a;color:#fff;border-color:#123c4a}
+      .btn.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
       .btn.grn{background:#0e9f6e;color:#fff;border-color:#0e9f6e}.btn.amb{background:#fff7e6;border-color:#f0c36d;color:#92400e}
       .main{max-width:1250px;margin:14px auto;padding:0 16px}
       .tbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
       .tb{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:6px 12px;font-weight:800;font-size:12.5px;cursor:pointer}
-      .tb.on{background:#123c4a;color:#fff;border-color:#123c4a}
+      .tb.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
       table.ct{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);margin-bottom:16px}
-      .ct th{background:#123c4a;color:#fff;padding:9px 12px;font-size:12.5px;text-align:left}
+      .ct th{background:#eef2f7;color:#334155;padding:9px 12px;font-size:12.5px;text-align:left;border-bottom:2px solid #cbd5e1}
       .ct td{padding:9px 12px;border-bottom:1px solid #edf2f7;font-size:13.5px;vertical-align:top}
       .tm{white-space:nowrap;font-weight:800;color:#334155}
       .pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:800;margin-right:6px}
@@ -213,21 +215,29 @@ export default function ClassSchedule() {
       .rm{color:#b45309;font-weight:800;font-size:12px}.cov{color:#dc2626;font-weight:800;font-size:11.5px}
       .conf td{background:#fee2e2}.free{color:#cbd5e1}.grow td{background:#eef4fb}
       .ed table{width:100%;border-collapse:collapse;background:#fff;font-size:12px}
-      .ed th{background:#334155;color:#fff;padding:6px;font-size:11px;position:sticky;top:0}
+      .ed th{background:#eef2f7;color:#334155;padding:6px;font-size:11px;position:sticky;top:0;border-bottom:2px solid #cbd5e1}
       .ed td{border:1px solid #e2e8f0;padding:2px}
       .ed select,.ed input{width:100%;border:none;font-size:11.5px;padding:4px 2px;background:transparent;font-family:inherit}
-      .ed .sec td{background:#123c4a;color:#fff;font-weight:800;padding:6px 8px}
+      .ed .sec td{background:#e0e7ff;color:#3730a3;font-weight:800;padding:6px 8px}
       .pa{display:none}
       @media print{
         .top,.bar,.tbtns,.noprint{display:none!important}.wrap{background:#fff}
         .pa{display:block}.pa .tpage{page-break-after:always;padding:10px 0}
         .screenview.hideonprint{display:none}
+        /* ink saver: no dark fills, black text + borders only */
+        table.ct{box-shadow:none}
+        .ct th{background:#fff!important;color:#222!important;border:1px solid #999;font-weight:900}
+        .ct td{border:1px solid #bbb;color:#222}
+        .conf td,.grow td{background:#fff!important}
+        .pill{background:#fff!important;color:#333!important;border:1px solid #999}
+        .rm,.cov,.tm{color:#222!important}
+        h2{color:#000}
       }
       .pa .tpage h2{margin:4px 0 10px}
       `}</style>
       <div className="top">
         <h1>📅 Class Schedule</h1>
-        <span style={{ color: "#9fc3d0", fontSize: 13, fontWeight: 700 }}>Week of {weekStart} · {dayLabel}</span>
+        <span style={{ color: "#64748b", fontSize: 13, fontWeight: 700 }}>Week of {weekStart} · {dayLabel}</span>
         <span style={{ marginLeft: "auto" }} />
         {canEdit && <span style={{ background: "#3ddbb8", color: "#0d3340", borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 800 }}>EDITOR</span>}
         <a href="/admineng/hub">← Hub</a>
@@ -241,8 +251,9 @@ export default function ClassSchedule() {
         <button className={"btn" + (day === "base" ? " on" : "")} onClick={() => { setDay("base"); setDraft(null) }}>Base Week</button>
         {DAYS.map((d, i) => { const ds = addD(weekStart, i); return <button key={d} className={"btn" + (day === ds ? " on" : "")} onClick={() => { setDay(ds); setDraft(null) }}>{d}{hasOv(ds) ? " ✱" : ""}</button> })}
         <span style={{ marginLeft: "auto" }} />
-        <button className="btn" onClick={() => { setPrintAll(false); setTimeout(() => window.print(), 50) }}>🖨 Print view</button>
-        <button className="btn grn" onClick={() => { setPrintAll(true); setTimeout(() => { window.print(); setPrintAll(false); }, 150) }}>🖨 Print ALL teachers</button>
+        <button className="btn" onClick={() => { setPrintAll(null); setTimeout(() => window.print(), 50) }}>🖨 Print view</button>
+        <button className="btn grn" onClick={() => { setPrintAll("t"); setTimeout(() => { window.print(); setPrintAll(null); }, 150) }}>🖨 Print ALL teachers</button>
+        <button className="btn grn" onClick={() => { setPrintAll("s"); setTimeout(() => { window.print(); setPrintAll(null); }, 150) }}>🖨 Print ALL students</button>
       </div>
 
       <div className="main">
@@ -275,15 +286,11 @@ export default function ClassSchedule() {
             )}
             {view === "student" && !printAll && (
               <div>
-                {(["junior", "lower"] as const).map(ph => (
-                  <div key={ph}>
-                    <h2 style={{ margin: "10px 0" }}>{ph === "junior" ? "JUNIOR" : "KINDER / LOWER"}</h2>
-                    {data.students.filter(s => s.phase === ph).map((s, i) => (
-                      <div key={i} style={{ marginBottom: 4 }}>
-                        <div style={{ fontWeight: 800, fontSize: 14, margin: "8px 0 4px" }}>{s.name} <span style={{ color: "#94a3b8", fontWeight: 600, fontSize: 12 }}>{s.cls}</span></div>
-                        {studentTable(s)}
-                      </div>
-                    ))}
+                <div className="tbtns noprint">{data.students.map((s2, i) => <button key={i} className={"tb" + (selStu === s2.name ? " on" : "")} onClick={() => setSelStu(s2.name)}>{s2.name}</button>)}</div>
+                {data.students.filter(s2 => s2.name === selStu).map((s2, i) => (
+                  <div key={i}>
+                    <h2 style={{ margin: "4px 0 10px" }}>{s2.name} <span style={{ color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>{s2.cls}</span></h2>
+                    {studentTable(s2)}
                   </div>
                 ))}
               </div>
@@ -333,8 +340,8 @@ export default function ClassSchedule() {
                 <div style={{ overflowX: "auto", maxHeight: "70vh", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10 }}>
                   <table><thead><tr>
                     <th style={{ minWidth: 110 }}>Student</th><th>Phase</th><th>Room</th>
-                    {GRP_SUBJ.map(s => <th key={s} style={{ background: "#1d4ed8" }}>G·{s}</th>)}
-                    {ONE_SUBJ.map(s => <th key={s} style={{ background: "#15803d" }}>1:1·{s}</th>)}
+                    {GRP_SUBJ.map(s => <th key={s} style={{ background: "#dbeafe", color: "#1d4ed8" }}>G·{s}</th>)}
+                    {ONE_SUBJ.map(s => <th key={s} style={{ background: "#dcfce7", color: "#15803d" }}>1:1·{s}</th>)}
                     <th></th>
                   </tr></thead><tbody>
                     {(["junior", "lower"] as const).map(ph => (<>
@@ -365,14 +372,20 @@ export default function ClassSchedule() {
               </div>
             )}
 
-            {/* Print-ALL-teachers area */}
+            {/* Print-ALL area */}
             <div className="pa">
-              {printAll && teachers.map(t => (
+              {printAll === "t" && teachers.map(t => (
                 <div className="tpage" key={t}>
                   <h2>{t} — {dayLabel} (Week {weekStart})</h2>
                   {teacherTable(t)}
                 </div>
               ))}
+              {printAll === "s" && (["junior", "lower"] as const).map(ph => data.students.filter(s2 => s2.phase === ph).map((s2, i) => (
+                <div className="tpage" key={ph + i}>
+                  <h2>{s2.name} <span style={{ fontWeight: 600, fontSize: 14 }}>{s2.cls}</span> — {ph === "junior" ? "JUNIOR" : "KINDER"} · Week {weekStart}</h2>
+                  {studentTable(s2)}
+                </div>
+              )))}
             </div>
           </>
         )}
