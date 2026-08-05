@@ -330,10 +330,14 @@ export default function ClassSchedule() {
                       </div>
                       <span className="mini">MEMBERS ({g.members.length})</span>
                       <div className="memwrap">
-                        {ed.students.map(s => {
-                          const on = g.members.includes(s.name);
-                          return <span key={s.name} className={"memchip" + (on ? " on" : "")} onClick={() => upd(d => { const G = d.groups[gi]; G.members = on ? G.members.filter(m => m !== s.name) : [...G.members, s.name] })}>{s.name}</span>;
-                        })}
+                        {g.members.map(m => <span key={m} className="memchip on" onClick={() => { if (confirm("Remove " + m + " from " + g.name + "?")) upd(d => { d.groups[gi].members = d.groups[gi].members.filter(x => x !== m) }) }}>{m} ✕</span>)}
+                        <select style={{ border: "1px dashed #cbd5e1", borderRadius: 14, padding: "2px 8px", fontSize: 11.5, fontFamily: "inherit", background: "#fff", color: "#64748b", maxWidth: 150 }} value="" onChange={e => { const v = e.target.value; if (v) upd(d => { if (!d.groups[gi].members.includes(v)) d.groups[gi].members.push(v) }) }}>
+                          <option value="">+ add member</option>
+                          {ed.students.filter(s => !g.members.includes(s.name)).map(s => {
+                            const other = ed.groups.find(G2 => G2.id !== g.id && G2.members.includes(s.name));
+                            return <option key={s.name} value={s.name}>{s.name}{other ? "  (in " + other.name + ")" : ""}</option>;
+                          })}
+                        </select>
                       </div>
                       <span className="mini">CLASS TIMES</span>
                       {g.sessions.map((se, si) => (
