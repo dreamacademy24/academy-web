@@ -82,6 +82,7 @@ export default function ClassSchedule() {
   const [busy, setBusy] = useState(""); const [printAll, setPrintAll] = useState<null | "t" | "s">(null);
   const [loading, setLoading] = useState(true);
   const [openG, setOpenG] = useState<string>("");
+  const [oneG, setOneG] = useState<string>("all");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -366,9 +367,19 @@ export default function ClassSchedule() {
             {nav === "one" && (canEdit && ed ? (
               <>
                 <span className="mini">Grey = taken by a group class. Green = 1:1 (choose subject &amp; teacher). Blank = free.</span>
-                <div className="ox card" style={{ padding: 6, marginTop: 8 }}>
+                <div className="bar" style={{ marginTop: 8 }}>
+                  <button className={"tb" + (oneG === "all" ? " on" : "")} onClick={() => setOneG("all")}>All ({ed.students.length})</button>
+                  {ed.groups.map(g => <button key={g.id} className={"tb" + (oneG === g.id ? " on" : "")} onClick={() => setOneG(g.id)}>{g.name} ({g.members.length})</button>)}
+                  {(() => { const inG = new Set(ed.groups.flatMap(g => g.members)); const no = ed.students.filter(s => !inG.has(s.name)).length; return no > 0 ? <button className={"tb" + (oneG === "none" ? " on" : "")} onClick={() => setOneG("none")}>No group ({no})</button> : null })()}
+                </div>
+                <div className="ox card" style={{ padding: 6, marginTop: 4 }}>
                   <table className="m11"><thead><tr><th style={{ minWidth: 110 }}>Student</th>{SLOTS.map(s => <th key={s}>{s}</th>)}</tr></thead><tbody>
-                    {ed.students.map((s, si) => (
+                    {ed.students.map((s, si) => {
+                      if (oneG !== "all") {
+                        if (oneG === "none") { if (ed.groups.some(g => g.members.includes(s.name))) return null }
+                        else { const G = ed.groups.find(g => g.id === oneG); if (!G || !G.members.includes(s.name)) return null }
+                      }
+                      return (
                       <tr key={s.name}>
                         <td className="stn">{s.name}</td>
                         {SLOTS.map((_, sl) => {
@@ -386,7 +397,7 @@ export default function ClassSchedule() {
                           </td>;
                         })}
                       </tr>
-                    ))}
+                    )})}
                   </tbody></table>
                 </div>
               </>
