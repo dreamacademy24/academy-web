@@ -2,51 +2,68 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
-/* ── Class Schedule Builder (weekly base + per-day override) ──
-   Editors: app_settings.class_sched_editors (admin-axl / admin-suzy / admin-erica) */
+/* ── Class Schedule System v2 ──
+   Groups (time+students+teacher) + 1:1 matrix → auto-composed Master.
+   Editors: app_settings.class_sched_editors + admin-ceo/admin-jun */
 
-interface Stu { name: string; phase: "junior" | "lower"; room: string; cls: string; grp: string[]; one: string[] }
-interface Base { teachers: string[]; students: Stu[] }
-interface Row { id: string; week_start: string; base: Base; overrides: Record<string, Base> }
+interface Sess { slot: number; subject: string; teacher: string }
+interface Grp { id: string; name: string; room: string; members: string[]; sessions: Sess[] }
+interface StuV2 { name: string; sessions: Sess[] }
+interface BaseV2 { v: 2; teachers: string[]; groups: Grp[]; students: StuV2[] }
+interface Row { id: string; week_start: string; base: unknown; overrides: Record<string, unknown> }
 
 const SLOTS = ["9:00–9:40", "9:45–10:25", "10:30–11:15", "11:20–12:00", "12:50–13:30", "13:35–14:20", "14:40–15:15", "15:20–16:00"];
 const GRP_SUBJ = ["BTS", "SOLOMON", "DREAM", "FUN"];
 const ONE_SUBJ = ["SPEAKING", "LISTENING", "READING", "WRITING"];
-const ROOMS_OPT = ["ROOM 1", "ROOM 2", "ROOM 3", "ROOM 4"];
+const SUBJ_OPT = [...ONE_SUBJ, ...GRP_SUBJ, "PHONICS", "REVIEW", "TEST", "ETC"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const mondayOf = (d: Date) => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x };
+const addD = (s: string, n: number) => { const d = new Date(s + "T00:00:00"); d.setDate(d.getDate() + n); return ymd(d) };
+const normRoom = (r: string) => (r || "").toUpperCase().replace(/\s+/g, " ").trim();
 
-function pad2(n: number) { return String(n).padStart(2, "0") }
-function ymd(d: Date) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
-function mondayOf(d: Date) { const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); return x }
-function addD(s: string, n: number) { const d = new Date(s + "T00:00:00"); d.setDate(d.getDate() + n); return ymd(d) }
-function normRoom(r: string) { return (r || "").toUpperCase().replace(/\s+/g, " ").trim() }
-function splitTeacher(t: string): [string, string | null] {
-  const s = (t || "").replace(/\s+/g, " ").trim();
-  const m = s.split(/\s*-\s*/);
-  if (m.length === 2 && m[1]) return [m[0].trim(), m[1].trim()];
-  return [s, null];
-}
-interface Ev { slot: number; teacher: string; kind: "Group" | "1:1"; subj: string; who: string; room: string; cover: string | null }
-function buildEvents(b: Base): Ev[] {
-  const out: Ev[] = [];
-  const push = (slot: number, raw: string, kind: "Group" | "1:1", subj: string, who: string, room: string) => {
-    if (!raw) return;
-    const [p, cov] = splitTeacher(raw);
-    if (!p) return;
-    out.push({ slot, teacher: p, kind, subj, who, room, cover: cov });
-    if (cov) out.push({ slot, teacher: cov, kind, subj, who, room, cover: "covering " + p });
-  };
-  (b.students || []).forEach(s => {
-    for (let g = 0; g < 4; g++) {
-      if (s.phase === "junior") {
-        push(g * 2, s.grp[g], "Group", GRP_SUBJ[g], s.name, normRoom(s.room));
-        push(g * 2 + 1, s.one[g], "1:1", ONE_SUBJ[g], s.name, "");
-      } else {
-        push(g * 2, s.one[g], "1:1", ONE_SUBJ[g], s.name, "");
-        push(g * 2 + 1, s.grp[g], "Group", GRP_SUBJ[g], s.name, normRoom(s.room));
-      }
-    }
+/* v1 → v2 migration (old: students[{name,phase,room,grp[4],one[4]}]) */
+function toV2(raw: unknown): BaseV2 {
+  const b = (raw || {}) as { v?: number; teachers?: string[]; groups?: Grp[]; students?: unknown[] };
+  if (b.v === 2) return b as unknown as BaseV2;
+  const teachers = Array.isArray(b.teachers) ? b.teachers : [];
+  const oldStu = (Array.isArray(b.students) ? b.students : []) as { name: string; phase: "junior" | "lower"; room: string; grp: string[]; one: string[] }[];
+  if (!oldStu.length || !oldStu[0]?.grp) return { v: 2, teachers, groups: [], students: [] };
+  const groups: Grp[] = []; const students: StuV2[] = [];
+  const keys = [...new Set(oldStu.map(s => s.phase + "|" + normRoom(s.room)))];
+  keys.forEach((k, i) => {
+    const [ph, rm] = k.split("|");
+    const mem = oldStu.filter(s => s.phase + "|" + normRoom(s.room) === k);
+    const gslots = ph === "junior" ? [0, 2, 4, 6] : [1, 3, 5, 7];
+    groups.push({
+      id: uid(), name: "Group " + (i + 1) + (ph === "junior" ? " (JR)" : " (KD)"), room: rm,
+      members: mem.map(s => s.name),
+      sessions: gslots.map((sl, gi) => ({ slot: sl, subject: GRP_SUBJ[gi], teacher: mem[0]?.grp?.[gi] || "" })),
+    });
   });
+  oldStu.forEach(s => {
+    const oslots = s.phase === "junior" ? [1, 3, 5, 7] : [0, 2, 4, 6];
+    students.push({ name: s.name, sessions: oslots.map((sl, oi) => ({ slot: sl, subject: ONE_SUBJ[oi], teacher: s.one?.[oi] || "" })).filter(x => x.teacher) });
+  });
+  return { v: 2, teachers, groups, students };
+}
+
+interface Ev { slot: number; teacher: string; kind: "Group" | "1:1"; subject: string; who: string; room: string; gname: string; cover: string | null }
+function splitT(t: string): [string, string | null] {
+  const s = (t || "").replace(/\s+/g, " ").trim(); const m = s.split(/\s*-\s*/);
+  return m.length === 2 && m[1] ? [m[0].trim(), m[1].trim()] : [s, null];
+}
+function buildEvents(b: BaseV2): Ev[] {
+  const out: Ev[] = [];
+  const push = (slot: number, raw: string, kind: "Group" | "1:1", subject: string, who: string, room: string, gname: string) => {
+    if (!raw) return; const [p, cov] = splitT(raw); if (!p) return;
+    out.push({ slot, teacher: p, kind, subject, who, room, gname, cover: cov });
+    if (cov) out.push({ slot, teacher: cov, kind, subject, who, room, gname, cover: "covering " + p });
+  };
+  b.groups.forEach(g => g.sessions.forEach(se => g.members.forEach(m => push(se.slot, se.teacher, "Group", se.subject, m, normRoom(g.room), g.name))));
+  b.students.forEach(s => s.sessions.forEach(se => push(se.slot, se.teacher, "1:1", se.subject, s.name, "", "")));
   return out;
 }
 
@@ -56,29 +73,22 @@ export default function ClassSchedule() {
   const [editors, setEditors] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState(() => ymd(mondayOf(new Date())));
   const [row, setRow] = useState<Row | null>(null);
-  const [day, setDay] = useState<string>("base"); // 'base' | YYYY-MM-DD
-  const [view, setView] = useState<"teacher" | "student" | "room" | "master" | "edit">("teacher");
-  const [selT, setSelT] = useState("");
-  const [selR, setSelR] = useState("ROOM 1");
-  const [selStu, setSelStu] = useState("");
-  const [draft, setDraft] = useState<Base | null>(null);
-  const [busy, setBusy] = useState("");
-  const [printAll, setPrintAll] = useState<null | "t" | "s">(null);
+  const [day, setDay] = useState<string>("base");
+  const [nav, setNav] = useState<"groups" | "one" | "master">("master");
+  const [mview, setMview] = useState<"teacher" | "student" | "room" | "grid">("teacher");
+  const [selT, setSelT] = useState(""); const [selStu, setSelStu] = useState(""); const [selR, setSelR] = useState("");
+  const [draft, setDraft] = useState<BaseV2 | null>(null);
+  const [busy, setBusy] = useState(""); const [printAll, setPrintAll] = useState<null | "t" | "s">(null);
   const [loading, setLoading] = useState(true);
+  const [openG, setOpenG] = useState<string>("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("teacherSession");
-      if (raw && JSON.parse(raw)?.username) { setMe(String(JSON.parse(raw).username || "")); setAuthed(true); return; }
-    } catch { }
+    try { const raw = localStorage.getItem("teacherSession"); if (raw && JSON.parse(raw)?.username) { setMe(String(JSON.parse(raw).username || "")); setAuthed(true); return } } catch { }
     window.location.href = "/admineng/hub";
   }, []);
-  useEffect(() => {
-    supabase.from("app_settings").select("value").eq("key", "class_sched_editors").maybeSingle()
-      .then(({ data }) => { if (Array.isArray(data?.value)) setEditors(data!.value as string[]) });
-  }, []);
-  const canEdit = editors.includes(me) || me === "admin-ceo" || me === "admin-jun"; // CEO·관리자 상시 허용
+  useEffect(() => { supabase.from("app_settings").select("value").eq("key", "class_sched_editors").maybeSingle().then(({ data }) => { if (Array.isArray(data?.value)) setEditors(data!.value as string[]) }) }, []);
+  const canEdit = editors.includes(me) || me === "admin-ceo" || me === "admin-jun";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,42 +97,44 @@ export default function ClassSchedule() {
   }, [weekStart]);
   useEffect(() => { if (authed) load() }, [authed, load]);
 
-  const effBase: Base | null = useMemo(() => {
+  const effRaw = useMemo(() => {
     if (!row) return null;
-    if (day !== "base" && row.overrides && row.overrides[day]) return row.overrides[day];
-    return row.base && row.base.students ? row.base : null;
+    if (day !== "base" && row.overrides && (row.overrides as Record<string, unknown>)[day]) return (row.overrides as Record<string, unknown>)[day];
+    return row.base;
   }, [row, day]);
-  const data: Base | null = draft || effBase;
+  const saved: BaseV2 | null = useMemo(() => effRaw ? toV2(effRaw) : null, [effRaw]);
+  const data: BaseV2 | null = draft || saved;
+  const hasData = !!(data && (data.groups.length || data.students.length));
   const events = useMemo(() => data ? buildEvents(data) : [], [data]);
-  const teachers = useMemo(() => {
-    const set = new Set<string>(data?.teachers || []);
-    events.forEach(e => set.add(e.teacher));
-    return [...set].sort();
-  }, [data, events]);
+  const teachers = useMemo(() => { const s = new Set<string>(data?.teachers || []); events.forEach(e => s.add(e.teacher)); return [...s].sort() }, [data, events]);
   const rooms = useMemo(() => [...new Set(events.filter(e => e.room).map(e => e.room))].sort(), [events]);
+  const stuNames = useMemo(() => data ? data.students.map(s => s.name) : [], [data]);
   useEffect(() => { if (!selT && teachers.length) setSelT(teachers[0]) }, [teachers, selT]);
-  useEffect(() => { if (!selStu && data?.students?.length) setSelStu(data.students[0].name) }, [data, selStu]);
+  useEffect(() => { if (!selStu && stuNames.length) setSelStu(stuNames[0]) }, [stuNames, selStu]);
+  useEffect(() => { if (!selR && rooms.length) setSelR(rooms[0]) }, [rooms, selR]);
 
-  /* ── save helpers ── */
-  async function saveDraft() {
-    if (!draft || !row && day !== "base") { }
+  const ed: BaseV2 | null = draft; // editing copy
+  function beginEdit() { if (!draft) setDraft(saved ? JSON.parse(JSON.stringify(saved)) : { v: 2, teachers: [], groups: [], students: [] }) }
+  function upd(fn: (d: BaseV2) => void) { if (!draft) return; const d = JSON.parse(JSON.stringify(draft)); fn(d); setDraft(d) }
+
+  async function save() {
+    if (!draft) return;
     setBusy("Saving…");
-    const payload: Partial<Row> = {};
-    if (day === "base") payload.base = draft!;
-    else payload.overrides = { ...(row?.overrides || {}), [day]: draft! };
+    const payload: Record<string, unknown> = {};
+    if (day === "base") payload.base = draft;
+    else payload.overrides = { ...((row?.overrides as Record<string, unknown>) || {}), [day]: draft };
     let error;
     if (row) ({ error } = await supabase.from("class_schedules").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", row.id));
-    else ({ error } = await supabase.from("class_schedules").insert({ week_start: weekStart, base: day === "base" ? draft : { teachers: draft!.teachers, students: [] }, overrides: day === "base" ? {} : { [day]: draft } }));
+    else ({ error } = await supabase.from("class_schedules").insert({ week_start: weekStart, base: day === "base" ? draft : { v: 2, teachers: draft.teachers, groups: [], students: [] }, overrides: day === "base" ? {} : { [day]: draft } }));
     setBusy("");
     if (error) { alert("Save failed: " + error.message); return }
-    await load(); alert("Saved ✓");
+    await load(); setNav("master");
   }
   async function copyLastWeek() {
     setBusy("Copying…");
-    const prev = addD(weekStart, -7);
-    const { data: p } = await supabase.from("class_schedules").select("base").eq("week_start", prev).maybeSingle();
+    const { data: p } = await supabase.from("class_schedules").select("base").eq("week_start", addD(weekStart, -7)).maybeSingle();
     setBusy("");
-    if (!p?.base?.students?.length) { alert("No schedule found for last week (" + prev + ")"); return }
+    if (!p?.base) { alert("No schedule last week"); return }
     if (row) await supabase.from("class_schedules").update({ base: p.base, updated_at: new Date().toISOString() }).eq("id", row.id);
     else await supabase.from("class_schedules").insert({ week_start: weekStart, base: p.base, overrides: {} });
     await load();
@@ -131,298 +143,296 @@ export default function ClassSchedule() {
     setBusy("Importing…");
     try {
       const seed = await fetch("/class-sched-seed.json").then(r => r.json());
-      if (row) await supabase.from("class_schedules").update({ base: seed, updated_at: new Date().toISOString() }).eq("id", row.id);
-      else await supabase.from("class_schedules").insert({ week_start: weekStart, base: seed, overrides: {} });
+      const v2 = toV2(seed);
+      if (row) await supabase.from("class_schedules").update({ base: v2, updated_at: new Date().toISOString() }).eq("id", row.id);
+      else await supabase.from("class_schedules").insert({ week_start: weekStart, base: v2, overrides: {} });
       await load();
-    } catch (e) { alert("Import failed") }
+    } catch { alert("Import failed") }
     setBusy("");
   }
   async function resetDay() {
     if (day === "base" || !row) return;
-    if (!confirm("Remove the custom schedule for this day and use the base week?")) return;
-    const ov = { ...(row.overrides || {}) }; delete ov[day];
+    if (!confirm("Remove this day's custom schedule and use Base Week?")) return;
+    const ov = { ...((row.overrides as Record<string, unknown>) || {}) }; delete ov[day];
     await supabase.from("class_schedules").update({ overrides: ov, updated_at: new Date().toISOString() }).eq("id", row.id);
     await load();
   }
-  function setRoomGrp(ph: "junior" | "lower", room: string, gi: number, val: string) {
-    if (!draft) return;
-    setDraft({ ...draft, students: draft.students.map(s => (s.phase === ph && normRoom(s.room) === room) ? { ...s, grp: s.grp.map((g, i) => i === gi ? val : g) } : s) });
-  }
-  function roomGrpOf(ph: "junior" | "lower", room: string): string[] {
-    const s = (draft?.students || []).find(x => x.phase === ph && normRoom(x.room) === room);
-    return s ? s.grp : ["", "", "", ""];
-  }
-  function moveStudentRoom(si: number, room: string) {
-    if (!draft) return;
-    const s = draft.students[si];
-    const donor = draft.students.find(x => x.phase === s.phase && normRoom(x.room) === room && x !== s);
-    const st = [...draft.students];
-    st[si] = { ...s, room, grp: donor ? [...donor.grp] : s.grp };
-    setDraft({ ...draft, students: st });
-  }
-  function startEdit() {
-    if (!effBase) { setDraft({ teachers: [], students: [] }); setView("edit"); return }
-    setDraft(JSON.parse(JSON.stringify(effBase))); setView("edit");
-  }
 
-  /* ── render helpers ── */
+  /* ── shared render ── */
   const bySlot = (list: Ev[]) => { const m: Record<number, Ev[]> = {}; list.forEach(e => { (m[e.slot] = m[e.slot] || []).push(e) }); return m };
   function teacherTable(t: string) {
     const m = bySlot(events.filter(e => e.teacher === t));
-    return (
-      <table className="ct"><thead><tr><th style={{ width: 118 }}>Time</th><th>Assignment</th></tr></thead><tbody>
-        {SLOTS.map((s, i) => {
-          const es = m[i] || [];
-          const groups: Record<string, Ev[]> = {}; const ones: Ev[] = [];
-          es.forEach(e => { if (e.kind === "Group") { const k = e.subj + "|" + e.room + "|" + (e.cover || ""); (groups[k] = groups[k] || []).push(e) } else ones.push(e) });
-          const cells: ReactNode[] = [];
-          Object.entries(groups).forEach(([k, arr], gi) => {
-            const [subj, room, cov] = k.split("|");
-            cells.push(<div key={"g" + gi}><span className="pill pg">GROUP</span><b>{subj}</b><span className="rm"> {room}</span> — {arr.map(x => x.who).join(", ")}{cov && <span className="cov"> ({cov})</span>}</div>);
-          });
-          ones.forEach((e, oi) => cells.push(<div key={"o" + oi}><span className="pill p1">1:1</span><b>{e.subj}</b> — {e.who}{e.cover && <span className="cov"> ({e.cover})</span>}</div>));
-          const conflict = Object.keys(groups).length + ones.length > 1;
-          return <tr key={i} className={conflict ? "conf" : ""}><td className="tm">{s}{conflict ? " ⚠" : ""}</td><td>{cells.length ? cells : <span className="free">—</span>}</td></tr>;
-        })}
-      </tbody></table>
-    );
+    return (<table className="ct"><thead><tr><th style={{ width: 116 }}>Time</th><th>Assignment</th></tr></thead><tbody>
+      {SLOTS.map((s, i) => {
+        const es = m[i] || []; const gset: Record<string, Ev[]> = {}; const ones: Ev[] = [];
+        es.forEach(e => { if (e.kind === "Group") { const k = e.gname + "|" + e.subject + "|" + e.room + "|" + (e.cover || ""); (gset[k] = gset[k] || []).push(e) } else ones.push(e) });
+        const cells: ReactNode[] = [];
+        Object.entries(gset).forEach(([k, arr], gi) => { const [gn, subj, room, cov] = k.split("|"); cells.push(<div key={"g" + gi}><span className="pill pg">{gn || "GROUP"}</span><b>{subj}</b><span className="rm"> {room}</span> — {arr.map(x => x.who).join(", ")}{cov && <span className="cov"> ({cov})</span>}</div>) });
+        ones.forEach((e, oi) => cells.push(<div key={"o" + oi}><span className="pill p1">1:1</span><b>{e.subject}</b> — {e.who}{e.cover && <span className="cov"> ({e.cover})</span>}</div>));
+        const conflict = Object.keys(gset).length + ones.length > 1;
+        return <tr key={i} className={conflict ? "conf" : ""}><td className="tm">{s}{conflict ? " ⚠" : ""}</td><td>{cells.length ? cells : <span className="free">—</span>}</td></tr>;
+      })}
+    </tbody></table>);
   }
-  function studentTable(s: Stu) {
-    const rowsX: { tm: string; ty: string; subj: string; teacher: string; room: string }[] = [];
-    for (let g = 0; g < 4; g++) {
-      if (s.phase === "junior") {
-        rowsX.push({ tm: SLOTS[g * 2], ty: "Group", subj: GRP_SUBJ[g], teacher: s.grp[g] || "-", room: normRoom(s.room) });
-        rowsX.push({ tm: SLOTS[g * 2 + 1], ty: "1:1", subj: ONE_SUBJ[g], teacher: s.one[g] || "-", room: "" });
-      } else {
-        rowsX.push({ tm: SLOTS[g * 2], ty: "1:1", subj: ONE_SUBJ[g], teacher: s.one[g] || "-", room: "" });
-        rowsX.push({ tm: SLOTS[g * 2 + 1], ty: "Group", subj: GRP_SUBJ[g], teacher: s.grp[g] || "-", room: normRoom(s.room) });
-      }
-    }
-    return (
-      <table className="ct"><thead><tr><th>Time</th><th>Type</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead><tbody>
-        {rowsX.map((r2, i) => <tr key={i} className={r2.ty === "Group" ? "grow" : ""}><td className="tm">{r2.tm}</td><td>{r2.ty}</td><td><b>{r2.subj}</b></td><td>{r2.teacher}</td><td>{r2.room || "-"}</td></tr>)}
-      </tbody></table>
-    );
+  function studentTable(name: string) {
+    const list = events.filter(e => e.who === name && !(e.cover || "").startsWith("covering"));
+    const m = bySlot(list);
+    return (<table className="ct"><thead><tr><th style={{ width: 116 }}>Time</th><th>Type</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead><tbody>
+      {SLOTS.map((s, i) => {
+        const es = m[i] || [];
+        if (!es.length) return <tr key={i}><td className="tm">{s}</td><td colSpan={4} className="free">—</td></tr>;
+        return es.map((e, j) => <tr key={i + "_" + j} className={e.kind === "Group" ? "grow" : ""}><td className="tm">{j === 0 ? s : ""}</td><td>{e.kind === "Group" ? e.gname || "Group" : "1:1"}</td><td><b>{e.subject}</b></td><td>{e.teacher}{e.cover ? " -" + e.cover : ""}</td><td>{e.room || "-"}</td></tr>);
+      })}
+    </tbody></table>);
   }
   const dayLabel = day === "base" ? "Base Week" : day + " (" + DAYS[(new Date(day + "T00:00:00").getDay() + 6) % 7] + ")";
-  const hasOv = (d: string) => !!(row?.overrides && row.overrides[d]);
+  const hasOv = (d: string) => !!(row?.overrides && (row.overrides as Record<string, unknown>)[d]);
+  const grpOcc = useMemo(() => { // student slot occupied by group
+    const m: Record<string, Record<number, string>> = {};
+    (ed || data)?.groups.forEach(g => g.sessions.forEach(se => g.members.forEach(mm => { (m[mm] = m[mm] || {})[se.slot] = g.name + " · " + se.subject })));
+    return m;
+  }, [ed, data]);
 
   if (!authed) return null;
   return (
     <div className="wrap">
       <style>{`
-      *{box-sizing:border-box}.wrap{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:#f1f5f9;min-height:100vh;padding-bottom:60px}
-      .top{background:#fff;color:#1e293b;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0}
-      .top h1{font-size:18px;margin:0}.top a{color:#3b5bdb;text-decoration:none;font-weight:700;font-size:13px}
-      .bar{max-width:1250px;margin:14px auto 0;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-      .btn{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:7px 14px;font-weight:800;font-size:13px;cursor:pointer}
+      *{box-sizing:border-box}.wrap{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:#f4f6fa;min-height:100vh}
+      .top{background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:20}
+      .top h1{font-size:17px;margin:0;color:#1e293b}.top a{color:#3b5bdb;text-decoration:none;font-weight:700;font-size:13px}
+      .lay{display:flex;min-height:calc(100vh - 57px)}
+      .side{width:190px;background:#fff;border-right:1px solid #e2e8f0;padding:14px 10px;flex-shrink:0}
+      .sitem{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:9px;font-weight:800;font-size:13.5px;color:#475569;cursor:pointer;margin-bottom:4px}
+      .sitem.on{background:#eef2ff;color:#3730a3}
+      .side .sec{font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.08em;margin:14px 8px 6px}
+      .main{flex:1;padding:16px 20px;min-width:0}
+      .btn{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:7px 13px;font-weight:800;font-size:12.5px;cursor:pointer;color:#334155}
       .btn.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
-      .btn.grn{background:#0e9f6e;color:#fff;border-color:#0e9f6e}.btn.amb{background:#fff7e6;border-color:#f0c36d;color:#92400e}
-      .main{max-width:1250px;margin:14px auto;padding:0 16px}
-      .tbtns{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-      .tb{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:6px 12px;font-weight:800;font-size:12.5px;cursor:pointer}
+      .btn.grn{background:#0e9f6e;color:#fff;border-color:#0e9f6e}
+      .btn.warn{background:#fff7e6;border-color:#f0c36d;color:#92400e}
+      .bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+      .tb{background:#fff;border:1.5px solid #d7e0ea;border-radius:8px;padding:5px 11px;font-weight:800;font-size:12px;cursor:pointer;color:#334155}
       .tb.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
-      table.ct{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06);margin-bottom:16px}
+      table.ct{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 5px rgba(15,23,42,.06);margin-bottom:16px}
       .ct th{background:#eef2f7;color:#334155;padding:9px 12px;font-size:12.5px;text-align:left;border-bottom:2px solid #cbd5e1}
-      .ct td{padding:9px 12px;border-bottom:1px solid #edf2f7;font-size:13.5px;vertical-align:top}
+      .ct td{padding:9px 12px;border-bottom:1px solid #edf2f7;font-size:13.5px;vertical-align:top;color:#1e293b}
       .tm{white-space:nowrap;font-weight:800;color:#334155}
       .pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:10.5px;font-weight:800;margin-right:6px}
       .pg{background:#dbeafe;color:#1d4ed8}.p1{background:#dcfce7;color:#15803d}
       .rm{color:#b45309;font-weight:800;font-size:12px}.cov{color:#dc2626;font-weight:800;font-size:11.5px}
-      .conf td{background:#fee2e2}.free{color:#cbd5e1}.grow td{background:#eef4fb}
-      .ed table{width:100%;border-collapse:collapse;background:#fff;font-size:12px}
-      .ed th{background:#eef2f7;color:#334155;padding:6px;font-size:11px;position:sticky;top:0;border-bottom:2px solid #cbd5e1}
-      .ed td{border:1px solid #e2e8f0;padding:2px}
-      .ed select,.ed input{width:100%;border:none;font-size:11.5px;padding:4px 2px;background:transparent;font-family:inherit}
-      .ed .sec td{background:#e0e7ff;color:#3730a3;font-weight:800;padding:6px 8px}
+      .conf td{background:#fee2e2}.free{color:#cbd5e1}.grow td{background:#f5f8fd}
+      .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 5px rgba(15,23,42,.05)}
+      .gcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+      .ghead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+      .ghead input{font-weight:800;font-size:14px;border:none;border-bottom:1.5px dashed #cbd5e1;padding:2px 4px;width:120px;font-family:inherit;outline:none}
+      .mini{font-size:11px;color:#64748b;font-weight:700}
+      .sesrow{display:flex;gap:5px;align-items:center;margin-bottom:5px}
+      .sesrow select,.sesrow input{border:1px solid #dde5ee;border-radius:7px;padding:5px 6px;font-size:12px;font-family:inherit;background:#fff}
+      .memwrap{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+      .memchip{font-size:11px;font-weight:700;border:1px solid #dde5ee;border-radius:14px;padding:2px 9px;cursor:pointer;background:#fff;color:#475569}
+      .memchip.on{background:#3b5bdb;color:#fff;border-color:#3b5bdb}
+      .ox{overflow-x:auto}
+      .m11{border-collapse:collapse;background:#fff;font-size:11.5px;min-width:1050px}
+      .m11 th{background:#eef2f7;color:#334155;padding:6px;border:1px solid #dde5ee;font-size:11px;position:sticky;top:0}
+      .m11 td{border:1px solid #e6ecf3;padding:2px;vertical-align:top;min-width:108px}
+      .m11 .stn{font-weight:800;white-space:nowrap;padding:6px 8px;background:#fafcff;position:sticky;left:0}
+      .gocc{background:#f1f5f9;color:#94a3b8;font-size:10.5px;font-weight:700;padding:5px 6px;border-radius:5px;text-align:center}
+      .cellsel{width:100%;border:none;font-size:11px;padding:3px 2px;background:transparent;font-family:inherit}
+      .oneCell{background:#f0fdf4;border-radius:6px;padding:2px}
       .pa{display:none}
       @media print{
-        .top,.bar,.tbtns,.noprint{display:none!important}.wrap{background:#fff}
-        .pa{display:block}.pa .tpage{page-break-after:always;padding:10px 0}
-        .screenview.hideonprint{display:none}
-        /* ink saver: no dark fills, black text + borders only */
+        .top,.side,.bar,.noprint{display:none!important}.wrap{background:#fff}.main{padding:0}
+        .pa{display:block}.pa .tpage{page-break-after:always;padding:8px 0}
         table.ct{box-shadow:none}
         .ct th{background:#fff!important;color:#222!important;border:1px solid #999;font-weight:900}
         .ct td{border:1px solid #bbb;color:#222}
         .conf td,.grow td{background:#fff!important}
         .pill{background:#fff!important;color:#333!important;border:1px solid #999}
-        .rm,.cov,.tm{color:#222!important}
-        h2{color:#000}
+        .rm,.cov,.tm{color:#222!important}h2{color:#000}
       }
-      .pa .tpage h2{margin:4px 0 10px}
       `}</style>
+
       <div className="top">
-        <h1>📅 Class Schedule</h1>
-        <span style={{ color: "#64748b", fontSize: 13, fontWeight: 700 }}>Week of {weekStart} · {dayLabel}</span>
+        <h1>🗓 Class Schedule System</h1>
+        <span style={{ color: "#64748b", fontSize: 13, fontWeight: 700 }}>Week {weekStart} · {dayLabel}</span>
         <span style={{ marginLeft: "auto" }} />
-        {canEdit && <span style={{ background: "#3ddbb8", color: "#0d3340", borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 800 }}>EDITOR</span>}
+        {canEdit && <span style={{ background: "#dcfce7", color: "#166534", borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 800 }}>EDITOR</span>}
         <a href="/admineng/hub">← Hub</a>
       </div>
 
-      <div className="bar noprint">
-        <button className="btn" onClick={() => { setWeekStart(addD(weekStart, -7)); setDay("base") }}>◀ Prev</button>
-        <b style={{ fontSize: 14 }}>{weekStart} ~ {addD(weekStart, 5)}</b>
-        <button className="btn" onClick={() => { setWeekStart(addD(weekStart, 7)); setDay("base") }}>Next ▶</button>
-        <span style={{ width: 10 }} />
-        <button className={"btn" + (day === "base" ? " on" : "")} onClick={() => { setDay("base"); setDraft(null) }}>Base Week</button>
-        {DAYS.map((d, i) => { const ds = addD(weekStart, i); return <button key={d} className={"btn" + (day === ds ? " on" : "")} onClick={() => { setDay(ds); setDraft(null) }}>{d}{hasOv(ds) ? " ✱" : ""}</button> })}
-        <span style={{ marginLeft: "auto" }} />
-        <button className="btn" onClick={() => { setPrintAll(null); setTimeout(() => window.print(), 50) }}>🖨 Print view</button>
-        <button className="btn grn" onClick={() => { setPrintAll("t"); setTimeout(() => { window.print(); setPrintAll(null); }, 150) }}>🖨 Print ALL teachers</button>
-        <button className="btn grn" onClick={() => { setPrintAll("s"); setTimeout(() => { window.print(); setPrintAll(null); }, 150) }}>🖨 Print ALL students</button>
-      </div>
+      <div className="lay">
+        <div className="side noprint">
+          <div className="sec">BUILD</div>
+          <div className={"sitem" + (nav === "groups" ? " on" : "")} onClick={() => { setNav("groups"); if (canEdit) beginEdit() }}>👥 Groups</div>
+          <div className={"sitem" + (nav === "one" ? " on" : "")} onClick={() => { setNav("one"); if (canEdit) beginEdit() }}>🧑‍🏫 1:1 Matrix</div>
+          <div className="sec">RESULT</div>
+          <div className={"sitem" + (nav === "master" ? " on" : "")} onClick={() => setNav("master")}>🗂 Master</div>
+          {draft && canEdit && <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+            <button className="btn grn" onClick={save}>{busy || "💾 Save & Compose"}</button>
+            <button className="btn" onClick={() => { setDraft(null) }}>Discard changes</button>
+          </div>}
+        </div>
 
-      <div className="main">
-        {loading ? <div style={{ padding: 30, color: "#94a3b8" }}>Loading…</div> : !data ? (
-          <div style={{ background: "#fff", borderRadius: 12, padding: 30, textAlign: "center" }}>
-            <p style={{ fontWeight: 800, fontSize: 15 }}>No schedule for this week yet.</p>
-            {canEdit && <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-              <button className="btn grn" onClick={copyLastWeek}>{busy || "📋 Copy from last week"}</button>
-              <button className="btn" onClick={importSeed}>⬇ Import AUG 4 master</button>
-              <button className="btn" onClick={startEdit}>✏️ Start empty</button>
-            </div>}
+        <div className="main">
+          <div className="bar noprint">
+            <button className="btn" onClick={() => { setWeekStart(addD(weekStart, -7)); setDay("base") }}>◀</button>
+            <b style={{ fontSize: 13.5 }}>{weekStart} ~ {addD(weekStart, 5)}</b>
+            <button className="btn" onClick={() => { setWeekStart(addD(weekStart, 7)); setDay("base") }}>▶</button>
+            <span style={{ width: 8 }} />
+            <button className={"btn" + (day === "base" ? " on" : "")} onClick={() => { setDay("base"); setDraft(null) }}>Base Week</button>
+            {DAYS.map((d, i) => { const ds = addD(weekStart, i); return <button key={d} className={"btn" + (day === ds ? " on" : "")} onClick={() => { setDay(ds); setDraft(null) }}>{d}{hasOv(ds) ? " ✱" : ""}</button> })}
+            <span style={{ marginLeft: "auto" }} />
+            {canEdit && day !== "base" && hasOv(day) && <button className="btn warn" onClick={resetDay}>↩ Reset day</button>}
+            <button className="btn" onClick={() => { setPrintAll(null); setTimeout(() => window.print(), 60) }}>🖨 Print view</button>
+            <button className="btn grn" onClick={() => { setPrintAll("t"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL teachers</button>
+            <button className="btn grn" onClick={() => { setPrintAll("s"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL students</button>
           </div>
-        ) : (
-          <>
-            <div className="tbtns noprint">
-              {(["teacher", "student", "room", "master"] as const).map(v => (
-                <button key={v} className={"tb" + (view === v ? " on" : "")} onClick={() => { setView(v); setDraft(null) }}>{v === "teacher" ? "👩‍🏫 By Teacher" : v === "student" ? "🧒 By Student" : v === "room" ? "🚪 By Room" : "🗂 Master Grid"}</button>
-              ))}
-              {canEdit && <button className={"tb" + (view === "edit" ? " on" : "")} onClick={startEdit}>✏️ Edit</button>}
-              {canEdit && day !== "base" && !hasOv(day) && view !== "edit" && <button className="tb" style={{ borderColor: "#f0c36d", background: "#fff7e6", color: "#92400e" }} onClick={startEdit}>✱ Customize this day</button>}
-              {canEdit && day !== "base" && hasOv(day) && <button className="tb" style={{ color: "#dc2626" }} onClick={resetDay}>↩ Reset day to base</button>}
-            </div>
 
-            {view === "teacher" && !printAll && (
-              <div className="screenview">
-                <div className="tbtns noprint">{teachers.map(t => <button key={t} className={"tb" + (selT === t ? " on" : "")} onClick={() => setSelT(t)}>{t}</button>)}</div>
-                <h2 style={{ margin: "4px 0 10px" }}>{selT}</h2>
-                {selT && teacherTable(selT)}
-              </div>
-            )}
-            {view === "student" && !printAll && (
-              <div>
-                <div className="tbtns noprint">{data.students.map((s2, i) => <button key={i} className={"tb" + (selStu === s2.name ? " on" : "")} onClick={() => setSelStu(s2.name)}>{s2.name}</button>)}</div>
-                {data.students.filter(s2 => s2.name === selStu).map((s2, i) => (
-                  <div key={i}>
-                    <h2 style={{ margin: "4px 0 10px" }}>{s2.name} <span style={{ color: "#94a3b8", fontWeight: 600, fontSize: 13 }}>{s2.cls}</span></h2>
-                    {studentTable(s2)}
-                  </div>
-                ))}
-              </div>
-            )}
-            {view === "room" && !printAll && (
-              <div>
-                <div className="tbtns noprint">{rooms.map(r2 => <button key={r2} className={"tb" + (selR === r2 ? " on" : "")} onClick={() => setSelR(r2)}>{r2}</button>)}</div>
-                <h2 style={{ margin: "4px 0 10px" }}>{selR}</h2>
-                <table className="ct"><thead><tr><th style={{ width: 118 }}>Time</th><th>Class</th></tr></thead><tbody>
-                  {SLOTS.map((s, i) => {
-                    const es = events.filter(e => e.room === selR && e.kind === "Group" && e.slot === i && !(e.cover || "").startsWith("covering"));
-                    const g: Record<string, Ev[]> = {}; es.forEach(e => { const k = e.subj + "|" + e.teacher; (g[k] = g[k] || []).push(e) });
-                    return <tr key={i}><td className="tm">{s}</td><td>{Object.keys(g).length ? Object.entries(g).map(([k, arr], gi) => { const [subj, t] = k.split("|"); return <div key={gi}><span className="pill pg">{subj}</span><b>{t}</b> — {arr.map(x => x.who).join(", ")}</div> }) : <span className="free">—</span>}</td></tr>;
-                  })}
-                </tbody></table>
-              </div>
-            )}
-            {view === "master" && !printAll && (
-              <div style={{ overflowX: "auto" }}>
-                <table className="ct" style={{ minWidth: 1100 }}><thead><tr><th>Teacher</th>{SLOTS.map(s => <th key={s}>{s}</th>)}</tr></thead><tbody>
-                  {teachers.map(t => {
-                    const m = bySlot(events.filter(e => e.teacher === t));
-                    return <tr key={t}><td style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{t}</td>
-                      {SLOTS.map((s, i) => {
-                        const es = m[i] || [];
-                        if (!es.length) return <td key={i} className="free">—</td>;
-                        const g = es.filter(e => e.kind === "Group"); const o = es.filter(e => e.kind === "1:1");
-                        const conf = (g.length ? 1 : 0) + o.length > 1;
-                        return <td key={i} style={conf ? { background: "#fee2e2" } : {}}>
-                          {g.length > 0 && <div style={{ background: "#eef4fb", fontSize: 11, fontWeight: 700 }}>{g[0].subj} {g[0].room}</div>}
-                          {o.map((e, oi) => <div key={oi} style={{ background: "#f0fdf4", fontSize: 11 }}>{e.subj.slice(0, 4)} · {e.who}</div>)}
-                        </td>;
-                      })}</tr>;
-                  })}
-                </tbody></table>
-              </div>
-            )}
-            {view === "edit" && draft && !printAll && (
-              <div className="ed">
-                <div className="tbtns noprint" style={{ alignItems: "center" }}>
-                  <b>Editing: {dayLabel}</b>
-                  <button className="tb" style={{ background: "#0e9f6e", color: "#fff", borderColor: "#0e9f6e" }} onClick={saveDraft}>{busy || "💾 Save"}</button>
-                  <button className="tb" onClick={() => { setDraft(null); setView("teacher") }}>Cancel</button>
-                  <span style={{ marginLeft: 12, fontSize: 12, color: "#64748b" }}>Teachers:</span>
-                  <input style={{ flex: 1, minWidth: 260, border: "1.5px solid #d7e0ea", borderRadius: 8, padding: "6px 10px", fontSize: 12 }} value={(draft.teachers || []).join(", ")} onChange={e => setDraft({ ...draft, teachers: e.target.value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean) })} />
+          {loading ? <div style={{ padding: 30, color: "#94a3b8" }}>Loading…</div> : !hasData && !draft ? (
+            <div className="card" style={{ textAlign: "center", padding: 34 }}>
+              <p style={{ fontWeight: 800, fontSize: 15 }}>No schedule for this week yet.</p>
+              {canEdit && <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <button className="btn grn" onClick={copyLastWeek}>{busy || "📋 Copy last week"}</button>
+                <button className="btn" onClick={importSeed}>⬇ Import AUG 4 master</button>
+                <button className="btn" onClick={() => { beginEdit(); setNav("groups") }}>✏️ Start empty</button>
+              </div>}
+            </div>
+          ) : (<>
+
+            {/* ─── GROUPS ─── */}
+            {nav === "groups" && (canEdit && ed ? (
+              <>
+                <div className="bar">
+                  <button className="btn grn" onClick={() => upd(d => d.groups.push({ id: uid(), name: "Group " + (d.groups.length + 1), room: "ROOM 1", members: [], sessions: [] }))}>+ New group</button>
+                  <span className="mini">Group = time + students + teacher → goes into every member&apos;s & teacher&apos;s schedule automatically.</span>
                 </div>
-                {/* Group class assignment — set once per room, applies to all students in the room */}
-                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
-                  <b style={{ fontSize: 13 }}>👥 Group Classes (per room — applies to every student in the room)</b>
-                  <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 12 }}><thead><tr>
-                    <th style={{ textAlign: "left", padding: 4 }}>Room</th>{GRP_SUBJ.map(g => <th key={g} style={{ padding: 4, background: "#dbeafe", color: "#1d4ed8" }}>{g}</th>)}
-                  </tr></thead><tbody>
-                    {(["junior", "lower"] as const).map(ph => {
-                      const roomsOf = [...new Set(draft.students.filter(x => x.phase === ph).map(x => normRoom(x.room)))].sort();
-                      return roomsOf.map(rm => (
-                        <tr key={ph + rm}>
-                          <td style={{ padding: 4, fontWeight: 800 }}>{ph === "junior" ? "JR" : "KD"} · {rm} <span style={{ color: "#94a3b8", fontWeight: 600 }}>({draft.students.filter(x => x.phase === ph && normRoom(x.room) === rm).length})</span></td>
-                          {([0, 1, 2, 3] as const).map(gi => (
-                            <td key={gi} style={{ padding: 2, border: "1px solid #e2e8f0" }}>
-                              <select style={{ width: "100%", border: "none", fontSize: 12, padding: 4, background: "transparent" }} value={roomGrpOf(ph, rm)[gi] || ""} onChange={e => setRoomGrp(ph, rm, gi, e.target.value)}>
-                                <option value=""></option>{(draft.teachers || []).map(t => <option key={t} value={t}>{t}</option>)}
-                                {roomGrpOf(ph, rm)[gi] && !(draft.teachers || []).includes(roomGrpOf(ph, rm)[gi]) && <option value={roomGrpOf(ph, rm)[gi]}>{roomGrpOf(ph, rm)[gi]}</option>}
-                              </select>
-                            </td>
-                          ))}
-                        </tr>
-                      ));
+                <div className="card" style={{ marginBottom: 12 }}>
+                  <span className="mini">TEACHERS (comma separated)</span>
+                  <input style={{ width: "100%", border: "1px solid #dde5ee", borderRadius: 8, padding: "7px 10px", fontSize: 12.5, marginTop: 4, fontFamily: "inherit" }} value={(ed.teachers || []).join(", ")} onChange={e => upd(d => { d.teachers = e.target.value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean) })} />
+                  <div style={{ marginTop: 10 }}>
+                    <span className="mini">STUDENT POOL ({ed.students.length}) — click ✕ to remove, type to add</span>
+                    <div className="memwrap">
+                      {ed.students.map((s, i) => <span key={i} className="memchip">{s.name} <span style={{ cursor: "pointer", color: "#dc2626", fontWeight: 900 }} onClick={() => { if (confirm("Remove " + s.name + "?")) upd(d => { d.students.splice(i, 1); d.groups.forEach(g => g.members = g.members.filter(m => m !== s.name)) }) }}>✕</span></span>)}
+                      <input placeholder="+ add student, Enter" style={{ border: "1px dashed #cbd5e1", borderRadius: 14, padding: "2px 10px", fontSize: 11.5, fontFamily: "inherit", width: 150 }} onKeyDown={e => { if (e.key === "Enter") { const v = (e.target as HTMLInputElement).value.trim().toUpperCase(); if (v) { upd(d => d.students.push({ name: v, sessions: [] })); (e.target as HTMLInputElement).value = "" } } }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="gcards">
+                  {ed.groups.map((g, gi) => (
+                    <div className="card" key={g.id}>
+                      <div className="ghead">
+                        <input value={g.name} onChange={e => upd(d => { d.groups[gi].name = e.target.value })} />
+                        <select style={{ border: "1px solid #dde5ee", borderRadius: 7, padding: "4px 6px", fontSize: 12 }} value={g.room} onChange={e => upd(d => { d.groups[gi].room = e.target.value })}>
+                          {["ROOM 1", "ROOM 2", "ROOM 3", "ROOM 4", "ROOM 5", "ROOM 6"].map(r => <option key={r}>{r}</option>)}
+                        </select>
+                        <span style={{ marginLeft: "auto" }} />
+                        <button className="tb" style={{ color: "#dc2626" }} onClick={() => { if (confirm("Delete " + g.name + "?")) upd(d => d.groups.splice(gi, 1)) }}>🗑</button>
+                      </div>
+                      <span className="mini">MEMBERS ({g.members.length})</span>
+                      <div className="memwrap">
+                        {ed.students.map(s => {
+                          const on = g.members.includes(s.name);
+                          return <span key={s.name} className={"memchip" + (on ? " on" : "")} onClick={() => upd(d => { const G = d.groups[gi]; G.members = on ? G.members.filter(m => m !== s.name) : [...G.members, s.name] })}>{s.name}</span>;
+                        })}
+                      </div>
+                      <span className="mini">CLASS TIMES</span>
+                      {g.sessions.map((se, si) => (
+                        <div className="sesrow" key={si}>
+                          <select value={se.slot} onChange={e => upd(d => { d.groups[gi].sessions[si].slot = Number(e.target.value) })}>{SLOTS.map((s, i) => <option key={i} value={i}>{s}</option>)}</select>
+                          <select value={se.subject} onChange={e => upd(d => { d.groups[gi].sessions[si].subject = e.target.value })}>{SUBJ_OPT.map(x => <option key={x}>{x}</option>)}{!SUBJ_OPT.includes(se.subject) && se.subject && <option>{se.subject}</option>}</select>
+                          <select value={se.teacher} onChange={e => upd(d => { d.groups[gi].sessions[si].teacher = e.target.value })}><option value=""></option>{(ed.teachers || []).map(t => <option key={t}>{t}</option>)}{se.teacher && !(ed.teachers || []).includes(se.teacher) && <option>{se.teacher}</option>}</select>
+                          <button className="tb" style={{ color: "#dc2626", padding: "2px 7px" }} onClick={() => upd(d => d.groups[gi].sessions.splice(si, 1))}>✕</button>
+                        </div>
+                      ))}
+                      <button className="tb" onClick={() => upd(d => d.groups[gi].sessions.push({ slot: 0, subject: GRP_SUBJ[d.groups[gi].sessions.length % 4], teacher: "" }))}>+ time</button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit.</div>)}
+
+            {/* ─── 1:1 MATRIX ─── */}
+            {nav === "one" && (canEdit && ed ? (
+              <>
+                <span className="mini">Grey = taken by a group class. Green = 1:1 (choose subject &amp; teacher). Blank = free.</span>
+                <div className="ox card" style={{ padding: 6, marginTop: 8 }}>
+                  <table className="m11"><thead><tr><th style={{ minWidth: 110 }}>Student</th>{SLOTS.map(s => <th key={s}>{s}</th>)}</tr></thead><tbody>
+                    {ed.students.map((s, si) => (
+                      <tr key={s.name}>
+                        <td className="stn">{s.name}</td>
+                        {SLOTS.map((_, sl) => {
+                          const occ = grpOcc[s.name]?.[sl];
+                          if (occ) return <td key={sl}><div className="gocc">{occ}</div></td>;
+                          const sesIdx = s.sessions.findIndex(x => x.slot === sl);
+                          const ses = sesIdx >= 0 ? s.sessions[sesIdx] : null;
+                          return <td key={sl} className={ses ? "oneCell" : ""}>
+                            <select className="cellsel" value={ses?.subject || ""} onChange={e => upd(d => { const st = d.students[si]; const v = e.target.value; const ix = st.sessions.findIndex(x => x.slot === sl); if (!v) { if (ix >= 0) st.sessions.splice(ix, 1) } else if (ix >= 0) st.sessions[ix].subject = v; else st.sessions.push({ slot: sl, subject: v, teacher: "" }) })}>
+                              <option value="">—</option>{SUBJ_OPT.map(x => <option key={x}>{x}</option>)}
+                            </select>
+                            {ses && <select className="cellsel" value={ses.teacher} onChange={e => upd(d => { const st = d.students[si]; const ix = st.sessions.findIndex(x => x.slot === sl); if (ix >= 0) st.sessions[ix].teacher = e.target.value })}>
+                              <option value="">teacher?</option>{(ed.teachers || []).map(t => <option key={t}>{t}</option>)}{ses.teacher && !(ed.teachers || []).includes(ses.teacher) && <option>{ses.teacher}</option>}
+                            </select>}
+                          </td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody></table>
+                </div>
+              </>
+            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit.</div>)}
+
+            {/* ─── MASTER ─── */}
+            {nav === "master" && !printAll && (
+              <>
+                {draft && <div className="card noprint" style={{ marginBottom: 10, background: "#fff7e6", borderColor: "#f0c36d", fontWeight: 700, fontSize: 12.5 }}>⚠ You have unsaved edits — press 💾 Save &amp; Compose (left) to apply.</div>}
+                <div className="bar noprint">
+                  {(["teacher", "student", "room", "grid"] as const).map(v => <button key={v} className={"tb" + (mview === v ? " on" : "")} onClick={() => setMview(v)}>{v === "teacher" ? "👩‍🏫 By Teacher" : v === "student" ? "🧒 By Student" : v === "room" ? "🚪 By Room" : "🗂 Grid"}</button>)}
+                </div>
+                {mview === "teacher" && <>
+                  <div className="bar noprint">{teachers.map(t => <button key={t} className={"tb" + (selT === t ? " on" : "")} onClick={() => setSelT(t)}>{t}</button>)}</div>
+                  <h2 style={{ margin: "4px 0 10px" }}>{selT}</h2>{selT && teacherTable(selT)}
+                </>}
+                {mview === "student" && <>
+                  <div className="bar noprint">{stuNames.map(n => <button key={n} className={"tb" + (selStu === n ? " on" : "")} onClick={() => setSelStu(n)}>{n}</button>)}</div>
+                  <h2 style={{ margin: "4px 0 10px" }}>{selStu}</h2>{selStu && studentTable(selStu)}
+                </>}
+                {mview === "room" && <>
+                  <div className="bar noprint">{rooms.map(r => <button key={r} className={"tb" + (selR === r ? " on" : "")} onClick={() => setSelR(r)}>{r}</button>)}</div>
+                  <h2 style={{ margin: "4px 0 10px" }}>{selR}</h2>
+                  <table className="ct"><thead><tr><th style={{ width: 116 }}>Time</th><th>Class</th></tr></thead><tbody>
+                    {SLOTS.map((s, i) => {
+                      const es = events.filter(e => e.room === selR && e.kind === "Group" && e.slot === i && !(e.cover || "").startsWith("covering"));
+                      const g: Record<string, Ev[]> = {}; es.forEach(e => { const k = e.gname + "|" + e.subject + "|" + e.teacher; (g[k] = g[k] || []).push(e) });
+                      return <tr key={i}><td className="tm">{s}</td><td>{Object.keys(g).length ? Object.entries(g).map(([k, arr], gi) => { const [gn, subj, t] = k.split("|"); return <div key={gi}><span className="pill pg">{gn}</span><b>{subj}</b> · {t} — {arr.map(x => x.who).join(", ")}</div> }) : <span className="free">—</span>}</td></tr>;
                     })}
                   </tbody></table>
-                </div>
-                <div style={{ overflowX: "auto", maxHeight: "70vh", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10 }}>
-                  <table><thead><tr>
-                    <th style={{ minWidth: 110 }}>Student</th><th>Phase</th><th>Room</th>
-                    {ONE_SUBJ.map(s => <th key={s} style={{ background: "#dcfce7", color: "#15803d" }}>1:1·{s}</th>)}
-                    <th></th>
-                  </tr></thead><tbody>
-                    {(["junior", "lower"] as const).map(ph => (<>
-                      <tr key={ph + "h"} className="sec"><td colSpan={8}>{ph === "junior" ? "JUNIOR (Group first: 9:00 G / 9:45 1:1 …)" : "KINDER · LOWER (1:1 first: 9:00 1:1 / 9:45 G …)"}
-                        <button className="tb noprint" style={{ marginLeft: 10, padding: "2px 8px" }} onClick={() => setDraft({ ...draft, students: [...draft.students, { name: "NEW STUDENT", phase: ph, room: "ROOM 1", cls: "", grp: ["", "", "", ""], one: ["", "", "", ""] }] })}>+ Add student</button></td></tr>
-                      {draft.students.map((s, si) => s.phase !== ph ? null : (
-                        <tr key={si}>
-                          <td><input value={s.name} onChange={e => { const st = [...draft.students]; st[si] = { ...s, name: e.target.value }; setDraft({ ...draft, students: st }) }} /></td>
-                          <td><select value={s.phase} onChange={e => { const st = [...draft.students]; st[si] = { ...s, phase: e.target.value as Stu["phase"] }; setDraft({ ...draft, students: st }) }}><option value="junior">JR</option><option value="lower">KD</option></select></td>
-                          <td><select value={normRoom(s.room)} onChange={e => moveStudentRoom(si, e.target.value)}>{ROOMS_OPT.concat(ROOMS_OPT.includes(normRoom(s.room)) ? [] : [normRoom(s.room)]).map(r2 => <option key={r2} value={r2}>{r2}</option>)}</select></td>
-                          {([0, 1, 2, 3] as const).map(g => (
-                            <td key={"o" + g}><select value={s.one[g] || ""} onChange={e => { const st = [...draft.students]; const oo = [...s.one]; oo[g] = e.target.value; st[si] = { ...s, one: oo }; setDraft({ ...draft, students: st }) }}>
-                              <option value=""></option>{(draft.teachers || []).map(t => <option key={t} value={t}>{t}</option>)}{s.one[g] && !(draft.teachers || []).includes(s.one[g]) && <option value={s.one[g]}>{s.one[g]}</option>}
-                            </select></td>
-                          ))}
-                          <td><button className="tb" style={{ color: "#dc2626", padding: "2px 7px" }} onClick={() => { if (!confirm("Remove " + s.name + "?")) return; setDraft({ ...draft, students: draft.students.filter((_, xi) => xi !== si) }) }}>✕</button></td>
-                        </tr>
-                      ))}
-                    </>))}
+                </>}
+                {mview === "grid" && <div className="ox">
+                  <table className="ct" style={{ minWidth: 1100 }}><thead><tr><th>Teacher</th>{SLOTS.map(s => <th key={s}>{s}</th>)}</tr></thead><tbody>
+                    {teachers.map(t => {
+                      const m = bySlot(events.filter(e => e.teacher === t));
+                      return <tr key={t}><td style={{ fontWeight: 800, whiteSpace: "nowrap" }}>{t}</td>
+                        {SLOTS.map((_, i) => {
+                          const es = m[i] || []; if (!es.length) return <td key={i} className="free">—</td>;
+                          const g = es.filter(e => e.kind === "Group"); const o = es.filter(e => e.kind === "1:1");
+                          const conf = (g.length ? 1 : 0) + o.length > 1;
+                          return <td key={i} style={conf ? { background: "#fee2e2" } : {}}>
+                            {g.length > 0 && <div style={{ background: "#eef4fb", fontSize: 11, fontWeight: 700 }}>{g[0].gname} {g[0].subject} {g[0].room}</div>}
+                            {o.map((e, oi) => <div key={oi} style={{ background: "#f0fdf4", fontSize: 11 }}>{e.subject.slice(0, 4)} · {e.who}</div>)}
+                          </td>;
+                        })}</tr>;
+                    })}
                   </tbody></table>
-                </div>
-                <p style={{ fontSize: 12, color: "#64748b" }}>Tip: substitute teacher = select main teacher, then type is not needed — use the master upload format "TEACHER -SUB" via name field if required.</p>
-              </div>
+                </div>}
+              </>
             )}
 
-            {/* Print-ALL area */}
             <div className="pa">
-              {printAll === "t" && teachers.map(t => (
-                <div className="tpage" key={t}>
-                  <h2>{t} — {dayLabel} (Week {weekStart})</h2>
-                  {teacherTable(t)}
-                </div>
-              ))}
-              {printAll === "s" && (["junior", "lower"] as const).map(ph => data.students.filter(s2 => s2.phase === ph).map((s2, i) => (
-                <div className="tpage" key={ph + i}>
-                  <h2>{s2.name} <span style={{ fontWeight: 600, fontSize: 14 }}>{s2.cls}</span> — {ph === "junior" ? "JUNIOR" : "KINDER"} · Week {weekStart}</h2>
-                  {studentTable(s2)}
-                </div>
-              )))}
+              {printAll === "t" && teachers.map(t => <div className="tpage" key={t}><h2>{t} — {dayLabel} · Week {weekStart}</h2>{teacherTable(t)}</div>)}
+              {printAll === "s" && stuNames.map(n => <div className="tpage" key={n}><h2>{n} — {dayLabel} · Week {weekStart}</h2>{studentTable(n)}</div>)}
             </div>
-          </>
-        )}
+          </>)}
+        </div>
       </div>
     </div>
   );
