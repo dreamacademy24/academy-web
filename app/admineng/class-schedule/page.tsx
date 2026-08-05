@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { isAdminAuthed } from "@/lib/adminAuth";
 
 /* ── Class Schedule System v2 ──
    Groups (time+students+teacher) + 1:1 matrix → auto-composed Master.
@@ -88,7 +89,10 @@ export default function ClassSchedule() {
     window.location.href = "/admineng/hub";
   }, []);
   useEffect(() => { supabase.from("app_settings").select("value").eq("key", "class_sched_editors").maybeSingle().then(({ data }) => { if (Array.isArray(data?.value)) setEditors(data!.value as string[]) }) }, []);
-  const canEdit = editors.includes(me) || me === "admin-ceo" || me === "admin-jun";
+  const [adminOk, setAdminOk] = useState(false);
+  useEffect(() => { try { setAdminOk(isAdminAuthed()) } catch { } }, []);
+  const meN = (me || "").toLowerCase().trim();
+  const canEdit = adminOk || editors.map(x => String(x).toLowerCase().trim()).includes(meN) || ["admin-ceo", "ceo", "admin-jun", "jun", "admin-eric", "eric"].includes(meN) || meN.includes("ceo");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -353,7 +357,7 @@ export default function ClassSchedule() {
                   ))}
                 </div>
               </>
-            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit.</div>)}
+            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit. <span style={{ color: "#94a3b8" }}>(you: {me || "?"})</span></div>)}
 
             {/* ─── 1:1 MATRIX ─── */}
             {nav === "one" && (canEdit && ed ? (
@@ -383,7 +387,7 @@ export default function ClassSchedule() {
                   </tbody></table>
                 </div>
               </>
-            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit.</div>)}
+            ) : <div className="card">Read only — ask AXL / SUZY / ERICA to edit. <span style={{ color: "#94a3b8" }}>(you: {me || "?"})</span></div>)}
 
             {/* ─── MASTER ─── */}
             {nav === "master" && !printAll && (
