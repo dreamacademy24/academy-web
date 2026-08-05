@@ -246,7 +246,10 @@ export default function ClassSchedule() {
       .pa{display:none}
       @media print{
         .top,.side,.bar,.noprint{display:none!important}.wrap{background:#fff}.main{padding:0}
-        .pa{display:block}.pa .tpage{page-break-after:always;padding:8px 0}
+        .pa{display:block}.pa .tpage{page-break-after:always;padding:0}
+        .pa .half{padding:4px 0 8px}.pa .half h3{margin:2px 0 6px;font-size:15px;color:#000}
+        .pa .pmeta{font-weight:600;font-size:11.5px;color:#555}
+        .pa .half .ct{margin-bottom:6px}.pa .half .ct td{padding:4px 9px;font-size:11.5px}.pa .half .ct th{padding:5px 9px;font-size:11px}
         table.ct{box-shadow:none}
         .ct th{background:#fff!important;color:#222!important;border:1px solid #999;font-weight:900}
         .ct td{border:1px solid #bbb;color:#222}
@@ -287,9 +290,9 @@ export default function ClassSchedule() {
             {DAYS.map((d, i) => { const ds = addD(weekStart, i); return <button key={d} className={"btn" + (day === ds ? " on" : "")} onClick={() => { setDay(ds); setDraft(null) }}>{d}{hasOv(ds) ? " ✱" : ""}</button> })}
             <span style={{ marginLeft: "auto" }} />
             {canEdit && day !== "base" && hasOv(day) && <button className="btn warn" onClick={resetDay}>↩ Reset day</button>}
-            <button className="btn" onClick={() => { setPrintAll(null); setTimeout(() => window.print(), 60) }}>🖨 Print view</button>
-            <button className="btn grn" onClick={() => { setPrintAll("t"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL teachers</button>
-            <button className="btn grn" onClick={() => { setPrintAll("s"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL students</button>
+            <button className="btn" onClick={() => { setPrintAll(null); setTimeout(() => window.print(), 60) }}>🖨 Print this view</button>
+            <button className="btn grn" onClick={() => { setPrintAll("t"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL teachers (2/page)</button>
+            <button className="btn grn" onClick={() => { setPrintAll("s"); setTimeout(() => { window.print(); setPrintAll(null) }, 150) }}>🖨 ALL students (2/page)</button>
           </div>
 
           {loading ? <div style={{ padding: 30, color: "#94a3b8" }}>Loading…</div> : !hasData && !draft ? (
@@ -436,8 +439,16 @@ export default function ClassSchedule() {
             )}
 
             <div className="pa">
-              {printAll === "t" && teachers.map(t => <div className="tpage" key={t}><h2>{t} — {dayLabel} · Week {weekStart}</h2>{teacherTable(t)}</div>)}
-              {printAll === "s" && stuNames.map(n => <div className="tpage" key={n}><h2>{n} — {dayLabel} · Week {weekStart}</h2>{studentTable(n)}</div>)}
+              {printAll === "t" && Array.from({ length: Math.ceil(teachers.length / 2) }, (_, i) => teachers.slice(i * 2, i * 2 + 2)).map((pair, pi) => (
+                <div className="tpage" key={pi}>
+                  {pair.map(t => <div className="half" key={t}><h3>{t} <span className="pmeta">— {dayLabel} · Week {weekStart}</span></h3>{teacherTable(t)}</div>)}
+                </div>
+              ))}
+              {printAll === "s" && Array.from({ length: Math.ceil(stuNames.length / 2) }, (_, i) => stuNames.slice(i * 2, i * 2 + 2)).map((pair, pi) => (
+                <div className="tpage" key={pi}>
+                  {pair.map(n => <div className="half" key={n}><h3>{n} <span className="pmeta">— {dayLabel} · Week {weekStart}</span></h3>{studentTable(n)}</div>)}
+                </div>
+              ))}
             </div>
           </>)}
         </div>
