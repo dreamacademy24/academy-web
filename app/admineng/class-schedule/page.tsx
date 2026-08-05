@@ -144,6 +144,22 @@ export default function ClassSchedule() {
     await supabase.from("class_schedules").update({ overrides: ov, updated_at: new Date().toISOString() }).eq("id", row.id);
     await load();
   }
+  function setRoomGrp(ph: "junior" | "lower", room: string, gi: number, val: string) {
+    if (!draft) return;
+    setDraft({ ...draft, students: draft.students.map(s => (s.phase === ph && normRoom(s.room) === room) ? { ...s, grp: s.grp.map((g, i) => i === gi ? val : g) } : s) });
+  }
+  function roomGrpOf(ph: "junior" | "lower", room: string): string[] {
+    const s = (draft?.students || []).find(x => x.phase === ph && normRoom(x.room) === room);
+    return s ? s.grp : ["", "", "", ""];
+  }
+  function moveStudentRoom(si: number, room: string) {
+    if (!draft) return;
+    const s = draft.students[si];
+    const donor = draft.students.find(x => x.phase === s.phase && normRoom(x.room) === room && x !== s);
+    const st = [...draft.students];
+    st[si] = { ...s, room, grp: donor ? [...donor.grp] : s.grp };
+    setDraft({ ...draft, students: st });
+  }
   function startEdit() {
     if (!effBase) { setDraft({ teachers: [], students: [] }); setView("edit"); return }
     setDraft(JSON.parse(JSON.stringify(effBase))); setView("edit");
@@ -337,26 +353,44 @@ export default function ClassSchedule() {
                   <span style={{ marginLeft: 12, fontSize: 12, color: "#64748b" }}>Teachers:</span>
                   <input style={{ flex: 1, minWidth: 260, border: "1.5px solid #d7e0ea", borderRadius: 8, padding: "6px 10px", fontSize: 12 }} value={(draft.teachers || []).join(", ")} onChange={e => setDraft({ ...draft, teachers: e.target.value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean) })} />
                 </div>
+                {/* Group class assignment — set once per room, applies to all students in the room */}
+                <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
+                  <b style={{ fontSize: 13 }}>👥 Group Classes (per room — applies to every student in the room)</b>
+                  <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8, fontSize: 12 }}><thead><tr>
+                    <th style={{ textAlign: "left", padding: 4 }}>Room</th>{GRP_SUBJ.map(g => <th key={g} style={{ padding: 4, background: "#dbeafe", color: "#1d4ed8" }}>{g}</th>)}
+                  </tr></thead><tbody>
+                    {(["junior", "lower"] as const).map(ph => {
+                      const roomsOf = [...new Set(draft.students.filter(x => x.phase === ph).map(x => normRoom(x.room)))].sort();
+                      return roomsOf.map(rm => (
+                        <tr key={ph + rm}>
+                          <td style={{ padding: 4, fontWeight: 800 }}>{ph === "junior" ? "JR" : "KD"} · {rm} <span style={{ color: "#94a3b8", fontWeight: 600 }}>({draft.students.filter(x => x.phase === ph && normRoom(x.room) === rm).length})</span></td>
+                          {([0, 1, 2, 3] as const).map(gi => (
+                            <td key={gi} style={{ padding: 2, border: "1px solid #e2e8f0" }}>
+                              <select style={{ width: "100%", border: "none", fontSize: 12, padding: 4, background: "transparent" }} value={roomGrpOf(ph, rm)[gi] || ""} onChange={e => setRoomGrp(ph, rm, gi, e.target.value)}>
+                                <option value=""></option>{(draft.teachers || []).map(t => <option key={t} value={t}>{t}</option>)}
+                                {roomGrpOf(ph, rm)[gi] && !(draft.teachers || []).includes(roomGrpOf(ph, rm)[gi]) && <option value={roomGrpOf(ph, rm)[gi]}>{roomGrpOf(ph, rm)[gi]}</option>}
+                              </select>
+                            </td>
+                          ))}
+                        </tr>
+                      ));
+                    })}
+                  </tbody></table>
+                </div>
                 <div style={{ overflowX: "auto", maxHeight: "70vh", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: 10 }}>
                   <table><thead><tr>
                     <th style={{ minWidth: 110 }}>Student</th><th>Phase</th><th>Room</th>
-                    {GRP_SUBJ.map(s => <th key={s} style={{ background: "#dbeafe", color: "#1d4ed8" }}>G·{s}</th>)}
                     {ONE_SUBJ.map(s => <th key={s} style={{ background: "#dcfce7", color: "#15803d" }}>1:1·{s}</th>)}
                     <th></th>
                   </tr></thead><tbody>
                     {(["junior", "lower"] as const).map(ph => (<>
-                      <tr key={ph + "h"} className="sec"><td colSpan={12}>{ph === "junior" ? "JUNIOR (Group first: 9:00 G / 9:45 1:1 …)" : "KINDER · LOWER (1:1 first: 9:00 1:1 / 9:45 G …)"}
+                      <tr key={ph + "h"} className="sec"><td colSpan={8}>{ph === "junior" ? "JUNIOR (Group first: 9:00 G / 9:45 1:1 …)" : "KINDER · LOWER (1:1 first: 9:00 1:1 / 9:45 G …)"}
                         <button className="tb noprint" style={{ marginLeft: 10, padding: "2px 8px" }} onClick={() => setDraft({ ...draft, students: [...draft.students, { name: "NEW STUDENT", phase: ph, room: "ROOM 1", cls: "", grp: ["", "", "", ""], one: ["", "", "", ""] }] })}>+ Add student</button></td></tr>
                       {draft.students.map((s, si) => s.phase !== ph ? null : (
                         <tr key={si}>
                           <td><input value={s.name} onChange={e => { const st = [...draft.students]; st[si] = { ...s, name: e.target.value }; setDraft({ ...draft, students: st }) }} /></td>
                           <td><select value={s.phase} onChange={e => { const st = [...draft.students]; st[si] = { ...s, phase: e.target.value as Stu["phase"] }; setDraft({ ...draft, students: st }) }}><option value="junior">JR</option><option value="lower">KD</option></select></td>
-                          <td><select value={normRoom(s.room)} onChange={e => { const st = [...draft.students]; st[si] = { ...s, room: e.target.value }; setDraft({ ...draft, students: st }) }}>{ROOMS_OPT.concat(ROOMS_OPT.includes(normRoom(s.room)) ? [] : [normRoom(s.room)]).map(r2 => <option key={r2} value={r2}>{r2}</option>)}</select></td>
-                          {([0, 1, 2, 3] as const).map(g => (
-                            <td key={"g" + g}><select value={s.grp[g] || ""} onChange={e => { const st = [...draft.students]; const gg = [...s.grp]; gg[g] = e.target.value; st[si] = { ...s, grp: gg }; setDraft({ ...draft, students: st }) }}>
-                              <option value=""></option>{(draft.teachers || []).map(t => <option key={t} value={t}>{t}</option>)}{s.grp[g] && !(draft.teachers || []).includes(s.grp[g]) && <option value={s.grp[g]}>{s.grp[g]}</option>}
-                            </select></td>
-                          ))}
+                          <td><select value={normRoom(s.room)} onChange={e => moveStudentRoom(si, e.target.value)}>{ROOMS_OPT.concat(ROOMS_OPT.includes(normRoom(s.room)) ? [] : [normRoom(s.room)]).map(r2 => <option key={r2} value={r2}>{r2}</option>)}</select></td>
                           {([0, 1, 2, 3] as const).map(g => (
                             <td key={"o" + g}><select value={s.one[g] || ""} onChange={e => { const st = [...draft.students]; const oo = [...s.one]; oo[g] = e.target.value; st[si] = { ...s, one: oo }; setDraft({ ...draft, students: st }) }}>
                               <option value=""></option>{(draft.teachers || []).map(t => <option key={t} value={t}>{t}</option>)}{s.one[g] && !(draft.teachers || []).includes(s.one[g]) && <option value={s.one[g]}>{s.one[g]}</option>}
