@@ -223,7 +223,7 @@ export default function AdminBookingsPage(){
   },[bType]);
   const NB_ACC_KR:Record<string,string>={jaypark:"제이파크",dreamhouse:"드림하우스",cubenine:"큐브나인"};
 
-  const CN_PERIODS=["1주","2주","4주","6일"];
+  const CN_PERIODS=["1주","2주","3주","4주","6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
   const NP_TYPES=[
     {v:'dh_only' as const, label:'드림하우스', desc:'숙소만 이용'},
