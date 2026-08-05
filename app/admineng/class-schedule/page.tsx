@@ -18,6 +18,17 @@ const GRP_SUBJ = ["BTS", "SOLOMON", "DREAM", "FUN"];
 const ONE_SUBJ = ["SPEAKING", "LISTENING", "READING", "WRITING"];
 const SUBJ_OPT = [...ONE_SUBJ, ...GRP_SUBJ, "PHONICS", "REVIEW", "TEST", "ETC"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SLOT_RANGE = [[540, 580], [585, 625], [630, 675], [680, 720], [770, 810], [815, 860], [880, 915], [920, 960]];
+function nowSlotPH(): { cur: number; next: number; mins: number } {
+  const ph = new Date(Date.now() + (8 * 60 + new Date().getTimezoneOffset()) * 60000);
+  const m = ph.getHours() * 60 + ph.getMinutes();
+  let cur = -1, next = -1;
+  for (let i = 0; i < SLOT_RANGE.length; i++) {
+    if (m >= SLOT_RANGE[i][0] && m <= SLOT_RANGE[i][1]) { cur = i; break }
+    if (m < SLOT_RANGE[i][0]) { next = i; break }
+  }
+  return { cur, next, mins: m };
+}
 const uid = () => Math.random().toString(36).slice(2, 10);
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const ymd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -76,7 +87,9 @@ export default function ClassSchedule() {
   const [row, setRow] = useState<Row | null>(null);
   const [day, setDay] = useState<string>("base");
   const [nav, setNav] = useState<"groups" | "one" | "master">("master");
-  const [mview, setMview] = useState<"teacher" | "student" | "room" | "grid">("teacher");
+  const [mview, setMview] = useState<"now" | "timeline" | "teacher" | "student" | "room" | "grid">("now");
+  const [findQ, setFindQ] = useState("");
+  const [slotOv, setSlotOv] = useState<number | null>(null);
   const [selT, setSelT] = useState(""); const [selStu, setSelStu] = useState(""); const [selR, setSelR] = useState("");
   const [draft, setDraft] = useState<BaseV2 | null>(null);
   const [busy, setBusy] = useState(""); const [printAll, setPrintAll] = useState<null | "t" | "s">(null);
@@ -408,8 +421,62 @@ export default function ClassSchedule() {
               <>
                 {draft && <div className="card noprint" style={{ marginBottom: 10, background: "#fff7e6", borderColor: "#f0c36d", fontWeight: 700, fontSize: 12.5 }}>⚠ You have unsaved edits — press 💾 Save &amp; Compose (left) to apply.</div>}
                 <div className="bar noprint">
-                  {(["teacher", "student", "room", "grid"] as const).map(v => <button key={v} className={"tb" + (mview === v ? " on" : "")} onClick={() => setMview(v)}>{v === "teacher" ? "👩‍🏫 By Teacher" : v === "student" ? "🧒 By Student" : v === "room" ? "🚪 By Room" : "🗂 Grid"}</button>)}
+                  {(["now", "timeline", "teacher", "student", "room", "grid"] as const).map(v => <button key={v} className={"tb" + (mview === v ? " on" : "")} onClick={() => setMview(v)}>{v === "now" ? "⏰ Now" : v === "timeline" ? "📊 Timeline" : v === "teacher" ? "👩‍🏫 By Teacher" : v === "student" ? "🧒 By Student" : v === "room" ? "🚪 By Room" : "🗂 Grid"}</button>)}
                 </div>
+                {mview === "now" && (() => {
+                  const { cur, next } = nowSlotPH();
+                  const autoSlot = cur >= 0 ? cur : next >= 0 ? next : 0;
+                  const showSlot = slotOv !== null ? slotOv : autoSlot;
+                  const isBreak = cur < 0 && slotOv === null;
+                  const es = events.filter(e => e.slot === showSlot && !(e.cover || "").startsWith("covering"));
+                  const q = findQ.trim().toUpperCase();
+                  const match = (e: Ev) => !q || e.who.toUpperCase().includes(q) || e.teacher.toUpperCase().includes(q);
+                  const gset: Record<string, Ev[]> = {}; const ones: Ev[] = [];
+                  es.forEach(e => { if (e.kind === "Group") { const k = e.gname + "|" + e.subject + "|" + e.room + "|" + e.teacher; (gset[k] = gset[k] || []).push(e) } else ones.push(e) });
+                  return (<>
+                    <div className="card" style={{ marginBottom: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 20, fontWeight: 800 }}>⏰ {SLOTS[showSlot]}</span>
+                      <span style={{ background: isBreak ? "#fff7e6" : "#dcfce7", color: isBreak ? "#92400e" : "#166534", borderRadius: 20, padding: "3px 12px", fontSize: 12.5, fontWeight: 800 }}>{isBreak ? "Break — next class" : "In class now"}</span>
+                      <input placeholder="🔍 student or teacher name…" value={findQ} onChange={e => setFindQ(e.target.value)} style={{ marginLeft: "auto", border: "1.5px solid #d7e0ea", borderRadius: 9, padding: "8px 12px", fontSize: 13, fontFamily: "inherit", minWidth: 220 }} />
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {SLOTS.map((_, i) => <button key={i} className={"tb" + (i === showSlot ? " on" : "")} style={{ padding: "3px 8px", fontSize: 11 }} onClick={() => setSlotOv(i === autoSlot ? null : i)} title={SLOTS[i]}>{i + 1}</button>)}
+                      </div>
+                    </div>
+                    <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>Group classes</h2>
+                    <div className="gcards" style={{ marginBottom: 16 }}>
+                      {Object.entries(gset).filter(([, arr]) => arr.some(match)).map(([k, arr]) => { const [gn, subj, room, t] = k.split("|");
+                        return <div className="card" key={k} style={{ borderLeft: "4px solid #7F77DD", borderRadius: 10 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}><b style={{ fontSize: 14 }}>{gn || "Group"}</b><span className="pill pg">{subj}</span><span className="rm">{room}</span><span style={{ marginLeft: "auto", fontWeight: 800, color: "#3730a3" }}>{t}</span></div>
+                          <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.7 }}>{arr.map(x => <span key={x.who} style={{ marginRight: 8, fontWeight: q && x.who.toUpperCase().includes(q) ? 900 : 500, background: q && x.who.toUpperCase().includes(q) ? "#fef08a" : "transparent", borderRadius: 4, padding: "0 2px" }}>{x.who}</span>)}</div>
+                        </div>; })}
+                    </div>
+                    <h2 style={{ margin: "0 0 8px", fontSize: 16 }}>1:1 classes</h2>
+                    <div className="card" style={{ padding: 0 }}>
+                      <table className="ct" style={{ margin: 0, boxShadow: "none" }}><thead><tr><th>Teacher</th><th>Student</th><th>Subject</th></tr></thead><tbody>
+                        {ones.filter(match).sort((a, b) => a.teacher < b.teacher ? -1 : 1).map((e, i) => <tr key={i}>
+                          <td style={{ fontWeight: 800, background: q && e.teacher.toUpperCase().includes(q) ? "#fef08a" : undefined }}>{e.teacher}</td>
+                          <td style={{ fontWeight: 700, background: q && e.who.toUpperCase().includes(q) ? "#fef08a" : undefined }}>{e.who}</td>
+                          <td><span className="pill p1">{e.subject}</span></td>
+                        </tr>)}
+                        {ones.filter(match).length === 0 && <tr><td colSpan={3} className="free">—</td></tr>}
+                      </tbody></table>
+                    </div>
+                  </>);
+                })()}
+                {mview === "timeline" && (() => {
+                  const { cur } = nowSlotPH();
+                  const grpBy: Record<string, Record<number, Ev[]>> = {};
+                  events.filter(e => e.kind === "Group" && !(e.cover || "").startsWith("covering")).forEach(e => { const r = e.room || "?"; (grpBy[r] = grpBy[r] || {}); (grpBy[r][e.slot] = grpBy[r][e.slot] || []).push(e) });
+                  const roomsT = Object.keys(grpBy).sort();
+                  const oneCnt: Record<number, number> = {}; events.filter(e => e.kind === "1:1" && !(e.cover || "").startsWith("covering")).forEach(e => oneCnt[e.slot] = (oneCnt[e.slot] || 0) + 1);
+                  return (<div className="ox"><table className="ct" style={{ minWidth: 1050 }}><thead><tr><th style={{ width: 90 }}>Room</th>{SLOTS.map((sl, i) => <th key={i} style={i === cur ? { background: "#fde68a", color: "#78350f" } : {}}>{sl}{i === cur ? " ⏰" : ""}</th>)}</tr></thead><tbody>
+                    {roomsT.map(r => <tr key={r}><td style={{ fontWeight: 800 }}>{r}</td>
+                      {SLOTS.map((_, i) => { const arr = grpBy[r][i] || []; const seen: Record<string, Ev[]> = {}; arr.forEach(e => { const k = e.gname + "|" + e.subject + "|" + e.teacher; (seen[k] = seen[k] || []).push(e) });
+                        return <td key={i} style={i === cur ? { background: "#fffbeb" } : {}}>{Object.entries(seen).map(([k, a2], j) => { const [gn, subj, t] = k.split("|"); return <div key={j} style={{ background: "#eef2ff", borderRadius: 6, padding: "3px 6px", marginBottom: 2, fontSize: 11.5 }}><b>{gn}</b> {subj}<br /><span style={{ color: "#3730a3", fontWeight: 800 }}>{t}</span> · {a2.length}명</div> }) || <span className="free">—</span>}</td>; })}
+                    </tr>)}
+                    <tr><td style={{ fontWeight: 800, color: "#15803d" }}>1:1</td>{SLOTS.map((_, i) => <td key={i} style={i === cur ? { background: "#fffbeb" } : {}}>{oneCnt[i] ? <span className="pill p1">{oneCnt[i]}건</span> : <span className="free">—</span>}</td>)}</tr>
+                  </tbody></table></div>);
+                })()}
                 {mview === "teacher" && <>
                   <div className="bar noprint">{teachers.map(t => <button key={t} className={"tb" + (selT === t ? " on" : "")} onClick={() => setSelT(t)}>{t}</button>)}</div>
                   <h2 style={{ margin: "4px 0 10px" }}>{selT}</h2>{selT && teacherTable(selT)}
