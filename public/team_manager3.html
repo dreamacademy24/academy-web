@@ -110,6 +110,9 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .apv-rich input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:4px;cursor:pointer;accent-color:var(--green);}
 .apv-rich hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 #apvBodyEd:empty:before{content:attr(data-ph);color:var(--text3);}
+#tmNt:empty:before{content:attr(data-ph);color:var(--text3);}
+#tmNt ul{padding-left:20px;}
+#tmNt input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:4px;}
 #apvBodyEd ul{padding-left:20px;}
 #apvBodyEd input[type=checkbox]{width:15px;height:15px;vertical-align:-2px;margin-right:4px;}
 
@@ -3022,7 +3025,25 @@ async function saveGuideMsg() {
     </div>
 
     <!-- body textarea (main content area) -->
-    <textarea class="tm-ed-body" id="tmNt" placeholder="업무 상세 내용, 메모, 참고사항 등을 자유롭게 작성하세요..."></textarea>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;padding:6px;background:var(--surface2);border-radius:8px 8px 0 0;border:1px solid var(--border2);border-bottom:none">
+      <button type="button" class="tm-btn tm-btn-sm" style="font-weight:900" onclick="_tmEd('bold')">B</button>
+      <button type="button" class="tm-btn tm-btn-sm" style="font-style:italic" onclick="_tmEd('italic')">I</button>
+      <button type="button" class="tm-btn tm-btn-sm" style="text-decoration:underline" onclick="_tmEd('underline')">U</button>
+      <button type="button" class="tm-btn tm-btn-sm" style="text-decoration:line-through" onclick="_tmEd('strikeThrough')">S</button>
+      <span style="width:1px;background:var(--border);margin:0 2px"></span>
+      <button type="button" class="tm-btn tm-btn-sm" onclick="_tmEd('fontSize','5')">크게</button>
+      <button type="button" class="tm-btn tm-btn-sm" onclick="_tmEd('fontSize','3')">보통</button>
+      <button type="button" class="tm-btn tm-btn-sm" onclick="_tmEd('fontSize','2')">작게</button>
+      <span style="width:1px;background:var(--border);margin:0 2px"></span>
+      <button type="button" class="tm-btn tm-btn-sm" style="color:#ef4444;font-weight:800" onclick="_tmEd('foreColor','#ef4444')">가</button>
+      <button type="button" class="tm-btn tm-btn-sm" style="color:#2563eb;font-weight:800" onclick="_tmEd('foreColor','#2563eb')">가</button>
+      <button type="button" class="tm-btn tm-btn-sm" style="font-weight:800" onclick="_tmEd('foreColor','#1a1d2e')">가</button>
+      <span style="width:1px;background:var(--border);margin:0 2px"></span>
+      <button type="button" class="tm-btn tm-btn-sm" onclick="_tmEd('insertUnorderedList')">• 목록</button>
+      <button type="button" class="tm-btn tm-btn-sm" onclick="_tmEdCheck()">☑ 체크</button>
+      <button type="button" class="tm-btn tm-btn-sm tm-btn-ghost" onclick="_tmEd('removeFormat')">지우기</button>
+    </div>
+    <div id="tmNt" contenteditable="true" data-ph="업무 상세 내용, 메모, 참고사항 등을 자유롭게 작성하세요..." style="min-height:170px;max-height:400px;overflow-y:auto;border:1px solid var(--border2);border-radius:0 0 8px 8px;padding:12px 14px;font-size:14.5px;line-height:1.8;outline:none;background:var(--surface);margin-bottom:14px"></div>
 
     <!-- checklist section -->
     <div class="tm-ed-section">
@@ -5898,7 +5919,7 @@ function renderBoardTaskDetail(taskId){
   if(dueT)html+='<span class="tag '+dueT.cls+'" style="font-size:11px">📅 '+t.due+' ('+dueT.text+')</span>';
   if(prog>0)html+='<span style="background:#eff6ff;color:#1d4ed8;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">'+prog+'%</span>';
   html+='</div>';
-  html+='<h2 style="font-size:18px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2></div>';
+  html+='<h2 style="font-size:20px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2>'+_taskMetaHtml(t)+'</div>';
   html+='<div style="display:flex;gap:6px;flex-shrink:0">';
   var canEdit=isManagerCU()||(CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0)));
   if(canEdit){
@@ -5926,7 +5947,7 @@ function renderBoardTaskDetail(taskId){
     html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
   }
   if(t.note){
-    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
+    html+=_taskNoteHtml(t);
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
@@ -7887,7 +7908,7 @@ function renderEmpDetail(taskId){
   if(emp)html+='<span style="background:'+ec+'18;color:'+ec+';padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700">'+esc(emp.name)+'</span>';
   if(dueT)html+='<span class="tag '+dueT.cls+'" style="font-size:11px">📅 '+t.due+' ('+dueT.text+')</span>';
   html+='</div>';
-  html+='<h2 style="font-size:18px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2></div>';
+  html+='<h2 style="font-size:20px;font-weight:800;margin:0;'+(isDoneTask(t)?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(t.title||'')+newBadgeHtml(t)+'</h2>'+_taskMetaHtml(t)+'</div>';
   html+='<div style="display:flex;gap:6px;flex-shrink:0">';
   var canEdit=isManagerCU()||(CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0)));
   if(canEdit){
@@ -7906,7 +7927,7 @@ function renderEmpDetail(taskId){
     html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
   }
   if(t.note){
-    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
+    html+=_taskNoteHtml(t);
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
@@ -8246,6 +8267,21 @@ function renderApprovalPage(empId,targetId){
     wrap.innerHTML=html;
     if(sel){_apvLoadCmts(String(sel.id));_apvBindChecks(sel);}
   });
+}
+function _tmEd(cmd,val){var ed=document.getElementById('tmNt');if(ed)ed.focus();try{document.execCommand(cmd,false,val||null);}catch(e){}}
+function _tmEdCheck(){var ed=document.getElementById('tmNt');if(ed)ed.focus();try{document.execCommand('insertHTML',false,'<div><input type="checkbox"> 항목 </div>');}catch(e){}}
+function _tmNtSet(note){var ed=document.getElementById('tmNt');if(!ed)return;var n=String(note||'');ed.innerHTML=/<[a-z][^>]*>/i.test(n)?_apvSafeHtml(n):esc(n).replace(/\n/g,'<br>');}
+function _tmNtGet(){var ed=document.getElementById('tmNt');if(!ed)return '';return ed.innerText.trim()?ed.innerHTML:'';}
+function _taskMetaHtml(t){
+  var parts=[];
+  if(t.createdAt){var d=new Date(t.createdAt);if(!isNaN(d))parts.push('\uD83D\uDD52 \uC791\uC131 '+d.toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}));}
+  if(t.createdBy){var au=getP(t.createdBy);parts.push('\u270D '+esc(au?au.name:t.createdBy));}
+  if(!parts.length)return '';
+  return '<div style="font-size:12.5px;color:var(--text3);font-weight:600;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap;border-top:1px dashed var(--border);padding-top:6px">'+parts.join('<span style="color:var(--border2)">\u00B7</span>')+'</div>';
+}
+function _taskNoteHtml(t){
+  var b=String(t.note||'');var isH=/<[a-z][^>]*>/i.test(b);
+  return '<div class="apv-rich" style="background:var(--surface);border:1px solid var(--border);padding:16px 18px;border-radius:10px;font-size:15px;color:var(--text);margin-bottom:14px;line-height:1.85;'+(isH?'':'white-space:pre-wrap')+'">'+(isH?_apvSafeHtml(b):esc(b))+'</div>';
 }
 function _apvEd(cmd,val){var ed=document.getElementById('apvBodyEd');if(ed)ed.focus();try{document.execCommand(cmd,false,val||null);}catch(e){}}
 function _apvEdCheck(){var ed=document.getElementById('apvBodyEd');if(ed)ed.focus();try{document.execCommand('insertHTML',false,'<div><input type="checkbox"> 항목 </div>');}catch(e){}}
@@ -9509,7 +9545,7 @@ function openTaskModal(pre){
   if(typeof clearTaskErr==='function')clearTaskErr();
   var _sb=document.getElementById('tmSaveBtn');if(_sb){_sb.disabled=false;_sb.textContent='저장';}
   document.getElementById('tmTitle').textContent='업무 추가';
-  ['tmTit','tmNt'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('tmTit').value='';var _ntEd=document.getElementById('tmNt');if(_ntEd)_ntEd.innerHTML='';
   document.getElementById('tmDue').value='';document.getElementById('tmDue').style.display='none';
   document.getElementById('tmDel').style.display='none';
   document.getElementById('tmCreated').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
@@ -9563,7 +9599,7 @@ function openTaskEdit(id){
   var _subTog=document.getElementById('tmSubToggle');_subTog.checked=_isSub;_subTog.parentElement.querySelector('span').style.background=_isSub?'#f59e0b':'#cbd5e1';_subTog.parentElement.querySelector('i').style.transform=_isSub?'translateX(16px)':'translateX(0)';
   document.getElementById('tmClSection').style.display=_isSub?'none':'';document.getElementById('tmSubSection').style.display=_isSub?'':'none';renderTMSubList();
   document.getElementById('tmTitle').textContent='업무 편집';
-  document.getElementById('tmTit').value=t.title;document.getElementById('tmNt').value=t.note||'';
+  document.getElementById('tmTit').value=t.title;_tmNtSet(t.note);
   document.getElementById('tmDel').style.display='inline-flex';
   document.getElementById('tmCreated').textContent=t.createdAt||new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   const hD=!!t.due;document.querySelectorAll('input[name="tmDM"]').forEach(function(r){r.checked=r.value===(hD?'date':'none');});
@@ -9669,7 +9705,7 @@ function saveTask(){
   const assignees=_selIds;
   const dueM=document.querySelector('input[name="tmDM"]:checked').value;
   const due=dueM==='date'?document.getElementById('tmDue').value:'';
-  const note=document.getElementById('tmNt').value;
+  const note=_tmNtGet();
   const createdAt=new Date().toISOString();
   var _isSubMode=document.getElementById('tmSubToggle').checked;
   var _clData,clProg;
@@ -10770,7 +10806,7 @@ function cancelPomo(){if(pomoInterval)clearInterval(pomoInterval);pomoInterval=n
 // ── TEMPLATES ──
 function saveAsTemplate(){
   var title=document.getElementById('tmTit').value.trim();if(!title){toast('업무 내용을 입력하세요','var(--red)');return;}
-  templates.push({id:uid(),title:title,note:document.getElementById('tmNt').value.trim(),checklist:[...tmChecklist]});
+  templates.push({id:uid(),title:title,note:_tmNtGet(),checklist:[...tmChecklist]});
   sv('tm_tmpl',templates);toast('✓ 템플릿이 저장됐어요!');
 }
 function showTmplPicker(){
@@ -10787,7 +10823,7 @@ function showTmplPicker(){
 function applyTmpl(id){
   var t=templates.find(function(x){return x.id===id;});if(!t)return;
   document.getElementById('tmTit').value=t.title;
-  document.getElementById('tmNt').value=t.note||'';
+  _tmNtSet(t.note);
   tmChecklist=(t.checklist||[]).map(function(c){return{id:uid(),text:c.text,done:false};});
   renderTMChecklist();
   var p=document.getElementById('tmplPicker');if(p)p.remove();
