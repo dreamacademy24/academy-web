@@ -275,17 +275,26 @@ export default function BookingPage() {
         const grp = rt.includes("풀") ? ["103","104","105","106"] : ["204","205","206","207","208","209","210"];
         const blk = blocks.filter(b => grp.includes(b.room) && b.ci < co2 && ci2 < b.co);
         const linked = new Set(blocks.map(b => b.booking_id).filter(Boolean));
-        const { data: bks } = await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status").ilike("accom_type", "%큐브%");
-        let cnt = blk.length;
+        const { data: bks } = await supabase.from("bookings").select("id,cn_room_type,checkin_date,checkout_date,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout,status,paid_amount").ilike("accom_type", "%큐브%");
+        // 날짜별 실제 동시 점유로 판정 (블록 + 블록 없는 확정·입금 예약만 — 미입금 접수는 제외)
+        const ivs: { ci: string; co: string }[] = blk.map(b => ({ ci: String(b.ci), co: String(b.co) }));
         for (const b of (bks || [])) {
           if (String(b.status || "").includes("취소") || linked.has(b.id)) continue;
           if ((b.cn_room_type || "디럭스").includes("풀") !== rt.includes("풀")) continue;
+          const confirmed = Number((b as unknown as { paid_amount?: number }).paid_amount || 0) > 0 || /영수증발행|결제완료|완료|인보이스발행/.test(String(b.status || ""));
+          if (!confirmed) continue;
           let bci = b.checkin_date, bco = b.checkout_date;
           if (b.seg1_type === "cubenine") { bci = b.seg1_checkin; bco = b.seg1_checkout; }
           else if (b.seg2_type === "cubenine") { bci = b.seg2_checkin; bco = b.seg2_checkout; }
-          if (bci && bco && String(bci) < co2 && ci2 < String(bco)) cnt++;
+          if (bci && bco && String(bci) < co2 && ci2 < String(bco)) ivs.push({ ci: String(bci), co: String(bco) });
         }
-        if (cnt >= cap) {
+        let full = false;
+        { const _p = (n: number) => String(n).padStart(2, "0");
+          const d = new Date(ci2 + "T00:00:00"); const end = new Date(co2 + "T00:00:00");
+          while (d < end) { const ds = `${d.getFullYear()}-${_p(d.getMonth() + 1)}-${_p(d.getDate())}`;
+            if (ivs.filter(v => v.ci <= ds && ds < v.co).length >= cap) { full = true; break }
+            d.setDate(d.getDate() + 1); } }
+        if (full) {
           alert(`⚠️ 죄송합니다 — 선택하신 기간의 큐브나인 ${rt.includes("풀") ? "풀억세스" : "디럭스오션"} 룸이 모두 예약되었습니다.\n\n다른 기간 또는 다른 룸타입을 선택하시거나, 카카오 채널로 문의해 주세요.`);
           setLoading(false);
           return;
