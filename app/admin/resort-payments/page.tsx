@@ -4,11 +4,11 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import ResortInvoiceDoc, { type ResortInvDocRow } from "../resort-invoice/ResortInvoiceDoc";
 
-type Resort = "all" | "jaypark" | "cubenine";
+type Resort = "all" | "jaypark" | "jaypark_short" | "cubenine";
 const RESORT_LABEL: Record<string, string> = { jaypark: "제이파크", cubenine: "큐브나인" };
 
 interface InvRow extends ResortInvDocRow {
-  id: string; memo: string | null;
+  id: string; memo: string | null; rate_tier?: string | null;
   status: string; paid_date: string | null; paid_memo: string | null;
   receipt_url: string | null;
   receipt_urls?: string[] | null;
@@ -60,7 +60,9 @@ export default function ResortPaymentsPage() {
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   const filtered = useMemo(() => rows.filter(r => {
-    if (resort !== "all" && r.resort !== resort) return false;
+    if (resort === "jaypark" && !(r.resort === "jaypark" && r.rate_tier !== "corporate")) return false;
+    if (resort === "jaypark_short" && !(r.resort === "jaypark" && r.rate_tier === "corporate")) return false;
+    if (resort === "cubenine" && r.resort !== "cubenine") return false;
     if (status !== "all" && r.status !== status) return false;
     if (month && !(r.period_start || "").startsWith(month)) return false;
     return true;
@@ -192,8 +194,8 @@ export default function ResortPaymentsPage() {
       <div className="rh"><h1>💳 리조트 결제내역</h1></div>
 
       <div className="fbar">
-        {(["all", "jaypark", "cubenine"] as Resort[]).map(r => (
-          <button key={r} className={`chip${resort === r ? " ac" : ""}`} onClick={() => setResort(r)}>{r === "all" ? "전체" : RESORT_LABEL[r]}</button>
+        {(["all", "jaypark", "jaypark_short", "cubenine"] as Resort[]).map(r => (
+          <button key={r} className={`chip${resort === r ? " ac" : ""}`} onClick={() => setResort(r)}>{r === "all" ? "전체" : r === "jaypark" ? "제이파크 (장기)" : r === "jaypark_short" ? "제이파크 단기" : RESORT_LABEL[r]}</button>
         ))}
         <span style={{ width: 10 }} />
         {(["all", "unpaid", "paid"] as const).map(s => (
@@ -230,7 +232,7 @@ export default function ResortPaymentsPage() {
                 <td style={{ fontWeight: 800, color: "#92400e" }}>{_ix + 1}</td><td style={{ whiteSpace: "nowrap" }}>
                   <button onClick={() => setViewInv(r)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, textDecoration: "underline" }}>{r.invoice_no}</button>
                 </td>
-                <td>{RESORT_LABEL[r.resort] || r.resort}</td>
+                <td>{r.resort === "jaypark" ? ((r as unknown as { rate_tier?: string }).rate_tier === "corporate" ? "제이파크 단기" : "제이파크") : (RESORT_LABEL[r.resort] || r.resort)}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   {(() => { const kr = String((r as unknown as { guests_kr?: string }).guests_kr || "").split(",")[0]?.trim(); return kr ? <div style={{ fontWeight: 800 }}>{kr}</div> : null; })()}
                   <div style={{ fontWeight: 700, fontSize: 11.5, color: "#475569" }}>{r.guest_name}</div>

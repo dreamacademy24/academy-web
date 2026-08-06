@@ -443,7 +443,7 @@ ${signature}`);
     } finally { setSending(false); }
   }
 
-  const recent = useMemo(() => invoices.filter(v => v.resort === resort), [invoices, resort]);
+  const recent = useMemo(() => invoices.filter(v => v.resort === resort && (resort !== "jaypark" || (jpShort ? v.rate_tier === "corporate" : v.rate_tier !== "corporate"))), [invoices, resort, jpShort]);
   if (!authed) return null;
 
 
@@ -623,7 +623,7 @@ ${signature}`);
       )}
 
       <div className="card no-print">
-        <h2>최근 생성된 인보이스 — {RESORT_LABEL[resort]} ({recent.length})</h2>
+        <h2>최근 생성된 인보이스 — {resort === "jaypark" ? (jpShort ? "제이파크 단기" : "제이파크 (장기)") : RESORT_LABEL[resort]} ({recent.length})</h2>
         {recent.length === 0 ? <div style={{ color: "#9ca3af", fontSize: 13, padding: 14, textAlign: "center" }}>아직 없습니다.</div> : (
           <table className="tbl"><thead><tr>
             <th style={{ width: 30 }}>#</th><th>번호</th><th>손님</th><th>룸</th><th>기간</th><th>박</th><th>금액</th><th>상태</th><th style={{ width: 120 }}></th>
