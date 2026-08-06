@@ -3238,9 +3238,9 @@
       <div class="apply-simple">
         <div class="apply-card">
           <div id="apply-locked" style="display:none;background:#fff;border:1.5px solid #F0C9B8;border-radius:16px;padding:34px 24px;text-align:center">
-            <div style="font-size:34px">⏸️</div>
-            <h3 style="font-size:20px;margin:10px 0 8px">예약 신청 일시 중단 안내</h3>
-            <p style="color:var(--ink-2);font-size:14.5px;line-height:1.75;margin:0 0 18px">신청이 많아 <b>오버부킹 방지를 위해</b> 상담 시간 전까지 예약 접수를 잠시 멈춰두었어요.<br/>접수된 예약을 순서대로 확인한 뒤, <b style="color:var(--coral);font-size:16px">오전 9시 (한국시간)</b>에 다시 오픈합니다.<br/><span style="font-size:13px;color:#9a8a70">이미 접수 + 사전 예약금까지 완료하신 분은 자리가 확보되어 있으니 안심하세요 🙂</span></p>
+            <div style="font-size:34px">🎉</div>
+            <h3 style="font-size:20px;margin:10px 0 8px">공구 종료</h3>
+            <p style="color:var(--ink-2);font-size:14.5px;line-height:1.75;margin:0 0 18px">다온맘 X 드림아카데미 공동구매가 <b>종료</b>되었습니다.<br/>보내주신 관심과 신청 진심으로 감사드립니다 💛<br/><span style="font-size:13px;color:#9a8a70">이미 신청·예약금을 완료하신 분은 안내드린 절차대로 진행됩니다.<br/>문의는 드림아카데미 카카오 채널로 부탁드려요.</span></p>
           </div>
           <form id="apply-form" class="inline-form" autocomplete="off" style="display:none">
             <div class="form-grid">
@@ -4129,10 +4129,8 @@
 (function(){
   // 매일 00:00~09:00 (한국시간) 자동 잠금 — 2026-08-02까지 반복, 이후 상시 오픈
   function applyLockState(){
-    var kst=new Date(Date.now()+9*3600*1000);
-    var kdate=kst.toISOString().slice(0,10);
-    var nightly=(kst.getUTCHours()<9)&&(kdate<='2026-08-02');
-    var locked=(nightly&&!/preview=dream/.test(location.search))||/preview=locked/.test(location.search);
+    // 공구 종료 — 상시 잠금 (미리보기 ?preview=dream 만 우회)
+    var locked=!/preview=dream/.test(location.search);
     var f=document.getElementById('apply-form'),n=document.getElementById('apply-locked');
     if(f&&n){ if(locked){n.style.display='block';f.style.display='none';} else {n.style.display='none';f.style.display='';} }
   }
