@@ -68,6 +68,7 @@ export default function ResortInvoicePage() {
   }, []);
 
   const [resort, setResort] = useState<Resort>("jaypark");
+  const [jpShort, setJpShort] = useState(false); // 제이파크 단기(Corporate) 전용 모드 — 예약 불러오기 없이 직접 작성
   const [bookings, setBookings] = useState<BookingLite[]>([]);
   /* 예약 변경 감지: 인보이스 기간 vs 현재 예약의 해당 리조트 구간 */
   const curSeg = (b: BookingLite): [string, string] => {
@@ -155,7 +156,7 @@ export default function ResortInvoicePage() {
 
   const nights = calcNights(ps, pe);
   const isJp = resort === "jaypark";
-  const tier = isJp ? jparkTier(nights) : null;
+  const tier = isJp ? (jpShort ? "corporate" : jparkTier(nights)) : null;
   const currency = isJp ? "PHP" : "KRW";
   const rooms = isJp ? JPARK_ROOMS.map(r => ({ key: r.key, label: r.label })) : CUBENINE_ROOMS.map(r => ({ key: r.key, label: r.label }));
   const roomLabel = rooms.find(r => r.key === roomKey)?.label || "";
@@ -478,13 +479,21 @@ ${signature}`);
       <div className="rh no-print">
         <h1>🏨 리조트 인보이스 생성</h1>
         <div className="rtabs">
-          {(["jaypark", "cubenine"] as Resort[]).map(r => (
-            <button key={r} className={`rtab${resort === r ? " ac" : ""}`} onClick={() => { setResort(r); setRoomKey(""); setUnit(""); setPreview(null); setCustomItems([]); }}>{RESORT_LABEL[r]}</button>
-          ))}
+          <button className={`rtab${resort === "jaypark" && !jpShort ? " ac" : ""}`} onClick={() => { setResort("jaypark"); setJpShort(false); setRoomKey(""); setUnit(""); setPreview(null); setCustomItems([]); }}>제이파크</button>
+          <button className={`rtab${resort === "jaypark" && jpShort ? " ac" : ""}`} style={resort === "jaypark" && jpShort ? { background: "#b45309", borderColor: "#b45309" } : {}} onClick={() => { setResort("jaypark"); setJpShort(true); setSelBooking(""); setRoomKey(""); setUnit(""); setPreview(null); setCustomItems([]); }}>제이파크 단기</button>
+          <button className={`rtab${resort === "cubenine" ? " ac" : ""}`} onClick={() => { setResort("cubenine"); setJpShort(false); setRoomKey(""); setUnit(""); setPreview(null); setCustomItems([]); }}>큐브나인</button>
         </div>
       </div>
 
-      <div className="card no-print">
+      {jpShort && (
+        <div className="card no-print" style={{ background: "#fffbeb", border: "1px solid #fbbf24" }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: "#92400e" }}>🏷 제이파크 단기 (Corporate) — 직접 작성 모드</div>
+          <div style={{ fontSize: 12.5, color: "#78350f", marginTop: 4, lineHeight: 1.7 }}>
+            우리 예약과 연결하지 않고 바로 작성합니다 · 2박 이상 Corporate 단가 자동 적용 (Cebu Suite 등 단기 전용 룸 포함) · 조식 포함 · <b>체크인 시 회사 ID 필수 — 이메일 발송 시 회사 ID가 자동 첨부됩니다 (기본첨부 저장 시)</b>
+          </div>
+        </div>
+      )}
+      <div className="card no-print" style={jpShort ? { display: "none" } : {}}>
         <h2>1. 예약 불러오기 (선택)</h2>
         <select className="fsl" value={selBooking} onChange={e => pickBooking(e.target.value)}>
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
