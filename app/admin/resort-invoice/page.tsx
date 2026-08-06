@@ -126,6 +126,7 @@ export default function ResortInvoicePage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailCc, setEmailCc] = useState("");
   const [attachImg, setAttachImg] = useState<string>(""); // 첨부될 인보이스 PNG 미리보기
+  const [extraFiles, setExtraFiles] = useState<{ name: string; dataUrl: string; isDefault?: boolean }[]>([]);
   const [emailBody, setEmailBody] = useState("");
   const [savingImg, setSavingImg] = useState(false);
 
@@ -401,6 +402,12 @@ ${signature}`);
     setEmailModal(true);
     // 첨부될 인보이스 이미지를 미리 만들어 우측에 보여줌 (발송 시 이 이미지가 그대로 첨부됨)
     setTimeout(async () => { const img = await captureDoc(); if (img) setAttachImg(img); }, 100);
+    // 저장된 기본 첨부 (회사 ID 등) 자동 포함
+    supabase.from("app_settings").select("value").eq("key", "resort_email_default_attach").maybeSingle().then(({ data }) => {
+      const v = data?.value as { name?: string; dataUrl?: string } | null;
+      if (v?.dataUrl) setExtraFiles([{ name: v.name || "company_id", dataUrl: v.dataUrl, isDefault: true }]);
+      else setExtraFiles([]);
+    });
   }
 
   async function sendEmail() {
@@ -424,6 +431,7 @@ ${signature}`);
           subject: emailSubject.trim() || `[Dream Company] Invoice ${preview.invoice_no}`,
           text: emailBody,
           imageBase64: img, filename: `invoice_${preview.invoice_no}.png`,
+          extraAttachments: extraFiles.map(f => ({ name: f.name, dataUrl: f.dataUrl })),
         }),
       });
       const d = await r.json();
@@ -669,6 +677,41 @@ ${signature}`);
                 : <div style={{ padding: 30, textAlign: "center", color: "#94a3b8", fontSize: 12.5 }}>첨부 이미지 생성 중...</div>}
             </div>
             <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>이 이미지가 메일에 그대로 첨부됩니다.</div>
+            <div style={{ marginTop: 16, borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>📎 추가 첨부 <span style={{ fontWeight: 500, color: "#64748b" }}>(회사 ID 등)</span></div>
+              {extraFiles.map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 10px", marginBottom: 6, background: f.isDefault ? "#f0fdf4" : "#fff" }}>
+                  {/^data:image/.test(f.dataUrl) && <img src={f.dataUrl} alt="" style={{ width: 42, height: 42, objectFit: "cover", borderRadius: 6, border: "1px solid #e5e7eb" }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                    {f.isDefault && <div style={{ fontSize: 10.5, color: "#16a34a", fontWeight: 700 }}>기본 첨부 (자동 포함)</div>}
+                  </div>
+                  {!f.isDefault && <button onClick={async () => {
+                    await supabase.from("app_settings").upsert({ key: "resort_email_default_attach", value: { name: f.name, dataUrl: f.dataUrl } }, { onConflict: "key" });
+                    setExtraFiles(prev => prev.map((x, xi) => xi === i ? { ...x, isDefault: true } : { ...x, isDefault: false }));
+                    alert("기본 첨부로 저장했습니다. 앞으로 모든 리조트 메일에 자동 첨부됩니다.");
+                  }} style={{ border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", borderRadius: 6, padding: "4px 8px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>⭐ 기본첨부로</button>}
+                  <button onClick={async () => {
+                    if (f.isDefault) { if (!confirm("기본 첨부를 해제할까요? (저장된 회사 ID 삭제)")) return; await supabase.from("app_settings").delete().eq("key", "resort_email_default_attach"); }
+                    setExtraFiles(prev => prev.filter((_, xi) => xi !== i));
+                  }} style={{ border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", borderRadius: 6, padding: "4px 8px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>✕</button>
+                </div>
+              ))}
+              <label style={{ display: "block", border: "1.5px dashed #cbd5e1", borderRadius: 8, padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 700, color: "#475569", cursor: "pointer" }}>
+                + 파일 추가 (사진/PDF)
+                <input type="file" accept="image/*,.pdf" multiple style={{ display: "none" }} onChange={e => {
+                  const files = Array.from(e.target.files || []);
+                  files.forEach(file => {
+                    if (file.size > 8 * 1024 * 1024) { alert(file.name + " — 8MB 이하만 첨부 가능합니다."); return }
+                    const rd = new FileReader();
+                    rd.onload = () => setExtraFiles(prev => [...prev, { name: file.name, dataUrl: String(rd.result) }]);
+                    rd.readAsDataURL(file);
+                  });
+                  e.target.value = "";
+                }} />
+              </label>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>단기(Corporate) 예약은 체크인 시 회사 ID 필수 — ⭐ 기본첨부로 저장하면 매번 자동 첨부됩니다.</div>
+            </div>
           </div>
         </div>
       </div>

@@ -16,9 +16,12 @@ export const JPARK_ROOMS: JparkRoom[] = [
   { key: "premier",          label: "Premier",                 location: "Jpark Tower",   corporate: 8700,  long7: 6800,  long14: 5950 },
   { key: "premier_ov",       label: "Premier Ocean View",      location: "Jpark Tower",   corporate: 9700,  long7: 8000,  long14: 7000 },
   { key: "mactan_suite",     label: "Mactan Suite",            location: "Main Building", corporate: 11700, long7: 8800,  long14: 7700 },
-  { key: "mactan_suite_ov",  label: "Mactan Suite Ocean View", location: "Main Building", corporate: 13500, long7: 10000, long14: 8750 },
+  { key: "mactan_suite_ov",  label: "Mactan Suite Ocean View", location: "Main Building", corporate: 12700, long7: 10000, long14: 8750 },
   { key: "mountain_suite",   label: "Mountain Suite",          location: "Jpark Tower",   corporate: 12500, long7: 9200,  long14: 8050 },
-  { key: "ocean_suite",      label: "Ocean Suite",             location: "Jpark Tower",   corporate: 14300, long7: 10400, long14: 9100 },
+  { key: "ocean_suite",      label: "Ocean Suite",             location: "Jpark Tower",   corporate: 13500, long7: 10400, long14: 9100 },
+  { key: "paw_suite",        label: "Paw Suite (단기 전용)",        location: "Main Building", corporate: 14300, long7: 0, long14: 0 },
+  { key: "cebu_suite",       label: "Cebu Suite (단기 전용)",       location: "Main Building", corporate: 17000, long7: 0, long14: 0 },
+  { key: "cebu_suite_ov",    label: "Cebu Suite Ocean View (단기 전용)", location: "Main Building", corporate: 18800, long7: 0, long14: 0 },
 ];
 
 export const JPARK_EXTRA_PERSON = 3000; // PHP/박 (전 단계 동일)
