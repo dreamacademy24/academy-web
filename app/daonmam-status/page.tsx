@@ -23,7 +23,8 @@ const STAGE_C: Record<string, { c: string; bg: string }> = {
 const SEL_STAGES = ["신청서 접수", "예약금 입금", "확정예약 진행중", "취소"];
 
 function shortNo(no: string | null) { return no ? no.split("-").pop() : "-"; }
-function mask(name: string | null) { const n = (name || "").trim(); return n.length <= 1 ? (n || "-") : n[0] + "*" + n.slice(2); }
+function mask(name: string | null) { return (name || "-").trim() || "-"; }
+function tail4(p: string | null | undefined) { const d = String(p || "").replace(/\D/g, ""); return d ? d.slice(-4) : ""; }
 function won(n: number | null | undefined) { const v = Number(n) || 0; return v ? v.toLocaleString("ko-KR") + "원" : "-"; }
 
 export default function DaonmamStatusPage() {
@@ -32,7 +33,7 @@ export default function DaonmamStatusPage() {
   const [showCancel, setShowCancel] = useState(false);
   async function load() {
     const { data } = await supabase.from("bookings")
-      .select("id,reservation_no,booker_name,accom_type,accom_weeks,checkin_date,checkout_date,adults,children,payment_status,paid_amount,final_price,daon_stage,created_at,status")
+      .select("id,reservation_no,booker_name,booker_phone,accom_type,accom_weeks,checkin_date,checkout_date,adults,children,payment_status,paid_amount,final_price,daon_stage,created_at,status")
       .eq("agency", "다온맘").order("created_at", { ascending: false });
     setRows((data as Bk[]) || []); setLoaded(true);
   }
@@ -80,7 +81,7 @@ export default function DaonmamStatusPage() {
       <span style={{ fontSize: 12, fontWeight: 700, color, background: color + "14", borderRadius: 8, padding: "1px 8px" }}>{n}건</span>
     </div>
   );
-  const nameCell = (b: Bk) => (<span style={{ fontWeight: 700 }}>{mask(b.booker_name)}{nameCnt[baseName(b.booker_name)] > 1 && <span style={{ marginLeft: 4, background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 5, padding: "0 5px", fontSize: 10, fontWeight: 800 }}>중복</span>}</span>);
+  const nameCell = (b: Bk) => (<span style={{ fontWeight: 700 }}>{mask(b.booker_name)}{tail4((b as unknown as { booker_phone?: string }).booker_phone) && <span style={{ marginLeft: 5, color: "#64748b", fontWeight: 600, fontSize: 11.5 }}>({tail4((b as unknown as { booker_phone?: string }).booker_phone)})</span>}{nameCnt[baseName(b.booker_name)] > 1 && <span style={{ marginLeft: 4, background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 5, padding: "0 5px", fontSize: 10, fontWeight: 800 }}>중복</span>}</span>);
   const period = (b: Bk) => <>{b.accom_weeks ? b.accom_weeks + "주" : "-"}</>;
 
   return (
@@ -89,7 +90,7 @@ export default function DaonmamStatusPage() {
         <div style={{ textAlign: "center", marginBottom: 26 }}>
           <span style={{ display: "inline-block", background: "#0f172a", color: "#fff", fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "5px 14px", letterSpacing: 0.3 }}>다온맘 X 드림아카데미 공동구매</span>
           <h1 style={{ fontSize: 25, fontWeight: 900, margin: "12px 0 6px" }}>공구 예약 현황</h1>
-          <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>실시간 접수 현황 · 개인정보 보호를 위해 이름은 일부 가려져 있습니다</p>
+          <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>실시간 접수 현황 · 이름 옆 괄호 = 연락처 뒷 4자리</p>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10, marginBottom: 28 }}>
