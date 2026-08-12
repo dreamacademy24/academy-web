@@ -1407,6 +1407,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무<span id="notif-dot-mywork" class="notif-dot" style="display:none"></span><span id="badge-mywork" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="board" onclick="showPage('board')">전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
+      <button class="tab-item" data-page="weeklycl" onclick="showPage('weeklycl')">주간 체크</button>
       <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
       <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
     </div>
@@ -1686,6 +1687,9 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <!-- 하우스 보고: /admin/house-reports 로 이전됨 -->
 
       <!-- DAILY (standalone - not used, daily is in emp page) -->
+      <div id="page-weeklycl" class="hidden">
+        <div style="max-width:1280px"><div id="weeklyClPageWrap"></div></div>
+      </div>
       <div id="page-daily" class="hidden">
         <div id="dclPage"></div>
       </div>
@@ -3985,7 +3989,7 @@ function savePw(){
 }
 
 // ── NAV ──
-const PAGES=['home','announcements','board','calendar','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide','sboard'];
+const PAGES=['home','announcements','board','calendar','weeklycl','emp','projects','proj-detail','proj-task','daily','opinions','chat','approval','manual','mywork','guide','sboard'];
 function buildEmpNav(){
   const nav=document.getElementById('empNav');nav.innerHTML='';
   const vis=ALL.filter(e=>e.id===CU.id);
@@ -4052,6 +4056,7 @@ function showPage(p){
   if(p==='mywork'){markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
+  if(p==='weeklycl'){renderWeeklyClPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8';document.getElementById('topS').textContent='\uB4F1\uB85D \u00B7 \uC694\uC77C\uBCC4 \uC815\uB9AC \u00B7 \uB2F9\uC77C \uD56D\uBAA9\uC740 \uD648 \uC624\uB298 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8\uB85C \uC790\uB3D9 \uC5F0\uACB0';}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
   if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');_setNavBadge('badge-opinions',0);}
@@ -4301,6 +4306,12 @@ function saveDailyEdit(id){
 function delChecklistItem(id,kind){
   if(!confirm('이 항목을 삭제할까요?'))return;
   sbDel('staff_checklist_items','id=eq.'+id).then(function(){if(kind==='weekly')loadWeeklyCheck();else loadDailyCheck();}).catch(function(e){alert('삭제 실패: '+(e&&e.message||e));});
+}
+function renderWeeklyClPage(){
+  var w=document.getElementById('weeklyClPageWrap');if(!w)return;
+  w.innerHTML='<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:10px 14px;font-size:12.5px;color:#3730a3;margin-bottom:12px">여기서 등록한 주간 항목은 각 요일이 되면 <b>홈 · ✅ 오늘 체크리스트</b>에 자동으로 나타나요. 체크 상태도 서로 연동됩니다.</div>'+
+    '<div class="hcard"><div id="weeklyCheckSection"></div></div>';
+  loadWeeklyCheck();
 }
 function loadWeeklyCheck(){
   var sec=document.getElementById('weeklyCheckSection');if(!sec)return;
@@ -4682,13 +4693,12 @@ function renderHomePage(){
       '<div style="background:#fff;border:1px solid #e6ebf5;border-radius:12px;padding:10px 14px"><b id="kOps4" style="font-size:22px">-</b><div style="font-size:10.5px;color:#64748b;font-weight:700">🚐 오늘 픽드랍</div></div>'+
     '</div></div>';
   html+='<div class="hcard hsplit hsplit-even"><div id="homeIssuesBox" class="hcol-l"></div><div id="homeTutorBox" class="hcol-r"></div></div>';
-  html+='<div class="hcard hsplit hsplit-main" style="margin-top:14px"><div id="dailyCheckSection" class="hcol-l"></div><div id="weeklyCheckSection" class="hcol-r"></div></div>';
+  html+='<div class="hcard" style="margin-top:14px"><div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button onclick="showPage(\'weeklycl\')" style="padding:5px 12px;border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8 \uAD00\uB9AC \u2192</button></div><div id="dailyCheckSection"></div></div>';
   dash.innerHTML=html;
   loadHomeIssues();
   loadHomeTutorIssues();
   loadHomeOps();
   loadDailyCheck('dailyCheckSection');
-  loadWeeklyCheck();
 }
 // 🚨 예약 운영 현황 — 자동 파생(룸배정/학생영문명), 체크인 임박순, 행별 숨김
 function _daysBetween(a,b){var d1=new Date(a+'T00:00:00'),d2=new Date(b+'T00:00:00');return Math.round((d2-d1)/86400000);}
