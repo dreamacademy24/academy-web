@@ -59,6 +59,7 @@ export default function DreamhouseRooms() {
   const [month, setMonth] = useState(today.getMonth())
   const [viewMode, setViewMode] = useState<'grid'|'calendar'>('grid')
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [unassigned, setUnassigned] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [tooltip, setTooltip] = useState<{x:number,y:number,booking:Booking}|null>(null)
   const [modal, setModal] = useState<Booking|null>(null)
@@ -108,6 +109,20 @@ export default function DreamhouseRooms() {
       return b
     })
     setBookings(arr as unknown as Booking[])
+    // 룸 미배정 예약 (활성)
+    try {
+      const unRes = await fetch('/api/dreamhouse?unassigned=1')
+      const unData = await unRes.json()
+      const unArr = (Array.isArray(unData) ? unData : []).map((b: Record<string, string>) => {
+        let dhCi: string | null = null, dhCo: string | null = null
+        if (b.seg1_type === 'dreamhouse') { dhCi = b.seg1_checkin; dhCo = b.seg1_checkout }
+        else if (b.seg2_type === 'dreamhouse') { dhCi = b.seg2_checkin; dhCo = b.seg2_checkout }
+        const base = { ...b, accom_room: '' }
+        if (dhCi && dhCo) return { ...base, checkin_date: String(dhCi).split('T')[0], checkout_date: String(dhCo).split('T')[0] }
+        return base
+      })
+      setUnassigned(unArr as unknown as Booking[])
+    } catch { setUnassigned([]) }
     setLoading(false)
   }
 
@@ -324,6 +339,18 @@ export default function DreamhouseRooms() {
               </div>
             ))}
             {overlapPairs.length>6&&<div style={{fontSize:11.5,color:'#991b1b'}}>외 {overlapPairs.length-6}건</div>}
+          </div>
+        )}
+        {/* ❗ 룸 미배정 배너 */}
+        {unassigned.length > 0 && (
+          <div style={{background:'#fff7ed',borderBottom:'2px solid #ea580c',padding:'10px 24px'}}>
+            <div style={{fontSize:13.5,fontWeight:800,color:'#9a3412',marginBottom:4}}>❗ 룸 미배정 {unassigned.length}건 — 룸을 배정해 주세요 (오버부킹 주의)</div>
+            {unassigned.slice(0,8).map(b=>(
+              <div key={b.id} style={{fontSize:12.5,color:'#7c2d12',marginBottom:2,cursor:'pointer'}} onClick={()=>{setModal(b);setModalRoom('')}}>
+                <b>{b.booker_name||b.reservation_no}</b> · {String(b.checkin_date||'').slice(5)}~{String(b.checkout_date||'').slice(5)} <span style={{color:'#1d4ed8',fontWeight:700}}>클릭해서 룸 배정 →</span>
+              </div>
+            ))}
+            {unassigned.length>8&&<div style={{fontSize:11.5,color:'#9a3412'}}>외 {unassigned.length-8}건</div>}
           </div>
         )}
         {/* 월 네비게이션 */}

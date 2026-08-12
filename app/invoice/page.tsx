@@ -530,6 +530,25 @@ interface Disc{id:number;name:string;amount:number}
 interface LC{id:number;name:string;amount:string}
 interface StudentInfo{id:number;korName:string;engName:string;age:string;grade:string;academyStart:string;academyEnd:string;academyWeeks:string;photo:string;name_kr?:string;name_en?:string;birth_date?:string;level?:string}
 
+
+/* 학생 영문이름·나이 비어있으면 students 테이블 값으로 자동 병합 (4자리 출생연도 → 만나이) */
+async function fillStudentInfo(bookingId:string|null,sts:any[]):Promise<any[]>{
+  try{
+    if(!bookingId||!Array.isArray(sts)||sts.length===0)return sts;
+    if(!sts.some((s:any)=>!String(s.engName||"").trim()||!String(s.age||"").trim()))return sts;
+    const {data:tbl}=await supabase.from("students").select("name_kr,name_en,age").eq("booking_id",bookingId);
+    if(!tbl||tbl.length===0)return sts;
+    const normAge=(v:unknown)=>{const n=parseInt(String(v??"").trim(),10);if(!n)return "";return n>1900?String(new Date().getFullYear()-n):String(n);};
+    return sts.map((s:any)=>{
+      const key=String(s.korName||s.name_kr||"").trim();
+      const m=key?tbl.find((r:any)=>String(r.name_kr||"").trim()===key):null;
+      if(!m)return s;
+      return {...s,
+        engName:String(s.engName||"").trim()||String(m.name_en||"").toUpperCase(),
+        age:String(s.age||"").trim()||normAge(m.age)};
+    });
+  }catch{return sts;}
+}
 /* 한글 이름으로 students 테이블에서 영문 이름 자동 조회 (입력값 미존재 시 빈 문자열) */
 async function autofillEngName(korName:string):Promise<string>{
   const k=korName.trim();
@@ -709,7 +728,7 @@ function InvoicePageInner(){
     if(d.reservationNo!==undefined)setReservationNo(d.reservationNo);
     if(d.reservationDate!==undefined)setReservationDate(d.reservationDate);
     if(d.booker!==undefined)setBooker(d.booker);
-    if(Array.isArray(d.students))setStudents(d.students);
+    if(Array.isArray(d.students)){setStudents(d.students);fillStudentInfo(bookingId,d.students).then(f=>{if(f!==d.students)setStudents(f);});}
     if(d.billing!==undefined)setBilling(d.billing);
     // billing(items/금액)이 있으면 applied=true 강제 — 미리보기 "견적 계산 후 적용" 문구 방지
     const hasBilling=!!(d.billing&&((Array.isArray(d.billing.items)&&d.billing.items.length>0)||Number(d.billing.basePrice)>0));
@@ -896,6 +915,7 @@ function InvoicePageInner(){
           }));
         }
       }
+      sts=await fillStudentInfo(bookingId,sts);
       if(sts.length>0) setStudents(sts.map((s:any,i:number)=>({...s,id:i+1,academyStart:s.academyStart||"",academyEnd:s.academyEnd||"",academyWeeks:s.academyWeeks||"2",photo:s.photo||"O"})));
       // 룸 번호: house_no 우선, 없으면 accom_room 폴백. DH 접두어 제거 + 공백 제거 + 대문자
       const rawRoom=(data.house_no||data.accom_room||"").toString();

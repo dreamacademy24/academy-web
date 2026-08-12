@@ -11,6 +11,21 @@ export async function GET(request: Request) {
   const firstDay = searchParams.get('firstDay')
   const lastDay = searchParams.get('lastDay')
 
+  // 룸 미배정 드림하우스 예약 (활성 · 체크아웃 안 지남)
+  if (searchParams.get('unassigned') === '1') {
+    const today = new Date().toISOString().slice(0, 10)
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id, accom_room, house_no, accom_type, checkin_date, checkout_date, booker_name, reservation_no, status, students, room_locked, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')
+      .ilike('accom_type', '%드림하우스%')
+      .not('status', 'ilike', '%취소%')
+      .gte('checkout_date', today)
+      .order('checkin_date')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const un = (data || []).filter(r => !String(r.accom_room || r.house_no || '').trim())
+    return NextResponse.json(un)
+  }
+
   const { data, error } = await supabase
     .from('bookings')
     .select('id, accom_room, checkin_date, checkout_date, booker_name, reservation_no, status, students, room_locked, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout')

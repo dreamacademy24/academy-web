@@ -8,9 +8,10 @@ import { HolidayBanner, HolidayPopup } from "@/components/HolidayNotice";
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
 interface Flight { airline: string; flightNo: string; date: string; time: string; place: string; undecided: boolean }
 
-type NPType = "dh_only" | "jp_only" | "cn_only" | "commute";
+type NPType = "dh_only" | "dh_da" | "jp_only" | "cn_only" | "commute";
 const NP_TYPES: { value: NPType; icon: string; label: string; desc: string }[] = [
   { value: "dh_only",  icon: "🏠", label: "드림하우스", desc: "숙소만 이용" },
+  { value: "dh_da",    icon: "🎒", label: "드하 + 드림아카데미", desc: "숙소 + 학원 (비패키지)" },
   { value: "jp_only",  icon: "🏨", label: "제이파크",   desc: "숙소만 이용" },
   { value: "cn_only",  icon: "🏢", label: "큐브나인",   desc: "숙소만 이용" },
   { value: "commute",  icon: "🚶", label: "통학형",     desc: "숙소 없이 학원만" },
@@ -60,7 +61,7 @@ export default function BookingNonPackagePage() {
   const holidayHits = useMemo(
     () => holidaysInRange(deployedHolidays, dates.checkIn, dates.checkOut)
       // 아이언맨(도로통제·투어셔틀)은 패키지 전용 안내 — 통학형에는 표시 안 함
-      .filter(h => !(bType === "commute" && String(h.name || "").includes("아이언맨"))),
+      .filter(h => !((bType === "commute" || bType === "dh_da") && String(h.name || "").includes("아이언맨"))),
     [deployedHolidays, dates.checkIn, dates.checkOut, bType]
   );
   useEffect(() => {
@@ -72,6 +73,8 @@ export default function BookingNonPackagePage() {
   }, [holidayHits, dates.checkIn, dates.checkOut, holidayPopupKey]);
 
   const isCommute = bType === "commute";
+  const isDhDa = bType === "dh_da";
+  const effAcademy = academyOpt || isDhDa; // 드하+드아는 아카데미 필수
 
   // 비통학형: 체크인 + 기간(주) → 체크아웃 자동계산
   useEffect(() => {
@@ -92,9 +95,9 @@ export default function BookingNonPackagePage() {
       const g = extraGuardians[i];
       if (!g.kor.trim() || !g.eng.trim()) { alert(`보호자 ${i + 2}번의 한글/영문 이름을 모두 입력해주세요.`); return; }
     }
-    if ((isCommute || academyOpt) && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만(옵션 없음)은 학생 불필요
-    if (!isCommute && academyOpt && (!acadDates.start || !acadDates.end)) { alert("아카데미 수업 시작/종료 날짜를 입력해주세요."); return; }
-    if (!isCommute && academyOpt) {
+    if ((isCommute || effAcademy) && !students.some(s => s.korName.trim())) { alert("학생 이름을 1명 이상 입력해주세요."); return; } // 숙소만(옵션 없음)은 학생 불필요
+    if (!isCommute && effAcademy && (!acadDates.start || !acadDates.end)) { alert("아카데미 수업 시작/종료 날짜를 입력해주세요."); return; }
+    if (!isCommute && effAcademy) {
       const sd = new Date(acadDates.start + "T00:00:00").getDay(), ed = new Date(acadDates.end + "T00:00:00").getDay();
       if (sd !== 1 || ed !== 5) { alert("수업 시작은 월요일, 종료는 금요일이어야 해요."); return; }
       if (acadDates.end <= acadDates.start) { alert("수업 종료가 시작보다 빠를 수 없어요."); return; }
@@ -107,7 +110,7 @@ export default function BookingNonPackagePage() {
     setLoading(true);
     const rno = "DA-" + todayCompact + "-" + Math.floor(Math.random() * 900000 + 100000);
     let accomType = "";
-    if (bType === "dh_only") accomType = "드림하우스 단독";
+    if (bType === "dh_only" || bType === "dh_da") accomType = "드림하우스 단독";
     else if (bType === "jp_only") accomType = "제이파크 단독";
     else if (bType === "cn_only") accomType = "큐브나인 단독";
     else accomType = "통학형";
@@ -116,8 +119,8 @@ export default function BookingNonPackagePage() {
     const flightOutStr = isCommute ? "" : (flightOut.undecided ? "미정" : [flightOut.airline, flightOut.flightNo, flightOut.date, flightOut.time].filter(Boolean).join(" "));
 
     // 통학형: 사용자 입력 그대로. 숙소 단독 + 아카데미 옵션: 별도 입력한 수업 기간 사용.
-    const academyStart = (!isCommute && academyOpt && acadDates.start) ? acadDates.start : dates.checkIn;
-    const academyEnd = (!isCommute && academyOpt && acadDates.end) ? acadDates.end : dates.checkOut;
+    const academyStart = (!isCommute && effAcademy && acadDates.start) ? acadDates.start : dates.checkIn;
+    const academyEnd = (!isCommute && effAcademy && acadDates.end) ? acadDates.end : dates.checkOut;
     const enrichedStudents = students.filter(s => s.korName.trim()).map(s => ({
       ...s, academyStart, academyEnd, academyWeeks: "",
     }));
@@ -126,7 +129,7 @@ export default function BookingNonPackagePage() {
     const childrenCount = students.filter(s => s.korName.trim()).length;
 
     // 🏠 드림하우스 만실 체크 — 접수 단계에서 오버부킹 예방
-    if (bType === "dh_only" && dates.checkIn && dates.checkOut) {
+    if ((bType === "dh_only" || isDhDa) && dates.checkIn && dates.checkOut) {
       try {
         const av = await fetch(`/api/dreamhouse/availability?ci=${dates.checkIn}&co=${dates.checkOut}`).then(r => r.json());
         if (Array.isArray(av.fullDates) && av.fullDates.length > 0) {
@@ -162,7 +165,7 @@ export default function BookingNonPackagePage() {
       status: "접수",
     };
     if (isCommute) payload.booking_type = "commute";
-    payload.academy_option = !isCommute && academyOpt;
+    payload.academy_option = !isCommute && effAcademy;
 
     const { data: booking, error } = await supabase.from("bookings").insert(payload).select().single();
     if (error) { setLoading(false); alert("접수 실패: " + error.message); return; }
@@ -240,7 +243,7 @@ export default function BookingNonPackagePage() {
     `}</style>
 
     <div className="bw">
-      <div className="bh"><h1>드림아카데미 예약 접수 (비패키지)</h1><p>숙소 단독 또는 통학형 예약을 접수합니다.</p></div>
+      <div className="bh"><h1>드림아카데미 예약 접수 (비패키지)</h1><p>숙소 단독 · 드하+드림아카데미 · 통학형 예약을 접수합니다.</p></div>
       <div className="bc">
 
         <div className="bs">
@@ -254,6 +257,12 @@ export default function BookingNonPackagePage() {
               </div>
             ))}
           </div>
+          {isDhDa && (
+            <div style={{ marginTop: 12, background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: 10, padding: "12px 14px", fontSize: 13, color: "#78350f", lineHeight: 1.7 }}>
+              🎒 <b>드하 + 드림아카데미 (비패키지)</b> — 드림하우스에 숙박하며 아카데미로 등원하는 유형이에요.<br/>
+              패키지가 아니므로 <b>식사 · 애프터스쿨 · 투어셔틀은 포함되지 않아요.</b> (숙소 + 수업만)
+            </div>
+          )}
         </div>
 
         <div className="bs">
@@ -262,7 +271,7 @@ export default function BookingNonPackagePage() {
             <div className="fg" style={{ marginBottom: 10 }}>
               <label className="fl">숙소 이용 기간<span className="req">*</span></label>
               <select className="fsl" value={weeks} onChange={e => setWeeks(Number(e.target.value))}>
-                {Array.from({ length: 12 }, (_, i) => i + 1).filter(w => bType !== "dh_only" || w >= 2).map(w => <option key={w} value={w}>{w}주</option>)}
+                {Array.from({ length: 12 }, (_, i) => i + 1).filter(w => (bType !== "dh_only" && bType !== "dh_da") || w >= 2).map(w => <option key={w} value={w}>{w}주</option>)}
               </select>
             </div>
           )}
@@ -384,13 +393,13 @@ export default function BookingNonPackagePage() {
         {!isCommute && (
           <div className="bs">
             <label className="fl-checkbox" style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-              <input type="checkbox" checked={academyOpt} onChange={e => setAcademyOpt(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+              <input type="checkbox" checked={effAcademy} disabled={isDhDa} onChange={e => setAcademyOpt(e.target.checked)} style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
               <span style={{ fontSize: 14, lineHeight: 1.6 }}>
                 <b>🏫 드림아카데미 수업도 함께 등록해요</b><br />
                 <span style={{ fontSize: 12.5, color: "#6b7c93" }}>숙소와 별도로 등록·결제되는 통학 수업이에요. 체크하면 수업 기간과 학생 정보를 입력해요. (수업료는 상담 시 안내)</span>
               </span>
             </label>
-            {academyOpt && (<>
+            {effAcademy && (<>
               <div className="fr" style={{ marginTop: 12 }}>
                 <div className="fg">
                   <label className="fl">수업 시작 (월요일)<span className="req">*</span></label>
@@ -408,7 +417,7 @@ export default function BookingNonPackagePage() {
           </div>
         )}
 
-        {(isCommute || academyOpt) && (
+        {(isCommute || effAcademy) && (
         <div className="bs">
           <h2>4️⃣ 학생 정보 ({students.length}/5)</h2>
           {students.map((s, idx) => (

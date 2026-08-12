@@ -597,7 +597,7 @@ export default function BookingPage() {
             <div className="fr">
               <div className="fg">
                 <label className="fl">체크인{!isCombo && <span className="req">*</span>}</label>
-                <input className="fi" type="date" value={dates.checkIn} readOnly={isCombo} onChange={e => { if (!isCombo) setDates({ ...dates, checkIn: e.target.value }); }} style={isCombo ? { background: "#f3f4f6" } : undefined} />
+                <input className="fi" type="date" value={dates.checkIn} readOnly={isCombo} onChange={e => { if (isCombo) return; const v = e.target.value; if (v) { const dw = new Date(v + "T00:00:00").getDay(); if (dw !== 0 && dw !== 6) { alert("체크인은 토요일 또는 일요일만 선택할 수 있어요.\n(표준 체크인 = 토요일)"); return; } } setDates({ ...dates, checkIn: v }); }} style={isCombo ? { background: "#f3f4f6" } : undefined} />
                 {isCombo && <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 3 }}>콤보는 위 &apos;숙소 구간&apos;에서 입력합니다</div>}
               </div>
               <div className="fg">
