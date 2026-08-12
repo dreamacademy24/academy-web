@@ -581,6 +581,74 @@ export default function BookingDetailPage() {
             <button className="btn btn-sm btn-blue" onClick={saveEdit} disabled={saving}>{saving?"저장 중...":"💾 저장"}</button>
           </>)}
         </div>
+        {/* 올인원 패키지 섹션 */}
+        <div style={{margin:'6px 0 18px', padding:16, background:'#fefce8', borderRadius:10, border:'1px solid #fde68a'}}>
+          <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
+            <span style={{fontWeight:700, fontSize:15}}>🌟 올인원패키지</span>
+            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
+              <input
+                type="checkbox"
+                checked={isAllInOne}
+                onChange={e => toggleAllInOne(e.target.checked)}
+                style={{width:18, height:18, cursor:'pointer'}}
+              />
+              <span style={{fontSize:13, color:'#92400e'}}>{isAllInOne ? '해당' : '미해당'}</span>
+            </label>
+          </div>
+
+          {isAllInOne && (
+            <div style={{display:'flex', flexDirection:'column', gap:10}}>
+              {portalUserId ? (
+                <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                  <div style={{fontSize:13}}>
+                    <b>포털 아이디:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalUsername}</code>
+                  </div>
+                  <div style={{fontSize:13}}>
+                    <b>현재 임시 비번:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalTempPw}</code>
+                  </div>
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={portalLoading}
+                    style={{alignSelf:'flex-start', padding:'6px 14px', background:'#f59e0b', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontSize:13}}
+                  >
+                    🔄 비번 재설정
+                  </button>
+                </div>
+              ) : (
+                <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                  <div style={{display:'flex', gap:8, alignItems:'center'}}>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12, color:'#6b7280', display:'block', marginBottom:2}}>아이디 (5~8자)</label>
+                      <input
+                        value={portalUsername}
+                        onChange={e => setPortalUsername(e.target.value.replace(/[^a-zA-Z0-9]/g,'').slice(0,8))}
+                        maxLength={8}
+                        placeholder="자동생성됨"
+                        style={{width:'100%', padding:'6px 10px', border:'1px solid #d1d5db', borderRadius:6, fontSize:13}}
+                      />
+                    </div>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:12, color:'#6b7280', display:'block', marginBottom:2}}>임시 비밀번호</label>
+                      <input
+                        value={portalTempPw}
+                        onChange={e => setPortalTempPw(e.target.value)}
+                        style={{width:'100%', padding:'6px 10px', border:'1px solid #d1d5db', borderRadius:6, fontSize:13}}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleIssueAccount}
+                    disabled={portalLoading || !portalUsername}
+                    style={{alignSelf:'flex-start', padding:'8px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontWeight:600, fontSize:13}}
+                  >
+                    {portalLoading ? '처리 중...' : '🔑 포털 계정 발급'}
+                  </button>
+                </div>
+              )}
+              {portalMsg && <p style={{fontSize:13, color: portalMsg.includes('✅') ? '#16a34a' : '#dc2626', margin:0}}>{portalMsg}</p>}
+            </div>
+          )}
+        </div>
         <div className="sec">
           <h2>예약 정보</h2>
           <div className="grid">
@@ -930,74 +998,6 @@ export default function BookingDetailPage() {
           ))}
         </div></div>}
 
-        {/* 올인원 패키지 섹션 */}
-        <div style={{marginTop:24, padding:16, background:'#fefce8', borderRadius:10, border:'1px solid #fde68a'}}>
-          <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:12}}>
-            <span style={{fontWeight:700, fontSize:15}}>🌟 올인원패키지</span>
-            <label style={{display:'flex', alignItems:'center', gap:6, cursor:'pointer'}}>
-              <input
-                type="checkbox"
-                checked={isAllInOne}
-                onChange={e => toggleAllInOne(e.target.checked)}
-                style={{width:18, height:18, cursor:'pointer'}}
-              />
-              <span style={{fontSize:13, color:'#92400e'}}>{isAllInOne ? '해당' : '미해당'}</span>
-            </label>
-          </div>
-
-          {isAllInOne && (
-            <div style={{display:'flex', flexDirection:'column', gap:10}}>
-              {portalUserId ? (
-                <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                  <div style={{fontSize:13}}>
-                    <b>포털 아이디:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalUsername}</code>
-                  </div>
-                  <div style={{fontSize:13}}>
-                    <b>현재 임시 비번:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalTempPw}</code>
-                  </div>
-                  <button
-                    onClick={handleResetPassword}
-                    disabled={portalLoading}
-                    style={{alignSelf:'flex-start', padding:'6px 14px', background:'#f59e0b', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontSize:13}}
-                  >
-                    🔄 비번 재설정
-                  </button>
-                </div>
-              ) : (
-                <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                  <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:12, color:'#6b7280', display:'block', marginBottom:2}}>아이디 (5~8자)</label>
-                      <input
-                        value={portalUsername}
-                        onChange={e => setPortalUsername(e.target.value.replace(/[^a-zA-Z0-9]/g,'').slice(0,8))}
-                        maxLength={8}
-                        placeholder="자동생성됨"
-                        style={{width:'100%', padding:'6px 10px', border:'1px solid #d1d5db', borderRadius:6, fontSize:13}}
-                      />
-                    </div>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:12, color:'#6b7280', display:'block', marginBottom:2}}>임시 비밀번호</label>
-                      <input
-                        value={portalTempPw}
-                        onChange={e => setPortalTempPw(e.target.value)}
-                        style={{width:'100%', padding:'6px 10px', border:'1px solid #d1d5db', borderRadius:6, fontSize:13}}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleIssueAccount}
-                    disabled={portalLoading || !portalUsername}
-                    style={{alignSelf:'flex-start', padding:'8px 16px', background:'#7c3aed', color:'white', border:'none', borderRadius:6, cursor:'pointer', fontWeight:600, fontSize:13}}
-                  >
-                    {portalLoading ? '처리 중...' : '🔑 포털 계정 발급'}
-                  </button>
-                </div>
-              )}
-              {portalMsg && <p style={{fontSize:13, color: portalMsg.includes('✅') ? '#16a34a' : '#dc2626', margin:0}}>{portalMsg}</p>}
-            </div>
-          )}
-        </div>
       </>)}
 
       {/* 탭3: 학생 */}
