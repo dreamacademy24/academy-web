@@ -4224,7 +4224,7 @@ function _dailyCheckHtml(byKey,today,bookings){
     : DAILY_ITEMS.map(function(it){return {key:it.key,label:it.label,assignee:'all',fixed:true};});
   // 주간 체크리스트 중 오늘 요일 항목을 데일리에 병합 (메이 아이디어)
   var todayDow=new Date(today+'T00:00:00').getDay();
-  var weeklyToday=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&Number(it.weekday)===todayDow;});
+  var weeklyToday=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly'&&Number(it.weekday)===todayDow&&_wkPeriodOk(it,today);});
   var total=allItems.length+weeklyToday.length,done=0;
   allItems.forEach(function(it){if(byKey[it.key])done++;});
   weeklyToday.forEach(function(it){if(byKey[it.id])done++;});
@@ -4255,7 +4255,7 @@ function _dailyCheckHtml(byKey,today,bookings){
     return '<div style="padding:7px 8px;border-radius:8px;margin-bottom:4px;background:'+(checked?'#f0fdf4':'#faf5ff')+'">'+
       '<div style="display:flex;align-items:center;gap:9px">'+
       '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleWeeklyCheck(\''+it.id+'\',\''+today+'\',this)" style="width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:#7c3aed">'+
-      '<span style="flex:1;font-size:12.5px;color:'+(checked?'var(--text3)':'var(--text)')+';'+(checked?'text-decoration:line-through':'')+'"><span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#6d28d9;border-radius:5px;padding:1px 6px;margin-right:5px;vertical-align:middle">주간</span>'+esc(it.content||'')+'</span>'+
+      '<span style="flex:1;font-size:12.5px;color:'+(checked?'var(--text3)':'var(--text)')+';'+(checked?'text-decoration:line-through':'')+'"><span style="font-size:9.5px;font-weight:800;background:#ede9fe;color:#6d28d9;border-radius:5px;padding:1px 6px;margin-right:5px;vertical-align:middle">주간</span>'+esc(it.content||'')+'</span>'+_wkMetaChips(it)+
       _clBadge(it.assignee)+who+
       '<button onclick="openWeeklyEditById(\''+it.id+'\')" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px">✏️</button>'+
       '</div>'+chips+'</div>';
@@ -4381,11 +4381,22 @@ function _weeklyHead(){
     '<div style="display:flex;align-items:center;gap:8px">'+_wkToggleHtml()+
     '<button onclick="openWeeklyForm()" style="padding:6px 12px;border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ 등록</button></div></div>';
 }
+function _wkPeriodOk(it,ymd){
+  if(it.start_date&&ymd<String(it.start_date).slice(0,10))return false;
+  if(it.end_date&&ymd>String(it.end_date).slice(0,10))return false;
+  return true;
+}
+function _wkMetaChips(it){
+  var h='';
+  if(it.ref_label)h+='<span style="font-size:10.5px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:6px;padding:1px 7px;font-weight:700;white-space:nowrap">👤 '+esc(it.ref_label)+'</span>';
+  if(it.start_date||it.end_date)h+='<span style="font-size:10.5px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;border-radius:6px;padding:1px 7px;font-weight:700;white-space:nowrap">📆 '+(it.start_date?String(it.start_date).slice(5,10).replace('-','/'):'')+'~'+(it.end_date?String(it.end_date).slice(5,10).replace('-','/'):'')+'</span>';
+  return h;
+}
 function _weeklyHtml(dates,checkSet,bookings){
   if(_wkView==='person')return _weeklyHead()+_wkBoardHtml(dates,checkSet,bookings);
   var dows=['일','월','화','수','목','금','토'];var todayS=_dailyToday();
   var weekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly';});
-  function itemsForDate(ymd){var dow=new Date(ymd+'T00:00:00').getDay();return weekly.filter(function(it){return Number(it.weekday)===dow;});}
+  function itemsForDate(ymd){var dow=new Date(ymd+'T00:00:00').getDay();return weekly.filter(function(it){return Number(it.weekday)===dow&&_wkPeriodOk(it,ymd);});}
   var strip='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">달력 — 전체 항목 표시 (칸 클릭 = 아래 해당 요일로 이동)</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:14px">';
   dates.forEach(function(ymd){
     var d=new Date(ymd+'T00:00:00');var dow=d.getDay();var isToday=ymd===todayS;var its=itemsForDate(ymd);
@@ -4407,7 +4418,7 @@ function _weeklyHtml(dates,checkSet,bookings){
       var done=!!checkSet[ymd+'|'+it.id];
       bands+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'+
         '<input type="checkbox" '+(done?'checked':'')+' onchange="toggleWeeklyCheck(\''+it.id+'\',\''+ymd+'\',this)" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:#4f46e5">'+
-        '<span style="flex:1;font-size:13px;color:'+(done?'var(--text3)':'var(--text)')+';'+(done?'text-decoration:line-through':'')+'">'+esc(it.content||'')+(it.recurring?' <span style="font-size:10.5px;color:#6366f1">· 매주</span>':'')+'</span>'+
+        '<span style="flex:1;font-size:13px;color:'+(done?'var(--text3)':'var(--text)')+';'+(done?'text-decoration:line-through':'')+'">'+esc(it.content||'')+(it.recurring?' <span style="font-size:10.5px;color:#6366f1">· 매주</span>':'')+'</span>'+_wkMetaChips(it)+
         _clBadge(it.assignee)+
         '<button onclick="openWeeklyEditById(\''+it.id+'\')" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px" title="수정">✏️</button>'+
         '<button onclick="delChecklistItem(\''+it.id+'\',\'weekly\')" style="background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:13px" title="삭제">✕</button></div>';
@@ -4423,7 +4434,7 @@ function _weeklyHtml(dates,checkSet,bookings){
 function _wkBoardHtml(dates,checkSet,bookings){
   var dows=['일','월','화','수','목','금','토'];
   var dowYmd={};dates.forEach(function(ymd){dowYmd[new Date(ymd+'T00:00:00').getDay()]=ymd;});
-  var weekly=CHECKLIST_ITEMS.filter(function(it){return it.kind==='weekly';});
+  var weekly=CHECKLIST_ITEMS.filter(function(it){if(it.kind!=='weekly')return false;var y=dowYmd[Number(it.weekday)];return !y||_wkPeriodOk(it,y);});
   var byA={};weekly.forEach(function(it){
     var ids=_clAssignees(it.assignee);
     if(ids.indexOf('all')>=0){(byA['all']=byA['all']||[]).push(it);}
@@ -4498,6 +4509,10 @@ function openWeeklyForm(presetDow,editItem){
     '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:12px"><input type="checkbox" id="wkRecurring" checked style="width:16px;height:16px"> 매주 반복</label>'+
     '<div style="font-size:12px;color:#64748b;margin-bottom:4px">고객 자동표시 <span style="color:#94a3b8">(선택)</span></div>'+
     '<select id="wkSmart" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option><option value="checkin_today">오늘 체크인 고객</option><option value="checkin_week">이번주 체크인 고객</option><option value="checkout_week">이번주 체크아웃 고객</option><option value="checkin_week_jp">이번주 제이파크 체크인 고객</option><option value="checkin_week_c9">이번주 큐브나인 체크인 고객</option><option value="checkin_1w">다음주 체크인 고객</option><option value="checkin_2w">2주뒤 체크인 고객</option><option value="checkin_3w">3주뒤 체크인 고객</option><option value="checkin_4w">4주뒤 체크인 고객</option></select>'+
+    '<div style="font-size:12px;color:#64748b;margin-bottom:4px">기간 <span style="color:#94a3b8">(선택 — 이 기간에만 표시돼요)</span></div>'+
+    '<div style="display:flex;gap:6px;align-items:center;margin-bottom:12px"><input type="date" id="wkStart" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"><span style="color:#94a3b8">~</span><input type="date" id="wkEnd" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box"></div>'+
+    '<div style="font-size:12px;color:#64748b;margin-bottom:4px">특정 예약/학생 <span style="color:#94a3b8">(선택 — 항목에 이름 칩으로 표시)</span></div>'+
+    '<select id="wkRef" style="width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px;box-sizing:border-box"><option value="">없음</option></select>'+
     '<div style="display:flex;justify-content:flex-end;gap:8px"><button onclick="var o=document.getElementById(\'wkFormOv\');if(o)o.remove();" style="padding:8px 16px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-family:inherit">취소</button>'+
     '<button onclick="submitWeeklyItem()" style="padding:8px 16px;border:none;background:#4f46e5;color:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:700">'+(editItem?'저장':'등록')+'</button></div></div>';
   document.body.appendChild(ov);
@@ -4505,7 +4520,10 @@ function openWeeklyForm(presetDow,editItem){
     document.getElementById('wkContent').value=editItem.content||'';
     document.getElementById('wkRecurring').checked=editItem.recurring!==false;
     document.getElementById('wkSmart').value=editItem.smart_key||'';
+    document.getElementById('wkStart').value=editItem.start_date?String(editItem.start_date).slice(0,10):'';
+    document.getElementById('wkEnd').value=editItem.end_date?String(editItem.end_date).slice(0,10):'';
   }
+  _wkLoadRefOptions(editItem?editItem.ref_booking:'',editItem?editItem.ref_label:'');
   _wkPickDow(editItem?Number(editItem.weekday):(presetDow!=null?presetDow:new Date().getDay()));
 }
 function _wkAssChipsHtml(sel){
@@ -4570,6 +4588,25 @@ function _assCollect(rowId){
   if(!ids.length||ids.indexOf('all')>=0)return 'all';
   return ids.join(',');
 }
+var _wkRefCache=null;
+function _wkLoadRefOptions(selId,selLabel){
+  var sel=document.getElementById('wkRef');if(!sel)return;
+  function fill(list){
+    var h='<option value="">없음</option>';
+    list.forEach(function(b){h+='<option value="'+b.id+'"'+(String(selId||'')===String(b.id)?' selected':'')+'>'+esc(b.label)+'</option>';});
+    if(selId&&!list.some(function(b){return String(b.id)===String(selId);}))h+='<option value="'+esc(String(selId))+'" selected>'+esc(selLabel||'(지난/삭제된 예약)')+'</option>';
+    sel.innerHTML=h;
+  }
+  if(_wkRefCache){fill(_wkRefCache);return;}
+  var today=_dailyToday();
+  sbGet('bookings','select=id,booker_name,students,checkin_date,checkout_date,status&checkout_date=gte.'+today+'&order=checkin_date').then(function(rows){
+    var list=(rows||[]).filter(function(b){return String(b.status||'').indexOf('취소')<0;}).map(function(b){
+      var stu='';try{var st=typeof b.students==='string'?JSON.parse(b.students):b.students;if(Array.isArray(st))stu=st.map(function(x){return x.korName||x.name_kr||'';}).filter(Boolean).join('·');}catch(e){}
+      return {id:b.id,label:(b.booker_name||'')+(stu?' ('+stu+')':'')+' · IN '+String(b.checkin_date||'').slice(5)};
+    });
+    _wkRefCache=list;fill(list);
+  }).catch(function(){fill([]);});
+}
 function submitWeeklyItem(){
   var content=(document.getElementById('wkContent').value||'').trim();if(!content){alert('내용을 입력해주세요');return;}
   if(_wkSelDow==null){alert('요일을 선택해주세요');return;}
@@ -4577,7 +4614,13 @@ function submitWeeklyItem(){
   var recurring=document.getElementById('wkRecurring').checked;
   var smart=document.getElementById('wkSmart').value||null;
   var who=(CU&&(CU.name||CU.id))||'';
-  var body={kind:'weekly',content:content,assignee:assignee,weekday:_wkSelDow,recurring:recurring,smart_key:smart};
+  var sD=(document.getElementById('wkStart')||{}).value||null;
+  var eD=(document.getElementById('wkEnd')||{}).value||null;
+  if(sD&&eD&&eD<sD){alert('기간 종료가 시작보다 빠를 수 없어요');return;}
+  var refSel=document.getElementById('wkRef');
+  var refId=refSel&&refSel.value?refSel.value:null;
+  var refLabel=refId&&refSel.selectedIndex>=0?refSel.options[refSel.selectedIndex].textContent:null;
+  var body={kind:'weekly',content:content,assignee:assignee,weekday:_wkSelDow,recurring:recurring,smart_key:smart,start_date:sD,end_date:eD,ref_booking:refId,ref_label:refLabel};
   var p=_wkEditId?sbPatch('staff_checklist_items','id=eq.'+_wkEditId,body):sbPost('staff_checklist_items',Object.assign({created_by:who,active:true},body));
   p.then(function(){var ov=document.getElementById('wkFormOv');if(ov)ov.remove();_wkEditId=null;loadWeeklyCheck();}).catch(function(e){alert('저장 실패: '+(e&&e.message||e));});
 }
