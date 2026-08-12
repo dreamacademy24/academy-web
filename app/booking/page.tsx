@@ -75,45 +75,6 @@ export default function BookingPage() {
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
   const [agreed, setAgreed] = useState<boolean>(false);
-  const [payMethod, setPayMethod] = useState<string>("");
-  const [isDaon, setIsDaon] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.get("src") === "daonmam") setIsDaon(true);
-    // 다온맘 신청 폼에서 넘어온 프리필 (pf = base64 JSON)
-    const pf = sp.get("pf");
-    if (!pf) return;
-    try {
-      const d = JSON.parse(decodeURIComponent(escape(atob(pf.replace(/-/g, "+").replace(/_/g, "/")))));
-      if (d.name || d.phone) setBooker(prev => ({ ...prev, name: d.name || "", phone: d.phone || "" }));
-      const lodging = String(d.lodging || "");
-      const w = parseInt(String(d.duration_weeks || ""), 10) || 0;
-      if (lodging.includes("드림하우스")) {
-        setBType("dreamhouse");
-        if (w && DH_WEEKS.includes(w)) setAccom(prev => ({ ...prev, dh_weeks: w }));
-      } else if (lodging.includes("제이파크")) {
-        setBType("jaypark");
-        if (w >= 1 && w <= 4) setAccom(prev => ({ ...prev, jp_weeks: w }));
-      } else if (lodging.includes("큐브나인")) {
-        setBType("cubenine");
-        if (CN_PERIODS.includes(w + "주")) setAccom(prev => ({ ...prev, cn_period: w + "주" }));
-      }
-      if (d.depart_date) setDates(prev => ({ ...prev, checkIn: String(d.depart_date) }));
-      const n = parseInt(String(d.children || ""), 10) || 0;
-      if (n > 0) {
-        const ages = String(d.ages || "").split(/[,/·\s]+/).filter(Boolean);
-        setStudents(Array.from({ length: Math.min(n, 5) }, (_, i) => ({ id: Date.now() + i, korName: "", engName: "", age: ages[i] || "", grade: "주니어", photo: "O" })));
-      }
-      const notes: string[] = ["[다온맘 신청 정보]"];
-      const numOf = (v: unknown) => { const p = parseInt(String(v || ""), 10); return p > 0 ? String(p) : String(v || ""); };
-      if (d.adults) notes.push(`보호자 ${numOf(d.adults)}명`);
-      if (d.children) notes.push(`아이 ${numOf(d.children)}명${d.ages ? ` (${d.ages})` : ""}`);
-      if (d.duration_weeks) notes.push(`희망 기간 ${numOf(d.duration_weeks)}주`);
-      if (d.oceanview) notes.push("오션뷰 변경 희망");
-      if (notes.length > 1) setSpecialRequest(prev => prev ? prev : notes.join(" · "));
-    } catch { /* 무시 */ }
-  }, []);
   // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
   const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
   const [holidayPopup, setHolidayPopup] = useState<HolidayItem[] | null>(null);
@@ -351,7 +312,7 @@ export default function BookingPage() {
       special_request: specialRequest,
       status: "접수",
       payment_method: "deposit50_consult",
-      agency: isDaon ? "다온맘" : null,
+      agency: null,
     }).select().single();
 
     if (error) { setLoading(false); alert("접수 실패: " + error.message); return; }
@@ -389,17 +350,12 @@ export default function BookingPage() {
     }
 
     try {
-      const pmLabel = "예약금 50만 자리확보 → 상담 확정";
-      fetch("/api/notify/telegram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "booking", payload: { name: uniq.name, accomType, weeks: accomWeeks, payMethod: pmLabel, daon: isDaon, rno } }) });
+      const pmLabel = "상담 후 확정";
+      fetch("/api/notify/telegram", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "booking", payload: { name: uniq.name, accomType, weeks: accomWeeks, payMethod: pmLabel, rno } }) });
     } catch { /* noop */ }
 
     setLoading(false);
     setReservationNo(rno);
-    if (isDaon) {
-      alert("✅ 접수 완료! 예약번호 " + rno + "\n\n예약금 50만원 결제 페이지(네이버 스토어)로 이동합니다.\n결제 후 카카오 채널로 결제자 이름을 꼭 알려주세요 (결제자 = 예약자 동일).\n⏰ 30분 이내 미결제 시 자리 확보가 취소될 수 있어요.");
-      window.location.href = "https://smartstore.naver.com/dreamacademy/products/13686581910";
-      return;
-    }
     setDone(true);
   }
 
@@ -417,23 +373,10 @@ export default function BookingPage() {
       <div className="dc">✅</div>
       <div className="dh">예약 접수 완료!</div>
       <div className="drn">{reservationNo}</div>
-      <div style={{ textAlign: "left", background: "#fff", border: "1.5px solid #86efac", borderRadius: 14, padding: "18px 18px", margin: "0 0 18px" }}>
-        <div style={{ fontSize: 14.5, fontWeight: 800, color: "#166534", marginBottom: 6 }}>💳 다음 단계 — 예약금 50만원으로 자리 확보</div>
-        <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.85 }}>
-          아래 버튼에서 <b>예약금 50만원</b>을 결제하시면 자리가 확보돼요.<br/>
-          이후 상담에서 최종 결제 방식(💵 현금 전액입금 최대 할인 / 💳 카드)을 정하시면 됩니다.
-        </div>
-        <a href="https://smartstore.naver.com/dreamacademy/products/13686581910" target="_blank" rel="noopener noreferrer" style={{ display: "block", textAlign: "center", marginTop: 12, background: "#03C75A", color: "#fff", fontWeight: 800, fontSize: 15, padding: "13px 0", borderRadius: 10, textDecoration: "none" }}>💳 네이버 스토어에서 예약금 결제하기</a>
-        <div style={{ fontSize: 12, color: "#6b7c93", lineHeight: 1.7, marginTop: 10 }}>
-          <span style={{ color: "#b91c1c", fontWeight: 700 }}>⏰ 접수 후 30분 이내 미결제 시 자리 확보가 취소될 수 있어요.</span><br/>
-          결제 후 <b>카카오 채널로 결제자 이름을 꼭 알려주세요</b> (결제자 이름 = 예약자 이름 동일).<br/>
-          예약금은 총 금액에서 차감돼요. 예약금 결제만으로는 최종 확정이 아니며, 상담으로 날짜·구성을 마무리해 주세요.
-        </div>
-      </div>
       <div className="dp">담당자가 확인 후 상세 안내를 드립니다.<br/>문의사항은 카카오톡으로 연락주세요.</div>
       <a className="dk" href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">카카오톡 문의하기</a>
       <div style={{ marginTop: 14 }}>
-        <button onClick={() => { if (isDaon) window.location.href = "/daonmam/#tab-8"; else window.location.reload(); }} style={{ background: "#fff", border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>↩ 새 예약 다시 신청하기</button>
+        <button onClick={() => window.location.reload()} style={{ background: "#fff", border: "1.5px solid #cbd5e1", borderRadius: 10, padding: "10px 22px", fontSize: 13, fontWeight: 700, color: "#475569", cursor: "pointer", fontFamily: "inherit" }}>↩ 새 예약 다시 신청하기</button>
       </div>
     </div>
   </>);
@@ -834,20 +777,6 @@ export default function BookingPage() {
 
         {/* 기간 내 휴무일 안내 배너 (공용 컴포넌트) */}
         <HolidayBanner hits={holidayHits} />
-
-        {/* 예약금 자리확보 안내 */}
-        <div className="bs">
-          <h2>💳 결제 안내</h2>
-          <div style={{ background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "14px 16px" }}>
-            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#166534" }}>예약금 50만원으로 자리부터 확보해요</div>
-            <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8, marginTop: 6 }}>
-              접수 후 <b>예약금 50만원</b>을 결제하시면 자리가 확보됩니다.<br/>
-              최종 결제 방식(💵 현금 전액입금 최대 할인 / 💳 카드)은 <b>상담에서 편하게 정하시면 돼요.</b><br/>
-              <span style={{ color: "#b91c1c", fontSize: 12.5, fontWeight: 700 }}>⏰ 접수 후 30분 이내에 예약금 결제가 없으면 자리 확보(접수)가 취소될 수 있어요.</span><br/>
-              <span style={{ color: "#6b7c93", fontSize: 12 }}>예약금은 총 금액에서 차감되며, 상담 후 확정 전까지는 취소·조정 부담이 없어요.</span>
-            </div>
-          </div>
-        </div>
 
         {/* 동의 체크박스 + 환불규정 보기 */}
         <div style={{
