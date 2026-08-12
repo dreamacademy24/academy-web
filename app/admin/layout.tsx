@@ -57,6 +57,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "자료모음", href: "/admin/resources" },
     { label: "사이트 관리", href: "/admin/site" },
     { label: "민에듀 공구", href: "/admin/minedu" },
+    { label: "다온맘 (현황·정산)", href: "/daonmam-status", ext: true },
     { label: "이메일", href: "https://privateemail.com/appsuite/", ext: true },
   ]},
 ];

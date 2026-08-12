@@ -178,7 +178,6 @@ export default function AdminBookingsPage(){
   const [authed,setAuthed]=useState(false);
   const [bookings,setBookings]=useState<Booking[]>([]);
   const [filter,setFilter]=useState("전체");
-  const [listAgency,setListAgency]=useState<"전체"|"다온맘">("전체");
   const [listPeriod,setListPeriod]=useState<"현재"|"지난"|"전체">("현재");
   const [listSearch,setListSearch]=useState("");
   const [confirmFilter]=useState("전체");
@@ -186,7 +185,7 @@ export default function AdminBookingsPage(){
   const [confirmType,setConfirmType]=useState<"전체"|"리조트"|"통학형">("전체");
   const [confirmPeriod,setConfirmPeriod]=useState<"전체"|"진행중"|"예정"|"이번주"|"지난">("진행중");
   const [loading,setLoading]=useState(false);
-  const [mainTab,setMainTab]=useState<"newlist"|"daon"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
+  const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [newSearch,setNewSearch]=useState("");
   const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
   useEffect(()=>{
@@ -679,44 +678,6 @@ export default function AdminBookingsPage(){
     try{const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();const bl=(Array.isArray(st?.value)?st!.value:[]) as {booking_id?:string}[];if(bl.some(x=>x.booking_id===b.id)){await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:bl.filter(x=>x.booking_id!==b.id)},{onConflict:"key"});}}catch{}
     load();
   }
-  async function secureRoom(b: Booking){
-    const at=String(b.accom_type||"");
-    const isDH=at.includes("드림하우스"); const isCN=at.includes("큐브");
-    try{
-      let roomMsg="";
-      const bb=b as unknown as Record<string,string>;
-      if(isDH){
-        let ci=b.checkin_date||"", co=b.checkout_date||"";
-        if(bb.seg1_type==="dreamhouse"){ci=bb.seg1_checkin||ci;co=bb.seg1_checkout||co;}
-        else if(bb.seg2_type==="dreamhouse"){ci=bb.seg2_checkin||ci;co=bb.seg2_checkout||co;}
-        const avail=await fetchDhAvailRooms(supabase as never,b.id,ci,co);
-        if(!avail.length){alert("⚠️ 이 기간 드림하우스 가용 룸이 없습니다 — 룸 캘린더에서 확인해주세요.");return;}
-        const room=avail[0];
-        await supabase.from("bookings").update({house_no:room,accom_room:room,paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
-        roomMsg="드림하우스 "+room.toUpperCase();
-      } else if(isCN){
-        let ci=b.checkin_date||"", co=b.checkout_date||"";
-        if(bb.seg1_type==="cubenine"){ci=bb.seg1_checkin||ci;co=bb.seg1_checkout||co;}
-        else if(bb.seg2_type==="cubenine"){ci=bb.seg2_checkin||ci;co=bb.seg2_checkout||co;}
-        const rt=String(bb.cn_room_type||"디럭스");
-        const grp=rt.includes("풀")?["103","104","105","106"]:["204","205","206","207","208","209","210"];
-        const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();
-        const blocks=(Array.isArray(st?.value)?st!.value:[]) as {id:string;room:string;name:string;ci:string;co:string;kind?:string;booking_id?:string}[];
-        const free=grp.find(r=>!blocks.some(x=>x.room===r&&x.booking_id!==b.id&&x.ci<co&&ci<x.co));
-        if(!free){alert("⚠️ 이 기간 큐브나인 "+(rt.includes("풀")?"풀억세스":"디럭스오션")+" 가용 룸이 없습니다.");return;}
-        const next=blocks.filter(x=>x.booking_id!==b.id);
-        next.push({id:Math.random().toString(36).slice(2,10)+Date.now().toString(36),room:free,name:b.booker_name||"드림 예약",ci,co,kind:"dream",booking_id:b.id});
-        await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:next},{onConflict:"key"});
-        await supabase.from("bookings").update({paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
-        roomMsg="큐브나인 "+free+"호 ("+(rt.includes("풀")?"풀억세스":"디럭스오션")+")";
-      } else {
-        await supabase.from("bookings").update({paid_amount:500000,payment_status:"partial",daon_stage:"예약금 입금"}).eq("id",b.id);
-        roomMsg="(숙소 배정 불필요 유형)";
-      }
-      alert("✅ 룸확보 완료!\n"+(b.booker_name||"")+" · "+roomMsg+"\n사전 예약금 50만원 입금 처리 · 상태: 예약금 입금");
-      load();
-    }catch(e){alert("룸확보 실패: "+(e as Error).message);}
-  }
   const load=useCallback(async()=>{
     setLoading(true);
     const {data,error}=await supabase.from("bookings").select("*").order("checkin_date",{ascending:true});
@@ -776,7 +737,7 @@ export default function AdminBookingsPage(){
   const _stBase=filter==="전체"?bookings.filter(b=>b.status!=="완료"&&!String(b.status||"").includes("취소")):filter==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")):bookings.filter(b=>b.status===filter);
   // 다온맘 미입금(룸확보 전) 건은 예약내역에서 제외 — 부킹리스트·다온맘 탭에서만 관리 (취소 필터는 예외)
   const _stBase2=filter==="취소"?_stBase:_stBase.filter(b=>!(b.agency==="다온맘"&&!(Number((b as unknown as Record<string,unknown>).paid_amount)>0)));
-  const statusFiltered=listAgency==="다온맘"?_stBase2.filter(b=>b.agency==="다온맘"):_stBase2;
+  const statusFiltered=_stBase2;
   const filtered=listPeriod==="현재"?statusFiltered.filter(b=>!isPast(b)):listPeriod==="지난"?statusFiltered.filter(b=>isPast(b)):statusFiltered;
   const searchedList=filtered.filter(b=>{if(!listSearch)return true;const q=listSearch.toLowerCase();return[b.reservation_no,b.booker_name,stuNames(b.students),b.assignee,b.accom_type,b.checkin_date,b.agency].some(v=>v&&v.toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
   const pastCount=statusFiltered.filter(b=>isPast(b)).length;
@@ -929,7 +890,6 @@ export default function AdminBookingsPage(){
     <div className="main-tabs">
       <button className={`main-tab${mainTab==="estimate"?" ac":""}`} onClick={()=>setMainTab("estimate")}>📊 견적</button>
       <button className={`main-tab${mainTab==="newlist"?" ac":""}`} onClick={()=>setMainTab("newlist")}>📋 부킹 리스트{(()=>{const n=bookings.filter(b=>b.status==="접수"||b.status==="접수중").length;return n>0&&<span style={{background:"#e85d35",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>{n}</span>;})()}</button>
-      <button className={`main-tab${mainTab==="daon"?" ac":""}`} onClick={()=>setMainTab("daon")}>💛 다온맘{(()=>{const n=bookings.filter(b=>b.agency==="다온맘").length;return n>0&&<span style={{background:"#eab308",color:"#3c1e1e",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:800}}>{n}</span>;})()}</button>
       <button className={`main-tab${mainTab==="list"?" ac":""}`} onClick={()=>setMainTab("list")}>📄 예약내역{(()=>{const _t=calYmd(new Date());const n=bookings.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim()&&!(b.status||"").includes("취소")&&(!b.checkout_date||String(b.checkout_date).slice(0,10)>=_t)).length;return n>0?<span style={{background:"#dc2626",color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,marginLeft:4,fontWeight:700}}>❗{n}</span>:null;})()}</button>
       <button className={`main-tab${mainTab==="receipt"?" ac":""}`} onClick={()=>setMainTab("receipt")}>🧾 영수증</button>
       <button className={`main-tab${mainTab==="confirm"?" ac":""}`} onClick={()=>setMainTab("confirm")}>✅ 확정 예약</button>
@@ -959,7 +919,7 @@ export default function AdminBookingsPage(){
             <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
             <td style={{fontSize:12,color:"#888",whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
             <td onClick={e=>e.stopPropagation()} style={{display:"flex",gap:4}}>
-              {(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?<span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:11.5,fontWeight:800,alignSelf:"center"}}>✅확보</span>:<button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button>}<button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
+              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act" style={{background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1"}} onClick={()=>router.push("/admin/bookings/"+b.id)}>상세보기</button>
               {b.agency==="다온맘"?<button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>:<button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no+"\n\n⚠️ 학생·픽드랍·셔틀·튜터·체크인 등 모든 연결 데이터가 함께 삭제됩니다.")){const res=await fetch("/api/bookings/"+b.id+"/delete",{method:"DELETE"});if(!res.ok){alert("삭제 실패");return;}try{const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();const bl=(Array.isArray(st?.value)?st!.value:[]) as {booking_id?:string}[];if(bl.some(x=>x.booking_id===b.id)){await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:bl.filter(x=>x.booking_id!==b.id)},{onConflict:"key"});}}catch{}load();}}}>삭제</button>}
             </td>
@@ -975,77 +935,10 @@ export default function AdminBookingsPage(){
     })()}
 
     {/* ── 탭1: 예약내역 (전체 부킹 리스트) ── */}
-    {mainTab==="daon"&&(()=>{
-      const _bn=(n:string|null|undefined)=>String(n||"").replace(/\s/g,"").replace(/[A-Z]$/,"");
-      const _nc:{[k:string]:number}={};bookings.filter(b=>b.agency==="다온맘").forEach(b=>{const k=_bn(b.booker_name);if(k)_nc[k]=(_nc[k]||0)+1;});
-      const daonAll=bookings.filter(b=>b.agency==="다온맘").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no].some(v=>v&&String(v).toLowerCase().includes(q));}).sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
-      const rows=daonAll.filter(b=>!String(b.status||"").includes("취소"));
-      const cancelledRows=daonAll.filter(b=>String(b.status||"").includes("취소"));
-      return (<div style={{background:"#fff",borderRadius:12,padding:16,border:"1px solid #f1e2b8"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-          <span style={{fontSize:14,fontWeight:800}}>💛 다온맘 공구 예약 (접수 순)</span><input type="text" placeholder="🔍 검색" value={newSearch} onChange={ev=>setNewSearch(ev.target.value)} style={{marginLeft:6,fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:160,outline:"none"}}/>
-          <span style={{fontSize:12,color:"#92400e",background:"#fef3c7",borderRadius:8,padding:"2px 8px",fontWeight:700}}>{rows.length}건</span>
-          <span style={{fontSize:11.5,color:"#94a3b8"}}>선착순 판정 = 접수시간 기준 · ❗미입금 30분 규칙 동일</span>
-        </div>
-        {rows.length===0?<div style={{textAlign:"center",padding:"50px 0",color:"#aaa",fontSize:14}}>아직 다온맘 예약이 없습니다</div>:
-        (<div className="tbl-w"><table className="tbl"><thead><tr>
-          <th>순번</th><th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>진행</th><th>액션</th><th style={{minWidth:150}}>비고</th>
-        </tr></thead><tbody>
-          {rows.map((b,ix)=>{
-            const unpaid30=(()=>{try{const created=new Date(String(b.created_at)).getTime();const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;return paid<=0&&Date.now()-created>30*60*1000;}catch{return false;}})();
-            const stage=String(b.status||"").includes("취소")?"취소":/영수증발행|결제완료|완료/.test(String(b.status||""))?"예약 확정":String((b as unknown as Record<string,unknown>).daon_stage||"신청서 접수");
-            return (<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)} style={unpaid30?{background:"#fff7f7"}:undefined}>
-            <td style={{fontWeight:800,color:"#92400e"}}>{ix+1}</td>
-            <td style={{fontWeight:600,color:"#5b6cf8"}}>{shortNo(b.reservation_no)}</td>
-            <td style={{whiteSpace:"nowrap"}}>{b.booker_name||"-"}{_nc[_bn(b.booker_name)]>1&&<span style={{marginLeft:5,background:"#fef3c7",color:"#92400e",border:"1px solid #fcd34d",fontSize:10,fontWeight:800,borderRadius:6,padding:"1px 6px"}}>중복</span>}{unpaid30&&<span style={{marginLeft:6,background:"#fee2e2",color:"#b91c1c",fontSize:10.5,fontWeight:800,borderRadius:8,padding:"1px 7px"}}>❗미입금</span>}</td>
-            <td style={{fontSize:12,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{stuNames(b.students)}</td>
-            <td>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
-            <td>{b.checkin_date||"-"}</td>
-            <td style={{fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
-            <td style={{fontSize:11.5,fontWeight:800,color:stage==="취소"?"#dc2626":stage==="예약 확정"?"#166534":stage==="예약금 입금"?"#1e40af":"#92400e"}}>{stage}</td>
-            <td onClick={ev=>ev.stopPropagation()} style={{display:"flex",gap:4}}>
-              {(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?<span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:6,padding:"4px 8px",fontSize:11.5,fontWeight:800,alignSelf:"center"}}>✅확보</span>:<button className="act" style={{background:"#dcfce7",color:"#166534",border:"1px solid #86efac",fontWeight:800}} onClick={()=>{if(confirm("스토어 사전 예약금 결제 확인됐나요?\n"+(b.booker_name||"")+" — 빈 룸을 자동 배정하고 예약금 입금 처리합니다."))secureRoom(b);}}>💰룸확보</button>}
-              <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
-              <button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>
-            </td>
-            <td onClick={ev=>ev.stopPropagation()}>
-              <input key={b.id+"_"+String((b as unknown as Record<string,unknown>).daon_memo||"")} type="text" defaultValue={String((b as unknown as Record<string,unknown>).daon_memo||"")} placeholder="메모"
-                onBlur={async ev=>{const v=ev.target.value.trim();if(v===String((b as unknown as Record<string,unknown>).daon_memo||""))return;await supabase.from("bookings").update({daon_memo:v||null}).eq("id",b.id);load();}}
-                onKeyDown={ev=>{if(ev.key==="Enter")(ev.target as HTMLInputElement).blur();}}
-                style={{width:150,padding:"6px 8px",border:"1px solid #e2e8f0",borderRadius:7,fontSize:12,fontFamily:"inherit",outline:"none"}}/>
-            </td>
-          </tr>);})}
-        </tbody></table></div>)}
-
-        {cancelledRows.length>0&&<div style={{marginTop:18,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:12,padding:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-            <span style={{fontSize:13.5,fontWeight:800,color:"#b91c1c"}}>🗑 취소된 예약</span>
-            <span style={{fontSize:12,color:"#b91c1c",background:"#fee2e2",borderRadius:8,padding:"1px 8px",fontWeight:700}}>{cancelledRows.length}건</span>
-            <span style={{fontSize:11.5,color:"#94a3b8"}}>기록 보존 · 자리는 반환됨 · 다온맘 현황 페이지에도 취소로 표시</span>
-          </div>
-          <div className="tbl-w"><table className="tbl"><thead><tr>
-            <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>숙소</th><th>체크인</th><th>접수일시</th><th>액션</th>
-          </tr></thead><tbody>
-            {cancelledRows.map(b=>(<tr key={b.id} style={{opacity:.7}} onClick={()=>router.push("/admin/bookings/"+b.id)}>
-              <td style={{fontWeight:600,color:"#94a3b8"}}>{shortNo(b.reservation_no)}</td>
-              <td style={{textDecoration:"line-through",color:"#6b7280"}}>{b.booker_name||"-"}</td>
-              <td style={{fontSize:12,color:"#9ca3af"}}>{stuNames(b.students)}</td>
-              <td style={{color:"#9ca3af"}}>{fmtAccom(b as unknown as Record<string,string>)||"-"}</td>
-              <td style={{color:"#9ca3af"}}>{b.checkin_date||"-"}</td>
-              <td style={{fontSize:12,color:"#9ca3af",whiteSpace:"nowrap"}}>{fDateTime(b.created_at)}</td>
-              <td onClick={ev=>ev.stopPropagation()}>
-                <button className="act" style={{background:"#f1f5f9",color:"#475569"}} onClick={async()=>{if(confirm("취소를 되돌려 접수 상태로 복구할까요?\n"+(b.booker_name||""))){await supabase.from("bookings").update({status:"접수",daon_stage:(Number((b as unknown as Record<string,unknown>).paid_amount)||0)>0?"예약금 입금":"신청서 접수"}).eq("id",b.id);load();}}}>↩ 복구</button>
-              </td>
-            </tr>))}
-          </tbody></table></div>
-        </div>}
-      </div>);
-    })()}
 
     {mainTab==="list"&&(<>
       <div className="sub-tabs">
         {statusFilters.map(t=><button key={t} className={`sub-tab${filter===t?" ac":""}`} style={t==="취소"?{color:"#b91c1c"}:undefined} onClick={()=>setFilter(t)}>{t} {t!=="전체"&&<>({t==="취소"?bookings.filter(b=>String(b.status||"").includes("취소")).length:bookings.filter(b=>b.status===t).length})</>}</button>)}
-        <button className={`sub-tab${listAgency==="다온맘"?" ac":""}`} style={{background:listAgency==="다온맘"?"#f59e0b":"#fef3c7",color:listAgency==="다온맘"?"#fff":"#92400e",fontWeight:800}} onClick={()=>setListAgency(listAgency==="다온맘"?"전체":"다온맘")}>💛 다온맘만 ({bookings.filter(b=>b.agency==="다온맘").length})</button>
         <span style={{marginLeft:"auto",display:"flex",gap:4,alignItems:"center"}}>
           <input type="text" placeholder="🔍 예약자, 학생, 예약번호, 숙소..." value={listSearch} onChange={e=>setListSearch(e.target.value)} style={{fontSize:12,padding:"5px 10px",border:"1px solid #d1d5db",borderRadius:8,width:220,outline:"none"}}/>
           {listSearch&&<button onClick={()=>setListSearch("")} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#9ca3af",padding:"2px 4px"}}>✕</button>}
