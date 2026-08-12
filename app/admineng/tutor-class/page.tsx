@@ -262,13 +262,15 @@ export default function EngTutorClassPage() {
     const list = (data || []) as any[];
     const bookingIds = Array.from(new Set(list.map(r => r.booking_id).filter(Boolean)));
     if (bookingIds.length > 0) {
-      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room").in("id", bookingIds);
-      const bm: Record<string, { house_no?: string; accom_room?: string }> = {};
-      (bs || []).forEach((b: any) => { bm[b.id] = { house_no: b.house_no, accom_room: b.accom_room }; });
+      const { data: bs } = await supabase.from("bookings").select("id, house_no, accom_room, assignee, care_assignee").in("id", bookingIds);
+      const bm: Record<string, { house_no?: string; accom_room?: string; assignee?: string; care_assignee?: string }> = {};
+      (bs || []).forEach((b: any) => { bm[b.id] = { house_no: b.house_no, accom_room: b.accom_room, assignee: b.assignee, care_assignee: b.care_assignee }; });
       list.forEach(r => {
         const b = bm[r.booking_id] || {};
         const room = (b.house_no || b.accom_room || '').toString().replace(/^dh/i,'').replace(/\s+/g,'').toUpperCase();
         if (room) r.house_number = room;
+        const km = (b.assignee || b.care_assignee || '').toString().trim();
+        if (km) (r as any).kr_manager = km;
       });
     }
     setReqs(list as TutorReq[]);
@@ -1067,15 +1069,16 @@ export default function EngTutorClassPage() {
               <thead><tr>
                 <th style={{width:"5%"}}>Date</th>
                 <th style={{width:"10%",whiteSpace:"nowrap"}}>House</th>
-                <th style={{width:"25%"}}>Student</th>
+                <th style={{width:"20%"}}>Student</th>
                 <th style={{width:"4%"}}>Age</th>
                 <th style={{width:"4%"}}>Type</th>
                 <th style={{width:"4%"}}>Time</th>
                 <th style={{width:"11%"}}>Period</th>
                 <th style={{width:"8%"}}>Days</th>
                 <th style={{width:"8%"}}>Tutor</th>
+                <th style={{width:"7%"}} title="Korean staff in charge — ask them about this booking">KR Staff</th>
                 <th style={{width:"8%"}}>Status</th>
-                <th style={{width:"13%",textAlign:"center"}}>Action</th>
+                <th style={{width:"11%",textAlign:"center"}}>Action</th>
               </tr></thead>
               <tbody>
                 {shown.map(r => {
@@ -1110,6 +1113,7 @@ export default function EngTutorClassPage() {
                       <td style={{fontSize:11}}>{fmtDate(r.start_date)}~{fmtDate(r.end_date)}</td>
                       <td style={{fontSize:11}}>{days(r) || "-"}</td>
                       <td style={{fontSize:11}}>{tutorName(r.assigned_tutor_id)}</td>
+                      <td style={{fontSize:11,fontWeight:700,color:"#7c3aed",whiteSpace:"nowrap"}}>{(r as any).kr_manager || "-"}</td>
                       <td><span className="ebadge" style={{background:st.bg,color:st.color}}>{st.label}</span></td>
                       <td style={{textAlign:"center"}} onClick={e=>e.stopPropagation()}>
                         <button className="ebtn ebtn-blue" style={{padding:"5px 10px",fontSize:11,marginRight:4}} onClick={()=>router.push('/admineng/tutor-class/' + r.id)}>Detail</button>
