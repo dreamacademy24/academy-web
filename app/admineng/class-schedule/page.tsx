@@ -133,6 +133,9 @@ export default function ClassSchedule() {
 
   const ed: BaseV2 | null = draft; // editing copy
   function beginEdit() { if (!draft) setDraft(saved ? JSON.parse(JSON.stringify(saved)) : { v: 2, teachers: [], groups: [], students: [] }) }
+  // canEdit(로그인 정보)가 늦게 로드돼도 빌드 뷰에서 편집 초안 자동 시작 — "Read only" 오표시 방지
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (canEdit && !draft && (nav === "groups" || nav === "one")) beginEdit() }, [canEdit, nav, saved]);
   function upd(fn: (d: BaseV2) => void) { if (!draft) return; const d = JSON.parse(JSON.stringify(draft)); fn(d); setDraft(d) }
 
   async function save() {
