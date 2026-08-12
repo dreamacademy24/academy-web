@@ -667,9 +667,9 @@ export default function AdminBookingsPage(){
       .then(r=>r.json())
       .then(data=>{
         const names=(((data&&data.staff)||[]) as {name:string}[]).map(s=>s.name).filter(Boolean);
-        setAssignees(names.length?names:["May","Jamie","Candice"]);
+        setAssignees(names.length?names:["May","Candice"]);
       })
-      .catch(()=>setAssignees(["May","Jamie","Candice"]));
+      .catch(()=>setAssignees(["May","Candice"]));
   },[]);
 
   async function cancelBooking(b: Booking){

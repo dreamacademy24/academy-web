@@ -484,7 +484,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 //  CONSTANTS
 // ────────────────────────────────────────
 const EMPS = [
-  { id:'jamie', name:'Jamie',  color:'#0ea5e9', initial:'JA' },
   { id:'vivace',name:'Vivace', color:'#f59e0b', initial:'V'  },
   { id:'candice', name:'Candice', color:'#14b8a6', initial:'CA' },
   { id:'song', name:'Song', color:'#8b5cf6', initial:'SO' },
@@ -516,7 +515,6 @@ if(!tasks.length){
   const today=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
   tasks=[
     {id:uid(),title:'클라이언트 미팅 자료 준비',assignee:'candice',due:d(2),createdAt:today,note:'',done:false,files:[],shared:true},
-    {id:uid(),title:'SNS 4월 콘텐츠 기획',assignee:'jamie',due:d(7),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'3월 정산 마감',assignee:'candice',due:d(1),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'디자인 시안 2차 수정',assignee:'vivace',due:d(3),createdAt:today,note:'',done:false,files:[],shared:true},
     {id:uid(),title:'Q2 전략 기획서 작성',assignee:'',due:d(5),createdAt:today,note:'전체 공유',done:false,files:[],shared:true},
