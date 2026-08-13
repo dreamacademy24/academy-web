@@ -2041,3 +2041,12 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 
 ### 메이 확인 대기
 - 이세리 IN 편명 KE601 추정 — 티켓 확인 / 홍민준 영문이름·나이 학생탭 입력 / 이민지 중복 접수(3/7, 0원) / 취소자 환불(오유빈 100·전보람/문지현/진정은 각 50 + 확보금 3건) / 다온맘 정산 워드 발송
+
+## 2026-08-13 세션 (직원업무 Phase 5 탭 통합 — 90d105a)
+- 상단 탭 8개 → 7개: 홈 / 내 업무 / 업무 / 달력 / 주간 체크 / 소통 / 자료
+- 그룹 서브탭(pill): 업무=[전체 업무|프로젝트] · 소통=[공지사항|채팅|의견요청] · 자료=[업무자료|안내문구|공유보드]
+- 고아 페이지 복구: 채팅·의견요청·프로젝트·공유보드 — 이전 개편에서 탭이 빠져 알림 팝업으로만 진입 가능하던 것을 서브탭으로 부활
+- 구현: TAB_GROUPS/showGroup/renderGrpSubnav/groupOf (setNav 위), showPage 말미에 서브탭 렌더+localStorage tmGrp_* 마지막 서브페이지 기억, setNav는 data-group 하이라이트 지원, proj-detail/proj-task는 alias로 업무 탭 하이라이트만
+- 뱃지: badge-comm(소통)=공지+의견+채팅 합산, badge-board(업무)=업무알림+프로젝트 스레드, badge-opinions/chat은 서브탭 pill 안으로 이동
+- 채팅 페이지 서브탭 높이 보정 (chatWrap calc(100vh - 195px))
+- 라이브 검증 ✓: 7탭 렌더, 그룹 라우팅/서브탭 active/탭 하이라이트/마지막 서브페이지 기억, 전체업무 테이블·프로젝트·채팅(입력창 포함) 레이아웃 정상, 콘솔 에러 0
