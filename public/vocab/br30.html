@@ -2892,4 +2892,68 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
     </div>
   <div class="pagenum">57 · Dream Academy Vocabulary BR-30</div>
 </div>
+
+<style>
+.ansline { border:none !important; border-bottom:1.4px solid #94a3b8 !important; background:#fafcff; font:inherit; color:#0f172a; flex:1; min-width:40px; height:26px; font-size:14px; padding:2px 6px; border-radius:4px 4px 0 0; }
+.ansline:focus { outline:none; background:#eff6ff; border-bottom-color:#2563eb !important; }
+.w-en { cursor:pointer; }
+.w-en:active { color:#0d9488; }
+.spk { cursor:pointer; border:none; background:#ccfbf1; color:#0d9488; border-radius:50%; width:22px; height:22px; font-size:12px; margin-left:2px; vertical-align:middle; }
+.playall { cursor:pointer; border:none; background:#0d9488; color:#fff; border-radius:14px; padding:3px 12px; font-size:11px; font-weight:700; }
+.chip { cursor:pointer; }
+@media print { .spk, .playall { display:none; } }
+</style>
+<script>
+function speak(t, cb){
+  var u = new SpeechSynthesisUtterance(t);
+  u.lang = 'en-US'; u.rate = 0.85;
+  var vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  if (vs.length) u.voice = vs.find(v => /Google US|Samantha|Aria/.test(v.name)) || vs[0];
+  if (cb) u.onend = cb;
+  speechSynthesis.speak(u);
+}
+document.addEventListener('DOMContentLoaded', function(){
+  speechSynthesis.getVoices();
+  // 1) 단어 탭 → 발음
+  document.querySelectorAll('.w-en').forEach(function(el){
+    el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+    var b = document.createElement('button'); b.className='spk'; b.textContent='🔊';
+    b.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+    el.after(b);
+  });
+  document.querySelectorAll('.chip').forEach(function(el){
+    el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+  });
+  // 2) DAY 전체 듣기 (단어→뜻→예문)
+  document.querySelectorAll('.day-meta').forEach(function(meta){
+    var sheet = meta.closest('.sheet'); if (!sheet) return;
+    var items = [];
+    sheet.querySelectorAll('.word').forEach(function(w){
+      var en = w.querySelector('.w-en'), df = w.querySelector('.w-def'), ex = w.querySelector('.w-ex');
+      if (en) items.push([en.textContent, df?df.textContent:'', ex?ex.textContent:'']);
+    });
+    if (!items.length) return;
+    var btn = document.createElement('button'); btn.className='playall'; btn.textContent='▶ Listen All';
+    btn.addEventListener('click', function(){
+      speechSynthesis.cancel();
+      var i = 0;
+      (function next(){
+        if (i >= items.length) { btn.textContent='▶ Listen All'; return; }
+        var it = items[i++]; btn.textContent = '🔊 ' + it[0];
+        speak(it[0], function(){ setTimeout(function(){ speak(it[1] + '. ' + it[2], function(){ setTimeout(next, 500); }); }, 350); });
+      })();
+    });
+    meta.appendChild(btn);
+  });
+  // 3) 쓰기 줄 → 입력칸 + 자동저장
+  var n = 0;
+  document.querySelectorAll('span.t-line, .w-my .line, .t-pic .line').forEach(function(el){
+    var inp = document.createElement('input');
+    inp.className = 'ansline'; inp.autocomplete='off'; inp.id = 'ans' + (n++);
+    inp.value = localStorage.getItem('br30_' + inp.id) || '';
+    inp.addEventListener('input', function(){ localStorage.setItem('br30_' + inp.id, inp.value); });
+    el.replaceWith(inp);
+  });
+});
+</script>
 </body></html>
