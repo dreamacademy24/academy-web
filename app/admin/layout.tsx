@@ -17,6 +17,7 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },
+    { label: "엄마 화면 미리보기", href: "/admin/portal-preview" },
     { label: "학생 관리", href: "/admin/students" },
     { label: "정산 관리", href: "/admin/settlement" },
     { label: "튜터 수업", href: "/admin/tutor-class" },
