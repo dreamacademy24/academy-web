@@ -216,6 +216,11 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
   box-shadow:0 1px 3px rgba(0,0,0,0.08),0 0 0 0.5px rgba(0,0,0,0.05);
 }
 .tab-item.tab-active:hover{background:#ffffff !important;color:#0f172a !important;}
+.grp-subnav{display:flex;gap:6px;padding:12px 24px 0;flex-wrap:wrap;}
+.grp-sub-btn{padding:6px 14px;font-size:12.5px;font-weight:600;border:1px solid var(--border);background:#fff;color:var(--text2);border-radius:999px;cursor:pointer;font-family:inherit;}
+.grp-sub-btn:hover{background:var(--surface2);color:var(--text);}
+.grp-sub-btn.on{background:var(--primary);border-color:var(--primary);color:#fff;}
+.grp-sub-btn .nav-badge{margin-left:4px;}
 .th-right{flex-shrink:0;position:relative;}
 .user-avatar-btn{
   display:flex;align-items:center;gap:8px;padding:5px 10px 5px 5px;
@@ -1403,13 +1408,12 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
     </div>
     <div class="th-center">
       <button class="tab-item tab-active" data-page="home" onclick="showPage('home')">홈<span id="notif-dot-notice" class="notif-dot" style="display:none"></span><span id="badge-notif" class="nav-badge">0</span></button>
-      <button class="tab-item" data-page="announcements" onclick="showPage('announcements')">공지사항</button>
       <button class="tab-item" data-page="mywork" onclick="showPage('mywork')">내 업무<span id="notif-dot-mywork" class="notif-dot" style="display:none"></span><span id="badge-mywork" class="nav-badge">0</span></button>
-      <button class="tab-item" data-page="board" onclick="showPage('board')">전체 업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
+      <button class="tab-item" data-group="work" onclick="showGroup('work')">업무<span id="notif-dot-board" class="notif-dot" style="display:none"></span><span id="badge-board" class="nav-badge">0</span></button>
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
       <button class="tab-item" data-page="weeklycl" onclick="showPage('weeklycl')">주간 체크</button>
-      <button class="tab-item" data-page="manual" onclick="showPage('manual')">업무자료</button>
-      <button class="tab-item" data-page="guide" onclick="showPage('guide')">안내문구</button>
+      <button class="tab-item" data-group="comm" onclick="showGroup('comm')">소통<span id="badge-comm" class="nav-badge">0</span></button>
+      <button class="tab-item" data-group="docs" onclick="showGroup('docs')">자료</button>
     </div>
     <div class="th-right">
       <button class="user-avatar-btn" onclick="toggleUserMenu(event)">
@@ -3714,6 +3718,12 @@ function updateNavBadges(){
   // 채팅: 채널별 _unreadCache 합산
   var chatTotal=0;try{Object.keys(_unreadCache||{}).forEach(function(k){chatTotal+=(_unreadCache[k]||0);});}catch(e){}
   _setNavBadge('badge-chat',chatTotal);
+  // 소통 탭 합산 (공지 + 의견 + 채팅)
+  var ntCount=myNotifs.filter(function(n){return n.type==='notice';}).length;
+  _setNavBadge('badge-comm',ntCount+opCount+chatTotal);
+  // 업무 탭: 프로젝트 스레드 알림 합산
+  var thCount=myNotifs.filter(function(n){return n.type==='thread';}).length;
+  _setNavBadge('badge-board',boardNotif+thCount);
   // 전체 알림
   _setNavBadge('badge-notif',(myNotifs||[]).length);
 }
@@ -4000,8 +4010,34 @@ function buildEmpNav(){
     el.onclick=function(){closeUserMenu();showEmpPage(emp.id);};nav.appendChild(el);
   });
 }
+// ── Phase5 탭 그룹 (2026-08-13) ──
+const TAB_GROUPS={work:['board','projects'],comm:['announcements','chat','opinions'],docs:['manual','guide','sboard']};
+const TAB_GROUP_ALIAS={'proj-detail':'work','proj-task':'work'};
+const GRP_LABELS={board:'\uD83D\uDCCB \uC804\uCCB4 \uC5C5\uBB34',projects:'\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8',announcements:'\uD83D\uDCE2 \uACF5\uC9C0\uC0AC\uD56D',chat:'\uD83D\uDDE8\uFE0F \uCC44\uD305',opinions:'\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD',manual:'\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC',guide:'\u270D\uFE0F \uC548\uB0B4\uBB38\uAD6C',sboard:'\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC'};
+function groupOf(p){if(!p)return null;if(TAB_GROUP_ALIAS[p])return TAB_GROUP_ALIAS[p];for(var g in TAB_GROUPS){if(TAB_GROUPS[g].indexOf(p)>=0)return g;}return null;}
+function showGroup(g){
+  var pages=TAB_GROUPS[g]||[];var last=null;
+  try{last=localStorage.getItem('tmGrp_'+g);}catch(e){}
+  showPage(pages.indexOf(last)>=0?last:pages[0]);
+}
+function renderGrpSubnav(p){
+  document.querySelectorAll('.grp-subnav').forEach(function(e){e.remove();});
+  var g=groupOf(p);if(!g||TAB_GROUP_ALIAS[p])return;
+  var pageEl=document.getElementById('page-'+p);if(!pageEl)return;
+  var bar=document.createElement('div');bar.className='grp-subnav';
+  bar.innerHTML=(TAB_GROUPS[g]||[]).map(function(sp){
+    var badge='';
+    if(sp==='opinions')badge='<span id="badge-opinions" class="nav-badge" style="display:none">0</span>';
+    if(sp==='chat')badge='<span id="badge-chat" class="nav-badge" style="display:none">0</span>';
+    return '<button class="grp-sub-btn'+(sp===p?' on':'')+'" onclick="showPage(\''+sp+'\')">'+GRP_LABELS[sp]+badge+'</button>';
+  }).join('');
+  pageEl.insertBefore(bar,pageEl.firstChild);
+  if(p==='chat'){var _cw=document.getElementById('chatWrap');if(_cw)_cw.style.height='calc(100vh - 195px)';}
+  if(typeof updateNavBadges==='function')updateNavBadges();
+}
 function setNav(pg,eid){
-  document.querySelectorAll('.tab-item').forEach(el=>el.classList.toggle('tab-active',el.dataset.page===pg));
+  var _g=groupOf(pg);
+  document.querySelectorAll('.tab-item').forEach(el=>el.classList.toggle('tab-active',el.dataset.page===pg||(!!el.dataset.group&&el.dataset.group===_g)));
   document.querySelectorAll('.emp-nav-item').forEach(el=>el.classList.toggle('active',el.dataset.eid===eid));
 }
 function toggleUserMenu(e){
@@ -4064,6 +4100,9 @@ function showPage(p){
   if(p==='manual'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC';document.getElementById('topS').textContent='';}
   if(p==='guide'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uC548\uB0B4\uBB38\uAD6C';document.getElementById('topS').textContent='';}
   if(p==='sboard'){renderSBoard();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC';document.getElementById('topS').textContent='\uACC4\uC815\u00B7\uBCC0\uACBD\u00B7\uB9C1\uD06C\u00B7\uBA54\uBAA8 \uACF5\uC6A9';}
+  var _grp=groupOf(p);
+  if(_grp&&!TAB_GROUP_ALIAS[p]){try{localStorage.setItem('tmGrp_'+_grp,p);}catch(e){}}
+  renderGrpSubnav(p);
   if(typeof updateNavBadges==='function')updateNavBadges();
 }
 function showEmpPage(empId){if(CU&&CU.id===empId){try{recordBoardView();}catch(e){}}
