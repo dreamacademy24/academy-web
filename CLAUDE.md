@@ -2012,3 +2012,32 @@ ALTER TABLE pickup_requests ADD CONSTRAINT pickup_requests_request_type_check
 ## 2026-07-07 — 포털 튜터 신청 기간 제한 (9ffc8a3)
 - 규칙: 방문 튜터 = 드림하우스 체류 중에만. 리조트(제이파크·큐브) 단독 = 신청 차단(빨간 배너+버튼 비활성), 콤보 = 드하 seg 구간 날짜만 (min/max·제출 가드·파란 안내 배너)
 - 구현: /api/bookings/[id]로 accom_type·seg 조회 → bookingInfo.tutor_allowed/tutor_start/tutor_end. 통학형은 현행 유지 (메이 확인 필요 시 조정)
+
+## 2026-08-12~13 세션 (다온맘 마감 정리 · 스토어 준비 · 다수 개선)
+
+### 배포 완료 (전부 라이브 검증)
+- 이세리 재방문 예약 생성: DA-20260810-776288, 드하 4주 9/11~10/9, KE601(추정)/KE602, 아카데미 9/14~10/8, 학생 3명(LEO/ISABELLA/BEN) 재연결 + 체크인디테일 생성. OCR이 flight_in을 PNR(FXW8VJ)로 덮은 것 KE601로 복구
+- 다온맘 공구 마감 정리: 예약관리 💛다온맘 탭·룸확보 기능 제거 / /booking 다온맘 잔재(50만 결제안내·스토어 흐름·프리필·isDaon) 제거 / 공개폼 /daonmam → 비밀주소 /daonmam-m8x3k1q (preview=dream으로 잠금 우회) / 어드민 예약현황 페이지 /admin/daonmam 신설 / 사이드바 기타업무에 다온맘 3종(예약현황·현황정산·비밀폼)
+- booking2: 드하+드림아카데미 비패키지 카드(dh_da) — accom_type "드림하우스 단독"+academy_option 재사용, 식사·애프터스쿨·투어셔틀 미포함 배너, 만실체크·2주 최소 포함
+- /booking 체크인 토/일만 선택 가능 (평일 alert 차단, 패키지 폼만)
+- 인보이스: 학생 영문이름·만나이 자동 병합(fillStudentInfo — students 테이블에서, 스냅샷 경로 포함)
+- 룸미배정: 예약내역 숙소칸 전체 빨강 + 드림하우스 룸캘린더 미배정 배너(/api/dreamhouse?unassigned=1)
+- 예약상세: 올인원패키지·포털계정발급 섹션 기본정보 최상단 이동
+- class-schedule: CEO Read only 오표시 fix (canEdit 늦은 로드 시 beginEdit 자동)
+- 직원업무 주간 체크: 별도 "주간 체크" 탭 분리(전체폭+zoom 1.22) + 홈은 오늘 체크리스트만 + 기간(start/end_date)·특정 예약/학생(ref_booking/ref_label) 등록 — staff_checklist_items에 컬럼 4개 추가(DDL 완료), 기간 내에만 표시·칩 표시
+- 튜터 Requests Inbox: KR Staff 컬럼(bookings.assignee/care_assignee)
+- 영수증 탭: 입금액·입금상태(완납/잔여/미입금/잔금지연) 컬럼 + 잔금 미납만 필터 — paid_amount 기준
+- 정산 관리: 통학형·취소 예약 목록 제외
+- 엄마 화면 미리보기: /admin/portal-preview (좌측 엄마 목록 → 우측 iframe, 모바일 프레임, admin_view 파라미터로 portalSession 위임+보라 배너, 페이지 이탈 시 세션 정리). 사이드바 예약·아카데미 그룹
+- 제이파크 단기 인보이스(Chaeyoon Lee·Heesoo Jun, 디럭스OV 1박 ₱9,000) 이미지 제작(시스템 미등록) + admin@dreamacademyph.com으로 rsvn@ 실발송 완료
+- 산출물: 유학원_특별혜택_프로모션_공문.docx (8/14~20 일주일, 추석 룸당 30만 선착순 2팀 최우선, 얼리버드 예시표+재방문 중복불가+변경1회, JP 세탁 주2회), 드림하우스_로고_문구제거.png(재제작본)
+
+### Google Play 스토어 등록 진행 중 (드림게스트)
+- 개인 계정 "세부드림아카데미" 생성 완료 (deskor112@gmail.com, 계정 ID 5743852725507380573, $25 결제)
+- 신원 확인 서류 제출 → 심사 대기 (1~3일, 메일). Android 기기 확인 완료. 전화번호 인증은 신원 승인 후
+- 다음 단계: 승인 메일 오면 → PWABuilder로 드림게스트(manifest-guest, /portal) AAB 생성 (패키지명 com.dreamacademyph.dreamguest) → assetlinks.json 배포 → 콘솔 업로드 → 비공개 테스트 (개인 계정 요건: 테스터 20명×14일 opt-in) → 정식 출시 신청
+- 개인정보처리방침 /privacy 이미 존재 (스토어 등록에 사용)
+- 장기: D-U-N-S 신청해두고 조직 계정 전환(앱 이전) 검토
+
+### 메이 확인 대기
+- 이세리 IN 편명 KE601 추정 — 티켓 확인 / 홍민준 영문이름·나이 학생탭 입력 / 이민지 중복 접수(3/7, 0원) / 취소자 환불(오유빈 100·전보람/문지현/진정은 각 50 + 확보금 3건) / 다온맘 정산 워드 발송
