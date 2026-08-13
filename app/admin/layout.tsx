@@ -59,6 +59,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "민에듀 공구", href: "/admin/minedu" },
     { label: "다온맘 예약현황", href: "/admin/daonmam" },
     { label: "다온맘 (현황·정산)", href: "/daonmam-status", ext: true },
+    { label: "다온맘 신청폼 (비밀주소)", href: "/daonmam-m8x3k1q/index.html?preview=dream", ext: true },
     { label: "이메일", href: "https://privateemail.com/appsuite/", ext: true },
   ]},
 ];
