@@ -69,6 +69,8 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
 .t-pic .line { border-bottom:1.2px solid #cbd5e1; height:20px; margin-top:8px; }
 .t-score { position:absolute; top:50px; right:56px; border:2px solid #1e3a5f; border-radius:10px; padding:5px 14px; font-size:12px; color:#1e3a5f; font-weight:700; }
 .bl { color:#1e3a5f; }
+.cline { max-width:130px; }
+@media print { .cline { display:none; } }
 .key-title { font-size:26px; font-weight:800; color:#134e4a; border-bottom:3px solid #0d9488; padding-bottom:12px; margin-bottom:20px; }
 .key-title span { font-size:13px; color:#6b7280; font-weight:600; margin-left:10px; }
 .key-title.small { font-size:18px; }
@@ -192,23 +194,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ your dad; a male parent &nbsp;&nbsp; ⓑ the father of your mom or dad &nbsp;&nbsp; ⓒ your father and mother &nbsp;&nbsp; ⓓ a boy in your family with the same parents</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">father ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">brother ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">grandfather ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">parents ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">father ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">brother ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">grandfather ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">parents ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">👩</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👧</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👵</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👨‍👩‍👧‍👦</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="mother"><div class="emoji">👩</div><div class="line"></div></div><div class="t-pic" data-ans="sister"><div class="emoji">👧</div><div class="line"></div></div><div class="t-pic" data-ans="grandmother"><div class="emoji">👵</div><div class="line"></div></div><div class="t-pic" data-ans="family"><div class="emoji">👨‍👩‍👧‍👦</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>My <b class="bl">__________</b> smiles a lot.</span></div><div class="t-row"><span class="no">10</span><span>My little <b class="bl">__________</b> is cute.</span></div><div class="t-row"><span class="no">11</span><span>My <b class="bl">__________</b> gives me hugs.</span></div><div class="t-row"><span class="no">12</span><span>I love my <b class="bl">__________</b>.</span></div>
+    <div class="t-row" data-ans="mother"><span class="no">9</span><span style="flex:1">My <b class="bl">__________</b> smiles a lot.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="sister"><span class="no">10</span><span style="flex:1">My little <b class="bl">__________</b> is cute.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="grandmother"><span class="no">11</span><span style="flex:1">My <b class="bl">__________</b> gives me hugs.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="family"><span class="no">12</span><span style="flex:1">I love my <b class="bl">__________</b>.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">ethfra</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">tmhreo</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">ssiert</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="father"><span class="no">13</span><span class="scr">ethfra</span><span class="t-line"></span></div><div class="t-row" data-ans="mother"><span class="no">14</span><span class="scr">tmhreo</span><span class="t-line"></span></div><div class="t-row" data-ans="sister"><span class="no">15</span><span class="scr">ssiert</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Your grandmother is the mother of your mom or dad.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A brother is a girl in your family.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>Parents are your father and mother.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Your grandmother is the mother of your mom or dad.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A brother is a girl in your family.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>Parents are your father and mother.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -294,23 +296,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ to throw the ball to the batter &nbsp;&nbsp; ⓑ a person who teaches and trains a team &nbsp;&nbsp; ⓒ a sport played with a bat, a ball, and bases &nbsp;&nbsp; ⓓ a hand cover used to catch the ball</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">baseball ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">glove ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">coach ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">pitch ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">baseball ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">glove ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">coach ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">pitch ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🏏</div><div class="line"></div></div><div class="t-pic"><div class="emoji">⛑️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🏟️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎉</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="bat"><div class="emoji">🏏</div><div class="line"></div></div><div class="t-pic" data-ans="helmet"><div class="emoji">⛑️</div><div class="line"></div></div><div class="t-pic" data-ans="field"><div class="emoji">🏟️</div><div class="line"></div></div><div class="t-pic" data-ans="home run"><div class="emoji">🎉</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Bobby holds the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span>Wear your <b class="bl">__________</b>!</span></div><div class="t-row"><span class="no">11</span><span>We run on the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>Bobby hit a <b class="bl">__________</b>!</span></div>
+    <div class="t-row" data-ans="bat"><span class="no">9</span><span style="flex:1">Bobby holds the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="helmet"><span class="no">10</span><span style="flex:1">Wear your <b class="bl">__________</b>!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="field"><span class="no">11</span><span style="flex:1">We run on the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="home run"><span class="no">12</span><span style="flex:1">Bobby hit a <b class="bl">__________</b>!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">atb</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">lvoeg</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">hccoa</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="bat"><span class="no">13</span><span class="scr">atb</span><span class="t-line"></span></div><div class="t-row" data-ans="glove"><span class="no">14</span><span class="scr">lvoeg</span><span class="t-line"></span></div><div class="t-row" data-ans="coach"><span class="no">15</span><span class="scr">hccoa</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Bobby the bunny hit a home run.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>Mia the mouse was the coach.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>You catch the ball with a glove.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Bobby the bunny hit a home run.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>Mia the mouse was the coach.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>You catch the ball with a glove.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -396,23 +398,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a colorful bird that can talk &nbsp;&nbsp; ⓑ the color of grass and leaves &nbsp;&nbsp; ⓒ what we see, like red, blue, and yellow &nbsp;&nbsp; ⓓ the color of the sun and bananas</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">color ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">yellow ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">green ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">parrot ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">color ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">yellow ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">green ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">parrot ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🔴</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🔵</div><div class="line"></div></div><div class="t-pic"><div class="emoji">⚪</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐻‍❄️</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="red"><div class="emoji">🔴</div><div class="line"></div></div><div class="t-pic" data-ans="blue"><div class="emoji">🔵</div><div class="line"></div></div><div class="t-pic" data-ans="white"><div class="emoji">⚪</div><div class="line"></div></div><div class="t-pic" data-ans="polar bear"><div class="emoji">🐻‍❄️</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The apple is <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span>The sky is <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">11</span><span>The polar bear is <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b> likes ice.</span></div>
+    <div class="t-row" data-ans="red"><span class="no">9</span><span style="flex:1">The apple is <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="blue"><span class="no">10</span><span style="flex:1">The sky is <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="white"><span class="no">11</span><span style="flex:1">The polar bear is <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="polar bear"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b> likes ice.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">edr</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">lebu</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">roocl</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="red"><span class="no">13</span><span class="scr">edr</span><span class="t-line"></span></div><div class="t-row" data-ans="blue"><span class="no">14</span><span class="scr">lebu</span><span class="t-line"></span></div><div class="t-row" data-ans="color"><span class="no">15</span><span class="scr">roocl</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The polar bear is white.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A banana is red.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A parrot is a colorful bird.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The polar bear is white.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A banana is red.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A parrot is a colorful bird.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -498,23 +500,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ something you sit on &nbsp;&nbsp; ⓑ a screen you can play games on &nbsp;&nbsp; ⓒ a cube toy you use to build things &nbsp;&nbsp; ⓓ a soft toy bear you can cuddle</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">teddy bear ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">building block ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">tablet ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">chair ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">teddy bear ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">building block ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">tablet ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">chair ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🚗</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎠</div><div class="line"></div></div><div class="t-pic"><div class="emoji">📏</div><div class="line"></div></div><div class="t-pic"><div class="emoji">✨</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="toy car"><div class="emoji">🚗</div><div class="line"></div></div><div class="t-pic" data-ans="rocking horse"><div class="emoji">🎠</div><div class="line"></div></div><div class="t-pic" data-ans="ruler"><div class="emoji">📏</div><div class="line"></div></div><div class="t-pic" data-ans="new"><div class="emoji">✨</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> is fast.</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> goes creak!</span></div><div class="t-row"><span class="no">11</span><span>Draw a line with a <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>I have a <b class="bl">__________</b> toy!</span></div>
+    <div class="t-row" data-ans="toy car"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> is fast.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="rocking horse"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> goes creak!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="ruler"><span class="no">11</span><span style="flex:1">Draw a line with a <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="new"><span class="no">12</span><span style="flex:1">I have a <b class="bl">__________</b> toy!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">wen</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">ulrre</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">hraic</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="new"><span class="no">13</span><span class="scr">wen</span><span class="t-line"></span></div><div class="t-row" data-ans="ruler"><span class="no">14</span><span class="scr">ulrre</span><span class="t-line"></span></div><div class="t-row" data-ans="chair"><span class="no">15</span><span class="scr">hraic</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>A rocking horse moves back and forth.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A tablet is a very old toy.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>You draw straight lines with a ruler.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>A rocking horse moves back and forth.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A tablet is a very old toy.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>You draw straight lines with a ruler.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -600,23 +602,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ the season when leaves change color (autumn) &nbsp;&nbsp; ⓑ the seventh month of the year &nbsp;&nbsp; ⓒ the season when flowers bloom &nbsp;&nbsp; ⓓ a little hot, but not too hot</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">spring ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">fall ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">warm ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">July ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">spring ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">fall ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">warm ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">July ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">☀️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">❄️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎂</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐻</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="summer"><div class="emoji">☀️</div><div class="line"></div></div><div class="t-pic" data-ans="winter"><div class="emoji">❄️</div><div class="line"></div></div><div class="t-pic" data-ans="birthday"><div class="emoji">🎂</div><div class="line"></div></div><div class="t-pic" data-ans="hibernation"><div class="emoji">🐻</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>We swim in <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span>It snows in <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">11</span><span>Happy <b class="bl">__________</b> to you!</span></div><div class="t-row"><span class="no">12</span><span>Bears go into <b class="bl">__________</b>.</span></div>
+    <div class="t-row" data-ans="summer"><span class="no">9</span><span style="flex:1">We swim in <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="winter"><span class="no">10</span><span style="flex:1">It snows in <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="birthday"><span class="no">11</span><span style="flex:1">Happy <b class="bl">__________</b> to you!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="hibernation"><span class="no">12</span><span style="flex:1">Bears go into <b class="bl">__________</b>.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">alfl</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">rmwa</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">jluy</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="fall"><span class="no">13</span><span class="scr">alfl</span><span class="t-line"></span></div><div class="t-row" data-ans="warm"><span class="no">14</span><span class="scr">rmwa</span><span class="t-line"></span></div><div class="t-row" data-ans="July"><span class="no">15</span><span class="scr">jluy</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Winter is the hottest season.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>Bears go into hibernation in winter.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>July is the seventh month of the year.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="F"><span class="no">16</span><span>Winter is the hottest season.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">17</span><span>Bears go into hibernation in winter.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>July is the seventh month of the year.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -702,23 +704,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ in the middle of two things &nbsp;&nbsp; ⓑ a container for carrying things &nbsp;&nbsp; ⓒ inside something &nbsp;&nbsp; ⓓ on top of something</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">on ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">in ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">between ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">basket ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">on ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">in ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">between ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">basket ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">⬇️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🔙</div><div class="line"></div></div><div class="t-pic"><div class="emoji">➡️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🍑</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="under"><div class="emoji">⬇️</div><div class="line"></div></div><div class="t-pic" data-ans="behind"><div class="emoji">🔙</div><div class="line"></div></div><div class="t-pic" data-ans="beside"><div class="emoji">➡️</div><div class="line"></div></div><div class="t-pic" data-ans="peach"><div class="emoji">🍑</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The cat is <b class="bl">__________</b> the chair.</span></div><div class="t-row"><span class="no">10</span><span>The dog is <b class="bl">__________</b> the tree.</span></div><div class="t-row"><span class="no">11</span><span>The bowl is <b class="bl">__________</b> the cup.</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b> is sweet.</span></div>
+    <div class="t-row" data-ans="under"><span class="no">9</span><span style="flex:1">The cat is <b class="bl">__________</b> the chair.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="behind"><span class="no">10</span><span style="flex:1">The dog is <b class="bl">__________</b> the tree.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="beside"><span class="no">11</span><span style="flex:1">The bowl is <b class="bl">__________</b> the cup.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="peach"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b> is sweet.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">no</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">ni</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">duner</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="on"><span class="no">13</span><span class="scr">no</span><span class="t-line"></span></div><div class="t-row" data-ans="in"><span class="no">14</span><span class="scr">ni</span><span class="t-line"></span></div><div class="t-row" data-ans="under"><span class="no">15</span><span class="scr">duner</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The peach is a round, soft fruit.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>'Under' means on top of something.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A basket can carry things.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The peach is a round, soft fruit.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>'Under' means on top of something.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A basket can carry things.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -804,23 +806,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ an animal that lives with you at home &nbsp;&nbsp; ⓑ an animal with feathers, wings, and a beak &nbsp;&nbsp; ⓒ a small, furry animal with a long tail &nbsp;&nbsp; ⓓ an animal with a hard shell on its back</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">pet ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">cat ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">bird ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">turtle ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">pet ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">cat ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">bird ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">turtle ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐶</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐰</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐟</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐹</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="dog"><div class="emoji">🐶</div><div class="line"></div></div><div class="t-pic" data-ans="rabbit"><div class="emoji">🐰</div><div class="line"></div></div><div class="t-pic" data-ans="fish"><div class="emoji">🐟</div><div class="line"></div></div><div class="t-pic" data-ans="hamster"><div class="emoji">🐹</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> says woof!</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> has a fluffy tail.</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b> swims all day.</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b> is so small.</span></div>
+    <div class="t-row" data-ans="dog"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> says woof!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="rabbit"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> has a fluffy tail.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="fish"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b> swims all day.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="hamster"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b> is so small.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">ept</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">gdo</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">atc</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="pet"><span class="no">13</span><span class="scr">ept</span><span class="t-line"></span></div><div class="t-row" data-ans="dog"><span class="no">14</span><span class="scr">gdo</span><span class="t-line"></span></div><div class="t-row" data-ans="cat"><span class="no">15</span><span class="scr">atc</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>A turtle has a hard shell.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A fish lives in trees.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A hamster is a very big animal.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>A turtle has a hard shell.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A fish lives in trees.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">18</span><span>A hamster is a very big animal.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -906,23 +908,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a fun and exciting experience &nbsp;&nbsp; ⓑ to jump lightly or quickly &nbsp;&nbsp; ⓒ clothes you wear for swimming &nbsp;&nbsp; ⓓ a sandy place next to the sea</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">beach ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">swimsuit ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">adventure ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">hop ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">beach ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">swimsuit ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">adventure ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">hop ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🥵</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🏐</div><div class="line"></div></div><div class="t-pic"><div class="emoji">📖</div><div class="line"></div></div><div class="t-pic"><div class="emoji">💨</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="hot"><div class="emoji">🥵</div><div class="line"></div></div><div class="t-pic" data-ans="beach ball"><div class="emoji">🏐</div><div class="line"></div></div><div class="t-pic" data-ans="story"><div class="emoji">📖</div><div class="line"></div></div><div class="t-pic" data-ans="rush"><div class="emoji">💨</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>It is <b class="bl">__________</b> today!</span></div><div class="t-row"><span class="no">10</span><span>Catch the <b class="bl">__________</b>!</span></div><div class="t-row"><span class="no">11</span><span>Read me a <b class="bl">__________</b>, please.</span></div><div class="t-row"><span class="no">12</span><span>We <b class="bl">__________</b>ed to the sea.</span></div>
+    <div class="t-row" data-ans="hot"><span class="no">9</span><span style="flex:1">It is <b class="bl">__________</b> today!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="beach ball"><span class="no">10</span><span style="flex:1">Catch the <b class="bl">__________</b>!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="story"><span class="no">11</span><span style="flex:1">Read me a <b class="bl">__________</b>, please.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="rush"><span class="no">12</span><span style="flex:1">We <b class="bl">__________</b>ed to the sea.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">toh</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">hpo</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">uhsr</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="hot"><span class="no">13</span><span class="scr">toh</span><span class="t-line"></span></div><div class="t-row" data-ans="hop"><span class="no">14</span><span class="scr">hpo</span><span class="t-line"></span></div><div class="t-row" data-ans="rush"><span class="no">15</span><span class="scr">uhsr</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>We wear a swimsuit at the beach.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>'Rush' means to move very slowly.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>It is cold on a hot summer day.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>We wear a swimsuit at the beach.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>'Rush' means to move very slowly.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">18</span><span>It is cold on a hot summer day.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1008,23 +1010,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ to do something one after another &nbsp;&nbsp; ⓑ to give part of something to others &nbsp;&nbsp; ⓒ someone you like and trust &nbsp;&nbsp; ⓓ to use something and give it back later</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">friend ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">share ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">take turns ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">borrow ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">friend ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">share ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">take turns ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">borrow ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">💗</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🙏</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🤲</div><div class="line"></div></div><div class="t-pic"><div class="emoji">😔</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="kind"><div class="emoji">💗</div><div class="line"></div></div><div class="t-pic" data-ans="respect"><div class="emoji">🙏</div><div class="line"></div></div><div class="t-pic" data-ans="lend"><div class="emoji">🤲</div><div class="line"></div></div><div class="t-pic" data-ans="lonely"><div class="emoji">😔</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Be <b class="bl">__________</b> to your friends.</span></div><div class="t-row"><span class="no">10</span><span>We <b class="bl">__________</b> our teacher.</span></div><div class="t-row"><span class="no">11</span><span>Can you <b class="bl">__________</b> me a pencil?</span></div><div class="t-row"><span class="no">12</span><span>Nobody should feel <b class="bl">__________</b>.</span></div>
+    <div class="t-row" data-ans="kind"><span class="no">9</span><span style="flex:1">Be <b class="bl">__________</b> to your friends.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="respect"><span class="no">10</span><span style="flex:1">We <b class="bl">__________</b> our teacher.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="lend"><span class="no">11</span><span style="flex:1">Can you <b class="bl">__________</b> me a pencil?</span><span class="t-line cline"></span></div><div class="t-row" data-ans="lonely"><span class="no">12</span><span style="flex:1">Nobody should feel <b class="bl">__________</b>.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">nidk</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">dlne</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">aehrs</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="kind"><span class="no">13</span><span class="scr">nidk</span><span class="t-line"></span></div><div class="t-row" data-ans="lend"><span class="no">14</span><span class="scr">dlne</span><span class="t-line"></span></div><div class="t-row" data-ans="share"><span class="no">15</span><span class="scr">aehrs</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Good friends take turns.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>'Borrow' means to keep something forever.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>Kind friends share their things.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Good friends take turns.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>'Borrow' means to keep something forever.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>Kind friends share their things.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1110,23 +1112,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ feeling mad about something &nbsp;&nbsp; ⓑ feeling glad and joyful &nbsp;&nbsp; ⓒ tired and not interested &nbsp;&nbsp; ⓓ feeling shocked or amazed</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">happy ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">angry ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">surprised ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">bored ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">happy ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">angry ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">surprised ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">bored ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">😢</div><div class="line"></div></div><div class="t-pic"><div class="emoji">😨</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🤩</div><div class="line"></div></div><div class="t-pic"><div class="emoji">😟</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="sad"><div class="emoji">😢</div><div class="line"></div></div><div class="t-pic" data-ans="scared"><div class="emoji">😨</div><div class="line"></div></div><div class="t-pic" data-ans="excited"><div class="emoji">🤩</div><div class="line"></div></div><div class="t-pic" data-ans="worried"><div class="emoji">😟</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Don't be <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span>I was <b class="bl">__________</b> of the dark.</span></div><div class="t-row"><span class="no">11</span><span>I am <b class="bl">__________</b> about the trip!</span></div><div class="t-row"><span class="no">12</span><span>Mom was <b class="bl">__________</b> about me.</span></div>
+    <div class="t-row" data-ans="sad"><span class="no">9</span><span style="flex:1">Don't be <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="scared"><span class="no">10</span><span style="flex:1">I was <b class="bl">__________</b> of the dark.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="excited"><span class="no">11</span><span style="flex:1">I am <b class="bl">__________</b> about the trip!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="worried"><span class="no">12</span><span style="flex:1">Mom was <b class="bl">__________</b> about me.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">dsa</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">yphpa</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">nrgay</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="sad"><span class="no">13</span><span class="scr">dsa</span><span class="t-line"></span></div><div class="t-row" data-ans="happy"><span class="no">14</span><span class="scr">yphpa</span><span class="t-line"></span></div><div class="t-row" data-ans="angry"><span class="no">15</span><span class="scr">nrgay</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>'Happy' means feeling glad.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>'Bored' means very excited.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>The children had many feelings at the fair.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>'Happy' means feeling glad.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>'Bored' means very excited.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>The children had many feelings at the fair.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1212,23 +1214,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ moving quickly &nbsp;&nbsp; ⓑ an instrument with black and white keys &nbsp;&nbsp; ⓒ to make music with your voice &nbsp;&nbsp; ⓓ making a big, strong sound</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">sing ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">loud ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">fast ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">piano ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">sing ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">loud ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">fast ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">piano ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🔊</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🤫</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐌</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🥁</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="sound"><div class="emoji">🔊</div><div class="line"></div></div><div class="t-pic" data-ans="quiet"><div class="emoji">🤫</div><div class="line"></div></div><div class="t-pic" data-ans="slow"><div class="emoji">🐌</div><div class="line"></div></div><div class="t-pic" data-ans="drum"><div class="emoji">🥁</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>What is that <b class="bl">__________</b>?</span></div><div class="t-row"><span class="no">10</span><span>Please be <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">11</span><span>The turtle song is <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>Hit the <b class="bl">__________</b> — boom!</span></div>
+    <div class="t-row" data-ans="sound"><span class="no">9</span><span style="flex:1">What is that <b class="bl">__________</b>?</span><span class="t-line cline"></span></div><div class="t-row" data-ans="quiet"><span class="no">10</span><span style="flex:1">Please be <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="slow"><span class="no">11</span><span style="flex:1">The turtle song is <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="drum"><span class="no">12</span><span style="flex:1">Hit the <b class="bl">__________</b> — boom!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">sign</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">odul</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">afst</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="sing"><span class="no">13</span><span class="scr">sign</span><span class="t-line"></span></div><div class="t-row" data-ans="loud"><span class="no">14</span><span class="scr">odul</span><span class="t-line"></span></div><div class="t-row" data-ans="fast"><span class="no">15</span><span class="scr">afst</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>A drum is very quiet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>We sing with our voice.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A piano has black and white keys.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="F"><span class="no">16</span><span>A drum is very quiet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">17</span><span>We sing with our voice.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A piano has black and white keys.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1314,23 +1316,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ one more time &nbsp;&nbsp; ⓑ water that falls from the sky &nbsp;&nbsp; ⓒ a jacket that keeps you dry &nbsp;&nbsp; ⓓ covered with water</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">rain ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">wet ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">raincoat ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">again ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">rain ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">wet ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">raincoat ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">again ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">☔</div><div class="line"></div></div><div class="t-pic"><div class="emoji">☂️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👢</div><div class="line"></div></div><div class="t-pic"><div class="emoji">⚽</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="rainy"><div class="emoji">☔</div><div class="line"></div></div><div class="t-pic" data-ans="umbrella"><div class="emoji">☂️</div><div class="line"></div></div><div class="t-pic" data-ans="rain boots"><div class="emoji">👢</div><div class="line"></div></div><div class="t-pic" data-ans="play"><div class="emoji">⚽</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>It is a <b class="bl">__________</b> day.</span></div><div class="t-row"><span class="no">10</span><span>Open your <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">11</span><span>My <b class="bl">__________</b> are yellow.</span></div><div class="t-row"><span class="no">12</span><span>Rain, go away — I want to <b class="bl">__________</b>!</span></div>
+    <div class="t-row" data-ans="rainy"><span class="no">9</span><span style="flex:1">It is a <b class="bl">__________</b> day.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="umbrella"><span class="no">10</span><span style="flex:1">Open your <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="rain boots"><span class="no">11</span><span style="flex:1">My <b class="bl">__________</b> are yellow.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="play"><span class="no">12</span><span style="flex:1">Rain, go away — I want to <b class="bl">__________</b>!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">twe</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">rina</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">pyal</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="wet"><span class="no">13</span><span class="scr">twe</span><span class="t-line"></span></div><div class="t-row" data-ans="rain"><span class="no">14</span><span class="scr">rina</span><span class="t-line"></span></div><div class="t-row" data-ans="play"><span class="no">15</span><span class="scr">pyal</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>An umbrella keeps you dry in the rain.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>Rain boots keep your feet wet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>Rain falls from the sky.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>An umbrella keeps you dry in the rain.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>Rain boots keep your feet wet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>Rain falls from the sky.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1416,23 +1418,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a green place with trees and grass &nbsp;&nbsp; ⓑ something you climb up and go down &nbsp;&nbsp; ⓒ a light toy that flies in the wind &nbsp;&nbsp; ⓓ the colorful part of a plant</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">park ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">slide ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">kite ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">flower ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">park ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">slide ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">kite ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">flower ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🤸</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎠</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🏞️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🌱</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="playground"><div class="emoji">🤸</div><div class="line"></div></div><div class="t-pic" data-ans="swing"><div class="emoji">🎠</div><div class="line"></div></div><div class="t-pic" data-ans="pond"><div class="emoji">🏞️</div><div class="line"></div></div><div class="t-pic" data-ans="grass"><div class="emoji">🌱</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> is fun.</span></div><div class="t-row"><span class="no">10</span><span>Push me on the <b class="bl">__________</b>!</span></div><div class="t-row"><span class="no">11</span><span>Ducks swim in the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>We sit on the <b class="bl">__________</b>.</span></div>
+    <div class="t-row" data-ans="playground"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> is fun.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="swing"><span class="no">10</span><span style="flex:1">Push me on the <b class="bl">__________</b>!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="pond"><span class="no">11</span><span style="flex:1">Ducks swim in the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="grass"><span class="no">12</span><span style="flex:1">We sit on the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">karp</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">teki</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">ondp</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="park"><span class="no">13</span><span class="scr">karp</span><span class="t-line"></span></div><div class="t-row" data-ans="kite"><span class="no">14</span><span class="scr">teki</span><span class="t-line"></span></div><div class="t-row" data-ans="pond"><span class="no">15</span><span class="scr">ondp</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Ducks swim in the pond.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A kite flies high in the wind.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A slide moves back and forth.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Ducks swim in the pond.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">17</span><span>A kite flies high in the wind.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">18</span><span>A slide moves back and forth.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1518,23 +1520,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ food made with two slices of bread &nbsp;&nbsp; ⓑ wanting food &nbsp;&nbsp; ⓒ to put food in your mouth and chew &nbsp;&nbsp; ⓓ a cold, sweet food</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">hungry ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">eat ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">sandwich ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">ice cream ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">hungry ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">eat ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">sandwich ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">ice cream ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">😌</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🥛</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🥦</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🍉</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="full"><div class="emoji">😌</div><div class="line"></div></div><div class="t-pic" data-ans="drink"><div class="emoji">🥛</div><div class="line"></div></div><div class="t-pic" data-ans="vegetables"><div class="emoji">🥦</div><div class="line"></div></div><div class="t-pic" data-ans="watermelon"><div class="emoji">🍉</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>I'm <b class="bl">__________</b>. Thank you!</span></div><div class="t-row"><span class="no">10</span><span><b class="bl">__________</b> your milk.</span></div><div class="t-row"><span class="no">11</span><span><b class="bl">__________</b> make you strong.</span></div><div class="t-row"><span class="no">12</span><span><b class="bl">__________</b> is juicy.</span></div>
+    <div class="t-row" data-ans="full"><span class="no">9</span><span style="flex:1">I'm <b class="bl">__________</b>. Thank you!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="drink"><span class="no">10</span><span style="flex:1"><b class="bl">__________</b> your milk.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="vegetables"><span class="no">11</span><span style="flex:1"><b class="bl">__________</b> make you strong.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="watermelon"><span class="no">12</span><span style="flex:1"><b class="bl">__________</b> is juicy.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">aet</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">llfu</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">krnid</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="eat"><span class="no">13</span><span class="scr">aet</span><span class="t-line"></span></div><div class="t-row" data-ans="full"><span class="no">14</span><span class="scr">llfu</span><span class="t-line"></span></div><div class="t-row" data-ans="drink"><span class="no">15</span><span class="scr">krnid</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Vegetables make you strong.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>Watermelon is a vegetable.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>'Full' means you want more food.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Vegetables make you strong.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>Watermelon is a vegetable.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">18</span><span>'Full' means you want more food.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1620,23 +1622,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a tool for sweeping the floor &nbsp;&nbsp; ⓑ to clean with water and soap &nbsp;&nbsp; ⓒ not neat or clean &nbsp;&nbsp; ⓓ a soft thing used for cleaning</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">messy ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">wash ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">broom ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">sponge ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">messy ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">wash ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">broom ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">sponge ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🚪</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🫧</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🪣</div><div class="line"></div></div><div class="t-pic"><div class="emoji">📦</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="room"><div class="emoji">🚪</div><div class="line"></div></div><div class="t-pic" data-ans="wipe"><div class="emoji">🫧</div><div class="line"></div></div><div class="t-pic" data-ans="mop"><div class="emoji">🪣</div><div class="line"></div></div><div class="t-pic" data-ans="put away"><div class="emoji">📦</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>This is my <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span><b class="bl">__________</b> the table.</span></div><div class="t-row"><span class="no">11</span><span><b class="bl">__________</b> the floor.</span></div><div class="t-row"><span class="no">12</span><span><b class="bl">__________</b> your toys.</span></div>
+    <div class="t-row" data-ans="room"><span class="no">9</span><span style="flex:1">This is my <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="wipe"><span class="no">10</span><span style="flex:1"><b class="bl">__________</b> the table.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="mop"><span class="no">11</span><span style="flex:1"><b class="bl">__________</b> the floor.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="put away"><span class="no">12</span><span style="flex:1"><b class="bl">__________</b> your toys.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">pom</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">oomr</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">whas</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="mop"><span class="no">13</span><span class="scr">pom</span><span class="t-line"></span></div><div class="t-row" data-ans="room"><span class="no">14</span><span class="scr">oomr</span><span class="t-line"></span></div><div class="t-row" data-ans="wash"><span class="no">15</span><span class="scr">whas</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>We sweep the floor with a broom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>'Messy' means clean and neat.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>We wash our hands with soap and water.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>We sweep the floor with a broom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>'Messy' means clean and neat.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>We wash our hands with soap and water.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1722,23 +1724,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a boy child &nbsp;&nbsp; ⓑ a small clock you wear on your wrist &nbsp;&nbsp; ⓒ the brother of your mom or dad &nbsp;&nbsp; ⓓ the holiday on december 25</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">Christmas ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">watch ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">uncle ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">son ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">Christmas ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">watch ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">uncle ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">son ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🎁</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👩‍🦰</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🧒</div><div class="line"></div></div><div class="t-pic"><div class="emoji">👧</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="gift"><div class="emoji">🎁</div><div class="line"></div></div><div class="t-pic" data-ans="aunt"><div class="emoji">👩‍🦰</div><div class="line"></div></div><div class="t-pic" data-ans="cousin"><div class="emoji">🧒</div><div class="line"></div></div><div class="t-pic" data-ans="daughter"><div class="emoji">👧</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>This <b class="bl">__________</b> is for you.</span></div><div class="t-row"><span class="no">10</span><span>My <b class="bl">__________</b> visits us.</span></div><div class="t-row"><span class="no">11</span><span>I play with my <b class="bl">__________</b>s.</span></div><div class="t-row"><span class="no">12</span><span>Their <b class="bl">__________</b> sings well.</span></div>
+    <div class="t-row" data-ans="gift"><span class="no">9</span><span style="flex:1">This <b class="bl">__________</b> is for you.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="aunt"><span class="no">10</span><span style="flex:1">My <b class="bl">__________</b> visits us.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="cousin"><span class="no">11</span><span style="flex:1">I play with my <b class="bl">__________</b>s.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="daughter"><span class="no">12</span><span style="flex:1">Their <b class="bl">__________</b> sings well.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">nos</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">tigf</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">nuta</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="son"><span class="no">13</span><span class="scr">nos</span><span class="t-line"></span></div><div class="t-row" data-ans="gift"><span class="no">14</span><span class="scr">tigf</span><span class="t-line"></span></div><div class="t-row" data-ans="aunt"><span class="no">15</span><span class="scr">nuta</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Christmas is on December 25.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>Your aunt is your father's brother.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>You wear a watch on your wrist.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Christmas is on December 25.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>Your aunt is your father's brother.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>You wear a watch on your wrist.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1824,23 +1826,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ making you laugh &nbsp;&nbsp; ⓑ an animal that climbs trees &nbsp;&nbsp; ⓒ a sign that shows how many, like 1, 2, 3 &nbsp;&nbsp; ⓓ a long, thin animal with no legs</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">number ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">snake ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">funny ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">monkey ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">number ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">snake ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">funny ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">monkey ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐘</div><div class="line"></div></div><div class="t-pic"><div class="emoji">➰</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐭</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐛</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="elephant"><div class="emoji">🐘</div><div class="line"></div></div><div class="t-pic" data-ans="tail"><div class="emoji">➰</div><div class="line"></div></div><div class="t-pic" data-ans="mouse"><div class="emoji">🐭</div><div class="line"></div></div><div class="t-pic" data-ans="bug"><div class="emoji">🐛</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b>'s nose makes a 7!</span></div><div class="t-row"><span class="no">10</span><span>The monkey's <b class="bl">__________</b> makes a 9.</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b>'s body makes a 6.</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b>'s body makes a 0.</span></div>
+    <div class="t-row" data-ans="elephant"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b>'s nose makes a 7!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="tail"><span class="no">10</span><span style="flex:1">The monkey's <b class="bl">__________</b> makes a 9.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="mouse"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b>'s body makes a 6.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="bug"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b>'s body makes a 0.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">gub</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">ilta</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">nskea</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="bug"><span class="no">13</span><span class="scr">gub</span><span class="t-line"></span></div><div class="t-row" data-ans="tail"><span class="no">14</span><span class="scr">ilta</span><span class="t-line"></span></div><div class="t-row" data-ans="snake"><span class="no">15</span><span class="scr">nskea</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The snake's body makes an 8.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>The elephant's nose makes a 3.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>The bug's body makes a 0.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The snake's body makes an 8.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>The elephant's nose makes a 3.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>The bug's body makes a 0.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -1926,23 +1928,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a small animal with eight legs &nbsp;&nbsp; ⓑ the number 8 &nbsp;&nbsp; ⓒ a lot of &nbsp;&nbsp; ⓓ the part of the body used for walking</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">leg ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">spider ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">many ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">eight ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">leg ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">spider ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">many ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">eight ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐝</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🦀</div><div class="line"></div></div><div class="t-pic"><div class="emoji">6️⃣</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🔟</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="bee"><div class="emoji">🐝</div><div class="line"></div></div><div class="t-pic" data-ans="crab"><div class="emoji">🦀</div><div class="line"></div></div><div class="t-pic" data-ans="six"><div class="emoji">6️⃣</div><div class="line"></div></div><div class="t-pic" data-ans="ten"><div class="emoji">🔟</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>A <b class="bl">__________</b> has six legs.</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> walks sideways.</span></div><div class="t-row"><span class="no">11</span><span>I am <b class="bl">__________</b> years old.</span></div><div class="t-row"><span class="no">12</span><span>I have <b class="bl">__________</b> fingers.</span></div>
+    <div class="t-row" data-ans="bee"><span class="no">9</span><span style="flex:1">A <b class="bl">__________</b> has six legs.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="crab"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> walks sideways.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="six"><span class="no">11</span><span style="flex:1">I am <b class="bl">__________</b> years old.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="ten"><span class="no">12</span><span style="flex:1">I have <b class="bl">__________</b> fingers.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">egl</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">ebe</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">xsi</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="leg"><span class="no">13</span><span class="scr">egl</span><span class="t-line"></span></div><div class="t-row" data-ans="bee"><span class="no">14</span><span class="scr">ebe</span><span class="t-line"></span></div><div class="t-row" data-ans="six"><span class="no">15</span><span class="scr">xsi</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>A bee has six legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A spider has ten legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A crab has ten legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>A bee has six legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A spider has ten legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A crab has ten legs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2028,23 +2030,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ to go or change place &nbsp;&nbsp; ⓑ something built very tall &nbsp;&nbsp; ⓒ a tall animal with a very long neck &nbsp;&nbsp; ⓓ a big, strong animal with thick fur</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">tower ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">move ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">giraffe ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">bear ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">tower ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">move ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">giraffe ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">bear ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🧘</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🦌</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🦁</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🦋</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="sit"><div class="emoji">🧘</div><div class="line"></div></div><div class="t-pic" data-ans="deer"><div class="emoji">🦌</div><div class="line"></div></div><div class="t-pic" data-ans="lion"><div class="emoji">🦁</div><div class="line"></div></div><div class="t-pic" data-ans="butterfly"><div class="emoji">🦋</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The bird <b class="bl">__________</b>s on the rabbit.</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> sits on the elephant.</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b> says roar!</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b> sits on the bird.</span></div>
+    <div class="t-row" data-ans="sit"><span class="no">9</span><span style="flex:1">The bird <b class="bl">__________</b>s on the rabbit.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="deer"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> sits on the elephant.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="lion"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b> says roar!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="butterfly"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b> sits on the bird.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">ist</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">eovm</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">ered</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="sit"><span class="no">13</span><span class="scr">ist</span><span class="t-line"></span></div><div class="t-row" data-ans="move"><span class="no">14</span><span class="scr">eovm</span><span class="t-line"></span></div><div class="t-row" data-ans="deer"><span class="no">15</span><span class="scr">ered</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The animals make a tower.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A giraffe has a short neck.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>The butterfly sits on the bird.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The animals make a tower.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A giraffe has a short neck.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>The butterfly sits on the bird.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2130,23 +2132,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a long animal with big teeth in rivers &nbsp;&nbsp; ⓑ soft, sticky wet dirt &nbsp;&nbsp; ⓒ a small animal with a big fluffy tail &nbsp;&nbsp; ⓓ to move your body to music</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">dance ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">mud ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">squirrel ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">crocodile ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">dance ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">mud ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">squirrel ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">crocodile ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐸</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐧</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🦘</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐨</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="frog"><div class="emoji">🐸</div><div class="line"></div></div><div class="t-pic" data-ans="penguin"><div class="emoji">🐧</div><div class="line"></div></div><div class="t-pic" data-ans="kangaroo"><div class="emoji">🦘</div><div class="line"></div></div><div class="t-pic" data-ans="koala"><div class="emoji">🐨</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> dances in the mud.</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> dances on the ice.</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b> jumps high.</span></div><div class="t-row"><span class="no">12</span><span>The <b class="bl">__________</b> sleeps in the tree.</span></div>
+    <div class="t-row" data-ans="frog"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> dances in the mud.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="penguin"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> dances on the ice.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="kangaroo"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b> jumps high.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="koala"><span class="no">12</span><span style="flex:1">The <b class="bl">__________</b> sleeps in the tree.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">dum</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">ogrf</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">eadcn</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="mud"><span class="no">13</span><span class="scr">dum</span><span class="t-line"></span></div><div class="t-row" data-ans="frog"><span class="no">14</span><span class="scr">ogrf</span><span class="t-line"></span></div><div class="t-row" data-ans="dance"><span class="no">15</span><span class="scr">eadcn</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The penguin dances on the ice.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>The frog dances in the tree.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A koala sleeps in the tree.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The penguin dances on the ice.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>The frog dances in the tree.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A koala sleeps in the tree.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2232,23 +2234,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ clothing you wear on your head &nbsp;&nbsp; ⓑ white, cold pieces of ice from the sky &nbsp;&nbsp; ⓒ shoes for cold or snowy days &nbsp;&nbsp; ⓓ the outside space next to a house</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">snow ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">hat ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">boots ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">yard ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">snow ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">hat ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">boots ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">yard ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">⛄</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🧤</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🥶</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🛣️</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="snowman"><div class="emoji">⛄</div><div class="line"></div></div><div class="t-pic" data-ans="gloves"><div class="emoji">🧤</div><div class="line"></div></div><div class="t-pic" data-ans="cold"><div class="emoji">🥶</div><div class="line"></div></div><div class="t-pic" data-ans="street"><div class="emoji">🛣️</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Let's build a <b class="bl">__________</b>!</span></div><div class="t-row"><span class="no">10</span><span>My <b class="bl">__________</b> are red.</span></div><div class="t-row"><span class="no">11</span><span>Winter is <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>Look both ways on the <b class="bl">__________</b>.</span></div>
+    <div class="t-row" data-ans="snowman"><span class="no">9</span><span style="flex:1">Let's build a <b class="bl">__________</b>!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="gloves"><span class="no">10</span><span style="flex:1">My <b class="bl">__________</b> are red.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="cold"><span class="no">11</span><span style="flex:1">Winter is <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="street"><span class="no">12</span><span style="flex:1">Look both ways on the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">hta</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">nwso</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">ocld</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="hat"><span class="no">13</span><span class="scr">hta</span><span class="t-line"></span></div><div class="t-row" data-ans="snow"><span class="no">14</span><span class="scr">nwso</span><span class="t-line"></span></div><div class="t-row" data-ans="cold"><span class="no">15</span><span class="scr">ocld</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Snow is white and cold.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>We wear gloves on our feet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A snowman is made of snow.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>Snow is white and cold.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>We wear gloves on our feet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A snowman is made of snow.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2334,23 +2336,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a building where people live &nbsp;&nbsp; ⓑ a room where people cook &nbsp;&nbsp; ⓒ glass in the wall you can see through &nbsp;&nbsp; ⓓ a room where you sleep</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">house ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">kitchen ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">bedroom ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">window ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">house ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">kitchen ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">bedroom ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">window ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🛁</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🛋️</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🚪</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🛠️</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="bathroom"><div class="emoji">🛁</div><div class="line"></div></div><div class="t-pic" data-ans="living room"><div class="emoji">🛋️</div><div class="line"></div></div><div class="t-pic" data-ans="door"><div class="emoji">🚪</div><div class="line"></div></div><div class="t-pic" data-ans="make"><div class="emoji">🛠️</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Wash up in the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">10</span><span>We watch TV in the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">11</span><span>Please close the <b class="bl">__________</b>.</span></div><div class="t-row"><span class="no">12</span><span>Let's <b class="bl">__________</b> a sandcastle!</span></div>
+    <div class="t-row" data-ans="bathroom"><span class="no">9</span><span style="flex:1">Wash up in the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="living room"><span class="no">10</span><span style="flex:1">We watch TV in the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="door"><span class="no">11</span><span style="flex:1">Please close the <b class="bl">__________</b>.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="make"><span class="no">12</span><span style="flex:1">Let's <b class="bl">__________</b> a sandcastle!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">rdoo</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">aekm</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">suheo</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="door"><span class="no">13</span><span class="scr">rdoo</span><span class="t-line"></span></div><div class="t-row" data-ans="make"><span class="no">14</span><span class="scr">aekm</span><span class="t-line"></span></div><div class="t-row" data-ans="house"><span class="no">15</span><span class="scr">suheo</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>Mom cooks in the bathroom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>We sleep in the bedroom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A window is made of glass.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="F"><span class="no">16</span><span>Mom cooks in the bathroom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">17</span><span>We sleep in the bedroom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A window is made of glass.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2436,23 +2438,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a baby cat &nbsp;&nbsp; ⓑ a baby duck &nbsp;&nbsp; ⓒ a baby sheep &nbsp;&nbsp; ⓓ a very young child or animal</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">baby ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">kitten ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">lamb ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">duckling ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">baby ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">kitten ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">lamb ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">duckling ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐕</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐄</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐴</div><div class="line"></div></div><div class="t-pic"><div class="emoji">😴</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="puppy"><div class="emoji">🐕</div><div class="line"></div></div><div class="t-pic" data-ans="calf"><div class="emoji">🐄</div><div class="line"></div></div><div class="t-pic" data-ans="foal"><div class="emoji">🐴</div><div class="line"></div></div><div class="t-pic" data-ans="sleep"><div class="emoji">😴</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> runs to me.</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> drinks milk.</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b> runs with its mom.</span></div><div class="t-row"><span class="no">12</span><span>Animals <b class="bl">__________</b> at night.</span></div>
+    <div class="t-row" data-ans="puppy"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> runs to me.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="calf"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> drinks milk.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="foal"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b> runs with its mom.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="sleep"><span class="no">12</span><span style="flex:1">Animals <b class="bl">__________</b> at night.</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">bbya</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">cfal</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">ambl</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="baby"><span class="no">13</span><span class="scr">bbya</span><span class="t-line"></span></div><div class="t-row" data-ans="calf"><span class="no">14</span><span class="scr">cfal</span><span class="t-line"></span></div><div class="t-row" data-ans="lamb"><span class="no">15</span><span class="scr">ambl</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>A puppy is a baby dog.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>A lamb is a baby cow.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>A duckling swims behind its mom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>A puppy is a baby dog.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>A lamb is a baby cow.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>A duckling swims behind its mom.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2538,23 +2540,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ a farm bird that lays eggs &nbsp;&nbsp; ⓑ a big farm animal that gives us milk &nbsp;&nbsp; ⓒ a bird that swims and quacks &nbsp;&nbsp; ⓓ a strong animal people can ride</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">cow ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">chicken ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">horse ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">duck ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">cow ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">chicken ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">horse ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">duck ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🐷</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐏</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐐</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🐓</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="pig"><div class="emoji">🐷</div><div class="line"></div></div><div class="t-pic" data-ans="sheep"><div class="emoji">🐏</div><div class="line"></div></div><div class="t-pic" data-ans="goat"><div class="emoji">🐐</div><div class="line"></div></div><div class="t-pic" data-ans="rooster"><div class="emoji">🐓</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>The <b class="bl">__________</b> says oink!</span></div><div class="t-row"><span class="no">10</span><span>The <b class="bl">__________</b> says baa!</span></div><div class="t-row"><span class="no">11</span><span>The <b class="bl">__________</b> eats grass.</span></div><div class="t-row"><span class="no">12</span><span>Cock-a-doodle-doo! → <b class="bl">__________</b></span></div>
+    <div class="t-row" data-ans="pig"><span class="no">9</span><span style="flex:1">The <b class="bl">__________</b> says oink!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="sheep"><span class="no">10</span><span style="flex:1">The <b class="bl">__________</b> says baa!</span><span class="t-line cline"></span></div><div class="t-row" data-ans="goat"><span class="no">11</span><span style="flex:1">The <b class="bl">__________</b> eats grass.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="rooster"><span class="no">12</span><span style="flex:1">Cock-a-doodle-doo! → <b class="bl">__________</b></span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">ocw</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">gpi</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">otag</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="cow"><span class="no">13</span><span class="scr">ocw</span><span class="t-line"></span></div><div class="t-row" data-ans="pig"><span class="no">14</span><span class="scr">gpi</span><span class="t-line"></span></div><div class="t-row" data-ans="goat"><span class="no">15</span><span class="scr">otag</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>The rooster crows in the morning.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>The cow says 'oink.'</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>The chicken lays eggs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>The rooster crows in the morning.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">17</span><span>The cow says 'oink.'</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">18</span><span>The chicken lays eggs.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2640,23 +2642,23 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="t-sec">
     <div class="t-sec-title"><span>A</span>Match the word to its meaning. Write ⓐ ⓑ ⓒ ⓓ.</div>
     <div class="opt">ⓐ moving through water &nbsp;&nbsp; ⓑ a sport where you hit a ball over a net &nbsp;&nbsp; ⓒ the first day of the school week &nbsp;&nbsp; ⓓ a sport where you kick a ball</div>
-    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">soccer ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">2</span><span class="q">swimming ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">3</span><span class="q">volleyball ( &nbsp;&nbsp; )</span></div><div class="t-row half"><span class="no">4</span><span class="q">Monday ( &nbsp;&nbsp; )</span></div></div>
+    <div class="rowwrap"><div class="t-row half"><span class="no">1</span><span class="q">soccer ( <span class="abox" data-ans="d">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">2</span><span class="q">swimming ( <span class="abox" data-ans="a">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">3</span><span class="q">volleyball ( <span class="abox" data-ans="b">&nbsp;&nbsp;</span> )</span></div><div class="t-row half"><span class="no">4</span><span class="q">Monday ( <span class="abox" data-ans="c">&nbsp;&nbsp;</span> )</span></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>B</span>Look at the picture and write the word.</div>
-    <div class="t-pic-grid"><div class="t-pic"><div class="emoji">🏀</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🏸</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎳</div><div class="line"></div></div><div class="t-pic"><div class="emoji">🎊</div><div class="line"></div></div></div>
+    <div class="t-pic-grid"><div class="t-pic" data-ans="basketball"><div class="emoji">🏀</div><div class="line"></div></div><div class="t-pic" data-ans="badminton"><div class="emoji">🏸</div><div class="line"></div></div><div class="t-pic" data-ans="bowling"><div class="emoji">🎳</div><div class="line"></div></div><div class="t-pic" data-ans="Saturday"><div class="emoji">🎊</div><div class="line"></div></div></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>C</span>Complete the sentences from today's lesson.</div>
-    <div class="t-row"><span class="no">9</span><span>Throw the ball in the hoop! → <b class="bl">__________</b></span></div><div class="t-row"><span class="no">10</span><span><b class="bl">__________</b> is fun with a friend.</span></div><div class="t-row"><span class="no">11</span><span>Roll the ball — strike! → <b class="bl">__________</b></span></div><div class="t-row"><span class="no">12</span><span><b class="bl">__________</b> is fun day!</span></div>
+    <div class="t-row" data-ans="basketball"><span class="no">9</span><span style="flex:1">Throw the ball in the hoop! → <b class="bl">__________</b></span><span class="t-line cline"></span></div><div class="t-row" data-ans="badminton"><span class="no">10</span><span style="flex:1"><b class="bl">__________</b> is fun with a friend.</span><span class="t-line cline"></span></div><div class="t-row" data-ans="bowling"><span class="no">11</span><span style="flex:1">Roll the ball — strike! → <b class="bl">__________</b></span><span class="t-line cline"></span></div><div class="t-row" data-ans="Saturday"><span class="no">12</span><span style="flex:1"><b class="bl">__________</b> is fun day!</span><span class="t-line cline"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>D</span>Unscramble the letters and write the word.</div>
-    <div class="t-row"><span class="no">13</span><span class="scr">roeccs</span><span class="t-line"></span></div><div class="t-row"><span class="no">14</span><span class="scr">dnoaym</span><span class="t-line"></span></div><div class="t-row"><span class="no">15</span><span class="scr">bnoiglw</span><span class="t-line"></span></div>
+    <div class="t-row" data-ans="soccer"><span class="no">13</span><span class="scr">roeccs</span><span class="t-line"></span></div><div class="t-row" data-ans="Monday"><span class="no">14</span><span class="scr">dnoaym</span><span class="t-line"></span></div><div class="t-row" data-ans="bowling"><span class="no">15</span><span class="scr">bnoiglw</span><span class="t-line"></span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title"><span>E</span>Circle True or False.</div>
-    <div class="t-row"><span class="no">16</span><span>We play soccer with our feet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">17</span><span>In bowling, you roll a ball at pins.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row"><span class="no">18</span><span>Saturday is between Monday and Tuesday.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
+    <div class="t-row tfrow" data-ans="T"><span class="no">16</span><span>We play soccer with our feet.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="T"><span class="no">17</span><span>In bowling, you roll a ball at pins.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div><div class="t-row tfrow" data-ans="F"><span class="no">18</span><span>Saturday is between Monday and Tuesday.</span><span class="tfopt">True&nbsp;/&nbsp;False</span></div>
   </div>
   <div class="t-sec">
     <div class="t-sec-title" style="color:#7c3aed;"><span style="background:#7c3aed;">F</span>✏️ Make it Mine! Pick 2 words and write about YOU.</div>
@@ -2894,27 +2896,38 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
 </div>
 
 <style>
-.ansline { border:none !important; border-bottom:1.4px solid #94a3b8 !important; background:#fafcff; font:inherit; color:#0f172a; flex:1; min-width:40px; height:26px; font-size:14px; padding:2px 6px; border-radius:4px 4px 0 0; }
+.ansline { border:none !important; border-bottom:1.4px solid #94a3b8 !important; background:#fafcff; font:inherit; color:#0f172a; flex:1; min-width:36px; height:26px; font-size:14px; padding:2px 6px; border-radius:4px 4px 0 0; }
 .ansline:focus { outline:none; background:#eff6ff; border-bottom-color:#2563eb !important; }
-.w-en { cursor:pointer; }
-.w-en:active { color:#0d9488; }
+input.abox { width:34px; flex:none; text-align:center; font-weight:800; }
+.ansline.ok { background:#ecfdf5; border-bottom-color:#10b981 !important; }
+.ansline.no { background:#fef2f2; border-bottom-color:#ef4444 !important; }
+.w-en { cursor:pointer; } .w-en:active { color:#0d9488; }
 .spk { cursor:pointer; border:none; background:#ccfbf1; color:#0d9488; border-radius:50%; width:22px; height:22px; font-size:12px; margin-left:2px; vertical-align:middle; }
 .playall { cursor:pointer; border:none; background:#0d9488; color:#fff; border-radius:14px; padding:3px 12px; font-size:11px; font-weight:700; }
 .chip { cursor:pointer; }
-@media print { .spk, .playall { display:none; } }
+.tfbtn { cursor:pointer; border:1.4px solid #cbd5e1; background:#fff; color:#475569; border-radius:14px; padding:2px 12px; font-size:12px; font-weight:700; margin-left:5px; }
+.tfbtn.sel { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
+.tfbtn.ok { background:#10b981; border-color:#10b981; color:#fff; }
+.tfbtn.no { background:#ef4444; border-color:#ef4444; color:#fff; }
+.checkbtn { cursor:pointer; border:none; background:#7c3aed; color:#fff; border-radius:16px; padding:6px 16px; font-size:13px; font-weight:800; margin-left:auto; }
+.resetbtn { cursor:pointer; border:1.4px solid #cbd5e1; background:#fff; color:#64748b; border-radius:16px; padding:5px 12px; font-size:11px; font-weight:700; margin-left:8px; }
+#daynav { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#134e4a; border-radius:24px; padding:8px 14px; display:flex; gap:8px; align-items:center; box-shadow:0 6px 20px rgba(0,0,0,.3); z-index:99; }
+#daynav select { border:none; border-radius:12px; padding:5px 8px; font-weight:700; font-size:13px; background:#fff; color:#134e4a; }
+#daynav .navlbl { color:#99f6e4; font-size:11px; font-weight:800; }
 </style>
 <script>
 function speak(t, cb){
   var u = new SpeechSynthesisUtterance(t);
   u.lang = 'en-US'; u.rate = 0.85;
-  var vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
-  if (vs.length) u.voice = vs.find(v => /Google US|Samantha|Aria/.test(v.name)) || vs[0];
+  var vs = speechSynthesis.getVoices().filter(function(v){return v.lang.indexOf('en')===0;});
+  if (vs.length) u.voice = vs.find(function(v){return /Google US|Samantha|Aria/.test(v.name);}) || vs[0];
   if (cb) u.onend = cb;
   speechSynthesis.speak(u);
 }
+function norm(s){ return (s||'').toLowerCase().trim().replace(/\s+/g,' ').replace(/[.!?]$/,''); }
 document.addEventListener('DOMContentLoaded', function(){
   speechSynthesis.getVoices();
-  // 1) 단어 탭 → 발음
+  // 단어 탭 발음
   document.querySelectorAll('.w-en').forEach(function(el){
     el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
     var b = document.createElement('button'); b.className='spk'; b.textContent='🔊';
@@ -2924,36 +2937,122 @@ document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('.chip').forEach(function(el){
     el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
   });
-  // 2) DAY 전체 듣기 (단어→뜻→예문)
+  // DAY 전체 듣기
   document.querySelectorAll('.day-meta').forEach(function(meta){
     var sheet = meta.closest('.sheet'); if (!sheet) return;
     var items = [];
     sheet.querySelectorAll('.word').forEach(function(w){
-      var en = w.querySelector('.w-en'), df = w.querySelector('.w-def'), ex = w.querySelector('.w-ex');
+      var en=w.querySelector('.w-en'), df=w.querySelector('.w-def'), ex=w.querySelector('.w-ex');
       if (en) items.push([en.textContent, df?df.textContent:'', ex?ex.textContent:'']);
     });
     if (!items.length) return;
     var btn = document.createElement('button'); btn.className='playall'; btn.textContent='▶ Listen All';
     btn.addEventListener('click', function(){
-      speechSynthesis.cancel();
-      var i = 0;
+      speechSynthesis.cancel(); var i=0;
       (function next(){
-        if (i >= items.length) { btn.textContent='▶ Listen All'; return; }
-        var it = items[i++]; btn.textContent = '🔊 ' + it[0];
-        speak(it[0], function(){ setTimeout(function(){ speak(it[1] + '. ' + it[2], function(){ setTimeout(next, 500); }); }, 350); });
+        if (i>=items.length){ btn.textContent='▶ Listen All'; return; }
+        var it=items[i++]; btn.textContent='🔊 '+it[0];
+        speak(it[0], function(){ setTimeout(function(){ speak(it[1]+'. '+it[2], function(){ setTimeout(next,500); }); },350); });
       })();
     });
     meta.appendChild(btn);
   });
-  // 3) 쓰기 줄 → 입력칸 + 자동저장
-  var n = 0;
-  document.querySelectorAll('span.t-line, .w-my .line, .t-pic .line').forEach(function(el){
-    var inp = document.createElement('input');
-    inp.className = 'ansline'; inp.autocomplete='off'; inp.id = 'ans' + (n++);
-    inp.value = localStorage.getItem('br30_' + inp.id) || '';
-    inp.addEventListener('input', function(){ localStorage.setItem('br30_' + inp.id, inp.value); });
-    el.replaceWith(inp);
+  // 입력칸 변환 + 자동저장
+  var n=0;
+  function mkInput(el, cls){
+    var inp=document.createElement('input');
+    inp.className='ansline'+(cls?' '+cls:''); inp.autocomplete='off'; inp.id='ans'+(n++);
+    if (el.dataset && el.dataset.ans) inp.dataset.ans = el.dataset.ans;
+    inp.value = localStorage.getItem('br30_'+inp.id)||'';
+    inp.addEventListener('input', function(){ localStorage.setItem('br30_'+inp.id, inp.value); inp.classList.remove('ok','no'); });
+    el.replaceWith(inp); return inp;
+  }
+  document.querySelectorAll('span.abox').forEach(function(el){ var i=mkInput(el,'abox'); i.maxLength=1; });
+  document.querySelectorAll('span.t-line, .w-my .line, .t-pic .line').forEach(function(el){ mkInput(el); });
+  // True/False 버튼
+  document.querySelectorAll('.tfrow').forEach(function(row, ri){
+    var opt=row.querySelector('.tfopt'); if(!opt) return;
+    var wrap=document.createElement('span'); wrap.style.marginLeft='auto';
+    ['T','F'].forEach(function(v){
+      var b=document.createElement('button'); b.className='tfbtn'; b.textContent=(v==='T'?'True':'False'); b.dataset.v=v;
+      b.addEventListener('click', function(){
+        wrap.querySelectorAll('.tfbtn').forEach(function(x){x.classList.remove('sel','ok','no');});
+        b.classList.add('sel'); row.dataset.sel=v; localStorage.setItem('br30_tf'+ri, v);
+      });
+      wrap.appendChild(b);
+    });
+    var saved=localStorage.getItem('br30_tf'+ri);
+    if(saved){ row.dataset.sel=saved; wrap.querySelectorAll('.tfbtn').forEach(function(x){ if(x.dataset.v===saved) x.classList.add('sel'); }); }
+    opt.replaceWith(wrap);
   });
+  // 채점하기
+  document.querySelectorAll('.sheet').forEach(function(sheet){
+    var scoreEl = sheet.querySelector('.t-score'); if (!scoreEl) return;
+    var hd = sheet.querySelector('.t-header'); if (!hd) return;
+    var btn=document.createElement('button'); btn.className='checkbtn'; btn.textContent='✅ Check!';
+    var rst=document.createElement('button'); rst.className='resetbtn'; rst.textContent='↺';
+    hd.appendChild(btn); hd.appendChild(rst);
+    btn.addEventListener('click', function(){
+      var total=0, good=0;
+      sheet.querySelectorAll('input[data-ans]').forEach(function(inp){
+        total++;
+        var ok = norm(inp.value)===norm(inp.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+inp.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.t-pic[data-ans]').forEach(function(pic){
+        var inp=pic.querySelector('input.ansline'); if(!inp) return;
+        total++;
+        var ok = norm(inp.value)===norm(pic.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+pic.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.t-row[data-ans]:not(.tfrow)').forEach(function(row){
+        var inp=row.querySelector('input.ansline:not(.abox)'); if(!inp) return;
+        total++;
+        var ok = norm(inp.value)===norm(row.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+row.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.tfrow[data-ans]').forEach(function(row){
+        total++;
+        var sel=row.dataset.sel;
+        row.querySelectorAll('.tfbtn').forEach(function(b){
+          b.classList.remove('ok','no');
+          if(b.dataset.v===sel) b.classList.add(sel===row.dataset.ans?'ok':'no');
+        });
+        if(sel===row.dataset.ans) good++;
+      });
+      scoreEl.textContent = 'SCORE ' + good + ' / ' + total;
+      scoreEl.style.color = good===total ? '#10b981' : '#1e3a5f';
+      if (good===total) { speechSynthesis.cancel(); speak('Perfect! Great job!'); }
+    });
+    rst.addEventListener('click', function(){
+      sheet.querySelectorAll('input.ansline').forEach(function(inp){ inp.value=''; inp.classList.remove('ok','no'); localStorage.removeItem('br30_'+inp.id); });
+      sheet.querySelectorAll('.tfrow').forEach(function(row){ delete row.dataset.sel; row.querySelectorAll('.tfbtn').forEach(function(b){b.classList.remove('sel','ok','no');}); });
+      scoreEl.textContent = 'score ____ / 20';
+    });
+  });
+  // DAY 네비게이션
+  var sheets = Array.from(document.querySelectorAll('.sheet'));
+  var nav = document.createElement('div'); nav.id='daynav';
+  nav.innerHTML = '<span class="navlbl">DREAM VOCA</span>';
+  var sel = document.createElement('select');
+  sel.innerHTML = '<option value="0">🏠 Cover</option>';
+  sheets.forEach(function(sh, i){
+    var badge = sh.querySelector('.day-badge');
+    var t = sh.querySelector('.t-header');
+    var key = sh.querySelector('.key-title');
+    if (badge && !t) sel.innerHTML += '<option value="'+i+'">'+badge.textContent+' — Study</option>';
+    else if (t) sel.innerHTML += '<option value="'+i+'">'+t.querySelector('.t-badge').textContent+' — Test</option>';
+    else if (key && key.textContent.indexOf('Answer')>=0 && sel.innerHTML.indexOf('Answer Key')<0) sel.innerHTML += '<option value="'+i+'">🔑 Answer Key</option>';
+  });
+  sel.addEventListener('change', function(){ sheets[+sel.value].scrollIntoView({behavior:'smooth'}); });
+  nav.appendChild(sel);
+  document.body.appendChild(nav);
 });
 </script>
 </body></html>
