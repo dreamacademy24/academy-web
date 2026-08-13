@@ -48,6 +48,22 @@ export default function PortalDashboard() {
   useEffect(() => {
     async function init() {
       if (typeof window === "undefined") return;
+      // 👀 관리자 미리보기: ?admin_view={bookingId} — 어드민 로그인 상태에서만 해당 예약의 엄마 화면을 그대로 연다
+      try {
+        const av = new URLSearchParams(window.location.search).get("admin_view");
+        if (av) {
+          const { isAdminAuthed } = await import("@/lib/adminAuth");
+          if (isAdminAuthed()) {
+            const j = await fetch("/api/bookings/" + av).then(r => r.json());
+            const b = j?.booking;
+            if (b && b.id) {
+              localStorage.setItem("portalSession", JSON.stringify({ booking_id: b.id, booking_number: b.reservation_no, guest_name: b.booker_name, check_in_date: b.checkin_date, expires: Date.now() + 2 * 3600000, admin_view: true }));
+              window.location.replace("/portal/dashboard");
+              return;
+            }
+          }
+        }
+      } catch {}
       // 1) portalSession 체크
       try {
         const raw = localStorage.getItem("portalSession");
@@ -321,7 +337,14 @@ export default function PortalDashboard() {
     profile?.full_name ||
     authUser?.email?.split('@')[0];
 
+  const adminView = !!(session as unknown as { admin_view?: boolean } | null)?.admin_view;
   return (<>
+    {adminView && (
+      <div style={{ position: "sticky", top: 0, zIndex: 999, background: "#7c3aed", color: "#fff", padding: "9px 16px", display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 700, fontFamily: "'Noto Sans KR',sans-serif" }}>
+        👀 관리자 미리보기 — {(session as unknown as { guest_name?: string } | null)?.guest_name}님이 보는 화면과 동일합니다 (엄마에게는 아무 표시 안 됨)
+        <button onClick={() => { localStorage.removeItem("portalSession"); window.close(); setTimeout(() => { window.location.href = "/admin/bookings"; }, 300); }} style={{ marginLeft: "auto", background: "#fff", color: "#7c3aed", border: "none", borderRadius: 7, padding: "5px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>미리보기 종료</button>
+      </div>
+    )}
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}

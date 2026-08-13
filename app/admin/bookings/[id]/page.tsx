@@ -574,6 +574,7 @@ export default function BookingDetailPage() {
       {/* 탭1: 기본정보 */}
       {tab === "info" && (<>
         <div className="ed-bar">
+          <button className="btn btn-sm" style={{ background: "#7c3aed", color: "#fff", marginRight: "auto" }} onClick={() => window.open("/portal/dashboard?admin_view=" + b.id, "_blank")}>👀 엄마 화면 보기</button>
           {!editing ? (
             <button className="btn btn-sm btn-blue" onClick={()=>startEdit(b)}>✏️ 수정</button>
           ) : (<>
