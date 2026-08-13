@@ -196,6 +196,7 @@ export default function AdminBookingsPage(){
     }catch{/* ignore */}
   },[]);
   const [confirmSearch,setConfirmSearch]=useState("");
+  const [rcpUnpaidOnly,setRcpUnpaidOnly]=useState(false);
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
   const [showAllCols,setShowAllCols]=useState(false); // 확정예약 전체 컬럼 토글
   const [assignees,setAssignees]=useState<string[]>([]);
@@ -1010,42 +1011,69 @@ export default function AdminBookingsPage(){
     </>)}
 
     {/* ── 탭2: 영수증 ── */}
-    {mainTab==="receipt"&&(<>
+    {mainTab==="receipt"&&(()=>{
+      const rcpInfo=(b:Booking)=>{
+        const fin=b.final_price||b.base_price||0;
+        const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;
+        const remain=Math.max(0,fin-paid);
+        const overdue=!!(b.balance_date&&remain>0&&String(b.balance_date).slice(0,10)<=calYmd(new Date()));
+        return {fin,paid,remain,overdue};
+      };
+      const unpaidAll=rcpList.filter(b=>{const i=rcpInfo(b);return i.fin>0&&i.remain>0;});
+      const overdueAll=unpaidAll.filter(b=>rcpInfo(b).overdue);
+      const shownRcp=rcpUnpaidOnly?unpaidAll:rcpList;
+      const stBadge=(b:Booking)=>{
+        const i=rcpInfo(b);
+        if(i.fin<=0)return <span style={{color:"#94a3b8",fontSize:12}}>-</span>;
+        if(i.remain<=0)return <span style={{background:"#f0fdf4",color:"#166534",border:"1px solid #bbf7d0",borderRadius:7,padding:"2px 9px",fontSize:11.5,fontWeight:800,whiteSpace:"nowrap"}}>✅ 완납</span>;
+        if(i.paid<=0)return <span style={{background:"#dc2626",color:"#fff",borderRadius:7,padding:"2px 9px",fontSize:11.5,fontWeight:800,whiteSpace:"nowrap"}}>❗ 미입금</span>;
+        return <span style={{background:i.overdue?"#dc2626":"#fff7ed",color:i.overdue?"#fff":"#c2410c",border:i.overdue?"none":"1px solid #fed7aa",borderRadius:7,padding:"2px 9px",fontSize:11.5,fontWeight:800,whiteSpace:"nowrap"}}>{i.overdue?"⏰ 잔금 지연 ":"잔여 "}{fmt(i.remain)}</span>;
+      };
+      return(<>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+        <button className={`sub-tab${!rcpUnpaidOnly?" ac":""}`} onClick={()=>setRcpUnpaidOnly(false)}>전체 ({rcpList.length})</button>
+        <button className={`sub-tab${rcpUnpaidOnly?" ac":""}`} style={{background:rcpUnpaidOnly?"#dc2626":"#fef2f2",color:rcpUnpaidOnly?"#fff":"#b91c1c",fontWeight:800}} onClick={()=>setRcpUnpaidOnly(true)}>❗ 잔금 미납만 ({unpaidAll.length})</button>
+        {overdueAll.length>0&&<span style={{fontSize:12,fontWeight:800,color:"#dc2626"}}>⏰ 잔금일 지난 미납 {overdueAll.length}건 — 입금 안내 필요!</span>}
+        <span style={{marginLeft:"auto",fontSize:11.5,color:"#94a3b8"}}>입금액 = 영수증 지불내역 저장 기준 · 행 클릭 = 영수증</span>
+      </div>
       <div className="tbl-w"><table className="tbl"><thead><tr>
-        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>예약금</th><th>잔금</th><th>최종금액</th>
+        <th>예약번호</th><th>예약자명</th><th>학생이름</th><th>체크인</th><th>잔금일</th><th>예약금</th><th>잔금</th><th>최종금액</th><th>입금액</th><th>입금상태</th>
       </tr></thead><tbody>
-        {rcpList.length===0?<tr><td colSpan={8} className="empty">영수증 발행 내역이 없습니다.</td></tr>:
-        rcpList.map(b=>{
+        {shownRcp.length===0?<tr><td colSpan={10} className="empty">{rcpUnpaidOnly?"잔금 미납 건이 없습니다 🎉":"영수증 발행 내역이 없습니다."}</td></tr>:
+        shownRcp.map(b=>{
           const fin=b.final_price||b.base_price||0;
           const dep=fin>=1000000?1000000:fin;
           const bal=fin>1000000?fin-1000000:0;
+          const i=rcpInfo(b);
           return(
-          <tr key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>
+          <tr key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={i.overdue?{background:"#fef2f2"}:undefined}>
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            <td>{b.balance_date||"-"}</td>
+            <td style={i.overdue?{color:"#dc2626",fontWeight:800}:undefined}>{b.balance_date||"-"}</td>
             <td>{fmt(dep)}</td>
             <td>{fmt(bal)}</td>
             <td style={{fontWeight:700}}>{fmt(fin)}</td>
+            <td style={{fontWeight:700,color:i.paid>0?"#166534":"#94a3b8"}}>{i.paid>0?fmt(i.paid):"-"}</td>
+            <td>{stBadge(b)}</td>
           </tr>
           );
         })}
       </tbody></table></div>
       <div className="mob-cards" style={{display:"none",flexDirection:"column",gap:12}}>
-        {rcpList.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
-        rcpList.map(b=>(
+        {shownRcp.length===0?<div className="empty">영수증 발행 내역이 없습니다.</div>:
+        shownRcp.map(b=>(
           <div key={b.id} onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")} style={{background:"#fff",borderRadius:12,padding:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <span style={{fontWeight:700,color:"#1a6fc4",fontSize:14}}>{b.reservation_no}</span>
-              <span style={{fontWeight:700}}>{fmt(b.final_price)}</span>
+              {stBadge(b)}
             </div>
-            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name}</div>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{b.booker_name} · {fmt(b.final_price)}</div>
             <div style={{fontSize:13,color:"#6b7c93"}}>{stuNames(b.students)} · 체크인: {b.checkin_date||"미정"}</div>
           </div>
         ))}
       </div>
-    </>)}
+    </>);})()}
 
     {/* ── 탭4: 확정 예약 (스프레드시트) ── */}
     {mainTab==="confirm"&&(()=>{
