@@ -2670,3 +2670,165 @@ body { background:#e8ecef; font-family:'Segoe UI','Malgun Gothic',sans-serif; }
   <div class="pagenum">52 · Dream Academy Vocabulary BR-30</div>
 </div>
 
+
+<style>
+.ansline { border:none !important; border-bottom:1.4px solid #94a3b8 !important; background:#fafcff; font:inherit; color:#0f172a; flex:1; min-width:36px; height:26px; font-size:14px; padding:2px 6px; border-radius:4px 4px 0 0; }
+.ansline:focus { outline:none; background:#eff6ff; border-bottom-color:#2563eb !important; }
+input.abox { width:34px; flex:none; text-align:center; font-weight:800; }
+.ansline.ok { background:#ecfdf5; border-bottom-color:#10b981 !important; }
+.ansline.no { background:#fef2f2; border-bottom-color:#ef4444 !important; }
+.w-en { cursor:pointer; } .w-en:active { color:#0d9488; }
+.spk { cursor:pointer; border:none; background:#ccfbf1; color:#0d9488; border-radius:50%; width:22px; height:22px; font-size:12px; margin-left:2px; vertical-align:middle; }
+.playall { cursor:pointer; border:none; background:#0d9488; color:#fff; border-radius:14px; padding:3px 12px; font-size:11px; font-weight:700; }
+.chip { cursor:pointer; }
+.tfbtn { cursor:pointer; border:1.4px solid #cbd5e1; background:#fff; color:#475569; border-radius:14px; padding:2px 12px; font-size:12px; font-weight:700; margin-left:5px; }
+.tfbtn.sel { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
+.tfbtn.ok { background:#10b981; border-color:#10b981; color:#fff; }
+.tfbtn.no { background:#ef4444; border-color:#ef4444; color:#fff; }
+.checkbtn { cursor:pointer; border:none; background:#7c3aed; color:#fff; border-radius:16px; padding:6px 16px; font-size:13px; font-weight:800; margin-left:auto; margin-right:8px; }
+.resetbtn { cursor:pointer; border:1.4px solid #cbd5e1; background:#fff; color:#64748b; border-radius:16px; padding:5px 12px; font-size:11px; font-weight:700; margin-right:150px; }
+#daynav { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:#134e4a; border-radius:24px; padding:8px 14px; display:flex; gap:8px; align-items:center; box-shadow:0 6px 20px rgba(0,0,0,.3); z-index:99; }
+#daynav select { border:none; border-radius:12px; padding:5px 8px; font-weight:700; font-size:13px; background:#fff; color:#134e4a; }
+#daynav .navlbl { color:#99f6e4; font-size:11px; font-weight:800; }
+</style>
+<script>
+function speak(t, cb){
+  var u = new SpeechSynthesisUtterance(t);
+  u.lang = 'en-US'; u.rate = 0.85;
+  var vs = speechSynthesis.getVoices().filter(function(v){return v.lang.indexOf('en')===0;});
+  if (vs.length) u.voice = vs.find(function(v){return /Google US|Samantha|Aria/.test(v.name);}) || vs[0];
+  if (cb) u.onend = cb;
+  speechSynthesis.speak(u);
+}
+function norm(s){ return (s||'').toLowerCase().trim().replace(/\s+/g,' ').replace(/[.!?]$/,''); }
+document.addEventListener('DOMContentLoaded', function(){
+  speechSynthesis.getVoices();
+  // 단어 탭 발음
+  document.querySelectorAll('.w-en').forEach(function(el){
+    el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+    var b = document.createElement('button'); b.className='spk'; b.textContent='🔊';
+    b.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+    el.after(b);
+  });
+  document.querySelectorAll('.chip').forEach(function(el){
+    el.addEventListener('click', function(){ speechSynthesis.cancel(); speak(el.textContent); });
+  });
+  // DAY 전체 듣기
+  document.querySelectorAll('.day-meta').forEach(function(meta){
+    var sheet = meta.closest('.sheet'); if (!sheet) return;
+    var items = [];
+    sheet.querySelectorAll('.word').forEach(function(w){
+      var en=w.querySelector('.w-en'), df=w.querySelector('.w-def'), ex=w.querySelector('.w-ex');
+      if (en) items.push([en.textContent, df?df.textContent:'', ex?ex.textContent:'']);
+    });
+    if (!items.length) return;
+    var btn = document.createElement('button'); btn.className='playall'; btn.textContent='▶ Listen All';
+    btn.addEventListener('click', function(){
+      speechSynthesis.cancel(); var i=0;
+      (function next(){
+        if (i>=items.length){ btn.textContent='▶ Listen All'; return; }
+        var it=items[i++]; btn.textContent='🔊 '+it[0];
+        speak(it[0], function(){ setTimeout(function(){ speak(it[1]+'. '+it[2], function(){ setTimeout(next,500); }); },350); });
+      })();
+    });
+    meta.appendChild(btn);
+  });
+  // 입력칸 변환 + 자동저장
+  var n=0;
+  function mkInput(el, cls){
+    var inp=document.createElement('input');
+    inp.className='ansline'+(cls?' '+cls:''); inp.autocomplete='off'; inp.id='ans'+(n++);
+    if (el.dataset && el.dataset.ans) inp.dataset.ans = el.dataset.ans;
+    inp.value = localStorage.getItem('br30_'+inp.id)||'';
+    inp.addEventListener('input', function(){ localStorage.setItem('br30_'+inp.id, inp.value); inp.classList.remove('ok','no'); });
+    el.replaceWith(inp); return inp;
+  }
+  document.querySelectorAll('span.abox').forEach(function(el){ var i=mkInput(el,'abox'); i.maxLength=1; });
+  document.querySelectorAll('span.t-line, .w-my .line, .t-pic .line').forEach(function(el){ mkInput(el); });
+  // True/False 버튼
+  document.querySelectorAll('.tfrow').forEach(function(row, ri){
+    var opt=row.querySelector('.tfopt'); if(!opt) return;
+    var wrap=document.createElement('span'); wrap.style.marginLeft='auto';
+    ['T','F'].forEach(function(v){
+      var b=document.createElement('button'); b.className='tfbtn'; b.textContent=(v==='T'?'True':'False'); b.dataset.v=v;
+      b.addEventListener('click', function(){
+        wrap.querySelectorAll('.tfbtn').forEach(function(x){x.classList.remove('sel','ok','no');});
+        b.classList.add('sel'); row.dataset.sel=v; localStorage.setItem('br30_tf'+ri, v);
+      });
+      wrap.appendChild(b);
+    });
+    var saved=localStorage.getItem('br30_tf'+ri);
+    if(saved){ row.dataset.sel=saved; wrap.querySelectorAll('.tfbtn').forEach(function(x){ if(x.dataset.v===saved) x.classList.add('sel'); }); }
+    opt.replaceWith(wrap);
+  });
+  // 채점하기
+  document.querySelectorAll('.sheet').forEach(function(sheet){
+    var scoreEl = sheet.querySelector('.t-score'); if (!scoreEl) return;
+    var hd = sheet.querySelector('.t-header'); if (!hd) return;
+    var btn=document.createElement('button'); btn.className='checkbtn'; btn.textContent='✅ Check!';
+    var rst=document.createElement('button'); rst.className='resetbtn'; rst.textContent='↺';
+    hd.appendChild(btn); hd.appendChild(rst);
+    btn.addEventListener('click', function(){
+      var total=0, good=0;
+      sheet.querySelectorAll('input[data-ans]').forEach(function(inp){
+        total++;
+        var ok = norm(inp.value)===norm(inp.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+inp.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.t-pic[data-ans]').forEach(function(pic){
+        var inp=pic.querySelector('input.ansline'); if(!inp) return;
+        total++;
+        var ok = norm(inp.value)===norm(pic.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+pic.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.t-row[data-ans]:not(.tfrow)').forEach(function(row){
+        var inp=row.querySelector('input.ansline:not(.abox)'); if(!inp) return;
+        total++;
+        var ok = norm(inp.value)===norm(row.dataset.ans);
+        inp.classList.remove('ok','no'); inp.classList.add(ok?'ok':'no');
+        inp.title = ok ? '' : 'Answer: '+row.dataset.ans;
+        if(ok) good++;
+      });
+      sheet.querySelectorAll('.tfrow[data-ans]').forEach(function(row){
+        total++;
+        var sel=row.dataset.sel;
+        row.querySelectorAll('.tfbtn').forEach(function(b){
+          b.classList.remove('ok','no');
+          if(b.dataset.v===sel) b.classList.add(sel===row.dataset.ans?'ok':'no');
+        });
+        if(sel===row.dataset.ans) good++;
+      });
+      scoreEl.textContent = 'SCORE ' + good + ' / ' + total;
+      scoreEl.style.color = good===total ? '#10b981' : '#1e3a5f';
+      if (good===total) { speechSynthesis.cancel(); speak('Perfect! Great job!'); }
+    });
+    rst.addEventListener('click', function(){
+      sheet.querySelectorAll('input.ansline').forEach(function(inp){ inp.value=''; inp.classList.remove('ok','no'); localStorage.removeItem('br30_'+inp.id); });
+      sheet.querySelectorAll('.tfrow').forEach(function(row){ delete row.dataset.sel; row.querySelectorAll('.tfbtn').forEach(function(b){b.classList.remove('sel','ok','no');}); });
+      scoreEl.textContent = 'score ____ / 20';
+    });
+  });
+  // DAY 네비게이션
+  var sheets = Array.from(document.querySelectorAll('.sheet'));
+  var nav = document.createElement('div'); nav.id='daynav';
+  nav.innerHTML = '<span class="navlbl">DREAM VOCA</span>';
+  var sel = document.createElement('select');
+  sel.innerHTML = '<option value="0">🏠 Cover</option>';
+  sheets.forEach(function(sh, i){
+    var badge = sh.querySelector('.day-badge');
+    var t = sh.querySelector('.t-header');
+    var key = sh.querySelector('.key-title');
+    if (badge && !t) sel.innerHTML += '<option value="'+i+'">'+badge.textContent+' — Study</option>';
+    else if (t) sel.innerHTML += '<option value="'+i+'">'+t.querySelector('.t-badge').textContent+' — Test</option>';
+    else if (key && key.textContent.indexOf('Answer')>=0 && sel.innerHTML.indexOf('Answer Key')<0) sel.innerHTML += '<option value="'+i+'">🔑 Answer Key</option>';
+  });
+  sel.addEventListener('change', function(){ sheets[+sel.value].scrollIntoView({behavior:'smooth'}); });
+  nav.appendChild(sel);
+  document.body.appendChild(nav);
+});
+</script>
+</body></html>
