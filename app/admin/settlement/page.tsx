@@ -54,7 +54,7 @@ export default function SettlementPage() {
   useEffect(() => { if (!isAdminAuthed()) { router.replace("/login"); return; } setAuthed(true); }, [router]);
 
   const loadBookings = useCallback(async () => {
-    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, accom_room, students, settlement_open").order("checkin_date", { ascending: false });
+    const { data } = await supabase.from("bookings").select("id, booker_name, reservation_no, checkin_date, checkout_date, house_no, accom_room, students, settlement_open, accom_type, status").order("checkin_date", { ascending: false });
     const today = today10();
     const rank = (b: Booking) => {
       const ci = b.checkin_date || "", co = b.checkout_date || "";
@@ -62,7 +62,14 @@ export default function SettlementPage() {
       if (ci && ci > today) return 1;
       return 2;
     };
-    const sorted = ((data || []) as Booking[]).sort((a, b) => {
+    // 통학형(숙박 정산 대상 아님)·취소 예약 제외
+    const eligible = ((data || []) as Booking[]).filter(b => {
+      const at = String((b as unknown as Record<string, unknown>).accom_type || "");
+      if (at.includes("통학")) return false;
+      if (String((b as unknown as Record<string, unknown>).status || "").includes("취소")) return false;
+      return true;
+    });
+    const sorted = eligible.sort((a, b) => {
       const ra = rank(a), rb = rank(b);
       if (ra !== rb) return ra - rb;
       if (ra === 1) return (a.checkin_date || "").localeCompare(b.checkin_date || "");
