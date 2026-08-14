@@ -17,7 +17,6 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },
-    { label: "엄마 화면 미리보기", href: "/admin/portal-preview" },
     { label: "학생 관리", href: "/admin/students" },
     { label: "정산 관리", href: "/admin/settlement" },
     { label: "튜터 수업", href: "/admin/tutor-class" },
@@ -28,7 +27,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "유학원 관리", href: "/admin/agencies" },
     { label: "동의서함", href: "/admin/consents" },
     { label: "공지 배포", href: "/admin/notices" },
-    { label: "지난 내역 보관함", href: "/admin/archive" },
+    { label: "엄마 화면 미리보기", href: "/admin/portal-preview" },
   ]},
   { title: "드림하우스", items: [
     { label: "드림하우스 룸", href: "/dreamhouse-rooms", ext: true },
@@ -56,6 +55,7 @@ const NAV: { title: string; items: Item[] }[] = [
   { title: "기타 업무", items: [
     { label: "직원 가이드", href: "/staff-guide.html", ext: true },
     { label: "자료모음", href: "/admin/resources" },
+    { label: "지난 내역 보관함", href: "/admin/archive" },
     { label: "사이트 관리", href: "/admin/site" },
     { label: "민에듀 공구", href: "/admin/minedu" },
     { label: "다온맘 예약현황", href: "/admin/daonmam" },
