@@ -11,21 +11,13 @@ export async function GET(req: Request) {
   const bookingId = searchParams.get("booking_id");
   if (!bookingId) return NextResponse.json({ error: "booking_id required" }, { status: 400 });
 
-  // 예약에서 룸 번호 조회 (fieldtrip_applications 매칭용)
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("house_no, accom_room")
-    .eq("id", bookingId)
-    .maybeSingle();
-  const roomNumber = booking?.house_no || booking?.accom_room || "";
-
   const [shuttleRes, fieldtripRes, tutorRes, pickupRes] = await Promise.all([
     supabase.from("shuttle_applications").select("*")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
-    // booking_id 기준(셔틀·튜터와 동일). 구버전 room_number 저장분도 OR로 호환.
+    // booking_id로만 매칭 — room_number 폴백은 같은 룸을 쓴 다른 예약 내역까지 노출되어 제거 (2026-08-17)
     supabase.from("fieldtrip_applications").select("*")
-      .or(roomNumber ? `booking_id.eq.${bookingId},room_number.eq.${roomNumber}` : `booking_id.eq.${bookingId}`)
+      .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
     // /portal/tutor와 동일하게 booking_id로 직접 조회 (student_id 경유 X)
     supabase.from("tutor_requests")
