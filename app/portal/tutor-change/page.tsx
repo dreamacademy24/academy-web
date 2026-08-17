@@ -70,7 +70,7 @@ export default function TutorChangePage() {
       if (form.type === "full_cancel") {
         const appId = l.application_id || (l.admin_memo ? (l.admin_memo.match(/request_id:\s*([a-f0-9-]+)/i) || [])[1] : null);
         if (!appId) { showToast("전체 취소는 신청 연결이 필요합니다. 매니저에게 문의해주세요."); setSubmitting(false); return; }
-        const r = await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "tutor_requests", id: appId, reason: form.reason || "전체 취소 요청" }) });
+        const r = await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "tutor_requests", id: appId, reason: form.reason || "전체 취소 요청", booking_id: bookingId }) });
         if (!r.ok) { const e = await r.json().catch(() => ({})); showToast(e.error || "요청 실패"); setSubmitting(false); return; }
       } else {
         let reason = form.reason || "";
