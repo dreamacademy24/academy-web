@@ -7736,6 +7736,7 @@ function renderEmpDetailEmpty(emp){
     var done=isDoneTask(t);
     var urgentCls=(!done&&_isUrgentEmpTask(t))?' is-urgent':'';
     var cmt=(taskComments[t.id]||[]).length;
+    var cmtNew=(typeof myNotifs!=='undefined'?(myNotifs||[]):[]).some(function(nn){return !nn.is_read&&nn.type==='task_comment'&&String(nn.ref_id)===String(t.id);});
     var h='<div class="empb-card'+urgentCls+(done?' is-done':'')+'" onclick="selectEmpTask(\x27'+t.id+'\x27)">';
     if(isOwner||isAdmin()){
       h+='<div class="empb-act">';
@@ -7745,7 +7746,7 @@ function renderEmpDetailEmpty(emp){
       h+='</div>';
     }
     h+='<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;padding-right:46px;'+(done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+esc(t.title||'')+'</div>';
-    var meta=[dueBadge(t),clTxt(t),(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':'')].filter(function(x){return x;});
+    var meta=[dueBadge(t),clTxt(t),(cmtNew?'<span style="font-size:10.5px;font-weight:800;color:#dc2626;background:#fee2e2;border-radius:6px;padding:1px 6px">💬 '+(cmt||'')+' NEW</span>':(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':''))].filter(function(x){return x;});
     if(meta.length)h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+meta.join('')+'</div>';
     h+='</div>';
     return h;
@@ -7785,7 +7786,8 @@ function renderEmpDetailEmpty(emp){
     return;
   }
   if(isOwner){
-    d.innerHTML='<div style="max-width:1100px">'+html+'</div>';
+    d.innerHTML='<div id="empHomeNotif" style="max-width:1100px"></div><div style="max-width:1100px">'+html+'</div>';
+    try{_renderEmpHomeNotif(empId);}catch(e){}
     return;
   }
   d.innerHTML='<div class="empb-wrap"><div id="tlWidget"></div>'+html+'</div>';
