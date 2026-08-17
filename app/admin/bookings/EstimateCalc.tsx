@@ -731,10 +731,11 @@ export default function EstimateCalc(){
     const factor=Math.min(w,4)/4;
     const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
     const _wk=w<4?` · ${w}주 적용`:"";
-    const _sm=ci?seasonMix(ci,w):null;
-    const eb=is27?((_sm?_sm.peak>_sm.off:season==="peak")?10:20):0;
+    /* 얼리버드 단가 = 입실일(체크인) 시즌 기준 — 유학원 공문: 비수기 입실 20만 / 성수기 입실 10만 */
+    const ebPeak=ci?isPeak(ci):season==="peak";
+    const eb=is27?(ebPeak?10:20):0;
     const lines:{name:string;amount:number}[]=[];
-    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (1인 ${_ep(eb)}×${n}명${_wk})`,amount:Math.round(eb*factor*n)*10000});
+    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (${ebPeak?"성수기":"비수기"} 입실 · 1인 ${_ep(eb)}×${n}명${_wk})`,amount:Math.round(eb*factor*n)*10000});
     if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
     if(cash&&ci>="2026-08-01"&&ci<="2026-08-31")lines.push({name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
     if(String(p.accom).includes("cubenine"))lines.push({name:`다온맘 큐브나인 추가 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
