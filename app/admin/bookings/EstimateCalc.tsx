@@ -686,7 +686,7 @@ export default function EstimateCalc(){
     if(!w){alert("기간을 먼저 설정해주세요.");return;}
     const kids=Number(p.kids)||0;
     if(!kids){alert("아이 인원을 먼저 설정해주세요 (수업료는 아이 기준).");return;}
-    const co=(()=>{const t=new Date(p.checkin+"T00:00:00");t.setDate(t.getDate()+w*7);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;})();
+    const co=(()=>{const t=new Date(p.checkin+"T00:00:00");t.setDate(t.getDate()+(p.accom==="commute"?(w-1)*7+4:w*7));return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;})();
     // 평일(월~금) 휴무일만 수업 손실 — 주말 휴무는 원래 수업 없음
     const hs=holidaysInRange(holidays,p.checkin,co).filter(h=>{const d=new Date(h.date+"T00:00:00").getDay();return d>=1&&d<=5;});
     if(!hs.length){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
@@ -779,11 +779,11 @@ export default function EstimateCalc(){
     return accomLabel[p.accom]+(p.roomType?` ${p.roomType}${(p.accom==="jaypark"||p.accom==="jpark")?" 가든뷰":""}`:"");
   }
   function fmtDate(d:string){if(!d)return"";const dt=new Date(d);return `${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;}
-  function calcCheckout(checkin:string, weeks:number){
+  function calcCheckout(checkin:string, weeks:number, commute?:boolean){
     if(!checkin) return "";
     const d=new Date(checkin);
     if(isNaN(d.getTime())) return "";
-    d.setDate(d.getDate()+weeks*7);
+    d.setDate(d.getDate()+(commute?(weeks-1)*7+4:weeks*7));
     const y=d.getFullYear();
     const m=String(d.getMonth()+1).padStart(2,"0");
     const dd=String(d.getDate()).padStart(2,"0");
@@ -888,7 +888,7 @@ export default function EstimateCalc(){
           )}
           <label style={{flex:1}}><span style={lbl}>체크인 날짜</span>
             <input style={sel} type="date" value={plan.checkin} onChange={e=>setCheckinAndSeason(idx,e.target.value)}/>
-            {plan.checkin&&<div style={{marginTop:4,fontSize:12,color:"#6b7280"}}>체크아웃: {calcCheckout(plan.checkin,totalWeeks(plan))}</div>}
+            {plan.checkin&&<div style={{marginTop:4,fontSize:12,color:"#6b7280"}}>{plan.accom==="commute"?"수업종료 (월~금)":"체크아웃"}: {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>}
           </label>
         </div>
         {/* 자동판별 + 시즌 수동선택 */}
@@ -972,7 +972,7 @@ export default function EstimateCalc(){
           <div style={{fontSize:16,fontWeight:800,color:"#1a1a2e",marginBottom:4}}>{label}</div>
           <div style={{fontSize:13,fontWeight:600,color:"#1a6fc4",marginBottom:4}}>{planName(plan)} · 총 {totalWeeks(plan)}주</div>
           {plan.checkin && (
-            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>체크인: {plan.checkin} / 체크아웃: {calcCheckout(plan.checkin,totalWeeks(plan))}</div>
+            <div style={{fontSize:12,color:"#475569",marginBottom:4}}>{plan.accom==="commute"?"수업시작":"체크인"}: {plan.checkin} / {plan.accom==="commute"?"수업종료":"체크아웃"}: {calcCheckout(plan.checkin,totalWeeks(plan),plan.accom==="commute")}</div>
           )}
           <div style={{marginBottom:4}}>{seasonBadge(plan.season)}</div>
           <div style={{fontSize:12,color:"#6b7c93"}}>{plan.accom!=="commute" ? `보호자 ${plan.parents}명 + 아이 ${plan.kids}명` : `아이 ${plan.kids}명`}</div>
