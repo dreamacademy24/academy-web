@@ -42,25 +42,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // 2. bookings_new — 이름으로 검색 (예약번호 컬럼 없음)
-    const { data: newBookings, error: newErr } = await supabase
-      .from('bookings_new')
-      .select('id, booker_name, check_in, status')
-      .ilike('booker_name', name)
-
-    if (newErr) console.error('bookings_new query error:', newErr.message)
-
-    if (newBookings && newBookings.length > 0) {
-      const b = newBookings[0]
-      return NextResponse.json({
-        booking_id: b.id,
-        booking_number: bno,
-        guest_name: b.booker_name,
-        check_in_date: b.check_in,
-        status: b.status,
-      })
-    }
-
     return NextResponse.json({ error: '예약 정보를 찾을 수 없습니다. 예약번호와 이름을 확인해주세요.' }, { status: 404 })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown error'
