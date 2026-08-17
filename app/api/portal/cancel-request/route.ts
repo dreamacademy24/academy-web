@@ -19,6 +19,12 @@ export async function POST(req: Request) {
     }
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
+    // 소유권 검증 (2026-08-17): 행에 booking_id가 있으면 요청자의 booking_id와 일치해야 함 — 타인 신청 취소 방지
+    const { data: ownRow } = await supabase.from(table).select("booking_id").eq("id", id).maybeSingle();
+    if (ownRow?.booking_id && String(ownRow.booking_id) !== String(body?.booking_id || "")) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
     let update: Record<string, unknown> = { status: "cancel_requested" };
     if (table === "fieldtrip_applications" && token) {
       // 날짜(프로그램) 단위 취소요청 — 전체 status는 건드리지 않음
