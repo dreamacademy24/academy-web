@@ -1,8 +1,10 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.dreamacademyph.dreamguest",
-    "sha256_cert_fingerprints": ["F8:DD:66:CC:14:2D:12:9F:52:46:D8:8D:73:0D:F7:7C:89:CB:83:F5:F1:03:14:EC:90:EA:7A:96:D5:A1:D5:5F"]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dreamacademyph.dreamguest",
+      "sha256_cert_fingerprints": ["F8:DD:66:CC:14:2D:12:9F:52:46:D8:8D:73:0D:F7:7C:89:CB:83:F5:F1:03:14:EC:90:EA:7A:96:D5:A1:D5:5F"]
+    }
   }
-}]
+]
