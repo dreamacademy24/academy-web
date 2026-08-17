@@ -15,9 +15,6 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 async function loadBooking(bookingId: string) {
-  // bookings_new 먼저
-  const { data: newB } = await supabase.from('bookings_new').select('*').eq('id', bookingId).maybeSingle()
-  if (newB) return { booking: newB, source: 'new' as const }
   const { data: oldB } = await supabase.from('bookings').select('*').eq('id', bookingId).maybeSingle()
   if (oldB) return { booking: oldB, source: 'old' as const }
   return null
@@ -74,8 +71,7 @@ export async function PATCH(req: Request) {
     for (const k of allowed) if (k in fields) update[k] = (fields as Record<string, unknown>)[k] === '' ? null : (fields as Record<string, unknown>)[k]
     if (Object.keys(update).length === 0) return NextResponse.json({ error: 'no fields to update' }, { status: 400 })
 
-    const tbl = result.source === 'new' ? 'bookings_new' : 'bookings'
-    const { error } = await supabase.from(tbl).update(update).eq('id', booking_id)
+    const { error } = await supabase.from('bookings').update(update).eq('id', booking_id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     const today = new Date().toISOString().slice(0, 10)
@@ -129,18 +125,7 @@ export async function PUT(req: Request) {
 
     const bookerName = result.booking.booker_name || '손님'
 
-    // 업데이트 (bookings_new vs bookings 컬럼 스키마 다름)
-    if (result.source === 'new') {
-      const { error } = await supabase.from('bookings_new').update({
-        flight_in_airline: flight_in?.airline || null,
-        flight_in_date: flight_in?.date || null,
-        flight_in_time: flight_in?.time || null,
-        flight_out_airline: flight_out?.airline || null,
-        flight_out_date: flight_out?.date || null,
-        flight_out_time: flight_out?.time || null,
-      }).eq('id', booking_id)
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    } else {
+    {
       const fIn = [flight_in?.airline, flight_in?.date, flight_in?.time].filter(Boolean).join(' ')
       const fOut = [flight_out?.airline, flight_out?.date, flight_out?.time].filter(Boolean).join(' ')
       const { error } = await supabase.from('bookings').update({
