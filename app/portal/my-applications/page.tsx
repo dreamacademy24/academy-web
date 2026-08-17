@@ -77,7 +77,7 @@ export default function MyApplicationsPage() {
     setCxSending(true);
     try {
       for (const rid of rowIds) {
-        await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token }) });
+        await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token, booking_id: bookingId }) });
       }
       // 로컬 반영
       setData(prev => ({ ...prev, fieldtrip: prev.fieldtrip.map((r: AnyRow) => rowIds.includes(String(r.id))
@@ -235,7 +235,7 @@ export default function MyApplicationsPage() {
     const res = await fetch("/api/portal/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table: cancelModal.table, id: cancelModal.id, reason: cancelReason }),
+      body: JSON.stringify({ table: cancelModal.table, id: cancelModal.id, reason: cancelReason, booking_id: bookingId }),
     });
     setCancelSaving(false);
     if (!res.ok) {
