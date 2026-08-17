@@ -47,7 +47,7 @@ export default function PortalPaymentPage() {
           setData(d);
         } else {
           const errData = await res.json().catch(() => ({}));
-          setError(errData.error || `조회 실패 (${res.status})`);
+          setError(res.status===404?"연결된 예약을 찾을 수 없어요. 예약이 아직 계정에 연결되지 않았을 수 있어요 — 드림아카데미 상담 창구로 문의해 주세요.":(errData.error || `조회 실패 (${res.status})`));
         }
       } catch (e) {
         setError("네트워크 오류: " + (e instanceof Error ? e.message : "unknown"));
