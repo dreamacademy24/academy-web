@@ -1334,8 +1334,9 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 /* ── 🕐 내 하루 타임라인 (내 업무 홈) ── */
 .empb-wrap{display:grid;grid-template-columns:330px minmax(0,1fr);gap:18px;align-items:start}
 .empb-wrap.empb-3col{grid-template-columns:330px 400px minmax(0,1fr)}
+.empb-wrap.empb-home2{grid-template-columns:340px minmax(0,640px)}
 @media(max-width:1500px){.empb-wrap.empb-3col{grid-template-columns:330px minmax(0,1fr)}.empb-wrap.empb-3col #empHomeDcl{grid-column:1/-1;order:3}}
-@media(max-width:1150px){.empb-wrap,.empb-wrap.empb-3col{grid-template-columns:1fr}}
+@media(max-width:1150px){.empb-wrap,.empb-wrap.empb-3col,.empb-wrap.empb-home2{grid-template-columns:1fr}}
 .tlw{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:16px}
 .tlw-h{font-size:13.5px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .tlw-h .tl-import{font-size:11px;color:var(--primary);cursor:pointer;font-weight:700;white-space:nowrap}
@@ -1599,6 +1600,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
             <div id="empSubNav" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 16px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5;align-items:center">
               <div id="empSubNavTitle" style="font-size:17px;font-weight:800;color:var(--text);padding:6px 16px 6px 2px;margin-right:4px;white-space:nowrap">내 업무 <span id="empSubNavSub" style="font-size:11px;color:var(--text3);font-weight:600"></span></div>
               <button id="empTab-home" onclick="setEmpTab('home')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🏠 홈</button>
+              <button id="empTab-board" onclick="setEmpTab('board')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📊 보드</button>
               <button id="empTab-checklist" onclick="setEmpTab('checklist')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 체크리스트</button>
               <button id="empTab-guest" onclick="setEmpTab('guest')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 손님</button>
               <button id="empTab-calendar" onclick="setEmpTab('calendar')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📅 달력</button>
@@ -3726,6 +3728,7 @@ function updateNavBadges(){
   _setNavBadge('badge-board',boardNotif+thCount);
   // 전체 알림
   _setNavBadge('badge-notif',(myNotifs||[]).length);
+  try{if(document.getElementById('empHomeNotif'))_renderEmpHomeNotif(curEmpId||(CU&&CU.id));}catch(e){}
 }
 function jsonHash(obj){return JSON.stringify(obj).length+'-'+JSON.stringify(obj).slice(0,100);}
 function startPolling(){
@@ -6922,10 +6925,11 @@ function setEmpTab(tab){
   if(tab==='apv')tab='approval';
   if(tab==='student'||tab==='booking')tab='guest';
   _empTab=tab;
-  ['home','checklist','guest','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
+  ['home','board','checklist','guest','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
   var empId=curEmpId||(CU&&CU.id);
   var d=document.getElementById('empDetail');
-  if(tab==='home'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId));}
+  if(tab==='home'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId),'home');}
+  else if(tab==='board'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId),'board');}
   else if(tab==='checklist'){renderEmpChecklistTab(empId);}
   else if(tab==='guest'){renderEmpGuestTab(empId);}
   else if(tab==='calendar'){renderEmpCalendarTab(empId);}
@@ -7771,9 +7775,49 @@ function renderEmpDetailEmpty(emp){
   html+='</div>';
   if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
   html+='</div>';
-  d.innerHTML='<div class="empb-wrap'+(isOwner?' empb-3col':'')+'"><div id="tlWidget"></div>'+(isOwner?'<div id="empHomeDcl" style="background:#fff;border:1px solid #ebedf3;border-radius:16px;padding:16px 18px;min-width:0"></div>':'')+html+'</div>';
-  if(isOwner){try{loadDailyCheck('empHomeDcl');}catch(e){}}
+  var mode=(arguments.length>1&&arguments[1])||(typeof _empTab!=='undefined'&&_empTab==='board'?'board':'home');
+  if(isOwner&&mode!=='board'){
+    /* 홈 = 새 소식 + 타임라인 + 오늘 체크리스트 (보드는 📊 보드 탭으로 분리, 2026-08-17) */
+    d.innerHTML='<div id="empHomeNotif"></div><div class="empb-wrap empb-home2"><div id="tlWidget"></div><div id="empHomeDcl" style="background:#fff;border:1px solid #ebedf3;border-radius:16px;padding:16px 18px;min-width:0"></div></div>';
+    try{loadDailyCheck('empHomeDcl');}catch(e){}
+    renderMyTimeline(empId);
+    try{_renderEmpHomeNotif(empId);}catch(e){}
+    return;
+  }
+  if(isOwner){
+    d.innerHTML='<div style="max-width:1100px">'+html+'</div>';
+    return;
+  }
+  d.innerHTML='<div class="empb-wrap"><div id="tlWidget"></div>'+html+'</div>';
   renderMyTimeline(empId);
+}
+function _renderEmpHomeNotif(empId){
+  var box=document.getElementById('empHomeNotif');if(!box)return;
+  var list=(myNotifs||[]).filter(function(n){return !n.is_read;});
+  window._empNotifList=list;
+  if(!list.length){box.innerHTML='';return;}
+  var ic={task_comment:'💬',notice:'📢',thread:'🚀',opinion:'💭',approval:'⚖️',task_assigned:'📌',task:'📌',unassigned_task:'📥'};
+  var h='<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:14px;padding:12px 16px;margin-bottom:14px;max-width:1000px">';
+  h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px">🔔 새 소식 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+list.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">댓글·새 글 — 누르면 해당 위치로 이동해요</span></div>';
+  list.slice(0,8).forEach(function(n,i){
+    h+='<div onclick="_empNotifGo('+i+')" style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:#7f1d1d">';
+    h+='<span>'+(ic[n.type]||'🔔')+'</span><span style="flex:1;min-width:0;font-weight:600">'+esc(String(n.message||'새 알림'))+'</span><span style="font-size:10.5px;color:#dc2626;white-space:nowrap">'+_actWhen(n.created_at)+'</span></div>';
+  });
+  if(list.length>8)h+='<div style="font-size:11px;color:#b91c1c;text-align:center;padding-top:2px">+'+(list.length-8)+'개 더</div>';
+  h+='</div>';
+  box.innerHTML=h;
+}
+function _empNotifGo(idx){
+  var n=(window._empNotifList||[])[idx];if(!n)return;
+  try{sbPatch('staff_notifications','id=eq.'+n.id,{is_read:true});n.is_read=true;myNotifs=(myNotifs||[]).filter(function(x){return x.id!==n.id;});}catch(e){}
+  try{updateNavBadges();}catch(e){}
+  var tp=n.type;
+  if((tp==='task_comment'||tp==='task'||tp==='task_assigned'||tp==='unassigned_task')&&n.ref_id){try{selectEmpTask(String(n.ref_id));return;}catch(e){}}
+  if(tp==='notice'){showPage('announcements');return;}
+  if(tp==='thread'){showPage('projects');return;}
+  if(tp==='opinion'){showPage('opinions');return;}
+  if(tp==='approval'){setEmpTab('approval');return;}
+  _renderEmpHomeNotif(curEmpId||(CU&&CU.id));
 }
 function _renderEmpChecklist(empId){
   var box=document.getElementById('empChecklistBox');if(!box)return;
