@@ -18,20 +18,7 @@ export async function GET(req: Request) {
     .eq('id', bookingId)
     .maybeSingle()
 
-  // fallback: bookings_new (옛 마이그레이션 잔재)
-  if (!booking) {
-    const { data: alt } = await supabase
-      .from('bookings_new')
-      .select('*')
-      .eq('id', bookingId)
-      .maybeSingle()
-    if (!alt) return NextResponse.json({ error: 'not found' }, { status: 404 })
-
-    const { data: students } = await supabase
-      .from('students').select('*').eq('booking_id', bookingId).order('name_kr')
-
-    return NextResponse.json({ booking: alt, source: 'new', students: students ?? [] })
-  }
+  if (!booking) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
   const { data: students } = await supabase
     .from('students').select('*').eq('booking_id', bookingId).order('name_kr')
