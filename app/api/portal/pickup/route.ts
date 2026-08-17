@@ -7,8 +7,6 @@ const supabase = createClient(
 )
 
 async function getBookingInfo(bookingId: string) {
-  const { data: newB } = await supabase.from('bookings_new').select('id, booker_name').eq('id', bookingId).maybeSingle()
-  if (newB) return { source: 'new' as const, booker_name: newB.booker_name, in_new: true }
   const { data: oldB } = await supabase.from('bookings').select('id, booker_name, reservation_no').eq('id', bookingId).maybeSingle()
   if (oldB) return { source: 'old' as const, booker_name: oldB.booker_name, reservation_no: oldB.reservation_no, in_new: false }
   return null
