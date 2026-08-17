@@ -7,8 +7,6 @@ const supabase = createClient(
 )
 
 async function loadBooking(bookingId: string) {
-  const { data: newB } = await supabase.from('bookings_new').select('*').eq('id', bookingId).maybeSingle()
-  if (newB) return { booking: newB, source: 'new' as const }
   const { data: oldB } = await supabase.from('bookings').select('*').eq('id', bookingId).maybeSingle()
   if (oldB) return { booking: oldB, source: 'old' as const }
   return null
@@ -88,16 +86,11 @@ export async function POST(req: Request) {
       raw: payment,
     })
 
-    if (result.source === 'new') {
-      await supabase.from('bookings_new').update({
-        paid_amount: newPaid,
-        payment_status: newStatus,
-      }).eq('id', booking_id)
-    } else {
-      await supabase.from('bookings').update({
-        status: newStatus === 'paid' ? '결제완료' : result.booking.status,
-      }).eq('id', booking_id)
-    }
+    await supabase.from('bookings').update({
+      paid_amount: newPaid,
+      payment_status: newStatus,
+      status: newStatus === 'paid' ? '결제완료' : result.booking.status,
+    }).eq('id', booking_id)
 
     // 어드민 알림 태스크
     const today = new Date().toISOString().slice(0, 10)
