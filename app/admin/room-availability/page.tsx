@@ -54,7 +54,7 @@ export default function RoomAvailability() {
 
   const firstFree = rows.find(r => r.free >= 1)
   const status = (f: number) => f <= 0 ? { t: '마감', c: '#dc2626', bg: '#fef2f2' } : f <= 2 ? { t: `임박 · ${f}룸`, c: '#c2410c', bg: '#fff7ed' } : { t: `여유 · ${f}룸`, c: '#15803d', bg: '#f0fdf4' }
-  const fmt = (w: string) => { const [y, mo, d] = w.split('-'); return `${mo}/${d}` }
+  const fmt = (w: string) => { const p = w.split('-'); return `${p[1]}/${p[2]}` }
   const months: { key: string; label: string; weeks: Wk[] }[] = []
   rows.forEach(r => {
     const key = r.week.slice(0, 7); const [y, mo] = key.split('-')
