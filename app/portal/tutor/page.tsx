@@ -680,7 +680,7 @@ export default function PortalTutorPage() {
     const res = await fetch("/api/portal/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason }),
+      body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason, booking_id: session?.booking_id }),
     });
     setCancelReqSaving(false);
     if (!res.ok) {
