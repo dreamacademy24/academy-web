@@ -1535,19 +1535,19 @@ function InvoicePageInner(){
     const n=(cP||0)+(cK||0);
     if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
     if(!a1CI){alert("체크인 날짜를 입력해주세요 (입실 시기·시즌 자동 판정).");return;}
-    /* 얼리버드 대상 = 체류 중간점 기준 · 얼리버드 단가 = 입실일(체크인) 시즌 기준 (공문: 비수기 20만/성수기 10만) */
+    /* 얼리버드 대상 = 체류 중간점 기준 · 단가 = 주별 가중 (비수기 주 20만/4 · 성수기 주 10만/4) */
     const _co=(cm==="combo"?a2CO:a1CO)||a1CI;
     const _midN=Math.floor((new Date(_co).getTime()-new Date(a1CI).getTime())/864e5/2);
     const mid=addDays(a1CI,Math.max(0,_midN));
     const is27=mid>="2027-03-01"&&mid<="2028-02-29";
-    const pk=isPeak(a1CI);
+    const _mx=seasonMixInv(a1CI,Math.max(1,w));
+    const ebPer=is27?(_mx.off*20+_mx.peak*10)/4*(Math.min(w,4)/Math.max(1,w)):0;
     const factor=Math.min(w,4)/4;
     const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
     const _wk=w<4?` · ${w}주 적용`:"";
-    const eb=is27?(pk?10:20):0;
     const isC9=a1T==="cubenine"||(cm==="combo"&&a2T==="cubenine");
     const lines:{name:string;amount:number}[]=[];
-    if(eb>0)lines.push({name:`다온맘 얼리버드 할인 (${pk?"성수기":"비수기"} 입실 · 1인 ${_ep(eb)}×${n}명${_wk})`,amount:Math.round(eb*factor*n)*10000});
+    if(ebPer>0){const _pt=Number.isInteger(ebPer)?String(ebPer):ebPer.toFixed(1);const _seg=(_mx.off>0&&_mx.peak>0)?"비수기 "+_mx.off+"주+성수기 "+_mx.peak+"주 · ":(_mx.peak>0?"성수기 · ":"비수기 · ");lines.push({name:"다온맘 얼리버드 할인 ("+_seg+"1인 "+_pt+"만×"+n+"명)",amount:Math.round(ebPer*n*10000)});}
     if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
     if(cash&&a1CI>="2026-08-01"&&a1CI<="2026-08-31")lines.push({name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
     if(isC9)lines.push({name:`다온맘 큐브나인 추가 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
