@@ -288,7 +288,7 @@ export default function PortalTutorPage() {
           setBookingStudents(sd.students || []);
           if (sd.booker) setBookerInfo(sd.booker);
           // 튜터 가능 구간 = 드림하우스 체류 구간 (제이파크·큐브 리조트 단독은 방문 튜터 불가)
-          let tStart = sd.checkin_date || "", tEnd = sd.checkout_date || "", tAllowed = true;
+          let tStart = sd.checkin_date || "", tEnd = sd.checkout_date || "", tAllowed = true, tAcademy = false;
           try {
             const bRes = await fetch(`/api/bookings/${session.booking_id}`);
             if (bRes.ok) {
@@ -302,13 +302,13 @@ export default function PortalTutorPage() {
               if (segs.length) {
                 const dh = segs.find((x: any[]) => String(x[0]) === "dreamhouse");
                 if (dh) { tStart = String(dh[1] || tStart).slice(0, 10); tEnd = String(dh[2] || tEnd).slice(0, 10); }
-                else tAllowed = false; // 콤보인데 드림하우스 구간 없음 = 리조트 단독
+                else tAcademy = true; // 콤보인데 드림하우스 구간 없음 = 리조트 단독 → 아카데미 내 수업
               } else if (at.includes("제이파크") || at.includes("큐브")) {
-                tAllowed = false; // 리조트 단독 투숙
+                tAcademy = true; // 리조트 단독 투숙 → 아카데미 내 수업 (체류 기간 전체 신청 가능)
               }
             }
           } catch { /* 확인 실패 시 기존 규칙(투숙 기간) 유지 */ }
-          setBookingInfo({ _loaded: true, checkin_date: sd.checkin_date, checkout_date: sd.checkout_date, tutor_allowed: tAllowed, tutor_start: tStart, tutor_end: tEnd });
+          setBookingInfo({ _loaded: true, checkin_date: sd.checkin_date, checkout_date: sd.checkout_date, tutor_allowed: tAllowed, tutor_start: tStart, tutor_end: tEnd, academy_mode: tAcademy });
         }
       }
     })();
@@ -475,13 +475,21 @@ export default function PortalTutorPage() {
 
     // 튜터 가능 기간(드림하우스 체류 구간) + 종료일<시작일 가드
     {
-      if (bookingInfo && bookingInfo.tutor_allowed === false) { setMsg("리조트(제이파크·큐브나인) 단독 투숙은 방문 튜터 수업 신청이 불가해요."); return; }
+      const _academy = !!(bookingInfo && (bookingInfo as any).academy_mode);
+      if (_academy) {
+        if (validBlocks.some(b => b.days.includes("토") || b.days.includes("일"))) { setMsg("리조트 투숙 튜터 수업(아카데미 내 진행)은 월~금만 가능해요."); return; }
+        for (const b of validBlocks) {
+          const st = (b.time || "").slice(0, 5);
+          if (b.sessions_per_day === 2 && st !== "16:00") { setMsg("아카데미 수업 2타임은 16:00 시작(16:00~17:40)만 가능해요."); return; }
+          if (b.sessions_per_day !== 2 && st !== "16:00" && st !== "16:50") { setMsg("아카데미 수업은 16:00~16:50 / 16:50~17:40 두 타임만 가능해요."); return; }
+        }
+      }
       const bs = bookingInfo?.tutor_start || bookingInfo?.check_in || bookingInfo?.checkin_date || "";
       const be = bookingInfo?.tutor_end || bookingInfo?.check_out || bookingInfo?.checkout_date || "";
       if (!form.start_date || !form.end_date) { setMsg("수업 시작일과 종료일을 모두 선택해주세요."); return; }
       if (form.end_date < form.start_date) { setMsg("종료일은 시작일 이후여야 해요."); return; }
       if ((bs && form.start_date < bs) || (be && form.end_date > be)) {
-        setMsg(`튜터 수업은 드림하우스 체류 기간(${bs} ~ ${be}) 안에서만 신청할 수 있어요.`); return;
+        setMsg(`튜터 수업은 ${_academy ? "체류 기간" : "드림하우스 체류 기간"}(${bs} ~ ${be}) 안에서만 신청할 수 있어요.`); return;
       }
     }
 
@@ -596,7 +604,7 @@ export default function PortalTutorPage() {
         total_amount: _totalAmount,
         privacy_agreed: true,
         rules_agreed: true,
-        slot_label: null,
+        slot_label: (bookingInfo && (bookingInfo as any).academy_mode) ? "아카데미 수업(리조트 투숙)" : null,
       }),
     });
     setSaving(false);
@@ -680,7 +688,7 @@ export default function PortalTutorPage() {
     const res = await fetch("/api/portal/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason, booking_id: session?.booking_id }),
+      body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason }),
     });
     setCancelReqSaving(false);
     if (!res.ok) {
@@ -1447,7 +1455,14 @@ export default function PortalTutorPage() {
             (!!form.end_date   && !!be && form.end_date   > be) ||
             (!!form.start_date && !!form.end_date && form.end_date < form.start_date);
           const isCombo = !!bookingInfo && bookingInfo.tutor_allowed !== false && !!bookingInfo.tutor_start && (bookingInfo.tutor_start !== (bookingInfo.checkin_date || "") || bookingInfo.tutor_end !== (bookingInfo.checkout_date || ""));
+          const academyB = !!bookingInfo && !!(bookingInfo as any).academy_mode;
           return (<>
+            {academyB && (
+              <div style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", borderRadius: 12, padding: "12px 16px", fontSize: 13, fontWeight: 700, color: "#1e40af", marginBottom: 10 }}>
+                🏫 리조트(제이파크·큐브나인) 투숙 고객님의 튜터 수업은 <b>아카데미 내</b>에서 진행돼요.<br />
+                <span style={{ fontWeight: 500 }}>월~금 · 16:00~16:50 / 16:50~17:40 (하루 최대 2타임) · 정규 수업 종료 후 이어서 진행됩니다.</span>
+              </div>
+            )}
             {notAllowed && (
               <div style={{ background: "#fef2f2", border: "1.5px solid #fca5a5", borderRadius: 12, padding: "12px 16px", fontSize: 13.5, fontWeight: 700, color: "#991b1b", marginBottom: 10 }}>
                 🙏 방문 튜터 수업은 <b>드림하우스 체류 중에만</b> 진행돼요.<br />
@@ -1658,18 +1673,20 @@ export default function PortalTutorPage() {
 
     {timePickerOpen && (() => {
       const peak = isPeakSeason(form.start_date);
+      const academyM = !!(bookingInfo && (bookingInfo as any).academy_mode);
       const curBlock = blocks[timeBlockIdx] || INIT_BLOCK;
       const curSessions = curBlock.sessions_per_day;
       // 현재 블록 time에서 시작 시각 파싱, 없으면 기본값
       const m = (curBlock.time || "").match(/^(\d{1,2}):(\d{2})/);
-      const initial = m ? `${m[1].padStart(2,"0")}:${m[2]}` : (peak ? "17:00" : "10:00");
+      const initial = m ? `${m[1].padStart(2,"0")}:${m[2]}` : (academyM ? "16:00" : peak ? "17:00" : "10:00");
       return (
         <div className="modal-bg" onClick={() => setTimePickerOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>수업 시간 선택</h3>
             <div className="modal-sub">
               {curSessions}타임 ({curSessions * 50}분) 시작 시간을 입력하세요. (10:00 ~ 20:00)
-              {peak && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
+              {academyM && <><br/><span style={{color:'#1e40af',fontWeight:700}}>※ 리조트 투숙(아카데미 내 수업)은 16:00 / 16:50 시작만 가능해요.</span></>}
+              {!academyM && peak && <><br/><span style={{color:'#dc2626',fontWeight:700}}>※ 성수기는 17:00 이후만 가능합니다.</span></>}
             </div>
             <input
               id="tutor-time-input"
@@ -1682,9 +1699,9 @@ export default function PortalTutorPage() {
             />
             <div style={{marginTop:12,fontSize:11,color:"#6b7c93",fontWeight:600}}>빠른 선택</div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginTop:6}}>
-              {["10:00","13:00","14:00","15:30","17:00","17:30","18:00","19:00"].map(t => {
+              {(academyM ? ["16:00","16:50"] : ["10:00","13:00","14:00","15:30","17:00","17:30","18:00","19:00"]).map(t => {
                 const [h] = t.split(":").map(Number);
-                const disabled = peak && h < 17;
+                const disabled = !academyM && peak && h < 17;
                 return (
                   <button
                     key={t}
@@ -1711,7 +1728,10 @@ export default function PortalTutorPage() {
                   if (!/^\d{2}:\d{2}$/.test(v)) { toastErr("시간 형식이 올바르지 않습니다 (예: 14:30)"); return; }
                   const [hh, mm] = v.split(":").map(Number);
                   if (hh < 10 || hh > 20 || (hh === 20 && mm > 0)) { toastErr("시작 시간은 10:00 ~ 20:00 범위 내여야 합니다."); return; }
-                  if (peak && hh < 17) { toastErr("성수기에는 17:00 이후 시작만 가능합니다."); return; }
+                  if (academyM) {
+                    const okA = v === "16:00" || (v === "16:50" && curSessions !== 2);
+                    if (!okA) { toastErr(curSessions === 2 ? "아카데미 수업 2타임은 16:00 시작만 가능해요." : "아카데미 수업은 16:00 또는 16:50 시작만 가능해요."); return; }
+                  } else if (peak && hh < 17) { toastErr("성수기에는 17:00 이후 시작만 가능합니다."); return; }
                   setBlocks(prev => prev.map((x, i) => i === timeBlockIdx ? { ...x, time: formatTimeRange(v, x.sessions_per_day) } : x));
                   setTimePickerOpen(false);
                 }}
