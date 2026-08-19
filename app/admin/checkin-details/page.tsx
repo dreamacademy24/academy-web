@@ -285,32 +285,10 @@ function CheckinDetailsInner() {
               if (newOut) setFlightOut(newOut);
               if (f.out_date) setFlightOutDate(f.out_date);
               if (f.out_time) setFlightOutTime(f.out_time);
-              // 3) bookings 테이블에 자동 저장 (확정예약/픽드랍 등에 자동 연동)
-              const flightUpdate: Record<string, string> = {};
-              if (f.in_airline) flightUpdate.flight_in_airline = f.in_airline;
-              if (f.in_no) flightUpdate.flight_in_no = f.in_no;
-              if (f.in_date) flightUpdate.flight_in_date = f.in_date;
-              if (f.in_time) flightUpdate.flight_in_time = f.in_time;
-              if (f.in_origin) flightUpdate.flight_in_origin = f.in_origin;
-              if (f.out_airline) flightUpdate.flight_out_airline = f.out_airline;
-              if (f.out_no) flightUpdate.flight_out_no = f.out_no;
-              if (f.out_date) flightUpdate.flight_out_date = f.out_date;
-              if (f.out_time) flightUpdate.flight_out_time = f.out_time;
-              if (f.out_destination) flightUpdate.flight_out_destination = f.out_destination;
-              // 통합 flight_in/flight_out 필드도 업데이트
-              if (newIn) flightUpdate.flight_in = newIn;
-              if (newOut) flightUpdate.flight_out = newOut;
-              if (Object.keys(flightUpdate).length > 0) {
-                try {
-                  await fetch(`/api/bookings/${selId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(flightUpdate),
-                  });
-                } catch { /* 저장 실패해도 UI는 유지 */ }
-              }
-              setMsg("✅ 항공권 인식 완료! 예약 정보에 자동 저장되었습니다.");
-              setTimeout(() => setMsg(""), 5000);
+              // ⚠️ 자동 DB 저장 제거 (2026-08 Candice 요청): OCR이 담당자의 수동 수정값을
+              // 덮어쓰던 버그. 이제 인식 결과는 입력칸에만 채우고, 담당자가 확인 후 [저장]을 눌러야 반영됨.
+              setMsg("✅ 항공권 인식 완료! 시간·편명을 확인하고 아래 [저장] 버튼을 눌러 반영해주세요. (자동 저장되지 않아요)");
+              setTimeout(() => setMsg(""), 7000);
             }
           }
         } catch { /* OCR 실패해도 이미지 저장은 완료 */ }
