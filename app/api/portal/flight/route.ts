@@ -78,9 +78,9 @@ export async function PATCH(req: Request) {
     const bookerName = result.booking.booker_name || '손님'
     const f = fields as Record<string, string>
     await supabase.from('staff_tasks').insert({
-      title: `✈️ ${bookerName}님이 항공편을 등록/변경했습니다`,
+      title: `✈️ ${bookerName}님이 항공권을 등록했어요 — 확인해주세요`,
       assignee: 'all', due: today, done: false, shared: true,
-      note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${f.flight_in_airline || ''} ${f.flight_in_no || ''} ${f.flight_in_date || ''} ${f.flight_in_time || ''}\n출국: ${f.flight_out_airline || ''} ${f.flight_out_no || ''} ${f.flight_out_date || ''} ${f.flight_out_time || ''}`,
+      note: `${bookerName}님이 항공권 정보를 등록/변경했어요. 확인 후 체크인 디테일에 반영해주세요.\n\n체크인: ${checkIn || '-'}\n입국: ${f.flight_in_airline || ''} ${f.flight_in_no || ''} ${f.flight_in_date || ''} ${f.flight_in_time || ''}\n출국: ${f.flight_out_airline || ''} ${f.flight_out_no || ''} ${f.flight_out_date || ''} ${f.flight_out_time || ''}\n\n바로가기: https://www.dreamacademyph.com/admin/bookings/${booking_id}`,
     })
     try {
       await supabase.from('customer_activity').insert({
@@ -138,12 +138,12 @@ export async function PUT(req: Request) {
     // 어드민 알림 태스크
     const today = new Date().toISOString().slice(0, 10)
     await supabase.from('staff_tasks').insert({
-      title: `✈️ ${bookerName}님이 항공편을 등록/변경했습니다`,
+      title: `✈️ ${bookerName}님이 항공권을 등록했어요 — 확인해주세요`,
       assignee: 'all',
       due: today,
       done: false,
       shared: true,
-      note: `예약 ID: ${booking_id}\n체크인: ${checkIn || '-'}\n입국: ${flight_in?.airline || ''} ${flight_in?.date || ''} ${flight_in?.time || ''}\n출국: ${flight_out?.airline || ''} ${flight_out?.date || ''} ${flight_out?.time || ''}`,
+      note: `${bookerName}님이 항공권 정보를 등록/변경했어요. 확인 후 체크인 디테일에 반영해주세요.\n\n체크인: ${checkIn || '-'}\n입국: ${flight_in?.airline || ''} ${flight_in?.date || ''} ${flight_in?.time || ''}\n출국: ${flight_out?.airline || ''} ${flight_out?.date || ''} ${flight_out?.time || ''}\n\n바로가기: https://www.dreamacademyph.com/admin/bookings/${booking_id}`,
     })
     try {
       await supabase.from('customer_activity').insert({
