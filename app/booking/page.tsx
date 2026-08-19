@@ -67,6 +67,7 @@ export default function BookingPage() {
     { type: "dreamhouse", checkin: "", checkout: "" },
   ]);
   const [dates, setDates] = useState({ checkIn: "", checkOut: "", pickupPlace: "공항" });
+  const [ciSnapNote, setCiSnapNote] = useState("");
   const [flightIn, setFlightIn] = useState<Flight>({ ...emptyFlight });
   const [flightOut, setFlightOut] = useState<Flight>({ ...emptyFlight });
   const [students, setStudents] = useState<Student[]>([{ id: 1, korName: "", engName: "", age: "", grade: "주니어", photo: "O" }]);
@@ -597,7 +598,29 @@ export default function BookingPage() {
             <div className="fr">
               <div className="fg">
                 <label className="fl">체크인{!isCombo && <span className="req">*</span>}</label>
-                <input className="fi" type="date" value={dates.checkIn} readOnly={isCombo} onChange={e => { if (isCombo) return; const v = e.target.value; if (v) { const dw = new Date(v + "T00:00:00").getDay(); if (dw !== 0 && dw !== 6) { alert("체크인은 토요일 또는 일요일만 선택할 수 있어요.\n(표준 체크인 = 토요일)"); return; } } setDates({ ...dates, checkIn: v }); }} style={isCombo ? { background: "#f3f4f6" } : undefined} />
+                <input className="fi" type="date" value={dates.checkIn} readOnly={isCombo} onChange={e => {
+                  if (isCombo) return;
+                  const v = e.target.value;
+                  if (v) {
+                    const isResortOnly = bType === "jaypark" || bType === "cubenine";
+                    const allow = isResortOnly ? [0, 5, 6] : [0, 6];
+                    const d = new Date(v + "T00:00:00");
+                    if (!allow.includes(d.getDay())) {
+                      let n = 0;
+                      while (!allow.includes(d.getDay()) && n < 7) { d.setDate(d.getDate() + 1); n++; }
+                      const mo = String(d.getMonth() + 1).padStart(2, "0"), da = String(d.getDate()).padStart(2, "0");
+                      const nv = `${d.getFullYear()}-${mo}-${da}`;
+                      const dowKr = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+                      setCiSnapNote(`평일은 선택할 수 없어 가까운 ${dowKr}요일(${mo}/${da})로 자동 조정했어요.`);
+                      setDates({ ...dates, checkIn: nv });
+                      return;
+                    }
+                    setCiSnapNote("");
+                  }
+                  setDates({ ...dates, checkIn: v });
+                }} style={isCombo ? { background: "#f3f4f6" } : undefined} />
+                {!isCombo && ciSnapNote && <div style={{ fontSize: 11.5, color: "#b45309", fontWeight: 700, marginTop: 3 }}>⚠️ {ciSnapNote}</div>}
+                {!isCombo && !ciSnapNote && <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 3 }}>체크인은 {(bType === "jaypark" || bType === "cubenine") ? "금·토·일요일" : "토·일요일"}만 가능해요 (표준 = 토요일)</div>}
                 {isCombo && <div style={{ fontSize: 11, color: "#6b7c93", marginTop: 3 }}>콤보는 위 &apos;숙소 구간&apos;에서 입력합니다</div>}
               </div>
               <div className="fg">
