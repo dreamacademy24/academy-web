@@ -3813,6 +3813,19 @@ function cleanNote(v){
   }
   return t;
 }
+function _taskCreatedInfo(t){
+  var c=t.createdAt||t.created_at; if(!c)return null;
+  var d=new Date(c); if(isNaN(d.getTime()))return null;
+  var days=Math.floor((Date.now()-new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime())/86400000);
+  return {md:(d.getMonth()+1)+'/'+d.getDate(), days:days};
+}
+function _taskAgeHtml(t,done){
+  var a=_taskCreatedInfo(t); if(!a)return '';
+  var hot=!done&&a.days>=3;
+  var col=hot?'#dc2626':'var(--text3)';
+  var txt='\uD83D\uDCDD '+a.md+(a.days>0?' \u00B7 '+a.days+'\uC77C\uCC38':' \u00B7 \uC624\uB298');
+  return '<span title="\uC791\uC131\uC77C" style="font-size:10.5px;font-weight:'+(hot?'700':'600')+';color:'+col+'">'+txt+'</span>';
+}
 
 let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
     projects=ld('tm_p',[]),threads=ld('tm_th',{}),taskComments=ld('tm_tc',{});
@@ -5674,7 +5687,7 @@ function _btRow(t){
   var creator=(t.createdBy&&t.createdBy!==t.assignee)?getP(t.createdBy):null;
   var creatorHtml=creator?'<span title="지시한 사람: '+esc(creator.name)+'" style="font-size:10.5px;font-weight:800;color:#6d28d9;background:#ede9fe;border-radius:6px;padding:2px 6px;margin-right:6px;vertical-align:middle;white-space:nowrap">'+esc(creator.name)+' ➜</span>':'';
   return '<tr class="bt-row" '+(isArch?'':'onclick="openBoardTask(\''+t.id+'\')" ')+'style="'+(stale&&!dn?'opacity:.62':'')+'">'+chk+
-    '<td style="max-width:340px"><span style="font-weight:'+((un||t.priority==='high')?'800':'600')+';'+(dn?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+((un&&!dn)?' <span class="bt-badge" style="background:#ede9fe;color:#6d28d9">지시</span>':'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'</td>'+
+    '<td style="max-width:340px"><span style="font-weight:'+((un||t.priority==='high')?'800':'600')+';'+(dn?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+(t.priority==='high'?'🚨 ':'')+esc(t.title||'')+'</span>'+((un&&!dn)?' <span class="bt-badge" style="background:#ede9fe;color:#6d28d9">지시</span>':'')+newBadgeHtml(t)+unseenBadgeHtml(t)+'<div style="margin-top:3px">'+_taskAgeHtml(t,dn)+'</div></td>'+
     '<td style="white-space:nowrap">'+creatorHtml+'<span style="display:inline-flex;width:24px;height:24px;border-radius:7px;background:'+ec+';color:#fff;align-items:center;justify-content:center;font-weight:800;font-size:11px;vertical-align:middle;margin-right:6px">'+ei+'</span><span style="font-size:13.5px;font-weight:700;color:var(--text2)">'+esc(en)+(extra?' 외 '+extra:'')+'</span></td>'+
     '<td>'+(dueT?'<span class="bt-badge" style="background:'+(dueBad?'#fee2e2':'#f1f5f9')+';color:'+(dueBad?'#b91c1c':'#475569')+'">'+dueT.text+'</span>':'<span style="color:var(--text3)">—</span>')+'</td>'+
     '<td class="bt-hm"><span class="bt-pbar"><i style="width:'+Math.min(100,prog)+'%"></i></span><span style="font-size:12.5px;color:var(--text3)">'+prog+'%</span></td>'+
@@ -7543,7 +7556,7 @@ function renderEmpDetailEmpty(emp){
       h+='</div>';
     }
     h+='<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;padding-right:46px;'+(done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+esc(t.title||'')+'</div>';
-    var meta=[dueBadge(t),clTxt(t),(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':'')].filter(function(x){return x;});
+    var meta=[_taskAgeHtml(t,done),dueBadge(t),clTxt(t),(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':'')].filter(function(x){return x;});
     if(meta.length)h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+meta.join('')+'</div>';
     h+='</div>';
     return h;
