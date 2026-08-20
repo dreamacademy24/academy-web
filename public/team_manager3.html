@@ -1591,6 +1591,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
             <div id="empSubNav" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin:0 0 16px;flex-wrap:wrap;position:sticky;top:0;background:var(--bg);z-index:5;align-items:center">
               <div id="empSubNavTitle" style="font-size:17px;font-weight:800;color:var(--text);padding:6px 16px 6px 2px;margin-right:4px;white-space:nowrap">내 업무 <span id="empSubNavSub" style="font-size:11px;color:var(--text3);font-weight:600"></span></div>
               <button id="empTab-home" onclick="setEmpTab('home')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🏠 홈</button>
+              <button id="empTab-board" onclick="setEmpTab('board')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📊 보드</button>
               <button id="empTab-checklist" onclick="setEmpTab('checklist')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📋 체크리스트</button>
               <button id="empTab-guest" onclick="setEmpTab('guest')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">🎓 손님</button>
               <button id="empTab-calendar" onclick="setEmpTab('calendar')" style="padding:9px 16px;font-size:13.5px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit">📅 달력</button>
@@ -6745,10 +6746,11 @@ function setEmpTab(tab){
   if(tab==='apv')tab='approval';
   if(tab==='student'||tab==='booking')tab='guest';
   _empTab=tab;
-  ['home','checklist','guest','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
+  ['home','board','checklist','guest','calendar','approval'].forEach(function(k){var b=document.getElementById('empTab-'+k);if(b){var on=k===tab;b.style.color=on?'var(--primary)':'var(--text2)';b.style.borderBottom=on?'2px solid var(--primary)':'2px solid transparent';b.style.fontWeight=on?'800':'600';}});
   var empId=curEmpId||(CU&&CU.id);
   var d=document.getElementById('empDetail');
   if(tab==='home'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId));}
+  else if(tab==='board'){_empSelTaskId=null;renderEmpDetailEmpty(getP(empId));}
   else if(tab==='checklist'){renderEmpChecklistTab(empId);}
   else if(tab==='guest'){renderEmpGuestTab(empId);}
   else if(tab==='calendar'){renderEmpCalendarTab(empId);}
@@ -7575,7 +7577,10 @@ function renderEmpDetailEmpty(emp){
   html+='</div>';
   if(!pool.length)html+='<div class="tm-empty" style="margin-top:8px"><span class="ic">📋</span>등록된 업무가 없어요'+(isOwner?' — 위 + 버튼으로 추가':'')+'</div>';
   html+='</div>';
-  d.innerHTML='<div class="empb-wrap'+(isOwner?' empb-3col':'')+'"><div id="tlWidget"></div>'+(isOwner?'<div id="empHomeDcl" style="background:#fff;border:1px solid #ebedf3;border-radius:16px;padding:16px 18px;min-width:0"></div>':'')+html+'</div>';
+  // 📊 보드 탭: 보드만 단독 표시
+  if(_empTab==='board'){ d.innerHTML=html; return; }
+  // 🏠 홈 탭: 타임라인 + 체크리스트만 (보드는 별도 탭)
+  d.innerHTML='<div class="empb-wrap"><div id="tlWidget"></div>'+(isOwner?'<div id="empHomeDcl" style="background:#fff;border:1px solid #ebedf3;border-radius:16px;padding:16px 18px;min-width:0"></div>':'')+'</div>';
   if(isOwner){try{loadDailyCheck('empHomeDcl');}catch(e){}}
   renderMyTimeline(empId);
 }
