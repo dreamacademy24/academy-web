@@ -3797,6 +3797,21 @@ function todayStr(){return localDateStr(new Date());}
 function mondayOfWeek(ds){var d=parseLocalDate(ds);if(!d)return ds;var dow=d.getDay();d.setDate(d.getDate()-((dow+6)%7));return localDateStr(d);}
 function addDaysStr(ds,n){var d=parseLocalDate(ds);d.setDate(d.getDate()+n);return localDateStr(d);}
 function esc(t){var s=String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');s=s.replace(/(https?:\/\/[^\s&<>"{}|\\^`\[\]]+)/g,function(u){return '<a href="'+u.replace(/&amp;/g,'&')+'" target="_blank" rel="noopener noreferrer" style="color:#6366f1;text-decoration:underline;word-break:break-all;">'+u+'</a>';});return s.replace(/\n/g,'<br>');}
+function cleanNote(v){
+  if(!v)return '';
+  var t=String(v);
+  // HTML 태그/엔티티가 섞여 있으면 정리 (붙여넣기로 들어간 서식 제거)
+  if(/<[a-z!\/][\s\S]*?>/i.test(t)||/&(nbsp|amp|lt|gt|quot|#\d+);/i.test(t)){
+    t=t.replace(/<\s*br\s*\/?\s*>/gi,'\n')
+       .replace(/<\/(div|p|li|h[1-6])\s*>/gi,'\n')
+       .replace(/<[^>]+>/g,'')
+       .replace(/&nbsp;/gi,' ')
+       .replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
+       .replace(/&quot;/gi,'"').replace(/&#0?39;/gi,"'").replace(/&#0?34;/gi,'"')
+       .replace(/\n{3,}/g,'\n\n').replace(/[ \t]+\n/g,'\n').trim();
+  }
+  return t;
+}
 
 let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
     projects=ld('tm_p',[]),threads=ld('tm_th',{}),taskComments=ld('tm_tc',{});
@@ -5868,7 +5883,7 @@ function renderBoardTaskDetail(taskId){
     html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
   }
   if(t.note){
-    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
+    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(cleanNote(t.note))+'</div>';
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
@@ -6064,7 +6079,7 @@ function renderBoardTask(f){
     nameDiv.appendChild(titleEl);
     var tProj=t.projId?projects.find(function(p){return p.id===t.projId;}):null;
     if(tProj){const pBadge=document.createElement('span');pBadge.style.cssText='display:inline-block;font-size:10px;padding:1px 6px;border-radius:10px;margin-top:2px;font-weight:600;background:'+tProj.color+'22;color:'+tProj.color+';border:1px solid '+tProj.color+'44';pBadge.textContent='🚀 '+tProj.name;nameDiv.appendChild(pBadge);}
-    if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=t.note;nameDiv.appendChild(ne);}
+    if(t.note){const ne=document.createElement('div');ne.style.cssText='font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';ne.textContent=cleanNote(t.note);nameDiv.appendChild(ne);}
     if(t.createdAt){const cDate=document.createElement('div');cDate.style.cssText='font-size:11px;color:#9ca3af;margin-top:2px';cDate.textContent='작성 '+shortCreated(t.createdAt);nameDiv.appendChild(cDate);}
     if(t.files&&t.files.length){const fd=document.createElement('div');fd.innerHTML=renderTaskFiles(t);nameDiv.appendChild(fd);}
     row.appendChild(nameDiv);
@@ -7807,7 +7822,7 @@ function renderEmpDetail(taskId){
     html+='<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>진행률</span><span style="color:'+ec+';font-weight:700">'+prog+'%</span></div><div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+prog+'%;background:'+ec+'"></div></div></div>';
   }
   if(t.note){
-    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(t.note)+'</div>';
+    html+='<div style="background:var(--surface2);padding:12px;border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:14px;white-space:pre-wrap;line-height:1.6">'+esc(cleanNote(t.note))+'</div>';
   }
   if(t.checklist&&!t.checklist._sub&&Array.isArray(t.checklist)&&t.checklist.length){
     console.log('[taskDetail] FLAT checklist branch, items:',t.checklist.length,'canEdit:',canEdit,'taskId:',t.id);
