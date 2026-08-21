@@ -4,6 +4,8 @@ import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { supabase } from "@/lib/supabase";
 import { fetchDeployedHolidays, holidaysInRange, type HolidayItem } from "@/lib/holidays";
 import { HolidayBanner, HolidayPopup } from "@/components/HolidayNotice";
+import RefundPolicyModal from "@/components/RefundPolicyModal";
+import { getRefundPolicyKeys } from "@/lib/refundPolicy";
 
 interface Student { id: number; korName: string; engName: string; age: string; grade: string; photo: string }
 interface Flight { airline: string; flightNo: string; date: string; time: string; place: string; undecided: boolean }
@@ -53,6 +55,7 @@ export default function BookingNonPackagePage() {
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
   // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
   const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
   const [holidayPopup, setHolidayPopup] = useState<HolidayItem[] | null>(null);
@@ -480,7 +483,11 @@ export default function BookingNonPackagePage() {
           <input type="checkbox" id="agreed-checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
             style={{width:18,height:18,marginTop:2,flexShrink:0,cursor:"pointer"}} />
           <label htmlFor="agreed-checkbox" style={{flex:1,fontSize:13,lineHeight:1.5,color:"#374151",cursor:"pointer"}}>
-            <strong style={{color:"#111"}}>입력 내용을 확인하였고 예약에 동의합니다.</strong>
+            <strong style={{color:"#111"}}>입력 내용을 확인하였고, 환불규정도 확인하였으며, 예약에 동의합니다.</strong>
+            <button type="button" onClick={(e)=>{e.preventDefault();setPolicyOpen(true);}}
+              style={{marginLeft:8,padding:"3px 10px",fontSize:12,background:"#fff",border:"1px solid #3b82f6",color:"#3b82f6",borderRadius:6,cursor:"pointer",fontWeight:600}}>
+              환불규정 보기 →
+            </button>
           </label>
         </div>
 
@@ -490,6 +497,11 @@ export default function BookingNonPackagePage() {
       </div>
     </div>
     {/* 휴무일 안내 팝업 (공용 컴포넌트) */}
+    <RefundPolicyModal
+      open={policyOpen}
+      onClose={() => setPolicyOpen(false)}
+      policyKeys={getRefundPolicyKeys(bType === "commute" ? "통학형" : bType === "jp_only" ? "제이파크" : bType === "cn_only" ? "큐브나인" : "드림하우스")}
+    />
     <HolidayPopup hits={holidayPopup} onClose={() => setHolidayPopup(null)} variant="roomonly" />
   </>);
 }
