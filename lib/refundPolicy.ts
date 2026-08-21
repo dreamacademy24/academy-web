@@ -1,6 +1,6 @@
 // 부킹/견적 페이지 공유 환불 규정 데이터
 
-export type RefundPolicyKey = "dreamhouse" | "jpark" | "cubenine";
+export type RefundPolicyKey = "dreamhouse" | "jpark" | "cubenine" | "commute";
 
 export interface PolicySection {
   icon: string;
@@ -54,7 +54,7 @@ const COMMON_REFUND_RULE: PolicySection = {
 };
 
 // 동의 내역 보관용 규정 버전 — 문구가 바뀔 때마다 날짜 갱신 (booking_consents.policy_version에 저장)
-export const REFUND_POLICY_VERSION = "2026-07-28";
+export const REFUND_POLICY_VERSION = "2026-08-20";
 
 const COMMON_INSURANCE: PolicySection = {
   icon: "🛡️",
@@ -220,16 +220,53 @@ const CUBENINE_POLICY: RefundPolicy = {
   ],
 };
 
+// === 통학형 ===
+const COMMUTE_POLICY: RefundPolicy = {
+  key: "commute",
+  label: "통학형",
+  title: "통학형 프로그램 규정 안내",
+  sections: [
+    {
+      icon: "💳",
+      title: "등록 및 결제 안내",
+      bullets: [
+        "예약금: 총 금액의 30% (입금 확인 후 등록 완료)",
+        "잔금 납부: 잔금은 입실(수업 시작)일 기준 8주 전까지 전액 입금해주셔야 합니다.",
+        "등록 완료 후 환불/변경: 등록 완료 후에는 환불 및 변경이 불가하오니 신중히 결정 부탁드립니다.",
+      ],
+    },
+    {
+      icon: "🌀",
+      title: "자연재해 및 불가항력 상황",
+      bullets: [
+        "태풍, 지진, 홍수 등으로 수업이 불가능한 경우 일정 조정 가능",
+        "단, 학원이 정상 운영 가능한 경우 환불 및 변경 불가",
+      ],
+    },
+    COMMON_PROGRAM_NOTICE,
+    COMMON_REFUND_RULE,
+    COMMON_INSURANCE,
+    {
+      icon: "📋",
+      title: "기타 안내",
+      bullets: [...COMMON_ETC_TAIL],
+    },
+  ],
+};
+
 export const REFUND_POLICIES: Record<RefundPolicyKey, RefundPolicy> = {
   dreamhouse: DREAMHOUSE_POLICY,
   jpark: JPARK_POLICY,
   cubenine: CUBENINE_POLICY,
+  commute: COMMUTE_POLICY,
 };
 
 // 부킹 타입 → 표시할 환불 규정 키 매핑
 // BookingType union이 영어/한국어 어느 쪽이어도 cover하도록 양쪽 매칭
 export function getRefundPolicyKeys(bType: string): RefundPolicyKey[] {
   const lower = bType.toLowerCase();
+  // 통학형은 전용 규정 (예약금 30% · 잔금 8주 전)
+  if (lower.includes("commute") || bType.includes("통학")) return ["commute"];
   const isDH = lower.includes("dream") || lower.includes("dh") || bType.includes("드림");
   const isJP = lower.includes("jpark") || lower.includes("jaypark") || bType.includes("제이파크");
   const isC9 = lower.includes("cube") || bType.includes("큐브");
