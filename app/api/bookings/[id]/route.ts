@@ -92,6 +92,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const body = await req.json()
+  // 예약유형이 콤보(+)가 아닌 값으로 변경되면 콤보 잔재(seg1/seg2·큐브 필드) 자동 정리
+  if (body && typeof body.accom_type === 'string' && !body.accom_type.includes('+')) {
+    Object.assign(body, {
+      seg1_type: null, seg1_checkin: null, seg1_checkout: null,
+      seg2_type: null, seg2_checkin: null, seg2_checkout: null,
+    })
+    if (!body.accom_type.includes('큐브')) { body.cn_period = null; body.cn_room_type = null; body.cn_weeks = null }
+    if (!body.accom_type.includes('제이파크')) { body.jp_room_type = null; body.jp_weeks = null }
+    if (!body.accom_type.includes('드림하우스')) { body.dh_weeks = null }
+  }
   // bookings_new 우선, 없으면 bookings (live 테이블)
   const newRow = await supabase.from('bookings_new').update(body).eq('id', id).select().maybeSingle()
   let updatedBooking: Record<string, unknown> | null = null
