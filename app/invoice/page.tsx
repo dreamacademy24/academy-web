@@ -1996,7 +1996,7 @@ function InvoicePageInner(){
         <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomKo(a1T)} 체크인</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomKo(a1T)} 체크아웃</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
             {cm==="combo"&&a2CI&&a2CO&&<tr><td className="lb">{_accomKo(a2T)} 체크인</td><td style={{fontWeight:700}}>{a2CI}</td><td className="lb">{_accomKo(a2T)} 체크아웃</td><td style={{fontWeight:700}}>{overallCO||a2CO}</td></tr>}
-        <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+        <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td>{!isCommute&&<><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></>}</tr>
         <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
       </tbody></table></div>
 
@@ -2112,7 +2112,7 @@ function InvoicePageInner(){
               <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${lateCheckout?"22:30pm":"12noon"}`):"-"}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomKo(a1T)} 체크인</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomKo(a1T)} 체크아웃</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
             {cm==="combo"&&a2CI&&a2CO&&<tr><td className="lb">{_accomKo(a2T)} 체크인</td><td style={{fontWeight:700}}>{a2CI}</td><td className="lb">{_accomKo(a2T)} 체크아웃</td><td style={{fontWeight:700}}>{overallCO||a2CO}</td></tr>}
-              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></tr>
+              <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td>{!isCommute&&<><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></>}</tr>
               <tr><td className="lb">잔금납부일</td><td colSpan={3}>{booker.balanceDate||"미정"}</td></tr>
               {checkin.specialRequest&&<tr><td className="lb">특이사항</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
             </tbody></table>
