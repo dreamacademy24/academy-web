@@ -144,10 +144,12 @@ export function getBookingCategory(b: {
   else if (at0.includes("패키지") || at0.includes("+") || ["드림하우스", "제이파크", "큐브나인"].includes(at0)) pkg = "패키지";
   else pkg = "비패키지";
   const at = (b.accom_type || "").toLowerCase();
-  const hasRoom = !!String(b.house_no || b.accom_room || "").trim();
+  // 통학형: 드림하우스 룸 번호 패턴(B13L10 등)이 배정된 경우만 드하+드아 — 외부 숙소/기타 텍스트는 통학으로 유지
+  const _roomNorm = normalizeDhRoom(String(b.house_no || b.accom_room || ""));
+  const hasDhRoom = /^B\d{1,2}L\d{1,2}$/.test(_roomNorm);
   const ac = b.academy_option === true;
   let comp: string;
-  if (isCommuteBooking(b)) comp = hasRoom ? "드하+드아" : "통학(드아)";
+  if (isCommuteBooking(b)) comp = hasDhRoom ? "드하+드아" : "통학(드아)";
   else if (at.includes("+")) comp = at.includes("제이파크") ? "드하+JP" : at.includes("큐브") ? "드하+C9" : "콤보";
   else if (at.includes("제이파크")) comp = ac ? "JP+드아" : "JP";
   else if (at.includes("큐브")) comp = ac ? "C9+드아" : "C9";
