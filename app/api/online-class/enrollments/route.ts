@@ -142,7 +142,7 @@ export async function PATCH(req: Request) {
     const body = await req.json()
     const { id, regenerate_sessions, ...fields } = body
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-    const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times','portal_open']
+    const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times','portal_open','customer_user_id']
     const INT_FIELDS = new Set(['duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week'])
     const updates: Record<string, unknown> = {}
     for (const k of allowed) {

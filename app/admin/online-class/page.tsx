@@ -8,6 +8,7 @@ interface Tutor { id: string; name_display: string; name_en: string }
 interface Enrollment {
   id: string; student_name: string; student_name_en: string | null;
   student_birth_year: string | null; tutor_id: string | null;
+  customer_user_id?: string | null;
   tutor: Tutor | null;
   enrollment_type: string; level: string | null;
   days_of_week: string[]; class_time_kr: string | null; class_time_ph: string | null;
@@ -130,6 +131,17 @@ export default function OnlineClassPage() {
   const [tutorFilter, setTutorFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<"current" | "upcoming" | "past">("current");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // 출석부(한눈에) 뷰
+  const [listMode, setListMode] = useState<"list" | "sheet">("list");
+  const [sheetMonth, setSheetMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [sheetSessions, setSheetSessions] = useState<any[]>([]);
+  const [sheetLoading, setSheetLoading] = useState(false);
+  // 손님 계정 검색 모달
+  const [acctModal, setAcctModal] = useState<null | "form" | "edit">(null);
+  const [acctQ, setAcctQ] = useState("");
+  const [acctResults, setAcctResults] = useState<any[]>([]);
+  const [acctLoading, setAcctLoading] = useState(false);
+  const [acctLabels, setAcctLabels] = useState<Record<string, string>>({});
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<{ session: Session; daysBefore: number } | null>(null);
@@ -142,6 +154,38 @@ export default function OnlineClassPage() {
   const [tpShow, setTpShow] = useState(false);
   const [tpLabel, setTpLabel] = useState("");
   const tpCb = useRef<((time: string) => void) | null>(null);
+  async function loadSheet(month: string) {
+    setSheetLoading(true);
+    try {
+      const [y, m] = month.split("-").map(Number);
+      const last = new Date(y, m, 0).getDate();
+      const res = await fetch(`/api/online-class/sessions?start=${month}-01&end=${month}-${String(last).padStart(2, "0")}`);
+      if (res.ok) { const d = await res.json(); setSheetSessions(d.sessions || []); }
+    } finally { setSheetLoading(false); }
+  }
+  function shiftSheetMonth(diff: number) {
+    const [y, m] = sheetMonth.split("-").map(Number);
+    const d = new Date(y, m - 1 + diff, 1);
+    const nm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    setSheetMonth(nm); loadSheet(nm);
+  }
+  async function searchAccounts() {
+    const q = acctQ.trim();
+    if (q.length < 2) return;
+    setAcctLoading(true);
+    try {
+      const res = await fetch(`/api/admin/portal-users?q=${encodeURIComponent(q)}`);
+      const d = await res.json();
+      setAcctResults(d.users || []);
+    } finally { setAcctLoading(false); }
+  }
+  function pickAccount(u: { id: string; username?: string; name?: string }) {
+    const label = `${u.name || "?"} (${u.username || u.id.slice(0, 8)})`;
+    setAcctLabels(prev => ({ ...prev, [u.id]: label }));
+    if (acctModal === "form") setForm(f => ({ ...f, customer_user_id: u.id, portal_open: true }));
+    if (acctModal === "edit") setEditForm(f => ({ ...f, customer_user_id: u.id, portal_open: true }));
+    setAcctModal(null); setAcctQ(""); setAcctResults([]);
+  }
   function openTimePicker(label: string, cb: (time: string) => void) {
     setTpLabel(label);
     tpCb.current = cb;
@@ -282,6 +326,7 @@ export default function OnlineClassPage() {
       student_name: e.student_name,
       student_name_en: e.student_name_en || "",
       student_birth_year: e.student_birth_year || "",
+      customer_user_id: e.customer_user_id || null,
       tutor_id: e.tutor?.id || "",
       days_of_week: [...(e.days_of_week || [])],
       class_time_kr: e.class_time_kr || "",
@@ -551,6 +596,84 @@ export default function OnlineClassPage() {
           <span className="cnt">{filtered.length}명</span>
         </div>
 
+        <div style={{ display: "flex", gap: 6, margin: "0 0 10px" }}>
+          <button className="btn-sm" style={listMode === "list" ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : {}} onClick={() => setListMode("list")}>📋 리스트</button>
+          <button className="btn-sm" style={listMode === "sheet" ? { background: "#1a6fc4", color: "#fff", borderColor: "#1a6fc4" } : {}} onClick={() => { setListMode("sheet"); loadSheet(sheetMonth); }}>🗓 출석부 (한눈에)</button>
+          {listMode === "sheet" && (
+            <span style={{ display: "inline-flex", gap: 6, alignItems: "center", marginLeft: 10 }}>
+              <button className="btn-sm" onClick={() => shiftSheetMonth(-1)}>◀</button>
+              <b style={{ fontSize: 14 }}>{sheetMonth.replace("-", "년 ")}월</b>
+              <button className="btn-sm" onClick={() => shiftSheetMonth(1)}>▶</button>
+              {sheetLoading && <span style={{ fontSize: 12, color: "#94a3b8" }}>불러오는 중…</span>}
+            </span>
+          )}
+        </div>
+        {listMode === "sheet" ? (() => {
+          const [sy, sm] = sheetMonth.split("-").map(Number);
+          const lastDay = new Date(sy, sm, 0).getDate();
+          const days = Array.from({ length: lastDay }, (_, i) => i + 1);
+          const WD = ["일", "월", "화", "수", "목", "금", "토"];
+          const cellMap = new Map<string, any>();
+          sheetSessions.forEach((s: any) => {
+            const eid = s.enrollment_id || (s.enrollment && s.enrollment.id);
+            if (eid && s.scheduled_date) cellMap.set(`${eid}_${s.scheduled_date}`, s);
+          });
+          const SYM: Record<string, { t: string; c: string; bg: string }> = {
+            scheduled: { t: "·", c: "#94a3b8", bg: "transparent" },
+            attended: { t: "O", c: "#166534", bg: "#dcfce7" },
+            no_show: { t: "✗", c: "#dc2626", bg: "#fef2f2" },
+            absent: { t: "✗", c: "#dc2626", bg: "#fef2f2" },
+            cancelled: { t: "X", c: "#dc2626", bg: "#fee2e2" },
+            makeup: { t: "△", c: "#b45309", bg: "#fef3c7" },
+          };
+          return (
+            <div className="sec" style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", fontSize: 12, minWidth: 900 }}>
+                <thead>
+                  <tr>
+                    <th style={{ position: "sticky", left: 0, background: "#f8fafc", zIndex: 2, padding: "6px 10px", border: "1px solid #e2e8f0", textAlign: "left", minWidth: 130 }}>학생</th>
+                    <th style={{ padding: "6px 8px", border: "1px solid #e2e8f0", minWidth: 60 }}>잔여</th>
+                    {days.map(d => {
+                      const wd = new Date(sy, sm - 1, d).getDay();
+                      const wk = wd === 0 || wd === 6;
+                      return <th key={d} style={{ padding: "4px 2px", border: "1px solid #e2e8f0", minWidth: 26, background: wk ? "#f1f5f9" : "#fff", color: wk ? "#cbd5e1" : wd === 5 ? "#2563eb" : "#334155", fontSize: 10.5 }}>{d}<br />{WD[wd]}</th>;
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(e => {
+                    const total = e.total_sessions || 0;
+                    const used = e.used_sessions || 0;
+                    const rem = e.remaining_sessions ?? Math.max(0, total - used);
+                    return (
+                      <tr key={e.id}>
+                        <td onClick={() => loadSessions(e.id)} style={{ position: "sticky", left: 0, background: "#fff", zIndex: 1, padding: "5px 10px", border: "1px solid #e2e8f0", cursor: "pointer", whiteSpace: "nowrap" }}>
+                          <b>{e.student_name}</b> <span style={{ color: "#94a3b8", fontSize: 10.5 }}>{e.tutor?.name_display || "미배정"}</span>
+                        </td>
+                        <td style={{ textAlign: "center", border: "1px solid #e2e8f0", fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534" }}>{rem}/{total}</td>
+                        {days.map(d => {
+                          const dateStr = `${sheetMonth}-${String(d).padStart(2, "0")}`;
+                          const s = cellMap.get(`${e.id}_${dateStr}`);
+                          const wd = new Date(sy, sm - 1, d).getDay();
+                          const wk = wd === 0 || wd === 6;
+                          if (!s) return <td key={d} style={{ border: "1px solid #eef2f7", background: wk ? "#f8fafc" : undefined }} />;
+                          const sym = SYM[s.status] || SYM.scheduled;
+                          const tt = `${e.student_name} · ${s.scheduled_date} ${s.scheduled_time_kr || ""} · ${s.status}` + (s.attitude === "issue" ? `\n⚠️ 태도: ${s.attitude_note || ""}` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "");
+                          return (
+                            <td key={d} onClick={() => loadSessions(e.id)} title={tt} style={{ textAlign: "center", border: "1px solid #e2e8f0", background: sym.bg, color: sym.c, fontWeight: 800, cursor: "pointer", position: "relative" }}>
+                              {sym.t}{s.attitude === "issue" && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 8 }}>⚠️</span>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>· 예정 O 출석 ✗ 결석 X 차감취소 △ 보강 ⚠️ 태도기록 — 칸/이름 클릭 = 상세 패널</div>
+            </div>
+          );
+        })() : (
         <div className="sec">
           {filtered.length === 0 ? (
             <div className="empty">해당 조건의 수강생이 없습니다</div>
@@ -610,10 +733,11 @@ export default function OnlineClassPage() {
             </table>
           )}
         </div>
+        )}
       </>}
 
       {/* ═══ TAB 2: 수강 등록 ═══ */}
-      {tab === "register" && <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      {tab === "register" && <div style={{ maxWidth: 1150, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, alignItems: "start" }}>
         <div className="form-card">
           <div className="section-title">학생 정보</div>
           <div className="form-row">
@@ -622,7 +746,12 @@ export default function OnlineClassPage() {
           </div>
           <div className="form-row">
             <div><label className="form-label">출생연도</label><input className="form-input" value={form.student_birth_year} onChange={e => setForm({ ...form, student_birth_year: e.target.value })} placeholder="18년생" /></div>
-            <div><label className="form-label">손님 계정 ID</label><input className="form-input" value={form.customer_user_id} onChange={e => setForm({ ...form, customer_user_id: e.target.value })} placeholder="선택" />
+            <div><label className="form-label">손님 앱(계정) 연결</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input className="form-input" value={form.customer_user_id ? (acctLabels[form.customer_user_id] || form.customer_user_id.slice(0, 8) + "…") : ""} readOnly placeholder="미연결 — 🔍로 검색" style={{ flex: 1, background: form.customer_user_id ? "#f0fdf4" : undefined, cursor: "default" }} />
+                <button type="button" className="btn-sm" onClick={() => { setAcctModal("form"); setAcctQ(""); setAcctResults([]); }} style={{ whiteSpace: "nowrap" }}>🔍 계정 찾기</button>
+                {form.customer_user_id && <button type="button" className="btn-sm" style={{ color: "#dc2626" }} onClick={() => setForm(f => ({ ...f, customer_user_id: "", portal_open: false }))}>해제</button>}
+              </div>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginTop: 6, cursor: "pointer", color: form.portal_open ? "#166534" : "#64748b", fontWeight: 700 }}>
                 <input type="checkbox" checked={form.portal_open} onChange={e => setForm({ ...form, portal_open: e.target.checked })} />
                 📱 손님 앱(포털)에 공개 — 지정 손님만 화상영어 탭이 열려요
@@ -736,7 +865,7 @@ export default function OnlineClassPage() {
           <textarea className="form-input" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="특이사항 메모" style={{ resize: "vertical", minHeight: 80 }} />
         </div>
 
-        <button className="submit-btn" onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
+        <button className="submit-btn" style={{ gridColumn: "1 / -1" }} onClick={submitEnrollment} disabled={submitting}>{submitting ? "등록 중..." : "수강 등록"}</button>
       </div>}
 
       {/* ═══ TAB 3: 변경요청 수신함 ═══ */}
@@ -926,6 +1055,14 @@ export default function OnlineClassPage() {
               <input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value), post_sessions: Number(e.target.value), pre_sessions: 0 }))} />
             </div>
           )}
+          <div style={{ marginBottom: 12 }}>
+            <label className="form-label" style={{ fontSize: 11 }}>손님 앱(계정) 연결</label>
+            <div style={{ display: "flex", gap: 6 }}>
+              <input className="form-input" value={editForm.customer_user_id ? (acctLabels[String(editForm.customer_user_id)] || String(editForm.customer_user_id).slice(0, 8) + "…") : ""} readOnly placeholder="미연결 — 🔍로 검색" style={{ flex: 1, background: editForm.customer_user_id ? "#f0fdf4" : undefined, cursor: "default" }} />
+              <button type="button" className="btn-sm" onClick={() => { setAcctModal("edit"); setAcctQ(""); setAcctResults([]); }} style={{ whiteSpace: "nowrap" }}>🔍 계정 찾기</button>
+              {editForm.customer_user_id ? <button type="button" className="btn-sm" style={{ color: "#dc2626" }} onClick={() => setEditForm(f => ({ ...f, customer_user_id: null, portal_open: false }))}>해제</button> : null}
+            </div>
+          </div>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginBottom: 12, cursor: "pointer", fontWeight: 700, color: editForm.portal_open ? "#166534" : "#64748b" }}>
             <input type="checkbox" checked={editForm.portal_open === true} onChange={e => setEditForm(f => ({ ...f, portal_open: e.target.checked }))} />
             📱 손님 앱(포털) 공개 — 체크한 수강권만 손님 화상영어 탭에 표시
@@ -976,6 +1113,29 @@ export default function OnlineClassPage() {
         </div>
       );
     })()}
+
+      {acctModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setAcctModal(null)}>
+          <div style={{ background: "#fff", borderRadius: 14, width: "min(480px, 92vw)", padding: 22 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 10 }}>🔍 손님 앱 계정 찾기</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              <input className="form-input" autoFocus value={acctQ} onChange={e => setAcctQ(e.target.value)} onKeyDown={e => { if (e.key === "Enter") searchAccounts(); }} placeholder="이름 또는 아이디 (2글자 이상)" style={{ flex: 1 }} />
+              <button className="btn-sm" onClick={searchAccounts} disabled={acctLoading}>{acctLoading ? "검색중…" : "검색"}</button>
+            </div>
+            <div style={{ maxHeight: 280, overflowY: "auto" }}>
+              {acctResults.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#94a3b8", fontSize: 12.5, padding: 20 }}>이름이나 아이디로 검색하세요<br/>(회원가입한 손님 계정)</div>
+              ) : acctResults.map((u: any) => (
+                <div key={u.id} onClick={() => pickAccount(u)} style={{ padding: "9px 12px", borderRadius: 9, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #eef2f7", marginBottom: 6 }}>
+                  <span><b>{u.name || "(이름 없음)"}</b> <span style={{ color: "#64748b", fontSize: 12 }}>{u.username}</span></span>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>{u.email || ""}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>선택하면 계정이 연결되고 📱 앱 공개가 자동으로 켜져요. 우리가 대신 등록·변경해줄 때도 여기서 연결만 하면 손님 앱에 바로 보여요.</div>
+          </div>
+        </div>
+      )}
 
     {/* 시간 선택 모달 */}
     {tpShow && (
