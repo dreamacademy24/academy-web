@@ -44,13 +44,14 @@ const MEAL_HOLIDAYS = new Set([
 type GuardianStay = { name: string; from: string; to: string };
 type Bk = Record<string, any>;
 
-/* 기본규정: 올인원 드림하우스/제이파크 = 식사 O, 큐브나인 = 식사 X */
-type MealSeg = { from: string; to: string; loc: "DH" | "JPARK" };
+/* 기본규정: 드림하우스/제이파크 = 3식 · 큐브나인 = 저녁만 (2026-08-26 변경) */
+type MealSeg = { from: string; to: string; loc: "DH" | "JPARK" | "CUBE9" };
 
-function segLoc(t: string | null | undefined): "DH" | "JPARK" | null {
+function segLoc(t: string | null | undefined): "DH" | "JPARK" | "CUBE9" | null {
   if (t === "dreamhouse") return "DH";
   if (t === "jaypark") return "JPARK";
-  return null; // cubenine 등 → 식사 없음
+  if (t === "cubenine") return "CUBE9"; // 저녁만
+  return null;
 }
 
 /* 식사 제공 구간 목록 (콤보는 구간별, 환승일은 둘째 숙소 소속) */
@@ -66,8 +67,7 @@ function mealSegs(b: Bk): MealSeg[] {
   }
   if (!b.checkin_date || !b.checkout_date) return [];
   const at = String(b.accom_type || "");
-  if (at.includes("큐브")) return [];
-  const loc: "DH" | "JPARK" = at.includes("제이파크") ? "JPARK" : "DH";
+  const loc: "DH" | "JPARK" | "CUBE9" = at.includes("큐브") ? "CUBE9" : at.includes("제이파크") ? "JPARK" : "DH";
   return [{ from: b.checkin_date.slice(0, 10), to: b.checkout_date.slice(0, 10), loc }];
 }
 
@@ -226,7 +226,7 @@ export default function MealPlanPage() {
       /* 날짜별 식사 위치: JPARK or 드하 호수 라벨 (없으면 null) */
       const locByDay = weekDates.map(d => {
         const s = segs.find(sg => d >= sg.from && d <= sg.to);
-        return s ? (s.loc === "JPARK" ? "JPARK" : room.label) : null;
+        return s ? (s.loc === "JPARK" ? "JPARK" : s.loc === "CUBE9" ? "CUBE9" : room.label) : null;
       });
       if (locByDay.every(l => !l)) return null;
       const kids = kidsCount(b);
@@ -236,7 +236,8 @@ export default function MealPlanPage() {
       const notes: string[] = [];
       if (cur >= total) notes.push("⚠ Last week");
       else if (cur === 1) notes.push("🆕 New");
-      if (segs.length > 1) notes.push(`콤보 · ${fShort(segs[1].from)} ${segs[1].loc === "DH" ? "드하" : "제이파크"} 이동`);
+      if (segs.length > 1) notes.push(`콤보 · ${fShort(segs[1].from)} ${segs[1].loc === "DH" ? "드하" : segs[1].loc === "CUBE9" ? "큐브" : "제이파크"} 이동`);
+      if (locByDay.some(l => l === "CUBE9")) notes.push("🌙 큐브 — 저녁만");
       /* 정렬: 이번 주 JPARK만 체류하는 집은 맨 뒤 */
       const sortBld = locByDay.some(l => l && l !== "JPARK") ? room.bld : 50;
       return { b, room, sortBld, segs, mIn, mOut, cur, total, kids, locByDay, adultsByDay, adultsSet, addr, note: notes.join(" · "), stay: `${cur}w / ${total}w` };
@@ -331,7 +332,11 @@ export default function MealPlanPage() {
         ["  ✔ = attending    Cancel = meal cancelled    Fresh Box = pack for absent guest"],
         ["GUEST INFO", "", "", "", "BREAKFAST", "", "", "", `LUNCH${holi ? "  ★아이포함" : ""}`, "", "", "", "DINNER", "", "", "", "NOTE"],
         ["Name", "Address", "Adults", "Kids", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", "Adults ✔", "Kids ✔", "Cancel", "Fresh Box", ""],
-        ...dayRows.map(g => [engName(g.b), g.locByDay[di], g.adultsByDay[di], g.kids, "", "", "", "", "", "", "", "", "", "", "", "", g.note]),
+        ...dayRows.map(g => {
+          const dOnly = g.locByDay[di] === "CUBE9";
+          const bl = dOnly ? "—" : "";
+          return [engName(g.b), g.locByDay[di], g.adultsByDay[di], g.kids, bl, bl, bl, bl, bl, bl, bl, bl, "", "", "", "", dOnly ? "🌙 Dinner only" : g.note];
+        }),
       ];
       aoa.push(["TOTAL", "", dayRows.reduce((s, g) => s + g.adultsByDay[di], 0), dayRows.reduce((s, g) => s + g.kids, 0)]);
       aoa.push([]);
@@ -555,8 +560,11 @@ export default function MealPlanPage() {
                     <tr key={g.b.id} style={{ height: 30 }}>
                       <td className="nm">{engName(g.b)}</td><td>{g.locByDay[di]}</td>
                       <td style={{ fontWeight: 700 }}>{g.adultsByDay[di]}</td><td style={{ fontWeight: 700 }}>{g.kids}</td>
-                      {Array.from({ length: 12 }).map((_, i) => <td key={i}></td>)}
-                      <td style={{ fontSize: 10.5 }}>{g.note.includes("Last") ? "⚠ Last week" : g.note.includes("New") ? "🆕 New" : ""}</td>
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const dOnly = g.locByDay[di] === "CUBE9" && i < 8; // 큐브 = 아침·점심 없음
+                        return <td key={i} style={dOnly ? { background: "#f1f5f9", color: "#cbd5e1", textAlign: "center", fontSize: 10 } : undefined}>{dOnly ? "—" : ""}</td>;
+                      })}
+                      <td style={{ fontSize: 10.5 }}>{g.locByDay[di] === "CUBE9" ? "🌙 Dinner only" : g.note.includes("Last") ? "⚠ Last week" : g.note.includes("New") ? "🆕 New" : ""}</td>
                     </tr>
                   ))}
                   <tr style={{ fontWeight: 800, background: "#f8fafc" }}>
@@ -601,16 +609,19 @@ export default function MealPlanPage() {
                     {dayGuests.map(g => {
                       const loc = g.locByDay[idx];
                       const isJp = loc === "JPARK";
+                      const isCube = loc === "CUBE9";
                       return (
                         <tr key={g.b.id}>
                           {[0, 1, 2].map(mi => (
                             <td key={mi}>
+                              {isCube && mi < 2 ? <div style={{ textAlign: "center", color: "#cbd5e1", fontSize: 11 }}>—</div> : (
                               <div className="lbl-card">
-                                {!isJp && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
+                                {!isJp && !isCube && g.room.bld === 17 && <div className="h">DREAMHOUSE</div>}
                                 {isJp && <div className="h" style={{ color: "#6d28d9" }}>JPARK</div>}
-                                <div className="rm">{isJp ? "JPARK" : `B${g.room.bld}  L${g.room.lot}`}</div>
+                                {isCube && <div className="h" style={{ color: "#0e7490" }}>CUBE 9 · DINNER</div>}
+                                <div className="rm">{isJp ? "JPARK" : isCube ? "CUBE9" : `B${g.room.bld}  L${g.room.lot}`}</div>
                                 <div className="ct">{mi === 1 && !holi ? `${g.adultsByDay[idx]}` : `${g.adultsByDay[idx]} + ${g.kids}`}</div>
-                              </div>
+                              </div>)}
                             </td>
                           ))}
                         </tr>

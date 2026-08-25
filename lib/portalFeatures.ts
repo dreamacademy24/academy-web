@@ -35,7 +35,9 @@ export function defaultPortalFeatures(b: BookingLike): PortalFeatureMap {
   // 비패키지 통학형: 셔틀 X(패키지 전용) · 애프터스쿨 X(참여 불가, 필드트립은 관리자가 개별 오픈) · 튜터 O
   if (commute) return { checkin: false, shuttle: false, afterschool: false, tutor: true, meal: true, consultation: true };
   // 비패키지 숙소 단독 (room only): 투어셔틀 X · 애프터스쿨 X · 튜터 O(리조트=아카데미 내)
-  return { checkin: true, shuttle: false, afterschool: false, tutor: true, meal: false, consultation: true };
+  // 큐브나인은 저녁 식사 제공(2026-08-26~) → 식단 탭 O
+  const isCube = (b?.accom_type || "").includes("큐브");
+  return { checkin: true, shuttle: false, afterschool: false, tutor: true, meal: isCube, consultation: true };
 }
 
 /** 기본값 + portal_features 오버라이드 병합 */

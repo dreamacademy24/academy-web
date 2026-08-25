@@ -162,7 +162,7 @@ export default function MoriPage() {
     else { setPlan(null); setStatus("none"); setWeekId(null); }
   }
 
-  /* 이번 주에 식사 나가는 손님 (올인원, 드하/제이파크 구간) — 식단 관련 업무와 같은 규칙 */
+  /* 이번 주에 식사 나가는 손님 (드하/제이파크 = 3식, 큐브 = 저녁만) — 식단 관련 업무와 같은 규칙 */
   async function loadGuests() {
     try {
       const { data } = await supabase.from("bookings").select("id, booker_name, checkin_date, checkout_date, accom_type, is_all_in_one, status, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout, adults, children, students, guardian_stays");
@@ -181,12 +181,12 @@ export default function MoriPage() {
         if (!b.is_all_in_one) continue;
         if (excluded.has(String(b.id))) continue;
         if (String(b.status || "").includes("취소")) continue;
-        const eat = (t?: string | null) => t === "dreamhouse" || t === "jaypark";
+        const eat = (t?: string | null) => t === "dreamhouse" || t === "jaypark" || t === "cubenine"; // 큐브 = 저녁만 (2026-08-26)
         const segs: { from: string; to: string }[] = [];
         if (b.seg1_type || b.seg2_type) {
           if (eat(b.seg1_type) && b.seg1_checkin && b.seg1_checkout) segs.push({ from: String(b.seg1_checkin).slice(0, 10), to: String(b.seg1_checkout).slice(0, 10) });
           if (eat(b.seg2_type) && b.seg2_checkin && b.seg2_checkout) segs.push({ from: String(b.seg2_checkin).slice(0, 10), to: String(b.seg2_checkout).slice(0, 10) });
-        } else if (b.checkin_date && b.checkout_date && !String(b.accom_type || "").includes("큐브")) {
+        } else if (b.checkin_date && b.checkout_date) {
           segs.push({ from: String(b.checkin_date).slice(0, 10), to: String(b.checkout_date).slice(0, 10) });
         }
         if (!segs.length) continue;
