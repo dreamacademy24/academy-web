@@ -700,8 +700,8 @@ export default function EstimateCalc(){
       sum+=(pk?perPeak:perOff)*kids;
       parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));
     }
-    const line={id:Date.now(),name:`학원 휴무 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
-    const kept=p.discounts.filter(d=>!d.name.startsWith("학원 휴무 수업료 제외"));
+    const line={id:Date.now(),name:`학원 방학 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
+    const kept=p.discounts.filter(d=>!d.name.startsWith("학원 방학 수업료 제외"));
     up(idx,{discounts:[...kept,line]});
   }
   function applyClosing(idx:number){
@@ -937,7 +937,7 @@ export default function EstimateCalc(){
               <button style={{...addBtnS,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,true)}>💛 다온맘 현금</button>
               <button style={{...addBtnS,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,false)}>💛 다온맘 카드</button>
               <button style={{...addBtnS,background:"#fee2e2",border:"1px solid #f87171",color:"#991b1b"}} onClick={()=>applyClosing(idx)}>⏰ 마감임박</button>
-              <button style={{...addBtnS,background:"#e0f2fe",border:"1px solid #38bdf8",color:"#075985"}} onClick={()=>applyHolidayDeduct(idx)}>🏫 휴무 수업료</button>
+              <button style={{...addBtnS,background:"#e0f2fe",border:"1px solid #38bdf8",color:"#075985"}} onClick={()=>applyHolidayDeduct(idx)}>🏫 방학 수업료</button>
               <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
             </span>
           </div>
