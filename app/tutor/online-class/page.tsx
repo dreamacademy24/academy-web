@@ -1,172 +1,102 @@
 "use client";
+// Teacher Online Class — full redesign 2026-08-26 (3 tabs: Today / My Students / Schedule)
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
-import { TUTOR_COLORS } from "@/lib/tutorColors";
 import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
 
-// Admin이 다른 튜터 대시보드를 열람할 때 사용할 계정 목록.
-// staff_user_id 값은 app/login/page.tsx의 tutor 계정과 동일.
+// Admin can view other teachers' dashboards (?tutor= / select)
 const TUTOR_ACCOUNTS: { id: string; label: string }[] = [
-  { id: "admin-ann",     label: "T.Ann" },
-  { id: "admin-angel",   label: "T.Angel" },
-  { id: "admin-carla",   label: "T.Carla" },
-  { id: "admin-amelyn",  label: "T.Amelyn" },
+  { id: "admin-angelica", label: "T.Angelica" },
+  { id: "admin-jean", label: "T.Jean" },
+  { id: "admin-ann", label: "T.Ann" },
+  { id: "admin-florefe", label: "T.Florefe" },
+  { id: "admin-jenny", label: "T.Jenny" },
+  { id: "admin-nick", label: "T.Nick" },
+  { id: "admin-carla", label: "T.Carla" },
+  { id: "admin-angel", label: "T.Angel" },
+  { id: "admin-amelyn", label: "T.Amelyn" },
   { id: "admin-cristel", label: "T.Cristel" },
 ];
 
-interface Tutor {
-  id: string;
-  staff_user_id: string | null;
-  name_display: string;
-  name_en: string | null;
-}
-
+interface Tutor { id: string; staff_user_id: string | null; name_display: string; name_en: string | null; level?: string | null }
 interface Enrollment {
-  id: string;
-  student_name: string;
-  student_name_en: string | null;
-  student_birth_year: string | null;
-  days_of_week: string[] | null;
-  class_time_kr: string | null;
-  class_time_ph: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  duration_weeks: number | null;
-  class_period: string | null;
-  pre_sessions: number | null;
-  post_sessions: number | null;
-  total_sessions: number | null;
-  used_sessions: number | null;
-  status: string | null;
-  notes: string | null;
-  tutor_notes: string | null;
+  id: string; student_name: string; student_name_en: string | null; student_birth_year: string | null;
+  days_of_week: string[] | null; class_time_kr: string | null; class_time_ph: string | null;
+  day_times?: Record<string, string> | null; level?: string | null;
+  start_date: string | null; end_date: string | null; class_period: string | null;
+  total_sessions: number | null; used_sessions: number | null; status: string | null;
+  notes: string | null; tutor_notes: string | null;
 }
-
-interface SessionItem {
-  id: string;
-  session_number: number;
-  scheduled_date: string;
-  scheduled_time_ph: string | null;
-  scheduled_time_kr: string | null;
-  status: string;
-  session_note: string | null;
+interface Ses {
+  id: string; session_number: number; scheduled_date: string;
+  scheduled_time_ph: string | null; scheduled_time_kr: string | null;
+  status: string; session_note: string | null;
   attitude?: string | null; attitude_note?: string | null;
   enrollment: { id: string; student_name: string; student_name_en: string | null } | null;
 }
 
-const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = {
-  scheduled: { label: "Scheduled", bg: "#f1f5f9", color: "#64748b" },
-  attended:  { label: "Attended",  bg: "#dcfce7", color: "#166534" },
-  no_show:   { label: "Absent",    bg: "#fef2f2", color: "#dc2626" },
-  absent:    { label: "Absent",    bg: "#fef2f2", color: "#dc2626" },
-  cancelled: { label: "Cancelled", bg: "#fef2f2", color: "#dc2626" },
-  makeup:    { label: "Makeup",    bg: "#fef9c3", color: "#92400e" },
+const ST: Record<string, { label: string; bg: string; color: string }> = {
+  scheduled: { label: "Scheduled", bg: "#eef2f7", color: "#64748b" },
+  attended: { label: "Attended", bg: "#dcfce7", color: "#166534" },
+  no_show: { label: "Absent", bg: "#fee2e2", color: "#dc2626" },
+  absent: { label: "Absent", bg: "#fee2e2", color: "#dc2626" },
+  cancelled: { label: "Cancelled", bg: "#fee2e2", color: "#dc2626" },
+  makeup: { label: "Makeup", bg: "#fef3c7", color: "#92400e" },
 };
-
-const DAY_LABEL: Record<string, string> = {
-  mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
-  "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat", "일": "Sun",
+const LV: Record<string, { label: string; bg: string; color: string }> = {
+  beginner: { label: "Beginner", bg: "#dbeafe", color: "#1e40af" },
+  intermediate: { label: "Intermediate", bg: "#ede9fe", color: "#6d28d9" },
+  advanced: { label: "Advanced", bg: "#fce7f3", color: "#9d174d" },
 };
+const DAY_EN: Record<string, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun", "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat", "일": "Sun" };
 
-function pad(n: number) { return String(n).padStart(2, "0"); }
-function fmt(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+const pad = (n: number) => String(n).padStart(2, "0");
+const fmtD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (s: string, n: number) => { const d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n); return fmtD(d); };
+function weekStart(offset: number) { const now = new Date(); const day = now.getDay(); const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1) + offset * 7); return mon; }
+const dateEN = (s: string) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+const shortEN = (s: string) => new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-function weekRange(offset = 0) {
-  const now = new Date();
-  const day = now.getDay();
-  const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-  mon.setDate(mon.getDate() + offset * 7);
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  return { start: fmt(mon), end: fmt(sun), startDate: mon, endDate: sun };
-}
-function weekLabel(offset: number) {
-  if (offset === 0) return "This Week";
-  if (offset === 1) return "Next Week";
-  if (offset === -1) return "Last Week";
-  if (offset > 0) return `${offset} weeks later`;
-  return `${-offset} weeks ago`;
-}
-
-function addDays(dateStr: string, days: number) {
-  const d = new Date(dateStr + "T12:00:00");
-  d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-function diffDays(a: string, b: string) {
-  const da = new Date(a + "T12:00:00").getTime();
-  const db = new Date(b + "T12:00:00").getTime();
-  return Math.round((da - db) / (1000 * 60 * 60 * 24));
-}
-function formatTodayEN(dateStr: string) {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-}
-
-function formatWeekRangeEN(start: Date, end: Date) {
-  const opt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-  const s = start.toLocaleDateString("en-US", opt);
-  const e = end.toLocaleDateString("en-US", opt);
-  const y = end.getFullYear();
-  return `${s} – ${e}, ${y}`;
-}
-
-function formatDayHeader(dateStr: string) {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
-
-function capDays(days: string[] | null) {
-  if (!days || !days.length) return "-";
-  return days.map(d => DAY_LABEL[d.toLowerCase()] || DAY_LABEL[d] || d).join(", ");
-}
-
-function TutorOnlineClassInner() {
-  const router = useRouter();
+function Inner() {
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
-  const [adminRole, setAdminRole] = useState<string>("");
+  const [adminRole, setAdminRole] = useState("");
   const [tab, setTab] = useState<"today" | "students" | "schedule">("today");
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [loadingTutor, setLoadingTutor] = useState(true);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [weekSessions, setWeekSessions] = useState<SessionItem[]>([]);
-  const [todaySessions, setTodaySessions] = useState<SessionItem[]>([]);
+  const [todaySessions, setTodaySessions] = useState<Ses[]>([]);
+  const [weekSessions, setWeekSessions] = useState<Ses[]>([]);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
   const [dateOffset, setDateOffset] = useState(0);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [sessionNoteDraft, setSessionNoteDraft] = useState<Record<string, string>>({});
+  const [expandStu, setExpandStu] = useState<string | null>(null);
+  const [stuSessions, setStuSessions] = useState<Record<string, Ses[]>>({});
+  const [notifs, setNotifs] = useState<Array<{ id: string; message: string; is_read: boolean; created_at: string }>>([]);
+  const [notifDismissed, setNotifDismissed] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedDate = addDays(fmt(new Date()), dateOffset);
+  const selectedDate = addDays(fmtD(new Date()), dateOffset);
 
   useEffect(() => {
-    if (isAdminAuthed()) {
-      setAuthed(true);
-      const info = getAdminInfo();
-      setAdminRole(info?.role || "");
-    } else if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
+    if (isAdminAuthed()) { setAuthed(true); setAdminRole(getAdminInfo()?.role || ""); }
+    else if (typeof window !== "undefined") window.location.href = "/login";
   }, []);
 
   const resolveTutor = useCallback(async () => {
     if (!authed) return;
     setLoadingTutor(true);
-    let staffUserId = "";
-    const info = getAdminInfo();
-    if (info && info.staffId) staffUserId = info.staffId;
+    let sid = getAdminInfo()?.staffId || "";
     const qp = searchParams.get("tutor");
-    if (qp) staffUserId = qp;
-    if (!staffUserId) { setTutor(null); setLoadingTutor(false); return; }
-    const res = await fetch(`/api/online-class/tutors?staff_user_id=${encodeURIComponent(staffUserId)}`);
+    if (qp) sid = qp;
+    if (!sid) { setTutor(null); setLoadingTutor(false); return; }
+    const res = await fetch(`/api/online-class/tutors?staff_user_id=${encodeURIComponent(sid)}`);
     if (res.ok) { const d = await res.json(); setTutor(d.tutor || null); }
     setLoadingTutor(false);
   }, [authed, searchParams]);
-
   useEffect(() => { resolveTutor(); }, [resolveTutor]);
 
   const loadEnrollments = useCallback(async () => {
@@ -175,512 +105,336 @@ function TutorOnlineClassInner() {
     if (res.ok) { const d = await res.json(); setEnrollments((d.enrollments || []).filter((e: Enrollment) => e.status === "active")); }
   }, [tutor]);
 
-  const loadWeek = useCallback(async () => {
-    if (!tutor) return;
-    const { start, end } = weekRange(weekOffset);
-    const res = await fetch(`/api/online-class/sessions?start=${start}&end=${end}`);
-    if (res.ok) {
-      const d = await res.json();
-      const all = (d.sessions || []) as (SessionItem & { tutor?: { id: string } | null })[];
-      setWeekSessions(all.filter(s => s.tutor && s.tutor.id === tutor.id));
-    }
-  }, [tutor, weekOffset]);
-
   const loadToday = useCallback(async () => {
     if (!tutor) return;
     const res = await fetch(`/api/online-class/sessions?date=${selectedDate}`);
     if (res.ok) {
       const d = await res.json();
-      const all = (d.sessions || []) as (SessionItem & { tutor?: { id: string } | null })[];
-      setTodaySessions(all.filter(s => s.tutor && s.tutor.id === tutor.id));
+      setTodaySessions((d.sessions || []).filter((s: any) => s.tutor_id === tutor.id || s.tutor?.id === tutor.id));
     }
   }, [tutor, selectedDate]);
 
-  // ─── Notifications (schedule changes etc.) — 30s polling + unread popup ───
-  const [notifs, setNotifs] = useState<Array<{ id: string; message: string; is_read: boolean; created_at: string }>>([]);
-  const [notifDismissed, setNotifDismissed] = useState(false);
+  const loadWeek = useCallback(async () => {
+    if (!tutor) return;
+    const mon = weekStart(weekOffset);
+    const res = await fetch(`/api/online-class/sessions?start=${fmtD(mon)}&end=${addDays(fmtD(mon), 6)}`);
+    if (res.ok) {
+      const d = await res.json();
+      setWeekSessions((d.sessions || []).filter((s: any) => s.tutor_id === tutor.id || s.tutor?.id === tutor.id));
+    }
+  }, [tutor, weekOffset]);
+
+  useEffect(() => { loadEnrollments(); }, [loadEnrollments]);
+  useEffect(() => { loadToday(); }, [loadToday]);
+  useEffect(() => { loadWeek(); }, [loadWeek]);
+
+  // notifications (30s poll)
   const loadNotifs = useCallback(async () => {
     if (!tutor) return;
     const res = await fetch(`/api/online-class/notifications?tutor_id=${tutor.id}`);
     if (res.ok) { const d = await res.json(); setNotifs(d.notifications || []); }
   }, [tutor]);
-  useEffect(() => {
-    loadNotifs();
-    const iv = setInterval(loadNotifs, 30000);
-    return () => clearInterval(iv);
-  }, [loadNotifs]);
-  const unreadNotifs = notifs.filter(n => !n.is_read);
+  useEffect(() => { loadNotifs(); const t = setInterval(loadNotifs, 30000); return () => clearInterval(t); }, [loadNotifs]);
+  const unread = notifs.filter(n => !n.is_read);
   async function markNotifsRead() {
-    const ids = unreadNotifs.map(n => n.id);
-    setNotifDismissed(true);
-    if (ids.length === 0) return;
-    await fetch("/api/online-class/notifications", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
-    });
-    loadNotifs();
-    loadEnrollments(); loadWeek(); loadToday();
+    if (!tutor || unread.length === 0) { setNotifDismissed(true); return; }
+    await fetch("/api/online-class/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: unread.map(n => n.id) }) });
+    setNotifDismissed(true); loadNotifs();
   }
 
-  async function markStatus(sessionId: string, status: string) {
-    if (!tutor) return;
-    setUpdating(sessionId);
-    const body: Record<string, unknown> = { id: sessionId, status, recorded_by: tutor.staff_user_id || "" };
-    if (sessionNoteDraft[sessionId] !== undefined) body.session_note = sessionNoteDraft[sessionId];
-    const res = await fetch("/api/online-class/sessions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  async function markStatus(s: Ses, status: string) {
+    setUpdating(s.id);
+    const body: Record<string, unknown> = { id: s.id, status, recorded_by: tutor?.staff_user_id || "" };
+    if (noteDraft[s.id] !== undefined) body.session_note = noteDraft[s.id];
+    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); }
-    await loadToday();
-    await loadWeek();
+    await loadToday(); await loadWeek(); await loadEnrollments();
     setUpdating(null);
   }
-
-  async function setAttitude(s: SessionItem, val: string) {
+  async function saveNote(s: Ses, value: string) {
+    await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: s.id, session_note: value }) });
+    setTodaySessions(prev => prev.map(x => x.id === s.id ? { ...x, session_note: value.trim() || null } : x));
+  }
+  async function setAttitude(s: Ses, val: string) {
     let note: string | null = s.attitude_note || null;
     if (val === "issue") {
       const input = window.prompt("Describe the behavior issue (visible to admin):", s.attitude_note || "");
       if (input === null) return;
       note = input.trim() || null;
-    } else { note = null; }
-    const res = await fetch("/api/online-class/sessions", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: s.id, attitude: val === "clear" ? null : val, attitude_note: note }),
-    });
+    } else note = null;
+    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: s.id, attitude: val === "clear" ? null : val, attitude_note: note }) });
     if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); return; }
     setTodaySessions(prev => prev.map(x => x.id === s.id ? { ...x, attitude: val === "clear" ? null : val, attitude_note: note } : x));
   }
-
-  async function saveSessionNote(sessionId: string, value: string) {
-    const res = await fetch("/api/online-class/sessions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: sessionId, session_note: value }),
-    });
-    if (res.ok) {
-      setTodaySessions(prev => prev.map(s => s.id === sessionId ? { ...s, session_note: value.trim() || null } : s));
+  async function toggleStuSessions(enrId: string) {
+    if (expandStu === enrId) { setExpandStu(null); return; }
+    setExpandStu(enrId);
+    if (!stuSessions[enrId]) {
+      const res = await fetch(`/api/online-class/sessions?enrollment_id=${enrId}`);
+      if (res.ok) { const d = await res.json(); setStuSessions(prev => ({ ...prev, [enrId]: d.sessions || [] })); }
     }
   }
-
-  useEffect(() => { if (tutor) { loadEnrollments(); loadWeek(); loadToday(); } }, [tutor, loadEnrollments, loadWeek, loadToday]);
-
-  async function saveNote(enrollmentId: string, value: string) {
-    const res = await fetch(`/api/online-class/enrollments/${enrollmentId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tutor_notes: value }),
-    });
-    if (res.ok) {
-      setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, tutor_notes: value } : e));
-    }
-    setEditingNoteId(null);
-  }
-
-  const { startDate, endDate } = weekRange(weekOffset);
-  const weekByDate: Record<string, SessionItem[]> = {};
-  weekSessions.forEach(s => {
-    if (!weekByDate[s.scheduled_date]) weekByDate[s.scheduled_date] = [];
-    weekByDate[s.scheduled_date].push(s);
-  });
-  const sortedDates = Object.keys(weekByDate).sort();
-
-  const tutorParam = searchParams.get("tutor");
 
   if (!authed) return null;
+  if (loadingTutor) return <div className="tcw"><div className="empty">Loading…</div><Css /></div>;
 
-  return (<>
-    <style>{`
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.tv-w{max-width:1500px;margin:0 auto;padding:20px 24px;min-height:100vh}
-.tv-back{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:#6b7c93;cursor:pointer;text-decoration:none;margin-bottom:14px}
-.tv-back:hover{background:#f8fafc}
-.tv-head{margin-bottom:20px}
-.tv-head h1{font-size:22px;font-weight:800;color:#1a1a2e;margin-bottom:4px}
-.tv-head .who{font-size:13px;color:#6b7c93}
-.tv-tabs{display:flex;gap:0;background:#fff;border-radius:10px;margin-bottom:16px;border:1px solid #e2e8f0;overflow:hidden}
-.tv-tab{flex:1;padding:12px;font-size:14px;font-weight:700;text-align:center;border:none;cursor:pointer;font-family:inherit;background:transparent;color:#6b7c93}
-.tv-tab.ac{background:#1a6fc4;color:#fff}
-.tv-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px;margin-bottom:12px}
-.tv-empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;background:#fff;border:1px dashed #e2e8f0;border-radius:12px}
-.tbl-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:visible}
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap}
-.tbl td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle;white-space:nowrap}
-.tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:#fafbfc}
-.cell-remaining{color:#166534;font-weight:800}
-.cell-name{font-weight:700}
-.cell-en-link{font-weight:800;color:#1a6fc4;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
-.cell-en-link:hover{color:#0d3d7a}
-.cell-notes{white-space:normal;min-width:200px;color:#475569;cursor:pointer;padding:6px 12px !important;border-radius:6px}
-.cell-notes:hover{background:#eff6ff}
-.cell-notes.empty{color:#cbd5e1;font-style:italic}
-.cell-notes textarea{width:100%;min-height:60px;padding:6px 8px;border:1px solid #1a6fc4;border-radius:6px;font-family:inherit;font-size:12px;outline:none;resize:vertical;background:#fff}
-.day-header{font-size:15px;font-weight:800;color:#374151;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}
-.sch-row{display:grid;grid-template-columns:80px 1fr 80px 60px 100px;gap:10px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px}
-.sch-time{font-size:15px;font-weight:800;color:#1a6fc4}
-.sch-name{font-size:14px;font-weight:700;color:#1a1a2e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sch-kr{font-size:12px;color:#6b7c93}
-.sch-no{font-size:12px;color:#6b7c93}
-.badge{display:inline-block;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;text-align:center}
-.week-range{font-size:13px;color:#6b7c93;margin-bottom:12px}
-.week-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px}
-.week-nav button{padding:7px 14px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#334155}
-.week-nav button:hover{background:#f8fafc;border-color:#1a6fc4;color:#1a6fc4}
-.week-nav .center{flex:1;text-align:center;font-size:14px;font-weight:800;color:#1a1a2e}
-.week-nav .center .sub{font-size:12px;font-weight:500;color:#64748b;margin-left:8px}
-.week-nav .today-btn{background:#1a6fc4;color:#fff;border-color:#1a6fc4}
-.week-nav .today-btn:hover{background:#0d3d7a;color:#fff}
-.td-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px}
-.td-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.td-time{font-size:17px;font-weight:800;color:#1a6fc4}
-.td-info{margin-bottom:12px}
-.td-info .name{font-size:16px;font-weight:800;color:#1a1a2e}
-.td-info .meta{font-size:12px;color:#6b7c93;margin-top:4px}
-.td-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.td-btn{padding:9px;border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;color:#64748b}
-.td-btn:hover{background:#f8fafc}
-.td-btn:disabled{opacity:0.4;cursor:not-allowed}
-.td-btn.ac-scheduled{background:#f1f5f9;border-color:#94a3b8;color:#334155}
-.td-btn.ac-attended{background:#16a34a;border-color:#16a34a;color:#fff}
-.td-btn.ac-absent{background:#dc2626;border-color:#dc2626;color:#fff}
-.td-btn.ac-makeup{background:#eab308;border-color:#eab308;color:#fff}
-.td-btn.ac-undo{background:#64748b;border-color:#64748b;color:#fff}
-.td-note{margin-top:10px;border-top:1px dashed #e2e8f0;padding-top:10px}
-.td-note-label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
-.td-note-ta{width:100%;min-height:32px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;font-family:inherit;font-size:12.5px;outline:none;resize:vertical;background:#fff;color:#334155;line-height:1.5;overflow:hidden}
-.td-note-ta:focus{border-color:#1a6fc4;background:#fffdf5}
-.td-note-ta::placeholder{color:#cbd5e1;font-style:italic}
-.wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.wk-col{min-height:120px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
-.wk-head{font-size:12px;font-weight:800;color:#1a1a2e;text-align:center;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
-.wk-empty{font-size:11px;color:#cbd5e1;text-align:center;padding:14px 0;font-style:italic}
-.wk-card{position:relative;padding:8px 8px 8px 12px;background:#f8fafc;border-radius:7px;font-size:11px;overflow:hidden}
-.wk-card .wk-bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:#94a3b8}
-.wk-time{font-size:12px;font-weight:800;color:#1a6fc4;margin-bottom:2px}
-.wk-name{font-size:12px;font-weight:700;color:#1a1a2e;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wk-meta{font-size:10px;color:#94a3b8;margin-bottom:4px}
-.wk-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
-.wk-note-icon{position:absolute;top:6px;right:6px;font-size:11px;cursor:help}
-.tv-admin-ribbon{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;font-size:12.5px;color:#78350f;font-weight:700;flex-wrap:wrap;margin-bottom:14px}
-.tv-admin-ribbon select{padding:4px 10px;border:1px solid #fcd34d;border-radius:6px;background:#fff;font-size:12.5px;font-family:inherit;font-weight:700;color:#78350f;cursor:pointer;outline:none}
-.tv-admin-ribbon select:focus{border-color:#f59e0b}
-.tv-admin-ribbon .tv-admin-switch{color:#1a6fc4;font-weight:700;text-decoration:none;font-size:12px}
-.tv-admin-ribbon .tv-admin-switch:hover{text-decoration:underline}
-.tv-select-intro{margin-bottom:10px}
-.tv-select-intro h2{font-size:18px;font-weight:800;color:#1a1a2e;margin:0 0 4px}
-.tv-select-intro p{font-size:13px;color:#6b7c93;margin:0}
-.tv-select-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:14px}
-.tv-select-card{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;font-size:16px;font-weight:800;color:#fff;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.08);transition:transform 120ms,box-shadow 120ms;text-align:center;padding:8px}
-.tv-select-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.18)}
-@media(max-width:800px){.tv-select-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:500px){.tv-select-grid{grid-template-columns:repeat(2,1fr)}.tv-admin-ribbon{width:100%}}
-    `}</style>
-    <div className="tv-w">
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:8,alignItems:'center'}}>
-        <a href="/admin/online-class-attendance" className="tv-back" style={{margin:0}}>← Back to Attendance</a>
-        <a href="/tutor/guide" className="tv-back" style={{margin:0,background:'#eff6ff',borderColor:'#bfdbfe',color:'#1a6fc4'}}>📖 Guide</a>
-        {adminRole === "admin" && tutorParam && tutor && (
-          <div className="tv-admin-ribbon" style={{marginLeft:'auto'}}>
-            <span>👁 Admin view — showing {tutor.name_display}</span>
-            <select
-              value={tutorParam}
-              onChange={e => router.push(`/tutor/online-class?tutor=${e.target.value}`)}
-              aria-label="View as tutor"
-            >
-              {TUTOR_ACCOUNTS.map(acc => (
-                <option key={acc.id} value={acc.id}>{acc.label}</option>
-              ))}
-            </select>
-            <a href="/tutor/online-class" className="tv-admin-switch">← All tutors</a>
+  const isAdminViewer = adminRole && adminRole !== "local_teacher";
+  const stuName = (s: Ses) => s.enrollment?.student_name_en || s.enrollment?.student_name || "?";
+  const doneCnt = todaySessions.filter(s => s.status !== "scheduled").length;
+  const sortedToday = [...todaySessions].sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""));
+
+  return (
+    <div className="tcw">
+      {/* ── Header ── */}
+      <div className="hd">
+        <div>
+          <div className="hd-t">💻 Online Class {tutor ? <span className="hd-name">{tutor.name_display}</span> : null}
+            {tutor?.level && LV[tutor.level] && <span className="chip" style={{ background: LV[tutor.level].bg, color: LV[tutor.level].color }}>{LV[tutor.level].label}</span>}
           </div>
-        )}
-      </div>
-
-      <div className="tv-head">
-        <h1>My Online Class</h1>
-        <div className="who">
-          {loadingTutor
-            ? "Loading..."
-            : tutor
-              ? `${tutor.name_display}${tutor.name_en ? ` (${tutor.name_en})` : ""}`
-              : adminRole === "admin" && !tutorParam
-                ? "Admin — select a tutor below"
-                : "⚠️ Tutor profile not found for this account."}
+          <div className="hd-s">{dateEN(fmtD(new Date()))} · PH time</div>
         </div>
+        <div style={{ flex: 1 }} />
+        {isAdminViewer && (
+          <select className="sel" value={searchParams.get("tutor") || ""} onChange={e => { window.location.href = `/tutor/online-class?tutor=${e.target.value}`; }}>
+            <option value="">— view as teacher —</option>
+            {TUTOR_ACCOUNTS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+          </select>
+        )}
+        <a href="/admineng/hub" className="hub">← Hub</a>
       </div>
 
-      <div className="tv-tabs">
-        <button className={`tv-tab${tab === "today" ? " ac" : ""}`} onClick={() => setTab("today")}>📅 Today</button>
-        <button className={`tv-tab${tab === "students" ? " ac" : ""}`} onClick={() => setTab("students")}>👩‍🎓 My Students</button>
-        <button className={`tv-tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📆 My Schedule</button>
-      </div>
-
-      {!loadingTutor && !tutor && (
-        adminRole === "admin" && !tutorParam ? (
-          <div className="tv-card">
-            <div className="tv-select-intro">
-              <h2>Select a tutor to view</h2>
-              <p>As an admin, you can view any tutor&apos;s dashboard.</p>
-            </div>
-            <div className="tv-select-grid">
-              {TUTOR_ACCOUNTS.map(acc => (
-                <a
-                  key={acc.id}
-                  href={`/tutor/online-class?tutor=${acc.id}`}
-                  className="tv-select-card"
-                  style={{ background: TUTOR_COLORS[acc.label] || "#64748b" }}
-                >
-                  {acc.label}
-                </a>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="tv-empty">
-            No tutor profile linked to this account. Please contact admin or use ?tutor=&lt;staff_user_id&gt; in the URL.
-          </div>
-        )
-      )}
-
-      {tutor && tab === "today" && (
+      {!tutor ? <div className="empty">No teacher account matched. Please contact the manager.</div> : (
         <>
-          <div className="week-nav">
-            <button onClick={() => setDateOffset(o => o - 1)}>◀ Previous</button>
-            <div
-              className="center"
-              style={{ cursor: "pointer" }}
-              title="Click to pick a date"
-              onClick={() => {
-                const el = dateInputRef.current;
-                if (!el) return;
-                const picker = (el as HTMLInputElement & { showPicker?: () => void }).showPicker;
-                if (typeof picker === "function") picker.call(el);
-                else el.click();
-              }}
-            >
-              📅 {formatTodayEN(selectedDate)}
-            </div>
-            {dateOffset !== 0 && <button className="today-btn" onClick={() => setDateOffset(0)}>Today</button>}
-            <button onClick={() => setDateOffset(o => o + 1)}>Next ▶</button>
-            <input
-              ref={dateInputRef}
-              type="date"
-              value={selectedDate}
-              onChange={e => { if (e.target.value) setDateOffset(diffDays(e.target.value, fmt(new Date()))); }}
-              style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
-            />
+          {/* ── Tabs ── */}
+          <div className="tabs">
+            <button className={`tb ${tab === "today" ? "on" : ""}`} onClick={() => setTab("today")}>📅 Today {todaySessions.length > 0 && <span className="cnt">{doneCnt}/{todaySessions.length}</span>}</button>
+            <button className={`tb ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>👧 My Students <span className="cnt">{enrollments.length}</span></button>
+            <button className={`tb ${tab === "schedule" ? "on" : ""}`} onClick={() => setTab("schedule")}>🗓 My Schedule</button>
           </div>
-          {todaySessions.length === 0 ? (
-            <div className="tv-empty">No classes scheduled on {formatTodayEN(selectedDate)}.</div>
-          ) : (
-            todaySessions
-              .slice()
-              .sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""))
-              .map(s => {
-                const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-                const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
-                const cur = s.status;
-                return (
-                  <div key={s.id} className="td-card">
-                    <div className="td-top">
-                      <div className="td-time">{s.scheduled_time_ph || "-"} <span style={{fontSize:12,fontWeight:600,color:"#94a3b8"}}>· KR {s.scheduled_time_kr || "-"}</span></div>
-                      <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                    </div>
-                    <div className="td-info">
-                      <div className="name">{studentName}</div>
-                      <div className="meta">Session #{s.session_number}</div>
-                    </div>
-                    <div className="td-btns">
-                      <button className={`td-btn${cur === "scheduled" ? " ac-undo" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "scheduled")} style={{background:"#f1f5f9",color:"#64748b",borderColor:"#cbd5e1"}}>↺ Undo</button>
-                      <button className={`td-btn${cur === "attended" ? " ac-attended" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✓ Attended</button>
-                      <button className={`td-btn${(cur === "no_show" || cur === "absent") ? " ac-absent" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>✗ Absent</button>
-                      <button className={`td-btn${cur === "makeup" ? " ac-makeup" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>△ Makeup</button>
-                    </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>Behavior:</span>
-                      <button className="td-btn" style={s.attitude === "good" ? { background: "#dcfce7", color: "#166534", borderColor: "#86efac" } : {}} onClick={() => setAttitude(s, s.attitude === "good" ? "clear" : "good")}>😊 Good</button>
-                      <button className="td-btn" style={s.attitude === "issue" ? { background: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" } : {}} onClick={() => setAttitude(s, "issue")}>⚠ Issue</button>
-                      {s.attitude === "issue" && s.attitude_note && <span style={{ fontSize: 11, color: "#dc2626" }}>{s.attitude_note}</span>}
-                    </div>
-                    <div className="td-note">
-                      <label className="td-note-label">Notes (optional)</label>
-                      <textarea
-                        className="td-note-ta"
-                        rows={1}
-                        placeholder="Any notes about today's class? (e.g., student was late, tech issue)"
-                        value={sessionNoteDraft[s.id] !== undefined ? sessionNoteDraft[s.id] : (s.session_note || "")}
-                        onChange={e => {
-                          setSessionNoteDraft(prev => ({ ...prev, [s.id]: e.target.value }));
-                          const el = e.target as HTMLTextAreaElement;
-                          el.style.height = "auto";
-                          el.style.height = el.scrollHeight + "px";
-                        }}
-                        onBlur={e => {
-                          const draft = sessionNoteDraft[s.id];
-                          if (draft !== undefined && draft !== (s.session_note || "")) {
-                            saveSessionNote(s.id, draft);
-                          }
-                          const el = e.target as HTMLTextAreaElement;
-                          if (!el.value) { el.style.height = ""; }
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
-          )}
-        </>
-      )}
 
-      {tutor && tab === "students" && (
-        enrollments.length === 0 ? (
-          <div className="tv-empty">No students assigned yet.</div>
-        ) : (
-          <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>English Name</th><th>Age</th><th>Days</th>
-                  <th>KR Time</th><th>PH Time</th><th>Start</th><th>End</th>
-                  <th>Period</th><th>Class Period</th>
-                  <th>Pre</th><th>Post</th><th>Total</th><th>Remaining</th>
-                  <th style={{ minWidth: 220 }}>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {enrollments.map(e => {
-                  const total = e.total_sessions || 0;
-                  const used = e.used_sessions || 0;
-                  const remaining = Math.max(0, total - used);
-                  const age = e.student_birth_year ? (new Date().getFullYear() - Number(e.student_birth_year)) : null;
-                  const isEditing = editingNoteId === e.id;
-                  return (
-                    <tr key={e.id}>
-                      <td className="cell-en-link" onClick={() => setInvoiceStudent(e.id)} title="Click to view calendar">
-                        {e.student_name_en || e.student_name || "-"}
-                      </td>
-                      <td>{age !== null && !isNaN(age) ? age : (e.student_birth_year || "-")}</td>
-                      <td>{capDays(e.days_of_week)}</td>
-                      <td>{e.class_time_kr || "-"}</td>
-                      <td>{e.class_time_ph || "-"}</td>
-                      <td>{e.start_date || "-"}</td>
-                      <td>{e.end_date || "-"}</td>
-                      <td>{e.duration_weeks ? `${e.duration_weeks} wks` : "-"}</td>
-                      <td>{e.class_period || "-"}</td>
-                      <td>{e.pre_sessions ?? 0}</td>
-                      <td>{e.post_sessions ?? 0}</td>
-                      <td>{total}</td>
-                      <td className="cell-remaining">{remaining}</td>
-                      <td
-                        className={`cell-notes${!e.tutor_notes && !isEditing ? " empty" : ""}`}
-                        onClick={() => { if (!isEditing) { setEditingNoteId(e.id); setNoteDraft(e.tutor_notes || ""); } }}
-                      >
-                        {isEditing ? (
-                          <textarea
-                            autoFocus
-                            value={noteDraft}
-                            onChange={ev => setNoteDraft(ev.target.value)}
-                            onBlur={() => saveNote(e.id, noteDraft.trim())}
-                            onKeyDown={ev => {
-                              if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); saveNote(e.id, noteDraft.trim()); }
-                              if (ev.key === "Escape") { setEditingNoteId(null); }
-                            }}
-                            placeholder="Enter to save (Shift+Enter: new line)"
-                          />
-                        ) : (
-                          e.tutor_notes || "Click to add notes"
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )
-      )}
-
-      {invoiceStudent && <StudentInvoiceCalendar enrollmentId={invoiceStudent} onClose={() => setInvoiceStudent(null)} />}
-
-      {tutor && tab === "schedule" && (
-        <>
-          <div className="week-nav">
-            <button onClick={() => setWeekOffset(o => o - 1)}>◀ Previous Week</button>
-            <div className="center">
-              📅 {weekLabel(weekOffset)}
-              <span className="sub">{formatWeekRangeEN(startDate, endDate)}</span>
-            </div>
-            {weekOffset !== 0 && <button className="today-btn" onClick={() => setWeekOffset(0)}>Today</button>}
-            <button onClick={() => setWeekOffset(o => o + 1)}>Next Week ▶</button>
-          </div>
-          <div className="wk-grid">
-            {Array.from({ length: 7 }).map((_, i) => {
-              const d = new Date(startDate); d.setDate(startDate.getDate() + i);
-              const dateStr = fmt(d);
-              const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
-              const dayNum = d.getDate();
-              const list = (weekByDate[dateStr] || []).slice().sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""));
-              return (
-                <div key={dateStr} className="wk-col">
-                  <div className="wk-head">{dayLabel} {dayNum}</div>
-                  {list.length === 0 ? (
-                    <div className="wk-empty">No class</div>
-                  ) : list.map(s => {
-                    const st = SES_STYLE[s.status] || SES_STYLE.scheduled;
-                    const studentName = s.enrollment?.student_name_en || s.enrollment?.student_name || "-";
+          {/* ══ TODAY ══ */}
+          {tab === "today" && (
+            <div>
+              <div className="dnav">
+                <button className="nb" onClick={() => setDateOffset(dateOffset - 1)}>‹</button>
+                <button className="nb today" onClick={() => setDateOffset(0)} style={dateOffset === 0 ? { background: "#1a6fc4", color: "#fff" } : {}}>Today</button>
+                <button className="nb" onClick={() => setDateOffset(dateOffset + 1)}>›</button>
+                <span className="dlabel" onClick={() => dateInputRef.current?.showPicker?.()}>{dateEN(selectedDate)}</span>
+                <input ref={dateInputRef} type="date" lang="en" value={selectedDate} onChange={e => { if (e.target.value) setDateOffset(Math.round((new Date(e.target.value + "T12:00:00").getTime() - new Date(fmtD(new Date()) + "T12:00:00").getTime()) / 86400000)); }} style={{ width: 0, height: 0, opacity: 0, position: "absolute" }} />
+              </div>
+              {sortedToday.length === 0 ? <div className="empty">No classes on this day 🌴</div> : (
+                <div className="tgrid">
+                  {sortedToday.map(s => {
+                    const st = ST[s.status] || ST.scheduled;
+                    const done = s.status !== "scheduled";
                     return (
-                      <div key={s.id} className="wk-card">
-                        <div className="wk-bar" />
-                        <div className="wk-time">{s.scheduled_time_ph || "-"}</div>
-                        <div className="wk-name">{studentName}</div>
-                        <div className="wk-meta">#{s.session_number}</div>
-                        <span className="wk-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                        {s.session_note && <span className="wk-note-icon" title={s.session_note}>💬</span>}
+                      <div key={s.id} className={`tcard ${done ? "done" : ""}`}>
+                        <div className="trow1">
+                          <div className="ttime">{s.scheduled_time_ph || "-"}<span className="tkr">KR {s.scheduled_time_kr || "-"}</span></div>
+                          <span className="chip" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                        </div>
+                        <div className="tname">{stuName(s)} <span className="tnkr">{s.enrollment?.student_name}</span></div>
+                        <div className="tmeta">Session #{s.session_number}</div>
+                        <div className="tbtns">
+                          <button className={`ab at ${s.status === "attended" ? "on" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s, "attended")}>✓ Attended</button>
+                          <button className={`ab ab2 ${(s.status === "no_show" || s.status === "absent") ? "on" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s, "no_show")}>✗ Absent</button>
+                          <button className={`ab am ${s.status === "makeup" ? "on" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s, "makeup")}>△ Makeup</button>
+                          {done && <button className="ab" disabled={updating === s.id} onClick={() => markStatus(s, "scheduled")}>↺ Undo</button>}
+                        </div>
+                        <div className="brow">
+                          <span className="blbl">Behavior</span>
+                          <button className={`bb good ${s.attitude === "good" ? "on" : ""}`} onClick={() => setAttitude(s, s.attitude === "good" ? "clear" : "good")}>😊 Good</button>
+                          <button className={`bb issue ${s.attitude === "issue" ? "on" : ""}`} onClick={() => setAttitude(s, "issue")}>⚠ Issue</button>
+                          {s.attitude === "issue" && s.attitude_note && <span className="bnote">{s.attitude_note}</span>}
+                        </div>
+                        <textarea className="nta" rows={1} placeholder="Class note (optional) — saved automatically"
+                          value={noteDraft[s.id] !== undefined ? noteDraft[s.id] : (s.session_note || "")}
+                          onChange={e => { setNoteDraft(prev => ({ ...prev, [s.id]: e.target.value })); const el = e.target; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }}
+                          onBlur={e => saveNote(s, e.target.value)} />
                       </div>
                     );
                   })}
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </div>
+          )}
+
+          {/* ══ MY STUDENTS ══ */}
+          {tab === "students" && (
+            enrollments.length === 0 ? <div className="empty">No active students</div> : (
+              <div className="sgrid">
+                {enrollments.map(e => {
+                  const total = e.total_sessions || 0, used = e.used_sessions || 0;
+                  const rem = Math.max(0, total - used);
+                  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+                  const lv = e.level && LV[e.level];
+                  const open = expandStu === e.id;
+                  const recent = (stuSessions[e.id] || []).slice(-10).reverse();
+                  return (
+                    <div key={e.id} className="scard">
+                      <div className="srow1">
+                        <div className="sname">{e.student_name_en || e.student_name} <span className="tnkr">{e.student_name_en ? e.student_name : ""}</span></div>
+                        {lv && <span className="chip" style={{ background: lv.bg, color: lv.color }}>{lv.label}</span>}
+                      </div>
+                      <div className="smeta">
+                        {(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")} · PH {e.class_time_ph || "-"} <span className="tnkr">(KR {e.class_time_kr || "-"})</span>
+                        {e.day_times && Object.keys(e.day_times).length > 0 && <span className="tnkr"> · per-day times</span>}
+                      </div>
+                      <div className="smeta">{e.start_date} ~ {e.end_date || "?"}</div>
+                      <div className="pbar-wrap">
+                        <div className="pbar-info"><span>Used {used} / {total}</span><b style={{ color: rem <= 3 ? "#dc2626" : "#166534" }}>{rem} left</b></div>
+                        <div className="pbar"><div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4" }} /></div>
+                      </div>
+                      {e.tutor_notes && <div className="snote">📝 {e.tutor_notes}</div>}
+                      <div className="sbtns">
+                        <button className="ab" onClick={() => toggleStuSessions(e.id)}>{open ? "▲ Hide history" : "▼ History"}</button>
+                        <button className="ab" onClick={() => setInvoiceStudent(e.id)}>🧾 Calendar</button>
+                      </div>
+                      {open && (
+                        <div className="hist">
+                          {recent.length === 0 ? <div className="tnkr">Loading…</div> : recent.map(s => {
+                            const st = ST[s.status] || ST.scheduled;
+                            return <div key={s.id} className="hrow"><span>#{s.session_number} {shortEN(s.scheduled_date)}</span><span className="chip" style={{ background: st.bg, color: st.color }}>{st.label}</span>{s.attitude === "issue" && <span title={s.attitude_note || ""}>⚠️</span>}{s.session_note && <span className="tnkr" style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.session_note}</span>}</div>;
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {/* ══ SCHEDULE ══ */}
+          {tab === "schedule" && (() => {
+            const mon = weekStart(weekOffset);
+            const days = Array.from({ length: 6 }, (_, i) => addDays(fmtD(mon), i)); // Mon~Sat
+            const todayStr = fmtD(new Date());
+            const byDay: Record<string, Ses[]> = {};
+            weekSessions.forEach(s => { if (!byDay[s.scheduled_date]) byDay[s.scheduled_date] = []; byDay[s.scheduled_date].push(s); });
+            return (
+              <div>
+                <div className="dnav">
+                  <button className="nb" onClick={() => setWeekOffset(weekOffset - 1)}>‹ Prev</button>
+                  <button className="nb" onClick={() => setWeekOffset(0)} style={weekOffset === 0 ? { background: "#1a6fc4", color: "#fff" } : {}}>This Week</button>
+                  <button className="nb" onClick={() => setWeekOffset(weekOffset + 1)}>Next ›</button>
+                  <span className="dlabel">{shortEN(days[0])} – {shortEN(days[5])}</span>
+                </div>
+                <div className="wgrid">
+                  {days.map(d => {
+                    const list = (byDay[d] || []).sort((a, b) => (a.scheduled_time_ph || "").localeCompare(b.scheduled_time_ph || ""));
+                    const isToday = d === todayStr;
+                    return (
+                      <div key={d} className={`wcol ${isToday ? "today" : ""}`}>
+                        <div className="whead">{new Date(d + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}<br /><span className="tnkr">{shortEN(d)}</span></div>
+                        {list.length === 0 ? <div className="wempty">—</div> : list.map(s => {
+                          const st = ST[s.status] || ST.scheduled;
+                          return (
+                            <div key={s.id} className="wchip" style={{ background: st.bg, color: st.color }} title={`${stuName(s)} · ${s.status}` + (s.session_note ? `\n📝 ${s.session_note}` : "")}>
+                              <b>{s.scheduled_time_ph || "-"}</b> {stuName(s)}
+                              {s.attitude === "issue" && " ⚠️"}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="tnkr" style={{ marginTop: 8 }}>Gray=Scheduled · Green=Attended · Red=Absent/Cancelled · Yellow=Makeup · Click Today tab to mark attendance</div>
+              </div>
+            );
+          })()}
         </>
       )}
-    </div>
 
-    {/* ─── Schedule update popup (unread notifications) ─── */}
-    {unreadNotifs.length > 0 && !notifDismissed && (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 22, maxWidth: 440, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,0.25)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-            <span style={{ fontSize: 16, fontWeight: 800 }}>Schedule update{unreadNotifs.length > 1 ? `s (${unreadNotifs.length})` : ""}</span>
+      {/* notifications popup */}
+      {unread.length > 0 && !notifDismissed && (
+        <div className="nov">
+          <div className="nbox">
+            <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10 }}>🔔 Schedule updates</div>
+            {unread.map(n => <div key={n.id} className="nrow">{n.message}</div>)}
+            <button className="ab at on" style={{ width: "100%", marginTop: 12 }} onClick={markNotifsRead}>OK, got it</button>
           </div>
-          <div style={{ maxHeight: 300, overflowY: "auto" }}>
-            {unreadNotifs.map(n => (
-              <div key={n.id} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                <div style={{ fontSize: 13.5, color: "#1a1a2e", lineHeight: 1.6 }}>{n.message}</div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{(n.created_at || "").slice(0, 16).replace("T", " ")}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ fontSize: 12, color: "#6b7c93", margin: "8px 0 14px" }}>Your schedule has been updated. Please check My Schedule.</div>
-          <button onClick={markNotifsRead}
-            style={{ width: "100%", padding: 12, background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
-            OK, got it
-          </button>
         </div>
-      </div>
-    )}
-  </>);
+      )}
+
+      {invoiceStudent && <StudentInvoiceCalendar enrollmentId={invoiceStudent} onClose={() => setInvoiceStudent(null)} />}
+      <Css />
+    </div>
+  );
+}
+
+function Css() {
+  return <style>{`
+    body{background:#f4f6fa}
+    .tcw{font-family:'Noto Sans KR',sans-serif;max-width:1500px;margin:0 auto;padding:22px 18px}
+    .hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .hd-t{font-size:20px;font-weight:800}
+    .hd-name{color:#1a6fc4;margin-left:6px}
+    .hd-s{font-size:12.5px;color:#94a3b8;margin-top:2px}
+    .hub{font-size:13px;font-weight:700;color:#475569;text-decoration:none;border:1px solid #e2e8f0;background:#fff;border-radius:9px;padding:8px 13px}
+    .sel{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
+    .tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
+    .tb{flex:0 0 auto;padding:10px 18px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569}
+    .tb.on{background:#1a6fc4;border-color:#1a6fc4;color:#fff}
+    .cnt{font-size:11px;background:rgba(0,0,0,0.08);border-radius:99px;padding:1px 7px;margin-left:5px}
+    .tb.on .cnt{background:rgba(255,255,255,0.25)}
+    .chip{font-size:11px;font-weight:800;border-radius:7px;padding:2px 8px;white-space:nowrap}
+    .dnav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .nb{padding:8px 14px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
+    .dlabel{font-size:15px;font-weight:800;cursor:pointer}
+    .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+    .tcard{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:16px}
+    .tcard.done{opacity:.82}
+    .trow1{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .ttime{font-size:20px;font-weight:800;color:#0f172a}
+    .tkr{font-size:12px;font-weight:600;color:#94a3b8;margin-left:8px}
+    .tname{font-size:16.5px;font-weight:800}
+    .tnkr{font-size:12px;font-weight:600;color:#94a3b8}
+    .tmeta{font-size:12px;color:#94a3b8;margin:2px 0 10px}
+    .tbtns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .ab{padding:9px 13px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569}
+    .ab.at.on{background:#16a34a;border-color:#16a34a;color:#fff}
+    .ab.ab2.on{background:#dc2626;border-color:#dc2626;color:#fff}
+    .ab.am.on{background:#d97706;border-color:#d97706;color:#fff}
+    .brow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .blbl{font-size:11px;font-weight:800;color:#94a3b8}
+    .bb{padding:6px 11px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;color:#64748b}
+    .bb.good.on{background:#dcfce7;border-color:#86efac;color:#166534}
+    .bb.issue.on{background:#fef2f2;border-color:#fecaca;color:#dc2626}
+    .bnote{font-size:11.5px;color:#dc2626}
+    .nta{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;resize:none;overflow:hidden}
+    .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+    .scard{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:16px}
+    .srow1{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+    .sname{font-size:16px;font-weight:800}
+    .smeta{font-size:12.5px;color:#64748b;margin-bottom:3px}
+    .pbar-wrap{margin:10px 0}
+    .pbar-info{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px}
+    .pbar{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+    .snote{font-size:12.5px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;color:#78350f;margin-bottom:8px}
+    .sbtns{display:flex;gap:6px}
+    .hist{margin-top:10px;border-top:1px solid #eef2f7;padding-top:8px;display:flex;flex-direction:column;gap:5px}
+    .hrow{display:flex;align-items:center;gap:8px;font-size:12.5px}
+    .wgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+    .wcol{background:#fff;border:1px solid #e8ecf3;border-radius:12px;padding:10px;min-height:120px}
+    .wcol.today{border-color:#1a6fc4;box-shadow:0 0 0 2px rgba(26,111,196,0.12)}
+    .whead{text-align:center;font-size:13px;font-weight:800;margin-bottom:8px}
+    .wempty{text-align:center;color:#cbd5e1;font-size:12px;padding:12px 0}
+    .wchip{font-size:11.5px;font-weight:700;border-radius:7px;padding:5px 8px;margin-bottom:5px;line-height:1.35}
+    .empty{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:44px;text-align:center;color:#94a3b8;font-size:14px}
+    .nov{position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:999;display:flex;align-items:center;justify-content:center}
+    .nbox{background:#fff;border-radius:16px;padding:22px;width:min(440px,90vw)}
+    .nrow{font-size:13.5px;padding:9px 12px;background:#f0f7ff;border-radius:9px;margin-bottom:6px;line-height:1.5}
+    @media(max-width:640px){
+      .tcw{padding:14px 10px}
+      .tgrid,.sgrid{grid-template-columns:1fr}
+      .wgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .ttime{font-size:18px}
+    }
+  `}</style>;
 }
 
 export default function TutorOnlineClassPage() {
-  return (
-    <Suspense fallback={null}>
-      <TutorOnlineClassInner />
-    </Suspense>
-  );
+  return <Suspense fallback={<div style={{ padding: 60, textAlign: "center", color: "#94a3b8" }}>Loading…</div>}><Inner /></Suspense>;
 }
