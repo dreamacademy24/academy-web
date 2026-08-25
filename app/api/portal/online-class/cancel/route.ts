@@ -9,7 +9,7 @@ const supabase = createClient(
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { session_id, customer_user_id, confirm } = body
+    const { session_id, customer_user_id, confirm, reason } = body
     if (!session_id) return NextResponse.json({ error: 'session_id required' }, { status: 400 })
     if (!customer_user_id) return NextResponse.json({ error: 'customer_user_id required' }, { status: 400 })
 
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         can_cancel: true,
         deduct: true,
         require_confirm: true,
-        message_ko: '⚠️ 3일 이내 취소는 회차가 차감됩니다. 취소하시겠습니까?',
+        message_ko: '⚠️ 3일 이내 취소는 회차가 차감됩니다. 취소하시겠습니까?\n(아이가 아픈 경우 등 부득이한 사정은 사유를 남겨주시면 확인 후 보강으로 처리해드릴 수 있어요)',
         message_en: '⚠️ Cancellation within 3 days will deduct 1 session. Proceed?',
         days_before: daysBefore,
       }
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
         status: targetStatus,
         cancel_noticed_at: noticedAt,
         cancel_days_before: daysBefore,
+        ...(reason ? { session_note: `[취소사유] ${String(reason).slice(0, 200)}` } : {}),
       })
       .eq('id', session_id)
     if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })

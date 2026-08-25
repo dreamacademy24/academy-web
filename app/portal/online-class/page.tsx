@@ -84,6 +84,7 @@ function PortalOnlineClassInner() {
   const [calMonth, setCalMonth] = useState<Date>(() => { const d = new Date(); d.setDate(1); return d });
   const [cancelTarget, setCancelTarget] = useState<{ session: Session; info: any } | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
   // 변경 요청
   const [changeOpen, setChangeOpen] = useState(false);
@@ -231,6 +232,7 @@ function PortalOnlineClassInner() {
       });
       const info = await res.json();
       if (!res.ok) { setMsg({ text: info.error || "오류가 발생했습니다.", type: "err" }); return; }
+      setCancelReason("");
       setCancelTarget({ session, info });
     } catch {
       setMsg({ text: "네트워크 오류가 발생했습니다.", type: "err" });
@@ -250,6 +252,7 @@ function PortalOnlineClassInner() {
           session_id: cancelTarget.session.id,
           customer_user_id: testUser ? activeEnroll.customer_user_id : authUserId,
           confirm: true,
+          reason: cancelReason.trim() || undefined,
         }),
       });
       const r = await res.json();
@@ -349,7 +352,7 @@ function PortalOnlineClassInner() {
       </div>
 
       {loading ? <div className="sec"><div className="empty">불러오는 중...</div></div> : !activeEnroll ? (
-        <div className="sec"><div className="empty">등록된 화상영어 수강 정보가 없습니다.</div></div>
+        <div className="sec"><div className="empty">아직 화상영어 수강이 연결되지 않았어요.<br/>등록·문의는 카카오 채널로 연락해주세요 😊</div></div>
       ) : (
         <>
           {enrollments.length > 1 && (
@@ -573,6 +576,17 @@ function PortalOnlineClassInner() {
               return "❌ 당일 취소입니다. 회차가 차감됩니다.\n그래도 취소하시겠습니까?";
             })()}
           </div>
+          <textarea
+            value={cancelReason}
+            onChange={e => setCancelReason(e.target.value)}
+            placeholder="취소 사유 (선택) — 예: 아이가 아파요, 학교 행사"
+            style={{ width: "100%", boxSizing: "border-box", minHeight: 64, padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10, fontFamily: "inherit", fontSize: 13, marginTop: 10, resize: "vertical" }}
+          />
+          {cancelTarget.info.days_before < 4 && (
+            <div style={{ fontSize: 12, color: "#92400e", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "8px 10px", marginTop: 8, lineHeight: 1.5 }}>
+              💡 아이가 아픈 경우 등 부득이한 사정은 사유를 남겨주세요. 관리자가 확인 후 <b>보강(차감 없음)</b>으로 처리해드릴 수 있어요.
+            </div>
+          )}
           <div className="acts">
             <button className="btn-cancel" disabled={cancelLoading} onClick={() => setCancelTarget(null)}>닫기</button>
             <button className="btn-confirm" disabled={cancelLoading} onClick={confirmCancel}>{cancelLoading ? "처리중..." : "취소하기"}</button>

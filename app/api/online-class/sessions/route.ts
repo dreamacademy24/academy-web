@@ -48,8 +48,35 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json()
     const sessionId = body.session_id || body.id
-    const { status, recorded_by, cancel_noticed_at, session_note } = body
+    const { status, recorded_by, cancel_noticed_at, session_note, admin_makeup, attitude, attitude_note } = body
     if (!sessionId) return NextResponse.json({ error: 'session_id required' }, { status: 400 })
+
+    // 어드민 보강 전환: 차감된 취소(cancelled) → makeup + 회차 복구 (아이 아픔 등)
+    if (admin_makeup === true) {
+      const { data: cur } = await supabase.from('online_sessions')
+        .select('status, enrollment_id, cancel_days_before').eq('id', sessionId).single()
+      if (!cur) return NextResponse.json({ error: 'session not found' }, { status: 404 })
+      if (cur.status !== 'cancelled') return NextResponse.json({ error: '차감 취소 상태만 보강으로 전환할 수 있어요' }, { status: 400 })
+      const { error: mkErr } = await supabase.from('online_sessions')
+        .update({ status: 'makeup' }).eq('id', sessionId)
+      if (mkErr) return NextResponse.json({ error: mkErr.message }, { status: 500 })
+      const { data: enroll } = await supabase.from('online_enrollments')
+        .select('used_sessions').eq('id', cur.enrollment_id).single()
+      if (enroll && (enroll.used_sessions || 0) > 0) {
+        await supabase.from('online_enrollments')
+          .update({ used_sessions: (enroll.used_sessions || 0) - 1 }).eq('id', cur.enrollment_id)
+      }
+      return NextResponse.json({ ok: true, converted: true, message: '보강으로 전환하고 회차 1회를 복구했어요.' })
+    }
+
+    // 수업태도 기록만 단독 저장 (티쳐 화면)
+    if (typeof attitude !== 'undefined' && !status) {
+      const upd: Record<string, unknown> = { attitude: attitude || null }
+      if (typeof attitude_note !== 'undefined') upd.attitude_note = (attitude_note || '').toString().trim() || null
+      const { error } = await supabase.from('online_sessions').update(upd).eq('id', sessionId)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
 
     // 노트만 단독 저장 (status 변경 없이)
     if (typeof session_note !== 'undefined' && !status) {

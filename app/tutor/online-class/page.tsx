@@ -51,6 +51,7 @@ interface SessionItem {
   scheduled_time_kr: string | null;
   status: string;
   session_note: string | null;
+  attitude?: string | null; attitude_note?: string | null;
   enrollment: { id: string; student_name: string; student_name_en: string | null } | null;
 }
 
@@ -235,6 +236,21 @@ function TutorOnlineClassInner() {
     await loadToday();
     await loadWeek();
     setUpdating(null);
+  }
+
+  async function setAttitude(s: SessionItem, val: string) {
+    let note: string | null = s.attitude_note || null;
+    if (val === "issue") {
+      const input = window.prompt("Describe the behavior issue (visible to admin):", s.attitude_note || "");
+      if (input === null) return;
+      note = input.trim() || null;
+    } else { note = null; }
+    const res = await fetch("/api/online-class/sessions", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: s.id, attitude: val === "clear" ? null : val, attitude_note: note }),
+    });
+    if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); return; }
+    setTodaySessions(prev => prev.map(x => x.id === s.id ? { ...x, attitude: val === "clear" ? null : val, attitude_note: note } : x));
   }
 
   async function saveSessionNote(sessionId: string, value: string) {
@@ -482,6 +498,12 @@ function TutorOnlineClassInner() {
                       <button className={`td-btn${cur === "attended" ? " ac-attended" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "attended")}>✓ Attended</button>
                       <button className={`td-btn${(cur === "no_show" || cur === "absent") ? " ac-absent" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "no_show")}>✗ Absent</button>
                       <button className={`td-btn${cur === "makeup" ? " ac-makeup" : ""}`} disabled={updating === s.id} onClick={() => markStatus(s.id, "makeup")}>△ Makeup</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>Behavior:</span>
+                      <button className="td-btn" style={s.attitude === "good" ? { background: "#dcfce7", color: "#166534", borderColor: "#86efac" } : {}} onClick={() => setAttitude(s, s.attitude === "good" ? "clear" : "good")}>😊 Good</button>
+                      <button className="td-btn" style={s.attitude === "issue" ? { background: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" } : {}} onClick={() => setAttitude(s, "issue")}>⚠ Issue</button>
+                      {s.attitude === "issue" && s.attitude_note && <span style={{ fontSize: 11, color: "#dc2626" }}>{s.attitude_note}</span>}
                     </div>
                     <div className="td-note">
                       <label className="td-note-label">Notes (optional)</label>

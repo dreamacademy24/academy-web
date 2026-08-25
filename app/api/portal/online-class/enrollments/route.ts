@@ -18,6 +18,7 @@ export async function GET(req: Request) {
       .from('online_enrollments')
       .select('*, tutor:online_tutors(id, name_display, name_en)')
       .eq('customer_user_id', customerUserId)
+      .eq('portal_open', true)
       .order('start_date', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     enrollments = data ?? []

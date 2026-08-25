@@ -17,12 +17,14 @@ interface Enrollment {
   total_sessions: number; pre_sessions: number; post_sessions: number;
   used_sessions: number; remaining_sessions: number | null;
   status: string; notes: string | null;
+  portal_open?: boolean | null;
 }
 interface Session {
   id: string; enrollment_id: string; session_number: number;
   scheduled_date: string; scheduled_time_ph: string | null; scheduled_time_kr: string | null;
   status: string; is_makeup_added: boolean; note: string | null;
   session_note: string | null;
+  attitude?: string | null; attitude_note?: string | null;
   cancel_days_before?: number | null;
 }
 
@@ -42,13 +44,13 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = 
   makeup:     { label: "△", bg: "#fef9c3", color: "#92400e" },
 };
 
-const DAYS = ["월", "화", "수", "목", "금", "토"];
+const DAYS = ["월", "화", "수", "목", "금"]; // 평일만 (2026-08 개편)
 
-// 수업 시간 선택 모달용 — 13:00 ~ 23:00, 30분 간격
+// 수업 시간 선택 모달용 — 세부 14:00~21:00 운영 = 한국 15:00~21:30 시작 (30분 간격, 2026-08 개편)
 const TIME_SLOTS: string[] = [];
-for (let h = 13; h <= 23; h++) {
+for (let h = 15; h <= 21; h++) {
   TIME_SLOTS.push(`${h}:00`);
-  if (h < 23) TIME_SLOTS.push(`${h}:30`);
+  TIME_SLOTS.push(`${h}:30`);
 }
 function subtractHour(t: string): string {
   const [h, m] = t.split(":").map(Number);
@@ -156,6 +158,7 @@ export default function OnlineClassPage() {
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
+    portal_open: false,
     tutor_id: "", enrollment_type: "free_package", level: "",
     days_of_week: [] as string[],
     class_time_kr: "", class_time_ph: "",
@@ -293,7 +296,25 @@ export default function OnlineClassPage() {
       sessions_per_week: e.sessions_per_week ?? 3,
       status: e.status || "active",
       notes: e.notes || "",
+      portal_open: e.portal_open === true,
     });
+  }
+  async function adminMakeup(s: Session) {
+    if (!window.confirm(`#${s.session_number} (${s.scheduled_date}) 차감 취소를 보강(무차감)으로 전환할까요?\n\n회차 1회가 복구되고 마지막 회차 뒤 보강이 추가돼요. (아이 아픔 등 부득이한 사정)`)) return;
+    try {
+      const res = await fetch("/api/online-class/sessions", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: s.id, admin_makeup: true }),
+      });
+      const r = await res.json();
+      if (!res.ok) { toastErr(r.error || "전환 실패"); return; }
+      toastOk("보강으로 전환했어요 (회차 복구)");
+      if (expandedId) {
+        const res2 = await fetch(`/api/online-class/sessions?enrollment_id=${expandedId}`);
+        if (res2.ok) { const d = await res2.json(); setSessions(d.sessions || []); }
+      }
+      await loadEnrollments();
+    } catch (e) { toastErr("전환 실패: " + (e instanceof Error ? e.message : "unknown")); }
   }
   function toggleEditDay(d: string) {
     setEditForm(f => {
@@ -381,6 +402,7 @@ export default function OnlineClassPage() {
           duration_weeks: Number(form.duration_weeks) || null,
           class_duration_weeks: Number(form.class_duration_weeks) || null,
           sessions_per_week: Number(form.sessions_per_week) || 3,
+          portal_open: form.portal_open === true,
           total_sessions: total,
           pre_sessions: pre,
           post_sessions: post,
@@ -393,6 +415,7 @@ export default function OnlineClassPage() {
       setPeriodTag("standalone"); setDayTimesOn(false); setDayTimes({});
       setForm({
         student_name: "", student_name_en: "", student_birth_year: "", customer_user_id: "",
+        portal_open: false,
         tutor_id: "", enrollment_type: "free_package", level: "",
         days_of_week: [], class_time_kr: "", class_time_ph: "",
         start_date: "", end_date: "", duration_weeks: "", class_duration_weeks: "",
@@ -599,7 +622,12 @@ export default function OnlineClassPage() {
           </div>
           <div className="form-row">
             <div><label className="form-label">출생연도</label><input className="form-input" value={form.student_birth_year} onChange={e => setForm({ ...form, student_birth_year: e.target.value })} placeholder="18년생" /></div>
-            <div><label className="form-label">손님 계정 ID</label><input className="form-input" value={form.customer_user_id} onChange={e => setForm({ ...form, customer_user_id: e.target.value })} placeholder="선택" /></div>
+            <div><label className="form-label">손님 계정 ID</label><input className="form-input" value={form.customer_user_id} onChange={e => setForm({ ...form, customer_user_id: e.target.value })} placeholder="선택" />
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, marginTop: 6, cursor: "pointer", color: form.portal_open ? "#166534" : "#64748b", fontWeight: 700 }}>
+                <input type="checkbox" checked={form.portal_open} onChange={e => setForm({ ...form, portal_open: e.target.checked })} />
+                📱 손님 앱(포털)에 공개 — 지정 손님만 화상영어 탭이 열려요
+              </label>
+            </div>
           </div>
         </div>
 
@@ -673,12 +701,16 @@ export default function OnlineClassPage() {
           <div className="form-row">
             <div>
               <label className="form-label">주 수업 횟수</label>
-              <select className="form-input" value={form.sessions_per_week} onChange={e => setForm({ ...form, sessions_per_week: e.target.value })}>
-                <option value="1">1회</option>
-                <option value="2">2회</option>
-                <option value="3">3회</option>
+              <select className="form-input" value={form.sessions_per_week} onChange={e => {
+                const spw = Number(e.target.value) || 3;
+                const total = Number(form.total_sessions) || 0;
+                setForm({ ...form, sessions_per_week: e.target.value, ...(total > 0 ? { duration_weeks: String(Math.ceil(total / spw)) } : {}) });
+              }}>
+                <option value="2">2회 (최소)</option>
+                <option value="3">3회 (기본)</option>
                 <option value="5">5회</option>
               </select>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>주1회 불가 · 주2회 선택 시 총 회차 유지, 기간 연장 (예: 12회 = 6주)</div>
             </div>
             <div>
               <label className="form-label">총 회차 *</label>
@@ -818,8 +850,12 @@ export default function OnlineClassPage() {
                         <div className="num">{d}</div>
                         <div>{st.label}</div>
                         {s.session_note && <span style={{ position: "absolute", top: 2, right: 2, fontSize: 10 }}>💬</span>}
+                        {s.attitude === "issue" && <span style={{ position: "absolute", bottom: 2, right: 2, fontSize: 10 }} title={`수업태도: ${s.attitude_note || "문제 기록"}`}>⚠️</span>}
                         {s.status === "scheduled" && (
                           <button className="cancel-btn" onClick={() => openCancelModal(s)} title="취소">×</button>
+                        )}
+                        {s.status === "cancelled" && (s.cancel_days_before == null || s.cancel_days_before < 4) && (
+                          <button className="cancel-btn" style={{ background: "#dcfce7", color: "#166534" }} onClick={() => adminMakeup(s)} title="보강 전환 (차감 복구)">↩</button>
                         )}
                       </div>
                     );
@@ -827,7 +863,7 @@ export default function OnlineClassPage() {
                 </div>
               </div>
             ))}
-            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 14 }}>O 출석 · X 결석/차감취소 · △ 보강 · 예정 칸에 마우스 올리면 × 취소 버튼</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 14 }}>O 출석 · X 결석/차감취소 · △ 보강 · ⚠️ 태도기록 · 예정 칸 ×=취소 · X 칸 ↩=보강 전환(차감 복구)</div>
             {sessions.some(s => s.session_note) && (
               <div style={{ padding: 14, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#78350f", marginBottom: 10 }}>📝 튜터 메모</div>
@@ -890,6 +926,10 @@ export default function OnlineClassPage() {
               <input type="number" className="form-input" value={String(editForm.total_sessions ?? "")} onChange={e => setEditForm(f => ({ ...f, total_sessions: Number(e.target.value), post_sessions: Number(e.target.value), pre_sessions: 0 }))} />
             </div>
           )}
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginBottom: 12, cursor: "pointer", fontWeight: 700, color: editForm.portal_open ? "#166534" : "#64748b" }}>
+            <input type="checkbox" checked={editForm.portal_open === true} onChange={e => setEditForm(f => ({ ...f, portal_open: e.target.checked }))} />
+            📱 손님 앱(포털) 공개 — 체크한 수강권만 손님 화상영어 탭에 표시
+          </label>
           <div style={{ marginBottom: 12 }}>
             <label className="form-label" style={{ fontSize: 11 }}>상태</label>
             <select className="form-input" value={String(editForm.status ?? "active")} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}>
