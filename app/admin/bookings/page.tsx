@@ -147,7 +147,11 @@ function acaEnd(b:any):string{
 }
 function fmtAccom(b:any):string{
   const t=b.accom_type||"";
-  if(isCommuteBooking(b))return "통학형";
+  if(isCommuteBooking(b)){
+    const _rm=String(b.house_no||b.accom_room||"").replace(/\s+/g,"").replace(/^dh/i,"").toUpperCase();
+    if(/^B\d{1,2}L\d{1,2}$/.test(_rm))return "DH "+_rm; // 통학형+드하 룸 배정(드하+드아) — 룸 표시
+    return "통학형";
+  }
   // 콤보: 숙소 구간(seg1/seg2) 순서대로 짧은 코드 (예: JP+DH)
   const SHORT:Record<string,string>={jaypark:"JP",dreamhouse:"DH",cubenine:"CUBE9"};
   if(b.seg1_type&&b.seg2_type){
@@ -1079,7 +1083,8 @@ export default function AdminBookingsPage(){
     {mainTab==="confirm"&&(()=>{
       const q=confirmSearch.toLowerCase();
       // 담당자 목록 자동 추출 (중복 제거)
-      const assigneeNames=Array.from(new Set(confirmList.map(b=>(b.assignee||"").trim()).filter(Boolean))).sort();
+      const RETIRED=["Jamie","Jenna","Yuna"]; // 퇴사자 — 칩에서 제외 (담당 재지정 전까지 '전체'에서만 보임)
+      const assigneeNames=Array.from(new Set(confirmList.map(b=>(b.assignee||"").trim()).filter(Boolean))).filter(nm=>!RETIRED.includes(nm)).sort();
       const hasUnassigned=confirmList.some(b=>!(b.assignee||"").trim());
       // 담당자 필터 적용
       const assigneeFiltered=confirmAssignee==="전체"?confirmFiltered
@@ -1158,15 +1163,15 @@ export default function AdminBookingsPage(){
         <div style={{display:"flex",flexDirection:"column",gap:8,padding:"10px 12px",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:10,marginBottom:10}}>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
             <span style={{fontSize:11,fontWeight:800,color:"#1a6fc4",width:44,flexShrink:0}}>담당자</span>
-            {["전체",...assigneeNames,...(hasUnassigned?["미배정"]:[])].map(name=>{const on=confirmAssignee===name;return <button key={name} onClick={()=>setConfirmAssignee(name)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #1a6fc4":"1px solid #dbeafe",background:on?"#1a6fc4":"#fff",color:on?"#fff":"#1a6fc4"}}>{name}</button>;})}
+            {["전체",...assigneeNames,...(hasUnassigned?["미배정"]:[])].map(name=>{const on=confirmAssignee===name;return <button key={name} onClick={()=>setConfirmAssignee(name)} style={{padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #1a6fc4":"1px solid #dbeafe",background:on?"#1a6fc4":"#fff",color:on?"#fff":"#1a6fc4"}}>{name}</button>;})}
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
             <span style={{fontSize:11,fontWeight:800,color:"#7c3aed",width:44,flexShrink:0}}>유형</span>
-            {(["전체","리조트","통학형"] as const).map(t=>{const on=confirmType===t;return <button key={t} onClick={()=>setConfirmType(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #7c3aed":"1px solid #ede9fe",background:on?"#7c3aed":"#fff",color:on?"#fff":"#7c3aed"}}>{t}</button>;})}
+            {(["전체","리조트","통학형"] as const).map(t=>{const on=confirmType===t;return <button key={t} onClick={()=>setConfirmType(t)} style={{padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #7c3aed":"1px solid #ede9fe",background:on?"#7c3aed":"#fff",color:on?"#fff":"#7c3aed"}}>{t}</button>;})}
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
             <span style={{fontSize:11,fontWeight:800,color:"#0d9488",width:44,flexShrink:0}}>기간</span>
-            {(["전체","진행중","예정","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="진행중"?"현재 진행중":t==="예정"?"입실 예정":t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
+            {(["전체","진행중","예정","이번주","지난"] as const).map(t=>{const on=confirmPeriod===t;return <button key={t} onClick={()=>setConfirmPeriod(t)} style={{padding:"5px 12px",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",border:on?"1px solid #0d9488":"1px solid #ccfbf1",background:on?"#0d9488":"#fff",color:on?"#fff":"#0d9488"}}>{t==="진행중"?"현재 진행중":t==="예정"?"입실 예정":t==="지난"?"지난·졸업":t==="이번주"?"이번주 체크인":t}</button>;})}
           </div>
         </div>
         <div className="cf-search">
