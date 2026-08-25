@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
 import * as XLSX from "xlsx";
-import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue, isCommuteBooking } from "@/lib/bookingTypes";
+import { ADMIN_BOOKING_TYPES as BOOKING_TYPES, type BookingTypeValue, isCommuteBooking, getBookingCategory } from "@/lib/bookingTypes";
 import { fmtAge, ageNum } from "@/lib/format";
 import { agencyShort, AGENCY_PRESETS } from "@/lib/agencies";
 
@@ -390,7 +390,7 @@ export default function AdminBookingsPage(){
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"부킹리스트");XLSX.writeFile(wb,"부킹리스트_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
   function exportConfirmXlsx(rows:Booking[]){
-    const data=rows.map(b=>{const isC=isCommuteBooking(b);const at=(b.accom_type||"").toLowerCase();const gub=isC?"통학형":at.includes("제이파크")?"JP":at.includes("큐브")?"C9":"DH";const aio=isC?"통학형":(b as any).is_all_in_one?"올인원":"일반";return{예약번호:shortNo(b.reservation_no),담당자:b.assignee||"",구분:gub,올인원:aio,예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0};});
+    const data=rows.map(b=>{const isC=isCommuteBooking(b);const at=(b.accom_type||"").toLowerCase();const cat=getBookingCategory(b as never);return{예약번호:shortNo(b.reservation_no),담당자:b.assignee||"",구성:cat.comp,패키지:cat.pkg,예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0};});
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
 
@@ -958,7 +958,7 @@ export default function AdminBookingsPage(){
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{(b.reservation_no||"").split("-").pop()}</td>
-            <td>{(b as any).is_all_in_one?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:<span style={{color:"#cbd5e1"}}>-</span>}</td>
+            <td>{(()=>{const cat=getBookingCategory(b as never);return(<div style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>{(b as any).is_all_in_one?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:<span style={{display:"inline-block",fontSize:10.5,background:"#f1f5f9",color:"#64748b",padding:"1px 6px",borderRadius:10,fontWeight:700}}>비패키지</span>}<span style={{fontSize:10,fontWeight:800,color:"#4338ca"}}>{cat.comp}</span></div>);})()}</td>
             <td onClick={e=>e.stopPropagation()}>
               <select className="asg" value={b.status||"접수"} style={{background:sc.bg,color:sc.color,fontWeight:700,borderRadius:8,border:"none",padding:"3px 6px"}}
                 onChange={async e=>{const v=e.target.value;
@@ -1118,8 +1118,8 @@ export default function AdminBookingsPage(){
       const cols:{key:string;label:string;get:(b:Booking)=>string|number}[]=[
         {key:"reservation_no",label:"예약번호",get:b=>shortNo(b.reservation_no)},
         {key:"assignee",label:"담당자",get:b=>b.assignee||"-"},
-        {key:"gubun",label:"구분",get:b=>{const isC=isCommuteBooking(b);if(isC)return"통학형";const at=(b.accom_type||"").toLowerCase();if(at.includes("제이파크"))return"JP";if(at.includes("큐브"))return"C9";return"DH";}},
-        {key:"allinone",label:"올인원",get:b=>{if(isCommuteBooking(b))return"통학형";return(b as any).is_all_in_one?"올인원":"일반";}},
+        {key:"gubun",label:"구성",get:b=>getBookingCategory(b as never).comp},
+        {key:"allinone",label:"패키지",get:b=>getBookingCategory(b as never).pkg},
         {key:"booker_name",label:"예약자",get:b=>b.booker_name},
         {key:"students",label:"학생",get:b=>stuNames(b.students)},
         {key:"checkin_date",label:"체크인",get:b=>b.checkin_date||"-"},
@@ -1195,12 +1195,11 @@ export default function AdminBookingsPage(){
           sorted.map(b=>{
             const bdday=getBalanceDday(b.balance_date);
             const isC=isCommuteBooking(b);
-            const gubunLabel=(()=>{if(isC)return"통학형";const at=(b.accom_type||"").toLowerCase();if(at.includes("제이파크"))return"JP";if(at.includes("큐브"))return"C9";return"DH";})();
-            const gubunColor:Record<string,{bg:string;color:string}>={"DH":{bg:"#dbeafe",color:"#1e40af"},"JP":{bg:"#fce7f3",color:"#9d174d"},"C9":{bg:"#e0e7ff",color:"#4338ca"},"통학형":{bg:"#f5f5f4",color:"#78716c"}};
-            const gc=gubunColor[gubunLabel]||gubunColor["DH"];
-            const aioLabel=isC?"통학형":(b as any).is_all_in_one?"올인원":"일반";
-            const aioColor:Record<string,{bg:string;color:string}>={"올인원":{bg:"#fef3c7",color:"#92400e"},"통학형":{bg:"#f5f5f4",color:"#78716c"},"일반":{bg:"#f1f5f9",color:"#64748b"}};
-            const ac=aioColor[aioLabel]||aioColor["일반"];
+            const cat=getBookingCategory(b as never);
+            const gubunLabel=cat.comp;
+            const gc=gubunLabel.startsWith("드하")?{bg:"#dbeafe",color:"#1e40af"}:gubunLabel.startsWith("JP")?{bg:"#fce7f3",color:"#9d174d"}:gubunLabel.startsWith("C9")?{bg:"#e0e7ff",color:"#4338ca"}:{bg:"#f5f5f4",color:"#78716c"};
+            const aioLabel=cat.pkg;
+            const ac=aioLabel==="올인원"?{bg:"#fef3c7",color:"#92400e"}:{bg:"#f1f5f9",color:"#64748b"};
             return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td><span style={{fontSize:11,fontWeight:700,color:"#1a6fc4"}}>{b.assignee||"-"}</span></td>

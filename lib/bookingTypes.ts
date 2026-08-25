@@ -123,3 +123,26 @@ export function isCommuteBooking(
   if (!b) return false;
   return b.booking_type === "commute" || b.accom_type === "통학형";
 }
+
+// ── 예약 카테고리 라벨 (패키지 여부 / 서비스 구성) — 2026-08-25
+// pkg: "올인원" | "비패키지"
+// comp: 드하 / 드하+드아 / 드하+JP / 드하+C9 / JP / JP+드아 / C9 / C9+드아 / 통학(드아)
+export function getBookingCategory(b: {
+  accom_type?: string | null; booking_type?: string | null;
+  is_all_in_one?: boolean | null; academy_option?: boolean | null;
+  house_no?: string | null; accom_room?: string | null;
+} | null | undefined): { pkg: string; comp: string } {
+  if (!b) return { pkg: "-", comp: "-" };
+  const pkg = b.is_all_in_one ? "올인원" : "비패키지";
+  const at = (b.accom_type || "").toLowerCase();
+  const hasRoom = !!String(b.house_no || b.accom_room || "").trim();
+  const ac = b.academy_option === true;
+  let comp: string;
+  if (isCommuteBooking(b)) comp = hasRoom ? "드하+드아" : "통학(드아)";
+  else if (at.includes("+")) comp = at.includes("제이파크") ? "드하+JP" : at.includes("큐브") ? "드하+C9" : "콤보";
+  else if (at.includes("제이파크")) comp = ac ? "JP+드아" : "JP";
+  else if (at.includes("큐브")) comp = ac ? "C9+드아" : "C9";
+  else if (at.includes("드림") || at.includes("드하")) comp = ac ? "드하+드아" : "드하";
+  else comp = b.accom_type || "-";
+  return { pkg, comp };
+}
