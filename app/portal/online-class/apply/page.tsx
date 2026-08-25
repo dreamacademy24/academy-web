@@ -14,7 +14,7 @@ interface Slot { time_kr: string; time_ph: string; days: Record<string, DayCell>
 interface TutorBrief { id: string; name: string }
 
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토" };
-const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat"];
+const DAYS = ["mon", "tue", "wed", "thu", "fri"]; // 평일만 (2026-08 개편)
 
 export default function ApplyPage() {
   return (
@@ -32,6 +32,7 @@ function ApplyInner() {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [level, setLevel] = useState("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [tutors, setTutors] = useState<TutorBrief[]>([]);
@@ -123,6 +124,7 @@ function ApplyInner() {
           customer_user_id: authUser.id,
           tutor_id: suggested.id,
           enrollment_type: "free_package",
+          level,
           days_of_week: selectedDays,
           class_time_kr: selectedTime,
           start_date: fmt(startDate),
@@ -213,8 +215,18 @@ function ApplyInner() {
               </button>
             ))}
           </div>
-          <div className="hint">{selectedDays.length}/3 선택됨 · 주 {selectedDays.length}회 수업</div>
-          <button className="btn-p" disabled={selectedDays.length === 0} onClick={() => setStep(2)}>
+          <div className="hint">{selectedDays.length}/3 선택됨 · 주 {selectedDays.length}회 수업 <b style={{ color: "#b45309" }}>(최소 주 2회)</b></div>
+          <h2 style={{ marginTop: 22 }}>아이 영어 레벨</h2>
+          <div className="days">
+            {([["beginner", "비기너", "알파벳·기초 단어 수준"], ["intermediate", "인터미디어", "간단한 문장으로 대화 가능"], ["advanced", "어드밴스드", "자유로운 대화 가능"]] as const).map(([v, l, d]) => (
+              <button key={v} className={`dchip ${level === v ? "on" : ""}`} onClick={() => setLevel(v)} style={{ minWidth: 120, flexDirection: "column", height: "auto", padding: "10px 14px" }}>
+                <div style={{ fontWeight: 800 }}>{l}</div>
+                <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 2 }}>{d}</div>
+              </button>
+            ))}
+          </div>
+          <div className="hint">레벨에 맞는 선생님을 배정해 드려요 (배정 후 조정 가능)</div>
+          <button className="btn-p" disabled={selectedDays.length < 2 || !level} onClick={() => setStep(2)}>
             다음 단계
           </button>
         </div>

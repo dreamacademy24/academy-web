@@ -474,7 +474,11 @@ export default function OnlineClassPage() {
   }
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const tutorNames = [...new Set(enrollments.map(e => e.tutor?.name_display).filter(Boolean))].sort() as string[];
+  // 필터 칩 = 전체 활성 티쳐 (배정 없는 새 티쳐도 표시 — 배정용) + 수업만 남은 비활성 티쳐
+  const LV_KR: Record<string, string> = { beginner: "비기너", intermediate: "인터", advanced: "어드밴", coordinator: "코디" };
+  const tutorLevelMap: Record<string, string> = {};
+  tutors.forEach((t: any) => { if (t.name_display) tutorLevelMap[t.name_display] = LV_KR[t.level] || ""; });
+  const tutorNames = [...new Set([...tutors.map((t: any) => t.name_display), ...enrollments.map(e => e.tutor?.name_display)].filter(Boolean))] as string[];
   const hasNoTutor = enrollments.some(e => !e.tutor);
 
   const filtered = enrollments.filter(e => {
@@ -579,9 +583,10 @@ export default function OnlineClassPage() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#1a6fc4", width: 44, flexShrink: 0 }}>담당T</span>
             {["all", ...tutorNames, ...(hasNoTutor ? ["미배정"] : [])].map(name => {
+              const lv = tutorLevelMap[name];
               const on = tutorFilter === name;
               const label = name === "all" ? "전체" : name;
-              return <button key={name} onClick={() => setTutorFilter(name)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #1a6fc4" : "1px solid #dbeafe", background: on ? "#1a6fc4" : "#fff", color: on ? "#fff" : "#1a6fc4" }}>{label}</button>;
+              return <button key={name} onClick={() => setTutorFilter(name)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #1a6fc4" : "1px solid #dbeafe", background: on ? "#1a6fc4" : "#fff", color: on ? "#fff" : "#1a6fc4" }}>{label}{lv && <span style={{ fontSize: 10, opacity: 0.75, marginLeft: 3 }}>({lv})</span>}</button>;
             })}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
