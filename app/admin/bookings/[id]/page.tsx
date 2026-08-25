@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { generatePortalId, generateTempPassword } from "@/lib/portalUtils";
 import { isCommuteBooking, getBookingCategory } from "@/lib/bookingTypes";
+import { PORTAL_FEATURES, defaultPortalFeatures, resolvePortalFeatures } from "@/lib/portalFeatures";
 import { fmtRoom } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 
@@ -153,6 +154,19 @@ export default function BookingDetailPage() {
     setPortalUserId(bk.portal_user_id || '');
   }, [data]);
 
+  async function toggleFeature(key: string) {
+    const bk = data?.booking; if (!bk) return;
+    const cur = resolvePortalFeatures(bk) as Record<string, boolean>;
+    const next = { ...cur, [key]: !cur[key] };
+    const res = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portal_features: next }) });
+    if (res.ok) await load();
+    else alert("저장 실패 — 다시 시도해주세요");
+  }
+  async function resetFeatures() {
+    if (!confirm("앱 메뉴를 예약 유형 기본값(자동)으로 되돌릴까요?")) return;
+    const res = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ portal_features: null }) });
+    if (res.ok) await load(); else alert("저장 실패");
+  }
   async function toggleAllInOne(val: boolean) {
     setIsAllInOne(val);
     await fetch(`/api/bookings/${id}`, {
@@ -649,6 +663,34 @@ export default function BookingDetailPage() {
             </div>
           )}
         </div>
+        {(() => {
+          const feats = resolvePortalFeatures(b) as Record<string, boolean>;
+          const defs = defaultPortalFeatures(b) as Record<string, boolean>;
+          const hasOverride = !!b.portal_features;
+          return (
+            <div style={{ margin: "0 0 18px", padding: 16, background: "#f0f7ff", borderRadius: 10, border: "1px solid #bfdbfe" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 800, fontSize: 14.5 }}>📱 손님 앱 메뉴</span>
+                <span style={{ fontSize: 11.5, color: "#64748b" }}>이 예약의 손님 앱에 보이는 메뉴 — 클릭으로 켜고 끄기 (예약 유형 기본값에서 개별 조정)</span>
+                {hasOverride && <button onClick={resetFeatures} style={{ marginLeft: "auto", border: "1px solid #cbd5e1", background: "#fff", borderRadius: 7, padding: "3px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", color: "#64748b" }}>↺ 기본값으로</button>}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {PORTAL_FEATURES.map(f => {
+                  const on = feats[f.key];
+                  const isDefault = feats[f.key] === defs[f.key];
+                  return (
+                    <button key={f.key} onClick={() => toggleFeature(f.key)} title={f.desc + (isDefault ? " (기본값)" : " (수동 조정됨)")}
+                      style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                        border: on ? "1px solid #16a34a" : "1px solid #e2e8f0",
+                        background: on ? "#dcfce7" : "#f8fafc", color: on ? "#166534" : "#94a3b8" }}>
+                      {on ? "✓ " : "✕ "}{f.label}{!isDefault && <span style={{ marginLeft: 4, fontSize: 10 }}>✎</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
         <div className="sec">
           <h2>예약 정보</h2>
           <div className="grid">

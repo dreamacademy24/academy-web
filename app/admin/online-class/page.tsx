@@ -647,7 +647,7 @@ export default function OnlineClassPage() {
                     const rem = e.remaining_sessions ?? Math.max(0, total - used);
                     return (
                       <tr key={e.id}>
-                        <td onClick={() => loadSessions(e.id)} style={{ position: "sticky", left: 0, background: "#fff", zIndex: 1, padding: "5px 10px", border: "1px solid #e2e8f0", cursor: "pointer", whiteSpace: "nowrap" }}>
+                        <td onClick={() => router.push(`/admin/online-class/${e.id}`)} style={{ position: "sticky", left: 0, background: "#fff", zIndex: 1, padding: "5px 10px", border: "1px solid #e2e8f0", cursor: "pointer", whiteSpace: "nowrap" }}>
                           <b>{e.student_name}</b> <span style={{ color: "#94a3b8", fontSize: 10.5 }}>{e.tutor?.name_display || "미배정"}</span>
                         </td>
                         <td style={{ textAlign: "center", border: "1px solid #e2e8f0", fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534" }}>{rem}/{total}</td>
@@ -660,7 +660,7 @@ export default function OnlineClassPage() {
                           const sym = SYM[s.status] || SYM.scheduled;
                           const tt = `${e.student_name} · ${s.scheduled_date} ${s.scheduled_time_kr || ""} · ${s.status}` + (s.attitude === "issue" ? `\n⚠️ 태도: ${s.attitude_note || ""}` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "");
                           return (
-                            <td key={d} onClick={() => loadSessions(e.id)} title={tt} style={{ textAlign: "center", border: "1px solid #e2e8f0", background: sym.bg, color: sym.c, fontWeight: 800, cursor: "pointer", position: "relative" }}>
+                            <td key={d} onClick={() => router.push(`/admin/online-class/${e.id}`)} title={tt} style={{ textAlign: "center", border: "1px solid #e2e8f0", background: sym.bg, color: sym.c, fontWeight: 800, cursor: "pointer", position: "relative" }}>
                               {sym.t}{s.attitude === "issue" && <span style={{ position: "absolute", top: -2, right: 0, fontSize: 8 }}>⚠️</span>}
                             </td>
                           );
@@ -670,7 +670,7 @@ export default function OnlineClassPage() {
                   })}
                 </tbody>
               </table>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>· 예정 O 출석 ✗ 결석 X 차감취소 △ 보강 ⚠️ 태도기록 — 칸/이름 클릭 = 상세 패널</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>· 예정 O 출석 ✗ 결석 X 차감취소 △ 보강 ⚠️ 태도기록 — 칸/이름 클릭 = 학생 상세 페이지</div>
             </div>
           );
         })() : (
@@ -695,7 +695,7 @@ export default function OnlineClassPage() {
                   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
                   const isSplit = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
                   return (
-                    <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => loadSessions(e.id)}>
+                    <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => router.push(`/admin/online-class/${e.id}`)}>
                       <td style={{ fontWeight: 700 }}>{e.student_name}
                         {isSplit && <span title="연수전/연수후 분리 수강 (구버전)" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}
                         {e.class_period === "pre" && <span style={{ marginLeft: 4, fontSize: 9, background: "#e1f5ee", color: "#085041", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>연수전</span>}
@@ -716,9 +716,9 @@ export default function OnlineClassPage() {
                       </td>
                       <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
                       <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
-                        <button className="btn-sm" onClick={() => loadSessions(e.id)}>출결</button>
+                        <button className="btn-sm" onClick={() => router.push(`/admin/online-class/${e.id}`)}>출결</button>
                         {" "}
-                        <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => openEditModal(e)}>수정</button>
+                        <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => router.push(`/admin/online-class/${e.id}`)}>수정</button>
                         {" "}
                         <button className="btn-sm" style={{ color: "#d97706", borderColor: "#fcd34d" }} onClick={() => regenerateSessions(e.id)} disabled={regenerating}>🔄</button>
                         {" "}

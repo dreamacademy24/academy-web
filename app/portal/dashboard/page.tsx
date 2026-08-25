@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { resolvePortalFeatures } from "@/lib/portalFeatures";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import PortalPushButton from "@/components/PortalPushButton";
@@ -313,20 +314,25 @@ export default function PortalDashboard() {
 
   if (!session && !authUser) return null;
 
-  const cards = [
+  // 예약별 앱 메뉴 권한 (카테고리 기본값 + 어드민 오버라이드). 예약 없으면 null
+  const feats = bookingInfo ? resolvePortalFeatures(bookingInfo) : null;
+  // 화상영어 전용 계정: 예약 연결 없음 + 화상영어 수강권만 있는 손님 → 화상영어·공지만 표시
+  const ocOnly = !bookingInfo && !session && ocReady;
+  const allCards = [
     { icon: "📋", title: "내 예약현황", desc: "예약·학생·결제 정보 확인", ready: true, href: "/portal/my-booking" },
     { icon: "📢", title: "공지사항", desc: "안내·공지 확인", ready: true, href: "/portal/notices" },
-    { icon: "🏨", title: "체크인 정보입력", desc: "입실 전 필요한 정보 사전 등록", subDesc: "항공권 · 체크인 · 픽드랍신청", ready: true, href: "/portal/checkin-detail" },
-    { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: true, href: "/portal/shuttle" },
-    { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: true, href: "/after-school-fieldtrip" },
-    { icon: "👩‍🏫", title: "튜터 수업 신청", desc: "방문 튜터 수업 새 신청", ready: true, href: "/portal/tutor" },
-    { icon: "✏️", title: "튜터 수업 변경요청", desc: "신청한 수업 취소·시간·날짜 변경", ready: true, href: "/portal/tutor-change" },
+    { icon: "🏨", title: "체크인 정보입력", desc: "입실 전 필요한 정보 사전 등록", subDesc: "항공권 · 체크인 · 픽드랍신청", ready: feats ? feats.checkin : true, href: "/portal/checkin-detail" },
+    { icon: "🚌", title: "투어 셔틀 신청", desc: "드림하우스/제이파크/큐브나인", ready: feats ? feats.shuttle : true, href: "/portal/shuttle" },
+    { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: feats ? feats.afterschool : true, href: "/after-school-fieldtrip" },
+    { icon: "👩‍🏫", title: "튜터 수업 신청", desc: "방문 튜터 수업 새 신청", ready: feats ? feats.tutor : true, href: "/portal/tutor" },
+    { icon: "✏️", title: "튜터 수업 변경요청", desc: "신청한 수업 취소·시간·날짜 변경", ready: feats ? feats.tutor : true, href: "/portal/tutor-change" },
     { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: ocReady, href: "/portal/online-class" },
     { icon: "🧾", title: "정산내역" + (bookingInfo?.settlement_open ? " (베타)" : ""), desc: "보증금·튜터비·추가비용 정산 내역", ready: !!bookingInfo?.settlement_open, href: "/portal/settlement" },
-    { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: true, href: "/portal/meal-menu" },
+    { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: feats ? feats.meal : true, href: "/portal/meal-menu" },
     { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-applications" },
-    { icon: "🗓", title: "상담 예약", desc: "학습 상담 일정 확인 및 예약", ready: true, href: "/portal/consultation" },
+    { icon: "🗓", title: "상담 예약", desc: "학습 상담 일정 확인 및 예약", ready: feats ? feats.consultation : true, href: "/portal/consultation" },
   ];
+  const cards = ocOnly ? allCards.filter(c => c.title === "화상영어" || c.title === "공지사항") : allCards;
 
   const memberCards = authUser ? cards : cards;
 
