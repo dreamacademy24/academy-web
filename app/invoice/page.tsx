@@ -655,17 +655,16 @@ function InvoicePageInner(){
       if(!go){availGuard.current=prev;setA1CI(prev.ci);setA1W(prev.w);setA2W(prev.w2);}
     }
   })();},[a1CI,a1W,a2W,cm,a1T,a2T]);
-  const overallCI=a1CI;
+  let overallCI=a1CI;
   /* ── 체류 기간 휴무일 (배포된 휴일, 인보이스에 자동 표시 — 날짜 변경 시 갱신) ── */
   const [allHolidays,setAllHolidays]=useState<HolidayItem[]>([]);
   useEffect(()=>{fetchDeployedHolidays().then(setAllHolidays);},[]);
   // 체크아웃: dbCheckout(수동 수정값) 우선, 없으면 자동계산(a1W*7 / 콤보 a2CO)
-  const overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
+  let overallCO=dbCheckout||(cm==="combo"?a2CO:a1CO);
   /* 콤보 숙소별 구간 표시 (인보이스 어느 날짜가 어느 숙소인지) */
   const _accomKo=(t:string)=>t==="dreamhouse"?"드림하우스":t==="jpark"?"제이파크":t==="cubenine"?"큐브나인":t;
   const _accomEn=(t:string)=>t==="dreamhouse"?"Dream House":t==="jpark"?"J Park":t==="cubenine"?"Cube Nine":t;
 
-  const stayHolidays=holidaysInRange(allHolidays,overallCI,overallCO);
   const coTimeText=lateCheckout?"22:30pm":"12noon"; // 체크아웃 시간 표기
   async function syncLateCheckout(v:boolean){
     setLateCheckout(v);
@@ -683,6 +682,14 @@ function InvoicePageInner(){
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
   const [isCommute,setIsCommute]=useState(false);
+  /* ── 통학형: 수업시작/종료 = 학생 아카데미 날짜가 source (편집 즉시 미리보기·저장에 반영) ── */
+  if(isCommute){
+    const _aSt=students.map(s=>s.academyStart).filter(Boolean).sort();
+    const _aEn=students.map(s=>s.academyEnd).filter(Boolean).sort();
+    if(_aSt.length) overallCI=_aSt[0];
+    if(_aEn.length) overallCO=_aEn[_aEn.length-1];
+  }
+  const stayHolidays=holidaysInRange(allHolidays,overallCI,overallCO);
 
   /* ── 인보이스 스냅샷 (저장/불러오기) ── */
   const [snapshotChecked,setSnapshotChecked]=useState(false); // 스냅샷 조회 완료 여부
@@ -778,6 +785,10 @@ function InvoicePageInner(){
           if(a1T==="jpark")upd.jp_weeks=a1W;
           if(a1T==="dreamhouse")upd.dh_weeks=a1W;
         }
+      }else{
+        // 통학형: 학생 아카데미 날짜(=수업시작/종료)를 예약 원본에 동기화
+        if(overallCI) upd.checkin_date=overallCI;
+        if(overallCO) upd.checkout_date=overallCO;
       }
       const {error:stErr}=await supabase.from("bookings").update(upd).eq("id",bookingId);
       if(stErr) console.error("[confirmInvoice status]",stErr);
