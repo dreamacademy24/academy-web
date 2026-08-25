@@ -750,6 +750,10 @@ function InvoicePageInner(){
   /* ── 인보이스 확정/해제 (PATCH confirmed_at + saved_data 함께 저장) ── */
   async function confirmInvoice(){
     if(!bookingId){alert("예약 ID가 없어 확정할 수 없습니다.");return;}
+    if(invoiceWarnings.length>0){
+      const ok=confirm("🔎 확인 필요 항목 "+invoiceWarnings.length+"건:\n\n"+invoiceWarnings.map(m=>"⚠️ "+m).join("\n")+"\n\n그래도 확정할까요?");
+      if(!ok)return;
+    }
     try{
       const res=await fetch("/api/invoice/snapshot",{
         method:"PATCH",headers:{"Content-Type":"application/json"},
@@ -1332,6 +1336,36 @@ function InvoicePageInner(){
   // 이번 청구: 예약금 단계(전액입금 아님 & 기납부<예약금)면 예약금 잔여, 아니면 전체 잔여
   const depositStage = !effectiveFullPayment && receiptPaidTotal < depositAmt;
   const additionalDue = Math.max(0, (depositStage ? depositAmt : fp) - receiptPaidTotal);
+
+  /* ── 🔎 인보이스 실수 방지 자동 검증 (2026-08-25 메이 요청) — 경고만, 차단 안 함 ── */
+  const invoiceWarnings=useMemo(()=>{
+    const w:string[]=[];
+    const day=(d:string)=>{try{return new Date(d+"T00:00:00").getDay();}catch{return -1;}};
+    const DN=["일","월","화","수","목","금","토"];
+    const ci=overallCI,co=overallCO;
+    const nights=ci&&co?Math.round((new Date(co+"T00:00:00").getTime()-new Date(ci+"T00:00:00").getTime())/86400000):0;
+    const allLabels=[...billing.items.map(i=>i.label||""),...billing.additions.map(a=>a.name||"")].join(" ");
+    const hasExtraNight=/추가\s*투숙|1박|박\s*추가|extra/i.test(allLabels);
+    if(ci&&co&&co<=ci)w.push("체크아웃이 체크인보다 빠르거나 같아요 — 날짜를 확인해주세요.");
+    if(isCommute){
+      if(ci&&day(ci)!==1)w.push(`수업시작이 ${DN[day(ci)]}요일이에요 — 통학형은 월요일 시작이 기본이에요.`);
+      if(co&&day(co)!==5)w.push(`수업종료가 ${DN[day(co)]}요일이에요 — 금요일 종료가 기본이에요.`);
+    }else if(ci){
+      const dhIn=a1T==="dreamhouse";
+      if(dhIn&&day(ci)!==6&&day(ci)!==0)w.push(`체크인이 ${DN[day(ci)]}요일이에요 — 드림하우스는 토요일(표준)·일요일 체크인이에요.`);
+      if(!dhIn&&![0,5,6].includes(day(ci)))w.push(`체크인이 ${DN[day(ci)]}요일이에요 — 리조트는 금·토·일 체크인이에요.`);
+      if(nights>0&&nights%7!==0&&!hasExtraNight)w.push(`체크인~체크아웃이 ${Math.floor(nights/7)}주 + ${nights%7}박이에요 — 주 단위가 아닌데 '추가 투숙(1박 추가)' 항목이 없어요. 날짜나 추가 항목을 다시 확인해주세요.`);
+    }
+    if(receiptPaidTotal>fp&&fp>0)w.push(`기납부 합계(${fmt(receiptPaidTotal)}원)가 전체 금액(${fmt(fp)}원)보다 커요 — 지불내역 금액을 확인해주세요.`);
+    if(applied&&fp<=0)w.push("전체 금액이 0원 이하예요 — 요금 적용을 확인해주세요.");
+    if(booker.balanceDate&&ci&&booker.balanceDate>=ci)w.push(`잔금 납부 예정일(${booker.balanceDate})이 ${isCommute?"수업시작":"체크인"} 이후예요 — 잔금은 2달 전까지가 기본이에요.`);
+    if(!isCommute&&ci&&co){
+      students.filter(s=>(s.korName||"").trim()&&s.academyStart).forEach(s=>{
+        if(s.academyStart<ci||(s.academyEnd&&s.academyEnd>co))w.push(`학생 ${s.korName}의 아카데미 기간(${s.academyStart}~${s.academyEnd||"?"})이 체크인~체크아웃 범위를 벗어나요.`);
+      });
+    }
+    return w;
+  },[overallCI,overallCO,isCommute,a1T,billing.items,billing.additions,receiptPaidTotal,fp,booker.balanceDate,students,applied]);
   function addD(){setBilling(b=>({...b,discounts:[...b.discounts,{id:Date.now(),name:"",amount:0}]}));}
   function rmD(id:number){setBilling(b=>({...b,discounts:b.discounts.filter(d=>d.id!==id)}));}
   function upD(id:number,f:string,v:string|number){setBilling(b=>({...b,discounts:b.discounts.map(d=>d.id===id?{...d,[f]:v}:d)}));}
@@ -1963,6 +1997,13 @@ function InvoicePageInner(){
     <div className="f-row"><div className="f-group"><label className="f-label">유학원명</label><input className="f-input" placeholder="없으면 개인" value={adminOnly.agency} onChange={e=>setAdminOnly({...adminOnly,agency:e.target.value})}/></div><div className="f-group"><label className="f-label">SSP</label><select className="f-select" value={adminOnly.ssp} onChange={e=>setAdminOnly({...adminOnly,ssp:e.target.value})}><option value="O">O</option><option value="X">X</option></select></div></div>
   </div>
 
+  {invoiceWarnings.length>0&&(
+    <div style={{margin:"14px 0",padding:"13px 16px",background:"#fffbeb",border:"2px solid #f59e0b",borderRadius:10}}>
+      <div style={{fontWeight:800,color:"#92400e",fontSize:14,marginBottom:6}}>🔎 확정 전 확인해주세요 ({invoiceWarnings.length}건)</div>
+      {invoiceWarnings.map((m,i)=>(<div key={i} style={{fontSize:12.5,color:"#78350f",lineHeight:1.6}}>⚠️ {m}</div>))}
+      <div style={{fontSize:11,color:"#a16207",marginTop:6}}>의도한 경우(예: 실제 1박 추가 손님)라면 그대로 진행해도 돼요.</div>
+    </div>
+  )}
   <button className="bg" onClick={gen}>인보이스 미리보기</button>
   <a href="/admin/bookings?tab=list" className="bl">← 예약내역으로 돌아가기</a>
   </div>):(
