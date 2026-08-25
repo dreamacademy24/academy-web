@@ -133,7 +133,16 @@ export function getBookingCategory(b: {
   house_no?: string | null; accom_room?: string | null;
 } | null | undefined): { pkg: string; comp: string } {
   if (!b) return { pkg: "-", comp: "-" };
-  const pkg = b.is_all_in_one ? "올인원" : "비패키지";
+  // 패키지 판정: 올인원 플래그 > accom_type 문구
+  //  · "○○ 단독"(booking2 room only) → 비패키지
+  //  · "○○ 패키지" / 콤보(+) / 구버전 단일 표기(드림하우스·제이파크·큐브나인) → 패키지
+  const at0 = (b.accom_type || "").trim();
+  let pkg: string;
+  if (b.is_all_in_one) pkg = "올인원";
+  else if (isCommuteBooking(b)) pkg = "비패키지";
+  else if (at0.includes("단독")) pkg = "비패키지";
+  else if (at0.includes("패키지") || at0.includes("+") || ["드림하우스", "제이파크", "큐브나인"].includes(at0)) pkg = "패키지";
+  else pkg = "비패키지";
   const at = (b.accom_type || "").toLowerCase();
   const hasRoom = !!String(b.house_no || b.accom_room || "").trim();
   const ac = b.academy_option === true;

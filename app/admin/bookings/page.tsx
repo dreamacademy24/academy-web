@@ -958,7 +958,7 @@ export default function AdminBookingsPage(){
           const sc=SC[b.status]||SC["접수"];
           return(<tr key={b.id} onClick={()=>router.push("/admin/bookings/"+b.id)}>
             <td style={{fontWeight:600,color:"#1a6fc4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.reservation_no}>{(b.reservation_no||"").split("-").pop()}</td>
-            <td>{(()=>{const cat=getBookingCategory(b as never);return(<div style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>{(b as any).is_all_in_one?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:<span style={{display:"inline-block",fontSize:10.5,background:"#f1f5f9",color:"#64748b",padding:"1px 6px",borderRadius:10,fontWeight:700}}>비패키지</span>}<span style={{fontSize:10,fontWeight:800,color:"#4338ca"}}>{cat.comp}</span></div>);})()}</td>
+            <td>{(()=>{const cat=getBookingCategory(b as never);return(<div style={{display:"flex",flexDirection:"column",gap:2,alignItems:"flex-start"}}>{cat.pkg==="올인원"?<span style={{display:"inline-block",fontSize:11,background:"#fef3c7",color:"#92400e",padding:"1px 6px",borderRadius:10,fontWeight:700}}>🌟 올인원</span>:cat.pkg==="패키지"?<span style={{display:"inline-block",fontSize:10.5,background:"#dcfce7",color:"#166534",padding:"1px 6px",borderRadius:10,fontWeight:700}}>패키지</span>:<span style={{display:"inline-block",fontSize:10.5,background:"#f1f5f9",color:"#64748b",padding:"1px 6px",borderRadius:10,fontWeight:700}}>비패키지</span>}<span style={{fontSize:10,fontWeight:800,color:"#4338ca"}}>{cat.comp}</span></div>);})()}</td>
             <td onClick={e=>e.stopPropagation()}>
               <select className="asg" value={b.status||"접수"} style={{background:sc.bg,color:sc.color,fontWeight:700,borderRadius:8,border:"none",padding:"3px 6px"}}
                 onChange={async e=>{const v=e.target.value;
@@ -1199,7 +1199,7 @@ export default function AdminBookingsPage(){
             const gubunLabel=cat.comp;
             const gc=gubunLabel.startsWith("드하")?{bg:"#dbeafe",color:"#1e40af"}:gubunLabel.startsWith("JP")?{bg:"#fce7f3",color:"#9d174d"}:gubunLabel.startsWith("C9")?{bg:"#e0e7ff",color:"#4338ca"}:{bg:"#f5f5f4",color:"#78716c"};
             const aioLabel=cat.pkg;
-            const ac=aioLabel==="올인원"?{bg:"#fef3c7",color:"#92400e"}:{bg:"#f1f5f9",color:"#64748b"};
+            const ac=aioLabel==="올인원"?{bg:"#fef3c7",color:"#92400e"}:aioLabel==="패키지"?{bg:"#dcfce7",color:"#166534"}:{bg:"#f1f5f9",color:"#64748b"};
             return(<tr key={b.id} className={b.confirmed?"confirmed-row":""} onClick={()=>router.push("/admin/bookings/"+b.id)} style={{cursor:"pointer"}}>
               <td style={{fontWeight:700,color:"#1a6fc4"}}>{shortNo(b.reservation_no)}</td>
               <td><span style={{fontSize:11,fontWeight:700,color:"#1a6fc4"}}>{b.assignee||"-"}</span></td>
