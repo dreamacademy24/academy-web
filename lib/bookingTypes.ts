@@ -149,7 +149,7 @@ export function getBookingCategory(b: {
   const hasDhRoom = /^B\d{1,2}L\d{1,2}$/.test(_roomNorm);
   const ac = b.academy_option === true;
   let comp: string;
-  if (isCommuteBooking(b)) comp = hasDhRoom ? "드하+드아" : "통학(드아)";
+  if (isCommuteBooking(b)) comp = hasDhRoom ? "드하+드아" : "통학형";
   else if (at.includes("+")) comp = at.includes("제이파크") ? "드하+JP" : at.includes("큐브") ? "드하+C9" : "콤보";
   else if (at.includes("제이파크")) comp = ac ? "JP+드아" : "JP";
   else if (at.includes("큐브")) comp = ac ? "C9+드아" : "C9";
