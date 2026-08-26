@@ -101,6 +101,12 @@ export default function BookingDetailPage() {
   const [portalUserId, setPortalUserId] = useState('');
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalMsg, setPortalMsg] = useState('');
+  // 기존 손님 계정 연결 (재방문 손님이 같은 아이디 유지)
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkQ, setLinkQ] = useState('');
+  const [linkResults, setLinkResults] = useState<any[]>([]);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkLabel, setLinkLabel] = useState('');
 
   useEffect(() => {
     if (isAdminAuthed()) {
@@ -207,6 +213,31 @@ export default function BookingDetailPage() {
     if (res.ok) { setPortalTempPw(newPw); setPortalMsg(`✅ 새 비번: ${newPw}`); }
     else { setPortalMsg('비번 재설정 실패'); }
     setPortalLoading(false);
+  }
+
+  async function searchLinkAccounts() {
+    const q = linkQ.trim(); if (q.length < 2) return;
+    setLinkLoading(true);
+    try {
+      const res = await fetch(`/api/admin/portal-users?q=${encodeURIComponent(q)}`);
+      const d = await res.json();
+      setLinkResults(d.users || []);
+    } finally { setLinkLoading(false); }
+  }
+  async function linkExistingAccount(u: { id: string; name?: string; username?: string }) {
+    const res = await fetch(`/api/bookings/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ portal_user_id: u.id }) });
+    if (!res.ok) { alert('연결 실패 — 다시 시도해주세요'); return; }
+    setPortalUserId(u.id);
+    setLinkLabel(`${u.name || '?'}${u.username ? ' (' + u.username + ')' : ''}`);
+    setLinkOpen(false); setLinkQ(''); setLinkResults([]);
+    await load();
+  }
+  async function unlinkAccount() {
+    if (!confirm('이 예약의 손님 앱 계정 연결을 해제할까요?')) return;
+    const res = await fetch(`/api/bookings/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ portal_user_id: null }) });
+    if (!res.ok) { alert('해제 실패'); return; }
+    setPortalUserId(''); setLinkLabel('');
+    await load();
   }
 
   function startEdit(b: Record<string, any>) {
@@ -663,6 +694,42 @@ export default function BookingDetailPage() {
             </div>
           )}
         </div>
+        {/* 손님 앱 계정 연결 (재방문 손님 = 같은 아이디 유지) */}
+        <div style={{marginTop:12, padding:'12px 14px', background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10}}>
+          <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
+            <b style={{fontSize:13}}>🔗 손님 앱 계정</b>
+            {portalUserId ? (
+              <span style={{fontSize:13, color:'#166534', background:'#f0fdf4', padding:'2px 8px', borderRadius:6}}>연결됨{linkLabel ? ' · ' + linkLabel : ''}</span>
+            ) : (
+              <span style={{fontSize:13, color:'#94a3b8'}}>미연결</span>
+            )}
+            <button onClick={() => { setLinkOpen(true); setLinkQ(''); setLinkResults([]); }} style={{marginLeft:'auto', padding:'6px 12px', background:'#1e40af', color:'#fff', border:'none', borderRadius:6, cursor:'pointer', fontSize:12.5, fontWeight:600}}>{portalUserId ? '계정 변경' : '기존 계정 연결'}</button>
+            {portalUserId && <button onClick={unlinkAccount} style={{padding:'6px 12px', background:'#fff', color:'#dc2626', border:'1px solid #fecaca', borderRadius:6, cursor:'pointer', fontSize:12.5}}>해제</button>}
+          </div>
+          <p style={{fontSize:11.5, color:'#94a3b8', margin:'6px 0 0'}}>재방문 손님이면 예약자 이름으로 검색해 <b>기존 아이디에 연결</b>하세요. 손님은 같은 아이디로 로그인해 이 예약을 봅니다. (예약 이름의 B/C 접미사는 그대로 둬도 됩니다)</p>
+        </div>
+        {linkOpen && (
+          <div onClick={() => setLinkOpen(false)} style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <div onClick={e => e.stopPropagation()} style={{background:'#fff', borderRadius:14, padding:'20px 22px', width:420, maxWidth:'92vw', boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}}>
+              <div style={{fontSize:15, fontWeight:800, marginBottom:10}}>🔍 기존 손님 계정 연결</div>
+              <div style={{display:'flex', gap:8, marginBottom:10}}>
+                <input autoFocus value={linkQ} onChange={e => setLinkQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') searchLinkAccounts(); }} placeholder="예약자 이름 또는 아이디 (2글자 이상)" style={{flex:1, padding:'8px 10px', border:'1px solid #d1d5db', borderRadius:8, fontSize:13}} />
+                <button onClick={searchLinkAccounts} disabled={linkLoading} style={{padding:'8px 14px', background:'#1e40af', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13}}>{linkLoading ? '검색중…' : '검색'}</button>
+              </div>
+              <div style={{maxHeight:280, overflowY:'auto'}}>
+                {linkResults.length === 0 ? (
+                  <div style={{textAlign:'center', color:'#94a3b8', fontSize:12.5, padding:20}}>예약자 이름으로 검색하세요<br/>(앱 계정이 있는 예약만 나옵니다)</div>
+                ) : linkResults.map((u: any) => (
+                  <div key={u.id} onClick={() => linkExistingAccount(u)} style={{padding:'9px 12px', borderRadius:9, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', border:'1px solid #eef2f7', marginBottom:6}}>
+                    <span><b>{u.name || '(이름 없음)'}</b> <span style={{color:'#64748b', fontSize:12}}>{u.username}</span></span>
+                    <span style={{fontSize:11, color:'#94a3b8'}}>{u.email || ''}</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{fontSize:11.5, color:'#94a3b8', marginTop:8}}>선택하면 이 예약이 그 손님 계정에 연결됩니다.</p>
+            </div>
+          </div>
+        )}
         {(() => {
           const feats = resolvePortalFeatures(b) as Record<string, boolean>;
           const defs = defaultPortalFeatures(b) as Record<string, boolean>;
