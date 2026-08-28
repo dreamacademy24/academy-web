@@ -377,7 +377,7 @@ function PortalOnlineClassInner() {
 .modal .btn-cancel{background:#f1f5f9;color:#475569}
 .modal .btn-confirm{background:#dc2626;color:#fff}
 .modal .btn-confirm:disabled{opacity:0.6;cursor:not-allowed}
-@media(max-width:500px){.oc-w{padding:20px 14px}.grid{grid-template-columns:1fr}.sess-stats{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:500px){.oc-w{padding:20px 14px}.sess-stats{grid-template-columns:1fr 1fr 1fr}}
     `}</style>
 
     {msg && <div className={`msg ${msg.type}`} onClick={() => setMsg(null)}>{msg.text}</div>}
@@ -434,7 +434,7 @@ function PortalOnlineClassInner() {
           <div className="sec">
             <h2>수강 정보</h2>
             <div className="grid">
-              <div className="item"><div className="lbl">담당 선생님</div><div className="val">{activeEnroll.tutor?.name_display || "-"}</div></div>
+              <div className="item"><div className="lbl">담당 선생님</div><div className="val">{activeEnroll.tutor?.name_display || <span style={{ color: "#94a3b8", fontWeight: 600 }}>배정 예정</span>}</div></div>
               <div className="item"><div className="lbl">수업 구분</div><div className="val">{PERIOD_LABEL[activeEnroll.class_period] || activeEnroll.class_period}</div></div>
               <div className="item"><div className="lbl">수업 요일</div><div className="val">{daysToKr(activeEnroll.days_of_week || [])}</div></div>
               <div className="item"><div className="lbl">수업 시간 (한국)</div><div className="val">{activeEnroll.class_time_kr || "-"}</div></div>

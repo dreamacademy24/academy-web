@@ -128,9 +128,11 @@ export async function PATCH(req: Request) {
     if (fsErr) return NextResponse.json({ error: fsErr.message }, { status: 500 })
 
     let regenerated = 0
+    let newEndDate: string | null = null
     if (futureSes && futureSes.length > 0) {
       const numbers = futureSes.map(s => s.session_number).sort((a, b) => a - b)
       const newDates = genDates(effective, newDays, futureSes.length)
+      newEndDate = newDates[newDates.length - 1] || null
       if (newDates.length < futureSes.length) {
         return NextResponse.json({ error: '새 요일로 날짜 생성에 실패했습니다. 요일을 확인해주세요.' }, { status: 400 })
       }
@@ -163,6 +165,7 @@ export async function PATCH(req: Request) {
     const enrollPatch: Record<string, unknown> = {}
     if (cr.req_days_of_week?.length) enrollPatch.days_of_week = newDays
     if (cr.req_time_kr) { enrollPatch.class_time_kr = cr.req_time_kr; enrollPatch.class_time_ph = phOf(cr.req_time_kr); enrollPatch.day_times = null }
+    if (newEndDate) enrollPatch.end_date = newEndDate
     if (Object.keys(enrollPatch).length > 0) {
       const { error: upErr } = await supabase.from('online_enrollments').update(enrollPatch).eq('id', enroll.id)
       if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
