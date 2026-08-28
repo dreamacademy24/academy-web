@@ -163,6 +163,7 @@ function Inner() {
   async function markStatus(s: Ses, status: string) {
     setUpdating(s.id);
     const body: Record<string, unknown> = { id: s.id, status, recorded_by: tutor?.staff_user_id || "" };
+    if (status === "makeup") body.force_makeup = true; // 보강 = 무차감 + 마지막에 1회 추가 (어드민과 동일)
     if (noteDraft[s.id] !== undefined) body.session_note = noteDraft[s.id];
     const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); }
