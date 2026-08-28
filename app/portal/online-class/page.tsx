@@ -389,7 +389,7 @@ function PortalOnlineClassInner() {
       </div>
 
       {loading ? <div className="sec"><div className="empty">불러오는 중...</div></div> : !activeEnroll ? (
-        <div className="sec"><div className="empty">아직 화상영어 수강이 연결되지 않았어요.<br/>등록·문의는 카카오 채널로 연락해주세요 😊</div></div>
+        <div className="sec"><div className="empty" style={{ padding: "36px 20px" }}>아직 신청한 화상영어 수업이 없어요.<br/><br/><button onClick={() => router.push("/portal/online-class/apply")} style={{ padding: "12px 28px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>➕ 화상영어 신규 신청</button><div style={{ fontSize: 12, color: "#94a3b8", marginTop: 12 }}>아이별로 요일·시간·레벨을 선택해 신청해요 (한 계정 최대 4명)</div></div></div>
       ) : (
         <>
           {enrollments.length > 1 && (

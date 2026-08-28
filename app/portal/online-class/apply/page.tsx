@@ -33,6 +33,9 @@ function ApplyInner() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [level, setLevel] = useState("");
+  const [children, setChildren] = useState<{ kor: string; en: string }[]>([]);
+  const [childName, setChildName] = useState("");     // 선택된 아이 한글명
+  const [childEn, setChildEn] = useState("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [tutors, setTutors] = useState<TutorBrief[]>([]);
@@ -51,6 +54,27 @@ function ApplyInner() {
       setAuthUser(data.session.user);
       const { data: prof } = await supabase.from("profiles").select("*").eq("id", data.session.user.id).single();
       setProfile(prof);
+      // 이 계정에 연결된 예약의 자녀(최대 4명) 로드
+      try {
+        const { data: bks } = await supabase.from("bookings").select("students").eq("portal_user_id", data.session.user.id);
+        const list: { kor: string; en: string }[] = [];
+        const seen = new Set<string>();
+        for (const b of (bks || [])) {
+          let arr: any = b.students; if (typeof arr === "string") { try { arr = JSON.parse(arr); } catch { arr = []; } }
+          for (const s of (Array.isArray(arr) ? arr : [])) {
+            const kor = (s.korName || s.name_kr || s.name || "").trim();
+            const en = (s.engName || s.name_en || "").trim();
+            if (kor && !seen.has(kor)) { seen.add(kor); list.push({ kor, en }); }
+          }
+        }
+        // 프로필 children 폴백
+        if (list.length === 0 && prof?.children) {
+          let ch: any = prof.children; if (typeof ch === "string") { try { ch = JSON.parse(ch); } catch { ch = []; } }
+          for (const c of (Array.isArray(ch) ? ch : [])) { const kor = (c.name || c.kor || "").trim(); if (kor && !seen.has(kor)) { seen.add(kor); list.push({ kor, en: (c.name_en || c.en || "").trim() }); } }
+        }
+        setChildren(list.slice(0, 4));
+        if (list.length === 1) { setChildName(list[0].kor); setChildEn(list[0].en); }
+      } catch { /* ignore */ }
       setAuthChecking(false);
     })();
   }, [router]);
@@ -111,7 +135,7 @@ function ApplyInner() {
     if (!suggested || !authUser || !selectedDays.length || !selectedTime) return;
     setSubmitting(true);
     try {
-      const studentName = profile?.name || profile?.full_name || authUser.email?.split("@")[0] || "신청자";
+      const studentName = childName || profile?.name || authUser.email?.split("@")[0] || "신청자";
       const startDate = new Date();
       const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
       const pad = (n: number) => n < 10 ? "0" + n : "" + n;
@@ -121,6 +145,7 @@ function ApplyInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           student_name: studentName,
+          student_name_en: childEn || null,
           customer_user_id: authUser.id,
           tutor_id: suggested.id,
           enrollment_type: "free_package",
@@ -205,6 +230,18 @@ function ApplyInner() {
 
       {step === 1 && (
         <div className="sec">
+          {children.length > 0 && (<>
+            <h2>어느 아이 수업인가요?</h2>
+            <div className="days">
+              {children.map(c => (
+                <button key={c.kor} className={`dchip ${childName === c.kor ? "on" : ""}`} onClick={() => { setChildName(c.kor); setChildEn(c.en); }} style={{ minWidth: 90 }}>
+                  {c.kor}{c.en ? <span style={{ fontSize: 10, opacity: 0.7, display: "block" }}>{c.en}</span> : null}
+                </button>
+              ))}
+            </div>
+            <div className="hint">한 계정에 여러 아이가 있으면 아이마다 따로 신청해요 (최대 4명)</div>
+            <div style={{ height: 14 }} />
+          </>)}
           <h2>수업 요일 선택 (최대 3개)</h2>
           <div className="days">
             {DAYS.map(d => (
@@ -226,7 +263,7 @@ function ApplyInner() {
             ))}
           </div>
           <div className="hint">레벨에 맞는 선생님을 배정해 드려요 (배정 후 조정 가능)</div>
-          <button className="btn-p" disabled={selectedDays.length < 2 || !level} onClick={() => setStep(2)}>
+          <button className="btn-p" disabled={selectedDays.length < 2 || !level || (children.length > 0 && !childName)} onClick={() => setStep(2)}>
             다음 단계
           </button>
         </div>
@@ -264,6 +301,10 @@ function ApplyInner() {
       {step === 3 && (
         <div className="sec">
           <h2>신청 내용 확인</h2>
+          {childName && (<div className="confirm" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
+            <div className="t">신청 아이</div>
+            <div className="v">{childName}{childEn ? " (" + childEn + ")" : ""}</div>
+          </div>)}
           <div className="confirm">
             <div className="t">수업 요일</div>
             <div className="v">{selectedDays.map(d => DAY_KR[d]).join(" · ")}요일</div>
