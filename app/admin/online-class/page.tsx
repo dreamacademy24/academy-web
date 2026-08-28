@@ -730,7 +730,7 @@ export default function OnlineClassPage() {
                       </td>
                       <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
                       <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
-                        <button className="btn-sm" onClick={() => router.push(`/admin/online-class/${e.id}`)}>출결</button>
+                        <button className="btn-sm" onClick={() => router.push(`/admin/online-class/${e.id}?focus=attendance`)}>출결</button>
                         {" "}
                         <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => router.push(`/admin/online-class/${e.id}`)}>수정</button>
                         {" "}

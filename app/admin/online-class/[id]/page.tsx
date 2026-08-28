@@ -93,6 +93,13 @@ export default function OnlineClassStudentPage() {
     } finally { setLoading(false); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("focus") !== "attendance") return;
+    if (!sessions.length) return;
+    const t = setTimeout(() => document.getElementById("attendance-sec")?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    return () => clearTimeout(t);
+  }, [sessions.length]);
   useEffect(() => { fetchDeployedHolidays().then(h => setHolidaySet(new Set((h || []).map((x: any) => x.date)))).catch(() => {}); }, []);
   const [tutorAvail, setTutorAvail] = useState<Record<string, boolean> | null>(null);
   useEffect(() => {
@@ -288,7 +295,7 @@ export default function OnlineClassStudentPage() {
 
           {/* ── 우: 출석부 ── */}
           <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: 20 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>🗓 출석부 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>세션 {sessions.length}개</span></div>
+            <div id="attendance-sec" style={{ fontSize: 15, fontWeight: 800, marginBottom: 12 }}>🗓 출석부 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>세션 {sessions.length}개</span></div>
             {months.length === 0 ? <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>세션이 없습니다</div> : months.map(m => (
               <div key={m} style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: "#1a6fc4", marginBottom: 7 }}>{m.replace("-", "년 ")}월</div>
