@@ -2136,9 +2136,10 @@ function InvoicePageInner(){
             {combo?(<>
               <tr><td className="lb">Accommodation 1</td><td style={{fontWeight:700}}>{accEn(a1T)}</td><td className="lb">Period 1</td><td>{fmtEn(a1CI)} — {fmtEn(a1CO)}</td></tr>
               <tr><td className="lb">Accommodation 2</td><td style={{fontWeight:700}}>{accEn(a2T)}</td><td className="lb">Period 2</td><td>{fmtEn(a2CI)} — {fmtEn(overallCO)}</td></tr>
+              <tr><td className="lb">Check-in / out Time</td><td colSpan={3}>Check-in 3:00 PM · Check-out 12:00 NN</td></tr>
             </>):(<>
-              <tr><td className="lb">Accommodation</td><td colSpan={3} style={{fontWeight:700}}>{accEn(a1T)}{roomTxt?`  ·  Room ${roomTxt}`:""}</td></tr>
-              <tr><td className="lb">Check-in</td><td>{fmtEn(overallCI)}</td><td className="lb">Check-out</td><td>{fmtEn(overallCO)}</td></tr>
+              <tr><td className="lb">Accommodation</td><td colSpan={3} style={{fontWeight:700}}>{accEn(a1T)}{roomTxt?`  ·  Room ${roomTxt.toUpperCase()}`:""}</td></tr>
+              <tr><td className="lb">Check-in</td><td>{fmtEn(overallCI)} · 3:00 PM</td><td className="lb">Check-out</td><td>{fmtEn(overallCO)} · 12:00 NN</td></tr>
             </>)}
             <tr><td className="lb">Total Nights</td><td colSpan={3}>{nights} night(s)</td></tr>
           </tbody></table>
