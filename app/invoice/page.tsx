@@ -1487,9 +1487,13 @@ function InvoicePageInner(){
   async function saveAsImage(elementId:string="invoice-content"){
     const el=document.getElementById(elementId);
     if(!el) return;
-    const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    const hidden=Array.from(el.querySelectorAll<HTMLElement>(".no-print"));
+    hidden.forEach(x=>{x.dataset._d=x.style.display;x.style.display="none";});
+    let canvas;
+    try{ canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"}); }
+    finally{ hidden.forEach(x=>{x.style.display=x.dataset._d||"";delete x.dataset._d;}); }
     const link=document.createElement("a");
-    link.download="인보이스_"+(booker.name||reservationNo||"draft")+".png";
+    link.download=(elementId==="immig-cert"?"확인서_":"인보이스_")+(booker.name||reservationNo||"draft")+".png";
     link.href=canvas.toDataURL("image/png");
     link.click();
   }
@@ -2109,7 +2113,7 @@ function InvoicePageInner(){
       const guestNames=certGuestNames.trim()?certGuestNames.split(",").map(x=>x.trim()).filter(Boolean):autoNames;
       const nights=(overallCI&&overallCO)?Math.max(0,Math.round((new Date(overallCO+"T00:00:00").getTime()-new Date(overallCI+"T00:00:00").getTime())/86400000)):0;
       const persons=(Number(cP)||1)+(students.filter(s=>(s.engName||s.korName||"").trim()).length||Number(cK)||0);
-      return (
+      return (<div className="iw">
       <div className="iv" id="immig-cert">
         <div className="it">
           <div style={{display:"flex",flexDirection:"column"}}>
@@ -2144,21 +2148,15 @@ function InvoicePageInner(){
             This is to certify that the above-named guest(s) have a confirmed accommodation reservation
             with Dream Company for the period stated above. This document is issued upon the guest{"\u2019"}s request.
           </div>
-          <div style={{marginTop:40,display:"flex",justifyContent:"flex-end"}}>
-            <div style={{textAlign:"center"}}>
-              <div style={{borderTop:"1px solid #94a3b8",width:220,paddingTop:8,fontSize:13,color:"#475569"}}>Authorized Signature</div>
-              <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>DREAM COMPANY</div>
-            </div>
-          </div>
         </div>
-        <div className="pb no-print">
-          <button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button>
-          <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
-          <button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("immig-cert")}>📷 이미지 저장</button>
-        </div>
-        <div className="ift" style={{maxWidth:800,margin:"0 auto"}}>🛂 이민국 제출용 — 금액·아카데미·수업 문구가 없는 순수 숙박 확인서입니다. (SSP는 현지 도착 후 발급)</div>
       </div>
-      );
+      <div className="pb no-print">
+        <button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button>
+        <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
+        <button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("immig-cert")}>📷 이미지 저장</button>
+      </div>
+      <div className="ift" style={{maxWidth:800,margin:"0 auto"}}>🛂 이민국 제출용 — 금액·아카데미·수업 문구가 없는 순수 숙박 확인서입니다. (SSP는 현지 도착 후 발급)</div>
+      </div>);
     })()
   ):(
     /* ── 영수증 탭 ── */
