@@ -2088,50 +2088,53 @@ function InvoicePageInner(){
     <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
   </div>)}
   </>):tab==="cert"?(
-    /* ── 🛂 이민국 제출용 영문 숙박 확인서 (금액·아카데미 문구 없음) ── */
+    /* ── 🛂 이민국 제출용 영문 숙박 확인서 (인보이스 스타일 · 금액·아카데미·수업·SSP 문구 없음) ── */
     (()=>{
       const accEn=(t:string)=>t==="dreamhouse"?"Dream House Residence":t==="jpark"?"J Park Island Resort":t==="cubenine"?"Cube Nine Residence":"Residence";
       const fmtEn=(d:string)=>{if(!d)return "-";try{return new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});}catch{return d;}};
       const roomTxt=(checkin.houseNo||"").trim();
       const combo=cm==="combo";
-      const guestNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>(s.engName||"").trim()).map(s=>s.engName.trim().toUpperCase())].filter(Boolean);
+      const isName=(v:string)=>{const t=(v||"").trim();return t.length>0 && !/^[0-9\-\s+]+$/.test(t);}; // 숫자(전화번호)만이면 제외
+      const guestNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>isName(s.engName)).map(s=>s.engName.trim().toUpperCase())].filter(isName);
       const nights=(overallCI&&overallCO)?Math.max(0,Math.round((new Date(overallCO+"T00:00:00").getTime()-new Date(overallCI+"T00:00:00").getTime())/86400000)):0;
       const persons=(Number(cP)||1)+(students.filter(s=>(s.engName||s.korName||"").trim()).length||Number(cK)||0);
       return (
-      <div className="iw">
-        <div id="immig-cert" style={{background:"#fff",maxWidth:800,margin:"0 auto",padding:"48px 52px",boxSizing:"border-box",fontFamily:"'Georgia',serif",color:"#1a1a2e"}}>
-          <div style={{textAlign:"center",borderBottom:"3px solid #1a2b4a",paddingBottom:18,marginBottom:26}}>
-            <div style={{fontSize:26,fontWeight:800,letterSpacing:2,color:"#1a2b4a"}}>DREAM COMPANY</div>
-            <div style={{fontSize:12,color:"#6b7280",marginTop:4}}>Mactan, Lapu-Lapu City, Cebu, Philippines</div>
-            <div style={{fontSize:19,fontWeight:700,letterSpacing:3,marginTop:16,color:"#334155"}}>ACCOMMODATION CONFIRMATION</div>
+      <div className="iv" id="immig-cert">
+        <div className="it">
+          <div style={{display:"flex",flexDirection:"column"}}>
+            <span style={{fontSize:26,fontWeight:800,letterSpacing:2,color:"#1a2b4a",lineHeight:1.1}}>DREAM COMPANY</span>
+            <span style={{fontSize:11,color:"#94a3b8",letterSpacing:0.5,marginTop:3}}>Mactan, Lapu-Lapu City, Cebu, Philippines</span>
           </div>
-          <table style={{width:"100%",borderCollapse:"collapse",fontSize:14,lineHeight:1.7}}>
-            <tbody>
-              <tr><td style={{padding:"9px 12px",fontWeight:700,width:210,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Reference No.</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{reservationNo}</td></tr>
-              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Date of Issue</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(reservationDate)}</td></tr>
-              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Guest Name(s)</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{guestNames.join(", ")||"-"}</td></tr>
-              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Number of Guests</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{persons} person(s)</td></tr>
-              {combo?(<>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation 1</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a1T)}</td></tr>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Period 1</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(a1CI)} &nbsp;—&nbsp; {fmtEn(a1CO)}</td></tr>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation 2</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a2T)}</td></tr>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Period 2</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(a2CI)} &nbsp;—&nbsp; {fmtEn(overallCO)}</td></tr>
-              </>):(<>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a1T)}{roomTxt?` · Room ${roomTxt}`:""}</td></tr>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Check-in</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(overallCI)}</td></tr>
-                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Check-out</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(overallCO)}</td></tr>
-              </>)}
-              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Total Nights</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{nights} night(s)</td></tr>
-            </tbody>
-          </table>
-          <div style={{fontSize:13,lineHeight:1.75,marginTop:26,color:"#334155"}}>
+          <div className="itr"><h1>CONFIRMATION</h1><p>No. {reservationNo}</p></div>
+        </div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Accommodation Confirmation</div>
+          <table className="tb"><tbody>
+            <tr><td className="lb">Issued By</td><td>DREAM COMPANY</td><td className="lb">Date of Issue</td><td>{fmtEn(reservationDate)}</td></tr>
+            <tr><td className="lb">Reference No.</td><td>{reservationNo}</td><td className="lb">No. of Guests</td><td>{persons} person(s)</td></tr>
+            <tr><td className="lb">Guest Name(s)</td><td colSpan={3} style={{fontWeight:700}}>{guestNames.join(", ")||"-"}</td></tr>
+          </tbody></table>
+        </div>
+        <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Stay Details</div>
+          <table className="tb"><tbody>
+            {combo?(<>
+              <tr><td className="lb">Accommodation 1</td><td style={{fontWeight:700}}>{accEn(a1T)}</td><td className="lb">Period 1</td><td>{fmtEn(a1CI)} — {fmtEn(a1CO)}</td></tr>
+              <tr><td className="lb">Accommodation 2</td><td style={{fontWeight:700}}>{accEn(a2T)}</td><td className="lb">Period 2</td><td>{fmtEn(a2CI)} — {fmtEn(overallCO)}</td></tr>
+            </>):(<>
+              <tr><td className="lb">Accommodation</td><td colSpan={3} style={{fontWeight:700}}>{accEn(a1T)}{roomTxt?`  ·  Room ${roomTxt}`:""}</td></tr>
+              <tr><td className="lb">Check-in</td><td>{fmtEn(overallCI)}</td><td className="lb">Check-out</td><td>{fmtEn(overallCO)}</td></tr>
+            </>)}
+            <tr><td className="lb">Total Nights</td><td colSpan={3}>{nights} night(s)</td></tr>
+          </tbody></table>
+        </div>
+        <div className="is" style={{marginTop:8}}>
+          <div style={{fontSize:13,lineHeight:1.8,color:"#334155"}}>
             This is to certify that the above-named guest(s) have a confirmed accommodation reservation
-            with Dream Company for the period stated above. This document is issued upon the guest\'s request.
+            with Dream Company for the period stated above. This document is issued upon the guest{"\u2019"}s request.
           </div>
-          <div style={{marginTop:44,display:"flex",justifyContent:"flex-end"}}>
+          <div style={{marginTop:40,display:"flex",justifyContent:"flex-end"}}>
             <div style={{textAlign:"center"}}>
-              <div style={{borderTop:"1px solid #94a3b8",width:230,paddingTop:8,fontSize:13,color:"#475569"}}>Authorized Signature</div>
-              <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>Dream Company</div>
+              <div style={{borderTop:"1px solid #94a3b8",width:220,paddingTop:8,fontSize:13,color:"#475569"}}>Authorized Signature</div>
+              <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>DREAM COMPANY</div>
             </div>
           </div>
         </div>
