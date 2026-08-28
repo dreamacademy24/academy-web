@@ -2139,9 +2139,10 @@ function InvoicePageInner(){
               <tr><td className="lb">Check-in / out Time</td><td colSpan={3}>Check-in 3:00 PM · Check-out 12:00 NN</td></tr>
             </>):(<>
               <tr><td className="lb">Accommodation</td><td colSpan={3} style={{fontWeight:700}}>{accEn(a1T)}{roomTxt?`  ·  Room ${roomTxt.toUpperCase()}`:""}</td></tr>
-              <tr><td className="lb">Check-in</td><td>{fmtEn(overallCI)} · 3:00 PM</td><td className="lb">Check-out</td><td>{fmtEn(overallCO)} · 12:00 NN</td></tr>
+              <tr><td className="lb">Check-in Date</td><td>{fmtEn(overallCI)}</td><td className="lb">Check-in Time</td><td>3:00 PM</td></tr>
+              <tr><td className="lb">Check-out Date</td><td>{fmtEn(overallCO)}</td><td className="lb">Check-out Time</td><td>12:00 NN (Noon)</td></tr>
             </>)}
-            <tr><td className="lb">Total Nights</td><td colSpan={3}>{nights} night(s)</td></tr>
+            <tr><td className="lb">Total Nights</td><td>{nights} night(s)</td><td className="lb">Country</td><td>Philippines</td></tr>
           </tbody></table>
         </div>
         <div className="is" style={{marginTop:8}}>
