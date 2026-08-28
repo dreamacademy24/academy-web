@@ -699,7 +699,7 @@ function InvoicePageInner(){
 
   /* ── 인보이스/영수증 서브탭 ── */
   const initialTab=(searchParams.get("tab")==="receipt")?"receipt":"invoice";
-  const [tab,setTab]=useState<"invoice"|"receipt">(initialTab);
+  const [tab,setTab]=useState<"invoice"|"receipt"|"cert">(initialTab);
   const [receiptPayments,setReceiptPayments]=useState<{id:number;type:string;date:string;amount:string}[]>([
     {id:1,type:"예약금",date:todayStr,amount:""}
   ]);
@@ -1887,6 +1887,7 @@ function InvoicePageInner(){
     <div className="mt" style={{maxWidth:480,margin:"0 auto 8px"}}>
       <button className={`mb${tab==="invoice"?" ac":""}`} onClick={()=>setTab("invoice")}>📄 인보이스</button>
       <button className={`mb${tab==="receipt"?" ac":""}`} onClick={()=>setTab("receipt")}>🧾 영수증</button>
+      {!isCommute&&<button className={`mb${tab==="cert"?" ac":""}`} onClick={()=>setTab("cert")}>🛂 영문 확인서</button>}
     </div>
   </div>
 
@@ -2086,7 +2087,64 @@ function InvoicePageInner(){
     </div>
     <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
   </div>)}
-  </>):(
+  </>):tab==="cert"?(
+    /* ── 🛂 이민국 제출용 영문 숙박 확인서 (금액·아카데미 문구 없음) ── */
+    (()=>{
+      const accEn=(t:string)=>t==="dreamhouse"?"Dream House Residence":t==="jpark"?"J Park Island Resort":t==="cubenine"?"Cube Nine Residence":"Residence";
+      const fmtEn=(d:string)=>{if(!d)return "-";try{return new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});}catch{return d;}};
+      const roomTxt=(checkin.houseNo||"").trim();
+      const combo=cm==="combo";
+      const guestNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>(s.engName||"").trim()).map(s=>s.engName.trim().toUpperCase())].filter(Boolean);
+      const nights=(overallCI&&overallCO)?Math.max(0,Math.round((new Date(overallCO+"T00:00:00").getTime()-new Date(overallCI+"T00:00:00").getTime())/86400000)):0;
+      const persons=(Number(cP)||1)+(students.filter(s=>(s.engName||s.korName||"").trim()).length||Number(cK)||0);
+      return (
+      <div className="iw">
+        <div id="immig-cert" style={{background:"#fff",maxWidth:800,margin:"0 auto",padding:"48px 52px",boxSizing:"border-box",fontFamily:"'Georgia',serif",color:"#1a1a2e"}}>
+          <div style={{textAlign:"center",borderBottom:"3px solid #1a2b4a",paddingBottom:18,marginBottom:26}}>
+            <div style={{fontSize:26,fontWeight:800,letterSpacing:2,color:"#1a2b4a"}}>DREAM COMPANY</div>
+            <div style={{fontSize:12,color:"#6b7280",marginTop:4}}>Mactan, Lapu-Lapu City, Cebu, Philippines</div>
+            <div style={{fontSize:19,fontWeight:700,letterSpacing:3,marginTop:16,color:"#334155"}}>ACCOMMODATION CONFIRMATION</div>
+          </div>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:14,lineHeight:1.7}}>
+            <tbody>
+              <tr><td style={{padding:"9px 12px",fontWeight:700,width:210,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Reference No.</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{reservationNo}</td></tr>
+              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Date of Issue</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(reservationDate)}</td></tr>
+              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Guest Name(s)</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{guestNames.join(", ")||"-"}</td></tr>
+              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Number of Guests</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{persons} person(s)</td></tr>
+              {combo?(<>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation 1</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a1T)}</td></tr>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Period 1</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(a1CI)} &nbsp;—&nbsp; {fmtEn(a1CO)}</td></tr>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation 2</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a2T)}</td></tr>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Period 2</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(a2CI)} &nbsp;—&nbsp; {fmtEn(overallCO)}</td></tr>
+              </>):(<>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Accommodation</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{accEn(a1T)}{roomTxt?` · Room ${roomTxt}`:""}</td></tr>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Check-in</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(overallCI)}</td></tr>
+                <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Check-out</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{fmtEn(overallCO)}</td></tr>
+              </>)}
+              <tr><td style={{padding:"9px 12px",fontWeight:700,background:"#f3f5f9",border:"1px solid #dbe1ea"}}>Total Nights</td><td style={{padding:"9px 12px",border:"1px solid #dbe1ea"}}>{nights} night(s)</td></tr>
+            </tbody>
+          </table>
+          <div style={{fontSize:13,lineHeight:1.75,marginTop:26,color:"#334155"}}>
+            This is to certify that the above-named guest(s) have a confirmed accommodation reservation
+            with Dream Company for the period stated above. This document is issued upon the guest\'s request.
+          </div>
+          <div style={{marginTop:44,display:"flex",justifyContent:"flex-end"}}>
+            <div style={{textAlign:"center"}}>
+              <div style={{borderTop:"1px solid #94a3b8",width:230,paddingTop:8,fontSize:13,color:"#475569"}}>Authorized Signature</div>
+              <div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>Dream Company</div>
+            </div>
+          </div>
+        </div>
+        <div className="pb no-print">
+          <button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button>
+          <button className="pp" onClick={()=>window.print()}>🖨 PDF / 인쇄</button>
+          <button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:14,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage("immig-cert")}>📷 이미지 저장</button>
+        </div>
+        <div className="ift" style={{maxWidth:800,margin:"0 auto"}}>🛂 이민국 제출용 — 금액·아카데미·수업 문구가 없는 순수 숙박 확인서입니다. (SSP는 현지 도착 후 발급)</div>
+      </div>
+      );
+    })()
+  ):(
     /* ── 영수증 탭 ── */
     <div className="iw">
       {!confirmedAt?(
