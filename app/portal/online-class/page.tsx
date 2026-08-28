@@ -73,6 +73,7 @@ function PortalOnlineClassInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const testUser = searchParams.get("test_user") === "true";
+  const previewUid = searchParams.get("preview_uid") || "";
 
   const [authChecking, setAuthChecking] = useState(true);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
@@ -103,6 +104,7 @@ function PortalOnlineClassInner() {
   useEffect(() => {
     (async () => {
       if (testUser) { setAuthChecking(false); return; }
+      if (previewUid) { setAuthUserId(previewUid); setAuthChecking(false); return; }
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
         if (typeof window !== "undefined") router.replace("/login");
@@ -112,7 +114,7 @@ function PortalOnlineClassInner() {
       setAuthEmail(data.session.user.email || null);
       setAuthChecking(false);
     })();
-  }, [router, testUser]);
+  }, [router, testUser, previewUid]);
 
   const load = useCallback(async () => {
     setLoading(true);
