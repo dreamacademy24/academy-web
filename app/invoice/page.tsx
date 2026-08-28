@@ -682,6 +682,7 @@ function InvoicePageInner(){
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
   const [isCommute,setIsCommute]=useState(false);
+  const [certGuestNames,setCertGuestNames]=useState("");  // 이민국 확인서 게스트명 수동 편집
   /* ── 통학형: 수업시작/종료 = 학생 아카데미 날짜가 source (편집 즉시 미리보기·저장에 반영) ── */
   if(isCommute){
     const _aSt=students.map(s=>s.academyStart).filter(Boolean).sort();
@@ -2095,7 +2096,8 @@ function InvoicePageInner(){
       const roomTxt=(checkin.houseNo||"").trim();
       const combo=cm==="combo";
       const isName=(v:string)=>{const t=(v||"").trim();return t.length>0 && !/^[0-9\-\s+]+$/.test(t);}; // 숫자(전화번호)만이면 제외
-      const guestNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>isName(s.engName)).map(s=>s.engName.trim().toUpperCase())].filter(isName);
+      const autoNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>isName(s.engName)).map(s=>s.engName.trim().toUpperCase())].filter(isName);
+      const guestNames=certGuestNames.trim()?certGuestNames.split(",").map(x=>x.trim()).filter(Boolean):autoNames;
       const nights=(overallCI&&overallCO)?Math.max(0,Math.round((new Date(overallCO+"T00:00:00").getTime()-new Date(overallCI+"T00:00:00").getTime())/86400000)):0;
       const persons=(Number(cP)||1)+(students.filter(s=>(s.engName||s.korName||"").trim()).length||Number(cK)||0);
       return (
@@ -2111,7 +2113,9 @@ function InvoicePageInner(){
           <table className="tb"><tbody>
             <tr><td className="lb">Issued By</td><td>DREAM COMPANY</td><td className="lb">Date of Issue</td><td>{fmtEn(reservationDate)}</td></tr>
             <tr><td className="lb">Reference No.</td><td>{reservationNo}</td><td className="lb">No. of Guests</td><td>{persons} person(s)</td></tr>
-            <tr><td className="lb">Guest Name(s)</td><td colSpan={3} style={{fontWeight:700}}>{guestNames.join(", ")||"-"}</td></tr>
+            <tr><td className="lb">Guest Name(s)</td><td colSpan={3} style={{fontWeight:700}}>{guestNames.join(", ")||"-"}
+              <input className="no-print" value={certGuestNames} onChange={e=>setCertGuestNames(e.target.value)} placeholder={autoNames.join(", ")||"영문 이름 입력 (쉼표로 여러 명)"} style={{display:"block",marginTop:6,width:"100%",boxSizing:"border-box",padding:"6px 9px",border:"1px dashed #cbd5e1",borderRadius:6,fontSize:12,fontWeight:400,fontFamily:"'Noto Sans KR',sans-serif"}} />
+            </td></tr>
           </tbody></table>
         </div>
         <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Stay Details</div>
