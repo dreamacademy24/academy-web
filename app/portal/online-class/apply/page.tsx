@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -26,6 +26,8 @@ export default function ApplyPage() {
 
 function ApplyInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const previewUid = searchParams.get("preview_uid") || "";
   const [authChecking, setAuthChecking] = useState(true);
   const [authUser, setAuthUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -48,16 +50,17 @@ function ApplyInner() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
+      const uid = data.session?.user?.id || previewUid; // preview_uid = 어드민 미리보기 (제출 불가)
+      if (!uid) {
         if (typeof window !== "undefined") router.replace("/login");
         return;
       }
-      setAuthUser(data.session.user);
-      const { data: prof } = await supabase.from("profiles").select("*").eq("id", data.session.user.id).single();
+      if (data.session) setAuthUser(data.session.user);
+      const { data: prof } = await supabase.from("profiles").select("*").eq("id", uid).single();
       setProfile(prof);
       // 이 계정에 연결된 예약의 자녀(최대 4명) 로드
       try {
-        const { data: bks } = await supabase.from("bookings").select("students").eq("portal_user_id", data.session.user.id);
+        const { data: bks } = await supabase.from("bookings").select("students").eq("portal_user_id", uid);
         const list: { kor: string; en: string }[] = [];
         const seen = new Set<string>();
         for (const b of (bks || [])) {
@@ -76,7 +79,7 @@ function ApplyInner() {
         setChildren(list.slice(0, 6));
         // 이미 화상영어 등록된 아이 이름 (중복 신청 방지 표시)
         try {
-          const er = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${data.session.user.id}`);
+          const er = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${uid}`);
           if (er.ok) { const ed = await er.json(); const en = new Set<string>((ed.enrollments || []).map((e: any) => (e.student_name || "").trim()).filter(Boolean)); setEnrolledNames(en); }
         } catch { /* ignore */ }
         const notEnrolled = list.filter(c => true);
@@ -229,6 +232,7 @@ function ApplyInner() {
       <button className="back" onClick={() => router.push("/portal/online-class")}>← 화상영어로 돌아가기</button>
       <div className="head"><h1>화상영어 신청</h1><p>요일과 시간을 선택하면 담당 선생님이 자동 배정됩니다</p></div>
 
+      {!authUser && previewUid && <div style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12.5, fontWeight: 700, color: "#92400e" }}>👁 어드민 미리보기 모드 — 실제 신청은 되지 않아요</div>}
       <div className="steps">
         <div className={`sp ${step===1?"ac":step>1?"done":""}`}>1. 요일</div>
         <div className={`sp ${step===2?"ac":step>2?"done":""}`}>2. 시간</div>
