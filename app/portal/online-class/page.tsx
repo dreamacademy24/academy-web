@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -175,6 +175,15 @@ function PortalOnlineClassInner() {
     () => activeEnroll ? sessions.filter(s => s.enrollment_id === activeEnroll.id) : [],
     [sessions, activeEnroll]
   );
+  // 달력을 "다음 예정 수업(없으면 마지막 수업)"이 있는 달로 자동 이동 (수업이 미래 달에 있을 때 빈 달로 열려 비어 보이는 문제 방지)
+  const _calInit = useRef(false);
+  useEffect(() => {
+    if (_calInit.current || activeSessions.length === 0) return;
+    const today = localStr(new Date());
+    const upcoming = [...activeSessions].filter(s => s.scheduled_date >= today).sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date))[0];
+    const target = upcoming || [...activeSessions].sort((a,b)=>b.scheduled_date.localeCompare(a.scheduled_date))[0];
+    if (target) { const d = new Date(target.scheduled_date + "T00:00:00"); d.setDate(1); setCalMonth(d); _calInit.current = true; }
+  }, [activeSessions]);
 
   const upcomingSessions = useMemo(
     () => activeSessions.filter(s => s.status === "scheduled").sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date)),
@@ -571,7 +580,16 @@ function PortalOnlineClassInner() {
           <div className="ques">
             {(() => {
               const db = cancelTarget.info.days_before;
-              if (db >= 4) return "취소하면 마지막 회차 뒤에 1회 추가됩니다. 취소하시겠습니까?";
+              if (db >= 4) {
+                // 무차감 → 마지막 예정 수업 다음 수업일로 1회 밀림. 예상 새 종료일 계산
+                const future = activeSessions.filter(s => s.status === "scheduled").map(s => s.scheduled_date).sort();
+                const lastDate = future[future.length - 1];
+                const days = (activeEnroll?.days_of_week || []) as string[];
+                const DKR: Record<string, number> = { "일":0,"월":1,"화":2,"수":3,"목":4,"금":5,"토":6 };
+                let nd = "";
+                if (lastDate && days.length) { const c = new Date(lastDate + "T00:00:00"); for (let i=0;i<40;i++){ c.setDate(c.getDate()+1); if (days.some(d=>DKR[d]===c.getDay())){ nd = `${c.getFullYear()}-${pad2(c.getMonth()+1)}-${pad2(c.getDate())}`; break; } } }
+                return `이 날은 무료 취소(회차 차감 없음)예요.\n회차가 그대로 유지되어 수업이 1회 뒤로 밀려요${nd?` — 마지막 수업이 ${fmtDateKr(nd)}로 변경됩니다.`:"."}\n\n취소하시겠습니까?`;
+              }
               if (db >= 1) return "⚠️ 3일 이내 취소로 회차가 1회 차감됩니다.\n그래도 취소하시겠습니까?";
               return "❌ 당일 취소입니다. 회차가 차감됩니다.\n그래도 취소하시겠습니까?";
             })()}
