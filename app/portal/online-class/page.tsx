@@ -88,6 +88,11 @@ function PortalOnlineClassInner() {
   const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
   // 변경 요청
   const [changeOpen, setChangeOpen] = useState(false);
+  const [singleTarget, setSingleTarget] = useState<Session | null>(null); // 1회차 변경 대상
+  const [sgDate, setSgDate] = useState("");
+  const [sgTime, setSgTime] = useState("");
+  const [sgMemo, setSgMemo] = useState("");
+  const [sgSubmitting, setSgSubmitting] = useState(false);
   const [chDays, setChDays] = useState<string[]>([]);
   const [chTime, setChTime] = useState("");
   const [chEff, setChEff] = useState("");
@@ -164,6 +169,29 @@ function PortalOnlineClassInner() {
       setChangeOpen(false); setChDays([]); setChTime(""); setChEff(""); setChMemo("");
       setMyReqs(prev => [r.request, ...prev]);
     } finally { setChSubmitting(false); }
+  }
+
+  async function submitSingle() {
+    if (!activeEnroll || !singleTarget) return;
+    const uid = testUser ? activeEnroll.customer_user_id : authUserId;
+    if (!uid) { setMsg({ text: "계정 연결 정보가 없습니다.", type: "err" }); return; }
+    if (!sgDate && !sgTime.trim()) { setMsg({ text: "새 날짜 또는 시간을 입력해주세요.", type: "err" }); return; }
+    setSgSubmitting(true);
+    try {
+      const res = await fetch("/api/portal/online-class/change-request", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enrollment_id: activeEnroll.id, customer_user_id: uid,
+          req_type: "single", session_id: singleTarget.id,
+          req_date: sgDate || null, req_time_kr: sgTime.trim() || null, memo: sgMemo.trim() || null,
+        }),
+      });
+      const r = await res.json();
+      if (!res.ok) { setMsg({ text: r.error || "신청에 실패했습니다.", type: "err" }); return; }
+      setMsg({ text: "1회차 변경 요청이 접수되었습니다. 선생님·담당자 확인 후 반영돼요 😊", type: "ok" });
+      setSingleTarget(null); setSgDate(""); setSgTime(""); setSgMemo("");
+      setMyReqs(prev => [r.request, ...prev]);
+    } finally { setSgSubmitting(false); }
   }
 
   const [selEnrollId, setSelEnrollId] = useState<string | null>(null);
@@ -439,7 +467,7 @@ function PortalOnlineClassInner() {
                   ) : (
                     <button onClick={() => { setChangeOpen(true); setChDays([]); setChTime(""); setChEff(""); setChMemo(""); }}
                       style={{ width: "100%", padding: "11px", background: "#fff", color: "#1a6fc4", border: "1.5px solid #93c5fd", borderRadius: 10, fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
-                      🔄 요일·시간 변경 요청
+                      🔄 전체 요일·시간 변경 신청
                     </button>
                   )}
                   {lastDone && lastDone.status === "rejected" && lastDone.admin_note && (
@@ -507,9 +535,15 @@ function PortalOnlineClassInner() {
                     </div>
                     <div className="act">
                       <span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
-                      {tab === "upcoming" && s.status === "scheduled" && (
-                        <button className="cancel-btn" disabled={cancelLoading} onClick={() => openCancel(s)}>취소 신청</button>
-                      )}
+                      {tab === "upcoming" && s.status === "scheduled" && (() => {
+                        const dU = Math.round((new Date(s.scheduled_date + "T00:00:00").getTime() - new Date(localStr(new Date()) + "T00:00:00").getTime()) / 86400000);
+                        return (<>
+                          {dU >= 4 && (
+                            <button className="cancel-btn" style={{ background: "#eff6ff", color: "#1a6fc4", borderColor: "#bfdbfe" }} onClick={() => { setSingleTarget(s); setSgDate(""); setSgTime(""); setSgMemo(""); }}>변경</button>
+                          )}
+                          <button className="cancel-btn" disabled={cancelLoading} onClick={() => openCancel(s)}>취소 신청</button>
+                        </>);
+                      })()}
                     </div>
                   </div>
                 );
@@ -526,8 +560,7 @@ function PortalOnlineClassInner() {
         <div className="modal" onClick={e => e.stopPropagation()}>
           <h3>요일·시간 변경 요청</h3>
           <div className="detail">
-            현재: {daysToKr(activeEnroll.days_of_week || [])} {activeEnroll.class_time_kr || ""}<br />
-            바꾸고 싶은 항목만 입력하세요. 적용일 <b>4일 전까지</b> 신청 가능해요.
+            <b>전체 남은 일정</b>의 요일·시간을 바꾸는 신청이에요.<br />현재: {daysToKr(activeEnroll.days_of_week || [])} {activeEnroll.class_time_kr || ""}<br />바꾸고 싶은 항목만 입력하세요. 적용일 <b>4일 전까지</b> 신청 가능해요.
           </div>
           <div style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>새 요일 (그대로면 비워두세요)</div>
@@ -559,11 +592,45 @@ function PortalOnlineClassInner() {
             <textarea value={chMemo} onChange={e => setChMemo(e.target.value)} placeholder="예: 학원 일정이 바뀌어서요"
               style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 56 }} />
           </div>
-          <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 12 }}>관리자 확인 후 승인되면 선생님께 자동으로 안내되고, 적용일 이후 수업 일정이 새로 생성됩니다.</div>
+          <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 12 }}>현지 선생님 승인 → 한국인 담당자 최종 승인 후 적용일 이후 일정이 새로 생성돼요. (특정 1회만 바꾸려면 각 수업의 [변경] 버튼을 이용하세요)</div>
           <div className="acts">
             <button className="btn-cancel" disabled={chSubmitting} onClick={() => setChangeOpen(false)}>닫기</button>
             <button style={{ flex: 1, padding: 10, borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: "#1a6fc4", color: "#fff", opacity: chSubmitting ? 0.6 : 1 }}
               disabled={chSubmitting} onClick={submitChange}>{chSubmitting ? "신청 중..." : "변경 요청하기"}</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {singleTarget && activeEnroll && (
+      <div className="modal-bg" onClick={() => !sgSubmitting && setSingleTarget(null)}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <h3>이 수업만 날짜·시간 변경</h3>
+          <div className="detail">
+            원래 수업: <b>{fmtDateKr(singleTarget.scheduled_date)}</b> · #{singleTarget.session_number}회차<br />
+            {singleTarget.scheduled_time_kr || activeEnroll.class_time_kr || ""} · {activeEnroll.tutor?.name_display || ""}<br />
+            이 <b>1회차만</b> 옮겨요. (수업 4일 전까지 신청 가능)
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "10px 0" }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>새 날짜</div>
+              <input type="date" value={sgDate} onChange={e => setSgDate(e.target.value)}
+                min={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return localStr(d); })()}
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit" }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 5 }}>새 시간 (한국, 선택)</div>
+              <input value={sgTime} onChange={e => setSgTime(e.target.value)} placeholder="그대로면 비워두세요"
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, fontFamily: "inherit" }} />
+            </div>
+          </div>
+          <textarea value={sgMemo} onChange={e => setSgMemo(e.target.value)} placeholder="메모 (선택) — 예: 그날 병원 예약이 있어요"
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical", minHeight: 52, marginBottom: 12 }} />
+          <div style={{ fontSize: 11.5, color: "#94a3b8", marginBottom: 12 }}>현지 선생님 승인 → 한국인 담당자 최종 승인 후 이 수업 날짜가 바뀌어요.</div>
+          <div className="acts">
+            <button className="btn-cancel" disabled={sgSubmitting} onClick={() => setSingleTarget(null)}>닫기</button>
+            <button style={{ flex: 1, padding: 10, borderRadius: 8, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", border: "none", background: "#1a6fc4", color: "#fff", opacity: sgSubmitting ? 0.6 : 1 }}
+              disabled={sgSubmitting} onClick={submitSingle}>{sgSubmitting ? "신청 중..." : "1회차 변경 요청"}</button>
           </div>
         </div>
       </div>
