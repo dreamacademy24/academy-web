@@ -662,6 +662,24 @@ export default function EstimateCalc(){
   const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
   const [holidays,setHolidays]=useState<HolidayItem[]>([]);
   useEffect(()=>{ fetchDeployedHolidays().then(setHolidays).catch(()=>{}); },[]);
+  /* 🏫 방학 수업료 자동 차감 — 견적 기간에 평일 휴무가 걸리면 자동으로 '학원 방학 수업료 제외' 반영 (직원 누락 방지, 2026-08-28) */
+  useEffect(()=>{
+    if(!holidays.length)return;
+    setPlans(prev=>{
+      let changed=false;
+      const next=prev.map(p=>{
+        const kept=p.discounts.filter(d=>!d.name.startsWith("학원 방학 수업료 제외"));
+        const line=computeHolidayLine(p);
+        const desired=line?[...kept,{id:(p.discounts.find(d=>d.name.startsWith("학원 방학 수업료 제외"))?.id)||Date.now(),...line}]:kept;
+        const cur=p.discounts.map(d=>d.name+"|"+d.amount).join("~");
+        const des=desired.map(d=>d.name+"|"+d.amount).join("~");
+        if(cur!==des){changed=true;return {...p,discounts:desired};}
+        return p;
+      });
+      return changed?next:prev;
+    });
+  // 체크인·주수·아이수·숙소·휴일이 바뀔 때만 재계산 (무한루프 방지: 변경 없으면 prev 반환)
+  },[holidays,plans.map(p=>`${p.checkin}|${p.accom}|${p.weeks}|${p.dhWeeks}|${p.subWeeks}|${p.kids}`).join(",")]);
 
   function up(idx:number,patch:Partial<PlanState>){
     setPlans(prev=>prev.map((p,i)=>{
@@ -679,30 +697,30 @@ export default function EstimateCalc(){
   function setCheckinAndSeason(idx:number,date:string){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
-  function applyHolidayDeduct(idx:number){
-    const p=plans[idx];
-    if(!p.checkin){alert("체크인 날짜를 먼저 입력해주세요.");return;}
+  /* 방학(평일 휴무) 수업료 차감 — 순수 계산 (alert 없음, 자동/수동 공용) */
+  function computeHolidayLine(p:PlanState):{name:string;amount:number}|null{
     const w=totalWeeks(p);
-    if(!w){alert("기간을 먼저 설정해주세요.");return;}
     const kids=Number(p.kids)||0;
-    if(!kids){alert("아이 인원을 먼저 설정해주세요 (수업료는 아이 기준).");return;}
+    if(!p.checkin||!w||!kids)return null;
     const co=(()=>{const t=new Date(p.checkin+"T00:00:00");t.setDate(t.getDate()+(p.accom==="commute"?(w-1)*7+4:w*7));return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;})();
-    // 평일(월~금) 휴무일만 수업 손실 — 주말 휴무는 원래 수업 없음
     const hs=holidaysInRange(holidays,p.checkin,co).filter(h=>{const d=new Date(h.date+"T00:00:00").getDay();return d>=1&&d<=5;});
-    if(!hs.length){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
-    // 일할 단가 = 등록 주수의 통학형 표 ÷ (주수×5일) — 예: 2주 비9만/성10만, 4주 비76,050/성84,500
+    if(!hs.length)return null;
     const base=COMMUTE[w]||(w===1?[500000,450000,500000]:COMMUTE[12]);
     const days=w*5;
     const perOff=Math.round(base[1]/days), perPeak=Math.round(base[2]/days);
     let sum=0;const parts:string[]=[];
-    for(const h of hs){
-      const pk=isPeak(h.date);
-      sum+=(pk?perPeak:perOff)*kids;
-      parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));
-    }
-    const line={id:Date.now(),name:`학원 방학 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
+    for(const h of hs){const pk=isPeak(h.date);sum+=(pk?perPeak:perOff)*kids;parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));}
+    return {name:`학원 방학 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
+  }
+  function applyHolidayDeduct(idx:number){
+    const p=plans[idx];
+    if(!p.checkin){alert("체크인 날짜를 먼저 입력해주세요.");return;}
+    if(!totalWeeks(p)){alert("기간을 먼저 설정해주세요.");return;}
+    if(!(Number(p.kids)||0)){alert("아이 인원을 먼저 설정해주세요 (수업료는 아이 기준).");return;}
+    const line=computeHolidayLine(p);
+    if(!line){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
     const kept=p.discounts.filter(d=>!d.name.startsWith("학원 방학 수업료 제외"));
-    up(idx,{discounts:[...kept,line]});
+    up(idx,{discounts:[...kept,{id:Date.now(),...line}]});
   }
   function applyClosing(idx:number){
     const p=plans[idx];
@@ -1012,6 +1030,11 @@ export default function EstimateCalc(){
           <span style={{color:"#374151"}}>{r.mix?`혼합 시즌 (비수기 ${r.mix.off}주 + 성수기 ${r.mix.peak}주)`:seasonLabel[plan.season]+" 가격"}</span>
           <span style={{fontWeight:600,color:"#1a1a2e"}}>{won(r.seasonPrice)}</span>
         </div>
+        {plan.discounts.some(d=>d.name.startsWith("학원 방학 수업료 제외"))&&(
+          <div style={{margin:"6px 0",padding:"7px 11px",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,fontSize:11.5,color:"#1e40af",fontWeight:600}}>
+            🏫 이 견적 기간에 학원 <b>방학(휴무일)</b>이 포함되어 아래에 <b>수업료 차감</b>이 자동 반영되었어요.
+          </div>
+        )}
 
         {/* 추가항목 */}
         {hasExtras&&<>
