@@ -1279,7 +1279,7 @@ function InvoicePageInner(){
     if(cm==="single"){
       const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
       const mx=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
-      const price=mx.peak===0?e[1]:mx.off===0?e[2]:Math.round((e[1]/a1W*mx.off+e[2]/a1W*mx.peak)/10000)*10000;
+      const price=mx.peak===0?e[1]:mx.off===0?e[2]:Math.round(e[1]/a1W)*mx.off+Math.round(e[2]/a1W)*mx.peak;
       const pk=mx.peak>0&&mx.off===0;
       const seasonLb=mx.peak===0?"비수기":mx.off===0?"성수기":`혼합 (비수기 ${mx.off}주+성수기 ${mx.peak}주)`;
       if(ex1Cnt>0)extras.push({label:`추가 인원 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
@@ -1290,7 +1290,7 @@ function InvoicePageInner(){
     const e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);if(!e1||!e2)return null;
     const mx1=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
     const mx2=a2CI?seasonMixInv(a2CI,a2W):{off:a2W,peak:0};
-    const segPrice=(e:P3,mx:{off:number;peak:number})=>Math.round((e[1]/tw*mx.off+e[2]/tw*mx.peak)/10000)*10000;
+    const segPrice=(e:P3,mx:{off:number;peak:number})=>Math.round(e[1]/tw)*mx.off+Math.round(e[2]/tw)*mx.peak;
     const p1=segPrice(e1,mx1),p2=segPrice(e2,mx2);
     const f1=sp(e1,mx1.peak>mx1.off),f2=sp(e2,mx2.peak>mx2.off);
     const sLb=(mx:{off:number;peak:number})=>mx.peak===0?"비수기":mx.off===0?"성수기":`혼합 (비${mx.off}+성${mx.peak})`;
