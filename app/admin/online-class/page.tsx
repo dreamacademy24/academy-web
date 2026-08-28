@@ -486,7 +486,8 @@ export default function OnlineClassPage() {
   const LV_KR: Record<string, string> = { beginner: "비기너", intermediate: "인터", advanced: "어드밴", coordinator: "코디" };
   const tutorLevelMap: Record<string, string> = {};
   tutors.forEach((t: any) => { if (t.name_display) tutorLevelMap[t.name_display] = LV_KR[t.level] || ""; });
-  const tutorNames = [...new Set([...tutors.map((t: any) => t.name_display), ...enrollments.map(e => e.tutor?.name_display)].filter(Boolean))] as string[];
+  // 활성 튜터만 필터 칩에 노출 (비활성 옛 튜터 제외). 비활성에 배정된 학생은 'all' 뷰에서 보임
+  const tutorNames = [...new Set(tutors.map((t: any) => t.name_display).filter(Boolean))] as string[];
   const hasNoTutor = enrollments.some(e => !e.tutor);
 
   const filtered = enrollments.filter(e => {

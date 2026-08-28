@@ -65,7 +65,6 @@ function formatDateShort(dateStr: string) {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-const TUTOR_OPTIONS = ["T.Ann", "T.Angel", "T.Carla", "T.Amelyn", "T.Cristel"];
 
 export default function StaffOnlineClassPage() {
   const [authState, setAuthState] = useState<'loading' | 'guest' | 'authed'>('loading');
@@ -248,7 +247,7 @@ export default function StaffOnlineClassPage() {
           <label>👤 View as:</label>
           <select value={viewAsTutor} onChange={e => setViewAsTutor(e.target.value)}>
             <option value="all">All Tutors</option>
-            {TUTOR_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+            {tutors.map(t => <option key={t.id} value={t.name_display}>{t.name_display}</option>)}
           </select>
           {viewAsTutor !== "all" && (
             <button type="button" className="clear-link" onClick={() => setViewAsTutor("all")}>Clear filter</button>
