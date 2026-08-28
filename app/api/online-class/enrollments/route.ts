@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     .order('created_at', { ascending: false })
 
   if (tutorId) q = q.eq('tutor_id', tutorId)
+  if (searchParams.get('unassigned') === 'true') q = q.is('tutor_id', null).eq('status', 'active')
 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

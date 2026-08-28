@@ -62,7 +62,9 @@ function Inner() {
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
   const [adminRole, setAdminRole] = useState("");
-  const [tab, setTab] = useState<"today" | "students" | "schedule" | "requests">("today");
+  const [tab, setTab] = useState<"today" | "students" | "schedule" | "requests" | "open">("today");
+  const [openStudents, setOpenStudents] = useState<Enrollment[]>([]);
+  const [claiming, setClaiming] = useState<string | null>(null);
   const [changeReqs, setChangeReqs] = useState<any[]>([]);
   const [reqBusy, setReqBusy] = useState<string | null>(null);
   const [tutor, setTutor] = useState<Tutor | null>(null);
@@ -76,6 +78,7 @@ function Inner() {
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
   const [expandStu, setExpandStu] = useState<string | null>(null);
+  const [pickSes, setPickSes] = useState<{ enrId: string; ses: Ses } | null>(null);
   const [stuSessions, setStuSessions] = useState<Record<string, Ses[]>>({});
   const [notifs, setNotifs] = useState<Array<{ id: string; message: string; is_read: boolean; created_at: string }>>([]);
   const [notifDismissed, setNotifDismissed] = useState(false);
@@ -194,6 +197,35 @@ function Inner() {
     }
   }
 
+  async function markStuSession(enrId: string, s: Ses, status: string) {
+    const body: Record<string, unknown> = { id: s.id, status, recorded_by: tutor?.staff_user_id || "" };
+    if (status === "makeup") body.force_makeup = true;
+    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setPickSes(null);
+    if (!res.ok) { const r = await res.json().catch(() => ({})); alert((r as any).error || "Failed"); return; }
+    const rr = await fetch(`/api/online-class/sessions?enrollment_id=${enrId}`);
+    if (rr.ok) { const d = await rr.json(); setStuSessions(prev => ({ ...prev, [enrId]: d.sessions || [] })); }
+    await loadEnrollments(); await loadToday(); await loadWeek();
+  }
+
+  const loadOpenStudents = useCallback(async () => {
+    const res = await fetch("/api/online-class/enrollments?unassigned=true");
+    if (res.ok) { const d = await res.json(); setOpenStudents(d.enrollments || []); }
+  }, []);
+  useEffect(() => { if (tutor) loadOpenStudents(); }, [tutor, loadOpenStudents]);
+
+  async function claimStudent(e: Enrollment) {
+    if (!tutor) return;
+    if (!confirm(`Take ${e.student_name_en || e.student_name}?\n${(e.days_of_week || []).join("/")} · PH ${e.class_time_ph || "-"}`)) return;
+    setClaiming(e.id);
+    const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: e.id, tutor_id: tutor.id }) });
+    const r = await res.json().catch(() => ({}));
+    setClaiming(null);
+    if (!res.ok) { alert((r as any).error || "Failed — maybe another teacher took this student already."); await loadOpenStudents(); return; }
+    await loadOpenStudents(); await loadEnrollments(); await loadWeek();
+    alert(`✅ ${e.student_name_en || e.student_name} is now your student!`);
+  }
+
   if (!authed) return null;
   if (loadingTutor) return <div className="tcw"><div className="empty">Loading…</div><Css /></div>;
 
@@ -228,6 +260,7 @@ function Inner() {
           <div className="tabs">
             <button className={`tb ${tab === "today" ? "on" : ""}`} onClick={() => setTab("today")}>📅 Today {todaySessions.length > 0 && <span className="cnt">{doneCnt}/{todaySessions.length}</span>}</button>
             <button className={`tb ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>👧 My Students <span className="cnt">{enrollments.length}</span></button>
+            <button className={`tb ${tab === "open" ? "on" : ""}`} onClick={() => setTab("open")}>✋ Open Students {openStudents.length > 0 && <span className="cnt" style={{ background: "#f59e0b", color: "#fff" }}>{openStudents.length}</span>}</button>
             <button className={`tb ${tab === "schedule" ? "on" : ""}`} onClick={() => setTab("schedule")}>🗓 My Schedule</button>
             <button className={`tb ${tab === "requests" ? "on" : ""}`} onClick={() => setTab("requests")}>🔔 Change Requests {changeReqs.length > 0 && <span className="cnt" style={{ background: "#dc2626", color: "#fff" }}>{changeReqs.length}</span>}</button>
           </div>
@@ -289,7 +322,6 @@ function Inner() {
                   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
                   const lv = e.level && LV[e.level];
                   const open = expandStu === e.id;
-                  const recent = (stuSessions[e.id] || []).slice(-10).reverse();
                   return (
                     <div key={e.id} className="scard">
                       <div className="srow1">
@@ -312,12 +344,62 @@ function Inner() {
                       </div>
                       {open && (
                         <div className="hist">
-                          {recent.length === 0 ? <div className="tnkr">Loading…</div> : recent.map(s => {
-                            const st = ST[s.status] || ST.scheduled;
-                            return <div key={s.id} className="hrow"><span>#{s.session_number} {shortEN(s.scheduled_date)}</span><span className="chip" style={{ background: st.bg, color: st.color }}>{st.label}</span>{s.attitude === "issue" && <span title={s.attitude_note || ""}>⚠️</span>}{s.session_note && <span className="tnkr" style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.session_note}</span>}</div>;
-                          })}
+                          {(stuSessions[e.id] || []).length === 0 ? <div className="tnkr">Loading…</div> : (() => {
+                            const all = [...(stuSessions[e.id] || [])].sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
+                            const byM: Record<string, Ses[]> = {};
+                            all.forEach(s => { const m = (s.scheduled_date || "").slice(0, 7); if (!byM[m]) byM[m] = []; byM[m].push(s); });
+                            return Object.keys(byM).sort().map(m => (
+                              <div key={m} style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1a6fc4", marginBottom: 5 }}>{m}</div>
+                                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                  {byM[m].map(s => {
+                                    const st = ST[s.status] || ST.scheduled;
+                                    const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
+                                    const lb = s.status === "attended" ? "O" : (s.status === "no_show" || s.status === "absent") ? "✗" : s.status === "makeup" ? "△" : s.status === "cancelled" ? "X" : "·";
+                                    return (
+                                      <div key={s.id} onClick={() => setPickSes({ enrId: e.id, ses: s })} title={`#${s.session_number} ${s.scheduled_date} · ${s.status} — tap to mark`}
+                                        style={{ width: 52, borderRadius: 8, padding: "6px 2px 5px", textAlign: "center", background: st.bg, color: st.color, border: "1px solid rgba(0,0,0,0.05)", cursor: "pointer", position: "relative" }}>
+                                        <div style={{ fontSize: 10.5, fontWeight: 700 }}>{d}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 800 }}>{lb}</div>
+                                        {s.attitude === "issue" && <span style={{ position: "absolute", top: 1, right: 2, fontSize: 9 }}>⚠️</span>}
+                                        {s.session_note && <span style={{ position: "absolute", bottom: 1, right: 2, fontSize: 9 }}>💬</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ));
+                          })()}
+                          <div className="tnkr" style={{ fontSize: 10.5 }}>O Attended · ✗ Absent · △ Makeup (no deduction) · X Cancelled — tap a box to mark</div>
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {/* ══ OPEN STUDENTS (unassigned — take like visiting-tutor inbox) ══ */}
+          {tab === "open" && (
+            openStudents.length === 0 ? <div className="empty">No open students right now 🎉</div> : (
+              <div className="sgrid">
+                {openStudents.map(e => {
+                  const lv = e.level && LV[e.level];
+                  return (
+                    <div key={e.id} className="scard" style={{ border: "1.5px solid #fcd34d" }}>
+                      <div className="srow1">
+                        <div className="sname">{e.student_name_en || e.student_name} <span className="tnkr">{e.student_name_en ? e.student_name : ""}</span></div>
+                        {lv && <span className="chip" style={{ background: lv.bg, color: lv.color }}>{lv.label}</span>}
+                      </div>
+                      <div className="smeta">{(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")} · PH {e.class_time_ph || "-"} <span className="tnkr">(KR {e.class_time_kr || "-"})</span></div>
+                      <div className="smeta">{e.start_date} ~ {e.end_date || "?"} · {e.total_sessions} sessions</div>
+                      <div className="sbtns">
+                        <button className="ab" disabled={claiming === e.id} onClick={() => claimStudent(e)}
+                          style={{ background: "#f59e0b", color: "#fff", border: "none", fontWeight: 800 }}>
+                          {claiming === e.id ? "Taking…" : "✋ Take this student"}
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -411,6 +493,20 @@ function Inner() {
         </div>
       )}
 
+      {pickSes && (
+        <div onClick={() => setPickSes(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={ev => ev.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(340px,92vw)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 3 }}>#{pickSes.ses.session_number} · {pickSes.ses.scheduled_date}</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 14 }}>Mark this session</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <button onClick={() => markStuSession(pickSes.enrId, pickSes.ses, "attended")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>O Attended</button>
+              <button onClick={() => markStuSession(pickSes.enrId, pickSes.ses, "no_show")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>✗ Absent</button>
+              <button onClick={() => markStuSession(pickSes.enrId, pickSes.ses, "makeup")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fcd34d", background: "#fffbeb", color: "#b45309", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>△ Makeup <span style={{ fontWeight: 600, color: "#94a3b8" }}>· no deduction, +1 at end</span></button>
+              <button onClick={() => markStuSession(pickSes.enrId, pickSes.ses, "scheduled")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #e2e8f0", background: "#fff", color: "#475569", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>↺ Back to scheduled</button>
+            </div>
+          </div>
+        </div>
+      )}
       {invoiceStudent && <StudentInvoiceCalendar enrollmentId={invoiceStudent} onClose={() => setInvoiceStudent(null)} />}
       <Css />
     </div>
