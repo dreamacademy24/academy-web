@@ -17,7 +17,10 @@ export async function GET(req: Request) {
     .order('created_at', { ascending: false })
 
   if (tutorId) q = q.eq('tutor_id', tutorId)
-  if (searchParams.get('unassigned') === 'true') q = q.is('tutor_id', null).eq('status', 'active')
+  if (searchParams.get('unassigned') === 'true') {
+    const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10) // PH 기준
+    q = q.is('tutor_id', null).eq('status', 'active').or(`end_date.is.null,end_date.gte.${today}`)
+  }
 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
