@@ -65,6 +65,7 @@ function Inner() {
   const [tab, setTab] = useState<"today" | "students" | "schedule" | "requests" | "open">("today");
   const [openStudents, setOpenStudents] = useState<Enrollment[]>([]);
   const [claiming, setClaiming] = useState<string | null>(null);
+  const [availMap, setAvailMap] = useState<Record<string, { names: string[]; meFree: boolean }>>({});
   const [changeReqs, setChangeReqs] = useState<any[]>([]);
   const [reqBusy, setReqBusy] = useState<string | null>(null);
   const [tutor, setTutor] = useState<Tutor | null>(null);
@@ -210,8 +211,23 @@ function Inner() {
 
   const loadOpenStudents = useCallback(async () => {
     const res = await fetch("/api/online-class/enrollments?unassigned=true");
-    if (res.ok) { const d = await res.json(); setOpenStudents(d.enrollments || []); }
-  }, []);
+    if (!res.ok) return;
+    const d = await res.json();
+    const list: Enrollment[] = d.enrollments || [];
+    setOpenStudents(list);
+    // 각 수강권의 요일·시간에 가능한 티쳐 조회 (한정된 시간/자리 표시)
+    const entries = await Promise.all(list.map(async e => {
+      if (!e.days_of_week?.length || !e.class_time_kr) return [e.id, { names: [], meFree: true }] as const;
+      try {
+        const r = await fetch(`/api/online-class/availability?days=${encodeURIComponent((e.days_of_week || []).join(","))}&time=${encodeURIComponent(e.class_time_kr)}`);
+        if (!r.ok) return [e.id, { names: [], meFree: true }] as const;
+        const a = await r.json();
+        const frees = (a.tutors || []).filter((t: any) => t.available);
+        return [e.id, { names: frees.map((t: any) => t.name), meFree: tutor ? frees.some((t: any) => t.id === tutor.id) : true }] as const;
+      } catch { return [e.id, { names: [], meFree: true }] as const; }
+    }));
+    setAvailMap(Object.fromEntries(entries));
+  }, [tutor]);
   useEffect(() => { if (tutor) loadOpenStudents(); }, [tutor, loadOpenStudents]);
 
   async function claimStudent(e: Enrollment) {
@@ -394,9 +410,24 @@ function Inner() {
                       </div>
                       <div className="smeta">{(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")} · PH {e.class_time_ph || "-"} <span className="tnkr">(KR {e.class_time_kr || "-"})</span></div>
                       <div className="smeta">{e.start_date} ~ {e.end_date || "?"} · {e.total_sessions} sessions</div>
+                      {(() => {
+                        const av = availMap[e.id];
+                        if (!av) return null;
+                        return (
+                          <div style={{ fontSize: 11.5, marginTop: 4, lineHeight: 1.5 }}>
+                            <span style={{ color: "#64748b" }}>Available: </span>
+                            {av.names.length ? <b style={{ color: "#166534" }}>{av.names.join(", ")}</b> : <b style={{ color: "#dc2626" }}>none — slot full</b>}
+                            {tutor && !av.meFree && <div style={{ color: "#dc2626", fontWeight: 700 }}>⚠ You already have a class at this time</div>}
+                          </div>
+                        );
+                      })()}
                       <div className="sbtns">
-                        <button className="ab" disabled={claiming === e.id} onClick={() => claimStudent(e)}
-                          style={{ background: "#f59e0b", color: "#fff", border: "none", fontWeight: 800 }}>
+                        <button className="ab" disabled={claiming === e.id} onClick={() => {
+                          const av = availMap[e.id];
+                          if (av && tutor && !av.meFree && !confirm("⚠ This overlaps your existing class time. Take anyway?")) return;
+                          claimStudent(e);
+                        }}
+                          style={{ background: availMap[e.id] && tutor && !availMap[e.id].meFree ? "#94a3b8" : "#f59e0b", color: "#fff", border: "none", fontWeight: 800 }}>
                           {claiming === e.id ? "Taking…" : "✋ Take this student"}
                         </button>
                       </div>

@@ -94,6 +94,18 @@ export default function OnlineClassStudentPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { fetchDeployedHolidays().then(h => setHolidaySet(new Set((h || []).map((x: any) => x.date)))).catch(() => {}); }, []);
+  const [tutorAvail, setTutorAvail] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    const days = (form?.days_of_week || []) as string[];
+    const time = form?.class_time_kr as string;
+    if (!days.length || !time) { setTutorAvail(null); return; }
+    let dead = false;
+    fetch(`/api/online-class/availability?days=${encodeURIComponent(days.join(","))}&time=${encodeURIComponent(time)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (dead || !d) return; const m: Record<string, boolean> = {}; (d.tutors || []).forEach((t: any) => { m[t.id] = t.available; }); setTutorAvail(m); })
+      .catch(() => {});
+    return () => { dead = true; };
+  }, [form?.days_of_week, form?.class_time_kr]);
 
   async function save() {
     if (!form) return;
@@ -192,8 +204,20 @@ export default function OnlineClassStudentPage() {
             <div style={{ marginBottom: 10 }}><label style={lbl}>담당 튜터</label>
               <select style={inp} value={form.tutor_id} onChange={e => setForm({ ...form, tutor_id: e.target.value })}>
                 <option value="">미배정</option>
-                {tutors.map(t => <option key={t.id} value={t.id}>{t.name_display}</option>)}
+                {tutors.map(t => {
+                  const free = tutorAvail ? tutorAvail[t.id] : undefined;
+                  const mine = form.tutor_id === t.id;
+                  return <option key={t.id} value={t.id}>{t.name_display}{free === false && !mine ? " — ⛔ 이 시간 수업 있음" : free === true ? " ✓" : ""}</option>;
+                })}
               </select>
+              {tutorAvail && (() => {
+                const frees = tutors.filter(t => tutorAvail[t.id]);
+                return (
+                  <div style={{ fontSize: 11.5, marginTop: 5, color: frees.length ? "#166534" : "#dc2626", lineHeight: 1.5 }}>
+                    {(form.days_of_week || []).join("/")} {form.class_time_kr} 가능: {frees.length ? frees.map(t => t.name_display).join(", ") : "없음 — 시간대 마감"}
+                  </div>
+                );
+              })()}
             </div>
             <div style={{ marginBottom: 10 }}><label style={lbl}>수강 요일 (평일만)</label>
               <div style={{ display: "flex", gap: 6 }}>
