@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import { fetchDeployedHolidays } from "@/lib/holidays";
+import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
 
 interface Tutor { id: string; name_display: string; name_en: string }
 interface Enrollment {
@@ -129,6 +131,8 @@ export default function OnlineClassPage() {
   // list tab
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+  useEffect(() => { fetchDeployedHolidays().then(h => setHolidaySet(new Set((h || []).map(x => x.date)))).catch(() => {}); }, []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tutorFilter, setTutorFilter] = useState("all");
@@ -830,7 +834,18 @@ export default function OnlineClassPage() {
           <div className="section-title">기간 & 회차</div>
           <div className="form-row">
             <div><label className="form-label">시작일 *</label><input type="date" className="form-input" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} /></div>
-            <div><label className="form-label">종료일</label><input type="date" className="form-input" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} /></div>
+            <div><label className="form-label">종료일 (마지막 회차 · 자동)</label>
+              {(() => {
+                const r = buildOnlineSessionDates(form.start_date, form.days_of_week, Number(form.total_sessions) || 0, holidaySet);
+                const skipHoli = r.skipped.filter(s => s.reason === "휴일").length;
+                const skipVac = r.skipped.filter(s => s.reason === "방학").length;
+                return (<>
+                  <input type="date" className="form-input" value={r.endDate || form.end_date} readOnly style={{ background: "#f0fdf4", fontWeight: 700 }} title="시작일·요일·회차 기준 자동 계산 (성수기/방학·휴일 제외)" />
+                  {r.endDate ? <div style={{ fontSize: 11, color: "#166534", marginTop: 4 }}>✅ 총 {form.total_sessions}회 → 마지막 수업 <b>{r.endDate}</b>{(skipHoli || skipVac) ? ` · 건너뜀: ${skipVac ? `방학 ${skipVac}일` : ""}${skipVac && skipHoli ? " · " : ""}${skipHoli ? `휴일 ${skipHoli}일` : ""}` : ""}</div>
+                    : <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>시작일·요일·회차를 입력하면 자동 계산돼요 (성수기/방학·휴일 제외)</div>}
+                </>);
+              })()}
+            </div>
           </div>
           <div className="form-row">
             <div><label className="form-label">기간 (주)</label><input type="number" className="form-input" value={form.duration_weeks} onChange={e => setForm({ ...form, duration_weeks: e.target.value })} placeholder="자동계산" /></div>

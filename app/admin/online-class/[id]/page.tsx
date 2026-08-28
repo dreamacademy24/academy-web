@@ -3,6 +3,8 @@
 // 리스트의 슬라이드 패널 대신 전용 페이지에서 수강 정보 + 출석부 + 계정 연결까지 관리
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { fetchDeployedHolidays } from "@/lib/holidays";
+import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
 
 const DAYS = ["월", "화", "수", "목", "금"];
 const TIME_SLOTS: string[] = [];
@@ -43,6 +45,7 @@ export default function OnlineClassStudentPage() {
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [form, setForm] = useState<any>(null);
   const [dayTimesOn, setDayTimesOn] = useState(false);
@@ -89,6 +92,7 @@ export default function OnlineClassStudentPage() {
     } finally { setLoading(false); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { fetchDeployedHolidays().then(h => setHolidaySet(new Set((h || []).map((x: any) => x.date)))).catch(() => {}); }, []);
 
   async function save() {
     if (!form) return;
@@ -228,7 +232,16 @@ export default function OnlineClassStudentPage() {
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
               <div><label style={lbl}>시작일</label><input type="date" style={inp} value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} /></div>
-              <div><label style={lbl}>종료일</label><input type="date" style={inp} value={form.end_date || ""} onChange={e => setForm({ ...form, end_date: e.target.value })} /></div>
+              <div><label style={lbl}>종료일 (마지막 회차 · 자동)</label>
+                {(() => {
+                  const r = buildOnlineSessionDates(form.start_date, form.days_of_week, Number(form.total_sessions) || 0, holidaySet);
+                  const sV = r.skipped.filter(s => s.reason === "방학").length, sH = r.skipped.filter(s => s.reason === "휴일").length;
+                  return (<>
+                    <input type="date" style={{ ...inp, background: "#f0fdf4", fontWeight: 700 }} value={r.endDate || form.end_date || ""} readOnly title="시작일·요일·회차 기준 자동 (성수기/방학·휴일 제외)" />
+                    {r.endDate ? <div style={{ fontSize: 11, color: "#166534", marginTop: 3 }}>✅ 마지막 수업 <b>{r.endDate}</b>{(sV || sH) ? ` · 건너뜀 ${sV ? `방학 ${sV}일` : ""}${sV && sH ? "·" : ""}${sH ? `휴일 ${sH}일` : ""}` : ""}</div> : null}
+                  </>);
+                })()}
+              </div>
               <div><label style={lbl}>주 수업 횟수</label>
                 <select style={inp} value={form.sessions_per_week} onChange={e => { const spw = Number(e.target.value) || 3; const t = Number(form.total_sessions) || 0; setForm({ ...form, sessions_per_week: e.target.value, ...(t > 0 ? { duration_weeks: Math.ceil(t / spw) } : {}) }); }}>
                   <option value="2">2회 (최소)</option><option value="3">3회 (기본)</option><option value="5">5회</option>

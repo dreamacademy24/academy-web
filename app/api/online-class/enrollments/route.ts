@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,6 +25,13 @@ export async function GET(req: Request) {
 
 // 요일 매핑
 const DAY_MAP: Record<string, number> = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 }
+
+async function loadHolidaySet(): Promise<Set<string>> {
+  try {
+    const { data } = await supabase.from('holidays').select('date').eq('is_deployed', true)
+    return new Set((data || []).map((h: { date: string }) => h.date))
+  } catch { return new Set() }
+}
 
 function generateSessionDates(startDate: string, endDate: string, daysOfWeek: string[], totalSessions: number): string[] {
   const dates: string[] = []
@@ -96,13 +104,13 @@ export async function POST(req: Request) {
     if (enErr) return NextResponse.json({ error: enErr.message }, { status: 500 })
 
     // 2. Generate sessions
-    const calcEnd = end_date || (() => {
-      const d = new Date(start_date)
-      d.setDate(d.getDate() + (duration_weeks || 12) * 7)
-      return d.toISOString().slice(0, 10)
-    })()
-
-    const sessionDates = generateSessionDates(start_date, calcEnd, days_of_week, Number(total_sessions))
+    const holidaySet = await loadHolidaySet()
+    const _built = buildOnlineSessionDates(start_date, days_of_week, Number(total_sessions), holidaySet)
+    const sessionDates = _built.dates
+    // 실제 마지막 회차로 종료일 보정 (성수기/방학·휴일 제외 반영)
+    if (_built.endDate && _built.endDate !== end_date) {
+      await supabase.from('online_enrollments').update({ end_date: _built.endDate }).eq('id', enrollment.id)
+    }
 
     // 요일별 시간 (day_times: {"수":"17:00","금":"18:00"} — 한국시간 기준, 필리핀 = -1시간)
     const DAY_KR_BY_JS = ['일', '월', '화', '수', '목', '금', '토']
@@ -225,13 +233,8 @@ export async function PATCH(req: Request) {
             }
           }
 
-          const calcEnd = enroll.end_date || (() => {
-            const d = new Date(enroll.start_date)
-            d.setDate(d.getDate() + (enroll.duration_weeks || 52) * 7)
-            return d.toISOString().slice(0, 10)
-          })()
-
-          const dates = generateSessionDates(startFrom, calcEnd, enroll.days_of_week, needed)
+          const _hs = await loadHolidaySet()
+          const dates = buildOnlineSessionDates(startFrom, enroll.days_of_week, needed, _hs).dates
           const DAY_KR_BY_JS2 = ['일', '월', '화', '수', '목', '금', '토']
           const phOf2 = (kr: string | null) => {
             if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
