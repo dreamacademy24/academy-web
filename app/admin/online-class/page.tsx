@@ -54,8 +54,11 @@ for (let h = 15; h <= 21; h++) {
   TIME_SLOTS.push(`${h}:30`);
 }
 function subtractHour(t: string): string {
+  if (!t || !/^\d{1,2}:\d{2}/.test(t)) return "";
+  {
   const [h, m] = t.split(":").map(Number);
-  return `${h - 1}:${String(m).padStart(2, "0")}`;
+  return `${String((h + 23) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
 }
 
 // 기간 컬럼 헬퍼
@@ -379,7 +382,7 @@ export default function OnlineClassPage() {
       const res = await fetch("/api/online-class/enrollments", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editTarget.id, ...editForm }),
+        body: JSON.stringify({ id: editTarget.id, ...editForm, class_time_ph: subtractHour(String(editForm.class_time_kr ?? "")) || editForm.class_time_ph || null }),
       });
       const r = await res.json();
       if (!res.ok) { toastErr(r.error || "저장 실패"); return; }
@@ -441,6 +444,7 @@ export default function OnlineClassPage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          class_time_ph: subtractHour(form.class_time_kr) || null,
           class_period: periodTag,
           day_times: dt && Object.keys(dt).length > 0 ? dt : null,
           days_of_week: form.days_of_week,
@@ -802,7 +806,7 @@ export default function OnlineClassPage() {
           </div>
           <div className="form-row">
             <div><label className="form-label">한국 수업 시간</label><input className="form-input" value={form.class_time_kr} readOnly onClick={() => { if (!dayTimesOn) openTimePicker("한국 수업 시간", t => setForm(f => ({ ...f, class_time_kr: t, class_time_ph: subtractHour(t) }))); }} placeholder="시간 선택" style={{ cursor: dayTimesOn ? "not-allowed" : "pointer", ...(dayTimesOn ? { background: "#f8fafc", opacity: 0.6 } : {}) }} /></div>
-            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={form.class_time_ph} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} placeholder="자동 계산" title="한국 시간 -1시간 자동" /></div>
+            <div><label className="form-label">필리핀 수업 시간</label><input className="form-input" value={subtractHour(form.class_time_kr) || form.class_time_ph} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} placeholder="자동 계산" title="한국 시간 -1시간 자동" /></div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, fontWeight: 600, color: "#475569", marginBottom: 8, cursor: "pointer" }}>
             <input type="checkbox" checked={dayTimesOn} onChange={e => setDayTimesOn(e.target.checked)} />
@@ -1042,7 +1046,7 @@ export default function OnlineClassPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
             <div><label className="form-label" style={{ fontSize: 11 }}>한국 시간</label><input className="form-input" value={String(editForm.class_time_kr ?? "")} readOnly onClick={() => openTimePicker("한국 수업 시간", t => setEditForm(f => ({ ...f, class_time_kr: t, class_time_ph: subtractHour(t) })))} style={{ cursor: "pointer" }} /></div>
-            <div><label className="form-label" style={{ fontSize: 11 }}>필리핀 시간</label><input className="form-input" value={String(editForm.class_time_ph ?? "")} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} title="한국 시간 -1시간 자동" /></div>
+            <div><label className="form-label" style={{ fontSize: 11 }}>필리핀 시간</label><input className="form-input" value={subtractHour(String(editForm.class_time_kr ?? "")) || String(editForm.class_time_ph ?? "")} readOnly style={{ background: "#f8fafc", opacity: 0.7 }} title="한국 시간 -1시간 자동" /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>시작일</label><input type="date" className="form-input" value={String(editForm.start_date ?? "")} onChange={e => setEditForm(f => ({ ...f, start_date: e.target.value }))} /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>종료일</label><input type="date" className="form-input" value={String(editForm.end_date ?? "")} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} /></div>
             <div><label className="form-label" style={{ fontSize: 11 }}>연수 기간 (주)</label><input type="number" className="form-input" value={String(editForm.duration_weeks ?? "")} onChange={e => setEditForm(f => ({ ...f, duration_weeks: e.target.value }))} /></div>

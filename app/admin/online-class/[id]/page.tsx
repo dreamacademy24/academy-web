@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 const DAYS = ["월", "화", "수", "목", "금"];
 const TIME_SLOTS: string[] = [];
 for (let h = 15; h <= 21; h++) { TIME_SLOTS.push(`${h}:00`); TIME_SLOTS.push(`${h}:30`); }
-const subHour = (t: string) => { const [h, m] = t.split(":").map(Number); return `${h - 1}:${String(m).padStart(2, "0")}`; };
+const subHour = (t: string) => { if(!t||!/^\d{1,2}:\d{2}/.test(t))return ""; const [h, m] = t.split(":").map(Number); return `${String((h + 23) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`; };
 
 interface Tutor { id: string; name_display: string; name_en?: string | null }
 interface Enr {
@@ -102,6 +102,7 @@ export default function OnlineClassStudentPage() {
         duration_weeks: form.duration_weeks === "" ? null : Number(form.duration_weeks),
         class_duration_weeks: form.class_duration_weeks === "" ? null : Number(form.class_duration_weeks),
         customer_user_id: form.customer_user_id || null,
+        class_time_ph: subHour(form.class_time_kr) || null,
         day_times: dayTimesOn ? Object.fromEntries(form.days_of_week.filter((d: string) => (dayTimes[d] || "").trim()).map((d: string) => [d, dayTimes[d].trim()])) : null,
       };
       const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -212,7 +213,7 @@ export default function OnlineClassStudentPage() {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 6 }}>
               <div><label style={lbl}>한국 시간</label><input style={{ ...inp, cursor: "pointer", background: dayTimesOn ? "#f8fafc" : "#fff" }} readOnly value={form.class_time_kr} onClick={() => { if (!dayTimesOn) setTp({ label: "한국 수업 시간", cb: t => setForm((f: any) => ({ ...f, class_time_kr: t, class_time_ph: subHour(t) })) }); }} placeholder="시간 선택" /></div>
-              <div><label style={lbl}>필리핀 시간</label><input style={{ ...inp, background: "#f8fafc" }} readOnly value={form.class_time_ph} /></div>
+              <div><label style={lbl}>필리핀 시간</label><input style={{ ...inp, background: "#f8fafc" }} readOnly value={subHour(form.class_time_kr) || form.class_time_ph} /></div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginBottom: 8, cursor: "pointer" }}>
               <input type="checkbox" checked={dayTimesOn} onChange={e => setDayTimesOn(e.target.checked)} /> 요일별 시간 다르게 (예: 월 18:30 / 수 19:30)
