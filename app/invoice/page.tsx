@@ -1326,10 +1326,26 @@ function InvoicePageInner(){
   const td=billing.discounts.reduce((s,d)=>s+(Number(d.amount)||0),0);
   const ta=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
   const fp=billing.basePrice+ta-td;
-  // 예약금 정책: 리조트형(드림하우스 없이 제이파크/큐브나인만 — 단독·리조트 콤보) = 총액의 50% (천원 반올림), 그 외 = 100만원
+  // 예약금 정책 (2026-08-28): 드림하우스 = 100만원 · 제이파크/큐브나인 = 해당 숙소 금액의 50%
+  //  · 단독 리조트 = 총액의 50% · 콤보(드하+리조트) = 드하 100만 + 리조트 구간 50% · 그 외(드하 단독·통학) = 100만
   const _isResort=(t:string)=>t==="jpark"||t==="cubenine";
+  const roundTh=(v:number)=>Math.round(v/1000)*1000;
   const isResortSingle=!isCommute&&!dhOnly&&(cm==="combo"?(_isResort(a1T)&&_isResort(a2T)):_isResort(a1T));
-  const depositAmt=isResortSingle?Math.round(fp/2/1000)*1000:1000000;
+  const isResortCombo=!isCommute&&cm==="combo"&&(_isResort(a1T)||_isResort(a2T)); // 드하+리조트 등 리조트 포함 콤보
+  const depositAmt=(()=>{
+    if(isCommute)return 1000000;
+    if(isResortSingle)return roundTh(fp/2);                 // 리조트 단독/전부 리조트 = 총액 50%
+    if(isResortCombo){
+      // 구간별: 드하 100만 + 리조트 구간 금액의 50% (billing.items의 숙소별 금액 사용, 없으면 a1/a2 비중 추정)
+      let dep=0; const items=billing.items||[];
+      const priceOf=(t:string)=>{const it=items.find(i=>i.accom===t);return it?Number(it.price)||0:0;};
+      const hasDH=a1T==="dreamhouse"||a2T==="dreamhouse";
+      if(hasDH)dep+=1000000;
+      for(const rt of ["jpark","cubenine"]){ if(a1T===rt||a2T===rt){ const p=priceOf(rt); dep+= p>0 ? p/2 : (fp - (hasDH?1000000*2:0))/2; } }
+      return roundTh(dep||fp/2);
+    }
+    return 1000000;                                          // 드하 단독 등
+  })();
   const receiptPaidTotal=useMemo(()=>receiptPayments
     .filter(p=>(p.amount||"").trim()!=="")
     .reduce((s,p)=>s+(Number(String(p.amount).replace(/[,\s]/g,""))||0),0),
