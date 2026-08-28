@@ -11,15 +11,8 @@ interface Account {
   color: string;
   staffId: string;
   badge?: string;
+  isTutor?: boolean;
 }
-
-const TUTOR_ACCOUNTS: Account[] = [
-  { userId: "admin-ann",     displayLabel: "T.Ann",     sessionName: "T.Ann",     color: TUTOR_COLORS["T.Ann"],     staffId: "admin-ann" },
-  { userId: "admin-angel",   displayLabel: "T.Angel",   sessionName: "T.Angel",   color: TUTOR_COLORS["T.Angel"],   staffId: "admin-angel" },
-  { userId: "admin-carla",   displayLabel: "T.Carla",   sessionName: "T.Carla",   color: TUTOR_COLORS["T.Carla"],   staffId: "admin-carla" },
-  { userId: "admin-amelyn",  displayLabel: "T.Amelyn",  sessionName: "T.Amelyn",  color: TUTOR_COLORS["T.Amelyn"],  staffId: "admin-amelyn" },
-  { userId: "admin-cristel", displayLabel: "T.Cristel", sessionName: "T.Cristel", color: TUTOR_COLORS["T.Cristel"], staffId: "admin-cristel" },
-];
 
 const ADMIN_ACCOUNTS: Account[] = [
   { userId: "admin-may", displayLabel: "May",   sessionName: "May", color: "#A855F7", staffId: "may", badge: "CEO" },
@@ -36,6 +29,20 @@ interface Props {
 export default function OnlineClassLoginScreen({ onAuthenticated }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<Account | null>(null);
+  const [tutorAccounts, setTutorAccounts] = useState<Account[]>([]);
+  useEffect(() => {
+    fetch("/api/online-class/tutors").then(r => r.ok ? r.json() : { tutors: [] }).then(d => {
+      const accts: Account[] = (d.tutors || []).map((t: any) => ({
+        userId: t.staff_user_id || t.id,
+        displayLabel: t.name_display,
+        sessionName: t.name_display,
+        color: TUTOR_COLORS[t.name_display] || "#94a3b8",
+        staffId: t.staff_user_id || "",
+        isTutor: true,
+      }));
+      setTutorAccounts(accts);
+    }).catch(() => {});
+  }, []);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,9 +74,28 @@ export default function OnlineClassLoginScreen({ onAuthenticated }: Props) {
     setSubmitting(false);
   }
 
-  function submit() {
+  async function submit() {
     if (!selected || submitting) return;
     setSubmitting(true);
+    // 현지 티쳐: staff_accounts(DB) 인증 → staffId(=staff_user_id)로 저장하면 티쳐 화면이 본인 수강생을 찾음
+    if (selected.isTutor) {
+      try {
+        const r = await fetch("/api/admineng/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: selected.staffId, password }) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) {
+          setError("Incorrect password. Please try again.");
+          setPassword(""); setSubmitting(false);
+          setTimeout(() => inputRef.current?.focus(), 0);
+          return;
+        }
+        setAdminAuthed(selected.staffId, { role: "tutor", name: selected.sessionName, staffId: selected.staffId });
+        router.push("/tutor/online-class");
+      } catch {
+        setError("Login failed. Please try again."); setSubmitting(false);
+      }
+      return;
+    }
+    // 관리자(May/CEO): 기존 방식
     const res = validateOnlineClassLogin(selected.userId, password);
     if (!res || !res.success) {
       setError("Incorrect password. Please try again.");
@@ -146,7 +172,7 @@ export default function OnlineClassLoginScreen({ onAuthenticated }: Props) {
         {/* Tutors */}
         <div className="ocl-section-label">Tutors</div>
         <div className="ocl-card-grid tutors">
-          {TUTOR_ACCOUNTS.map(a => (
+          {tutorAccounts.map(a => (
             <button
               key={a.userId}
               type="button"
