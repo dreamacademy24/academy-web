@@ -34,6 +34,7 @@ function ApplyInner() {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [level, setLevel] = useState("");
   const [children, setChildren] = useState<{ kor: string; en: string }[]>([]);
+  const [enrolledNames, setEnrolledNames] = useState<Set<string>>(new Set());
   const [childName, setChildName] = useState("");     // 선택된 아이 한글명
   const [childEn, setChildEn] = useState("");
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -67,13 +68,19 @@ function ApplyInner() {
             if (kor && !seen.has(kor)) { seen.add(kor); list.push({ kor, en }); }
           }
         }
-        // 프로필 children 폴백
-        if (list.length === 0 && prof?.children) {
+        // 프로필 children 항상 병합 (예약 students에 없는 아이도 포함)
+        if (prof?.children) {
           let ch: any = prof.children; if (typeof ch === "string") { try { ch = JSON.parse(ch); } catch { ch = []; } }
           for (const c of (Array.isArray(ch) ? ch : [])) { const kor = (c.name || c.kor || "").trim(); if (kor && !seen.has(kor)) { seen.add(kor); list.push({ kor, en: (c.name_en || c.en || "").trim() }); } }
         }
-        setChildren(list.slice(0, 4));
-        if (list.length === 1) { setChildName(list[0].kor); setChildEn(list[0].en); }
+        setChildren(list.slice(0, 6));
+        // 이미 화상영어 등록된 아이 이름 (중복 신청 방지 표시)
+        try {
+          const er = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${data.session.user.id}`);
+          if (er.ok) { const ed = await er.json(); const en = new Set<string>((ed.enrollments || []).map((e: any) => (e.student_name || "").trim()).filter(Boolean)); setEnrolledNames(en); }
+        } catch { /* ignore */ }
+        const notEnrolled = list.filter(c => true);
+        if (notEnrolled.length === 1) { setChildName(notEnrolled[0].kor); setChildEn(notEnrolled[0].en); }
       } catch { /* ignore */ }
       setAuthChecking(false);
     })();
@@ -233,13 +240,20 @@ function ApplyInner() {
           {children.length > 0 && (<>
             <h2>어느 아이 수업인가요?</h2>
             <div className="days">
-              {children.map(c => (
-                <button key={c.kor} className={`dchip ${childName === c.kor ? "on" : ""}`} onClick={() => { setChildName(c.kor); setChildEn(c.en); }} style={{ minWidth: 90 }}>
+              {children.map(c => {
+                const done = enrolledNames.has(c.kor);
+                return (
+                <button key={c.kor} className={`dchip ${childName === c.kor ? "on" : ""}`} disabled={done}
+                  onClick={() => { if (done) return; setChildName(c.kor); setChildEn(c.en); }}
+                  title={done ? "이미 화상영어를 신청한 아이예요" : ""}
+                  style={{ minWidth: 90, position: "relative", opacity: done ? 0.5 : 1, cursor: done ? "not-allowed" : "pointer" }}>
                   {c.kor}{c.en ? <span style={{ fontSize: 10, opacity: 0.7, display: "block" }}>{c.en}</span> : null}
+                  {done ? <span style={{ fontSize: 9.5, color: "#16a34a", fontWeight: 800, display: "block", marginTop: 2 }}>✓ 신청됨</span> : null}
                 </button>
-              ))}
+                );
+              })}
             </div>
-            <div className="hint">한 계정에 여러 아이가 있으면 아이마다 따로 신청해요 (최대 4명)</div>
+            <div className="hint">한 계정에 여러 아이가 있으면 아이마다 따로 신청해요 · <b style={{ color: "#16a34a" }}>✓ 신청됨</b>은 이미 신청한 아이예요</div>
             <div style={{ height: 14 }} />
           </>)}
           <h2>수업 요일 선택 (최대 3개)</h2>

@@ -407,6 +407,12 @@ function PortalOnlineClassInner() {
               ))}
             </div>
           )}
+          <div style={{ marginBottom: 12 }}>
+            <button onClick={() => router.push("/portal/online-class/apply")}
+              style={{ padding: "9px 16px", background: "#fff", color: "#1a6fc4", border: "1.5px solid #1a6fc4", borderRadius: 10, fontFamily: "inherit", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+              ➕ 다른 아이 신규 신청
+            </button>
+          </div>
           {(() => {
             const todayStr = localStr(new Date());
             const remaining = activeEnroll.total_sessions - activeEnroll.used_sessions;
