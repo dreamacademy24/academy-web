@@ -62,7 +62,9 @@ function Inner() {
   const searchParams = useSearchParams();
   const [authed, setAuthed] = useState(false);
   const [adminRole, setAdminRole] = useState("");
-  const [tab, setTab] = useState<"today" | "students" | "schedule">("today");
+  const [tab, setTab] = useState<"today" | "students" | "schedule" | "requests">("today");
+  const [changeReqs, setChangeReqs] = useState<any[]>([]);
+  const [reqBusy, setReqBusy] = useState<string | null>(null);
   const [tutor, setTutor] = useState<Tutor | null>(null);
   const [loadingTutor, setLoadingTutor] = useState(true);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -135,6 +137,22 @@ function Inner() {
     if (res.ok) { const d = await res.json(); setNotifs(d.notifications || []); }
   }, [tutor]);
   useEffect(() => { loadNotifs(); const t = setInterval(loadNotifs, 30000); return () => clearInterval(t); }, [loadNotifs]);
+
+  const loadChangeReqs = useCallback(async () => {
+    if (!tutor) return;
+    const res = await fetch(`/api/online-class/change-requests?tutor_id=${tutor.id}&status=pending`);
+    if (res.ok) { const d = await res.json(); setChangeReqs((d.requests || []).filter((r: any) => r.teacher_status === "pending")); }
+  }, [tutor]);
+  useEffect(() => { loadChangeReqs(); }, [loadChangeReqs]);
+  async function teacherProcess(id: string, action: "teacher_approve" | "teacher_reject") {
+    let teacher_note: string | null = null;
+    if (action === "teacher_reject") { teacher_note = window.prompt("Reason for rejecting (optional):") || null; }
+    setReqBusy(id);
+    const res = await fetch("/api/online-class/change-requests", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action, teacher_note }) });
+    setReqBusy(null);
+    if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); return; }
+    loadChangeReqs();
+  }
   const unread = notifs.filter(n => !n.is_read);
   async function markNotifsRead() {
     if (!tutor || unread.length === 0) { setNotifDismissed(true); return; }
@@ -210,6 +228,7 @@ function Inner() {
             <button className={`tb ${tab === "today" ? "on" : ""}`} onClick={() => setTab("today")}>📅 Today {todaySessions.length > 0 && <span className="cnt">{doneCnt}/{todaySessions.length}</span>}</button>
             <button className={`tb ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>👧 My Students <span className="cnt">{enrollments.length}</span></button>
             <button className={`tb ${tab === "schedule" ? "on" : ""}`} onClick={() => setTab("schedule")}>🗓 My Schedule</button>
+            <button className={`tb ${tab === "requests" ? "on" : ""}`} onClick={() => setTab("requests")}>🔔 Change Requests {changeReqs.length > 0 && <span className="cnt" style={{ background: "#dc2626", color: "#fff" }}>{changeReqs.length}</span>}</button>
           </div>
 
           {/* ══ TODAY ══ */}
@@ -298,6 +317,39 @@ function Inner() {
                           })}
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {/* ══ CHANGE REQUESTS (teacher approval) ══ */}
+          {tab === "requests" && (
+            changeReqs.length === 0 ? <div className="empty">No pending change requests 🎉</div> : (
+              <div className="sgrid">
+                {changeReqs.map(r => {
+                  const en = r.enrollment || {};
+                  const dEn: Record<string, string> = { "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat" };
+                  const dstr = (arr: any) => (arr || []).map((d: string) => dEn[d] || d).join("/");
+                  return (
+                    <div key={r.id} className="scard">
+                      <div className="srow1">
+                        <div className="sname">{en.student_name_en || en.student_name}</div>
+                        <span className="chip" style={{ background: r.req_type === "single" ? "#dbeafe" : "#ede9fe", color: r.req_type === "single" ? "#1e40af" : "#6d28d9" }}>{r.req_type === "single" ? "1 session" : "Full schedule"}</span>
+                      </div>
+                      <div className="smeta">Now: {dstr(en.days_of_week)} {en.class_time_kr || ""}</div>
+                      <div className="smeta" style={{ color: "#1a6fc4", fontWeight: 700 }}>
+                        {r.req_type === "single"
+                          ? `→ ${r.req_date || "(keep date)"} ${r.req_time_kr || ""}`
+                          : `→ ${r.req_days_of_week?.length ? dstr(r.req_days_of_week) : dstr(en.days_of_week)} ${r.req_time_kr || en.class_time_kr || ""} (from ${r.effective_from})`}
+                      </div>
+                      {r.memo && <div className="snote">💬 {r.memo}</div>}
+                      <div className="sbtns">
+                        <button className="ab at on" disabled={reqBusy === r.id} onClick={() => teacherProcess(r.id, "teacher_approve")}>✓ Approve</button>
+                        <button className="ab ab2" disabled={reqBusy === r.id} onClick={() => teacherProcess(r.id, "teacher_reject")}>✗ Reject</button>
+                      </div>
+                      <div className="tnkr" style={{ marginTop: 6 }}>After you approve, the Korean manager gives final approval.</div>
                     </div>
                   );
                 })}

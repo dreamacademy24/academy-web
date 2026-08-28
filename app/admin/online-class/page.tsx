@@ -248,7 +248,7 @@ export default function OnlineClassPage() {
       admin_note = window.prompt("거절 사유 (엄마 포털에 표시됩니다)") || null;
       if (admin_note === null) return;
     } else {
-      if (!window.confirm("승인하면 적용일 이후 예정 수업이 새 요일·시간으로 자동 재생성됩니다. 진행할까요?")) return;
+      if (!window.confirm("최종 승인하면 실제 수업 일정이 변경됩니다 (1회차=해당 수업 이동 / 전체=적용일 이후 재생성). 진행할까요?")) return;
     }
     setReqProcessing(id);
     const res = await fetch("/api/online-class/change-requests", {
@@ -920,25 +920,30 @@ export default function OnlineClassPage() {
                     <span style={{ fontSize: 12, color: "#6b7c93" }}>{en.tutor?.name_display || "튜터 미지정"}</span>
                     <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>{(r.created_at || "").slice(0, 16).replace("T", " ")}</span>
                   </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 6, padding: "2px 8px", background: r.req_type === "single" ? "#eff6ff" : "#f5f3ff", color: r.req_type === "single" ? "#1a6fc4" : "#7c3aed" }}>{r.req_type === "single" ? "1회차 변경" : "전체 요일 변경"}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 6, padding: "2px 8px", background: r.teacher_status === "approved" ? "#dcfce7" : r.teacher_status === "rejected" ? "#fef2f2" : "#fef9c3", color: r.teacher_status === "approved" ? "#166534" : r.teacher_status === "rejected" ? "#dc2626" : "#92400e" }}>현지T {r.teacher_status === "approved" ? "승인✓" : r.teacher_status === "rejected" ? "거절" : "대기"}</span>
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center", background: "#f8fafc", borderRadius: 8, padding: "10px 12px", fontSize: 12.5 }}>
                     <div>
                       <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>현재</div>
-                      {daysToKr(en.days_of_week || [])} {en.class_time_kr || ""}
+                      {r.req_type === "single" ? "이 수업" : daysToKr(en.days_of_week || [])} {r.req_type === "single" ? "" : (en.class_time_kr || "")}
                     </div>
                     <div style={{ fontSize: 16, color: "#1a6fc4" }}>→</div>
                     <div>
-                      <div style={{ fontSize: 10.5, color: "#1a6fc4", fontWeight: 700, marginBottom: 2 }}>요청 (적용일 {r.effective_from})</div>
-                      <b>{r.req_days_of_week?.length ? daysToKr(r.req_days_of_week) : daysToKr(en.days_of_week || [])} {r.req_time_kr || en.class_time_kr || ""}</b>
+                      <div style={{ fontSize: 10.5, color: "#1a6fc4", fontWeight: 700, marginBottom: 2 }}>{r.req_type === "single" ? "새 날짜/시간" : `요청 (적용일 ${r.effective_from})`}</div>
+                      <b>{r.req_type === "single" ? `${r.req_date || "(날짜 유지)"} ${r.req_time_kr || ""}` : `${r.req_days_of_week?.length ? daysToKr(r.req_days_of_week) : daysToKr(en.days_of_week || [])} ${r.req_time_kr || en.class_time_kr || ""}`}</b>
                     </div>
                   </div>
                   {r.memo && <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>💬 {r.memo}</div>}
                   {r.admin_note && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>관리자: {r.admin_note}</div>}
                   {r.status === "pending" && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                      <button className="btn-sm" disabled={reqProcessing === r.id} style={{ background: "#0d9488", color: "#fff", borderColor: "#0d9488", padding: "7px 16px" }} onClick={() => processReq(r.id, "approve")}>
-                        {reqProcessing === r.id ? "처리 중..." : "✓ 승인 (세션 재생성 + 튜터 알림)"}
+                    <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      <button className="btn-sm" disabled={reqProcessing === r.id || r.teacher_status !== "approved"} title={r.teacher_status !== "approved" ? "현지 선생님 승인 후 최종 승인 가능" : ""} style={{ background: r.teacher_status === "approved" ? "#0d9488" : "#cbd5e1", color: "#fff", borderColor: r.teacher_status === "approved" ? "#0d9488" : "#cbd5e1", padding: "7px 16px", cursor: r.teacher_status === "approved" ? "pointer" : "not-allowed" }} onClick={() => processReq(r.id, "approve")}>
+                        {reqProcessing === r.id ? "처리 중..." : "✓ 최종 승인 (적용)"}
                       </button>
                       <button className="btn-sm" disabled={reqProcessing === r.id} style={{ color: "#dc2626", borderColor: "#fecaca", padding: "7px 16px" }} onClick={() => processReq(r.id, "reject")}>거절</button>
+                      {r.teacher_status !== "approved" && <span style={{ fontSize: 11, color: "#92400e" }}>⏳ 현지 선생님 승인 대기 중</span>}
                     </div>
                   )}
                 </div>
