@@ -214,7 +214,8 @@ export default function PortalDashboard() {
       let ocItems: Array<{ key: string; status: string }> = [];
       // 화상영어 판정 계정: 미리보기(admin_view)면 예약의 portal_user_id, 아니면 로그인 사용자
       let ocUid: string | null = user?.id || null;
-      const _av = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin_view") : null;
+      let _av: string | null = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("admin_view");
+      try { const raw2 = localStorage.getItem("portalSession"); if (raw2) { const s2 = JSON.parse(raw2); if (s2?.admin_view && s2?.booking_id) { _av = s2.booking_id; if (!bookingId) bookingId = s2.booking_id; } } } catch {}
       if (_av && bookingId) {
         try { const rb = await fetch(`/api/bookings/${bookingId}`); if (rb.ok) { const jb = await rb.json(); ocUid = (jb?.booking?.portal_user_id) || ocUid; if (!cancelled && jb?.booking?.portal_user_id) setPreviewOcUid(jb.booking.portal_user_id); } } catch {}
       }
