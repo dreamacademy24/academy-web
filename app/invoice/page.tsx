@@ -676,6 +676,7 @@ function InvoicePageInner(){
   const [reservationNo,setReservationNo]=useState(()=>"DA-"+todayCompact+"-"+Math.floor(Math.random()*900000+100000));
   const [reservationDate,setReservationDate]=useState(todayStr);
   const [booker,setBooker]=useState({name:"",englishName:"",balanceDate:""});
+  const [extraGuardians,setExtraGuardians]=useState<{kor:string;eng:string}[]>([]);
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [applied,setApplied]=useState(false);
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"드림하우스 보증금",amount:""}] as LC[]});
@@ -691,6 +692,9 @@ function InvoicePageInner(){
     if(_aEn.length) overallCO=_aEn[_aEn.length-1];
   }
   const stayHolidays=holidaysInRange(allHolidays,overallCI,overallCO);
+  /* 전체 투숙자 영문명 (예약자 + 추가보호자 + 학생) — 숫자(전화번호)만인 값 제외 */
+  const _isNm=(v:string)=>{const t=(v||"").trim();return t.length>0 && !/^[0-9\-\s+]+$/.test(t);};
+  const allGuestsEn=[booker.englishName,...extraGuardians.map(g=>g.eng),...students.map(s=>s.engName||s.name_en||"")].map(x=>(x||"").trim().toUpperCase()).filter(_isNm);
 
   /* ── 인보이스 스냅샷 (저장/불러오기) ── */
   const [snapshotChecked,setSnapshotChecked]=useState(false); // 스냅샷 조회 완료 여부
@@ -912,6 +916,7 @@ function InvoicePageInner(){
         }catch{}
       }
       setBooker({name:data.booker_name,englishName,balanceDate:data.balance_date||""});
+      try{const eg=typeof data.extra_guardians==="string"?JSON.parse(data.extra_guardians):data.extra_guardians;setExtraGuardians(Array.isArray(eg)?eg.filter((g:any)=>g&&(g.eng||g.kor)):[]);}catch{setExtraGuardians([]);}
       setIsCommute(isCommuteBooking(data));
       if(data.checkout_date) setDbCheckout(data.checkout_date);
       let sts:any[]=[];
@@ -1773,6 +1778,7 @@ function InvoicePageInner(){
         <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div>
           <table className="tb"><tbody>
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
+            <tr><td className="lb">All Guests (EN)</td><td colSpan={3} style={{fontWeight:700}}>{allGuestsEn.join(", ")||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
             <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomEn(a1T)} Check-in</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomEn(a1T)} Check-out</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
@@ -1930,7 +1936,10 @@ function InvoicePageInner(){
   {/* ── 섹션2: 예약자 정보 ── */}
   <div className="fs"><h2>예약자 정보</h2>
     <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input auto" value={reservationNo} readOnly/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></div></div>
-    <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value})}/></div></div>
+    <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value.toUpperCase()})}/></div></div>
+    {extraGuardians.map((g,i)=>(
+      <div className="f-row" key={i}><div className="f-group"><label className="f-label">추가 보호자 {i+2} 한글</label><input className="f-input" value={g.kor} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,kor:e.target.value}:x))}/></div><div className="f-group"><label className="f-label">추가 보호자 {i+2} 영문</label><input className="f-input" placeholder="HONG GILDONG" value={g.eng} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,eng:e.target.value.toUpperCase()}:x))}/></div></div>
+    ))}
     <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>syncLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
   </div>
 
@@ -2035,6 +2044,7 @@ function InvoicePageInner(){
 
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
+        <tr><td className="lb">투숙자 (영문)</td><td colSpan={3} style={{fontWeight:700}}>{allGuestsEn.join(", ")||"-"}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
         <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomKo(a1T)} 체크인</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomKo(a1T)} 체크아웃</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
@@ -2095,8 +2105,7 @@ function InvoicePageInner(){
       const fmtEn=(d:string)=>{if(!d)return "-";try{return new Date(d+"T00:00:00").toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});}catch{return d;}};
       const roomTxt=(checkin.houseNo||"").trim();
       const combo=cm==="combo";
-      const isName=(v:string)=>{const t=(v||"").trim();return t.length>0 && !/^[0-9\-\s+]+$/.test(t);}; // 숫자(전화번호)만이면 제외
-      const autoNames=[(booker.englishName||"").trim().toUpperCase(),...students.filter(s=>isName(s.engName)).map(s=>s.engName.trim().toUpperCase())].filter(isName);
+      const autoNames=allGuestsEn;
       const guestNames=certGuestNames.trim()?certGuestNames.split(",").map(x=>x.trim()).filter(Boolean):autoNames;
       const nights=(overallCI&&overallCO)?Math.max(0,Math.round((new Date(overallCO+"T00:00:00").getTime()-new Date(overallCI+"T00:00:00").getTime())/86400000)):0;
       const persons=(Number(cP)||1)+(students.filter(s=>(s.engName||s.korName||"").trim()).length||Number(cK)||0);
