@@ -52,6 +52,7 @@ export default function OnlineClassStudentPage() {
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({});
   // 시간 선택
   const [tp, setTp] = useState<{ label: string; cb: (t: string) => void } | null>(null);
+  const [pick, setPick] = useState<Ses | null>(null);
   // 계정 검색
   const [acctOpen, setAcctOpen] = useState(false);
   const [acctQ, setAcctQ] = useState("");
@@ -126,25 +127,12 @@ export default function OnlineClassStudentPage() {
     await load();
   }
 
-  async function cancelSession(s: Ses) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const sched = new Date(s.scheduled_date + "T00:00:00");
-    const dB = Math.round((sched.getTime() - today.getTime()) / 86400000);
-    const msg = dB >= 4 ? `#${s.session_number} (${s.scheduled_date}) 취소 — 4일 전이라 차감 없이 보강 처리돼요. 진행할까요?`
-      : `#${s.session_number} (${s.scheduled_date}) 취소 — ${dB <= 0 ? "당일" : dB + "일 전"}이라 회차가 차감돼요. 진행할까요?`;
-    if (!confirm(msg)) return;
-    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: s.id, status: dB >= 4 ? "makeup" : "cancelled", cancel_noticed_at: new Date().toISOString() }) });
-    const r = await res.json();
-    if (!res.ok) { show(r.error || "취소 실패", false); return; }
-    show(r.message || "처리 완료"); await load();
-  }
-
-  async function makeupConvert(s: Ses) {
-    if (!confirm(`#${s.session_number} (${s.scheduled_date}) 차감 취소를 보강(무차감)으로 전환할까요?\n회차 1회가 복구돼요. (아이 아픔 등 부득이한 사정)`)) return;
-    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: s.id, admin_makeup: true }) });
-    const r = await res.json();
-    if (!res.ok) { show(r.error || "전환 실패", false); return; }
-    show("보강 전환 + 회차 복구 ✅"); await load();
+  async function setSesStatus(s: Ses, st: string, force?: boolean) {
+    const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: s.id, status: st, ...(force ? { force_makeup: true } : {}) }) });
+    const r = await res.json().catch(() => ({}));
+    setPick(null);
+    if (!res.ok) { show((r as any).error || "변경 실패", false); return; }
+    show((r as any).message || "변경되었습니다 ✅"); await load();
   }
 
   async function searchAccounts() {
@@ -285,16 +273,14 @@ export default function OnlineClassStudentPage() {
                     let st = SES_STYLE[s.status] || SES_STYLE.scheduled;
                     if (s.status === "cancelled" && s.cancel_days_before != null && s.cancel_days_before >= 4) st = SES_STYLE.makeup;
                     const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
-                    const deducted = s.status === "cancelled" && (s.cancel_days_before == null || s.cancel_days_before < 4);
                     return (
-                      <div key={s.id} title={`#${s.session_number} ${s.scheduled_date} ${s.scheduled_time_kr || ""} · ${s.status}` + (s.attitude === "issue" ? `\n⚠️ 태도: ${s.attitude_note || ""}` : "") + (s.session_note ? `\n📝 ${s.session_note}` : "")}
-                        style={{ position: "relative", width: 64, borderRadius: 9, padding: "8px 4px 7px", textAlign: "center", background: st.bg, color: st.color, border: "1px solid rgba(0,0,0,0.05)" }}>
+                      <div key={s.id} onClick={() => setPick(s)} title={`#${s.session_number} ${s.scheduled_date} ${s.scheduled_time_kr || ""} · ${s.status} — 클릭해서 출석/보강/취소 선택`}
+                        style={{ position: "relative", width: 64, borderRadius: 9, padding: "8px 4px 7px", textAlign: "center", background: st.bg, color: st.color, border: "1px solid rgba(0,0,0,0.05)", cursor: "pointer" }}>
                         <div style={{ fontSize: 11.5, fontWeight: 700 }}>{d}</div>
                         <div style={{ fontSize: 14, fontWeight: 800 }}>{st.label}</div>
                         {s.session_note && <span style={{ position: "absolute", top: 2, right: 3, fontSize: 10 }}>💬</span>}
                         {s.attitude === "issue" && <span style={{ position: "absolute", bottom: 2, right: 3, fontSize: 10 }}>⚠️</span>}
-                        {s.status === "scheduled" && <button onClick={() => cancelSession(s)} title="취소" style={{ position: "absolute", top: -6, left: -6, width: 18, height: 18, borderRadius: 9, border: "none", background: "#fee2e2", color: "#dc2626", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: "18px", padding: 0 }}>×</button>}
-                        {deducted && <button onClick={() => makeupConvert(s)} title="보강 전환 (차감 복구)" style={{ position: "absolute", top: -6, left: -6, width: 18, height: 18, borderRadius: 9, border: "none", background: "#dcfce7", color: "#166534", fontSize: 11, fontWeight: 800, cursor: "pointer", lineHeight: "18px", padding: 0 }}>↩</button>}
+
                       </div>
                     );
                   })}
@@ -326,6 +312,23 @@ export default function OnlineClassStudentPage() {
             <div style={{ fontWeight: 800, marginBottom: 10 }}>{tp.label} <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>(세부 -1시간 · 운영 세부 14:00~21:00)</span></div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
               {TIME_SLOTS.map(t => <button key={t} onClick={() => { tp.cb(t); setTp(null); }} style={{ padding: "9px 0", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 출석/보강/취소 상태 선택 모달 */}
+      {pick && (
+        <div onClick={() => setPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(360px,92vw)" }}>
+            <div style={{ fontWeight: 800, marginBottom: 3 }}>#{pick.session_number} · {pick.scheduled_date}</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 14 }}>{pick.scheduled_time_kr || ""} · 이 수업 상태를 선택하세요</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <button onClick={() => setSesStatus(pick, "attended")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>⭕ 출석 <span style={{ fontWeight: 600, color: "#64748b" }}>· 회차 차감</span></button>
+              <button onClick={() => setSesStatus(pick, "no_show")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>✗ 결석 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 회차 차감</span></button>
+              <button onClick={() => setSesStatus(pick, "makeup", true)} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fcd34d", background: "#fffbeb", color: "#b45309", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>△ 보강 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 무차감 · 마지막에 1회 추가 (티쳐 결근 등)</span></button>
+              <button onClick={() => setSesStatus(pick, "cancelled")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fecaca", background: "#fff", color: "#dc2626", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>✕ 취소 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 4일 전 이내면 차감</span></button>
+              <button onClick={() => setSesStatus(pick, "scheduled")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #e2e8f0", background: "#fff", color: "#475569", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>↩ 예정으로 되돌리기</button>
             </div>
           </div>
         </div>

@@ -102,12 +102,15 @@ export async function PATCH(req: Request) {
       const today = new Date(); today.setHours(0, 0, 0, 0)
       const sched = new Date((prev.scheduled_date || '') + 'T00:00:00')
       const daysBefore = Math.round((sched.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      // 어드민이 직접 '보강'을 지정하면 날짜와 무관하게 무차감 + 보강 추가 (티쳐 결근/부득이한 사정)
+      const forceMk = status === 'makeup' && body.force_makeup === true
+      const effDays = forceMk ? 4 : daysBefore
 
       const noticedAt = cancel_noticed_at || new Date().toISOString()
       const update: Record<string, unknown> = {
         status,
         cancel_noticed_at: noticedAt,
-        cancel_days_before: daysBefore,
+        cancel_days_before: effDays,
       }
       if (recorded_by) { update.recorded_by = recorded_by; update.recorded_at = new Date().toISOString() }
       if (typeof session_note !== 'undefined') update.session_note = (session_note || '').toString().trim() || null
@@ -115,11 +118,18 @@ export async function PATCH(req: Request) {
       const { error } = await supabase.from('online_sessions').update(update).eq('id', sessionId)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-      // 4일 전 이상 + makeup: 차감 없음, 트리거가 보강 추가
-      if (daysBefore >= 4 && status === 'makeup') {
+      // 4일 전 이상 + makeup(또는 어드민 직접 보강): 차감 없음, 트리거가 보강 추가
+      if (effDays >= 4 && status === 'makeup') {
+        // 직접 보강 지정인데 이전이 차감 상태(출석/결석/차감취소)였으면 회차 1회 복구
+        if (forceMk && (prev.status === 'attended' || prev.status === 'no_show' || prev.status === 'cancelled')) {
+          const { data: en2 } = await supabase.from('online_enrollments').select('used_sessions').eq('id', prev.enrollment_id).single()
+          if (en2 && (en2.used_sessions || 0) > 0) {
+            await supabase.from('online_enrollments').update({ used_sessions: (en2.used_sessions || 0) - 1 }).eq('id', prev.enrollment_id)
+          }
+        }
         return NextResponse.json({
           ok: true,
-          cancel_days_before: daysBefore,
+          cancel_days_before: effDays,
           makeup_added: true,
           message: '보강 처리되었습니다. 마지막 회차 이후 1회 자동 추가됩니다.',
           message_en: 'Marked as makeup. One session has been added after your last class.',
@@ -127,7 +137,7 @@ export async function PATCH(req: Request) {
       }
 
       // 3일 이내 (또는 cancelled): 회차 차감
-      if (daysBefore < 4 && prev.status === 'scheduled') {
+      if (effDays < 4 && prev.status === 'scheduled') {
         const { data: enroll } = await supabase
           .from('online_enrollments')
           .select('used_sessions')
@@ -143,10 +153,10 @@ export async function PATCH(req: Request) {
 
       return NextResponse.json({
         ok: true,
-        cancel_days_before: daysBefore,
-        session_deducted: daysBefore < 4,
-        message: daysBefore < 4 ? '회차가 차감되었습니다.' : '취소되었습니다.',
-        message_en: daysBefore < 4 ? '1 session has been deducted.' : 'Cancelled.',
+        cancel_days_before: effDays,
+        session_deducted: effDays < 4,
+        message: effDays < 4 ? '회차가 차감되었습니다.' : '취소되었습니다.',
+        message_en: effDays < 4 ? '1 session has been deducted.' : 'Cancelled.',
       })
     }
 
@@ -168,6 +178,20 @@ export async function PATCH(req: Request) {
         await supabase
           .from('online_enrollments')
           .update({ used_sessions: (enroll.used_sessions || 0) + 1 })
+          .eq('id', prev.enrollment_id)
+      }
+    }
+    // 예정으로 되돌리기: 이전이 차감 상태였으면 회차 1회 복구
+    if (prev.enrollment_id && status === 'scheduled' && (prev.status === 'attended' || prev.status === 'no_show')) {
+      const { data: enroll } = await supabase
+        .from('online_enrollments')
+        .select('used_sessions')
+        .eq('id', prev.enrollment_id)
+        .single()
+      if (enroll && (enroll.used_sessions || 0) > 0) {
+        await supabase
+          .from('online_enrollments')
+          .update({ used_sessions: (enroll.used_sessions || 0) - 1 })
           .eq('id', prev.enrollment_id)
       }
     }
