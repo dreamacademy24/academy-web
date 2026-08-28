@@ -19,6 +19,7 @@ export default function PortalDashboard() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [ocReady, setOcReady] = useState(false);
+  const [previewOcUid, setPreviewOcUid] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [bookingInfo, setBookingInfo] = useState<any>(null);
@@ -211,13 +212,19 @@ export default function PortalDashboard() {
         } catch {}
       }
       let ocItems: Array<{ key: string; status: string }> = [];
-      if (user?.id) {
+      // 화상영어 판정 계정: 미리보기(admin_view)면 예약의 portal_user_id, 아니면 로그인 사용자
+      let ocUid: string | null = user?.id || null;
+      const _av = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin_view") : null;
+      if (_av && bookingId) {
+        try { const rb = await fetch(`/api/bookings/${bookingId}`); if (rb.ok) { const jb = await rb.json(); ocUid = (jb?.booking?.portal_user_id) || ocUid; if (!cancelled && jb?.booking?.portal_user_id) setPreviewOcUid(jb.booking.portal_user_id); } } catch {}
+      }
+      if (ocUid) {
         try {
-          const rEn = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${user.id}`);
+          const rEn = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${ocUid}`);
           if (rEn.ok) { const de = await rEn.json(); if ((de.enrollments || []).length > 0) setOcReady(true); }
         } catch {}
         try {
-          const r2 = await fetch(`/api/portal/online-class/change-request?customer_user_id=${user.id}`);
+          const r2 = await fetch(`/api/portal/online-class/change-request?customer_user_id=${ocUid}`);
           if (r2.ok) { const dd = await r2.json(); ocItems = (dd.requests || []).map((it: any) => ({ key: `ocreq:${it.id}`, status: String(it.status ?? "") })); }
         } catch {}
       }
@@ -326,7 +333,7 @@ export default function PortalDashboard() {
     { icon: "🎓", title: "애프터스쿨/필드트립", desc: "방과후 활동 및 현장학습", ready: feats ? feats.afterschool : true, href: "/after-school-fieldtrip" },
     { icon: "👩‍🏫", title: "튜터 수업 신청", desc: "방문 튜터 수업 새 신청", ready: feats ? feats.tutor : true, href: "/portal/tutor" },
     { icon: "✏️", title: "튜터 수업 변경요청", desc: "신청한 수업 취소·시간·날짜 변경", ready: feats ? feats.tutor : true, href: "/portal/tutor-change" },
-    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: ocReady, href: "/portal/online-class" },
+    { icon: "💻", title: "화상영어", desc: "온라인 영어 수업", ready: ocReady, href: previewOcUid ? `/portal/online-class?preview_uid=${previewOcUid}` : "/portal/online-class" },
     { icon: "🧾", title: "정산내역" + (bookingInfo?.settlement_open ? " (베타)" : ""), desc: "보증금·튜터비·추가비용 정산 내역", ready: !!bookingInfo?.settlement_open, href: "/portal/settlement" },
     { icon: "🍽", title: "식단", desc: "학생 점심(아카데미) · 드림하우스(올인원) 식단표", ready: feats ? feats.meal : true, href: "/portal/meal-menu" },
     { icon: "📑", title: "내 신청 내역", desc: "셔틀/튜터/픽드랍 등 전체 신청 확인", ready: true, href: "/portal/my-applications" },
