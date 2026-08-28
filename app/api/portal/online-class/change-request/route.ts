@@ -24,18 +24,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { enrollment_id, customer_user_id, req_days_of_week, req_time_kr, effective_from, memo } = body
+    const { enrollment_id, customer_user_id, req_days_of_week, req_time_kr, effective_from, memo, req_type, session_id, req_date } = body
+    const kind = req_type === 'single' ? 'single' : 'full'
     if (!enrollment_id) return NextResponse.json({ error: 'enrollment_id required' }, { status: 400 })
     if (!customer_user_id) return NextResponse.json({ error: 'customer_user_id required' }, { status: 400 })
-    if (!effective_from) return NextResponse.json({ error: '적용 시작일을 선택해주세요.' }, { status: 400 })
-    if (!(req_days_of_week?.length) && !req_time_kr) {
-      return NextResponse.json({ error: '변경할 요일 또는 시간을 입력해주세요.' }, { status: 400 })
+    if (kind === 'single') {
+      if (!session_id) return NextResponse.json({ error: '변경할 수업을 선택해주세요.' }, { status: 400 })
+      if (!req_date && !req_time_kr) return NextResponse.json({ error: '새 날짜 또는 시간을 입력해주세요.' }, { status: 400 })
+    } else {
+      if (!effective_from) return NextResponse.json({ error: '적용 시작일을 선택해주세요.' }, { status: 400 })
+      if (!(req_days_of_week?.length) && !req_time_kr) return NextResponse.json({ error: '변경할 요일 또는 시간을 입력해주세요.' }, { status: 400 })
     }
 
     // 본인 확인
     const { data: enroll } = await supabase
       .from('online_enrollments')
-      .select('id, customer_user_id, student_name')
+      .select('id, customer_user_id, student_name, tutor_id')
       .eq('id', enrollment_id)
       .single()
     if (!enroll) return NextResponse.json({ error: 'enrollment not found' }, { status: 404 })
@@ -43,12 +47,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '본인 수강 정보만 변경 요청할 수 있습니다.' }, { status: 403 })
     }
 
-    // 4일 전 규칙
+    // 4일 전 규칙 — 변경 대상일(1회차는 그 수업의 원래 날짜) 기준
     const today = new Date(); today.setHours(0, 0, 0, 0)
-    const eff = new Date(effective_from + 'T00:00:00')
+    let refDateStr = effective_from
+    if (kind === 'single') {
+      const { data: ses } = await supabase.from('online_sessions').select('scheduled_date').eq('id', session_id).single()
+      refDateStr = ses?.scheduled_date || req_date || effective_from
+    }
+    const eff = new Date((refDateStr || '') + 'T00:00:00')
     const daysBefore = Math.round((eff.getTime() - today.getTime()) / 86400000)
     if (daysBefore < 4) {
-      return NextResponse.json({ error: '변경은 적용일 4일 전까지만 신청 가능합니다. 급한 변경은 카카오톡으로 문의해주세요.' }, { status: 400 })
+      return NextResponse.json({ error: '변경은 수업 4일 전까지만 신청 가능합니다. 급한 변경은 카카오톡으로 문의해주세요.' }, { status: 400 })
     }
 
     // 중복 pending 방지
@@ -66,10 +75,15 @@ export async function POST(req: Request) {
       .from('online_change_requests')
       .insert({
         enrollment_id, customer_user_id,
-        req_days_of_week: req_days_of_week?.length ? req_days_of_week : null,
+        req_type: kind,
+        session_id: kind === 'single' ? session_id : null,
+        req_date: kind === 'single' ? (req_date || null) : null,
+        req_days_of_week: kind === 'full' && req_days_of_week?.length ? req_days_of_week : null,
         req_time_kr: req_time_kr || null,
-        effective_from, memo: memo || null,
-        status: 'pending',
+        effective_from: kind === 'full' ? effective_from : (req_date || refDateStr || null),
+        memo: memo || null,
+        tutor_id: enroll.tutor_id || null,
+        status: 'pending', teacher_status: 'pending', admin_status: 'pending',
       })
       .select()
       .single()
