@@ -23,24 +23,29 @@ export function buildOnlineSessionDates(
   startDate: string,
   daysOfWeek: string[],
   totalSessions: number,
-  holidayDates: Set<string>
-): { dates: string[]; endDate: string; skipped: { date: string; reason: "휴일" | "방학" }[] } {
+  holidayDates: Set<string>,
+  excludeRanges: { from: string; to: string }[] = []
+): { dates: string[]; endDate: string; skipped: { date: string; reason: "휴일" | "방학" | "체류" }[] } {
   const dates: string[] = [];
-  const skipped: { date: string; reason: "휴일" | "방학" }[] = [];
+  const skipped: { date: string; reason: "휴일" | "방학" | "체류" }[] = [];
   if (!startDate || !totalSessions || !daysOfWeek?.length) return { dates, endDate: "", skipped };
   const targetJs = new Set(daysOfWeek.map(d => DAY_KR_TO_JS[d]).filter(v => v !== undefined));
   const cur = new Date(startDate + "T00:00:00");
   let guard = 0;
-  while (dates.length < totalSessions && guard < 2000) {
+  while (dates.length < totalSessions && guard < 3000) {
     guard++;
     const js = cur.getDay();
     if (targetJs.has(js)) {
       const ds = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
       if (holidayDates.has(ds)) skipped.push({ date: ds, reason: "휴일" });
       else if (isPeakVacation(ds)) skipped.push({ date: ds, reason: "방학" });
+      else if (excludeRanges.some(r => r.from && r.to && ds >= r.from && ds <= r.to)) skipped.push({ date: ds, reason: "체류" });
       else dates.push(ds);
     }
     cur.setDate(cur.getDate() + 1);
   }
   return { dates, endDate: dates.length ? dates[dates.length - 1] : "", skipped };
 }
+
+// DAY 매핑에 영문 요일도 흡수 (mon/tue…)
+Object.assign(DAY_KR_TO_JS as Record<string, number>, { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 });

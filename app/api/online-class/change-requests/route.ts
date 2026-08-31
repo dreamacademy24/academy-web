@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { sendTelegramTeachers, escapeHtml } from '@/lib/telegram'
+import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -131,7 +132,20 @@ export async function PATCH(req: Request) {
     let newEndDate: string | null = null
     if (futureSes && futureSes.length > 0) {
       const numbers = futureSes.map(s => s.session_number).sort((a, b) => a - b)
-      const newDates = genDates(effective, newDays, futureSes.length)
+      // 휴일·방학·체류기간 제외 반영 (재방문 대응)
+      const { data: _hol } = await supabase.from('holidays').select('date').eq('is_deployed', true)
+      const _hs = new Set<string>((_hol || []).map((h: { date: string }) => h.date))
+      const _today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+      const { data: _bks } = await supabase.from('bookings').select('checkin_date, checkout_date, students, portal_user_id, status').gte('checkout_date', _today).neq('status', '취소')
+      const _stays: { from: string; to: string }[] = []
+      for (const b of (_bks || [])) {
+        if (!b.checkin_date || !b.checkout_date) continue
+        let arr: unknown = b.students
+        if (typeof arr === 'string') { try { arr = JSON.parse(arr) } catch { arr = [] } }
+        const nameMatch = Array.isArray(arr) && arr.some((st: any) => ((st.korName || st.name_kr || st.name || '').trim() === (enroll.student_name || '').trim()))
+        if (nameMatch || (enroll.customer_user_id && b.portal_user_id === enroll.customer_user_id)) _stays.push({ from: b.checkin_date, to: b.checkout_date })
+      }
+      const newDates = buildOnlineSessionDates(effective, newDays, futureSes.length, _hs, _stays).dates
       newEndDate = newDates[newDates.length - 1] || null
       if (newDates.length < futureSes.length) {
         return NextResponse.json({ error: '새 요일로 날짜 생성에 실패했습니다. 요일을 확인해주세요.' }, { status: 400 })

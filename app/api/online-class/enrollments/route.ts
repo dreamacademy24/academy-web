@@ -31,6 +31,30 @@ export async function GET(req: Request) {
 // 요일 매핑
 const DAY_MAP: Record<string, number> = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 }
 
+
+// 학생의 세부 체류기간(향후 예약) 조회 — 화상영어 세션 생성 시 자동 제외 (재방문 대응)
+async function loadStayRanges(customerUserId: string | null, studentName: string | null): Promise<{ from: string; to: string }[]> {
+  try {
+    const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+    let q = supabase.from('bookings').select('checkin_date, checkout_date, students, portal_user_id, status')
+      .gte('checkout_date', today).neq('status', '취소')
+    const { data } = await q
+    const ranges: { from: string; to: string }[] = []
+    for (const b of (data || [])) {
+      if (!b.checkin_date || !b.checkout_date) continue
+      let match = false
+      if (customerUserId && b.portal_user_id === customerUserId) match = true
+      if (!match && studentName) {
+        let arr: unknown = b.students
+        if (typeof arr === 'string') { try { arr = JSON.parse(arr) } catch { arr = [] } }
+        if (Array.isArray(arr)) match = arr.some((st: any) => ((st.korName || st.name_kr || st.name || '').trim() === studentName.trim()))
+      }
+      if (match) ranges.push({ from: b.checkin_date, to: b.checkout_date })
+    }
+    return ranges
+  } catch { return [] }
+}
+
 async function loadHolidaySet(): Promise<Set<string>> {
   try {
     const { data } = await supabase.from('holidays').select('date').eq('is_deployed', true)
@@ -110,7 +134,8 @@ export async function POST(req: Request) {
 
     // 2. Generate sessions
     const holidaySet = await loadHolidaySet()
-    const _built = buildOnlineSessionDates(start_date, days_of_week, Number(total_sessions), holidaySet)
+    const _stays = await loadStayRanges(customer_user_id || null, student_name || null)
+    const _built = buildOnlineSessionDates(start_date, days_of_week, Number(total_sessions), holidaySet, _stays)
     const sessionDates = _built.dates
     // 실제 마지막 회차로 종료일 보정 (성수기/방학·휴일 제외 반영)
     if (_built.endDate && _built.endDate !== end_date) {
@@ -239,7 +264,8 @@ export async function PATCH(req: Request) {
           }
 
           const _hs = await loadHolidaySet()
-          const dates = buildOnlineSessionDates(startFrom, enroll.days_of_week, needed, _hs).dates
+          const _stays2 = await loadStayRanges(enroll.customer_user_id || null, enroll.student_name || null)
+          const dates = buildOnlineSessionDates(startFrom, enroll.days_of_week, needed, _hs, _stays2).dates
           const DAY_KR_BY_JS2 = ['일', '월', '화', '수', '목', '금', '토']
           const phOf2 = (kr: string | null) => {
             if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
@@ -266,6 +292,8 @@ export async function PATCH(req: Request) {
             const { error: insErr } = await supabase.from('online_sessions').insert(rows)
             if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
             sessionsRegenerated = rows.length
+            // 종료일 = 실제 마지막 회차 (체류·방학·휴일 제외 반영)
+            await supabase.from('online_enrollments').update({ end_date: rows[rows.length - 1].scheduled_date }).eq('id', id)
           }
         }
       }
