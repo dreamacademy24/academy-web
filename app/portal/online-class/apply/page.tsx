@@ -232,6 +232,9 @@ function ApplyInner() {
       <button className="back" onClick={() => router.push("/portal/online-class")}>← 화상영어로 돌아가기</button>
       <div className="head"><h1>화상영어 신청</h1><p>요일과 시간을 선택하면 담당 선생님이 자동 배정됩니다</p></div>
 
+      <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 10, padding: "9px 13px", marginBottom: 12, fontSize: 12.5, color: "#4338ca", lineHeight: 1.55 }}>
+        <b>🛠 베타 오픈 (수정 중)</b> — 화상영어 메뉴를 새로 단장하고 있어요. 일정·회차가 다소 변경될 수 있으며, 이상한 점은 채널로 문의해 주세요!
+      </div>
       {!authUser && previewUid && <div style={{ background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10, padding: "8px 12px", marginBottom: 12, fontSize: 12.5, fontWeight: 700, color: "#92400e" }}>👁 어드민 미리보기 모드 — 실제 신청은 되지 않아요</div>}
       <div className="steps">
         <div className={`sp ${step===1?"ac":step>1?"done":""}`}>1. 요일</div>

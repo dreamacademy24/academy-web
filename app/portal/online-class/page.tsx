@@ -389,6 +389,9 @@ function PortalOnlineClassInner() {
         <h1>화상영어 수업</h1>
         <p>내 수업 스케줄 및 출결 현황</p>
       </div>
+      <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 10, padding: "9px 13px", marginBottom: 12, fontSize: 12.5, color: "#4338ca", lineHeight: 1.55 }}>
+        <b>🛠 베타 오픈 (수정 중)</b> — 화상영어 메뉴를 새로 단장하고 있어요. 일정·회차가 다소 변경될 수 있으며, 이상한 점은 채널로 문의해 주세요!
+      </div>
 
       {loading ? <div className="sec"><div className="empty">불러오는 중...</div></div> : !activeEnroll ? (
         <div className="sec"><div className="empty" style={{ padding: "36px 20px" }}>아직 신청한 화상영어 수업이 없어요.<br/><br/><button onClick={() => router.push("/portal/online-class/apply")} style={{ padding: "12px 28px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>➕ 화상영어 신규 신청</button><div style={{ fontSize: 12, color: "#94a3b8", marginTop: 12 }}>아이별로 요일·시간·레벨을 선택해 신청해요 (한 계정 최대 4명)</div></div></div>
