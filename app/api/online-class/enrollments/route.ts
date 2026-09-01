@@ -18,7 +18,7 @@ export async function GET(req: Request) {
 
   if (tutorId) q = q.eq('tutor_id', tutorId)
   const unassigned = searchParams.get('unassigned') === 'true'
-  if (unassigned) q = q.is('tutor_id', null).eq('status', 'active')
+  if (unassigned) q = q.is('tutor_id', null).in('status', ['active', 'scheduled'])
 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
