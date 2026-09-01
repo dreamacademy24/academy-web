@@ -419,7 +419,16 @@ function Inner() {
                             <b>{e.student_name_en || e.student_name}</b> <span className="tnkr">{e.student_name_en ? e.student_name : ""}</span>
                           </td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
-                            {lv ? <span className="chip" style={{ background: lv.bg, color: lv.color, fontWeight: 800 }}>{lv.label}</span> : <span style={{ color: "#cbd5e1" }}>—</span>}
+                            <select value={e.level || ""} onChange={async ev => {
+                              const v = ev.target.value || null;
+                              const r = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: e.id, level: v }) });
+                              if (r.ok) setOpenStudents(prev => prev.map(x => x.id === e.id ? { ...x, level: v } : x));
+                            }} style={{ padding: "6px 8px", border: "1px solid " + (lv ? lv.color : "#e2e8f0"), borderRadius: 8, fontFamily: "inherit", fontSize: 12, fontWeight: 800, background: lv ? lv.bg : "#fff", color: lv ? lv.color : "#94a3b8", cursor: "pointer" }}>
+                              <option value="">— set level</option>
+                              <option value="beginner">Beginner</option>
+                              <option value="intermediate">Intermediate</option>
+                              <option value="advanced">Advanced</option>
+                            </select>
                           </td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap", fontWeight: 700 }}>{(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")}</td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>{e.class_time_ph || "-"} <span className="tnkr">(KR {e.class_time_kr || "-"})</span></td>

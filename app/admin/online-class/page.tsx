@@ -101,7 +101,7 @@ function PeriodCell({ e }: { e: Enrollment }) {
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets">("list");
+  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets">("targets");
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
@@ -567,8 +567,8 @@ export default function OnlineClassPage() {
       </div>
 
       <div className="tabs">
-        <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "targets" ? " ac" : ""}`} onClick={() => setTab("targets")}>🎯 대상 목록</button>
+        <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
         <button className={`tab${tab === "requests" ? " ac" : ""}`} onClick={() => setTab("requests")} style={{ position: "relative" }}>
           📬 변경요청

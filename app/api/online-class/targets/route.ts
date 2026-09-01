@@ -29,6 +29,7 @@ export async function GET() {
 
   const rows: any[] = []
   for (const b of (bks || [])) {
+    if ((b.accom_type || '').includes('통학')) continue // 통학형 제외 (화상영어 대상 아님)
     let arr: unknown = b.students
     if (typeof arr === 'string') { try { arr = JSON.parse(arr) } catch { arr = [] } }
     if (!Array.isArray(arr)) continue
