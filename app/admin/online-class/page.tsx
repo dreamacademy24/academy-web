@@ -721,6 +721,8 @@ export default function OnlineClassPage() {
                   return (
                     <tr key={e.id} style={{ cursor: "pointer", background: expandedId === e.id ? "#eff6ff" : undefined }} onClick={() => router.push(`/admin/online-class/${e.id}`)}>
                       <td style={{ fontWeight: 700 }}>{e.student_name}
+                        {(e as any).notes?.includes("엄마 앱 신청") && <span title={(e as any).notes} style={{ marginLeft: 4, fontSize: 9, background: "#fdf4ff", color: "#a21caf", border: "1px solid #f0abfc", padding: "1px 5px", borderRadius: 8, fontWeight: 800 }}>📱 엄마신청</span>}
+                        {(e as any).notes?.includes("엄마 앱 신청") && !confirmedIds.has(e.id) && <span title="아직 확정 안 함 — 상태 셀의 [확정] 버튼으로 확인 처리" style={{ marginLeft: 3, fontSize: 11, color: "#dc2626", fontWeight: 900 }}>❗</span>}
                         {isSplit && <span title="연수전/연수후 분리 수강 (구버전)" style={{ marginLeft: 4, fontSize: 9, background: "#ede9fe", color: "#6d28d9", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>전·후</span>}
                         {e.class_period === "pre" && <span style={{ marginLeft: 4, fontSize: 9, background: "#e1f5ee", color: "#085041", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>연수전</span>}
                         {e.class_period === "standalone" && <span style={{ marginLeft: 4, fontSize: 9, background: "#f1f5f9", color: "#475569", padding: "1px 5px", borderRadius: 8, fontWeight: 700 }}>단독</span>}

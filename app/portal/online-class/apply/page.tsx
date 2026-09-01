@@ -209,6 +209,7 @@ function ApplyInner() {
           post_sessions: eff === "post" ? totalSessions : 0,
           class_period: eff,
           status: "active",
+          notes: `📱 엄마 앱 신청 ${new Date().toISOString().slice(0, 10)} · ${eff === "pre" ? "연수 전" : "연수 후"} 선택`,
         }),
       });
       const r = await res.json();
