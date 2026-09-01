@@ -37,6 +37,8 @@ function ApplyInner() {
   const [level, setLevel] = useState("");
   const [children, setChildren] = useState<{ kor: string; en: string }[]>([]);
   const [enrolledNames, setEnrolledNames] = useState<Set<string>>(new Set());
+  const [period, setPeriod] = useState<"pre" | "post" | "">("");
+  const [bk, setBk] = useState<{ ci: string; co: string; weeks: number } | null>(null);
   const [childName, setChildName] = useState("");     // 선택된 아이 한글명
   const [childEn, setChildEn] = useState("");
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -60,7 +62,7 @@ function ApplyInner() {
       setProfile(prof);
       // 이 계정에 연결된 예약의 자녀(최대 4명) 로드
       try {
-        const { data: bks } = await supabase.from("bookings").select("students").eq("portal_user_id", uid);
+        const { data: bks } = await supabase.from("bookings").select("students, checkin_date, checkout_date, accom_weeks, dh_weeks, accom_type, status").eq("portal_user_id", uid).neq("status", "취소").order("checkin_date", { ascending: false });
         const list: { kor: string; en: string }[] = [];
         const seen = new Set<string>();
         for (const b of (bks || [])) {
@@ -75,6 +77,15 @@ function ApplyInner() {
         if (prof?.children) {
           let ch: any = prof.children; if (typeof ch === "string") { try { ch = JSON.parse(ch); } catch { ch = []; } }
           for (const c of (Array.isArray(ch) ? ch : [])) { const kor = (c.name || c.kor || "").trim(); if (kor && !seen.has(kor)) { seen.add(kor); list.push({ kor, en: (c.name_en || c.en || "").trim() }); } }
+        }
+        // 가장 가까운(미래 우선) 예약으로 전/후 기준 잡기
+        const _t = new Date().toISOString().slice(0, 10);
+        const upcoming = (bks || []).filter((b: any) => (b.checkin_date || "") > _t).sort((a: any, b: any) => a.checkin_date.localeCompare(b.checkin_date))[0];
+        const latest = upcoming || (bks || [])[0];
+        if (latest?.checkin_date) {
+          const wks = Number(latest.dh_weeks || latest.accom_weeks) || Math.max(1, Math.round((new Date(latest.checkout_date).getTime() - new Date(latest.checkin_date).getTime()) / (7 * 86400000)));
+          setBk({ ci: latest.checkin_date, co: latest.checkout_date, weeks: wks });
+          setPeriod((latest.checkin_date > _t) ? "" : "post"); // 미래 예약이면 선택하게, 지난 예약이면 바로 시작(후)
         }
         setChildren(list.slice(0, 6));
         // 이미 화상영어 등록된 아이 이름 (중복 신청 방지 표시)
@@ -142,14 +153,18 @@ function ApplyInner() {
   }
 
   async function submit() {
-    if (!suggested || !authUser || !selectedDays.length || !selectedTime) return;
+    if (!authUser || !selectedDays.length || !selectedTime) return;
     setSubmitting(true);
     try {
       const studentName = childName || profile?.name || authUser.email?.split("@")[0] || "신청자";
-      const startDate = new Date();
-      const endDate = new Date(); endDate.setMonth(endDate.getMonth() + 3);
       const pad = (n: number) => n < 10 ? "0" + n : "" + n;
       const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      // 시작일: 전 = 4일 뒤부터 (준비 기간) / 후 = 체크아웃 다음 날부터
+      const eff = period || "post";
+      let start = new Date(); start.setDate(start.getDate() + 4);
+      if (eff === "post" && bk && bk.co > fmt(new Date())) { start = new Date(bk.co + "T00:00:00"); start.setDate(start.getDate() + 1); }
+      // 회차 = 패키지 등록 주수 × 주 3회 (기본 규정)
+      const totalSessions = (bk?.weeks || 4) * 3;
       const res = await fetch("/api/online-class/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,24 +172,24 @@ function ApplyInner() {
           student_name: studentName,
           student_name_en: childEn || null,
           customer_user_id: authUser.id,
-          tutor_id: suggested.id,
+          tutor_id: null, // 미배정 — 티쳐가 Open Students에서 가져감
           enrollment_type: "free_package",
           level,
           days_of_week: selectedDays,
           class_time_kr: selectedTime,
-          start_date: fmt(startDate),
-          end_date: fmt(endDate),
+          start_date: fmt(start),
+          end_date: null,
           sessions_per_week: selectedDays.length,
-          total_sessions: selectedDays.length * 12,
-          pre_sessions: 0,
-          post_sessions: selectedDays.length * 12,
-          class_period: "post",
-          status: "pending",
+          total_sessions: totalSessions,
+          pre_sessions: eff === "pre" ? totalSessions : 0,
+          post_sessions: eff === "post" ? totalSessions : 0,
+          class_period: eff,
+          status: "active",
         }),
       });
       const r = await res.json();
       if (!res.ok) { setMsg({ text: r.error || "신청 실패", type: "err" }); return; }
-      setMsg({ text: "✅ 신청되었습니다. 관리자 확인 후 확정됩니다.", type: "ok" });
+      setMsg({ text: "✅ 신청되었습니다. 선생님 배정 후 안내드릴게요!", type: "ok" });
       setTimeout(() => router.push("/portal/online-class"), 1500);
     } finally {
       setSubmitting(false);
@@ -263,6 +278,21 @@ function ApplyInner() {
             <div className="hint">한 계정에 여러 아이가 있으면 아이마다 따로 신청해요 · <b style={{ color: "#16a34a" }}>✓ 신청됨</b>은 이미 신청한 아이예요</div>
             <div style={{ height: 14 }} />
           </>)}
+          {bk && bk.ci > new Date().toISOString().slice(0, 10) && (<>
+            <h2>언제 수업할까요?</h2>
+            <div className="days">
+              <button className={`dchip ${period === "pre" ? "on" : ""}`} onClick={() => setPeriod("pre")} style={{ minWidth: 150, flexDirection: "column", height: "auto", padding: "10px 14px" }}>
+                <div style={{ fontWeight: 800 }}>연수 가기 전에</div>
+                <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 2 }}>지금 시작 → 출국 전까지</div>
+              </button>
+              <button className={`dchip ${period === "post" ? "on" : ""}`} onClick={() => setPeriod("post")} style={{ minWidth: 150, flexDirection: "column", height: "auto", padding: "10px 14px" }}>
+                <div style={{ fontWeight: 800 }}>다녀와서</div>
+                <div style={{ fontSize: 10.5, opacity: 0.8, marginTop: 2 }}>귀국 후({bk.co?.slice(5).replace("-", "/")}~) 시작</div>
+              </button>
+            </div>
+            <div className="hint">연수 기간({bk.ci?.slice(5).replace("-", "/")}~{bk.co?.slice(5).replace("-", "/")})에는 수업이 자동으로 쉬어가요 · 총 {(bk.weeks || 4) * 3}회 (등록 {bk.weeks}주 × 주 3회)</div>
+            <div style={{ height: 14 }} />
+          </>)}
           <h2>수업 요일 선택 (최대 3개)</h2>
           <div className="days">
             {DAYS.map(d => (
@@ -284,7 +314,7 @@ function ApplyInner() {
             ))}
           </div>
           <div className="hint">레벨에 맞는 선생님을 배정해 드려요 (배정 후 조정 가능)</div>
-          <button className="btn-p" disabled={selectedDays.length < 2 || !level || (children.length > 0 && !childName)} onClick={() => setStep(2)}>
+          <button className="btn-p" disabled={selectedDays.length < 2 || !level || (children.length > 0 && !childName) || (!!bk && bk.ci > new Date().toISOString().slice(0, 10) && !period)} onClick={() => setStep(2)}>
             다음 단계
           </button>
         </div>
@@ -336,7 +366,7 @@ function ApplyInner() {
           </div>
           <div className="confirm" style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
             <div className="t">담당 선생님</div>
-            <div className="v">{suggested?.name} 배정 예정</div>
+            <div className="v">신청 후 선생님이 배정돼요 (가능: {suggested?.name || "확인 중"} 외)</div>
           </div>
           <div className="acts">
             <button className="btn-s" onClick={() => setStep(2)}>← 이전</button>
