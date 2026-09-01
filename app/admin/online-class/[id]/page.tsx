@@ -53,6 +53,11 @@ export default function OnlineClassStudentPage() {
   // 시간 선택
   const [tp, setTp] = useState<{ label: string; cb: (t: string) => void } | null>(null);
   const [pick, setPick] = useState<Ses | null>(null);
+  const [mentOpen, setMentOpen] = useState(false);
+  const [zoomMap, setZoomMap] = useState<Record<string, string>>({});
+  const [zoomDraft, setZoomDraft] = useState("");
+  const [mentText, setMentText] = useState("");
+  useEffect(() => { fetch("/api/online-class/zoom").then(r => r.ok ? r.json() : { links: {} }).then((d: any) => setZoomMap(d.links || {})).catch(() => {}); }, []);
   // 계정 검색
   const [acctOpen, setAcctOpen] = useState(false);
   const [acctQ, setAcctQ] = useState("");
@@ -155,6 +160,29 @@ export default function OnlineClassStudentPage() {
     await load();
   }
 
+  function buildMent(zoomText: string) {
+    if (!enr) return "";
+    const days = (form?.days_of_week || enr.days_of_week || []).join("");
+    const time = form?.class_time_kr || enr.class_time_kr || "";
+    const sd = form?.start_date || enr.start_date || "";
+    let startLine = "";
+    if (sd) { const d = new Date(sd + "T00:00:00"); startLine = `${d.getMonth() + 1}월 ${d.getDate()}일(${"일월화수목금토"[d.getDay()]})부터 시작되는 `; }
+    return `안녕하세요 어머님^^\n${startLine}${enr.student_name} 화상영어 링크 보내드립니다.\n기기 점검 및 입장 준비를 위해 수업 시작 5분 전까지 미리 접속 부탁드립니다. 또한 수업 집중력을 위해 소음이 적은 독립된 공간을 마련해 주시고, 에코(울림) 방지를 위해 헤드셋이나 이어폰 사용을 권장드립니다.\n✔ 수업 시간(${days}) : ${time}\n\n${zoomText || "(티쳐 줌 링크를 아래에 저장해 주세요)"}`;
+  }
+  function openMent() {
+    const tid = form?.tutor_id || enr?.tutor_id || "";
+    const z = tid ? (zoomMap[tid] || "") : "";
+    setZoomDraft(z);
+    setMentText(buildMent(z));
+    setMentOpen(true);
+  }
+  async function saveZoom() {
+    const tid = form?.tutor_id || enr?.tutor_id;
+    if (!tid) { alert("담당 튜터를 먼저 지정해 주세요."); return; }
+    const r = await fetch("/api/online-class/zoom", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tutor_id: tid, text: zoomDraft }) });
+    if (r.ok) { setZoomMap(prev => ({ ...prev, [tid]: zoomDraft })); setMentText(buildMent(zoomDraft)); show("줌 링크 저장 ✅"); }
+  }
+
   async function setSesStatus(s: Ses, st: string, force?: boolean) {
     const res = await fetch("/api/online-class/sessions", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session_id: s.id, status: st, ...(force ? { force_makeup: true } : {}) }) });
     const r = await res.json().catch(() => ({}));
@@ -193,6 +221,7 @@ export default function OnlineClassStudentPage() {
           <span style={{ fontSize: 12, fontWeight: 800, background: "#dcfce7", color: "#166534", borderRadius: 8, padding: "3px 10px" }}>{STATUS_OPT.find(o => o[0] === enr.status)?.[1] || enr.status}</span>
           <div style={{ flex: 1 }} />
           <button onClick={() => window.open(`/admin/online-class/invoice?enrollment_id=${id}`, "_blank")} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🧾 인보이스</button>
+          <button onClick={openMent} style={{ border: "1px solid #d8b4fe", background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💬 안내 멘트</button>
           <button onClick={regenerate} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🔄 세션 재생성</button>
         </div>
 
@@ -352,6 +381,25 @@ export default function OnlineClassStudentPage() {
             <div style={{ fontWeight: 800, marginBottom: 10 }}>{tp.label} <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>(세부 -1시간 · KR 14:00~21:30 시작, 마지막 수업 21:30)</span></div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
               {TIME_SLOTS.map(t => <button key={t} onClick={() => { tp.cb(t); setTp(null); }} style={{ padding: "9px 0", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 안내 멘트 생성 모달 */}
+      {mentOpen && (
+        <div onClick={() => setMentOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={ev => ev.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(560px,94vw)", maxHeight: "88vh", overflowY: "auto" }}>
+            <div style={{ fontWeight: 800, marginBottom: 10 }}>💬 화상영어 안내 멘트 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{enr?.student_name} · 요일/시간/시작일 자동</span></div>
+            <textarea value={mentText} onChange={ev => setMentText(ev.target.value)} rows={13}
+              style={{ width: "100%", boxSizing: "border-box", padding: 12, border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 13, fontFamily: "inherit", lineHeight: 1.6 }} />
+            <button onClick={() => { navigator.clipboard.writeText(mentText); show("복사됨 — 카톡에 붙여넣으세요 ✅"); }}
+              style={{ width: "100%", marginTop: 8, padding: "11px 0", background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>📋 멘트 복사</button>
+            <div style={{ marginTop: 16, borderTop: "1px solid #eef2f7", paddingTop: 12 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 800, marginBottom: 6 }}>🔗 티쳐 줌 링크 블록 <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>티쳐별 1회 저장 — 이후 자동 삽입</span></div>
+              <textarea value={zoomDraft} onChange={ev => setZoomDraft(ev.target.value)} rows={6} placeholder={"Topic: ...\nJoin Zoom Meeting\nhttps://...\nMeeting ID: ...\nPasscode: ..."}
+                style={{ width: "100%", boxSizing: "border-box", padding: 10, border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 12, fontFamily: "inherit", lineHeight: 1.5 }} />
+              <button onClick={saveZoom} style={{ marginTop: 6, padding: "8px 14px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💾 이 티쳐 줌 링크 저장</button>
             </div>
           </div>
         </div>
