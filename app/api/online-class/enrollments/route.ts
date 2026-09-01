@@ -25,6 +25,22 @@ export async function GET(req: Request) {
   let rows = data ?? []
   // 미배정 목록: 잔여 회차 있는 수강권만 (종료일 지나도 회차 남으면 표시)
   if (unassigned) rows = rows.filter((e: any) => ((e.total_sessions || 0) - (e.used_sessions || 0)) > 0)
+  // 연수기간(체류) 부착 — 기간 컬럼 '연수/화상' 2개념 표시용
+  if (searchParams.get('include_stays') === '1' && rows.length) {
+    const { data: bks } = await supabase.from('bookings')
+      .select('checkin_date, checkout_date, students, portal_user_id, status').neq('status', '취소')
+    const parsed = (bks || []).filter(b => b.checkin_date && b.checkout_date).map(b => {
+      let arr: unknown = b.students
+      if (typeof arr === 'string') { try { arr = JSON.parse(arr) } catch { arr = [] } }
+      const names = Array.isArray(arr) ? arr.map((st: any) => (st.korName || st.name_kr || st.name || '').trim()).filter(Boolean) : []
+      return { ci: b.checkin_date, co: b.checkout_date, names, uid: b.portal_user_id }
+    })
+    rows = rows.map((e: any) => ({
+      ...e,
+      stays: parsed.filter(b => (e.customer_user_id && b.uid === e.customer_user_id) || (e.student_name && b.names.includes(e.student_name.trim())))
+        .map(b => ({ from: b.ci, to: b.co })).sort((a, b) => a.from.localeCompare(b.from)),
+    }))
+  }
   return NextResponse.json({ enrollments: rows })
 }
 

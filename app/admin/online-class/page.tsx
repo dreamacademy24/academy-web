@@ -78,50 +78,33 @@ function PeriodCell({ e }: { e: Enrollment }) {
   const sd = e.start_date || "";
   const ed = e.end_date || "";
   const today = new Date().toISOString().slice(0, 10);
-  const isBoth = e.class_period === "both" || (e.pre_sessions > 0 && e.post_sessions > 0);
-  const isPre = !isBoth && e.class_period === "pre";
-  const isPost = !isBoth && (e.class_period === "post" || e.class_period === "standalone");
-
+  const isNow = sd && sd <= today && (!ed || ed >= today);
+  const stays: { from: string; to: string }[] = (e as any).stays || [];
   const nowBadge = <span style={{ marginLeft: 3, fontSize: 9, fontWeight: 800, color: "#059669", background: "#d1fae5", padding: "1px 5px", borderRadius: 6 }}>현재</span>;
-
-  if (isBoth && sd && ed) {
-    const spw = e.sessions_per_week || 3;
-    const preW = Math.max(1, Math.ceil((e.pre_sessions || 0) / spw));
-    const postW = Math.max(1, Math.ceil((e.post_sessions || 0) / spw));
-    const preStart = addDays(sd, -(preW * 7));
-    const preEnd = addDays(sd, -1);
-    const postStart = addDays(ed, 1);
-    const postEnd = addDays(ed, postW * 7);
-    const preNow = today >= preStart && today <= preEnd;
-    const postNow = today >= postStart && today <= postEnd;
-    return (
-      <div style={{ lineHeight: 1.6, whiteSpace: "nowrap" }}>
-        <div><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>전</span><span style={{ fontSize: 11 }}>{fmtMD(preStart)}~{fmtMD(preEnd)}</span>{preNow && nowBadge}</div>
-        <div style={{ fontSize: 10, color: "#94a3b8", paddingLeft: 2 }}>연수 {fmtMD(sd)}~{fmtMD(ed)}</div>
-        <div><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>후</span><span style={{ fontSize: 11 }}>{fmtMD(postStart)}~{fmtMD(postEnd)}</span>{postNow && nowBadge}</div>
+  return (
+    <div style={{ lineHeight: 1.7, whiteSpace: "nowrap" }}>
+      <div>
+        <span style={{ fontSize: 10, fontWeight: 800, color: "#1d4ed8", background: "#dbeafe", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>화상</span>
+        <span style={{ fontSize: 11 }}>{fmtMD(sd)}~{ed ? fmtMD(ed) : "?"}</span>{isNow && nowBadge}
       </div>
-    );
-  }
-
-  if (isPre) {
-    const isNow = sd <= today && (!ed || ed >= today);
-    return <div style={{ whiteSpace: "nowrap" }}><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>전</span><span style={{ fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}</span>{isNow && nowBadge}</div>;
-  }
-
-  // standalone / post
-  const isNow = sd <= today && (!ed || ed >= today);
-  if (e.class_period === "post") {
-    return <div style={{ whiteSpace: "nowrap" }}><span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", background: "#ede9fe", padding: "1px 4px", borderRadius: 4, marginRight: 3 }}>후</span><span style={{ fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}</span>{isNow && nowBadge}</div>;
-  }
-
-  // standalone — 화상영어 기간만
-  return <div style={{ whiteSpace: "nowrap", fontSize: 11 }}>{fmtMD(sd)}~{fmtMD(ed)}{isNow && nowBadge}</div>;
+      {stays.slice(0, 2).map((st, i) => (
+        <div key={i}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#b45309", background: "#fef3c7", padding: "1px 5px", borderRadius: 4, marginRight: 4 }}>연수</span>
+          <span style={{ fontSize: 11, color: "#64748b" }}>{fmtMD(st.from)}~{fmtMD(st.to)}</span>
+          {today >= st.from && today <= st.to && nowBadge}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"list" | "register" | "requests">("list");
+  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets">("list");
+  const [targets, setTargets] = useState<any[]>([]);
+  const [tgQ, setTgQ] = useState("");
+  const [tgShowExcluded, setTgShowExcluded] = useState(false);
 
   // 변경요청 수신함
   const [changeReqs, setChangeReqs] = useState<any[]>([]);
@@ -226,7 +209,7 @@ export default function OnlineClassPage() {
   }, []);
 
   const loadEnrollments = useCallback(async () => {
-    const res = await fetch("/api/online-class/enrollments");
+    const res = await fetch("/api/online-class/enrollments?include_stays=1");
     if (res.ok) { const d = await res.json(); setEnrollments(d.enrollments || []); }
   }, []);
 
@@ -234,6 +217,21 @@ export default function OnlineClassPage() {
     const res = await fetch("/api/online-class/tutors");
     if (res.ok) { const d = await res.json(); setTutors(d.tutors || []); }
   }, []);
+
+  const loadTargets = useCallback(async () => {
+    const res = await fetch("/api/online-class/targets");
+    if (res.ok) { const d = await res.json(); setTargets(d.targets || []); }
+  }, []);
+  useEffect(() => { if (tab === "targets" && targets.length === 0) loadTargets(); }, [tab, targets.length, loadTargets]);
+
+  async function toggleTarget(key: string, excluded: boolean) {
+    const res = await fetch("/api/online-class/targets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: excluded ? "restore" : "exclude", key }) });
+    if (res.ok) setTargets(prev => prev.map(t => t.key === key ? { ...t, excluded: !excluded } : t));
+  }
+  function registerFromTarget(t: any) {
+    setForm((f: any) => ({ ...f, student_name: t.name_kr, student_name_en: t.name_en || "", student_birth_year: t.birth || "", customer_user_id: t.portal_user_id || "" }));
+    setTab("register");
+  }
 
   const loadChangeReqs = useCallback(async () => {
     const res = await fetch("/api/online-class/change-requests");
@@ -570,6 +568,7 @@ export default function OnlineClassPage() {
 
       <div className="tabs">
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
+        <button className={`tab${tab === "targets" ? " ac" : ""}`} onClick={() => setTab("targets")}>🎯 대상 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
         <button className={`tab${tab === "requests" ? " ac" : ""}`} onClick={() => setTab("requests")} style={{ position: "relative" }}>
           📬 변경요청
@@ -749,6 +748,51 @@ export default function OnlineClassPage() {
         </div>
         )}
       </>}
+
+      {/* ═══ TAB: 대상 목록 (올해 다녀간 아이 전체 — 확인하며 등록/제외) ═══ */}
+      {tab === "targets" && (() => {
+        const visible = targets.filter(t => (tgShowExcluded ? true : !t.excluded))
+          .filter(t => !tgQ || [t.name_kr, t.name_en, t.booker_name, t.house].some(v => v && String(v).toLowerCase().includes(tgQ.toLowerCase())));
+        return (
+          <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 14, padding: 18 }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>🎯 화상영어 대상 목록 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>올해 다녀간 아이 {visible.length}명</span></div>
+              <input value={tgQ} onChange={e => setTgQ(e.target.value)} placeholder="이름·예약자·하우스 검색" style={{ marginLeft: "auto", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 9, fontSize: 13, fontFamily: "inherit", width: 220 }} />
+              <label style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                <input type="checkbox" checked={tgShowExcluded} onChange={e => setTgShowExcluded(e.target.checked)} /> 제외된 아이 보기
+              </label>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 860 }}>
+                <thead><tr style={{ color: "#6b7c93", fontSize: 12, textAlign: "left" }}>
+                  {["학생", "출생", "예약자", "하우스", "체류기간", "화상영어", "액션"].map(h => <th key={h} style={{ padding: "9px 12px", borderBottom: "1px solid #eef2f7", whiteSpace: "nowrap" }}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {visible.map(t => (
+                    <tr key={t.key} style={{ borderBottom: "1px solid #f5f7fa", opacity: t.excluded ? 0.45 : 1 }}>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}><b>{t.name_kr}</b> <span style={{ color: "#94a3b8", fontSize: 11.5 }}>{t.name_en}</span></td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>{t.birth || "-"}</td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>{t.booker_name}</td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>{t.house}</td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap", fontSize: 12.5 }}>{t.ci?.slice(5)}~{t.co?.slice(5)}</td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                        {t.enrolled === "active" ? <span style={{ fontSize: 11, fontWeight: 800, background: "#dcfce7", color: "#166534", padding: "2px 8px", borderRadius: 8 }}>수강중</span>
+                          : t.enrolled === "past" ? <span style={{ fontSize: 11, fontWeight: 700, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 8 }}>이력 있음</span>
+                          : <span style={{ color: "#cbd5e1" }}>—</span>}
+                      </td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                        <button onClick={() => registerFromTarget(t)} style={{ border: "1px solid #93c5fd", background: "#eff6ff", color: "#1d4ed8", borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>➕ 수강 등록</button>
+                        <button onClick={() => toggleTarget(t.key, t.excluded)} style={{ border: "1px solid " + (t.excluded ? "#bbf7d0" : "#fecaca"), background: "#fff", color: t.excluded ? "#166534" : "#dc2626", borderRadius: 8, padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t.excluded ? "↩ 복구" : "🗑 제외"}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>제외해도 삭제되는 건 아니에요 — "제외된 아이 보기"로 언제든 복구 가능. [➕ 수강 등록]을 누르면 이름·계정이 채워진 등록 폼으로 이동해요.</div>
+          </div>
+        );
+      })()}
 
       {/* ═══ TAB 2: 수강 등록 ═══ */}
       {tab === "register" && <div style={{ maxWidth: 1150, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, alignItems: "start" }}>
