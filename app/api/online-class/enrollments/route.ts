@@ -48,6 +48,40 @@ export async function GET(req: Request) {
 const DAY_MAP: Record<string, number> = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 }
 
 
+
+// ── 티쳐 시간 중복 방지 (핵심 안전장치) ──
+// 같은 티쳐 + 겹치는 요일 + 같은 시간 + 수강기간 겹침 → 배정 차단
+const _DN: Record<string, string> = { mon: 'mon', tue: 'tue', wed: 'wed', thu: 'thu', fri: 'fri', sat: 'sat', sun: 'sun', '월': 'mon', '화': 'tue', '수': 'wed', '목': 'thu', '금': 'fri', '토': 'sat', '일': 'sun' }
+function _nd(d: string): string { return _DN[String(d).toLowerCase()] || String(d).toLowerCase() }
+function _nt(t: string | null): string | null {
+  if (!t) return null
+  const m = String(t).match(/(\d{1,2})[:시](\d{2})/)
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}` : String(t)
+}
+async function findTutorConflict(tutorId: string, enr: { id?: string; days_of_week?: string[]; class_time_kr?: string | null; day_times?: Record<string, string> | null; start_date?: string | null; end_date?: string | null }): Promise<string | null> {
+  if (!tutorId) return null
+  const { data: others } = await supabase.from('online_enrollments')
+    .select('id, student_name, days_of_week, class_time_kr, day_times, start_date, end_date, status')
+    .eq('tutor_id', tutorId).in('status', ['active', 'scheduled'])
+  const myDays = (enr.days_of_week || []).map(_nd)
+  const myTimeOf = (d: string) => _nt((enr.day_times && (enr.day_times as any)[Object.keys(_DN).find(k => _nd(k) === d && k.length === 1) || ''] ) || enr.class_time_kr || null)
+  const aS = enr.start_date || '0000', aE = enr.end_date || '9999'
+  for (const o of (others || [])) {
+    if (enr.id && o.id === enr.id) continue
+    const bS = o.start_date || '0000', bE = o.end_date || '9999'
+    if (aS > bE || bS > aE) continue // 기간 안 겹침
+    const oDays = (o.days_of_week || []).map(_nd)
+    for (const d of myDays) {
+      if (!oDays.includes(d)) continue
+      const t1 = myTimeOf(d)
+      const kr = Object.keys(_DN).find(k => _nd(k) === d && k.length === 1) || ''
+      const t2 = _nt((o.day_times && (o.day_times as any)[kr]) || o.class_time_kr || null)
+      if (t1 && t2 && t1 === t2) return `${o.student_name} (${d.toUpperCase()} ${t1})`
+    }
+  }
+  return null
+}
+
 // 학생의 세부 체류기간(향후 예약) 조회 — 화상영어 세션 생성 시 자동 제외 (재방문 대응)
 async function loadStayRanges(customerUserId: string | null, studentName: string | null): Promise<{ from: string; to: string }[]> {
   try {
@@ -116,6 +150,10 @@ export async function POST(req: Request) {
     }
 
     // 1. Insert enrollment
+    if (tutor_id) {
+      const conflict = await findTutorConflict(tutor_id, { days_of_week, class_time_kr, day_times: day_times || null, start_date, end_date })
+      if (conflict) return NextResponse.json({ error: `⛔ 티쳐 시간 중복: 이미 ${conflict} 수업이 있어요. 다른 시간/티쳐를 선택하세요.` }, { status: 409 })
+    }
     const { data: enrollment, error: enErr } = await supabase
       .from('online_enrollments')
       .insert({
@@ -215,6 +253,24 @@ export async function PATCH(req: Request) {
       oldTutorId = prev?.tutor_id ?? null
     }
 
+    // 티쳐 시간 중복 하드 블록: 배정될(또는 유지될) 티쳐 기준으로 최종 스케줄 검사
+    {
+      const { data: cur } = await supabase.from('online_enrollments')
+        .select('id, tutor_id, days_of_week, class_time_kr, day_times, start_date, end_date').eq('id', id).single()
+      const effTutor = ('tutor_id' in updates ? updates.tutor_id : cur?.tutor_id) as string | null
+      if (effTutor) {
+        const eff = {
+          id,
+          days_of_week: ('days_of_week' in updates ? updates.days_of_week : cur?.days_of_week) as string[],
+          class_time_kr: ('class_time_kr' in updates ? updates.class_time_kr : cur?.class_time_kr) as string | null,
+          day_times: ('day_times' in updates ? updates.day_times : cur?.day_times) as Record<string, string> | null,
+          start_date: ('start_date' in updates ? updates.start_date : cur?.start_date) as string | null,
+          end_date: ('end_date' in updates ? updates.end_date : cur?.end_date) as string | null,
+        }
+        const conflict = await findTutorConflict(effTutor, eff)
+        if (conflict) return NextResponse.json({ error: `⛔ 티쳐 시간 중복: 이미 ${conflict} 수업이 있어요. 다른 시간/티쳐를 선택하세요.` }, { status: 409 })
+      }
+    }
     const { error } = await supabase.from('online_enrollments').update(updates).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
