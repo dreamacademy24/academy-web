@@ -317,11 +317,6 @@ function ApplyInner() {
             <div className="hint">연수 기간({bk.ci?.slice(5).replace("-", "/")}~{bk.co?.slice(5).replace("-", "/")})에는 수업이 자동으로 쉬어가요 · 총 {(bk.weeks || 4) * 3}회 (등록 {bk.weeks}주 × 주 3회)</div>
             <div style={{ height: 14 }} />
           </>)}
-          <h2>수업 시작일</h2>
-          <input type="date" value={startDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 4); const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; return m < RESUME_DATE ? RESUME_DATE : m; })()} onChange={e => setStartDate(e.target.value)}
-            style={{ padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginBottom: 4 }} />
-          <div className="hint">준비 기간을 위해 최소 4일 뒤부터 시작할 수 있어요{period === "post" && bk && bk.co > new Date().toISOString().slice(0, 10) ? " · 귀국 다음 날로 자동 설정됨" : ""}</div>
-          <div style={{ height: 14 }} />
           <h2>수업 요일 선택 (최대 3개)</h2>
           <div className="days">
             {DAYS.map(d => (
@@ -351,6 +346,14 @@ function ApplyInner() {
 
       {step === 2 && (
         <div className="sec">
+          <h2>수업 시작일</h2>
+          <input type="date" value={startDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 4); const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; return m < RESUME_DATE ? RESUME_DATE : m; })()} onChange={e => setStartDate(e.target.value)}
+            style={{ padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginBottom: 4 }} />
+          <div className="hint">
+            {startDate ? `${startDate.slice(5).replace("-", "/")}(${"일월화수목금토"[new Date(startDate + "T00:00:00").getDay()]})부터` : ""} · {selectedDays.map(d => DAY_KR[d]).join("/")}요일 주 {selectedDays.length}회
+            {period === "post" && bk && bk.co > new Date().toISOString().slice(0, 10) ? " · 귀국 다음 날로 자동 설정됨" : " · 최소 4일 뒤부터 시작 가능"}
+          </div>
+          <div style={{ height: 16 }} />
           <h2>수업 시간 선택 (한국시간)</h2>
           {loading ? <div style={{ padding: 20, textAlign: "center", color: "#94a3b8" }}>불러오는 중...</div> : (
             <>
