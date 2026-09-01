@@ -693,7 +693,7 @@ export default function OnlineClassPage() {
           ) : (
             <table className="tbl">
               <thead><tr>
-                <th>학생명</th><th>영문명</th><th>담당T</th><th>요일</th><th>한국시간</th>
+                <th>학생명</th><th>영문명</th><th>담당T</th><th>요일</th><th>시간 (KR/PH)</th>
                 <th>기간</th><th style={{ minWidth: 140 }}>잔여 회차</th>
                 <th>상태</th><th>관리</th>
               </tr></thead>
@@ -717,7 +717,10 @@ export default function OnlineClassPage() {
                       <td>{e.student_name_en || "-"}</td>
                       <td>{e.tutor?.name_display || "-"}</td>
                       <td>{daysToKr(e.days_of_week)}</td>
-                      <td>{e.class_time_kr || "-"}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <div style={{ fontWeight: 700 }}>KR {e.class_time_kr || "-"}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8" }}>PH {e.class_time_ph || "-"}</div>
+                      </td>
                       <td><PeriodCell e={e} /></td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
