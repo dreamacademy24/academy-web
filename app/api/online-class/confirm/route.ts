@@ -8,21 +8,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const KEY = 'oc_confirmed_enrollments'
+const KEYS: Record<string, string> = { confirm: 'oc_confirmed_enrollments', close: 'oc_closed_enrollments' }
 
 export async function GET() {
-  const { data } = await supabase.from('app_settings').select('value').eq('key', KEY).maybeSingle()
-  return NextResponse.json({ ids: Array.isArray(data?.value) ? data!.value : [] })
+  const out: Record<string, string[]> = {}
+  for (const [kind, key] of Object.entries(KEYS)) {
+    const { data } = await supabase.from('app_settings').select('value').eq('key', key).maybeSingle()
+    out[kind] = Array.isArray(data?.value) ? data!.value : []
+  }
+  return NextResponse.json({ ids: out.confirm, confirm: out.confirm, close: out.close })
 }
 
-// POST { id, on }
+// POST { id, on, kind?: 'confirm'|'close' }
 export async function POST(req: Request) {
-  const { id, on } = await req.json()
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-  const { data } = await supabase.from('app_settings').select('value').eq('key', KEY).maybeSingle()
+  const { id, on, kind = 'confirm' } = await req.json()
+  const key = KEYS[kind]
+  if (!id || !key) return NextResponse.json({ error: 'bad request' }, { status: 400 })
+  const { data } = await supabase.from('app_settings').select('value').eq('key', key).maybeSingle()
   let list: string[] = Array.isArray(data?.value) ? data!.value : []
   if (on) { if (!list.includes(id)) list.push(id) } else list = list.filter(x => x !== id)
-  const { error } = await supabase.from('app_settings').upsert({ key: KEY, value: list }, { onConflict: 'key' })
+  const { error } = await supabase.from('app_settings').upsert({ key, value: list }, { onConflict: 'key' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, ids: list })
 }

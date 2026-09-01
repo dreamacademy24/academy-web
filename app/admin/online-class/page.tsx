@@ -110,7 +110,13 @@ export default function OnlineClassPage() {
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
   const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
-  useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : { ids: [] }).then(d => setConfirmedIds(new Set(d.ids || []))).catch(() => {}); }, []);
+  const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
+  useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : {}).then(d => { setConfirmedIds(new Set(d.confirm || d.ids || [])); setClosedIds(new Set(d.close || [])); }).catch(() => {}); }, []);
+  async function toggleClose(id: string) {
+    const on = !closedIds.has(id);
+    const r = await fetch("/api/online-class/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, on, kind: "close" }) });
+    if (r.ok) setClosedIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
+  }
   async function toggleConfirm(id: string) {
     const on = !confirmedIds.has(id);
     const r = await fetch("/api/online-class/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, on }) });
@@ -130,7 +136,7 @@ export default function OnlineClassPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tutorFilter, setTutorFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState<"current" | "upcoming" | "past">("current");
+  const [periodFilter, setPeriodFilter] = useState<"all" | "current" | "upcoming" | "past">("current");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // 출석부(한눈에) 뷰
   const [listMode, setListMode] = useState<"list" | "sheet">("list");
@@ -510,6 +516,7 @@ export default function OnlineClassPage() {
     // 기간 필터
     const sd = e.start_date || "";
     const ed = e.end_date || "";
+    if (periodFilter === "all") return true;
     if (periodFilter === "current") return e.status === "active" && sd <= todayStr;
     if (periodFilter === "upcoming") return e.status === "active" && sd > todayStr;
     if (periodFilter === "past") return e.status !== "active" || (!!ed && ed < todayStr);
@@ -610,7 +617,7 @@ export default function OnlineClassPage() {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#0d9488", width: 44, flexShrink: 0 }}>기간</span>
-            {([["current", "현재 수업중"], ["upcoming", "예정"], ["past", "종료·기타"]] as const).map(([key, label]) => {
+            {([["all", "전체"], ["current", "현재 수업중"], ["upcoming", "예정"], ["past", "종료·기타"]] as const).map(([key, label]) => {
               const on = periodFilter === key;
               return <button key={key} onClick={() => setPeriodFilter(key as typeof periodFilter)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #0d9488" : "1px solid #ccfbf1", background: on ? "#0d9488" : "#fff", color: on ? "#fff" : "#0d9488" }}>{label}</button>;
             })}
@@ -745,12 +752,25 @@ export default function OnlineClassPage() {
                       </td>
                       <td onClick={ev => ev.stopPropagation()}>
                         <span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span>
-                        <button onClick={() => toggleConfirm(e.id)} title={confirmedIds.has(e.id) ? "확정 해제" : "확인 완료로 표시"}
-                          style={{ marginLeft: 5, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
-                            border: confirmedIds.has(e.id) ? "1px solid #16a34a" : "1px dashed #cbd5e1",
-                            background: confirmedIds.has(e.id) ? "#dcfce7" : "#fff", color: confirmedIds.has(e.id) ? "#166534" : "#94a3b8" }}>
-                          {confirmedIds.has(e.id) ? "✔ 확정" : "확정"}
-                        </button>
+                        {closedIds.has(e.id) ? (
+                          <button onClick={() => toggleClose(e.id)} title="마감됨 — 클릭하면 마감 해제"
+                            style={{ marginLeft: 5, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", border: "1px solid #334155", background: "#1e293b", color: "#fff" }}>
+                            🔒 마감
+                          </button>
+                        ) : (<>
+                          <button onClick={() => toggleConfirm(e.id)} title={confirmedIds.has(e.id) ? "확정 해제" : "확인 완료로 표시"}
+                            style={{ marginLeft: 5, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                              border: confirmedIds.has(e.id) ? "1px solid #16a34a" : "1px dashed #cbd5e1",
+                              background: confirmedIds.has(e.id) ? "#dcfce7" : "#fff", color: confirmedIds.has(e.id) ? "#166534" : "#94a3b8" }}>
+                            {confirmedIds.has(e.id) ? "✔ 확정" : "확정"}
+                          </button>
+                          {confirmedIds.has(e.id) && (
+                            <button onClick={() => toggleClose(e.id)} title="최종 확인 완료 — 일정 마감"
+                              style={{ marginLeft: 3, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", border: "1px solid #94a3b8", background: "#f8fafc", color: "#475569" }}>
+                              마감
+                            </button>
+                          )}
+                        </>)}
                       </td>
                       <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/${e.id}?focus=attendance`)}>출결</button>
