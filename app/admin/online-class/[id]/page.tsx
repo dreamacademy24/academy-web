@@ -129,10 +129,19 @@ export default function OnlineClassStudentPage() {
         class_time_ph: subHour(form.class_time_kr) || null,
         day_times: dayTimesOn ? Object.fromEntries(form.days_of_week.filter((d: string) => (dayTimes[d] || "").trim()).map((d: string) => [d, dayTimes[d].trim()])) : null,
       };
+      // 요일·시간·시작일·회차가 바뀌면 예정 세션 자동 재생성 (이력 보존)
+      const schedChanged = !!enr && (
+        JSON.stringify([...(form.days_of_week || [])].sort()) !== JSON.stringify([...(enr.days_of_week || [])].sort()) ||
+        (form.class_time_kr || "") !== (enr.class_time_kr || "") ||
+        (form.start_date || "") !== (enr.start_date || "") ||
+        Number(form.total_sessions) !== Number(enr.total_sessions || 0) ||
+        JSON.stringify(body.day_times || null) !== JSON.stringify(enr.day_times || null)
+      );
+      if (schedChanged) body.regenerate_sessions = true;
       const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const r = await res.json();
       if (!res.ok) { show(r.error || "저장 실패", false); return; }
-      show("저장 완료 ✅" + (r.sessions_tutor_synced ? ` · 세션 튜터 ${r.sessions_tutor_synced}개 동기화` : ""));
+      show("저장 완료 ✅" + (schedChanged ? ` · 출석부 ${r.sessions_regenerated ?? 0}개 재생성` : "") + (r.sessions_tutor_synced ? ` · 세션 튜터 ${r.sessions_tutor_synced}개 동기화` : ""));
       await load();
     } finally { setSaving(false); }
   }
