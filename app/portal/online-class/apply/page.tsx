@@ -347,11 +347,26 @@ function ApplyInner() {
       {step === 2 && (
         <div className="sec">
           <h2>수업 시작일</h2>
-          <input type="date" value={startDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 4); const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; return m < RESUME_DATE ? RESUME_DATE : m; })()} onChange={e => setStartDate(e.target.value)}
-            style={{ padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginBottom: 4 }} />
+          {(() => {
+            const pad = (n: number) => n < 10 ? "0" + n : "" + n;
+            const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            const base = new Date(); base.setDate(base.getDate() + 4);
+            let minD = fmt(base); if (minD < RESUME_DATE) minD = RESUME_DATE;
+            let maxD: string | undefined = undefined;
+            const today = fmt(new Date());
+            const futureTrip = bk && bk.ci > today;
+            if (futureTrip && period === "pre") { // 연수 전: 체크인 전날까지
+              const d = new Date(bk!.ci + "T00:00:00"); d.setDate(d.getDate() - 1); maxD = fmt(d);
+            }
+            if (futureTrip && period === "post") { // 연수 후: 귀국 다음 날부터
+              const d = new Date(bk!.co + "T00:00:00"); d.setDate(d.getDate() + 1); const m2 = fmt(d); if (m2 > minD) minD = m2;
+            }
+            return <input type="date" value={startDate} min={minD} max={maxD} onChange={e => setStartDate(e.target.value)}
+              style={{ padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginBottom: 4 }} />;
+          })()}
           <div className="hint">
             {startDate ? `${startDate.slice(5).replace("-", "/")}(${"일월화수목금토"[new Date(startDate + "T00:00:00").getDay()]})부터` : ""} · {selectedDays.map(d => DAY_KR[d]).join("/")}요일 주 {selectedDays.length}회
-            {period === "post" && bk && bk.co > new Date().toISOString().slice(0, 10) ? " · 귀국 다음 날로 자동 설정됨" : " · 최소 4일 뒤부터 시작 가능"}
+            {period === "pre" && bk ? ` · 연수 전 수업: 출국(${bk.ci?.slice(5).replace("-", "/")}) 전까지` : period === "post" && bk && bk.co > new Date().toISOString().slice(0, 10) ? ` · 연수 후 수업: 귀국(${bk.co?.slice(5).replace("-", "/")}) 다음 날부터` : " · 최소 4일 뒤부터 시작 가능"}
           </div>
           <div style={{ height: 16 }} />
           <h2>수업 시간 선택 (한국시간)</h2>
