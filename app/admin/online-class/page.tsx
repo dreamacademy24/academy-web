@@ -111,7 +111,7 @@ export default function OnlineClassPage() {
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
   const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
   const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
-  useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : {}).then(d => { setConfirmedIds(new Set(d.confirm || d.ids || [])); setClosedIds(new Set(d.close || [])); }).catch(() => {}); }, []);
+  useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : {}).then((d: any) => { setConfirmedIds(new Set<string>(d.confirm || d.ids || [])); setClosedIds(new Set<string>(d.close || [])); }).catch(() => {}); }, []);
   async function toggleClose(id: string) {
     const on = !closedIds.has(id);
     const r = await fetch("/api/online-class/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, on, kind: "close" }) });
