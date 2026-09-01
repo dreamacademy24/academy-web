@@ -15,6 +15,7 @@ interface TutorBrief { id: string; name: string }
 
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토" };
 const DAYS = ["mon", "tue", "wed", "thu", "fri"]; // 평일만 (2026-08 개편)
+const RESUME_DATE = "2026-09-07"; // 성수기 후 재개일 — 이 날짜 전으로는 시작 불가 (다음 시즌에 갱신)
 
 export default function ApplyPage() {
   return (
@@ -38,6 +39,7 @@ function ApplyInner() {
   const [children, setChildren] = useState<{ kor: string; en: string }[]>([]);
   const [enrolledNames, setEnrolledNames] = useState<Set<string>>(new Set());
   const [period, setPeriod] = useState<"pre" | "post" | "">("");
+  const [startDate, setStartDate] = useState("");
   const [bk, setBk] = useState<{ ci: string; co: string; weeks: number } | null>(null);
   const [childName, setChildName] = useState("");     // 선택된 아이 한글명
   const [childEn, setChildEn] = useState("");
@@ -152,13 +154,24 @@ function ApplyInner() {
     }
   }
 
+  useEffect(() => {
+    const pad = (n: number) => n < 10 ? "0" + n : "" + n;
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const eff = period || "post";
+    let st = new Date(); st.setDate(st.getDate() + 4);
+    if (eff === "post" && bk && bk.co > fmt(new Date())) { st = new Date(bk.co + "T00:00:00"); st.setDate(st.getDate() + 1); }
+    let ds = fmt(st);
+    if (ds < RESUME_DATE) ds = RESUME_DATE; // 재개일 이전 시작 불가
+    setStartDate(ds);
+  }, [period, bk]);
+
   function planInfo() {
     const pad = (n: number) => n < 10 ? "0" + n : "" + n;
     const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const eff = period || "post";
     let start = new Date(); start.setDate(start.getDate() + 4);
     if (eff === "post" && bk && bk.co > fmt(new Date())) { start = new Date(bk.co + "T00:00:00"); start.setDate(start.getDate() + 1); }
-    return { eff, startStr: fmt(start), total: (bk?.weeks || 4) * 3 };
+    return { eff, startStr: startDate || fmt(start), total: (bk?.weeks || 4) * 3 };
   }
 
   async function submit() {
@@ -172,6 +185,8 @@ function ApplyInner() {
       const eff = period || "post";
       let start = new Date(); start.setDate(start.getDate() + 4);
       if (eff === "post" && bk && bk.co > fmt(new Date())) { start = new Date(bk.co + "T00:00:00"); start.setDate(start.getDate() + 1); }
+      let startStr = startDate || fmt(start);
+      if (startStr < RESUME_DATE) startStr = RESUME_DATE;
       // 회차 = 패키지 등록 주수 × 주 3회 (기본 규정)
       const totalSessions = (bk?.weeks || 4) * 3;
       const res = await fetch("/api/online-class/enrollments", {
@@ -186,7 +201,7 @@ function ApplyInner() {
           level,
           days_of_week: selectedDays,
           class_time_kr: selectedTime,
-          start_date: fmt(start),
+          start_date: startStr,
           end_date: null,
           sessions_per_week: selectedDays.length,
           total_sessions: totalSessions,
@@ -302,6 +317,11 @@ function ApplyInner() {
             <div className="hint">연수 기간({bk.ci?.slice(5).replace("-", "/")}~{bk.co?.slice(5).replace("-", "/")})에는 수업이 자동으로 쉬어가요 · 총 {(bk.weeks || 4) * 3}회 (등록 {bk.weeks}주 × 주 3회)</div>
             <div style={{ height: 14 }} />
           </>)}
+          <h2>수업 시작일</h2>
+          <input type="date" value={startDate} min={(() => { const d = new Date(); d.setDate(d.getDate() + 4); const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; return m < RESUME_DATE ? RESUME_DATE : m; })()} onChange={e => setStartDate(e.target.value)}
+            style={{ padding: "10px 14px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", marginBottom: 4 }} />
+          <div className="hint">준비 기간을 위해 최소 4일 뒤부터 시작할 수 있어요{period === "post" && bk && bk.co > new Date().toISOString().slice(0, 10) ? " · 귀국 다음 날로 자동 설정됨" : ""}</div>
+          <div style={{ height: 14 }} />
           <h2>수업 요일 선택 (최대 3개)</h2>
           <div className="days">
             {DAYS.map(d => (
