@@ -242,6 +242,14 @@ function Inner() {
     alert(`✅ ${e.student_name_en || e.student_name} is now your student!`);
   }
 
+  async function releaseStudent(e: Enrollment) {
+    if (!confirm(`Release ${e.student_name_en || e.student_name}?\nThe student goes back to Open Students so another teacher can take them.`)) return;
+    const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: e.id, tutor_id: null }) });
+    const r = await res.json().catch(() => ({}));
+    if (!res.ok) { alert((r as any).error || "Failed"); return; }
+    await loadEnrollments(); await loadOpenStudents(); await loadToday(); await loadWeek();
+  }
+
   if (!authed) return null;
   if (loadingTutor) return <div className="tcw"><div className="empty">Loading…</div><Css /></div>;
 
@@ -357,6 +365,7 @@ function Inner() {
                       <div className="sbtns">
                         <button className="ab" onClick={() => toggleStuSessions(e.id)}>{open ? "▲ Hide history" : "▼ History"}</button>
                         <button className="ab" onClick={() => setInvoiceStudent(e.id)}>🧾 Calendar</button>
+                        <button className="ab" onClick={() => releaseStudent(e)} style={{ color: "#dc2626", borderColor: "#fecaca" }}>↩ Release</button>
                       </div>
                       {open && (
                         <div className="hist">
