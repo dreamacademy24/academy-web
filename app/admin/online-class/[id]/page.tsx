@@ -77,7 +77,7 @@ export default function OnlineClassStudentPage() {
           student_name: e.student_name || "", student_name_en: e.student_name_en || "",
           student_birth_year: e.student_birth_year || "", level: e.level || "",
           tutor_id: e.tutor?.id || e.tutor_id || "",
-          days_of_week: e.days_of_week || [], class_time_kr: e.class_time_kr || "", class_time_ph: e.class_time_ph || "",
+          days_of_week: [...new Set((e.days_of_week||[]).map((d:string)=>({mon:"월",tue:"화",wed:"수",thu:"목",fri:"금",sat:"토",sun:"일"} as Record<string,string>)[String(d).toLowerCase()]||d))], class_time_kr: e.class_time_kr || "", class_time_ph: e.class_time_ph || "",
           start_date: e.start_date || "", end_date: e.end_date || "",
           duration_weeks: e.duration_weeks ?? "", class_duration_weeks: e.class_duration_weeks ?? "",
           sessions_per_week: String(e.sessions_per_week || 3), total_sessions: e.total_sessions ?? 0,

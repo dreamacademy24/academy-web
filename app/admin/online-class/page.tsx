@@ -63,6 +63,10 @@ function subtractHour(t: string): string {
   }
 }
 
+const _DAY_ENG2KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
+function normDays(days: string[] | null | undefined): string[] {
+  return [...new Set((days || []).map(d => _DAY_ENG2KR[String(d).toLowerCase()] || d))];
+}
 // 기간 컬럼 헬퍼
 function fmtMD(dateStr: string): string {
   if (!dateStr) return "?";
@@ -333,7 +337,7 @@ export default function OnlineClassPage() {
       student_birth_year: e.student_birth_year || "",
       customer_user_id: e.customer_user_id || null,
       tutor_id: e.tutor?.id || "",
-      days_of_week: [...(e.days_of_week || [])],
+      days_of_week: normDays(e.days_of_week),
       class_time_kr: e.class_time_kr || "",
       class_time_ph: e.class_time_ph || "",
       start_date: e.start_date || "",
