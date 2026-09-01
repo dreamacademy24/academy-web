@@ -524,6 +524,7 @@ function al(t:AT,r:string){return t==="dreamhouse"?"Dream House":t==="jpark"?`�
 function fmt(n:number){return n.toLocaleString("ko-KR");}
 function mp(t:AT){return t==="dreamhouse"?6:t==="jpark"?5:4;} // 제이파크 5인(성인2+아이3, 2026-07-21)
 function extraRate(t:AT){return t==="cubenine"?250000:340000;}
+function guardRate(t:AT){return t==="jpark"?180000:t==="cubenine"?150000:170000;} // 보호자 추가(4번째~) 주당 요금
 
 /* ── 타입 ── */
 interface Disc{id:number;name:string;amount:number}
@@ -1277,7 +1278,10 @@ function InvoicePageInner(){
       }
     }
     if(cm==="single"){
-      const e=lk(a1T,a1R,a1W,cP,cK);if(!e)return null;
+      let e=lk(a1T,a1R,a1W,cP,cK);let gN=0;
+      if(!e&&cP>3){e=lk(a1T,a1R,a1W,3,cK);if(e)gN=cP-3;} // 보호자 4명: 3명 가격표 + 추가요금
+      if(!e)return null;
+      if(gN>0)extras.push({label:`보호자 추가 ${gN}명 × ${a1W}주 (주당 ${fmt(guardRate(a1T))})`,price:guardRate(a1T)*gN*a1W});
       const mx=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
       const price=mx.peak===0?e[1]:mx.off===0?e[2]:Math.round(e[1]/a1W)*mx.off+Math.round(e[2]/a1W)*mx.peak;
       const pk=mx.peak>0&&mx.off===0;
@@ -1287,7 +1291,10 @@ function InvoicePageInner(){
       return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:seasonLb,accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK}]};
     }
     const tw=a1W+a2W;
-    const e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);if(!e1||!e2)return null;
+    let e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);let gN2=0;
+    if((!e1||!e2)&&cP>3){const f1_=lk(a1T,a1R,tw,3,cK),f2_=lk(a2T,a2R,tw,3,cK);if(f1_&&f2_){e1=f1_;e2=f2_;gN2=cP-3;}}
+    if(!e1||!e2)return null;
+    if(gN2>0)extras.push({label:`보호자 추가 ${gN2}명 (${alKo(a1T,a1R)} ${a1W}주 + ${alKo(a2T,a2R)} ${a2W}주)`,price:gN2*(guardRate(a1T)*a1W+guardRate(a2T)*a2W)});
     const mx1=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
     const mx2=a2CI?seasonMixInv(a2CI,a2W):{off:a2W,peak:0};
     const segPrice=(e:P3,mx:{off:number;peak:number})=>Math.round(e[1]/tw)*mx.off+Math.round(e[2]/tw)*mx.peak;
@@ -1932,10 +1939,10 @@ function InvoicePageInner(){
 
     {cm==="single"?(<>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 선택")}
-      <div className="f-row"><div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,mp(a1T)-p)));}}>{[1,2,3].filter(p=>p<mp(a1T)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,mp(a1T)-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
+      <div className="f-row"><div className="f-group"><label className="f-label">보호자</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,mp(a1T)-p)));}}>{[1,2,3,4].filter(p=>p<mp(a1T)).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,mp(a1T)-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       <div className="ex-box"><div className="ex-title">추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
     </>):(<>
-      <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,Math.min(mp(a1T),mp(a2T))-p)));}}>{[1,2,3].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,Math.min(mp(a1T),mp(a2T))-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
+      <div className="f-row" style={{marginBottom:"16px"}}><div className="f-group"><label className="f-label">보호자 (공통)</label><select className="f-select" value={cP} onChange={e=>{const p=Number(e.target.value);setCP(p);setCK(Math.min(cK,Math.max(1,Math.min(mp(a1T),mp(a2T))-p)));}}>{[1,2,3,4].filter(p=>p<Math.min(mp(a1T),mp(a2T))).map(p=><option key={p} value={p}>{p}명</option>)}</select></div><div className="f-group"><label className="f-label">아이 (공통)</label><select className="f-select" value={cK} onChange={e=>setCK(Number(e.target.value))}>{Array.from({length:Math.max(1,Math.min(mp(a1T),mp(a2T))-cP)},(_,i)=>i+1).map(k=><option key={k} value={k}>{k}명</option>)}</select></div></div>
       {rSel(a1T,setA1T,a1R,setA1R,a1W,setA1W,a1CI,setA1CI,a1CO,"숙소 A")}
       <div className="ex-box"><div className="ex-title">숙소 A 추가 인원 (1주일 고정 · {fmt(extraRate(a1T))}원/인)</div><div className="ex-row"><div className="f-group" style={{flex:"0 0 140px"}}><label className="f-label">추가 인원</label><select className="f-select" value={ex1Cnt} onChange={e=>setEx1Cnt(Number(e.target.value))}><option value={0}>0명</option><option value={1}>1명</option><option value={2}>2명</option></select></div>{ex1Cnt>0&&<div style={{fontSize:"13px",fontWeight:700,color:"#1a6fc4",paddingBottom:"2px"}}>+{fmt(extraRate(a1T)*ex1Cnt)}원</div>}</div></div>
       <div className="cp">+</div>
