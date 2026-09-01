@@ -40,7 +40,7 @@ export default function PortalPreviewPage() {
   const t = today10();
   const staying = (b: B) => (b.checkin_date || "") <= t && (b.checkout_date || "9999") >= t;
   const future = (b: B) => (b.checkin_date || "") > t;
-  const base = rows.filter(b => tab === "now" ? staying(b) : tab === "future" ? future(b) : (b.checkout_date || "9999") >= t);
+  const base = rows.filter(b => tab === "now" ? staying(b) : tab === "future" ? future(b) : true); // 전체 = 과거(귀국 후 화상영어 등) 포함
   const shown = base.filter(b => { if (!q) return true; const s = q.toLowerCase(); return [b.booker_name, stuNames(b.students), b.reservation_no, b.house_no, b.accom_room].some(v => v && String(v).toLowerCase().includes(s)); });
 
   const pick = (b: B) => { try { localStorage.removeItem("portalSession"); } catch { } setSel(b); setFrameKey(k => k + 1); };
@@ -54,7 +54,7 @@ export default function PortalPreviewPage() {
           <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10 }}>👀 엄마 화면 미리보기</div>
           <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
             {([["now", "투숙중"], ["future", "예정"], ["all", "전체"]] as const).map(([k, v]) => (
-              <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", border: tab === k ? "none" : "1px solid #e2e8f0", background: tab === k ? "#7c3aed" : "#fff", color: tab === k ? "#fff" : "#64748b" }}>{v} ({rows.filter(b => k === "now" ? staying(b) : k === "future" ? future(b) : (b.checkout_date || "9999") >= t).length})</button>
+              <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", border: tab === k ? "none" : "1px solid #e2e8f0", background: tab === k ? "#7c3aed" : "#fff", color: tab === k ? "#fff" : "#64748b" }}>{v} ({rows.filter(b => k === "now" ? staying(b) : k === "future" ? future(b) : true).length})</button>
             ))}
           </div>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 이름·학생·룸번호" style={{ width: "100%", boxSizing: "border-box", padding: "8px 11px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 12.5, outline: "none" }} />
