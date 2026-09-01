@@ -152,6 +152,15 @@ function ApplyInner() {
     }
   }
 
+  function planInfo() {
+    const pad = (n: number) => n < 10 ? "0" + n : "" + n;
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const eff = period || "post";
+    let start = new Date(); start.setDate(start.getDate() + 4);
+    if (eff === "post" && bk && bk.co > fmt(new Date())) { start = new Date(bk.co + "T00:00:00"); start.setDate(start.getDate() + 1); }
+    return { eff, startStr: fmt(start), total: (bk?.weeks || 4) * 3 };
+  }
+
   async function submit() {
     if (!authUser || !selectedDays.length || !selectedTime) return;
     setSubmitting(true);
@@ -363,6 +372,11 @@ function ApplyInner() {
           <div className="confirm">
             <div className="t">수업 시간 (한국)</div>
             <div className="v">{selectedTime}</div>
+          </div>
+          <div className="confirm" style={{ background: "#fffbeb", borderColor: "#fcd34d" }}>
+            <div className="t">시작 예정일 · 총 회차</div>
+            <div className="v">{(() => { const p = planInfo(); return `${p.startStr.slice(5).replace("-", "/")}부터 · 총 ${p.total}회 (등록 ${bk?.weeks || 4}주 × 주 3회)`; })()}</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>선택한 요일 기준으로 시작돼요{bk && bk.ci > new Date().toISOString().slice(0, 10) ? " · 연수 기간에는 자동으로 쉬어가요" : ""}</div>
           </div>
           <div className="confirm" style={{ background: "#f0fdf4", borderColor: "#bbf7d0" }}>
             <div className="t">담당 선생님</div>
