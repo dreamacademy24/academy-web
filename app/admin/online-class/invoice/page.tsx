@@ -147,7 +147,8 @@ function groupWeekSegments(weeks: CalWeek[]): CalSegment[] {
 function renderCalendar(
   weeks: CalWeek[],
   sessionMap: Record<string, Session>,
-  enrollment: Enrollment
+  enrollment: Enrollment,
+  holidaySet: Set<string> = new Set()
 ) {
   const segments = groupWeekSegments(weeks);
   return (
@@ -488,15 +489,15 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;marg
       {enrollment.class_period === "both" ? (<>
         {preSessions.length > 0 && (<>
           <div className="section-title">연수 전</div>
-          {renderCalendar(preWeeks, sessionMap, enrollment)}
+          {renderCalendar(preWeeks, sessionMap, enrollment, holidaySet)}
         </>)}
         {postSessions.length > 0 && (<>
           <div className="section-title" style={{ marginTop: 20 }}>연수 종료 후</div>
-          {renderCalendar(postWeeks, sessionMap, enrollment)}
+          {renderCalendar(postWeeks, sessionMap, enrollment, holidaySet)}
         </>)}
       </>) : (<>
         <div className="section-title">{periodTitle}</div>
-        {renderCalendar(allWeeks, sessionMap, enrollment)}
+        {renderCalendar(allWeeks, sessionMap, enrollment, holidaySet)}
       </>)}
 
       <div className="rules">
