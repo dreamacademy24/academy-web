@@ -8,7 +8,7 @@ import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
 
 const DAYS = ["월", "화", "수", "목", "금"];
 const TIME_SLOTS: string[] = [];
-for (let h = 15; h <= 21; h++) { TIME_SLOTS.push(`${h}:00`); TIME_SLOTS.push(`${h}:30`); }
+for (let h = 14; h <= 21; h++) { TIME_SLOTS.push(`${h}:00`); TIME_SLOTS.push(`${h}:30`); } // KR 14:00~21:30 (세부 13:00~20:30)
 const subHour = (t: string) => { if(!t||!/^\d{1,2}:\d{2}/.test(t))return ""; const [h, m] = t.split(":").map(Number); return `${String((h + 23) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`; };
 
 interface Tutor { id: string; name_display: string; name_en?: string | null }
@@ -349,7 +349,7 @@ export default function OnlineClassStudentPage() {
       {tp && (
         <div onClick={() => setTp(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(420px,92vw)" }}>
-            <div style={{ fontWeight: 800, marginBottom: 10 }}>{tp.label} <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>(세부 -1시간 · 운영 세부 14:00~21:00)</span></div>
+            <div style={{ fontWeight: 800, marginBottom: 10 }}>{tp.label} <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>(세부 -1시간 · KR 14:00~21:30 시작, 마지막 수업 21:30)</span></div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
               {TIME_SLOTS.map(t => <button key={t} onClick={() => { tp.cb(t); setTp(null); }} style={{ padding: "9px 0", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>)}
             </div>

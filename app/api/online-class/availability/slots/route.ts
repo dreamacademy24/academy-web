@@ -27,10 +27,11 @@ function krToPh(krTime: string): string {
 }
 
 function buildTimeSlots(): { weekday: string[]; saturday: string[] } {
+  // 운영시간: KR 14:00 ~ 21:30 시작 (세부 13:00~20:30, 마지막 수업 KR 21:30 = 세부 20:30)
   const wd: string[] = []
-  for (let h = 12; h <= 22; h++) {
+  for (let h = 14; h <= 21; h++) {
     wd.push(`${String(h).padStart(2,'0')}:00`)
-    if (h < 22) wd.push(`${String(h).padStart(2,'0')}:30`)
+    wd.push(`${String(h).padStart(2,'0')}:30`)
   }
   const sat: string[] = []
   for (let h = 9; h <= 12; h++) {

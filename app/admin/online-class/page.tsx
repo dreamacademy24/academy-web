@@ -49,9 +49,9 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = 
 
 const DAYS = ["월", "화", "수", "목", "금"]; // 평일만 (2026-08 개편)
 
-// 수업 시간 선택 모달용 — 세부 14:00~21:00 운영 = 한국 15:00~21:30 시작 (30분 간격, 2026-08 개편)
+// 수업 시간 선택 모달용 — KR 14:00~21:30 시작 (세부 13:00~20:30, 마지막 수업 KR 21:30, 2026-09 확정)
 const TIME_SLOTS: string[] = [];
-for (let h = 15; h <= 21; h++) {
+for (let h = 14; h <= 21; h++) {
   TIME_SLOTS.push(`${h}:00`);
   TIME_SLOTS.push(`${h}:30`);
 }
