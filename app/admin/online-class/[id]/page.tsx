@@ -35,7 +35,7 @@ const SES_STYLE: Record<string, { label: string; bg: string; color: string }> = 
   cancelled: { label: "X", bg: "#fee2e2", color: "#dc2626" },
   makeup: { label: "△", bg: "#fef3c7", color: "#b45309" },
 };
-const STATUS_OPT = [["active", "수업중"], ["scheduled", "예정"], ["completed", "종료"], ["paused", "일시중지"], ["cancelled", "취소"]];
+const STATUS_OPT = [["active", "수업중"], ["completed", "종료"], ["paused", "일시중지"], ["cancelled", "취소"]];
 
 export default function OnlineClassStudentPage() {
   const { id } = useParams<{ id: string }>();
