@@ -224,6 +224,16 @@ export default function PortalDashboard() {
           const rEn = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${ocUid}`);
           if (rEn.ok) { const de = await rEn.json(); if ((de.enrollments || []).length > 0) setOcReady(true); }
         } catch {}
+        // D-60 자동 활성화: 올인원(통학형 제외) 예약이 체크인 60일 전 이내면 신청 가능하게 오픈
+        try {
+          const { data: myBks } = await supabase.from("bookings")
+            .select("checkin_date, accom_type, status")
+            .eq("portal_user_id", ocUid).neq("status", "취소");
+          const _t2 = new Date(); _t2.setDate(_t2.getDate() + 60);
+          const lim = `${_t2.getFullYear()}-${String(_t2.getMonth() + 1).padStart(2, "0")}-${String(_t2.getDate()).padStart(2, "0")}`;
+          const eligible = (myBks || []).some(b => !(b.accom_type || "").includes("통학") && (b.checkin_date || "9999") <= lim);
+          if (eligible) setOcReady(true);
+        } catch {}
         try {
           const r2 = await fetch(`/api/portal/online-class/change-request?customer_user_id=${ocUid}`);
           if (r2.ok) { const dd = await r2.json(); ocItems = (dd.requests || []).map((it: any) => ({ key: `ocreq:${it.id}`, status: String(it.status ?? "") })); }
