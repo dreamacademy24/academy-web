@@ -109,6 +109,13 @@ export default function OnlineClassPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
+  const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
+  useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : { ids: [] }).then(d => setConfirmedIds(new Set(d.ids || []))).catch(() => {}); }, []);
+  async function toggleConfirm(id: string) {
+    const on = !confirmedIds.has(id);
+    const r = await fetch("/api/online-class/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, on }) });
+    if (r.ok) setConfirmedIds(prev => { const n = new Set(prev); if (on) n.add(id); else n.delete(id); return n; });
+  }
 
   // 변경요청 수신함
   const [changeReqs, setChangeReqs] = useState<any[]>([]);
@@ -734,7 +741,15 @@ export default function OnlineClassPage() {
                           <span style={{ fontSize: 11, fontWeight: 700, color: rem <= 3 ? "#dc2626" : "#166534", whiteSpace: "nowrap" }}>{rem} / {total}</span>
                         </div>
                       </td>
-                      <td><span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span></td>
+                      <td onClick={ev => ev.stopPropagation()}>
+                        <span className="badge" style={{ background: stBg, color: stColor }}>{stLabel}</span>
+                        <button onClick={() => toggleConfirm(e.id)} title={confirmedIds.has(e.id) ? "확정 해제" : "확인 완료로 표시"}
+                          style={{ marginLeft: 5, padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit",
+                            border: confirmedIds.has(e.id) ? "1px solid #16a34a" : "1px dashed #cbd5e1",
+                            background: confirmedIds.has(e.id) ? "#dcfce7" : "#fff", color: confirmedIds.has(e.id) ? "#166534" : "#94a3b8" }}>
+                          {confirmedIds.has(e.id) ? "✔ 확정" : "확정"}
+                        </button>
+                      </td>
                       <td style={{ whiteSpace: "nowrap" }} onClick={ev => ev.stopPropagation()}>
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/${e.id}?focus=attendance`)}>출결</button>
                         {" "}
