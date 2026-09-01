@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import { fetchDeployedHolidays } from "@/lib/holidays";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 
@@ -179,8 +180,11 @@ function renderCalendar(
                 const isWeekend = dow === 0 || dow === 6;
                 const isBreak = cell.inRange && !isWeekend && isSummerBreak(cell.dateStr);
                 let timeLabel = "";
+                const isHoliday = cell.inRange && !isWeekend && !s && holidaySet.has(cell.dateStr);
                 if (isBreak) {
                   classes.push("break"); timeLabel = "방학";
+                } else if (isHoliday) {
+                  classes.push("holiday"); timeLabel = "휴무일";
                 } else if (s) {
                   if (s.status === "cancelled") { classes.push("holiday"); timeLabel = "휴강"; }
                   else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
@@ -222,6 +226,8 @@ function OnlineInvoiceInner() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; type: "ok" | "err" } | null>(null);
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+  useEffect(() => { fetchDeployedHolidays().then(h => setHolidaySet(new Set((h || []).map(x => x.date)))).catch(() => {}); }, []);
 
   useEffect(() => {
     if (isAdminAuthed()) setAuthed(true);
