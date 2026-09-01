@@ -33,11 +33,7 @@ function buildTimeSlots(): { weekday: string[]; saturday: string[] } {
     wd.push(`${String(h).padStart(2,'0')}:00`)
     wd.push(`${String(h).padStart(2,'0')}:30`)
   }
-  const sat: string[] = []
-  for (let h = 9; h <= 12; h++) {
-    sat.push(`${String(h).padStart(2,'0')}:00`)
-    if (h < 12) sat.push(`${String(h).padStart(2,'0')}:30`)
-  }
+  const sat: string[] = [] // 토요일 수업 폐지 (2026-09) — 오전 슬롯 제거
   return { weekday: wd, saturday: sat }
 }
 
