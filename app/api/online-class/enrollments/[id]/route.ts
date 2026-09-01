@@ -37,6 +37,8 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   await supabase.from('online_change_requests').delete().eq('enrollment_id', id)
   // 알림 삭제
   await supabase.from('online_notifications').delete().eq('enrollment_id', id)
+  // 인보이스 삭제 (FK)
+  await supabase.from('online_invoices').delete().eq('enrollment_id', id)
   // 등록 삭제
   const { error } = await supabase.from('online_enrollments').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
