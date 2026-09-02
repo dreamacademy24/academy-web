@@ -256,7 +256,10 @@ export default function PortalShuttlePage() {
       // 콤보 예약: 투어 날짜가 어느 숙소 구간인지에 따라 픽업장소 자동 결정
       const resolvePickup = (tourDate: string): string => {
         const accom = resolveComboAccom(bookingMeta, tourDate);
-        return accom.room || accom.nameKr; // DH→"B17L8", JP→"제이파크"
+        // 셔틀 탑승 지점(고정) — 손님 방/집 주소가 아니라 정해진 탑승 장소
+        if (accom.segType === "jaypark") return "제이파크 로비";
+        if (accom.segType === "cubenine") return "큐브나인 로비";
+        return "드림센터"; // dreamhouse
       };
       const rows = selectedTours.map(t => ({
         booking_id: session.booking_id,
