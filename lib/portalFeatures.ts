@@ -9,6 +9,7 @@ export const PORTAL_FEATURES = [
   { key: "tutor", label: "튜터 수업", desc: "방문/아카데미 튜터" },
   { key: "meal", label: "식단", desc: "아카데미 점심·드림하우스 식단" },
   { key: "consultation", label: "상담 예약", desc: "학습 상담" },
+  { key: "online_class", label: "화상영어", desc: "기본: 체크인 60일 전 자동 오픈 · 켜면 즉시 오픈" },
 ] as const;
 
 export type PortalFeatureKey = (typeof PORTAL_FEATURES)[number]["key"];
@@ -28,16 +29,16 @@ export function defaultPortalFeatures(b: BookingLike): PortalFeatureMap {
   const dhda = cat.comp === "드하+드아";
   // 올인원·패키지: 전부 제공 (통학형 패키지는 숙소 관련 제외)
   if (cat.pkg === "올인원" || cat.pkg === "패키지") {
-    return { checkin: !commute, shuttle: !commute, afterschool: !commute, tutor: true, meal: true, consultation: true };
+    return { checkin: !commute, shuttle: !commute, afterschool: !commute, tutor: true, meal: true, consultation: true, online_class: false };
   }
   // 비패키지 드하+드아 (예: 장보운): 셔틀 O · 애프터스쿨 X · 튜터 O
-  if (dhda) return { checkin: true, shuttle: true, afterschool: false, tutor: true, meal: true, consultation: true };
+  if (dhda) return { checkin: true, shuttle: true, afterschool: false, tutor: true, meal: true, consultation: true, online_class: false };
   // 비패키지 통학형: 셔틀 X(패키지 전용) · 애프터스쿨 X(참여 불가, 필드트립은 관리자가 개별 오픈) · 튜터 O
-  if (commute) return { checkin: false, shuttle: false, afterschool: false, tutor: true, meal: true, consultation: true };
+  if (commute) return { checkin: false, shuttle: false, afterschool: false, tutor: true, meal: true, consultation: true, online_class: false };
   // 비패키지 숙소 단독 (room only): 투어셔틀 X · 애프터스쿨 X · 튜터 O(리조트=아카데미 내)
   // 큐브나인은 저녁 식사 제공(2026-08-26~) → 식단 탭 O
   const isCube = (b?.accom_type || "").includes("큐브");
-  return { checkin: true, shuttle: false, afterschool: false, tutor: true, meal: isCube, consultation: true };
+  return { checkin: true, shuttle: false, afterschool: false, tutor: true, meal: isCube, consultation: true, online_class: false };
 }
 
 /** 기본값 + portal_features 오버라이드 병합 */

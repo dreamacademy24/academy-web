@@ -227,11 +227,13 @@ export default function PortalDashboard() {
         // D-60 자동 활성화: 올인원(통학형 제외) 예약이 체크인 60일 전 이내면 신청 가능하게 오픈
         try {
           const { data: myBks } = await supabase.from("bookings")
-            .select("checkin_date, accom_type, status")
+            .select("checkin_date, accom_type, status, portal_features")
             .eq("portal_user_id", ocUid).neq("status", "취소");
           const _t2 = new Date(); _t2.setDate(_t2.getDate() + 60);
           const lim = `${_t2.getFullYear()}-${String(_t2.getMonth() + 1).padStart(2, "0")}-${String(_t2.getDate()).padStart(2, "0")}`;
-          const eligible = (myBks || []).some(b => !(b.accom_type || "").includes("통학") && (b.checkin_date || "9999") <= lim);
+          const eligible = (myBks || []).some(b =>
+            (b.portal_features as any)?.online_class === true ||
+            (!(b.accom_type || "").includes("통학") && (b.checkin_date || "9999") <= lim));
           if (eligible) setOcReady(true);
         } catch {}
         try {
