@@ -201,6 +201,7 @@ function ApplyInner() {
           level,
           days_of_week: selectedDays.map(d => DAY_KR[d] || d), // 한글 요일로 저장 (데이터 통일)
           class_time_kr: selectedTime,
+          class_time_ph: (() => { const m = selectedTime.match(/(\d{1,2}):(\d{2})/); return m ? `${String((Number(m[1]) + 23) % 24).padStart(2, "0")}:${m[2]}` : null; })(),
           start_date: startStr,
           end_date: null,
           sessions_per_week: selectedDays.length,

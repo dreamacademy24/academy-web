@@ -482,9 +482,13 @@ function Inner() {
                       </div>
                       <div className="smeta">Now: {dstr(en.days_of_week)} {en.class_time_kr || ""}</div>
                       <div className="smeta" style={{ color: "#1a6fc4", fontWeight: 700 }}>
-                        {r.req_type === "single"
-                          ? `→ ${r.req_date || "(keep date)"} ${r.req_time_kr || ""}`
-                          : `→ ${r.req_days_of_week?.length ? dstr(r.req_days_of_week) : dstr(en.days_of_week)} ${r.req_time_kr || en.class_time_kr || ""} (from ${r.effective_from})`}
+                        {(() => {
+                          const ph = (kr: string | null) => { const m = String(kr || "").match(/(\d{1,2}):(\d{2})/); return m ? ` (PH ${String((Number(m[1]) + 23) % 24).padStart(2, "0")}:${m[2]})` : ""; };
+                          const t = r.req_time_kr || en.class_time_kr || "";
+                          return r.req_type === "single"
+                            ? `→ ${r.req_date || "(keep date)"} ${r.req_time_kr || ""}${ph(r.req_time_kr)}`
+                            : `→ ${r.req_days_of_week?.length ? dstr(r.req_days_of_week) : dstr(en.days_of_week)} ${t}${ph(t)} (from ${r.effective_from})`;
+                        })()}
                       </div>
                       {r.memo && <div className="snote">💬 {r.memo}</div>}
                       <div className="sbtns">

@@ -2,6 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
 
+function krToPh(kr: string | null): string | null {
+  if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
+  const [h, m] = kr.split(':').map(Number)
+  return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -166,7 +172,7 @@ export async function POST(req: Request) {
         level: level || null,
         days_of_week,
         class_time_kr: class_time_kr || null,
-        class_time_ph: class_time_ph || null,
+        class_time_ph: class_time_ph || krToPh(class_time_kr || null), // PH = KR-1h 자동
         start_date, end_date: end_date || null,
         duration_weeks: duration_weeks || null,
         class_duration_weeks: class_duration_weeks || null,
