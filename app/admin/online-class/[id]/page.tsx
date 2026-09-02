@@ -54,6 +54,21 @@ export default function OnlineClassStudentPage() {
   const [tp, setTp] = useState<{ label: string; cb: (t: string) => void } | null>(null);
   const [pick, setPick] = useState<Ses | null>(null);
   const [mentOpen, setMentOpen] = useState(false);
+  const [comments, setComments] = useState<{ id: string; by: string; at: string; text: string }[]>([]);
+  const [cmtDraft, setCmtDraft] = useState("");
+  useEffect(() => { if (id) fetch(`/api/online-class/comments?enrollment_id=${id}`).then(r => r.ok ? r.json() : { comments: [] }).then((d: any) => setComments(d.comments || [])).catch(() => {}); }, [id]);
+  async function addComment() {
+    if (!cmtDraft.trim()) return;
+    let by = "관리자"; try { const raw = localStorage.getItem("tm_admin_info"); if (raw) by = JSON.parse(raw).name || by; } catch {}
+    try { const { getAdminInfo } = await import("@/lib/adminAuth"); const inf = getAdminInfo(); if (inf?.name) by = inf.name; } catch {}
+    const r = await fetch("/api/online-class/comments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enrollment_id: id, by, text: cmtDraft }) });
+    if (r.ok) { const d = await r.json(); setComments(d.comments || []); setCmtDraft(""); }
+  }
+  async function delComment(cid: string) {
+    if (!confirm("이 코멘트를 삭제할까요?")) return;
+    const r = await fetch("/api/online-class/comments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enrollment_id: id, delete_id: cid }) });
+    if (r.ok) { const d = await r.json(); setComments(d.comments || []); }
+  }
   const [zoomMap, setZoomMap] = useState<Record<string, string>>({});
   const [zoomDraft, setZoomDraft] = useState("");
   const [mentText, setMentText] = useState("");
@@ -329,6 +344,27 @@ export default function OnlineClassStudentPage() {
             </div>
             <button onClick={save} disabled={saving} style={{ width: "100%", padding: "12px 0", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "저장 중…" : "💾 저장"}</button>
             <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>요일 변경 후에는 [🔄 세션 재생성]으로 예정 세션을 갱신하세요 (이력은 보존)</div>
+
+            {/* 💬 어드민 코멘트 — 결제·회차 등 기록 */}
+            <div style={{ marginTop: 18, borderTop: "1px solid #eef2f7", paddingTop: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 8 }}>💬 코멘트 <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>결제·회차 등 내부 기록 (손님에게 안 보임)</span></div>
+              {comments.length === 0 && <div style={{ fontSize: 12, color: "#cbd5e1", marginBottom: 8 }}>아직 코멘트가 없어요</div>}
+              {comments.map(c => (
+                <div key={c.id} style={{ background: "#f8fafc", border: "1px solid #eef2f7", borderRadius: 10, padding: "9px 12px", marginBottom: 6 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
+                    <b style={{ fontSize: 12 }}>{c.by}</b>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{c.at.slice(0, 16).replace("T", " ")}</span>
+                    <button onClick={() => delComment(c.id)} style={{ marginLeft: "auto", border: "none", background: "none", color: "#cbd5e1", cursor: "pointer", fontSize: 12 }}>🗑</button>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{c.text}</div>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <input value={cmtDraft} onChange={ev => setCmtDraft(ev.target.value)} onKeyDown={ev => { if (ev.key === "Enter") addComment(); }}
+                  placeholder="예: 회차 12회 추가 결제 완료 (9/2 카드)" style={{ flex: 1, padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 9, fontSize: 13, fontFamily: "inherit" }} />
+                <button onClick={addComment} style={{ padding: "9px 16px", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>등록</button>
+              </div>
+            </div>
           </div>
 
           {/* ── 우: 출석부 ── */}
