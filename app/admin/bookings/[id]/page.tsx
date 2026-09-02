@@ -746,7 +746,11 @@ export default function BookingDetailPage() {
                   const on = feats[f.key];
                   const isDefault = feats[f.key] === defs[f.key];
                   return (
-                    <button key={f.key} onClick={() => toggleFeature(f.key)} title={f.desc + (isDefault ? " (기본값)" : " (수동 조정됨)")}
+                    <button key={f.key} onClick={() => {
+                      const next = !on;
+                      if (!window.confirm(`『${f.label}』 메뉴를 ${next ? "활성화" : "비활성화"}하시겠습니까?\n${next ? "손님 앱에 이 메뉴가 바로 보이게 됩니다." : "손님 앱에서 이 메뉴가 숨겨집니다."}`)) return;
+                      toggleFeature(f.key);
+                    }} title={f.desc + (isDefault ? " (기본값)" : " (수동 조정됨)")}
                       style={{ padding: "7px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                         border: on ? "1px solid #16a34a" : "1px solid #e2e8f0",
                         background: on ? "#dcfce7" : "#f8fafc", color: on ? "#166534" : "#94a3b8" }}>
