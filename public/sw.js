@@ -1,4 +1,4 @@
-const CACHE_NAME = "dreamacademy-v5";
+const CACHE_NAME = "dreamacademy-v6";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

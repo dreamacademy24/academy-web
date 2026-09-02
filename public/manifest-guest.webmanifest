@@ -1,7 +1,7 @@
 {
   "id": "/portal",
-  "name": "드림게스트",
-  "short_name": "드림게스트",
+  "name": "드림아카데미",
+  "short_name": "드림아카데미",
   "description": "드림아카데미 손님 포털 — 예약 조회·결제·셔틀/픽업/튜터 신청",
   "start_url": "/portal",
   "scope": "/portal",
@@ -13,18 +13,26 @@
     {
       "src": "/icons/apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -6,7 +6,7 @@ import InstallClient from "./InstallClient";
     옛 'Dream Academy' 앱과 동일 앱으로 오인해 "이미 설치됨"이 뜨는 문제) */
 
 const META: Record<string, { name: string; manifest: string }> = {
-  guest: { name: "드림게스트", manifest: "/manifest-guest.webmanifest" },
+  guest: { name: "드림아카데미", manifest: "/manifest-guest.webmanifest" },
   admin: { name: "드림 관리자", manifest: "/manifest-admin.webmanifest" },
   staff: { name: "Dream Staff", manifest: "/manifest-staff.webmanifest" },
 };

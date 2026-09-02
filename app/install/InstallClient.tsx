@@ -15,7 +15,7 @@ interface AppConfig {
 }
 
 const APPS: Record<AppKey, AppConfig> = {
-  guest: { key: "guest", name: "드림게스트", startUrl: "/portal", manifest: "/manifest-guest.webmanifest", desc: "예약 조회 · 결제 · 셔틀/픽업/튜터 신청" },
+  guest: { key: "guest", name: "드림아카데미", startUrl: "/portal", manifest: "/manifest-guest.webmanifest", desc: "예약 조회 · 결제 · 셔틀/픽업/튜터 신청" },
   admin: { key: "admin", name: "드림 관리자", startUrl: "/admin/hub", manifest: "/manifest-admin.webmanifest", desc: "관리자 허브" },
   staff: { key: "staff", name: "Dream Staff", startUrl: "/admineng/hub", manifest: "/manifest-staff.webmanifest", desc: "현지 직원 / 튜터" },
 };
