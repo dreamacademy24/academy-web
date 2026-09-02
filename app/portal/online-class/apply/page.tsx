@@ -199,7 +199,7 @@ function ApplyInner() {
           tutor_id: null, // 미배정 — 티쳐가 Open Students에서 가져감
           enrollment_type: "free_package",
           level,
-          days_of_week: selectedDays,
+          days_of_week: selectedDays.map(d => DAY_KR[d] || d), // 한글 요일로 저장 (데이터 통일)
           class_time_kr: selectedTime,
           start_date: startStr,
           end_date: null,
