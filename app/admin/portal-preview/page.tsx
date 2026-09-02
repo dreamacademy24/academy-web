@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import { PORTAL_FEATURES, defaultPortalFeatures, resolvePortalFeatures } from "@/lib/portalFeatures";
 
-interface B { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; accom_room: string | null; accom_type: string | null; students: unknown; status: string | null; }
+interface B { id: string; booker_name: string | null; reservation_no: string | null; checkin_date: string | null; checkout_date: string | null; house_no: string | null; accom_room: string | null; accom_type: string | null; students: unknown; status: string | null; booking_type?: string | null; is_all_in_one?: boolean | null; academy_option?: boolean | null; portal_features?: Record<string, boolean> | null; }
 
 function stuNames(students: unknown) { try { const s = typeof students === "string" ? JSON.parse(students) : students; if (Array.isArray(s)) return s.map((x: { korName?: string; name_kr?: string }) => x.korName || x.name_kr || "").filter(Boolean).join(", "); } catch { } return ""; }
 const today10 = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -24,7 +25,7 @@ export default function PortalPreviewPage() {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("bookings")
-      .select("id,booker_name,reservation_no,checkin_date,checkout_date,house_no,accom_room,accom_type,students,status")
+      .select("id,booker_name,reservation_no,checkin_date,checkout_date,house_no,accom_room,accom_type,students,status,booking_type,is_all_in_one,academy_option,portal_features")
       .not("status", "ilike", "%취소%").order("checkin_date");
     setRows((data || []) as B[]);
   }, []);
@@ -44,6 +45,20 @@ export default function PortalPreviewPage() {
   const shown = base.filter(b => { if (!q) return true; const s = q.toLowerCase(); return [b.booker_name, stuNames(b.students), b.reservation_no, b.house_no, b.accom_room].some(v => v && String(v).toLowerCase().includes(s)); });
 
   const pick = (b: B) => { try { localStorage.removeItem("portalSession"); } catch { } setSel(b); setFrameKey(k => k + 1); };
+
+  async function toggleFeat(key: string, label: string) {
+    if (!sel) return;
+    const cur = resolvePortalFeatures(sel);
+    const next = !cur[key as keyof typeof cur];
+    if (!window.confirm(`『${label}』 메뉴를 ${next ? "활성화" : "비활성화"}하시겠습니까?\n${next ? "이 엄마 앱에 바로 보이게 됩니다." : "이 엄마 앱에서 숨겨집니다."}`)) return;
+    const pf = { ...(sel.portal_features || {}), [key]: next };
+    const { error } = await supabase.from("bookings").update({ portal_features: pf }).eq("id", sel.id);
+    if (error) { alert("저장 실패: " + error.message); return; }
+    const updated = { ...sel, portal_features: pf };
+    setSel(updated);
+    setRows(prev => prev.map(r => r.id === sel.id ? updated : r));
+    setFrameKey(k => k + 1); // 미리보기 즉시 반영
+  }
   const room = (b: B) => (b.house_no || b.accom_room || "").toString().toUpperCase();
 
   return (
@@ -85,6 +100,28 @@ export default function PortalPreviewPage() {
             <span style={{ marginLeft: "auto", fontSize: 11, color: "#dc2626", fontWeight: 700 }}>⚠ 이 화면에서 신청·수정하면 실제 반영됩니다 — 보기 전용으로만!</span>
           </>) : <span style={{ fontSize: 13, color: "#64748b" }}>왼쪽에서 엄마를 선택하면 그 엄마의 포털 화면이 여기 나타나요</span>}
         </div>
+        {sel && (() => {
+          const feats = resolvePortalFeatures(sel);
+          const defs = defaultPortalFeatures(sel);
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: "#475569" }}>📱 앱 메뉴</span>
+              {PORTAL_FEATURES.map(f => {
+                const on = feats[f.key];
+                const isDefault = feats[f.key] === defs[f.key];
+                return (
+                  <button key={f.key} onClick={() => toggleFeat(f.key, f.label)} title={f.desc + (isDefault ? " (기본값)" : " (수동 조정됨)")}
+                    style={{ padding: "4px 10px", borderRadius: 8, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                      border: on ? "1px solid #16a34a" : "1px solid #e2e8f0",
+                      background: on ? "#dcfce7" : "#fff", color: on ? "#166534" : "#94a3b8" }}>
+                    {on ? "✓ " : ""}{f.label}{!isDefault && <span style={{ marginLeft: 3, fontSize: 9 }}>✎</span>}
+                  </button>
+                );
+              })}
+              <span style={{ fontSize: 10.5, color: "#94a3b8" }}>클릭 → 확인 → 앱에 즉시 반영</span>
+            </div>
+          );
+        })()}
         <div style={{ flex: 1, overflow: "hidden", display: "flex", justifyContent: "center", background: mobile ? "#e2e8f0" : "#fff", padding: mobile && sel ? "14px 0" : 0 }}>
           {sel && (
             <iframe key={frameKey} src={`/portal/dashboard?admin_view=${sel.id}&t=${frameKey}`}
