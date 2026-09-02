@@ -458,9 +458,10 @@ export default function HomePage() {
     <a href="/admin/hub">관리페이지 →</a>
   ) : supaUser ? (
     <a href="/portal/dashboard">마이페이지 →</a>
-  ) : (
+  ) : (<>
+    <a href="/login" style={{fontWeight:700,color:"#1a6fc4"}}>🔑 로그인 (마이페이지) →</a>
     <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
-  )}
+  </>)}
   <div style={{borderTop:"1px solid #e2e8f0",marginTop:8,paddingTop:8}}>
     {adminInfo ? (<>
       <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {adminInfo.name}님</span>
