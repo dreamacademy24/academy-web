@@ -319,10 +319,10 @@ function Inner() {
         <>
           {/* ── Tabs ── */}
           <div className="tabs">
+            <button className={`tb ${tab === "open" ? "on" : ""}`} onClick={() => setTab("open")}>📥 Requests Inbox {openStudents.length > 0 && <span className="cnt" style={{ background: "#f59e0b", color: "#fff" }}>{openStudents.length}</span>}</button>
             <button className={`tb ${tab === "today" ? "on" : ""}`} onClick={() => setTab("today")}>📅 Today {todaySessions.length > 0 && <span className="cnt">{doneCnt}/{todaySessions.length}</span>}</button>
-            <button className={`tb ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>👧 My Students <span className="cnt">{enrollments.length}</span></button>
-            <button className={`tb ${tab === "open" ? "on" : ""}`} onClick={() => setTab("open")}>✋ Open Students {openStudents.length > 0 && <span className="cnt" style={{ background: "#f59e0b", color: "#fff" }}>{openStudents.length}</span>}</button>
-            <button className={`tb ${tab === "schedule" ? "on" : ""}`} onClick={() => setTab("schedule")}>🗓 My Schedule</button>
+            <button className={`tb ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>🎓 My Classes <span className="cnt">{enrollments.length}</span></button>
+            <button className={`tb ${tab === "schedule" ? "on" : ""}`} onClick={() => setTab("schedule")}>🗓 Weekly View</button>
             <button className={`tb ${tab === "requests" ? "on" : ""}`} onClick={() => setTab("requests")}>🔔 Change Requests {changeReqs.length > 0 && <span className="cnt" style={{ background: "#dc2626", color: "#fff" }}>{changeReqs.length}</span>}</button>
           </div>
 
@@ -449,7 +449,7 @@ function Inner() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 900 }}>
                   <thead>
                     <tr style={{ color: "#6b7c93", fontSize: 12, textAlign: "left" }}>
-                      {["Student", "Level", "Days", "Time (PH)", "Period", "Sessions", "Available Teachers", "Action"].map(h => (
+                      {["Date", "Student", "Age", "Level", "Days", "Time (PH)", "Period", "Sessions", "Available Teachers", "Status", "Action"].map(h => (
                         <th key={h} style={{ padding: "10px 14px", borderBottom: "1px solid #eef2f7", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
@@ -461,9 +461,11 @@ function Inner() {
                       const meBusy = av && tutor && !av.meFree;
                       return (
                         <tr key={e.id} style={{ borderBottom: "1px solid #f5f7fa" }}>
+                          <td style={{ padding: "11px 14px", whiteSpace: "nowrap", color: "#94a3b8", fontSize: 12 }}>{(e as any).created_at ? String((e as any).created_at).slice(5, 10).replace("-", "/") : "-"}</td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
                             <b>{e.student_name_en || e.student_name}</b> <span className="tnkr">{e.student_name_en ? e.student_name : ""}</span>
                           </td>
+                          <td style={{ padding: "11px 14px", whiteSpace: "nowrap", textAlign: "center" }}>{(() => { const b = String((e as any).student_birth_year || "").match(/(20\d{2})/); return b ? (new Date().getFullYear() - Number(b[1])) : "-"; })()}</td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
                             <select value={e.level || ""} onChange={async ev => {
                               const v = ev.target.value || null;
@@ -485,11 +487,14 @@ function Inner() {
                             {meBusy && <div style={{ color: "#dc2626", fontWeight: 700 }}>⚠ overlaps your class</div>}
                           </td>
                           <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
+                            <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>Pending</span>
+                          </td>
+                          <td style={{ padding: "11px 14px", whiteSpace: "nowrap" }}>
                             <button className="ab" disabled={claiming === e.id} onClick={() => {
                               if (meBusy && !confirm("⚠ This overlaps your existing class time. Take anyway?")) return;
                               claimStudent(e);
                             }}
-                              style={{ background: meBusy ? "#94a3b8" : "#f59e0b", color: "#fff", border: "none", fontWeight: 800, padding: "8px 14px" }}>
+                              style={{ background: meBusy ? "#94a3b8" : "#16a34a", color: "#fff", border: "none", fontWeight: 800, padding: "8px 16px", borderRadius: 8 }}>
                               {claiming === e.id ? "Taking…" : "✋ Take"}
                             </button>
                           </td>
@@ -623,9 +628,9 @@ function Css() {
     .hd-s{font-size:12.5px;color:#94a3b8;margin-top:2px}
     .hub{font-size:13px;font-weight:700;color:#475569;text-decoration:none;border:1px solid #e2e8f0;background:#fff;border-radius:9px;padding:8px 13px}
     .sel{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
-    .tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
-    .tb{flex:0 0 auto;padding:10px 18px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569}
-    .tb.on{background:#1a6fc4;border-color:#1a6fc4;color:#fff}
+    .tabs{display:flex;gap:0;margin-bottom:16px;overflow-x:auto;background:#fff;border:1px solid #e8ecf3;border-radius:12px;padding:5px}
+    .tb{flex:1 1 0;min-width:130px;padding:11px 10px;border-radius:9px;border:none;background:transparent;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;color:#475569;white-space:nowrap;text-align:center}
+    .tb.on{background:#4956e3;color:#fff}
     .cnt{font-size:11px;background:rgba(0,0,0,0.08);border-radius:99px;padding:1px 7px;margin-left:5px}
     .tb.on .cnt{background:rgba(255,255,255,0.25)}
     .chip{font-size:11px;font-weight:800;border-radius:7px;padding:2px 8px;white-space:nowrap}
