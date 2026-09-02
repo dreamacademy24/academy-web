@@ -1,4 +1,5 @@
 "use client";
+import { getTutorColor } from "@/lib/tutorColors";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -105,10 +106,23 @@ function PeriodCell({ e }: { e: Enrollment }) {
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets">("targets");
+  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets" | "weekly">("targets");
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
+  const [wkOffset, setWkOffset] = useState(0);
+  const [wkSessions, setWkSessions] = useState<any[]>([]);
+  const [wkLoading, setWkLoading] = useState(false);
+  useEffect(() => {
+    if (tab !== "weekly") return;
+    const now = new Date(); const dow = (now.getDay() + 6) % 7; // 월=0
+    const mon = new Date(now); mon.setDate(now.getDate() - dow + wkOffset * 7);
+    const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+    setWkLoading(true);
+    fetch(`/api/online-class/sessions?start=${f(mon)}&end=${f(sat)}`).then(r => r.ok ? r.json() : { sessions: [] })
+      .then((d: any) => setWkSessions(d.sessions || [])).catch(() => {}).finally(() => setWkLoading(false));
+  }, [tab, wkOffset]);
   const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
   const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
   useEffect(() => { fetch("/api/online-class/confirm").then(r => r.ok ? r.json() : {}).then((d: any) => { setConfirmedIds(new Set<string>(d.confirm || d.ids || [])); setClosedIds(new Set<string>(d.close || [])); }).catch(() => {}); }, []);
@@ -596,7 +610,7 @@ export default function OnlineClassPage() {
             </span>
           )}
         </button>
-        <button className="tab" onClick={() => router.push("/admin/online-class-attendance")}>📅 주간 스케줄</button>
+        <button className={`tab${tab === "weekly" ? " ac" : ""}`} onClick={() => setTab("weekly")}>📅 주간 스케줄</button>
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
@@ -792,6 +806,60 @@ export default function OnlineClassPage() {
         </div>
         )}
       </>}
+
+      {/* ═══ TAB: 주간 스케줄 (한국어 자체 화면) ═══ */}
+      {tab === "weekly" && (() => {
+        const now = new Date(); const dow = (now.getDay() + 6) % 7;
+        const mon = new Date(now); mon.setDate(now.getDate() - dow + wkOffset * 7);
+        const f = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const days = Array.from({ length: 6 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d; });
+        const todayStr2 = f(new Date());
+        const byDate: Record<string, any[]> = {};
+        wkSessions.forEach(x => { const k = x.scheduled_date; (byDate[k] = byDate[k] || []).push(x); });
+        Object.values(byDate).forEach(arr => arr.sort((a, b) => (a.scheduled_time_kr || "").localeCompare(b.scheduled_time_kr || "")));
+        const DN = ["월", "화", "수", "목", "금", "토"];
+        return (
+          <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 14, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>📅 주간 스케줄 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{f(days[0]).slice(5).replace("-", "/")} ~ {f(days[5]).slice(5).replace("-", "/")}</span></div>
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                <button onClick={() => setWkOffset(o => o - 1)} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>◀ 이전 주</button>
+                <button onClick={() => setWkOffset(0)} style={{ border: "1px solid #93c5fd", background: wkOffset === 0 ? "#1a6fc4" : "#fff", color: wkOffset === 0 ? "#fff" : "#1a6fc4", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>이번 주</button>
+                <button onClick={() => setWkOffset(o => o + 1)} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>다음 주 ▶</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              {tutors.map(t => <span key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 700, color: "#475569", border: "1px solid #e2e8f0", borderRadius: 8, padding: "3px 9px" }}><span style={{ width: 9, height: 9, borderRadius: 5, background: getTutorColor(t.name_display) }} />{t.name_display}</span>)}
+            </div>
+            {wkLoading ? <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>불러오는 중...</div> : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6,minmax(0,1fr))", gap: 8 }}>
+                {days.map((d, i) => {
+                  const k = f(d); const list = byDate[k] || [];
+                  const isToday = k === todayStr2;
+                  return (
+                    <div key={k} style={{ border: isToday ? "2px solid #1a6fc4" : "1px solid #eef2f7", borderRadius: 12, background: isToday ? "#f0f7ff" : "#fafbfd", minHeight: 200, padding: 8 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 800, color: isToday ? "#1a6fc4" : "#475569", marginBottom: 8, textAlign: "center" }}>{DN[i]} <span style={{ fontWeight: 600, color: "#94a3b8" }}>{k.slice(5).replace("-", "/")}</span>{list.length > 0 && <span style={{ marginLeft: 4, fontSize: 10.5, color: "#1a6fc4" }}>({list.length})</span>}</div>
+                      {list.map(x => {
+                        const col = getTutorColor(x.tutor?.name_display);
+                        const done = x.status === "attended"; const bad = x.status === "cancelled" || x.status === "no_show" || x.status === "absent";
+                        return (
+                          <div key={x.id} onClick={() => x.enrollment?.id && router.push(`/admin/online-class/${x.enrollment.id}?focus=attendance`)}
+                            style={{ background: "#fff", borderLeft: `4px solid ${col}`, border: "1px solid #eef2f7", borderLeftWidth: 4, borderLeftColor: col, borderRadius: 8, padding: "6px 8px", marginBottom: 6, cursor: "pointer", opacity: bad ? 0.55 : 1 }}>
+                            <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1e293b" }}>{x.scheduled_time_kr || "-"} <span style={{ fontWeight: 600, color: "#94a3b8" }}>(PH {x.scheduled_time_ph || "-"})</span></div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#334155", textDecoration: bad ? "line-through" : "none" }}>{x.enrollment?.student_name || "?"}{done ? " ✓" : ""}</div>
+                            <div style={{ fontSize: 10.5, color: col, fontWeight: 700 }}>{x.tutor?.name_display || "미배정"}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 10 }}>카드를 클릭하면 그 학생의 출석부로 이동해요 · 취소/결석은 흐리게 표시</div>
+          </div>
+        );
+      })()}
 
       {/* ═══ TAB: 대상 목록 (올해 다녀간 아이 전체 — 확인하며 등록/제외) ═══ */}
       {tab === "targets" && (() => {

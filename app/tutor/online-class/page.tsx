@@ -6,18 +6,6 @@ import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import StudentInvoiceCalendar from "@/components/StudentInvoiceCalendar";
 
 // Admin can view other teachers' dashboards (?tutor= / select)
-const TUTOR_ACCOUNTS: { id: string; label: string }[] = [
-  { id: "admin-angelica", label: "T.Angelica" },
-  { id: "admin-jean", label: "T.Jean" },
-  { id: "admin-ann", label: "T.Ann" },
-  { id: "admin-florefe", label: "T.Florefe" },
-  { id: "admin-jenny", label: "T.Jenny" },
-  { id: "admin-nick", label: "T.Nick" },
-  { id: "admin-carla", label: "T.Carla" },
-  { id: "admin-angel", label: "T.Angel" },
-  { id: "admin-amelyn", label: "T.Amelyn" },
-  { id: "admin-cristel", label: "T.Cristel" },
-];
 
 interface Tutor { id: string; staff_user_id: string | null; name_display: string; name_en: string | null; level?: string | null }
 interface Enrollment {
@@ -80,6 +68,29 @@ function Inner() {
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
   const [expandStu, setExpandStu] = useState<string | null>(null);
   const [pickSes, setPickSes] = useState<{ enrId: string; ses: Ses } | null>(null);
+  const [allTutors, setAllTutors] = useState<Tutor[]>([]);
+  const [homeStats, setHomeStats] = useState<Record<string, { today: number; students: number }>>({});
+  useEffect(() => {
+    fetch("/api/online-class/tutors").then(r => r.ok ? r.json() : { tutors: [] }).then((d: any) => setAllTutors(d.tutors || [])).catch(() => {});
+  }, []);
+  useEffect(() => {
+    // 티쳐 홈(매칭 없음/어드민): 티쳐별 오늘 수업·수강생 수
+    if (tutor) return;
+    (async () => {
+      try {
+        const [enR, seR] = await Promise.all([
+          fetch("/api/online-class/enrollments"),
+          fetch(`/api/online-class/sessions?date=${fmtD(new Date())}`),
+        ]);
+        const en = enR.ok ? await enR.json() : { enrollments: [] };
+        const se = seR.ok ? await seR.json() : { sessions: [] };
+        const m: Record<string, { today: number; students: number }> = {};
+        (en.enrollments || []).forEach((e: any) => { if (e.tutor_id && e.status === "active") { m[e.tutor_id] = m[e.tutor_id] || { today: 0, students: 0 }; m[e.tutor_id].students++; } });
+        (se.sessions || []).forEach((x: any) => { if (x.tutor_id) { m[x.tutor_id] = m[x.tutor_id] || { today: 0, students: 0 }; m[x.tutor_id].today++; } });
+        setHomeStats(m);
+      } catch { /* ignore */ }
+    })();
+  }, [tutor]);
   const [stuSessions, setStuSessions] = useState<Record<string, Ses[]>>({});
   const [notifs, setNotifs] = useState<Array<{ id: string; message: string; is_read: boolean; created_at: string }>>([]);
   const [notifDismissed, setNotifDismissed] = useState(false);
@@ -272,13 +283,39 @@ function Inner() {
         {isAdminViewer && (
           <select className="sel" value={searchParams.get("tutor") || ""} onChange={e => { window.location.href = `/tutor/online-class?tutor=${e.target.value}`; }}>
             <option value="">— view as teacher —</option>
-            {TUTOR_ACCOUNTS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            {allTutors.map(t => <option key={t.id} value={t.staff_user_id || ""}>{t.name_display}</option>)}
           </select>
         )}
         <a href="/admineng/hub" className="hub">← Hub</a>
       </div>
 
-      {!tutor ? <div className="empty">No teacher account matched. Please contact the manager.</div> : (
+      {!tutor ? (
+        <div>
+          <div style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", borderRadius: 16, padding: "22px 26px", color: "#fff", marginBottom: 18 }}>
+            <div style={{ fontSize: 20, fontWeight: 800 }}>🏠 Teacher Home</div>
+            <div style={{ fontSize: 13, opacity: 0.85, marginTop: 4 }}>{isAdminViewer ? "Pick a teacher card to view their classes." : "Your account is not linked to a teacher yet — please contact the manager."}</div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 }}>
+            {allTutors.map(t => {
+              const st = homeStats[t.id] || { today: 0, students: 0 };
+              const lv = t.level && LV[t.level];
+              return (
+                <div key={t.id} onClick={() => { if (isAdminViewer) window.location.href = `/tutor/online-class?tutor=${t.staff_user_id}`; }}
+                  style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 14, padding: "16px 18px", cursor: isAdminViewer ? "pointer" : "default" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800 }}>{t.name_display}</div>
+                    {lv && <span className="chip" style={{ background: lv.bg, color: lv.color }}>{lv.label}</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
+                    <div><div style={{ fontSize: 20, fontWeight: 800, color: "#1a6fc4" }}>{st.today}</div><div style={{ fontSize: 11, color: "#94a3b8" }}>Today</div></div>
+                    <div><div style={{ fontSize: 20, fontWeight: 800, color: "#059669" }}>{st.students}</div><div style={{ fontSize: 11, color: "#94a3b8" }}>Students</div></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
         <>
           {/* ── Tabs ── */}
           <div className="tabs">
