@@ -4953,9 +4953,14 @@ function renderTeacherSharedTasks(boxId){
       var asg=(t.assignees||[]).map(function(id){var pp=getP(id);return pp?'<span style="font-size:10px;font-weight:700;color:#fff;background:'+pp.color+';border-radius:999px;padding:1px 7px">'+esc(pp.name)+'</span>':'';}).join(' ');
       var stC=t.done?'#16a34a':(t.status==='doing'?'#2563eb':'#94a3b8');
       var stL=t.done?'완료':(t.status==='doing'?'진행중':'대기');
+      _ttData[t.id]=t.title||'';
       h+='<div style="display:flex;align-items:center;gap:9px;padding:9px 6px;border-bottom:1px solid #f4f6fb">'+
         '<input type="checkbox" '+(t.done?'checked':'')+' onchange="toggleTeacherTask(\''+t.id+'\',this.checked)" style="width:17px;height:17px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">'+
-        '<span style="flex:1;min-width:0;font-size:13.5px;'+(t.done?'text-decoration:line-through;color:#94a3b8':'color:#1f2937')+'">'+esc(t.title||'')+'</span>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:13.5px;'+(t.done?'text-decoration:line-through;color:#94a3b8':'color:#1f2937')+'">'+esc(t.title||'')+'</div>'+
+          '<div id="ttTr_'+t.id+'" style="font-size:12px;color:#0e7490;margin-top:2px">'+(_ttTr[t.id]?('🇰🇷 '+esc(_ttTr[t.id])):'')+'</div>'+
+        '</div>'+
+        '<button onclick="transTeacherTask(\''+t.id+'\')" title="한국어로 번역" style="border:1px solid #e2e8f0;background:#fff;border-radius:7px;padding:2px 7px;font-size:11px;cursor:pointer;flex-shrink:0">🌐</button>'+
         asg+
         '<span style="font-size:10px;font-weight:700;color:'+stC+';flex-shrink:0">'+stL+'</span>'+
         (t.due?'<span style="font-size:10px;color:#94a3b8;flex-shrink:0">📅 '+esc(t.due)+'</span>':'')+
@@ -4968,6 +4973,17 @@ function toggleTeacherTask(id,on){
   sbPatch('teacher_tasks','id=eq.'+id,{done:on,status:on?'done':'doing',updated_at:new Date().toISOString()})
     .then(function(){renderTeacherSharedTasks('teacherSharedBox');})
     .catch(function(e){alert('저장 실패: '+e);});
+}
+var _ttData={}, _ttTr={};
+function transTeacherTask(id){
+  var el=document.getElementById('ttTr_'+id);
+  if(_ttTr[id]){ if(el)el.textContent='🇰🇷 '+_ttTr[id]; return; }
+  var title=_ttData[id]||''; if(!title){return;}
+  if(el)el.textContent='번역 중…';
+  fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:title})})
+    .then(function(r){return r.ok?r.json():{};})
+    .then(function(d){ _ttTr[id]=d.translated||''; var e=document.getElementById('ttTr_'+id); if(e)e.textContent=_ttTr[id]?('🇰🇷 '+_ttTr[id]):''; })
+    .catch(function(){ var e=document.getElementById('ttTr_'+id); if(e)e.textContent=''; });
 }
 // 🚨 예약 운영 현황 — 자동 파생(룸배정/학생영문명), 체크인 임박순, 행별 숨김
 function _daysBetween(a,b){var d1=new Date(a+'T00:00:00'),d2=new Date(b+'T00:00:00');return Math.round((d2-d1)/86400000);}
