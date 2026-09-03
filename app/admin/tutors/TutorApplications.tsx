@@ -217,6 +217,46 @@ export default function TutorApplications() {
   // 확정 처리 공통 함수 — tutor_lessons + tutor_lesson_sessions 생성.
   // 단가=하루치(기본×타임), 회차=실제 수업 일수, 총액=단가×일수 로 저장.
   // 모달 저장(saveAdmin)·목록 "확정" 버튼이 동일하게 호출. 실패 시 throw.
+  // 방문 튜터 룸 충돌 검사 — 같은 룸 + 요일 겹침 + 시간 겹침 + 기간 겹침이면 충돌 메시지 반환(없으면 null)
+  async function checkRoomConflict(app: TutorApp): Promise<string | null> {
+    const myRoom = (app.house_number || "").trim().toUpperCase();
+    if (!myRoom) return null;
+    const dayMap: Record<string, number> = { sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6, "일":0,"월":1,"화":2,"수":3,"목":4,"금":5,"토":6 };
+    const daySet = (arr: unknown): Set<number> => new Set(((arr as string[])||[]).map(d=>dayMap[String(d).trim()]).filter((n):n is number=>n!==undefined));
+    const trange = (t: string | null | undefined): [number, number] | null => {
+      if (!t) return null;
+      const m = String(t).match(/(\d{1,2}):(\d{2})/g);
+      if (!m) return null;
+      const toMin = (x: string) => { const [h, mi] = x.split(":").map(Number); return h*60+mi; };
+      const start = toMin(m[0]); const end = m[1] ? toMin(m[1]) : start + 50;
+      return [start, end];
+    };
+    const myDays = daySet(app.class_days);
+    const myT = trange(app.class_time);
+    if (!myDays.size || !myT || !app.start_date || !app.end_date) return null;
+    const { data: lessons } = await supabase.from("tutor_lessons").select("house_or_reserver,class_days,class_time,start_date,end_date,tutor_id,application_id,student_names").eq("status","active");
+    const { data: bks } = await supabase.from("bookings").select("booker_name,house_no");
+    const nameRoom = new Map<string, string>();
+    for (const b of (bks||[]) as { booker_name: string; house_no: string }[]) {
+      const nm = (b.booker_name||"").trim(); const rm = (b.house_no||"").trim().toUpperCase();
+      if (nm && rm) nameRoom.set(nm, rm);
+    }
+    for (const l of (lessons||[]) as Record<string, unknown>[]) {
+      if (l.application_id === app.id) continue;
+      const lRoom = (nameRoom.get(String(l.house_or_reserver||"").trim())||"").toUpperCase();
+      if (!lRoom || lRoom !== myRoom) continue;
+      const lDays = daySet(l.class_days);
+      let hit = false; for (const d of myDays) if (lDays.has(d)) { hit = true; break; }
+      if (!hit) continue;
+      const lT = trange(l.class_time as string); if (!lT) continue;
+      if (!(myT[0] < lT[1] && lT[0] < myT[1])) continue;
+      if (!(app.start_date <= String(l.end_date) && String(l.start_date) <= app.end_date)) continue;
+      const tName = tutors.find(t => t.id === l.tutor_id)?.name || "미배정";
+      return `🏠 ${myRoom} — 같은 시간대에 이미 [${l.student_names} / ${tName}] 수업이 있어요 (${l.class_time || ""})`;
+    }
+    return null;
+  }
+
   async function createLessonForApp(
     app: TutorApp,
     opts?: { assignedTutorId?: string | null; totalSessions?: number | null; totalAmount?: number | null; adminMemo?: string }
@@ -228,6 +268,14 @@ export default function TutorApplications() {
       .from("tutor_lessons").select("id").eq("application_id", app.id).maybeSingle();
     if (exErr) console.error("기존 수업 조회 실패:", exErr);
     if (existing) return "확정 저장 (수업은 이미 생성됨)";
+
+    // ── 방문 튜터 룸 충돌 체크: 같은 집(룸) + 요일 + 시간대 + 기간이 겹치면 다른 티쳐 방문 불가 ──
+    const _conflict = await checkRoomConflict(app);
+    if (_conflict) {
+      if (!window.confirm(`⚠️ 같은 집 동시간 충돌\n\n${_conflict}\n\n한 집에 같은 시간 다른 티쳐 방문은 불가합니다. 그래도 확정할까요?`)) {
+        throw new Error("확정 취소 — 룸/시간 충돌");
+      }
+    }
 
     const dayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
     const targetDays = (app.class_days || []).map(d => dayMap[d]).filter(n => n !== undefined);
