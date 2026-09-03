@@ -45,15 +45,26 @@ export default function TeacherWorkspace() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    let raw = "";
-    try { raw = localStorage.getItem("teacherSession") || ""; } catch { /* */ }
-    if (!raw) { router.replace("/admineng/hub"); return; }
-    try {
-      const s = JSON.parse(raw);
-      setMe({ username: s.username, name: s.name || s.username, color: s.color, initial: s.initial });
-    } catch { router.replace("/admineng/hub"); return; }
-    setReady(true);
-  }, [router]);
+    (async () => {
+      // 1) 현지직원(티쳐) 세션
+      try {
+        const raw = localStorage.getItem("teacherSession");
+        if (raw) { const s = JSON.parse(raw); setMe({ username: s.username, name: s.name || s.username, color: s.color, initial: s.initial }); setReady(true); return; }
+      } catch { /* */ }
+      // 2) 한국 어드민 세션 (같은 회사 계정 — 그대로 열람/편집)
+      try {
+        const { getAdminInfo } = await import("@/lib/adminAuth");
+        const inf = getAdminInfo();
+        if (inf && (inf.staffId || inf.name)) {
+          const uid = (inf.staffId || "").replace(/^admin-/, "");
+          setMe({ username: uid || "admin", name: inf.name || uid || "Admin" });
+          setReady(true); return;
+        }
+      } catch { /* */ }
+      // 3) 로그인 없이도 열람 허용 (읽기 전용)
+      setMe(null); setReady(true);
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("project_nodes").select("*").order("sort_idx", { ascending: true });
@@ -126,7 +137,7 @@ export default function TeacherWorkspace() {
     if (!cmts[n.id]) loadCmts(n.id);
   }
 
-  if (!ready || !me) return null;
+  if (!ready) return null;
 
   const childrenOf = (pid: string | null) =>
     nodes.filter(n => n.parent_id === pid && visible.has(n.id)).sort((a, b) => (a.sort_idx || 0) - (b.sort_idx || 0));
@@ -175,7 +186,7 @@ export default function TeacherWorkspace() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <button onClick={() => router.push("/admineng/hub")} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 9, padding: "6px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>← Hub</button>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: "#0f172a" }}>💼 Workspace</h1>
-          <span style={{ marginLeft: "auto", fontSize: 13, color: "#64748b" }}>Hi, {me.name}</span>
+          <span style={{ marginLeft: "auto", fontSize: 13, color: "#64748b" }}>{me ? "Hi, " + me.name : "Viewing (read-only)"}</span>
         </div>
         <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 14px" }}>Projects and tasks shared by the Korean team. Check off what you finish and leave comments.</p>
 
