@@ -37,7 +37,7 @@ export const INCLUSIONS_DH_JP = INCLUSIONS_JP;
 
 export const INCLUSIONS_C9: PkgItem[] = [
   { icon: "🏨", title: "큐브나인 객실", desc: "조식 포함 / 인피티니 풀 및 시설 자유 이용" },
-  { icon: "🍽️", title: "식사 바우처 포함", desc: "1주 기준 10만원 / 더 나인 레스토랑" },
+  { icon: "🍱", title: "평일 석식 도시락 제공", desc: "한국인 조리사님 프리미엄 도시락 / 저녁 17:40 배달" },
   { icon: "🎓", title: "드림아카데미 정규 수업", desc: "+ 에프터 스쿨 + 주말 체험" },
   { icon: "🚐", title: "공항 픽업 & 드랍", desc: "+ 주말 투어 셔틀" },
   { icon: "💻", title: "무료 화상영어", desc: "출국 전 / 귀국 후 (등록기간만큼)" },
