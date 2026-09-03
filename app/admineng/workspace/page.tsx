@@ -36,13 +36,16 @@ export default function TeacherWorkspace() {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [view, setView] = useState<"home" | "projects">("home");
+  const [view, setView] = useState<"home" | "projects" | "notices">("home");
   const [selProj, setSelProj] = useState<string | null>(null);
   const [selNode, setSelNode] = useState<string | null>(null);
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [cmts, setCmts] = useState<Record<string, Cmt[]>>({});
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [noticeEn, setNoticeEn] = useState<Record<string, { t?: string; b?: string }>>({});
+  const [openNotice, setOpenNotice] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -71,6 +74,26 @@ export default function TeacherWorkspace() {
     setNodes((data as Node[]) || []);
   }, []);
   useEffect(() => { if (ready) load(); }, [ready, load]);
+
+  const trKo2En = useCallback(async (text: string) => {
+    if (!text || !text.trim()) return "";
+    try {
+      const r = await fetch("/api/translate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, dir: "ko2en" }) });
+      if (!r.ok) return "";
+      const d = await r.json();
+      return d.translated || "";
+    } catch { return ""; }
+  }, []);
+  const loadNotices = useCallback(async () => {
+    const { data } = await supabase.from("staff_notices").select("*").order("date", { ascending: false });
+    const arr = data || [];
+    setNotices(arr);
+    for (const n of arr) {
+      const t = (n.title || n.text || "").slice(0, 140);
+      if (t) trKo2En(t).then(en => { if (en) setNoticeEn(prev => ({ ...prev, [n.id]: { ...(prev[n.id] || {}), t: en } })); });
+    }
+  }, [trKo2En]);
+  useEffect(() => { if (ready && view === "notices" && notices.length === 0) loadNotices(); }, [ready, view, notices.length, loadNotices]);
 
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
   const myU = me?.username || "___";
@@ -191,7 +214,7 @@ export default function TeacherWorkspace() {
         <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 14px" }}>Projects and tasks shared by the Korean team. Check off what you finish and leave comments.</p>
 
         <div style={{ display: "inline-flex", background: "#eef2f7", borderRadius: 11, padding: 3, marginBottom: 16 }}>
-          {([["home", "🏠 Home"], ["projects", "📁 Projects"]] as const).map(([k, label]) => (
+          {([["home", "🏠 Home"], ["projects", "📁 Projects"], ["notices", "💬 Notices"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setView(k)} style={{ border: "none", background: view === k ? "#fff" : "transparent", color: view === k ? "#0f172a" : "#64748b", borderRadius: 9, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: view === k ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>{label}</button>
           ))}
         </div>
@@ -284,6 +307,36 @@ export default function TeacherWorkspace() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {view === "notices" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {notices.map(n => {
+              const en = noticeEn[n.id] || {};
+              const open = openNotice === n.id;
+              return (
+                <div key={n.id} style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: "12px 14px" }}>
+                  <div onClick={() => { const willOpen = !open; setOpenNotice(willOpen ? n.id : null); if (willOpen && !en.b) { trKo2En(n.text || "").then(bx => setNoticeEn(prev => ({ ...prev, [n.id]: { ...(prev[n.id] || {}), b: bx } }))); } }}
+                    style={{ cursor: "pointer", display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0 }}>{n.date}</span>
+                    {n.require_read && <span style={{ fontSize: 9, fontWeight: 800, color: "#dc2626", background: "#fef2f2", borderRadius: 6, padding: "1px 6px", flexShrink: 0 }}>MUST READ</span>}
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", flex: 1, minWidth: 0 }}>{en.t || n.title || (n.text || "").slice(0, 40)}</span>
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{open ? "▲" : "▼"}</span>
+                  </div>
+                  {open && (
+                    <div style={{ marginTop: 10, fontSize: 13, color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                      {en.b || "Translating…"}
+                      <details style={{ marginTop: 8 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 11, color: "#94a3b8" }}>Show original (한국어)</summary>
+                        <div style={{ marginTop: 6, color: "#64748b", whiteSpace: "pre-wrap" }}>{n.text}</div>
+                      </details>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {notices.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>No notices.</div>}
           </div>
         )}
       </div>
