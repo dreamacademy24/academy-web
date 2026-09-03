@@ -38,7 +38,7 @@ export default function TeacherWorkspace() {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [view, setView] = useState<"home" | "projects" | "notices">("home");
+  const [view, setView] = useState<"home" | "projects" | "notices" | "tasks">("home");
   const [selProj, setSelProj] = useState<string | null>(null);
   const [selNode, setSelNode] = useState<string | null>(null);
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
@@ -53,6 +53,14 @@ export default function TeacherWorkspace() {
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [newProj, setNewProj] = useState(false);
   const [npName, setNpName] = useState("");
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [selTask, setSelTask] = useState<string | null>(null);
+  const [taskFilter, setTaskFilter] = useState<"all" | "mine">("all");
+  const [newTask, setNewTask] = useState(false);
+  const [ntTitle, setNtTitle] = useState("");
+  const [taskAssignFor, setTaskAssignFor] = useState<string | null>(null);
+  const [tcmts, setTcmts] = useState<Record<string, any[]>>({});
+  const [tdraft, setTdraft] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -101,6 +109,49 @@ export default function TeacherWorkspace() {
     }
   }, [trKo2En]);
   useEffect(() => { if (ready && view === "notices" && notices.length === 0) loadNotices(); }, [ready, view, notices.length, loadNotices]);
+
+  const loadTasks = useCallback(async () => {
+    const { data } = await supabase.from("teacher_tasks").select("*").order("sort_idx", { ascending: false }).order("created_at", { ascending: false });
+    setTasks(data || []);
+  }, []);
+  useEffect(() => { if (ready) loadTasks(); }, [ready, loadTasks]);
+
+  async function createTask() {
+    const t = ntTitle.trim(); if (!t || !me) return;
+    const id = crypto.randomUUID(); const now = new Date().toISOString();
+    await supabase.from("teacher_tasks").insert({ id, title: t, body: "", assignees: [], due: null, status: "todo", done: false, team_shared: false, created_by: me.username, created_at: now, updated_at: now, sort_idx: Date.now() % 1000000 });
+    setNtTitle(""); setNewTask(false); await loadTasks(); setSelTask(id);
+  }
+  async function saveTaskField(id: string, field: string, value: any) {
+    setTasks(prev => prev.map(x => x.id === id ? { ...x, [field]: value } : x));
+    await supabase.from("teacher_tasks").update({ [field]: value, updated_at: new Date().toISOString() }).eq("id", id);
+  }
+  async function toggleTaskDone(t: any) {
+    const nd = !t.done;
+    setTasks(prev => prev.map(x => x.id === t.id ? { ...x, done: nd, status: nd ? "done" : "doing" } : x));
+    await supabase.from("teacher_tasks").update({ done: nd, status: nd ? "done" : "doing", updated_at: new Date().toISOString() }).eq("id", t.id);
+  }
+  async function delTask(t: any) {
+    if (!confirm("Delete this task?")) return;
+    await supabase.from("teacher_tasks").delete().eq("id", t.id);
+    if (selTask === t.id) setSelTask(null);
+    await loadTasks();
+  }
+  async function saveTaskAssignees(id: string, sel: string[]) {
+    const hasKorean = sel.some(x => koreans.find(k => k.id === x));
+    setTasks(prev => prev.map(x => x.id === id ? { ...x, assignees: sel, team_shared: hasKorean } : x));
+    await supabase.from("teacher_tasks").update({ assignees: sel, team_shared: hasKorean, updated_at: new Date().toISOString() }).eq("id", id);
+  }
+  async function loadTcmts(taskId: string) {
+    const { data } = await supabase.from("teacher_task_comments").select("*").eq("task_id", taskId).order("ts", { ascending: true });
+    setTcmts(prev => ({ ...prev, [taskId]: data || [] }));
+  }
+  async function addTcmt(taskId: string) {
+    const t = tdraft.trim(); if (!t || !me) return;
+    const { error } = await supabase.from("teacher_task_comments").insert({ task_id: taskId, from_id: me.username, text: t, ts: new Date().toISOString() });
+    if (error) { alert("Failed: " + error.message); return; }
+    setTdraft(""); loadTcmts(taskId);
+  }
 
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
   const myU = me?.username || "___";
@@ -278,7 +329,7 @@ export default function TeacherWorkspace() {
         <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 14px" }}>Projects and tasks shared by the Korean team. Check off what you finish and leave comments.</p>
 
         <div style={{ display: "inline-flex", background: "#eef2f7", borderRadius: 11, padding: 3, marginBottom: 16 }}>
-          {([["home", "🏠 Home"], ["projects", "📁 Projects"], ["notices", "💬 Notices"]] as const).map(([k, label]) => (
+          {([["home", "🏠 Home"], ["projects", "📁 Projects"], ["tasks", "✅ Tasks"], ["notices", "💬 Notices"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setView(k)} style={{ border: "none", background: view === k ? "#fff" : "transparent", color: view === k ? "#0f172a" : "#64748b", borderRadius: 9, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: view === k ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>{label}</button>
           ))}
         </div>
@@ -445,6 +496,79 @@ export default function TeacherWorkspace() {
             {notices.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>No notices.</div>}
           </div>
         )}
+
+        {view === "tasks" && (
+          <div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <div style={{ display: "inline-flex", background: "#eef2f7", borderRadius: 9, padding: 3 }}>
+                {([["all", "All (" + tasks.length + ")"], ["mine", "Mine (" + tasks.filter(t => (t.assignees || []).includes(myU) && !t.done).length + ")"]] as const).map(([k, label]) => (
+                  <button key={k} onClick={() => setTaskFilter(k)} style={{ border: "none", background: taskFilter === k ? "#fff" : "transparent", color: taskFilter === k ? "#0f172a" : "#64748b", borderRadius: 7, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>
+                ))}
+              </div>
+              {!newTask
+                ? <button onClick={() => setNewTask(true)} style={{ marginLeft: "auto", border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 9, padding: "7px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ New Task</button>
+                : null}
+            </div>
+            {newTask && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 12, background: "#fff", border: "1px solid #67e8f9", borderRadius: 12, padding: 10 }}>
+                <input autoFocus value={ntTitle} onChange={e => setNtTitle(e.target.value)} placeholder="New task…" onKeyDown={e => { if (e.key === "Enter") createTask(); }} style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "inherit" }} />
+                <button onClick={createTask} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+                <button onClick={() => { setNewTask(false); setNtTitle(""); }} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              </div>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {tasks.filter(t => taskFilter === "all" ? true : (t.assignees || []).includes(myU)).sort((a, b) => Number(a.done) - Number(b.done)).map(t => {
+                const open = selTask === t.id;
+                const list = tcmts[t.id] || [];
+                return (
+                  <div key={t.id} style={{ background: "#fff", border: "1px solid " + (t.done ? "#d1fae5" : "#e8ecf3"), borderRadius: 12, padding: "12px 14px", opacity: t.done ? 0.75 : 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <input type="checkbox" checked={t.done} onClick={e => e.stopPropagation()} onChange={() => toggleTaskDone(t)} style={{ width: 19, height: 19, accentColor: "#16a34a", cursor: "pointer", flexShrink: 0 }} />
+                      <div onClick={() => { const w = !open; setSelTask(w ? t.id : null); if (w && !tcmts[t.id]) loadTcmts(t.id); }} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", textDecoration: t.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: open ? "normal" : "nowrap" }}>{t.title}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginTop: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: STA_COLOR[t.status || "todo"], background: STA_COLOR[t.status || "todo"] + "1a", borderRadius: 6, padding: "1px 7px" }}>{STA[t.status || "todo"]}</span>
+                          {t.due && <span style={{ fontSize: 10, color: t.due < today && !t.done ? "#dc2626" : "#94a3b8" }}>📅 {t.due}</span>}
+                          {(t.assignees || []).map((id: string) => <span key={id} style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: personColor(id), borderRadius: 999, padding: "1px 7px" }}>{personName(id)}</span>)}
+                          {t.team_shared && <span style={{ fontSize: 9, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", borderRadius: 6, padding: "1px 6px" }}>↔ Korea</span>}
+                        </div>
+                      </div>
+                      <span onClick={() => { const w = !open; setSelTask(w ? t.id : null); if (w && !tcmts[t.id]) loadTcmts(t.id); }} style={{ fontSize: 12, color: "#94a3b8", cursor: "pointer" }}>{open ? "▲" : "▼"}</span>
+                    </div>
+                    {open && (
+                      <div style={{ borderTop: "1px solid #f1f5f9", marginTop: 10, paddingTop: 10 }}>
+                        <input value={t.title || ""} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, title: e.target.value } : x))} onBlur={e => saveTaskField(t.id, "title", e.target.value)} style={{ fontSize: 15, fontWeight: 700, width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "6px 8px", marginBottom: 8, fontFamily: "inherit" }} />
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+                          <select value={t.status || "todo"} onChange={e => saveTaskField(t.id, "status", e.target.value)} style={{ fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", borderRadius: 7, padding: "4px 8px", color: STA_COLOR[t.status || "todo"] }}>
+                            {["todo", "doing", "done"].map(k => <option key={k} value={k}>{STA[k]}</option>)}
+                          </select>
+                          <input type="date" value={t.due || ""} onChange={e => saveTaskField(t.id, "due", e.target.value || null)} style={{ fontSize: 12, border: "1px solid #e2e8f0", borderRadius: 7, padding: "4px 8px" }} />
+                          <button onClick={() => setTaskAssignFor(t.id)} style={{ border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 999, padding: "3px 11px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Assign</button>
+                        </div>
+                        <textarea value={t.body || ""} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, body: e.target.value } : x))} onBlur={e => saveTaskField(t.id, "body", e.target.value)} rows={3} placeholder="Details…" style={{ width: "100%", boxSizing: "border-box", fontSize: 13, color: "#334155", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontFamily: "inherit", lineHeight: 1.5 }} />
+                        <button onClick={() => delTask(t)} style={{ marginTop: 8, border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 8, padding: "4px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Delete</button>
+                        <div style={{ borderTop: "1px solid #f1f5f9", marginTop: 12, paddingTop: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>💬 Comments</div>
+                          {list.map((c: any) => (
+                            <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#0e7490", flexShrink: 0 }}>{personName(c.from_id)}</span>
+                              <span style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-wrap" }}>{c.text}</span>
+                            </div>
+                          ))}
+                          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                            <input value={tdraft} onChange={e => setTdraft(e.target.value)} placeholder="Write a comment…" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTcmt(t.id); } }} style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontFamily: "inherit" }} />
+                            <button onClick={() => addTcmt(t.id)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 8, padding: "7px 13px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Post</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {tasks.filter(t => taskFilter === "all" ? true : (t.assignees || []).includes(myU)).length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>No tasks yet. Create one with “+ New Task”.</div>}
+            </div>
+          </div>
+        )}
       </div>
 
       {assignFor && (() => {
@@ -470,6 +594,35 @@ export default function TeacherWorkspace() {
               </div>
               <div style={{ textAlign: "right", marginTop: 16 }}>
                 <button onClick={() => setAssignFor(null)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {taskAssignFor && (() => {
+        const t = tasks.find(x => x.id === taskAssignFor);
+        const cur = (t?.assignees || []);
+        const toggle = (id: string) => { const nx = cur.includes(id) ? cur.filter((x: string) => x !== id) : [...cur, id]; saveTaskAssignees(taskAssignFor, nx); };
+        return (
+          <div onClick={() => setTaskAssignFor(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "min(460px,94vw)", maxHeight: "80vh", overflowY: "auto", padding: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Assign people</div>
+              <div style={{ fontSize: 11, color: "#0e7490", fontWeight: 700, margin: "4px 0 6px" }}>🌏 Teachers</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {teachers.map(tt => { const on = cur.includes(tt.id); return (
+                  <button key={tt.id} onClick={() => toggle(tt.id)} style={{ border: "1px solid " + (on ? tt.color : "#e2e8f0"), background: on ? tt.color : "#fff", color: on ? "#fff" : "#334155", borderRadius: 999, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{tt.name}</button>
+                ); })}
+                {teachers.length === 0 && <span style={{ fontSize: 12, color: "#94a3b8" }}>No teachers</span>}
+              </div>
+              <div style={{ fontSize: 11, color: "#1e3a5f", fontWeight: 700, margin: "14px 0 6px" }}>🇰🇷 Korea team <span style={{ color: "#94a3b8", fontWeight: 400 }}>(assigning shares this to Korea)</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {koreans.map(k => { const on = cur.includes(k.id); return (
+                  <button key={k.id} onClick={() => toggle(k.id)} style={{ border: "1px solid " + (on ? k.color : "#e2e8f0"), background: on ? k.color : "#fff", color: on ? "#fff" : "#334155", borderRadius: 999, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{k.name}</button>
+                ); })}
+              </div>
+              <div style={{ textAlign: "right", marginTop: 16 }}>
+                <button onClick={() => setTaskAssignFor(null)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
               </div>
             </div>
           </div>
