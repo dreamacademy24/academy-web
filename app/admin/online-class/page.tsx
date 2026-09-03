@@ -1079,7 +1079,11 @@ export default function OnlineClassPage() {
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 6, padding: "2px 8px", background: r.req_type === "single" ? "#eff6ff" : "#f5f3ff", color: r.req_type === "single" ? "#1a6fc4" : "#7c3aed" }}>{r.req_type === "single" ? "1회차 변경" : "전체 요일 변경"}</span>
+                    {en.tutor_id ? (
                     <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 6, padding: "2px 8px", background: r.teacher_status === "approved" ? "#dcfce7" : r.teacher_status === "rejected" ? "#fef2f2" : "#fef9c3", color: r.teacher_status === "approved" ? "#166534" : r.teacher_status === "rejected" ? "#dc2626" : "#92400e" }}>현지T {r.teacher_status === "approved" ? "승인✓" : r.teacher_status === "rejected" ? "거절" : "대기"}</span>
+                    ) : (
+                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 6, padding: "2px 8px", background: "#e0e7ff", color: "#4338ca" }}>미배정 · 바로 승인</span>
+                    )}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center", background: "#f8fafc", borderRadius: 8, padding: "10px 12px", fontSize: 12.5 }}>
                     <div>
@@ -1096,11 +1100,14 @@ export default function OnlineClassPage() {
                   {r.admin_note && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>관리자: {r.admin_note}</div>}
                   {r.status === "pending" && (
                     <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
-                      <button className="btn-sm" disabled={reqProcessing === r.id || r.teacher_status !== "approved"} title={r.teacher_status !== "approved" ? "현지 선생님 승인 후 최종 승인 가능" : ""} style={{ background: r.teacher_status === "approved" ? "#0d9488" : "#cbd5e1", color: "#fff", borderColor: r.teacher_status === "approved" ? "#0d9488" : "#cbd5e1", padding: "7px 16px", cursor: r.teacher_status === "approved" ? "pointer" : "not-allowed" }} onClick={() => processReq(r.id, "approve")}>
+                      {(() => { const canApprove = !en.tutor_id || r.teacher_status === "approved"; return (
+                      <button className="btn-sm" disabled={reqProcessing === r.id || !canApprove} title={!canApprove ? "현지 선생님 승인 후 최종 승인 가능" : ""} style={{ background: canApprove ? "#0d9488" : "#cbd5e1", color: "#fff", borderColor: canApprove ? "#0d9488" : "#cbd5e1", padding: "7px 16px", cursor: canApprove ? "pointer" : "not-allowed" }} onClick={() => processReq(r.id, "approve")}>
                         {reqProcessing === r.id ? "처리 중..." : "✓ 최종 승인 (적용)"}
                       </button>
+                      ); })()}
                       <button className="btn-sm" disabled={reqProcessing === r.id} style={{ color: "#dc2626", borderColor: "#fecaca", padding: "7px 16px" }} onClick={() => processReq(r.id, "reject")}>거절</button>
-                      {r.teacher_status !== "approved" && <span style={{ fontSize: 11, color: "#92400e" }}>⏳ 현지 선생님 승인 대기 중</span>}
+                      {en.tutor_id && r.teacher_status !== "approved" && <span style={{ fontSize: 11, color: "#92400e" }}>⏳ 현지 선생님 승인 대기 중</span>}
+                      {!en.tutor_id && <span style={{ fontSize: 11, color: "#4338ca" }}>담당 티쳐 미배정 — 승인하면 바로 적용됩니다</span>}
                     </div>
                   )}
                 </div>

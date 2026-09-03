@@ -45,11 +45,14 @@ export async function GET(req: Request) {
     .select('*, enrollment:online_enrollments(id, student_name, student_name_en, days_of_week, class_time_kr, day_times, start_date, end_date, tutor_id, tutor:online_tutors(id, name_display))')
     .order('created_at', { ascending: false })
   if (status) q = q.eq('status', status)
-  if (tutorId) q = q.eq('tutor_id', tutorId)
   if (teacherStatus) q = q.eq('teacher_status', teacherStatus)
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ requests: data ?? [] })
+  let rows = data ?? []
+  // 티쳐 수신함: change_request.tutor_id는 생성 시점 스냅샷(미배정 후 배정 시 stale)이므로
+  // enrollment의 현재 배정 tutor_id 기준으로 필터한다.
+  if (tutorId) rows = rows.filter((r: any) => (r.enrollment?.tutor_id || r.tutor_id) === tutorId)
+  return NextResponse.json({ requests: rows })
 }
 
 // 어드민: 승인/거절
@@ -74,8 +77,11 @@ export async function PATCH(req: Request) {
       await supabase.from('online_change_requests').update({ teacher_status: 'rejected', teacher_note: teacher_note || null, status: 'rejected', admin_note: '현지 선생님 거절', processed_at: new Date().toISOString() }).eq('id', id)
       return NextResponse.json({ ok: true, teacher_status: 'rejected' })
     }
-    // ── 2단계(한국인): 티쳐 승인 전이면 최종 승인 불가 ──
-    if (action === 'approve' && cr.teacher_status !== 'approved') {
+    // ── 2단계(한국인): 담당 티쳐가 배정된 경우에만 현지T 승인 후 최종 승인 가능 ──
+    // 미배정(담당 티쳐 없음)이면 현지 승인 단계를 건너뛰고 한국인이 바로 최종 승인 → 이후 티쳐가 take.
+    const { data: _enrAssign } = await supabase.from('online_enrollments').select('tutor_id').eq('id', cr.enrollment_id).single()
+    const _isAssigned = !!(_enrAssign?.tutor_id)
+    if (action === 'approve' && _isAssigned && cr.teacher_status !== 'approved') {
       return NextResponse.json({ error: '현지 선생님 승인 후 최종 승인할 수 있습니다.' }, { status: 400 })
     }
 
