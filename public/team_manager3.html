@@ -1387,12 +1387,14 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-due.od{color:#ef4444;font-weight:700}
 .pt-add-root{padding:8px 6px;color:var(--primary);cursor:pointer;font-size:13px;margin-top:4px}
 .pt-add-root:hover{background:var(--surface);border-radius:6px}
-.pt-meta{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:6px 0 14px;font-size:13px}
-.pt-meta-item{display:flex;align-items:center;gap:5px}
-.pt-plus{cursor:pointer;color:var(--text3);border:1px dashed var(--border2);border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.pt-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px;font-size:14px}
+.pt-meta-item{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:7px 12px}
+.pt-chkline{display:flex;align-items:center;gap:6px;padding:2px 0}
+.pt-chkline input[type=checkbox]{width:17px;height:17px;flex-shrink:0}
+.pt-plus{cursor:pointer;color:var(--text3);border:1px dashed var(--border2);border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
 .pt-plus:hover{color:var(--primary);border-color:var(--primary)}
 .pt-toolbar{display:flex;gap:2px;border:1px solid var(--border2);border-bottom:none;border-radius:8px 8px 0 0;padding:6px 8px;background:var(--surface2)}
-.pt-tb{border:none;background:transparent;cursor:pointer;padding:3px 8px;border-radius:4px;font-size:14px;color:var(--text)}
+.pt-tb{border:none;background:transparent;cursor:pointer;padding:5px 11px;border-radius:5px;font-size:16px;color:var(--text)}
 .pt-tb:hover{background:var(--surface)}
 .pt-body{min-height:120px;max-height:340px;overflow-y:auto;border:1px solid var(--border2);border-radius:0 0 8px 8px;padding:12px 14px;font-size:14px;line-height:1.8;outline:none;background:var(--surface)}
 .pt-body:empty:before{content:attr(data-ph);color:var(--text3)}
@@ -11531,9 +11533,9 @@ function ptRenderDetail(id){
   // meta row
   h+='<div class="pt-meta">';
   h+='<span class="pt-meta-item"><span style="color:var(--text3)">담당</span>'+(av||'<span style="color:var(--text3);font-size:12px">없음</span>')+'<span class="pt-plus" onclick="ptPickAssignees(\''+id+'\')">+</span></span>';
-  h+='<span class="pt-meta-item"><select onchange="ptSaveField(\''+id+'\',\'status\',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:3px 6px;font-size:12px;color:'+staColor[n.status||'todo']+';font-weight:700">'
+  h+='<span class="pt-meta-item"><select onchange="ptSaveField(\''+id+'\',\'status\',this.value)" style="border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-size:14px;color:'+staColor[n.status||'todo']+';font-weight:700;cursor:pointer">'
     +['todo','doing','done'].map(function(k){return '<option value="'+k+'"'+((n.status||'todo')===k?' selected':'')+'>'+STA[k]+'</option>';}).join('')+'</select></span>';
-  h+='<span class="pt-meta-item"><span style="color:var(--text3)">📅</span><input type="date" value="'+(n.due||'')+'" onchange="ptSaveField(\''+id+'\',\'due\',this.value)" style="border:1px solid var(--border2);border-radius:6px;padding:2px 6px;font-size:12px"></span>';
+  h+='<span class="pt-meta-item"><span style="color:var(--text3)">📅</span><input type="date" value="'+(n.due||'')+'" onchange="ptSaveField(\''+id+'\',\'due\',this.value)" style="border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-size:14px"></span>';
   if(!isTask)h+='<span class="pt-meta-item"><span style="color:var(--text3)">진행률</span><b style="color:#6366f1">'+prog+'%</b></span>';
   h+='</div>';
   // body editor
@@ -11542,17 +11544,21 @@ function ptRenderDetail(id){
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'italic\')"><i>I</i></button>'
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'insertUnorderedList\')">≡</button>'
     +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'red\')" style="color:#c0392b;font-weight:700">A</button>'
+    +'<button type="button" class="pt-tb" onmousedown="return ptCmd(event,\'check\')" title="체크 항목">\u2611</button>'
     +'</div>';
-  h+='<div id="ptBody" contenteditable="true" class="pt-body" onblur="ptSaveField(\''+id+'\',\'body\',this.innerHTML)" data-ph="내용·설명을 자유롭게 작성하세요...">'+(n.body||'')+'</div>';
+  h+='<div id="ptBody" contenteditable="true" class="pt-body" onblur="ptSaveField(\''+id+'\',\'body\',ptSyncBody(this))" data-ph="내용·설명을 자유롭게 작성하세요... (☑ 버튼으로 체크 항목 추가)">'+(n.body||'')+'</div>';
   h+='<div style="font-size:11px;color:var(--text3);margin-top:4px">'+(n.updated_at?'수정: '+ptTs(n.updated_at):'')+'</div>';
   // comments
   h+='<div class="pt-cmt-sec"><div style="font-size:13px;font-weight:700;margin-bottom:8px">💬 댓글 <span id="ptCmtCnt" style="color:var(--text3)"></span></div>'
     +'<div id="ptCmtList"></div>'
     +'<div style="display:flex;gap:6px;margin-top:8px"><input id="ptCmtInp" placeholder="댓글 입력..." style="flex:1;border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:13px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();ptAddComment(\''+id+'\')}"><button class="btn btn-primary btn-sm" onclick="ptAddComment(\''+id+'\')">등록</button></div></div>';
   el.innerHTML=h;
+  var _bodyEl=document.getElementById('ptBody');
+  if(_bodyEl){_bodyEl.addEventListener('change',function(ev){if(ev.target&&ev.target.type==='checkbox'){ptSaveField(id,'body',ptSyncBody(_bodyEl));}});}
   ptRenderComments(id);
 }
-function ptCmd(e,k){e.preventDefault();try{if(k==='red'){document.execCommand('foreColor',false,'#c0392b');}else{document.execCommand(k,false,null);}}catch(x){}return false;}
+function ptCmd(e,k){e.preventDefault();try{if(k==='red'){document.execCommand('foreColor',false,'#c0392b');}else if(k==='check'){document.execCommand('insertHTML',false,'<div class="pt-chkline"><input type="checkbox">&nbsp;할 일</div>');}else{document.execCommand(k,false,null);}}catch(x){}return false;}
+function ptSyncBody(el){try{el.querySelectorAll('input[type=checkbox]').forEach(function(c){if(c.checked)c.setAttribute('checked','checked');else c.removeAttribute('checked');});}catch(e){}return el.innerHTML;}
 function ptSaveField(id,field,val){
   var n=ptFindNode(id);if(!n)return;
   if(field==='due'&&!val)val=null;
