@@ -87,6 +87,13 @@ export async function PATCH(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
     }
+    if (action === 'set_role') {
+      const newRole = body.newRole
+      if (!newRole) return NextResponse.json({ error: 'newRole이 필요합니다.' }, { status: 400 })
+      const { error } = await supabase.from('staff_accounts').update({ role: newRole }).eq('username', username)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, role: newRole })
+    }
     if (action === 'rename') {
       const newUsername = body.newUsername
       if (!newUsername) return NextResponse.json({ error: 'newUsername이 필요합니다.' }, { status: 400 })

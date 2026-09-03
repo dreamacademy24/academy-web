@@ -3873,8 +3873,6 @@ let EMPS=[
   {id:'jun',  name:'Jun',   color:'#f59e0b',initial:'JU'},
   {id:'candice',name:'Candice', color:'#14b8a6',initial:'CA'},
   {id:'song',name:'Song', color:'#8b5cf6',initial:'SO'},
-  {id:'abby',name:'Abby', color:'#e11d48',initial:'AB'},
-  {id:'bella',name:'Bella', color:'#0891b2',initial:'BE'},
 ];
 let CEO={id:'ceo',name:'CEO',color:'#1e3a5f',initial:'C',role:'대표'};
 let ALL=[...EMPS,CEO];
@@ -3899,7 +3897,7 @@ function loadStaffAccounts(){
     .catch(function(e){console.warn('[staff-accounts] 동적 로딩 실패 — 하드코딩 폴백:',e&&e.message||e);});
   return Promise.race([fetchP,timeout]);
 }
-function isAdmin(){return CU&&(CU.id==='ceo'||CU.id==='abby');}
+function isAdmin(){return CU&&CU.id==='ceo';}
 function getP(id){return ALL.find(e=>e.id===id);}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;
@@ -3952,7 +3950,7 @@ let goals=ld('tm_goals',[]);
 let noticeReads=ld('tm_read',{});
 
 
-const DEFAULT_PASSWORDS={vivace:'vivace1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',song:'song1234',abby:'abby2026!',bella:'bella2026!',ceo:'ceo1234'};
+const DEFAULT_PASSWORDS={vivace:'vivace1234',eric:'eric1234',jun:'jun1234',candice:'candice1234',song:'song1234',ceo:'ceo1234'};
 let PASSWORDS=ld('tm_pw',DEFAULT_PASSWORDS);
 Object.keys(DEFAULT_PASSWORDS).forEach(function(k){if(!PASSWORDS[k])PASSWORDS[k]=DEFAULT_PASSWORDS[k];});
 sv('tm_pw',PASSWORDS);

@@ -57,6 +57,6 @@ CREATE INDEX IF NOT EXISTS idx_pnc_node ON project_node_comments(node_id);
 `
   const { error } = await supabase.rpc('exec_sql', { sql: ddl })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  await supabase.rpc('exec_sql', { sql: `NOTIFY pgrst, 'reload schema';` }).catch(() => {})
+  try { await supabase.rpc('exec_sql', { sql: `NOTIFY pgrst, 'reload schema';` }) } catch {}
   return NextResponse.json({ ok: true })
 }
