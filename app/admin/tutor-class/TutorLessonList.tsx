@@ -28,7 +28,7 @@ interface SessionRow {
   session_note: string | null;
 }
 interface Counts { total: number; scheduled: number; attended: number; no_show: number; cancelled: number; rescheduled: number }
-interface LessonRow extends Lesson { tutor_name: string | null; counts: Counts }
+interface LessonRow extends Lesson { tutor_name: string | null; counts: Counts; room_no?: string }
 
 const DAY_KR: Record<string, string> = { mon: "월", tue: "화", wed: "수", thu: "목", fri: "금", sat: "토", sun: "일" };
 const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
@@ -114,10 +114,18 @@ export default function TutorLessonList() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [tRes, lRes] = await Promise.all([
+    const [tRes, lRes, bRes] = await Promise.all([
       supabase.from("tutors").select("id, name").order("name"),
       supabase.from("tutor_lessons").select("*").order("created_at", { ascending: false }),
+      supabase.from("bookings").select("booker_name, house_no"),
     ]);
+    // 예약자명 → 룸번호 맵 (방문 튜터 룸 표시용). 룸번호 대문자 정규화.
+    const roomMap = new Map<string, string>();
+    for (const b of (bRes.data || []) as { booker_name: string; house_no: string }[]) {
+      const nm = (b.booker_name || "").trim();
+      const rm = (b.house_no || "").trim().toUpperCase();
+      if (nm && rm) roomMap.set(nm, rm);
+    }
     if (tRes.error) console.error("튜터 조회 실패:", tRes.error);
     if (lRes.error) console.error("수업 조회 실패:", lRes.error);
     const tutorList = (tRes.data || []) as Tutor[];
@@ -143,6 +151,7 @@ export default function TutorLessonList() {
       ...l,
       tutor_name: l.tutor_id ? (tutorMap.get(l.tutor_id) || null) : null,
       counts: countStatus(grouped.get(l.id) || []),
+      room_no: roomMap.get((l.house_or_reserver || "").trim()) || "",
     }));
     setLessons(rows);
     setLoading(false);
@@ -478,6 +487,7 @@ export default function TutorLessonList() {
             <tr>
               <th>접수</th>
               <th>예약자</th>
+              <th>룸</th>
               <th>수강자</th>
               <th>담당 T</th>
               <th>유형</th>
@@ -508,6 +518,7 @@ export default function TutorLessonList() {
                   <tr>
                     <td style={{ whiteSpace: "nowrap", fontSize: 12, color: "#6b7c93" }}>{fmtMD(l.created_at)}</td>
                     <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{l.house_or_reserver}</td>
+                    <td style={{ whiteSpace: "nowrap", fontWeight: 700, color: l.room_no ? "#0d9488" : "#cbd5e1" }}>{l.room_no || "-"}</td>
                     <td style={{ fontWeight: 700 }}>{l.student_names}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {l.tutor_name ? l.tutor_name : <span className="tll-muted">(미배정)</span>}
