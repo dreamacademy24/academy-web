@@ -38,7 +38,7 @@ export default function TeacherWorkspace() {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [view, setView] = useState<"home" | "projects" | "notices" | "tasks">("home");
+  const [view, setView] = useState<"home" | "projects" | "notices" | "tasks" | "weekly">("home");
   const [selProj, setSelProj] = useState<string | null>(null);
   const [selNode, setSelNode] = useState<string | null>(null);
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
@@ -61,6 +61,11 @@ export default function TeacherWorkspace() {
   const [taskAssignFor, setTaskAssignFor] = useState<string | null>(null);
   const [tcmts, setTcmts] = useState<Record<string, any[]>>({});
   const [tdraft, setTdraft] = useState("");
+  const [weekly, setWeekly] = useState<any[]>([]);
+  const [wchecks, setWchecks] = useState<any[]>([]);
+  const [newWk, setNewWk] = useState(false);
+  const [nwTitle, setNwTitle] = useState("");
+  const [wkAssignFor, setWkAssignFor] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -151,6 +156,51 @@ export default function TeacherWorkspace() {
     const { error } = await supabase.from("teacher_task_comments").insert({ task_id: taskId, from_id: me.username, text: t, ts: new Date().toISOString() });
     if (error) { alert("Failed: " + error.message); return; }
     setTdraft(""); loadTcmts(taskId);
+  }
+
+  const loadWeekly = useCallback(async () => {
+    const { data: items } = await supabase.from("teacher_weekly_items").select("*").eq("active", true).order("sort_idx", { ascending: true });
+    setWeekly(items || []);
+    const { data: ch } = await supabase.from("teacher_weekly_checks").select("*").eq("check_date", ymd(new Date()));
+    setWchecks(ch || []);
+  }, []);
+  useEffect(() => { if (ready && view === "weekly") loadWeekly(); }, [ready, view, loadWeekly]);
+
+  async function createWeekly() {
+    const t = nwTitle.trim(); if (!t || !me) return;
+    const id = crypto.randomUUID();
+    await supabase.from("teacher_weekly_items").insert({ id, title: t, assignees: [], weekdays: [], active: true, created_by: me.username, created_at: new Date().toISOString(), sort_idx: Date.now() % 1000000 });
+    setNwTitle(""); setNewWk(false); await loadWeekly();
+  }
+  async function saveWeeklyField(id: string, field: string, value: any) {
+    setWeekly(prev => prev.map(x => x.id === id ? { ...x, [field]: value } : x));
+    await supabase.from("teacher_weekly_items").update({ [field]: value }).eq("id", id);
+  }
+  async function delWeekly(id: string) {
+    if (!confirm("Delete this recurring item?")) return;
+    await supabase.from("teacher_weekly_items").delete().eq("id", id);
+    await loadWeekly();
+  }
+  async function saveWeeklyAssignees(id: string, sel: string[]) {
+    setWeekly(prev => prev.map(x => x.id === id ? { ...x, assignees: sel } : x));
+    await supabase.from("teacher_weekly_items").update({ assignees: sel }).eq("id", id);
+  }
+  async function toggleWeekday(item: any, wd: number) {
+    const cur: number[] = item.weekdays || [];
+    const nx = cur.includes(wd) ? cur.filter(x => x !== wd) : [...cur, wd].sort();
+    await saveWeeklyField(item.id, "weekdays", nx);
+  }
+  async function toggleWeeklyCheck(item: any) {
+    if (!me) return;
+    const td = ymd(new Date());
+    const mine = wchecks.find(c => c.item_id === item.id && c.by_id === me.username);
+    if (mine) {
+      await supabase.from("teacher_weekly_checks").delete().eq("id", mine.id);
+      setWchecks(prev => prev.filter(c => c.id !== mine.id));
+    } else {
+      const { data } = await supabase.from("teacher_weekly_checks").insert({ item_id: item.id, check_date: td, by_id: me.username }).select();
+      if (data && data[0]) setWchecks(prev => [...prev, data[0]]);
+    }
   }
 
   const byId = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
@@ -329,7 +379,7 @@ export default function TeacherWorkspace() {
         <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 14px" }}>Projects and tasks shared by the Korean team. Check off what you finish and leave comments.</p>
 
         <div style={{ display: "inline-flex", background: "#eef2f7", borderRadius: 11, padding: 3, marginBottom: 16 }}>
-          {([["home", "🏠 Home"], ["projects", "📁 Projects"], ["tasks", "✅ Tasks"], ["notices", "💬 Notices"]] as const).map(([k, label]) => (
+          {([["home", "🏠 Home"], ["projects", "📁 Projects"], ["tasks", "✅ Tasks"], ["weekly", "🔁 Weekly"], ["notices", "💬 Notices"]] as const).map(([k, label]) => (
             <button key={k} onClick={() => setView(k)} style={{ border: "none", background: view === k ? "#fff" : "transparent", color: view === k ? "#0f172a" : "#64748b", borderRadius: 9, padding: "7px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: view === k ? "0 1px 3px rgba(0,0,0,0.08)" : "none" }}>{label}</button>
           ))}
         </div>
@@ -569,6 +619,69 @@ export default function TeacherWorkspace() {
             </div>
           </div>
         )}
+
+        {view === "weekly" && (() => {
+          const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const todayWd = new Date().getDay();
+          const td = ymd(new Date());
+          const forToday = weekly.filter(it => !(it.weekdays || []).length || (it.weekdays || []).includes(todayWd));
+          const checkedBy = (id: string) => wchecks.filter(c => c.item_id === id).map(c => c.by_id);
+          const iChecked = (id: string) => wchecks.some(c => c.item_id === id && c.by_id === myU);
+          return (
+            <div>
+              <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: 14, marginBottom: 18 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 2 }}>✅ Today — {WD[todayWd]} {td}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>Recurring tasks to check off today</div>
+                {forToday.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, padding: "10px 0" }}>Nothing scheduled for today.</div>}
+                {forToday.map(it => {
+                  const done = iChecked(it.id);
+                  const others = checkedBy(it.id);
+                  return (
+                    <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: "1px solid #f6f8fb" }}>
+                      <input type="checkbox" checked={done} onChange={() => toggleWeeklyCheck(it)} style={{ width: 19, height: 19, accentColor: "#16a34a", cursor: "pointer", flexShrink: 0 }} />
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: done ? "#94a3b8" : "#1f2937", textDecoration: done ? "line-through" : "none" }}>{it.title}</span>
+                      {(it.assignees || []).map((id: string) => <span key={id} style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: personColor(id), borderRadius: 999, padding: "1px 7px" }}>{personName(id)}</span>)}
+                      {others.length > 0 && <span style={{ fontSize: 10, color: "#16a34a", fontWeight: 700 }}>✓ {others.map(personName).join(", ")}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>🔁 Recurring items</div>
+                {!newWk && <button onClick={() => setNewWk(true)} style={{ marginLeft: "auto", border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 9, padding: "6px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>+ New item</button>}
+              </div>
+              {newWk && (
+                <div style={{ display: "flex", gap: 8, marginBottom: 10, background: "#fff", border: "1px solid #67e8f9", borderRadius: 12, padding: 10 }}>
+                  <input autoFocus value={nwTitle} onChange={e => setNwTitle(e.target.value)} placeholder="e.g. Check classroom supplies" onKeyDown={e => { if (e.key === "Enter") createWeekly(); }} style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "inherit" }} />
+                  <button onClick={createWeekly} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Add</button>
+                  <button onClick={() => { setNewWk(false); setNwTitle(""); }} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                </div>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {weekly.map(it => (
+                  <div key={it.id} style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: "12px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input value={it.title || ""} onChange={e => setWeekly(prev => prev.map(x => x.id === it.id ? { ...x, title: e.target.value } : x))} onBlur={e => saveWeeklyField(it.id, "title", e.target.value)} style={{ flex: 1, fontSize: 14, fontWeight: 600, border: "none", borderBottom: "1px solid #eef2f7", outline: "none", padding: "3px 0", fontFamily: "inherit" }} />
+                      <button onClick={() => delWeekly(it.id)} style={{ border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 7, padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>🗑</button>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      {WD.map((d, i) => { const on = (it.weekdays || []).includes(i); return (
+                        <button key={i} onClick={() => toggleWeekday(it, i)} style={{ border: "1px solid " + (on ? "#0e7490" : "#e2e8f0"), background: on ? "#0e7490" : "#fff", color: on ? "#fff" : "#94a3b8", borderRadius: 7, width: 34, padding: "4px 0", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>{d[0]}</button>
+                      ); })}
+                      <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4 }}>{(it.weekdays || []).length ? "" : "Every day"}</span>
+                      <span style={{ marginLeft: "auto", display: "flex", gap: 4, alignItems: "center" }}>
+                        {(it.assignees || []).map((id: string) => <span key={id} style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: personColor(id), borderRadius: 999, padding: "1px 7px" }}>{personName(id)}</span>)}
+                        <button onClick={() => setWkAssignFor(it.id)} style={{ border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 999, padding: "2px 9px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Assign</button>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {weekly.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>No recurring items yet. Add one with “+ New item”.</div>}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {assignFor && (() => {
@@ -623,6 +736,29 @@ export default function TeacherWorkspace() {
               </div>
               <div style={{ textAlign: "right", marginTop: 16 }}>
                 <button onClick={() => setTaskAssignFor(null)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {wkAssignFor && (() => {
+        const it = weekly.find(x => x.id === wkAssignFor);
+        const cur = (it?.assignees || []);
+        const toggle = (id: string) => { const nx = cur.includes(id) ? cur.filter((x: string) => x !== id) : [...cur, id]; saveWeeklyAssignees(wkAssignFor, nx); };
+        return (
+          <div onClick={() => setWkAssignFor(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "min(460px,94vw)", maxHeight: "80vh", overflowY: "auto", padding: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Assign people</div>
+              <div style={{ fontSize: 11, color: "#0e7490", fontWeight: 700, margin: "4px 0 6px" }}>🌏 Teachers</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {teachers.map(tt => { const on = cur.includes(tt.id); return (
+                  <button key={tt.id} onClick={() => toggle(tt.id)} style={{ border: "1px solid " + (on ? tt.color : "#e2e8f0"), background: on ? tt.color : "#fff", color: on ? "#fff" : "#334155", borderRadius: 999, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{tt.name}</button>
+                ); })}
+                {teachers.length === 0 && <span style={{ fontSize: 12, color: "#94a3b8" }}>No teachers</span>}
+              </div>
+              <div style={{ textAlign: "right", marginTop: 16 }}>
+                <button onClick={() => setWkAssignFor(null)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
               </div>
             </div>
           </div>
