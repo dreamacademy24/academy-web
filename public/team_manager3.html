@@ -4931,12 +4931,43 @@ function renderHomePage(){
       '<div style="background:#fff;border:1px solid #e6ebf5;border-radius:12px;padding:10px 14px"><b id="kOps4" style="font-size:22px">-</b><div style="font-size:10.5px;color:#64748b;font-weight:700">🚐 오늘 픽드랍</div></div>'+
     '</div></div>';
   html+='<div class="hcard hsplit hsplit-even"><div id="homeIssuesBox" class="hcol-l"></div><div id="homeTutorBox" class="hcol-r"></div></div>';
+  html+='<div class="hcard" style="margin-top:14px"><div id="teacherSharedBox"></div></div>';
   html+='<div class="hcard" style="margin-top:14px"><div style="display:flex;justify-content:flex-end;margin-bottom:4px"><button onclick="showPage(\'weeklycl\')" style="padding:5px 12px;border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8 \uAD00\uB9AC \u2192</button></div><div id="dailyCheckSection"></div></div>';
   dash.innerHTML=html;
   loadHomeIssues();
   loadHomeTutorIssues();
   loadHomeOps();
   loadDailyCheck('dailyCheckSection');
+  renderTeacherSharedTasks('teacherSharedBox');
+}
+// 🌏 현지팀(티쳐)이 한국팀에 공유한 업무 — teacher_tasks team_shared
+function renderTeacherSharedTasks(boxId){
+  var box=document.getElementById(boxId);if(!box)return;
+  box.innerHTML='<div style="font-size:14px;font-weight:800;color:#1f2433;margin-bottom:6px">🌏 현지팀에서 공유한 업무</div><div style="font-size:12px;color:#94a3b8">불러오는 중…</div>';
+  sbGet('teacher_tasks','team_shared=eq.true&order=created_at.desc').then(function(rows){
+    rows=Array.isArray(rows)?rows:[];
+    var head='<div style="font-size:14px;font-weight:800;color:#1f2433;margin-bottom:10px">🌏 현지팀에서 공유한 업무 <span style="font-size:12px;color:#0e7490">'+rows.length+'건</span></div>';
+    if(!rows.length){box.innerHTML=head+'<div style="font-size:12.5px;color:#94a3b8;padding:4px 0">공유된 업무가 없습니다.</div>';return;}
+    var h=head;
+    rows.forEach(function(t){
+      var asg=(t.assignees||[]).map(function(id){var pp=getP(id);return pp?'<span style="font-size:10px;font-weight:700;color:#fff;background:'+pp.color+';border-radius:999px;padding:1px 7px">'+esc(pp.name)+'</span>':'';}).join(' ');
+      var stC=t.done?'#16a34a':(t.status==='doing'?'#2563eb':'#94a3b8');
+      var stL=t.done?'완료':(t.status==='doing'?'진행중':'대기');
+      h+='<div style="display:flex;align-items:center;gap:9px;padding:9px 6px;border-bottom:1px solid #f4f6fb">'+
+        '<input type="checkbox" '+(t.done?'checked':'')+' onchange="toggleTeacherTask(\''+t.id+'\',this.checked)" style="width:17px;height:17px;accent-color:#16a34a;cursor:pointer;flex-shrink:0">'+
+        '<span style="flex:1;min-width:0;font-size:13.5px;'+(t.done?'text-decoration:line-through;color:#94a3b8':'color:#1f2937')+'">'+esc(t.title||'')+'</span>'+
+        asg+
+        '<span style="font-size:10px;font-weight:700;color:'+stC+';flex-shrink:0">'+stL+'</span>'+
+        (t.due?'<span style="font-size:10px;color:#94a3b8;flex-shrink:0">📅 '+esc(t.due)+'</span>':'')+
+      '</div>';
+    });
+    box.innerHTML=h;
+  }).catch(function(e){console.error('teacher shared',e);box.innerHTML='';});
+}
+function toggleTeacherTask(id,on){
+  sbPatch('teacher_tasks','id=eq.'+id,{done:on,status:on?'done':'doing',updated_at:new Date().toISOString()})
+    .then(function(){renderTeacherSharedTasks('teacherSharedBox');})
+    .catch(function(e){alert('저장 실패: '+e);});
 }
 // 🚨 예약 운영 현황 — 자동 파생(룸배정/학생영문명), 체크인 임박순, 행별 숨김
 function _daysBetween(a,b){var d1=new Date(a+'T00:00:00'),d2=new Date(b+'T00:00:00');return Math.round((d2-d1)/86400000);}
@@ -11422,7 +11453,20 @@ function ptOpen(){
 }
 function ptLoadAll(){
   return sbGet('project_nodes','select=*&order=sort_idx.asc').then(function(rows){
-    PT.nodes=Array.isArray(rows)?rows:[];
+    rows=Array.isArray(rows)?rows:[];
+    // 한국(team) 것은 전부, 티쳐(teacher) 것은 team_shared=true인 것 + 그 조상(폴더·프로젝트)만 표시
+    var byId={}; rows.forEach(function(n){byId[n.id]=n;});
+    var keep={};
+    rows.forEach(function(n){
+      if(n.origin!=='teacher'){ keep[n.id]=true; return; }
+      if(n.team_shared){
+        keep[n.id]=true;
+        var c=n.parent_id?byId[n.parent_id]:null, g=0;
+        while(c&&g++<30){ keep[c.id]=true; c=c.parent_id?byId[c.parent_id]:null; }
+        if(n.project_id&&byId[n.project_id]) keep[n.project_id]=true;
+      }
+    });
+    PT.nodes=rows.filter(function(n){return keep[n.id];});
   }).catch(function(e){console.error('pt load',e);PT.nodes=[];});
 }
 /* ---------- 프로젝트 목록 ---------- */
@@ -11443,7 +11487,7 @@ function ptRenderList(){
       var cnt=PT.nodes.filter(function(n){return n.project_id===pr.id&&n.kind!=='project';}).length;
       h+='<div class="proj-card" onclick="ptRenderProject(\''+pr.id+'\')" style="cursor:pointer">'
         +'<div class="proj-card-top"><div class="proj-color-dot" style="background:#6366f1"></div>'
-        +'<div class="proj-name">'+esc(pr.title||'제목 없음')+'</div>'
+        +'<div class="proj-name">'+esc(pr.title||'제목 없음')+(pr.origin==='teacher'?' <span style="font-size:10px;font-weight:800;color:#0e7490;background:#ecfeff;border-radius:6px;padding:1px 6px">🌏 현지팀</span>':'')+'</div>'
         +(pr.due?'<span class="proj-due-badge">📅 '+pr.due+'</span>':'')
         +'<div class="proj-pct" style="color:#6366f1">'+prog+'%</div></div>'
         +'<div class="proj-bar" style="height:6px;margin-top:8px"><div class="proj-bar-fill" style="width:'+prog+'%;background:#6366f1"></div></div>'
