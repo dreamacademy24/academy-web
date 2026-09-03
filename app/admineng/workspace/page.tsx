@@ -46,6 +46,11 @@ export default function TeacherWorkspace() {
   const [notices, setNotices] = useState<any[]>([]);
   const [noticeEn, setNoticeEn] = useState<Record<string, { t?: string; b?: string }>>({});
   const [openNotice, setOpenNotice] = useState<string | null>(null);
+  const [teachers, setTeachers] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [koreans, setKoreans] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+  const [newProj, setNewProj] = useState(false);
+  const [npName, setNpName] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -102,7 +107,7 @@ export default function TeacherWorkspace() {
   const visible = useMemo(() => {
     const vis = new Set<string>();
     for (const n of nodes) {
-      if (n.teacher_shared) {
+      if (n.teacher_shared || n.origin === "teacher") {
         vis.add(n.id);
         let cur: Node | undefined = n.parent_id ? byId.get(n.parent_id) : undefined;
         let g = 0;
@@ -132,6 +137,57 @@ export default function TeacherWorkspace() {
     let g = 0;
     while (cur && g++ < 20) { parts.unshift(cur.title_en || cur.title || ""); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined; }
     return parts.filter(Boolean).join(" › ");
+  }
+
+  // 담당자 명단 로드 (현지 티쳐 + 한국 직원)
+  useEffect(() => {
+    if (!ready) return;
+    (async () => {
+      try {
+        const r = await fetch("/api/admin/staff-accounts?active=true");
+        if (!r.ok) return;
+        const d = await r.json();
+        const st = d.staff || [];
+        setTeachers(st.filter((x: any) => x.role !== "korean_admin" && x.username !== "admin-ceo").map((x: any) => ({ id: x.username, name: x.name, color: x.color || "#0ea5e9" })));
+        setKoreans(st.filter((x: any) => x.role === "korean_admin").map((x: any) => ({ id: (x.username || "").replace(/^admin-/, ""), name: x.name, color: x.color || "#1e3a5f" })));
+      } catch { /* */ }
+    })();
+  }, [ready]);
+
+  const canEdit = (n: Node) => n.origin === "teacher";
+  const personName = (id: string) => teachers.find(t => t.id === id)?.name || koreans.find(k => k.id === id)?.name || id;
+  const personColor = (id: string) => teachers.find(t => t.id === id)?.color || koreans.find(k => k.id === id)?.color || "#94a3b8";
+
+  async function createProject() {
+    const name = npName.trim(); if (!name || !me) return;
+    const id = crypto.randomUUID(); const now = new Date().toISOString();
+    await supabase.from("project_nodes").insert({ id, project_id: id, parent_id: null, title: name, kind: "project", origin: "teacher", assignees: [], status: "todo", done: false, teacher_shared: false, team_shared: false, sort_idx: 0, created_by: me.username, created_at: now, updated_at: now });
+    setNpName(""); setNewProj(false); await load(); setSelProj(id); setSelNode(null);
+  }
+  async function addChild(parent: Node, kind: "folder" | "task") {
+    if (!me) return;
+    const id = crypto.randomUUID(); const now = new Date().toISOString();
+    await supabase.from("project_nodes").insert({ id, project_id: parent.project_id || parent.id, parent_id: parent.id, title: kind === "folder" ? "New folder" : "New task", kind, origin: "teacher", assignees: [], status: "todo", done: false, teacher_shared: false, team_shared: false, sort_idx: Date.now() % 100000, created_by: me.username, created_at: now, updated_at: now });
+    await load(); setOpenMap(m => ({ ...m, [parent.id]: true })); if (kind === "task") setSelNode(id);
+  }
+  async function saveField(id: string, field: string, value: any) {
+    setNodes(prev => prev.map(x => x.id === id ? { ...x, [field]: value } : x));
+    await supabase.from("project_nodes").update({ [field]: value, updated_at: new Date().toISOString() }).eq("id", id);
+  }
+  async function delNode(n: Node) {
+    if (!confirm("Delete this item" + (n.kind !== "task" ? " and everything inside it" : "") + "?")) return;
+    const ids: string[] = [n.id];
+    const collect = (pid: string) => { nodes.filter(x => x.parent_id === pid).forEach(c => { ids.push(c.id); collect(c.id); }); };
+    collect(n.id);
+    await supabase.from("project_nodes").delete().in("id", ids);
+    if (selNode && ids.includes(selNode)) setSelNode(null);
+    if (selProj && ids.includes(selProj)) setSelProj(null);
+    await load();
+  }
+  async function saveAssignees(id: string, sel: string[]) {
+    const hasKorean = sel.some(x => koreans.find(k => k.id === x));
+    setNodes(prev => prev.map(x => x.id === id ? { ...x, assignees: sel, team_shared: hasKorean } : x));
+    await supabase.from("project_nodes").update({ assignees: sel, team_shared: hasKorean, updated_at: new Date().toISOString() }).eq("id", id);
   }
 
   async function toggleDone(n: Node) {
@@ -184,6 +240,12 @@ export default function TeacherWorkspace() {
           <span style={{ fontSize: 14, textDecoration: n.done ? "line-through" : "none", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</span>
           {mine && n.kind === "task" && <span style={{ fontSize: 9, fontWeight: 800, color: "#0e7490", background: "#ecfeff", borderRadius: 6, padding: "1px 5px" }}>ME</span>}
           {n.due && n.kind === "task" && <span style={{ fontSize: 10, color: n.due < today && !n.done ? "#dc2626" : "#94a3b8" }}>{n.due.slice(5)}</span>}
+          {canEdit(n) && isBranch && (
+            <span style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+              <button onClick={e => { e.stopPropagation(); addChild(n, "folder"); }} title="Add folder" style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: 11, cursor: "pointer" }}>📁+</button>
+              <button onClick={e => { e.stopPropagation(); addChild(n, "task"); }} title="Add task" style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 6, padding: "1px 6px", fontSize: 11, cursor: "pointer" }}>✓+</button>
+            </span>
+          )}
         </div>
         {isBranch && open && kids.map(k => <TreeRow key={k.id} n={k} depth={depth + 1} />)}
       </div>
@@ -250,18 +312,34 @@ export default function TeacherWorkspace() {
           <div>
             {!selProj && (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {newProj ? (
+                  <div style={{ background: "#fff", border: "1px solid #67e8f9", borderRadius: 12, padding: 12, display: "flex", gap: 8 }}>
+                    <input autoFocus value={npName} onChange={e => setNpName(e.target.value)} placeholder="New project name…" onKeyDown={e => { if (e.key === "Enter") createProject(); }}
+                      style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 10px", fontSize: 14, fontFamily: "inherit" }} />
+                    <button onClick={createProject} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Create</button>
+                    <button onClick={() => { setNewProj(false); setNpName(""); }} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "8px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setNewProj(true)} style={{ alignSelf: "flex-start", border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ New Project</button>
+                )}
                 {projects.map(p => {
                   const cnt = nodes.filter(n => n.project_id === p.id && n.kind === "task" && visible.has(n.id));
                   const doneN = cnt.filter(n => n.done).length;
+                  const mineProj = p.origin === "teacher";
                   return (
                     <div key={p.id} onClick={() => { setSelProj(p.id); setSelNode(null); }}
-                      style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{p.title_en || p.title}</div>
-                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{cnt.length} tasks · {doneN} done</div>
+                      style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>{p.title_en || p.title}
+                          <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 800, borderRadius: 6, padding: "2px 7px", color: mineProj ? "#0e7490" : "#64748b", background: mineProj ? "#ecfeff" : "#f1f5f9" }}>{mineProj ? "OUR TEAM" : "SHARED FROM KOREA"}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{cnt.length} tasks · {doneN} done</div>
+                      </div>
+                      {canEdit(p) && <button onClick={e => { e.stopPropagation(); delNode(p); }} title="Delete project" style={{ border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 8, padding: "5px 9px", fontSize: 12, cursor: "pointer" }}>🗑</button>}
                     </div>
                   );
                 })}
-                {projects.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "50px 0" }}>No shared projects yet.</div>}
+                {projects.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: "40px 0" }}>No projects yet. Create one with “+ New Project”.</div>}
               </div>
             )}
             {selProj && (
@@ -278,14 +356,40 @@ export default function TeacherWorkspace() {
                       {pathOf(sel) && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>{pathOf(sel)}</div>}
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                         <input type="checkbox" checked={sel.done} disabled={!isMine(sel)} onChange={() => toggleDone(sel)} style={{ width: 20, height: 20, marginTop: 3, accentColor: "#16a34a", cursor: isMine(sel) ? "pointer" : "not-allowed" }} />
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", textDecoration: sel.done ? "line-through" : "none" }}>{sel.title_en || sel.title}</div>
+                        {canEdit(sel)
+                          ? <input value={sel.title || ""} onChange={e => setNodes(prev => prev.map(x => x.id === sel.id ? { ...x, title: e.target.value } : x))} onBlur={e => saveField(sel.id, "title", e.target.value)} style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", border: "none", borderBottom: "1px solid #e2e8f0", outline: "none", flex: 1, padding: "2px 0", background: "transparent" }} />
+                          : <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", textDecoration: sel.done ? "line-through" : "none" }}>{sel.title_en || sel.title}</div>}
                       </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "8px 0 10px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: STA_COLOR[sel.status || "todo"], background: STA_COLOR[sel.status || "todo"] + "1a", borderRadius: 7, padding: "3px 9px" }}>{STA[sel.status || "todo"] || sel.status}</span>
-                        {sel.due && <span style={{ fontSize: 11, fontWeight: 700, color: sel.due < today && !sel.done ? "#dc2626" : "#64748b", background: "#f1f5f9", borderRadius: 7, padding: "3px 9px" }}>📅 {sel.due}</span>}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", margin: "8px 0 10px" }}>
+                        {canEdit(sel) ? (
+                          <>
+                            <select value={sel.status || "todo"} onChange={e => saveField(sel.id, "status", e.target.value)} style={{ fontSize: 12, fontWeight: 700, border: "1px solid #e2e8f0", borderRadius: 7, padding: "4px 8px", color: STA_COLOR[sel.status || "todo"] }}>
+                              {["todo", "doing", "done"].map(k => <option key={k} value={k}>{STA[k]}</option>)}
+                            </select>
+                            <input type="date" value={sel.due || ""} onChange={e => saveField(sel.id, "due", e.target.value || null)} style={{ fontSize: 12, border: "1px solid #e2e8f0", borderRadius: 7, padding: "4px 8px" }} />
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: STA_COLOR[sel.status || "todo"], background: STA_COLOR[sel.status || "todo"] + "1a", borderRadius: 7, padding: "3px 9px" }}>{STA[sel.status || "todo"] || sel.status}</span>
+                            {sel.due && <span style={{ fontSize: 11, fontWeight: 700, color: sel.due < today && !sel.done ? "#dc2626" : "#64748b", background: "#f1f5f9", borderRadius: 7, padding: "3px 9px" }}>📅 {sel.due}</span>}
+                          </>
+                        )}
                         {isMine(sel) && <span style={{ fontSize: 11, fontWeight: 700, color: "#0e7490", background: "#ecfeff", borderRadius: 7, padding: "3px 9px" }}>Assigned to me</span>}
                       </div>
-                      {(sel.body_en || sel.body) && <div style={{ fontSize: 14, color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "#f8fafc", borderRadius: 10, padding: "12px 14px" }}>{sel.body_en || sel.body}</div>}
+                      {/* Assignees */}
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 10 }}>
+                        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>Assignees:</span>
+                        {(sel.assignees || []).length === 0 && <span style={{ fontSize: 12, color: "#94a3b8" }}>none</span>}
+                        {(sel.assignees || []).map(id => (
+                          <span key={id} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: personColor(id), borderRadius: 999, padding: "2px 9px" }}>{personName(id)}</span>
+                        ))}
+                        {canEdit(sel) && <button onClick={() => setAssignFor(sel.id)} style={{ border: "1px solid #0e7490", background: "#ecfeff", color: "#0e7490", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>+ Assign</button>}
+                        {sel.team_shared && <span style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", background: "#f5f3ff", borderRadius: 6, padding: "2px 7px" }}>↔ shared to Korea</span>}
+                      </div>
+                      {canEdit(sel)
+                        ? <textarea value={sel.body || ""} onChange={e => setNodes(prev => prev.map(x => x.id === sel.id ? { ...x, body: e.target.value } : x))} onBlur={e => saveField(sel.id, "body", e.target.value)} rows={5} placeholder="Details / description…" style={{ width: "100%", boxSizing: "border-box", fontSize: 14, color: "#334155", lineHeight: 1.6, border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", fontFamily: "inherit" }} />
+                        : (sel.body_en || sel.body) && <div style={{ fontSize: 14, color: "#334155", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "#f8fafc", borderRadius: 10, padding: "12px 14px" }}>{sel.body_en || sel.body}</div>}
+                      {canEdit(sel) && <button onClick={() => delNode(sel)} style={{ marginTop: 10, border: "1px solid #fecaca", background: "#fff", color: "#dc2626", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Delete task</button>}
 
                       <div style={{ borderTop: "1px solid #f1f5f9", marginTop: 14, paddingTop: 12 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>💬 Comments</div>
@@ -340,6 +444,35 @@ export default function TeacherWorkspace() {
           </div>
         )}
       </div>
+
+      {assignFor && (() => {
+        const node = byId.get(assignFor);
+        const cur = (node?.assignees || []);
+        const toggle = (id: string) => { const nx = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]; saveAssignees(assignFor, nx); };
+        return (
+          <div onClick={() => setAssignFor(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "min(460px,94vw)", maxHeight: "80vh", overflowY: "auto", padding: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Assign people</div>
+              <div style={{ fontSize: 11, color: "#0e7490", fontWeight: 700, margin: "4px 0 6px" }}>🌏 Teachers</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {teachers.map(t => { const on = cur.includes(t.id); return (
+                  <button key={t.id} onClick={() => toggle(t.id)} style={{ border: "1px solid " + (on ? t.color : "#e2e8f0"), background: on ? t.color : "#fff", color: on ? "#fff" : "#334155", borderRadius: 999, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{t.name}</button>
+                ); })}
+                {teachers.length === 0 && <span style={{ fontSize: 12, color: "#94a3b8" }}>No teachers</span>}
+              </div>
+              <div style={{ fontSize: 11, color: "#1e3a5f", fontWeight: 700, margin: "14px 0 6px" }}>🇰🇷 Korea team <span style={{ color: "#94a3b8", fontWeight: 400 }}>(assigning shares this to Korea)</span></div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {koreans.map(k => { const on = cur.includes(k.id); return (
+                  <button key={k.id} onClick={() => toggle(k.id)} style={{ border: "1px solid " + (on ? k.color : "#e2e8f0"), background: on ? k.color : "#fff", color: on ? "#fff" : "#334155", borderRadius: 999, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{k.name}</button>
+                ); })}
+              </div>
+              <div style={{ textAlign: "right", marginTop: 16 }}>
+                <button onClick={() => setAssignFor(null)} style={{ border: "none", background: "#0e7490", color: "#fff", borderRadius: 9, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
