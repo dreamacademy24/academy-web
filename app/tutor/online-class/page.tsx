@@ -114,6 +114,16 @@ function Inner() {
     if (res.ok) { const d = await res.json(); setTutor(d.tutor || null); }
     setLoadingTutor(false);
   }, [authed, searchParams]);
+
+  // 어드민 뷰어(현지직원 아님)로 진입 시 티쳐 미선택이면 첫 티쳐 자동 선택 — 튜터수업처럼 바로 탭 표시
+  useEffect(() => {
+    if (loadingTutor) return;
+    const isAdmin = adminRole && adminRole !== "local_teacher";
+    if (isAdmin && !tutor && allTutors.length && !searchParams.get("tutor")) {
+      const first = allTutors.find(t => t.staff_user_id);
+      if (first) window.location.href = `/tutor/online-class?tutor=${first.staff_user_id}`;
+    }
+  }, [loadingTutor, adminRole, tutor, allTutors, searchParams]);
   useEffect(() => { resolveTutor(); }, [resolveTutor]);
 
   const loadEnrollments = useCallback(async () => {
