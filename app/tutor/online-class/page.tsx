@@ -521,36 +521,38 @@ function Inner() {
           {/* ══ CHANGE REQUESTS (teacher approval) ══ */}
           {tab === "requests" && (
             changeReqs.length === 0 ? <div className="empty">No pending change requests 🎉</div> : (
-              <div className="sgrid">
+              <div className="ttbl-wrap">
+                <table className="ttbl">
+                  <thead><tr>
+                    <th>Student</th><th>Type</th><th>Now</th><th>Requested</th><th>Memo</th><th style={{ textAlign: "right" }}>Action</th>
+                  </tr></thead>
+                  <tbody>
                 {changeReqs.map(r => {
                   const en = r.enrollment || {};
                   const dEn: Record<string, string> = { "월": "Mon", "화": "Tue", "수": "Wed", "목": "Thu", "금": "Fri", "토": "Sat" };
                   const dstr = (arr: any) => (arr || []).map((d: string) => dEn[d] || d).join("/");
+                  const ph = (kr: string | null) => { const m = String(kr || "").match(/(\d{1,2}):(\d{2})/); return m ? ` (PH ${String((Number(m[1]) + 23) % 24).padStart(2, "0")}:${m[2]})` : ""; };
+                  const t = r.req_time_kr || en.class_time_kr || "";
+                  const reqStr = r.req_type === "single"
+                    ? `${r.req_date || "(keep date)"} ${r.req_time_kr || ""}${ph(r.req_time_kr)}`
+                    : `${r.req_days_of_week?.length ? dstr(r.req_days_of_week) : dstr(en.days_of_week)} ${t}${ph(t)}`;
                   return (
-                    <div key={r.id} className="scard">
-                      <div className="srow1">
-                        <div className="sname">{en.student_name_en || en.student_name}</div>
-                        <span className="chip" style={{ background: r.req_type === "single" ? "#dbeafe" : "#ede9fe", color: r.req_type === "single" ? "#1e40af" : "#6d28d9" }}>{r.req_type === "single" ? "1 session" : "Full schedule"}</span>
-                      </div>
-                      <div className="smeta">Now: {dstr(en.days_of_week)} {en.class_time_kr || ""}</div>
-                      <div className="smeta" style={{ color: "#1a6fc4", fontWeight: 700 }}>
-                        {(() => {
-                          const ph = (kr: string | null) => { const m = String(kr || "").match(/(\d{1,2}):(\d{2})/); return m ? ` (PH ${String((Number(m[1]) + 23) % 24).padStart(2, "0")}:${m[2]})` : ""; };
-                          const t = r.req_time_kr || en.class_time_kr || "";
-                          return r.req_type === "single"
-                            ? `→ ${r.req_date || "(keep date)"} ${r.req_time_kr || ""}${ph(r.req_time_kr)}`
-                            : `→ ${r.req_days_of_week?.length ? dstr(r.req_days_of_week) : dstr(en.days_of_week)} ${t}${ph(t)} (from ${r.effective_from})`;
-                        })()}
-                      </div>
-                      {r.memo && <div className="snote">💬 {r.memo}</div>}
-                      <div className="sbtns">
+                    <tr key={r.id}>
+                      <td style={{ fontWeight: 700 }}>{en.student_name_en || en.student_name}</td>
+                      <td><span className="chip" style={{ background: r.req_type === "single" ? "#dbeafe" : "#ede9fe", color: r.req_type === "single" ? "#1e40af" : "#6d28d9" }}>{r.req_type === "single" ? "1 session" : "Full"}</span></td>
+                      <td style={{ color: "#64748b" }}>{dstr(en.days_of_week)} {en.class_time_kr || ""}</td>
+                      <td style={{ color: "#1a6fc4", fontWeight: 700 }}>{reqStr}{r.req_type !== "single" && <span style={{ color: "#94a3b8", fontWeight: 400 }}> (from {r.effective_from})</span>}</td>
+                      <td style={{ color: "#475569" }}>{r.memo ? `💬 ${r.memo}` : "-"}</td>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button className="ab at on" disabled={reqBusy === r.id} onClick={() => teacherProcess(r.id, "teacher_approve")}>✓ Approve</button>
-                        <button className="ab ab2" disabled={reqBusy === r.id} onClick={() => teacherProcess(r.id, "teacher_reject")}>✗ Reject</button>
-                      </div>
-                      <div className="tnkr" style={{ marginTop: 6 }}>After you approve, the Korean manager gives final approval.</div>
-                    </div>
+                        <button className="ab ab2" disabled={reqBusy === r.id} onClick={() => teacherProcess(r.id, "teacher_reject")} style={{ marginLeft: 6 }}>✗ Reject</button>
+                      </td>
+                    </tr>
                   );
                 })}
+                  </tbody>
+                </table>
+                <div className="tnkr" style={{ marginTop: 8 }}>After you approve, the Korean manager gives final approval.</div>
               </div>
             )
           )}
@@ -696,6 +698,12 @@ function Css() {
       .wgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
       .ttime{font-size:18px}
     }
+.ttbl-wrap{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:6px;overflow-x:auto}
+.ttbl{width:100%;border-collapse:collapse;font-size:13.5px;min-width:640px}
+.ttbl th{text-align:left;padding:10px 12px;color:#94a3b8;font-weight:700;font-size:12px;border-bottom:2px solid #eef2f7;white-space:nowrap}
+.ttbl td{padding:11px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.ttbl tbody tr:last-child td,.ttbl tbody tr:last-child td{border-bottom:none}
+.ttbl tbody tr:hover{background:#f8fafc}
   `}</style>;
 }
 
