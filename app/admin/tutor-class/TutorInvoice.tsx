@@ -319,15 +319,20 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
     }
     return [...m.entries()].filter(([, ls]) => ls.length >= 2);
   }, [lessons]);
+  const [showPast, setShowPast] = useState(false);
+  const _todayStr = new Date().toISOString().slice(0, 10);
+  const _isPast = (l: Lesson) => !!(l.end_date && l.end_date < _todayStr);
+  const pastCount = useMemo(() => lessons.filter(_isPast).length, [lessons]);
   const houses = useMemo(() => {
     const m = new Map<string, Lesson[]>();
     for (const l of lessons) {
+      if (!showPast && _isPast(l)) continue;
       const k = (l.house_or_reserver || "").trim() || "(미지정)";
       if (!m.has(k)) m.set(k, []);
       m.get(k)!.push(l);
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "ko"));
-  }, [lessons]);
+  }, [lessons, showPast]);
   const [selHouse, setSelHouse] = useState("");
   const isGroup = selectedId.startsWith("grp:");
   const groupKey = isGroup ? selectedId.slice(4) : "";
@@ -586,6 +591,10 @@ export default function TutorInvoice({ lessonId: propLessonId, englishMode }: { 
           <option key={k} value={k}>{`🏠 ${k} (${ls.length}${englishMode ? "" : "건"})`}</option>
         ))}
       </select>
+      <label style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "#475569", cursor: "pointer", whiteSpace: "nowrap" }}>
+        <input type="checkbox" checked={showPast} onChange={e => { setShowPast(e.target.checked); setSelHouse(""); }} />
+        {englishMode ? `Show past (${pastCount})` : `과거 포함 (${pastCount})`}
+      </label>
       <button className="ti-btn ti-btn-print" onClick={handlePrint} disabled={!lesson && !isGroup}>
         📄 {englishMode ? "Print/PDF" : "인쇄/PDF"}
       </button>
