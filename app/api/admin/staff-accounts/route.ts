@@ -87,6 +87,15 @@ export async function PATCH(req: Request) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
     }
+    if (action === 'rename') {
+      const newUsername = body.newUsername
+      if (!newUsername) return NextResponse.json({ error: 'newUsername이 필요합니다.' }, { status: 400 })
+      const { data: dup } = await supabase.from('staff_accounts').select('id').eq('username', newUsername).maybeSingle()
+      if (dup) return NextResponse.json({ error: '이미 존재하는 username입니다.' }, { status: 409 })
+      const { error } = await supabase.from('staff_accounts').update({ username: newUsername }).eq('username', username)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, username: newUsername })
+    }
     return NextResponse.json({ error: '알 수 없는 action: ' + action }, { status: 400 })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
