@@ -12,6 +12,72 @@ export async function POST(req: Request) {
   if (key !== 'dream-projects-2026') return NextResponse.json({ error: 'forbidden' }, { status: 403 })
 
   const ddl = `
+-- 티쳐 전용 공간 구분 + 크로스 공유
+ALTER TABLE project_nodes ADD COLUMN IF NOT EXISTS origin text DEFAULT 'team';
+ALTER TABLE project_nodes ADD COLUMN IF NOT EXISTS team_shared boolean DEFAULT false;
+
+-- 티쳐 전용 단위 업무 (내 업무 / 업무 탭)
+CREATE TABLE IF NOT EXISTS teacher_tasks (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  title text NOT NULL DEFAULT '',
+  body text DEFAULT '',
+  assignees jsonb DEFAULT '[]'::jsonb,
+  due date,
+  status text DEFAULT 'todo',
+  done boolean DEFAULT false,
+  team_shared boolean DEFAULT false,
+  title_ko text,
+  body_ko text,
+  created_by text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  sort_idx int DEFAULT 0
+);
+ALTER TABLE teacher_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "all" ON teacher_tasks;
+CREATE POLICY "all" ON teacher_tasks FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON teacher_tasks TO anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS teacher_task_comments (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  task_id uuid,
+  from_id text DEFAULT '',
+  text text DEFAULT '',
+  ts timestamptz DEFAULT now()
+);
+ALTER TABLE teacher_task_comments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "all" ON teacher_task_comments;
+CREATE POLICY "all" ON teacher_task_comments FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON teacher_task_comments TO anon, authenticated;
+
+-- 티쳐 전용 주간 체크 항목
+CREATE TABLE IF NOT EXISTS teacher_weekly_items (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  title text NOT NULL DEFAULT '',
+  assignees jsonb DEFAULT '[]'::jsonb,
+  weekdays jsonb DEFAULT '[]'::jsonb,
+  active boolean DEFAULT true,
+  created_by text,
+  created_at timestamptz DEFAULT now(),
+  sort_idx int DEFAULT 0
+);
+ALTER TABLE teacher_weekly_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "all" ON teacher_weekly_items;
+CREATE POLICY "all" ON teacher_weekly_items FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON teacher_weekly_items TO anon, authenticated;
+
+CREATE TABLE IF NOT EXISTS teacher_weekly_checks (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  item_id uuid,
+  check_date date,
+  by_id text DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(item_id, check_date, by_id)
+);
+ALTER TABLE teacher_weekly_checks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "all" ON teacher_weekly_checks;
+CREATE POLICY "all" ON teacher_weekly_checks FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON teacher_weekly_checks TO anon, authenticated;
 CREATE TABLE IF NOT EXISTS project_nodes (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   project_id uuid,
