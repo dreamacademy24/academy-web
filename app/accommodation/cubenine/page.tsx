@@ -433,17 +433,10 @@ export default function CubeNinePage() {
               </div>
             </div>
             <div className="pkg-item">
-              <div className="pkg-item-icon">🍽️</div>
-              <div>
-                <div className="pkg-item-title">식사 바우처 제공</div>
-                <div className="pkg-item-desc">1주 기준 10만원 / 더 나인 레스토랑 이용</div>
-              </div>
-            </div>
-            <div className="pkg-item">
               <div className="pkg-item-icon">🍱</div>
               <div>
-                <div className="pkg-item-title">평일 3식 프리미엄 도시락</div>
-                <div className="pkg-item-desc">아침 7:50 / 점심 11:50 / 저녁 17:40 배달</div>
+                <div className="pkg-item-title">평일 석식 도시락 제공</div>
+                <div className="pkg-item-desc">한국인 조리사님 프리미엄 도시락 · 저녁 17:40 배달</div>
               </div>
             </div>
             <div className="pkg-item">

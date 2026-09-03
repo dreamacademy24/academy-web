@@ -96,7 +96,7 @@ const PRODUCT_DETAIL: Record<string, ProductDetail> = {
     ],
     highlights: [
       { icon: "🌅", title: "오션뷰 인피니티 풀", desc: "바다를 바라보는 야외 수영장" },
-      { icon: "🍳", title: "조식 포함 (월~일)", desc: "오션뷰 더나인 레스토랑 조식 · 1주 팀당 ₩10만 식사바우처" },
+      { icon: "🍳", title: "조식 포함 (월~일)", desc: "오션뷰 더나인 레스토랑 조식 · 평일 석식 도시락 제공" },
       { icon: "🛶", title: "해양 액티비티", desc: "카약·패들 이용, 다이빙 스팟 인접" },
     ],
     location: ["샹스몰 차량 3분 / 도보 10분", "공항 차량 20~30분", "베이스워터 차량 5분", "드림아카데미 차량 10~13분"],

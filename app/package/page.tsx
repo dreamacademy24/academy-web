@@ -449,7 +449,7 @@ export default function PackagePage() {
                 <div className="acc-feat">마사지 샵</div>
                 <div className="acc-special">
                   <strong>드림아카데미 X 큐브나인 패키지 특별혜택</strong><br/>
-                  · 도시락 대신 조식 및 식사 바우처 제공 (식사 바우처 : 팀당 1주 기준 10만원)<br/>
+                  · 조식 및 평일 석식 도시락 제공 (한국인 조리사님 프리미엄 도시락)<br/>
                   · 마사지&스파 20%, 레스토랑 10% 할인<br/>
                   · 바디 액티비티 무료 (카약/패들)
                 </div>
@@ -747,7 +747,6 @@ export default function PackagePage() {
               <div className="disc-card-body">
                 <p className="disc-card-desc">큐브나인 리조트 내 레스토랑</p>
                 <div className="disc-card-meta"><span>📍 마리곤돈 큐브나인 리조트</span></div>
-                <p className="disc-card-warn">* 패키지 식사 바우처 사용 시 할인 제외</p>
               </div>
             </div>
             <div className="disc-card">
