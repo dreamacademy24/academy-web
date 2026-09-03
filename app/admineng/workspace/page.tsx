@@ -15,6 +15,8 @@ type Node = {
   status: string | null;
   done: boolean;
   teacher_shared: boolean;
+  origin?: string | null;
+  team_shared?: boolean;
   title_en: string | null;
   body_en: string | null;
   due: string | null;
