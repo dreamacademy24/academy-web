@@ -57,7 +57,8 @@ export default function OnlineClassStudentPage() {
   const [comments, setComments] = useState<{ id: string; by: string; at: string; text: string }[]>([]);
   const [cmtDraft, setCmtDraft] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
-  const [siblings, setSiblings] = useState<{ id: string; student_name: string; student_name_en?: string | null }[]>([]);
+  const [siblings, setSiblings] = useState<{ id: string; student_name: string; student_name_en?: string | null; days_of_week?: string[]; class_time_kr?: string; start_date?: string; tutor_id?: string }[]>([]);
+  const [mentMode, setMentMode] = useState<"single" | "multi">("single");
   useEffect(() => { if (id) fetch(`/api/online-class/comments?enrollment_id=${id}`).then(r => r.ok ? r.json() : { comments: [] }).then((d: any) => setComments(d.comments || [])).catch(() => {}); }, [id]);
   async function addComment() {
     if (!cmtDraft.trim()) return;
@@ -117,7 +118,7 @@ export default function OnlineClassStudentPage() {
             if (allR.ok) {
               const all = await allR.json();
               const sibs = (all.enrollments || []).filter((x: any) => x.customer_user_id === e.customer_user_id && x.id !== e.id)
-                .map((x: any) => ({ id: x.id, student_name: x.student_name, student_name_en: x.student_name_en }));
+                .map((x: any) => ({ id: x.id, student_name: x.student_name, student_name_en: x.student_name_en, days_of_week: x.days_of_week, class_time_kr: x.class_time_kr, start_date: x.start_date, tutor_id: x.tutor_id }));
               setSiblings(sibs);
             }
           } catch { /* ignore */ }
@@ -198,11 +199,26 @@ export default function OnlineClassStudentPage() {
     if (sd) { const d = new Date(sd + "T00:00:00"); startLine = `${d.getMonth() + 1}월 ${d.getDate()}일(${"일월화수목금토"[d.getDay()]})부터 시작되는 `; }
     return `안녕하세요 어머님^^\n${startLine}${enr.student_name} 화상영어 링크 보내드립니다.\n기기 점검 및 입장 준비를 위해 수업 시작 5분 전까지 미리 접속 부탁드립니다. 또한 수업 집중력을 위해 소음이 적은 독립된 공간을 마련해 주시고, 에코(울림) 방지를 위해 헤드셋이나 이어폰 사용을 권장드립니다.\n✔ 수업 시간(${days}) : ${time}\n\n${zoomText || "(티쳐 줌 링크를 아래에 저장해 주세요)"}`;
   }
+  // 한 아이 블록 (합본용)
+  function mentBlock(name: string, days: string[], time: string, sd: string, zoom: string) {
+    let startLine = "";
+    if (sd) { const d = new Date(sd + "T00:00:00"); startLine = ` (${d.getMonth() + 1}월 ${d.getDate()}일 시작)`; }
+    return `■ ${name}${startLine}\n✔ 수업 시간(${(days || []).join("")}) : ${time || ""}\n${zoom || "(줌 링크 저장 필요)"}`;
+  }
+  // 형제(같은 계정) 합본 멘트 — 인사·공통안내 1회 + 아이별 블록
+  function buildMentAll() {
+    if (!enr) return "";
+    const meBlock = mentBlock(enr.student_name, (form?.days_of_week || enr.days_of_week || []), (form?.class_time_kr || enr.class_time_kr || ""), (form?.start_date || enr.start_date || ""), (form?.tutor_id || enr.tutor_id) ? (zoomMap[form?.tutor_id || enr.tutor_id || ""] || "") : "");
+    const sibBlocks = siblings.map(sb => mentBlock(sb.student_name, sb.days_of_week || [], sb.class_time_kr || "", sb.start_date || "", sb.tutor_id ? (zoomMap[sb.tutor_id] || "") : ""));
+    const body = [meBlock, ...sibBlocks].join("\n\n");
+    return `안녕하세요 어머님^^\n아이들 화상영어 링크 보내드립니다.\n기기 점검 및 입장 준비를 위해 수업 시작 5분 전까지 미리 접속 부탁드립니다. 또한 수업 집중력을 위해 소음이 적은 독립된 공간을 마련해 주시고, 에코(울림) 방지를 위해 헤드셋이나 이어폰 사용을 권장드립니다.\n\n${body}`;
+  }
   function openMent() {
     const tid = form?.tutor_id || enr?.tutor_id || "";
     const z = tid ? (zoomMap[tid] || "") : "";
     setZoomDraft(z);
-    setMentText(buildMent(z));
+    if (siblings.length > 0) { setMentMode("multi"); setMentText(buildMentAll()); }
+    else { setMentMode("single"); setMentText(buildMent(z)); }
     setMentOpen(true);
   }
   async function saveZoom() {
@@ -465,6 +481,12 @@ export default function OnlineClassStudentPage() {
         <div onClick={() => setMentOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={ev => ev.stopPropagation()} style={{ background: "#fff", borderRadius: 14, padding: 20, width: "min(560px,94vw)", maxHeight: "88vh", overflowY: "auto" }}>
             <div style={{ fontWeight: 800, marginBottom: 10 }}>💬 화상영어 안내 멘트 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{enr?.student_name} · 요일/시간/시작일 자동</span></div>
+            {siblings.length > 0 && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                <button onClick={() => { setMentMode("multi"); setMentText(buildMentAll()); }} style={{ flex: 1, border: mentMode === "multi" ? "1px solid #7c3aed" : "1px solid #e2e8f0", background: mentMode === "multi" ? "#f5f3ff" : "#fff", color: mentMode === "multi" ? "#6d28d9" : "#64748b", borderRadius: 9, padding: "7px 10px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>👨‍👩‍👧 형제 합본 ({siblings.length + 1}명)</button>
+                <button onClick={() => { const tid = form?.tutor_id || enr?.tutor_id || ""; setMentMode("single"); setMentText(buildMent(tid ? (zoomMap[tid] || "") : "")); }} style={{ flex: 1, border: mentMode === "single" ? "1px solid #1a6fc4" : "1px solid #e2e8f0", background: mentMode === "single" ? "#eff6ff" : "#fff", color: mentMode === "single" ? "#1a6fc4" : "#64748b", borderRadius: 9, padding: "7px 10px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>이 아이만</button>
+              </div>
+            )}
             <textarea value={mentText} onChange={ev => setMentText(ev.target.value)} rows={13}
               style={{ width: "100%", boxSizing: "border-box", padding: 12, border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 13, fontFamily: "inherit", lineHeight: 1.6 }} />
             <button onClick={() => { navigator.clipboard.writeText(mentText); show("복사됨 — 카톡에 붙여넣으세요 ✅"); }}
