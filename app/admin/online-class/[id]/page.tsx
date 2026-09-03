@@ -56,6 +56,8 @@ export default function OnlineClassStudentPage() {
   const [mentOpen, setMentOpen] = useState(false);
   const [comments, setComments] = useState<{ id: string; by: string; at: string; text: string }[]>([]);
   const [cmtDraft, setCmtDraft] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [siblings, setSiblings] = useState<{ id: string; student_name: string; student_name_en?: string | null }[]>([]);
   useEffect(() => { if (id) fetch(`/api/online-class/comments?enrollment_id=${id}`).then(r => r.ok ? r.json() : { comments: [] }).then((d: any) => setComments(d.comments || [])).catch(() => {}); }, [id]);
   async function addComment() {
     if (!cmtDraft.trim()) return;
@@ -108,6 +110,18 @@ export default function OnlineClassStudentPage() {
         const dt = e.day_times && typeof e.day_times === "object" ? e.day_times : null;
         setDayTimesOn(!!dt && Object.keys(dt).length > 0);
         setDayTimes(dt || {});
+        // 같은 손님 계정(customer_user_id)의 형제 수강권 조회 — 한 화면에서 전환
+        if (e.customer_user_id) {
+          try {
+            const allR = await fetch("/api/online-class/enrollments");
+            if (allR.ok) {
+              const all = await allR.json();
+              const sibs = (all.enrollments || []).filter((x: any) => x.customer_user_id === e.customer_user_id && x.id !== e.id)
+                .map((x: any) => ({ id: x.id, student_name: x.student_name, student_name_en: x.student_name_en }));
+              setSiblings(sibs);
+            }
+          } catch { /* ignore */ }
+        } else { setSiblings([]); }
       }
       if (r2 && r2.ok) { const t = await r2.json(); setTutors(t.tutors || []); }
     } finally { setLoading(false); }
@@ -234,8 +248,16 @@ export default function OnlineClassStudentPage() {
           <button onClick={() => router.push("/admin/online-class")} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>← 수강생 목록</button>
           <h1 style={{ fontSize: 21, fontWeight: 800, margin: 0 }}>{enr.student_name} <span style={{ fontSize: 14, color: "#64748b", fontWeight: 600 }}>{enr.student_name_en}</span></h1>
           <span style={{ fontSize: 12, fontWeight: 800, background: "#dcfce7", color: "#166534", borderRadius: 8, padding: "3px 10px" }}>{STATUS_OPT.find(o => o[0] === enr.status)?.[1] || enr.status}</span>
+          {siblings.length > 0 && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginLeft: 4 }}>
+              <span style={{ fontSize: 12, color: "#64748b", fontWeight: 700 }}>👨‍👩‍👧 같은 계정:</span>
+              {siblings.map(sb => (
+                <button key={sb.id} onClick={() => router.push(`/admin/online-class/${sb.id}?focus=attendance`)} style={{ border: "1px solid #c7d2fe", background: "#eef2ff", color: "#4338ca", borderRadius: 999, padding: "3px 11px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{sb.student_name}{sb.student_name_en ? ` (${sb.student_name_en})` : ""}</button>
+              ))}
+            </span>
+          )}
           <div style={{ flex: 1 }} />
-          <button onClick={() => window.open(`/admin/online-class/invoice?enrollment_id=${id}`, "_blank")} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🧾 인보이스</button>
+          <button onClick={() => setShowInvoice(true)} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🧾 인보이스</button>
           <button onClick={openMent} style={{ border: "1px solid #d8b4fe", background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💬 안내 멘트</button>
           <button onClick={regenerate} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🔄 세션 재생성</button>
         </div>
@@ -418,6 +440,22 @@ export default function OnlineClassStudentPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
               {TIME_SLOTS.map(t => <button key={t} onClick={() => { tp.cb(t); setTp(null); }} style={{ padding: "9px 0", border: "1px solid #e2e8f0", borderRadius: 8, background: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t}</button>)}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 인보이스 인라인 모달 (새창 대신) */}
+      {showInvoice && (
+        <div onClick={() => setShowInvoice(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 4000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "min(900px,96vw)", height: "92vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #e8ecf3" }}>
+              <span style={{ fontWeight: 800, fontSize: 15 }}>🧾 인보이스 — {enr.student_name}</span>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => window.open(`/admin/online-class/invoice?enrollment_id=${id}`, "_blank")} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>새 탭 ↗</button>
+                <button onClick={() => setShowInvoice(false)} style={{ border: "1px solid #e2e8f0", background: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>✕ 닫기</button>
+              </div>
+            </div>
+            <iframe src={`/admin/online-class/invoice?enrollment_id=${id}`} style={{ flex: 1, border: "none", width: "100%" }} title="invoice" />
           </div>
         </div>
       )}
