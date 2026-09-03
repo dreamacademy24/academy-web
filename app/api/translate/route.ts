@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server'
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
-const SYSTEM_PROMPT = `다음 영어 튜터 수업 노트를 학부모가 읽을 자연스러운 한국어로 번역.
+const SYSTEM_EN2KO = `다음 영어 튜터 수업 노트를 학부모가 읽을 자연스러운 한국어로 번역.
 번역문만 출력, 군더더기 금지.`
+const SYSTEM_KO2EN = `Translate the following Korean workplace note (project task / instruction for teachers) into clear, natural English.
+Keep it concise and professional. Output only the translation, no extra words.`
 
 export async function POST(req: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -12,17 +14,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY missing' }, { status: 500 })
   }
 
-  let body: { text?: string } = {}
+  let body: { text?: string; dir?: string } = {}
   try { body = await req.json() } catch { /* noop */ }
   const text = (body.text || '').trim()
   if (!text) {
     return NextResponse.json({ error: 'text required' }, { status: 400 })
   }
+  const system = body.dir === 'ko2en' ? SYSTEM_KO2EN : SYSTEM_EN2KO
 
   const payload = {
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
-    system: SYSTEM_PROMPT,
+    system,
     messages: [{ role: 'user', content: text }],
   }
 
