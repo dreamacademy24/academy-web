@@ -3940,7 +3940,18 @@ function loadStaffAccounts(){
   return Promise.race([fetchP,timeout]);
 }
 function isAdmin(){return CU&&CU.id==='ceo';}
-function getP(id){return ALL.find(e=>e.id===id);}
+let TEACHERS=[];
+// 현지 티쳐 명단 (korean_admin·ceo 제외한 모든 활성 계정 = 온라인/튜터/헤드티쳐 전체)
+function loadTeachers(){
+  return fetch('/api/admin/staff-accounts?active=true')
+    .then(function(r){return r.ok?r.json():{staff:[]};})
+    .then(function(d){
+      var arr=(d&&d.staff)||[];
+      TEACHERS=arr.filter(function(x){return x.role!=='korean_admin'&&x.username!=='admin-ceo';})
+        .map(function(x){return {id:x.username,name:x.name,color:x.color||'#0ea5e9',initial:x.initial||(x.name||'?').slice(0,1).toUpperCase(),isTeacher:true};});
+    }).catch(function(e){console.warn('[teachers] load fail',e);TEACHERS=[];});
+}
+function getP(id){return ALL.find(e=>e.id===id)||(TEACHERS&&TEACHERS.find(e=>e.id===id))||null;}
 
 let CU=null,curEmpId=null,curProjId=null,editProjId=null,editTaskId=null;
 let calDate=new Date(),calView='month',boardFilter='all',boardView='task',empFilter='active';
@@ -11377,6 +11388,7 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   loadStaffAccounts().then(loadGuideMsgs, loadGuideMsgs).then(_bootApp, _bootApp);
+  loadTeachers();
 });
 
 /* ===================== PROJECT TREE (신규 · Phase A) ===================== */
@@ -11400,9 +11412,12 @@ function ptProgress(projId,scopeId){
   return Math.round(d/leafs.length*100);
 }
 function ptOpen(){
-  ptLoadAll().then(function(){
-    if(PT.cur&&PT.nodes.find(function(n){return n.id===PT.cur;}))ptRenderProject(PT.cur);
-    else ptRenderList();
+  var preT=(TEACHERS&&TEACHERS.length)?Promise.resolve():loadTeachers();
+  preT.then(function(){
+    ptLoadAll().then(function(){
+      if(PT.cur&&PT.nodes.find(function(n){return n.id===PT.cur;}))ptRenderProject(PT.cur);
+      else ptRenderList();
+    });
   });
 }
 function ptLoadAll(){
@@ -11531,6 +11546,14 @@ function ptRenderDetail(id){
     +'</div></div>';
   h+='<input id="ptTitle" value="'+esc(n.title||'').replace(/<br>/g,'')+'" onchange="ptSaveField(\''+id+'\',\'title\',this.value)" style="font-size:20px;font-weight:700;border:none;outline:none;width:100%;padding:8px 0;background:transparent" placeholder="제목">';
   // meta row
+  // 🌏 티쳐 공유 토글
+  h+='<div style="margin:8px 0;padding:9px 12px;border-radius:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:'+(n.teacher_shared?'#ecfeff':'#f8fafc')+';border:1px solid '+(n.teacher_shared?'#67e8f9':'#e5e7eb')+'">'
+    +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:700;color:'+(n.teacher_shared?'#0e7490':'#64748b')+'">'
+    +'<input type="checkbox" '+(n.teacher_shared?'checked':'')+' onchange="ptToggleShare(\''+id+'\',this.checked)"> 🌏 티쳐 공유</label>'
+    +(n.teacher_shared
+        ?'<span style="font-size:11px;color:#0891b2">티쳐 Workspace에 영어로 표시됨'+(n.title_en?' · 번역 완료':' · 번역 중…')+'</span><button class="btn btn-secondary btn-sm" style="margin-left:auto;padding:3px 9px;font-size:11px" onclick="ptAutoTranslate2(\''+id+'\')">🌏 재번역</button>'
+        :'<span style="font-size:11px;color:#94a3b8">체크하면 현지 티쳐가 영어로 볼 수 있어요</span>')
+    +'</div>';
   h+='<div class="pt-meta">';
   h+='<span class="pt-meta-item"><span style="color:var(--text3)">담당</span>'+(av||'<span style="color:var(--text3);font-size:12px">없음</span>')+'<span class="pt-plus" onclick="ptPickAssignees(\''+id+'\')">+</span></span>';
   h+='<span class="pt-meta-item"><select onchange="ptSaveField(\''+id+'\',\'status\',this.value)" style="border:1px solid var(--border2);border-radius:8px;padding:7px 12px;font-size:14px;color:'+staColor[n.status||'todo']+';font-weight:700;cursor:pointer">'
@@ -11579,22 +11602,48 @@ function ptDelNode(id){
   PT.sel=n.parent_id||null;
   ptRenderTree(PT.cur);ptRenderDetail(PT.sel);
 }
+/* ---------- 티쳐 공유 / 자동 영어 번역 ---------- */
+function _ptStrip(html){return String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();}
+function _ptTr(text){return fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text,dir:'ko2en'})}).then(function(r){return r.ok?r.json():{};}).then(function(d){return (d&&d.translated)||'';}).catch(function(){return '';});}
+function ptAutoTranslate(n,cb){
+  if(!n)return;
+  var tt=_ptStrip(n.title);var bb=_ptStrip(n.body);
+  var jobs=[];
+  jobs.push((tt?_ptTr(tt):Promise.resolve('')).then(function(en){if(en){n.title_en=en;sbPatch('project_nodes','id=eq.'+n.id,{title_en:en}).catch(function(){});}}));
+  jobs.push((bb?_ptTr(bb):Promise.resolve('')).then(function(en){n.body_en=en||'';sbPatch('project_nodes','id=eq.'+n.id,{body_en:(en||'')}).catch(function(){});}));
+  Promise.all(jobs).then(function(){if(cb)cb();});
+}
+function ptAutoTranslate2(id){var n=ptFindNode(id);if(!n)return;n.title_en='';ptRenderDetail(id);ptAutoTranslate(n,function(){ptRenderDetail(id);});}
+function ptToggleShare(id,on){
+  var n=ptFindNode(id);if(!n)return;
+  n.teacher_shared=!!on;n.updated_at=ptNow();
+  sbPatch('project_nodes','id=eq.'+id,{teacher_shared:n.teacher_shared,updated_at:n.updated_at}).catch(function(e){console.error(e);});
+  if(on){ptAutoTranslate(n,function(){ptRenderDetail(id);});}
+  ptRenderDetail(id);ptRenderTree(PT.cur);
+}
 /* ---------- 담당자 선택 ---------- */
 function ptPickAssignees(id){
   var n=ptFindNode(id);if(!n)return;
   var cur=(n.assignees||[]).slice();
   var ov=document.createElement('div');ov.className='pt-ovl';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
-  var members=ALL.filter(function(e){return e.id!=='ceo'||true;});
-  var body='<div class="pt-ovl-card"><div style="font-weight:700;margin-bottom:10px">담당자 선택</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
-  body+=members.map(function(e){var on=cur.indexOf(e.id)>=0;return '<span class="pt-chip'+(on?' on':'')+'" data-id="'+e.id+'"><span class="pt-av" style="background:'+e.color+'">'+e.initial+'</span>'+esc(e.name)+'</span>';}).join('');
-  body+='</div><div style="text-align:right;margin-top:14px"><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.pt-ovl\').remove()">취소</button> <button class="btn btn-primary btn-sm" id="ptAsgSave">저장</button></div></div>';
+  function _chip(e){var on=cur.indexOf(e.id)>=0;return '<span class="pt-chip'+(on?' on':'')+'" data-id="'+e.id+'"><span class="pt-av" style="background:'+e.color+'">'+e.initial+'</span>'+esc(e.name)+'</span>';}
+  var kor=ALL.filter(function(e){return true;});
+  var body='<div class="pt-ovl-card"><div style="font-weight:700;margin-bottom:10px">담당자 선택</div>';
+  body+='<div style="font-size:11px;color:#94a3b8;margin:0 0 6px">한국 직원</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+kor.map(_chip).join('')+'</div>';
+  if(TEACHERS&&TEACHERS.length){
+    body+='<div style="font-size:11px;color:#0e7490;font-weight:700;margin:14px 0 6px">🌏 현지 티쳐 <span style="color:#94a3b8;font-weight:400">(배정 시 노드가 자동 공유됩니다)</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">'+TEACHERS.map(_chip).join('')+'</div>';
+  }
+  body+='<div style="text-align:right;margin-top:14px"><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.pt-ovl\').remove()">취소</button> <button class="btn btn-primary btn-sm" id="ptAsgSave">저장</button></div></div>';
   ov.innerHTML=body;document.body.appendChild(ov);
   ov.querySelectorAll('.pt-chip').forEach(function(c){c.onclick=function(){c.classList.toggle('on');};});
   ov.querySelector('#ptAsgSave').onclick=function(){
     var sel=[];ov.querySelectorAll('.pt-chip.on').forEach(function(c){sel.push(c.dataset.id);});
     n.assignees=sel;n.updated_at=ptNow();
-    sbPatch('project_nodes','id=eq.'+id,{assignees:sel,updated_at:n.updated_at}).catch(function(e){console.error(e);});
+    var hasTeacher=sel.some(function(x){return TEACHERS&&TEACHERS.find(function(t){return t.id===x;});});
+    var patch={assignees:sel,updated_at:n.updated_at};
+    if(hasTeacher&&!n.teacher_shared){n.teacher_shared=true;patch.teacher_shared=true;ptAutoTranslate(n);}
+    sbPatch('project_nodes','id=eq.'+id,patch).catch(function(e){console.error(e);});
     ov.remove();ptRenderTree(PT.cur);ptRenderDetail(id);
   };
 }
