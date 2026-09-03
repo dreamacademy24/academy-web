@@ -150,7 +150,12 @@ export function getBookingCategory(b: {
   const ac = b.academy_option === true;
   let comp: string;
   if (isCommuteBooking(b)) comp = hasDhRoom ? "드하+드아" : "통학형";
-  else if (at.includes("+")) comp = at.includes("제이파크") ? "드하+JP" : at.includes("큐브") ? "드하+C9" : "콤보";
+  else if (at.includes("+")) {
+    const _hasDh = at.includes("드림") || at.includes("드하");
+    const _hasJp = at.includes("제이파크") || at.includes("jpark") || at.includes("jaypark");
+    const _hasCn = at.includes("큐브") || at.includes("cube");
+    comp = _hasDh && _hasJp ? "드하+JP" : _hasDh && _hasCn ? "드하+C9" : _hasJp && _hasCn ? "JP+C9" : "콤보";
+  }
   else if (at.includes("제이파크")) comp = ac ? "JP+드아" : "JP";
   else if (at.includes("큐브")) comp = ac ? "C9+드아" : "C9";
   else if (at.includes("드림") || at.includes("드하")) comp = ac ? "드하+드아" : "드하";
