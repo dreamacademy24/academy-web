@@ -37,6 +37,10 @@ ALTER TABLE teacher_tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "all" ON teacher_tasks;
 CREATE POLICY "all" ON teacher_tasks FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON teacher_tasks TO anon, authenticated;
+ALTER TABLE teacher_tasks ADD COLUMN IF NOT EXISTS progress int DEFAULT 0;
+ALTER TABLE teacher_tasks ADD COLUMN IF NOT EXISTS seen jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE teacher_tasks ADD COLUMN IF NOT EXISTS priority text DEFAULT 'normal';
+ALTER TABLE teacher_tasks ADD COLUMN IF NOT EXISTS archived boolean DEFAULT false;
 
 CREATE TABLE IF NOT EXISTS teacher_task_comments (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
