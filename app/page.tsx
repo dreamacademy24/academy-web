@@ -173,7 +173,7 @@ export default function HomePage() {
     .divy { width: 44px; height: 3px; background: var(--yellow); margin: 14px 0 24px; border-radius: 2px; }
 
     /* ABOUT */
-    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+    .about-grid { display: grid; grid-template-columns: 1fr; max-width: 860px; }
     .about-features { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 32px; }
     .af { padding: 18px; border: 1px solid var(--stroke); border-radius: 10px; transition: box-shadow 200ms; border-left: 4px solid var(--blue); }
     .af:hover { box-shadow: var(--shadow); }
@@ -414,12 +414,6 @@ export default function HomePage() {
           <div className="af af-red"><div className="af-icon">⚙️</div><div className="af-t">체계적인 시스템</div><div className="af-d">담임 선생님 배정<br/>담당 매니저 빠른 피드백</div></div>
         </div>
         <div className="about-quote">"아이 한 명, 한 명의 가능성을 소중히 키우는 공간,<br/>드림아카데미에서 믿을 수 있는 배움을 시작하세요."</div>
-      </div>
-      <div className="about-features" style={{gridColumn:"1/-1"}}>
-        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>500+</div><div className="af-t" style={{marginTop:"4px"}}>수강생</div></div>
-        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>90%</div><div className="af-t" style={{marginTop:"4px"}}>교사 자격증 보유</div></div>
-        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>10년</div><div className="af-t" style={{marginTop:"4px"}}>운영 경력</div></div>
-        <div className="af" style={{textAlign:"center",padding:"24px"}}><div style={{fontFamily:"Montserrat",fontSize:"32px",fontWeight:900,color:"var(--blue)"}}>98%</div><div className="af-t" style={{marginTop:"4px"}}>만족도</div></div>
       </div>
     </div>
   </div>
