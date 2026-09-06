@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
+import { useEffect } from "react";
 
 export default function KinderPage() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -187,65 +188,7 @@ export default function KinderPage() {
       `}</style>
 
       {/* NAV */}
-      <nav id="mainNav">
-        <a href="/" className="logo">
-          <span className="D">D</span>ream<span className="A">A</span>cademy
-        </a>
-        <div className="nav-center">
-          <div className="nav-dd">
-            <a href="#" className="nav-active">
-              커리큘럼 <span className="nav-dd-arrow">▾</span>
-            </a>
-            <div className="nav-dd-menu">
-              <a href="/junior">주니어 커리큘럼</a>
-              <a href="/kinder" style={{ color: "var(--kinder-dark)", fontWeight: 600 }}>
-                ▶ 킨더 커리큘럼
-              </a>
-            </div>
-          </div>
-          <a href="/package">올인원패키지</a>
-          <div className="nav-dd">
-            <a href="#">
-              숙소 <span className="nav-dd-arrow">▾</span>
-            </a>
-            <div className="nav-dd-menu">
-              <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-              <a href="/accommodation/jpark">제이파크</a>
-              <a href="/accommodation/cubenine">큐브나인</a>
-            </div>
-          </div>
-          <a href="/playdream">플레이드림</a>
-          <a href="/apply">패키지서비스신청</a>
-          <a href="/notice">공지사항</a>
-          <a href="/community">커뮤니티</a>
-        </div>
-        <div className="nav-right">
-          <a href="/login" style={{color:"#374151",fontSize:"13.5px",fontWeight:600,marginRight:"10px"}}>로그인</a><a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
-        </div>
-        <button
-          className="hamburger"
-          onClick={() => setMobileNavOpen((v) => !v)}
-        >
-          <span></span><span></span><span></span>
-        </button>
-      </nav>
-
-      {/* MOBILE NAV */}
-      <div className={`mob-nav${mobileNavOpen ? " open" : ""}`} id="mobnav">
-        <a href="/junior">주니어 커리큘럼</a>
-        <a href="/kinder" style={{ color: "var(--kinder-dark)", fontWeight: 700 }}>
-          ▶ 킨더 커리큘럼
-        </a>
-        <a href="/package">올인원패키지</a>
-        <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-        <a href="/accommodation/jpark">제이파크</a>
-        <a href="/accommodation/cubenine">큐브나인</a>
-        <a href="/playdream">플레이드림</a>
-          <a href="/apply">패키지서비스신청</a>
-        <a href="/notice">공지사항</a>
-        <a href="/community">커뮤니티</a>
-        <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
-      </div>
+      <SiteNav />
 
       {/* PAGE HERO */}
       <div className="page-hero">
@@ -498,23 +441,7 @@ export default function KinderPage() {
       </div>
 
       {/* FOOTER */}
-      <footer>
-        <div className="footer-inner">
-          <span className="flogo">
-            <span className="D">D</span>ream<span className="A">A</span>cademy
-          </span>
-          <div className="flinks">
-            <a href="/">홈</a>
-            <a href="/junior">주니어 커리큘럼</a>
-            <a href="/kinder">킨더 커리큘럼</a>
-            <a href="/shuttle">셔틀 신청</a>
-            <a href="/after-school-fieldtrip">애프터스쿨</a>
-            <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기</a>
-          </div>
-        </div>
-        <div className="fcopy">© 2026 Dream Academy by Dream Company. All rights reserved. · Cebu, Philippines</div>
-        <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0"}}><a href="/admin" style={{fontSize:"20px",color:"#fff",fontWeight:900,textDecoration:"none"}}>관리자</a></div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -1,39 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { isAdminAuthed, getAdminInfo, clearAdminAuth } from "@/lib/adminAuth";
-import { supabase } from "@/lib/supabase";
+import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
+import { useEffect } from "react";
 
 export default function HomePage() {
-  const router = useRouter();
-  const [adminInfo, setAdminInfo] = useState<{name:string; role:string; staffId:string} | null>(null);
-  const [supaUser, setSupaUser] = useState<any>(null);
-  const [supaProfile, setSupaProfile] = useState<any>(null);
-
   useEffect(() => {
-    const info = getAdminInfo();
-    if (info) { setAdminInfo(info); return; }
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setSupaUser(data.user);
-        supabase.from("profiles").select("*").eq("id", data.user.id).single().then(({ data: prof }) => {
-          if (prof) setSupaProfile(prof);
-        });
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    // Scroll shadow effect
-    const handleScroll = () => {
-      const nav = document.getElementById('mainNav');
-      if (nav) {
-        nav.style.boxShadow =
-          window.scrollY > 20 ? '0 2px 20px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.08)';
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-
     // Intersection Observer for fade animations
     const obs = new IntersectionObserver(
       (entries) => entries.forEach((el) => {
@@ -58,15 +29,6 @@ export default function HomePage() {
       }
     });
 
-    // Hamburger toggle
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    if (hamburgerBtn) {
-      hamburgerBtn.addEventListener('click', () => {
-        const mobnav = document.getElementById('mobnav');
-        if (mobnav) mobnav.classList.toggle('open');
-      });
-    }
-
     // FAQ accordion
     document.querySelectorAll('.faq-q').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -82,7 +44,6 @@ export default function HomePage() {
     });
 
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       obs.disconnect();
     };
 
@@ -397,83 +358,7 @@ export default function HomePage() {
     }
   `}</style>
       {/* NAV */}
-<nav id="mainNav">
-  <a href="/" className="logo"><img src="/logo.png" alt="드림아카데미" /></a>
-  <div className="nav-center">
-    <div className="nav-dd">
-      <a href="#">커리큘럼 <span className="nav-dd-arrow">▾</span></a>
-      <div className="nav-dd-menu">
-        <a href="/junior">주니어 커리큘럼</a>
-        <a href="/kinder">킨더 커리큘럼</a>
-      </div>
-    </div>
-    <a href="/package">올인원패키지</a>
-    <div className="nav-dd">
-      <a href="#">숙소 <span className="nav-dd-arrow">▾</span></a>
-      <div className="nav-dd-menu">
-        <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-        <a href="/accommodation/jpark">제이파크</a>
-        <a href="/accommodation/cubenine">큐브나인</a>
-      </div>
-    </div>
-    <a href="/playdream">플레이드림</a>
-    <a href="/notice">공지사항</a>
-    <a href="/community">커뮤니티</a>
-    <a href="/products" className="nav-pay">결제</a>
-  </div>
-  <div className="nav-right">
-    {adminInfo ? (<>
-      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {adminInfo.name}님</span>
-      <button onClick={() => { clearAdminAuth(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
-    </>) : supaUser ? (<>
-      <span style={{fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {supaProfile?.name || supaUser?.email?.split('@')[0]}님</span>
-      <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); window.location.reload(); }} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"6px 12px",fontSize:"12px",color:"#94a3b8",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그아웃</button>
-    </>) : (
-      <button onClick={() => router.push('/admin')} style={{background:"none",border:"1px solid #e2e8f0",borderRadius:"6px",padding:"7px 14px",fontSize:"13px",color:"#374151",fontWeight:600,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>로그인</button>
-    )}
-    {adminInfo ? (
-      <a href="/admin/hub" className="nav-cta">관리페이지</a>
-    ) : supaUser ? (
-      <a href="/portal/dashboard" className="nav-cta">마이페이지</a>
-    ) : (
-      <a href="http://pf.kakao.com/_Yuhxhn/chat" className="nav-cta" target="_blank" rel="noopener noreferrer">상담하기</a>
-    )}
-  </div>
-  <div className="hamburger" id="hamburgerBtn">
-    <span></span><span></span><span></span>
-  </div>
-</nav>
-<div className="mob-nav" id="mobnav">
-  <a href="/junior">주니어 커리큘럼</a>
-  <a href="/kinder">킨더 커리큘럼</a>
-  <a href="/package">올인원패키지</a>
-  <a href="/accommodation/dreamhouse">드림하우스 (독채)</a>
-  <a href="/accommodation/jpark">제이파크</a>
-  <a href="/accommodation/cubenine">큐브나인</a>
-  <a href="/playdream">플레이드림</a>
-  <a href="/notice">공지사항</a>
-  <a href="/community">커뮤니티</a>
-  <a href="/products" className="nav-pay">결제</a>
-  {adminInfo ? (
-    <a href="/admin/hub">관리페이지 →</a>
-  ) : supaUser ? (
-    <a href="/portal/dashboard">마이페이지 →</a>
-  ) : (<>
-    <a href="/login" style={{fontWeight:700,color:"#1a6fc4"}}>🔑 로그인 (마이페이지) →</a>
-    <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer">상담하기 →</a>
-  </>)}
-  <div style={{borderTop:"1px solid #e2e8f0",marginTop:8,paddingTop:8}}>
-    {adminInfo ? (<>
-      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {adminInfo.name}님</span>
-      <a href="#" onClick={(e)=>{e.preventDefault();clearAdminAuth();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
-    </>) : supaUser ? (<>
-      <span style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#374151",fontWeight:600}}>안녕하세요! {supaProfile?.name || supaUser?.email?.split('@')[0]}님</span>
-      <a href="#" onClick={async(e)=>{e.preventDefault();await supabase.auth.signOut();window.location.href="/";}} style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#dc2626"}}>로그아웃</a>
-    </>) : (
-      <a href="/admin" style={{display:"block",padding:"11px 18px",fontSize:"13px",color:"#1a6fc4",fontWeight:600}}>로그인</a>
-    )}
-  </div>
-</div>
+<SiteNav />
 
 {/* HERO: 밝은 흰색 배경 */}
 <section className="hero">
@@ -817,23 +702,7 @@ export default function HomePage() {
 <a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" className="mob-cta">💬 카카오톡 상담하기</a>
 
 {/* FOOTER */}
-<footer>
-  <div className="footer-grid">
-    <div>
-      <span className="flogo"><span className="D">D</span>ream<span className="A">A</span>cademy</span>
-      <p className="fdesc">필리핀 세부의 프리미엄 영어 교육 프로그램.<br/>숙소, 수업, 식사, 활동까지 올인원 케어.</p>
-      <div className="fsns"><a href="#" aria-label="Instagram">📷</a><a href="http://pf.kakao.com/_Yuhxhn/chat" target="_blank" rel="noopener noreferrer" aria-label="KakaoTalk">💬</a><a href="#" aria-label="YouTube">▶️</a></div>
-    </div>
-    <div><div className="ftitle">커리큘럼</div><div className="flinks"><a href="/junior">주니어 커리큘럼</a><a href="/kinder">킨더 커리큘럼</a><a href="/after-school-fieldtrip">애프터스쿨</a></div></div>
-    <div><div className="ftitle">숙소</div><div className="flinks"><a href="/accommodation/dreamhouse">드림하우스 (독채)</a><a href="/accommodation/jpark">제이파크</a><a href="/accommodation/cubenine">큐브나인</a><a href="#">패키지 안내</a></div></div>
-    <div><div className="ftitle">서비스</div><div className="flinks"><a href="/shuttle">투어 셔틀 신청</a><a href="/after-school-fieldtrip">애프터스쿨 신청</a><a href="/portal/dashboard">마이페이지</a><a href="/notice">공지사항</a><a href="/community">커뮤니티</a></div></div>
-  </div>
-  <div className="fbottom">
-    <span>© 2026 Dream Academy by Dream Company. All rights reserved.</span>
-    <span>Bayswater, Mactan · Cebu, Philippines</span>
-  </div>
-  <div style={{textAlign:"right",maxWidth:1200,margin:"8px auto 0",paddingRight:"60px"}}><a href="/admin" style={{fontSize:"14px",color:"rgba(255,255,255,0.5)",fontWeight:600,textDecoration:"none"}}>관리자</a></div>
-</footer>
+<SiteFooter />
     </>
   );
 }
