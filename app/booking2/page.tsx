@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
+import { fetchCopySource, nonPackageTypeFromAccom, copyGuardians } from "@/lib/bookingCopy";
 import { supabase } from "@/lib/supabase";
 import { fetchDeployedHolidays, holidaysInRange, type HolidayItem } from "@/lib/holidays";
 import { HolidayBanner, HolidayPopup } from "@/components/HolidayNotice";
@@ -56,6 +57,25 @@ export default function BookingNonPackagePage() {
   const [reservationNo, setReservationNo] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
+
+  // 재방문 복사: /booking2?copy=<예약id> → 예약자·보호자·학생·유형 프리필 (날짜·항공편은 새로 입력)
+  const [copiedFrom, setCopiedFrom] = useState<{ name: string; no: string } | null>(null);
+  useEffect(() => {
+    const cid = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("copy") : null;
+    if (!cid) return;
+    fetchCopySource(cid).then((src) => {
+      if (!src) return;
+      const b = src.booking;
+      const t = nonPackageTypeFromAccom(b) as NPType;
+      setBType(t);
+      if (t === "dh_da") setAcademyOpt(true);
+      setBooker({ name: String(b.booker_name || ""), nameEng: String(b.booker_english || ""), phone: String(b.booker_phone || "") });
+      setExtraGuardians(copyGuardians(b.extra_guardians));
+      if (b.accom_weeks && Number(b.accom_weeks) > 0) setWeeks(Number(b.accom_weeks));
+      if (src.students.length) setStudents(src.students.map((st, i) => ({ id: Date.now() + i, korName: st.korName, engName: st.engName, age: st.age, grade: st.grade, photo: st.photo })));
+      setCopiedFrom({ name: String(b.booker_name || ""), no: String(b.reservation_no || "") });
+    });
+  }, []);
   // 배포된 휴일 — 선택한 기간에 끼면 팝업 + 배너 안내
   const [deployedHolidays, setDeployedHolidays] = useState<HolidayItem[]>([]);
   const [holidayPopup, setHolidayPopup] = useState<HolidayItem[] | null>(null);
@@ -248,6 +268,11 @@ export default function BookingNonPackagePage() {
     <div className="bw">
       <div className="bh"><h1>드림아카데미 예약 접수 (비패키지)</h1><p>숙소 단독 · 드하+드림아카데미 · 통학형 예약을 접수합니다.</p></div>
       <div className="bc">
+        {copiedFrom && (
+          <div style={{ marginTop: 14, background: "#ecfdf5", border: "1.5px solid #6ee7b7", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#065f46", lineHeight: 1.6 }}>
+            🔁 <b>{copiedFrom.name}</b>님의 이전 예약({copiedFrom.no})을 복사했어요. 예약자·학생·유형은 채워져 있으니 <b>날짜·항공편·요청사항만 새로 입력</b>하고 접수하세요.
+          </div>
+        )}
 
         <div className="bs">
           <h2>1️⃣ 예약 유형</h2>

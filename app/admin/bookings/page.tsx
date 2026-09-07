@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { copyBookingUrl } from "@/lib/bookingCopy";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { toastOk, toastErr } from "@/lib/toast";
@@ -962,7 +963,7 @@ export default function AdminBookingsPage(){
       </div>
       {(()=>{const un=searchedList.filter(b=>(b.accom_type||"").includes("드림하우스")&&!String(b.house_no||b.accom_room||"").trim());return un.length>0?(<div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"10px 14px",margin:"0 0 10px",fontSize:13,color:"#b91c1c",fontWeight:700,display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:16}}>❗</span>드림하우스 룸 미배정 {un.length}건 — 오버부킹 주의! 각 예약에 룸을 배정해 주세요.</div>):null;})()}
       <div className="tbl-w"><table className="tbl" style={{tableLayout:'fixed',width:'100%',minWidth:1360}}><thead><tr>
-        <th style={{width:95}}>예약번호</th><th style={{width:80}}>구분</th><th style={{width:105}}>상태</th><th style={{width:95}}>담당자</th><th style={{width:95}}>케어담당</th><th style={{width:130}}>예약자명</th><th style={{width:170}}>학생이름</th><th style={{width:95}}>체크인</th><th style={{width:95}}>숙소</th><th style={{width:85}}>접수일</th><th style={{width:320}}>액션</th>
+        <th style={{width:95}}>예약번호</th><th style={{width:80}}>구분</th><th style={{width:105}}>상태</th><th style={{width:95}}>담당자</th><th style={{width:95}}>케어담당</th><th style={{width:130}}>예약자명</th><th style={{width:170}}>학생이름</th><th style={{width:95}}>체크인</th><th style={{width:95}}>숙소</th><th style={{width:85}}>접수일</th><th style={{width:430}}>액션</th>
       </tr></thead><tbody>
         {searchedList.length===0?<tr><td colSpan={10} className="empty">{listSearch?"검색 결과가 없습니다.":"예약이 없습니다."}</td></tr>:
         searchedList.map(b=>{
@@ -991,6 +992,7 @@ export default function AdminBookingsPage(){
               <button className="act act-b" onClick={()=>router.push("/invoice?id="+b.id)}>인보이스</button>
               <button className="act act-g" onClick={()=>window.open("/invoice?id="+b.id+"&tab=receipt","_blank")}>영수증</button>
               <button className="act" style={{background:"#eff6ff",color:"#1a6fc4",border:"1px solid #bfdbfe"}} onClick={()=>{navigator.clipboard.writeText("https://www.dreamacademyph.com/payment?id="+b.id);toastErr("결제 링크가 복사되었습니다!");}}>💳 결제링크</button>
+              <button className="act" title="재방문 — 이 예약 정보로 새 접수 폼 열기 (날짜·항공편만 새로 입력)" style={{background:"#ecfdf5",color:"#047857",border:"1px solid #a7f3d0"}} onClick={()=>window.open(copyBookingUrl(b),"_blank")}>🔁 재방문 복사</button>
               {b.agency==="다온맘"?<button className="act act-r" onClick={()=>cancelBooking(b)}>취소</button>:<button className="act act-r" onClick={async()=>{if(confirm("정말 삭제하시겠습니까?\n"+b.booker_name+" / "+b.reservation_no+"\n\n⚠️ 학생·픽드랍·셔틀·튜터·체크인 등 모든 연결 데이터가 함께 삭제됩니다.")){const res=await fetch("/api/bookings/"+b.id+"/delete",{method:"DELETE"});if(!res.ok){alert("삭제 실패");return;}try{const {data:st}=await supabase.from("app_settings").select("value").eq("key","cube9_room_blocks").maybeSingle();const bl=(Array.isArray(st?.value)?st!.value:[]) as {booking_id?:string}[];if(bl.some(x=>x.booking_id===b.id)){await supabase.from("app_settings").upsert({key:"cube9_room_blocks",value:bl.filter(x=>x.booking_id!==b.id)},{onConflict:"key"});}}catch{}load();}}}>삭제</button>}
             </td>
           </tr>);
@@ -1260,6 +1262,7 @@ export default function AdminBookingsPage(){
         {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
         {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
+        {key:"_copy",label:"재방문",get:()=>""},
       ];
       const searched=studentsList.filter(s=>{
         // 년 필터: academyStart의 년도가 일치해야 함 (시작 기준 유지)
@@ -1431,6 +1434,9 @@ export default function AdminBookingsPage(){
               <td style={{textAlign:"center"}}>{s.photo||""}</td>
               <td className="wrap" onClick={e=>{e.stopPropagation();setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}} style={{cursor:"pointer",color:s.special_request?"#1a6fc4":"#94a3b8",textDecoration:s.special_request?"underline":"none"}}>
                 {s.special_request?(s.special_request.length>30?s.special_request.slice(0,30)+"...":s.special_request):"+ 추가"}
+              </td>
+              <td onClick={e=>e.stopPropagation()} style={{whiteSpace:"nowrap"}}>
+                <button className="act" title="이 예약 정보(예약자·학생·숙소 유형)로 새 접수 폼 열기 — 날짜·항공편만 새로 입력" style={{background:"#ecfdf5",color:"#047857",border:"1px solid #a7f3d0",padding:"3px 8px",fontSize:11.5}} onClick={()=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank")}>🔁 복사</button>
               </td>
             </tr>);
           })}

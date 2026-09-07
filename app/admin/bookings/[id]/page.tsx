@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { copyBookingUrl } from "@/lib/bookingCopy";
 import { toastErr, toastOk } from "@/lib/toast";
 import { useRouter, useParams } from "next/navigation";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
@@ -607,6 +608,7 @@ export default function BookingDetailPage() {
           <span className="badge" style={{ background: payStatus.bg, color: payStatus.color }}>{payStatus.label}</span>
           {b.booking_type && <span className="badge" style={{ background: "#e0e7ff", color: "#3730a3" }}>{BT_LABEL[b.booking_type] || b.booking_type}</span>}
           <span className="badge" style={{ background: b.confirmed ? "#dcfce7" : "#fef3c7", color: b.confirmed ? "#166534" : "#92400e" }}>{b.confirmed ? "확정" : "미확정"}</span>
+          <button title="재방문 — 이 예약의 예약자·학생·숙소 유형으로 새 접수 폼을 엽니다 (날짜·항공편만 새로 입력)" onClick={() => window.open(copyBookingUrl({ id: b.id, accom_type: b.accom_type, booking_type: b.booking_type }), "_blank")} style={{ marginLeft: "auto", background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", borderRadius: 8, padding: "6px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🔁 재방문 복사</button>
         </div>
       </div>
 

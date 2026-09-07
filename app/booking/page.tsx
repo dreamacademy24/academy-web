@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
+import { fetchCopySource, packageTypeFromAccom, copyGuardians } from "@/lib/bookingCopy";
 import { supabase } from "@/lib/supabase";
 import RefundPolicyModal from "@/components/RefundPolicyModal";
 import { getRefundPolicyKeys, REFUND_POLICY_VERSION } from "@/lib/refundPolicy";
@@ -93,6 +94,30 @@ export default function BookingPage() {
     setHolidayPopup(holidayHits);
   }, [holidayHits, dates.checkIn, dates.checkOut, holidayPopupKey]);
   const [policyOpen, setPolicyOpen] = useState<boolean>(false);
+
+  // 재방문 복사: /booking?copy=<예약id> → 예약자·보호자·학생·숙소 유형 프리필 (날짜·항공편은 새로 입력)
+  const [copiedFrom, setCopiedFrom] = useState<{ name: string; no: string } | null>(null);
+  useEffect(() => {
+    const cid = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("copy") : null;
+    if (!cid) return;
+    fetchCopySource(cid).then((src) => {
+      if (!src) return;
+      const b = src.booking;
+      setBType(packageTypeFromAccom(b.accom_type) as BookingType);
+      setBooker({ name: String(b.booker_name || ""), nameEng: String(b.booker_english || ""), phone: String(b.booker_phone || "") });
+      setExtraGuardians(copyGuardians(b.extra_guardians));
+      setAccom((a) => ({
+        ...a,
+        dh_weeks: b.dh_weeks || a.dh_weeks,
+        jp_weeks: b.jp_weeks || a.jp_weeks,
+        cn_period: b.cn_period || a.cn_period,
+        jp_room_type: b.jp_room_type || a.jp_room_type,
+        cn_room_type: b.cn_room_type || a.cn_room_type,
+      }));
+      if (src.students.length) setStudents(src.students.map((st, i) => ({ id: Date.now() + i, korName: st.korName, engName: st.engName, age: st.age, grade: st.grade, photo: st.photo })));
+      setCopiedFrom({ name: String(b.booker_name || ""), no: String(b.reservation_no || "") });
+    });
+  }, []);
 
   // 자동 체크아웃 계산
   const isCombo = bType === "dreamhouse_jaypark" || bType === "dreamhouse_cubenine" || bType === "jaypark_cubenine";
@@ -425,6 +450,11 @@ export default function BookingPage() {
     <div className="bw">
       <div className="bh"><h1>드림아카데미 예약 접수</h1><p>Dream Academy Reservation</p></div>
       <div className="bc">
+        {copiedFrom && (
+          <div style={{ marginTop: 14, background: "#ecfdf5", border: "1.5px solid #6ee7b7", borderRadius: 12, padding: "10px 14px", fontSize: 13, color: "#065f46", lineHeight: 1.6 }}>
+            🔁 <b>{copiedFrom.name}</b>님의 이전 예약({copiedFrom.no})을 복사했어요. 예약자·학생·숙소 유형은 채워져 있으니 <b>날짜·항공편·요청사항만 새로 입력</b>하고 접수하세요.
+          </div>
+        )}
 
         {/* 1. 예약 유형 */}
         <div className="bs">
