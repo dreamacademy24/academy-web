@@ -87,6 +87,13 @@ function calYmd(d:Date):string{
   const dd=String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${dd}`;
 }
+// 잔금 납부일 = DB balance_date, 없으면 체크인(통학형은 수업시작) 2개월 전으로 자동 계산 (인보이스 규칙과 동일)
+function balanceDateOf(b:{balance_date?:string|null;checkin_date?:string|null;academy_start?:string|null}):string{
+  if(b.balance_date)return String(b.balance_date).slice(0,10);
+  const base=b.checkin_date||b.academy_start; if(!base)return "";
+  const [y,m,d]=String(base).slice(0,10).split("-").map(Number); if(!y||!m||!d)return "";
+  const dt=new Date(y,m-1,d); dt.setMonth(dt.getMonth()-2); return calYmd(dt);
+}
 // 월~일 주별로 분할. month는 1~12. 해당 월의 첫날을 포함하는 월요일부터 시작.
 function genCalWeeks(year:number,month:number):Date[][]{
   const firstDay=new Date(year,month-1,1);
@@ -394,7 +401,7 @@ export default function AdminBookingsPage(){
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"부킹리스트");XLSX.writeFile(wb,"부킹리스트_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
   function exportConfirmXlsx(rows:Booking[]){
-    const data=rows.map(b=>{const isC=isCommuteBooking(b);const at=(b.accom_type||"").toLowerCase();const cat=getBookingCategory(b as never);return{예약번호:shortNo(b.reservation_no),담당자:b.assignee||"",구성:cat.comp,패키지:cat.pkg,예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:b.balance_date||"",금액:b.final_price||b.base_price||0};});
+    const data=rows.map(b=>{const isC=isCommuteBooking(b);const at=(b.accom_type||"").toLowerCase();const cat=getBookingCategory(b as never);return{예약번호:shortNo(b.reservation_no),담당자:b.assignee||"",구성:cat.comp,패키지:cat.pkg,예약자명:b.booker_name,학생이름:stuNames(b.students),체크인:b.checkin_date||"",체크아웃:b.checkout_date||"","숙소/룸":fmtAccom(b),아카데미시작:acaStart(b),항공IN:b.flight_in||"",항공OUT:b.flight_out||"",픽업장소:b.pickup_place||"",드랍장소:b.drop_off||"",유학원:b.agency||"",잔금일:balanceDateOf(b),금액:b.final_price||b.base_price||0};});
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"확정예약");XLSX.writeFile(wb,"확정예약_"+new Date().toISOString().slice(0,10)+".xlsx");
   }
 
@@ -1020,8 +1027,8 @@ export default function AdminBookingsPage(){
         const fin=b.final_price||b.base_price||0;
         const paid=Number((b as unknown as Record<string,unknown>).paid_amount)||0;
         const remain=Math.max(0,fin-paid);
-        const overdue=!!(b.balance_date&&remain>0&&String(b.balance_date).slice(0,10)<=calYmd(new Date()));
-        return {fin,paid,remain,overdue};
+        const bd=balanceDateOf(b);const overdue=!!(bd&&remain>0&&bd<=calYmd(new Date()));
+        return {fin,paid,remain,overdue,bd};
       };
       const unpaidAll=rcpList.filter(b=>{const i=rcpInfo(b);return i.fin>0&&i.remain>0;});
       const overdueAll=unpaidAll.filter(b=>rcpInfo(b).overdue);
@@ -1054,7 +1061,7 @@ export default function AdminBookingsPage(){
             <td style={{fontWeight:600,color:"#1a6fc4"}}>{b.reservation_no}</td>
             <td>{b.booker_name}</td><td style={{maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={stuNames(b.students)}>{stuNames(b.students)}</td>
             <td>{b.checkin_date||"미정"}</td>
-            <td style={i.overdue?{color:"#dc2626",fontWeight:800}:undefined}>{b.balance_date||"-"}</td>
+            <td style={i.overdue?{color:"#dc2626",fontWeight:800}:undefined} title={b.balance_date?undefined:"체크인 2개월 전 자동 계산"}>{i.bd||"-"}{!b.balance_date&&i.bd?<span style={{fontSize:10,color:"#94a3b8",marginLeft:4}}>자동</span>:null}</td>
             <td>{fmt(dep)}</td>
             <td>{fmt(bal)}</td>
             <td style={{fontWeight:700}}>{fmt(fin)}</td>
@@ -1135,7 +1142,7 @@ export default function AdminBookingsPage(){
         {key:"flight_in",label:"항공IN",get:b=>b.flight_in||"-"},
         {key:"flight_out",label:"항공OUT",get:b=>b.flight_out||"-"},
         {key:"agency",label:"유학원",get:b=>b.agency||"-"},
-        {key:"balance_date",label:"잔금일",get:b=>b.balance_date||"-"},
+        {key:"balance_date",label:"잔금일",get:b=>balanceDateOf(b)||"-"},
         {key:"price",label:"금액",get:b=>b.final_price||b.base_price||0},
         {key:"special_request",label:"특이사항",get:b=>b.special_request||"-"},
         {key:"missing",label:"누락",get:b=>missingItems(b).join("·")||"✓"},

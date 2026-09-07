@@ -3804,7 +3804,7 @@ function markNotifsRead(type){
 function renderNotifBadges(){
   var counts={};
   myNotifs.forEach(function(n){counts[n.type]=(counts[n.type]||0)+1;});
-  var map={mywork:['task_comment','unassigned_task','task','task_assigned'],board:['task_comment','unassigned_task','task','task_assigned'],projects:['thread'],opinions:['opinion'],approval:['approval'],notice:['notice']};
+  var map={mywork:['task_comment','unassigned_task','task','task_assigned'],board:['task_comment','unassigned_task','task','task_assigned'],projects:['thread'],ptree:['project'],opinions:['opinion'],approval:['approval'],notice:['notice']};
   Object.keys(map).forEach(function(key){
     var total=0;map[key].forEach(function(t){total+=(counts[t]||0);});
     var dot=document.getElementById('notif-dot-'+key);
@@ -3834,7 +3834,7 @@ function updateNavBadges(){
   var ntCount=myNotifs.filter(function(n){return n.type==='notice';}).length;
   _setNavBadge('badge-comm',ntCount+opCount+chatTotal);
   // 업무 탭: 프로젝트 스레드 알림 합산
-  var thCount=myNotifs.filter(function(n){return n.type==='thread';}).length;
+  var thCount=myNotifs.filter(function(n){return n.type==='thread'||n.type==='project';}).length;
   _setNavBadge('badge-board',boardNotif+thCount);
   // 전체 알림
   _setNavBadge('badge-notif',(myNotifs||[]).length);
@@ -4244,7 +4244,7 @@ function showPage(p){
   if(p==='mywork'){markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
-  if(p==='ptree'){document.getElementById('btnTask').style.display='none';document.getElementById('btnProj').style.display='none';document.getElementById('topT').textContent='\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8';document.getElementById('topS').textContent='\uD070 \uD504\uB85C\uC81D\uD2B8\uB97C \uD3F4\uB354\uCC98\uB7FC \uC815\uB9AC\u00B7\uC18C\uD1B5';ptOpen();}
+  if(p==='ptree'){markNotifsRead('project');document.getElementById('btnTask').style.display='none';document.getElementById('btnProj').style.display='none';document.getElementById('topT').textContent='\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8';document.getElementById('topS').textContent='\uD070 \uD504\uB85C\uC81D\uD2B8\uB97C \uD3F4\uB354\uCC98\uB7FC \uC815\uB9AC\u00B7\uC18C\uD1B5';ptOpen();}
   if(p==='weeklycl'){renderWeeklyClPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8';document.getElementById('topS').textContent='\uB4F1\uB85D \u00B7 \uC694\uC77C\uBCC4 \uC815\uB9AC \u00B7 \uB2F9\uC77C \uD56D\uBAA9\uC740 \uD648 \uC624\uB298 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8\uB85C \uC790\uB3D9 \uC5F0\uACB0';}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
@@ -4402,7 +4402,7 @@ function loadDailyCheck(targetId){
   if(targetId)_dclTargetId=targetId;
   var sec=document.getElementById(_dclTargetId);if(!sec)return;
   var today=_dailyToday();
-  var far=new Date(today+'T00:00:00');far.setDate(far.getDate()+56);
+  var far=new Date(today+'T00:00:00');far.setDate(far.getDate()+63);
   Promise.all([sbGet('staff_daily_check','check_date=eq.'+today),loadChecklistItems(),
     sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status,seg1_type,seg1_checkin,seg2_type,seg2_checkin&checkout_date=gte.'+today+'&checkin_date=lte.'+_ymdLocal(far)).catch(function(){return [];})
   ]).then(function(res){
@@ -4445,7 +4445,8 @@ function _dailyCheckHtml(byKey,today,bookings){
     var r=byKey[it.id],checked=!!r,who='';
     if(r){var t8=new Date(new Date(r.checked_at||Date.now()).getTime()+8*3600000);who='<span style="font-size:10px;color:var(--text3);white-space:nowrap">'+esc(r.checked_by||'')+' '+_dailyP2(t8.getUTCHours())+':'+_dailyP2(t8.getUTCMinutes())+'</span>';}
     var names=it.smart_key?_smartNames(it.smart_key,today,bookings||[]):[];
-    var chips=names.length?'<div style="margin-left:26px;margin-top:2px;display:flex;gap:4px;flex-wrap:wrap">'+names.map(function(n){return '<span style="font-size:10px;background:#f1f5f9;color:#475569;border-radius:6px;padding:1px 7px">'+esc(n)+'</span>';}).join('')+'</div>':'';
+    var _cs={};Object.keys(byKey||{}).forEach(function(k){_cs[today+'|'+k]=byKey[k];});
+    var chips=it.smart_key?_smartSubsHtml(it.id,today,names,_cs,{ml:'26px',fs:'10.5px'}):'';
     return '<div style="padding:7px 8px;border-radius:8px;margin-bottom:4px;background:'+(checked?'#f0fdf4':'#faf5ff')+'">'+
       '<div style="display:flex;align-items:center;gap:9px">'+
       '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleWeeklyCheck(\''+it.id+'\',\''+today+'\',this)" style="width:17px;height:17px;flex-shrink:0;cursor:pointer;accent-color:#7c3aed">'+
@@ -4511,16 +4512,61 @@ function loadWeeklyCheck(){
   var sec=document.getElementById('weeklyCheckSection');if(!sec)return;
   var mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
   var dates=[];for(var i=0;i<7;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);dates.push(_ymdLocal(d));}
-  var weekStart=dates[0];var far=new Date(mon);far.setDate(mon.getDate()+56);var farStr=_ymdLocal(far);
+  var weekStart=dates[0];var far=new Date(mon);far.setDate(mon.getDate()+70);var farStr=_ymdLocal(far);
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.join(',')+')'),
     sbGet('bookings','select=booker_name,checkin_date,checkout_date,reservation_no,students,booking_type,accom_type,house_no,accom_room,status,seg1_type,seg1_checkin,seg2_type,seg2_checkin&checkout_date=gte.'+weekStart+'&checkin_date=lte.'+farStr).catch(function(){return [];})
   ]).then(function(res){
-    var checks=res[1]||[];var bookings=res[2]||[];var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
+    var checks=res[1]||[];var bookings=res[2]||[];_wkBookingsCache=bookings;var checkSet={};checks.forEach(function(r){checkSet[r.check_date+'|'+r.item_key]=r;});
     sec.innerHTML=_weeklyHtml(dates,checkSet,bookings);
   }).catch(function(e){console.error('weekly load',e);sec.innerHTML=_weeklyHtml(dates,{},[]);});
 }
+// ── 스마트 고객 하위 체크리스트: 고객별 체크(staff_daily_check item_key = 항목id#고객명). 전부 체크되면 상위 자동 체크, 하나라도 풀리면 상위 해제
+function _subKey(itemId,name){return itemId+'#'+name;}
+function _smartSubsHtml(itemId,ymd,names,checkSet,opt){
+  opt=opt||{};var ml=opt.ml||'24px';var fs=opt.fs||'11px';
+  if(!names.length)return '<div style="margin-left:'+ml+';margin-top:4px;margin-bottom:6px;font-size:10.5px;color:#94a3b8">해당 고객 없음</div>';
+  var done=0;var h='<div style="margin-left:'+ml+';margin-top:4px;margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px 10px">';
+  names.forEach(function(nm){
+    var r=checkSet&&checkSet[ymd+'|'+_subKey(itemId,nm)];var dn=!!r;if(dn)done++;
+    h+='<label style="display:inline-flex;align-items:center;gap:5px;font-size:'+fs+';background:'+(dn?'#f0fdf4':'#f1f5f9')+';color:'+(dn?'#15803d':'#334155')+';border-radius:6px;padding:2px 8px;cursor:pointer;'+(dn?'text-decoration:line-through;':'')+'">'+
+      '<input type="checkbox" '+(dn?'checked':'')+' onchange="toggleSmartSub(\''+itemId+'\',\''+ymd+'\',\''+esc(nm).replace(/'/g,"\\'")+'\','+JSON.stringify(names).replace(/"/g,'&quot;')+',this)" style="width:13px;height:13px;accent-color:#16a34a;cursor:pointer">'+esc(nm)+'</label>';
+  });
+  h+='<span style="font-size:10px;color:#94a3b8;align-self:center">'+done+'/'+names.length+'</span></div>';
+  return h;
+}
+function toggleSmartSub(itemId,ymd,name,names,el){
+  var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  var key=_subKey(itemId,name);
+  var p=el.checked
+    ?_dailyUpsert({check_date:ymd,item_key:key,checked:true,checked_by:who,checked_at:new Date().toISOString()})
+    :sbDel('staff_daily_check','check_date=eq.'+ymd+'&item_key=eq.'+key);
+  p.then(function(){
+    // 형제 항목 상태 재조회 → 전부 체크면 상위 체크, 아니면 상위 해제
+    return sbGet('staff_daily_check','check_date=eq.'+ymd+'&item_key=like.'+encodeURIComponent(itemId+'#')+'*');
+  }).then(function(rows){
+    var set={};(rows||[]).forEach(function(r){set[r.item_key]=1;});
+    var all=(names||[]).every(function(nm){return set[_subKey(itemId,nm)];});
+    if(all)return _dailyUpsert({check_date:ymd,item_key:itemId,checked:true,checked_by:who,checked_at:new Date().toISOString()});
+    return sbDel('staff_daily_check','check_date=eq.'+ymd+'&item_key=eq.'+itemId);
+  }).then(function(){
+    if(typeof loadWeeklyCheck==='function')loadWeeklyCheck();
+    if(typeof loadDailyCheck==='function')loadDailyCheck();
+    if(typeof curEmpId!=='undefined'&&curEmpId&&typeof _renderEmpChecklist==='function')_renderEmpChecklist(curEmpId);
+  }).catch(function(e){console.error('smart sub err',e);el.checked=!el.checked;});
+}
+// 상위 항목을 직접 체크/해제하면 하위 고객도 같이 체크/해제
+function _cascadeSmartSubs(itemId,ymd,checked){
+  var it=(typeof CHECKLIST_ITEMS!=='undefined'?CHECKLIST_ITEMS:[]).find(function(x){return x.id===itemId;});
+  if(!it||!it.smart_key)return Promise.resolve();
+  var bk=(typeof _wkBookingsCache!=='undefined'&&_wkBookingsCache)||[];
+  var names=_smartNames(it.smart_key,ymd,bk);if(!names.length)return Promise.resolve();
+  var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
+  if(checked)return Promise.all(names.map(function(nm){return _dailyUpsert({check_date:ymd,item_key:_subKey(itemId,nm),checked:true,checked_by:who,checked_at:new Date().toISOString()});}));
+  return sbDel('staff_daily_check','check_date=eq.'+ymd+'&item_key=like.'+encodeURIComponent(itemId+'#')+'*');
+}
+var _wkBookingsCache=null;
 function _smartNames(smartKey,occYmd,bookings){
   if(!smartKey)return [];
   var occ=new Date(occYmd+'T00:00:00');var loS,hiS;
@@ -4617,9 +4663,7 @@ function _weeklyHtml(dates,checkSet,bookings){
         _clBadge(it.assignee)+
         '<button onclick="openWeeklyEditById(\''+it.id+'\')" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px" title="수정">✏️</button>'+
         '<button onclick="delChecklistItem(\''+it.id+'\',\'weekly\')" style="background:none;border:none;cursor:pointer;color:#cbd5e1;font-size:13px" title="삭제">✕</button></div>';
-      if(it.smart_key){var names=_smartNames(it.smart_key,ymd,bookings);
-        if(names.length)bands+='<div style="margin-left:24px;margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap">'+names.map(function(n){return '<span style="font-size:10.5px;background:#f1f5f9;color:#475569;border-radius:6px;padding:2px 8px">'+esc(n)+'</span>';}).join('')+'</div>';
-        else bands+='<div style="margin-left:24px;margin-bottom:6px;font-size:10.5px;color:#94a3b8">해당 고객 없음</div>';}
+      if(it.smart_key){var names=_smartNames(it.smart_key,ymd,bookings);bands+=_smartSubsHtml(it.id,ymd,names,checkSet,{ml:'24px',fs:'11px'});}
     });
     bands+='</div></div>';
   });
@@ -4666,9 +4710,7 @@ function _wkBoardHtml(dates,checkSet,bookings){
           '<input type="checkbox" '+(dn?'checked':'')+' '+(oc?'':'disabled')+' onchange="toggleWeeklyCheck(\''+it.id+'\',\''+(oc||'')+'\',this)" style="width:17px;height:17px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:#4f46e5">'+
           '<span style="font-size:13.5px;font-weight:500;line-height:1.45;color:'+(dn?'var(--text3)':'var(--text)')+';'+(dn?'text-decoration:line-through':'')+'">'+esc(it.content||'')+'</span>'+
         '</label>';
-      if(it.smart_key&&oc){var names=_smartNames(it.smart_key,oc,bookings);
-        if(names.length)h+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">'+names.map(function(n){return '<span style="font-size:11px;background:#f1f5f9;color:#334155;border-radius:6px;padding:3px 8px;line-height:1.3">'+esc(n)+'</span>';}).join('')+'</div>';
-        else h+='<div style="margin-top:6px;font-size:11px;color:#94a3b8">해당 고객 없음</div>';}
+      if(it.smart_key&&oc){var names=_smartNames(it.smart_key,oc,bookings);h+=_smartSubsHtml(it.id,oc,names,checkSet,{ml:'0',fs:'11.5px'});}
       h+='</div>';
     });
     h+='</div>';
@@ -4838,10 +4880,12 @@ function toggleWeeklyCheck(key,date,el){
   var who=(typeof CU!=='undefined'&&CU)?(CU.name||CU.id||''):'';
   if(el.checked){
     _dailyUpsert({check_date:date,item_key:key,checked:true,checked_by:who,checked_at:new Date().toISOString()})
+      .then(function(){return _cascadeSmartSubs(key,date,true);})
       .then(function(){loadWeeklyCheck();if(typeof loadDailyCheck==='function')loadDailyCheck();})
       .catch(function(e){console.error('weekly check err',e);el.checked=false;});
   } else {
     sbDel('staff_daily_check','check_date=eq.'+date+'&item_key=eq.'+key)
+      .then(function(){return _cascadeSmartSubs(key,date,false);})
       .then(function(){loadWeeklyCheck();if(typeof loadDailyCheck==='function')loadDailyCheck();})
       .catch(function(e){console.error('weekly uncheck err',e);el.checked=true;});
   }
@@ -8003,7 +8047,7 @@ function _renderEmpHomeNotif(empId){
   var list=(myNotifs||[]).filter(function(n){return !n.is_read;});
   window._empNotifList=list;
   if(!list.length){box.innerHTML='';return;}
-  var ic={task_comment:'💬',notice:'📢',thread:'🚀',opinion:'💭',approval:'⚖️',task_assigned:'📌',task:'📌',unassigned_task:'📥'};
+  var ic={task_comment:'💬',notice:'📢',thread:'🚀',project:'🚀',opinion:'💭',approval:'⚖️',task_assigned:'📌',task:'📌',unassigned_task:'📥'};
   var h='<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:14px;padding:12px 16px;margin-bottom:14px;max-width:1000px">';
   h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px">🔔 새 소식 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+list.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">댓글·새 글 — 누르면 해당 위치로 이동해요</span></div>';
   list.slice(0,8).forEach(function(n,i){
@@ -8022,6 +8066,7 @@ function _empNotifGo(idx){
   if((tp==='task_comment'||tp==='task'||tp==='task_assigned'||tp==='unassigned_task')&&n.ref_id){try{selectEmpTask(String(n.ref_id));return;}catch(e){}}
   if(tp==='notice'){showPage('announcements');return;}
   if(tp==='thread'){showPage('projects');return;}
+  if(tp==='project'){try{if(n.ref_id){var _pn=(typeof PT!=='undefined'&&PT.nodes||[]).find(function(x){return x.id===n.ref_id;});if(_pn){PT.cur=_pn.project_id;PT.sel=_pn.id;}else{window._ptPendingSel=String(n.ref_id);}}}catch(e){}showPage('ptree');return;}
   if(tp==='opinion'){showPage('opinions');return;}
   if(tp==='approval'){setEmpTab('approval');return;}
   _renderEmpHomeNotif(curEmpId||(CU&&CU.id));
@@ -8031,7 +8076,7 @@ function _renderEmpChecklist(empId){
   var mon=new Date();mon.setHours(0,0,0,0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
   var dates=[];for(var i=0;i<7;i++){var dd=new Date(mon);dd.setDate(mon.getDate()+i);dates.push(_ymdLocal(dd));}
   var today=_dailyToday();
-  var far=new Date(mon);far.setDate(mon.getDate()+56);
+  var far=new Date(mon);far.setDate(mon.getDate()+70);
   Promise.all([
     loadChecklistItems(),
     sbGet('staff_daily_check','check_date=in.('+dates.concat([today]).join(',')+')'),
@@ -8063,8 +8108,7 @@ function _empChecklistHtml(empId,dates,today,checkSet,bookings){
       h+='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px">';
       h+='<div style="margin-bottom:6px"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#eef2ff;color:#4338ca">매주 '+dows[Number(it.weekday)]+'</span></div>';
       h+='<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" '+(dn?'checked':'')+' '+(oc?'':'disabled')+' onchange="toggleEmpCheck(\''+it.id+'\',\''+(oc||'')+'\',this)" style="width:17px;height:17px;margin-top:1px;accent-color:#4f46e5;flex-shrink:0"><span style="font-size:13.5px;font-weight:500;line-height:1.45;'+(dn?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(it.content||'')+'</span></label>';
-      if(it.smart_key&&oc){var names=_smartNames(it.smart_key,oc,bookings);
-        if(names.length)h+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">'+names.map(function(n){return '<span style="font-size:11px;background:#f1f5f9;color:#334155;border-radius:6px;padding:3px 8px">'+esc(n)+'</span>';}).join('')+'</div>';}
+      if(it.smart_key&&oc){var names=_smartNames(it.smart_key,oc,bookings);h+=_smartSubsHtml(it.id,oc,names,checkSet,{ml:'0',fs:'11.5px'});}
       h+='</div>';
     });
   }
@@ -11462,6 +11506,7 @@ function ptOpen(){
   var preT=(TEACHERS&&TEACHERS.length)?Promise.resolve():loadTeachers();
   preT.then(function(){
     ptLoadAll().then(function(){
+      if(window._ptPendingSel){var _pn=PT.nodes.find(function(n){return n.id===window._ptPendingSel;});window._ptPendingSel=null;if(_pn){PT.cur=_pn.project_id;PT.sel=_pn.id;}}
       if(PT.cur&&PT.nodes.find(function(n){return n.id===PT.cur;}))ptRenderProject(PT.cur);
       else ptRenderList();
     });
@@ -11565,9 +11610,75 @@ function ptDueShort(d){try{var p=d.split('-');return (+p[1])+'/'+(+p[2]);}catch(
 function ptDueClass(d,done){if(done)return '';try{var t=new Date(d+'T23:59:59');var now=new Date();var diff=(t-now)/86400000;if(diff<0)return ' od';if(diff<=3)return ' soon';}catch(e){}return '';}
 function ptToggle(id){PT.openMap[id]=PT.openMap[id]===false?true:false;ptRenderTree(PT.cur);}
 function ptSelect(id){PT.sel=id;ptRenderTree(PT.cur);ptRenderDetail(id);}
+/* ---------- 프로젝트 업데이트 알림: 항목·상위 폴더·프로젝트의 담당자 + 만든 사람에게 (본인 제외, 한국 직원만) ---------- */
+function _ptRelatedIds(nodeId){
+  var ids={};var n=ptFindNode(nodeId);
+  while(n){
+    (n.assignees||[]).forEach(function(a){if(a)ids[a]=1;});
+    if(n.created_by)ids[n.created_by]=1;
+    if(n.kind==='project')break;
+    n=n.parent_id?ptFindNode(n.parent_id):null;
+  }
+  return Object.keys(ids).filter(function(id){
+    if(!id||id===(CU&&CU.id))return false;
+    if(String(id).indexOf('admin-')===0)return false; // 현지 티쳐는 티쳐 Workspace에서 확인
+    return true;
+  });
+}
+var _ptNtLast={};
+function _ptNotifyDebounced(nodeId,what){var k=nodeId+'|'+what;var now=Date.now();if(_ptNtLast[k]&&now-_ptNtLast[k]<10*60*1000)return;_ptNtLast[k]=now;_ptNotify(nodeId,what);}
+function _ptNotify(nodeId,what){
+  try{
+    var n=ptFindNode(nodeId);if(!n)return;
+    var pr=ptFindNode(n.project_id);var pname=pr?pr.title:'프로젝트';
+    var msg='🚀 '+pname+' › '+String(n.title||'').slice(0,24)+' — '+what+' ('+((CU&&CU.name)||'')+')';
+    _ptRelatedIds(nodeId).forEach(function(id){createNotif(id,'project',nodeId,msg);});
+  }catch(e){console.error('pt notify',e);}
+}
+/* ---------- 인쇄: 선택 항목 + 하위 전체를 A4 체크시트로 ---------- */
+function ptPrint(id){
+  var n=ptFindNode(id);if(!n)return;
+  var pr=ptFindNode(n.project_id);
+  var STA={todo:'대기',doing:'진행중',done:'완료'};
+  function nm(mid){var e=getP(mid);if(e)return e.name;var t=(TEACHERS||[]).find(function(x){return x.id===mid;});return t?t.name:mid;}
+  function body(x){var b=String(x.body||'').trim();if(!b)return '';
+    // 본문의 체크박스 유지, 스크립트 제거
+    b=b.replace(/<script[\s\S]*?<\/script>/gi,'');return '<div class="body">'+b+'</div>';}
+  function meta(x){var m=[];if(x.due)m.push('📅 '+x.due);if(x.assignees&&x.assignees.length)m.push('👤 '+x.assignees.map(nm).join(', '));if(x.kind==='task')m.push(STA[x.status]||'');return m.filter(Boolean).join(' · ');}
+  function render(x,depth){
+    var kids=ptChildren(x.id,x.project_id);
+    var h='';
+    if(x.kind==='task'){
+      h+='<div class="row" style="margin-left:'+(depth*18)+'px"><span class="cb">'+(x.done?'☑':'☐')+'</span><div class="rt"><div class="tt'+(x.done?' dn':'')+'">'+esc(x.title||'')+'</div>'+(meta(x)?'<div class="mt">'+meta(x)+'</div>':'')+body(x)+'</div></div>';
+    } else {
+      h+='<div class="fd" style="margin-left:'+(depth*18)+'px">'+(depth===0?'':'📁 ')+esc(x.title||'')+(meta(x)?'<span class="mt"> · '+meta(x)+'</span>':'')+'</div>'+body(x);
+    }
+    kids.forEach(function(k){h+=render(k,depth+1);});
+    return h;
+  }
+  var title=esc(n.title||'');var sub=(pr&&pr.id!==n.id)?esc(pr.title||''):'';
+  var today=new Date();var ds=today.getFullYear()+'.'+(today.getMonth()+1)+'.'+today.getDate();
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>'
+    +'@page{size:A4;margin:14mm}body{font-family:"Noto Sans KR",-apple-system,sans-serif;color:#111;font-size:12.5px;line-height:1.5;margin:0}'
+    +'h1{font-size:20px;margin:0 0 2px}.sub{font-size:12px;color:#666;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #111}'
+    +'.fd{font-size:14px;font-weight:800;margin:14px 0 6px;padding:4px 0;border-bottom:1px solid #ccc;page-break-after:avoid}.fd .mt{font-size:11px;font-weight:400;color:#666}'
+    +'.row{display:flex;gap:8px;padding:5px 0;border-bottom:1px dotted #ddd;page-break-inside:avoid}.cb{font-size:16px;line-height:1.2;width:20px;flex-shrink:0}.rt{flex:1}'
+    +'.tt{font-weight:600}.tt.dn{text-decoration:line-through;color:#888}.mt{font-size:11px;color:#666}'
+    +'.body{font-size:12px;color:#333;margin:3px 0 4px;padding:6px 8px;background:#f6f6f6;border-radius:4px}.body input[type=checkbox]{vertical-align:middle}'
+    +'.foot{margin-top:18px;font-size:10.5px;color:#888;text-align:right}'
+    +'@media print{.noprint{display:none}}</style></head><body>'
+    +'<div class="noprint" style="text-align:right;margin-bottom:8px"><button onclick="window.print()" style="padding:8px 16px;font-size:13px;cursor:pointer">🖨 인쇄</button></div>'
+    +'<h1>'+title+'</h1><div class="sub">'+(sub?sub+' · ':'')+'출력 '+ds+'</div>'
+    +render(n,0)
+    +'<div class="foot">Dream Academy · Team Manager</div></body></html>';
+  var w=window.open('','_blank');if(!w){alert('팝업이 차단됐어요. 팝업 허용 후 다시 눌러주세요.');return;}
+  w.document.open();w.document.write(html);w.document.close();
+  setTimeout(function(){try{w.focus();w.print();}catch(e){}},400);
+}
 function ptToggleDone(id){
   var n=ptFindNode(id);if(!n)return;n.done=!n.done;n.status=n.done?'done':'doing';n.updated_at=ptNow();
   sbPatch('project_nodes','id=eq.'+id,{done:n.done,status:n.status,updated_at:n.updated_at});
+  _ptNotify(id,n.done?'완료 체크':'완료 해제');
   ptRenderTree(PT.cur);if(PT.sel===id)ptRenderDetail(id);
 }
 function ptAddNode(projId,parentId,kind){
@@ -11578,6 +11689,7 @@ function ptAddNode(projId,parentId,kind){
   PT.nodes.push(row);
   if(parentId)PT.openMap[parentId]=true;
   sbUpsert('project_nodes',row).catch(function(e){alert('저장 실패: '+e);});
+  _ptNotify(row.id,'새 '+label+' 추가');
   PT.sel=row.id;ptRenderTree(projId);ptRenderDetail(row.id);
 }
 /* ---------- 항목 상세 문서 ---------- */
@@ -11602,6 +11714,7 @@ function ptRenderDetail(id){
     +'<div style="display:flex;gap:6px;flex-shrink:0">'
     +'<button class="btn btn-secondary btn-sm" onclick="ptAddNode(\''+n.project_id+'\',\''+id+'\',\'folder\')">+ 하위폴더</button>'
     +'<button class="btn btn-secondary btn-sm" onclick="ptAddNode(\''+n.project_id+'\',\''+id+'\',\'task\')">+ 할 일</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="ptPrint(\''+id+'\')" title="이 항목(하위 포함) 인쇄">🖨 인쇄</button>'
     +'<button class="btn btn-secondary btn-sm" onclick="ptDelNode(\''+id+'\')" style="color:#ef4444">🗑</button>'
     +'</div></div>';
   h+='<input id="ptTitle" value="'+esc(n.title||'').replace(/<br>/g,'')+'" onchange="ptSaveField(\''+id+'\',\'title\',this.value)" style="font-size:20px;font-weight:700;border:none;outline:none;width:100%;padding:8px 0;background:transparent" placeholder="제목">';
@@ -11649,6 +11762,7 @@ function ptSaveField(id,field,val){
   var patch={};patch[field]=val;patch.updated_at=n.updated_at;
   if(field==='status'){n.done=(val==='done');patch.done=n.done;}
   sbPatch('project_nodes','id=eq.'+id,patch).catch(function(e){console.error('pt save',e);});
+  var _fl={title:'제목 변경',body:'내용 수정',status:'상태 변경',due:'마감일 변경'};if(_fl[field])_ptNotifyDebounced(id,_fl[field]);
   if(field==='title'||field==='status'||field==='due'){ptRenderTree(PT.cur);}
 }
 function ptDelNode(id){
@@ -11704,6 +11818,7 @@ function ptPickAssignees(id){
     var patch={assignees:sel,updated_at:n.updated_at};
     if(hasTeacher&&!n.teacher_shared){n.teacher_shared=true;patch.teacher_shared=true;ptAutoTranslate(n);}
     sbPatch('project_nodes','id=eq.'+id,patch).catch(function(e){console.error(e);});
+    _ptNotify(id,'담당자 변경');sel.forEach(function(x){if(x!==(CU&&CU.id)&&String(x).indexOf('admin-')!==0)createNotif(x,'project',id,'📌 프로젝트 항목 담당 배정: '+String(n.title||'').slice(0,24)+' ('+((CU&&CU.name)||'')+')');});
     ov.remove();ptRenderTree(PT.cur);ptRenderDetail(id);
   };
 }
@@ -11733,6 +11848,7 @@ function ptAddComment(id){
   sbUpsert('project_node_comments',row).then(function(d){
     var saved=(Array.isArray(d)?d[0]:d)||row;
     if(!PT.comments[id])PT.comments[id]=[];PT.comments[id].push(saved);ptRenderComments(id);
+    _ptNotify(id,'댓글: '+text.slice(0,30));
   }).catch(function(e){alert('댓글 저장 실패: '+e);});
   inp.value='';
 }
