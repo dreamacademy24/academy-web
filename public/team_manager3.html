@@ -4244,7 +4244,7 @@ function showPage(p){
   if(p==='mywork'){markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
-  if(p==='ptree'){markNotifsRead('project');document.getElementById('btnTask').style.display='none';document.getElementById('btnProj').style.display='none';document.getElementById('topT').textContent='\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8';document.getElementById('topS').textContent='\uD070 \uD504\uB85C\uC81D\uD2B8\uB97C \uD3F4\uB354\uCC98\uB7FC \uC815\uB9AC\u00B7\uC18C\uD1B5';ptOpen();}
+  if(p==='ptree'){document.getElementById('btnTask').style.display='none';document.getElementById('btnProj').style.display='none';document.getElementById('topT').textContent='\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8';document.getElementById('topS').textContent='\uD070 \uD504\uB85C\uC81D\uD2B8\uB97C \uD3F4\uB354\uCC98\uB7FC \uC815\uB9AC\u00B7\uC18C\uD1B5';ptOpen();}
   if(p==='weeklycl'){renderWeeklyClPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8';document.getElementById('topS').textContent='\uB4F1\uB85D \u00B7 \uC694\uC77C\uBCC4 \uC815\uB9AC \u00B7 \uB2F9\uC77C \uD56D\uBAA9\uC740 \uD648 \uC624\uB298 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8\uB85C \uC790\uB3D9 \uC5F0\uACB0';}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
@@ -11543,12 +11543,14 @@ function ptRenderList(){
     h+='<div class="empty-state"><div class="ei">🚀</div>프로젝트가 없습니다<br><span style="font-size:12px">"새 프로젝트"로 시작하세요</span></div>';
   }else{
     h+='<div class="proj-grid">';
+    var _ust=_ptUnreadSet();
     projs.forEach(function(pr){
       var prog=ptProgress(pr.id);
       var cnt=PT.nodes.filter(function(n){return n.project_id===pr.id&&n.kind!=='project';}).length;
+      var _un=PT.nodes.filter(function(n){return n.project_id===pr.id&&_ust[n.id];}).length;
       h+='<div class="proj-card" onclick="ptRenderProject(\''+pr.id+'\')" style="cursor:pointer">'
         +'<div class="proj-card-top"><div class="proj-color-dot" style="background:#6366f1"></div>'
-        +'<div class="proj-name">'+esc(pr.title||'제목 없음')+(pr.origin==='teacher'?' <span style="font-size:10px;font-weight:800;color:#0e7490;background:#ecfeff;border-radius:6px;padding:1px 6px">🌏 현지팀</span>':'')+'</div>'
+        +'<div class="proj-name">'+esc(pr.title||'제목 없음')+(_un?' <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:900;padding:0 5px;vertical-align:middle">! '+_un+'</span>':'')+(pr.origin==='teacher'?' <span style="font-size:10px;font-weight:800;color:#0e7490;background:#ecfeff;border-radius:6px;padding:1px 6px">🌏 현지팀</span>':'')+'</div>'
         +(pr.due?'<span class="proj-due-badge">📅 '+pr.due+'</span>':'')
         +'<div class="proj-pct" style="color:#6366f1">'+prog+'%</div></div>'
         +'<div class="proj-bar" style="height:6px;margin-top:8px"><div class="proj-bar-fill" style="width:'+prog+'%;background:#6366f1"></div></div>'
@@ -11587,10 +11589,22 @@ function ptRenderTree(projId){
   h+='<div class="pt-add-root" onclick="ptAddNode(\''+projId+'\',null,\'folder\')">+ 폴더 추가</div>';
   el.innerHTML=h;
 }
+/* 프로젝트 미확인 표시: 내게 온 type=project 미읽음 알림(ref_id=항목) → 항목에 빨간 !, 상위 폴더·프로젝트 카드에도 표시. 항목을 열면 읽음 처리 */
+function _ptUnreadSet(){var st={};(myNotifs||[]).forEach(function(x){if(x.type==='project'&&x.ref_id)st[x.ref_id]=1;});return st;}
+function _ptUnreadDesc(nodeId,projId,st){if(st[nodeId])return true;return ptChildren(nodeId,projId).some(function(k){return _ptUnreadDesc(k.id,projId,st);});}
+function _ptBang(self,desc){if(self)return '<span title="새 업데이트 — 열어서 확인" style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;background:#dc2626;color:#fff;font-size:10.5px;font-weight:900;padding:0 4px;flex-shrink:0;margin-left:4px">!</span>';if(desc)return '<span title="하위에 새 업데이트" style="display:inline-block;width:8px;height:8px;border-radius:4px;background:#dc2626;flex-shrink:0;margin-left:4px"></span>';return '';}
+function ptMarkNodeRead(nodeId){
+  if(!CU)return;var hit=(myNotifs||[]).filter(function(x){return x.type==='project'&&x.ref_id===nodeId;});
+  if(!hit.length)return;
+  myNotifs=myNotifs.filter(function(x){return !(x.type==='project'&&x.ref_id===nodeId);});
+  sbPatch('staff_notifications','to_id=eq.'+CU.id+'&type=eq.project&ref_id=eq.'+nodeId,{is_read:true}).catch(function(){});
+  try{updateNavBadges();}catch(e){}
+}
 function ptTreeNodes(parentId,projId,depth){
-  var kids=ptChildren(parentId,projId),h='';
+  var kids=ptChildren(parentId,projId),h='';var _ust=_ptUnreadSet();
   kids.forEach(function(n){
     var hasKids=ptChildren(n.id,projId).length>0;
+    var _bang=_ptBang(!!_ust[n.id],hasKids&&_ptUnreadDesc(n.id,projId,_ust));
     var open=PT.openMap[n.id]!==false;
     var isTask=n.kind==='task';
     var av=(n.assignees||[]).slice(0,3).map(function(mid){var e=getP(mid);return e?'<span class="pt-av" style="background:'+e.color+'" title="'+esc(e.name)+'">'+e.initial+'</span>':'';}).join('');
@@ -11598,7 +11612,7 @@ function ptTreeNodes(parentId,projId,depth){
     h+= hasKids?'<span class="pt-chev" onclick="event.stopPropagation();ptToggle(\''+n.id+'\')">'+(open?'▾':'▸')+'</span>':'<span class="pt-chev"></span>';
     if(isTask){h+='<span class="pt-ck" onclick="event.stopPropagation();ptToggleDone(\''+n.id+'\')">'+(n.done?'☑':'☐')+'</span>';}
     else{h+='<span class="pt-ck">📁</span>';}
-    h+='<span class="pt-title'+(n.done?' done':'')+'">'+esc(n.title||'(제목 없음)')+'</span>';
+    h+='<span class="pt-title'+(n.done?' done':'')+'">'+esc(n.title||'(제목 없음)')+'</span>'+_bang;
     if(av)h+='<span style="display:flex;gap:2px;flex-shrink:0">'+av+'</span>';
     if(n.due)h+='<span class="pt-due'+(ptDueClass(n.due,n.done))+'">'+ptDueShort(n.due)+'</span>';
     h+='</div>';
@@ -11609,10 +11623,12 @@ function ptTreeNodes(parentId,projId,depth){
 function ptDueShort(d){try{var p=d.split('-');return (+p[1])+'/'+(+p[2]);}catch(e){return d;}}
 function ptDueClass(d,done){if(done)return '';try{var t=new Date(d+'T23:59:59');var now=new Date();var diff=(t-now)/86400000;if(diff<0)return ' od';if(diff<=3)return ' soon';}catch(e){}return '';}
 function ptToggle(id){PT.openMap[id]=PT.openMap[id]===false?true:false;ptRenderTree(PT.cur);}
-function ptSelect(id){PT.sel=id;ptRenderTree(PT.cur);ptRenderDetail(id);}
+function ptSelect(id){PT.sel=id;ptMarkNodeRead(id);ptRenderTree(PT.cur);ptRenderDetail(id);}
 /* ---------- 프로젝트 업데이트 알림: 항목·상위 폴더·프로젝트의 담당자 + 만든 사람에게 (본인 제외, 한국 직원만) ---------- */
 function _ptRelatedIds(nodeId){
-  var ids={};var n=ptFindNode(nodeId);
+  // 메이 지시(9/7): 프로젝트 업데이트는 한국 직원 전원에게 (본인·현지 티쳐 제외)
+  var ids={};(typeof ALL!=='undefined'?ALL:[]).forEach(function(e){if(e&&e.id)ids[e.id]=1;});
+  var n=ptFindNode(nodeId);
   while(n){
     (n.assignees||[]).forEach(function(a){if(a)ids[a]=1;});
     if(n.created_by)ids[n.created_by]=1;
@@ -11703,6 +11719,7 @@ function ptRenderDetail(id){
   var el=document.getElementById('ptDetail');if(!el)return;
   if(!id){el.innerHTML='<div class="empty-state" style="padding:40px"><div class="ei">👈</div>왼쪽에서 항목을 선택하거나<br>새로 추가하세요</div>';return;}
   var n=ptFindNode(id);if(!n){el.innerHTML='';return;}
+  ptMarkNodeRead(id);
   var path=ptPath(id).map(function(x){return esc(x.title||'');}).join(' <span style="color:var(--text3)">›</span> ');
   var isTask=n.kind==='task';
   var prog=isTask?null:ptProgress(n.project_id,n.id);
