@@ -13,6 +13,7 @@ const supabase = createClient(
 interface Session {
   booking_id: string; booking_number: string; guest_name: string;
   check_in_date: string; status: string; expires: number;
+  bookings?: Array<{ id: string; reservation_no: string; booker_name?: string; status?: string; accom_type?: string; checkin_date?: string; checkout_date?: string }>;
 }
 
 export default function PortalDashboard() {
@@ -332,6 +333,23 @@ export default function PortalDashboard() {
     router.replace("/portal");
   }
 
+  // 예약이 여러 건인 계정: 활성 예약 전환 (세션 갱신 후 새로고침 → 전 페이지 반영)
+  function switchBooking(bid: string) {
+    if (typeof window === "undefined" || !session) return;
+    const target = (session.bookings || []).find(b => b.id === bid);
+    if (!target || bid === session.booking_id) return;
+    const next = {
+      ...session,
+      booking_id: target.id,
+      booking_number: target.reservation_no || "",
+      guest_name: target.booker_name || session.guest_name,
+      check_in_date: target.checkin_date || "",
+      status: target.status || "",
+    };
+    localStorage.setItem("portalSession", JSON.stringify(next));
+    window.location.reload();
+  }
+
   if (!session && !authUser) return null;
 
   // 예약별 앱 메뉴 권한 (카테고리 기본값 + 어드민 오버라이드). 예약 없으면 null
@@ -406,6 +424,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
         <div className="db-logo">DREAM ACADEMY</div>
         <button className="db-logout" onClick={logout}>로그아웃</button>
       </div>
+
+      {session && Array.isArray(session.bookings) && session.bookings.length > 1 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8 }}>📋 예약이 여러 건이에요 — 확인할 예약을 선택하세요</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {session.bookings.map((b, i) => {
+              const active = b.id === session.booking_id;
+              const dates = [b.checkin_date, b.checkout_date].filter(Boolean).map(d => String(d).slice(5, 10).replace("-", "/")).join("~");
+              return (
+                <button key={b.id} onClick={() => switchBooking(b.id)} style={{ textAlign: "left", flex: "1 1 160px", minWidth: 150, padding: "12px 14px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", border: active ? "2px solid #7c3aed" : "2px solid #e2e8f0", background: active ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#fff", boxShadow: active ? "0 2px 10px rgba(124,58,237,0.15)" : "none" }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: active ? "#6d28d9" : "#334155", marginBottom: 3 }}>예약 {i + 1}{active ? " ✓ 보는 중" : ""}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a1a2e" }}>{b.accom_type || "-"}</div>
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{dates || b.reservation_no}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="db-welcome">
         <h1>안녕하세요, {displayName}님!</h1>

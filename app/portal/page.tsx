@@ -33,14 +33,23 @@ export default function PortalPage() {
     });
     const bookingData = bookingRes.ok ? await bookingRes.json() : null;
     const booking = bookingData?.booking;
+    const bookingList = (Array.isArray(bookingData?.bookings) && bookingData.bookings.length)
+      ? bookingData.bookings
+      : (booking ? [booking] : []);
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('portalSession', JSON.stringify({
         booking_id: booking?.id || '',
         booking_number: booking?.reservation_no || '',
         guest_name: booking?.booker_name || portalId,
-        check_in_date: booking?.check_in || '',
+        check_in_date: booking?.checkin_date || booking?.check_in || '',
         status: booking?.status || '',
+        // 재방문/여러 예약: 계정에 연결된 예약 전체 (대시보드 예약 전환용)
+        bookings: bookingList.map((b: any) => ({
+          id: b.id, reservation_no: b.reservation_no, booker_name: b.booker_name,
+          status: b.status, accom_type: b.accom_type,
+          checkin_date: b.checkin_date || '', checkout_date: b.checkout_date || ''
+        })),
         auth_type: 'supabase',
         expires: Date.now() + 24 * 60 * 60 * 1000
       }));

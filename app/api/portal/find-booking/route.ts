@@ -6,20 +6,24 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const SEL = 'id, reservation_no, booker_name, status, accom_type, checkin_date, checkout_date';
+
 export async function POST(req: NextRequest) {
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: '필수값 누락' }, { status: 400 });
 
   // 1. portal_user_id 직접 매칭 (이미 링크된 계정)
-  //    ⚠️ 한 계정에 예약이 여러 건일 수 있음(재방문/형제) → maybeSingle 금지, 최신 예약 우선
+  //    ⚠️ 한 계정에 예약이 여러 건일 수 있음(재방문/형제) → 전체 반환(최신순)
   const { data: linked } = await supabase
     .from('bookings')
-    .select('id, reservation_no, booker_name, status, accom_type')
+    .select(SEL)
     .eq('portal_user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .order('created_at', { ascending: false });
 
-  if (linked && linked.length) return NextResponse.json({ booking: linked[0] });
+  if (linked && linked.length) {
+    // booking = 최신(하위호환), bookings = 이 계정의 전체 예약 목록
+    return NextResponse.json({ booking: linked[0], bookings: linked });
+  }
 
   // 2. 이메일에서 예약번호 마지막 4자리 추출 → 자동 매칭
   //    ⚠️ 동명이인/번호 꼬리 중복 사고 방지: "후보가 정확히 1건" + "가입자 이름 = 예약자 이름"일 때만 자동 링크
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (last4 && /^\d{4}$/.test(last4)) {
     const { data: candidates } = await supabase
       .from('bookings')
-      .select('id, reservation_no, booker_name, status, accom_type, portal_user_id')
+      .select(SEL + ', portal_user_id')
       .ilike('reservation_no', `%${last4}`)
       .limit(5);
 
@@ -52,11 +56,11 @@ export async function POST(req: NextRequest) {
           .from('bookings')
           .update({ portal_user_id: userId })
           .eq('id', list[0].id);
-        return NextResponse.json({ booking: list[0] });
+        return NextResponse.json({ booking: list[0], bookings: [list[0]] });
       }
     }
     // 후보 0건/2건 이상, 또는 이름 불일치 → 자동 연결하지 않음 (예약 조회에서 예약번호+이름으로 확인)
   }
 
-  return NextResponse.json({ booking: null });
+  return NextResponse.json({ booking: null, bookings: [] });
 }
