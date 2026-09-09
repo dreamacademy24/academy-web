@@ -8059,7 +8059,8 @@ function _empReminders(empId){
   (notices||[]).forEach(function(n){
     if(!n.requireRead||n.done)return;
     if(((noticeReads[n.id])||[]).indexOf(me)>=0)return;
-    out.push({id:'nt_'+n.id,type:'notice',ref_id:n.id,virtual:true,message:'📢 공지 확인해 주세요: '+String(n.title||_ntPlain(n).slice(0,30)||'공지').slice(0,40)+' — 읽고 [읽음 확인] 눌러주세요',created_at:n.date||''});
+    try{var nd=new Date(String(n.date||'').replace(/\./g,'-').slice(0,10));if(nd.getTime()&&now-nd.getTime()>30*86400000)return;}catch(e){}
+    out.push({id:'nt_'+n.id,type:'notice',ref_id:n.id,virtual:true,message:'공지 확인해 주세요: '+String(n.title||_ntPlain(n).slice(0,30)||'공지').slice(0,40)+' — 읽고 [읽음 확인] 눌러주세요',created_at:n.date||''});
   });
   // (b) 3일 이상 완료 안 된 내 업무 → 재확인
   (tasks||[]).forEach(function(t){
@@ -8070,7 +8071,7 @@ function _empReminders(empId){
     var days=Math.floor((now-base)/86400000);if(days<3)return;
     var sn=_remindSnooze[t.id];if(sn&&now-sn<3*86400000)return;
     var overdue=t.due&&t.due<_ymdLocal(new Date());
-    out.push({id:'rm_'+t.id,type:'task',ref_id:t.id,virtual:true,snooze:t.id,message:'⏰ 재확인 — '+days+'일째 미완료'+(overdue?' · 마감 지남':'')+': '+String(t.title||'').slice(0,30),created_at:t.createdAt});
+    out.push({id:'rm_'+t.id,type:'task',ref_id:t.id,virtual:true,snooze:t.id,days:days,message:'재확인 — '+days+'일째 미완료'+(overdue?' · 마감 지남':'')+': '+String(t.title||'').slice(0,30),created_at:t.createdAt});
   });
   return out;
 }
@@ -8084,19 +8085,42 @@ function _renderEmpHomeNotif(empId){
   var box=document.getElementById('empHomeNotif');if(!box)return;
   var list=(myNotifs||[]).filter(function(n){return !n.is_read;});
   var extra=[];try{extra=_empReminders(empId);}catch(e){}
-  list=extra.filter(function(x){return x.type==='notice';}).concat(list).concat(extra.filter(function(x){return x.type!=='notice';}));
-  window._empNotifList=list;
-  if(!list.length){box.innerHTML='';return;}
+  var ntRem=extra.filter(function(x){return x.type==='notice';});
+  var tkRem=extra.filter(function(x){return x.type!=='notice';}).sort(function(a,b){return (b.days||0)-(a.days||0);});
+  var all=list.concat(ntRem).concat(tkRem);
+  window._empNotifList=all;
+  if(!all.length){box.innerHTML='';return;}
   var ic={task_comment:'💬',notice:'📢',thread:'🚀',project:'🚀',opinion:'💭',approval:'⚖️',task_assigned:'📌',task:'📌',unassigned_task:'📥'};
+  function row(n,i,extraBtn){
+    var r='<div onclick="_empNotifGo('+i+')" style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:#7f1d1d">';
+    r+='<span>'+(ic[n.type]||'🔔')+'</span><span style="flex:1;min-width:0;font-weight:600">'+esc(String(n.message||'새 알림'))+'</span>';
+    if(extraBtn)r+=extraBtn;
+    r+='<span style="font-size:10.5px;color:#dc2626;white-space:nowrap">'+(n.virtual?'':_actWhen(n.created_at))+'</span></div>';
+    return r;
+  }
   var h='<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:14px;padding:12px 16px;margin-bottom:14px;max-width:1000px">';
-  h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px">🔔 새 소식 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+list.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">댓글·새 글 — 누르면 해당 위치로 이동해요</span></div>';
-  list.slice(0,window._empNotifAll?999:8).forEach(function(n,i){
-    h+='<div onclick="_empNotifGo('+i+')" style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:#7f1d1d">';
-    h+='<span>'+(ic[n.type]||'🔔')+'</span><span style="flex:1;min-width:0;font-weight:600">'+esc(String(n.message||'새 알림'))+'</span>';
-    if(n.snooze)h+='<button onclick="_remindSnoozeTask(\''+n.snooze+'\',event)" title="3일 뒤 다시" style="border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:6px;font-size:10.5px;padding:1px 7px;cursor:pointer;white-space:nowrap">나중에</button>';
-    h+='<span style="font-size:10.5px;color:#dc2626;white-space:nowrap">'+(n.virtual&&n.type==='notice'?'':_actWhen(n.created_at))+'</span></div>';
-  });
-  if(list.length>8)h+='<div onclick="window._empNotifAll=!window._empNotifAll;_renderEmpHomeNotif(curEmpId||(CU&&CU.id))" style="font-size:11px;color:#b91c1c;text-align:center;padding-top:2px;cursor:pointer">'+(window._empNotifAll?'접기 ▲':'+'+(list.length-8)+'개 더')+'</div>';
+  /* ① 확인 안 한 공지 (읽음확인 필수) */
+  if(ntRem.length){
+    h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:4px">📢 확인 안 한 공지 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+ntRem.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">눌러서 읽고 [읽음 확인]을 눌러주세요</span></div>';
+    ntRem.forEach(function(n){h+=row(n,all.indexOf(n));});
+    h+='<div style="border-top:1px dashed #fca5a5;margin:8px 0"></div>';
+  }
+  /* ② 새 소식 (DB 알림) */
+  if(list.length){
+    h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px">🔔 새 소식 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+list.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">댓글·새 글 — 누르면 해당 위치로 이동해요</span></div>';
+    list.slice(0,window._empNotifAll?999:8).forEach(function(n){h+=row(n,all.indexOf(n));});
+    if(list.length>8)h+='<div onclick="window._empNotifAll=!window._empNotifAll;_renderEmpHomeNotif(curEmpId||(CU&&CU.id))" style="font-size:11px;color:#b91c1c;text-align:center;padding-top:2px;cursor:pointer">'+(window._empNotifAll?'접기 ▲':'+'+(list.length-8)+'개 더')+'</div>';
+  }
+  /* ③ 3일 이상 미완료 내 업무 재확인 */
+  if(tkRem.length){
+    if(list.length)h+='<div style="border-top:1px dashed #fca5a5;margin:8px 0"></div>';
+    h+='<div style="font-size:13px;font-weight:800;color:#b45309;margin-bottom:4px">⏰ 재확인 필요 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+tkRem.length+'</span> <span style="font-weight:600;font-size:11px;color:#b45309">3일 넘게 완료 안 된 내 업무 — 진행 중이면 [나중에], 끝났으면 완료 체크해 주세요</span></div>';
+    tkRem.slice(0,window._empRemAll?999:5).forEach(function(n){
+      var btn='<button onclick="_remindSnoozeTask(\''+n.snooze+'\',event)" title="3일 뒤 다시" style="border:1px solid #fcd34d;background:#fff;color:#b45309;border-radius:6px;font-size:10.5px;padding:1px 7px;cursor:pointer;white-space:nowrap">나중에</button>';
+      h+=row(n,all.indexOf(n),btn).replace('color:#7f1d1d','color:#78350f').replace('<span>📌</span>','<span>⏰</span>');
+    });
+    if(tkRem.length>5)h+='<div onclick="window._empRemAll=!window._empRemAll;_renderEmpHomeNotif(curEmpId||(CU&&CU.id))" style="font-size:11px;color:#b45309;text-align:center;padding-top:2px;cursor:pointer">'+(window._empRemAll?'접기 ▲':'+'+(tkRem.length-5)+'개 더')+'</div>';
+  }
   h+='</div>';
   box.innerHTML=h;
 }
