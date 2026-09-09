@@ -6,8 +6,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const SEL = 'id, reservation_no, booker_name, status, accom_type, checkin_date, checkout_date';
-
 export async function POST(req: NextRequest) {
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: '필수값 누락' }, { status: 400 });
@@ -16,7 +14,7 @@ export async function POST(req: NextRequest) {
   //    ⚠️ 한 계정에 예약이 여러 건일 수 있음(재방문/형제) → 전체 반환(최신순)
   const { data: linked } = await supabase
     .from('bookings')
-    .select(SEL)
+    .select('id, reservation_no, booker_name, status, accom_type, checkin_date, checkout_date')
     .eq('portal_user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -35,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (last4 && /^\d{4}$/.test(last4)) {
     const { data: candidates } = await supabase
       .from('bookings')
-      .select(SEL + ', portal_user_id')
+      .select('id, reservation_no, booker_name, status, accom_type, checkin_date, checkout_date, portal_user_id')
       .ilike('reservation_no', `%${last4}`)
       .limit(5);
 
