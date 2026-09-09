@@ -4090,7 +4090,7 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();var _initPg='home';try{var _qpPg=new URLSearchParams(window.location.search).get('page');if(_qpPg)_initPg=_qpPg;}catch(e){}showPage(_initPg);
-  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();});
   setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
@@ -5309,10 +5309,20 @@ function renderNotices(){
     list.appendChild(row);
   });
 }
+function _saveNoticeReadsSB(){
+  try{fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'notice_reads',value:noticeReads})}).catch(function(){});}catch(e){}
+}
+function loadNoticeReadsSB(){
+  return sbGet('app_settings','key=eq.notice_reads&select=value').then(function(rows){
+    var v=rows&&rows[0]&&rows[0].value;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
+    if(v&&typeof v==='object'){Object.keys(v).forEach(function(k){var a=noticeReads[k]||[];(v[k]||[]).forEach(function(id){if(a.indexOf(id)<0)a.push(id);});noticeReads[k]=a;});sv('tm_read',noticeReads);}
+  }).catch(function(){});
+}
 function markRead(noticeId){
   if(!noticeReads[noticeId])noticeReads[noticeId]=[];
   if(!noticeReads[noticeId].includes(CU.id))noticeReads[noticeId].push(CU.id);
-  sv('tm_read',noticeReads);renderNotices();
+  sv('tm_read',noticeReads);_saveNoticeReadsSB();renderNotices();
+  try{if(typeof _renderEmpHomeNotif==='function'&&document.getElementById('empHomeNotif'))_renderEmpHomeNotif(CU.id);}catch(e){}
   if(!document.getElementById('page-announcements').classList.contains('hidden'))renderAnnouncementsPage();
 }
 
@@ -8042,32 +8052,64 @@ function renderEmpDetailEmpty(emp){
   d.innerHTML='<div class="empb-wrap"><div id="tlWidget"></div>'+html+'</div>';
   renderMyTimeline(empId);
 }
+var _remindSnooze=ld('tm_remind_snooze',{});
+function _empReminders(empId){
+  var out=[];var now=Date.now();var me=empId||(CU&&CU.id);
+  // (a) 읽음확인 필수 공지 중 내가 아직 확인 안 한 것
+  (notices||[]).forEach(function(n){
+    if(!n.requireRead||n.done)return;
+    if(((noticeReads[n.id])||[]).indexOf(me)>=0)return;
+    out.push({id:'nt_'+n.id,type:'notice',ref_id:n.id,virtual:true,message:'📢 공지 확인해 주세요: '+String(n.title||_ntPlain(n).slice(0,30)||'공지').slice(0,40)+' — 읽고 [읽음 확인] 눌러주세요',created_at:n.date||''});
+  });
+  // (b) 3일 이상 완료 안 된 내 업무 → 재확인
+  (tasks||[]).forEach(function(t){
+    if(t.done)return;
+    var mine=t.assignee===me||(t.assignees||[]).indexOf(me)>=0;if(!mine)return;
+    if(typeof _isArchivedTask==='function'&&_isArchivedTask(t.id))return;
+    var base=t.createdAt?new Date(t.createdAt).getTime():0;if(!base)return;
+    var days=Math.floor((now-base)/86400000);if(days<3)return;
+    var sn=_remindSnooze[t.id];if(sn&&now-sn<3*86400000)return;
+    var overdue=t.due&&t.due<_ymdLocal(new Date());
+    out.push({id:'rm_'+t.id,type:'task',ref_id:t.id,virtual:true,snooze:t.id,message:'⏰ 재확인 — '+days+'일째 미완료'+(overdue?' · 마감 지남':'')+': '+String(t.title||'').slice(0,30),created_at:t.createdAt});
+  });
+  return out;
+}
+function _remindSnoozeTask(taskId,ev){
+  if(ev)ev.stopPropagation();
+  _remindSnooze[taskId]=Date.now();sv('tm_remind_snooze',_remindSnooze);
+  toast('3일 뒤에 다시 알려드릴게요');
+  _renderEmpHomeNotif(curEmpId||(CU&&CU.id));
+}
 function _renderEmpHomeNotif(empId){
   var box=document.getElementById('empHomeNotif');if(!box)return;
   var list=(myNotifs||[]).filter(function(n){return !n.is_read;});
+  var extra=[];try{extra=_empReminders(empId);}catch(e){}
+  list=extra.filter(function(x){return x.type==='notice';}).concat(list).concat(extra.filter(function(x){return x.type!=='notice';}));
   window._empNotifList=list;
   if(!list.length){box.innerHTML='';return;}
   var ic={task_comment:'💬',notice:'📢',thread:'🚀',project:'🚀',opinion:'💭',approval:'⚖️',task_assigned:'📌',task:'📌',unassigned_task:'📥'};
   var h='<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:14px;padding:12px 16px;margin-bottom:14px;max-width:1000px">';
   h+='<div style="font-size:13px;font-weight:800;color:#b91c1c;margin-bottom:6px">🔔 새 소식 <span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;padding:0 5px;vertical-align:middle">'+list.length+'</span> <span style="font-weight:600;font-size:11px;color:#ef4444">댓글·새 글 — 누르면 해당 위치로 이동해요</span></div>';
-  list.slice(0,8).forEach(function(n,i){
+  list.slice(0,window._empNotifAll?999:8).forEach(function(n,i){
     h+='<div onclick="_empNotifGo('+i+')" style="display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px;color:#7f1d1d">';
-    h+='<span>'+(ic[n.type]||'🔔')+'</span><span style="flex:1;min-width:0;font-weight:600">'+esc(String(n.message||'새 알림'))+'</span><span style="font-size:10.5px;color:#dc2626;white-space:nowrap">'+_actWhen(n.created_at)+'</span></div>';
+    h+='<span>'+(ic[n.type]||'🔔')+'</span><span style="flex:1;min-width:0;font-weight:600">'+esc(String(n.message||'새 알림'))+'</span>';
+    if(n.snooze)h+='<button onclick="_remindSnoozeTask(\''+n.snooze+'\',event)" title="3일 뒤 다시" style="border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:6px;font-size:10.5px;padding:1px 7px;cursor:pointer;white-space:nowrap">나중에</button>';
+    h+='<span style="font-size:10.5px;color:#dc2626;white-space:nowrap">'+(n.virtual&&n.type==='notice'?'':_actWhen(n.created_at))+'</span></div>';
   });
-  if(list.length>8)h+='<div style="font-size:11px;color:#b91c1c;text-align:center;padding-top:2px">+'+(list.length-8)+'개 더</div>';
+  if(list.length>8)h+='<div onclick="window._empNotifAll=!window._empNotifAll;_renderEmpHomeNotif(curEmpId||(CU&&CU.id))" style="font-size:11px;color:#b91c1c;text-align:center;padding-top:2px;cursor:pointer">'+(window._empNotifAll?'접기 ▲':'+'+(list.length-8)+'개 더')+'</div>';
   h+='</div>';
   box.innerHTML=h;
 }
 function _empNotifGo(idx){
   var n=(window._empNotifList||[])[idx];if(!n)return;
-  try{sbPatch('staff_notifications','id=eq.'+n.id,{is_read:true});n.is_read=true;myNotifs=(myNotifs||[]).filter(function(x){return x.id!==n.id;});}catch(e){}
+  if(!n.virtual){try{sbPatch('staff_notifications','id=eq.'+n.id,{is_read:true});n.is_read=true;myNotifs=(myNotifs||[]).filter(function(x){return x.id!==n.id;});}catch(e){}}
   try{updateNavBadges();}catch(e){}
   var tp=n.type;
   if((tp==='task_comment'||tp==='task'||tp==='task_assigned'||tp==='unassigned_task')&&n.ref_id){try{selectEmpTask(String(n.ref_id));return;}catch(e){}}
-  if(tp==='notice'){showPage('announcements');return;}
+  if(tp==='notice'){showPage('announcements');if(n.ref_id){setTimeout(function(){try{_ntOpen(String(n.ref_id));}catch(e){}},300);}return;}
   if(tp==='thread'){showPage('projects');return;}
   if(tp==='project'){try{if(n.ref_id){var _pn=(typeof PT!=='undefined'&&PT.nodes||[]).find(function(x){return x.id===n.ref_id;});if(_pn){PT.cur=_pn.project_id;PT.sel=_pn.id;}else{window._ptPendingSel=String(n.ref_id);}}}catch(e){}showPage('ptree');return;}
-  if(tp==='opinion'){showPage('opinions');return;}
+  if(tp==='opinion'){showPage('opinions');if(n.ref_id){setTimeout(function(){try{openOpinionDetail(String(n.ref_id));}catch(e){}},400);}return;}
   if(tp==='approval'){setEmpTab('approval');return;}
   _renderEmpHomeNotif(curEmpId||(CU&&CU.id));
 }
@@ -9160,12 +9202,27 @@ function _opdRenderReplies(opId,replies){
   el.innerHTML=html;
   setTimeout(function(){el.scrollTop=el.scrollHeight;},30);
 }
+function _opReplyNotify(opId,text){
+  try{
+    Promise.all([
+      sbGet('staff_opinions','id=eq.'+opId+'&select=from_id,title'),
+      sbGet('staff_op_replies','opinion_id=eq.'+opId+'&select=from_id')
+    ]).then(function(res){
+      var op=(res[0]||[])[0];if(!op)return;
+      var ids=[op.from_id].concat((res[1]||[]).map(function(r){return r.from_id;}));
+      var me=CU&&CU.id;var seen={};
+      ids=ids.filter(function(id){if(!id||id===me||seen[id])return false;if(String(id).indexOf('admin-')===0)return false;seen[id]=1;return true;});
+      if(ids.length)createNotifMultiple(ids,'opinion',String(opId),(CU&&CU.name||'')+'님이 "'+String(op.title||'의견').slice(0,20)+'"에 댓글: '+String(text||'').slice(0,30));
+    });
+  }catch(e){}
+}
 function _opdSubmitReply(opId){
   var inp=document.getElementById('opdReplyInp');
   var text=inp.value.trim();if(!text)return;
   inp.value='';
   sbPost('staff_op_replies',{from_id:CU?CU.id:'',opinion_id:opId,text:text,ts:Date.now()}).then(function(){
     sbGet('staff_op_replies','opinion_id=eq.'+opId+'&order=ts.asc').then(function(replies){_opdRenderReplies(opId,replies);});
+    _opReplyNotify(opId,text);
     renderOpinionList();
   });
 }
@@ -9294,7 +9351,7 @@ function submitReply(opId){
   var text=inp.value.trim();
   if(!text){toast('답변 내용을 입력해주세요');return;}
   sbPost('staff_op_replies',{opinion_id:opId,from_id:CU?CU.id:'',text:text,ts:Date.now()})
-    .then(function(){toast('답변 등록!');openOpinionDetail(opId);});
+    .then(function(){toast('답변 등록!');_opReplyNotify(opId,text);openOpinionDetail(opId);});
 }
 function deleteReply(opId,replyId){
   if(!confirm('답변을 삭제할까요?'));return;
@@ -9900,7 +9957,7 @@ function sendTaskCmt(){
   taskComments[curCmtTaskId].push(_nc2);
   sv('tm_tc',taskComments);syncTcToSB(curCmtTaskId,_nc2);inp.value='';inp.style.height='auto';
   var _ct2=tasks.find(function(t){return t.id===curCmtTaskId;});
-  if(_ct2){var _cmtMsg2=CU.name+'님이 "'+(_ct2.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets2=(_ct2.assignees&&_ct2.assignees.length?_ct2.assignees:[_ct2.assignee]).filter(function(id){return id&&id!==CU.id;});if(_cmtTargets2.length)createNotifMultiple(_cmtTargets2,'task_comment',curCmtTaskId,_cmtMsg2);}
+  if(_ct2){var _cmtMsg2=CU.name+'님이 "'+(_ct2.title||'업무').slice(0,20)+'"에 댓글: '+text.slice(0,30);var _cmtTargets2=(_ct2.assignees&&_ct2.assignees.length?_ct2.assignees:[_ct2.assignee]).concat([_ct2.createdBy]).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;});if(_cmtTargets2.length)createNotifMultiple(_cmtTargets2,'task_comment',curCmtTaskId,_cmtMsg2);}
   renderTaskCmtBody(curCmtTaskId);refreshAll();
 }
 function delTaskCmt(taskId,cmtId){
