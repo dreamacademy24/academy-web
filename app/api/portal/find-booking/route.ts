@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
       .ilike('reservation_no', `%${last4}`)
       .limit(5);
 
-    const list = (candidates || []).filter(b => !b.portal_user_id); // 이미 다른 계정에 연결된 예약 제외
+    type Cand = { id: string; reservation_no: string | null; booker_name: string | null; status: string | null; accom_type: string | null; checkin_date: string | null; checkout_date: string | null; portal_user_id: string | null };
+    const list = ((candidates ?? []) as unknown as Cand[]).filter(b => !b.portal_user_id); // 이미 다른 계정에 연결된 예약 제외
     if (list.length === 1) {
       // 이름 검증: 가입자 이름(user_metadata 또는 profiles.name)과 예약자명이 일치해야만 자동 링크
       const metaName = String(authData?.user?.user_metadata?.name || '').replace(/\s+/g, '');
