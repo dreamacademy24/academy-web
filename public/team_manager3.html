@@ -1405,15 +1405,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-chip.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary);font-weight:700}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="/staff-workspace-home.css?v=20260910-staff2">
-<script src="/staff-workspace-home.js?v=20260910-staff2"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260910-staff2">
-<script src="/staff-workspace-task.js?v=20260910-staff2"></script>
-<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260910-staff2">
-<script src="/staff-workspace-operations.js?v=20260910-staff2"></script>
-<link rel="stylesheet" href="/staff-workspace-media.css?v=20260910-staff2">
-<script src="/staff-workspace-media.js?v=20260910-staff2"></script>
-<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260910-staff2">
+<link rel="stylesheet" href="/staff-workspace-home.css?v=20260910-staff3">
+<script src="/staff-workspace-home.js?v=20260910-staff3"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260910-staff3">
+<script src="/staff-workspace-task.js?v=20260910-staff3"></script>
+<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260910-staff3">
+<script src="/staff-workspace-operations.js?v=20260910-staff3"></script>
+<link rel="stylesheet" href="/staff-workspace-media.css?v=20260910-staff3">
+<script src="/staff-workspace-media.js?v=20260910-staff3"></script>
+<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260910-staff3">
 </head>
 <body>
 
@@ -1461,7 +1461,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="calendar" onclick="showPage('calendar')">달력</button>
       <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재</button>
       <button class="tab-item" data-page="weeklycl" onclick="showPage('weeklycl')">주간 체크</button>
-      <button class="tab-item" data-group="comm" onclick="showGroup('comm')">공지사항<span id="badge-comm" class="nav-badge">0</span></button>
+      <button class="tab-item" data-page="announcements" onclick="showPage('announcements')">공지사항<span id="badge-comm" class="nav-badge">0</span></button>
+      <button class="tab-item" data-page="opinions" onclick="showPage('opinions')">의견요청<span id="badge-opinions" class="nav-badge">0</span></button>
       <button class="tab-item" data-group="docs" onclick="showGroup('docs')">자료</button>
     </div>
     <div class="th-right">
@@ -1535,7 +1536,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 
       <!-- ANNOUNCEMENTS -->
       <div id="page-announcements" class="hidden">
-        <div id="announcementsFeed" style="padding:20px;max-width:720px;margin:0 auto;overflow-y:auto;height:calc(100vh - 60px);box-sizing:border-box"></div>
+        <div id="announcementsFeed" style="padding:28px 32px;width:100%;max-width:1440px;margin:0 auto;box-sizing:border-box"></div>
       </div>
 
       <!-- BOARD -->
@@ -3804,7 +3805,7 @@ function updateNavBadges(){
   _setNavBadge('badge-chat',chatTotal);
   // 소통 탭 합산 (공지 + 의견 + 채팅)
   var ntCount=myNotifs.filter(function(n){return n.type==='notice';}).length;
-  _setNavBadge('badge-comm',ntCount+opCount+chatTotal);
+  _setNavBadge('badge-comm',ntCount);
   // 업무 탭: 프로젝트 스레드 알림 합산
   var thCount=myNotifs.filter(function(n){return n.type==='thread'||n.type==='project';}).length;
   _setNavBadge('badge-board',boardNotif+thCount);
@@ -3815,12 +3816,13 @@ function updateNavBadges(){
 function jsonHash(obj){return JSON.stringify(obj);}
 var _pollInFlight=false;
 function _pollEditing(){
+  if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)return true;
   if(typeof _staffTaskSaving!=='undefined'&&_staffTaskSaving)return true;
   if(typeof _staffTaskWrites!=='undefined'&&Object.keys(_staffTaskWrites).length)return true;
   if(typeof _staffApvSubmitting!=='undefined'&&(_staffApvSubmitting||_staffApvUploadCount||Object.keys(_staffApvBusy).length))return true;
   if(typeof _staffMediaBusy!=='undefined'&&_staffMediaBusy)return true;
   var active=document.activeElement;
-  return !!((active&&(active.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)))||document.querySelector('.overlay.open, .tm-ov'));
+  return !!((active&&(active.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)))||document.querySelector('.overlay.open, .tm-ov, .swt-reservation-preview:not([hidden])'));
 }
 function startPolling(){
   if(_pollTimer)clearInterval(_pollTimer);
@@ -4133,7 +4135,7 @@ function buildEmpNav(){
   });
 }
 // ── Phase5 탭 그룹 (2026-08-13) ──
-const TAB_GROUPS={work:['board'],comm:['announcements','chat','opinions'],docs:['manual','guide','sboard']};
+const TAB_GROUPS={work:['board'],comm:['announcements'],docs:['manual','guide','sboard']};
 const TAB_GROUP_ALIAS={'proj-detail':'work','proj-task':'work'};
 const GRP_LABELS={board:'\uD83D\uDCCB \uC804\uCCB4 \uC5C5\uBB34',projects:'\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8',announcements:'\uD83D\uDCE2 \uACF5\uC9C0\uC0AC\uD56D',chat:'\uD83D\uDDE8\uFE0F \uCC44\uD305',opinions:'\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD',manual:'\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC',guide:'\u270D\uFE0F \uC548\uB0B4\uBB38\uAD6C',sboard:'\uD83D\uDDC2\uFE0F \uACF5\uC720\uBCF4\uB4DC'};
 function groupOf(p){if(!p)return null;if(TAB_GROUP_ALIAS[p])return TAB_GROUP_ALIAS[p];for(var g in TAB_GROUPS){if(TAB_GROUPS[g].indexOf(p)>=0)return g;}return null;}
@@ -4144,7 +4146,7 @@ function showGroup(g){
 }
 function renderGrpSubnav(p){
   document.querySelectorAll('.grp-subnav').forEach(function(e){e.remove();});
-  var g=groupOf(p);if(!g||TAB_GROUP_ALIAS[p])return;
+  var g=groupOf(p);if(!g||TAB_GROUP_ALIAS[p]||(TAB_GROUPS[g]||[]).length<2)return;
   var pageEl=document.getElementById('page-'+p);if(!pageEl)return;
   var bar=document.createElement('div');bar.className='grp-subnav';
   bar.innerHTML=(TAB_GROUPS[g]||[]).map(function(sp){
@@ -4180,6 +4182,8 @@ document.addEventListener('click',function(e){
   dd.classList.remove('open');
 });
 function showPage(p){
+  if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen&&closeM('taskModal')===false)return;
+  if(p==='chat')p='announcements'; // Retired chat deep links return to notices.
   try{var _ov=document.getElementById('ntViewOv');if(_ov){_ov.remove();document.body.style.overflow='';_ntSelId=null;}}catch(e){}
   if(p==='mywork'){
     if(typeof CU !== 'undefined' && CU && CU.id){
@@ -5338,63 +5342,9 @@ function renderAnnouncementsPage(){
 }
 /* 공지 작성 — 서식 에디터 모달 */
 function _ntPostGuide(){
-  if(!confirm('직원업무 사용법 공지를 새로 등록할까요?'))return;
-  var b=''
-    +'<div style="font-size:15px;line-height:1.95">'
-    +'<div style="background:#eff6ff;border-left:4px solid #1a6fc4;padding:10px 14px;border-radius:8px;margin-bottom:14px"><b>직원업무가 새로워졌어요!</b> 아래를 한 번만 읽어두면 훨씬 편하게 쓸 수 있어요 😊</div>'
-    +'<b style="font-size:16px">⚡ 1. 빠른 추가 — 제일 많이 쓰게 될 기능</b><br>'
-    +'<b>내 업무</b> 화면 맨 위 입력칸에 <b>그냥 한 줄로 써서 Enter</b>만 누르면 업무가 만들어져요. 따로 날짜·긴급 설정 안 해도 돼요.<br>'
-    +'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin:8px 0">'
-    +'<b>📌 규칙</b><br>'
-    +'• 끝에 <b>오늘 / 내일 / 모레</b> 또는 <b>6/20</b> 같이 날짜를 쓰면 → 그 날짜가 마감일로 자동 입력<br>'
-    +'• 맨 앞에 <b>!</b> 를 붙이면 → 🚨 긴급으로 분류<br>'
-    +'• 아무것도 안 붙이면 → 그냥 기한 없는 일반 업무<br>'
-    +'</div>'
-    +'<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;margin:8px 0">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;background:#1a6fc4;color:#fff;font-weight:700;font-size:13px"><div style="padding:8px 12px">이렇게 입력하면</div><div style="padding:8px 12px;border-left:1px solid rgba(255,255,255,.3)">이렇게 만들어져요</div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">셔틀 명단 정리 내일</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">제목 <b>셔틀 명단 정리</b> · 마감 <b>내일</b></div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">!인보이스 확인 6/20</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">🚨긴급 <b>인보이스 확인</b> · 마감 <b>6월 20일</b></div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eef2f7;font-size:13.5px"><div style="padding:9px 12px;font-family:monospace;color:#1a1d2e">비품 주문하기</div><div style="padding:9px 12px;border-left:1px solid #eef2f7">제목 <b>비품 주문하기</b> (기한 없음)</div></div>'
-    +'</div>'
-    +'<hr>'
-    +'<b style="font-size:16px">✅ 2. 한 번에 완료 / 미루기</b><br>'
-    +'• 왼쪽 목록의 <b>네모(체크박스)</b>만 누르면 바로 완료 처리 (상세 안 들어가도 돼요)<br>'
-    +'• 카드의 <b>⏭</b> 버튼 또는 상세에서 <b>[오늘][내일][+1주]</b>로 마감일을 한 번에 바꿀 수 있어요<br>'
-    +'• 들어가면 바로 <b>내 보드</b>(🚨긴급 / 📋진행중 / ✅완료)가 한눈에 보여요<br>'
-    +'<hr>'
-    +'<b style="font-size:16px">🗂 3. 결재</b><br>'
-    +'• 왼쪽에서 결재 건을 고르면 오른쪽에 내용이 크게 보여요<br>'
-    +'• <b>상신할 때</b> 굵게·색·☑체크박스·<b>사진(최대 30MB)</b>까지 넣어 게시판 글처럼 작성 가능<br>'
-    +'• 승인/반려는 오른쪽 상세에서 바로<br>'
-    +'<hr>'
-    +'<b style="font-size:16px">📢 4. 공지 (지금 이 화면)</b><br>'
-    +'• 게시판이에요. 제목을 누르면 <b>새 화면으로 크게</b> 열려요<br>'
-    +'• <b>읽음확인 필수</b>라고 표시된 글은 꼭 [읽음 확인]을 눌러주세요<br>'
-    +'<hr>'
-    +'<b style="font-size:16px">🏠 5. 홈</b><br>'
-    +'맨 아래 <b>이번 주</b>에서 요일별 마감 업무와 휴무일을 한눈에 볼 수 있어요.'
-    +'<hr>'
-    +'<div style="background:#fffbeb;border-left:4px solid #d97706;padding:10px 14px;border-radius:8px;margin:14px 0"><b>🆕 6. 새로 추가된 관리자 메뉴 사용법</b> (관리자 홈에서)</div>'
-    +'<b style="font-size:15px">🍽 식단 관련 업무</b><br>'
-    +'• <b>올인원 식단(주 1장)</b> / <b>학생 식단(월 1장)</b> 탭에서 식단표 <b>사진 1장</b> 올리고 → <b>📢 발행 &amp; 알림</b><br>'
-    +'• 누르면 <b>받을 손님 선택창</b>이 떠요 (올인원=투숙중 올인원 / 학생=투숙중 전체가 자동 체크). 빼고 싶은 분만 체크 해제 후 보내기<br>'
-    +'• 엄마 앱 <b>🍽 식단</b>에 뜨고, 푸시 알림 + 빨간 뱃지가 갑니다<br>'
-    +'<b style="font-size:15px">🧾 정산 관리</b><br>'
-    +'• <b>보증금 정산</b> / <b>수업·교재비</b> 따로. <b>📄 인보이스 불러오기</b>로 금액 자동 입력 (직접 안 적어도 돼요)<br>'
-    +'• 항목마다 <b>청구(+) / 납부(−)</b> 태그로 구분, 최종 환불·납부 자동 계산<br>'
-    +'• <b>🔒 최종마감</b> 누르면 엄마에게 "정산 완료" 알림. <b>👩‍👧 엄마 공개</b> 켠 예약만 엄마가 봅니다(베타)<br>'
-    +'<b style="font-size:15px">📋 체크인 디테일</b><br>'
-    +'• <b>드림하우스 예약만</b>, <b>아직 안 온 손님만</b> 목록에 떠요 (지난 건은 아래 접힘). 🪧 체크인 카드 출력 가능<br>'
-    +'<b style="font-size:15px">🎒 애프터스쿨 / 필드트립</b><br>'
-    +'• 신청 칩 옆 <b>🗑</b>로 중복 신청을 지우면 티쳐(현지직원) 표에서도 같이 사라져요<br>'
-    +'<b style="font-size:15px">🔔 손님 알림</b><br>'
-    +'• 공지·식단·정산 발행 시 엄마 폰에 알림(구독한 분) + 앱 열면 빨간 뱃지(모두). 엄마들껜 마이페이지 맨 위에서 "알림 켜기"를 유도하고 있어요'
-    +'</div>';
-  var _nn={id:uid(),title:'📖 직원업무 사용법 안내 (꼭 읽어주세요!)',text:b,files:[],done:false,date:nowStr(),requireRead:true};
-  notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);
-  renderAnnouncementsPage();if(typeof renderNotices==='function')renderNotices();
-  createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'직원업무 사용법 공지가 등록되었어요');
-  toast('사용법 공지를 등록했어요');
+  var guide=notices.find(function(n){return n.id==='staff-workspace-guide-20260910';});
+  if(guide){_ntOpen(guide.id);return;}
+  window.open('/staff-guides/2026-09/guide.html','_blank','noopener');
 }
 function _ntEd(cmd,val){var ed=document.getElementById('ntBodyEd');if(ed)ed.focus();try{document.execCommand(cmd,false,val||null);}catch(e){}}
 function _ntEdCheck(){var ed=document.getElementById('ntBodyEd');if(ed)ed.focus();try{document.execCommand('insertHTML',false,'<div><input type="checkbox"> 항목 </div>');}catch(e){}}
@@ -7323,12 +7273,12 @@ function _bsSelect(id){
 }
 function renderEmpChecklistTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div style="max-width:980px"><div style="font-size:16px;font-weight:800;margin-bottom:10px">📋 체크리스트</div><div id="empChecklistBox" style="margin-bottom:6px"></div>'+_buildEmpDailyHtml(empId)+'</div>';
+  d.innerHTML='<div style="width:100%;max-width:1660px;margin:0 auto"><div style="font-size:16px;font-weight:800;margin-bottom:10px">📋 체크리스트</div><div id="empChecklistBox" style="margin-bottom:6px"></div>'+_buildEmpDailyHtml(empId)+'</div>';
   _renderEmpChecklist(empId);
 }
 function renderEmpStudentTab(empId){
   var d=document.getElementById('empDetail');if(!d)return;
-  d.innerHTML='<div style="max-width:980px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:16px;font-weight:800">🎓 담당 학생</div><div id="empStuSum" style="font-size:12px;font-weight:800;color:var(--primary)"></div><div style="flex:1"></div>'+(isAdmin()?'<button onclick="_clEditItems()" style="padding:4px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">⚙️ 체크 항목 편집</button>':'')+'</div><div style="font-size:11.5px;color:var(--text3);margin-bottom:12px">주담당·케어담당으로 지정된 예약의 학생 — 오늘의 출석/컨디션/투약/메모를 체크하세요 (버튼은 다시 누르면 해제)</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>';
+  d.innerHTML='<div style="width:100%;max-width:1660px;margin:0 auto"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:16px;font-weight:800">🎓 담당 학생</div><div id="empStuSum" style="font-size:12px;font-weight:800;color:var(--primary)"></div><div style="flex:1"></div>'+(isAdmin()?'<button onclick="_clEditItems()" style="padding:4px 10px;border:1px solid var(--border);background:var(--surface);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)">⚙️ 체크 항목 편집</button>':'')+'</div><div style="font-size:11.5px;color:var(--text3);margin-bottom:12px">주담당·케어담당으로 지정된 예약의 학생 — 오늘의 출석/컨디션/투약/메모를 체크하세요 (버튼은 다시 누르면 해제)</div><div id="empStuBox" style="font-size:13px;color:var(--text3)">불러오는 중…</div></div>';
   var p=getP(empId);var myName=(p&&p.name)||empId;
   var today=todayStr();
   var q='select=id,assignee,care_assignee,booker_name,students,checkin_date,checkout_date,house_no,accom_room,special_request,status&or=(assignee.eq.'+encodeURIComponent(myName)+',care_assignee.eq.'+encodeURIComponent(myName)+')&checkout_date=gte.'+today+'&order=checkin_date';
@@ -7778,7 +7728,7 @@ function renderEmpDetailEmpty(emp){
     h+='</div>';
     return h;
   }
-  var html='<div style="max-width:980px">';
+  var html='<div style="width:100%;max-width:1660px;margin:0 auto">';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><div style="font-size:16px;font-weight:800;flex:1">📊 '+esc((emp&&emp.name)||'')+'의 보드</div>';
   if(isOwner||isAdmin())html+='<button class="tm-btn tm-btn-pri tm-btn-sm" onclick="openTaskModal(\x27'+empId+'\x27)">+ 업무 추가</button>';
   html+='</div>';
@@ -7805,7 +7755,7 @@ function renderEmpDetailEmpty(emp){
     return;
   }
   if(isOwner){
-    d.innerHTML='<div id="empHomeNotif" style="max-width:1100px"></div><div style="max-width:1100px">'+html+'</div>';
+    d.innerHTML='<div class="staff-board-workspace"><details class="staff-board-updates"><summary>공지·댓글·재확인할 업무 펼치기</summary><div id="empHomeNotif"></div></details><div>'+html+'</div></div>';
     try{_renderEmpHomeNotif(empId);}catch(e){}
     return;
   }
@@ -9820,6 +9770,7 @@ function renderAssignPicker(){
   picker.innerHTML=h;
 }
 function toggleAssign(id){
+  if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)_staffTaskPageDirty=true;
   if(id===''){_assignSelected.clear();_assignSelected.add('');}
   else{
     _assignSelected.delete('');
@@ -9829,6 +9780,7 @@ function toggleAssign(id){
   renderAssignWrap();renderAssignPicker();
 }
 function removeAssign(e,id){
+  if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)_staffTaskPageDirty=true;
   e.stopPropagation();_assignSelected.delete(id);renderAssignWrap();
 }
 function toggleAssignPicker(){
@@ -10598,34 +10550,12 @@ var DEFAULT_CHANNELS=[
 ];
 function getChatMsgs(chId){return[];}
 function getChannels(){return DEFAULT_CHANNELS;}
-function markChatRead(chId){sbGet('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&order=ts.desc&limit=1').then(function(msgs){var rd=ld('tm_chat_read',{});rd[chId]=(msgs&&msgs.length>0)?msgs[0].ts:0;sv('tm_chat_read',rd);});}
+function markChatRead(){return;}
 var _unreadCache={};
 function getUnread(chId){return _unreadCache[chId]||0;}
-function refreshUnreadCounts(){
-  var chs=getChannels();var rd=ld('tm_chat_read',{});
-  chs.forEach(function(ch){
-    var last=rd[ch.id]||0;
-    sbGet('staff_chat','channel=eq.'+encodeURIComponent(ch.id)+'&ts=gt.'+last+'&select=from_id')
-      .then(function(msgs){
-        if(!msgs)return;
-        _unreadCache[ch.id]=msgs.filter(function(m){return !CU||m.from_id!==CU.id;}).length;
-        renderChannelList();
-      });
-  });
-}
+function refreshUnreadCounts(){_unreadCache={};}
 
-function renderChatPage(){
-  var wrap=document.getElementById('chatWrap');if(!wrap)return;
-  wrap.innerHTML=
-    '<div id="chatSidebar" style="width:200px;flex-shrink:0;background:var(--surface,#f1f5f9);border-right:1px solid var(--border,#e2e8f0);display:flex;flex-direction:column;overflow-y:auto">'+
-    '<div style="padding:16px 14px 10px;font-size:11px;font-weight:700;color:var(--text3,#94a3b8);letter-spacing:0.08em">\uCC44\uB110</div>'+
-    '<div id="channelList"></div></div>'+
-    '<div style="flex:1;display:flex;flex-direction:column;overflow:hidden">'+
-    '<div id="chatHeader" style="padding:14px 20px;border-bottom:1px solid var(--border,#e2e8f0);background:var(--surface2,#fff);flex-shrink:0"></div>'+
-    '<div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:2px"></div>'+
-    '<div id="chatInputArea" style="padding:12px 20px;border-top:1px solid var(--border,#e2e8f0);background:var(--surface2,#fff);flex-shrink:0"></div></div>';
-  renderChannelList();refreshUnreadCounts();switchChannel(curChannel);
-}
+function renderChatPage(){showPage('announcements');}
 function renderChannelList(){
   var chs=getChannels();var el=document.getElementById('channelList');if(!el)return;
   el.innerHTML=chs.map(function(ch){
@@ -10636,12 +10566,7 @@ function renderChannelList(){
     '</div>';
   }).join('');
 }
-function switchChannel(chId){
-  curChannel=chId;markChatRead(chId);renderChannelList();renderChatHeader(chId);renderChatMsgs(chId);renderChatInput(chId);
-  setTimeout(function(){var el=document.getElementById('chatMessages');if(el)el.scrollTop=el.scrollHeight;},50);
-  if(chatRefreshTimer)clearInterval(chatRefreshTimer);
-  chatRefreshTimer=setInterval(function(){if(curChannel===chId){renderChatMsgs(chId);refreshUnreadCounts();}},30000);
-}
+function switchChannel(){return;}
 function renderChatHeader(chId){
   var ch=getChannels().find(function(c){return c.id===chId;});if(!ch)return;
   var el=document.getElementById('chatHeader');if(!el)return;
@@ -10747,17 +10672,8 @@ function highlightMention(text){
     return '<span style="background:'+color+'22;color:'+color+';font-weight:700;border-radius:4px;padding:0 3px">@'+name+'</span>';
   });
 }
-function sendChatMsg(chId){
-  var inp=document.getElementById('chatTxt');if(!inp)return;
-  var text=inp.value.trim();if(!text)return;
-  inp.value='';inp.style.height='auto';
-  sbPost('staff_chat',{channel:chId,from_id:CU?CU.id:'',text:text,ts:Date.now()})
-    .then(function(){renderChatMsgs(chId);renderChatHeader(chId);markChatRead(chId);});
-}
-function deleteChatMsg(chId,ts){
-  sbDel('staff_chat','channel=eq.'+encodeURIComponent(chId)+'&ts=eq.'+ts)
-    .then(function(){renderChatMsgs(chId);});
-}
+function sendChatMsg(){return;}
+function deleteChatMsg(){return;}
 /* \u2500\u2500 \uCC44\uD305 \uC2DC\uC2A4\uD15C \uB05D \u2500\u2500 */
 
 
@@ -10821,7 +10737,7 @@ function refreshAll(){
   const dw=document.getElementById('empDailyWrap');if(dw&&!dw.classList.contains('hidden')&&curEmpId)renderEmpDailyChecklist(curEmpId,dw);
 }
 function openM(id){document.getElementById(id).classList.add('open');setTimeout(function(){const el=document.querySelector('#'+id+' input,#'+id+' textarea');if(el)el.focus();},80);}
-function closeM(id){if(id==='taskModal'&&typeof _staffMediaBusy!=='undefined'&&_staffMediaBusy){toast('사진 업로드 중입니다. 완료 후 닫아주세요.');return;}document.getElementById(id).classList.remove('open');}
+function closeM(id){if(id==='taskModal'&&typeof _staffMediaBusy!=='undefined'&&_staffMediaBusy){toast('사진 업로드 중입니다. 완료 후 닫아주세요.');return false;}if(id==='taskModal'&&typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen&&!_staffTaskClosePage())return false;document.getElementById(id).classList.remove('open');return true;}
 document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(function(o){o.classList.remove('open');});});
 document.addEventListener('click',function(e){var w=document.getElementById('tmAssWrap'),p=document.getElementById('tmAssPicker');if(w&&p&&!w.contains(e.target)&&!p.contains(e.target))p.style.display='none';});

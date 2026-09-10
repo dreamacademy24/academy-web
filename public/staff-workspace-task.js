@@ -1,5 +1,29 @@
 /* Staff instruction editor/detail. Keeps staff_tasks/checklist and comment contracts. */
 var _staffTaskSaving=false,_staffTaskDraftId=null,_staffTaskWrites={};
+var _staffTaskPageOpen=false,_staffTaskPageDirty=false,_staffTaskReturnScroll=0;
+function _staffTaskOpenPage(){
+  var page=document.getElementById('taskModal'),main=document.querySelector('.main-area');if(!page||!main)return;
+  _staffTaskReturnScroll=window.scrollY;_staffTaskPageOpen=true;_staffTaskPageDirty=false;
+  page.classList.remove('overlay');page.classList.add('swt-page');page.setAttribute('role','region');page.removeAttribute('aria-modal');
+  main.appendChild(page);document.body.classList.add('staff-task-page-open');window.scrollTo(0,0);
+}
+function _staffTaskClosePage(){
+  if(_staffTaskPageDirty&&!_staffTaskSaving&&!confirm('작성한 내용을 저장하지 않고 돌아갈까요?'))return false;
+  _staffTaskPageOpen=false;_staffTaskPageDirty=false;document.body.classList.remove('staff-task-page-open');window.scrollTo(0,_staffTaskReturnScroll);return true;
+}
+window.addEventListener('beforeunload',function(e){if(_staffTaskPageOpen&&_staffTaskPageDirty){e.preventDefault();e.returnValue='';}});
+async function _staffReservationPreview(host,id){
+  if(!host)return;var request=(host._request||0)+1;host._request=request;host.hidden=false;
+  host.innerHTML='<p role="status">손님 내역을 불러오는 중입니다…</p>';if(host.parentElement)host.parentElement.scrollTop=0;
+  try{
+    var rows=await sbGet('bookings','select='+_staffBookingFields()+'&id=eq.'+encodeURIComponent(id)),b=rows[0];
+    if(!host.isConnected||host._request!==request)return;if(!b)throw Error('예약을 찾을 수 없습니다.');
+    var students=[];try{students=typeof b.students==='string'?JSON.parse(b.students):b.students||[];}catch(e){}
+    var names=Array.isArray(students)?students.map(function(s){return s.korName||s.name_kr||s.name||'학생';}).join(', '):'';
+    host.innerHTML='<div class="swt-reservation-head"><h2>손님 내역 함께 보기</h2><button type="button" class="tm-btn" data-close>접기</button></div><strong class="swt-reservation-name">'+_staffSafe(b.booker_name||'이름 미등록')+'</strong><p>'+_staffSafe(b.reservation_no||'')+'</p><dl><dt>체류 기간</dt><dd>'+_staffSafe(b.checkin_date||'미정')+' → '+_staffSafe(b.checkout_date||'미정')+'</dd><dt>숙소 · 객실</dt><dd>'+_staffSafe([b.accom_type,b.house_no||b.accom_room].filter(Boolean).join(' · ')||'미정')+'</dd><dt>학생</dt><dd>'+_staffSafe(names||'등록 정보 없음')+'</dd><dt>예약 상태</dt><dd>'+_staffSafe(b.status||'확인 필요')+'</dd><dt>주담당 · 케어담당</dt><dd>'+_staffSafe([b.assignee,b.care_assignee].filter(Boolean).join(' · ')||'미배정')+'</dd></dl><a class="tm-btn" href="/admin/bookings/'+encodeURIComponent(b.id)+'" target="_blank" rel="noopener">전체 예약 상세 ↗</a><p class="swt-help">현재 예약 정보의 조회용 요약입니다. 변경은 예약 상세에서 진행하세요.</p>';
+    host.querySelector('[data-close]').onclick=function(){host.hidden=true;host._request++;};
+  }catch(e){if(host.isConnected&&host._request===request)host.innerHTML='<p role="alert">손님 내역을 불러오지 못했습니다. 예약을 다시 선택해주세요.</p>';}
+}
 function _staffTaskCanEdit(t){return !!(CU&&(isManagerCU()||t.createdBy===CU.id||_staffAssigned(t,CU.id)));}
 function _staffTaskItems(t){return Array.isArray(t.checklist)?t.checklist:(t.checklist&&Array.isArray(t.checklist.items)?t.checklist.items:[]);}
 async function _staffToggleTaskCompletion(id){
@@ -24,7 +48,7 @@ function _staffTaskPrepareForm(){
   var modal=document.getElementById('taskModal');if(!modal)return;
   if(!editTaskId)_staffTaskDraftId=null;
   if(!modal.classList.contains('swt-editor')){
-    modal.classList.add('swt-editor');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','swtFormHeading');
+    modal.classList.add('swt-editor');modal.setAttribute('aria-labelledby','swtFormHeading');
     var inner=modal.querySelector('.tm-ed-inner'),main=document.createElement('div'),aside=document.createElement('aside');
     main.className='swt-editor-main';aside.className='swt-editor-aside';
     while(inner.firstChild)main.appendChild(inner.firstChild);
@@ -59,7 +83,7 @@ function _staffTaskPrepareForm(){
     linked.innerHTML='<h2>관련 예약 연결</h2><label for="swtBookingQuery">예약자명 또는 예약번호</label><div><input id="swtBookingQuery" placeholder="두 글자 이상 입력"><button type="button" id="swtBookingSearch">검색</button></div><div id="swtBookingResults" role="status"></div><p class="swt-help">선택한 예약의 상세 링크가 요청 내용에 추가됩니다.</p>';
     aside.appendChild(linked);document.getElementById('swtBookingSearch').onclick=_staffTaskSearchBooking;
     document.getElementById('swtBookingQuery').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();_staffTaskSearchBooking();}};
-    modal.addEventListener('input',_staffTaskFormSummary);
+    modal.addEventListener('input',function(){_staffTaskPageDirty=true;_staffTaskFormSummary();});modal.addEventListener('change',function(){_staffTaskPageDirty=true;});
     modal.addEventListener('change',function(e){if(e.target.id==='tmSecret'&&e.target.checked)document.getElementById('tmShare').checked=false;if(e.target.id==='tmShare'&&e.target.checked)document.getElementById('tmSecret').checked=false;_staffTaskFormSummary();});
     document.getElementById('tmErr').setAttribute('role','alert');
   }
@@ -69,6 +93,8 @@ function _staffTaskPrepareForm(){
   var existing=editTaskId?tasks.find(function(t){return String(t.id)===String(editTaskId);}):null;
   document.getElementById('tmCreated').textContent=_staffTaskCreatedLabel(existing&&existing.createdAt||Date.now());
   document.getElementById('tmAssPicker').style.display='none';
+  var preview=document.getElementById('swtEditorReservation');if(!preview){preview=document.createElement('section');preview.id='swtEditorReservation';preview.className='swt-reservation-preview';modal.querySelector('.swt-editor-aside').prepend(preview);}preview.hidden=true;preview._request=(preview._request||0)+1;
+  _staffTaskOpenPage();
   _staffTaskFormSummary();
 }
 function _staffTaskFormSummary(){
@@ -92,7 +118,7 @@ function _staffTaskSearchBooking(){
     box.innerHTML='';rows=rows.filter(function(b){return String(b.status||'').indexOf('취소')<0;});
     if(!rows.length){box.textContent='해당하는 예약이 없습니다.';return;}
     rows.forEach(function(b){var btn=document.createElement('button');btn.type='button';btn.className='swt-booking-result';btn.textContent=(b.booker_name||'이름 없음')+' · '+(b.checkin_date||'')+' · '+(b.reservation_no||'');
-      btn.onclick=function(){var p=document.createElement('p'),a=document.createElement('a');a.href='/admin/bookings/'+encodeURIComponent(b.id);a.textContent='연결 예약: '+btn.textContent;a.target='_blank';a.rel='noopener';p.appendChild(a);document.getElementById('tmNt').appendChild(p);box.textContent='요청 내용에 예약 링크를 추가했습니다.';};box.appendChild(btn);});
+      btn.onclick=function(){var p=document.createElement('p'),a=document.createElement('a');a.href='/admin/bookings/'+encodeURIComponent(b.id);a.textContent='연결 예약: '+btn.textContent;a.target='_blank';a.rel='noopener';p.appendChild(a);document.getElementById('tmNt').appendChild(p);box.textContent='요청 내용에 예약 링크를 추가했습니다.';_staffTaskPageDirty=true;_staffReservationPreview(document.getElementById('swtEditorReservation'),b.id);};box.appendChild(btn);});
   }).catch(function(){if(box._version===version)box.textContent='예약 검색에 실패했습니다. 다시 시도해주세요.';});
 }
 function _staffTaskCandidate(previous,form,id,actor,now){
@@ -167,6 +193,13 @@ function _renderStaffTaskDetail(taskId,hostId){
     '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(function(c){var p=getP(c.author);return '<div><b>'+_staffSafe(p?p.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small><p>'+_staffSafe(c.text||'')+'</p></div>';}).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
     '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성일</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
+  var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');
+  if(reservationLinks.length){
+    var reservation=document.createElement('section');reservation.className='swt-reservation-preview';reservation.hidden=true;root.querySelector('.swt-detail-grid>aside').prepend(reservation);
+    reservationLinks.forEach(function(link){var parsed=new URL(link.getAttribute('href'),location.origin);if(parsed.origin!==location.origin)return;var id=parsed.pathname.split('/')[3];if(!id)return;
+      var view=document.createElement('button');view.type='button';view.className='tm-btn swt-booking-side';view.textContent='손님 내역 옆에서 보기';link.after(view);view.onclick=function(){root.classList.add('swt-with-reservation');_staffReservationPreview(reservation,decodeURIComponent(id));};
+    });
+  }
   function status(message){if(root.isConnected)feedback.textContent=message;}
   function rerender(){if(host.firstElementChild===root){var draft=root.querySelector('#swtReply');var text=draft?draft.value:'';_renderStaffTaskDetail(t.id,hostId);var next=host.querySelector('#swtReply');if(next&&text)next.value=text;}}
   async function update(patch){

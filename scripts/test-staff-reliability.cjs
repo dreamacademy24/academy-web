@@ -54,6 +54,31 @@ function deferred() {
   return { promise, resolve, reject };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test('full workspace editor pauses background refresh even after focus leaves an input',()=>{
+ const c=context(['_pollEditing'],{_staffTaskPageOpen:true,document:{activeElement:null,querySelector:()=>null}});
+ assert.equal(c._pollEditing(),true);
+ c._staffTaskPageOpen=false;assert.equal(c._pollEditing(),false);
+});
+test('discard cancellation keeps the task page and draft open; successful save bypasses discard',()=>{
+ let removed=0,scrolled=0;
+ const c=context(['_staffTaskClosePage'],{_staffTaskPageOpen:true,_staffTaskPageDirty:true,_staffTaskSaving:false,_staffTaskReturnScroll:80,confirm:()=>false,document:{body:{classList:{remove(){removed++;}}}},scrollTo(){scrolled++;}});
+ assert.equal(c._staffTaskClosePage(),false);assert.equal(c._staffTaskPageOpen,true);assert.equal(removed,0);
+ c._staffTaskSaving=true;assert.equal(c._staffTaskClosePage(),true);assert.equal(c._staffTaskPageDirty,false);assert.equal(removed,1);assert.equal(scrolled,1);
+});
+test('booking side preview ignores old responses and does not change the selected booking',async()=>{
+ const a=deferred(),b=deferred();const close={};
+ const host={isConnected:true,hidden:true,innerHTML:'',parentElement:{scrollTop:150},querySelector:()=>close};
+ const c=context(['_staffReservationPreview'],{sbGet:(_,q)=>q.includes('eq.A')?a.promise:b.promise,_staffBookingFields:()=>'*',_staffSafe:v=>String(v)});
+ const first=c._staffReservationPreview(host,'A'),second=c._staffReservationPreview(host,'B');
+ b.resolve([{id:'B',booker_name:'Family B'}]);await second;
+ a.resolve([{id:'A',booker_name:'Family A'}]);await first;
+ assert.match(host.innerHTML,/Family B/);assert.doesNotMatch(host.innerHTML,/Family A/);assert.equal(host.parentElement.scrollTop,0);
+ close.onclick();assert.equal(host.hidden,true);
+});
+test('retired chat actions do not fetch, post, or delete messages',()=>{
+ const c=context(['refreshUnreadCounts','sendChatMsg','deleteChatMsg','markChatRead','renderChatPage'],{_unreadCache:{old:6},sbGet(){throw Error('unexpected read');},sbPost(){throw Error('unexpected write');},sbDelete(){throw Error('unexpected delete');},showPage:p=>assert.equal(p,'announcements')});
+ c.refreshUnreadCounts();c.sendChatMsg();c.deleteChatMsg();c.markChatRead();c.renderChatPage();assert.equal(Object.keys(c._unreadCache).length,0);
+});
 function projectContext(overrides={}){
   return context(['_staffProjectSaveField','_staffProjectForView','_staffProjectRetry','ptFindNode','ptNow','ptLoadAll','ptDescendants','ptChildren','ptPath'],{
     CU:{id:'song'},PT:{nodes:[{id:'p',kind:'project'},{id:'n',kind:'task',project_id:'p',title:'Saved',status:'todo',done:false}],cur:'p',sel:'n'},
