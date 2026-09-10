@@ -16,6 +16,11 @@ function Frame() {
       const page = new URLSearchParams(qs).get("page") || "home";
       const info = getAdminInfo();
       const uid = (info?.staffId || "").replace(/^admin-/, "");
+      if (!uid || uid.toLowerCase() === "jun") {
+        setReal("");
+        window.location.replace("/login");
+        return;
+      }
       const params = new URLSearchParams();
       if (uid) params.set("user", uid);
       params.set("page", page);

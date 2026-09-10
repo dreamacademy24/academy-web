@@ -1,5 +1,18 @@
 /* PC staff home. Existing task, notice and booking editors remain the source of writes. */
 if(window.self!==window.top)document.documentElement.classList.add('staff-embedded');
+function _staffSessionEmployee(){
+  try{
+    var token=localStorage.getItem('adminToken'),info=JSON.parse(localStorage.getItem('adminInfo')||'null');
+    if(!token||token.indexOf('da-admin-')!==0||!info||!info.staffId)return null;
+    var id=String(info.staffId).replace(/^admin-/,'');
+    if(!id||id.toLowerCase()==='jun')return null;
+    return ALL.find(function(employee){return employee.id===id;})||null;
+  }catch(e){return null;}
+}
+function _staffRequireLogin(){
+  var target='/login';
+  try{window.top.location.replace(target);}catch(e){window.location.replace(target);}
+}
 function _staffTeamHomeMarkup(){
   var date=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Manila',month:'long',day:'numeric',weekday:'long'}).format(new Date());
   var cards=[['kOps1','확인 필요한 예약','누락 정보와 운영 요청'],['kOps2','오늘 체크리스트','팀이 함께 처리할 일'],['kOps3','오늘 체크인','도착 예정 가족'],['kOps4','오늘 픽드랍','예약된 이동 일정']];

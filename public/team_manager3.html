@@ -1405,15 +1405,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-chip.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary);font-weight:700}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="/staff-workspace-home.css?v=20260910-staff1">
-<script src="/staff-workspace-home.js?v=20260910-staff1"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260910-staff1">
-<script src="/staff-workspace-task.js?v=20260910-staff1"></script>
-<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260910-staff1">
-<script src="/staff-workspace-operations.js?v=20260910-staff1"></script>
-<link rel="stylesheet" href="/staff-workspace-media.css?v=20260910-staff1">
-<script src="/staff-workspace-media.js?v=20260910-staff1"></script>
-<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260910-staff1">
+<link rel="stylesheet" href="/staff-workspace-home.css?v=20260910-staff2">
+<script src="/staff-workspace-home.js?v=20260910-staff2"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260910-staff2">
+<script src="/staff-workspace-task.js?v=20260910-staff2"></script>
+<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260910-staff2">
+<script src="/staff-workspace-operations.js?v=20260910-staff2"></script>
+<link rel="stylesheet" href="/staff-workspace-media.css?v=20260910-staff2">
+<script src="/staff-workspace-media.js?v=20260910-staff2"></script>
+<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260910-staff2">
 </head>
 <body>
 
@@ -1426,8 +1426,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
         <div class="login-brand">Team Manager</div>
       </div>
     </div>
-    <div class="login-sub">직원을 선택하거나 관리자로 로그인하세요</div>
-    <div id="loginStep1"><div class="login-list" id="loginOpts"></div></div>
+    <div class="login-sub">통합 로그인 정보를 확인하고 있습니다.</div>
+    <div id="loginStep1"><a href="/login" target="_top">통합 로그인으로 이동</a><div id="loginOpts" hidden></div></div>
     <div class="login-step2" id="loginStep2">
       <div class="login-sel-user" id="loginSelUser"></div>
       <div class="pw-field">
@@ -4019,17 +4019,7 @@ function toast(msg,color){
 }
 
 // ── LOGIN ──
-function buildLogin(){
-  const o=document.getElementById('loginOpts');o.innerHTML='';
-  ALL.forEach(function(u){
-    const isA=u.id==='ceo';
-    const btn=document.createElement('button');btn.className='login-btn'+(isA?' is-admin':'');
-    const lbl=u.id==='ceo'?'👑 CEO (대표)':u.name;
-    btn.innerHTML='<div class="login-av" style="background:'+u.color+'">'+u.initial+'</div><span>'+lbl+'</span>';
-    btn.onclick=function(){selectUser(u);};
-    o.appendChild(btn);
-  });
-}
+function buildLogin(){_staffRequireLogin();}
 function selectUser(u){
   pendingUser=u;
   document.getElementById('loginStep1').style.display='none';
@@ -4080,13 +4070,9 @@ function doLogin(u){
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
 }
 function logout(){
-  stopPolling();
-  CU=null;
-  localStorage.removeItem('tm_session');
-  document.getElementById('loginScreen').style.display='flex';
-  document.getElementById('app').classList.add('hidden');
-  ['btnNotice','btnProj'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
-  buildLogin();
+ stopPolling();CU=null;
+ localStorage.removeItem('tm_session');localStorage.removeItem('adminToken');localStorage.removeItem('adminInfo');
+ fetch('/api/admin/logout',{method:'POST'}).catch(function(){}).finally(_staffRequireLogin);
 }
 
 // ── PASSWORD ──
@@ -11123,27 +11109,11 @@ window.addEventListener('DOMContentLoaded', function(){
   document.body.appendChild(_ld);
 
   function _bootApp(){
-    var le=document.getElementById('_staffLoadingScreen');if(le)le.remove();
-    // iframe 내부에서 ?user= 파라미터로 자동 로그인 (부모가 adminAuth 검증 완료)
-    var inIframe=false;try{inIframe=window.self!==window.top;}catch(e){inIframe=true;}
-    if(inIframe){
-      var params=new URLSearchParams(window.location.search);
-      var autoUser=params.get('user');
-      if(autoUser){
-        var au=ALL.find(function(e){return e.id===autoUser;});
-        if(au){doLogin(au);return;}
-      }
-    }
-    // localStorage 세션 복원
-    try{
-      var saved=JSON.parse(localStorage.getItem('tm_session'));
-      if(saved&&saved.id){
-        var su=ALL.find(function(e){return e.id===saved.id;});
-        if(su){doLogin(su);return;}
-      }
-    }catch(e){localStorage.removeItem('tm_session');}
-    buildLogin();
-  }
+ var le=document.getElementById('_staffLoadingScreen');if(le)le.remove();
+ var employee=_staffSessionEmployee();
+ if(employee){doLogin(employee);return;}
+ _staffRequireLogin();
+}
 
   loadStaffAccounts().then(loadGuideMsgs, loadGuideMsgs).then(_bootApp, _bootApp);
   loadTeachers();

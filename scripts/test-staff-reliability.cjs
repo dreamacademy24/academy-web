@@ -22,6 +22,18 @@ for (const [i, code] of scripts.entries()) {
   }
 }
 const quiet = { log() {}, warn() {}, error() {} };
+test('staff entry uses the unified account, never the old employee selection session',()=>{
+  const employee={id:'song',name:'Song'},data={adminToken:'da-admin-session',adminInfo:JSON.stringify({staffId:'admin-song'}),tm_session:JSON.stringify({id:'ceo'})};
+  const c=context(['_staffSessionEmployee'],{ALL:[employee,{id:'ceo'}],localStorage:{getItem:key=>data[key]||null}});
+  assert.equal(c._staffSessionEmployee(),employee);
+  delete data.adminToken;assert.equal(c._staffSessionEmployee(),null);
+  data.adminToken='da-admin-session';data.adminInfo='invalid';assert.equal(c._staffSessionEmployee(),null);
+  data.adminInfo=JSON.stringify({staffId:'admin-jun'});assert.equal(c._staffSessionEmployee(),null);
+});
+test('missing session routes the whole frame to unified login without employee buttons',()=>{
+  const destinations=[];const c=context(['buildLogin','_staffRequireLogin'],{top:{location:{replace:url=>destinations.push(url)}}});
+  c.buildLogin();assert.deepEqual(destinations,['/login']);
+});
 test('approval first entry initializes its tab state without relying on preview fixtures',()=>{
   const declarations=[];
   for(const code of scripts){const ast=ts.createSourceFile('staff.js',code,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);for(const n of ast.statements){if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)==='_apvTab'))declarations.push(n.getText(ast));}}

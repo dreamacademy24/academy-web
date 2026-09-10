@@ -16,10 +16,11 @@ function StaffIframe() {
       return
     }
     const info = getAdminInfo()
-    const rawUser = sp.get('user') || info?.staffId || ''
+    const rawUser = info?.staffId || ''
     const userId = rawUser.replace(/^admin-/, '')
-    if (userId) {
-      setSrc('/team_manager3.html?user=' + encodeURIComponent(userId))
+    if (userId && userId.toLowerCase() !== 'jun') {
+      const params = new URLSearchParams({ user: userId, page: sp.get('page') || 'home' })
+      setSrc('/team_manager3.html?' + params.toString())
     } else {
       window.location.href = '/admin'
     }
