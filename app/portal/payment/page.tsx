@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import * as PortOne from "@portone/browser-sdk/v2";
@@ -25,6 +26,7 @@ export default function PortalPaymentPage() {
   const [error, setError] = useState("");
   const [paid, setPaid] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<string | null>(null);
   const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
   const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
   const portoneReady = !!(storeId && channelKey);
@@ -34,6 +36,7 @@ export default function PortalPaymentPage() {
       const s = await resolvePortalSession();
       if (!s) { router.replace("/portal"); return; }
       setSession(s as Session);
+      setPendingPayment(localStorage.getItem(`portal-payment:${s.booking_id}`));
     })();
   }, [router]);
 
@@ -41,7 +44,7 @@ export default function PortalPaymentPage() {
     if (!session) return;
     (async () => {
       try {
-        const res = await fetch(`/api/portal/payment?booking_id=${session.booking_id}`);
+        const res = await portalFetch(`/api/portal/payment?booking_id=${session.booking_id}`);
         if (res.ok) {
           const d = await res.json();
           setData(d);
@@ -57,7 +60,7 @@ export default function PortalPaymentPage() {
 
   async function reload() {
     if (!session) return;
-    const res = await fetch(`/api/portal/payment?booking_id=${session.booking_id}`);
+    const res = await portalFetch(`/api/portal/payment?booking_id=${session.booking_id}`);
     if (res.ok) setData(await res.json());
   }
 
@@ -66,22 +69,31 @@ export default function PortalPaymentPage() {
     setError("");
     setPaying(true);
     try {
-      const paymentId = `payment-${data.booking_id}-${Date.now()}`;
+      let paymentId = pendingPayment;
+      if (!paymentId) {
+      const prepared = await portalFetch('/api/portal/payment', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: data.booking_id }) });
+      const order = await prepared.json();
+      if (!prepared.ok) { setError(order.error || '결제 준비에 실패했습니다.'); return; }
+      paymentId = order.payment_id as string;
+      setPendingPayment(paymentId);
+      localStorage.setItem(`portal-payment:${data.booking_id}`, paymentId);
       const res = await PortOne.requestPayment({
         storeId,
         channelKey,
         paymentId,
         orderName: `Dream Academy - ${data.reservation_no}`,
-        totalAmount: data.balance,
+        totalAmount: order.amount,
         currency: "CURRENCY_KRW",
         payMethod: "CARD",
       });
       if (!res || res.code !== undefined) {
         setError(res?.message || "결제가 취소되었습니다.");
+        if (res?.code) { localStorage.removeItem(`portal-payment:${data.booking_id}`); setPendingPayment(null); }
         return;
       }
+      }
       // 서버 검증 (포트원 단건조회로 금액 확인)
-      const verify = await fetch("/api/portal/payment", {
+      const verify = await portalFetch("/api/portal/payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ booking_id: data.booking_id, payment_id: paymentId }),
@@ -92,6 +104,8 @@ export default function PortalPaymentPage() {
         return;
       }
       setPaid(true);
+      setPendingPayment(null);
+      localStorage.removeItem(`portal-payment:${data.booking_id}`);
       reload();
     } catch {
       setError("결제 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -174,7 +188,7 @@ export default function PortalPaymentPage() {
           <h2>카드 결제</h2>
           <div className="pay-wrap">
             <button className="pay-btn" onClick={handlePay} disabled={paying}>
-              {paying ? "결제 진행 중..." : `${fmt(data.balance)} 결제하기`}
+              {paying ? "결제 확인 중..." : pendingPayment ? '이전 결제 결과 확인하기' : `${fmt(data.balance)} 결제하기`}
             </button>
           </div>
           <div className="hint">

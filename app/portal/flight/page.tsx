@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { resolvePortalSession } from "@/lib/portalSession";
@@ -26,7 +27,7 @@ export default function PortalFlightPage() {
 
   const load = useCallback(async () => {
     if (!session) return;
-    const res = await fetch(`/api/portal/flight?booking_id=${session.booking_id}`);
+    const res = await portalFetch(`/api/portal/flight?booking_id=${session.booking_id}`);
     if (res.ok) {
       const d = await res.json();
       setData(d);
@@ -40,7 +41,7 @@ export default function PortalFlightPage() {
   async function save() {
     if (!session) return;
     setSaving(true); setMsg("");
-    const res = await fetch("/api/portal/flight", {
+    const res = await portalFetch("/api/portal/flight", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ booking_id: session.booking_id, flight_in: fIn, flight_out: fOut }),

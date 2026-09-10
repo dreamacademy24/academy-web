@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { resolvePortalSession } from "@/lib/portalSession";
@@ -25,7 +26,7 @@ export default function PortalNoticesPage() {
   const load = useCallback(async (bid: string) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/portal/notices");
+      const res = await portalFetch("/api/portal/notices");
       if (!res.ok) { setLoading(false); return; }
       const { notices } = await res.json();
       const all = (notices || []) as Notice[];

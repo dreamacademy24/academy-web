@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { resolvePortalSession } from "@/lib/portalSession";
@@ -33,14 +34,14 @@ export default function PortalPickupPage() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const res = await fetch(`/api/portal/pickup?booking_id=${session.booking_id}`);
+      const res = await portalFetch(`/api/portal/pickup?booking_id=${session.booking_id}`);
       if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
     })();
   }, [session]);
 
   async function reload() {
     if (!session) return;
-    const res = await fetch(`/api/portal/pickup?booking_id=${session.booking_id}`);
+    const res = await portalFetch(`/api/portal/pickup?booking_id=${session.booking_id}`);
     if (res.ok) { const d = await res.json(); setRequests(d.requests || []); }
   }
 
@@ -48,7 +49,7 @@ export default function PortalPickupPage() {
     if (!session) return;
     if (!form.request_date || !form.location || !form.destination) { setMsg("날짜, 출발지, 목적지를 입력해주세요."); return; }
     setSaving(true); setMsg("");
-    const res = await fetch("/api/portal/pickup", {
+    const res = await portalFetch("/api/portal/pickup", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ booking_id: session.booking_id, ...form }),
     });
@@ -61,7 +62,7 @@ export default function PortalPickupPage() {
 
   async function cancel(id: string) {
     if (!confirm("신청을 취소하시겠습니까?")) return;
-    const res = await fetch(`/api/portal/pickup?id=${id}`, { method: "DELETE" });
+    const res = await portalFetch(`/api/portal/pickup?id=${id}`, { method: "DELETE" });
     if (!res.ok) { const r = await res.json(); alert(r.error || "취소 실패"); return; }
     reload();
   }

@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect } from "react";
 import { resolvePortalFeatures } from "@/lib/portalFeatures";
 import { useRouter } from "next/navigation";
@@ -58,7 +59,7 @@ export default function PortalDashboard() {
         if (av) {
           const { isAdminAuthed } = await import("@/lib/adminAuth");
           if (isAdminAuthed()) {
-            const j = await fetch("/api/bookings/" + av).then(r => r.json());
+            const j = await portalFetch("/api/bookings/" + av).then(r => r.json());
             const b = j?.booking;
             if (b && b.id) {
               localStorage.setItem("portalSession", JSON.stringify({ booking_id: b.id, booking_number: b.reservation_no, guest_name: b.booker_name, check_in_date: b.checkin_date, expires: Date.now() + 2 * 3600000, admin_view: true }));
@@ -114,7 +115,7 @@ export default function PortalDashboard() {
         if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id;
       }
       if (!bookingId || cancelled) return;
-      fetch(`/api/bookings/${bookingId}`)
+      portalFetch(`/api/bookings/${bookingId}`)
         .then(r => r.json())
         .then(d => { if (!cancelled) { setBookingInfo(d?.booking || d); setDashStudents(d?.students || []); } })
         .catch(() => {});
@@ -124,7 +125,7 @@ export default function PortalDashboard() {
         .eq("booking_id", bookingId)
         .order("created_at", { ascending: false })
         .then(({ data }) => { if (!cancelled) setShuttleApps(data || []); });
-      fetch(`/api/portal/tutor?booking_id=${bookingId}`)
+      portalFetch(`/api/portal/tutor?booking_id=${bookingId}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => {
           // 확인(클릭)한 확정 건은 다시 안 띄움 — 새로 확정된 건만 배너 표시
@@ -154,7 +155,7 @@ export default function PortalDashboard() {
       try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
       if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
       let allNotices: any[] = [];
-      try { const res = await fetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices = d.notices || []; } } catch {}
+      try { const res = await portalFetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices = d.notices || []; } } catch {}
       if (cancelled) return;
       const list = allNotices.filter((n: any) => n.popup).filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
       // 영구 dismiss된 공지 제외
@@ -180,7 +181,7 @@ export default function PortalDashboard() {
       try { const raw = localStorage.getItem("portalSession"); if (raw) { const s = JSON.parse(raw); if (s?.booking_id) bookingId = s.booking_id; } } catch {}
       if (!bookingId) { const { data: { user } } = await supabase.auth.getUser(); if (user?.user_metadata?.booking_id) bookingId = user.user_metadata.booking_id; }
       let allNotices2: any[] = [];
-      try { const res = await fetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices2 = d.notices || []; } } catch {}
+      try { const res = await portalFetch("/api/portal/notices"); if (res.ok) { const d = await res.json(); allNotices2 = d.notices || []; } } catch {}
       if (cancelled) return;
       const list = allNotices2.filter((n: any) => n.audience !== "selected" || (Array.isArray(n.target_ids) && bookingId && n.target_ids.includes(bookingId)));
       let lastSeen = ""; try { lastSeen = localStorage.getItem("notices_last_seen") || ""; } catch {}
@@ -204,7 +205,7 @@ export default function PortalDashboard() {
       const items: Array<{ key: string; status: string }> = [];
       if (bookingId) {
         try {
-          const res = await fetch(`/api/portal/my-applications?booking_id=${bookingId}`);
+          const res = await portalFetch(`/api/portal/my-applications?booking_id=${bookingId}`);
           if (res.ok) {
             const d = await res.json();
             (["shuttle", "fieldtrip", "tutor", "pickup"] as const).forEach(k =>
@@ -218,11 +219,11 @@ export default function PortalDashboard() {
       let _av: string | null = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("admin_view");
       try { const raw2 = localStorage.getItem("portalSession"); if (raw2) { const s2 = JSON.parse(raw2); if (s2?.admin_view && s2?.booking_id) { _av = s2.booking_id; if (!bookingId) bookingId = s2.booking_id; } } } catch {}
       if (_av && bookingId) {
-        try { const rb = await fetch(`/api/bookings/${bookingId}`); if (rb.ok) { const jb = await rb.json(); ocUid = (jb?.booking?.portal_user_id) || ocUid; if (!cancelled && jb?.booking?.portal_user_id) setPreviewOcUid(jb.booking.portal_user_id); } } catch {}
+        try { const rb = await portalFetch(`/api/bookings/${bookingId}`); if (rb.ok) { const jb = await rb.json(); ocUid = (jb?.booking?.portal_user_id) || ocUid; if (!cancelled && jb?.booking?.portal_user_id) setPreviewOcUid(jb.booking.portal_user_id); } } catch {}
       }
       if (ocUid) {
         try {
-          const rEn = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${ocUid}`);
+          const rEn = await portalFetch(`/api/portal/online-class/enrollments?customer_user_id=${ocUid}`);
           if (rEn.ok) { const de = await rEn.json(); if ((de.enrollments || []).length > 0) setOcReady(true); }
         } catch {}
         // D-60 자동 활성화: 올인원(통학형 제외) 예약이 체크인 60일 전 이내면 신청 가능하게 오픈
@@ -238,7 +239,7 @@ export default function PortalDashboard() {
           if (eligible) setOcReady(true);
         } catch {}
         try {
-          const r2 = await fetch(`/api/portal/online-class/change-request?customer_user_id=${ocUid}`);
+          const r2 = await portalFetch(`/api/portal/online-class/change-request?customer_user_id=${ocUid}`);
           if (r2.ok) { const dd = await r2.json(); ocItems = (dd.requests || []).map((it: any) => ({ key: `ocreq:${it.id}`, status: String(it.status ?? "") })); }
         } catch {}
       }
@@ -328,6 +329,15 @@ export default function PortalDashboard() {
   }
 
   async function logout() {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      const subscription = await reg?.pushManager.getSubscription();
+      if (subscription) {
+        // Unsubscribe locally even if the network is unavailable: old-account notifications stop.
+        await portalFetch('/api/portal/push/subscribe', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription, booking_id: session?.booking_id }) }).catch(() => {});
+        if (!await subscription.unsubscribe()) { alert('알림 연결 해제를 다시 시도해주세요.'); return; }
+      }
+    } catch { alert('알림 연결 해제에 실패했습니다. 다시 시도해주세요.'); return; }
     if (typeof window !== "undefined") localStorage.removeItem("portalSession");
     await supabase.auth.signOut();
     router.replace("/portal");

@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isPortalAdmin } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +29,8 @@ function ensureVapid(): { ok: boolean; error?: string } {
 }
 
 // 푸시 도달 가능 인원 (어드민 공지 화면 표시용)
-export async function GET() {
+export async function GET(req: Request) {
+  if (!await isPortalAdmin(req)) return NextResponse.json({ error: '관리자 재로그인이 필요합니다.' }, { status: 401 })
   const { count } = await supabase.from('push_subscriptions').select('id', { count: 'exact', head: true })
   return NextResponse.json({ subscribers: count ?? 0 })
 }
@@ -36,12 +38,15 @@ export async function GET() {
 // 공지 발행 시 호출 — 대상 손님 구독에 웹푸시 발송
 // test: true → 테스트 계정(PUSH_TEST_USERNAME, 기본 ECHTST30)에만 발송
 export async function POST(req: Request) {
+  if (!await isPortalAdmin(req)) return NextResponse.json({ error: '관리자 재로그인이 필요합니다.' }, { status: 401 })
   try {
     const v = ensureVapid()
     if (!v.ok) return NextResponse.json({ error: v.error }, { status: 500 })
 
     const { title, body, url, audience, target_ids, test } = await req.json()
     if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 })
+    if (!test && audience !== 'all' && audience !== 'selected') return NextResponse.json({ error: '발송 대상을 확인해주세요.' }, { status: 400 })
+    if (!test && audience === 'selected' && (!Array.isArray(target_ids) || target_ids.length === 0 || target_ids.some(id => typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)))) return NextResponse.json({ error: '대상을 1명 이상 선택해주세요.' }, { status: 400 })
 
     let q = supabase.from('push_subscriptions').select('endpoint, p256dh, auth, booking_id')
     if (test === true) {

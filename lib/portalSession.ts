@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { portalFetch } from '@/lib/portalFetch';
 
 export interface PortalSessionData {
   booking_id: string;
@@ -19,9 +20,13 @@ export async function resolvePortalSession(): Promise<PortalSessionData | null> 
   } catch {}
   const { data } = await supabase.auth.getSession();
   if (data.session) {
-    const u = data.session.user;
-    const bid = (u.user_metadata as { booking_id?: string } | null)?.booking_id || u.id;
-    return { booking_id: bid, booking_number: "", guest_name: u.email?.split("@")[0] || "회원", expires: Date.now() + 86400000 };
+    const response = await portalFetch('/api/portal/find-booking', { method: 'POST' });
+    if (!response.ok) return null;
+    const { booking, bookings } = await response.json();
+    if (!booking) return null;
+    const session = { booking_id: booking.id, booking_number: booking.reservation_no || '', guest_name: booking.booker_name || '회원', bookings, expires: Date.now() + 86400000 };
+    localStorage.setItem('portalSession', JSON.stringify(session));
+    return session;
   }
   return null;
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireBooking, requireApplication } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,24 +17,17 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const bookingId = searchParams.get('booking_id')
   if (!bookingId) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
+  const denied = await requireBooking(req, bookingId)
+  if (denied) return denied
 
   const info = await getBookingInfo(bookingId)
   if (!info) return NextResponse.json({ error: 'booking not found' }, { status: 404 })
 
-  let requests: Array<Record<string, unknown>> = []
-  if (info.in_new) {
-    // 손님 신청은 request_type='additional'로 저장
-    const { data } = await supabase.from('pickup_requests').select('*')
-      .eq('booking_id', bookingId).eq('request_type', 'additional')
-      .order('request_date', { ascending: false })
-    requests = data ?? []
-  } else {
-    const { data } = await supabase.from('pickup_requests').select('*')
-      .eq('request_type', 'additional')
-      .ilike('notes', `%portal_booking_id:${bookingId}%`)
-      .order('request_date', { ascending: false })
-    requests = data ?? []
-  }
+  const { data: requests, error } = await supabase.from('pickup_requests').select('*')
+    .eq('request_type', 'additional')
+    .or(`booking_id.eq.${bookingId},and(booking_id.is.null,notes.eq.portal_booking_id:${bookingId})`)
+    .order('request_date', { ascending: false })
+  if (error) return NextResponse.json({ error: '신청 조회에 실패했습니다.' }, { status: 500 })
   return NextResponse.json({ requests })
 }
 
@@ -46,6 +40,8 @@ export async function POST(req: Request) {
     }
 
     const info = await getBookingInfo(booking_id)
+    const denied = await requireBooking(req, booking_id)
+    if (denied) return denied
     if (!info) return NextResponse.json({ error: 'booking not found' }, { status: 404 })
 
     const row: Record<string, unknown> = {
@@ -56,7 +52,8 @@ export async function POST(req: Request) {
       num_people: num_people || 1,
       flight_info: flight_info || null,
       status: 'pending',
-      notes: info.in_new ? null : `portal_booking_id:${booking_id}`,
+      notes: null,
+      booking_id,
     }
     if (info.in_new) row.booking_id = booking_id
 
@@ -80,6 +77,8 @@ export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const denied = await requireApplication(req, 'pickup_requests', id)
+  if (denied) return denied
   const { data: existing } = await supabase.from('pickup_requests').select('status').eq('id', id).single()
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 })
   if (existing.status !== 'pending') return NextResponse.json({ error: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 })

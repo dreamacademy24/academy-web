@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { requireApplication } from '@/lib/portalAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,8 @@ export async function PATCH(req: Request) {
       total_sessions, total_amount,
     } = body || {};
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    const denied = await requireApplication(req, 'tutor_requests', id);
+    if (denied) return denied;
 
     // status가 pending인 경우에만 수정 허용
     const { data: existing, error: getErr } = await supabase

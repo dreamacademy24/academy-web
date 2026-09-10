@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -272,17 +273,17 @@ export default function PortalTutorPage() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
+      const res = await portalFetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
       if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); setNotesMap(d.notesMap || {}); }
-      const invRes = await fetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
+      const invRes = await portalFetch(`/api/portal/tutor-invoice?booking_id=${session.booking_id}`);
       if (invRes.ok) { const d = await invRes.json(); setInvLessons(d.lessons || []); }
-      const appsRes = await fetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
+      const appsRes = await portalFetch(`/api/portal/tutor-applications?booking_id=${session.booking_id}`);
       if (appsRes.ok) { const d = await appsRes.json(); setMyApplications(d.applications || []); }
       // 취소 요청 목록
-      const crRes = await fetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
+      const crRes = await portalFetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
       if (crRes.ok) { const d = await crRes.json(); setCancelRequests(d || []); }
       if (session.booking_id) {
-        const sRes = await fetch(`/api/portal/students?booking_id=${session.booking_id}`);
+        const sRes = await portalFetch(`/api/portal/students?booking_id=${session.booking_id}`);
         if (sRes.ok) {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
@@ -290,7 +291,7 @@ export default function PortalTutorPage() {
           // 튜터 가능 구간 = 드림하우스 체류 구간 (제이파크·큐브 리조트 단독은 방문 튜터 불가)
           let tStart = sd.checkin_date || "", tEnd = sd.checkout_date || "", tAllowed = true, tAcademy = false;
           try {
-            const bRes = await fetch(`/api/bookings/${session.booking_id}`);
+            const bRes = await portalFetch(`/api/bookings/${session.booking_id}`);
             if (bRes.ok) {
               const bj = await bRes.json();
               const b = bj.booking || bj;
@@ -365,10 +366,10 @@ export default function PortalTutorPage() {
 
   async function reload() {
     if (!session) return;
-    const res = await fetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
+    const res = await portalFetch(`/api/portal/tutor?booking_id=${session.booking_id}`);
     if (res.ok) { const d = await res.json(); setRequests(d.requests || []); setLessonMap(d.lessonMap || {}); setNotesMap(d.notesMap || {}); }
     // 취소 요청도 새로고침
-    const crRes = await fetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
+    const crRes = await portalFetch(`/api/portal/tutor/cancel-day?booking_id=${session.booking_id}`);
     if (crRes.ok) { const d = await crRes.json(); setCancelRequests(d || []); }
   }
 
@@ -392,7 +393,7 @@ export default function PortalTutorPage() {
     if (!cancelDayLesson || !cancelDaySession || !session) return;
     setCancelDaySaving(true);
     try {
-      const res = await fetch("/api/portal/tutor/cancel-day", {
+      const res = await portalFetch("/api/portal/tutor/cancel-day", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -428,7 +429,7 @@ export default function PortalTutorPage() {
     if (translatingKey === key) return; // 중복 호출 방지
     setTranslatingKey(key);
     try {
-      const res = await fetch("/api/translate", {
+      const res = await portalFetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: note }),
@@ -546,7 +547,7 @@ export default function PortalTutorPage() {
     }
 
     if (editingId) {
-      const res = await fetch("/api/portal/tutor-edit", {
+      const res = await portalFetch("/api/portal/tutor-edit", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -583,7 +584,7 @@ export default function PortalTutorPage() {
       return;
     }
 
-    const res = await fetch("/api/portal/tutor", {
+    const res = await portalFetch("/api/portal/tutor", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         booking_id: session.booking_id,
@@ -619,7 +620,7 @@ export default function PortalTutorPage() {
 
   async function cancel(id: string) {
     if (!confirm("신청을 취소하시겠습니까?")) return;
-    const res = await fetch(`/api/portal/tutor?id=${id}`, { method: "DELETE" });
+    const res = await portalFetch(`/api/portal/tutor?id=${id}`, { method: "DELETE" });
     if (!res.ok) { const r = await res.json(); toastErr(r.error || "취소 실패"); return; }
     reload();
   }
@@ -685,7 +686,7 @@ export default function PortalTutorPage() {
   async function submitCancelReq() {
     if (!cancelReqId) return;
     setCancelReqSaving(true);
-    const res = await fetch("/api/portal/cancel-request", {
+    const res = await portalFetch("/api/portal/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ table: "tutor_requests", id: cancelReqId, reason: cancelReqReason, booking_id: session?.booking_id }),

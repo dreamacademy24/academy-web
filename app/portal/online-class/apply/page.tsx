@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -92,7 +93,7 @@ function ApplyInner() {
         setChildren(list.slice(0, 6));
         // 이미 화상영어 등록된 아이 이름 (중복 신청 방지 표시)
         try {
-          const er = await fetch(`/api/portal/online-class/enrollments?customer_user_id=${uid}`);
+          const er = await portalFetch(`/api/portal/online-class/enrollments?customer_user_id=${uid}`);
           if (er.ok) { const ed = await er.json(); const en = new Set<string>((ed.enrollments || []).map((e: any) => (e.student_name || "").trim()).filter(Boolean)); setEnrolledNames(en); }
         } catch { /* ignore */ }
         const notEnrolled = list.filter(c => true);
@@ -104,7 +105,7 @@ function ApplyInner() {
 
   const loadSlots = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/online-class/availability/slots");
+    const res = await portalFetch("/api/online-class/availability/slots");
     if (res.ok) {
       const d = await res.json();
       setSlots(d.slots || []);
@@ -142,7 +143,7 @@ function ApplyInner() {
   async function selectTime(t: string) {
     setSelectedTime(t);
     const qs = selectedDays.map(d => `days[]=${d}`).join("&") + `&time=${t}`;
-    const res = await fetch(`/api/online-class/availability?${qs}`);
+    const res = await portalFetch(`/api/online-class/availability?${qs}`);
     if (res.ok) {
       const d = await res.json();
       if (d.any_available) {
@@ -189,7 +190,7 @@ function ApplyInner() {
       if (startStr < RESUME_DATE) startStr = RESUME_DATE;
       // 회차 = 패키지 등록 주수 × 주 3회 (기본 규정)
       const totalSessions = (bk?.weeks || 4) * 3;
-      const res = await fetch("/api/online-class/enrollments", {
+      const res = await portalFetch("/api/online-class/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

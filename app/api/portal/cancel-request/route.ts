@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { sendTelegram, escapeHtml } from "@/lib/telegram";
+import { requireApplication } from '@/lib/portalAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,12 +19,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid table" }, { status: 400 });
     }
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-
-    // 소유권 검증 (2026-08-17): 행에 booking_id가 있으면 요청자의 booking_id와 일치해야 함 — 타인 신청 취소 방지
-    const { data: ownRow } = await supabase.from(table).select("booking_id").eq("id", id).maybeSingle();
-    if (ownRow?.booking_id && String(ownRow.booking_id) !== String(body?.booking_id || "")) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
+    const denied = await requireApplication(req, table, id);
+    if (denied) return denied;
 
     let update: Record<string, unknown> = { status: "cancel_requested" };
     if (table === "fieldtrip_applications" && token) {

@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useEffect, useState } from "react";
 import { resolvePortalSession } from "@/lib/portalSession";
 
@@ -57,6 +58,15 @@ export default function PortalPushButton() {
         try {
           const reg = await navigator.serviceWorker.getRegistration();
           const sub = reg ? await reg.pushManager.getSubscription() : null;
+          if (sub) {
+            const sess = await resolvePortalSession();
+            if (!sess?.booking_id) { if (!cancelled) setStatus('default'); return; }
+            const response = await portalFetch('/api/portal/push/subscribe', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subscription: sub, booking_id: sess.booking_id, user_agent: navigator.userAgent }),
+            });
+            if (!response.ok) { if (!cancelled) setStatus('default'); return; }
+          }
           if (!cancelled) setStatus(sub ? "granted" : "default");
         } catch {
           if (!cancelled) setStatus("default");
@@ -97,7 +107,7 @@ export default function PortalPushButton() {
       });
 
       // d. 서버에 구독 저장
-      const res = await fetch("/api/portal/push/subscribe", {
+      const res = await portalFetch("/api/portal/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

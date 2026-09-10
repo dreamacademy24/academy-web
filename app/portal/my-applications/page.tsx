@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -77,7 +78,8 @@ export default function MyApplicationsPage() {
     setCxSending(true);
     try {
       for (const rid of rowIds) {
-        await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token, booking_id: bookingId }) });
+        const response = await portalFetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "fieldtrip_applications", id: rid, token }) });
+        if (!response.ok) throw new Error("취소 요청에 실패했습니다. 신청 내역을 다시 확인해주세요.");
       }
       // 로컬 반영
       setData(prev => ({ ...prev, fieldtrip: prev.fieldtrip.map((r: AnyRow) => rowIds.includes(String(r.id))
@@ -85,6 +87,9 @@ export default function MyApplicationsPage() {
         : r) }));
       setCxSheet(null);
       setToast("취소 요청이 접수됐어요. 직원 확인 후 처리됩니다.");
+    } catch (error) {
+      toastErr(error instanceof Error ? error.message : "취소 요청에 실패했습니다.");
+      if (bookingId) await load(bookingId);
     } finally { setCxSending(false); }
   }
   const [cancelModal, setCancelModal] = useState<CancelModalState>({ open: false, table: "", id: "", title: "" });
@@ -111,7 +116,7 @@ export default function MyApplicationsPage() {
     if (!bid) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/portal/my-applications?booking_id=${encodeURIComponent(bid)}`);
+      const res = await portalFetch(`/api/portal/my-applications?booking_id=${encodeURIComponent(bid)}`);
       if (res.ok) {
         const j = await res.json();
         setData({
@@ -129,7 +134,7 @@ export default function MyApplicationsPage() {
         } catch {}
       }
       // 확정 튜터 수업(인보이스+일정) — 신청별로 묶기
-      const inv = await fetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);
+      const inv = await portalFetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);
       if (inv.ok) {
         const ij = await inv.json();
         const map: Record<string, AnyRow[]> = {};
@@ -144,7 +149,7 @@ export default function MyApplicationsPage() {
       }
       // 취소 요청 불러오기
       try {
-        const crRes = await fetch(`/api/portal/tutor/cancel-day?booking_id=${encodeURIComponent(bid)}`);
+        const crRes = await portalFetch(`/api/portal/tutor/cancel-day?booking_id=${encodeURIComponent(bid)}`);
         if (crRes.ok) setCancelRequests(await crRes.json() || []);
       } catch {}
     } finally { setLoading(false); }
@@ -194,7 +199,7 @@ export default function MyApplicationsPage() {
     if (!cancelDayLesson || !cancelDaySession || !bookingId) return;
     setCancelDaySaving(true);
     try {
-      const res = await fetch("/api/portal/tutor/cancel-day", {
+      const res = await portalFetch("/api/portal/tutor/cancel-day", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -232,7 +237,7 @@ export default function MyApplicationsPage() {
   async function submitCancel() {
     if (!cancelModal.table || !cancelModal.id) return;
     setCancelSaving(true);
-    const res = await fetch("/api/portal/cancel-request", {
+    const res = await portalFetch("/api/portal/cancel-request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ table: cancelModal.table, id: cancelModal.id, reason: cancelReason, booking_id: bookingId }),
@@ -291,7 +296,7 @@ export default function MyApplicationsPage() {
   async function submitEdit() {
     if (!editId) return;
     setEditSaving(true);
-    const res = await fetch("/api/portal/tutor-edit", {
+    const res = await portalFetch("/api/portal/tutor-edit", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

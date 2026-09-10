@@ -1,4 +1,5 @@
 'use client';
+import { portalFetch } from "@/lib/portalFetch";
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolvePortalSession } from "@/lib/portalSession";
@@ -61,7 +62,7 @@ export default function PortalCheckinDetailPage() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-      const res = await fetch("/api/ocr/flight", { method: "POST", body: fd });
+      const res = await portalFetch("/api/ocr/flight", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "failed");
       const f = data.fields || {};
@@ -83,7 +84,7 @@ export default function PortalCheckinDetailPage() {
   async function loadPickups(bid: string) {
     if (!bid) return;
     try {
-      const res = await fetch(`/api/portal/pickup-request?booking_id=${encodeURIComponent(bid)}`);
+      const res = await portalFetch(`/api/portal/pickup-request?booking_id=${encodeURIComponent(bid)}`);
       if (!res.ok) return;
       const j = await res.json();
       const list = (j.requests || []) as PR[];
@@ -112,7 +113,7 @@ export default function PortalCheckinDetailPage() {
       setSavingExtra;
     setSaving(true);
     try {
-      const res = await fetch("/api/portal/pickup-request", {
+      const res = await portalFetch("/api/portal/pickup-request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           booking_id: bookingId,
@@ -153,13 +154,13 @@ export default function PortalCheckinDetailPage() {
         const ufd = new FormData();
         ufd.append("image", file);
         ufd.append("bookingId", bookingId);
-        const ur = await fetch("/api/upload-flight-image", { method: "POST", body: ufd });
+        const ur = await portalFetch("/api/upload-flight-image", { method: "POST", body: ufd });
         const uj = await ur.json().catch(()=>({}));
         if (Array.isArray(uj.flight_images)) setFlightImages(uj.flight_images);
       } catch {}
       const fd = new FormData();
       fd.append("image", file);
-      const res = await fetch("/api/ocr/flight", { method: "POST", body: fd });
+      const res = await portalFetch("/api/ocr/flight", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "failed");
       const f = data.fields || {};
@@ -192,7 +193,7 @@ export default function PortalCheckinDetailPage() {
     const bid = s.booking_id;
     setBookingId(bid);
     loadPickups(bid);
-    fetch(`/api/bookings/${bid}`).then(r=>r.json()).then(j=>{
+    portalFetch(`/api/bookings/${bid}`).then(r=>r.json()).then(j=>{
       const fi = j?.booking?.flight_images ?? j?.flight_images;
       if (Array.isArray(fi)) setFlightImages(fi);
     }).catch(()=>{});
@@ -200,7 +201,7 @@ export default function PortalCheckinDetailPage() {
     const sAny = s as typeof s & { check_in_date?: string };
     setForm(prev => prev.q1 ? prev : { ...prev, q1: `${s.guest_name || ""}${sAny.check_in_date ? `, ${sAny.check_in_date} 입실` : ""}`.trim() });
 
-    fetch(`/api/checkin-portal?bookingId=${bid}`)
+    portalFetch(`/api/checkin-portal?bookingId=${bid}`)
       .then(r => r.json())
       .then(d => {
         const det = d.detail || {};
@@ -258,7 +259,7 @@ export default function PortalCheckinDetailPage() {
       return;
     }
     setSubmitting(true);
-    const res = await fetch('/api/checkin-portal', {
+    const res = await portalFetch('/api/checkin-portal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

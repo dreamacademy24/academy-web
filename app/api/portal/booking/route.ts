@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireBooking } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const bookingId = searchParams.get('booking_id')
   if (!bookingId) return NextResponse.json({ error: 'booking_id required' }, { status: 400 })
+  const denied = await requireBooking(req, bookingId)
+  if (denied) return denied
 
   // bookings (live) 먼저 조회
   const { data: booking } = await supabase

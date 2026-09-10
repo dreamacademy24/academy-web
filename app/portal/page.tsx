@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -26,7 +27,7 @@ export default function PortalPage() {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.');
       setLoading(false); return;
     }
-    const bookingRes = await fetch('/api/portal/find-booking', {
+    const bookingRes = await portalFetch('/api/portal/find-booking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: data.user.id })

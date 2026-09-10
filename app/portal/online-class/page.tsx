@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -119,7 +120,7 @@ function PortalOnlineClassInner() {
   const load = useCallback(async () => {
     setLoading(true);
     const qs = testUser ? "test_user=true" : `customer_user_id=${authUserId}`;
-    const res = await fetch(`/api/portal/online-class/enrollments?${qs}`);
+    const res = await portalFetch(`/api/portal/online-class/enrollments?${qs}`);
     if (res.ok) {
       const d = await res.json();
       setEnrollments(d.enrollments || []);
@@ -135,7 +136,7 @@ function PortalOnlineClassInner() {
     (async () => {
       const uid = authUserId || enrollments[0]?.customer_user_id;
       if (!uid) return;
-      const res = await fetch(`/api/portal/online-class/change-request?customer_user_id=${uid}`);
+      const res = await portalFetch(`/api/portal/online-class/change-request?customer_user_id=${uid}`);
       if (res.ok) {
         const d = await res.json();
         setMyReqs(d.requests || []);
@@ -157,7 +158,7 @@ function PortalOnlineClassInner() {
     if (chDays.length === 0 && !chTime.trim()) { setMsg({ text: "변경할 요일 또는 시간을 입력해주세요.", type: "err" }); return; }
     setChSubmitting(true);
     try {
-      const res = await fetch("/api/portal/online-class/change-request", {
+      const res = await portalFetch("/api/portal/online-class/change-request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enrollment_id: activeEnroll.id, customer_user_id: uid,
@@ -180,7 +181,7 @@ function PortalOnlineClassInner() {
     if (!sgDate && !sgTime.trim()) { setMsg({ text: "새 날짜 또는 시간을 입력해주세요.", type: "err" }); return; }
     setSgSubmitting(true);
     try {
-      const res = await fetch("/api/portal/online-class/change-request", {
+      const res = await portalFetch("/api/portal/online-class/change-request", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enrollment_id: activeEnroll.id, customer_user_id: uid,
@@ -260,7 +261,7 @@ function PortalOnlineClassInner() {
     if (!activeEnroll) return;
     setCancelLoading(true);
     try {
-      const res = await fetch("/api/portal/online-class/cancel", {
+      const res = await portalFetch("/api/portal/online-class/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -284,7 +285,7 @@ function PortalOnlineClassInner() {
     if (!cancelTarget || !activeEnroll) return;
     setCancelLoading(true);
     try {
-      const res = await fetch("/api/portal/online-class/cancel", {
+      const res = await portalFetch("/api/portal/online-class/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

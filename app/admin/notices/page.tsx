@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminAuthed, clearAdminAuth } from "@/lib/adminAuth";
 
 interface Notice {
   id: string; category: string; title: string; content: string;
@@ -38,7 +38,7 @@ export default function AdminNoticesPage() {
   useEffect(() => { if (authed) load(); }, [authed, load]);
   useEffect(() => {
     if (!authed) return;
-    fetch("/api/portal/push/send").then(r => r.ok ? r.json() : null).then(d => { if (d) setPushReach(d.subscribers ?? 0); }).catch(() => {});
+    fetch("/api/portal/push/send").then(r => { if (r.status === 401) { clearAdminAuth(); router.replace('/login'); } return r.ok ? r.json() : null; }).then(d => { if (d) setPushReach(d.subscribers ?? 0); }).catch(() => {});
   }, [authed]);
 
   async function sendTestPush() {
@@ -80,10 +80,11 @@ export default function AdminNoticesPage() {
     if (res.error) { setMsg("저장 실패: " + res.error.message); return; }
     // 신규 발행 시에만 폰 푸시 전송 (수정은 재알림 안 함) — best-effort
     if (!form.id) {
-      fetch("/api/portal/push/send", {
+      const push = await fetch("/api/portal/push/send", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: payload.title, body: payload.content, audience: payload.audience, target_ids: payload.target_ids, url: "/portal/notices" }),
-      }).catch(() => {});
+      }).catch(() => null);
+      if (!push?.ok) { setMsg('공지는 저장됐지만 알림 발송에 실패했습니다. 로그인 상태를 확인해주세요.'); await load(); return; }
     }
     reset(); await load();
   }

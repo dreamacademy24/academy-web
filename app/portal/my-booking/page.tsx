@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -75,12 +76,12 @@ export default function MyBookingPage() {
     if (!session?.booking_id) return;
     setEngSaving(key);
     try {
-      const res = await fetch("/api/portal/student-english", {
+      const res = await portalFetch("/api/portal/student-english", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ booking_id: session.booking_id, student_id: s.id || null, name_kr: s.name_kr || null, name_en: en }),
       });
       if (!res.ok) { alert("저장에 실패했어요. 잠시 후 다시 시도해주세요."); return; }
-      const r = await fetch(`/api/portal/booking?booking_id=${session.booking_id}`);
+      const r = await portalFetch(`/api/portal/booking?booking_id=${session.booking_id}`);
       if (r.ok) setData(await r.json());
     } finally { setEngSaving(null); }
   }
@@ -97,7 +98,7 @@ export default function MyBookingPage() {
     try {
       const fd = new FormData();
       fd.append("image", file);
-      const res = await fetch("/api/ocr/flight", { method: "POST", body: fd });
+      const res = await portalFetch("/api/ocr/flight", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "failed");
       const f = data.fields || {};
@@ -131,7 +132,7 @@ export default function MyBookingPage() {
         if (!raw) {
           const { data: { session: authSession } } = await supabase.auth.getSession();
           if (!authSession) { router.replace("/portal"); return; }
-          const res = await fetch('/api/portal/find-booking', {
+          const res = await portalFetch('/api/portal/find-booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: authSession.user.id })
@@ -161,7 +162,7 @@ export default function MyBookingPage() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const res = await fetch(`/api/portal/booking?booking_id=${session.booking_id}`);
+      const res = await portalFetch(`/api/portal/booking?booking_id=${session.booking_id}`);
       if (res.ok) setData(await res.json());
       setLoading(false);
     })();
@@ -313,7 +314,7 @@ export default function MyBookingPage() {
           if (!session) return;
           setFlightSaving(true);
           try {
-            const res = await fetch('/api/portal/flight', {
+            const res = await portalFetch('/api/portal/flight', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ booking_id: session.booking_id, ...flightForm }),
@@ -323,7 +324,7 @@ export default function MyBookingPage() {
               alert('저장 실패: ' + (j.error || ''));
               return;
             }
-            const r = await fetch(`/api/portal/booking?booking_id=${session.booking_id}`);
+            const r = await portalFetch(`/api/portal/booking?booking_id=${session.booking_id}`);
             if (r.ok) setData(await r.json());
             setFlightEditing(false);
           } finally { setFlightSaving(false); }

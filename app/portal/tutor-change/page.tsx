@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +36,7 @@ export default function TutorChangePage() {
   const load = useCallback(async (bid: string) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);
+      const r = await portalFetch(`/api/portal/tutor-invoice?booking_id=${encodeURIComponent(bid)}`);
       const d = await r.json();
       setLessons((d.lessons || []) as Lesson[]);
     } catch { /* */ }
@@ -70,13 +71,13 @@ export default function TutorChangePage() {
       if (form.type === "full_cancel") {
         const appId = l.application_id || (l.admin_memo ? (l.admin_memo.match(/request_id:\s*([a-f0-9-]+)/i) || [])[1] : null);
         if (!appId) { showToast("전체 취소는 신청 연결이 필요합니다. 매니저에게 문의해주세요."); setSubmitting(false); return; }
-        const r = await fetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "tutor_requests", id: appId, reason: form.reason || "전체 취소 요청", booking_id: bookingId }) });
+        const r = await portalFetch("/api/portal/cancel-request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "tutor_requests", id: appId, reason: form.reason || "전체 취소 요청", booking_id: bookingId }) });
         if (!r.ok) { const e = await r.json().catch(() => ({})); showToast(e.error || "요청 실패"); setSubmitting(false); return; }
       } else {
         let reason = form.reason || "";
         if (form.type === "time_change") reason = `시간 변경 요청: ${form.newTime}${reason ? ` · ${reason}` : ""}`;
         else if (form.type === "date_change") reason = `날짜 변경 요청 → ${form.newDate}${reason ? ` · ${reason}` : ""}`;
-        const r = await fetch("/api/portal/tutor/cancel-day", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson_id: l.id, cancel_date: form.date, req_type: form.type, reason, booking_id: bookingId, requested_by: studentName, student_name: l.student_names, tutor_id: l.tutor_id, application_id: l.application_id }) });
+        const r = await portalFetch("/api/portal/tutor/cancel-day", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson_id: l.id, cancel_date: form.date, req_type: form.type, reason, booking_id: bookingId, requested_by: studentName, student_name: l.student_names, tutor_id: l.tutor_id, application_id: l.application_id }) });
         if (!r.ok) { const e = await r.json().catch(() => ({})); showToast(e.error || "요청 실패"); setSubmitting(false); return; }
       }
       showToast("✅ 요청이 접수되었습니다. 매니저 확인 후 반영됩니다.");

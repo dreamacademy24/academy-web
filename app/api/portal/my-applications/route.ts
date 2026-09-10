@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { requireBooking } from '@/lib/portalAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,14 +11,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get("booking_id");
   if (!bookingId) return NextResponse.json({ error: "booking_id required" }, { status: 400 });
+  const denied = await requireBooking(req, bookingId);
+  if (denied) return denied;
 
   const [shuttleRes, fieldtripRes, tutorRes, pickupRes] = await Promise.all([
     supabase.from("shuttle_applications").select("*")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false }),
-    // booking_id로만 매칭 — room_number 폴백은 같은 룸을 쓴 다른 예약 내역까지 노출되어 제거 (2026-08-17)
+    // booking_id 기준(셔틀·튜터와 동일). 구버전 room_number 저장분도 OR로 호환.
     supabase.from("fieldtrip_applications").select("*")
-      .eq("booking_id", bookingId)
+      .eq('booking_id', bookingId)
       .order("created_at", { ascending: false }),
     // /portal/tutor와 동일하게 booking_id로 직접 조회 (student_id 경유 X)
     supabase.from("tutor_requests")
@@ -26,8 +29,8 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false }),
     // pickup_requests.request_type 실제값: 'pickup' | 'dropoff' (구버전 'extra_pickup'/'extra_drop' 호환)
     supabase.from("pickup_requests").select("*")
-      .eq("booking_id", bookingId)
-      .in("request_type", ["pickup", "dropoff", "extra_pickup", "extra_drop"])
+      .or(`booking_id.eq.${bookingId},and(booking_id.is.null,notes.eq.portal_booking_id:${bookingId})`)
+      .in("request_type", ["pickup", "dropoff", "extra_pickup", "extra_drop", "additional", "extra"])
       .order("created_at", { ascending: false }),
   ]);
 

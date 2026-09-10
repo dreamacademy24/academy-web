@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -84,7 +85,7 @@ export default function PortalConsultation() {
     if (!bookingId) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/portal/consultation?booking_id=${bookingId}`);
+      const res = await portalFetch(`/api/portal/consultation?booking_id=${bookingId}`);
       const j = await res.json();
       if (j.consultations) setConsultations(j.consultations);
     } finally {
@@ -104,7 +105,7 @@ export default function PortalConsultation() {
     setBooking(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/portal/consultation", {
+      const res = await portalFetch("/api/portal/consultation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -129,7 +130,7 @@ export default function PortalConsultation() {
   async function cancelSlot(slotId: string) {
     if (!bookingId) return;
     if (!confirm("예약을 취소하시겠습니까?")) return;
-    const res = await fetch(`/api/portal/consultation?slot_id=${slotId}&booking_id=${bookingId}`, { method: "DELETE" });
+    const res = await portalFetch(`/api/portal/consultation?slot_id=${slotId}&booking_id=${bookingId}`, { method: "DELETE" });
     if (res.ok) {
       setMsg({ text: "예약이 취소되었습니다.", type: "ok" });
       loadConsultations();

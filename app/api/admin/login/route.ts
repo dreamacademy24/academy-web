@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { staffCookie } from '@/lib/portalAuth';
 
 // 사전 준비 (Supabase SQL Editor에서 1회 실행) — admineng 로그인과 동일 RPC 공유:
 // CREATE OR REPLACE FUNCTION verify_teacher_login(p_username text, p_password text)
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       role: row.role,
       staff: {
@@ -54,6 +55,8 @@ export async function POST(req: Request) {
         initial: row.initial,
       },
     });
+    response.cookies.set(staffCookie(row.username));
+    return response;
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'unknown';
     return NextResponse.json({ success: false, message: msg }, { status: 500 });

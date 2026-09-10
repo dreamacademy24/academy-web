@@ -1,4 +1,5 @@
 "use client";
+import { portalFetch } from "@/lib/portalFetch";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -99,7 +100,7 @@ export default function PortalShuttlePage() {
   // 예약 기간 + 숙소 정보 로드 (room_number 자동기입 + 월/주차 필터용)
   useEffect(() => {
     if (!session?.booking_id) return;
-    fetch(`/api/bookings/${session.booking_id}`)
+    portalFetch(`/api/bookings/${session.booking_id}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const b = d?.booking || d;
@@ -248,8 +249,7 @@ export default function PortalShuttlePage() {
       const scheduleString = selectedTours.map(t => t.value).join(", ");
       formData.append("schedule", scheduleString);
       formData.set("guestName", session.guest_name);
-      const res = await fetch(FORM_ENDPOINT, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Network error");
+
 
       // Supabase 동시 저장 — selectedTours 1개당 row 1개씩 INSERT
       const memo = (formData.get("memo") as string) || "";
@@ -276,12 +276,14 @@ export default function PortalShuttlePage() {
       }));
       console.log("[shuttle insert] rows:", rows);
       const { error: insErr } = await supabase.from("shuttle_applications").insert(rows);
-      if (insErr) console.warn("[shuttle insert] failed:", insErr);
+      if (insErr) throw new Error("신청 저장에 실패했습니다.");
+      // 시트 백업은 신청의 성공 조건이 아니다.
+      void portalFetch(FORM_ENDPOINT, { method: "POST", body: formData }).catch(() => {});
 
       // 텔레그램 그룹 알림 (저장 성공 시에만, best-effort — 실패해도 신청에 영향 없음)
       if (!insErr) {
         try {
-          await fetch("/api/notify/telegram", {
+          await portalFetch("/api/notify/telegram", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

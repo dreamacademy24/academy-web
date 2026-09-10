@@ -19,6 +19,7 @@ export function isAdminAuthed(): boolean {
 
 export function clearAdminAuth() {
   if (typeof window === 'undefined') return;
+  void fetch('/api/admin/logout', { method: 'POST' });
   localStorage.removeItem(ADMIN_TOKEN_KEY);
   localStorage.removeItem(ADMIN_INFO_KEY);
 }
