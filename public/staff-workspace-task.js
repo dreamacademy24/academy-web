@@ -52,7 +52,16 @@ function _staffTaskCompletedView(hostId){
   else{if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)closeBoardDrawer();_boardSelTaskId=null;renderBoard();}
   toast('완료했습니다. 완료 목록에서 다시 확인할 수 있습니다.');
 }
-function _staffTaskCreatedLabel(value){var date=new Date(value);return value&&!isNaN(date.getTime())?date.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}):'미지정';}
+function _staffTaskCreatedLabel(value){
+  if(value==null||value==='')return '미지정';
+  var plain=String(value),day=plain.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(day)return Number(day[1])+'년 '+Number(day[2])+'월 '+Number(day[3])+'일';
+  if(/^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/.test(plain))return plain;
+  var date=new Date(value);if(isNaN(date.getTime()))return '미지정';
+  var options={year:'numeric',month:'long',day:'numeric'};
+  if(typeof value==='number'||/\d{1,2}:\d{2}/.test(plain)){options.hour='2-digit';options.minute='2-digit';}
+  return date.toLocaleString('ko-KR',options);
+}
 function _staffTaskPrepareForm(){
   if(typeof _staffMediaDraft!=='undefined'){_staffMediaDraft++;_staffMediaFailures=[];var hint=document.getElementById('staffMediaHint');if(hint)hint.remove();_staffMediaFormHint();}
   var modal=document.getElementById('taskModal');if(!modal)return;
@@ -223,11 +232,11 @@ function _renderStaffTaskDetail(taskId,hostId){
   var people=ids.map(function(id){var p=getP(id);return p?p.name:id;}).join(', ')||'미배정';
   var comments=(taskComments[t.id]||[]).slice();
   host.innerHTML='<article class="swt-detail"><div class="swt-detail-nav"><button data-act="back">← 목록으로</button><span>업무 상세</span></div><header class="swt-detail-header"><div><span class="swt-badge '+(done?'is-done':'')+'">'+(done?'완료':'진행 중')+'</span>'+(t.priority==='high'?'<span class="swt-badge is-urgent">긴급</span>':'')+'<h1>'+_staffSafe(t.title)+'</h1><p>'+_staffSafe(creator?creator.name:t.createdBy||'작성자 미지정')+' → '+_staffSafe(people)+'</p></div>'+(canEdit?'<button class="swh-primary" data-act="edit">업무 수정</button>':'<span>읽기 전용</span>')+'</header>'+
-    '<div class="swt-detail-grid"><main><section class="swt-card"><h2>요청 내용</h2>'+(t.note?_taskNoteHtml(t):'<p class="swt-help">등록된 요청 내용이 없습니다.</p>')+'</section>'+
+    '<div class="swt-detail-grid"><main><section class="swt-card"><div class="swt-request-heading"><h2>요청 내용</h2><span class="swt-created-at">작성 · '+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</span></div>'+(t.note?_taskNoteHtml(t):'<p class="swt-help">등록된 요청 내용이 없습니다.</p>')+'</section>'+
     '<section class="swt-card"><div class="swt-section-head"><h2>'+(t.checklist&&t.checklist._sub?'하위 업무':'완료 조건')+'</h2><span>'+items.filter(function(c){return c.done;}).length+' / '+items.length+'</span></div><p class="swt-help">'+(items.length?'모든 항목을 체크하면 업무가 완료됩니다.':'결과를 아래에 남긴 뒤 완료 처리하세요.')+'</p><div class="swt-checks">'+items.map(function(c,i){return '<label><input type="checkbox" data-check="'+i+'" '+(c.done?'checked ':'')+(!canEdit?'disabled':'')+'><span><b>'+_staffSafe(c.text||c.title||'항목')+'</b>'+(c.note?'<small>'+_staffSafe(c.note)+'</small>':'')+'</span>'+((c.dueDate||c.due)?'<small>'+_staffSafe(c.dueDate||c.due)+'</small>':'')+'</label>';}).join('')+'</div></section>'+
     '<section class="swt-card"><h2>참고 자료 · 첨부 '+(t.files||[]).length+'</h2><div class="swt-files">'+((t.files||[]).length?renderTaskFiles(t):'<p class="swt-help">첨부된 파일이 없습니다.</p>')+'</div>'+(canEdit?'<button class="swt-text-btn" data-act="edit">사진·파일 추가 →</button>':'')+'</section>'+
     '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(_staffCommentHtml).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
-    '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성일</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
+    '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
   var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');
   if(reservationLinks.length){
