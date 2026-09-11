@@ -13,20 +13,23 @@ export function staffCookie(username: string) {
   const payload = Buffer.from(JSON.stringify({ username, expires: Date.now() + 8 * 3600000 })).toString('base64url');
   return { name: COOKIE, value: payload + '.' + mac(payload), httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/', maxAge: 8 * 3600 };
 }
-export async function isPortalAdmin(req: Request) {
+export async function portalStaffIdentity(req: Request): Promise<string | null> {
   const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin) return false;
+  if (origin && origin !== new URL(req.url).origin) return null;
   try {
     const value = req.headers.get('cookie')?.split(';').map(v => v.trim()).find(v => v.startsWith(COOKIE + '='))?.slice(COOKIE.length + 1);
-    if (!value) return false;
+    if (!value) return null;
     const [payload, signature] = value.split('.');
     const expected = Buffer.from(mac(payload)); const actual = Buffer.from(signature || '');
-    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return false;
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
     const claim = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    if (!Number.isFinite(claim.expires) || claim.expires <= Date.now()) return false;
+    if (typeof claim.username !== 'string' || !Number.isFinite(claim.expires) || claim.expires <= Date.now()) return null;
     const { data, error } = await portalDb().from('staff_accounts').select('role').eq('username', claim.username).eq('is_active', true).maybeSingle();
-    return !error && data?.role === 'korean_admin';
-  } catch { return false; }
+    return !error && data?.role === 'korean_admin' ? claim.username : null;
+  } catch { return null; }
+}
+export async function isPortalAdmin(req: Request) {
+  return !!(await portalStaffIdentity(req));
 }
 export async function portalUser(req: Request) {
   const token = req.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];

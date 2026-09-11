@@ -197,16 +197,36 @@ function _staffTaskCheckPatch(t,index){
   var progress=Math.round(items.filter(function(c){return c.done;}).length/items.length*100);
   return {checklist:checklist,progress:progress,done:progress===100};
 }
+function _staffOwnComment(c){return !!(CU&&c&&c.id!=null&&c.id!==''&&String(c.author)===String(CU.id));}
+function _staffCommentHtml(c,index){
+  var person=getP(c.author);
+  return '<div class="swt-comment" data-comment-index="'+index+'"><div class="swt-comment-head"><div><b>'+_staffSafe(person?person.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small></div>'+(_staffOwnComment(c)?'<div class="swt-comment-actions"><button type="button" data-act="comment-edit">수정</button><button type="button" data-act="comment-delete">삭제</button></div>':'')+'</div><p>'+_staffSafe(c.text||'')+'</p><div class="swt-comment-controls"></div></div>';
+}
+async function _staffMutateComment(taskId,c,text,deleting){
+  if(!_staffOwnComment(c))throw new Error('본인이 작성한 댓글만 수정·삭제할 수 있습니다.');
+  var author=CU.id;
+  if(!deleting&&!text.trim())throw new Error('댓글 내용을 입력해주세요.');
+  var response=await fetch('/api/staff/comments',{method:deleting?'DELETE':'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:String(c.id),taskId:String(taskId),originalText:c.text||'',text:text})});
+  var data=await response.json();
+  if(!response.ok)throw new Error(data.error||'댓글 저장에 실패했습니다.');
+  if(!data.comment||String(data.comment.id)!==String(c.id)||String(data.comment.task_id)!==String(taskId)||data.deleted!==deleting)throw new Error('저장 결과를 확인하지 못했습니다.');
+  if(CU&&CU.id===author){
+    var list=taskComments[taskId]||[],index=list.findIndex(function(row){return String(row.id)===String(c.id);});
+    if(index>=0){if(deleting)list.splice(index,1);else list[index]=rowToTc(data.comment);}
+    sv('tm_tc',taskComments);
+  }
+  return data.comment;
+}
 function _renderStaffTaskDetail(taskId,hostId){
   var host=document.getElementById(hostId),t=tasks.find(function(x){return String(x.id)===String(taskId);});if(!host||!t)return;
   var canEdit=_staffTaskCanEdit(t),canComment=!!CU&&taskVisible(t),items=_staffTaskItems(t),done=isDoneTask(t),creator=getP(t.createdBy),ids=[t.assignee].concat(t.assignees||[]).filter(function(id,i,a){return id&&a.indexOf(id)===i;});
   var people=ids.map(function(id){var p=getP(id);return p?p.name:id;}).join(', ')||'미배정';
-  var comments=taskComments[t.id]||[];
+  var comments=(taskComments[t.id]||[]).slice();
   host.innerHTML='<article class="swt-detail"><div class="swt-detail-nav"><button data-act="back">← 목록으로</button><span>업무 상세</span></div><header class="swt-detail-header"><div><span class="swt-badge '+(done?'is-done':'')+'">'+(done?'완료':'진행 중')+'</span>'+(t.priority==='high'?'<span class="swt-badge is-urgent">긴급</span>':'')+'<h1>'+_staffSafe(t.title)+'</h1><p>'+_staffSafe(creator?creator.name:t.createdBy||'작성자 미지정')+' → '+_staffSafe(people)+'</p></div>'+(canEdit?'<button class="swh-primary" data-act="edit">업무 수정</button>':'<span>읽기 전용</span>')+'</header>'+
     '<div class="swt-detail-grid"><main><section class="swt-card"><h2>요청 내용</h2>'+(t.note?_taskNoteHtml(t):'<p class="swt-help">등록된 요청 내용이 없습니다.</p>')+'</section>'+
     '<section class="swt-card"><div class="swt-section-head"><h2>'+(t.checklist&&t.checklist._sub?'하위 업무':'완료 조건')+'</h2><span>'+items.filter(function(c){return c.done;}).length+' / '+items.length+'</span></div><p class="swt-help">'+(items.length?'모든 항목을 체크하면 업무가 완료됩니다.':'결과를 아래에 남긴 뒤 완료 처리하세요.')+'</p><div class="swt-checks">'+items.map(function(c,i){return '<label><input type="checkbox" data-check="'+i+'" '+(c.done?'checked ':'')+(!canEdit?'disabled':'')+'><span><b>'+_staffSafe(c.text||c.title||'항목')+'</b>'+(c.note?'<small>'+_staffSafe(c.note)+'</small>':'')+'</span>'+((c.dueDate||c.due)?'<small>'+_staffSafe(c.dueDate||c.due)+'</small>':'')+'</label>';}).join('')+'</div></section>'+
     '<section class="swt-card"><h2>참고 자료 · 첨부 '+(t.files||[]).length+'</h2><div class="swt-files">'+((t.files||[]).length?renderTaskFiles(t):'<p class="swt-help">첨부된 파일이 없습니다.</p>')+'</div>'+(canEdit?'<button class="swt-text-btn" data-act="edit">사진·파일 추가 →</button>':'')+'</section>'+
-    '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(function(c){var p=getP(c.author);return '<div><b>'+_staffSafe(p?p.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small><p>'+_staffSafe(c.text||'')+'</p></div>';}).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
+    '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(_staffCommentHtml).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
     '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성일</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
   var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');
@@ -225,8 +245,40 @@ function _renderStaffTaskDetail(taskId,hostId){
     catch(e){status('저장 실패: '+e.message);root.querySelectorAll('input[data-check]').forEach(function(el){el.checked=!!items[Number(el.dataset.check)].done;});}
     finally{delete _staffTaskWrites[t.id];root.removeAttribute('aria-busy');root.querySelectorAll('input,button,textarea').forEach(function(el){el.disabled=false;});}
   }
-  root.addEventListener('change',function(e){if(e.target.dataset.check!==undefined){var current=tasks.find(function(x){return String(x.id)===String(t.id);});update(_staffTaskCheckPatch(current,Number(e.target.dataset.check)));}});
+  root.addEventListener('change',function(e){if(e.target.dataset.check!==undefined){if(root.querySelector('[data-comment-editing]')){e.target.checked=!e.target.checked;status('댓글 수정·삭제를 저장하거나 취소한 뒤 진행해주세요.');return;}var current=tasks.find(function(x){return String(x.id)===String(t.id);});update(_staffTaskCheckPatch(current,Number(e.target.dataset.check)));}});
   root.addEventListener('click',async function(e){var button=e.target.closest('button[data-act]');if(!button)return;var act=button.dataset.act;
+    if(_staffTaskWrites[t.id])return;
+    if(act.indexOf('comment-')===0){
+      var card=button.closest('[data-comment-index]'),index=card?Number(card.dataset.commentIndex):-1,c=comments[index];
+      if(!card||!_staffOwnComment(c))return;
+      var controls=card.querySelector('.swt-comment-controls'),paragraph=card.querySelector('p');
+      if(act==='comment-cancel'){controls.innerHTML='';paragraph.hidden=false;card.removeAttribute('data-comment-editing');card.querySelector('.swt-comment-actions').hidden=false;return;}
+      if(act==='comment-edit'||act==='comment-delete'){
+        if(root.querySelector('[data-comment-editing]')){status('열려 있는 댓글 수정을 저장하거나 취소해주세요.');return;}
+        card.setAttribute('data-comment-editing','true');card.querySelector('.swt-comment-actions').hidden=true;
+        if(act==='comment-edit'){
+          paragraph.hidden=true;controls.innerHTML='<label>댓글 수정<textarea class="swt-comment-editor" aria-label="댓글 수정"></textarea></label><div class="swt-comment-actions"><button type="button" data-act="comment-save">저장</button><button type="button" data-act="comment-cancel">취소</button></div><div role="status"></div>';
+          controls.querySelector('textarea').value=c.text||'';controls.querySelector('textarea').focus();
+        }else controls.innerHTML='<p>이 댓글을 삭제할까요? 삭제하면 되돌릴 수 없습니다.</p><div class="swt-comment-actions"><button type="button" class="swt-comment-danger" data-act="comment-remove">삭제 확인</button><button type="button" data-act="comment-cancel">취소</button></div><div role="status"></div>';
+        return;
+      }
+      if(act==='comment-save'||act==='comment-remove'){
+        var deleting=act==='comment-remove',editor=controls.querySelector('textarea'),value=editor?editor.value.trim():'',message=controls.querySelector('[role="status"]');
+        if(!deleting&&!value){message.textContent='댓글 내용을 입력해주세요.';editor.focus();return;}
+        _staffTaskWrites[t.id]=true;root.inert=true;message.textContent=deleting?'삭제 중…':'저장 중…';
+        try{
+          var saved=await _staffMutateComment(t.id,c,value,deleting);
+          if(root.isConnected){
+            if(deleting){card.remove();root.querySelector('[data-comment-count]').textContent=(taskComments[t.id]||[]).length;}
+            else{comments[index]=rowToTc(saved);var wrapper=document.createElement('div');wrapper.innerHTML=_staffCommentHtml(comments[index],index);card.replaceWith(wrapper.firstElementChild);}
+            status(deleting?'댓글을 삭제했습니다.':'댓글을 수정했습니다.');
+          }
+        }catch(err){if(root.isConnected)message.textContent=err.message+' 입력 내용은 유지됩니다.';}
+        finally{delete _staffTaskWrites[t.id];root.inert=false;}
+        return;
+      }
+    }
+    if(root.querySelector('[data-comment-editing]')){status('댓글 수정·삭제를 저장하거나 취소한 뒤 진행해주세요.');return;}
     if(act==='back'){if(hostId==='empDetail'){_empSelTaskId=null;setEmpTab('home');}else renderBoardDetailEmpty();return;}
     if(act==='edit'){openTaskEdit(t.id);return;}
     if(act==='complete'){

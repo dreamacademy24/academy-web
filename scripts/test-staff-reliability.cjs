@@ -54,7 +54,7 @@ test('approval first entry initializes its tab state without relying on preview 
   const state={};vm.runInNewContext(declarations.join('\n'),state);assert.equal(state._apvTab,null);
 });
 function context(names, overrides = {}) {
-  names=[...new Set(['_staffTaskTitleWithCategory','_staffTaskCompletionPatch',...names])];
+  names=[...new Set(['_staffTaskTitleWithCategory','_staffTaskCompletionPatch','_staffCommentHtml','_staffOwnComment',...names])];
   const ctx = vm.createContext({ console: quiet, URL, encodeURIComponent, ...overrides });
   ctx.window = ctx;
   for (const name of names) {
@@ -709,4 +709,17 @@ test('task detail actually renders its stored photo attachments through the shar
     document:{getElementById:()=>host},tasks:[{id:'t',title:'Photos',files:[{name:'photo.jpg',type:'image/jpeg',url:'/photo.jpg'}]}],CU:{id:'song'},taskComments:{},_staffTaskCanEdit:()=>true,taskVisible:()=>true,isDoneTask:()=>false,getP:()=>null,todayStr:()=> '2026-09-10',location:{href:'https://example.invalid/team'}
   });
   assert.throws(()=>ctx._renderStaffTaskDetail('t','host'),e=>e===stop);assert.match(html,/data-staff-photo="https:\/\/example.invalid\/photo.jpg"/);
+});
+
+test('comment changes retain cached original on failure and update only the acknowledged comment',async()=>{
+  const original={id:'c',author:'song',text:'before'},other={id:'d',author:'ceo',text:'keep'};let saves=0,request;
+  const c=context(['_staffMutateComment','rowToTc'],{CU:{id:'song'},taskComments:{t:[original,other]},sv(){saves++;},fetch:async(_u,options)=>{request=JSON.parse(options.body);return {ok:false,json:async()=>({error:'Conflict'})};}});
+  await assert.rejects(c._staffMutateComment('t',original,'after',false),/Conflict/);assert.equal(original.text,'before');assert.equal(saves,0);
+  c.fetch=async()=>({ok:true,json:async()=>({comment:{id:'c',task_id:'t',from_id:'song',text:'after',ts:1},deleted:false})});
+  await c._staffMutateComment('t',original,'after',false);assert.equal(c.taskComments.t[0].text,'after');assert.equal(c.taskComments.t[1],other);assert.equal(request.originalText,'before');
+  c.fetch=async()=>({ok:true,json:async()=>({comment:{id:'c',task_id:'t'},deleted:true})});await c._staffMutateComment('t',c.taskComments.t[0],'',true);assert.equal(c.taskComments.t.length,1);assert.equal(c.taskComments.t[0],other);
+  await assert.rejects(c._staffMutateComment('t',other,'hijack',false),/본인이/);
+});
+test('comment action buttons belong only to the author and escape comment content',()=>{
+  const c=context(['_staffSafe'],{CU:{id:'song'},getP:()=>null});assert.match(c._staffCommentHtml({id:'c',author:'song',text:'<script>'},0),/comment-edit/);assert.doesNotMatch(c._staffCommentHtml({id:'d',author:'ceo'},1),/data-act/);assert.doesNotMatch(c._staffCommentHtml({author:'song'},2),/data-act/);assert.match(c._staffCommentHtml({id:'c',author:'song',text:'<script>'},0),/&lt;script&gt;/);
 });
