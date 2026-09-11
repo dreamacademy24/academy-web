@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
+import { planOnlineSessions } from '@/lib/onlineSessionRepair'
+import { isPortalAdmin } from '@/lib/portalAuth'
 
 function krToPh(kr: string | null): string | null {
   if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
@@ -239,6 +241,7 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json()
     const { id, regenerate_sessions, ...fields } = body
+    if (regenerate_sessions && !await isPortalAdmin(req)) return NextResponse.json({ error: '출석부 날짜 복구는 직원 로그인 후 이용해주세요.' }, { status: 401 })
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times','portal_open','customer_user_id']
     const INT_FIELDS = new Set(['duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week'])
@@ -302,48 +305,31 @@ export async function PATCH(req: Request) {
         .single()
       if (enroll) {
         // attended/cancelled 등 이력이 있는 세션은 보존, scheduled만 삭제
-        const { data: scheduledSes } = await supabase
+        const { data: scheduledSes, error: scheduledError } = await supabase
           .from('online_sessions')
-          .select('id')
+          .select('*')
           .eq('enrollment_id', id)
           .eq('status', 'scheduled')
-        if (scheduledSes && scheduledSes.length > 0) {
-          await supabase.from('online_sessions').delete().in('id', scheduledSes.map(s => s.id))
-        }
+          .order('scheduled_date')
+        if (scheduledError) return NextResponse.json({ error: scheduledError.message }, { status: 500 })
 
         // 이력 세션 수 카운트 (출석/취소 등)
-        const { data: historySes } = await supabase
+        const { data: historySes, error: historyError } = await supabase
           .from('online_sessions')
-          .select('session_number')
+          .select('session_number,scheduled_date')
           .eq('enrollment_id', id)
           .neq('status', 'scheduled')
           .order('session_number', { ascending: false })
-        const lastNum = historySes?.length ? Math.max(...historySes.map(s => s.session_number)) : 0
+        if (historyError) return NextResponse.json({ error: historyError.message }, { status: 500 })
         const historyCount = historySes?.length || 0
 
         const total = enroll.total_sessions || 0
         const needed = total - historyCount
         if (needed > 0 && enroll.days_of_week?.length > 0) {
-          // 시작 날짜: 이력 마지막 날짜 다음 날 or enrollment start_date
-          let startFrom = enroll.start_date
-          if (historySes?.length) {
-            const { data: lastSes } = await supabase
-              .from('online_sessions')
-              .select('scheduled_date')
-              .eq('enrollment_id', id)
-              .neq('status', 'scheduled')
-              .order('scheduled_date', { ascending: false })
-              .limit(1)
-            if (lastSes?.length) {
-              const d = new Date(lastSes[0].scheduled_date + 'T00:00:00')
-              d.setDate(d.getDate() + 1)
-              startFrom = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-            }
-          }
-
           const _hs = await loadHolidaySet()
           const _stays2 = await loadStayRanges(enroll.customer_user_id || null, enroll.student_name || null)
-          const dates = buildOnlineSessionDates(startFrom, enroll.days_of_week, needed, _hs, _stays2).dates
+          const plan = planOnlineSessions(enroll.start_date, enroll.days_of_week, total, historySes || [], _hs, _stays2)
+          if (plan.length !== needed) return NextResponse.json({ error: '설정된 회차만큼 일정을 계산할 수 없습니다. 시작일과 요일을 확인해주세요.' }, { status: 400 })
           const DAY_KR_BY_JS2 = ['일', '월', '화', '수', '목', '금', '토']
           const phOf2 = (kr: string | null) => {
             if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
@@ -351,15 +337,16 @@ export async function PATCH(req: Request) {
             return `${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`
           }
           const dt = enroll.day_times as Record<string, string> | null
-          const rows = dates.map((date, idx) => {
+          const rows = plan.map(({ date, number }, idx) => {
             const dayKr = DAY_KR_BY_JS2[new Date(date + 'T00:00:00').getDay()]
             const overrideKr = dt ? dt[dayKr] : null
             const tKr = overrideKr || enroll.class_time_kr || null
             const tPh = overrideKr ? phOf2(overrideKr) : (enroll.class_time_ph || phOf2(tKr))
             return {
+              ...(scheduledSes?.[idx] || {}),
               enrollment_id: id,
               tutor_id: enroll.tutor_id || null,
-              session_number: lastNum + idx + 1,
+              session_number: number,
               scheduled_date: date,
               scheduled_time_kr: tKr,
               scheduled_time_ph: tPh,
@@ -367,11 +354,19 @@ export async function PATCH(req: Request) {
             }
           })
           if (rows.length > 0) {
-            const { error: insErr } = await supabase.from('online_sessions').insert(rows)
+            const surplus = (scheduledSes || []).slice(rows.length)
+            if (surplus.some(s => s.recorded_at || s.note || s.session_note || s.original_session_id)) return NextResponse.json({ error: '줄어드는 예정 회차에 기록이 있습니다. 회차와 메모를 먼저 확인해주세요.' }, { status: 409 })
+            const { error: insErr } = await supabase.from('online_sessions').upsert(rows)
             if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
+            if (surplus.length) {
+              const { error: trimError } = await supabase.from('online_sessions').delete().in('id', surplus.map(s => s.id)).eq('status', 'scheduled')
+              if (trimError) return NextResponse.json({ error: '일정은 반영했지만 초과 회차를 정리하지 못했습니다. 다시 확인해주세요.' }, { status: 500 })
+            }
             sessionsRegenerated = rows.length
             // 종료일 = 실제 마지막 회차 (체류·방학·휴일 제외 반영)
-            await supabase.from('online_enrollments').update({ end_date: rows[rows.length - 1].scheduled_date }).eq('id', id)
+            const endDate = [...rows.map(s => s.scheduled_date), ...(historySes || []).map(s => s.scheduled_date)].sort().at(-1)
+            const { error: endError } = await supabase.from('online_enrollments').update({ end_date: endDate }).eq('id', id)
+            if (endError) return NextResponse.json({ error: '출석부는 반영했지만 종료일 갱신에 실패했습니다. 다시 확인해주세요.' }, { status: 500 })
           }
         }
       }

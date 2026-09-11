@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { tutorGuardians } from '@/lib/bookingGuardians';
+import { requireBooking } from '@/lib/portalAuth';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +12,10 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get("booking_id");
   if (!bookingId) return NextResponse.json({ students: [] });
+  const denied = await requireBooking(req, bookingId);
+  if (denied) return denied;
+  const { data: guardianBooking } = await supabase.from('bookings').select('booker_name,booker_english,extra_guardians').eq('id', bookingId).maybeSingle();
+  const guardians = guardianBooking ? tutorGuardians(guardianBooking) : [];
 
   // 1) students 테이블에서 직접 조회
   const { data: students } = await supabase
@@ -32,7 +38,7 @@ export async function GET(req: Request) {
       ci = bk2?.check_in || ""; co = bk2?.check_out || "";
     }
     return NextResponse.json({
-      students,
+      students, guardians,
       booker: { name_kr: bkName, name_en: bkEn, age: "" },
       checkin_date: ci,
       checkout_date: co,
@@ -62,15 +68,15 @@ export async function GET(req: Request) {
         level: s.level ?? "junior",
       })).filter((s: any) => s.name_kr);
       return NextResponse.json({
-        students: parsed,
+        students: parsed, guardians,
         booker: { name_kr: booking.booker_name || "", name_en: booking.booker_english || "", age: "" },
         checkin_date: booking.checkin_date || booking.check_in || "",
         checkout_date: booking.checkout_date || booking.check_out || "",
       });
     } catch {
-      return NextResponse.json({ students: [] });
+      return NextResponse.json({ students: [], guardians });
     }
   }
 
-  return NextResponse.json({ students: [] });
+  return NextResponse.json({ students: [], guardians });
 }

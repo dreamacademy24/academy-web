@@ -22,6 +22,20 @@ for (const [i, code] of scripts.entries()) {
   }
 }
 const quiet = { log() {}, warn() {}, error() {} };
+test('requesting employee can complete CEO-assigned work but unrelated employees cannot',async()=>{
+  const task={id:'request',title:'Website',createdBy:'candice',assignee:'ceo',assignees:['ceo'],checklist:[{text:'Verify live',done:false,note:'Keep evidence'}],done:false,progress:0};
+  const c=context(['_staffTaskCanEdit','_staffAssigned','isManagerCU','_staffToggleTaskCompletion','_staffTaskPersistPatch','isDoneTask'],{CU:{id:'candice'},tasks:[task],_staffTaskWrites:{},sbPatch:async(_t,_q,b)=>[{id:'request',...b}],rebuildIdx(){},svTasks(){},refreshAll(){},toast(){}});
+  assert.equal(c._staffTaskCanEdit(task),true);
+  assert.equal(await c._staffToggleTaskCompletion(task.id),true);
+  assert.equal(task.done,true);assert.equal(task.checklist[0].done,true);assert.equal(task.checklist[0].note,'Keep evidence');
+  c.CU={id:'unrelated'};assert.equal(c._staffTaskCanEdit(task),false);
+});
+test('website category is recognized for old titles and never duplicates its prefix',()=>{
+  const c=context(['_staffWebsiteTaskTitle','_staffTaskTitleWithCategory']);
+  for(const title of ['홈페이지수정','홈페이지 수정','[홈페이지 수정] 보호자'])assert.equal(c._staffWebsiteTaskTitle(title),true);
+  assert.equal(c._staffTaskTitleWithCategory('[홈페이지 수정] 보호자','website'),'[홈페이지 수정] 보호자');
+  assert.equal(c._staffTaskTitleWithCategory('[홈페이지 수정] 보호자','general'),'보호자');
+});
 test('staff entry uses the unified account, never the old employee selection session',()=>{
   const employee={id:'song',name:'Song'},data={adminToken:'da-admin-session',adminInfo:JSON.stringify({staffId:'admin-song'}),tm_session:JSON.stringify({id:'ceo'})};
   const c=context(['_staffSessionEmployee'],{ALL:[employee,{id:'ceo'}],localStorage:{getItem:key=>data[key]||null}});
@@ -40,6 +54,7 @@ test('approval first entry initializes its tab state without relying on preview 
   const state={};vm.runInNewContext(declarations.join('\n'),state);assert.equal(state._apvTab,null);
 });
 function context(names, overrides = {}) {
+  names=[...new Set(['_staffTaskTitleWithCategory','_staffTaskCompletionPatch',...names])];
   const ctx = vm.createContext({ console: quiet, URL, encodeURIComponent, ...overrides });
   ctx.window = ctx;
   for (const name of names) {
@@ -456,7 +471,7 @@ test('instruction edits preserve creator, creation date and subtask metadata wit
 
 function instructionContext() {
   const errors = [], events = [], inner = {}, fields = {
-    tmTit: { value: 'Verify arrivals', focus() {} }, tmDue: { value: '2026-09-12' }, tmSubToggle: { checked: false },
+    swtCategory: { value: 'general' }, tmTit: { value: 'Verify arrivals', focus() {} }, tmDue: { value: '2026-09-12' }, tmSubToggle: { checked: false },
     tmShare: { checked: false }, tmSecret: { checked: false }, tmUrgent: { checked: false }, tmSaveBtn: {},
   };
   const ctx = context(['_staffTaskCandidate', '_staffSaveInstruction'], {
