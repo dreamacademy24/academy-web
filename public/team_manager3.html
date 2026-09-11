@@ -1405,15 +1405,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-chip.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary);font-weight:700}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-created1">
-<script src="/staff-workspace-home.js?v=20260911-created1"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260911-created1">
-<script src="/staff-workspace-task.js?v=20260911-created1"></script>
-<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-created1">
-<script src="/staff-workspace-operations.js?v=20260911-created1"></script>
-<link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-created1">
-<script src="/staff-workspace-media.js?v=20260911-created1"></script>
-<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-created1">
+<link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-routing1">
+<script src="/staff-workspace-home.js?v=20260911-routing1"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260911-routing1">
+<script src="/staff-workspace-task.js?v=20260911-routing1"></script>
+<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-routing1">
+<script src="/staff-workspace-operations.js?v=20260911-routing1"></script>
+<link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-routing1">
+<script src="/staff-workspace-media.js?v=20260911-routing1"></script>
+<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-routing1">
 </head>
 <body>
 
@@ -7646,7 +7646,9 @@ function _renderEmpSection(label, list, color, collapsed, secKey){
   }).join('');
   return '<details '+open+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--text2);padding:4px 0;letter-spacing:.3px;list-style:none">'+label+' <span style="color:var(--text3);font-weight:600">('+list.length+')</span></summary><div style="margin-top:4px">'+items+'</div></details>';
 }
-function selectEmpTask(taskId){try{recordTaskView(taskId);}catch(e){}
+function selectEmpTask(taskId){
+  if(tasks.some(function(t){return String(t.id)===String(taskId);})){_homeGotoBoardTask(taskId);return;}
+  try{recordTaskView(taskId);}catch(e){}
   _empSelTaskId=taskId;
   renderEmpSidebar(curEmpId);
   renderEmpDetail(taskId);
@@ -9510,50 +9512,10 @@ function togSubInDetail(taskId,idx){
   svTasks();syncTaskToSB(t);openTaskCmt(taskId);
 }
 function openTaskCmt(taskId){
-  curCmtTaskId=taskId;
-  const t=tasks.find(function(t){return t.id===taskId;});if(!t)return;
-  const emp=getP(t.assignee),dl=dL(t.due),ec=emp?emp.color:'#9ca3af',prog=t.progress||0;
-  const canEdit=isAdmin()||(CU&&CU.id===t.assignee);
-  document.getElementById('tcmEditBtn').style.display=canEdit?'inline-flex':'none';
-  const ck=document.getElementById('tcmCheck');ck.style.background=t.done?'var(--text3)':'#fff';ck.style.borderColor=t.done?'var(--text3)':'var(--border2)';ck.innerHTML=t.done?'<span style="color:#fff;font-size:10px">✓</span>':'';
-  document.getElementById('tcmInfo').style.borderLeftColor=ec;
-  document.getElementById('tcmTaskTitle').innerHTML=(t.idx?'<span style="color:var(--text3);font-size:11px;margin-right:4px">('+esc(t.idx)+')</span>':'')+'<span style="'+(t.done?'text-decoration:line-through;color:var(--text3);':'')+'">'+esc(t.title)+'</span>';
-  document.getElementById('tcmTaskMeta').innerHTML=
-    (emp?'<span style="display:inline-flex;align-items:center;gap:4px"><div style="width:18px;height:18px;border-radius:6px;background:'+ec+';display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff">'+emp.initial+'</div><span style="color:'+ec+';font-weight:700;font-size:12px">'+emp.name+'</span></span>':'<span style="color:var(--text3)">미배정</span>')+
-    (t.due?'<span class="tag '+(dl?dl.cls:'')+'" style="font-size:10.5px">⏱ '+t.due+(dl?' ('+dl.text+')':'')+'</span>':'')+
-    '<span class="badge '+(t.shared?'badge-green':'badge-amber')+'" style="font-size:10px">'+(t.shared?'📋 공유':'🔒 개인')+'</span>';
-  const noteEl=document.getElementById('tcmNote');if(t.note){noteEl.style.display='block';noteEl.textContent='📝 '+t.note;}else noteEl.style.display='none';
-  const filesEl=document.getElementById('tcmFiles');if(t.files&&t.files.length){filesEl.style.display='block';filesEl.innerHTML='📎 첨부파일: '+t.files.map(function(f){return '<span style="font-family:JetBrains Mono,monospace;font-size:11.5px;background:var(--surface2);padding:2px 7px;border-radius:4px;margin-left:4px">'+f.name+'</span>';}).join('');}else filesEl.style.display='none';
-  const progWrap=document.getElementById('tcmProgWrap');progWrap.innerHTML='';
-  if(taskHasSubtasks(t)){
-    var subItems=t.checklist.items||[];
-    var subDone=subItems.filter(function(s){return s.done;}).length;
-    var subPct=subItems.length?Math.round(subDone/subItems.length*100):0;
-    var subDiv=document.createElement('div');
-    subDiv.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🔀 하위 업무 ('+subDone+'/'+subItems.length+')</div>';
-    var subBar=document.createElement('div');subBar.className='cl-bar';subBar.innerHTML='<div class="cl-bar-fill" style="width:'+subPct+'%;background:'+ec+'"></div>';subDiv.appendChild(subBar);
-    var subListEl=document.createElement('div');subListEl.className='sub-list';subListEl.dataset.task=t.id;
-    subItems.forEach(function(s,si){
-      var se=getP(s.assignee);var seTag=se?'<span style="font-size:10px;background:'+se.color+'18;color:'+se.color+';padding:1px 6px;border-radius:99px">'+se.name+'</span>':'';
-      var sdl=dL(s.due);var sdTag=sdl?'<span class="tag '+sdl.cls+'" style="font-size:10px;padding:1px 5px">'+sdl.text+'</span>':'';
-      var sEl=document.createElement('div');sEl.className='sub-item';sEl.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;background:'+(s.done?'var(--surface,#f8fafc)':'#eff6ff')+';border:1px solid '+(s.done?'var(--border,#e2e8f0)':'#bfdbfe')+';border-radius:8px;margin-top:6px;cursor:pointer';
-      sEl.innerHTML=(canEdit?'<span class="drag-handle" title="드래그하여 순서 변경">⋮⋮</span>':'')+
-        '<div class="cl-cb'+(s.done?' checked':'')+'" onclick="togSubInDetail(\''+taskId+'\','+si+')"></div>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;'+(s.done?'text-decoration:line-through;color:var(--text3)':'')+'">'+esc(s.title)+'</div>'+
-        (seTag||sdTag||s.note?'<div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">'+seTag+sdTag+(s.note?'<span style="font-size:10px;color:var(--text3)">📝</span>':'')+'</div>':'')+'</div>';
-      subListEl.appendChild(sEl);
-    });
-    subDiv.appendChild(subListEl);
-    progWrap.appendChild(subDiv);
-    if(canEdit)_initClSortable(subListEl,taskId,'subtasks');
-  } else {
-    const clDiv=document.createElement('div');clDiv.id='tcm-cl-'+taskId;renderDetailChecklist(taskId,clDiv,canEdit);progWrap.appendChild(clDiv);
-  }
-  const progDiv=document.createElement('div');progDiv.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:700;color:var(--text2)">📊 진행률</span><span id="tcm-pp" style="font-size:20px;font-weight:800;color:'+ec+'">'+prog+'%</span></div>';
-  if(canEdit&&!taskHasSubtasks(t)){progDiv.innerHTML+='<input type="range" class="prog-slider" id="tcm-ps" min="0" max="100" value="'+prog+'" style="width:100%;background:linear-gradient(to right,'+ec+' '+prog+'%,var(--border2) '+prog+'%)" oninput="liveSliderModal(\''+taskId+'\',this,\''+ec+'\')" onchange="autoSaveProgressModal(\''+taskId+'\',this)" /><div class="prog-hint" style="text-align:right;margin-top:4px">슬라이더를 놓으면 자동 저장 ✓</div>';}
-  else{progDiv.innerHTML+='<div class="prog-bar"><div class="prog-bar-fill" style="width:'+prog+'%;background:'+ec+'"></div></div>';}
-  progWrap.appendChild(progDiv);
-  renderTaskCmtBody(taskId);openM('taskCmtModal');setTimeout(function(){document.getElementById('tcmInp').focus();},100);
+  // All legacy cards, comment links and calendar entries use the same full page.
+  if(!tasks.some(function(t){return String(t.id)===String(taskId);}))return;
+  closeM('taskCmtModal');
+  _homeGotoBoardTask(taskId);
 }
 function renderTaskCmtBody(taskId){
   const body=document.getElementById('tcmBody');const countEl=document.getElementById('tcmCmtCount');body.innerHTML='';

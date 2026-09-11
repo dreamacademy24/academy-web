@@ -720,6 +720,15 @@ test('comment changes retain cached original on failure and update only the ackn
   c.fetch=async()=>({ok:true,json:async()=>({comment:{id:'c',task_id:'t'},deleted:true})});await c._staffMutateComment('t',c.taskComments.t[0],'',true);assert.equal(c.taskComments.t.length,1);assert.equal(c.taskComments.t[0],other);
   await assert.rejects(c._staffMutateComment('t',other,'hijack',false),/본인이/);
 });
+test('legacy task and comment entries route to the full page without opening a modal',()=>{
+ const calls=[];const c=context(['openTaskCmt'],{tasks:[{id:42}],closeM:id=>calls.push(['close',id]),_homeGotoBoardTask:id=>calls.push(['detail',id])});
+ c.openTaskCmt('42');assert.deepEqual(calls,[['close','taskCmtModal'],['detail','42']]);
+ c.openTaskCmt('missing');assert.equal(calls.length,2);
+});
+test('personal home task and notification selections use the same full page',()=>{
+ const calls=[];const c=context(['selectEmpTask','_empNotifGo'],{tasks:[{id:'A'}],_homeGotoBoardTask:id=>calls.push(id),_empNotifList:[{virtual:true,type:'task_comment',ref_id:'A'}],updateNavBadges(){}});
+ c.selectEmpTask('A');c._empNotifGo(0);assert.deepEqual(calls,['A','A']);
+});
 test('comment action buttons belong only to the author and escape comment content',()=>{
   const c=context(['_staffSafe'],{CU:{id:'song'},getP:()=>null});assert.match(c._staffCommentHtml({id:'c',author:'song',text:'<script>'},0),/comment-edit/);assert.doesNotMatch(c._staffCommentHtml({id:'d',author:'ceo'},1),/data-act/);assert.doesNotMatch(c._staffCommentHtml({author:'song'},2),/data-act/);assert.match(c._staffCommentHtml({id:'c',author:'song',text:'<script>'},0),/&lt;script&gt;/);
 });
