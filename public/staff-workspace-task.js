@@ -217,7 +217,7 @@ async function _staffMutateComment(taskId,c,text,deleting){
   if(!deleting&&!text.trim())throw new Error('댓글 내용을 입력해주세요.');
   var response=await fetch('/api/staff/comments',{method:deleting?'DELETE':'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:String(c.id),taskId:String(taskId),originalText:c.text||'',text:text})});
   var data=await response.json();
-  if(!response.ok)throw new Error(data.error||'댓글 저장에 실패했습니다.');
+  if(!response.ok){var failure=new Error(data.error||'댓글 저장에 실패했습니다.');failure.status=response.status;throw failure;}
   if(!data.comment||String(data.comment.id)!==String(c.id)||String(data.comment.task_id)!==String(taskId)||data.deleted!==deleting)throw new Error('저장 결과를 확인하지 못했습니다.');
   if(CU&&CU.id===author){
     var list=taskComments[taskId]||[],index=list.findIndex(function(row){return String(row.id)===String(c.id);});
@@ -225,6 +225,31 @@ async function _staffMutateComment(taskId,c,text,deleting){
     sv('tm_tc',taskComments);
   }
   return data.comment;
+}
+async function _staffCommentReauthenticate(password){
+  if(!password)throw new Error('비밀번호를 입력해주세요.');
+  var author=CU&&CU.id,info;
+  try{info=JSON.parse(localStorage.getItem('adminInfo')||'{}');}catch(e){info={};}
+  var username=info.staffId||('admin-'+author);
+  if(!author||username.replace(/^admin-/,'')!==String(author))throw new Error('현재 직원 계정을 확인할 수 없습니다.');
+  var response=await fetch('/api/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:username,password:password})});
+  var data=await response.json();
+  if(!response.ok||!data.success)throw new Error(data.message||'로그인을 확인하지 못했습니다.');
+  if(data.role!=='korean_admin'||!data.staff||data.staff.username!==username||!CU||CU.id!==author)throw new Error('같은 직원 계정으로 다시 확인해주세요.');
+}
+function _staffCommentAuthPrompt(controls,taskId){
+  if(controls.querySelector('.swt-comment-auth'))return;
+  var box=document.createElement('form');box.className='swt-comment-auth';
+  box.innerHTML='<b>로그인 다시 확인</b><p>수정 내용은 그대로 유지됩니다. 현재 직원 계정의 비밀번호를 확인한 뒤 저장을 다시 눌러주세요.</p><label>비밀번호<input type="password" name="password" autocomplete="current-password" required></label><button type="submit">로그인 확인</button><div role="status"></div>';
+  controls.appendChild(box);
+  box.addEventListener('submit',async function(e){
+    e.preventDefault();if(_staffTaskWrites[taskId])return;
+    var input=box.querySelector('input'),button=box.querySelector('button'),message=box.querySelector('[role="status"]');
+    _staffTaskWrites[taskId]=true;button.disabled=true;input.disabled=true;message.textContent='확인 중…';
+    try{await _staffCommentReauthenticate(input.value);input.value='';if(box.isConnected){box.remove();controls.querySelector('[role="status"]').textContent='로그인을 확인했습니다. 저장 또는 삭제 확인을 다시 눌러주세요.';}}
+    catch(err){input.value='';if(box.isConnected)message.textContent=err.message;}
+    finally{delete _staffTaskWrites[taskId];button.disabled=false;input.disabled=false;}
+  });
 }
 function _renderStaffTaskDetail(taskId,hostId){
   var host=document.getElementById(hostId),t=tasks.find(function(x){return String(x.id)===String(taskId);});if(!host||!t)return;
@@ -282,7 +307,7 @@ function _renderStaffTaskDetail(taskId,hostId){
             else{comments[index]=rowToTc(saved);var wrapper=document.createElement('div');wrapper.innerHTML=_staffCommentHtml(comments[index],index);card.replaceWith(wrapper.firstElementChild);}
             status(deleting?'댓글을 삭제했습니다.':'댓글을 수정했습니다.');
           }
-        }catch(err){if(root.isConnected)message.textContent=err.message+' 입력 내용은 유지됩니다.';}
+        }catch(err){if(root.isConnected){message.textContent=err.message+' 입력 내용은 유지됩니다.';if(err.status===401)_staffCommentAuthPrompt(controls,t.id);}}
         finally{delete _staffTaskWrites[t.id];root.inert=false;}
         return;
       }

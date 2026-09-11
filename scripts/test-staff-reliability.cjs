@@ -22,6 +22,23 @@ for (const [i, code] of scripts.entries()) {
   }
 }
 const quiet = { log() {}, warn() {}, error() {} };
+test('expired comment edits preserve the original and can retry after verified login',async()=>{
+ const original={id:'c',author:'song',text:'old'},calls=[];let authenticated=false;
+ const c=context(['_staffMutateComment','_staffCommentReauthenticate'],{CU:{id:'song'},taskComments:{t:[original]},localStorage:{getItem:()=>JSON.stringify({staffId:'admin-song'})},rowToTc:r=>({id:r.id,author:r.from_id,text:r.text}),sv(){},fetch:async(url,init)=>{
+  calls.push({url,credentials:init.credentials,body:JSON.parse(init.body)});
+  if(url==='/api/admin/login'){authenticated=true;return {ok:true,json:async()=>({success:true,role:'korean_admin',staff:{username:'admin-song'}})};}
+  return authenticated?{ok:true,json:async()=>({deleted:false,comment:{id:'c',task_id:'t',from_id:'song',text:'new'}})}:{ok:false,status:401,json:async()=>({error:'Expired'})};
+ }});
+ await assert.rejects(c._staffMutateComment('t',original,'new',false),e=>e.status===401);assert.equal(c.taskComments.t[0].text,'old');
+ await c._staffCommentReauthenticate('synthetic-password');assert.equal(c.taskComments.t[0].text,'old');
+ await c._staffMutateComment('t',original,'new',false);assert.equal(c.taskComments.t[0].text,'new');
+ assert.deepEqual(calls.map(x=>x.url),['/api/staff/comments','/api/admin/login','/api/staff/comments']);assert.ok(calls.every(x=>x.credentials==='same-origin'));
+});
+test('comment reauthentication rejects empty passwords, wrong credentials and switched accounts',async()=>{
+ const c=context(['_staffCommentReauthenticate'],{CU:{id:'song'},localStorage:{getItem:()=>JSON.stringify({staffId:'admin-song'})},fetch:async()=>({ok:false,json:async()=>({message:'Wrong password'})})});
+ await assert.rejects(c._staffCommentReauthenticate(''),/비밀번호/);await assert.rejects(c._staffCommentReauthenticate('wrong'),/Wrong password/);
+ c.fetch=async()=>({ok:true,json:async()=>({success:true,role:'korean_admin',staff:{username:'admin-ceo'}})});await assert.rejects(c._staffCommentReauthenticate('synthetic'),/같은 직원/);
+});
 test('requesting employee can complete CEO-assigned work but unrelated employees cannot',async()=>{
   const task={id:'request',title:'Website',createdBy:'candice',assignee:'ceo',assignees:['ceo'],checklist:[{text:'Verify live',done:false,note:'Keep evidence'}],done:false,progress:0};
   const c=context(['_staffTaskCanEdit','_staffAssigned','isManagerCU','_staffToggleTaskCompletion','_staffTaskPersistPatch','isDoneTask'],{CU:{id:'candice'},tasks:[task],_staffTaskWrites:{},sbPatch:async(_t,_q,b)=>[{id:'request',...b}],rebuildIdx(){},svTasks(){},refreshAll(){},toast(){}});
