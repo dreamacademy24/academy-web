@@ -136,7 +136,7 @@ export default function AfterSchoolFieldtripPage() {
   }, [visibleMonths.join(','), activeMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const STORAGE_KEY = "afterschool_rules_confirmed";
+    const STORAGE_KEY = "afterschool_rules_confirmed_20260911";
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && Date.now() < parseInt(saved, 10)) {
       setModalHidden(true);
@@ -165,7 +165,6 @@ export default function AfterSchoolFieldtripPage() {
       const month = parseInt(parts[0], 10);
       const day = parseInt(parts[1], 10);
       const scheduleDate = new Date(pht.getFullYear(), month - 1, day);
-      const scheduleDow = scheduleDate.getDay();
       const isFieldtrip = item.classList.contains("fieldtrip");
       let deadline: Date;
       if (isFieldtrip) {
@@ -173,13 +172,10 @@ export default function AfterSchoolFieldtripPage() {
         deadline = new Date(scheduleDate);
         deadline.setDate(deadline.getDate() - 7);
         deadline.setHours(16, 50, 0, 0);
-      } else if (scheduleDow === 1) {
-        deadline = new Date(scheduleDate);
-        deadline.setDate(deadline.getDate() - 3);
-        deadline.setHours(16, 50, 0, 0);
       } else {
         deadline = new Date(scheduleDate);
-        deadline.setDate(deadline.getDate() - 1);
+        deadline.setDate(deadline.getDate() - 4);
+        while (deadline.getDay() === 0 || deadline.getDay() === 6) deadline.setDate(deadline.getDate() - 1);
         deadline.setHours(16, 50, 0, 0);
       }
       if (pht >= deadline) {
@@ -237,7 +233,7 @@ export default function AfterSchoolFieldtripPage() {
     const noShowCheck = document.getElementById("no-show-check") as HTMLInputElement | null;
     if (noShowCheck?.checked) {
       localStorage.setItem(
-        "afterschool_rules_confirmed",
+        "afterschool_rules_confirmed_20260911",
         (Date.now() + 30 * 24 * 60 * 60 * 1000).toString()
       );
     }
@@ -269,6 +265,7 @@ export default function AfterSchoolFieldtripPage() {
     const form = formRef.current;
     if (!form || !form.reportValidity()) return;
 
+    disableExpiredSchedules();
     const checked = form.querySelectorAll('input[name="schedule"]:checked');
     if (checked.length === 0) {
       toastErr("날짜를 최소 1개 이상 선택해 주세요.");
@@ -514,7 +511,7 @@ export default function AfterSchoolFieldtripPage() {
               <h3>📋 신청 안내</h3>
               <ul>
                 <li><strong>월~금 오후 4시 50분까지</strong> 신청 가능하며, <strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
-                <li>당일 신청 불가 — 자리 여유가 있어도 미예약 시 수업 불가합니다.</li>
+                <li><strong>애프터스쿨 프로그램은 시작일 기준 4일 전 마감됩니다.</strong> 재료 및 차량 준비를 위해 마감 이후 추가 신청은 불가하오니 미리 신청해주세요. 마감일이 주말이면 직전 금요일 오후 4시 50분까지 신청해주세요.</li>
               </ul>
               <h3>⚠️ 취소 및 이용 제한</h3>
               <ul>
@@ -563,7 +560,7 @@ export default function AfterSchoolFieldtripPage() {
               <header className="card-header">
                 <div>
                   <p className="card-title">신청 정보 입력</p>
-                  <p className="notice"><strong>월~금 오후 4시 50분까지</strong> 접수된 신청만 확인 가능하며, <strong>당일 신청은 불가</strong>합니다.</p>
+                  <p className="notice"><strong>애프터스쿨은 시작일 4일 전, 필드트립은 7일 전 마감</strong>됩니다. 월~금 오후 4시 50분까지 접수하며, 마감일이 주말이면 직전 금요일까지 신청해주세요.</p>
                 </div>
                 <div className="chip">● 사전 예약제</div>
               </header>
@@ -732,7 +729,7 @@ export default function AfterSchoolFieldtripPage() {
                 <ul>
                   <li><strong>월~금 오후 4시 50분까지</strong> 신청 가능합니다.</li>
                   <li><strong>토·일 및 당일 신청은 불가</strong>합니다.</li>
-                  <li>자리 여유가 있어도 미예약 시 수업 참여 불가합니다.</li>
+                  <li><strong>애프터스쿨 프로그램은 시작일 기준 4일 전 마감됩니다.</strong> 재료 및 차량 준비를 위해 마감 이후 추가 신청은 불가합니다. 마감일이 주말이면 직전 금요일 오후 4시 50분까지 신청해주세요.</li>
                   <li style={{ color: "#dc2626" }}><strong>🚌 필드트립은 7일 전까지 신청 가능합니다.</strong></li>
                 </ul>
               </div>

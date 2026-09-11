@@ -25,12 +25,22 @@ async function _staffReservationPreview(host,id){
   }catch(e){if(host.isConnected&&host._request===request)host.innerHTML='<p role="alert">손님 내역을 불러오지 못했습니다. 예약을 다시 선택해주세요.</p>';}
 }
 function _staffTaskCanEdit(t){return !!(CU&&(isManagerCU()||t.createdBy===CU.id||_staffAssigned(t,CU.id)));}
+function _staffWebsiteTaskTitle(title){return /^\s*(?:\[\s*홈페이지\s*수정\s*\]|홈페이지\s*수정(?:\s*[:：-]|\s*$))/.test(title||'');}
+function _staffTaskTitleWithCategory(title,category){
+  var clean=String(title||'').replace(/^\s*\[\s*홈페이지\s*수정\s*\]\s*/, '').trim();
+  return category==='website'?'[홈페이지 수정] '+clean:clean;
+}
+function _staffTaskCompletionPatch(t,done){
+  var checklist=JSON.parse(JSON.stringify(t.checklist||[])),items=Array.isArray(checklist)?checklist:checklist.items||[];
+  items.forEach(function(item){item.done=done;});
+  return {done:done,progress:done?100:0,checklist:checklist};
+}
 function _staffTaskItems(t){return Array.isArray(t.checklist)?t.checklist:(t.checklist&&Array.isArray(t.checklist.items)?t.checklist.items:[]);}
 async function _staffToggleTaskCompletion(id){
   var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t||_staffTaskWrites[id])return false;
   var done=!isDoneTask(t);_staffTaskWrites[id]=true;
   try{
-    await _staffTaskPersistPatch(t,{done:done,progress:done?100:0});
+    await _staffTaskPersistPatch(t,_staffTaskCompletionPatch(t,done));
     if(done){if(typeof _empSelTaskId!=='undefined'&&String(_empSelTaskId)===String(id))_empSelTaskId=null;if(typeof _boardSelTaskId!=='undefined'&&String(_boardSelTaskId)===String(id))_boardSelTaskId=null;}
     try{if(done&&t.createdBy&&CU&&t.createdBy!==CU.id)createNotif(t.createdBy,'task',t.id,(CU.name||CU.id)+'님이 업무를 완료했습니다: '+t.title);}catch(e){}
     refreshAll();return true;
@@ -62,6 +72,9 @@ function _staffTaskPrepareForm(){
     var assign=document.getElementById('tmAssWrap');assign.tabIndex=0;assign.setAttribute('role','button');assign.setAttribute('aria-label','담당자 선택');
     assign.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleAssignPicker();}});
     var label=document.createElement('label');label.className='swt-field-label';label.htmlFor='tmTit';label.textContent='업무 제목';title.before(label);
+    var category=document.createElement('div');category.className='swt-category';
+    category.innerHTML='<label class="swt-field-label" for="swtCategory">업무 분류</label><select id="swtCategory" class="tm-input"><option value="general">일반 업무</option><option value="website">홈페이지 수정</option></select><p class="swt-help">홈페이지 수정을 선택하면 제목에 [홈페이지 수정] 말머리가 붙습니다. 담당자도 함께 지정해주세요.</p>';
+    label.before(category);
     var body=document.getElementById('tmNt');body.setAttribute('role','textbox');body.setAttribute('aria-label','업무 요청 내용');body.setAttribute('aria-multiline','true');
     body.dataset.ph='요청 배경, 해야 할 일, 전달 방법을 적어주세요.';
     var bodyHead=document.createElement('div');bodyHead.className='swt-body-head';
@@ -69,7 +82,7 @@ function _staffTaskPrepareForm(){
     body.previousElementSibling.before(bodyHead);
     bodyHead.querySelector('button').onclick=function(){
       if(body.textContent.trim()){body.focus();return;}
-      body.innerHTML='<h3>요청 배경</h3><p><br></p><h3>해야 할 일</h3><ul><li><br></li></ul><h3>결과 전달 방법</h3><p><br></p>';body.focus();
+      body.innerHTML=document.getElementById('swtCategory').value==='website'?'<h3>수정할 화면 주소</h3><p><br></p><h3>현재 문제와 재현 방법</h3><p><br></p><h3>원하는 결과 · 직원이 직접 처리해야 할 기능</h3><p><br></p><h3>확인 방법</h3><p>실제 홈페이지에서 검증 후 이 업무에 결과를 댓글로 남겨주세요.</p>':'<h3>요청 배경</h3><p><br></p><h3>해야 할 일</h3><ul><li><br></li></ul><h3>결과 전달 방법</h3><p><br></p>';_staffTaskPageDirty=true;body.focus();
     };
     var checklist=document.getElementById('tmClSection').parentElement;
     checklist.querySelector('.tm-ed-section-title').textContent='완료 조건 · 체크리스트';
@@ -91,6 +104,8 @@ function _staffTaskPrepareForm(){
   document.getElementById('swtBookingQuery').value='';document.getElementById('swtBookingResults').innerHTML='';
   var results=document.getElementById('swtBookingResults');results._version=(results._version||0)+1;
   var existing=editTaskId?tasks.find(function(t){return String(t.id)===String(editTaskId);}):null;
+  document.getElementById('swtCategory').value=existing&&_staffWebsiteTaskTitle(existing.title)?'website':'general';
+  if(existing)document.getElementById('tmTit').value=existing.title.replace(/^\s*\[\s*홈페이지\s*수정\s*\]\s*/, '');
   document.getElementById('tmCreated').textContent=_staffTaskCreatedLabel(existing&&existing.createdAt||Date.now());
   document.getElementById('tmAssPicker').style.display='none';
   var preview=document.getElementById('swtEditorReservation');if(!preview){preview=document.createElement('section');preview.id='swtEditorReservation';preview.className='swt-reservation-preview';modal.querySelector('.swt-editor-aside').prepend(preview);}preview.hidden=true;preview._request=(preview._request||0)+1;
@@ -142,6 +157,7 @@ async function _staffSaveInstruction(){
   var title=document.getElementById('tmTit').value.trim(),dateMode=document.querySelector('input[name="tmDM"]:checked');
   var due=dateMode&&dateMode.value==='date'?document.getElementById('tmDue').value:'';
   if(!title){showTaskErr('업무 제목을 입력해주세요.');document.getElementById('tmTit').focus();return;}
+  title=_staffTaskTitleWithCategory(title,document.getElementById('swtCategory').value);
   if(dateMode&&dateMode.value==='date'&&!due){showTaskErr('완료 기한을 선택하거나 기한 없음을 선택해주세요.');return;}
   var ids=Array.from(_assignSelected).filter(Boolean),sub=document.getElementById('tmSubToggle').checked;
   var form={title:title,assignees:ids,due:due,note:_tmNtGet(),files:mFiles,checklist:sub?{_sub:true,items:tmSubtasks}:tmChecklist,projId:tmProjId,
@@ -214,9 +230,8 @@ function _renderStaffTaskDetail(taskId,hostId){
     if(act==='back'){if(hostId==='empDetail'){_empSelTaskId=null;setEmpTab('home');}else renderBoardDetailEmpty();return;}
     if(act==='edit'){openTaskEdit(t.id);return;}
     if(act==='complete'){
-      if(!done&&items.some(function(c){return !c.done;})){status('아직 체크하지 않은 완료 조건이 있습니다. 각 항목을 먼저 확인해주세요.');return;}
-      if(done&&items.length){status('다시 진행할 완료 조건의 체크를 해제해주세요. 다른 항목의 기록은 유지됩니다.');return;}
-      var patch={done:!done,progress:done?0:100};
+      if(!done&&items.some(function(c){return !c.done;})&&!confirm('남아 있는 완료 조건까지 모두 확인하고 이 업무를 완료할까요?'))return;
+      var patch=_staffTaskCompletionPatch(t,!done);
       await update(patch);return;
     }
     if(act==='comment'){

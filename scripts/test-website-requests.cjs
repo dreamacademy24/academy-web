@@ -1,0 +1,20 @@
+const ts=require('typescript'),fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const cache={};
+function mod(name){if(cache[name])return cache[name];const file=require('path').resolve(__dirname,'../lib',name+'.ts'),exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;vm.runInNewContext(code,{exports,require:n=>mod(n.replace('./','')),Set,Date});return cache[name]=exports;}
+const g=mod('bookingGuardians');
+assert.equal(g.normalizeGuardians([{kor:'윤지은',eng:'Yoon Ji Eun',stay:'keep'}])[0].stay,'keep');
+assert.equal(g.normalizeGuardians(JSON.stringify([{kr:'보호자',en:'Guardian'}]))[0].kor,'보호자');
+assert.equal(g.normalizeGuardians(['보호자'])[0].kor,'보호자');
+const people=g.tutorGuardians({booker_name:'예약자',extra_guardians:[{kor:'윤지은',eng:'Yoon Ji Eun'},{kor:'윤지은',eng:'Yoon Ji Eun'}]});
+assert.equal(people.length,2);assert.equal(people[1].name_kr,'윤지은');
+const {planOnlineSessions}=mod('onlineSessionRepair');
+const history=[{session_number:8,scheduled_date:'2026-09-23'},{session_number:9,scheduled_date:'2026-09-25'}];
+const plan=planOnlineSessions('2026-09-08',['화','수','금'],42,history,new Set(['2026-10-30']),[]);
+assert.equal(plan.length,40);assert.equal(plan[0].date,'2026-09-08');assert.equal(plan[0].number,1);
+assert.equal(plan[6].date,'2026-09-22');assert.equal(plan[6].number,7);
+assert.equal(plan[7].date,'2026-09-29');assert.equal(plan[7].number,10);
+assert.equal(plan.at(-1).number,42);assert.equal(plan.at(-1).date,'2027-03-02');
+assert.equal(new Set([...plan.map(p=>p.date),...history.map(p=>p.scheduled_date)]).size,42);
+const blocked=planOnlineSessions('2026-09-08',['화'],2,[],new Set(['2026-09-08']),[{from:'2026-09-15',to:'2026-09-22'}]);
+assert.equal(blocked[0].date,'2026-09-29');
+console.log('Guardian legacy formats/deduplication and missing first seven online sessions: PASS');

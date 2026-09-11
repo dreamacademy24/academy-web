@@ -219,6 +219,7 @@ export default function PortalTutorPage() {
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   const [bookingStudents, setBookingStudents] = useState<any[]>([]);
   const [bookerInfo, setBookerInfo] = useState<{ name_kr: string; name_en: string; age: string } | null>(null);
+  const [guardianNames, setGuardianNames] = useState<{ name_kr: string; name_en: string; age: string }[]>([]);
   const [form2, setForm2] = useState<typeof INIT_FORM2 | null>(null);
   const [blocks, setBlocks] = useState<ScheduleBlock[]>([{ ...INIT_BLOCK }]);
   const [timeBlockIdx, setTimeBlockIdx] = useState<number>(0);
@@ -288,6 +289,7 @@ export default function PortalTutorPage() {
           const sd = await sRes.json();
           setBookingStudents(sd.students || []);
           if (sd.booker) setBookerInfo(sd.booker);
+          setGuardianNames(sd.guardians || []);
           // 튜터 가능 구간 = 드림하우스 체류 구간 (제이파크·큐브 리조트 단독은 방문 튜터 불가)
           let tStart = sd.checkin_date || "", tEnd = sd.checkout_date || "", tAllowed = true, tAcademy = false;
           try {
@@ -329,12 +331,14 @@ export default function PortalTutorPage() {
   // 모달 표시용 — 보호자(예약자) + 자녀
   const modalStudents = useMemo<any[]>(() => {
     const list: any[] = [];
-    if (bookerInfo && (bookerInfo.name_kr || bookerInfo.name_en)) {
+    if (guardianNames.length) {
+      list.push(...guardianNames.map(g => ({ ...g, _isGuardian: true })));
+    } else if (bookerInfo && (bookerInfo.name_kr || bookerInfo.name_en)) {
       list.push({ name_kr: bookerInfo.name_kr, name_en: bookerInfo.name_en, age: bookerInfo.age, _isGuardian: true });
     }
     list.push(...students);
     return list;
-  }, [bookerInfo, students]);
+  }, [bookerInfo, guardianNames, students]);
 
   function pickStudentFromModal(idx: number) {
     const s = modalStudents[idx];

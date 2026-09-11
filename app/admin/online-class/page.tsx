@@ -435,7 +435,7 @@ export default function OnlineClassPage() {
 
   const [regenerating, setRegenerating] = useState(false);
   async function regenerateSessions(enrollmentId: string) {
-    if (!window.confirm("예정(scheduled) 세션을 삭제하고 현재 요일/시간 설정으로 재생성합니다.\n\n출석/취소 이력은 보존됩니다. 진행할까요?")) return;
+    if (!window.confirm("등록된 시작일·요일·총 회차에 맞춰 예정 출석부 날짜를 복구합니다.\n출석·취소·보강 이력은 유지됩니다. 진행할까요?")) return;
     setRegenerating(true);
     try {
       const res = await fetch("/api/online-class/enrollments", {
@@ -791,7 +791,7 @@ export default function OnlineClassPage() {
                         {" "}
                         <button className="btn-sm" style={{ color: "#1a6fc4", borderColor: "#93c5fd" }} onClick={() => router.push(`/admin/online-class/${e.id}`)}>수정</button>
                         {" "}
-                        <button className="btn-sm" style={{ color: "#d97706", borderColor: "#fcd34d" }} onClick={() => regenerateSessions(e.id)} disabled={regenerating}>🔄</button>
+                        <button className="btn-sm" style={{ color: "#d97706", borderColor: "#fcd34d" }} onClick={() => regenerateSessions(e.id)} disabled={regenerating}>출석부 날짜 복구</button>
                         {" "}
                         <button className="btn-sm" onClick={() => router.push(`/admin/online-class/invoice?enrollment_id=${e.id}`)}>인보이스</button>
                         {" "}

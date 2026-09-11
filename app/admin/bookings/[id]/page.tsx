@@ -1,4 +1,5 @@
 "use client";
+import GuardianEditor from './GuardianEditor';
 import { useState, useEffect, useCallback } from "react";
 import { copyBookingUrl } from "@/lib/bookingCopy";
 import { toastErr, toastOk } from "@/lib/toast";
@@ -765,6 +766,7 @@ export default function BookingDetailPage() {
           );
         })()}
         <div className="sec">
+          <GuardianEditor booking={b} onSaved={load} />
           <h2>예약 정보</h2>
           <div className="grid">
             <div className="item"><div className="lbl">예약자</div>
@@ -912,7 +914,7 @@ export default function BookingDetailPage() {
             </div>
             {Array.isArray(b.extra_guardians) && b.extra_guardians.length > 0 && (
               <div className="item"><div className="lbl">추가 보호자</div>
-                <div className="val">{b.extra_guardians.map((g:any)=>(typeof g==="string"?g:(g?.name||g?.kr||g?.name_kr||g?.english||""))).filter(Boolean).join(", ") || `${b.extra_guardians.length}명`}</div>
+                <div className="val">{b.extra_guardians.map((g:any)=>(typeof g==="string"?g:(g?.kor||g?.name||g?.kr||g?.name_kr||g?.eng||g?.english||""))).filter(Boolean).join(", ") || `${b.extra_guardians.length}명`}</div>
               </div>
             )}
             {/* 보호자 체류 기간 — 식단 모리인폼 주차별 성인 수 연동 */}

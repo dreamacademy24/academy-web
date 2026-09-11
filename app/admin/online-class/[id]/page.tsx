@@ -182,11 +182,11 @@ export default function OnlineClassStudentPage() {
   }
 
   async function regenerate() {
-    if (!confirm("예정(scheduled) 세션을 삭제하고 현재 요일/시간 설정으로 재생성합니다.\n출석/취소 이력은 보존됩니다. 진행할까요?")) return;
+    if (!confirm("등록된 시작일·요일·총 회차에 맞춰 예정 출석부 날짜를 복구합니다.\n출석·취소·보강 이력은 유지됩니다. 진행할까요?")) return;
     const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, regenerate_sessions: true }) });
     const r = await res.json();
     if (!res.ok) { show(r.error || "재생성 실패", false); return; }
-    show(`세션 재생성 완료 (${r.sessions_created ?? ""}개)`);
+    show(`출석부 날짜 복구 완료 (${r.sessions_regenerated ?? 0}개)`);
     await load();
   }
 
@@ -275,7 +275,7 @@ export default function OnlineClassStudentPage() {
           <div style={{ flex: 1 }} />
           <button onClick={() => setShowInvoice(true)} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🧾 인보이스</button>
           <button onClick={openMent} style={{ border: "1px solid #d8b4fe", background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💬 안내 멘트</button>
-          <button onClick={regenerate} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🔄 세션 재생성</button>
+          <button onClick={regenerate} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>출석부 날짜 복구</button>
         </div>
 
         {/* 잔여 바 */}
@@ -381,7 +381,7 @@ export default function OnlineClassStudentPage() {
               <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
             <button onClick={save} disabled={saving} style={{ width: "100%", padding: "12px 0", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "저장 중…" : "💾 저장"}</button>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>요일 변경 후에는 [🔄 세션 재생성]으로 예정 세션을 갱신하세요 (이력은 보존)</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>요일 변경 후에는 [출석부 날짜 복구]으로 예정 세션을 갱신하세요 (이력은 보존)</div>
 
             {/* 💬 어드민 코멘트 — 결제·회차 등 기록 */}
             <div style={{ marginTop: 18, borderTop: "1px solid #eef2f7", paddingTop: 14 }}>
