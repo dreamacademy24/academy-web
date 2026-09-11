@@ -704,7 +704,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
       )}
 
       <div className="db-footer">
-        {String(bookingInfo?.accom_type || '').includes('드림하우스') && <p style={{ marginBottom: 12 }}><a href="/guides/dreamhouse-guide-20260911.pdf" target="_blank" rel="noopener noreferrer">드림하우스 이용 안내서 (앱 신청 안내)</a></p>}
         <p>문의사항이 있으시면 카카오톡 또는 이메일로 연락주세요.</p>
         <p style={{ marginTop: 4 }}><a href="/">드림아카데미 홈</a></p>
       </div>
