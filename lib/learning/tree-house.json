@@ -1,0 +1,100 @@
+{
+  "id": "dsl-f2-w1-d1",
+  "title": "My Tree House",
+  "story_title": "A Place to Read",
+  "story": "Bobby and Mia see a house in a tall tree. Dad helps them climb the ladder. Bobby gives a soft knock on the door. \"Come in!\" says Grandpa. There is a big window. Outside it, they see a picture of a jungle. \"Is it real?\" asks Mia. \"No. I painted it,\" says Grandpa. There are green leaves and funny monkeys in the picture. Grandpa opens a book. The children sit beside him and read. \"I like this little house,\" says Bobby. They put the book away. Dad helps them go down the ladder, one at a time.",
+  "words": [
+    {
+      "word": "tree",
+      "ipa": "[triː]",
+      "pos": "n.",
+      "definition": "A tall plant with a trunk and leaves.",
+      "example": "Our tree is very tall.",
+      "id": "dsl-f2-w1-d1-w01",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 0
+    },
+    {
+      "word": "house",
+      "ipa": "[haʊs]",
+      "pos": "n.",
+      "definition": "A building where people live.",
+      "example": "My house has a red roof.",
+      "id": "dsl-f2-w1-d1-w02",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 1
+    },
+    {
+      "word": "climb",
+      "ipa": "[klaɪm]",
+      "pos": "v.",
+      "definition": "To go up using your hands and feet.",
+      "example": "Bobby can climb fast.",
+      "id": "dsl-f2-w1-d1-w03",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 2
+    },
+    {
+      "word": "ladder",
+      "ipa": "[ˈlædər]",
+      "pos": "n.",
+      "definition": "Steps for going up and down.",
+      "example": "Mia goes up the ladder.",
+      "id": "dsl-f2-w1-d1-w04",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 3
+    },
+    {
+      "word": "knock",
+      "ipa": "[nɑːk]",
+      "pos": "v.",
+      "definition": "To hit a door gently to get attention.",
+      "example": "Please knock on the door.",
+      "id": "dsl-f2-w1-d1-w05",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 4
+    },
+    {
+      "word": "door",
+      "ipa": "[dɔːr]",
+      "pos": "n.",
+      "definition": "It opens and closes to let you in.",
+      "example": "Open the door, please!",
+      "id": "dsl-f2-w1-d1-w06",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 5
+    },
+    {
+      "word": "jungle",
+      "ipa": "[ˈdʒʌŋɡl]",
+      "pos": "n.",
+      "definition": "A thick forest with many plants.",
+      "example": "Monkeys live in the jungle.",
+      "id": "dsl-f2-w1-d1-w07",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 6
+    },
+    {
+      "word": "window",
+      "ipa": "[ˈwɪndoʊ]",
+      "pos": "n.",
+      "definition": "An opening in a wall to see through.",
+      "example": "I look out the window.",
+      "id": "dsl-f2-w1-d1-w08",
+      "image_sheet": "images/day1_words.png",
+      "image_cell_0based": 7
+    }
+  ],
+  "questions": [
+    "Who helps the children climb?",
+    "What is outside the window?"
+  ],
+  "answers": [
+    "Dad.",
+    "A painted picture of a jungle."
+  ],
+  "frames": [
+    "I can see a ...",
+    "My tree house has ..."
+  ]
+}

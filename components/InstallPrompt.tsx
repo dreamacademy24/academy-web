@@ -85,7 +85,7 @@ export default function InstallPrompt() {
   const hideOnPaths = ["/booking", "/invoice", "/receipt", "/admin", "/guide", "/estimate", "/apply", "/login", "/signup", "/qr", "/portal", "/driver", "/staff"];
   if (hideOnPaths.some(p => pathname.startsWith(p))) return null;
 
-  if (!show) return null;
+  if (!show || pathname.startsWith('/learn') || pathname === '/dream-app') return null;
 
   const isKakao = env === "kakao-android" || env === "kakao-ios";
   const showInstallBtn = env === "android" && deferredPrompt && !isKakao;
