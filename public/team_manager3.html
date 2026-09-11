@@ -5219,7 +5219,7 @@ function renderNotices(){
   notices.forEach(function(n){
     const readers=noticeReads[n.id]||[];
     const hasRead=readers.includes(CU.id);
-    const readInfo=n.requireRead?(isAdmin()?'<div class="notice-read">📖 '+readers.length+'/'+ALL.length+' 읽음</div>':(!hasRead?'<button class="notice-read-btn" onclick="markRead(\''+n.id+'\')">읽음 확인</button>':'<span style="font-size:10px;color:var(--green)">✓ 읽음</span>')):'';
+    const readInfo=n.requireRead?((isAdmin()?'<div class="notice-read">📖 '+readers.length+'/'+ALL.length+' 읽음</div>':'')+(!hasRead?'<button class="notice-read-btn" onclick="markRead(\''+n.id+'\')">읽음 확인</button>':'<span style="font-size:10px;color:var(--green)">✓ 읽음</span>')):'';
     const row=document.createElement('div');row.className='notice-item'+(n.done?' done':'');
     row.innerHTML='<div class="notice-dot"></div>'+
       '<div class="notice-text">'+esc(n.text)+(n.requireRead?'<span class="badge badge-amber" style="margin-left:6px;font-size:9px">읽음확인</span>':'')+readInfo+'<div class="notice-date">'+n.date+'</div></div>'+
@@ -5291,7 +5291,7 @@ function renderAnnouncementsPage(){
     if(n.requireRead){
       h+='<div class="tm-divider"></div>';
       if(admin)h+='<div style="font-size:12.5px;color:var(--text3)">📖 '+readers.length+'/'+ALL.length+' 읽음</div>';
-      else if(hasRead)h+='<div style="font-size:12.5px;color:var(--green);font-weight:700">✓ 읽음 확인됨</div>';
+      if(hasRead)h+='<div style="font-size:12.5px;color:var(--green);font-weight:700">✓ 읽음 확인됨</div>';
       else h+='<button class="tm-btn tm-btn-pri" onclick="var notice=\x27'+n.id+'\x27;markRead(notice).then(function(ok){if(ok&&_ntSelId===notice)_ntBack();})">읽음 확인</button>';
     }
     if(admin){
