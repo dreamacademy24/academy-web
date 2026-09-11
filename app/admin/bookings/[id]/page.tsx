@@ -766,7 +766,7 @@ export default function BookingDetailPage() {
           );
         })()}
         <div className="sec">
-          <GuardianEditor booking={b} onSaved={load} />
+          <GuardianEditor booking={b} onSaved={async () => { toastOk('보호자 정보를 저장했습니다. 손님 앱을 다시 열면 반영됩니다.'); await load(); }} />
           <h2>예약 정보</h2>
           <div className="grid">
             <div className="item"><div className="lbl">예약자</div>
