@@ -3,6 +3,17 @@
 .swt-detail .swh-primary{background:#5b48c4;color:#fff;border:1px solid #5b48c4;border-radius:8px;padding:11px 16px;font-weight:700}.swt-detail .swh-primary:hover{background:#4937aa}.swt-detail button:disabled{opacity:.6;cursor:wait}
 @media(max-width:850px){.swt-editor .tm-ed-inner{grid-template-columns:1fr;padding:18px!important}.swt-editor-aside{position:static;grid-row:1}.swt-detail-grid{grid-template-columns:1fr}.swt-detail-grid aside{position:static}.swt-detail-header h1{font-size:21px}}
 /* The task editor is part of the workspace, not an overlay. */
+/* Board tasks occupy the content area while preserving the list in the DOM. */
+#page-board.staff-board-detail-open>#boardTableWrap,#page-board.staff-board-detail-open>#boardMD{display:none!important}
+#page-board.staff-board-detail-open #boardDrawer{position:static!important;inset:auto!important;width:100%!important;max-width:none!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;z-index:auto!important}
+#page-board.staff-board-detail-open #boardDrawer>div:first-child{display:none!important}
+#page-board.staff-board-detail-open #boardDrawerBody,#page-board.staff-board-detail-open #boardDetail{padding:0!important;overflow:visible!important}
+#page-board.staff-board-detail-open .swt-detail{width:100%;max-width:1660px;margin:0 auto}
+#page-board.staff-board-detail-open .swt-detail-grid{grid-template-columns:minmax(0,1fr) 310px;gap:28px}
+#page-board.staff-board-detail-open .swt-detail-grid>aside{top:160px}
+#page-board.staff-board-detail-open .swt-card .apv-rich{font-size:16px!important;line-height:1.9!important}
+#page-board.staff-board-detail-open .swt-with-reservation .swt-detail-grid{grid-template-columns:minmax(0,1fr) minmax(340px,420px)}
+@media(max-width:900px){#page-board.staff-board-detail-open .swt-detail-grid,#page-board.staff-board-detail-open .swt-with-reservation .swt-detail-grid{grid-template-columns:1fr}#page-board.staff-board-detail-open .swt-detail-grid>aside{position:static}}
 #taskModal.swt-page{overflow:visible!important}#taskModal.swt-page .modal-box{height:auto!important;min-width:0!important;animation:none!important}
 body.staff-task-page-open .main-area>.content,body.staff-task-page-open .main-area>.topbar{display:none!important}
 #taskModal.swt-page{position:static!important;inset:auto!important;background:none!important;backdrop-filter:none!important;padding:0!important;z-index:auto!important;width:100%;align-items:stretch!important;justify-content:stretch!important;display:none}

@@ -1405,15 +1405,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-chip.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary);font-weight:700}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-<link rel="stylesheet" href="/staff-workspace-home.css?v=20260910-staff3">
-<script src="/staff-workspace-home.js?v=20260910-staff3"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260910-staff3">
-<script src="/staff-workspace-task.js?v=20260910-staff3"></script>
-<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260910-staff3">
-<script src="/staff-workspace-operations.js?v=20260910-staff3"></script>
-<link rel="stylesheet" href="/staff-workspace-media.css?v=20260910-staff3">
-<script src="/staff-workspace-media.js?v=20260910-staff3"></script>
-<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260910-staff3">
+<link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-staff4">
+<script src="/staff-workspace-home.js?v=20260911-staff4"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260911-staff4">
+<script src="/staff-workspace-task.js?v=20260911-staff4"></script>
+<link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-staff4">
+<script src="/staff-workspace-operations.js?v=20260911-staff4"></script>
+<link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-staff4">
+<script src="/staff-workspace-media.js?v=20260911-staff4"></script>
+<link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-staff4">
 </head>
 <body>
 
@@ -3816,6 +3816,7 @@ function updateNavBadges(){
 function jsonHash(obj){return JSON.stringify(obj);}
 var _pollInFlight=false;
 function _pollEditing(){
+  if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)return true;
   if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)return true;
   if(typeof _staffTaskSaving!=='undefined'&&_staffTaskSaving)return true;
   if(typeof _staffTaskWrites!=='undefined'&&Object.keys(_staffTaskWrites).length)return true;
@@ -4183,6 +4184,7 @@ document.addEventListener('click',function(e){
 });
 function showPage(p){
   if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen&&closeM('taskModal')===false)return;
+  if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)closeBoardDrawer(false);
   if(p==='chat')p='announcements'; // Retired chat deep links return to notices.
   try{var _ov=document.getElementById('ntViewOv');if(_ov){_ov.remove();document.body.style.overflow='';_ntSelId=null;}}catch(e){}
   if(p==='mywork'){
@@ -4305,18 +4307,9 @@ function _homeVisibleTasks(){
   return tasks.filter(function(t){return CU&&(t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0));});
 }
 function _homeGotoBoardTask(taskId){
-  // 미배정 업무는 'unassigned' 필터로, 그 외는 'all'로 — 좌측 목록에 항상 표시되도록
   var t=tasks.find(function(x){return String(x.id)===String(taskId);});
-  boardView='task';
-  boardFilter=(t&&isUnassigned(t))?'unassigned':'all';
-  _boardSelTaskId=taskId;
-  showPage('board');
-  // 렌더링 직후 재호출로 사이드패널 확실히 열기 (타이밍 안전장치)
-  setTimeout(function(){
-    if(_boardSelTaskId===taskId){
-      try{ renderBoardTaskDetail(taskId); }catch(e){ console.error('[_homeGotoBoardTask] detail err',e); }
-    }
-  },100);
+  boardView='task';boardFilter=(t&&isUnassigned(t))?'unassigned':'all';
+  showPage('board');openBoardTask(taskId);
 }
 function _homeGotoBoardFilter(f){
   boardFilter=f;_boardSelTaskId=null;showPage('board');
@@ -5569,7 +5562,9 @@ function setBoardView(v,el){
 function _setBoardFilter(f){boardFilter=f;_boardSelTaskId=null;renderBoard();}
 function _setBoardView(v){boardView=v;_boardSelTaskId=null;_boardSelEmpId=null;renderBoard();}
 function _setBoardSearch(v){_boardSearch=(v||'').trim().toLowerCase();renderBoardSidebar();}
+var _staffBoardDetailOpen=false,_staffBoardReturnScroll=0;
 function renderBoard(){
+  if(_staffBoardDetailOpen){if(_boardSelTaskId){renderBoardTaskDetail(_boardSelTaskId);return;}closeBoardDrawer(false);}
   var _twEl=document.getElementById('boardTableWrap'),_mdEl=document.getElementById('boardMD');
   if(_boardUIMode()==='table'&&_twEl){
     _twEl.classList.remove('hidden');
@@ -5722,23 +5717,8 @@ function _renderBoardEmpList(){
   }
   return html;
 }
-function selectBoardTask(taskId){
-  try{
-    _boardSelTaskId=taskId;
-    recordTaskView(taskId);
-    renderBoardSidebar();
-    renderBoardTaskDetail(taskId);
-  }catch(err){
-    console.error('[selectBoardTask] err',err,'taskId:',taskId);
-    var d=document.getElementById('boardDetail');
-    if(d)d.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;font-size:13px">상세 로드 실패: '+esc(String(err&&err.message||err))+'</div>';
-  }
-}
-function _boardGotoTaskFromEmp(taskId){
-  // 직원별 뷰 → 업무별 뷰 + 선택. 순서: view 먼저, 그다음 task 선택 (덮어쓰기 방지)
-  boardView='task';_boardSelEmpId=null;_boardSelTaskId=taskId;
-  renderBoard();
-}
+function selectBoardTask(taskId){openBoardTask(taskId);}
+function _boardGotoTaskFromEmp(taskId){openBoardTask(taskId);}
 function selectBoardEmp(empId){_boardSelEmpId=empId;renderBoardSidebar();renderBoardEmpDetail(empId);}
 // ══════════ 전체 업무 개편 (2026-07-06): 테이블 뷰 + 직원 스트립 + 방치 정리 + 확인(열람) 기록 ══════════
 var _boardEmpFilter=null;
@@ -6014,22 +5994,24 @@ function _boardTableHtml(){
   return h;
 }
 function openBoardTask(taskId){
+  var page=document.getElementById('page-board'),body=document.getElementById('boardDrawerBody'),det=document.getElementById('boardDetail'),drawer=document.getElementById('boardDrawer');
+  if(!page||!body||!det||!drawer)return;
+  if(!_staffBoardDetailOpen)_staffBoardReturnScroll=window.scrollY;
+  _staffBoardDetailOpen=true;_boardSelTaskId=taskId;
   recordTaskView(taskId);
-  _boardSelTaskId=taskId;
-  var drawer=document.getElementById('boardDrawer'),dim=document.getElementById('boardDrawerDim'),body=document.getElementById('boardDrawerBody'),det=document.getElementById('boardDetail');
-  if(!drawer||!det||!body){selectBoardTask(taskId);return;}
-  if(det.parentNode!==body){body.appendChild(det);det.style.padding='0';}
-  drawer.style.display='block';if(dim)dim.style.display='block';
-  renderBoardTaskDetail(taskId);
-  setTimeout(function(){try{if(_boardUIMode()==='table')renderBoardTable();}catch(e){}},600);
+  if(det.parentNode!==body)body.appendChild(det);
+  page.classList.add('staff-board-detail-open');drawer.style.display='block';
+  drawer.setAttribute('role','region');drawer.setAttribute('aria-label','업무 상세');
+  var dim=document.getElementById('boardDrawerDim');if(dim)dim.style.display='none';
+  renderBoardTaskDetail(taskId);window.scrollTo(0,0);
 }
-function closeBoardDrawer(){
-  var drawer=document.getElementById('boardDrawer'),dim=document.getElementById('boardDrawerDim'),det=document.getElementById('boardDetail'),md=document.getElementById('boardMD');
-  if(drawer)drawer.style.display='none';
-  if(dim)dim.style.display='none';
+function closeBoardDrawer(restoreScroll){
+  var wasOpen=_staffBoardDetailOpen,drawer=document.getElementById('boardDrawer'),dim=document.getElementById('boardDrawerDim'),det=document.getElementById('boardDetail'),md=document.getElementById('boardMD'),page=document.getElementById('page-board');
+  _staffBoardDetailOpen=false;_boardSelTaskId=null;
+  if(page)page.classList.remove('staff-board-detail-open');
+  if(drawer)drawer.style.display='none';if(dim)dim.style.display='none';
   if(det&&md&&det.parentNode&&det.parentNode.id==='boardDrawerBody'){md.appendChild(det);det.style.padding='24px';}
-  _boardSelTaskId=null;
-  if(_boardUIMode()==='table'){try{renderBoardTable();}catch(e){}}
+  if(wasOpen&&restoreScroll!==false)window.scrollTo(0,_staffBoardReturnScroll);
 }
 function _btSelIds(){return Array.prototype.slice.call(document.querySelectorAll('.btChk:checked')).map(function(c){return c.value;});}
 function bulkArchiveTasks(){
@@ -6116,6 +6098,7 @@ function _homeDirectivesHtml(){
 }
 
 function renderBoardDetailEmpty(msg){
+  if(_staffBoardDetailOpen){closeBoardDrawer();return;}
   var d=document.getElementById('boardDetail');if(!d)return;
   d.innerHTML='<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:40px"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:14px;font-weight:600">'+esc(msg||'')+'</div></div>';
 }

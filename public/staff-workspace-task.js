@@ -39,7 +39,7 @@ async function _staffToggleTaskCompletion(id){
 }
 function _staffTaskCompletedView(hostId){
   if(hostId==='empDetail'){_empSelTaskId=null;setEmpTab('home');}
-  else{_boardSelTaskId=null;renderBoard();}
+  else{if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)closeBoardDrawer();_boardSelTaskId=null;renderBoard();}
   toast('완료했습니다. 완료 목록에서 다시 확인할 수 있습니다.');
 }
 function _staffTaskCreatedLabel(value){var date=new Date(value);return value&&!isNaN(date.getTime())?date.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}):'미지정';}

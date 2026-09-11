@@ -54,6 +54,23 @@ function deferred() {
   return { promise, resolve, reject };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test('board detail uses the full page, keeps filters, and restores the list scroll on return',()=>{
+ const nodes={},scrolls=[],rendered=[];
+ for(const id of ['page-board','boardDrawerBody','boardDetail','boardDrawer','boardDrawerDim','boardMD'])nodes[id]={id,style:{},classList:{add(){},remove(){}},setAttribute(){},appendChild(child){child.parentNode=this;}};
+ nodes.boardDetail.parentNode=nodes.boardMD;
+ const c=context(['openBoardTask','closeBoardDrawer'],{_staffBoardDetailOpen:false,_staffBoardReturnScroll:0,_boardSelTaskId:null,boardFilter:'urgent',_boardEmpFilter:'song',_boardSearch:'pickup',scrollY:540,document:{getElementById:id=>nodes[id]},recordTaskView(){},renderBoardTaskDetail:id=>rendered.push(id),scrollTo:(x,y)=>scrolls.push(y)});
+ c.openBoardTask('A');assert.equal(c._staffBoardDetailOpen,true);assert.equal(nodes.boardDrawerDim.style.display,'none');assert.equal(nodes.boardDetail.parentNode,nodes.boardDrawerBody);
+ c.scrollY=900;c.openBoardTask('B');assert.equal(c._staffBoardReturnScroll,540);
+ c.closeBoardDrawer();assert.equal(c._staffBoardDetailOpen,false);assert.equal(c._boardSelTaskId,null);assert.equal(nodes.boardDetail.parentNode,nodes.boardMD);assert.deepEqual(scrolls,[0,0,540]);assert.equal(c.boardFilter,'urgent');assert.equal(c._boardEmpFilter,'song');assert.equal(c._boardSearch,'pickup');
+});
+test('home task opens the full detail after switching to the board',()=>{
+ const calls=[];const c=context(['_homeGotoBoardTask'],{tasks:[{id:'A'}],isUnassigned:()=>false,showPage:p=>calls.push(p),openBoardTask:id=>calls.push(id)});
+ c._homeGotoBoardTask('A');assert.deepEqual(calls,['board','A']);
+});
+test('completion exits board detail before rendering the updated list',()=>{
+ const calls=[];const c=context(['_staffTaskCompletedView'],{_staffBoardDetailOpen:true,closeBoardDrawer:()=>calls.push('close'),renderBoard:()=>calls.push('list'),toast(){}});
+ c._staffTaskCompletedView('boardDetail');assert.deepEqual(calls,['close','list']);assert.equal(c._boardSelTaskId,null);
+});
 test('full workspace editor pauses background refresh even after focus leaves an input',()=>{
  const c=context(['_pollEditing'],{_staffTaskPageOpen:true,document:{activeElement:null,querySelector:()=>null}});
  assert.equal(c._pollEditing(),true);
