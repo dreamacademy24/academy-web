@@ -32,7 +32,7 @@ export async function POST(req: Request) {
       p_password: password,
     });
     if (error) {
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: 'Could not connect to the sign-in service. Please try again shortly.' }, { status: 503 });
     }
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) {
@@ -53,8 +53,7 @@ export async function POST(req: Request) {
     });
     response.cookies.set(staffCookie(row.username));
     return response;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, message: 'Could not process sign-in. Please try again shortly.' }, { status: 503 });
   }
 }

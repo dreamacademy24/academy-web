@@ -67,3 +67,17 @@ test('local login issues a server cookie only after successful credentials',asyn
   assert.equal(response.status,row?200:401);assert.equal(cookies.length,row?1:0);
  }
 });
+
+test('both staff login routes distinguish service failure from invalid credentials and hide internal errors',async()=>{
+ for(const kind of ['admin','admineng'])for(const failure of ['rpc','throw']){
+  const code=ts.transpileModule(readFileSync(new URL(`../app/api/${kind}/login/route.ts`,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const exports={},cookies=[];
+  vm.runInNewContext(code,{exports,process:{env:{}},require:n=>({
+   '@supabase/supabase-js':{createClient:()=>({rpc:async()=>{if(failure==='throw')throw new Error('private connection detail');return {data:null,error:{message:'private connection detail'}};}})},
+   'next/server':{NextResponse:{json:(body,init)=>({body,status:init?.status||200,cookies:{set:v=>cookies.push(v)}})}},
+   '@/lib/portalAuth':{staffCookie:username=>({username})},
+  })[n]});
+  const result=await exports.POST({json:async()=>({username:'test',password:'test-fixture'})});
+  assert.equal(result.status,503);assert.equal(cookies.length,0);assert.ok(!JSON.stringify(result.body).includes('private connection detail'));
+ }
+});

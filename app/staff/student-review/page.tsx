@@ -31,7 +31,7 @@ export default function StudentReview(){
  }
  const filtered=(data?.items||[]).filter(i=>(filter==='all'||i.status===filter)&&`${i.name} ${i.reservation} ${i.candidates.map(c=>c.name+' '+c.english).join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()));
  return <main className={styles.main}>
-  <header className={styles.top}><Link href="/admin/today">← 직원 홈</Link><span>DREAM · STUDENT CARE</span></header>
+  <header className={styles.top}><Link href="/staff/students">← 학생 케어 · 방문 이력</Link><span>DREAM · STUDENT CARE</span></header>
   <section className={styles.hero}><div><p>학생 케어 기반 정리 · 01</p><h1>학생 연결 검토</h1><p>예약에 있는 학생과 기존 학생 명부를 함께 확인합니다.</p></div><button disabled={busy||saving} onClick={load}>{busy?'불러오는 중…':'새로 확인'}</button></section>
   <aside className={styles.notice}><strong>학생을 확인한 뒤 연결합니다.</strong> 이름이나 번호가 같아도 자동으로 합치지 않습니다. 원본 예약 자료는 유지됩니다.</aside>{saveMessage&&<p role="status" className={styles.notice}>{saveMessage}</p>}
   {error&&<section className={styles.error} role="alert"><p>{error}</p>{auth&&<button disabled={busy} onClick={relogin}>관리자 계정으로 다시 로그인</button>}</section>}

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       p_password: password,
     });
     if (error) {
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: '로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 });
     }
 
     const row = Array.isArray(data) ? data[0] : data;
@@ -57,8 +57,7 @@ export async function POST(req: Request) {
     });
     response.cookies.set(staffCookie(row.username));
     return response;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown';
-    return NextResponse.json({ success: false, message: msg }, { status: 500 });
+  } catch {
+    return NextResponse.json({ success: false, message: '로그인 요청을 처리하지 못했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 });
   }
 }
