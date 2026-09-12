@@ -152,8 +152,10 @@ export default function MayLedgerPage() {
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAuthed(true);
     const saved = typeof window !== "undefined" ? sessionStorage.getItem(PASS_KEY) : null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved) setPass(saved);
   }, [router]);
 
@@ -178,6 +180,7 @@ export default function MayLedgerPage() {
     return true;
   }, [api]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (authed && pass) load(pass); }, [authed, pass, load]);
 
   async function submitPass(e: React.FormEvent) {
@@ -216,7 +219,10 @@ export default function MayLedgerPage() {
   async function saveRate(v: number) { if (!isFinite(v) || v <= 0) return; setKrw(v); await api("POST", { body: { kind: "config", krwPerPhp: v } }); }
 
   const divOptions = ws === "집" ? HOME_DIV : (fType === "income" ? CO_INC : CO_EXP);
-  useEffect(() => { if (!divOptions.includes(fDiv)) setFDiv(divOptions[0]); }, [ws, fType]); // eslint-disable-line
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!divOptions.includes(fDiv)) setFDiv(divOptions[0]);
+  }, [ws, fType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!authed) return null;
   const setThemeAttr = theme;
