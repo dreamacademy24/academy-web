@@ -11,7 +11,7 @@ function safeLink(value:unknown){
 }
 function documentFor(body:string){
   const plain=!/<\/?[a-z][\s\S]*>/i.test(body);
-  const content=plain?body.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\n','<br>'):body;
+  const content=plain?body.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('\n','<br>'):body.replace(/<a(?=[\s>])/gi,'<a target="_blank" rel="noopener noreferrer"');
   // The sandbox has no scripts, forms, same-origin privilege or top-navigation permission.
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>body{margin:0;padding:8px 16px 24px;font:15px/1.8 Arial,sans-serif;color:#334155;overflow-wrap:anywhere}h1,h2,h3{color:#172554;line-height:1.4}img{max-width:100%;height:auto}a{color:#2454a6}table{border-collapse:collapse;max-width:100%}td,th{border:1px solid #dde3ec;padding:8px}p{margin:0 0 16px}</style></head><body>${content}</body></html>`;
 }
