@@ -37,3 +37,7 @@
 ## 원본과 그림
 
 `lib/learning/tree-house.json`은 승인 교재에서 옮긴 단어·이야기 데이터이다. 이미지 파일과 생성 프롬프트는 `docs/learning-unit-assets.md` 참고. 신규 그림은 내장 image_gen 도구로 생성하여 프로젝트 안에 저장했다.
+
+## 첫 화면 수정
+사용자 요청에 따라 /dream-app을 게스트(신청용) / 학습모드 선택 입구로 정리했다. 기본 및 게스트 manifest의 시작 주소와 설치 안내의 바로가기 주소를 이 입구로 변경하고, 기존 manifest id는 유지했다. 게스트 manifest scope를 /로 넓혀 학습 경로를 포함했다. 모바일 390x844에서 두 선택 카드가 스크롤 없이 보이며, 양쪽 모드 진입과 돌아오기, manifest 시작 주소, TypeScript 및 변경 화면 ESLint 검사를 통과했다. 아직 서버에 배포하지 않은 로컬 변경이다.
+
