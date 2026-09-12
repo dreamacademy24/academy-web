@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
+import {openStaffSignIn} from '@/lib/staffSessionClient';
 import styles from './students.module.css';
 type Assignment={id:string;teacherId:string;name:string;active:boolean;available:boolean};
 type Visit={id:string;learner_id:string;name_kr:string;name_en:string|null;start_date:string;end_date:string;reason?:string;linkMethod?:string;assignments:Assignment[];history:{id:string;teacher:string;actor:string;active:boolean;at:string}[]};
@@ -23,11 +24,7 @@ export default function StudentCare(){
   catch(e){setError(e instanceof Error?e.message:'Unable to load student care.');}finally{setBusy(false);}
  },[]);
  useEffect(()=>{void load();},[load]);
- async function login(){
-  setBusy(true);
-  try{const r=await fetch('/api/admin/logout',{method:'POST'});if(!r.ok)throw new Error();for(const k of ['adminToken','adminInfo','teacherSession'])localStorage.removeItem(k);window.location.assign('/login');}
-  catch{setError('Unable to open sign in. Please retry.');setBusy(false);}
- }
+ function login(){openStaffSignIn();}
  function choose(v:Visit,teacherId:string,active:boolean,name:string){
   setMessage('');setPending({requestId:crypto.randomUUID(),visitId:v.id,teacherId,active,name,previousId:v.assignments.find(a=>a.teacherId===teacherId)?.id||null});
  }

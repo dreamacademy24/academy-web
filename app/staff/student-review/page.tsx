@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
+import {openStaffSignIn} from '@/lib/staffSessionClient';
 import type {ReviewItem,ReviewStatus} from '@/lib/student-care/reconcile';
 import styles from './review.module.css';
 type Item=ReviewItem&{token?:string|null;linked?:{learner_id:string;visit_id:string}|null;name:string;reservation:string;start:string|null;end:string|null;candidates:{id:string;name:string;english:string}[]};
@@ -24,11 +25,7 @@ export default function StudentReview(){
   catch(e){setError(e instanceof Error?e.message:'불러오지 못했어요.');}finally{setBusy(false);}
  },[]);
  useEffect(()=>{void load();},[load]);
- async function relogin(){
-  setBusy(true);
-  try{const r=await fetch('/api/admin/logout',{method:'POST'});if(!r.ok)throw new Error();localStorage.removeItem('adminToken');localStorage.removeItem('adminInfo');localStorage.removeItem('teacherSession');window.location.assign('/login');}
-  catch{setError('로그인 화면으로 이동하지 못했습니다. 다시 시도해주세요.');setBusy(false);}
- }
+ function relogin(){openStaffSignIn();}
  const filtered=(data?.items||[]).filter(i=>(filter==='all'||i.status===filter)&&`${i.name} ${i.reservation} ${i.candidates.map(c=>c.name+' '+c.english).join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()));
  return <main className={styles.main}>
   <header className={styles.top}><Link href="/staff/students">← 학생 케어 · 방문 이력</Link><span>DREAM · STUDENT CARE</span></header>

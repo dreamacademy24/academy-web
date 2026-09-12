@@ -4,7 +4,7 @@ import {canReviewStudents} from '@/lib/staffSession';
 const respond=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 const uuid=(value:unknown)=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 export async function POST(req:Request){
- const staff=await getStaffIdentity(req);
+ let staff;try{staff=await getStaffIdentity(req);}catch{return respond({error:'로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.'},503);}
  if(!staff)return respond({error:'다시 로그인해주세요.'},401);
  if(!canReviewStudents(staff))return respond({error:'담당자 배정은 관리자만 변경할 수 있습니다.'},403);
  let body;

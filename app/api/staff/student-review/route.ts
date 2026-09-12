@@ -7,7 +7,7 @@ export const dynamic='force-dynamic';
 const respond=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie'}});
 type Booking=BookingInput&{reservation_no:string|null;academy_start:string|null;academy_end:string|null};
 export async function GET(req:Request){
- const staff=await getStaffIdentity(req);
+ let staff;try{staff=await getStaffIdentity(req);}catch{return respond({error:'로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.'},503);}
  if(!staff)return respond({error:'로그인이 만료되었어요. 관리자 계정으로 다시 로그인해주세요.'},401);
  if(!canReviewStudents(staff))return respond({error:'학생 연결 검토는 관리자만 이용할 수 있습니다.'},403);
  try{

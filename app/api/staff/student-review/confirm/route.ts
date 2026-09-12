@@ -7,7 +7,7 @@ export const dynamic='force-dynamic';
 const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
 const uuid=(s:unknown):s is string=>typeof s==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 export async function POST(req:Request){
- const staff=await getStaffIdentity(req);
+ let staff;try{staff=await getStaffIdentity(req);}catch{return reply({error:'로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.'},503);}
  if(!staff)return reply({error:'다시 로그인해주세요.'},401);
  if(!canReviewStudents(staff))return reply({error:'관리자만 연결을 확정할 수 있습니다.'},403);
  try{

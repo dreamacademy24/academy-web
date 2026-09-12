@@ -7,6 +7,7 @@ export function signStaffSession(username:string,key:string,now=Date.now()){
  return `${payload}.${createHmac('sha256',key).update('portal-staff-v1:'+payload).digest('base64url')}`;
 }
 export async function resolveStaffSession(req:Request,key:string,lookup:(username:string)=>Promise<StaffIdentity|null>,now=Date.now()):Promise<StaffIdentity|null>{
+ let username:string;
  try{
   if(!key)return null;
   const origin=req.headers.get('origin');
@@ -20,7 +21,9 @@ export async function resolveStaffSession(req:Request,key:string,lookup:(usernam
   if(expected.length!==actual.length||!timingSafeEqual(expected,actual))return null;
   const claim=JSON.parse(Buffer.from(payload,'base64url').toString());
   if(typeof claim.username!=='string'||!claim.username.trim()||!Number.isFinite(claim.expires)||claim.expires<=now)return null;
-  return await lookup(claim.username);
+  username=claim.username;
  }catch{return null;}
+ // A failed directory lookup is service unavailability, not an invalid login.
+ return await lookup(username);
 }
 export const canReviewStudents=(staff:StaffIdentity|null)=>staff?.role==='korean_admin';

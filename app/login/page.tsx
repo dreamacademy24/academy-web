@@ -1,8 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { isAdminAuthed, setAdminAuthed } from "@/lib/adminAuth";
+import {clearStoredStaffIdentity,storeVerifiedStaff} from '@/lib/staffSessionClient';
+import {staffDestination} from '@/lib/staffNavigation';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,17 +12,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
+  const [checking,setChecking]=useState(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && isAdminAuthed()) {
-      try {
-        const info = JSON.parse(localStorage.getItem("adminInfo") || "{}");
-        router.replace(info.role === "tutor" ? "/tutor/online-class" : "/admin/hub");
-      } catch { router.replace("/admin/hub"); }
-    }
+    let live=true;
+    (async()=>{
+      try{
+        const response=await fetch('/api/staff/session',{method:'POST',credentials:'same-origin',cache:'no-store'});
+        if(!live)return;
+        if(response.ok){const {staff}=await response.json();if(!live)return;storeVerifiedStaff(staff);router.replace(staffDestination(staff.role,new URLSearchParams(window.location.search).get('next')));}
+        else if(response.status===401)clearStoredStaffIdentity();
+        else setErr('로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
+      }catch{if(live)setErr('로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');}
+      finally{if(live)setChecking(false);}
+    })();
+    return()=>{live=false;};
   }, [router]);
 
   async function handleLogin() {
+    if(checking||loading)return;
     const idTrim = form.id.trim();
     if (!idTrim || !form.password) { setErr("아이디와 비밀번호를 입력해주세요."); return; }
     setErr(""); setLoading(true);
@@ -35,15 +45,8 @@ export default function LoginPage() {
       const data = await res.json().catch(() => null);
       if (res.ok && data?.success) {
         const staff = data.staff;
-        if (data.role === "local_teacher") {
-          // 현지직원 → teacherSession + 현지직원 허브
-          localStorage.setItem("teacherSession", JSON.stringify(staff));
-          window.location.href = "/admineng/hub";
-          return;
-        }
-        // korean_admin (그 외 어드민 역할 포함) → 어드민 세션 + 어드민 허브
-        setAdminAuthed(staff.username, { role: data.role, name: staff.name, staffId: staff.username });
-        window.location.href = "/admin/hub";
+        storeVerifiedStaff({...staff,role:data.role});
+        window.location.href = staffDestination(data.role,new URLSearchParams(window.location.search).get('next'));
         return;
       }
       // 401 = 직원 계정 아님 → 일반 회원 로그인으로 폴백. 그 외 상태는 에러 표시.
@@ -53,7 +56,7 @@ export default function LoginPage() {
         return;
       }
     } catch {
-      // 네트워크 오류 등 → 일반 회원 로그인 시도로 폴백
+      setErr('로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.');setLoading(false);return;
     }
 
     // 2) 일반 회원 (아이디 → 가상 이메일 변환)
@@ -132,14 +135,14 @@ a{text-decoration:none;color:inherit;}
           </div>
         </div>
 
-        <button className="btn" disabled={loading} onClick={handleLogin}>
-          {loading ? "로그인 중..." : "로그인"}
+        <button className="btn" disabled={loading||checking} onClick={handleLogin}>
+          {checking?'로그인 확인 중...':loading ? "로그인 중..." : "로그인"}
         </button>
 
         {err && <div className="err">{err}</div>}
 
-        <div className="bottom">아직 계정이 없으신가요? <a href="/signup">회원가입</a></div>
-        <a href="/" className="back">← 홈으로 돌아가기</a>
+        <div className="bottom">아직 계정이 없으신가요? <Link href="/signup">회원가입</Link></div>
+        <Link href="/" className="back">← 홈으로 돌아가기</Link>
       </div>
     </div>
   </>);

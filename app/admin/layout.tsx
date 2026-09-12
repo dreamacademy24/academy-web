@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import StaffSessionBoundary from "@/components/StaffSessionBoundary";
 
 type Item = { label: string; href: string; ext?: boolean; badge?: number };
 const NAV: { title: string; items: Item[] }[] = [
@@ -15,14 +16,16 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "업무자료", href: "/staff?page=manual", ext: true },
     { label: "안내문구", href: "/staff?page=guide", ext: true },
   ]},
+  { title: "학생관리", items: [
+    { label: "학생관리", href: "/admin/students" },
+    { label: "학생케어 · 방문 이력", href: "/staff/students", ext: true },
+    { label: "튜터", href: "/admin/tutor-class" },
+    { label: "화상영어", href: "/admin/online-class" },
+    { label: "학생케어 사용 가이드 · 한/영", href: "/staff-guides/student-care/ko.html", ext: true },
+  ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },
-    { label: "학생 관리", href: "/admin/students" },
-    { label: "학생 케어 · 방문 이력", href: "/staff/students", ext: true },
-    { label: "학생 케어 가이드 · 한/영", href: "/staff-guides/student-care/ko.html", ext: true },
     { label: "정산 관리", href: "/admin/settlement" },
-    { label: "튜터 수업", href: "/admin/tutor-class" },
-    { label: "화상영어", href: "/admin/online-class" },
     { label: "SSP 관리", href: "/admin/ssp" },
     { label: "상담 예약", href: "/admin/consultations" },
     { label: "애프터스쿨/필드트립", href: "/admin/afterschool-fieldtrip" },
@@ -67,6 +70,13 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
 ];
 
+function AdminViewSource({ onChange }: { onChange: (src: string) => void }) {
+  const searchParams = useSearchParams();
+  const src = searchParams.get("src") || "";
+  useEffect(() => { onChange(src); }, [src, onChange]);
+  return null;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -105,14 +115,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const init: Record<string, boolean> = {};
-    const sp = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("src") || "") : "";
-    NAV.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && sp === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
+    NAV.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && viewSrc === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
     setOpen(init);
-    if (typeof window !== "undefined") setViewSrc(new URLSearchParams(window.location.search).get("src") || "");
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
-  }, [pathname]);
+  }, [pathname, viewSrc]);
 
-  if (framed) return <>{children}</>;
+  // Online attendance has its own tutor sign-in, separate from the staff workspace.
+  const content = pathname === "/admin" || pathname === "/admin/online-class-attendance" ? children : (
+    <StaffSessionBoundary requiredRole="korean_admin">{children}</StaffSessionBoundary>
+  );
+
+  if (framed) return <>{content}</>;
 
   const isView = pathname === "/admin/view";
   const badgeFor = (it: Item) => it.href === "/admin/bookings" ? roomAlerts : it.href === "/admin/tutor-class" ? tutorAlerts : 0;
@@ -123,6 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+      <Suspense fallback={null}><AdminViewSource onChange={setViewSrc} /></Suspense>
       <style>{`@media print{.admin-noprint{display:none!important}.admin-main{height:auto!important;overflow:visible!important}}`}</style>
       {!hidden && (
         <aside className="admin-noprint" style={{ width: 224, flexShrink: 0, background: "#3a47a8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
@@ -133,10 +147,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/today" style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 18px", fontSize: 15, fontWeight: 700, color: todayOn ? "#fff" : "#eef0fc", textDecoration: "none", background: todayOn ? "rgba(255,255,255,0.20)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>📅 오늘 한눈에</Link>
           {NAV.map(g => (
             <div key={g.title}>
-              <div onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 18px", fontSize: 15, fontWeight: 800, color: "#fff", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", background: open[g.title] ? "rgba(0,0,0,0.14)" : "transparent" }}>
+              <button type="button" aria-expanded={Boolean(open[g.title])} onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", border: 0, textAlign: "left", fontFamily: "inherit", padding: "13px 18px", fontSize: 15, fontWeight: 800, color: "#fff", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", background: open[g.title] ? "rgba(0,0,0,0.14)" : "transparent" }}>
                 {g.title} <span style={{ color: open[g.title] ? "#FFD54A" : "#c5cbf2", fontSize: 12 }}>{open[g.title] ? "▲" : "▼"}</span>
-              </div>
+              </button>
               {open[g.title] && g.items.map(it => {
                 const on = active(it);
                 const bdg = badgeFor(it);
@@ -151,7 +165,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 }
                 const to = it.ext ? `/admin/view?src=${encodeURIComponent(it.href)}` : it.href;
                 return (
-                  <Link key={it.href} href={to} onClick={() => it.ext && setViewSrc(it.href)} style={style}>
+                  <Link key={it.href} href={to} aria-current={on ? "page" : undefined} style={style}>
                     <span>{it.label}</span>
                     {bdg > 0 && <span style={{ minWidth: 19, height: 19, padding: "0 5px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#e23b3b", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>❗{bdg}</span>}
                   </Link>
@@ -166,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {hidden && (
           <button className="admin-noprint" onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#3a47a8", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
         )}
-        {children}
+        {content}
       </main>
     </div>
   );
