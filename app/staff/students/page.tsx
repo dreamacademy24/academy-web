@@ -34,6 +34,7 @@ export default function StudentCare(){
  return <main className={styles.main}>
   <header className={styles.top}><Link href={admin?'/admin/today':'/admineng/hub'}>← {admin?'직원 홈':'Teacher Hub'}</Link><span>DREAM · STUDENT CARE</span></header>
   <section className={styles.hero}><div><p>함께 이어가는 학생 케어 · Connected care</p><h1>{admin?'학생과 방문 이력':'My students'}</h1><p>{admin?'같은 학생의 방문을 구분하고, 방문별로 담당 선생님을 연결합니다.':'Prepare for each visit and care for your assigned students.'}</p></div><button disabled={busy||saving} onClick={()=>{setMessage('');void load();}}>{busy?'Loading…':'↻ Refresh'}</button></section>
+  <nav className={styles.actions} aria-label="Staff guides"><a href="/staff-guides/student-care/ko.html">직원 가이드 · 한국어</a><a href="/staff-guides/student-care/en.html" lang="en">Staff guide · English</a></nav>
   {auth&&<button disabled={busy} onClick={login}>Sign in again / 다시 로그인</button>}
   {error&&<p className={styles.error} role="alert">{error}</p>}
   {message&&<p className={styles.notice} role="status">{message}</p>}

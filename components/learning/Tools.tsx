@@ -33,7 +33,7 @@ export function useSpeech() {
   function speak(text: string) {
     if (!('speechSynthesis' in window)) { setError('이 브라우저에서는 소리를 들려줄 수 없어요. 선생님과 함께 읽어주세요.'); return; }
     window.speechSynthesis.cancel(); const id = ++generation.current;
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = .82;
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = .7;
     const voices = speechSynthesis.getVoices(); const voice = voices.find(v => /en-US/i.test(v.lang) && /Google|Samantha|Aria/i.test(v.name)) || voices.find(v => /^en/i.test(v.lang));
     if (voice) u.voice = voice;
     setError(''); setSpeaking(true);
