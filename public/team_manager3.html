@@ -3220,9 +3220,10 @@ async function saveGuideMsg() {
     <div class="modal-title">공지 추가</div>
     <div class="form-group"><label class="form-label">공지 내용</label><textarea class="form-textarea" id="nmTxt" placeholder="공지 내용 입력..." rows="3"></textarea></div>
     <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)"><input type="checkbox" id="nmRequireRead" style="width:16px;height:16px;accent-color:var(--primary)"> 읽음 확인 필요</label></div>
+    <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)"><input type="checkbox" id="nmTeacherShared" style="width:16px;height:16px;accent-color:var(--primary)"> 현지직원에게도 공유</label></div>
     <div class="modal-footer">
       <button class="btn btn-secondary btn-sm" onclick="closeM('noticeModal')">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="saveNotice()">등록</button>
+      <button class="btn btn-primary btn-sm" id="nmSubmit" onclick="saveNotice()">등록</button>
     </div>
   </div>
 </div>
@@ -3719,17 +3720,43 @@ function loadThreadsFromSB(){
   }).catch(function(e){console.error('[SB] threads load err',e);});
 }
 
-// ── Supabase sync: notices → staff_notices ──
-function ntToRow(n){return{id:n.id,title:n.title||'',text:n.text||'',files:n.files||[],done:!!n.done,date:n.date||'',require_read:!!n.requireRead};}
-function rowToNt(r){return{id:r.id,title:r.title||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],done:!!r.done,date:r.date||'',requireRead:!!r.require_read};}
-function syncNtToSB(n){sbUpsert('staff_notices',ntToRow(n)).catch(function(e){console.error('notice sync err',e);});}
-function delNtFromSB(id){sbDel('staff_notices','id=eq.'+id).catch(function(e){console.error('notice del err',e);});}
+// ── Signed staff notice API ──
+function ntToRow(n){return{id:n.id,title:n.title||'',text:n.text||'',files:n.files||[],done:!!n.done,date:n.date||'',require_read:!!n.requireRead,teacher_shared:!!n.teacherShared};}
+function rowToNt(r){return{id:r.id,title:r.title||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],done:!!r.done,date:r.date||'',requireRead:!!r.require_read,teacherShared:!!r.teacher_shared};}
+var _staffNoticeWrites={},_ntSaving=false,_nmSaving=false,_ntDraftId=null,_nmDraftId=null;
+function rememberNotice(saved){
+  var idx=notices.findIndex(function(n){return n.id===saved.id;});
+  if(idx<0)notices.unshift(saved);else notices[idx]=saved;
+  sv('tm_n',notices);
+}
+async function staffNoticeRequest(method,body,id){
+  var response=await fetch('/api/staff/notices'+(id?'?id='+encodeURIComponent(id):''),{method:method||'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined});
+  var data=await response.json().catch(function(){return {};});
+  if(!response.ok){var error=new Error(data.error||'공지 요청을 처리하지 못했습니다. 다시 시도해주세요.');error.status=response.status;throw error;}
+  return data;
+}
+async function fetchNoticeRows(){
+  var data=await staffNoticeRequest('GET');
+  if(!Array.isArray(data.notices))throw new Error('공지 목록을 불러오지 못했습니다.');
+  return data.notices;
+}
+async function syncNtToSB(n){
+  var data=await staffNoticeRequest('POST',ntToRow(n));
+  if(!data.notice||data.notice.id!==n.id)throw new Error('공지 저장 결과를 확인하지 못했습니다. 다시 시도해주세요.');
+  return rowToNt(data.notice);
+}
+async function delNtFromSB(id){
+  var data=await staffNoticeRequest('DELETE',null,id);
+  if(data.deleted!==true||data.id!==id)throw new Error('공지 삭제 결과를 확인하지 못했습니다. 다시 시도해주세요.');
+}
 function loadNoticesFromSB(){
-  return sbGet('staff_notices','order=date.desc').then(function(rows){
+  return fetchNoticeRows().then(function(rows){
       notices=rows.map(rowToNt);
       sv('tm_n',notices);
-      console.log('[SB] notices loaded:',rows.length);
-  }).catch(function(e){console.error('[SB] notices load err',e);});
+  }).catch(function(e){
+      if(e.status===401||e.status===403){notices=[];sv('tm_n',notices);}
+      toast(e.message||'공지를 불러오지 못했습니다.','#ef4444');
+  });
 }
 
 // ── Polling-based realtime sync ──
@@ -3821,6 +3848,7 @@ function _pollEditing(){
   if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)return true;
   if(typeof _staffTaskSaving!=='undefined'&&_staffTaskSaving)return true;
   if(typeof _staffTaskWrites!=='undefined'&&Object.keys(_staffTaskWrites).length)return true;
+  if(_ntSaving||_nmSaving||Object.keys(_staffNoticeWrites).length)return true;
   if(typeof _staffApvSubmitting!=='undefined'&&(_staffApvSubmitting||_staffApvUploadCount||Object.keys(_staffApvBusy).length))return true;
   if(typeof _staffMediaBusy!=='undefined'&&_staffMediaBusy)return true;
   var active=document.activeElement;
@@ -3841,7 +3869,7 @@ function pollForUpdates(){
     sbGet('staff_projects','order=created_at.desc&limit=100'),
     sbGet('staff_task_comments','order=ts.asc&limit=1000'),
     sbGet('staff_threads','order=ts.asc&limit=1000'),
-    sbGet('staff_notices','order=date.desc&limit=100')
+    fetchNoticeRows()
   ]).then(function(results){
     if(CU!==pollUser||_pollEditing())return;
     var newTasks=results[0],newProjs=results[1],newTc=results[2],newTh=results[3],newNt=results[4];
@@ -3982,7 +4010,7 @@ function _taskAgeHtml(t,done){
   return '<span title="\uC791\uC131\uC77C" style="font-size:10.5px;font-weight:'+(hot?'700':'600')+';color:'+col+'">'+txt+'</span>';
 }
 
-let tasks=ld('tm_t',[]),notices=ld('tm_n',[]),comments=ld('tm_c',{}),
+let tasks=ld('tm_t',[]),notices=[],comments=ld('tm_c',{}),
     projects=ld('tm_p',[]),threads=ld('tm_th',{}),taskComments=ld('tm_tc',{});
 let dailyData=ld('tm_daily',{});
 let templates=ld('tm_tmpl',[]);
@@ -5222,7 +5250,7 @@ function renderNotices(){
     const readInfo=n.requireRead?((isAdmin()?'<div class="notice-read">📖 '+readers.length+'/'+ALL.length+' 읽음</div>':'')+(!hasRead?'<button class="notice-read-btn" onclick="markRead(\''+n.id+'\')">읽음 확인</button>':'<span style="font-size:10px;color:var(--green)">✓ 읽음</span>')):'';
     const row=document.createElement('div');row.className='notice-item'+(n.done?' done':'');
     row.innerHTML='<div class="notice-dot"></div>'+
-      '<div class="notice-text">'+esc(n.text)+(n.requireRead?'<span class="badge badge-amber" style="margin-left:6px;font-size:9px">읽음확인</span>':'')+readInfo+'<div class="notice-date">'+n.date+'</div></div>'+
+      '<div class="notice-text">'+esc(n.text)+(n.requireRead?'<span class="badge badge-amber" style="margin-left:6px;font-size:9px">읽음확인</span>':'')+(n.teacherShared?'<span class="tm-badge" style="margin-left:6px;font-size:10px">현지 공유</span>':'')+readInfo+'<div class="notice-date">'+n.date+'</div></div>'+
       '<div class="notice-actions">'+
         '<button class="notice-btn" onclick="togNotice(\''+n.id+'\')">'+( n.done?'↩':'✓')+'</button>'+
         (isAdmin()?'<button class="notice-btn" onclick="delNotice(\''+n.id+'\')">✕</button>':'')+
@@ -5285,7 +5313,7 @@ function renderAnnouncementsPage(){
     h+='<div style="max-width:820px;margin:0 auto;padding:24px 18px 60px">';
     h+='<div class="tm-card"><div class="tm-card-b" style="padding:26px 28px">';
     h+='<div style="font-size:20px;font-weight:800;margin-bottom:8px">'+(n.requireRead?'<span class="tm-badge is-warn" style="vertical-align:middle;margin-right:6px">읽음확인</span>':'')+esc(n.title||_ntPlain(n).slice(0,40)||'(제목 없음)')+'</div>';
-    h+='<div class="tm-row tm-muted" style="font-size:12px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px"><span>📢 공지</span><span style="margin-left:auto">'+esc(n.date||'')+'</span></div>';
+    h+='<div class="tm-row tm-muted" style="font-size:12px;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px"><span>📢 공지</span>'+(n.teacherShared?'<span class="tm-badge">현지 공유</span>':'')+'<span style="margin-left:auto">'+esc(n.date||'')+'</span></div>';
     h+=_ntBodyHtml(n);
     if(n.files&&n.files.length)h+=renderOpinionAttachments(n.files);
     if(n.requireRead){
@@ -5297,7 +5325,7 @@ function renderAnnouncementsPage(){
     if(admin){
       h+='<div class="tm-row" style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)">';
       h+='<button class="tm-btn tm-btn-sm" onclick="_annTog(\x27'+n.id+'\x27)">'+(n.done?'↩ 되돌리기':'✓ 완료처리')+'</button>';
-      h+='<button class="tm-btn tm-btn-sm" style="color:var(--red);margin-left:auto" onclick="_annDel(\x27'+n.id+'\x27);_ntBack()">✕ 삭제</button></div>';
+      h+='<button class="tm-btn tm-btn-sm" style="color:var(--red);margin-left:auto" onclick="_annDel(\x27'+n.id+'\x27)">✕ 삭제</button></div>';
     }
     h+='</div></div></div>';
     _ntOv.innerHTML=h;_ntOv.style.display='block';document.body.style.overflow='hidden';
@@ -5325,6 +5353,7 @@ function renderAnnouncementsPage(){
     rows+='<div style="text-align:center;font-size:12.5px;color:var(--text3)">'+esc((n.date||'').replace(/\.\s*$/,'').trim())+'</div>';
     rows+='<div style="min-width:0"><span style="font-size:14.5px;font-weight:'+(unread?'800':'600')+';color:var(--text)">'+title+'</span>';
     if(n.requireRead)rows+=' <span class="tm-badge is-warn" style="font-size:10px">읽음확인</span>';
+    if(n.teacherShared)rows+=' <span class="tm-badge" style="font-size:10px">현지 공유</span>';
     if(unread)rows+=' <span class="tm-badge is-danger" style="font-size:10px">N</span>';
     if(nFiles)rows+=' <span style="font-size:11px;color:var(--text3)">📎'+nFiles+'</span>';
     if(n.done)rows+=' <span class="tm-badge is-muted" style="font-size:10px">완료</span>';
@@ -5361,7 +5390,9 @@ async function handleNtFiles(event){
   }).join('');
 }
 function _ntOpenForm(){
+  if(_ntSaving)return;
   _ntFiles=[];
+  _ntDraftId=uid();
   var old=document.getElementById('ntFormOv');if(old)old.remove();
   var ov=document.createElement('div');ov.id='ntFormOv';ov.className='tm-ov';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
@@ -5388,28 +5419,38 @@ function _ntOpenForm(){
   h+='<label class="tm-btn" style="border-style:dashed">📎 사진/파일 첨부 (이미지 30MB)<input type="file" id="ntFiles" multiple style="display:none" onchange="handleNtFiles(event)"></label>';
   h+='<div id="ntFilePreview" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>';
   h+='<label class="tm-chip" style="cursor:pointer;margin-top:12px"><input type="checkbox" id="ntRequireRead"> 읽음 확인 필수</label>';
+  h+='<label class="tm-chip" style="cursor:pointer;margin-top:12px"><input type="checkbox" id="ntTeacherShared"> 현지직원에게도 공유</label>';
   h+='</div><div class="tm-modal-f"><button class="tm-btn" onclick="document.getElementById(\x27ntFormOv\x27).remove()">취소</button>';
-  h+='<button class="tm-btn tm-btn-pri" onclick="_ntSubmit()">공지 등록</button></div></div>';
+  h+='<button class="tm-btn tm-btn-pri" id="ntSubmit" onclick="_ntSubmit()">공지 등록</button></div></div>';
   ov.innerHTML=h;document.body.appendChild(ov);
   var t=document.getElementById('ntTitle');if(t)t.focus();
 }
-function _ntSubmit(){
+async function _ntSubmit(){
+  if(_ntSaving||!CU)return false;
   var ed=document.getElementById('ntBodyEd');
   var title=(document.getElementById('ntTitle')||{}).value||'';
   var bodyVal=ed?ed.innerHTML:'';
   var plain=ed?(ed.textContent||'').trim():'';
   if(!plain&&!title.trim()&&!(ed&&ed.querySelector('input,img'))){toast('내용을 입력해주세요','#ef4444');return;}
   var rr=(document.getElementById('ntRequireRead')||{}).checked||false;
-  var _nn={id:uid(),title:title.trim(),text:bodyVal,files:_ntFiles||[],done:false,date:nowStr(),requireRead:rr};
-  notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);
-  var ov=document.getElementById('ntFormOv');if(ov)ov.remove();_ntFiles=[];
-  renderAnnouncementsPage();renderNotices();
-  createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'새 공지: '+(title.trim()||plain).slice(0,30));
-  if(typeof sendPortalPushForNotice==='function'){}
+  var shared=!!(document.getElementById('ntTeacherShared')||{}).checked;
+  if(!_ntDraftId)_ntDraftId=uid();
+  var _nn={id:_ntDraftId,title:title.trim(),text:bodyVal,files:_ntFiles||[],done:false,date:nowStr(),requireRead:rr,teacherShared:shared};
+  var actor=CU,button=document.getElementById('ntSubmit');_ntSaving=true;
+  if(button){button.disabled=true;button.textContent='저장 중…';}
+  try{
+    var saved=await syncNtToSB(_nn);if(CU!==actor)return false;
+    rememberNotice(saved);
+    var ov=document.getElementById('ntFormOv');if(ov)ov.remove();_ntFiles=[];_ntDraftId=null;
+    renderAnnouncementsPage();renderNotices();
+    createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+(title.trim()||plain).slice(0,30));
+    return true;
+  }catch(e){if(CU===actor)toast(e.message||'공지를 저장하지 못했습니다. 다시 시도해주세요.','#ef4444');return false;}
+  finally{_ntSaving=false;if(button){button.disabled=false;button.textContent='공지 등록';}}
 }
 // 공지 페이지 내 액션 래퍼 — 기존 togNotice/delNotice 재사용 후 현재 피드만 갱신.
-function _annTog(id){togNotice(id);renderAnnouncementsPage();}
-function _annDel(id){if(!confirm('공지사항을 삭제할까요?'))return;delNotice(id);renderAnnouncementsPage();}
+async function _annTog(id){if(await togNotice(id))renderAnnouncementsPage();}
+async function _annDel(id){if(!confirm('공지사항을 삭제할까요?'))return;if(await delNotice(id)){if(_ntSelId===id)_ntBack();else renderAnnouncementsPage();}}
 function renderHomeSG(){
   const grid=document.getElementById('homeSG');grid.innerHTML='';
   const shared=tasks.filter(t=>t.shared);
@@ -9548,9 +9589,43 @@ function delTaskCmt(taskId,cmtId){
 }
 
 // ── NOTICES ──
-function saveNotice(){const text=document.getElementById('nmTxt').value.trim();if(!text)return;const rr=document.getElementById('nmRequireRead').checked;var _nn={id:uid(),text,done:false,date:nowStr(),requireRead:rr};notices.unshift(_nn);sv('tm_n',notices);syncNtToSB(_nn);document.getElementById('nmTxt').value='';document.getElementById('nmRequireRead').checked=false;closeM('noticeModal');renderNotices();createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',_nn.id,'새 공지: '+text.slice(0,30));}
-function togNotice(id){const n=notices.find(n=>n.id===id);if(n){n.done=!n.done;sv('tm_n',notices);syncNtToSB(n);renderNotices();}}
-function delNotice(id){delNtFromSB(id);notices=notices.filter(n=>n.id!==id);sv('tm_n',notices);renderNotices();}
+async function saveNotice(){
+  if(_nmSaving||!CU)return false;
+  var input=document.getElementById('nmTxt'),text=input.value.trim();if(!text)return false;
+  var rr=document.getElementById('nmRequireRead').checked,shared=document.getElementById('nmTeacherShared').checked;
+  if(!_nmDraftId)_nmDraftId=uid();
+  var _nn={id:_nmDraftId,text:text,done:false,date:nowStr(),requireRead:rr,teacherShared:shared};
+  var actor=CU,button=document.getElementById('nmSubmit');_nmSaving=true;
+  if(button){button.disabled=true;button.textContent='저장 중…';}
+  try{
+    var saved=await syncNtToSB(_nn);if(CU!==actor)return false;
+    rememberNotice(saved);_nmDraftId=null;
+    input.value='';document.getElementById('nmRequireRead').checked=false;document.getElementById('nmTeacherShared').checked=false;
+    closeM('noticeModal');renderNotices();renderAnnouncementsPage();
+    createNotifMultiple(ALL.map(function(u){return u.id;}),'notice',saved.id,'새 공지: '+text.slice(0,30));
+    return true;
+  }catch(e){if(CU===actor)toast(e.message||'공지를 저장하지 못했습니다. 다시 시도해주세요.','#ef4444');return false;}
+  finally{_nmSaving=false;if(button){button.disabled=false;button.textContent='등록';}}
+}
+async function togNotice(id){
+  if(_staffNoticeWrites[id]||!CU)return false;
+  var n=notices.find(function(n){return n.id===id;});if(!n)return false;
+  var actor=CU;_staffNoticeWrites[id]=true;
+  try{
+    var saved=await syncNtToSB(Object.assign({},n,{done:!n.done}));if(CU!==actor)return false;
+    rememberNotice(saved);renderNotices();return true;
+  }catch(e){if(CU===actor)toast(e.message||'공지 상태를 저장하지 못했습니다.','#ef4444');return false;}
+  finally{delete _staffNoticeWrites[id];}
+}
+async function delNotice(id){
+  if(_staffNoticeWrites[id]||!CU)return false;
+  var actor=CU;_staffNoticeWrites[id]=true;
+  try{
+    await delNtFromSB(id);if(CU!==actor)return false;
+    notices=notices.filter(function(n){return n.id!==id;});sv('tm_n',notices);renderNotices();return true;
+  }catch(e){if(CU===actor)toast(e.message||'공지를 삭제하지 못했습니다.','#ef4444');return false;}
+  finally{delete _staffNoticeWrites[id];}
+}
 
 // ── TASK MODAL ──
 let tmProjId=null,tmChecklist2=[];

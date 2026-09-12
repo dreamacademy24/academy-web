@@ -8,11 +8,16 @@ const ts=createRequire(import.meta.url)('typescript');
 const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const actor={id:id(1),role:'korean_admin'};
 const payload={requestId:id(2),visitId:id(3),teacherId:id(4),active:true,previousId:null};
+const selectionExports={};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL('../lib/student-care/selection.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:selectionExports,URL,Error});
 function route(file,identity=actor,error=null){
  const exports={},calls=[];
  const code=ts.transpileModule(readFileSync(new URL(`../app/api/staff/students/${file}route.ts`,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const modules={'next/server':{NextResponse:{json:(body,init)=>({body,...init})}},'@/lib/staffSession':{canReviewStudents},'@/lib/portalAuth':{getStaffIdentity:async()=>identity,portalDb:()=>({rpc:async(name,args)=>{calls.push({name,args});return {data:{visits:[]},error};}})}};
- vm.runInNewContext(code,{exports,require:n=>modules[n]});return {exports,calls};
+ const modules={'next/server':{NextResponse:{json:(body,init)=>({body,...init})}},'@/lib/student-care/selection':selectionExports,'@/lib/staffSession':{canReviewStudents},'@/lib/portalAuth':{getStaffIdentity:async()=>identity,portalDb:()=>({rpc:async(name,args)=>{calls.push({name,args});return {data:{visits:[]},error};}})}};
+ vm.runInNewContext(code,{exports,require:n=>modules[n]});
+ // Existing request fixtures now need the URL consumed by the source selection parser.
+ for(const method of ['GET','POST'])if(exports[method]){const handler=exports[method];exports[method]=req=>handler({url:'http://localhost/api/staff/students',...req});}
+ return {exports,calls};
 }
 test('anonymous and unrelated roles are denied before any database access',async()=>{
  for(const [who,status] of [[null,401],[{...actor,role:'driver'},403]])for(const file of ['','assign/']){

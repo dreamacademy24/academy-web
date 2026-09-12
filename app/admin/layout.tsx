@@ -18,7 +18,6 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "학생관리", items: [
     { label: "학생관리", href: "/admin/students" },
-    { label: "학생케어 · 방문 이력", href: "/staff/students", ext: true },
     { label: "튜터", href: "/admin/tutor-class" },
     { label: "화상영어", href: "/admin/online-class" },
   ]},

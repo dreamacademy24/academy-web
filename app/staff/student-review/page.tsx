@@ -12,6 +12,7 @@ export default function StudentReview(){
  const [data,setData]=useState<Result|null>(null),[error,setError]=useState(''),[auth,setAuth]=useState(false),[busy,setBusy]=useState(true),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[page,setPage]=useState(0);
  const [editing,setEditing]=useState<{key:string;start:string;end:string;learnerId:string;requestId:string;confirmed:boolean}|null>(null);
  const [saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
+ const [selectedKey,setSelectedKey]=useState(''),[selectionQuery,setSelectionQuery]=useState('');
  function begin(item:Item){setSaveMessage('');setEditing({key:item.sourceKey,start:item.start||'',end:item.end||'',learnerId:'',requestId:crypto.randomUUID(),confirmed:false});}
  function edit(change:Partial<NonNullable<typeof editing>>){setEditing(e=>e?{...e,...change,requestId:crypto.randomUUID()}:e);}
  async function confirm(item:Item){
@@ -21,14 +22,16 @@ export default function StudentReview(){
  }
  const load=useCallback(async()=>{
   setBusy(true);setError('');setData(null);setAuth(false);
+  const params=new URLSearchParams(window.location.search);
+  if(params.has('bookingId')&&params.has('sourceIndex')){setSelectedKey(params.get('bookingId')+':'+params.get('sourceIndex'));setSelectionQuery(params.toString());}
   try{const r=await fetch('/api/staff/student-review',{cache:'no-store'});const d=await r.json();if(!r.ok){setAuth(r.status===401);throw new Error(d.error||'불러오지 못했어요.');}setData(d);setPage(0);}
   catch(e){setError(e instanceof Error?e.message:'불러오지 못했어요.');}finally{setBusy(false);}
  },[]);
  useEffect(()=>{void load();},[load]);
  function relogin(){openStaffSignIn();}
- const filtered=(data?.items||[]).filter(i=>(filter==='all'||i.status===filter)&&`${i.name} ${i.reservation} ${i.candidates.map(c=>c.name+' '+c.english).join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()));
+ const filtered=(data?.items||[]).filter(i=>(!selectedKey||i.sourceKey===selectedKey)&&(filter==='all'||i.status===filter)&&`${i.name} ${i.reservation} ${i.candidates.map(c=>c.name+' '+c.english).join(' ')}`.toLowerCase().includes(query.trim().toLowerCase()));
  return <main className={styles.main}>
-  <header className={styles.top}><Link href="/staff/students">← 학생 케어 · 방문 이력</Link><span>DREAM · STUDENT CARE</span></header>
+  <header className={styles.top}><Link href={'/staff/students'+(selectionQuery?'?'+selectionQuery:'')}>← 학생 케어 · 방문 이력</Link><span>DREAM · STUDENT CARE</span></header>
   <section className={styles.hero}><div><p>학생 케어 기반 정리 · 01</p><h1>학생 연결 검토</h1><p>예약에 있는 학생과 기존 학생 명부를 함께 확인합니다.</p></div><button disabled={busy||saving} onClick={load}>{busy?'불러오는 중…':'새로 확인'}</button></section>
   <aside className={styles.notice}><strong>학생을 확인한 뒤 연결합니다.</strong> 이름이나 번호가 같아도 자동으로 합치지 않습니다. 원본 예약 자료는 유지됩니다.</aside>{saveMessage&&<p role="status" className={styles.notice}>{saveMessage}</p>}
   {error&&<section className={styles.error} role="alert"><p>{error}</p>{auth&&<button disabled={busy} onClick={relogin}>관리자 계정으로 다시 로그인</button>}</section>}

@@ -107,6 +107,7 @@ export default function EngHubPage() {
   }
 
   const cards = [
+    { icon: "📢", title: "Announcements", desc: "Staff updates · Guides · 공지사항", href: "/admineng/notices" },
     { icon: "🌱", title: "My Students", desc: "Student care · Visit history · Care team", href: "/staff/students" },
     { icon: "🗓", title: "Class Schedule", desc: "By teacher · By student · Print", href: "/admineng/class-schedule" },
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },

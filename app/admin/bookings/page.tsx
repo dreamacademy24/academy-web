@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { copyBookingUrl } from "@/lib/bookingCopy";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { toastOk, toastErr } from "@/lib/toast";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import EstimateCalc from "./EstimateCalc";
@@ -185,6 +185,27 @@ function fmtAccom(b:any):string{
   return t||"-";
 }
 
+type StudentCareTarget={bookingId:string;sourceIndex:number;sourceId:string;name:string;start:string;end:string};
+
+function BookingRouteSync({onChange}:{onChange:(pathname:string,tab:string)=>void}){
+  const pathname=usePathname()||"";
+  const searchParams=useSearchParams();
+  const tab=searchParams.get("tab")||"";
+  useEffect(()=>{onChange(pathname,tab);},[pathname,tab,onChange]);
+  return null;
+}
+
+function StudentCareDialog({student,onClose}:{student:StudentCareTarget;onClose:()=>void}){
+  const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const el=dialog.current;el?.showModal();return()=>{el?.close();};},[]);
+  const params=new URLSearchParams({bookingId:student.bookingId,sourceIndex:String(student.sourceIndex),embedded:"1"});
+  if(student.sourceId)params.set("sourceId",student.sourceId);
+  return <dialog ref={dialog} className="student-care-dialog" aria-labelledby="student-care-title" onCancel={e=>{e.preventDefault();onClose();}}>
+    <header><div><h2 id="student-care-title">{student.name} · 학생케어</h2><p>{student.start||"시작일 미등록"} ~ {student.end||"종료일 미등록"}</p></div><button type="button" onClick={onClose} aria-label="학생케어 닫기">닫기 ✕</button></header>
+    <iframe title={`${student.name} 학생케어`} src={`/staff/students?${params.toString()}`}/>
+  </dialog>;
+}
+
 export default function AdminBookingsPage(){
   const router=useRouter();
   const [authed,setAuthed]=useState(false);
@@ -200,13 +221,6 @@ export default function AdminBookingsPage(){
   const [mainTab,setMainTab]=useState<"newlist"|"list"|"receipt"|"confirm"|"estimate"|"students">("newlist");
   const [newSearch,setNewSearch]=useState("");
   const [stuOnly,setStuOnly]=useState(false); // /admin/students 독립 페이지 모드
-  useEffect(()=>{
-    try{
-      if(window.location.pathname.startsWith("/admin/students")){setStuOnly(true);setMainTab("students");return;}
-      const t=new URLSearchParams(window.location.search).get("tab");
-      if(t==="students"||t==="estimate"||t==="list"||t==="receipt"||t==="confirm")setMainTab(t as never);
-    }catch{/* ignore */}
-  },[]);
   const [confirmSearch,setConfirmSearch]=useState("");
   const [rcpUnpaidOnly,setRcpUnpaidOnly]=useState(false);
   const [confirmSort,setConfirmSort]=useState<{key:string;asc:boolean}>({key:"checkin_date",asc:true});
@@ -260,6 +274,7 @@ export default function AdminBookingsPage(){
   /* ── 학생관리 탭 (bookings의 students JSONB에서 추출) ── */
   interface StudentRow{
     key:string; // booking_id + index
+    sourceIndex:number; sourceId:string;
     booking_id:string; reservation_no:string; status:string; booker_name:string;
     accom_type:string; house_no:string; accom_room:string;
     agency:string; balance_date:string; checkin_date:string; checkout_date:string;
@@ -292,6 +307,23 @@ export default function AdminBookingsPage(){
     await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`,{method:"POST",headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||"",Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||""}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates"},body:JSON.stringify({key:"stu_mismatch_ack",value:next,updated_at:new Date().toISOString()})}).catch(()=>{});
   }
   const [stuView,setStuView]=useState<"list"|"cal"|"now">("list");
+  const [careStudent,setCareStudent]=useState<StudentCareTarget|null>(null);
+  const syncRoute=useCallback((pathname:string,tab:string)=>{
+    if(pathname.startsWith("/admin/students")){
+      setStuOnly(true);setMainTab("students");
+      setStuView(tab==="list"?"list":tab==="cal"||tab==="calendar"?"cal":"now");
+      return;
+    }
+    setStuOnly(false);
+    if(tab==="students"||tab==="estimate"||tab==="list"||tab==="receipt"||tab==="confirm")setMainTab(tab);
+  },[]);
+  function openStudentCare(student:StudentRow){
+    setCareStudent({bookingId:student.booking_id,sourceIndex:student.sourceIndex,sourceId:student.sourceId,name:student.korName||student.engName||"학생",start:student.academyStart,end:student.academyEnd});
+  }
+  function selectStudentView(view:"list"|"cal"|"now"){
+    setStuView(view);
+    router.replace(`/admin/students?tab=${view==="now"?"attending":view}`,{scroll:false});
+  }
   const [attWeekOff,setAttWeekOff]=useState<number|null>(null); // null=오늘, n=이번주 기준 주 오프셋
   const [calPrintHalf,setCalPrintHalf]=useState<"all"|"1st"|"2nd">("all");
   const _now=new Date();
@@ -353,6 +385,8 @@ export default function AdminBookingsPage(){
       })();
       return{
         key:b.id+"_"+i,
+        sourceIndex:i,
+        sourceId:s.id&&s.student_id&&s.id!==s.student_id?"":String(s.id||s.student_id||"").trim(),
         booking_id:b.id,
         reservation_no:b.reservation_no||"",
         status:b.status||"",
@@ -785,7 +819,7 @@ export default function AdminBookingsPage(){
     return null;
   }
 
-  return(<><datalist id="agencyOpts">{AGENCY_PRESETS.map(a=><option key={a.name} value={a.name}/>)}</datalist>
+  return(<><Suspense fallback={null}><BookingRouteSync onChange={syncRoute}/></Suspense><datalist id="agencyOpts">{AGENCY_PRESETS.map(a=><option key={a.name} value={a.name}/>)}</datalist>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0;}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e;}
 .aw{max-width:1720px;margin:0 auto;padding:24px;}
@@ -808,6 +842,9 @@ export default function AdminBookingsPage(){
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
 .empty{text-align:center;padding:40px;color:#94a3b8;font-size:14px;}
 .asg{border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;font-size:12px;background:#fff;font-family:'Noto Sans KR',sans-serif;cursor:pointer;outline:none;}.asg:focus{border-color:#1a6fc4;}
+.student-care-button{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 12px;border:1px solid #c7d2fe;border-radius:6px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;}.student-care-button:hover{background:#e0e7ff;}.student-care-button:focus-visible{outline:3px solid #818cf8;outline-offset:2px;}
+.student-care-dialog{position:fixed;inset:0;margin:auto;width:min(1080px,calc(100vw - 32px));height:calc(100dvh - 48px);max-height:calc(100dvh - 48px);padding:0;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 24px 70px rgba(15,23,42,.3);overflow:hidden;background:#f5f7fa;color:#20364a;}.student-care-dialog::backdrop{background:rgba(15,23,42,.45);}.student-care-dialog[open]{display:flex;flex-direction:column;}.student-care-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 20px;background:#fff;border-bottom:1px solid #dce3eb;}.student-care-dialog h2{font-size:17px;font-weight:750;margin:0;}.student-care-dialog header p{font-size:12px;color:#64748b;margin-top:4px;}.student-care-dialog header button{padding:8px 12px;min-height:38px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;font:inherit;font-size:13px;color:#475569;cursor:pointer;white-space:nowrap;}.student-care-dialog iframe{width:100%;flex:1;min-height:0;border:0;background:#f5f7fa;}
+@media(max-width:600px){.student-care-dialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border-radius:9px;}.student-care-dialog>header{padding:12px;}.student-care-dialog h2{font-size:15px;}.student-care-button{min-height:38px;}}
 .act{padding:4px 10px;font-size:11px;font-weight:700;border:none;border-radius:6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-right:4px;}
 .act-b{background:#1a6fc4;color:#fff;}.act-b:hover{background:#0d3d7a;}
 .act-g{background:#16a34a;color:#fff;}.act-g:hover{background:#15803d;}
@@ -895,9 +932,9 @@ export default function AdminBookingsPage(){
 
     {stuOnly?(
     <div className="main-tabs">
-      <button className={`main-tab${stuView==="list"?" ac":""}`} onClick={()=>setStuView("list")}>📋 학생 리스트</button>
-      <button className={`main-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
-      <button className={`main-tab${stuView==="now"?" ac":""}`} onClick={()=>setStuView("now")}>🏫 등원중 · 재학</button>
+      <button className={`main-tab${stuView==="now"?" ac":""}`} onClick={()=>selectStudentView("now")}>🏫 등원중 · 재학</button>
+      <button className={`main-tab${stuView==="list"?" ac":""}`} onClick={()=>selectStudentView("list")}>📋 학생 리스트</button>
+      <button className={`main-tab${stuView==="cal"?" ac":""}`} onClick={()=>selectStudentView("cal")}>📅 달력</button>
     </div>
     ):(
     <div className="main-tabs">
@@ -1388,9 +1425,9 @@ export default function AdminBookingsPage(){
               </div>
             </div>
             <div className="ss-w"><table className="ss"><thead><tr>
-              <th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>
+              <th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>{stuOnly&&<th className="no-print">학생케어</th>}
             </tr></thead><tbody>
-              {att.length===0?<tr><td colSpan={10} className="empty">오늘 등원 중인 학생이 없습니다.</td></tr>:
+              {att.length===0?<tr><td colSpan={stuOnly?11:10} className="empty">선택한 기간에 등원 중인 학생이 없습니다.</td></tr>:
               att.map(s=>(<tr key={s.key}>
                 <td>{s.grade||"-"}</td>
                 <td style={{fontWeight:700}}>{s.korName||"-"}</td>
@@ -1402,6 +1439,7 @@ export default function AdminBookingsPage(){
                 <td style={{fontWeight:700,color:dd(s)==="오늘 종료"?"#dc2626":"#166534"}}>{dd(s)}</td>
                 <td>{s.booker_name||"-"}</td>
                 <td>{s.photo||""}</td>
+                {stuOnly&&<td className="no-print"><button type="button" className="student-care-button" onClick={()=>openStudentCare(s)} aria-label={`${s.korName||s.engName||"학생"} 학생케어 열기`}>케어 열기</button></td>}
               </tr>))}
             </tbody></table></div>
           </div>);
@@ -1541,6 +1579,8 @@ export default function AdminBookingsPage(){
     {/* ── 탭5: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
   </div>
+
+  {careStudent&&<StudentCareDialog student={careStudent} onClose={()=>setCareStudent(null)}/>}
 
   {/* 특이사항 편집 팝업 */}
   {stuSpecialPopup&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:16}} onClick={()=>setStuSpecialPopup(null)}>
