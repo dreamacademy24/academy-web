@@ -1,32 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { STAFF_COOKIE, signStaffSession, resolveStaffSession } from './staffSession';
 
 export const portalDb = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-const COOKIE = 'portal_staff_session';
-function mac(value: string) {
-  const key = process.env.STAFF_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error('Server authentication is not configured');
-  return createHmac('sha256', key).update('portal-staff-v1:' + value).digest('base64url');
-}
+function staffKey() { return process.env.STAFF_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''; }
 export function staffCookie(username: string) {
-  const payload = Buffer.from(JSON.stringify({ username, expires: Date.now() + 8 * 3600000 })).toString('base64url');
-  return { name: COOKIE, value: payload + '.' + mac(payload), httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/', maxAge: 8 * 3600 };
+  return { name: STAFF_COOKIE, value: signStaffSession(username, staffKey()), httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/', maxAge: 8 * 3600 };
+}
+export async function getStaffIdentity(req: Request) {
+  return resolveStaffSession(req, staffKey(), async username => {
+    const {data,error}=await portalDb().from('staff_accounts').select('id,username,role,name').eq('username',username).eq('is_active',true).maybeSingle();
+    if(error)throw error;
+    return data;
+  });
 }
 export async function portalStaffIdentity(req: Request): Promise<string | null> {
-  const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin) return null;
-  try {
-    const value = req.headers.get('cookie')?.split(';').map(v => v.trim()).find(v => v.startsWith(COOKIE + '='))?.slice(COOKIE.length + 1);
-    if (!value) return null;
-    const [payload, signature] = value.split('.');
-    const expected = Buffer.from(mac(payload)); const actual = Buffer.from(signature || '');
-    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-    const claim = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    if (typeof claim.username !== 'string' || !Number.isFinite(claim.expires) || claim.expires <= Date.now()) return null;
-    const { data, error } = await portalDb().from('staff_accounts').select('role').eq('username', claim.username).eq('is_active', true).maybeSingle();
-    return !error && data?.role === 'korean_admin' ? claim.username : null;
-  } catch { return null; }
+  const staff=await getStaffIdentity(req);
+  return staff?.role==='korean_admin'?staff.username:null;
 }
 export async function isPortalAdmin(req: Request) {
   return !!(await portalStaffIdentity(req));

@@ -22,6 +22,7 @@ export function clearAdminAuth() {
   void fetch('/api/admin/logout', { method: 'POST' });
   localStorage.removeItem(ADMIN_TOKEN_KEY);
   localStorage.removeItem(ADMIN_INFO_KEY);
+  localStorage.removeItem('teacherSession');
 }
 
 export function getAdminUserId(): string | null {

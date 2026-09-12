@@ -96,7 +96,10 @@ export default function EngHubPage() {
     }
   }
 
-  function logout() {
+  async function logout() {
+    try { const response=await fetch("/api/admin/logout",{method:"POST"}); if(!response.ok)throw new Error(); } catch { setErr("Could not sign out. Please try again."); return; }
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminInfo");
     localStorage.removeItem("teacherSession");
     setStaff(null);
     setUsername("");
