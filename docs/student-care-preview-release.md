@@ -1,5 +1,7 @@
 # Student care preview release — preparation
 
+Superseded: the user chose direct production deployment using the existing DB. See student-care-production-release.md. No extra paid DB was created and the interrupted preview migration was not applied.
+
 Date: 2026-09-12. Production deployment is not authorized by the current request; a separate test preview is authorized.
 
 ## Prepared

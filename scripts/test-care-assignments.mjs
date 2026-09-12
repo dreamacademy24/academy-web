@@ -9,7 +9,7 @@ create table staff_accounts(id uuid primary key,role text,is_active boolean,name
 create table bookings(id uuid primary key,students jsonb,reservation_no text);
 create table students(id uuid primary key,booking_id uuid,name_kr text,name_en text,level text);
 grant select on staff_accounts to service_role;`);
-for(const file of ['20260912055458_student_care_confirmed_visits','20260912061214_student_care_teacher_assignments'])await db.exec(readFileSync(new URL(`../supabase/migrations/${file}.sql`,import.meta.url),'utf8'));
+for(const file of ['20260912055458_student_care_confirmed_visits','20260912105728_student_care_teacher_assignments'])await db.exec(readFileSync(new URL(`../supabase/migrations/${file}.sql`,import.meta.url),'utf8'));
 await db.query(`insert into staff_accounts values($1,'korean_admin',true,'Admin'),($2,'local_teacher',true,'Teacher A'),($3,'local_teacher',true,'Teacher B'),($4,'local_teacher',false,'Disabled'),($5,'driver',true,'Other')`,[id(1),id(2),id(3),id(4),id(5)]);
 await db.query(`insert into care_learners(id,name_kr,created_by) values($1,'Test child',$2)`,[id(10),id(1)]);
 for(const n of [11,12])await db.query(`insert into care_visits(id,learner_id,booking_id,start_date,end_date,created_by) values($1,$2,$3,'2026-09-01','2026-09-30',$4)`,[id(n),id(10),id(n+100),id(1)]);

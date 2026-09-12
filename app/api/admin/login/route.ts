@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       staff: {
         username: row.username,
         name: row.name,
+        role: row.role,
         color: row.color,
         initial: row.initial,
       },
