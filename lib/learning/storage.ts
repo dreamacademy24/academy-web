@@ -57,3 +57,11 @@ export type Recording = { blob: Blob; text: string; seconds: number; savedAt: st
 export const getRecording = (key: string) => read<Recording>('audio', `${KEY}:${key}`);
 export const putRecording = (key: string, value: Recording) => write('audio', `${KEY}:${key}`, value);
 export const normalizeAnswer = (text: string) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+export type AdventureMemory = { scene: number; sentence: string; ink: Stroke[] };
+export const getAdventure = () => read<AdventureMemory>('drafts', 'treehouse-adventure-v1');
+let adventureQueue = Promise.resolve();
+export function putAdventure(value: AdventureMemory) {
+  const snapshot = structuredClone(value);
+  adventureQueue = adventureQueue.catch(() => {}).then(() => write('drafts', 'treehouse-adventure-v1', snapshot));
+  return adventureQueue;
+}

@@ -1,2 +1,2 @@
-import Player from '@/components/learning/Player';
-export default function Page(){return <Player/>}
+import Adventure from '@/components/learning/Adventure';
+export default function Page(){return <Adventure/>}
