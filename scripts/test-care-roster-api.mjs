@@ -24,6 +24,16 @@ test('local teacher can load scoped roster but cannot change assignments',async(
  assert.equal((await get.exports.GET({})).status,200);assert.equal(get.calls[0].args.p_actor_id,who.id);
  assert.equal((await post.exports.POST({json:async()=>payload})).status,403);assert.equal(post.calls.length,0);
 });
+
+test('directory sync is an admin-only POST using the signed-in actor',async()=>{
+ for(const [who,status] of [[null,401],[{...actor,role:'local_teacher'},403],[{...actor,role:'driver'},403]]){
+  const r=route('',who);assert.equal((await r.exports.POST({})).status,status);assert.equal(r.calls.length,0);
+ }
+ const r=route('');assert.equal((await r.exports.POST({})).status,200);
+ assert.deepEqual(r.calls.map(c=>c.name),['sync_care_directory','get_care_directory']);
+ assert.ok(r.calls.every(c=>c.args.p_actor_id===actor.id));
+ const read=route('');await read.exports.GET({});assert.deepEqual(read.calls.map(c=>c.name),['get_care_directory']);
+});
 test('malformed assignment never reaches RPC; client cannot choose actor',async()=>{
  for(const change of [{active:'true'},{previousId:undefined},{teacherId:'bad'}]){
   const r=route('assign/');assert.equal((await r.exports.POST({json:async()=>({...payload,...change})})).status,400);assert.equal(r.calls.length,0);
