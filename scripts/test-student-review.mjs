@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
 import {signStaffSession,resolveStaffSession,canReviewStudents} from '../lib/staffSession.ts';
+import {issueConfirmation} from '../lib/student-care/confirmation.ts';
 import {reconcileStudents} from '../lib/student-care/reconcile.ts';
 const require=createRequire(import.meta.url),ts=require('typescript');
 const key='test-only-key-not-used-in-production',now=1900000000000;
@@ -28,15 +29,16 @@ function route(identity,fail=false){
  const modules={
   'next/server':{NextResponse:{json:(body,init)=>({body,...init})}},
   '@/lib/portalAuth':{getStaffIdentity:async()=>identity,portalDb:()=>({from:table=>({select:()=>({order:()=>({range:async(start)=>{
-   reads++;if(fail)return {error:new Error('private db detail')};
+   reads++;if(table.startsWith('care_'))return {data:[]};if(fail)return {error:new Error('private db detail')};
    if(table==='bookings')return {data:[{id:'b',students:[{id:'s',korName:'샘플'}],reservation_no:'TEST'}]};
    if(start===0)return {data:Array.from({length:500},(_,i)=>({id:i===0?'s':`s${i}`,booking_id:'b',name_kr:'샘플'}))};
    return {data:[{id:'last',booking_id:'b',name_kr:'추가'}]};
   }})})})})},
   '@/lib/staffSession':{canReviewStudents},
+  '@/lib/student-care/confirmation':{issueConfirmation},
   '@/lib/student-care/reconcile':{reconcileStudents},
  };
- const exports={};vm.runInNewContext(code,{exports,require:n=>{if(!(n in modules))throw Error(n);return modules[n];},Map,Date,Error});
+ const exports={};vm.runInNewContext(code,{exports,process:{env:{STAFF_SESSION_SECRET:key}},require:n=>{if(!(n in modules))throw Error(n);return modules[n];},Map,Date,Error});
  return {get:exports.GET,reads:()=>reads};
 }
 test('unauthenticated and teacher requests never read student data',async()=>{
@@ -46,7 +48,7 @@ test('unauthenticated and teacher requests never read student data',async()=>{
 });
 test('admin review paginates and returns no-store result without mutation',async()=>{
  const r=route(admin);const res=await r.get(request());assert.equal(res.status,200);assert.equal(res.body.studentRowCount,501);
- assert.equal(r.reads(),3);assert.match(res.headers['Cache-Control'],/no-store/);assert.equal(res.body.items[0].status,'id_candidate');
+ assert.equal(r.reads(),6);assert.match(res.headers['Cache-Control'],/no-store/);assert.equal(res.body.items[0].status,'id_candidate');
 });
 test('data failure returns an error, never partial counts or internal messages',async()=>{
  const res=await route(admin,true).get(request());assert.equal(res.status,503);assert.equal(res.body.items,undefined);assert.ok(!res.body.error.includes('private db detail'));
