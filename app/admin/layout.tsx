@@ -21,7 +21,6 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "학생케어 · 방문 이력", href: "/staff/students", ext: true },
     { label: "튜터", href: "/admin/tutor-class" },
     { label: "화상영어", href: "/admin/online-class" },
-    { label: "학생케어 사용 가이드 · 한/영", href: "/staff-guides/student-care/ko.html", ext: true },
   ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },

@@ -108,7 +108,6 @@ export default function EngHubPage() {
 
   const cards = [
     { icon: "🌱", title: "My Students", desc: "Student care · Visit history · Care team", href: "/staff/students" },
-    { icon: "📖", title: "Student Care Guide", desc: "English / 한국어 · How to use Student Care", href: "/staff-guides/student-care/en.html" },
     { icon: "🗓", title: "Class Schedule", desc: "By teacher · By student · Print", href: "/admineng/class-schedule" },
     { icon: "🎧", title: "Online Class", desc: "Attendance · Weekly Schedule", href: "/admin/online-class-attendance" },
     { icon: "🎓", title: "Tutor Classes", desc: "Requests · My Schedule · Weekly", href: "/admineng/tutor-class" },
