@@ -1,7 +1,9 @@
 'use client';
 import Image from 'next/image';
+import Player from './Player';
+import data from '@/lib/learning/tree-house.json';
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,useRef} from 'react';
 import {Icon,InkPad,Recorder,WordArt,useSpeech} from './Tools';
 import {getAdventure,putAdventure,type Stroke} from '@/lib/learning/storage';
 import styles from './Adventure.module.css';
@@ -18,12 +20,16 @@ const scenes=[
  {title:'또 놀러 올게요, 할아버지!',speaker:'이야기의 끝',en:'Goodbye, Grandpa!',ko:'책을 제자리에 놓았어요. 아빠와 함께 한 사람씩 천천히 사다리를 내려가요.',action:'다시 놀러 가기',art:-1},
 ];
 export default function Adventure(){
+ const [practice,setPractice]=useState<number|null>(null);const origin=useRef<string>('');
+ function openWord(index:number,button:HTMLButtonElement){stop();origin.current=button.getAttribute('aria-label')||button.textContent||'';setPractice(index);window.scrollTo({top:0,behavior:"instant"});}
+ function returnToStory(){setPractice(null);requestAnimationFrame(()=>{const buttons=Array.from(document.querySelectorAll<HTMLButtonElement>('button'));buttons.find(b=>(b.getAttribute('aria-label')||b.textContent)===origin.current)?.focus();});}
  const [scene,setScene]=useState(0);const [ready,setReady]=useState(false);const [taps,setTaps]=useState(0);const [revealed,setRevealed]=useState(false);const [sentence,setSentence]=useState('');const [ink,setInk]=useState<Stroke[]>([]);const [busy,setBusy]=useState(false);const [savedError,setSavedError]=useState('');const [motion,setMotion]=useState(true);const {speak,stop,speaking,speechError}=useSpeech();const s=scenes[scene];
  useEffect(()=>{let live=true;getAdventure().then(d=>{if(!live)return;if(d){if(Number.isInteger(d.scene)&&d.scene>=0&&d.scene<scenes.length)setScene(d.scene);if(typeof d.sentence==='string')setSentence(d.sentence.slice(0,500));if(Array.isArray(d.ink))setInk(d.ink);}if(matchMedia('(prefers-reduced-motion: reduce)').matches)setMotion(false);setReady(true);}).catch(()=>{if(live){setSavedError('이 기기에서 이전 이야기를 불러오지 못했어요.');setReady(true);}});return()=>{live=false;};},[]);
  useEffect(()=>{if(!ready)return;putAdventure({scene,sentence,ink}).then(()=>setSavedError('')).catch(()=>setSavedError('저장 공간을 확인해주세요. 이번 이야기가 기기에 남지 않을 수 있어요.'));},[ready,scene,sentence,ink]);
  function next(){if(busy)return;window.scrollTo({top:0,behavior:"instant"});stop();setTaps(0);setRevealed(false);setScene(n=>Math.min(n+1,8));speak(scenes[Math.min(scene+1,8)].en);}
  function interact(){if(busy||revealed)return;const count=taps+1;setTaps(count);if(scene===2&&count<3){speak('Up!');return;}if(scene===3&&count<3){speak('Knock!');return;}setRevealed(true);speak(({1:'A tree house!',2:'We are here!',3:'Come in!',4:'A jungle!',5:'No. I painted it.',6:'I like this little house.'} as Record<number,string>)[scene]||s.en);}
  if(!ready)return <div className={styles.loading}>나무집으로 가는 길을 찾고 있어요…</div>;
+ if(practice!==null)return <Player startWord={practice} onReturn={returnToStory} storyLine={s.en}/>;
  return <main className={`${styles.adventure} ${motion?'':styles.still}`}>
   <header className={styles.top}><Link href="/learn" onClick={e=>{if(busy)e.preventDefault();}}><Icon name="back" size={19}/> 이야기 서재</Link><span>DREAM STORY <b>01</b></span><button onClick={()=>setMotion(!motion)} aria-pressed={motion}>{motion?'움직임 켜짐':'움직임 꺼짐'}</button></header>
   <div className={styles.progress} aria-label={`이야기 ${scene+1} / ${scenes.length}`}><div style={{width:`${(scene+1)/scenes.length*100}%`}}/></div>
@@ -40,7 +46,8 @@ export default function Adventure(){
     {scene===6&&<button className={`${styles.book} ${revealed?styles.openBook:''}`} onClick={interact} disabled={revealed} aria-label="이야기 책 펼치기"><span className={styles.bookPage}>My<br/>Tree House<Icon name="leaf" size={40}/></span><span className={styles.bookCover}><Icon name="book" size={48}/><b>책을 펼쳐봐요</b></span></button>}
     {revealed&&scene>0&&scene<7&&<span className={styles.discovery} role="status">{['','나무 위의 집을 찾았어요!','아빠와 함께 안전하게 도착!','할아버지가 문을 열어주셨어요!','와! 원숭이가 있는 정글이네요!','그림 속에서 정글을 여행할 수 있겠네요.','포근한 나무집에 이야기가 펼쳐져요.'][scene]}</span>}
    </div>
-   <div className={styles.dialogue}><div className={styles.dialogueTop}><span>{s.speaker}</span><button onClick={()=>speaking?stop():speak(s.en)} disabled={busy} aria-label={speaking?'대사 멈추기':'대사 듣기'}><Icon name={speaking?'stop':'sound'} size={21}/></button></div><p className={styles.english}>{s.en}</p><p className={styles.korean}>{s.ko}</p>
+   <div className={styles.dialogue}><div className={styles.dialogueTop}><span>{s.speaker}</span><button onClick={()=>speaking?stop():speak(s.en)} disabled={busy} aria-label={speaking?'대사 멈추기':'대사 듣기'}><Icon name={speaking?'stop':'sound'} size={21}/></button></div><p className={styles.english}>{s.en.split(/(\b(?:tree|house|climb|ladder|knock|door|jungle|window)\b)/gi).map((part,i)=>{const index=data.words.findIndex(w=>w.word===part.toLowerCase());return index<0?<span key={i}>{part}</span>:<button className={styles.wordLink} disabled={busy} key={i} onClick={e=>openWord(index,e.currentTarget)} aria-label={`${part} 단어로 놀기`}>{part}</button>;})}</p><p className={styles.korean}>{s.ko}</p>
+    {scene>0&&scene<8&&<div className={styles.wordTrail}><span>이 장면의 단어 친구 · 눌러서 함께 놀아요</span><div>{([[0,1],[0,1],[2,3],[4,5],[7,6],[6,7],[1,7],[0,1,2,3,4,5,6,7]][scene]).map(i=><button key={i} disabled={busy} onClick={e=>openWord(i,e.currentTarget)}><WordArt index={i} label=""/><b>{data.words[i].word}</b><Icon name="arrow" size={16}/></button>)}</div><small>듣기 · 그림 찾기 · 짝 맞추기 · 스펠링 · 쓰기 · 녹음</small></div>}
     {scene===7&&<div className={styles.creation}><label htmlFor="story-note">할아버지에게 남기는 나의 한 문장</label><input id="story-note" placeholder="My tree house has a window." maxLength={500} value={sentence} onChange={e=>setSentence(e.target.value)}/><InkPad value={ink} onChange={setInk} label="나무집 추억"/><Recorder recordingKey="adventure-farewell" text={sentence||s.en} onBusy={setBusy}/></div>}
     {(scene===0||revealed||scene>=7)&&<button className={styles.continue} disabled={busy} onClick={scene===8?()=>{stop();setScene(0);setRevealed(false);setTaps(0);}:next}>{scene===0?s.action:scene===7?s.action:scene===8?s.action:'이야기 계속하기'}<Icon name="arrow"/></button>}
     {scene>0&&scene<7&&!revealed&&<p className={styles.hint}>{s.action}{scene===3?' · 세 번 똑똑똑!':''}</p>}

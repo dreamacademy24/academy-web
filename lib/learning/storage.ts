@@ -1,8 +1,8 @@
 export type Point = { x: number; y: number };
 export type Stroke = Point[];
 export type Section = 'scene' | 'words' | 'story' | 'create' | 'finish';
-export type Phase = 'meet' | 'listen' | 'spell' | 'write' | 'speak';
-export type Evidence = { meet?: boolean; listen?: boolean; spell?: boolean; write?: boolean; speak?: boolean; listenAttempts?: number; spellAttempts?: number; spellingSupport?: boolean };
+export type Phase = 'meet' | 'listen' | 'match' | 'spell' | 'write' | 'speak';
+export type Evidence = { match?: boolean; meet?: boolean; listen?: boolean; spell?: boolean; write?: boolean; speak?: boolean; listenAttempts?: number; spellAttempts?: number; spellingSupport?: boolean };
 export type Draft = {
   version: 1; section: Section; index: number; phase: Phase; found: number[];
   evidence: Record<string, Evidence>; ink: Record<string, Stroke[]>;
@@ -45,7 +45,7 @@ export async function getDraft(): Promise<Draft> {
   if (!value || value.version !== 1) return initialDraft();
   return { ...initialDraft(), ...value, index: Math.max(0, Math.min(7, value.index || 0)),
     section: ['scene','words','story','create','finish'].includes(value.section) ? value.section : 'scene',
-    phase: ['meet','listen','spell','write','speak'].includes(value.phase) ? value.phase : 'meet' };
+    phase: ['meet','listen','match','spell','write','speak'].includes(value.phase) ? value.phase : 'meet' };
 }
 let queue = Promise.resolve();
 export function putDraft(draft: Draft) {

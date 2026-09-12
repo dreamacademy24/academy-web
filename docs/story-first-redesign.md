@@ -32,3 +32,11 @@
 https://www.youtube.com/watch?v=JeUIspxOqGc — 도요새중국어 독서 마당 A, B과정 리뉴얼 소개 (Short ver.). 브라우저에서 0:20 테마별 서재, 0:41 작가·콘텐츠 소개, 0:54~1:00 애니메이션·반응형 전자책 등 콘텐츠 예시, 1:20 관심 도서 화면을 확인했다. 앞으로의 시각적 목표는 인물·세계관이 있는 이야기 경험이며, 현 웹 화면의 단순 카메라 이동을 완성 캐릭터 애니메이션으로 간주하지 않는다.
 추가 사용자 요청으로 집 발견 버튼의 ‘저기! 작은 집!’ 한글 텍스트를 없애고 집 아이콘을 표시했다. 다른 한글 안내 전체 삭제 요청으로 확대 해석하지 않았다.
 
+
+## Story-integrated practice (2026-09-12)
+- Dialogue words and illustrated contextual word cards open the existing Player in place. Adventure remains mounted, preserving scene, interactions, sentence and ink; return restores focus to the originating word.
+- Embedded Player retains shared IndexedDB evidence, spelling, handwriting and recordings; hides global navigation and returns to the story after speaking. Recording busy state prevents an in-app return while saving or capturing.
+- Added a three-pair matching activity with distinct word and picture selections, retry feedback, completion evidence and keyboard-operable buttons. Available in standalone practice too.
+- Spelling success reads the current story sentence. Contextual sentence playback remains visible above activities.
+- Verified in browser: house from dialogue opens house, wrong match retries, three pairs complete, spelling submission, same-scene return with discovery state and keyboard focus preserved. TypeScript and targeted ESLint checked.
+- New reference posts: https://www.threads.com/@dalkom__mom/post/DTXxPcUktvf and https://www.threads.com/@ammas__choice/post/DbqJAHIEQwX . Text retrieved; embedded video playback not verified. First describes letter sounds, word completion, sentence rearrangement and resulting animation. Do not represent these reference features as all implemented: phoneme audio, sentence rearrangement and full character animation remain separate production work.
