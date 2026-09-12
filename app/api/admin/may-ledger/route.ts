@@ -58,6 +58,8 @@ export async function POST(req: Request) {
   if (!isFinite(amount) || amount <= 0) return NextResponse.json({ error: "금액을 확인해주세요" }, { status: 400 });
   const id = (typeof b.id === "string" && b.id) ? b.id
     : "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  // source: 'manual' 기본. 모리 발생/지급 구분은 'mori_accrue' / 'mori_settle' 로 저장(스키마 변경 없이).
+  const src = (typeof b.source === "string" && b.source) ? b.source : "manual";
   const row = {
     id,
     entry_date: (b.entry_date as string) || new Date().toISOString().slice(0, 10),
@@ -68,7 +70,7 @@ export async function POST(req: Request) {
     memo: (b.memo as string) || "",
     amount: Math.abs(amount),
     currency: (b.currency as string) === "KRW" ? "KRW" : "PHP",
-    source: "manual",
+    source: src,
   };
   const { data, error } = await sb.from("may_ledger").insert(row).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -81,7 +83,7 @@ export async function PATCH(req: Request) {
   const b = await req.json().catch(() => null) as { id?: string; patch?: Record<string, unknown> } | null;
   if (!b?.id || !b.patch) return NextResponse.json({ error: "id/patch 필요" }, { status: 400 });
   const allowed: Record<string, unknown> = {};
-  for (const k of ["entry_date", "book", "type", "division", "detail", "memo", "amount", "currency"]) {
+  for (const k of ["entry_date", "book", "type", "division", "detail", "memo", "amount", "currency", "source"]) {
     if (k in b.patch) allowed[k] = b.patch[k];
   }
   const { error } = await sb.from("may_ledger").update(allowed).eq("id", b.id);
