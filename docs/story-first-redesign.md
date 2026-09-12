@@ -40,3 +40,6 @@ https://www.youtube.com/watch?v=JeUIspxOqGc — 도요새중국어 독서 마당
 - Spelling success reads the current story sentence. Contextual sentence playback remains visible above activities.
 - Verified in browser: house from dialogue opens house, wrong match retries, three pairs complete, spelling submission, same-scene return with discovery state and keyboard focus preserved. TypeScript and targeted ESLint checked.
 - New reference posts: https://www.threads.com/@dalkom__mom/post/DTXxPcUktvf and https://www.threads.com/@ammas__choice/post/DbqJAHIEQwX . Text retrieved; embedded video playback not verified. First describes letter sounds, word completion, sentence rearrangement and resulting animation. Do not represent these reference features as all implemented: phoneme audio, sentence rearrangement and full character animation remain separate production work.
+
+## 후속 기획 결정
+사용자가 제안한 게임과 높은 레벨 활용 원칙은 [게임 아이디어 기록](learning-game-ideas.md)을 따른다. 현재 초급 단원에 모든 게임을 넣지 않으며, 기본 학습 후 게임으로 이해를 확인하는 방향이다.
