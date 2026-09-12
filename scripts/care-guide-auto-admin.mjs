@@ -1,6 +1,6 @@
 export function autoAdmin(lang){
  const ko=lang==='ko';
- const image='https://yiglafscjvjgkxpycevk.supabase.co/storage/v1/object/public/staff-files/student-care-guides/20260912/06-student-care.jpg';
+ const image='screens/06-student-care.jpg?v=auto-directory';
  const screen=`<figure class="screen"><a href="${image}" target="_blank" rel="noopener"><img src="${image}" alt="${ko?'기존 학생 명부의 검색과 필터':'Student directory search and filters'}" width="1265" height="712"></a><figcaption>${ko?'운영 화면 · 개인정보가 표시되지 않는 검색 상태로 촬영했습니다. 화면을 누르면 크게 볼 수 있어요.':'Live screen with a no-result search to avoid showing personal data. Select the image to enlarge.'}</figcaption></figure>`;
  const step=(n,title,action,result)=>`<article class="walk-step"><span class="step-number">${n}</span><div><h3>${title}</h3><p>${action}</p><p class="result"><strong>${ko?'완료 확인':'Check the result'}</strong> · ${result}</p></div></article>`;
  return `<section id="s2"><p class="eyebrow">02 · ${ko?'한국인 관리자':'Korean administrators'}</p><h2>${ko?'기존 학생 찾기 → 교사 배정 → 예외 확인':'Find existing students → assign teachers → review exceptions'}</h2><p class="path">${ko?'로그인 → 학생 케어 · 방문 이력':'Sign in → 학생 케어 · 방문 이력 (Student Care)'}</p><div class="walkthrough">`+

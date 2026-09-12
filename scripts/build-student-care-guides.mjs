@@ -25,6 +25,8 @@ for(const [lang,c] of Object.entries(copy)){
  c.toc[1]=lang==='ko'?'학생 찾기·교사 배정':'Find students & assign teachers';
  c.body=c.body.replace(lang==='ko'?'관리자가 예약 학생과 기존 명부를 대조하고 신원을 확인한 뒤 연결합니다.':'Administrators compare booking entries with the student register and confirm identity before linking.',lang==='ko'?'기존 명부를 바로 표시하고 정확히 일치하는 방문은 자동 연결합니다. 예외만 관리자가 확인합니다.':'The existing directory appears immediately; exact visits link automatically. Administrators review exceptions.');
  c.body=c.body.replace(/<section id="s2">[\s\S]*?<\/section>/,autoAdmin(lang));
+ c.body=c.body.replace('관리자는 연결 완료 여부를, 선생님은 해당 방문의 배정 여부를 확인합니다. 검색어·필터도 초기화합니다.','검색어·필터를 초기화하고 Refresh를 누릅니다. 관리자는 기존 학생 명부에 등록되어 있는지, 선생님은 해당 방문의 배정 여부를 확인합니다.');
+ c.body=c.body.replace('Administrators should check the confirmed link. Teachers should check their assignment for that visit. Clear the search and filters too.','Clear the search and filters, then Refresh. Administrators should check the original student directory; teachers should check their assignment for the visit.');
  for(const [id,kind] of [['s2','admin'],['s4','learning']]){
   if(kind==='admin')continue;
   c.body=c.body.replace(new RegExp(`(<section id="${id}">[\\s\\S]*?<p class="path">[\\s\\S]*?</p>)`),`$1${walkthrough(lang,kind)}`);
