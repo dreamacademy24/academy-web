@@ -1,0 +1,148 @@
+{
+  "version": 3,
+  "durationSeconds": 17.727458,
+  "sampleRate": 24000,
+  "channels": 1,
+  "bitsPerSample": 16,
+  "voices": {
+    "ko": {
+      "name": "Dreamy approved Qwen reference",
+      "engine": "Qwen3-TTS",
+      "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "speed": "normal",
+      "speedChanged": false,
+      "pitchChanged": false,
+      "referenceSha256": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8"
+    },
+    "en": {
+      "name": "Dreamy approved Qwen reference",
+      "engine": "Qwen3-TTS",
+      "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+      "speed": "normal",
+      "speedChanged": false,
+      "pitchChanged": false,
+      "referenceSha256": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8"
+    }
+  },
+  "cues": [
+    {
+      "id": "intro-01",
+      "scene": "greeting",
+      "start": 0.0,
+      "end": 2.8675,
+      "audioSrc": "/learning/tree-house/intro-voice-01.wav",
+      "text": "안녕! 나는 드림이야! Hello!",
+      "speech": [
+        {
+          "lang": "ko",
+          "text": "안녕! 나는 드림이야!"
+        },
+        {
+          "lang": "en",
+          "text": "Hello!"
+        }
+      ],
+      "audioStart": 0.04,
+      "audioDuration": 2.4775,
+      "audioEnd": 2.5175,
+      "leadingSilence": 0.012
+    },
+    {
+      "id": "intro-02",
+      "scene": "friends",
+      "start": 2.8675,
+      "end": 6.481125,
+      "audioSrc": "/learning/tree-house/intro-voice-02.wav",
+      "text": "우리 함께 이야기를 보며 영어 모험을 떠나자.",
+      "speech": [
+        {
+          "lang": "ko",
+          "text": "우리 함께 이야기를 보며 영어 모험을 떠나자."
+        }
+      ],
+      "audioStart": 2.9075,
+      "audioDuration": 3.223625,
+      "audioEnd": 6.131125,
+      "leadingSilence": 0.012
+    },
+    {
+      "id": "intro-03",
+      "scene": "listen-and-speak",
+      "start": 6.481125,
+      "end": 9.837333,
+      "audioSrc": "/learning/tree-house/intro-voice-03.wav",
+      "text": "잘 듣고, 나처럼 말해 봐! Tree!",
+      "speech": [
+        {
+          "lang": "ko",
+          "text": "잘 듣고, 나처럼 말해 봐!"
+        },
+        {
+          "lang": "en",
+          "text": "Tree!"
+        }
+      ],
+      "audioStart": 6.521125,
+      "audioDuration": 2.966208,
+      "audioEnd": 9.487333,
+      "leadingSilence": 0.012
+    },
+    {
+      "id": "intro-04",
+      "scene": "mission",
+      "start": 9.837333,
+      "end": 13.093875,
+      "audioSrc": "/learning/tree-house/intro-voice-04.wav",
+      "text": "단어도 써 보고, 게임으로 배운 걸 확인해 봐!",
+      "speech": [
+        {
+          "lang": "ko",
+          "text": "단어도 써 보고, 게임으로 배운 걸 확인해 봐!"
+        }
+      ],
+      "audioStart": 9.877333,
+      "audioDuration": 2.866542,
+      "audioEnd": 12.743875,
+      "leadingSilence": 0.012
+    },
+    {
+      "id": "intro-05",
+      "scene": "departure",
+      "start": 13.093875,
+      "end": 17.727458,
+      "audioSrc": "/learning/tree-house/intro-voice-05.wav",
+      "text": "준비됐지? 이제 너에게 맞는 모험을 시작해 볼까?",
+      "speech": [
+        {
+          "lang": "ko",
+          "text": "준비됐지? 이제 너에게 맞는 모험을 시작해 볼까?"
+        }
+      ],
+      "audioStart": 13.133875,
+      "audioDuration": 3.593583,
+      "audioEnd": 16.727458,
+      "leadingSilence": 0.0
+    }
+  ],
+  "narration": {
+    "source": "Qwen official free demo / generate_voice_clone",
+    "assemblyScript": "scripts/assemble-dreamy-qwen-intro.py",
+    "windowsNarrationScriptApplies": false,
+    "model": "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+    "referenceModel": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+    "referencePath": "artifacts/free-voice/dreamy-qwen-greeting.wav",
+    "referenceSha256": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+    "referenceText": "안녕! 나는 드림이야. 나랑 같이 영어 모험을 떠나 볼까? 잘 듣고, 함께 말해 봐!",
+    "languageForMixedSpeech": "Auto",
+    "processing": {
+      "trimOnly": true,
+      "silenceThresholdPcm16": 80,
+      "leadingPaddingSeconds": 0.012,
+      "trailingPaddingSeconds": 0.08,
+      "internalPausesPreserved": true,
+      "speedChanged": false,
+      "pitchChanged": false,
+      "sampleRateChanged": false
+    }
+  }
+}

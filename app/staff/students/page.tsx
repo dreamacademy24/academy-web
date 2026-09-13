@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {openStaffSignIn} from '@/lib/staffSessionClient';
+import LearningAssignment from '@/components/student-care/LearningAssignment';
 import styles from './students.module.css';
 type Assignment={id:string;teacherId:string;name:string;active:boolean;available:boolean};
 type Visit={id:string;learner_id:string;name_kr:string;name_en:string|null;start_date:string;end_date:string;reason?:string;linkMethod?:string;assignments:Assignment[];history:{id:string;teacher:string;actor:string;active:boolean;at:string}[]};
@@ -67,6 +68,7 @@ export default function StudentCare(){
       {admin&&<label className={styles.assign}>담당 선생님<select aria-label={`${student.name_kr} ${v.start_date} 담당 선생님 추가`} disabled={saving||!!pending} value="" onChange={e=>{const t=data.teachers.find(t=>t.id===e.target.value);if(t)choose(v,t.id,true,t.name);}}><option value="">선생님 추가</option>{data.teachers.filter(t=>!v.assignments.some(a=>a.teacherId===t.id&&a.active)).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}</div>
       {pending?.visitId===v.id&&<div className={styles.confirm}><p><strong>{student.name_kr} · {v.start_date} ~ {v.end_date}</strong></p><p>{pending.name} 선생님을 {pending.active?'담당자로 배정합니다. 이 방문의 학생 케어 정보를 볼 수 있게 됩니다.':'배정 해제합니다. 이 방문의 케어 정보 접근이 종료됩니다. 기존 배정 이력은 보존됩니다.'}</p><button disabled={saving} onClick={save}>{saving?'저장 중…':pending.active?'배정 저장':'해제 저장'}</button> <button disabled={saving} onClick={()=>{setPending(null);setMessage('');}}>취소</button></div>}
       {admin&&v.history.length>0&&<details className={styles.history}><summary>담당자 변경 이력 ({v.history.length})</summary><ul>{v.history.map(h=><li key={h.id}>{h.teacher} · {h.active?'배정':'해제'}<small>{new Date(h.at).toLocaleString('ko-KR')} · {h.actor}</small></li>)}</ul></details>}
+      <LearningAssignment visitId={v.id} admin={admin} defaultOpen={selected&&data.selection?.visitId===v.id}/>
       </>}
      </section>)}
     </article>;

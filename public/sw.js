@@ -1,4 +1,4 @@
-const CACHE_NAME = "dreamacademy-v6";
+const CACHE_NAME = "dreamacademy-v7";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -25,6 +25,9 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+  // Let the browser handle media byte ranges. Partial (206) responses cannot be
+  // stored with Cache.put, and a cached whole file must not replace a range.
+  if (req.headers.has('range') || req.destination === 'video' || req.destination === 'audio') return;
   const url = new URL(req.url);
   // 페이지(HTML 네비게이션) + API + 동적 데이터는 항상 네트워크에서 최신으로 (캐시로 옛 화면 안 보이게)
   if (req.mode === "navigate" || req.destination === "document" || url.pathname.startsWith("/api/")) {

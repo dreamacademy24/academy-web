@@ -1,7 +1,8 @@
 'use client';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getRecording, putRecording, type Recording, type Stroke } from '@/lib/learning/storage';
+import { type Recording, type Stroke } from '@/lib/learning/storage';
+import {useLearningStorage} from './LearningContext';
 
 export function Icon({ name, size = 22 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
@@ -58,13 +59,14 @@ export function InkPad({ value, onChange, label = '내 글씨', guide = '' }: { 
 }
 
 export function Recorder({ recordingKey, text, onSaved, onBusy }: { recordingKey: string; text: string; onSaved?: () => void; onBusy?: (busy: boolean) => void }) {
+  const {getRecording,putRecording}=useLearningStorage();
   const [status,setStatus]=useState<'idle'|'permission'|'recording'|'saving'>('idle'); const [seconds,setSeconds]=useState(0); const [record,setRecord]=useState<Recording>(); const [url,setUrl]=useState(''); const [error,setError]=useState('');
   const rec=useRef<MediaRecorder|null>(null); const stream=useRef<MediaStream|null>(null); const timer=useRef<ReturnType<typeof setInterval>|null>(null); const alive=useRef(true); const epoch=useRef(0); const startTime=useRef(0); const interrupted=useRef(false); const cb=useRef({onSaved,onBusy});
   useEffect(()=>{cb.current={onSaved,onBusy};},[onSaved,onBusy]);
   const stop=useCallback(()=>{ if(timer.current)clearInterval(timer.current);timer.current=null;if(rec.current?.state==='recording')rec.current.stop();stream.current?.getTracks().forEach(t=>t.stop()); },[]);
-  useEffect(()=>{alive.current=true;getRecording(recordingKey).then(r=>{if(alive.current)setRecord(r);}).catch(()=>{if(alive.current)setError('기기 저장을 열지 못했어요. 녹음 파일 저장 기능을 사용할 수 없어요.');});
+  useEffect(()=>{let live=true;alive.current=true;getRecording(recordingKey).then(r=>{if(live)setRecord(r);}).catch(()=>{if(live)setError('기기 저장을 열지 못했어요. 녹음 파일 저장 기능을 사용할 수 없어요.');});
     const hidden=()=>{if(document.hidden){epoch.current++;interrupted.current=true;if(!rec.current||rec.current.state==='inactive'){setStatus('idle');cb.current.onBusy?.(false);}stop();}};document.addEventListener('visibilitychange',hidden);
-    return()=>{alive.current=false;epoch.current++;stop();cb.current.onBusy?.(false);document.removeEventListener('visibilitychange',hidden);};},[recordingKey,stop]);
+    return()=>{live=false;alive.current=false;epoch.current++;stop();cb.current.onBusy?.(false);document.removeEventListener('visibilitychange',hidden);};},[recordingKey,stop,getRecording]);
   useEffect(()=>{if(!record)return;const src=URL.createObjectURL(record.blob);setUrl(src);return()=>URL.revokeObjectURL(src);},[record]);
   async function start(){
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){setError('이 브라우저는 녹음을 지원하지 않아요. Chrome 또는 Safari에서 열어주세요.');return;}

@@ -2,12 +2,11 @@
 import { portalFetch } from "@/lib/portalFetch";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+function portalDestination() {
+  return new URLSearchParams(window.location.search).get('returnTo') === '/learn' ? '/learn' : '/portal/dashboard';
+}
 
 export default function PortalPage() {
   const router = useRouter();
@@ -26,6 +25,11 @@ export default function PortalPage() {
     if (authError) {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.');
       setLoading(false); return;
+    }
+    if (portalDestination() === '/learn') {
+      setLoading(false);
+      router.replace('/learn');
+      return;
     }
     const bookingRes = await portalFetch('/api/portal/find-booking', {
       method: 'POST',
@@ -62,7 +66,7 @@ export default function PortalPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        router.replace("/portal/dashboard");
+        router.replace(portalDestination());
       }
     });
   }, [router]);
@@ -91,7 +95,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(135deg,#0f
     <div className="pt-w">
       <div className="pt-card">
         <div className="pt-logo">DREAM ACADEMY</div>
-        <div className="pt-sub">예약 조회 포털</div>
+        <div className="pt-sub">예약 · 학습 로그인</div>
         <div style={{fontSize:'12px',color:'#94a3b8',marginTop:'4px',marginBottom:'14px'}}>
           드림아카데미에서 발급받은 아이디로 로그인하세요
         </div>

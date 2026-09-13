@@ -4,6 +4,12 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## 학습 앱 제작 비용 기준
+
+- 사용자 요청: 이미 결제한 서비스와 현재 사용 가능한 내장 도구를 우선 사용한다. 추가 비용을 전제로 앱 제작을 진행하지 않는다.
+- Higgsfield를 포함한 외부 유료 생성 도구는 사용자가 해당 도구 사용과 비용을 명시적으로 허용하기 전까지 생성 요청을 실행하지 않는다. 사전 업로드 등 유료 제작 준비도 임의로 시작하지 않는다.
+- 이미지 생성, 영상 생성, 코드로 구현하는 애니메이션의 실제 구현 범위를 구분해서 설명한다. 내장 이미지 생성이 외부 유료 영상 생성을 포함한다고 설명하지 않는다.
+
 ## 직원업무 변경 공지
 
 - 기능 사용 가이드는 공지사항에서 안내한다. 왼쪽 업무 메뉴나 직원 홈의 업무 목록에 별도 가이드 항목을 추가하지 않는다.

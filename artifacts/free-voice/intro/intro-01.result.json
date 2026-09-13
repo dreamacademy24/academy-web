@@ -1,0 +1,24 @@
+{
+  "source": {
+    "text": "안녕! 나는 드림이야! Hello!",
+    "language": "Auto",
+    "referenceHash": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+    "model": "Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "result": [
+    {
+      "path": "/tmp/gradio/0d0d9210668c412c139694616bfbd79d9dd84a5144a04d5a938cc38e7e383238/audio.wav",
+      "url": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/0d0d9210668c412c139694616bfbd79d9dd84a5144a04d5a938cc38e7e383238/audio.wav",
+      "size": null,
+      "orig_name": "audio.wav",
+      "mime_type": null,
+      "is_stream": false,
+      "meta": {
+        "_type": "gradio.FileData"
+      }
+    },
+    "Voice clone generation completed successfully!"
+  ],
+  "completedAt": "2026-09-12T16:34:50.658Z",
+  "paidCredentialsUsed": false
+}

@@ -1,0 +1,16 @@
+{
+  "source": {
+    "text": "준비됐지? 이제 너에게 맞는 모험을 시작해 볼까?",
+    "language": "Korean",
+    "referenceHash": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+    "model": "Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "method": "official-demo-browser",
+  "authenticatedFreeAccount": true,
+  "useXVectorOnly": false,
+  "paidCredentialsUsed": false,
+  "savedAt": "2026-09-12T17:11:48.653Z",
+  "audioUrl": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/6cdfcd452fd49dd9ef1201f3820c66ffd4ecfd0d1d6df07376911cf1883f2d49/audio.wav",
+  "bytes": 191652,
+  "sha256": "de2286c291f3eeffa4ac8f396aad7c07c13a782bb7cb1099799d317c37f623df"
+}

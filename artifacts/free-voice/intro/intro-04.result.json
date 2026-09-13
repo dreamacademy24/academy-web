@@ -1,0 +1,16 @@
+{
+  "source": {
+    "text": "단어도 써 보고, 게임으로 배운 걸 확인해 봐!",
+    "language": "Korean",
+    "referenceHash": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+    "model": "Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "method": "official-demo-browser",
+  "authenticatedFreeAccount": true,
+  "useXVectorOnly": false,
+  "paidCredentialsUsed": false,
+  "savedAt": "2026-09-12T17:11:19.232Z",
+  "audioUrl": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/ff56a2fc9add3c6834b13ef7be6d279ce92352417a0f2ceeb396d8adf3a2387a/audio.wav",
+  "bytes": 141804,
+  "sha256": "ad90ab73b5472559fa9b5cc6ee89fa30aa20e7a2af6f0c7d54d299b219f0793a"
+}

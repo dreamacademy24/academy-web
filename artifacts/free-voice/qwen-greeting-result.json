@@ -1,0 +1,7 @@
+{
+  "status": "Voice design generation completed successfully!",
+  "audioUrl": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/cbe6e3614c028d7051b90f770dd097820a9983d224a5a909243d1e53d5d2130c/audio.wav",
+  "outputPath": "C:\\Users\\desko\\academy-web\\.release\\student-care-live\\artifacts\\free-voice\\dreamy-qwen-greeting.wav",
+  "bytes": 348374,
+  "paidCredentialsUsed": false
+}

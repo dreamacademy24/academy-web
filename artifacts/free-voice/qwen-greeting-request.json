@@ -1,0 +1,9 @@
+{
+  "provider": "Official Qwen Hugging Face Space, unauthenticated free quota",
+  "endpoint": "generate_voice_design",
+  "model": "Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+  "text": "안녕! 나는 드림이야. 나랑 같이 영어 모험을 떠나 볼까? 잘 듣고, 함께 말해 봐!",
+  "language": "Korean",
+  "instruction": "A bright, youthful female animated character voice, cheerful, playful, smiling and warmly encouraging. Speak natural native Korean with clear articulation at a NORMAL conversational pace, not slow. Express genuine curiosity and excitement with varied melodic intonation. A sweet light voice with a natural rounded tone, not shrill or artificially squeaky. Short natural pauses. No music or sound effects.",
+  "requestedAt": "2026-09-12T16:28:22.211Z"
+}

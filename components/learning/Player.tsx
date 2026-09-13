@@ -4,7 +4,8 @@ import Matching from './Matching';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import data from '@/lib/learning/tree-house.json';
-import {getDraft,putDraft,initialDraft,normalizeAnswer,type Draft,type Phase,type Section} from '@/lib/learning/storage';
+import {initialDraft,normalizeAnswer,type Draft,type Phase,type Section} from '@/lib/learning/storage';
+import {useLearningStorage} from './LearningContext';
 import {Icon,WordArt,InkPad,Recorder,useSpeech} from './Tools';
 const meanings=['나무','집','오르다','사다리','똑똑 두드리다','문','정글','창문'];
 const explanations=['굵은 줄기 위로 초록 잎이 자라요. 집을 든든하게 받쳐주는 나무예요.','지붕과 벽이 있고, 우리가 안에서 지낼 수 있어요. 나무 위에도 작은 집이 있네요!','손과 발을 써서 위로 올라가요. 바비와 미아는 아빠의 도움을 받아 올라가요.','한 칸씩 밟고 오르내리는 도구예요. 아빠와 함께 천천히 올라가요.','문을 살짝 똑똑! 안에 있는 사람에게 내가 왔다고 알려줘요.','열고 닫으면서 집 안으로 들어가요. 할아버지가 “들어오렴!” 하고 부르세요.','나무와 식물이 빽빽하게 자라는 숲이에요. 이야기 속 정글은 할아버지가 그린 그림이에요.','벽에 나 있어서 바깥을 볼 수 있어요. 창문 너머에는 어떤 그림이 있을까요?'];
@@ -15,9 +16,10 @@ const sectionNames=['나무집 탐험','단어랑 놀기','이야기 읽기','�
 const spots=[{i:0,x:55,y:76},{i:1,x:52,y:21},{i:3,x:35,y:66},{i:5,x:43,y:39},{i:7,x:60,y:33}];
 const paragraphs=[data.story.slice(0,data.story.indexOf('There is a big window.')),data.story.slice(data.story.indexOf('There is a big window.'),data.story.indexOf('Grandpa opens a book.')),data.story.slice(data.story.indexOf('Grandpa opens a book.'))];
 export default function Player({startWord,onReturn,storyLine}:{startWord?:number;onReturn?:()=>void;storyLine?:string}={}){
+ const {getDraft,putDraft}=useLearningStorage();
  const [draft,setDraft]=useState<Draft>(initialDraft);const [ready,setReady]=useState(false);const [saveError,setSaveError]=useState('');const [selected,setSelected]=useState(0);const [feedback,setFeedback]=useState('');const [answer,setAnswer]=useState('');const [busy,setBusy]=useState(false);const [assisted,setAssisted]=useState(false);const {speak,stop,speaking,speechError}=useSpeech();
- useEffect(()=>{let live=true;getDraft().then(d=>{if(live){if(d)setDraft(startWord===undefined?d:{...d,section:'words',index:startWord,phase:'meet'});setReady(true);}}).catch(()=>{if(live){setReady(true);setSaveError('기기 저장소를 열지 못했어요. 지금 한 활동은 다시 열 때 남지 않을 수 있어요.');}});return()=>{live=false;};},[startWord]);
- useEffect(()=>{if(!ready)return;putDraft(draft).then(()=>setSaveError('')).catch(()=>setSaveError('저장하지 못했어요. 브라우저의 저장 공간과 개인정보 보호 설정을 확인해주세요.'));},[draft,ready]);
+ useEffect(()=>{let live=true;getDraft().then(d=>{if(live){if(d)setDraft(startWord===undefined?d:{...d,section:'words',index:startWord,phase:'meet'});setReady(true);}}).catch(()=>{if(live){setReady(true);setSaveError('기기 저장소를 열지 못했어요. 지금 한 활동은 다시 열 때 남지 않을 수 있어요.');}});return()=>{live=false;};},[startWord,getDraft]);
+ useEffect(()=>{if(!ready)return;putDraft(draft).then(()=>setSaveError('')).catch(()=>setSaveError('저장하지 못했어요. 브라우저의 저장 공간과 개인정보 보호 설정을 확인해주세요.'));},[draft,ready,putDraft]);
  const word=data.words[draft.index];const evidence=draft.evidence[word.word]||{};
  function mark(field:Phase,extra={}){setDraft(d=>({...d,evidence:{...d.evidence,[word.word]:{...d.evidence[word.word],[field]:true,...extra}}}));}
  function go(section:Section){if(busy)return;stop();setFeedback('');setDraft(d=>({...d,section}));}

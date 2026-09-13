@@ -1,0 +1,27 @@
+{
+  "source": {
+    "text": "잘 듣고, 나처럼 말해 봐! Tree!",
+    "language": "Auto",
+    "referenceHash": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+    "model": "Qwen3-TTS-12Hz-1.7B-Base"
+  },
+  "method": "official-demo-browser",
+  "authenticatedFreeAccount": true,
+  "useXVectorOnly": false,
+  "paidCredentialsUsed": false,
+  "savedAt": "2026-09-12T17:10:37.450Z",
+  "audioUrl": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/b3591417b4930a0960d303a6d0af7149d0d41a656a737342d2f89a5398a1f4a7/audio.wav",
+  "bytes": 153306,
+  "sha256": "480d4baf2f1c876b6e53f37c23ff1773f5c9e2810d941726f2b4c62f9bee744f",
+  "previousRequest": {
+    "source": {
+      "text": "잘 듣고, 나처럼 말해 봐! Tree!",
+      "language": "Auto",
+      "referenceHash": "015c4fc062a58b42b10d6c25deda5a4308dc76a312a101024a08b92fb81444d8",
+      "model": "Qwen3-TTS-12Hz-1.7B-Base"
+    },
+    "eventId": "f4b5739ce67042aeb42289139d7f20cc",
+    "requestedAt": "2026-09-12T16:34:58.322Z",
+    "paidCredentialsUsed": false
+  }
+}
