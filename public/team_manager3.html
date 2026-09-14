@@ -1407,8 +1407,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
 <script src="/staff-workspace-home.js?v=20260911-reauth1"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260911-reauth1">
-<script src="/staff-workspace-task.js?v=20260911-reauth1"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-photos1">
+<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-photos1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
@@ -3670,7 +3670,7 @@ function loadProjectsFromSB(){
 // ── Supabase sync: taskComments → staff_task_comments ──
 // NOTE: staff_task_comments.id is bigint (DB auto-generated). Do NOT send local temp id.
 function tcToRow(taskId,c){var _ts=c.ts||c.date;if(_ts&&typeof _ts==='string'){var _d=new Date(_ts);_ts=isNaN(_d.getTime())?Date.now():_d.getTime();}if(!_ts)_ts=Date.now();return{task_id:taskId,from_id:c.author||c.from_id||'',text:c.text||'',ts:_ts};}
-function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',date:_ds};}
+function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],date:_ds};}
 function syncTcToSB(taskId,c){
   return sbUpsert('staff_task_comments',tcToRow(taskId,c)).then(function(data){
     if(Array.isArray(data)&&data.length&&data[0]&&data[0].id!=null){
@@ -3843,6 +3843,7 @@ function updateNavBadges(){
 function jsonHash(obj){return JSON.stringify(obj);}
 var _pollInFlight=false;
 function _pollEditing(){
+  if(typeof _staffCommentDrafts!=='undefined'&&Object.values(_staffCommentDrafts).some(function(d){return d.busy;}))return true;
   if(document.querySelector('[data-comment-editing]'))return true;
   if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)return true;
   if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen)return true;

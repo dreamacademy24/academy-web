@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     // 2. enrollment 조회 + 본인 확인
     const { data: enroll } = await supabase
       .from('online_enrollments')
-      .select('id, customer_user_id, used_sessions')
+      .select('id, customer_user_id, used_sessions, package_plan')
       .eq('id', ses.enrollment_id)
       .single()
     if (!enroll) return NextResponse.json({ error: 'enrollment not found' }, { status: 404 })
@@ -59,8 +59,8 @@ export async function POST(req: Request) {
         can_cancel: true,
         deduct: false,
         require_confirm: false,
-        message_ko: '취소 완료되었습니다. 마지막 회차 이후 1회 자동 추가됩니다.',
-        message_en: 'Cancelled successfully. One session has been added after your last class.',
+        message_ko: enroll.package_plan?'회차 차감 없이 취소합니다. 같은 전후 기간에 가능한 보강일이 없으면 담당자와 남은 회차를 재배분해주세요.':'취소 완료되었습니다. 마지막 회차 이후 1회 자동 추가됩니다.',
+        message_en: enroll.package_plan?'No credit deduction. Check the makeup date; if the same period is full, contact staff to reallocate the remaining credit.':'Cancelled successfully. One session has been added after your last class.',
         days_before: daysBefore,
       }
     } else if (daysBefore >= 1) {

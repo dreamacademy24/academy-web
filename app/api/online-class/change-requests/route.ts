@@ -100,6 +100,7 @@ export async function PATCH(req: Request) {
       .eq('id', cr.enrollment_id)
       .single()
     if (!enroll) return NextResponse.json({ error: 'enrollment not found' }, { status: 404 })
+    if(enroll.package_plan&&cr.req_type!=='single')return NextResponse.json({error:'전·후 일정이 연결되어 있습니다. 이 요청을 반려한 뒤 학생 상세 화면에서 각 일정을 수정해주세요.'},{status:409})
 
     // ── 1회차만 변경: 해당 세션의 날짜/시간만 이동 (재생성 없음) ──
     if (cr.req_type === 'single') {

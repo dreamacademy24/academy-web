@@ -48,13 +48,14 @@ export async function POST(req: Request) {
     // 본인 확인
     const { data: enroll } = await supabase
       .from('online_enrollments')
-      .select('id, customer_user_id, student_name, tutor_id')
+      .select('id, customer_user_id, student_name, tutor_id, package_plan')
       .eq('id', enrollment_id)
       .single()
     if (!enroll) return NextResponse.json({ error: 'enrollment not found' }, { status: 404 })
     if (enroll.customer_user_id !== customer_user_id) {
       return NextResponse.json({ error: '본인 수강 정보만 변경 요청할 수 있습니다.' }, { status: 403 })
     }
+    if(enroll.package_plan&&kind==='full')return NextResponse.json({error:'전·후에 나눈 전체 일정 변경은 담당자에게 요청해주세요. 1회 수업 변경은 출석부에서 신청할 수 있습니다.'},{status:409})
 
     // 4일 전 규칙 — 변경 대상일(1회차는 그 수업의 원래 날짜) 기준
     const today = new Date(); today.setHours(0, 0, 0, 0)

@@ -1,5 +1,6 @@
 "use client";
 import { portalFetch } from "@/lib/portalFetch";
+import type {PackagePlan} from '@/lib/onlinePackagePlan';
 import { useState, useEffect, useMemo, useCallback, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -11,6 +12,7 @@ const supabase = createClient(
 
 interface Tutor { id: string; name_display: string; name_en: string }
 interface Enrollment {
+  package_plan?:PackagePlan|null;
   id: string; student_name: string; student_name_en: string | null;
   customer_user_id: string | null;
   tutor_id: string | null; tutor: Tutor | null;
@@ -34,7 +36,7 @@ const DAY_KR: Record<string, string> = {
 };
 function daysToKr(days: string[]) { return (days || []).map(d => DAY_KR[d.toLowerCase()] || d).join("/"); }
 
-const PERIOD_LABEL: Record<string, string> = { pre: "연수전", post: "연수후", both: "연수전후", standalone: "화상수업", ssp: "SSP" };
+const PERIOD_LABEL: Record<string, string> = { pre: "연수전", post: "연수후", both: "연수전후", split: "연수 전·후 나누어 수강", standalone: "화상수업", ssp: "SSP" };
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; color: string }> = {
   scheduled:  { label: "예정",   bg: "#dbeafe", color: "#1e40af" },
@@ -440,11 +442,12 @@ function PortalOnlineClassInner() {
             <div className="grid">
               <div className="item"><div className="lbl">담당 선생님</div><div className="val">{activeEnroll.tutor?.name_display || <span style={{ color: "#94a3b8", fontWeight: 600 }}>배정 예정</span>}</div></div>
               <div className="item"><div className="lbl">수업 구분</div><div className="val">{PERIOD_LABEL[activeEnroll.class_period] || activeEnroll.class_period}</div></div>
-              <div className="item"><div className="lbl">수업 요일</div><div className="val">{daysToKr(activeEnroll.days_of_week || [])}</div></div>
-              <div className="item"><div className="lbl">수업 시간 (한국)</div><div className="val">{activeEnroll.class_time_kr || "-"}</div></div>
+              {!activeEnroll.package_plan&&<><div className="item"><div className="lbl">수업 요일</div><div className="val">{daysToKr(activeEnroll.days_of_week || [])}</div></div>
+              <div className="item"><div className="lbl">수업 시간 (한국)</div><div className="val">{activeEnroll.class_time_kr || "-"}</div></div></>}
               <div className="item"><div className="lbl">수강 시작</div><div className="val">{activeEnroll.start_date || "-"}</div></div>
               <div className="item"><div className="lbl">수강 종료</div><div className="val">{activeEnroll.end_date || "-"}</div></div>
             </div>
+            {activeEnroll.package_plan&&<div className="grid" style={{marginTop:16}}>{(['pre','post'] as const).map(key=>{const p=activeEnroll.package_plan![key];return <div key={key} className="item"><strong>{key==='pre'?'연수 전':'연수 후'} · {p.count}회</strong>{p.count>0?<><p>희망 시작 {p.start}</p><p>{p.days.map(d=>`${d} ${p.times[d]}`).join(' / ')} (한국)</p><small>실제 수업 날짜와 변경된 시간은 아래 출석부에서 확인해주세요.</small></>:<p>배정 없음</p>}</div>;})}</div>}
             <div className="sess-stats">
               <div className="stat"><div className="num">{activeEnroll.total_sessions}</div><div className="lbl">총 회차</div></div>
               <div className="stat used"><div className="num">{activeEnroll.used_sessions}</div><div className="lbl">사용 회차</div></div>
@@ -476,7 +479,7 @@ function PortalOnlineClassInner() {
                     <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#92400e", fontWeight: 600 }}>
                       ⏳ 변경 요청 검토 중 — {pendingReq.req_days_of_week?.length ? pendingReq.req_days_of_week.join("/") : ""} {pendingReq.req_time_kr || ""} (적용일 {pendingReq.effective_from})
                     </div>
-                  ) : (
+                  ) : activeEnroll.package_plan ? <p style={{fontSize:14,lineHeight:1.8}}>전·후 회차 배분이나 전체 일정 변경은 담당자에게 요청해주세요. 한 번의 수업 날짜·시간은 아래 출석부에서 변경 신청할 수 있습니다.</p> : (
                     <button onClick={() => { setChangeOpen(true); setChDays([]); setChTime(""); setChEff(""); setChMemo(""); }}
                       style={{ width: "100%", padding: "11px", background: "#fff", color: "#1a6fc4", border: "1.5px solid #93c5fd", borderRadius: 10, fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
                       🔄 전체 요일·시간 변경 신청

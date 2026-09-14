@@ -130,6 +130,14 @@ export async function PATCH(req: Request) {
             await supabase.from('online_enrollments').update({ used_sessions: (en2.used_sessions || 0) - 1 }).eq('id', prev.enrollment_id)
           }
         }
+        const { data: packageEnrollment } = await supabase.from('online_enrollments').select('package_plan').eq('id', prev.enrollment_id).single()
+        if (packageEnrollment?.package_plan) {
+          const { data: replacement } = await supabase.from('online_sessions').select('id,scheduled_date').eq('original_session_id', sessionId).limit(1)
+          const added = !!replacement?.length
+          return NextResponse.json({ok:true,cancel_days_before:effDays,makeup_added:added,
+            message:added ? `같은 연수 전/후 기간 안에 보강을 추가했습니다 (${replacement![0].scheduled_date}).` : '보강 회차를 보존했습니다. 같은 기간 안에 배정할 날짜가 부족하므로 수강 정보에서 연수 전·후 회차를 재배분해주세요.',
+            message_en:added ? 'Makeup added within the same pre/post-study period.' : 'Makeup credit retained. Staff must reallocate the pre/post-study plan because no date fits this period.'})
+        }
         return NextResponse.json({
           ok: true,
           cancel_days_before: effDays,

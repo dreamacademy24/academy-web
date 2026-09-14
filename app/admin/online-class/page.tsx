@@ -359,6 +359,7 @@ export default function OnlineClassPage() {
   }
 
   function openEditModal(e: Enrollment) {
+    if(e.enrollment_type==='free_package'&&e.customer_user_id){window.location.href='/admin/online-class/'+e.id;return;}
     setEditTarget(e);
     setEditForm({
       student_name: e.student_name,

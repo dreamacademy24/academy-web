@@ -144,6 +144,7 @@ function generateSessionDates(startDate: string, endDate: string, daysOfWeek: st
 
 export async function POST(req: Request) {
   try {
+    if (!await isPortalAdmin(req)) return NextResponse.json({error:'패키지 신청은 새 신청 화면에서 진행해주세요. 다시 열면 연수 전·후 일정을 나눌 수 있습니다.'},{status:401})
     const body = await req.json()
     const {
       student_name, student_name_en, student_birth_year, customer_user_id,
@@ -245,6 +246,9 @@ export async function PATCH(req: Request) {
     const { id, regenerate_sessions, ...fields } = body
     if (regenerate_sessions && !await isPortalAdmin(req)) return NextResponse.json({ error: '출석부 날짜 복구는 직원 로그인 후 이용해주세요.' }, { status: 401 })
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    const currentPlan = await supabase.from('online_enrollments').select('package_plan').eq('id',id).single()
+    if(currentPlan.error)return NextResponse.json({error:'수강권 정보를 확인하지 못했습니다.'},{status:503})
+    if(currentPlan.data.package_plan)return NextResponse.json({error:'연수 전·후 일정이 연결된 수강권입니다. 학생 상세 화면에서 총 회차와 전후 일정을 확인하고 저장해주세요.',detail_url:`/admin/online-class/${id}`},{status:409})
     const allowed = ['student_name','student_name_en','student_birth_year','tutor_id','days_of_week','class_time_kr','class_time_ph','start_date','end_date','duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week','status','notes','level','enrollment_type','class_period','day_times','portal_open','customer_user_id']
     const INT_FIELDS = new Set(['duration_weeks','class_duration_weeks','pre_sessions','post_sessions','total_sessions','sessions_per_week'])
     const updates: Record<string, unknown> = {}

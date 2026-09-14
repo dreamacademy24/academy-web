@@ -72,7 +72,7 @@ test('approval first entry initializes its tab state without relying on preview 
 });
 function context(names, overrides = {}) {
   names=[...new Set(['_staffTaskTitleWithCategory','_staffTaskCompletionPatch','_staffCommentHtml','_staffOwnComment',...names])];
-  const ctx = vm.createContext({ console: quiet, URL, encodeURIComponent, ...overrides });
+  const ctx = vm.createContext({ console: quiet, URL, encodeURIComponent, _ntSaving:false, _nmSaving:false, _staffNoticeWrites:{}, fetchNoticeRows:async()=>[], ...overrides });
   ctx.window = ctx;
   for (const name of names) {
     assert.ok(functions.has(name), `Missing actual function ${name}`);
@@ -358,7 +358,7 @@ function pollContext() {
     CU: {}, _pollInFlight: false, _pollHash: {},
     document: { activeElement: null, querySelector: () => null },
     tasks: [], projects: [], taskComments: {}, threads: {}, notices: [],
-    sbGet: async () => rows[(calls++) % 5],
+    sbGet: async () => rows[(calls++) % 5], fetchNoticeRows: async () => rows[(calls++) % 5],
     rowToTask: x => x, taskVisible: () => true, rowToProj: x => x, rowToTc: x => x, rowToTh: x => x, rowToNt: x => x,
     rebuildIdx() {}, sv() {}, _mergeLocalOnlyTc() {}, refreshAll() {}, showSyncBadge() {},
     loadMyNotifs() {}, refreshUnreadCounts() {}, refreshApvPendingCount() {}, updateNavBadges() {},

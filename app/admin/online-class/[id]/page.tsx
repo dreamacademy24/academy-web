@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchDeployedHolidays } from "@/lib/holidays";
 import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
+import OnlinePackagePlanEditor, { type PackageMeta } from '@/components/OnlinePackagePlanEditor';
+import {packagePlanText,type PackagePlan} from '@/lib/onlinePackagePlan';
 
 const DAYS = ["월", "화", "수", "목", "금"];
 const TIME_SLOTS: string[] = [];
@@ -13,6 +15,7 @@ const subHour = (t: string) => { if(!t||!/^\d{1,2}:\d{2}/.test(t))return ""; con
 
 interface Tutor { id: string; name_display: string; name_en?: string | null }
 interface Enr {
+  package_plan?:PackagePlan|null;
   id: string; student_name: string; student_name_en: string | null; student_birth_year: string | null;
   tutor_id: string | null; tutor?: Tutor | null; level: string | null; enrollment_type: string;
   days_of_week: string[]; class_time_kr: string | null; class_time_ph: string | null;
@@ -49,6 +52,9 @@ export default function OnlineClassStudentPage() {
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [form, setForm] = useState<any>(null);
+  const [packageMeta,setPackageMeta]=useState<PackageMeta|null>(null);
+  const [packagePlan,setPackagePlan]=useState<PackagePlan|null>(null);
+  const [packageError,setPackageError]=useState('');
   const [dayTimesOn, setDayTimesOn] = useState(false);
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({});
   // 시간 선택
@@ -58,7 +64,7 @@ export default function OnlineClassStudentPage() {
   const [comments, setComments] = useState<{ id: string; by: string; at: string; text: string }[]>([]);
   const [cmtDraft, setCmtDraft] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
-  const [siblings, setSiblings] = useState<{ id: string; student_name: string; student_name_en?: string | null; days_of_week?: string[]; class_time_kr?: string; start_date?: string; tutor_id?: string }[]>([]);
+  const [siblings, setSiblings] = useState<{ id: string; student_name: string; student_name_en?: string | null; days_of_week?: string[]; class_time_kr?: string; start_date?: string; tutor_id?: string; package_plan?: PackagePlan | null }[]>([]);
   const [mentMode, setMentMode] = useState<"single" | "multi">("single");
   useEffect(() => { if (id) fetch(`/api/online-class/comments?enrollment_id=${id}`).then(r => r.ok ? r.json() : { comments: [] }).then((d: any) => setComments(d.comments || [])).catch(() => {}); }, [id]);
   async function addComment() {
@@ -97,6 +103,10 @@ export default function OnlineClassStudentPage() {
         const d = await r1.json();
         setEnr(d.enrollment); setSessions(d.sessions || []);
         const e = d.enrollment as Enr;
+        setPackageMeta(null);setPackagePlan(null);setPackageError('');
+        if(e.enrollment_type==='free_package'&&e.customer_user_id){
+          try{const pr=await fetch(`/api/online-class/package-plan?id=${id}`,{cache:'no-store'});const pm=await pr.json();if(!pr.ok)throw Error(pm.error);setPackageMeta(pm);setPackagePlan(pm.plan);}catch(err){setPackageError(err instanceof Error?err.message:'연수 정보를 확인하지 못했습니다.');}
+        }
         setForm({
           student_name: e.student_name || "", student_name_en: e.student_name_en || "",
           student_birth_year: e.student_birth_year || "", level: e.level || "",
@@ -119,7 +129,7 @@ export default function OnlineClassStudentPage() {
             if (allR.ok) {
               const all = await allR.json();
               const sibs = (all.enrollments || []).filter((x: any) => x.customer_user_id === e.customer_user_id && x.id !== e.id)
-                .map((x: any) => ({ id: x.id, student_name: x.student_name, student_name_en: x.student_name_en, days_of_week: x.days_of_week, class_time_kr: x.class_time_kr, start_date: x.start_date, tutor_id: x.tutor_id }));
+                .map((x: any) => ({ id: x.id, student_name: x.student_name, student_name_en: x.student_name_en, days_of_week: x.days_of_week, class_time_kr: x.class_time_kr, start_date: x.start_date, tutor_id: x.tutor_id, package_plan: x.package_plan }));
               setSiblings(sibs);
             }
           } catch { /* ignore */ }
@@ -155,6 +165,13 @@ export default function OnlineClassStudentPage() {
     setSaveError("");
     setSaving(true);
     try {
+      if(enr?.enrollment_type==='free_package'&&enr.customer_user_id){
+        if(!packageMeta||!packagePlan)throw Error(packageError||'연수 정보를 불러온 뒤 다시 저장해주세요.');
+        if(form.customer_user_id!==enr.customer_user_id)throw Error('연수 연결 수강권은 계정을 임의로 변경할 수 없습니다. 연결된 예약을 먼저 확인해주세요.');
+        const response=await fetch('/api/online-class/package-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...form,id,package_plan:packagePlan,snapshot:packageMeta.snapshot,bookingSnapshot:packageMeta.bookingSnapshot})});
+        const result=await response.json();if(!response.ok){setSaveError(result.error||'저장 실패. 입력 내용은 유지됩니다.');return;}
+        show(`전후 회차 저장 완료 · 예정 수업 ${result.sessions_regenerated}개 반영`);await load();return;
+      }
       const body: any = {
         id,
         ...form,
@@ -180,7 +197,7 @@ export default function OnlineClassStudentPage() {
       if (!res.ok) { setSaveError(r.error || "저장 실패. 입력 내용은 유지됩니다."); return; }
       show("저장 완료 ✅" + (body.regenerate_sessions ? ` · 출석부 ${r.sessions_regenerated ?? 0}개 재생성` : "") + (r.sessions_tutor_synced ? ` · 세션 튜터 ${r.sessions_tutor_synced}개 동기화` : ""));
       await load();
-    } catch { setSaveError("저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다. 연결을 확인한 뒤 다시 시도해주세요."); }
+    } catch(e) { setSaveError(e instanceof Error?e.message:"저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다. 연결을 확인한 뒤 다시 시도해주세요."); }
     finally { setSaving(false); }
   }
 
@@ -191,6 +208,7 @@ export default function OnlineClassStudentPage() {
 
   function buildMent(zoomText: string) {
     if (!enr) return "";
+    if(enr.package_plan)return `안녕하세요 어머님^^\n${enr.student_name} 화상영어 일정과 링크 안내드립니다.\n${packagePlanText(enr.package_plan)}\n실제 날짜는 앱 출석부에서 확인해주세요. 수업 5분 전 접속을 부탁드립니다.\n\n${zoomText||'(티쳐 줌 링크 저장 필요)'}`;
     const days = (form?.days_of_week || enr.days_of_week || []).join("");
     const time = form?.class_time_kr || enr.class_time_kr || "";
     const sd = form?.start_date || enr.start_date || "";
@@ -199,7 +217,8 @@ export default function OnlineClassStudentPage() {
     return `안녕하세요 어머님^^\n${startLine}${enr.student_name} 화상영어 링크 보내드립니다.\n기기 점검 및 입장 준비를 위해 수업 시작 5분 전까지 미리 접속 부탁드립니다. 또한 수업 집중력을 위해 소음이 적은 독립된 공간을 마련해 주시고, 에코(울림) 방지를 위해 헤드셋이나 이어폰 사용을 권장드립니다.\n✔ 수업 시간(${days}) : ${time}\n\n${zoomText || "(티쳐 줌 링크를 아래에 저장해 주세요)"}`;
   }
   // 한 아이 블록 (합본용)
-  function mentBlock(name: string, days: string[], time: string, sd: string, zoom: string) {
+  function mentBlock(name: string, days: string[], time: string, sd: string, zoom: string, plan?: PackagePlan | null) {
+    if (plan) return `■ ${name}\n${packagePlanText(plan)}\n실제 날짜는 앱 출석부에서 확인해주세요.\n${zoom || "(줌 링크 저장 필요)"}`;
     let startLine = "";
     if (sd) { const d = new Date(sd + "T00:00:00"); startLine = ` (${d.getMonth() + 1}월 ${d.getDate()}일 시작)`; }
     return `■ ${name}${startLine}\n✔ 수업 시간(${(days || []).join("")}) : ${time || ""}\n${zoom || "(줌 링크 저장 필요)"}`;
@@ -207,8 +226,8 @@ export default function OnlineClassStudentPage() {
   // 형제(같은 계정) 합본 멘트 — 인사·공통안내 1회 + 아이별 블록
   function buildMentAll() {
     if (!enr) return "";
-    const meBlock = mentBlock(enr.student_name, (form?.days_of_week || enr.days_of_week || []), (form?.class_time_kr || enr.class_time_kr || ""), (form?.start_date || enr.start_date || ""), (form?.tutor_id || enr.tutor_id) ? (zoomMap[form?.tutor_id || enr.tutor_id || ""] || "") : "");
-    const sibBlocks = siblings.map(sb => mentBlock(sb.student_name, sb.days_of_week || [], sb.class_time_kr || "", sb.start_date || "", sb.tutor_id ? (zoomMap[sb.tutor_id] || "") : ""));
+    const meBlock = mentBlock(enr.student_name, (form?.days_of_week || enr.days_of_week || []), (form?.class_time_kr || enr.class_time_kr || ""), (form?.start_date || enr.start_date || ""), (form?.tutor_id || enr.tutor_id) ? (zoomMap[form?.tutor_id || enr.tutor_id || ""] || "") : "", enr.package_plan);
+    const sibBlocks = siblings.map(sb => mentBlock(sb.student_name, sb.days_of_week || [], sb.class_time_kr || "", sb.start_date || "", sb.tutor_id ? (zoomMap[sb.tutor_id] || "") : "", sb.package_plan));
     const body = [meBlock, ...sibBlocks].join("\n\n");
     return `안녕하세요 어머님^^\n아이들 화상영어 링크 보내드립니다.\n기기 점검 및 입장 준비를 위해 수업 시작 5분 전까지 미리 접속 부탁드립니다. 또한 수업 집중력을 위해 소음이 적은 독립된 공간을 마련해 주시고, 에코(울림) 방지를 위해 헤드셋이나 이어폰 사용을 권장드립니다.\n\n${body}`;
   }
@@ -289,6 +308,8 @@ export default function OnlineClassStudentPage() {
         </div>
 
         {saveError && <div role="alert" style={{ padding: 16, marginBottom: 16, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3", borderRadius: 10, lineHeight: 1.7 }}>{saveError}</div>}
+        {packageError&&<div role="alert" style={{padding:16,background:'#fff1f2',marginBottom:16}}>{packageError} <button onClick={load}>다시 불러오기</button></div>}
+        {packageMeta&&packagePlan&&<OnlinePackagePlanEditor meta={packageMeta} value={packagePlan} disabled={saving} onChange={p=>{setPackagePlan(p);setForm({...form,total_sessions:p.total,pre_sessions:p.pre.count,post_sessions:p.post.count});setSaveError('');}}/>}
         {used > total && <div role="status" style={{ padding: 16, marginBottom: 16, background: "#fffbeb", color: "#92400e", borderRadius: 10, lineHeight: 1.7 }}>과거 사용 {used}회가 현재 총 {total}회보다 많습니다. 이 수강권의 회차 기준을 확인해주세요. 새로 시작하는 수업은 별도 수강권에서 진행하고, 기존 출석 이력은 보존하세요.</div>}
         <div style={{ display: "grid", gridTemplateColumns: "440px minmax(0,1fr)", gap: 18, alignItems: "start" }}>
           {/* ── 좌: 수강 정보 편집 ── */}
@@ -304,12 +325,13 @@ export default function OnlineClassStudentPage() {
               <select style={inp} value={form.tutor_id} onChange={e => setForm({ ...form, tutor_id: e.target.value })}>
                 <option value="">미배정</option>
                 {tutors.map(t => {
-                  const free = tutorAvail ? tutorAvail[t.id] : undefined;
+                  const free = !packagePlan&&tutorAvail ? tutorAvail[t.id] : undefined;
                   const mine = form.tutor_id === t.id;
                   return <option key={t.id} value={t.id}>{t.name_display}{free === false && !mine ? " — ⛔ 이 시간 수업 있음" : free === true ? " ✓" : ""}</option>;
                 })}
               </select>
-              {tutorAvail && (() => {
+              {packagePlan&&<p style={{fontSize:13,color:'#64748b'}}>저장할 때 연수 전·후 실제 수업 날짜와 시간의 중복을 확인합니다.</p>}
+              {!packagePlan&&tutorAvail && (() => {
                 const frees = tutors.filter(t => tutorAvail[t.id]);
                 return (
                   <div style={{ fontSize: 11.5, marginTop: 5, color: frees.length ? "#166534" : "#dc2626", lineHeight: 1.5 }}>
@@ -318,7 +340,7 @@ export default function OnlineClassStudentPage() {
                 );
               })()}
             </div>
-            <div style={{ marginBottom: 10 }}><label style={lbl}>수강 요일 (평일만)</label>
+            {!packagePlan&&<><div style={{ marginBottom: 10 }}><label style={lbl}>수강 요일 (평일만)</label>
               <div style={{ display: "flex", gap: 6 }}>
                 {DAYS.map(d => {
                   const on = (form.days_of_week || []).includes(d);
@@ -366,6 +388,8 @@ export default function OnlineClassStudentPage() {
                 </select>
               </div>
             </div>
+            </>}
+            {packagePlan&&<div style={{padding:14,background:'#edf3ff',borderRadius:10,marginBottom:14}}>위에서 설정한 <b>총 {packagePlan.total}회 · 연수 전 {packagePlan.pre.count}회 / 후 {packagePlan.post.count}회</b>가 출석부에 함께 저장됩니다.<label style={lbl}>상태<select style={inp} value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_OPT.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></div>}
             <div style={{ marginBottom: 10 }}>
               <label style={lbl}>손님 앱(계정) 연결</label>
               <div style={{ display: "flex", gap: 6 }}>
@@ -511,7 +535,7 @@ export default function OnlineClassStudentPage() {
             <div style={{ display: "grid", gap: 8 }}>
               <button onClick={() => setSesStatus(pick, "attended")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#166534", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>⭕ 출석 <span style={{ fontWeight: 600, color: "#64748b" }}>· 회차 차감</span></button>
               <button onClick={() => setSesStatus(pick, "no_show")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>✗ 결석 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 회차 차감</span></button>
-              <button onClick={() => setSesStatus(pick, "makeup", true)} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fcd34d", background: "#fffbeb", color: "#b45309", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>△ 보강 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 무차감 · 마지막에 1회 추가 (티쳐 결근 등)</span></button>
+              <button onClick={() => setSesStatus(pick, "makeup", true)} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fcd34d", background: "#fffbeb", color: "#b45309", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>△ 보강 <span style={{ fontWeight: 600, color: "#94a3b8" }}>{enr?.package_plan ? '· 무차감 · 같은 전/후 기간 안에서 보강 (날짜 부족 시 회차 재배분)' : '· 무차감 · 마지막에 1회 추가 (티쳐 결근 등)'}</span></button>
               <button onClick={() => setSesStatus(pick, "cancelled")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #fecaca", background: "#fff", color: "#dc2626", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>✕ 취소 <span style={{ fontWeight: 600, color: "#94a3b8" }}>· 4일 전 이내면 차감</span></button>
               <button onClick={() => setSesStatus(pick, "scheduled")} style={{ padding: "11px 12px", borderRadius: 9, border: "1px solid #e2e8f0", background: "#fff", color: "#475569", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>↩ 예정으로 되돌리기</button>
             </div>
