@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
-import { planOnlineSessions } from '@/lib/onlineSessionRepair'
+import { planOnlineSessions, onlineSessionCountIssue } from '@/lib/onlineSessionRepair'
 import { isPortalAdmin } from '@/lib/portalAuth'
 
 function krToPh(kr: string | null): string | null {
@@ -255,6 +255,23 @@ export async function PATCH(req: Request) {
       if (INT_FIELDS.has(k) && v !== null) v = Number(v) || 0
       updates[k] = v
     }
+    // Validate the effective count BEFORE changing enrollment fields or any session.
+    // A completed old course cannot be repurposed as a smaller renewal.
+    if (regenerate_sessions || 'total_sessions' in updates) {
+      const { data: countEnrollment, error: countError } = await supabase.from('online_enrollments')
+        .select('total_sessions,used_sessions').eq('id', id).single()
+      if (countError || !countEnrollment) return NextResponse.json({ error: '수강권 정보를 확인하지 못했습니다. 새로고침 후 다시 시도해주세요.' }, { status: 409 })
+      const effectiveTotal = Number('total_sessions' in updates ? updates.total_sessions : countEnrollment.total_sessions)
+      if (regenerate_sessions || effectiveTotal !== Number(countEnrollment.total_sessions)) {
+        const { data: countSessions, error: sessionsError } = await supabase.from('online_sessions')
+          .select('id,status').eq('enrollment_id', id)
+        if (sessionsError) return NextResponse.json({ error: '기존 출석 이력을 확인하지 못했습니다. 변경하지 않았습니다.' }, { status: 503 })
+        const historyCount = (countSessions || []).filter(s => s.status !== 'scheduled').length
+        const scheduledCount = (countSessions || []).filter(s => s.status === 'scheduled').length
+        const issue = onlineSessionCountIssue(effectiveTotal, historyCount, scheduledCount, Number(countEnrollment.used_sessions) || 0)
+        if (issue) return NextResponse.json({ error: issue, code: 'SESSION_COUNT_CONFLICT' }, { status: 409 })
+      }
+    }
     // 튜터 변경 감지: 기존 tutor_id 먼저 조회
     let oldTutorId: string | null = null
     if ('tutor_id' in updates) {
@@ -324,11 +341,11 @@ export async function PATCH(req: Request) {
         const historyCount = historySes?.length || 0
 
         const total = enroll.total_sessions || 0
-        const needed = total - historyCount
+        const needed = total - Math.max(historyCount, Number(enroll.used_sessions) || 0)
         if (needed > 0 && enroll.days_of_week?.length > 0) {
           const _hs = await loadHolidaySet()
           const _stays2 = await loadStayRanges(enroll.customer_user_id || null, enroll.student_name || null)
-          const plan = planOnlineSessions(enroll.start_date, enroll.days_of_week, total, historySes || [], _hs, _stays2)
+          const plan = planOnlineSessions(enroll.start_date, enroll.days_of_week, total, historySes || [], _hs, _stays2, Number(enroll.used_sessions) || 0)
           if (plan.length !== needed) return NextResponse.json({ error: '설정된 회차만큼 일정을 계산할 수 없습니다. 시작일과 요일을 확인해주세요.' }, { status: 400 })
           const DAY_KR_BY_JS2 = ['일', '월', '화', '수', '목', '금', '토']
           const phOf2 = (kr: string | null) => {

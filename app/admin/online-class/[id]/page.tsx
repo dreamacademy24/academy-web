@@ -45,6 +45,7 @@ export default function OnlineClassStudentPage() {
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [form, setForm] = useState<any>(null);
@@ -149,8 +150,9 @@ export default function OnlineClassStudentPage() {
     return () => { dead = true; };
   }, [form?.days_of_week, form?.class_time_kr]);
 
-  async function save() {
-    if (!form) return;
+  async function save(forceRegenerate = false) {
+    if (!form || saving) return;
+    setSaveError("");
     setSaving(true);
     try {
       const body: any = {
@@ -172,22 +174,19 @@ export default function OnlineClassStudentPage() {
         Number(form.total_sessions) !== Number(enr.total_sessions || 0) ||
         JSON.stringify(body.day_times || null) !== JSON.stringify(enr.day_times || null)
       );
-      if (schedChanged) body.regenerate_sessions = true;
+      if (schedChanged || forceRegenerate) body.regenerate_sessions = true;
       const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const r = await res.json();
-      if (!res.ok) { show(r.error || "저장 실패", false); return; }
-      show("저장 완료 ✅" + (schedChanged ? ` · 출석부 ${r.sessions_regenerated ?? 0}개 재생성` : "") + (r.sessions_tutor_synced ? ` · 세션 튜터 ${r.sessions_tutor_synced}개 동기화` : ""));
+      if (!res.ok) { setSaveError(r.error || "저장 실패. 입력 내용은 유지됩니다."); return; }
+      show("저장 완료 ✅" + (body.regenerate_sessions ? ` · 출석부 ${r.sessions_regenerated ?? 0}개 재생성` : "") + (r.sessions_tutor_synced ? ` · 세션 튜터 ${r.sessions_tutor_synced}개 동기화` : ""));
       await load();
-    } finally { setSaving(false); }
+    } catch { setSaveError("저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다. 연결을 확인한 뒤 다시 시도해주세요."); }
+    finally { setSaving(false); }
   }
 
   async function regenerate() {
-    if (!confirm("등록된 시작일·요일·총 회차에 맞춰 예정 출석부 날짜를 복구합니다.\n출석·취소·보강 이력은 유지됩니다. 진행할까요?")) return;
-    const res = await fetch("/api/online-class/enrollments", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, regenerate_sessions: true }) });
-    const r = await res.json();
-    if (!res.ok) { show(r.error || "재생성 실패", false); return; }
-    show(`출석부 날짜 복구 완료 (${r.sessions_regenerated ?? 0}개)`);
-    await load();
+    if (saving || !confirm("현재 입력한 수강 정보를 저장하고, 시작일·요일·총 회차에 맞춰 예정 출석부 날짜를 복구합니다.\n출석·취소·보강 이력은 유지됩니다. 진행할까요?")) return;
+    await save(true);
   }
 
   function buildMent(zoomText: string) {
@@ -275,7 +274,7 @@ export default function OnlineClassStudentPage() {
           <div style={{ flex: 1 }} />
           <button onClick={() => setShowInvoice(true)} style={{ border: "1px solid #93c5fd", background: "#fff", color: "#1a6fc4", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>🧾 인보이스</button>
           <button onClick={openMent} style={{ border: "1px solid #d8b4fe", background: "#fff", color: "#7c3aed", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>💬 안내 멘트</button>
-          <button onClick={regenerate} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>출석부 날짜 복구</button>
+          <button onClick={regenerate} disabled={saving} style={{ border: "1px solid #fcd34d", background: "#fff", color: "#d97706", borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "저장 중…" : "출석부 날짜 복구"}</button>
         </div>
 
         {/* 잔여 바 */}
@@ -289,6 +288,8 @@ export default function OnlineClassStudentPage() {
           </div>
         </div>
 
+        {saveError && <div role="alert" style={{ padding: 16, marginBottom: 16, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3", borderRadius: 10, lineHeight: 1.7 }}>{saveError}</div>}
+        {used > total && <div role="status" style={{ padding: 16, marginBottom: 16, background: "#fffbeb", color: "#92400e", borderRadius: 10, lineHeight: 1.7 }}>과거 사용 {used}회가 현재 총 {total}회보다 많습니다. 이 수강권의 회차 기준을 확인해주세요. 새로 시작하는 수업은 별도 수강권에서 진행하고, 기존 출석 이력은 보존하세요.</div>}
         <div style={{ display: "grid", gridTemplateColumns: "440px minmax(0,1fr)", gap: 18, alignItems: "start" }}>
           {/* ── 좌: 수강 정보 편집 ── */}
           <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: 20 }}>
@@ -380,8 +381,8 @@ export default function OnlineClassStudentPage() {
             <div style={{ marginBottom: 14 }}><label style={lbl}>특이사항 메모</label>
               <textarea style={{ ...inp, minHeight: 70, resize: "vertical" }} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
-            <button onClick={save} disabled={saving} style={{ width: "100%", padding: "12px 0", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "저장 중…" : "💾 저장"}</button>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>요일 변경 후에는 [출석부 날짜 복구]으로 예정 세션을 갱신하세요 (이력은 보존)</div>
+            <button onClick={() => save()} disabled={saving} style={{ width: "100%", padding: "12px 0", background: "#1a6fc4", color: "#fff", border: "none", borderRadius: 10, fontSize: 14.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "저장 중…" : "💾 저장"}</button>
+            <div style={{ fontSize: 12, color: "#64748b", marginTop: 8, lineHeight: 1.6 }}>시작일·요일·시간·총 회차를 바꾸고 저장하면 예정 출석부도 함께 갱신됩니다. 총 회차에는 이 수강권의 기존 이력이 포함됩니다. [출석부 날짜 복구]도 현재 입력값을 저장한 뒤 실행합니다.</div>
 
             {/* 💬 어드민 코멘트 — 결제·회차 등 기록 */}
             <div style={{ marginTop: 18, borderTop: "1px solid #eef2f7", paddingTop: 14 }}>
