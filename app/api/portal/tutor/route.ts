@@ -119,12 +119,7 @@ export async function POST(req: Request) {
     const { data, error } = await supabase.from('tutor_requests').insert(row).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const today = new Date().toISOString().slice(0, 10)
-    await supabase.from('staff_tasks').insert({
-      title: `👩‍🏫 ${bookerName}님이 튜터 수업을 신청했습니다`,
-      assignee: 'all', due: today, done: false, shared: true,
-      note: `학생: ${body.student_name_kr || ''} (${body.student_name_en || ''})\n나이: ${body.student_age || '-'}\n유형: ${body.class_type || '-'}\n기간: ${body.start_date || '-'} ~ ${body.end_date || '-'}\n요일: ${(body.preferred_days_arr || []).join(',')}\n시간: ${body.preferred_time || '-'}`,
-    })
+    // The database trigger creates one assigned confirmation task in this insert transaction.
 
     // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
     try {

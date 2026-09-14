@@ -82,6 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [viewSrc, setViewSrc] = useState("");
   const [framed, setFramed] = useState(false);
   const [tutorAlerts, setTutorAlerts] = useState(0);
+  const [onlineAlerts, setOnlineAlerts] = useState(0);
   const [roomAlerts, setRoomAlerts] = useState(0);
 
   useEffect(() => {
@@ -90,17 +91,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     (async () => {
-      try {
-        const { count } = await supabase.from("tutor_requests")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["pending", "reviewing", "cancel_requested"]);
-        let cancelN = 0;
-        try {
-          const r = await fetch("/api/admin/tutor/cancel-requests?status=pending");
-          if (r.ok) { const d = await r.json(); cancelN = Array.isArray(d) ? d.length : 0; }
-        } catch {}
-        setTutorAlerts((count || 0) + cancelN);
-      } catch {}
       try {
         const { data } = await supabase.from("bookings").select("accom_type,house_no,accom_room,status,checkout_date");
         const d = new Date();
@@ -118,6 +108,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
   }, [pathname, viewSrc]);
 
+  useEffect(() => {
+    let live=true,busy=false;
+    const refresh=async()=>{if(busy||document.hidden)return;busy=true;try{
+      const r=await fetch('/api/staff/class-applications',{cache:'no-store'});
+      if(r.ok){const d=await r.json();if(live){setTutorAlerts(d.counts.tutor);setOnlineAlerts(d.counts.online);}}
+    }catch{}finally{busy=false;}};
+    const message=(e:MessageEvent)=>{if(e.origin===window.location.origin&&e.data?.type==='class-applications-changed')void refresh();};
+    void refresh();const timer=setInterval(refresh,30000);
+    window.addEventListener('focus',refresh);window.addEventListener('message',message);document.addEventListener('visibilitychange',refresh);
+    return()=>{live=false;clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('message',message);document.removeEventListener('visibilitychange',refresh);};
+  }, [pathname]);
+
   // Online attendance has its own tutor sign-in, separate from the staff workspace.
   const content = pathname === "/admin" || pathname === "/admin/online-class-attendance" ? children : (
     <StaffSessionBoundary requiredRole="korean_admin">{children}</StaffSessionBoundary>
@@ -126,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (framed) return <>{content}</>;
 
   const isView = pathname === "/admin/view";
-  const badgeFor = (it: Item) => it.href === "/admin/bookings" ? roomAlerts : it.href === "/admin/tutor-class" ? tutorAlerts : 0;
+  const badgeFor = (it: Item) => it.href === "/admin/bookings" ? roomAlerts : it.href === "/admin/tutor-class" ? tutorAlerts : it.href === "/admin/online-class" ? onlineAlerts : 0;
   const active = (it: Item) => it.ext
     ? (isView && viewSrc === it.href)
     : (!isView && (pathname === it.href || pathname.startsWith(it.href + "/")));
@@ -165,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 return (
                   <Link key={it.href} href={to} aria-current={on ? "page" : undefined} style={style}>
                     <span>{it.label}</span>
-                    {bdg > 0 && <span style={{ minWidth: 19, height: 19, padding: "0 5px", fontSize: 11, fontWeight: 800, color: "#fff", background: "#e23b3b", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}>❗{bdg}</span>}
+                    {bdg > 0 && <span style={{ minWidth: 19, height: 19, padding: "0 5px", fontSize: 11, fontWeight: 800, color: "#c62828", background: "#fff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }} aria-label={`확인할 신청 ${bdg}건`}>{bdg}</span>}
                   </Link>
                 );
               })}

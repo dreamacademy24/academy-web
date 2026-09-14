@@ -17,6 +17,7 @@ function _staffTeamHomeMarkup(){
   var date=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Manila',month:'long',day:'numeric',weekday:'long'}).format(new Date());
   var cards=[['kOps1','확인 필요한 예약','누락 정보와 운영 요청'],['kOps2','오늘 체크리스트','팀이 함께 처리할 일'],['kOps3','오늘 체크인','도착 예정 가족'],['kOps4','오늘 픽드랍','예약된 이동 일정']];
   return '<div class="swh-team-heading"><div><p class="swo-eyebrow">TEAM WORKSPACE · '+_staffSafe(date)+'</p><h1>오늘의 운영</h1><p>예약 현황과 팀 체크리스트를 한곳에서 확인하세요.</p></div><div><button class="tm-btn" onclick="showPage(\'mywork\')">내 업무 보기</button> <button class="tm-btn tm-primary" onclick="openTaskModal()">＋ 업무 작성</button></div></div>'+
+    '<section class="hcard" data-class-applications style="padding:16px;margin-bottom:16px"></section>'+
     '<div class="swh-team-metrics">'+cards.map(function(c){return '<section><span>'+c[1]+'</span><strong id="'+c[0]+'">—</strong><small>'+c[2]+'</small></section>';}).join('')+'</div>'+
     '<section class="hcard swh-team-daily"><div class="swh-team-section-heading"><div><h2>오늘 함께 처리할 일</h2><p>체크 상태는 주간 체크리스트와 연결됩니다.</p></div><button class="tm-btn" onclick="showPage(\'weeklycl\')">주간 체크 보기 →</button></div><div id="dailyCheckSection"></div></section>'+
     '<div class="swh-team-grid"><section class="hcard"><div id="homeIssuesBox"></div></section><section class="hcard"><div id="homeTutorBox"></div></section></div>'+
@@ -70,6 +71,7 @@ function _renderStaffHome(emp){
   var date=new Date(todayStr()+'T12:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
   host.innerHTML='<div class="swh" id="staffHomeRoot">'+
     '<header class="swh-header"><div><p class="swh-eyebrow">MY WORKSPACE · '+_staffSafe(date)+'</p><h1>'+_staffSafe(emp.name)+'님의 업무 홈</h1><p>오늘의 우선순위를 확인하고, 필요한 업무로 바로 이동하세요.</p></div><button class="swh-primary" data-action="create">＋ 업무 작성</button></header>'+
+    '<section class="swh-panel" data-class-applications data-employee="'+_staffSafe(emp.id)+'" style="padding:16px;margin-bottom:16px"></section>'+
     '<div class="swh-metrics">'+
       '<button data-filter="today"><span>오늘 마감</span><strong>'+model.today.length+'<small>건</small></strong><em>오늘 처리할 업무 →</em></button>'+
       '<button class="swh-overdue" data-filter="overdue"><span>기한 초과</span><strong>'+model.overdue.length+'<small>건</small></strong><em>먼저 확인해주세요 →</em></button>'+
@@ -82,6 +84,7 @@ function _renderStaffHome(emp){
     '</main><aside class="swh-aside"><section class="swh-panel" id="swhNoticePanel"><div class="swh-section-head"><h2>확인할 공지 <span class="swh-count">'+model.unread.length+'</span></h2><button class="swh-link" data-action="all-notices">전체</button></div><div id="swhNotices"></div></section>'+
       '<section class="swh-panel"><div class="swh-section-head"><h2>새 소식</h2></div><div id="swhActivity"></div></section>'+
       '<details class="swh-panel swh-timeline"><summary>하루 시간표 <span>펼치기</span></summary><div id="tlWidget"></div></details></aside></div></div>';
+  if(typeof _classApplicationsMount==='function')_classApplicationsMount();
   var root=document.getElementById('staffHomeRoot');
   root.addEventListener('click',function(event){
     var b=event.target.closest('button');if(!b||!root.contains(b))return;

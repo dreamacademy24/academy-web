@@ -1406,9 +1406,9 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-workspace-home.js?v=20260911-reauth1"></script>
+<script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-applications1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-photos1">
-<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-photos1"></script>
+<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-applications1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
@@ -4931,6 +4931,7 @@ function delSBoardItem(id){
 function renderHomePage(){
  var dash=document.getElementById('homeDashboard');if(!dash)return;
  dash.innerHTML=_staffTeamHomeMarkup();
+ if(typeof _classApplicationsMount==='function')_classApplicationsMount();
  loadHomeIssues();loadHomeTutorIssues();loadHomeOps();
  loadDailyCheck('dailyCheckSection');renderTeacherSharedTasks('teacherSharedBox');
 }

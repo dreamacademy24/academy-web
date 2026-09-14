@@ -196,7 +196,7 @@ function _staffTaskPersistPatch(t,patch){
   return sbPatch('staff_tasks','id=eq.'+encodeURIComponent(t.id),body).then(function(rows){
     if(!Array.isArray(rows)||!rows.some(function(r){return String(r.id)===String(t.id);}))throw new Error('저장 결과를 확인하지 못했습니다.');
     var current=tasks.find(function(x){return String(x.id)===String(t.id);});if(current)Object.assign(current,patch);
-    rebuildIdx();svTasks();return current;
+    rebuildIdx();svTasks();if(String(t.id).indexOf('class-application:')===0){if(typeof _loadClassApplications==='function')void _loadClassApplications();try{window.top.postMessage({type:'class-applications-changed'},location.origin);}catch(e){}}return current;
   });
 }
 function _staffTaskCheckPatch(t,index){
