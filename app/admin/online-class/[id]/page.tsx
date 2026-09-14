@@ -2,6 +2,7 @@
 // 화상영어 — 학생(수강권) 상세 관리 페이지 (2026-08-25)
 // 리스트의 슬라이드 패널 대신 전용 페이지에서 수강 정보 + 출석부 + 계정 연결까지 관리
 import { useState, useEffect, useCallback } from "react";
+import EnglishLevelOptions from '@/components/EnglishLevelOptions';
 import { useParams, useRouter } from "next/navigation";
 import { fetchDeployedHolidays } from "@/lib/holidays";
 import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
@@ -318,7 +319,7 @@ export default function OnlineClassStudentPage() {
               <div><label style={lbl}>학생명</label><input style={inp} value={form.student_name} onChange={e => setForm({ ...form, student_name: e.target.value })} /></div>
               <div><label style={lbl}>영문명</label><input style={inp} value={form.student_name_en} onChange={e => setForm({ ...form, student_name_en: e.target.value })} /></div>
               <div><label style={lbl}>출생연도</label><input style={inp} value={form.student_birth_year} onChange={e => setForm({ ...form, student_birth_year: e.target.value })} /></div>
-              <div><label style={lbl}>레벨</label><input style={inp} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })} placeholder="beginner…" /></div>
+              <div><label style={lbl}>레벨</label><select aria-label="레벨" style={inp} value={form.level} onChange={e => setForm({ ...form, level: e.target.value })}><EnglishLevelOptions value={form.level}/></select></div>
             </div>
             <div style={{ marginBottom: 10 }}><label style={lbl}>담당 튜터</label>
               <select style={inp} value={form.tutor_id} onChange={e => setForm({ ...form, tutor_id: e.target.value })}>

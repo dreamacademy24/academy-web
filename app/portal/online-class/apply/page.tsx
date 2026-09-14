@@ -4,6 +4,7 @@ import {portalFetch} from '@/lib/portalFetch';
 import OnlinePackagePlanEditor,{type PackageMeta} from '@/components/OnlinePackagePlanEditor';
 import {validatePackagePlan,buildPackageSchedule,type PackagePlan} from '@/lib/onlinePackagePlan';
 import Booking3Guide from '@/components/Booking3Guide';
+import EnglishLevelOptions from '@/components/EnglishLevelOptions';
 
 export default function ApplyOnlineClass(){
   const [meta,setMeta]=useState<PackageMeta|null>(null),[plan,setPlan]=useState<PackagePlan|null>(null);
@@ -30,7 +31,7 @@ export default function ApplyOnlineClass(){
       {meta.admin&&<p>관리자 미리보기 · 실제 신청은 손님 계정에서 가능합니다.</p>}
       <label style={{display:'block',margin:'24px 0'}}>수강 학생<select aria-label="수강 학생" value={student} disabled={busy} onChange={e=>setStudent(e.target.value)} style={{display:'block',fontSize:18,padding:14,width:'100%',marginTop:8,border:'1px solid #cbd5e1',borderRadius:10}}><option value="">학생을 선택해주세요</option>{meta.children.map(c=><option key={c.name} value={c.name}>{c.name} {c.english}</option>)}</select></label>
       {student&&meta.existing.some(e=>e.student_name===student)&&<p>기존 신청 내역이 있습니다. 이미 제공받은 연수의 회차는 중복 신청할 수 없습니다. 기존 회차의 배분 변경은 담당자에게 요청해주세요. <a href="/portal/online-class">기존 수업 확인</a></p>}
-      {plan&&<><OnlinePackagePlanEditor meta={{...meta,admin:false}} value={plan} onChange={p=>{setPlan(p);setAgreed(false);}} disabled={busy}/><label style={{display:'block',margin:'24px 0'}}>현재 영어 수준 또는 참고사항<input value={level} maxLength={100} disabled={busy} onChange={e=>setLevel(e.target.value)} placeholder="예: 간단한 문장으로 대화 가능 / 처음 시작" style={{display:'block',width:'100%',padding:14,fontSize:16,marginTop:8,border:'1px solid #cbd5e1',borderRadius:10}}/></label><label style={{display:'block',lineHeight:1.8,marginBottom:20}}><input type="checkbox" checked={agreed} disabled={busy} onChange={e=>setAgreed(e.target.checked)}/> 총 {plan.total}회와 연수 전 {plan.pre.count}회 · 연수 후 {plan.post.count}회 일정을 확인했습니다.</label><button style={{...button,width:'100%',opacity:busy||meta.admin?.5:1}} disabled={busy||meta.admin} onClick={submit}>{busy?'신청 중…':'이 일정으로 신청하기'}</button></>}
+      {plan&&<><OnlinePackagePlanEditor meta={{...meta,admin:false}} value={plan} onChange={p=>{setPlan(p);setAgreed(false);}} disabled={busy}/><label style={{display:'block',margin:'24px 0'}}>영어 수준 · 레벨<select value={level} disabled={busy} onChange={e=>setLevel(e.target.value)} style={{display:'block',width:'100%',padding:14,fontSize:16,marginTop:8,border:'1px solid #cbd5e1',borderRadius:10}}><EnglishLevelOptions value={level}/></select></label><label style={{display:'block',lineHeight:1.8,marginBottom:20}}><input type="checkbox" checked={agreed} disabled={busy} onChange={e=>setAgreed(e.target.checked)}/> 총 {plan.total}회와 연수 전 {plan.pre.count}회 · 연수 후 {plan.post.count}회 일정을 확인했습니다.</label><button style={{...button,width:'100%',opacity:busy||meta.admin?.5:1}} disabled={busy||meta.admin} onClick={submit}>{busy?'신청 중…':'이 일정으로 신청하기'}</button></>}
       {!meta.children.length&&<p>연결된 학생의 연수 예약이 없습니다. 담당자에게 예약과 앱 계정 연결을 요청해주세요.</p>}
     </>}{error&&<p role="alert" style={{color:'#b42318',background:'#fff1f0',padding:18,borderRadius:12,lineHeight:1.8}}>{error}</p>}
     </>}
