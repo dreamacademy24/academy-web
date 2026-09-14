@@ -407,6 +407,16 @@ export default function MoriPage() {
     setPlan({ ...plan, [date]: { ...plan[date], [meal]: arr } });
   }
 
+  // 저녁·아동 = 저녁·어른 그대로 복사 (아동 메뉴를 따로 안 만드는 날)
+  function copyAdultToChild(date: string) {
+    if (!plan) return;
+    const day = plan[date] || emptyDay();
+    const adult = [...(day.저녁어른 || [])];
+    if (!adult.length) { alert("저녁·어른 칸이 비어 있어요. 어른 메뉴를 먼저 넣어주세요."); return; }
+    if ((day.저녁아동 || []).length && !confirm("아동 칸에 이미 메뉴가 있어요. 어른 메뉴로 바꿀까요?")) return;
+    setPlan({ ...plan, [date]: { ...day, 저녁아동: adult } });
+  }
+
   // 셀 안에서 메뉴 순서 이동 (↑=-1, ↓=+1)
   function moveItem(date: string, meal: string, idx: number, dir: number) {
     if (!plan) return;
@@ -869,6 +879,10 @@ export default function MoriPage() {
                             {(meal === "아침" || meal === "저녁어른") && (
                               <span onClick={() => regenCell(d, meal === "아침" ? "아침" : "저녁")} title={meal === "아침" ? "아침 다시 추천" : "저녁(어른+아동) 다시 추천"}
                                 style={{ fontSize: 12, cursor: "pointer", color: "#8891b3" }}>🔄</span>
+                            )}
+                            {meal === "저녁아동" && (
+                              <span onClick={() => copyAdultToChild(d)} title="옆 칸(저녁·어른)의 메뉴를 그대로 아동 칸에 복사"
+                                style={{ fontSize: 12, cursor: "pointer", color: "#2f3b8f", fontWeight: 700, border: "1px solid #c7cdea", borderRadius: 6, padding: "0 6px", background: "#f3f5fd" }}>(어른과 동일)</span>
                             )}
                           </div>
                         </td>
