@@ -112,6 +112,7 @@ export default function OnlineClassPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
+  const [tgHideActive, setTgHideActive] = useState(true);
   const [wkOffset, setWkOffset] = useState(0);
   const [wkSessions, setWkSessions] = useState<any[]>([]);
   const [wkLoading, setWkLoading] = useState(false);
@@ -868,13 +869,18 @@ export default function OnlineClassPage() {
 
       {/* ═══ TAB: 대상 목록 (올해 다녀간 아이 전체 — 확인하며 등록/제외) ═══ */}
       {tab === "targets" && (() => {
+        const activeCount = targets.filter(t => t.enrolled === "active" && !t.excluded).length;
         const visible = targets.filter(t => (tgShowExcluded ? true : !t.excluded))
+          .filter(t => (tgHideActive ? t.enrolled !== "active" : true))
           .filter(t => !tgQ || [t.name_kr, t.name_en, t.booker_name, t.house].some(v => v && String(v).toLowerCase().includes(tgQ.toLowerCase())));
         return (
           <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 14, padding: 18 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>🎯 화상영어 대상 목록 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>올해 다녀간 아이 {visible.length}명</span></div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>🎯 화상영어 대상 목록 <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>{tgHideActive ? "등록해야 할 대상" : "올해 다녀간 아이"} {visible.length}명</span>{tgHideActive && activeCount > 0 && <span style={{ fontSize: 11.5, color: "#166534", fontWeight: 700, marginLeft: 6 }}>· 수강중 {activeCount}명 숨김</span>}</div>
               <input value={tgQ} onChange={e => setTgQ(e.target.value)} placeholder="이름·예약자·하우스 검색" style={{ marginLeft: "auto", padding: "8px 12px", border: "1px solid #e2e8f0", borderRadius: 9, fontSize: 13, fontFamily: "inherit", width: 220 }} />
+              <label style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                <input type="checkbox" checked={!tgHideActive} onChange={e => setTgHideActive(!e.target.checked)} /> 수강중도 보기
+              </label>
               <label style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
                 <input type="checkbox" checked={tgShowExcluded} onChange={e => setTgShowExcluded(e.target.checked)} /> 제외된 아이 보기
               </label>
@@ -906,7 +912,7 @@ export default function OnlineClassPage() {
                 </tbody>
               </table>
             </div>
-            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>제외해도 삭제되는 건 아니에요 — "제외된 아이 보기"로 언제든 복구 가능. [➕ 수강 등록]을 누르면 이름·계정이 채워진 등록 폼으로 이동해요.</div>
+            <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 8 }}>이미 수강중인 아이는 기본으로 숨겨져요 — 등록이 필요한 대상만 보여요. 다시 보려면 "수강중도 보기" 체크. 제외해도 삭제되는 건 아니에요("제외된 아이 보기"로 복구 가능). [➕ 수강 등록]을 누르면 이름·계정이 채워진 등록 폼으로 이동해요.</div>
           </div>
         );
       })()}
