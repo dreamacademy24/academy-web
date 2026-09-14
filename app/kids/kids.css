@@ -1,0 +1,31 @@
+/* 드림 키즈 — Tailwind v4 (preflight 제외: 사이트 전체 리셋 방지) */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "./page.tsx";
+@source "./data.ts";
+
+.kids-app { font-family: "Noto Sans KR", system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; user-select: none; }
+.kids-app button { font-family: inherit; }
+.kids-app *:focus { outline: none; }
+
+@keyframes kids-pop { 0% { transform: scale(0.6); opacity: 0 } 70% { transform: scale(1.08) } 100% { transform: scale(1); opacity: 1 } }
+@keyframes kids-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes kids-wiggle { 0%,100% { transform: rotate(-3deg) } 50% { transform: rotate(3deg) } }
+@keyframes kids-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(240,180,41,.55) } 70% { box-shadow: 0 0 0 16px rgba(240,180,41,0) } }
+@keyframes kids-confetti { 0% { transform: translateY(-20px) rotate(0); opacity: 1 } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0 } }
+@keyframes kids-mic { 0%,100% { transform: scale(1) } 50% { transform: scale(1.15) } }
+@keyframes kids-shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-8px) } 75% { transform: translateX(8px) } }
+
+.k-pop { animation: kids-pop .35s cubic-bezier(.2,.9,.3,1.3) both }
+.k-bob { animation: kids-bob 2.2s ease-in-out infinite }
+.k-wiggle { animation: kids-wiggle 1.4s ease-in-out infinite }
+.k-pulse { animation: kids-pulse 1.6s ease-out infinite }
+.k-mic { animation: kids-mic .8s ease-in-out infinite }
+.k-shake { animation: kids-shake .35s ease-in-out }
+.k-confetti { position: fixed; top: 0; width: 12px; height: 18px; border-radius: 3px; animation: kids-confetti 2.6s ease-in forwards; pointer-events: none; z-index: 60 }
+
+.k-btn { transition: transform .08s ease, filter .12s ease }
+.k-btn:active { transform: scale(.95) }
+.k-card { background: #fff; border-radius: 22px; box-shadow: 0 6px 18px rgba(30,42,58,.08) }
+.k-scroll::-webkit-scrollbar { display: none }

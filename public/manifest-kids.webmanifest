@@ -1,0 +1,16 @@
+{
+  "id": "/kids",
+  "name": "드림 키즈 · 영어 모험",
+  "short_name": "드림 키즈",
+  "description": "세부 드림아카데미 아이들을 위한 게이미피케이션 영어 학습 앱",
+  "start_url": "/kids",
+  "scope": "/kids",
+  "display": "standalone",
+  "background_color": "#F7F4EA",
+  "theme_color": "#F0B429",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
