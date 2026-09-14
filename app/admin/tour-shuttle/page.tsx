@@ -70,7 +70,8 @@ export default function TourShuttleAdminPage() {
   const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
   const [bookingRooms, setBookingRooms] = useState<Record<string, { room: string; seg1_type?: string; seg2_type?: string; seg2_checkin?: string; accom_type?: string }>>({});
   const [loading, setLoading] = useState(true);
-  const [mainTab, setMainTab] = useState<"ops" | "list" | "deploy">("ops");
+  const [mainTab, setMainTab] = useState<"ops" | "list" | "edit">("ops");
+  const [editTab, setEditTab] = useState<"applications" | "schedule">("applications");
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ tour_name: "", tour_date: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [addSaving, setAddSaving] = useState(false);
@@ -201,6 +202,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 .ts-empty{padding:60px;text-align:center;color:#94a3b8;font-size:14px}
 .ts-loading{padding:40px;text-align:center;color:#3b82f6;font-size:14px}
 .ts-notes{max-width:280px;font-size:12px;color:#475569;white-space:pre-wrap}
+.ts-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:#fff;padding:5px;border-radius:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.ts-nav button{border:0;border-radius:9px;background:transparent;color:#52627b;padding:11px 8px;font:700 14px inherit;cursor:pointer}.ts-nav button[aria-selected="true"]{background:#1a6fc4;color:#fff}
+.ts-help{margin:0 2px 15px;color:#64748b;font-size:13px;line-height:1.5}
+@media(max-width:600px){.ts-w{padding:12px}.ts-head{gap:8px}.ts-title{font-size:16px}.ts-sub{display:none}.ts-nav button{font-size:12px;padding:10px 4px}}
     `}</style>
     <div className="ts-w">
       <div className="ts-head">
@@ -209,17 +214,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
           <span className="ts-title">🚌 투어셔틀 관리</span>
           <span className="ts-sub">총 {futureCount}건</span>
         </div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <button onClick={() => setMainTab("ops")} style={{padding:"7px 15px",border:mainTab==="ops"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="ops"?"#1a6fc4":"#fff",color:mainTab==="ops"?"#fff":"#64748b"}}>🗓 운영달력</button>
-          <button onClick={() => setMainTab("list")} style={{padding:"7px 15px",border:mainTab==="list"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"#fff",color:mainTab==="list"?"#fff":"#64748b"}}>신청목록</button>
-          <button onClick={() => setMainTab("deploy")} style={{padding:"7px 15px",border:mainTab==="deploy"?"none":"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"#fff",color:mainTab==="deploy"?"#fff":"#64748b"}}>배포</button>
-        </div>
+        <div style={{width:100}} />
       </div>
+      <div className="ts-nav" role="tablist" aria-label="투어셔틀 관리 화면">
+        {([ ["ops", "📅 최종달력"], ["list", "📋 신청목록"], ["edit", "✏️ 변경수정"] ] as const).map(([tab, label]) => (
+          <button key={tab} role="tab" aria-selected={mainTab===tab} onClick={() => setMainTab(tab)}>{label}</button>
+        ))}
+      </div>
+      <p className="ts-help">{mainTab==="ops" ? "손님 신청 규칙과 휴무를 반영한 최종 일정을 확인합니다. 날짜의 투어를 누르면 신청자 명단이 열립니다." : mainTab==="list" ? "날짜별 신청자와 인원, 취소 요청을 확인합니다." : "신청을 변경하거나 셔틀 일정을 수정·배포합니다."}</p>
 
       {mainTab === "ops" ? (
-        <OpsCalendar />
-      ) : mainTab === "deploy" ? (
-        <ScheduleDeploy />
+        <OpsCalendar mode="final" />
+      ) : mainTab === "edit" ? (
+        <div>
+          <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+            <button onClick={() => setEditTab("applications")} style={{padding:"9px 14px",borderRadius:9,border:"1px solid #cbd5e1",background:editTab==="applications"?"#1a6fc4":"#fff",color:editTab==="applications"?"#fff":"#475569",fontWeight:700,cursor:"pointer"}}>신청 변경</button>
+            <button onClick={() => setEditTab("schedule")} style={{padding:"9px 14px",borderRadius:9,border:"1px solid #cbd5e1",background:editTab==="schedule"?"#1a6fc4":"#fff",color:editTab==="schedule"?"#fff":"#475569",fontWeight:700,cursor:"pointer"}}>일정 수정·배포</button>
+          </div>
+          {editTab==="applications" ? <OpsCalendar mode="edit" /> : <ScheduleDeploy />}
+        </div>
       ) : (
       <>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>

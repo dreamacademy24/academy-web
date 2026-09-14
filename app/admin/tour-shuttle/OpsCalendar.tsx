@@ -62,7 +62,8 @@ function calendarCells(month: string): { date: string; inMonth: boolean }[] {
   const start = new Date(first);
   start.setDate(first.getDate() - startDow);
   const cells: { date: string; inMonth: boolean }[] = [];
-  for (let i = 0; i < 42; i++) {
+  const cellCount = Math.ceil((startDow + new Date(y, mm, 0).getDate()) / 7) * 7;
+  for (let i = 0; i < cellCount; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
     cells.push({ date: ymd(d), inMonth: d.getMonth() === mm - 1 });
@@ -94,7 +95,7 @@ const inp: CSSProperties = { width: "100%", padding: "9px 11px", border: "1px so
 const lbl: CSSProperties = { display: "block", fontSize: 11.5, fontWeight: 700, color: "#475569", marginBottom: 5 };
 const btnBase: CSSProperties = { padding: "8px 13px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: "1px solid #cbd5e1", background: "#fff", color: "#475569" };
 
-export default function OpsCalendar() {
+export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit" }) {
   const [month, setMonth] = useState<string>(curMonth(0));
   const [apps, setApps] = useState<ShuttleApp[]>([]);
   const [extraHolidays, setExtraHolidays] = useState<Set<string>>(new Set());
@@ -316,7 +317,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
       border: isSel ? "2px solid #1a6fc4" : "2px solid transparent",
       borderRadius: 6, padding: "3px 5px", fontSize: 10.5, fontWeight: 700,
       textAlign: "left", cursor: "pointer", fontFamily: "inherit", lineHeight: 1.3,
-      whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      overflowWrap: "anywhere",
       display: "block", width: "100%",
     };
   }
@@ -359,7 +360,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <div key={i} style={{ minHeight: 100, background: c.inMonth ? (isHoliday ? "#fffbeb" : "#fff") : "#f8fafc", border: isToday ? "1.5px solid #1a6fc4" : "1px solid #e2e8f0", borderRadius: 8, padding: 5, opacity: c.inMonth ? 1 : 0.45, display: "flex", flexDirection: "column", gap: 3 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 11.5, fontWeight: 800, color: dow === 0 ? "#dc2626" : dow === 6 ? "#1a6fc4" : "#1a1a2e" }}>{dayNum}</span>
-                    {c.inMonth && !isHoliday && (
+                    {mode === "edit" && c.inMonth && !isHoliday && (
                       <button onClick={() => openAddApp(c.date, "", "")} title="이 날짜에 신청 직접 추가" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", padding: "0 2px", lineHeight: 1 }}>＋</button>
                     )}
                   </div>
@@ -369,7 +370,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                   {dayGroups.map(g => (
                     <button key={g.key} onClick={() => pickTour(g.key)} title={`${g.title} · 출발 ${g.time || "-"}${g.ret ? " · 복귀 " + g.ret : ""}${g.note ? " · " + g.note : ""} · ${g.people}명`} style={chipStyle(g)}>
                       {g.cancelReq.length > 0 && <span style={{ color: "#dc2626" }}>● </span>}
-                      {g.title.length > 8 ? g.title.slice(0, 8) + "…" : g.title} <b>{g.people}명</b>
+                      {g.title} <b>{g.people}명</b>
                     </button>
                   ))}
                 </div>
@@ -402,8 +403,8 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             </span>
             <div style={{ flex: 1 }} />
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button onClick={() => openAddApp(sel.date, sel.title, sel.time)} style={btnBase}>＋ 신청 추가</button>
-              {(sel.active.length + sel.cancelReq.length + sel.cancelled.length) > 0 && (
+              {mode === "edit" && <button onClick={() => openAddApp(sel.date, sel.title, sel.time)} style={btnBase}>＋ 신청 추가</button>}
+              {mode === "edit" && (sel.active.length + sel.cancelReq.length + sel.cancelled.length) > 0 && (
                 <button onClick={() => openEdit(sel)} style={btnBase} title="신청 내역을 다른 투어명/시간으로 이동">✏️ 신청 이동</button>
               )}
               <button onClick={() => printRoster(sel)} style={btnBase}>🖨 기사 명단</button>
@@ -413,7 +414,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
 
           {sel.people === 0 && sel.cancelReq.length === 0 && sel.cancelled.length === 0 && (
             <div style={{ padding: "12px 16px", fontSize: 13, color: "#94a3b8", background: "#fafafa" }}>
-              아직 신청자가 없습니다. 필요하면 <b>＋ 신청 추가</b>로 직접 등록할 수 있어요.
+              {mode === "edit" ? <>아직 신청자가 없습니다. 필요하면 <b>＋ 신청 추가</b>로 직접 등록할 수 있어요.</> : "아직 신청자가 없습니다."}
             </div>
           )}
 
@@ -429,7 +430,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <span style={{ minWidth: 42, color: "#475569", fontWeight: 700 }}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                 {a.riders && <span style={{ color: "#64748b", fontSize: 12.5 }} title={a.riders}>👥 {a.riders.length > 16 ? a.riders.slice(0, 16) + "…" : a.riders}</span>}
                 <span style={{ flex: 1, color: req ? "#475569" : "#cbd5e1", fontSize: 12.5 }}>{req ? `📝 ${req}` : "—"}</span>
-                <button onClick={() => deleteApp(a.id)} title="신청 삭제" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>🗑</button>
+                {mode === "edit" && <button onClick={() => deleteApp(a.id)} title="신청 삭제" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>🗑</button>}
               </div>
             );
           })}
@@ -444,7 +445,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <span style={{ minWidth: 64, color: "#92400e", fontWeight: 600 }}>{bookerName.length > 5 ? bookerName.slice(0, 5) + "…" : bookerName}</span>
                 <span style={{ minWidth: 42, color: "#92400e", fontWeight: 700 }}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                 <span style={{ flex: 1, color: "#92400e", fontSize: 12.5 }}>취소요청{a.cancel_reason ? ` · 사유: ${a.cancel_reason}` : ""}</span>
-                <button onClick={() => changeStatus(a.id, "cancelled")} style={{ ...btnBase, padding: "6px 11px", fontSize: 12 }}>취소 확정</button>
+                {mode === "edit" && <button onClick={() => changeStatus(a.id, "cancelled")} style={{ ...btnBase, padding: "6px 11px", fontSize: 12 }}>취소 확정</button>}
               </div>
             );
           })}
@@ -457,14 +458,14 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <span style={{ minWidth: 88, textDecoration: "line-through" }}>{displayRoom}</span>
                 <span style={{ minWidth: 42, textDecoration: "line-through" }}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                 <span style={{ flex: 1 }}>취소됨</span>
-                <button onClick={() => changeStatus(a.id, "confirmed")} style={{ ...btnBase, padding: "5px 10px", fontSize: 11.5, color: "#64748b" }}>되돌리기</button>
+                {mode === "edit" && <button onClick={() => changeStatus(a.id, "confirmed")} style={{ ...btnBase, padding: "5px 10px", fontSize: 11.5, color: "#64748b" }}>되돌리기</button>}
               </div>
             );
           })}
         </div>
       )}
 
-      {editOpen && sel && (
+      {mode === "edit" && editOpen && sel && (
         <div onClick={() => setEditOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 420, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -487,7 +488,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
         </div>
       )}
 
-      {appOpen && (
+      {mode === "edit" && appOpen && (
         <div onClick={() => setAppOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 460, padding: 20, boxShadow: "0 20px 60px rgba(0,0,0,0.18)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
