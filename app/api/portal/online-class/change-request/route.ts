@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isPortalAdmin, portalUser } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,9 +12,14 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const customerUserId = searchParams.get('customer_user_id')
   const enrollmentId = searchParams.get('enrollment_id')
+  const admin = await isPortalAdmin(req)
+  const user = admin ? null : await portalUser(req)
+  if (!admin && !user) return NextResponse.json({ error: '앱 로그인이 필요합니다.' }, { status: 401 })
+  if (!admin && customerUserId && customerUserId !== user!.id) return NextResponse.json({ error: '본인 요청만 확인할 수 있습니다.' }, { status: 403 })
   if (!customerUserId && !enrollmentId) return NextResponse.json({ requests: [] })
 
   let q = supabase.from('online_change_requests').select('*').order('created_at', { ascending: false })
+  if (!admin) q = q.eq('customer_user_id', user!.id)
   if (customerUserId) q = q.eq('customer_user_id', customerUserId)
   if (enrollmentId) q = q.eq('enrollment_id', enrollmentId)
   const { data, error } = await q
@@ -25,6 +31,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { enrollment_id, customer_user_id, req_days_of_week, req_time_kr, effective_from, memo, req_type, session_id, req_date } = body
+    const user = await portalUser(req)
+    if (!user) return NextResponse.json({ error: '앱 로그인이 필요합니다.' }, { status: 401 })
+    if (customer_user_id !== user.id) return NextResponse.json({ error: '본인 수업만 변경할 수 있습니다.' }, { status: 403 })
     const kind = req_type === 'single' ? 'single' : 'full'
     if (!enrollment_id) return NextResponse.json({ error: 'enrollment_id required' }, { status: 400 })
     if (!customer_user_id) return NextResponse.json({ error: 'customer_user_id required' }, { status: 400 })
@@ -51,7 +60,8 @@ export async function POST(req: Request) {
     const today = new Date(); today.setHours(0, 0, 0, 0)
     let refDateStr = effective_from
     if (kind === 'single') {
-      const { data: ses } = await supabase.from('online_sessions').select('scheduled_date').eq('id', session_id).single()
+      const { data: ses } = await supabase.from('online_sessions').select('scheduled_date').eq('id', session_id).eq('enrollment_id', enrollment_id).single()
+      if (!ses) return NextResponse.json({ error: '해당 수강권의 수업을 선택해주세요.' }, { status: 400 })
       refDateStr = ses?.scheduled_date || req_date || effective_from
     }
     const eff = new Date((refDateStr || '') + 'T00:00:00')

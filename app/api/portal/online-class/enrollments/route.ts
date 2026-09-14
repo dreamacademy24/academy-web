@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isPortalAdmin, portalUser } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const customerUserId = searchParams.get('customer_user_id')
   const testUser = searchParams.get('test_user')
+  const admin = await isPortalAdmin(req)
+  if (!admin) {
+    const user = await portalUser(req)
+    if (!user) return NextResponse.json({ error: '앱 로그인이 필요합니다.' }, { status: 401 })
+    if (testUser === 'true' || customerUserId !== user.id) return NextResponse.json({ error: '본인 수강권만 확인할 수 있습니다.' }, { status: 403 })
+  }
 
   let enrollments: any[] | null = null
 

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { portalUser } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { session_id, customer_user_id, confirm, reason } = body
+    const user = await portalUser(req)
+    if (!user) return NextResponse.json({ error: '앱 로그인이 필요합니다.' }, { status: 401 })
+    if (customer_user_id !== user.id) return NextResponse.json({ error: '본인 수업만 취소할 수 있습니다.' }, { status: 403 })
     if (!session_id) return NextResponse.json({ error: 'session_id required' }, { status: 400 })
     if (!customer_user_id) return NextResponse.json({ error: 'customer_user_id required' }, { status: 400 })
 

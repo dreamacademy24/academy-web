@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
 import { planOnlineSessions, onlineSessionCountIssue } from '@/lib/onlineSessionRepair'
-import { isPortalAdmin } from '@/lib/portalAuth'
+import { isPortalAdmin, getStaffIdentity } from '@/lib/portalAuth'
 
 function krToPh(kr: string | null): string | null {
   if (!kr || !/^\d{1,2}:\d{2}/.test(kr)) return null
@@ -16,6 +16,7 @@ const supabase = createClient(
 )
 
 export async function GET(req: Request) {
+  if (!await getStaffIdentity(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const tutorId = searchParams.get('tutor_id')
 
@@ -239,6 +240,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (!await isPortalAdmin(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
     const body = await req.json()
     const { id, regenerate_sessions, ...fields } = body
     if (regenerate_sessions && !await isPortalAdmin(req)) return NextResponse.json({ error: '출석부 날짜 복구는 직원 로그인 후 이용해주세요.' }, { status: 401 })

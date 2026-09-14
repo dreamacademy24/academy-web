@@ -38,6 +38,8 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+.booking3-*.log
+supabase/.temp/
 next-env.d.ts
 
 # 상품/브로셔 원본 자료 (참고용 — 배포 제외, 필요한 이미지는 public/으로 복사해서 사용)

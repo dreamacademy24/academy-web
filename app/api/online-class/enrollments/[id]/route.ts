@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { isPortalAdmin, getStaffIdentity } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,7 @@ const supabase = createClient(
 )
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!await getStaffIdentity(_req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
@@ -28,6 +30,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 }
 
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!await isPortalAdmin(_req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
@@ -46,6 +49,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  if (!await getStaffIdentity(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { id } = await ctx.params
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()

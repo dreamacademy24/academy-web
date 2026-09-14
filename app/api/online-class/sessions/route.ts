@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getStaffIdentity } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,7 @@ const supabase = createClient(
 )
 
 export async function GET(req: Request) {
+  if (!await getStaffIdentity(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const enrollmentId = searchParams.get('enrollment_id')
   const date = searchParams.get('date')
@@ -46,6 +48,7 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (!await getStaffIdentity(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
     const body = await req.json()
     const sessionId = body.session_id || body.id
     const { status, recorded_by, cancel_noticed_at, session_note, admin_makeup, attitude, attitude_note } = body

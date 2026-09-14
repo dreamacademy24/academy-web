@@ -1,5 +1,6 @@
 "use client";
 import { getTutorColor } from "@/lib/tutorColors";
+import Booking3Applications from '@/components/Booking3Applications';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
@@ -106,7 +107,8 @@ function PeriodCell({ e }: { e: Enrollment }) {
 export default function OnlineClassPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
-  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets" | "weekly">("targets");
+  const [tab, setTab] = useState<"list" | "register" | "requests" | "targets" | "weekly" | "applications">("targets");
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('tab') === 'applications') setTab('applications'); }, []);
   const [targets, setTargets] = useState<any[]>([]);
   const [tgQ, setTgQ] = useState("");
   const [tgShowExcluded, setTgShowExcluded] = useState(false);
@@ -599,6 +601,7 @@ export default function OnlineClassPage() {
       </div>
 
       <div className="tabs">
+        <button className={`tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")}>📝 화상영어 신청서</button>
         <button className={`tab${tab === "targets" ? " ac" : ""}`} onClick={() => setTab("targets")}>🎯 대상 목록</button>
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>📋 수강생 목록</button>
         <button className={`tab${tab === "register" ? " ac" : ""}`} onClick={() => setTab("register")}>➕ 수강 등록</button>
@@ -614,6 +617,7 @@ export default function OnlineClassPage() {
         <button className="tab" onClick={() => router.push("/admin/online-class/availability")}>📊 가용 현황</button>
       </div>
 
+      {tab === 'applications' && <Booking3Applications />}
       {/* ═══ TAB 1: 수강생 목록 ═══ */}
       {tab === "list" && <>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
