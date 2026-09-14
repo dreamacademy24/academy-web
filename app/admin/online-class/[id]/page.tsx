@@ -309,7 +309,6 @@ export default function OnlineClassStudentPage() {
 
         {saveError && <div role="alert" style={{ padding: 16, marginBottom: 16, background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3", borderRadius: 10, lineHeight: 1.7 }}>{saveError}</div>}
         {packageError&&<div role="alert" style={{padding:16,background:'#fff1f2',marginBottom:16}}>{packageError} <button onClick={load}>다시 불러오기</button></div>}
-        {packageMeta&&packagePlan&&<OnlinePackagePlanEditor meta={packageMeta} value={packagePlan} disabled={saving} onChange={p=>{setPackagePlan(p);setForm({...form,total_sessions:p.total,pre_sessions:p.pre.count,post_sessions:p.post.count});setSaveError('');}}/>}
         {used > total && <div role="status" style={{ padding: 16, marginBottom: 16, background: "#fffbeb", color: "#92400e", borderRadius: 10, lineHeight: 1.7 }}>과거 사용 {used}회가 현재 총 {total}회보다 많습니다. 이 수강권의 회차 기준을 확인해주세요. 새로 시작하는 수업은 별도 수강권에서 진행하고, 기존 출석 이력은 보존하세요.</div>}
         <div style={{ display: "grid", gridTemplateColumns: "440px minmax(0,1fr)", gap: 18, alignItems: "start" }}>
           {/* ── 좌: 수강 정보 편집 ── */}
@@ -330,7 +329,7 @@ export default function OnlineClassStudentPage() {
                   return <option key={t.id} value={t.id}>{t.name_display}{free === false && !mine ? " — ⛔ 이 시간 수업 있음" : free === true ? " ✓" : ""}</option>;
                 })}
               </select>
-              {packagePlan&&<p style={{fontSize:13,color:'#64748b'}}>저장할 때 연수 전·후 실제 수업 날짜와 시간의 중복을 확인합니다.</p>}
+
               {!packagePlan&&tutorAvail && (() => {
                 const frees = tutors.filter(t => tutorAvail[t.id]);
                 return (
@@ -340,6 +339,7 @@ export default function OnlineClassStudentPage() {
                 );
               })()}
             </div>
+        {packageMeta&&packagePlan&&<OnlinePackagePlanEditor meta={packageMeta} value={packagePlan} disabled={saving} onChange={p=>{setPackagePlan(p);setForm({...form,total_sessions:p.total,pre_sessions:p.pre.count,post_sessions:p.post.count});setSaveError('');}}/>}
             {!packagePlan&&<><div style={{ marginBottom: 10 }}><label style={lbl}>수강 요일 (평일만)</label>
               <div style={{ display: "flex", gap: 6 }}>
                 {DAYS.map(d => {
@@ -389,7 +389,7 @@ export default function OnlineClassStudentPage() {
               </div>
             </div>
             </>}
-            {packagePlan&&<div style={{padding:14,background:'#edf3ff',borderRadius:10,marginBottom:14}}>위에서 설정한 <b>총 {packagePlan.total}회 · 연수 전 {packagePlan.pre.count}회 / 후 {packagePlan.post.count}회</b>가 출석부에 함께 저장됩니다.<label style={lbl}>상태<select style={inp} value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_OPT.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></div>}
+            {packagePlan&&<div style={{marginBottom:10}}><label style={lbl}>상태</label><select style={inp} value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>{STATUS_OPT.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>}
             <div style={{ marginBottom: 10 }}>
               <label style={lbl}>손님 앱(계정) 연결</label>
               <div style={{ display: "flex", gap: 6 }}>
