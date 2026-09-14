@@ -44,6 +44,8 @@ export default function LearningWelcome({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<'ready' | 'playing' | 'ended'>('ready');
   const [buffering, setBuffering] = useState(false);
   const [error, setError] = useState(false);
+  const [dialogue, setDialogue] = useState<{ id: string; text: string } | null>(null);
+  const [nativeCaptions, setNativeCaptions] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playbackAttempt = useRef(0);
   const screen = view ?? (saved === 'pending' ? 'pending' : saved === 'seen' ? 'home' : 'intro');
@@ -54,6 +56,57 @@ export default function LearningWelcome({ children }: { children: ReactNode }) {
     return () => {
       playbackAttempt.current += 1;
       video?.pause();
+    };
+  }, [showingFilm]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const trackElement = video?.querySelector('track');
+    if (!video || !trackElement) return;
+    const track = trackElement.track;
+    // Keep one source of dialogue and timing: the video's caption file.
+    track.mode = 'hidden';
+    let fullscreenMode: TextTrackMode | null = null;
+    function syncDialogue() {
+      const cue = track.activeCues?.[0] as VTTCue | undefined;
+      const next = cue ? { id: cue.id, text: cue.text } : null;
+      setDialogue(previous => previous?.id === next?.id && previous?.text === next?.text ? previous : next);
+      setNativeCaptions(track.mode !== 'hidden');
+    }
+    function enterFullscreen() {
+      if (fullscreenMode !== null) return;
+      fullscreenMode = track.mode;
+      // Native video fullscreen cannot display the surrounding HTML bubble.
+      if (track.mode === 'hidden') track.mode = 'showing';
+      syncDialogue();
+    }
+    function leaveFullscreen() {
+      if (fullscreenMode === null) return;
+      track.mode = fullscreenMode;
+      fullscreenMode = null;
+      syncDialogue();
+    }
+    function syncFullscreen() {
+      if (document.fullscreenElement === video) enterFullscreen();
+      else leaveFullscreen();
+    }
+    track.addEventListener('cuechange', syncDialogue);
+    trackElement.addEventListener('load', syncDialogue);
+    video.textTracks.addEventListener('change', syncDialogue);
+    video.addEventListener('timeupdate', syncDialogue);
+    video.addEventListener('seeked', syncDialogue);
+    video.addEventListener('webkitbeginfullscreen', enterFullscreen);
+    video.addEventListener('webkitendfullscreen', leaveFullscreen);
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => {
+      track.removeEventListener('cuechange', syncDialogue);
+      trackElement.removeEventListener('load', syncDialogue);
+      video.textTracks.removeEventListener('change', syncDialogue);
+      video.removeEventListener('timeupdate', syncDialogue);
+      video.removeEventListener('seeked', syncDialogue);
+      video.removeEventListener('webkitbeginfullscreen', enterFullscreen);
+      video.removeEventListener('webkitendfullscreen', leaveFullscreen);
+      document.removeEventListener('fullscreenchange', syncFullscreen);
     };
   }, [showingFilm]);
 
@@ -90,6 +143,8 @@ export default function LearningWelcome({ children }: { children: ReactNode }) {
   }
 
   function replayIntro() {
+    setDialogue(null);
+    setNativeCaptions(false);
     setPhase('ready');
     setError(false);
     setBuffering(false);
@@ -138,6 +193,12 @@ export default function LearningWelcome({ children }: { children: ReactNode }) {
           <track kind="subtitles" src="/learning/tree-house/dreamy-intro.ko.vtt?voice=qwen1" srcLang="ko" label="한국어" default />
           이 브라우저에서는 영상을 재생할 수 없어요. 아래 버튼으로 학습을 시작할 수 있어요.
         </video>
+        {phase === 'playing' && !error && !nativeCaptions && <div className={styles.dialogueLayer}>
+          {dialogue && <div key={dialogue.id} className={styles.dialogue} data-testid="dreamy-dialogue">
+            <span className={styles.speaker}>드림이</span>
+            <p>{dialogue.text}</p>
+          </div>}
+        </div>}
         {phase === 'ready' && !error && <div className={styles.startOverlay}>
           <button className={styles.play} type="button" onClick={() => void play()}><span className={styles.playIcon} aria-hidden="true">▶</span> 드림이 만나기</button>
           <span className={styles.soundHint}>눌러서 소리와 함께 만나보세요</span>
