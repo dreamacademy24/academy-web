@@ -263,7 +263,7 @@ function WorldMap({ course, st, unlocked, onPlay, onLocked }: { course: Course; 
           const first = u.lessons[0].id === l.id;
           return (
             <React.Fragment key={l.id}>
-              {first && <div className="absolute -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#4B5563] shadow-sm" style={{ left: `${p.x}%`, top: p.y - 58 }}>📍 {u.title} · {u.ko}</div>}
+              {first && <div className="absolute rounded-full bg-white/90 px-3 py-1 text-[11px] font-black text-[#4B5563] shadow-sm" style={{ left: p.x < 50 ? `${p.x + 12}%` : "auto", right: p.x < 50 ? "auto" : `${100 - p.x + 12}%`, top: p.y - 12 }}>📍 {u.title} · {u.ko}</div>}
               <button onClick={() => open ? onPlay(l.id) : onLocked()} className={`k-btn absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center ${isNext ? "k-pulse" : ""}`} style={{ left: `${p.x}%`, top: p.y }}>
                 <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl shadow-[0_5px_0_rgba(0,0,0,.12)]"
                   style={{ background: !open ? "#D9D9D9" : s > 0 ? course.color : "#FFE24A", color: "#fff", filter: !open ? "grayscale(1)" : "none" }}>
@@ -308,7 +308,7 @@ function Player({ lesson, course, voice, name, onExit, onFinish }: { lesson: Les
     if (!finished.current) {
       finished.current = true;
       const stars = correct >= 3 ? 3 : correct === 2 ? 2 : 1;
-      const pron = pronScores.length ? Math.round(pronScores.reduce((a, b) => a + b, 0) / pronScores.length) : null;
+      const said = pronScores.filter(x => x > 0); const pron = said.length ? Math.round(said.reduce((a, b) => a + b, 0) / said.length) : null;
       onFinish(stars, pron, Math.max(1, Math.round((Date.now() - startedAt.current) / 60000)));
     }
     setStep("result");
@@ -492,7 +492,7 @@ function QuizStep({ lesson, course, voice, onDone }: { lesson: Lesson; course: C
 function ResultStep({ name, course, correct, pron, voice, onHome, onRetry }: { name: string; course: Course; correct: number; pron: number[]; voice: boolean; onHome: () => void; onRetry: () => void }) {
   const stars = correct >= 3 ? 3 : correct === 2 ? 2 : 1;
   const line = stars === 3 ? MASCOT_LINES.result3[0] : stars === 2 ? MASCOT_LINES.result2[0] : MASCOT_LINES.result1[0];
-  const avg = pron.length ? Math.round(pron.reduce((a, b) => a + b, 0) / pron.length) : null;
+  const said = pron.filter(x => x > 0); const avg = said.length ? Math.round(said.reduce((a, b) => a + b, 0) / said.length) : null;
   const sticker = STICKERS[(correct * 7 + pron.length) % STICKERS.length];
   return (
     <div className="mt-4 text-center">
