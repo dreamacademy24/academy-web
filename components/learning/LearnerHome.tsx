@@ -7,6 +7,7 @@ import { portalFetch } from '@/lib/portalFetch';
 import { supabase } from '@/lib/supabase';
 import { getLearningUnit, isLevelCode } from '@/lib/learning/catalog';
 import type { LearningChildren, LearningChild } from '@/lib/learning/children';
+import LearningWorld from './LearningWorld';
 import styles from './LearnerHome.module.css';
 
 type HomeState = { status: 'loading' | 'login' | 'error' } | { status: 'ready'; data: LearningChildren };
@@ -23,17 +24,55 @@ function isChildrenResponse(value: unknown): value is LearningChildren {
     && data.children.every(child => typeof child.learnerId === 'string' && typeof child.nameKr === 'string' && Array.isArray(child.visits));
 }
 
+function HudIcon({ kind }: { kind: 'back' | 'refresh' | 'people' | 'arrow' | 'sparkle' }) {
+  const paths = {
+    back: 'M14 6l-6 6 6 6M8 12h12',
+    refresh: 'M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9',
+    people: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3a4 4 0 0 1 0 8M22 21v-2a4 4 0 0 0-3-3.9M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+    arrow: 'M5 12h14M13 6l6 6-6 6',
+    sparkle: 'M12 3l2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7L12 3',
+  };
+  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[kind]} /></svg>;
+}
+
+function PreviewLink() {
+  return <Link href="/learn/tree-house?preview=1" className={styles.preview} aria-label="로그인 없이 공개 체험 보기">먼저 해보기 <HudIcon kind="arrow" /></Link>;
+}
+
+function ChildPicker({ learners, selectedId, onSelect, onCancel }: {
+  learners: LearningChild[]; selectedId: string | null;
+  onSelect: (id: string) => void; onCancel?: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
+  return <dialog ref={dialogRef} className={styles.childPicker} aria-labelledby="choose-learner-title" onCancel={event => { event.preventDefault(); onCancel?.(); }}>
+    <div className={styles.pickerTop}><span className={styles.smallLabel}>함께할 친구</span>{onCancel && <button type="button" className={styles.close} onClick={onCancel} aria-label="아이 선택 닫기">×</button>}</div>
+    <h2 id="choose-learner-title">학습할 아이를 선택해 주세요</h2><p>드림이가 기다리고 있어요.</p>
+    <div className={styles.childButtons}>{learners.map((item, index) => <button key={item.learnerId} type="button" className={styles.childButton} aria-pressed={selectedId === item.learnerId} onClick={() => onSelect(item.learnerId)}>
+      <span className={styles.avatar} data-color={index % 3} aria-hidden="true">{childName(item).slice(0, 1) || index + 1}</span>
+      <span className={styles.childName}><strong>{childName(item)}</strong>{item.nameEn && item.nameEn !== childName(item) && <small>{item.nameEn}</small>}</span>
+      <span className={styles.childArrow} aria-hidden="true">{selectedId === item.learnerId ? '✓' : '→'}</span>
+    </button>)}</div>
+    {!onCancel && <Link href="/dream-app" className={styles.pickerBack}>모드 선택으로 돌아가기</Link>}
+  </dialog>;
+}
+
 function VisitLearning({ child, visit }: { child: LearningChild; visit: ChildVisit }) {
   const assignment = visit.assignment;
   const level = assignment && isLevelCode(assignment.levelCode) ? assignment.levelCode : null;
   const unit = assignment && getLearningUnit(level, assignment.unitId);
   const published = assignment?.published === true && unit?.published === true;
   const query = new URLSearchParams({ learnerId: child.learnerId, visitId: visit.visitId });
-  if (!assignment || !level) return <div className={styles.waiting} role="status"><span className={styles.stateLabel}>학습 배정 대기</span><h3>배울 내용을 준비하고 있어요</h3><p>선생님이 레벨과 교재를 배정하면<br />여기에서 학습을 시작할 수 있어요.</p></div>;
-  if (!published || !unit) return <div className={styles.waiting} role="status"><span className={styles.level}>{level}</span><h3>{assignment.unitId ? '교재를 준비하고 있어요' : '교재 배정을 기다리고 있어요'}</h3><p>{assignment.unitId ? '배정된 교재가 아직 앱에 공개되지 않았어요.' : '학습할 교재가 배정되면 여기에서 시작할 수 있어요.'}</p><span className={styles.stateLabel}>{assignment.unitId ? '공개 준비 중' : '교재 배정 대기'}</span></div>;
+  if (!assignment || !level) return <section className={styles.missionPanel}><span className={styles.smallLabel}>학습 배정 대기</span><h2>배울 내용을 준비하고 있어요</h2><p>선생님이 레벨과 교재를 배정하면<br />내 모험을 시작할 수 있어요.</p><PreviewLink /></section>;
+  if (!published || !unit) return <section className={styles.missionPanel}><span className={styles.level}>{level}</span><h2>{assignment.unitId ? '교재를 준비하고 있어요' : '교재 배정을 기다리고 있어요'}</h2><p>{assignment.unitId ? '배정된 교재가 아직 앱에 공개되지 않았어요.' : '학습할 교재가 배정되면 여기에서 시작할 수 있어요.'}</p><PreviewLink /></section>;
   return <article className={styles.unit}>
-    <div className={styles.unitPicture}><Image src="/learning/tree-house/scene.webp" alt="나무 위에 지어진 작은 집" width={1408} height={1024} sizes="(max-width: 600px) 90vw, 290px" /></div>
-    <div className={styles.unitCopy}><span className={styles.level}>{level}</span><span className={styles.unitLabel}>나에게 배정된 교재</span><h3>{unit.title}</h3><p>이야기를 보고, 듣고 말하고,<br />마지막 게임까지 함께해요.</p><Link className={styles.primary} href={`${unit.href}?${query.toString()}`}>학습 시작하기 <span aria-hidden="true">→</span></Link></div>
+    <div className={styles.bookTop}><span className={styles.smallLabel}>지금 떠날 이야기</span><span className={styles.level}>{level}</span></div>
+    <div className={styles.bookRow}><div className={styles.bookCover}><Image src="/learning/tree-house/dream-world-v2.png" alt="나무 위에 지어진 작은 집" width={1408} height={1024} sizes="120px" /><span aria-hidden="true"><HudIcon kind="sparkle" /></span></div><div><h2>{unit.title}</h2><p>나무 위에 누가 살고 있을까?</p></div></div>
+    <Link className={styles.primary} href={`${unit.href}?${query.toString()}`}>학습 시작하기 <HudIcon kind="arrow" /></Link>
   </article>;
 }
 
@@ -42,6 +81,7 @@ export default function LearnerHome() {
   const [refresh, setRefresh] = useState(0);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedVisits, setSelectedVisits] = useState<Record<string, string>>({});
+  const [choosingChild, setChoosingChild] = useState(false);
   const requestVersion = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
   const actorId = useRef<string | null>(null);
@@ -63,6 +103,7 @@ export default function LearnerHome() {
       if (event === 'SIGNED_OUT' || actorId.current !== nextActor) {
         setSelectedChildId(null);
         setSelectedVisits({});
+        setChoosingChild(false);
       }
       actorId.current = nextActor;
       setState({ status: event === 'SIGNED_OUT' ? 'login' : 'loading' });
@@ -103,23 +144,35 @@ export default function LearnerHome() {
   const children = state.status === 'ready' ? state.data.children : [];
   const child = children.find(item => item.learnerId === selectedChildId) ?? (children.length === 1 ? children[0] : null);
   const visit = child ? child.visits.find(item => item.visitId === selectedVisits[child.learnerId]) ?? child.visits[0] : null;
-  return <main className={styles.home}>
-    <header className={styles.header}><Link href="/dream-app" className={styles.brand}>DREAM <span>LEARNING</span></Link><Link href="/dream-app" className={styles.modeLink}>모드 선택</Link></header>
-    <section className={styles.hello} aria-labelledby="learn-home-title"><div><span className={styles.eyebrow}>드림이와 함께하는 영어 공부</span><h1 id="learn-home-title">오늘의 모험을<br />시작해 볼까요?</h1><p>우리 아이의 레벨과 교재로 이어지는 영어 시간.</p></div><Image className={styles.mango} src="/learning/tree-house/dreamy-wave.webp" width={300} height={400} alt="망고 드림이" sizes="(max-width: 600px) 90px, 150px" /></section>
-    {state.status === 'loading' && <section className={styles.message} role="status" aria-busy="true"><span className={styles.loadingDot} aria-hidden="true" /><h2>아이의 학습 정보를 불러오고 있어요</h2></section>}
-    {state.status === 'login' && <section className={styles.message}><span className={styles.stateLabel}>나의 학습</span><h2>누구와 함께 떠날까요?</h2><p>보호자 계정으로 로그인하면<br />아이별 교재와 연수 기록을 확인할 수 있어요.</p><Link href="/portal?returnTo=%2Flearn" className={styles.primary}>로그인하고 시작하기 <span aria-hidden="true">→</span></Link></section>}
-    {state.status === 'error' && <section className={styles.message} role="alert"><h2>학습 정보를 불러오지 못했어요</h2><p>연결 상태를 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.secondary} onClick={reload}>다시 불러오기</button></section>}
-    {state.status === 'ready' && <>
-      <div className={styles.sectionBar}><h2>{children.length > 1 ? '학습할 아이를 선택해 주세요' : '나의 학습'}</h2><button type="button" className={styles.refresh} onClick={reload} aria-label="아이의 학습 정보 새로고침">↻ 새로고침</button></div>
-      {children.length === 0 ? <section className={styles.message}><h3>{state.data.pendingCount > 0 ? '연수 기록 확인이 필요해요' : '연결된 아이가 아직 없어요'}</h3><p>{state.data.pendingCount > 0 ? '직원이 연수 기록을 확인하면 아이와 배정된 교재가 표시돼요.' : '학원에 보호자 계정의 학생 정보 확인을 요청해 주세요.'}</p><button type="button" onClick={reload} className={styles.secondary}>다시 확인하기</button></section> : <>
-        {children.length > 1 && <div className={styles.children} aria-label="학습할 아이"><div className={styles.childButtons}>{children.map((item, index) => <button key={item.learnerId} type="button" className={styles.childButton} aria-pressed={child?.learnerId === item.learnerId} onClick={() => setSelectedChildId(item.learnerId)}><span className={styles.avatar} aria-hidden="true">{childName(item).slice(0, 1) || index + 1}</span><span><strong>{childName(item)}</strong>{item.nameEn && item.nameEn !== childName(item) && <small>{item.nameEn}</small>}</span><span className={styles.check} aria-hidden="true">{child?.learnerId === item.learnerId ? '✓' : ''}</span></button>)}</div></div>}
-        {child ? <section className={styles.childPanel} aria-label={`${childName(child)}의 학습`}>
-          <div className={styles.childTitle}><div><span className={styles.stateLabel}>지금 학습할 아이</span><h2>{childName(child)}{child.nameEn && child.nameEn !== childName(child) && <small>{child.nameEn}</small>}</h2></div></div>
-          {visit ? <><div className={styles.visitPicker}>{child.visits.length > 1 ? <><label htmlFor="learning-visit">연수 기록 선택</label><select id="learning-visit" value={visit.visitId} onChange={event => setSelectedVisits(previous => ({ ...previous, [child.learnerId]: event.target.value }))}>{child.visits.map((item, index) => <option key={item.visitId} value={item.visitId}>{visitDates(item)}{index === 0 ? ' · 최근 연수' : ''}</option>)}</select></> : <><span>연수 기간</span><strong>{visitDates(visit)}</strong></>}</div><VisitLearning child={child} visit={visit} /></> : <div className={styles.waiting} role="status"><h3>연수 기록을 확인하고 있어요</h3><p>연수 기록이 연결되면 배정된 교재를 확인할 수 있어요.</p></div>}
-        </section> : <div className={styles.chooseHint}>위에서 아이를 선택하면 배정된 교재가 열려요.</div>}
-        {state.data.pendingCount > 0 && <p className={styles.pending} role="status">확인이 필요한 연수 기록 {state.data.pendingCount}건이 있어요. 직원이 확인하면 이곳에 함께 표시돼요.</p>}
-      </>}
-    </>}
-    <footer className={styles.footer}><Link href="/learn/tree-house?preview=1">로그인 없이 공개 체험 보기 <span aria-hidden="true">→</span></Link><p>공개 체험은 아이에게 배정된 학습과 별도로 진행돼요.</p></footer>
+  const pickChild = state.status === 'ready' && children.length > 1 && (!child || choosingChild);
+  const greeting = state.status === 'loading' ? '우리의 모험을 찾고 있어. 잠깐만!'
+    : state.status === 'error' ? '잠깐, 길이 끊겼나 봐. 다시 연결해 볼까?'
+      : child ? `${childName(child)}, 반가워! 오늘도 나랑 함께 놀자.` : '안녕! 나는 드림이야. 우리 같이 영어 모험을 떠나자!';
+  return <main className={styles.home} aria-label="드림이의 영어 모험">
+    <LearningWorld className={styles.world} />
+    <div className={styles.shade} aria-hidden="true" /><h1 className={styles.screenReader}>드림이와 함께하는 영어 모험</h1>
+    <header className={styles.hud}>
+      <div className={styles.hudLeft}><Link href="/dream-app" className={styles.iconButton} aria-label="모드 선택으로 돌아가기"><HudIcon kind="back" /></Link>
+        {child ? children.length > 1 ? <button type="button" className={styles.profile} onClick={() => setChoosingChild(true)} aria-label={`${childName(child)} · 학습할 아이 바꾸기`}><span className={styles.profileAvatar} aria-hidden="true">{childName(child).slice(0, 1)}</span><span>{childName(child)}</span><HudIcon kind="people" /></button> : <div className={styles.profile}><span className={styles.profileAvatar} aria-hidden="true">{childName(child).slice(0, 1)}</span><span>{childName(child)}</span></div> : <span className={styles.worldLabel}>드림이의 영어 섬</span>}
+      </div>
+      <div className={styles.hudRight}>
+        {child && visit && <div className={styles.visitPicker}>{child.visits.length > 1 ? <><label className={styles.screenReader} htmlFor="learning-visit">연수 기록 선택</label><select id="learning-visit" value={visit.visitId} onChange={event => setSelectedVisits(previous => ({ ...previous, [child.learnerId]: event.target.value }))}>{child.visits.map((item, index) => <option key={item.visitId} value={item.visitId}>{visitDates(item)}{index === 0 ? ' · 최근 연수' : ''}</option>)}</select></> : <span className={styles.visitDate} aria-label="연수 기간">{visitDates(visit)}</span>}</div>}
+        {state.status === 'ready' && <button type="button" className={styles.iconButton} onClick={reload} aria-label="아이의 학습 정보 새로고침"><HudIcon kind="refresh" /></button>}
+      </div>
+    </header>
+    <div className={styles.sceneUI}>
+      <div className={styles.coachBubble}><span className={styles.speaker}>드림이</span><p>{greeting}</p></div>
+      <div className={styles.launchArea}>
+        {state.status === 'loading' && <section className={`${styles.missionPanel} ${styles.loading}`} role="status" aria-busy="true"><span className={styles.loadingDot} aria-hidden="true" /><h2>아이의 학습 정보를 불러오고 있어요</h2></section>}
+        {state.status === 'login' && <section className={styles.missionPanel}><span className={styles.smallLabel}>나의 모험</span><h2>우리, 같이 시작할까?</h2><p>보호자 계정으로 로그인하면<br />나에게 맞는 이야기가 열려요.</p><Link href="/portal?returnTo=%2Flearn" className={styles.primary}>로그인하고 시작하기 <HudIcon kind="arrow" /></Link><PreviewLink /></section>}
+        {state.status === 'error' && <section className={styles.missionPanel} role="alert"><span className={styles.smallLabel}>잠시 쉬어가기</span><h2>학습 정보를 불러오지 못했어요</h2><p>연결 상태를 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={reload}>다시 불러오기 <HudIcon kind="refresh" /></button></section>}
+        {state.status === 'ready' && children.length === 0 && <section className={styles.missionPanel}><span className={styles.smallLabel}>내 모험 준비 중</span><h2>{state.data.pendingCount > 0 ? '연수 기록 확인이 필요해요' : '연결된 아이가 아직 없어요'}</h2><p>{state.data.pendingCount > 0 ? '직원이 연수 기록을 확인하면 아이와 배정된 교재가 표시돼요.' : '학원에 보호자 계정의 학생 정보 확인을 요청해 주세요.'}</p><button type="button" onClick={reload} className={styles.secondary}>다시 확인하기</button><PreviewLink /></section>}
+        {state.status === 'ready' && child && <div className={styles.childPanel} aria-label={`${childName(child)}의 학습`}>
+          {visit ? <VisitLearning child={child} visit={visit} /> : <section className={styles.missionPanel}><span className={styles.smallLabel}>내 모험 준비 중</span><h2>연수 기록을 확인하고 있어요</h2><p>연수 기록이 연결되면 배정된 교재를 확인할 수 있어요.</p><PreviewLink /></section>}
+          {state.data.pendingCount > 0 && <p className={styles.pending} role="status">연수 기록 {state.data.pendingCount}건 확인 중</p>}
+        </div>}
+      </div>
+    </div>
+    {pickChild && <ChildPicker learners={children} selectedId={child?.learnerId ?? null} onSelect={id => { setSelectedChildId(id); setChoosingChild(false); }} onCancel={child ? () => setChoosingChild(false) : undefined} />}
   </main>;
 }

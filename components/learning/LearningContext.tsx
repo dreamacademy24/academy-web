@@ -25,7 +25,7 @@ export function useLearningHref() {
 }
 function LearningProvider({scope,name,children}:{scope:LearningScope;name:string;children:ReactNode}) {
   const value = useMemo(() => ({scope,storage:createLearningStorage(scope)}),[scope]);
-  return <Context.Provider value={value}><div className={styles.bar}><span>{scope.kind==='demo'?'체험 모드 · 이 기기에만 저장':`${name} · My Tree House`}</span><Link href="/learn">{scope.kind==='demo'?'학습 홈':'아이 바꾸기 · 학습 홈'}</Link></div>{children}</Context.Provider>;
+  return <Context.Provider value={value}><div className={styles.session}><div className={styles.bar}><span>{scope.kind==='demo'?'체험 모드 · 이 기기에만 저장':`${name} · My Tree House`}</span><Link href="/learn">{scope.kind==='demo'?'학습 홈':'아이 바꾸기 · 학습 홈'}</Link></div>{children}</div></Context.Provider>;
 }
 type AccessState = {status:'checking'|'signin'|'invalid'|'error'} | {status:'ready';scope:LearningScope;name:string};
 function VerifyLearningSession({selection,children}:{selection:Extract<LearningSelection,{kind:'learner'}>;children:ReactNode}) {

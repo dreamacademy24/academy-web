@@ -1,4 +1,8 @@
-export const officialLevels = ['DSL-F2', 'DSL-T1', 'DR-F1', 'DR-F2', 'DR-S', 'DR-T'] as const;
+export const officialLevels = [
+  'DSL-F1', 'DSL-F2', 'DSL-S1', 'DSL-S2', 'DSL-T1', 'DSL-T2',
+  'DR-F1', 'DR-F2', 'DR-S', 'DR-T',
+  'DW-F', 'DW-S1', 'DW-S2', 'DW-T', 'DW-M',
+] as const;
 export type LevelCode = typeof officialLevels[number];
 export type LearningUnit = { id: string; levelCode: LevelCode; title: string; href: string; published: boolean };
 export const learningUnits: readonly LearningUnit[] = [

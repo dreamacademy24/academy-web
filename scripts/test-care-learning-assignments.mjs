@@ -11,8 +11,10 @@ create table students(id uuid primary key,booking_id uuid,name_kr text,name_en t
 grant select on staff_accounts to service_role;`);
 const migrationDir = new URL('../supabase/migrations/', import.meta.url);
 const learningMigration = readdirSync(migrationDir).find(file => file.endsWith('_care_learning_assignments.sql'));
+const allLevelsMigration = readdirSync(migrationDir).find(file => file.endsWith('_care_learning_all_official_levels.sql'));
 assert.ok(learningMigration);
-for (const file of ['20260912055458_student_care_confirmed_visits.sql', '20260912105728_student_care_teacher_assignments.sql', learningMigration]) {
+assert.ok(allLevelsMigration);
+for (const file of ['20260912055458_student_care_confirmed_visits.sql', '20260912105728_student_care_teacher_assignments.sql', learningMigration, allLevelsMigration]) {
   if (file === learningMigration) await db.exec('alter default privileges in schema public grant all on tables to service_role');
   await db.exec(readFileSync(new URL(file, migrationDir), 'utf8'));
 }
@@ -102,6 +104,32 @@ test('teacher unassignment and disabled accounts immediately lose read access', 
   assert.equal((await read(2)).history.length, 3);
   await db.exec('reset role'); await db.query('update staff_accounts set is_active=false where id=$1', [id(2)]); await db.exec('set role service_role');
   await assert.rejects(read(2), /CARE_FORBIDDEN/);
+});
+
+test('all fifteen official levels save without publishing another level\'s app unit', async () => {
+  const levels = ['DSL-F1', 'DSL-F2', 'DSL-S1', 'DSL-S2', 'DSL-T1', 'DSL-T2', 'DR-F1', 'DR-F2', 'DR-S', 'DR-T', 'DW-F', 'DW-S1', 'DW-S2', 'DW-T', 'DW-M'];
+  const originalVisit = await read();
+  await db.exec('reset role');
+  for (const [index] of levels.entries()) {
+    await db.query(`insert into care_visits(id,learner_id,booking_id,start_date,end_date,level_snapshot,created_by) values($1,$2,$3,'2026-09-01','2026-09-30','junior',$4)`, [id(300 + index), id(10), id(600 + index), id(1)]);
+  }
+  await db.exec('set role service_role');
+  for (const [index, level] of levels.entries()) {
+    const input = { request: 400 + index, visit: 300 + index, level, unit: null };
+    const result = await save(input);
+    assert.equal(result.assignment.level_code, level);
+    assert.equal(result.assignment.unit_id, null);
+    assert.equal(result.assignment.version, 1);
+    assert.equal(result.history.length, 1);
+    assert.equal((await save(input)).alreadySaved, true);
+    if (level !== 'DSL-F2') await assert.rejects(save({ ...input, request: 500 + index, previous: 400 + index, unit: 'dsl-f2-w1-d1' }), /CARE_INVALID_INPUT/);
+  }
+  assert.deepEqual(await read(), originalVisit);
+  assert.equal((await db.query('select count(*) from care_learning_assignment_audit where assignment_id=any($1::uuid[])', [levels.map((_, index) => id(400 + index))])).rows[0].count, 15);
+  const changed = await save({ request: 700, visit: 300, previous: 400, level: 'DW-M', unit: null });
+  assert.deepEqual(changed.history.map(row => row.level_code), ['DW-M', 'DSL-F1']);
+  assert.equal(changed.assignment.version, 2);
+  await assert.rejects(save({ request: 701, visit: 300, previous: 400, level: 'DSL-F1', unit: null }), /CARE_ASSIGNMENT_CHANGED/);
 });
 
 test.after(async () => { await db.close(); });

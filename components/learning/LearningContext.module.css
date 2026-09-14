@@ -5,3 +5,6 @@
 .state a,.state button{display:inline-block;margin:0 10px 8px 0;padding:10px 16px;border:1px solid #cfdbc9;border-radius:9px;background:#eef4e9;color:#365542;font:600 14px/1.5 Arial,'Apple SD Gothic Neo',sans-serif;text-decoration:none;cursor:pointer}
 .bar a:focus-visible,.state a:focus-visible,.state button:focus-visible{outline:3px solid #83a361;outline-offset:3px}
 @media(max-width:560px){.bar{padding:9px 14px;gap:10px;font-size:11px;align-items:flex-start}.state{margin:24px 14px;padding:24px 20px}.state h1{font-size:21px}}
+.session{--learning-viewport:calc(100svh - 36px)}
+.bar{height:36px;padding:7px 16px;font-size:11px;align-items:center}
+.bar>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

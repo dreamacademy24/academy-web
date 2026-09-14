@@ -85,7 +85,7 @@ export default function FinalMission({ motion, onMotion, onReturn, onReviewWord 
     </header>
     <div className={styles.layout}>
       <aside className={styles.world} aria-label={`드림이의 여행 · 미션 ${progress} / 3 완료`}>
-        <Image src="/learning/tree-house/scene.webp" alt="오늘 함께 놀았던 나무집" fill sizes="(max-width: 800px) 100vw, 420px" priority/>
+        <Image src="/learning/tree-house/dream-world-v2.png" alt="오늘 함께 놀았던 나무집" fill sizes="(max-width: 800px) 100vw, 420px" priority/>
         <div className={styles.worldShade}/>
         <div className={styles.worldTitle}><span>DREAMY’S LITTLE ADVENTURE</span><h2>우리의<br/>나무집 추억책</h2></div>
         <div className={styles.trail}>

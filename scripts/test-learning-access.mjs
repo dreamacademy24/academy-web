@@ -21,8 +21,16 @@ const v = (booking, learner = 50, visit = booking + 200) => ({ id: id(visit), le
 const assignment = (visit = 210, level = 'DSL-F2', unit = 'dsl-f2-w1-d1', version = 1) => ({ id: id(900 + version), visit_id: id(visit), level_code: level, unit_id: unit, version, effective_at: '2026-09-12T15:00:00Z', created_at: '2026-09-12T15:00:00Z' });
 
 test('official stages are explicit and publication requires the correct level/unit pair', () => {
-  assert.deepEqual(plain(catalog.officialLevels), ['DSL-F2', 'DSL-T1', 'DR-F1', 'DR-F2', 'DR-S', 'DR-T']);
+  assert.deepEqual(plain(catalog.officialLevels), ['DSL-F1', 'DSL-F2', 'DSL-S1', 'DSL-S2', 'DSL-T1', 'DSL-T2', 'DR-F1', 'DR-F2', 'DR-S', 'DR-T', 'DW-F', 'DW-S1', 'DW-S2', 'DW-T', 'DW-M']);
   for (const level of ['BR40', 'BR-120', 'junior', 'kinder', 'DR-S1', '', null]) assert.equal(catalog.isLevelCode(level), false);
+  for (const level of catalog.officialLevels) {
+    assert.equal(catalog.validLearningAssignment(level, null), true);
+    const levelOnly = catalog.describeAssignment(assignment(210, level, null));
+    assert.equal(levelOnly.levelCode, level);
+    assert.equal(levelOnly.published, false);
+    assert.equal(levelOnly.href, null);
+    assert.equal(catalog.validLearningAssignment(level, 'dsl-f2-w1-d1'), level === 'DSL-F2');
+  }
   assert.equal(catalog.validLearningAssignment('DR-F1', null), true);
   assert.equal(catalog.validLearningAssignment('DR-F1', 'dsl-f2-w1-d1'), false);
   assert.equal(catalog.validLearningAssignment('DSL-F2', '/learn/tree-house'), false);
@@ -157,6 +165,12 @@ test('staff API validates an explicit CAS input and passes only the signed actor
     const rejected = staffApi(); assert.equal((await rejected.POST(post({ ...validBody, ...patch }))).status, 400); assert.equal(rejected.calls.length, 0);
   }
   assert.equal((await staffApi().POST(post({ ...validBody, levelCode: 'DR-F1', unitId: null }))).status, 200);
+  for (const levelCode of catalog.officialLevels) {
+    const request = staffApi();
+    assert.equal((await request.POST(post({ ...validBody, levelCode, unitId: null }))).status, 200);
+    assert.equal(request.calls[0].args.p_level_code, levelCode);
+    assert.equal(request.calls[0].args.p_unit_id, null);
+  }
 });
 
 test('teachers can read only through SQL authorization and cannot write; statuses are distinct', async () => {
