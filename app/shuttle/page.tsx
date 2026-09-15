@@ -476,7 +476,7 @@ export default function ShuttlePage() {
                                     <input type="checkbox" name="schedule" value={`${m}-${d}-${si}-${slotSlug(sl.name)}`} />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
-                                      <span className="schedule-sub">출발 {sl.time.replace(/(am|pm)$/i, '')} · 복귀 {sl.return}</span>
+                                      <span className="schedule-sub">출발 {sl.time} · 복귀 {sl.return}</span>
                                       {sl.note && <span style={{color:'#dc2626', fontSize:11, fontWeight:600, marginTop:2}}>❗ {sl.note}</span>}
                                     </div>
                                   </label>
