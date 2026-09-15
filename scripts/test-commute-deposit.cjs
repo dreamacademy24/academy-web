@@ -13,4 +13,5 @@ const page=fs.readFileSync('app/invoice/page.tsx','utf8');
 assert.ok(page.includes('if(isCommute)return commuteDeposit(fp);'));
 assert.equal((page.match(/<CommuteDepositNotice /g)||[]).length,4,'all invoice/receipt surfaces show the policy');
 assert.ok(page.includes('const isFullPayment=daysUntilCheckin<60;'),'existing full-payment policy retained');
-console.log('10 commute deposit checks passed');
+assert.ok(!page.includes('{!isCommute&&<><div className="is">'),'day-school guest invoices must show billing');
+console.log('11 commute deposit checks passed');
