@@ -638,7 +638,7 @@ export default function PortalShuttlePage() {
                                     />
                                     <div className="schedule-label">
                                       <span className="schedule-main">{item.dayLabel} · {sl.name}</span>
-                                      <span className="schedule-sub">출발 {sl.time.replace(/(am|pm)$/i, '')} · 복귀 {sl.return}</span>
+                                      <span className="schedule-sub">출발 {sl.time} · 복귀 {sl.return}</span>
                                       {sl.note && <span style={{color:'#dc2626', fontSize:11, fontWeight:600, marginTop:2}}>❗ {sl.note}</span>}
                                     </div>
                                   </label>
@@ -667,7 +667,7 @@ export default function PortalShuttlePage() {
                           <div key={t.value} style={{display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10}}>
                             <div style={{flex:1, minWidth:0}}>
                               <div style={{fontSize:13, fontWeight:700, color:"#1a1a2e"}}>{md}{dow && ` (${dow})`} · {t.tourName}</div>
-                              <div style={{fontSize:11, color:"#6b7280", marginTop:2}}>출발 {t.departTime.replace(/(am|pm)$/i, '')}</div>
+                              <div style={{fontSize:11, color:"#6b7280", marginTop:2}}>출발 {t.departTime}</div>
                             </div>
                             <div style={{display:"flex", alignItems:"center", gap:6, flexShrink:0}}>
                               <button type="button" aria-label="인원 줄이기"
