@@ -24,3 +24,6 @@ test('opening one task acknowledges only its notifications and preserves other v
 test('production scripts parse and task list navigation never clears all task comments',()=>{
  let count=0;for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)){if(match[1].trim()){new vm.Script(match[1]);count++;}}assert.ok(count>0);assert.doesNotMatch(inline,/if\(p==='(?:board|mywork)'\)[^\n]*markNotifsRead\('task_comment'\)/);
 });
+test('returning from task details immediately refreshes the list order',()=>{
+ const f=fixture();let refreshed=0;Object.assign(f,{_staffBoardDetailOpen:true,_boardSelTaskId:'read',_staffBoardReturnScroll:0,document:{getElementById:()=>null},window:{scrollTo:()=>{}},_boardUIMode:()=> 'table',renderBoardTable:()=>refreshed++,renderBoardSidebar:()=>refreshed++});functions(f,['closeBoardDrawer']);f.closeBoardDrawer();assert.equal(refreshed,1);assert.equal(f._staffBoardDetailOpen,false);f.closeBoardDrawer();assert.equal(refreshed,1);
+});

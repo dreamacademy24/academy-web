@@ -6027,6 +6027,7 @@ function closeBoardDrawer(restoreScroll){
   if(page)page.classList.remove('staff-board-detail-open');
   if(drawer)drawer.style.display='none';if(dim)dim.style.display='none';
   if(det&&md&&det.parentNode&&det.parentNode.id==='boardDrawerBody'){md.appendChild(det);det.style.padding='24px';}
+  if(wasOpen){if(_boardUIMode()==='table')renderBoardTable();else renderBoardSidebar();}
   if(wasOpen&&restoreScroll!==false)window.scrollTo(0,_staffBoardReturnScroll);
 }
 function _btSelIds(){return Array.prototype.slice.call(document.querySelectorAll('.btChk:checked')).map(function(c){return c.value;});}
