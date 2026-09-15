@@ -2,6 +2,7 @@
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 import { isAdminAuthed, getAdminInfo } from '@/lib/adminAuth'
+import StaffAppManifest from '@/components/StaffAppManifest'
 
 interface NotifItem { icon: string; msg: string }
 
@@ -41,6 +42,7 @@ function StaffIframe() {
   if (!src) return null
   return (
     <>
+      <StaffAppManifest />
       <iframe src={src} style={{ width: '100%', height: '100dvh', border: 'none' }} />
       {notifs.length > 0 && (
         <div style={{

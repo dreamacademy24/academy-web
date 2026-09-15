@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import StaffSessionBoundary from "@/components/StaffSessionBoundary";
+import StaffAppManifest from "@/components/StaffAppManifest";
 
 type Item = { label: string; href: string; ext?: boolean; badge?: number };
 const NAV: { title: string; items: Item[] }[] = [
@@ -136,9 +137,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const todayOn = !isView && pathname === "/admin/today";
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+    <div className={isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) ? "staff-mobile-host" : undefined} style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+      {isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) && <StaffAppManifest />}
       <Suspense fallback={null}><AdminViewSource onChange={setViewSrc} /></Suspense>
-      <style>{`@media print{.admin-noprint{display:none!important}.admin-main{height:auto!important;overflow:visible!important}}`}</style>
+      <style>{`@media(max-width:760px){.staff-mobile-host{min-height:0!important}.staff-mobile-host>aside,.staff-mobile-host>.admin-main>button.admin-noprint{display:none!important}.staff-mobile-host>.admin-main{height:var(--staff-viewport,100dvh)!important;overflow:hidden!important}.staff-mobile-host>.admin-main iframe{height:var(--staff-viewport,100dvh)!important}}@media print{.admin-noprint{display:none!important}.admin-main{height:auto!important;overflow:visible!important}}`}</style>
       {!hidden && (
         <aside className="admin-noprint" style={{ width: 224, flexShrink: 0, background: "#3a47a8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.16)" }}>
