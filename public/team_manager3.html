@@ -1406,7 +1406,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-chat1"></script>
+<script src="/staff-task-order.js?v=20260915-1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-order1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
 <script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
@@ -3672,7 +3672,7 @@ function loadProjectsFromSB(){
 // ── Supabase sync: taskComments → staff_task_comments ──
 // NOTE: staff_task_comments.id is bigint (DB auto-generated). Do NOT send local temp id.
 function tcToRow(taskId,c){var _ts=c.ts||c.date;if(_ts&&typeof _ts==='string'){var _d=new Date(_ts);_ts=isNaN(_d.getTime())?Date.now():_d.getTime();}if(!_ts)_ts=Date.now();return{task_id:taskId,from_id:c.author||c.from_id||'',text:c.text||'',ts:_ts};}
-function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],date:_ds};}
+function rowToTc(r){var _ds='';if(r.ts){try{_ds=new Date(Number(r.ts)).toLocaleString('ko-KR');}catch(e){_ds=String(r.ts);}}return{id:r.id,author:r.from_id||'',text:r.text||'',files:Array.isArray(r.files)?r.files:[],ts:Number(r.ts)||0,date:_ds};}
 function syncTcToSB(taskId,c){
   return sbUpsert('staff_task_comments',tcToRow(taskId,c)).then(function(data){
     if(Array.isArray(data)&&data.length&&data[0]&&data[0].id!=null){
@@ -3871,12 +3871,12 @@ function pollForUpdates(){
   return Promise.all([
     sbGet('staff_tasks','order=created_at.desc&limit=500'),
     sbGet('staff_projects','order=created_at.desc&limit=100'),
-    sbGet('staff_task_comments','order=ts.asc&limit=1000'),
+    sbGet('staff_task_comments','order=ts.desc&limit=1000'),
     sbGet('staff_threads','order=ts.asc&limit=1000'),
     fetchNoticeRows()
   ]).then(function(results){
     if(CU!==pollUser||_pollEditing())return;
-    var newTasks=results[0],newProjs=results[1],newTc=results[2],newTh=results[3],newNt=results[4];
+    var newTasks=results[0],newProjs=results[1],newTc=results[2].slice().reverse(),newTh=results[3],newNt=results[4];
     var changed=false;
     // tasks
     var th1=jsonHash(newTasks);
@@ -4030,7 +4030,7 @@ sv('tm_pw',PASSWORDS);
 let pendingUser=null;
 
 function rebuildIdx(){let n=1;[...tasks].sort((a,b)=>a.createdAt<b.createdAt?-1:1).forEach(t=>{if(t.shared)t.idx=n++;else t.idx=null;});}
-function sortT(arr){return[...arr].sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;var aH=a.priority==='high'?1:0,bH=b.priority==='high'?1:0;if(aH!==bH)return bH-aH;if(!a.due)return 1;if(!b.due)return -1;return a.due<b.due?-1:1;});}
+function sortT(arr){return arr.slice().sort(_staffTaskCompare);}
 
 function parseLocalDate(str){
   if(!str)return null;
@@ -4100,7 +4100,7 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();var _initPg='home';try{var _qpPg=new URLSearchParams(window.location.search).get('page');if(_qpPg)_initPg=_qpPg;}catch(e){}showPage(_initPg);
-  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();_staffRelatedTaskDeepLink();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){return loadBoardMeta();}).then(function(){refreshAll();startPolling();loadMyNotifs();_staffRelatedTaskDeepLink();});
   setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
@@ -4249,8 +4249,8 @@ function showPage(p){
   document.getElementById('btnProj').style.display='none';
   if(p==='home'){renderHome();markNotifsRead('all');}
   if(p==='announcements'){renderAnnouncementsPage();document.getElementById('btnTask').style.display='none';markNotifsRead('notice');}
-  if(p==='board'){renderBoard();recordBoardView();markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
-  if(p==='mywork'){markNotifsRead('task_comment');markNotifsRead('unassigned_task');markNotifsRead('task');markNotifsRead('task_assigned');}
+  if(p==='board'){renderBoard();recordBoardView();/* Task notifications are acknowledged only when that task is opened. */}
+  if(p==='mywork'){/* Task notifications are acknowledged only when that task is opened. */}
   if(p==='calendar'){loadStudentEvents(calDate.getFullYear(),calDate.getMonth()+1).then(function(){renderCal();});}
   if(p==='projects'){renderProjList();document.getElementById('btnTask').style.display='none';if(isAdmin())document.getElementById('btnProj').style.display='inline-flex';markNotifsRead('thread');}
   if(p==='ptree'){document.getElementById('btnTask').style.display='none';document.getElementById('btnProj').style.display='none';document.getElementById('topT').textContent='\uD83D\uDE80 \uD504\uB85C\uC81D\uD2B8';document.getElementById('topS').textContent='\uD070 \uD504\uB85C\uC81D\uD2B8\uB97C \uD3F4\uB354\uCC98\uB7FC \uC815\uB9AC\u00B7\uC18C\uD1B5';ptOpen();}
@@ -5579,7 +5579,7 @@ function isNewTask(t){
   return (Date.now()-d.getTime())<24*60*60*1000;
 }
 function newBadgeHtml(t){
-  return isNewTask(t)?'<span style="background:#ef4444;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-left:4px;vertical-align:middle">NEW</span>':'';
+  return _staffTaskAttentionBadge(t);
 }
 function isManagerCU(){return CU&&CU.id==='ceo';}
 function shortCreated(d){
@@ -5702,32 +5702,10 @@ function _renderBoardTaskItem(t,color){
     '</div></div>';
 }
 function _renderBoardTaskList(){
-  var f=_boardFiltered();
-  if(!f.length) return '<div style="text-align:center;padding:30px 14px;color:var(--text3);font-size:12px">표시할 업무가 없습니다</div>';
-  var notDone=f.filter(function(t){return !isDoneTask(t);});
-  var done=f.filter(isDoneTask);
-  var urgent=notDone.filter(function(t){return t.priority==='high'||(t.due&&parseLocalDate(t.due)<=new Date(new Date().setHours(23,59,59,999)));});
-  var unassigned=notDone.filter(isUnassignedTask);
-  var active=notDone.filter(function(t){return !urgent.includes(t)&&!unassigned.includes(t);});
-  function section(label,list,color,collapsed){
-    if(!list.length)return '';
-    return '<details '+(collapsed?'':'open')+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--text2);padding:4px 0;letter-spacing:.3px;list-style:none">'+label+' <span style="color:var(--text3);font-weight:600">('+list.length+')</span></summary><div style="margin-top:4px">'+list.map(function(t){return _renderBoardTaskItem(t,color);}).join('')+'</div></details>';
-  }
-  var html='';
-  if(boardFilter==='unassigned'){
-    html+=unassigned.map(function(t){return _renderBoardTaskItem(t,'#9ca3af');}).join('');
-  } else if(boardFilter==='done'){
-    html+=done.map(function(t){return _renderBoardTaskItem(t,'#10b981');}).join('');
-  } else if(boardFilter==='active'){
-    html+=section('🚨 긴급',urgent,'#ef4444');
-    html+=section('📋 진행 중',active,'#3b82f6');
-  } else {
-    html+=section('🚨 긴급',urgent,'#ef4444');
-    html+=section('📋 진행 중',active,'#3b82f6');
-    html+=section('🚫 미배정',unassigned,'#9ca3af');
-    html+=section('✅ 완료',done,'#10b981',true);
-  }
-  return html;
+  var f=sortT(_boardFiltered());
+  if(!f.length)return '<div style="text-align:center;padding:30px 14px;color:var(--text3);font-size:12px">표시할 업무가 없습니다</div>';
+  function section(label,rows,collapsed){return rows.length?'<details '+(collapsed?'':'open')+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;padding:6px 0">'+label+' ('+rows.length+')</summary>'+rows.map(function(t){return _renderBoardTaskItem(t);}).join('')+'</details>':'';}
+  return section('확인할 업무 · 새 댓글',f.filter(function(t){return _staffTaskAttention(t).needed;}))+section('확인한 업무 · 처리 중',f.filter(function(t){return !_staffTaskAttention(t).needed&&!isDoneTask(t);}))+section('완료',f.filter(function(t){return !_staffTaskAttention(t).needed&&isDoneTask(t);}),boardFilter!=='done');
 }
 function _renderBoardEmpList(){
   // 모든 직원에게 전체 직원 목록 노출 (읽기 허용, 편집/삭제는 기존 권한 체크 유지)
@@ -5805,25 +5783,30 @@ function _saveArchived(){
 }
 function _myViews(){if(!CU)return {};if(!_taskViews[CU.id])_taskViews[CU.id]={};return _taskViews[CU.id];}
 function _saveMyViews(){
-  if(!CU)return;
-  fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'task_views_'+CU.id,value:_myViews(),updated_at:new Date().toISOString()})}).catch(function(){});
+  if(!CU)return Promise.resolve();
+  return fetch(SB_URL+'/rest/v1/app_settings?on_conflict=key',{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'task_views_'+CU.id,value:_myViews(),updated_at:new Date().toISOString()})}).then(function(response){if(!response.ok)throw Error('열람 저장 실패');});
 }
-function recordBoardView(){loadBoardMeta().then(function(){if(!CU)return;var v=_myViews();v._board=new Date().toISOString();_saveMyViews();});}
+function recordBoardView(){var actor=CU;loadBoardMeta().then(function(){if(!actor||CU!==actor)return;var v=_myViews();v._board=new Date().toISOString();return _saveMyViews();}).catch(function(){});}
 function recordTaskView(taskId){
-  loadBoardMeta().then(function(){
-    if(!CU)return;var v=_myViews();
-    v[String(taskId)]=new Date().toISOString();v._board=new Date().toISOString();
-    _saveMyViews();
+  var actor=CU,opened=new Date().toISOString();
+  return loadBoardMeta().then(function(){
+    if(!actor||CU!==actor)return;var v=_myViews(),previous=v[String(taskId)];
+    v[String(taskId)]=opened;v._board=opened;
+    return _saveMyViews().then(function(){
+      var types=['task_comment','unassigned_task','task','task_assigned'];
+      return sbPatch('staff_notifications','to_id=eq.'+encodeURIComponent(actor.id)+'&ref_id=eq.'+encodeURIComponent(taskId)+'&type=in.(task_comment,unassigned_task,task,task_assigned)&is_read=eq.false&created_at=lte.'+encodeURIComponent(opened),{is_read:true}).then(function(){
+        if(CU!==actor)return;
+        myNotifs=myNotifs.filter(function(n){return !(String(n.ref_id)===String(taskId)&&types.indexOf(n.type)>=0&&_staffTaskTime(n.created_at)<=_staffTaskTime(opened));});
+        renderNotifBadges();
+      }).catch(function(){});
+    }).catch(function(){
+      if(v[String(taskId)]===opened){if(previous)v[String(taskId)]=previous;else delete v[String(taskId)];}
+      if(CU===actor)toast('열람 기록을 저장하지 못했습니다. 다시 열어 확인해주세요.','#dc2626');
+    });
   });
 }
 function unseenBadgeHtml(t){
-  try{
-    if(!CU||!t||isDoneTask(t))return '';
-    var mine=t.assignee===CU.id||(t.assignees&&t.assignees.indexOf(CU.id)>=0);
-    if(!mine)return '';
-    if(_myViews()[String(t.id)])return '';
-    return '<span title="아직 열어보지 않았어요" style="background:#ef4444;color:#fff;font-size:9.5px;font-weight:900;padding:2px 6px;border-radius:8px;margin-left:4px;vertical-align:middle">!</span>';
-  }catch(e){return '';}
+  return ''; // Personal unread/new-comment label is rendered once by newBadgeHtml.
 }
 function isStaleTask(t){
   if(isDoneTask(t))return false;
@@ -5866,22 +5849,9 @@ function renderBoardTable(){
   });
 }
 function _btSeenCell(t){
-  var ids=[];
-  if(t.assignee)ids.push(t.assignee);
-  (t.assignees||[]).forEach(function(id){if(id&&ids.indexOf(id)<0)ids.push(id);});
-  if(!ids.length){
-    var n=0;
-    Object.keys(_taskViews).forEach(function(emp){if(emp!=='ceo'&&_taskViews[emp]&&_taskViews[emp][String(t.id)])n++;});
-    return n?'<span style="color:#16a34a;font-weight:700;font-size:12.5px">'+n+'명 봄</span>':'<span style="color:#dc2626;font-weight:800;font-size:12.5px">아무도 안 봄</span>';
-  }
-  if(isDoneTask(t))return '<span style="color:var(--text3);font-size:11px">—</span>';
-  var unseen=[];
-  ids.forEach(function(id){
-    var v=_taskViews[id]&&_taskViews[id][String(t.id)];
-    if(!v){var p=getP(id);unseen.push(p?p.name:id);}
-  });
-  if(!unseen.length)return '<span style="color:#16a34a;font-weight:700;font-size:12.5px">👁 확인함</span>';
-  return '<span style="color:#dc2626;font-weight:800;font-size:12.5px" title="'+esc(unseen.join(', '))+' 미확인">'+esc(unseen[0])+(unseen.length>1?' 외 '+(unseen.length-1):'')+' 미확인</span>';
+  var state=_staffTaskAttention(t),ids=[t.assignee].concat(t.assignees||[]).filter(function(id,i,a){return id&&a.indexOf(id)===i;});
+  var others=ids.map(function(id){var p=getP(id);return (p?p.name:id)+': '+((_taskViews[id]||{})[String(t.id)]?'열람함':'미열람');}).join(', ');
+  return '<span style="color:'+(state.needed?'#4338ca':'var(--text3)')+';font-weight:'+(state.needed?'700':'400')+';font-size:12px" title="내 확인 상태 기준 · 담당자 열람: '+esc(others||'미배정')+'">'+(state.comments?'새 댓글 '+state.comments:state.needed?'미확인':'확인함')+'</span>';
 }
 function _btStrip(tasksAll){
   var eod=new Date(new Date().setHours(23,59,59,999));
@@ -6017,27 +5987,26 @@ function _boardTableHtml(){
   h+=_btCleanBanner(poolNoEmp.filter(isStaleTask).length);
   h+=_btFbar(counts);
   var cols=7+(_boardCleanMode?1:0);
-  var head='<tr>'+(_boardCleanMode?'<th style="width:30px"></th>':'')+'<th>업무명</th><th>담당자</th><th>마감</th><th class="bt-hm" style="width:120px">진행률</th><th>상태</th><th>확인</th><th class="bt-hm">💬</th></tr>';
+  var head='<tr>'+(_boardCleanMode?'<th style="width:30px"></th>':'')+'<th>업무명</th><th>담당자</th><th>마감</th><th class="bt-hm" style="width:120px">진행률</th><th>상태</th><th>내 확인</th><th class="bt-hm">💬</th></tr>';
   var body='';
   var secRow=function(label){return '<tr class="bt-sec"><td colspan="'+cols+'">'+label+'</td></tr>';};
-  var byDue=function(a,b){return String(a.due||'9999').localeCompare(String(b.due||'9999'));};
+  var byDue=_staffTaskCompare;
   var flat=_btFilteredRows(pool,arch);
   if(flat){
     if(!flat.length)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
     else body=flat.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
   } else {
-    var done=pool.filter(isDoneTask);
-    var stale=pool.filter(function(t){return !isDoneTask(t)&&isStaleTask(t);});
-    var top=pool.filter(function(t){return !isDoneTask(t)&&!isStaleTask(t)&&(urg(t)||isUnassignedTask(t));});
-    var mid=pool.filter(function(t){return !isDoneTask(t)&&!isStaleTask(t)&&top.indexOf(t)<0;});
-    if(top.length)body+=secRow('🚨 긴급 · 📢 지시(미배정) — 먼저 확인 ('+top.length+')')+top.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
-    if(mid.length)body+=secRow('📋 진행 중 ('+mid.length+')')+mid.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
-    if(stale.length)body+=secRow('🧹 방치 — 마감 30일+ 지남 · 정리 대상 ('+stale.length+')')+stale.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+    var needs=pool.filter(function(t){return _staffTaskAttention(t).needed;});
+    var checked=pool.filter(function(t){return !_staffTaskAttention(t).needed;});
+    var done=checked.filter(isDoneTask);
+    var active=checked.filter(function(t){return !isDoneTask(t);});
+    if(needs.length)body+=secRow('확인할 업무 · 새 댓글 ('+needs.length+')')+needs.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
+    if(active.length)body+=secRow('확인한 업무 · 처리 중 ('+active.length+')')+active.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
     if(!body)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
-    if(done.length)body+=secRow('✅ 완료 ('+done.length+') — 최근 20개')+done.slice(0,20).map(function(t){return _btRow(t);}).join('');
+    if(done.length)body+=secRow('✅ 완료 ('+done.length+') — 최근 20개')+done.slice().sort(function(a,b){return _staffTaskTime(b.createdAt)-_staffTaskTime(a.createdAt);}).slice(0,20).map(function(t){return _btRow(t);}).join('');
   }
   h+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow-x:auto"><table class="bt-tbl">'+head+body+'</table></div>';
-  h+='<div style="font-size:11px;color:var(--text3);margin-top:8px">행 클릭 = 상세(댓글·체크리스트) · 직원 카드 클릭 = 그 직원 업무만 보기 · 보관함은 삭제가 아니라 숨김이에요</div>';
+  h+='<div style="font-size:11px;color:var(--text3);margin-top:8px">내 미확인 업무·새 댓글이 위로, 확인한 업무는 아래로 자동 정렬됩니다. 열람은 업무 완료와 별개입니다. · 직원 카드 클릭 = 그 직원 업무만 보기</div>';
   return h;
 }
 function openBoardTask(taskId){
@@ -7733,7 +7702,7 @@ function renderEmpDetailEmpty(emp){
     var done=isDoneTask(t);
     var urgentCls=(!done&&_isUrgentEmpTask(t))?' is-urgent':'';
     var cmt=(taskComments[t.id]||[]).length;
-    var cmtNew=(typeof myNotifs!=='undefined'?(myNotifs||[]):[]).some(function(nn){return !nn.is_read&&nn.type==='task_comment'&&String(nn.ref_id)===String(t.id);});
+    var cmtNew=_staffTaskAttention(t).comments>0;
     var h='<div class="empb-card'+urgentCls+(done?' is-done':'')+'" onclick="selectEmpTask(\x27'+t.id+'\x27)">';
     if(isOwner||isAdmin()){
       h+='<div class="empb-act">';
@@ -7750,7 +7719,7 @@ function renderEmpDetailEmpty(emp){
   }
   function col(label,color,list,emptyTxt,limit,key){
     var exp=key&&window._bexp&&window._bexp[key];
-    var shown=(limit&&!exp)?list.slice(0,limit):list;
+    list=sortT(list);var shown=(limit&&!exp)?list.slice(0,limit):list;
     var h='<div style="min-width:0"><div style="font-size:12px;font-weight:800;color:'+color+';margin-bottom:7px">'+label+' <span style="color:var(--text3);font-weight:600">'+list.length+'</span></div>';
     if(!list.length)h+='<div style="font-size:11.5px;color:var(--text3);background:var(--surface2);border-radius:8px;padding:12px;text-align:center">'+emptyTxt+'</div>';
     else{h+=shown.map(bCard).join('');

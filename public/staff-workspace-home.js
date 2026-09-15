@@ -33,7 +33,7 @@ function _staffHomeModel(taskRows,noticeRows,reads,empId,today){
   var dueToday=assigned.filter(function(t){return (t.due||'').slice(0,10)===today;});
   var unread=(noticeRows||[]).filter(function(n){return n.requireRead&&!n.done&&((reads||{})[n.id]||[]).map(String).indexOf(String(empId))<0;});
   function rank(t){return t.due&&t.due.slice(0,10)<today?0:(t.due||'').slice(0,10)===today?1:(t.priority==='high'||t.priority==='urgent')?2:3;}
-  assigned.sort(function(a,b){return rank(a)-rank(b)||(a.due||'9999').localeCompare(b.due||'9999')||(b.createdAt||'').localeCompare(a.createdAt||'');});
+  assigned.sort(_staffTaskCompare);
   return {assigned:assigned,overdue:overdue,today:dueToday,unread:unread,
     outgoing:active.filter(function(t){return t.createdBy===empId&&!_staffAssigned(t,empId);})};
 }
@@ -78,7 +78,7 @@ function _renderStaffHome(emp){
       '<button data-action="notices"><span>확인할 공지</span><strong>'+model.unread.length+'<small>건</small></strong><em>필수 공지 읽음 확인 →</em></button>'+
       '<button data-action="guests"><span>내 담당 예약</span><strong id="swhGuestCount">—</strong><em>체류 중 · 입실 예정 →</em></button></div>'+
     '<div class="swh-columns"><main class="swh-main">'+
-      '<section class="swh-panel"><div class="swh-section-head"><div><h2>처리할 업무</h2><p>기한이 지난 업무부터 순서대로 보여드려요.</p></div><button class="swh-link" data-tab="board">보드 보기 ↗</button></div><div class="swh-filters" id="swhFilters"></div><div id="swhTasks"></div></section>'+
+      '<section class="swh-panel"><div class="swh-section-head"><div><h2>처리할 업무</h2><p>내 미확인 업무·새 댓글은 위로, 확인한 업무는 아래로 보여드려요.</p></div><button class="swh-link" data-tab="board">보드 보기 ↗</button></div><div class="swh-filters" id="swhFilters"></div><div id="swhTasks"></div></section>'+
       '<section class="swh-panel"><div class="swh-section-head"><div><h2>내 담당 예약</h2><p>예약 준비 · 학생 케어 · 인계 코멘트</p></div><button class="swh-link" data-action="guests">전체 보기 ↗</button></div><div id="swhBookings" role="status" class="swh-loading">담당 예약을 불러오는 중입니다…</div></section>'+
       '<section class="swh-panel"><div class="swh-section-head"><div><h2>반복 체크</h2><p>내 담당 항목과 공용 체크를 확인하세요.</p></div><button class="swh-link" data-tab="checklist">체크리스트 열기 ↗</button></div><div id="empHomeDcl"></div></section>'+
     '</main><aside class="swh-aside"><section class="swh-panel" id="swhNoticePanel"><div class="swh-section-head"><h2>확인할 공지 <span class="swh-count">'+model.unread.length+'</span></h2><button class="swh-link" data-action="all-notices">전체</button></div><div id="swhNotices"></div></section>'+
@@ -104,10 +104,11 @@ function _renderStaffHome(emp){
     var choices=[['focus','우선순위',model.assigned.length],['today','오늘',model.today.length],['overdue','기한 초과',model.overdue.length],['outgoing','내가 지시한 업무',model.outgoing.length]];
     document.getElementById('swhFilters').innerHTML=choices.map(function(c){return '<button data-filter="'+c[0]+'" aria-pressed="'+(_staffHomeFilter===c[0])+'">'+c[1]+' <span>'+c[2]+'</span></button>';}).join('');
     var rows=_staffHomeFilter==='today'?model.today:_staffHomeFilter==='overdue'?model.overdue:_staffHomeFilter==='outgoing'?model.outgoing:model.assigned;
+    rows=rows.slice().sort(_staffTaskCompare);
     document.getElementById('swhTasks').innerHTML=rows.length?rows.slice(0,6).map(function(t){
       var due=(t.due||'').slice(0,10),late=due&&due<todayStr(),who=getP(t.assignee),author=getP(t.createdBy);
       var status=late?'기한 초과':due===todayStr()?'오늘 마감':due?due.slice(5).replace('-','/')+' 마감':'기한 없음';
-      return '<button class="swh-task" data-task="'+_staffSafe(t.id)+'"><span class="swh-task-icon" aria-hidden="true">↗</span><span class="swh-task-text"><b>'+_staffSafe(t.title||'제목 없음')+'</b><small>'+_staffSafe(_staffHomeFilter==='outgoing'?'담당 '+(who?who.name:t.assignee||'미배정'):'지시자 '+(author?author.name:t.createdBy||'미지정'))+(t.files&&t.files.length?' · 첨부 '+t.files.length:'')+'</small></span><span class="swh-pill '+(late?'is-late':due===todayStr()?'is-today':'')+'">'+status+'</span></button>';
+      return '<button class="swh-task" data-task="'+_staffSafe(t.id)+'"><span class="swh-task-icon" aria-hidden="true">↗</span><span class="swh-task-text"><b>'+_staffSafe(t.title||'제목 없음')+_staffTaskAttentionBadge(t)+'</b><small>'+_staffSafe(_staffHomeFilter==='outgoing'?'담당 '+(who?who.name:t.assignee||'미배정'):'지시자 '+(author?author.name:t.createdBy||'미지정'))+(t.files&&t.files.length?' · 첨부 '+t.files.length:'')+'</small></span><span class="swh-pill '+(late?'is-late':due===todayStr()?'is-today':'')+'">'+status+'</span></button>';
     }).join('')+(rows.length>6?'<button class="swh-more" data-tab="board">보드에서 '+rows.length+'건 모두 보기 →</button>':''):'<div class="swh-empty">해당하는 미완료 업무가 없습니다.</div>';
   }
   renderTasks();
