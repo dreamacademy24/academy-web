@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { portalFetch } from '@/lib/portalFetch';
 import { supabase } from '@/lib/supabase';
-import { getLearningUnit, isLevelCode } from '@/lib/learning/catalog';
+import { getLearningUnit, isLevelCode, type LearningUnit } from '@/lib/learning/catalog';
 import type { LearningChildren, LearningChild } from '@/lib/learning/children';
 import LearningWorld from './LearningWorld';
 import styles from './LearnerHome.module.css';
@@ -69,14 +69,19 @@ function VisitLearning({ child, visit }: { child: LearningChild; visit: ChildVis
   const query = new URLSearchParams({ learnerId: child.learnerId, visitId: visit.visitId });
   if (!assignment || !level) return <section className={styles.missionPanel}><span className={styles.smallLabel}>학습 배정 대기</span><h2>배울 내용을 준비하고 있어요</h2><p>선생님이 레벨과 교재를 배정하면<br />내 모험을 시작할 수 있어요.</p><PreviewLink /></section>;
   if (!published || !unit) return <section className={styles.missionPanel}><span className={styles.level}>{level}</span><h2>{assignment.unitId ? '교재를 준비하고 있어요' : '교재 배정을 기다리고 있어요'}</h2><p>{assignment.unitId ? '배정된 교재가 아직 앱에 공개되지 않았어요.' : '학습할 교재가 배정되면 여기에서 시작할 수 있어요.'}</p><PreviewLink /></section>;
+  return <LearningUnitCard unit={unit} href={`${unit.href}?${query.toString()}`} />;
+}
+
+function LearningUnitCard({ unit, href, staffPreview = false }: { unit: LearningUnit; href: string; staffPreview?: boolean }) {
   return <article className={styles.unit}>
-    <div className={styles.bookTop}><span className={styles.smallLabel}>지금 떠날 이야기</span><span className={styles.level}>{level}</span></div>
+    <div className={styles.bookTop}><span className={styles.smallLabel}>{staffPreview ? '직원 체험 · Staff preview' : '지금 떠날 이야기'}</span><span className={styles.level}>{unit.levelCode}</span></div>
     <div className={styles.bookRow}><div className={styles.bookCover}><Image src="/learning/tree-house/dream-world-v2.png" alt="나무 위에 지어진 작은 집" width={1408} height={1024} sizes="120px" /><span aria-hidden="true"><HudIcon kind="sparkle" /></span></div><div><h2>{unit.title}</h2><p>나무 위에 누가 살고 있을까?</p></div></div>
-    <Link className={styles.primary} href={`${unit.href}?${query.toString()}`}>학습 시작하기 <HudIcon kind="arrow" /></Link>
+    <Link className={styles.primary} href={href}>{staffPreview ? '체험 시작 · Start preview' : '학습 시작하기'} <HudIcon kind="arrow" /></Link>
+    {staffPreview && <p className={styles.pending}>체험 기록과 녹음은 이 기기에만 저장돼요.<br />Preview only · Saved on this device.</p>}
   </article>;
 }
 
-export default function LearnerHome() {
+export default function LearnerHome({ staffPreview = false }: { staffPreview?: boolean }) {
   const [state, setState] = useState<HomeState>({ status: 'loading' });
   const [refresh, setRefresh] = useState(0);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
@@ -127,6 +132,7 @@ export default function LearnerHome() {
     setRefresh(value => value + 1);
   }, [invalidateRequest]);
   useEffect(() => {
+    if (staffPreview) return;
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') { actorId.current = session?.user.id ?? null; return; }
       if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT') return;
@@ -149,8 +155,9 @@ export default function LearnerHome() {
       window.removeEventListener('focus', whenVisible);
       document.removeEventListener('visibilitychange', whenVisible);
     };
-  }, [invalidateRequest, reload]);
+  }, [invalidateRequest, reload, staffPreview]);
   useEffect(() => {
+    if (staffPreview) return;
     const controller = new AbortController();
     const version = ++requestVersion.current;
     activeRequest.current?.abort();
@@ -172,12 +179,14 @@ export default function LearnerHome() {
     }
     void load();
     return () => { active = false; controller.abort(); };
-  }, [refresh]);
+  }, [refresh, staffPreview]);
   const children = state.status === 'ready' ? state.data.children : [];
   const child = children.find(item => item.learnerId === selectedChildId) ?? (children.length === 1 ? children[0] : null);
   const visit = child ? child.visits.find(item => item.visitId === selectedVisits[child.learnerId]) ?? child.visits[0] : null;
   const pickChild = state.status === 'ready' && children.length > 1 && (!child || choosingChild);
-  const greeting = state.status === 'loading' ? '우리의 모험을 찾고 있어. 잠깐만!'
+  const previewUnit = staffPreview ? getLearningUnit('DSL-F2', 'dsl-f2-w1-d1') : null;
+  const greeting = staffPreview ? '안녕! 나는 드림이야. 나랑 함께 영어 모험을 떠나자!'
+    : state.status === 'loading' ? '우리의 모험을 찾고 있어. 잠깐만!'
     : state.status === 'error' ? '잠깐, 길이 끊겼나 봐. 다시 연결해 볼까?'
       : child ? `${childName(child)}, 반가워! 오늘도 나랑 함께 놀자.` : '안녕! 나는 드림이야. 우리 같이 영어 모험을 떠나자!';
   return <main className={styles.home} aria-label="드림이의 영어 모험">
@@ -202,6 +211,8 @@ export default function LearnerHome() {
     <div className={styles.sceneUI}>
       <div key={greetingRun} className={`${styles.coachBubble} ${greetingStatus !== 'idle' ? styles.greetingBubble : ''}`} aria-live="polite"><span className={styles.speaker}>드림이</span><p>{greetingStatus === 'error' ? '목소리를 불러오지 못했어. 나를 다시 눌러 줄래?' : greetingStatus !== 'idle' ? '안녕! 나는 드림이야! Hello!' : greeting}</p></div>
       <div className={styles.launchArea}>
+        {staffPreview && previewUnit && <LearningUnitCard unit={previewUnit} href={`${previewUnit.href}?preview=1`} staffPreview />}
+        {!staffPreview && <>
         {state.status === 'loading' && <section className={`${styles.missionPanel} ${styles.loading}`} role="status" aria-busy="true"><span className={styles.loadingDot} aria-hidden="true" /><h2>아이의 학습 정보를 불러오고 있어요</h2></section>}
         {state.status === 'login' && <section className={styles.missionPanel}><span className={styles.smallLabel}>나의 모험</span><h2>우리, 같이 시작할까?</h2><p>보호자 계정으로 로그인하면<br />나에게 맞는 이야기가 열려요.</p><Link href="/portal?returnTo=%2Flearn" className={styles.primary}>로그인하고 시작하기 <HudIcon kind="arrow" /></Link><PreviewLink /></section>}
         {state.status === 'error' && <section className={styles.missionPanel} role="alert"><span className={styles.smallLabel}>잠시 쉬어가기</span><h2>학습 정보를 불러오지 못했어요</h2><p>연결 상태를 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={reload}>다시 불러오기 <HudIcon kind="refresh" /></button></section>}
@@ -210,6 +221,7 @@ export default function LearnerHome() {
           {visit ? <VisitLearning child={child} visit={visit} /> : <section className={styles.missionPanel}><span className={styles.smallLabel}>내 모험 준비 중</span><h2>연수 기록을 확인하고 있어요</h2><p>연수 기록이 연결되면 배정된 교재를 확인할 수 있어요.</p><PreviewLink /></section>}
           {state.data.pendingCount > 0 && <p className={styles.pending} role="status">연수 기록 {state.data.pendingCount}건 확인 중</p>}
         </div>}
+        </>}
       </div>
     </div>
     {pickChild && <ChildPicker learners={children} selectedId={child?.learnerId ?? null} onSelect={id => { setSelectedChildId(id); setChoosingChild(false); }} onCancel={child ? () => setChoosingChild(false) : undefined} />}

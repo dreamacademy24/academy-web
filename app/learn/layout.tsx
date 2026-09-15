@@ -1,13 +1,22 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import StaffSessionBoundary from '@/components/StaffSessionBoundary';
+import StaffPreviewAccess from '@/components/learning/StaffPreviewAccess';
+import { getLearningStaffAccess } from '@/lib/learning/staff-preview';
 import './learning.css';
 import styles from './coming-soon.module.css';
 
-export const metadata = {
-  title: process.env.NODE_ENV === 'development' ? 'Dream Learning · 드림이와 영어 모험' : '학습모드 준비 중 · 드림아카데미',
-  description: '드림이와 고래상어가 즐거운 영어 모험을 준비하고 있어요. 조금만 기다려 주세요.',
-  manifest: '/manifest-guest.webmanifest',
-};
+export const dynamic = 'force-dynamic';
+
+export async function generateMetadata() {
+  const development = process.env.NODE_ENV === 'development';
+  const staffPreview = !development && (await getLearningStaffAccess()).status === 'staff';
+  return {
+    title: development ? 'Dream Learning · 드림이와 영어 모험' : staffPreview ? '드림이 학습모드 · 직원 체험' : '학습모드 준비 중 · 드림아카데미',
+    description: '드림이와 고래상어가 즐거운 영어 모험을 준비하고 있어요. 조금만 기다려 주세요.',
+    manifest: '/manifest-guest.webmanifest',
+  };
+}
 
 function LearningComingSoon() {
   return <main className={styles.page} data-learning-availability="coming-soon">
@@ -23,12 +32,16 @@ function LearningComingSoon() {
         <Link href="/dream-app" className={styles.back}>모드 선택으로 돌아가기</Link>
         <Link href="/portal" className={styles.guest}>게스트 시작하기 <span aria-hidden="true">→</span></Link>
       </nav>
+      <Link href="/login?next=%2Flearn" className={styles.staffSignIn}>직원 로그인 · Staff sign in</Link>
     </section>
   </main>;
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  // Keep every public /learn route closed, including old lesson and preview URLs.
-  // The existing app remains available only through the local development server.
-  return <div className="learning-app">{process.env.NODE_ENV === 'development' ? children : <LearningComingSoon />}</div>;
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  if (process.env.NODE_ENV === 'development') return <div className="learning-app">{children}</div>;
+
+  const access = await getLearningStaffAccess();
+  return <div className="learning-app">{access.status === 'staff'
+    ? <StaffSessionBoundary>{children}</StaffSessionBoundary>
+    : access.status === 'error' ? <StaffPreviewAccess status="error" /> : <LearningComingSoon />}</div>;
 }

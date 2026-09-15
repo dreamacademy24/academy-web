@@ -70,10 +70,11 @@ function VerifyLearningSession({selection,children}:{selection:Extract<LearningS
   const message = access.status==='checking'?'아이의 학습 정보를 확인하고 있어요…':access.status==='signin'?'보호자 계정으로 로그인한 뒤 학습할 아이를 선택해주세요.':access.status==='invalid'?'이 아이에게 배정된 단원을 다시 선택해주세요.':'학습 정보를 불러오지 못했어요. 다시 확인해주세요.';
   return <main className={styles.state}><h1>학습 준비</h1><p role={access.status==='error'?'alert':'status'}>{message}</p>{access.status==='error'&&<button onClick={()=>setRetry(value=>value+1)}>다시 확인</button>}{access.status==='signin'&&<Link href="/portal?returnTo=%2Flearn">보호자 로그인</Link>}{access.status!=='checking'&&<Link href="/learn">학습 홈에서 아이 선택</Link>}</main>;
 }
-export default function LearningContextGuard({children}:{children:ReactNode}) {
+export default function LearningContextGuard({children,previewOnly=false}:{children:ReactNode;previewOnly?:boolean}) {
   const search = useSearchParams();
   const learnerId = search.get('learnerId'), visitId = search.get('visitId');
   const selection = useMemo(() => parseLearningSelection(learnerId,visitId),[learnerId,visitId]);
+  if (previewOnly) return <LearningProvider scope={DEMO_SCOPE} name="직원 체험">{children}</LearningProvider>;
   if (search.getAll('learnerId').length>1 || search.getAll('visitId').length>1 || selection.kind==='invalid') return <main className={styles.state}><h1>학습할 아이를 선택해주세요.</h1><Link href="/learn">학습 홈으로</Link></main>;
   if (selection.kind==='demo') return <LearningProvider scope={DEMO_SCOPE} name="체험">{children}</LearningProvider>;
   return <VerifyLearningSession key={`${selection.learnerId}:${selection.visitId}`} selection={selection}>{children}</VerifyLearningSession>;

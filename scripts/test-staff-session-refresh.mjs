@@ -107,6 +107,74 @@ test('staff return navigation preserves the correct student page and admin ifram
  assert.equal(staffDestination('local_teacher','/admineng/hub'),'/admineng/hub');
 });
 
+test('staff learning returns allow only the three explicit learning pages for both staff roles',()=>{
+ for(const role of ['korean_admin','local_teacher']){
+  for(const path of ['/learn','/learn/tree-house','/learn/tree-house/practice']){
+   const next=`${path}?preview=1#start`;
+   assert.equal(staffDestination(role,next),next);
+  }
+  for(const next of ['/learning','/learn-anything','/learn/unknown','/learn/tree-house/unknown','/learn/tree-house/practice/unknown','/learn%2Ftree-house']){
+   assert.equal(staffDestination(role,next),role==='korean_admin'?'/admin/hub':'/admineng/hub');
+  }
+ }
+ for(const role of ['driver','parent',''])assert.equal(staffDestination(role,'/learn?preview=1'),'/admineng/hub');
+});
+
+function learningPreview({value=token,identity=staff,lookupError=null,at=now}={}){
+ const cookieReads=[],queries=[],requests=[];
+ const query={
+  select:columns=>{queries.push(['select',columns]);return query;},
+  eq:(column,value)=>{queries.push(['eq',column,value]);return query;},
+  maybeSingle:async()=>({data:identity,error:lookupError}),
+ };
+ const portal=loadModule('../lib/portalAuth.ts',{
+  '@supabase/supabase-js':{createClient:()=>({from:table=>{queries.push(['from',table]);return query;}})},
+  'next/server':{},
+  './staffSession':{...sessions,resolveStaffSession:(req,secret,lookup)=>sessions.resolveStaffSession(req,secret,lookup,at)},
+ },{process:{env:{STAFF_SESSION_SECRET:key,NODE_ENV:'production'}}});
+ const access=loadModule('../lib/learning/staff-preview.ts',{
+  'server-only':{},
+  react:{cache:fn=>fn},
+  'next/headers':{cookies:async()=>({get:name=>{cookieReads.push(name);return value?{value}:undefined;}})},
+  '@/lib/staffSession':sessions,
+  '@/lib/portalAuth':{getStaffIdentity:req=>{requests.push(req);return portal.getStaffIdentity(req);}},
+ },{Request});
+ return {...access,cookieReads,queries,requests};
+}
+
+test('learning preview admits active signed admin and teacher accounts without returning identity',async()=>{
+ for(const role of ['korean_admin','local_teacher']){
+  const gate=learningPreview({identity:{...staff,role}}),result=await gate.getLearningStaffAccess();
+  assert.equal(JSON.stringify(result),JSON.stringify({status:'staff'}));
+  assert.deepEqual(gate.cookieReads,[sessions.STAFF_COOKIE]);
+  assert.deepEqual(gate.queries,[['from','staff_accounts'],['select','id,username,role,name'],['eq','username',staff.username],['eq','is_active',true]]);
+  assert.deepEqual([...gate.requests[0].headers.keys()],['cookie']);
+  assert.equal(gate.requests[0].headers.get('cookie'),`${sessions.STAFF_COOKIE}=${token}`);
+ }
+});
+
+test('learning preview rejects missing, forged, expired, inactive and unsupported staff access',async()=>{
+ for(const options of [
+  {value:null},{value:'unsigned'},{value:`${token}x`},{value:`${token}.extra`},
+  {value:sessions.signStaffSession(staff.username,'wrong-fixture-key',issuedAt)},
+  {at:issuedAt+8*3600000},
+ ]){
+  const gate=learningPreview(options);
+  assert.equal((await gate.getLearningStaffAccess()).status,'public');
+  assert.equal(gate.queries.length,0);
+ }
+ for(const identity of [null,{...staff,role:'driver'},{...staff,role:'parent'}]){
+  const gate=learningPreview({identity});
+  assert.equal((await gate.getLearningStaffAccess()).status,'public');
+  assert.ok(gate.queries.some(query=>query[0]==='eq'&&query[1]==='is_active'&&query[2]===true));
+ }
+});
+
+test('learning preview directory outages fail closed with a retry status and no private detail',async()=>{
+ const gate=learningPreview({lookupError:new Error('private database detail')});
+ assert.equal(JSON.stringify(await gate.getLearningStaffAccess()),JSON.stringify({status:'error'}));
+});
+
 test('return navigation enforces role boundaries and rejects login loops and external destinations',()=>{
  const unsafe=[undefined,null,123,'https://external.example/','//external.example/path','/\\external.example/path','/admin/\nview','/login','/api/admin/login','/admin/../login'];
  for(const role of ['korean_admin','local_teacher'])for(const next of unsafe){

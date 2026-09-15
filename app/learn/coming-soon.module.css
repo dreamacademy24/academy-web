@@ -12,5 +12,7 @@
 .guest { border: 1px solid #315e4d; background: #315e4d; color: #fff; }
 .back:hover { background: #fff; }.guest:hover { background: #254c3e; }
 .actions a:focus-visible { outline: 3px solid #cb9c35; outline-offset: 4px; }
+.staffSignIn { display: inline-block; margin-top: 25px; padding: 10px 12px; color: #61796d; font-size: 12px; line-height: 1.5; text-underline-offset: 4px; }
+.staffSignIn:hover { color: #284e43; }.staffSignIn:focus-visible { outline: 3px solid #cb9c35; outline-offset: 4px; border-radius: 8px; }
 @media (max-width: 440px) { .page { padding-left: 20px; padding-right: 20px; }.illustration { width: min(100%, 280px); margin-top: 24px; }.content p { font-size: 13px; }.actions { gap: 10px; margin-top: 26px; }.actions a { flex: 1 1 100%; max-width: 330px; } }
 @media (max-height: 760px) and (min-width: 441px) { .page { padding-top: 25px; padding-bottom: 25px; }.illustration { width: 280px; margin-top: 18px; margin-bottom: 14px; }.content h1 { margin-top: 14px; }.actions { margin-top: 24px; } }
