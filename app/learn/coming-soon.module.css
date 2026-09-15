@@ -1,0 +1,16 @@
+.page { display: grid; place-items: center; min-height: 100svh; padding: max(36px, env(safe-area-inset-top)) 24px max(36px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 34%, #ffffff 0, #f9fbf2 43%, #edf4e8 100%); }
+.content { width: min(100%, 580px); text-align: center; }
+.brand { display: inline-block; color: #537165; font-size: 12px; line-height: 1.5; font-weight: 800; letter-spacing: .17em; }
+.illustration { display: grid; place-items: center; width: min(100%, 390px); margin: 28px auto 20px; }
+.illustration img { display: block; width: 100%; height: auto; object-fit: contain; }
+.badge { display: inline-block; padding: 7px 15px; border: 1px solid #eddfa8; border-radius: 99px; color: #857031; background: #fff4c7; font-size: 12px; font-weight: 800; line-height: 1.4; }
+.content h1 { margin: 18px 0 15px; color: #284e43; font-size: clamp(25px, 4.6vw, 34px); line-height: 1.35; font-weight: 800; letter-spacing: -.045em; word-break: keep-all; }
+.content p { margin: 0; color: #718178; font-size: 14px; line-height: 1.9; word-break: keep-all; overflow-wrap: anywhere; }
+.actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 30px 0 0; }
+.actions a { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 48px; padding: 13px 20px; border-radius: 15px; font-size: 13px; line-height: 1.5; font-weight: 700; text-decoration: none; }
+.back { border: 1px solid #d8e2d6; background: #ffffffb3; color: #527160; }
+.guest { border: 1px solid #315e4d; background: #315e4d; color: #fff; }
+.back:hover { background: #fff; }.guest:hover { background: #254c3e; }
+.actions a:focus-visible { outline: 3px solid #cb9c35; outline-offset: 4px; }
+@media (max-width: 440px) { .page { padding-left: 20px; padding-right: 20px; }.illustration { width: min(100%, 280px); margin-top: 24px; }.content p { font-size: 13px; }.actions { gap: 10px; margin-top: 26px; }.actions a { flex: 1 1 100%; max-width: 330px; } }
+@media (max-height: 760px) and (min-width: 441px) { .page { padding-top: 25px; padding-bottom: 25px; }.illustration { width: 280px; margin-top: 18px; margin-bottom: 14px; }.content h1 { margin-top: 14px; }.actions { margin-top: 24px; } }
