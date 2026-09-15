@@ -1,0 +1,16 @@
+const fs=require('node:fs'),assert=require('node:assert/strict'),ts=require('typescript');
+const code=ts.transpileModule(fs.readFileSync('lib/commuteDeposit.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const mod={exports:{}};new Function('exports',code)(mod.exports);
+const deposit=mod.exports.commuteDeposit;
+assert.equal(deposit(3000000),900000);
+assert.equal(deposit(3000000+200000-100000),930000);
+assert.equal(deposit(1000000),300000);
+assert.equal(deposit(1234567),370370);
+assert.equal(deposit(0),0);
+assert.equal(deposit(-10000),0);
+assert.equal(deposit(NaN),0);
+const page=fs.readFileSync('app/invoice/page.tsx','utf8');
+assert.ok(page.includes('if(isCommute)return commuteDeposit(fp);'));
+assert.equal((page.match(/<CommuteDepositNotice /g)||[]).length,4,'all invoice/receipt surfaces show the policy');
+assert.ok(page.includes('const isFullPayment=daysUntilCheckin<60;'),'existing full-payment policy retained');
+console.log('10 commute deposit checks passed');

@@ -6,6 +6,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
 import { isCommuteBooking } from "@/lib/bookingTypes";
+import { commuteDeposit } from "@/lib/commuteDeposit";
+import CommuteDepositNotice from "@/components/CommuteDepositNotice";
 import html2canvas from "html2canvas";
 
 /* ── 유틸 함수 (100% 기존 유지) ── */
@@ -1359,13 +1361,13 @@ function InvoicePageInner(){
   const ta=billing.additions.reduce((s,a)=>s+(Number(a.amount)||0),0);
   const fp=billing.basePrice+ta-td;
   // 예약금 정책 (2026-08-28): 드림하우스 = 100만원 · 제이파크/큐브나인 = 해당 숙소 금액의 50%
-  //  · 단독 리조트 = 총액의 50% · 콤보(드하+리조트) = 드하 100만 + 리조트 구간 50% · 그 외(드하 단독·통학) = 100만
+  //  · 단독 리조트 = 총액의 50% · 콤보(드하+리조트) = 드하 100만 + 리조트 구간 50% · 통학 = 최종 원화 청구액 30% · 드하 단독 = 100만
   const _isResort=(t:string)=>t==="jpark"||t==="cubenine";
   const roundTh=(v:number)=>Math.round(v/1000)*1000;
   const isResortSingle=!isCommute&&!dhOnly&&(cm==="combo"?(_isResort(a1T)&&_isResort(a2T)):_isResort(a1T));
   const isResortCombo=!isCommute&&cm==="combo"&&(_isResort(a1T)||_isResort(a2T)); // 드하+리조트 등 리조트 포함 콤보
   const depositAmt=(()=>{
-    if(isCommute)return 1000000;
+    if(isCommute)return commuteDeposit(fp);
     if(isResortSingle)return roundTh(fp/2);                 // 리조트 단독/전부 리조트 = 총액 50%
     if(isResortCombo){
       // 구간별: 드하 100만 + 리조트 구간 금액의 50% (billing.items의 숙소별 금액 사용, 없으면 a1/a2 비중 추정)
@@ -1882,6 +1884,7 @@ function InvoicePageInner(){
 
         {fp>0&&(
           <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Payment Schedule</div>
+            {isCommute&&<CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} />}
             {effectiveFullPayment?(
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8}}>
                 <span style={{fontWeight:700,color:"#dc2626"}}>Full Payment (Booking Confirmation)</span>
@@ -1889,7 +1892,7 @@ function InvoicePageInner(){
               </div>
             ):(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,marginBottom:8}}>
-                <span style={{fontWeight:700,color:"#166534"}}>Deposit (Booking Confirmation)</span>
+                <span style={{fontWeight:700,color:"#166534"}}>Deposit{isCommute?" (30%)":""} (Booking Confirmation)</span>
                 <span style={{fontWeight:700,color:"#2563eb"}}>{fmt(depositAmt)}원</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px"}}>
@@ -2042,6 +2045,7 @@ function InvoicePageInner(){
     {billing.locals.map(c=><div className="dr" key={c.id}><div className="f-group"><input className="f-input" placeholder="항목명" value={c.name} onChange={e=>upL(c.id,"name",e.target.value)}/></div><div className="f-group"><input className="f-input" placeholder="금액 (예: 7,000 pesos)" value={c.amount} onChange={e=>upL(c.id,"amount",e.target.value)}/>{c.name==="드림하우스 보증금"&&<div className="f-hint">(1주 × 2,000페소 자동계산)</div>}</div><button className="bs br" onClick={()=>rmL(c.id)}>삭제</button></div>)}
     <button className="bs bd" onClick={addL}>+ 현지 지불 항목 추가</button>
     <button type="button" onClick={autoFillLocals} style={{marginLeft:8,padding:"6px 12px",fontSize:12,background:"#3b82f6",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontWeight:600}}>🪙 현지지불 자동채움 (학생/기간 기준)</button>
+    {isCommute&&<CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} />}
     {a1CI&&(<div style={{marginTop:"14px",padding:"12px 14px",borderRadius:"8px",background:effectiveFullPayment?"#fef2f2":"#f0f7ff",border:effectiveFullPayment?"1px solid #fecaca":"1px solid #bfdbfe",fontSize:"13px"}}>{effectiveFullPayment?(<><span style={{color:"#dc2626",fontWeight:700}}>{isFullPayment?"⚠️ 전액 입금 — 체크인이 2달 미만입니다. ":"💰 전액 입금 — "}전체 금액({fmt(fp)}원)을 납부해 주세요.</span>{!isFullPayment&&(<div style={{marginTop:"8px"}}><label style={{fontSize:"12px",color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={forceFullPayment} onChange={e=>setForceFullPayment(e.target.checked)} style={{marginRight:"6px"}} />💰 전액 입금으로 표시</label></div>)}</>):(<><div style={{marginBottom:"4px"}}><strong>예약금:</strong> {fmt(depositAmt)}원{isResortSingle&&<span style={{fontSize:11,color:"#6b7c93"}}> (리조트 패키지 — 총액의 50%)</span>}</div><div style={{marginBottom:"4px"}}><strong>잔금:</strong> {fmt(Math.max(0,fp-depositAmt))}원{booker.balanceDate?` (납부일: ${booker.balanceDate})`:""}</div><div style={{color:"#6b7c93",fontSize:"11px",marginTop:"6px"}}>※ 예약금 입금 후 예약 확정, 잔금은 입실 2달 전까지 납부</div><div style={{marginTop:"8px"}}><label style={{fontSize:"12px",color:"#475569",cursor:"pointer"}}><input type="checkbox" checked={forceFullPayment} onChange={e=>setForceFullPayment(e.target.checked)} style={{marginRight:"6px"}} />💰 전액 입금으로 표시</label></div></>)}</div>)}
   </div>
 
@@ -2116,6 +2120,7 @@ function InvoicePageInner(){
         {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
         {ta>0&&<tr className="tr"><td>총 추가</td><td style={{textAlign:"right",color:"#16a34a"}}>+{fmt(ta)}원</td></tr>}
         <tr className="fr"><td style={{background:"#5b4fff",color:"white",fontWeight:700}}>전체 금액</td><td style={{background:"#5b4fff",color:"white",fontWeight:700,textAlign:"right"}}>{fmt(fp)}원</td></tr>
+        {isCommute&&<tr><td colSpan={2}><CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} /></td></tr>}
         {fp>0&&(hasReceiptPayments?(
           <>
             {receiptPayments.filter(p=>(p.amount||"").trim()!=="").map((p,i)=>(
@@ -2127,7 +2132,7 @@ function InvoicePageInner(){
             <tr style={{background:"#e0f2fe"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>기납부 합계</td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#0369a1"}}>−{fmt(receiptPaidTotal)}원</td></tr>
             <tr style={{background:additionalDue===0?"#f0fdf4":"#fff7ed"}}><td style={{padding:"12px",fontWeight:800,color:additionalDue===0?"#166534":"#c2410c",fontSize:14}}>이번 청구 금액{depositStage?" (예약금 기준)":""}</td><td style={{textAlign:"right",padding:"12px",fontWeight:800,color:additionalDue===0?"#166534":"#c2410c",fontSize:14}}>{fmt(additionalDue)}원</td></tr>
           </>
-        ):effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>{fmt(depositAmt)}원</td></tr><tr style={{background:"#fff7ed"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>잔금 <span style={{fontSize:11,fontWeight:400}}>{booker.balanceDate?`(납부일: ${booker.balanceDate})`:""}</span></td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>{fmt(Math.max(0,fp-depositAmt))}원</td></tr><tr><td colSpan={2} style={{padding:"10px 12px",fontSize:12,color:"#6b7280",textAlign:"center"}}>※ 예약금 {fmt(depositAmt)}원{isResortSingle?" (총액의 50%)":""} 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
+        ):effectiveFullPayment?<tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:"13px",textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원을 즉시 납부해 주세요.</td></tr>:<><tr style={{background:"#f0fdf4"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금{isCommute?" (30%)":""} <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>{fmt(depositAmt)}원</td></tr><tr style={{background:"#fff7ed"}}><td style={{padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>잔금 <span style={{fontSize:11,fontWeight:400}}>{booker.balanceDate?`(납부일: ${booker.balanceDate})`:""}</span></td><td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#ea580c"}}>{fmt(Math.max(0,fp-depositAmt))}원</td></tr><tr><td colSpan={2} style={{padding:"10px 12px",fontSize:12,color:"#6b7280",textAlign:"center"}}>※ 예약금 {fmt(depositAmt)}원{isCommute?" (총액의 30%)":isResortSingle?" (총액의 50%)":""} 입금 후 예약이 확정되며, 잔금은 입실 2달 전까지 납부해 주세요.</td></tr></>)}
       </tbody></table>
       {billing.locals.filter(c=>c.name||c.amount).length>0&&<table className="tb" style={{marginTop:"12px"}}><thead><tr><th style={{width:"60%"}}>현지 지불 항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></tr></thead><tbody>{billing.locals.filter(c=>c.name||c.amount).map((c,i)=><tr key={i}><td>{c.name}</td><td style={{textAlign:"right"}}>{c.amount}{c.amount.includes("페소")?"":" 페소"}</td></tr>)}</tbody></table>}</>}</div>
 
@@ -2298,6 +2303,7 @@ function InvoicePageInner(){
               {td>0&&<tr><td style={{fontWeight:600}}>총 할인</td><td style={{textAlign:"right",color:"#dc2626",fontWeight:600}}>-{fmt(td)}원</td></tr>}
               {billing.additions.filter(a=>a.name).map((a,i)=><tr key={`a${i}`}><td style={{color:"#16a34a",fontWeight:700}}>↑ {a.name}</td><td style={{textAlign:"right",color:"#16a34a",fontWeight:700}}>+{fmt(Number(a.amount))}원</td></tr>)}
               <tr className="fr"><td style={{background:"#5b4fff",color:"#fff",fontWeight:800,boxShadow:"inset 0 0 0 1000px #5b4fff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>총 청구금액</td><td style={{background:"#5b4fff",color:"#fff",fontWeight:800,textAlign:"right",boxShadow:"inset 0 0 0 1000px #5b4fff",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>{fmt(fp)}원</td></tr>
+              {isCommute&&<tr><td colSpan={2}><CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} /></td></tr>}
               {hasReceiptPayments?(<>
                 <tr style={{background:"#ecfdf5"}}>
                   <td style={{padding:"10px 12px",fontWeight:800,color:"#065f46",boxShadow:"inset 0 0 0 1000px #ecfdf5",WebkitPrintColorAdjust:"exact",printColorAdjust:"exact"}}>✅ 납부 완료 <span style={{fontSize:11,fontWeight:500}}>(누적 {receiptPayments.filter(p=>(p.amount||"").trim()!=="").length}건)</span></td>
@@ -2329,7 +2335,7 @@ function InvoicePageInner(){
                 <tr style={{background:"#fef2f2"}}><td colSpan={2} style={{padding:"10px 12px",fontWeight:700,color:"#dc2626",fontSize:13,textAlign:"center"}}>{isFullPayment?"⚠️ 입실 2달 미만 — ":"💰 "}전액 {fmt(fp)}원 즉시 납부</td></tr>
               ):(<>
                 <tr style={{background:"#f0fdf4"}}>
-                  <td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금 <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td>
+                  <td style={{padding:"10px 12px",fontWeight:700,color:"#166534"}}>예약금{isCommute?" (30%)":""} <span style={{fontSize:11,fontWeight:400}}>(입금 시 예약 확정)</span></td>
                   <td style={{textAlign:"right",padding:"10px 12px",fontWeight:700,color:"#166534"}}>{fmt(depositAmt)}원</td>
                 </tr>
                 <tr style={{background:"#fff7ed"}}>
