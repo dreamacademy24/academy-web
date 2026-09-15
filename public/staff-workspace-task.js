@@ -178,6 +178,7 @@ async function _staffSaveInstruction(){
   try{
     var result=await sbUpsert('staff_tasks',taskToRow(candidate));
     if(!Array.isArray(result)||!result.some(function(r){return String(r.id)===String(candidate.id);}))throw new Error('저장 결과를 확인하지 못했습니다. 다시 시도해주세요.');
+    if(window._staffChatBeforeTaskSaved)await window._staffChatBeforeTaskSaved(candidate);
     var index=tasks.findIndex(function(t){return String(t.id)===String(candidate.id);});
     if(index>=0)tasks[index]=candidate;else tasks.unshift(candidate);
     rebuildIdx();svTasks();
@@ -265,6 +266,7 @@ function _renderStaffTaskDetail(taskId,hostId){
     '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
   _staffRelatedTaskDetail(root);
+  if(window._staffChatTaskContext)window._staffChatTaskContext(root.querySelector('.swt-detail-grid>main'),t);
   var replyDraft=_staffCommentDraft(t.id),reply=root.querySelector('#swtReply');
   if(reply){reply.value=replyDraft.text||'';reply.addEventListener('input',function(){replyDraft.text=reply.value;});var photoHost=document.createElement('div');photoHost.className='swt-comment-photo-picker';reply.after(photoHost);_staffCommentPhotoPicker(photoHost,t.id,replyDraft);}
   var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');

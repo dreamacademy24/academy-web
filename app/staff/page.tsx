@@ -20,6 +20,7 @@ function StaffIframe() {
     const userId = rawUser.replace(/^admin-/, '')
     if (userId && userId.toLowerCase() !== 'jun') {
       const params = new URLSearchParams({ user: userId, page: sp.get('page') || 'home' })
+      for (const key of ['room', 'message', 'task']) { const value = sp.get(key); if (value) params.set(key, value) }
       setSrc('/team_manager3.html?' + params.toString())
     } else {
       window.location.href = '/admin'

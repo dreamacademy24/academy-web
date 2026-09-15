@@ -1406,14 +1406,15 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-applications1"></script>
+<script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-chat1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
-<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-related1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
+<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
 <script src="/staff-workspace-media.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-reauth1">
+<link rel="stylesheet" href="/staff-chat.css?v=20260915-1"><script src="/staff-chat.js?v=20260915-1"></script>
 </head>
 <body>
 
@@ -1462,6 +1463,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
       <button class="tab-item" data-page="approval" onclick="showPage('approval')">결재</button>
       <button class="tab-item" data-page="weeklycl" onclick="showPage('weeklycl')">주간 체크</button>
       <button class="tab-item" data-page="announcements" onclick="showPage('announcements')">공지사항<span id="badge-comm" class="nav-badge">0</span></button>
+      <button class="tab-item" data-page="chat" onclick="showPage('chat')">채팅<span id="scBadge" class="nav-badge"></span></button>
       <button class="tab-item" data-page="opinions" onclick="showPage('opinions')">의견요청<span id="badge-opinions" class="nav-badge">0</span></button>
       <button class="tab-item" data-group="docs" onclick="showGroup('docs')">자료</button>
     </div>
@@ -4215,7 +4217,7 @@ document.addEventListener('click',function(e){
 function showPage(p){
   if(typeof _staffTaskPageOpen!=='undefined'&&_staffTaskPageOpen&&closeM('taskModal')===false)return;
   if(typeof _staffBoardDetailOpen!=='undefined'&&_staffBoardDetailOpen)closeBoardDrawer(false);
-  if(p==='chat')p='announcements'; // Retired chat deep links return to notices.
+
   try{var _ov=document.getElementById('ntViewOv');if(_ov){_ov.remove();document.body.style.overflow='';_ntSelId=null;}}catch(e){}
   if(p==='mywork'){
     if(typeof CU !== 'undefined' && CU && CU.id){
@@ -9679,6 +9681,7 @@ function saveQA(){
   if(shared)toast('✓ 달력·전체 보드에 공유됐어요!');renderEmpPage(curEmpId);
 }
 function openTaskModal(pre){
+  if(window._staffChatCancelTask)window._staffChatCancelTask();
   if(typeof _staffMediaBusy!=='undefined'&&_staffMediaBusy){toast('사진 업로드가 끝난 뒤 이동해주세요.');return;}
   if(_staffTaskSaving){toast('저장 중입니다. 잠시 기다려주세요.');return;}
   editTaskId=null;tmProjId=null;mFiles=[];tmChecklist=[];tmSubtasks=[];
@@ -10578,7 +10581,7 @@ var _unreadCache={};
 function getUnread(chId){return _unreadCache[chId]||0;}
 function refreshUnreadCounts(){_unreadCache={};}
 
-function renderChatPage(){showPage('announcements');}
+function renderChatPage(){window._staffChatRender();}
 function renderChannelList(){
   var chs=getChannels();var el=document.getElementById('channelList');if(!el)return;
   el.innerHTML=chs.map(function(ch){

@@ -26,6 +26,7 @@ function Frame() {
       params.set("page", page);
       const task = new URLSearchParams(qs).get("task");
       if (task) params.set("task", task);
+      for (const key of ["room", "message"]) { const value = new URLSearchParams(qs).get(key); if (value) params.set(key, value); }
       setReal("/team_manager3.html?" + params.toString());
     } else {
       setReal(src);

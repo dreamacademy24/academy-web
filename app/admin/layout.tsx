@@ -9,6 +9,7 @@ type Item = { label: string; href: string; ext?: boolean; badge?: number };
 const NAV: { title: string; items: Item[] }[] = [
   { title: "직원업무", items: [
     { label: "직원업무 홈", href: "/staff?page=home", ext: true },
+    { label: "직원 채팅", href: "/staff?page=chat", ext: true },
     { label: "공지사항", href: "/staff?page=announcements", ext: true },
     { label: "내 업무", href: "/staff?page=mywork", ext: true },
     { label: "전체 업무", href: "/staff?page=board", ext: true },
