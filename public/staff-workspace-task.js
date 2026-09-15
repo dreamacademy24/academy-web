@@ -118,6 +118,7 @@ function _staffTaskPrepareForm(){
   document.getElementById('tmCreated').textContent=_staffTaskCreatedLabel(existing&&existing.createdAt||Date.now());
   document.getElementById('tmAssPicker').style.display='none';
   var preview=document.getElementById('swtEditorReservation');if(!preview){preview=document.createElement('section');preview.id='swtEditorReservation';preview.className='swt-reservation-preview';modal.querySelector('.swt-editor-aside').prepend(preview);}preview.hidden=true;preview._request=(preview._request||0)+1;
+  _staffRelatedTaskSetup();
   _staffTaskOpenPage();
   _staffTaskFormSummary();
 }
@@ -263,6 +264,7 @@ function _renderStaffTaskDetail(taskId,hostId){
     '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(_staffCommentHtml).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
     '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
+  _staffRelatedTaskDetail(root);
   var replyDraft=_staffCommentDraft(t.id),reply=root.querySelector('#swtReply');
   if(reply){reply.value=replyDraft.text||'';reply.addEventListener('input',function(){replyDraft.text=reply.value;});var photoHost=document.createElement('div');photoHost.className='swt-comment-photo-picker';reply.after(photoHost);_staffCommentPhotoPicker(photoHost,t.id,replyDraft);}
   var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');

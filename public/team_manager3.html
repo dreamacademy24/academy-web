@@ -1407,8 +1407,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
 <script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260915-applications1"></script>
-<link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-photos1">
-<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-applications1"></script>
+<link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
+<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-related1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
@@ -4097,7 +4097,7 @@ function doLogin(u){
   const av=document.getElementById('sbAv');av.textContent=u.initial;av.style.background=u.color;
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();var _initPg='home';try{var _qpPg=new URLSearchParams(window.location.search).get('page');if(_qpPg)_initPg=_qpPg;}catch(e){}showPage(_initPg);
-  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();});
+  loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){refreshAll();startPolling();loadMyNotifs();_staffRelatedTaskDeepLink();});
   setTimeout(seedDesignVotePost,2500);
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
