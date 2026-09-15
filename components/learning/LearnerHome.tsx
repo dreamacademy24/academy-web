@@ -82,6 +82,38 @@ export default function LearnerHome() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedVisits, setSelectedVisits] = useState<Record<string, string>>({});
   const [choosingChild, setChoosingChild] = useState(false);
+  const [characterBounds, setCharacterBounds] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [greetingStatus, setGreetingStatus] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle');
+  const [greetingRun, setGreetingRun] = useState(0);
+  const greetingAudio = useRef<HTMLAudioElement>(null);
+  const greetingVersion = useRef(0);
+  const replayGreeting = () => {
+    const clip = greetingAudio.current;
+    if (!clip) return;
+    const version = ++greetingVersion.current;
+    clip.pause();
+    clip.currentTime = 0;
+    setGreetingRun(value => value + 1);
+    setGreetingStatus('loading');
+    void clip.play().catch(() => {
+      if (version === greetingVersion.current) setGreetingStatus('error');
+    });
+  };
+  useEffect(() => {
+    const clip = greetingAudio.current;
+    const stopWhenHidden = () => {
+      if (!document.hidden) return;
+      greetingVersion.current += 1;
+      clip?.pause();
+      setGreetingStatus('idle');
+    };
+    document.addEventListener('visibilitychange', stopWhenHidden);
+    return () => {
+      greetingVersion.current += 1;
+      clip?.pause();
+      document.removeEventListener('visibilitychange', stopWhenHidden);
+    };
+  }, []);
   const requestVersion = useRef(0);
   const activeRequest = useRef<AbortController | null>(null);
   const actorId = useRef<string | null>(null);
@@ -149,8 +181,15 @@ export default function LearnerHome() {
     : state.status === 'error' ? '잠깐, 길이 끊겼나 봐. 다시 연결해 볼까?'
       : child ? `${childName(child)}, 반가워! 오늘도 나랑 함께 놀자.` : '안녕! 나는 드림이야. 우리 같이 영어 모험을 떠나자!';
   return <main className={styles.home} aria-label="드림이의 영어 모험">
-    <LearningWorld className={styles.world} />
+    <LearningWorld className={styles.world} speaking={greetingStatus === 'playing'} onCharacterBounds={setCharacterBounds} />
+    <audio ref={greetingAudio} src="/learning/tree-house/intro-voice-01.wav" preload="auto" aria-hidden="true"
+      onPlaying={() => setGreetingStatus('playing')} onEnded={() => setGreetingStatus('idle')}
+      onError={() => { if (greetingStatus !== 'idle') setGreetingStatus('error'); }} />
     <div className={styles.shade} aria-hidden="true" /><h1 className={styles.screenReader}>드림이와 함께하는 영어 모험</h1>
+    <button type="button" className={styles.dreamyGreeting} style={characterBounds ?? undefined} onClick={replayGreeting}
+      aria-label="드림이 인사 다시 듣기" title="드림이를 눌러 인사해요" data-greeting={greetingStatus}>
+      <span className={styles.greetingHint}>드림이와 인사해요</span>
+    </button>
     <header className={styles.hud}>
       <div className={styles.hudLeft}><Link href="/dream-app" className={styles.iconButton} aria-label="모드 선택으로 돌아가기"><HudIcon kind="back" /></Link>
         {child ? children.length > 1 ? <button type="button" className={styles.profile} onClick={() => setChoosingChild(true)} aria-label={`${childName(child)} · 학습할 아이 바꾸기`}><span className={styles.profileAvatar} aria-hidden="true">{childName(child).slice(0, 1)}</span><span>{childName(child)}</span><HudIcon kind="people" /></button> : <div className={styles.profile}><span className={styles.profileAvatar} aria-hidden="true">{childName(child).slice(0, 1)}</span><span>{childName(child)}</span></div> : <span className={styles.worldLabel}>드림이의 영어 섬</span>}
@@ -161,7 +200,7 @@ export default function LearnerHome() {
       </div>
     </header>
     <div className={styles.sceneUI}>
-      <div className={styles.coachBubble}><span className={styles.speaker}>드림이</span><p>{greeting}</p></div>
+      <div key={greetingRun} className={`${styles.coachBubble} ${greetingStatus !== 'idle' ? styles.greetingBubble : ''}`} aria-live="polite"><span className={styles.speaker}>드림이</span><p>{greetingStatus === 'error' ? '목소리를 불러오지 못했어. 나를 다시 눌러 줄래?' : greetingStatus !== 'idle' ? '안녕! 나는 드림이야! Hello!' : greeting}</p></div>
       <div className={styles.launchArea}>
         {state.status === 'loading' && <section className={`${styles.missionPanel} ${styles.loading}`} role="status" aria-busy="true"><span className={styles.loadingDot} aria-hidden="true" /><h2>아이의 학습 정보를 불러오고 있어요</h2></section>}
         {state.status === 'login' && <section className={styles.missionPanel}><span className={styles.smallLabel}>나의 모험</span><h2>우리, 같이 시작할까?</h2><p>보호자 계정으로 로그인하면<br />나에게 맞는 이야기가 열려요.</p><Link href="/portal?returnTo=%2Flearn" className={styles.primary}>로그인하고 시작하기 <HudIcon kind="arrow" /></Link><PreviewLink /></section>}

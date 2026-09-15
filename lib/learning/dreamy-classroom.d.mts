@@ -5,4 +5,5 @@ export type DreamyClassroom = {
   setReducedMotion: (reduced: boolean) => void;
   dispose: () => void;
 };
-export function mountDreamyClassroom(canvas: HTMLCanvasElement, options?: { compact?: boolean; onError?: (error: unknown) => void }): DreamyClassroom;
+export function mountDreamyClassroom(canvas: HTMLCanvasElement, options?: { compact?: boolean; onError?: (error: unknown) => void; onCharacterBounds?: (bounds: CharacterBounds) => void }): DreamyClassroom;
+export type CharacterBounds = { left: number; top: number; width: number; height: number };

@@ -2,6 +2,11 @@
 .home p{word-break:keep-all;overflow-wrap:anywhere}
 .world{position:absolute!important;inset:0;z-index:-2;width:100%;height:100%}
 .shade{position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(180deg,#ffffff36,transparent 28%,transparent 72%,#284b3712)}
+.dreamyGreeting{position:absolute;z-index:0;left:24%;top:30%;width:24%;height:44%;min-width:44px;min-height:44px;padding:0;border:0;border-radius:45%;background:transparent;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.greetingHint{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);padding:6px 12px;border:1px solid #fff9dd;border-radius:99px;background:#fffdf0ed;box-shadow:0 3px 0 #a7c2ab70;color:#577347;font-size:11px;font-weight:750;white-space:nowrap;pointer-events:none}
+.dreamyGreeting:hover .greetingHint,.dreamyGreeting:focus-visible .greetingHint{background:#fff0af}
+.greetingBubble{animation:greetingPop .28s ease-out}
+@keyframes greetingPop{from{transform:translateY(5px) scale(.97);opacity:.65}to{transform:translateY(0) scale(1);opacity:1}}
 .screenReader{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .hud{position:relative;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:max(22px,env(safe-area-inset-top)) clamp(18px,3.4vw,52px) 10px}
 .hudLeft,.hudRight{display:flex;align-items:center;gap:12px;min-width:0}
@@ -13,7 +18,8 @@
 .profile>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile>svg{width:18px;height:18px;flex:none;opacity:.7}
 .profileAvatar{display:grid;place-items:center;flex:none;width:34px;height:34px;border:1px solid #ffe099;border-radius:50%;background:linear-gradient(#ffeeb3,#f4d480);color:#8d6b2f;font-size:17px;box-shadow:inset 0 2px 0 #fff4d4}
 .visitPicker{min-width:0}.visitPicker select,.visitDate{display:block;min-height:43px;max-width:100%;border:1px solid #ffffffe0;border-radius:15px;background:#fbfff7d6;padding:10px 12px;font:inherit;font-size:11px;font-weight:650;color:#567467;box-shadow:0 3px 0 #9dbcaa45;white-space:nowrap}.visitPicker select{padding-right:26px;max-width:265px}.visitDate{display:flex;align-items:center}
-.sceneUI{position:relative;flex:1;min-height:calc(100svh - 82px);padding:0 clamp(26px,5vw,76px) max(40px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;justify-content:flex-end}
+.sceneUI{position:relative;flex:1;min-height:calc(100svh - 82px);padding:0 clamp(26px,5vw,76px) max(40px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;justify-content:flex-end;pointer-events:none}
+.coachBubble,.launchArea{pointer-events:auto}
 .coachBubble{position:absolute;top:7%;left:clamp(24px,5vw,76px);width:min(32vw,370px);padding:18px 22px 20px;border:2px solid #fffdf3;border-radius:26px 26px 26px 9px;background:#fffef3f5;box-shadow:0 6px 0 #c5d8af88,0 10px 28px #426a4613}
 .coachBubble::after{content:"";position:absolute;right:28px;bottom:-14px;width:23px;height:23px;border-right:2px solid #fffdf3;border-bottom:2px solid #fffdf3;border-radius:0 0 7px;background:#fffef3;transform:rotate(35deg) skewY(20deg)}
 .speaker,.smallLabel{display:inline-block;font-size:11px;font-weight:850;line-height:1.4;letter-spacing:.06em;color:#938043}.speaker{border-radius:99px;background:#ffe6a0;padding:4px 10px;color:#866328}.coachBubble p{position:relative;z-index:1;font-size:clamp(15px,1.65vw,21px);font-weight:750;line-height:1.55;letter-spacing:-.035em;margin:9px 0 0}
@@ -35,4 +41,4 @@
 @media(max-width:360px){.hud{padding-left:12px;padding-right:12px}.sceneUI{padding-left:14px;padding-right:14px}.coachBubble{left:18px;width:calc(100vw - 36px)}.missionPanel,.unit{padding:17px}.missionPanel h2{font-size:19px}.bookRow h2{font-size:24px}.bookCover{width:69px}.bookRow{gap:14px}.childPicker{padding:19px}.childButton{padding:12px;gap:10px}}
 @media(max-height:700px) and (max-width:600px){.coachBubble{top:7%;padding-top:10px;padding-bottom:12px}.coachBubble p{font-size:14px;line-height:1.4}.launchArea{max-width:345px}.missionPanel,.unit{padding:16px 18px}.missionPanel{gap:10px}.missionPanel h2{font-size:19px}.missionPanel p{font-size:11px}.bookRow{margin:11px 0 14px}.bookCover{width:65px}.bookRow h2{font-size:23px}.primary,.secondary{min-height:44px;font-size:13px!important}.sceneUI{padding-bottom:18px}}
 @media(max-height:500px) and (min-width:601px){.hud{padding-top:12px}.sceneUI{min-height:calc(100svh - 68px);padding-bottom:25px}.coachBubble{top:5%;max-width:280px}.missionPanel,.unit{padding:18px}.bookRow{margin:13px 0 16px}.bookCover{width:70px}.launchArea{margin-bottom:0}}
-@media(prefers-reduced-motion:reduce){.loadingDot{animation:none}.iconButton,.primary,.secondary,.preview,.childButton{transition:none}.iconButton:hover,.iconButton:active,.primary:hover,.primary:active,.childButton:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.loadingDot,.greetingBubble{animation:none}.iconButton,.primary,.secondary,.preview,.childButton{transition:none}.iconButton:hover,.iconButton:active,.primary:hover,.primary:active,.childButton:hover{transform:none}}
