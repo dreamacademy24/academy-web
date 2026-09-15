@@ -21,8 +21,11 @@ export async function chatAccess(req:Request){
  if(error)chatError('직원 목록을 불러오지 못했습니다.',503);
  const employees=(data||[]).map(e=>({id:e.username.replace(/^admin-/,''),name:e.name})).filter(e=>e.id!=='jun');
  if(!employees.some(e=>e.id===actor))chatError('사용 권한이 없습니다.',403);
- const ids=employees.map(e=>e.id),rooms=['all',...ids.filter(id=>id!==actor).map(id=>dmRoom(actor,id))];
- return {db,actor,employees,rooms,checkRoom:(room:string)=>{if(!rooms.includes(room))chatError('이 대화에 접근할 수 없습니다.',403);return roomMembers(room,ids);}};
+ const groupResult=await db.from('staff_chat_groups').select('id,name,creator,members,created_at').contains('members',[actor]).order('created_at');
+ if(groupResult.error)chatError('그룹 채팅 목록을 불러오지 못했습니다.',503);
+ const ids=employees.map(e=>e.id),groups=(groupResult.data||[]).map(g=>({...g,members:g.members.filter((id:string)=>ids.includes(id)),room:'group:'+g.id}));
+ const rooms=['all',...ids.filter(id=>id!==actor).map(id=>dmRoom(actor,id)),...groups.map(g=>g.room)];
+ return {db,actor,employees,rooms,groups,checkRoom:(room:string):string[]=>{if(!rooms.includes(room))chatError('이 대화에 접근할 수 없습니다.',403);return groups.find(g=>g.room===room)?.members||roomMembers(room,ids);}};
 }
 export async function chatTask(db:ReturnType<typeof portalDb>,id:string,actor:string){
  const {data,error}=await db.from('staff_tasks').select('id,title,secret,created_by,assignee,assignees,done,due').eq('id',id).maybeSingle();
