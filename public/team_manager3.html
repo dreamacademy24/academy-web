@@ -3755,6 +3755,7 @@ function loadNoticesFromSB(){
   return fetchNoticeRows().then(function(rows){
       notices=rows.map(rowToNt);
       sv('tm_n',notices);
+      var page=document.getElementById('page-announcements');if(page&&!page.classList.contains('hidden'))renderAnnouncementsPage();
   }).catch(function(e){
       if(e.status===401||e.status===403){notices=[];sv('tm_n',notices);}
       toast(e.message||'공지를 불러오지 못했습니다.','#ef4444');
@@ -10755,6 +10756,7 @@ function showUpdateBanner(updates){
 
 function refreshAll(){
   if(!document.getElementById('page-home').classList.contains('hidden'))renderHome();
+  if(!document.getElementById('page-announcements').classList.contains('hidden'))renderAnnouncementsPage();
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
   if(!document.getElementById('page-calendar').classList.contains('hidden'))renderCal();
   if(!document.getElementById('page-emp').classList.contains('hidden')&&curEmpId)renderEmpPage(curEmpId);

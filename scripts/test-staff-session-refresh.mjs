@@ -107,17 +107,18 @@ test('staff return navigation preserves the correct student page and admin ifram
  assert.equal(staffDestination('local_teacher','/admineng/hub'),'/admineng/hub');
 });
 
-test('staff learning returns allow only the three explicit learning pages for both staff roles',()=>{
+test('staff learning returns allow only mode selection and the three explicit learning pages for both staff roles',()=>{
  for(const role of ['korean_admin','local_teacher']){
-  for(const path of ['/learn','/learn/tree-house','/learn/tree-house/practice']){
+  for(const path of ['/dream-app','/learn','/learn/tree-house','/learn/tree-house/practice']){
+   assert.equal(staffDestination(role,path),path);
    const next=`${path}?preview=1#start`;
    assert.equal(staffDestination(role,next),next);
   }
-  for(const next of ['/learning','/learn-anything','/learn/unknown','/learn/tree-house/unknown','/learn/tree-house/practice/unknown','/learn%2Ftree-house']){
+  for(const next of ['/dream-app-anything','/dream-app/unknown','/dream-application','/learning','/learn-anything','/learn/unknown','/learn/tree-house/unknown','/learn/tree-house/practice/unknown','/learn%2Ftree-house']){
    assert.equal(staffDestination(role,next),role==='korean_admin'?'/admin/hub':'/admineng/hub');
   }
  }
- for(const role of ['driver','parent',''])assert.equal(staffDestination(role,'/learn?preview=1'),'/admineng/hub');
+ for(const role of ['driver','parent',''])for(const path of ['/dream-app','/learn'])assert.equal(staffDestination(role,`${path}?preview=1`),'/admineng/hub');
 });
 
 function learningPreview({value=token,identity=staff,lookupError=null,at=now}={}){
