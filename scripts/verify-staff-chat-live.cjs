@@ -1,6 +1,6 @@
 // Uses isolated, temporary employee-role accounts and a private task. Never messages real employees.
 const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto'),{createClient}=require('@supabase/supabase-js');
-const base=process.argv[2]||'http://localhost:4193',db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}),run=randomUUID().slice(0,8),ids=['a','b','c'].map(i=>'test-chat-'+run+'-'+i),task='test-chat-task-'+run,room='dm:'+ids.slice(0,2).sort().join(':'),message=randomUUID(),reply=randomUUID(),password=randomUUID()+'Ab9!',paths=[];
+const base=process.argv[2]||'http://localhost:4193',db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}),run=randomUUID().slice(0,8),ids=['a','b','c'].map(i=>'test-chat-'+run+'-'+i),task='test-chat-task-'+run,room='dm:'+ids.slice(0,2).sort().join(':'),message=randomUUID(),reply=randomUUID(),password=randomUUID()+'Ab9!',paths=[],groupId=randomUUID(),groupRoom='group:'+groupId;
 const ok=r=>{if(r.error)throw Error(r.error.message);return r.data;};
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aMioAAAAASUVORK5CYII=','base64');
 (async()=>{try{
@@ -22,8 +22,23 @@ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42
  ok(await db.from('staff_tasks').insert({id:task,title:'[검증용 비공개] 채팅 연결',secret:true,created_by:ids[0],assignee:ids[2],assignees:JSON.stringify([ids[0],ids[2]])}));
  for(let i=0;i<2;i++)assert.equal((await api(0,{action:'link',message,task})).status,200);
  assert.equal((await api(2,null,'?task='+task)).data.messages[0].canOpen,false);assert.equal((await fetch(fileUrl,{headers:{Cookie:cookies[2]}})).status,200);assert.equal((await api(2,null,'?room='+encodeURIComponent(room))).status,403);
+ const create={action:'create_group',id:groupId,name:'[검증용] 수학수업 프로젝트',members:[ids[1]]};
+ const groups=await Promise.all([api(0,create),api(0,create)]);groups.forEach(r=>assert.equal(r.status,200,JSON.stringify(r.data)));assert.equal(ok(await db.from('staff_chat_groups').select('id').eq('id',groupId)).length,1);
+ assert.equal((await api(2,{...create,members:[ids[0]]})).status,409);
+ assert.ok((await api(1,null)).data.groups.some(g=>g.id===groupId));assert.ok(!(await api(2,null)).data.groups.some(g=>g.id===groupId));
+ assert.equal((await api(2,null,'?room='+groupRoom)).status,403);assert.equal((await api(2,{action:'read',room:groupRoom,seq})).status,403);
+ const gf=new FormData();gf.set('room',groupRoom);gf.set('file',new File([png],'그룹 사진.png',{type:'image/png'}));assert.equal((await fetch(base+'/api/staff/chat/files',{method:'POST',headers:{Cookie:cookies[2]},body:gf})).status,403);
+ const groupUpload=await fetch(base+'/api/staff/chat/files',{method:'POST',headers:{Cookie:cookies[0]},body:gf}),gfile=await groupUpload.json();assert.equal(groupUpload.status,200);paths.push(ids[0]+'/'+gfile.file.id);
+ const gm=randomUUID(),gb={id:gm,room:groupRoom,text:'[검증용] 그룹 수학수업 자료',files:[gfile.file.id],mentions:[ids[2]]};assert.equal((await api(2,gb)).status,403);assert.equal((await api(0,gb)).status,200);
+ const groupList=await api(1,null,'?room='+groupRoom);assert.equal(groupList.data.messages.length,1);assert.equal(groupList.data.messages[0].mentions.length,0);
+ const count=(await api(1,null)).data.counts.find(c=>c.room===groupRoom);assert.equal(Number(count.unread),1);assert.equal(Number(count.attention),0);
+ assert.equal((await fetch(base+'/api/staff/chat/files?id='+gfile.file.id,{headers:{Cookie:cookies[2]}})).status,403);assert.equal((await fetch(base+'/api/staff/chat/files?id='+gfile.file.id,{headers:{Cookie:cookies[1]}})).status,200);
+ assert.equal((await api(1,{action:'read',room:groupRoom,seq:groupList.data.messages[0].seq})).status,200);assert.equal(Number((await api(1,null)).data.counts.find(c=>c.room===groupRoom).unread),0);
+ assert.equal((await api(1,{id:randomUUID(),room:groupRoom,text:'[검증용] 그룹 답장',files:[],reply:gm,mentions:[ids[0]]})).status,200);assert.equal((await api(0,null,'?room='+groupRoom)).data.messages.length,2);
+ console.log('PASS group: concurrent create, reconnect, member-only room/files/read/send, mentions-only attention, photos and replies');
  const push=await fetch(base+'/api/staff/chat/push',{headers:{Cookie:cookies[0]}});assert.equal(push.status,200);console.log('PASS real employee-role login; DM isolation; photo upload/private download; concurrent idempotent send/read; reply/search; task link with selected-file sharing; push config',await push.json());
  }finally{
+  ok(await db.from('staff_messages').delete().eq('room',groupRoom));ok(await db.from('staff_message_reads').delete().eq('room',groupRoom));ok(await db.from('staff_message_files').delete().eq('room',groupRoom));ok(await db.from('staff_chat_groups').delete().eq('id',groupId));
   ok(await db.from('staff_message_links').delete().eq('task_id',task));ok(await db.from('staff_messages').delete().eq('room',room));ok(await db.from('staff_message_reads').delete().eq('room',room));ok(await db.from('staff_message_files').delete().eq('room',room));if(paths.length)ok(await db.storage.from('staff-chat-private').remove(paths));ok(await db.from('staff_tasks').delete().eq('id',task));ok(await db.from('staff_message_push').delete().in('employee',ids));ok(await db.from('staff_accounts').delete().in('username',ids));console.log('Removed only this run’s private test data.');
  }
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

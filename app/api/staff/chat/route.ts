@@ -18,7 +18,7 @@ export async function GET(req:Request){try{
   const messages=await Promise.all((m.data||[]).map(async m=>({...m,refs:await chatReferences(c.db,m.refs||[],c.actor),canOpen:c.rooms.includes(m.room)})));
   return NextResponse.json({messages,employees:c.employees});
  }
- if(!room){const counts=await c.db.rpc('staff_message_counts',{p_employee:c.actor,p_rooms:c.rooms});if(counts.error)throw counts.error;return NextResponse.json({actor:c.actor,employees:c.employees,rooms:c.rooms,counts:counts.data});}
+ if(!room){const counts=await c.db.rpc('staff_message_counts',{p_employee:c.actor,p_rooms:c.rooms});if(counts.error)throw counts.error;return NextResponse.json({actor:c.actor,employees:c.employees,rooms:c.rooms,groups:c.groups,counts:counts.data});}
  c.checkRoom(room);
  const q=u.searchParams.get('q')?.trim().slice(0,150),before=Number(u.searchParams.get('before')||0),target=u.searchParams.get('message');
  let query=c.db.from('staff_messages').select('*').eq('room',room);
@@ -38,6 +38,14 @@ export async function GET(req:Request){try{
  }catch(e){return failure(e);}}
 export async function POST(req:Request){try{
  const c=await chatAccess(req),b=await req.json();
+ if(b.action==='create_group'){
+  const name=typeof b.name==='string'?b.name.trim():'';
+  if(!uuid(b.id)||!name||name.length>80||!Array.isArray(b.members)||b.members.length>50||b.members.some((id:unknown)=>typeof id!=='string'||!c.employees.some(e=>e.id===id)))chatError('채팅방 이름과 참여 직원을 확인해주세요.');
+  const members=[...new Set<string>([c.actor,...b.members])].sort();if(members.length<2||members.length>50)chatError('함께 대화할 직원을 한 명 이상 선택해주세요.');
+  const r=await c.db.rpc('staff_chat_group_create',{p_id:b.id,p_name:name,p_creator:c.actor,p_members:members});
+  if(r.error)chatError('그룹 채팅을 만들지 못했습니다. 참여자를 확인하고 다시 시도해주세요.',409);
+  return NextResponse.json({group:{...r.data,room:'group:'+r.data.id}});
+ }
  if(b.action==='read'){c.checkRoom(b.room);if(!Number.isSafeInteger(b.seq)||b.seq<1)chatError('읽음 위치가 올바르지 않습니다.');const r=await c.db.rpc('staff_message_read',{p_room:b.room,p_employee:c.actor,p_seq:b.seq});if(r.error)throw r.error;return NextResponse.json({ok:true});}
  if(b.action==='link'){
   if(!uuid(b.message)||typeof b.task!=='string')chatError('연결할 업무를 선택해주세요.');
@@ -52,6 +60,6 @@ export async function POST(req:Request){try{
  let files:any[]=[];if(b.files.length){const f=await c.db.from('staff_message_files').select('id,name,mime,size').in('id',b.files).eq('room',b.room).eq('owner',c.actor);if(f.error||f.data?.length!==new Set(b.files).size)chatError('첨부 권한을 확인하지 못했습니다.');files=f.data.sort((a,b)=>a.id.localeCompare(b.id));}
  const r=await c.db.rpc('staff_message_send',{p_id:b.id,p_room:b.room,p_sender:c.actor,p_body:text,p_reply:b.reply||null,p_mentions:mentions,p_files:files,p_refs:refs});
  if(r.error)chatError(r.error.message.includes('conflict')?'이미 전송된 메시지와 내용이 다릅니다. 대화를 확인해주세요.':'메시지를 저장하지 못했습니다. 입력은 유지됩니다.',409);
- let push='not_requested';if(r.data.created){const recipients=b.room==='all'?mentions:members.filter(id=>id!==c.actor);push=await sendChatPush(c.db,recipients,b.room,b.id).catch(()=> 'failed');}
+ let push='not_requested';if(r.data.created){const recipients=b.room.startsWith('dm:')?members.filter(id=>id!==c.actor):mentions;push=await sendChatPush(c.db,recipients,b.room,b.id).catch(()=> 'failed');}
  return NextResponse.json({...r.data,push});
  }catch(e){return failure(e);}}
