@@ -189,7 +189,7 @@ export default function ScheduleDeploy() {
     return map;
   }, [items]);
 
-  const isDeployed = useMemo(() => items.some(i => i.is_deployed), [items]);
+  const isDeployed = useMemo(() => items.length > 0 && items.every(i => i.is_deployed), [items]);
 
   async function runGenerate() {
     if (busy) return;
@@ -374,7 +374,7 @@ export default function ScheduleDeploy() {
         )}
 
         <div style={{marginTop:10,fontSize:11,color:"#94a3b8"}}>
-          총 {items.length}건 · A/B주 패턴은 2026-05-04(월) 기준 · 매주 월/수/금 H-Mart 자동 포함
+          총 {items.length}건 · 배포된 일정은 최종달력과 손님 신청 화면에 함께 반영됩니다. 항목을 눌러 수정·삭제할 수 있습니다. 기존 신청자는 신청변경에서 별도로 확인해주세요.
         </div>
       </div>
 

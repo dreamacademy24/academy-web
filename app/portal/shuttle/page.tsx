@@ -8,11 +8,9 @@ import { resolveComboAccom } from "@/lib/bookingTypes";
 import { toastOk, toastErr } from "@/lib/toast";
 
 // ── 셔틀 자동 생성 헬퍼 (public/shuttle 와 동일) ────────────────────
-import { SHUTTLE_SPECIAL_MSG, getShSlots as getShSlotsLib, type ShSlot } from "@/lib/shuttleTours";
+import { SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
 
-// 배포된 휴일(holidays 테이블) — 페이지 로드 시 채워져 셔틀도 자동 차단
-const EXTRA_SHUTTLE_HOLIDAYS = new Set<string>();
-const getShSlots = (dateStr: string) => getShSlotsLib(dateStr, EXTRA_SHUTTLE_HOLIDAYS);
+import { usePublishedShuttle } from "@/lib/usePublishedShuttle";
 
 function slotSlug(name: string): string {
   if (name.startsWith('H-Mart')) return 'hmart';
@@ -43,7 +41,7 @@ const SLUG_TO_NAME: Record<string, string> = {
 const DAY_KR = ['일','월','화','수','목','금','토'];
 
 // 주차 단위: 화요일 시작 ~ 다음주 월요일 종료. rangeStart/End 안에서만 포함.
-function buildShWeeks(year: number, month: number, rangeStart?: string, rangeEnd?: string) {
+function buildShWeeks(year: number, month: number, getShSlots: (date: string) => ShSlot[] | "holiday", rangeStart?: string, rangeEnd?: string) {
   type Item = { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string };
   const days = new Date(year, month, 0).getDate();
   const weeks: { label: string; items: Item[] }[] = [];
@@ -78,14 +76,7 @@ interface PortalSession { booking_id: string; guest_name: string; expires: numbe
 type SelectedTour = { value: string; tourName: string; date: string; departTime: string; people: number };
 
 export default function PortalShuttlePage() {
-  // 배포 휴일 로드 → 셔틀 차단 반영 (tick으로 재렌더)
-  const [, setHolidayTick] = useState(0);
-  useEffect(() => {
-    import("@/lib/holidays").then(m => m.fetchDeployedHolidays(supabase)).then(list => {
-      list.forEach(h => EXTRA_SHUTTLE_HOLIDAYS.add(h.date));
-      if (list.length > 0) setHolidayTick(t => t + 1);
-    }).catch(() => {});
-  }, []);
+  const { getSlots, loading: scheduleLoading, error: scheduleError } = usePublishedShuttle();
   const router = useRouter();
   const [session, setSession] = useState<PortalSession | null>(null);
   const [bookingMeta, setBookingMeta] = useState<{ checkin: string; checkout: string; room: string; seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string; seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string; house_no?: string; accom_room?: string; accom_type?: string } | null>(null);
@@ -204,7 +195,7 @@ export default function PortalShuttlePage() {
         checkbox.checked = false;
       }
     });
-  }, [activeMonth, accordionState]);
+  }, [activeMonth, accordionState, getSlots]);
 
   // 월 변경 시 1주차 자동 펼침
   useEffect(() => {
@@ -310,6 +301,8 @@ export default function PortalShuttlePage() {
   };
 
   const noShowRef = useRef<HTMLInputElement>(null);
+
+  if (scheduleLoading || scheduleError) return <div role="status" style={{padding: 32}}>{scheduleError || "최신 셔틀 일정을 불러오는 중..."}</div>;
 
   if (!session) return null;
 
@@ -573,7 +566,7 @@ export default function PortalShuttlePage() {
                     ))}
                   </div>
                   <div className="month-schedules">
-                    {visibleMonths.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), bookingMeta?.checkin, bookingMeta?.checkout).map((wk, wi) => {
+                    {visibleMonths.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), getSlots, bookingMeta?.checkin, bookingMeta?.checkout).map((wk, wi) => {
                       const key = `${activeMonth}-${wi+1}`;
                       const isOpen = !!accordionState[key];
                       const m = parseInt(activeMonth, 10);

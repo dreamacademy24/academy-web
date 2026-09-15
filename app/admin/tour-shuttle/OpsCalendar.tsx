@@ -2,8 +2,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from "react";
 import { toastErr } from "@/lib/toast";
 import { createClient } from "@supabase/supabase-js";
-import { getShSlots, SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
-import { fetchDeployedHolidays } from "@/lib/holidays";
+import { SHUTTLE_SPECIAL_MSG } from "@/lib/shuttleTours";
+import { usePublishedShuttle } from "@/lib/usePublishedShuttle";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -98,7 +98,7 @@ const btnBase: CSSProperties = { padding: "8px 13px", borderRadius: 8, fontSize:
 export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit" }) {
   const [month, setMonth] = useState<string>(curMonth(0));
   const [apps, setApps] = useState<ShuttleApp[]>([]);
-  const [extraHolidays, setExtraHolidays] = useState<Set<string>>(new Set());
+  const { getSlots, loading: scheduleLoading, error: scheduleError } = usePublishedShuttle();
   const [bookingNames, setBookingNames] = useState<Record<string, string>>({});
   const [bookingRooms, setBookingRooms] = useState<Record<string, RoomInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -113,11 +113,6 @@ export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit"
   const [appForm, setAppForm] = useState({ tour_date: "", tour_name: "", depart_time: "", portal_name: "", room_number: "", riders: "", people_count: 1, request: "" });
   const [appSaving, setAppSaving] = useState(false);
 
-  useEffect(() => {
-    fetchDeployedHolidays().then(list => {
-      if (list.length > 0) setExtraHolidays(new Set(list.map(h => h.date)));
-    }).catch(() => {});
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -165,7 +160,7 @@ export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit"
     const lastDay = new Date(y, mm, 0).getDate();
     for (let d = 1; d <= lastDay; d++) {
       const ds = `${month}-${pad2(d)}`;
-      const slots = getShSlots(ds, extraHolidays);
+      const slots = getSlots(ds);
       if (slots === "holiday") { holi.add(ds); continue; }
       for (const sl of slots) {
         const key = mk(ds, sl.name);
@@ -187,7 +182,7 @@ export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit"
       else { g.active.push(a); g.people += a.people_count || 0; }
     }
     return { groups: map, holidaySet: holi };
-  }, [apps, month, extraHolidays]);
+  }, [apps, month, getSlots]);
 
   const groupsByDate = useMemo(() => {
     const m = new Map<string, TourGroup[]>();
@@ -226,8 +221,8 @@ export default function OpsCalendar({ mode = "edit" }: { mode?: "final" | "edit"
     const newTitle = editForm.title.trim();
     if (!newTitle) { toastErr("투어명은 필수입니다."); return; }
     const appCount = sel.active.length + sel.cancelReq.length + sel.cancelled.length;
-    if (appCount === 0) { toastErr("이동할 신청 내역이 없습니다. (기본 투어 패턴은 코드 규칙이라 여기서 바뀌지 않아요)"); return; }
-    if (!confirm(`신청 ${appCount}건을 "${sel.title}" → "${newTitle}" 으로 이동합니다.\n⚠️ 손님 신청 화면의 기본 투어 목록은 고정 규칙이라 바뀌지 않습니다. 계속할까요?`)) return;
+    if (appCount === 0) { toastErr("이동할 신청 내역이 없습니다. (투어 일정은 투어 일정 배포 탭에서 수정해주세요)"); return; }
+    if (!confirm(`신청 ${appCount}건을 "${sel.title}" → "${newTitle}" 으로 이동합니다.\n⚠️ 손님 신청 일정은 투어 일정 배포 탭에서 별도로 수정해주세요. 계속할까요?`)) return;
     setEditSaving(true);
     const { error } = await supabase.from("shuttle_applications")
       .update({ tour_name: newTitle, depart_time: editForm.time.trim() || null })
@@ -336,7 +331,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
           {stats.cancelReq > 0 && <span style={{ padding: "4px 11px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: "#fef2f2", color: "#dc2626" }}>취소요청 {stats.cancelReq}</span>}
           <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>이달 총 {stats.people}명</span>
           <div style={{ flex: 1 }} />
-          <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>손님 신청 화면과 동일 규칙 · 휴무 자동 반영</span>
+          <span style={{ fontSize: 11.5, color: "#94a3b8", fontWeight: 600 }}>배포된 일정과 동일 · 휴무 자동 반영</span>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5, marginBottom: 5 }}>
@@ -345,8 +340,8 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
           ))}
         </div>
 
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#94a3b8", fontSize: 13 }}>불러오는 중...</div>
+        {loading || scheduleLoading || scheduleError ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#94a3b8", fontSize: 13 }}>{scheduleError || "불러오는 중..."}</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 5 }}>
             {cells.map((c, i) => {
@@ -430,7 +425,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <span style={{ minWidth: 42, color: "#475569", fontWeight: 700 }}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                 {a.riders && <span style={{ color: "#64748b", fontSize: 12.5 }} title={a.riders}>👥 {a.riders.length > 16 ? a.riders.slice(0, 16) + "…" : a.riders}</span>}
                 <span style={{ flex: 1, color: req ? "#475569" : "#cbd5e1", fontSize: 12.5 }}>{req ? `📝 ${req}` : "—"}</span>
-                {mode === "edit" && <button onClick={() => deleteApp(a.id)} title="신청 삭제" style={{ border: "none", background: "transparent", color: "#cbd5e1", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>🗑</button>}
+                {mode === "edit" && <button onClick={() => deleteApp(a.id)} title="신청 삭제" style={{ border: "none", background: "transparent", color: "#dc2626", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>신청 삭제</button>}
               </div>
             );
           })}
@@ -458,6 +453,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
                 <span style={{ minWidth: 88, textDecoration: "line-through" }}>{displayRoom}</span>
                 <span style={{ minWidth: 42, textDecoration: "line-through" }}>{a.people_count != null ? `${a.people_count}명` : "-"}</span>
                 <span style={{ flex: 1 }}>취소됨</span>
+                {mode === "edit" && <button onClick={() => deleteApp(a.id)} style={{ ...btnBase, color: "#dc2626" }}>신청 삭제</button>}
                 {mode === "edit" && <button onClick={() => changeStatus(a.id, "confirmed")} style={{ ...btnBase, padding: "5px 10px", fontSize: 11.5, color: "#64748b" }}>되돌리기</button>}
               </div>
             );
@@ -474,7 +470,7 @@ th,td{border:1px solid #999;padding:8px 10px;text-align:left}th{background:#f1f5
             </div>
             <div style={{ fontSize: 11.5, color: "#6b7c93", marginBottom: 10, lineHeight: 1.5 }}>
               {fmtDateKR(sel.date)}의 신청 내역을 다른 투어명·시간으로 옮깁니다.<br />
-              ⚠️ 손님 신청 화면의 기본 투어 목록은 고정 규칙이라 여기서 바뀌지 않아요.
+              ⚠️ 손님 신청 일정 변경은 투어 일정 배포 탭에서 해주세요.
             </div>
             <label style={lbl}>투어명</label>
             <input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} style={{ ...inp, marginBottom: 12 }} />

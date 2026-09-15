@@ -3,11 +3,9 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ── 셔틀 자동 생성 헬퍼 ────────────────────────────────────────
-import { SHUTTLE_SPECIAL_MSG, getShSlots as getShSlotsLib, type ShSlot } from "@/lib/shuttleTours";
+import { SHUTTLE_SPECIAL_MSG, type ShSlot } from "@/lib/shuttleTours";
 
-// 배포된 휴일(holidays 테이블) — 페이지 로드 시 채워져 셔틀도 자동 차단
-const EXTRA_SHUTTLE_HOLIDAYS = new Set<string>();
-const getShSlots = (dateStr: string) => getShSlotsLib(dateStr, EXTRA_SHUTTLE_HOLIDAYS);
+import { usePublishedShuttle } from "@/lib/usePublishedShuttle";
 
 function slotSlug(name: string): string {
   if (name.startsWith('H-Mart')) return 'hmart';
@@ -25,7 +23,7 @@ function slotSlug(name: string): string {
 const DAY_KR = ['일','월','화','수','목','금','토'];
 
 // 주차 단위: 화요일 시작 ~ 다음주 월요일 종료
-function buildShWeeks(year: number, month: number) {
+function buildShWeeks(year: number, month: number, getShSlots: (date: string) => ShSlot[] | "holiday") {
   type Item = { dateStr:string; dayLabel:string; slots: ShSlot[]|'holiday'; special?:string };
   const days = new Date(year, month, 0).getDate();
   const weeks: { label: string; items: Item[] }[] = [];
@@ -53,14 +51,7 @@ function buildShWeeks(year: number, month: number) {
 const ACTIVE_MONTHS = ['5','6','7','8','9','10','11','12'];
 
 export default function ShuttlePage() {
-  // 배포 휴일 로드 → 셔틀 차단 반영
-  const [, setHolidayTick] = useState(0);
-  useEffect(() => {
-    import("@/lib/holidays").then(m => m.fetchDeployedHolidays(supabase)).then(list => {
-      list.forEach(h => EXTRA_SHUTTLE_HOLIDAYS.add(h.date));
-      if (list.length > 0) setHolidayTick(t => t + 1);
-    }).catch(() => {});
-  }, []);
+  const { getSlots, loading: scheduleLoading, error: scheduleError } = usePublishedShuttle();
   const [modalHidden, setModalHidden] = useState(false);
   const [modalHiding, setModalHiding] = useState(false);
   const [activeMonth, setActiveMonth] = useState("5");
@@ -117,7 +108,7 @@ export default function ShuttlePage() {
         checkbox.checked = false;
       }
     });
-  }, [activeMonth, accordionState]);
+  }, [activeMonth, accordionState, getSlots]);
 
   // 월 변경 시 1주차 자동 펼침 (이미 사용자가 토글한 키는 유지)
   useEffect(() => {
@@ -184,6 +175,8 @@ export default function ShuttlePage() {
   };
 
   const noShowRef = useRef<HTMLInputElement>(null);
+
+  if (scheduleLoading || scheduleError) return <div role="status" style={{padding: 32}}>{scheduleError || "최신 셔틀 일정을 불러오는 중..."}</div>;
 
   return (
     <>
@@ -452,7 +445,7 @@ export default function ShuttlePage() {
                     ))}
                   </div>
                   <div className="month-schedules">
-                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10)).map((wk, wi) => {
+                    {ACTIVE_MONTHS.includes(activeMonth) && buildShWeeks(2026, parseInt(activeMonth, 10), getSlots).map((wk, wi) => {
                       const key = `${activeMonth}-${wi+1}`;
                       const isOpen = !!accordionState[key];
                       const m = parseInt(activeMonth, 10);
