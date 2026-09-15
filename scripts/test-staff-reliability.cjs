@@ -141,6 +141,38 @@ test('notice filters intersect unread-required state with title or body search',
   assert.deepEqual(Array.from(ctx._staffNoticeList(),n=>n.id),['new','body']);
 });
 
+test('cold announcements entry displays asynchronously loaded notices without a second navigation',async()=>{
+  const pending=deferred(),writes=[];
+  let visible=true;
+  const feed={innerHTML:''},page={classList:{contains:()=>!visible}},hidden={classList:{contains:()=>true}};
+  const rows=Array.from({length:37},(_,i)=>({id:`notice-${i}`,title:`Update ${i}`,text:'Existing notice',date:'2026-09-15',files:[],done:i===0,require_read:i===1,teacher_shared:true}));
+  const reads={'notice-1':['song']},before=JSON.stringify(reads);
+  const ctx=context(['loadNoticesFromSB','rowToNt','renderAnnouncementsPage','_staffNoticeList','refreshAll'],{
+    CU:{id:'song'},notices:[],noticeReads:reads,_ntSelId:null,_staffNoticeFilter:'all',_staffNoticeQuery:'',curEmpId:null,curProjId:null,
+    document:{getElementById:id=>id==='announcementsFeed'?feed:id==='page-announcements'?page:id.startsWith('page-')?hidden:null},
+    fetchNoticeRows:()=>pending.promise,sv:(key,value)=>writes.push({key,value}),
+    isAdmin:()=>false,esc:value=>String(value||''),_ntPlain:n=>n.text,
+    toast:()=>assert.fail('Notice loading should succeed'),
+  });
+  ctx.renderAnnouncementsPage();
+  assert.match(feed.innerHTML,/등록된 공지가 없습니다/);
+  const loading=ctx.loadNoticesFromSB();
+  assert.match(feed.innerHTML,/전체 공지 0/);
+  pending.resolve(rows);await loading;
+  assert.match(feed.innerHTML,/전체 공지 37/);
+  assert.equal((feed.innerHTML.match(/class="swo-notice-row"/g)||[]).length,37);
+  assert.doesNotMatch(feed.innerHTML,/등록된 공지가 없습니다/);
+  assert.equal(ctx.notices[0].done,true);assert.equal(ctx.notices[1].requireRead,true);
+  assert.equal(JSON.stringify(reads),before);assert.deepEqual(writes.map(write=>write.key),['tm_n']);
+
+  ctx.notices.push({...ctx.notices[1],id:'notice-38'});ctx.refreshAll();
+  assert.match(feed.innerHTML,/전체 공지 38/);
+  visible=false;feed.innerHTML='Inactive page';
+  await ctx.loadNoticesFromSB();ctx.refreshAll();
+  assert.equal(feed.innerHTML,'Inactive page');
+  assert.equal(JSON.stringify(reads),before);
+});
+
 test('notice read confirmation merges latest readers and is acknowledged only after persistence',async()=>{
   const write=deferred();let posted;
   const ctx=context(['markRead'],{CU:{id:'song'},_staffNoticeReadBusy:false,noticeReads:{},sbGet:async()=>[{value:{n:['jun'],other:['ceo']}}],_saveNoticeReadsSB:next=>{posted=next;return write.promise;},sv(){},renderNotices(){},document:{getElementById:()=>null},toast(){}});
@@ -263,6 +295,7 @@ test('failed uncheck restores the checkbox, unlocks it, and reports failure', as
 test('server empty lists clear cached records without resurrecting saved records', async () => {
   const unexpectedWrite = () => assert.fail('Read must not upload cached records');
   const ctx = context(['loadTasksFromSB', 'loadProjectsFromSB', 'loadNoticesFromSB', 'loadThreadsFromSB', 'loadTaskCommentsFromSB', '_mergeLocalOnlyTc'], {
+    document: { getElementById: () => null },
     sbGet: async () => [], tasks: [{ id: 1 }], projects: [{ id: 1 }], notices: [{ id: 1 }],
     threads: { p: [{ id: 1 }] }, taskComments: { t: [{ id: 1 }] },
     rowToTask: x => x, taskVisible: () => true, rowToProj: x => x, rowToNt: x => x,
