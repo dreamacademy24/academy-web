@@ -333,6 +333,7 @@ export async function PATCH(req: Request) {
           .select('*')
           .eq('enrollment_id', id)
           .eq('status', 'scheduled')
+          .eq('schedule_locked', false)
           .order('scheduled_date')
         if (scheduledError) return NextResponse.json({ error: scheduledError.message }, { status: 500 })
 
@@ -341,7 +342,7 @@ export async function PATCH(req: Request) {
           .from('online_sessions')
           .select('session_number,scheduled_date')
           .eq('enrollment_id', id)
-          .neq('status', 'scheduled')
+          .or('status.neq.scheduled,schedule_locked.eq.true')
           .order('session_number', { ascending: false })
         if (historyError) return NextResponse.json({ error: historyError.message }, { status: 500 })
         const historyCount = historySes?.length || 0

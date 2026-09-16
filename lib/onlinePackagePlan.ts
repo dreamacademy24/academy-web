@@ -4,7 +4,7 @@ export type PackageBooking = { id:string; number:string; from:string; to:string;
 export type PackagePart = { count:number; start:string; days:string[]; times:Record<string,string> };
 export type PackagePlan = { version:1; bookingIds:string[]; total:number; manual:boolean; reason:string; pre:PackagePart; post:PackagePart };
 export function packagePlanText(plan:PackagePlan){return `총 ${plan.total}회\n`+(['pre','post'] as const).map(key=>{const p=plan[key];return `${key==='pre'?'연수 전':'연수 후'} ${p.count}회`+(p.count?` · 희망 시작 ${p.start}\n${p.days.map(d=>`${d} ${p.times[d]}`).join(' / ')} (한국 시간)`:'');}).join('\n');}
-export type PackageSession = { id:string; status:string; scheduled_date:string; session_number:number; package_phase?:string|null; cancel_days_before?:number|null; is_makeup_added?:boolean; original_session_id?:string|null; note?:string|null; session_note?:string|null; attitude?:string|null; attitude_note?:string|null; recorded_at?:string|null; scheduled_time_kr?:string|null };
+export type PackageSession = { id:string; schedule_locked?:boolean; status:string; scheduled_date:string; session_number:number; package_phase?:string|null; cancel_days_before?:number|null; is_makeup_added?:boolean; original_session_id?:string|null; note?:string|null; session_note?:string|null; attitude?:string|null; attitude_note?:string|null; recorded_at?:string|null; scheduled_time_kr?:string|null };
 export const addDate = (date:string,n:number) => new Date(Date.parse(date+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
 const validDate=(s:string)=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
 export function bookingStudents(value:unknown):any[]{if(typeof value==='string'){try{return bookingStudents(JSON.parse(value));}catch{return [];}}return Array.isArray(value)?value:[];}
@@ -58,7 +58,7 @@ export function validatePackagePlan(value:unknown,bookings:PackageBooking[],admi
   if(parts.pre.count+parts.post.count!==p.total)throw Error(`연수 전 ${parts.pre.count}회 + 연수 후 ${parts.post.count}회가 총 ${p.total}회와 같아야 합니다.`);
   return {version:1,bookingIds:selected.map(b=>b.id),total:p.total,manual,reason:manual?p.reason.trim():'',...parts};
 }
-export function mutablePackageSession(s:PackageSession,today:string){return s.status==='scheduled'&&s.scheduled_date>=today&&!s.is_makeup_added&&!s.original_session_id&&!s.note&&!s.session_note&&!s.attitude&&!s.attitude_note&&!s.recorded_at;}
+export function mutablePackageSession(s:PackageSession,today:string){return !s.schedule_locked&&s.status==='scheduled'&&s.scheduled_date>=today&&!s.is_makeup_added&&!s.original_session_id&&!s.note&&!s.session_note&&!s.attitude&&!s.attitude_note&&!s.recorded_at;}
 export function chargedPackageSession(s:PackageSession){return ['attended','absent','no_show'].includes(s.status)||(s.status==='cancelled'&&(s.cancel_days_before==null||s.cancel_days_before<4));}
 export function buildPackageSchedule(plan:PackagePlan,bookings:PackageBooking[],sessions:PackageSession[],holidays:Set<string>,used=0,today=koreaToday()){
   const selected=bookings.filter(b=>plan.bookingIds.includes(b.id)),bounds=packageBounds(selected);

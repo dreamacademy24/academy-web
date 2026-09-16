@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { sendTelegramTeachers, escapeHtml } from '@/lib/telegram'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
+import { isPortalAdmin } from '@/lib/portalAuth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -60,6 +61,7 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json()
     const { id, action, admin_note, teacher_note, processed_by } = body
+    if (['approve','reject'].includes(action) && !await isPortalAdmin(req)) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:401})
     if (!id || !['approve', 'reject', 'teacher_approve', 'teacher_reject'].includes(action)) {
       return NextResponse.json({ error: 'id, action required' }, { status: 400 })
     }
@@ -105,12 +107,8 @@ export async function PATCH(req: Request) {
     // ── 1회차만 변경: 해당 세션의 날짜/시간만 이동 (재생성 없음) ──
     if (cr.req_type === 'single') {
       if (!cr.session_id) return NextResponse.json({ error: 'session_id 없음' }, { status: 400 })
-      const patch: Record<string, unknown> = {}
-      if (cr.req_date) patch.scheduled_date = cr.req_date
-      if (cr.req_time_kr) { patch.scheduled_time_kr = cr.req_time_kr; patch.scheduled_time_ph = phOf(cr.req_time_kr) }
-      const { error: sErr } = await supabase.from('online_sessions').update(patch).eq('id', cr.session_id).eq('status', 'scheduled')
-      if (sErr) return NextResponse.json({ error: sErr.message }, { status: 500 })
-      await supabase.from('online_change_requests').update({ status: 'approved', admin_status: 'approved', admin_note: admin_note || null, processed_by: processed_by || '관리자', processed_at: new Date().toISOString() }).eq('id', id)
+      const { error: sErr } = await supabase.rpc('approve_online_single_change',{p_request:id,p_note:admin_note||null,p_by:processed_by||'관리자'})
+      if (sErr) return NextResponse.json({ error: sErr.message.includes('SESSION_MISSING_OR_PROCESSED') ? '대상 수업이 변경되거나 없어 승인하지 않았습니다. 출석부를 확인해주세요.' : sErr.message.includes('TUTOR_CONFLICT') ? '선생님의 다른 수업과 시간이 겹칩니다.' : '변경 일정 저장에 실패하여 승인하지 않았습니다. 새로고침 후 확인해주세요.' }, { status: 409 })
       try {
         const stuName = enroll.student_name_en || enroll.student_name
         const msg = `Class moved — ${stuName}: → ${cr.req_date || '(same date)'}${cr.req_time_kr ? ` ${cr.req_time_kr} KST` : ''}`
@@ -131,6 +129,7 @@ export async function PATCH(req: Request) {
       .select('id, session_number, scheduled_date')
       .eq('enrollment_id', enroll.id)
       .eq('status', 'scheduled')
+      .eq('schedule_locked', false)
       .gte('scheduled_date', effective)
       .order('scheduled_date')
     if (fsErr) return NextResponse.json({ error: fsErr.message }, { status: 500 })
@@ -142,6 +141,9 @@ export async function PATCH(req: Request) {
       // 휴일·방학·체류기간 제외 반영 (재방문 대응)
       const { data: _hol } = await supabase.from('holidays').select('date').eq('is_deployed', true)
       const _hs = new Set<string>((_hol || []).map((h: { date: string }) => h.date))
+      const {data: locked,error: lockedError}=await supabase.from('online_sessions').select('scheduled_date').eq('enrollment_id',enroll.id).eq('schedule_locked',true)
+      if(lockedError)return NextResponse.json({error:'승인된 변경 일정을 확인하지 못했습니다.'},{status:503})
+      for(const session of locked||[])_hs.add(session.scheduled_date)
       const _today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
       const { data: _bks } = await supabase.from('bookings').select('checkin_date, checkout_date, students, portal_user_id, status').gte('checkout_date', _today).neq('status', '취소')
       const _stays: { from: string; to: string }[] = []
@@ -153,7 +155,7 @@ export async function PATCH(req: Request) {
         if (nameMatch || (enroll.customer_user_id && b.portal_user_id === enroll.customer_user_id)) _stays.push({ from: b.checkin_date, to: b.checkout_date })
       }
       const newDates = buildOnlineSessionDates(effective, newDays, futureSes.length, _hs, _stays).dates
-      newEndDate = newDates[newDates.length - 1] || null
+      newEndDate = [...newDates, ...(locked || []).map(s => s.scheduled_date)].sort().at(-1) || null
       if (newDates.length < futureSes.length) {
         return NextResponse.json({ error: '새 요일로 날짜 생성에 실패했습니다. 요일을 확인해주세요.' }, { status: 400 })
       }

@@ -23,7 +23,7 @@ interface Session {
   id: string; enrollment_id: string; session_number: number;
   scheduled_date: string; scheduled_time_kr: string | null; scheduled_time_ph: string | null;
   status: string;
-  package_phase?: "pre" | "post" | null;
+  package_phase?: "pre" | "post" | null; schedule_locked?: boolean;
 }
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -192,7 +192,7 @@ function renderCalendar(
                   else if (s.status === "makeup") { classes.push("makeup"); timeLabel = "보강"; }
                   else if (s.status === "attended") { classes.push("attended"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
                   else if (s.status === "absent" || s.status === "no_show") { classes.push("holiday"); timeLabel = "결석"; }
-                  else { classes.push("has-class"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr); }
+                  else { classes.push("has-class"); timeLabel = fmtClassTime(s.scheduled_time_kr || enrollment.class_time_kr) + (s.schedule_locked ? " (변경)" : ""); }
                 }
                 return (
                   <td key={cell.dateStr} className={classes.join(" ")}>
