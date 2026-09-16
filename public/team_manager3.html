@@ -11035,7 +11035,7 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 
 /* ===================== PROJECT TREE (신규 · Phase A) ===================== */
-var PT={nodes:[],cur:null,sel:null,openMap:{},comments:{}};
+var PT={nodes:[],cur:null,sel:null,openMap:{},comments:{},listMode:'active'};
 function ptNow(){return new Date().toISOString();}
 function ptFindNode(id){return PT.nodes.find(function(n){return n.id===id;});}
 function ptChildren(parentId,projId){
@@ -11052,8 +11052,10 @@ function ptProgress(projId,scopeId){
   var leafs=pool.filter(function(n){return n.kind==='task';});
   if(!leafs.length)return 0;
   var d=leafs.filter(function(n){return n.done;}).length;
-  return Math.round(d/leafs.length*100);
+  // Incomplete projects must not become 100% through rounding (e.g. 199/200).
+  return d===leafs.length?100:Math.min(99,Math.round(d/leafs.length*100));
 }
+function ptIsPast(projId){return ptProgress(projId)===100;}
 function ptOpen(){
   var root=document.getElementById('ptRoot'),actor=CU;
   if(root)root.innerHTML='<div class="swo-empty" role="status">프로젝트를 불러오는 중입니다.</div>';
@@ -11088,16 +11090,23 @@ function ptLoadAll(){
   });
 }
 /* ---------- 프로젝트 목록 ---------- */
-function ptRenderList(){
+function ptRenderList(mode){
+  if(mode==='active'||mode==='past')PT.listMode=mode;
   PT.cur=null;
   var root=document.getElementById('ptRoot');if(!root)return;
-  var projs=PT.nodes.filter(function(n){return n.kind==='project';})
+  var allProjs=PT.nodes.filter(function(n){return n.kind==='project';})
     .sort(function(a,b){return String(b.created_at||'').localeCompare(String(a.created_at||''));});
-  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-    +'<div style="font-size:15px;font-weight:700">전체 프로젝트</div>'
+  var pastCount=allProjs.filter(function(pr){return ptIsPast(pr.id);}).length;
+  var isPast=PT.listMode==='past';
+  var projs=allProjs.filter(function(pr){return ptIsPast(pr.id)===isPast;});
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'
+    +'<div role="group" aria-label="프로젝트 목록 선택" style="display:flex;gap:8px;flex-wrap:wrap">'
+    +'<button class="btn '+(!isPast?'btn-primary':'btn-outline')+' btn-sm" aria-pressed="'+(!isPast)+'" onclick="ptRenderList(\'active\')">진행 중 프로젝트 ('+(allProjs.length-pastCount)+')</button>'
+    +'<button class="btn '+(isPast?'btn-primary':'btn-outline')+' btn-sm" aria-pressed="'+isPast+'" onclick="ptRenderList(\'past\')">과거 프로젝트 ('+pastCount+')</button></div>'
     +'<button class="btn btn-primary btn-sm" onclick="ptNewProject()">+ 새 프로젝트</button></div>';
+  h+='<p style="font-size:12px;color:var(--text3);margin:0 0 14px">'+(isPast?'모든 할 일이 완료된 프로젝트입니다. 프로젝트를 누르면 기존 내용과 기록을 다시 확인할 수 있습니다.':'진행률 100%인 프로젝트는 과거 프로젝트에 자동으로 모입니다.')+'</p>';
   if(!projs.length){
-    h+='<div class="empty-state"><div class="ei">🚀</div>프로젝트가 없습니다<br><span style="font-size:12px">"새 프로젝트"로 시작하세요</span></div>';
+    h+='<div class="empty-state"><div class="ei">'+(isPast?'🗂️':'🚀')+'</div>'+(isPast?'과거 프로젝트가 없습니다':'진행 중인 프로젝트가 없습니다')+'</div>';
   }else{
     h+='<div class="proj-grid">';
     var _ust=_ptUnreadSet();
@@ -11141,8 +11150,9 @@ function ptRenderProject(projId){
 function ptRenderTree(projId){
   var pr=ptFindNode(projId);var el=document.getElementById('ptTree');if(!el||!pr)return;
   var prog=ptProgress(projId);
-  var h='<div class="pt-back" onclick="ptRenderList()">← 목록</div>'
+  var h='<button class="pt-back" onclick="ptRenderList()">← '+(PT.listMode==='past'?'과거 프로젝트':'진행 중 프로젝트')+' 목록</button>'
     +'<div class="pt-proj-head"><span style="font-size:16px">🗂️</span><span style="flex:1;font-weight:700;font-size:15px">'+esc(pr.title)+'</span><span style="font-size:12px;color:#6366f1;font-weight:700">'+prog+'%</span></div>';
+  if(ptIsPast(projId))h+='<div style="font-size:12px;color:var(--text3);padding:8px 4px">과거 프로젝트 · 미완료 할 일이 생기면 진행 중 목록으로 돌아갑니다.</div>';
   h+=ptTreeNodes(null,projId,0);
   h+='<div class="pt-add-root" onclick="ptAddNode(\''+projId+'\',null,\'folder\')">+ 폴더 추가</div>';
   el.innerHTML=h;
