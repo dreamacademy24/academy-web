@@ -23,6 +23,7 @@ interface Session {
   id: string; enrollment_id: string; session_number: number;
   scheduled_date: string; scheduled_time_kr: string | null; scheduled_time_ph: string | null;
   status: string;
+  package_phase?: "pre" | "post" | null;
 }
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -249,40 +250,8 @@ function OnlineInvoiceInner() {
 
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
-  // 성수기 방학 세션 제외 + 부족 회차 방학 후로 연장
-  const DAY_MAP_INV: Record<string, number> = { "월":1,"화":2,"수":3,"목":4,"금":5,"토":6,"일":0 };
-  const extendedSessions = useMemo(() => {
-    if (!enrollment || sessions.length === 0) return sessions;
-    // 방학 기간 세션 제외
-    const active = sessions.filter(s => !isSummerBreak(s.scheduled_date));
-    const total = enrollment.total_sessions || 0;
-    if (active.length >= total) return active;
-    // 부족분을 방학 이후로 연장
-    const needed = total - active.length;
-    const sorted = [...active].sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
-    const lastDate = sorted.length > 0 ? sorted[sorted.length - 1].scheduled_date : "2026-08-31";
-    const targetDays = (enrollment.days_of_week || []).map(d => DAY_MAP_INV[d]).filter(n => n !== undefined);
-    const existDates = new Set(sorted.map(s => s.scheduled_date));
-    const virtual: Session[] = [];
-    const cur = new Date(lastDate + "T00:00:00");
-    cur.setDate(cur.getDate() + 1);
-    let guard = 0;
-    while (virtual.length < needed && guard < 400) {
-      const ds = localStr(cur);
-      if (targetDays.includes(cur.getDay()) && !isSummerBreak(ds) && !existDates.has(ds)) {
-        virtual.push({
-          id: `virt-${ds}`, enrollment_id: enrollment.id,
-          session_number: active.length + virtual.length + 1,
-          scheduled_date: ds,
-          scheduled_time_kr: enrollment.class_time_kr, scheduled_time_ph: enrollment.class_time_ph,
-          status: "scheduled",
-        });
-      }
-      cur.setDate(cur.getDate() + 1);
-      guard++;
-    }
-    return [...sorted, ...virtual].sort((a,b) => a.scheduled_date.localeCompare(b.scheduled_date));
-  }, [sessions, enrollment]);
+  // 저장된 출석부만 표시합니다. 인보이스에서 별도 회차를 만들지 않습니다.
+  const extendedSessions = sessions;
 
   const sessionMap = useMemo(() => {
     const map: Record<string, Session> = {};
@@ -293,6 +262,9 @@ function OnlineInvoiceInner() {
   const { preSessions, postSessions } = useMemo(() => {
     if (!enrollment) return { preSessions: extendedSessions, postSessions: [] };
     if (enrollment.class_period === "both") {
+      if (extendedSessions.length && extendedSessions.every(s => s.package_phase === "pre" || s.package_phase === "post")) {
+        return { preSessions: extendedSessions.filter(s => s.package_phase === "pre"), postSessions: extendedSessions.filter(s => s.package_phase === "post") };
+      }
       const sorted = [...extendedSessions].sort((a,b) => a.session_number - b.session_number);
       const preCount = enrollment.pre_sessions || 0;
       return { preSessions: sorted.slice(0, preCount), postSessions: sorted.slice(preCount) };
