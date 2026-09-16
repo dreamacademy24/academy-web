@@ -78,7 +78,7 @@ function _renderStaffHome(emp){
       '<button data-action="notices"><span>확인할 공지</span><strong>'+model.unread.length+'<small>건</small></strong><em>필수 공지 읽음 확인 →</em></button>'+
       '<button data-action="guests"><span>내 담당 예약</span><strong id="swhGuestCount">—</strong><em>체류 중 · 입실 예정 →</em></button></div>'+
     '<div class="swh-columns"><main class="swh-main">'+
-      '<section class="swh-panel"><div class="swh-section-head"><div><h2>처리할 업무</h2><p>내 미확인 업무·새 댓글은 위로, 확인한 업무는 아래로 보여드려요.</p></div><button class="swh-link" data-tab="board">보드 보기 ↗</button></div><div class="swh-filters" id="swhFilters"></div><div id="swhTasks"></div></section>'+
+      '<section class="swh-panel"><div class="swh-section-head"><div><h2>처리할 업무</h2><p>내 미확인 업무·새 댓글은 위로, 확인한 업무는 아래로 보여드려요.</p></div><div><button class="swh-link" data-action="completed">완료 업무 보기</button> <button class="swh-link" data-tab="board">보드 보기 ↗</button></div></div><div class="swh-filters" id="swhFilters"></div><div id="swhTasks"></div></section>'+
       '<section class="swh-panel"><div class="swh-section-head"><div><h2>내 담당 예약</h2><p>예약 준비 · 학생 케어 · 인계 코멘트</p></div><button class="swh-link" data-action="guests">전체 보기 ↗</button></div><div id="swhBookings" role="status" class="swh-loading">담당 예약을 불러오는 중입니다…</div></section>'+
       '<section class="swh-panel"><div class="swh-section-head"><div><h2>반복 체크</h2><p>내 담당 항목과 공용 체크를 확인하세요.</p></div><button class="swh-link" data-tab="checklist">체크리스트 열기 ↗</button></div><div id="empHomeDcl"></div></section>'+
     '</main><aside class="swh-aside"><section class="swh-panel" id="swhNoticePanel"><div class="swh-section-head"><h2>확인할 공지 <span class="swh-count">'+model.unread.length+'</span></h2><button class="swh-link" data-action="all-notices">전체</button></div><div id="swhNotices"></div></section>'+
@@ -94,6 +94,7 @@ function _renderStaffHome(emp){
     if(b.dataset.notice){showPage('announcements');_ntOpen(b.dataset.notice);return;}
     if(b.dataset.tab){setEmpTab(b.dataset.tab);return;}
     if(b.dataset.activity){var n=(myNotifs||[]).find(function(x){return String(x.id)===b.dataset.activity;});if(n){window._empNotifList=[n];_empNotifGo(0);}return;}
+    if(b.dataset.action==='completed')_staffOpenCompleted();
     if(b.dataset.action==='create')openTaskModal(emp.id);
     if(b.dataset.action==='guests')_staffOpenGuest(emp);
     if(b.dataset.action==='all-notices')showPage('announcements');
@@ -133,6 +134,15 @@ function _renderStaffHome(emp){
 }
 function _staffHomeActivity(){
   var box=document.getElementById('swhActivity');if(!box)return;
-  var rows=(myNotifs||[]).filter(function(n){return !n.is_read&&n.type!=='notice';});
+  var rows=(myNotifs||[]).filter(function(n){return !n.is_read&&n.type!=='notice'&&_staffActiveTaskNotification(n);});
   box.innerHTML=rows.length?rows.slice(0,5).map(function(n){return '<button class="swh-activity" data-activity="'+_staffSafe(n.id)+'"><span class="swh-dot" aria-hidden="true"></span><span>'+_staffSafe(n.message||'새 소식')+'<small>'+_staffSafe(_actWhen(n.created_at))+'</small></span></button>';}).join(''):'<div class="swh-empty">새로운 댓글이나 요청이 없습니다.</div>';
+}
+function _staffActiveTaskNotification(n){
+  if(['task','task_assigned','task_comment','unassigned_task'].indexOf(n.type)<0)return true;
+  var task=tasks.find(function(t){return String(t.id)===String(n.ref_id);});
+  return !!task&&!isDoneTask(task)&&!_isArchivedTask(task.id);
+}
+function _staffOpenCompleted(){
+  boardFilter='done';_boardEmpFilter=null;_boardSearch='';_boardSelTaskId=null;
+  showPage('board');renderBoard();
 }
