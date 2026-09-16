@@ -82,7 +82,7 @@ export function buildPackageSchedule(plan:PackagePlan,bookings:PackageBooking[],
       if(dates.length<remaining)throw Error(`연수 전 배정 ${part.count}회 중 앞으로 ${dates.length}회만 가능합니다. 시작일·요일을 조정하거나 남은 회차를 연수 후로 배분해주세요.`);
       for(const date of dates){do{number++;}while(reserved.has(number));const day=['일','월','화','수','목','금','토'][new Date(date+'T12:00:00Z').getUTCDay()];rows.push({date,number,time:part.times[day],phase:key});}
     }
-    const dates=[...history.map(s=>s.scheduled_date),...rows.filter(r=>r.phase===key).map(r=>r.date)].sort();summary[key]={first:dates[0]||'',last:dates.at(-1)||'',count:part.count};
+    const dates=[...history.filter(s=>s.status==='scheduled'||chargedPackageSession(s)).map(s=>s.scheduled_date),...rows.filter(r=>r.phase===key).map(r=>r.date)].sort();summary[key]={first:dates[0]||'',last:dates.at(-1)||'',count:part.count};
   }
   return {rows,summary,fixedCount:fixed.length,used:Math.max(used,charged),endDate:[...fixed.map(s=>s.scheduled_date),...rows.map(r=>r.date)].sort().at(-1)||'',startDate:[plan.pre.count?plan.pre.start:'',plan.post.count?plan.post.start:''].filter(Boolean).sort()[0]};
 }

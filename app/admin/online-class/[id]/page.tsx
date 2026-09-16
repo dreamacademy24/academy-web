@@ -300,7 +300,7 @@ export default function OnlineClassStudentPage() {
         {/* 잔여 바 */}
         <div style={{ background: "#fff", border: "1px solid #e8ecf3", borderRadius: 12, padding: "14px 18px", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 7 }}>
-            <span>사용 {used}회 / 전체 {total}회 <span style={{ color: "#94a3b8", fontWeight: 600 }}>· {enr.tutor?.name_display || "튜터 미배정"} · {(form.days_of_week || []).join("/")} {form.class_time_kr}</span></span>
+            <span>사용 {used}회 / 전체 {total}회 <span style={{ color: "#94a3b8", fontWeight: 600 }}>· {enr.tutor?.name_display || "튜터 미배정"} · {packagePlan ? (['pre','post'] as const).filter(key=>packagePlan[key].count>0).map(key=>`${key==='pre'?'연수 전':'연수 후'} ${packagePlan[key].days.map(d=>`${d} ${packagePlan[key].times[d]}`).join(' / ')}`).join(' · ') : (form.days_of_week || []).map((d:string)=>`${d} ${dayTimesOn ? dayTimes[d] || form.class_time_kr : form.class_time_kr}`).join(' / ')}</span></span>
             <span style={{ color: rem <= 3 ? "#dc2626" : "#166534" }}>잔여 {rem}회</span>
           </div>
           <div style={{ height: 10, background: "#e2e8f0", borderRadius: 5, overflow: "hidden" }}>
