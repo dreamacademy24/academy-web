@@ -16,17 +16,27 @@ export default function LoginPage() {
 
   useEffect(() => {
     let live=true;
-    (async()=>{
+    let running=false;
+    const check=async()=>{
+      if(running)return;
+      running=true;
       try{
-        const response=await fetch('/api/staff/session',{method:'POST',credentials:'same-origin',cache:'no-store'});
+        const response=await fetch('/api/staff/session',{method:'POST',credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(15000)});
         if(!live)return;
         if(response.ok){const {staff}=await response.json();if(!live)return;storeVerifiedStaff(staff);router.replace(staffDestination(staff.role,new URLSearchParams(window.location.search).get('next')));}
         else if(response.status===401)clearStoredStaffIdentity();
         else setErr('로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');
       }catch{if(live)setErr('로그인 서버 연결을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.');}
-      finally{if(live)setChecking(false);}
-    })();
-    return()=>{live=false;};
+      finally{running=false;if(live)setChecking(false);}
+    };
+    const visible=()=>{if(document.visibilityState==='visible')void check();};
+    const changed=(event:StorageEvent)=>{if(event.newValue&&['adminToken','teacherSession'].includes(event.key||''))void check();};
+    void check();
+    window.addEventListener('focus',visible);
+    window.addEventListener('online',visible);
+    document.addEventListener('visibilitychange',visible);
+    window.addEventListener('storage',changed);
+    return()=>{live=false;window.removeEventListener('focus',visible);window.removeEventListener('online',visible);document.removeEventListener('visibilitychange',visible);window.removeEventListener('storage',changed);};
   }, [router]);
 
   async function handleLogin() {

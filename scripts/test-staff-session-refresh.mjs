@@ -52,9 +52,21 @@ test('invalid, expired and cross-origin signatures are denied without looking up
   assert.equal(result.status,401);assertPrivate(result);
   assert.equal(api.lookups.length,0);assert.equal(api.cookies.length,0);assert.equal(api.renewals.length,0);
  }
- const expired=endpoint({at:issuedAt+8*3600000});
+ const expired=endpoint({at:issuedAt+sessions.STAFF_SESSION_MAX_AGE*1000});
  assert.equal((await expired.POST(request())).status,401);
  assert.equal(expired.lookups.length,0);assert.equal(expired.cookies.length,0);
+});
+
+test('remembered staff login survives overnight and expires after 30 idle days',async()=>{
+ assert.equal(sessions.STAFF_SESSION_MAX_AGE,30*24*3600);
+ for(const days of [1,7,29]){
+  const api=endpoint({at:issuedAt+days*24*3600000});
+  assert.equal((await api.POST(request())).status,200);
+  assert.equal(api.cookies[0].maxAge,30*24*3600);
+ }
+ const expired=endpoint({at:issuedAt+30*24*3600000});
+ assert.equal((await expired.POST(request())).status,401);
+ assert.equal(expired.cookies.length,0);
 });
 
 test('valid current admin and teacher sessions renew the server cookie and return current identity only',async()=>{
@@ -158,7 +170,7 @@ test('learning preview rejects missing, forged, expired, inactive and unsupporte
  for(const options of [
   {value:null},{value:'unsigned'},{value:`${token}x`},{value:`${token}.extra`},
   {value:sessions.signStaffSession(staff.username,'wrong-fixture-key',issuedAt)},
-  {at:issuedAt+8*3600000},
+  {at:issuedAt+sessions.STAFF_SESSION_MAX_AGE*1000},
  ]){
   const gate=learningPreview(options);
   assert.equal((await gate.getLearningStaffAccess()).status,'public');

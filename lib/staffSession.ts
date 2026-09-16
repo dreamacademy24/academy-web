@@ -1,9 +1,10 @@
 import {createHmac,timingSafeEqual} from 'node:crypto';
 export const STAFF_COOKIE='portal_staff_session';
+export const STAFF_SESSION_MAX_AGE=30*24*3600;
 export type StaffIdentity={id:string;username:string;role:string;name:string};
 export function signStaffSession(username:string,key:string,now=Date.now()){
  if(!key)throw new Error('Staff session key required');
- const payload=Buffer.from(JSON.stringify({username,expires:now+8*3600000})).toString('base64url');
+ const payload=Buffer.from(JSON.stringify({username,expires:now+STAFF_SESSION_MAX_AGE*1000})).toString('base64url');
  return `${payload}.${createHmac('sha256',key).update('portal-staff-v1:'+payload).digest('base64url')}`;
 }
 export async function resolveStaffSession(req:Request,key:string,lookup:(username:string)=>Promise<StaffIdentity|null>,now=Date.now()):Promise<StaffIdentity|null>{

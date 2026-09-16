@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { STAFF_COOKIE, signStaffSession, resolveStaffSession } from './staffSession';
+import { STAFF_COOKIE, STAFF_SESSION_MAX_AGE, signStaffSession, resolveStaffSession } from './staffSession';
 
 export const portalDb = () => createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
 function staffKey() { return process.env.STAFF_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''; }
 export function staffCookie(username: string) {
-  return { name: STAFF_COOKIE, value: signStaffSession(username, staffKey()), httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/', maxAge: 8 * 3600 };
+  return { name: STAFF_COOKIE, value: signStaffSession(username, staffKey()), httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' as const, path: '/', maxAge: STAFF_SESSION_MAX_AGE };
 }
 export async function getStaffIdentity(req: Request) {
   return resolveStaffSession(req, staffKey(), async username => {
