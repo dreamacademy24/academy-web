@@ -1,13 +1,6 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 interface Stu { korName: string; engName: string; birth: string; }
 
 function MedFormInner() {
@@ -15,12 +8,15 @@ function MedFormInner() {
   const bookingId = sp.get("bookingId") || sp.get("id") || "";
   const [students, setStudents] = useState<Stu[]>([]);
   const [booker, setBooker] = useState("");
+  const [loadError,setLoadError]=useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!bookingId) { setLoading(false); return; }
     (async () => {
-      const { data } = await supabase.from("bookings").select("booker_name, students").eq("id", bookingId).maybeSingle();
+      const response=await fetch("/api/admin/checkin-preparation?bookingId="+encodeURIComponent(bookingId));
+      const result=await response.json();if(!response.ok){setLoadError(result.error);setLoading(false);return;}
+      const data=result.booking;
       let sts: Stu[] = [];
       if (data) {
         setBooker(data.booker_name || "");
@@ -37,16 +33,14 @@ function MedFormInner() {
           }
         } catch { /* ignore */ }
       }
-      if (sts.length === 0) {
-        const { data: rows } = await supabase.from("students").select("name_kr,name_en,age").eq("booking_id", bookingId);
-        sts = (rows || []).map((r: any) => ({ korName: r.name_kr || "", engName: r.name_en || "", birth: String(r.age || "") }));
-      }
+      if(sts.length===0)sts=(result.students||[]).map((r:any)=>({korName:r.name_kr||"",engName:r.name_en||"",birth:String(r.age||"")}));
       if (sts.length === 0) sts = [{ korName: "", engName: "", birth: "" }];
       setStudents(sts);
       setLoading(false);
     })();
   }, [bookingId]);
 
+  if(loadError)return <p role="alert">{loadError}</p>;
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#94a3b8", fontFamily: "sans-serif" }}>불러오는 중...</div>;
 
   return (<>

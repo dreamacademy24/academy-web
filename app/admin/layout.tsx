@@ -40,7 +40,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "하우스 보고", href: "/admin/house-reports" },
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
-    { label: "체크인 디테일", href: "/admin/checkin-details" },
+    { label: "체크인 준비", href: "/admin/checkin-details" },
     { label: "상비약 관리", href: "/admin/med-forms" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
   ]},
@@ -128,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <StaffSessionBoundary requiredRole="korean_admin">{children}</StaffSessionBoundary>
   );
 
-  if (framed) return <>{content}</>;
+  if (framed || pathname === "/admin/checkin-print") return <>{content}</>;
 
   const isView = pathname === "/admin/view";
   const chatParams = new URLSearchParams(viewSrc.split('?')[1] || '');

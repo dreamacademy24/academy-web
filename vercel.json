@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/online-class-morning",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/medication-followup",
+      "schedule": "0 0 * * *"
     }
   ]
 }

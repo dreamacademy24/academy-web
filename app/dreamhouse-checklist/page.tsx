@@ -4,6 +4,7 @@ import {ChecklistSection,ChecklistTemplate} from '@/lib/dreamhouseChecklist';
 import styles from './checklist.module.css';
 
 export default function DreamhouseChecklist(){
+  const [bookingReady,setBookingReady]=useState(false);
   const [saved,setSaved]=useState<ChecklistTemplate|null>(null),[draft,setDraft]=useState<ChecklistTemplate|null>(null);
   const [variant,setVariant]=useState<'standard'|'daon'>('standard'),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   const [message,setMessage]=useState(''),[error,setError]=useState(''),[needsLogin,setNeedsLogin]=useState(false);
@@ -14,6 +15,7 @@ export default function DreamhouseChecklist(){
     catch(e){setError(e instanceof Error?e.message:'Could not load the checklist.');}finally{setLoading(false);}
   }
   useEffect(()=>{void load();},[]);
+  useEffect(()=>{const id=new URLSearchParams(window.location.search).get('bookingId');if(!id){setBookingReady(true);return;}fetch('/api/admin/checkin-preparation?bookingId='+encodeURIComponent(id)).then(async r=>{if(!r.ok)throw Error('예약 정보를 불러오지 못했습니다.');return r.json();}).then(({booking:b,detail:d})=>{setFields(f=>({...f,guest:b.booker_name||'',date:(b.checkin_date||'').slice(0,10),house:b.house_no||b.accom_room||'',beds:(()=>{try{return Object.entries(JSON.parse(d?.bed_setting||'{}')).map(([k,v])=>k+': '+v).join(' / ');}catch{return d?.bed_setting||'';}})()}));setBookingReady(true);}).catch(e=>setError(e.message));},[]);
   const dirty=editing&&JSON.stringify(draft)!==JSON.stringify(saved);
   useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
   async function save(){
@@ -47,7 +49,7 @@ export default function DreamhouseChecklist(){
       </section>))}</div></fieldset>
       <button disabled={busy||!dirty} onClick={()=>void save()}>{busy?'Saving…':'Save template for all staff'}</button>
     </div>}
-    {saved&&!loading&&<article className={styles.sheet} id="dreamhouse-print-sheet">
+    {saved&&!loading&&<article className={styles.sheet} id="dreamhouse-print-sheet" data-booking-ready={bookingReady?"true":"false"}>
       <header className={styles.sheetHeader}><div><p>DREAM HOUSE</p><h1>Check-in Preparation Checklist</h1></div><strong>{variant==='daon'?'DAON MOM':'STANDARD'}</strong></header>
       <div className={styles.details}>{field('guest','Guest / Reservation')}{field('date','Check-in date')}{field('house','Block and lot / House')}{field('beds','Bed setup')}{field('inspector','Checked by')}</div>
       <p className={styles.instructions}>Check that each item is clean, complete and working. Tick when ready; write N/A if not applicable. Record any issues below.</p>

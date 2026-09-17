@@ -1,5 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import {buildGuestDetails} from "@/lib/guestDetailsPrint";
+import MedicationReceipts from "@/components/MedicationReceipts";
+import CheckinPreparationList from "@/components/CheckinPreparationList";
 import { toastErr } from "@/lib/toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
@@ -96,10 +99,9 @@ function CheckinDetailsInner() {
   const searchParams = useSearchParams();
   const initialBookingId = searchParams.get("bookingId");
   const autoSelectedRef = useRef(false);
+  const [preparationTab,setPreparationTab]=useState("documents");
   const [authed, setAuthed] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [listView, setListView] = useState<"upcoming"|"past">("upcoming");
-  const [listQ, setListQ] = useState("");
   const [checkinStatus, setCheckinStatus] = useState<Record<string, { submitted: boolean; saved: boolean }>>({});
   const [selId, setSelId] = useState<string | null>(null);
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -155,9 +157,10 @@ function CheckinDetailsInner() {
       if (d.detail) {
         setDetail(d.detail);
         // invoice_snapshot에서 현지지불 항목 로드
-        fetch(`/api/admin/invoice-snapshot?bookingId=${id}`)
+        fetch(`/api/invoice/snapshot?booking_id=${id}`)
           .then(r=>r.ok?r.json():null)
-          .then(snap=>{
+          .then(result=>{
+            const snap=result?.snapshot;
             if(snap?.saved_data){
               try{
                 const data = typeof snap.saved_data==="string"?JSON.parse(snap.saved_data):snap.saved_data;
@@ -347,164 +350,8 @@ function CheckinDetailsInner() {
   }
 
   // ── GUEST DETAILS 인쇄 시트 (EN/KR 공용, 인보이스 스타일 컬러) ──
-  function printGuestDetails(lang: "en" | "kr", b: Booking, d: Partial<Detail>, dash: (v: any) => string) {
-    const isEn = lang === "en";
-    const L = isEn
-      ? { title:"GUEST DETAILS", name:"NAME", house:"HOUSE NO", cin:"CHECK IN", cout:"CHECK OUT",
-          pick:"PICK UP", drop:"DROP", bed:"BED SETTING", master:"2F MASTER", small:"2F SMALL", first:"1F",
-          sim:"SIM", load:"LOAD", guest:"ALL GUEST", add:"ADD PICKUP", memo:"MEMO", settle:"SETTLEMENT",
-          deposit:"DEPOSIT", date:"DATE", item:"ITEM", amount:"AMOUNT", note:"NOTE",
-          deduct:"TOTAL DEDUCTION", refund:"REFUND AMOUNT", pkg:"ALL-INCLUSIVE PACKAGE" }
-      : { title:"GUEST DETAILS", name:"예약자", house:"하우스번호", cin:"체크인", cout:"체크아웃",
-          pick:"픽업", drop:"드랍", bed:"베드 세팅", master:"2F 마스터", small:"2F 작은방", first:"1F",
-          sim:"유심", load:"수량", guest:"투숙객 전체", add:"추가 픽드랍", memo:"메모", settle:"정산",
-          deposit:"보증금", date:"날짜", item:"항목", amount:"금액", note:"비고",
-          deduct:"차감 합계", refund:"환불 금액", pkg:"올인원 패키지" };
-
-    const logo = (typeof window !== "undefined" ? window.location.origin : "") + "/dream-academy-logo.png";
-    const nameLine = `${dash(b.booker_name)}${b.booker_english ? ` (${b.booker_english})` : ""}`;
-    const houseNo = dash(b.house_no || b.accom_room);
-    const checkIn = dash(d.checkin_date || b.checkin_date);
-    const checkOut = dash(b.checkout_date);
-    const arrAirline = [b.flight_in_airline, b.flight_in_no].filter(Boolean).join(" ") || (b.flight_in || "");
-    const arrWhen = [((b.flight_in_date || "").split("T")[0] || "").replace(/-/g,"."), b.flight_in_time].filter(Boolean).join(" ");
-    const arrFlight = [arrAirline, arrWhen].filter(Boolean).join(" / ") || dash(b.pickup_place);
-    const m1 = bedNum(bedConfig.room1), m2 = bedNum(bedConfig.room2), m3 = bedNum(bedConfig.room3);
-    const simList = simCards.map(s => simCompact(s.plan)).filter(Boolean);
-    const simText = simList.length ? simList.join(", ") : "-";
-    const loadText = simList.length ? String(simList.length) : "-";
-    const guests = dash(d.guest_names_en);
-    let addText = "-";
-    try {
-      const arr = JSON.parse(d.extra_pickups || "[]");
-      if (Array.isArray(arr) && arr.length > 0) {
-        addText = arr.map((p: { type?: string; date?: string; time?: string; airline?: string; flight?: string }) => {
-          const line = `[${p.type || ""}] ${p.date || ""} ${p.time || ""} ${p.airline || ""} ${p.flight || ""}`.replace(/\s+/g, " ").trim();
-          return isEn ? enText(line) : line;
-        }).join("  |  ");
-      }
-    } catch {}
-    const etc = d.extra_requests ? String(d.extra_requests) : "";
-    const isPkg = isPackage(b.accom_type);
-    const pkgBadge = isPkg ? `<span class="pkg">${L.pkg}</span>` : "";
-    const memoLines = Array.from({length:2}).map(()=>`<div class="mline"></div>`).join("");
-    const memoHtml = (etc ? `<div class="metxt">${etc}</div>` : "") + memoLines;
-
-    // 정산 섹션 - 보증금 항목 찾기
-    const depositItem = localItems.find(l => l.name?.includes("보증금") || l.name?.toLowerCase().includes("deposit"));
-    let depositAmt = "_______ PHP";
-    if(depositItem && depositItem.amount){
-      depositAmt = `${Number(String(depositItem.amount).replace(/[,\s]/g,"")).toLocaleString()} PHP`;
-    } else {
-      // 체크인~체크아웃 주수로 자동 계산 (Dream House 기준: 4주=8000, 3주=6000, 2주=4000)
-      const cin = new Date(b.checkin_date||""); const cout = new Date(b.checkout_date||"");
-      if(!isNaN(cin.getTime()) && !isNaN(cout.getTime())){
-        const days = Math.round((cout.getTime()-cin.getTime())/(1000*60*60*24));
-        const weeks = Math.round(days/7);
-        const depMap:{[k:number]:number} = {2:4000,3:6000,4:8000};
-        if(depMap[weeks]) depositAmt = `${depMap[weeks].toLocaleString()} PHP`;
-        else if(weeks>4) depositAmt = `8,000 PHP`;
-        else if(weeks>=1) depositAmt = `${weeks*2000} PHP`;
-      }
-    }
-    const otherLocals = localItems.filter(l => !l.name?.includes("보증금") && !l.name?.toLowerCase().includes("deposit"));
-    const blankRows = 14;
-    const settleRows = Array.from({length:blankRows}).map(()=>
-      `<tr><td class="sdate"></td><td class="sitem"></td><td class="samt"></td><td class="snote"></td></tr>`
-    ).join("");
-
-    const html = `<!doctype html>
-<html lang="${isEn ? "en" : "ko"}"><head><meta charset="utf-8"/>
-<title>${L.title} — ${dash(b.booker_name)}</title>
-<style>
-  *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;margin:0;padding:0;background:#fff;}
-  #cdwrap{overflow:hidden;}
-  #cdsheet{padding:22px 26px;min-height:257mm;display:flex;flex-direction:column;transform-origin:top center;}
-
-  .hd{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #1f2937;padding-bottom:8px;margin-bottom:18px;}
-  .hd img{height:38px;width:auto;}
-  .hd-title{font-size:26px;font-weight:800;letter-spacing:2px;color:#1f2937;}
-  .pkg-badge{display:inline-block;box-shadow:inset 0 0 0 1000px #eef2ff !important;color:#4f46e5 !important;font-size:10px;font-weight:700;letter-spacing:0.06em;padding:2px 10px;border-radius:4px;margin-top:5px;}
-
-  .info{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 22px;margin-bottom:18px;}
-  .fld .lbl{font-size:11px;color:#64748b;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:3px;}
-  .fld .val{font-size:16px;font-weight:700;color:#1f2937;}
-  .fld .val .sub{font-weight:400;color:#6b7280;}
-
-  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;}
-  .card{box-shadow:inset 0 0 0 1000px #f8fafc !important;border:1.5px solid #94a3b8;border-radius:8px;padding:9px 8px;text-align:center;}
-  .card .ct{font-size:11px;color:#475569;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;}
-  .card .cv{font-size:23px;font-weight:800;color:#1f2937;}
-  .card .cv.sm{font-size:15px;}
-
-  .line{display:flex;gap:12px;border:1.5px solid #94a3b8;border-radius:8px;padding:9px 12px;margin-bottom:8px;align-items:baseline;}
-  .line .k{font-size:11px;color:#64748b;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;width:80px;}
-  .line .v{font-size:14px;color:#1f2937;font-weight:600;flex:1;}
-  .line.memo .v{color:#374151;font-weight:400;}
-  .metxt{font-size:13px;color:#374151;margin-bottom:4px;}
-  .mline{border-bottom:1.5px solid #64748b;height:22px;}
-
-  .settle-hd{font-size:12px;font-weight:800;letter-spacing:0.08em;color:#1f2937;margin:6px 0 8px;display:flex;justify-content:space-between;align-items:center;}
-  .dep-pill{box-shadow:inset 0 0 0 1000px #fef3c7 !important;color:#92400e !important;font-size:13px;font-weight:800;padding:4px 14px;border-radius:6px;}
-  .settle-tbl{width:100%;border-collapse:collapse;}
-  .settle-tbl th{box-shadow:inset 0 0 0 1000px #f8fafc !important;color:#475569 !important;font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;text-align:left;padding:9px 10px;border-bottom:2px solid #475569;}
-  .settle-tbl td{padding:11px 10px;border-bottom:1.5px solid #94a3b8;font-size:13px;height:38px;}
-  .settle-tbl th.samt,.settle-tbl td.samt{text-align:right;}
-  .sdate{width:18%;} .sitem{width:42%;} .samt{width:18%;} .snote{width:22%;}
-
-  @media print{
-    @page{size:A4;margin:10mm 12mm;}
-    body{padding:0;}
-  }
-</style></head>
-<body>
-<div id="cdwrap"><div id="cdsheet">
-  <div class="hd">
-    <img src="${logo}" onerror="this.style.display='none'"/>
-    <div style="text-align:right;">
-      <div class="hd-title">${L.title}</div>
-      ${isPkg ? `<div><span class="pkg-badge">${L.pkg}</span></div>` : ""}
-    </div>
-  </div>
-
-  <div class="info">
-    <div class="fld"><div class="lbl">${L.name}</div><div class="val">${nameLine}</div></div>
-    <div class="fld"><div class="lbl">${L.house}</div><div class="val">${houseNo}</div></div>
-    <div class="fld"><div class="lbl">${L.pick}</div><div class="val">${arrFlight}</div></div>
-    <div class="fld"><div class="lbl">${L.cin}</div><div class="val">${checkIn}</div></div>
-    <div class="fld"><div class="lbl">${L.cout}</div><div class="val">${checkOut}</div></div>
-    <div class="fld"><div class="lbl">${L.guest}</div><div class="val">${guests}</div></div>
-  </div>
-
-  <div class="cards">
-    <div class="card"><div class="ct">${L.master}</div><div class="cv">${m1}</div></div>
-    <div class="card"><div class="ct">${L.small}</div><div class="cv">${m2}</div></div>
-    <div class="card"><div class="ct">${L.first}</div><div class="cv">${m3}</div></div>
-    <div class="card"><div class="ct">${L.sim}</div><div class="cv sm">${simText}</div></div>
-    <div class="card"><div class="ct">${L.load}</div><div class="cv">${loadText}</div></div>
-  </div>
-
-  <div class="line"><span class="k">${L.add}</span><span class="v">${addText}</span></div>
-  <div class="line memo"><span class="k">${L.memo}</span><div class="v">${memoHtml}</div></div>
-
-  <div style="flex:1"></div>
-  <div class="settle-hd"><span>${L.settle}</span><span class="dep-pill">${L.deposit} ${depositAmt}</span></div>
-  <table class="settle-tbl">
-    <thead><tr>
-      <th class="sdate">${L.date}</th><th class="sitem">${L.item}</th><th class="samt">${L.amount}</th><th class="snote">${L.note}</th>
-    </tr></thead>
-    <tbody>${settleRows}</tbody>
-  </table>
-</div></div>
-  <script>(function(){function fit(){var w=document.getElementById('cdwrap'),s=document.getElementById('cdsheet');if(!w||!s)return;s.style.transform='';w.style.height='';var maxH=Math.round(277/25.4*96);var h=s.scrollHeight;if(h>maxH){var f=maxH/h;s.style.transform='scale('+f+')';w.style.height=(h*f)+'px';}}if(document.readyState!=='loading')fit();else document.addEventListener('DOMContentLoaded',fit);window.addEventListener('load',fit);})();</script>
-  <script>window.onload=function(){window.print();};</script>
-${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
-  <div style="font-size:15px;font-weight:800;color:#1a6fc4;border-bottom:2px solid #1a6fc4;padding-bottom:6px;margin-bottom:14px">${isEn ? "FLIGHT TICKETS" : "항공권 사진"} (${flightImages.length})</div>
-  ${flightImages.map(u => `<img src="${u}" style="width:100%;max-height:46vh;object-fit:contain;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px"/>`).join("")}
-</div>` : ""}</body></html>`;
-    // <script>autoprint 제거 후 state에 저장 → 오버레이 iframe으로 표시
-    setPrintHtml(html.replace(/<script>window\.onload[^<]*<\/script>/g, ""));
+  function printGuestDetails(lang: "en" | "kr", b: Booking, d: Partial<Detail>, _dash: (v: any) => string) {
+    setPrintHtml(buildGuestDetails(lang,b,d,bedConfig,simCards,localItems,flightImages));
   }
 
   function handlePrint(lang: "en" | "kr" = "en") {
@@ -539,7 +386,7 @@ ${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
   return (<>
     <style>{`
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
-.cd-w{max-width:900px;margin:0 auto;padding:40px 24px}
+.cd-w{max-width:1200px;margin:0 auto;padding:40px 24px}
 .cd-top{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .cd-back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px}.cd-back:hover{background:#e2e8f0}
 .cd-top h1{font-size:24px;font-weight:800;flex:1}
@@ -564,8 +411,8 @@ ${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
     <div className="cd-w">
       <div className="cd-top">
         <button className="cd-back" onClick={()=>{ if(selId){setSelId(null);setBooking(null);setDetail(null);setEditing(true);setMsg("");}else{router.push("/admin/hub");} }}>←</button>
-        <h1>체크인 디테일</h1>
-        <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+        <h1>{booking ? "체크인 디테일" : "체크인 준비"}</h1>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
           <button onClick={()=>{ if(selId) window.open(`/admin/checkin-card?bookingId=${selId}`,"_blank"); }} disabled={!selId}
             style={{padding:"6px 12px",border:"none",background:"#1a6fc4",color:"#fff",borderRadius:6,fontSize:12,fontWeight:700,cursor:selId?"pointer":"not-allowed",fontFamily:"inherit",opacity:selId?1:0.5}}>
             🪧 체크인 카드
@@ -585,122 +432,7 @@ ${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
         </div>
       </div>
 
-      {(!detail || !booking) && (() => {
-        const today = new Date(); today.setHours(0,0,0,0);
-        const ymd = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
-        const todayStr = ymd(today);
-        const ci = (b: Booking) => (b.checkin_date || "").slice(0,10);
-        const co = (b: Booking) => (b.checkout_date || "").slice(0,10);
-        // 미래(예정)/지난 분리 — 체크아웃이 오늘보다 이전이면 지난 건
-        // 드림하우스 포함 예약만 체크인 디테일 필요 (통학형·제이파크/큐브 단독 제외)
-        const needsCheckin = (b: Booking) => {
-          const at = String(b.accom_type || "");
-          const bt = String(b.booking_type || "").toLowerCase();
-          // 통학형/제이파크 단독/큐브나인 단독은 드하 아님 → 제외 (stray house_no 있어도)
-          const isCommute = at.includes("통학") || bt.includes("commute");
-          const isSoloOther = (at.includes("제이파크") || at.includes("큐브")) && !at.includes("드림하우스");
-          if (isCommute || isSoloOther) return false;
-          if (at.includes("드림하우스") || at.toLowerCase().includes("dream")) return true;
-          if (bt.includes("dreamhouse")) return true;
-          if (b.seg1_type === "dreamhouse" || b.seg2_type === "dreamhouse") return true;
-          if ((b.house_no && b.house_no.trim()) || (b.accom_room && b.accom_room.trim())) return true; // 룸번호 있으면 드하
-          return false;
-        };
-        const dhAll = bookings.filter(needsCheckin);
-        const dh = listQ.trim() ? dhAll.filter(b => String(b.booker_name||"").includes(listQ.trim())) : dhAll;
-        // 예정 = 아직 도착 안 한(체크인 날짜가 오늘 이후) 예약만. 이미 도착(체류중)·체크아웃 완료는 아래 접힘
-        const upcoming = dh.filter(b => ci(b) && ci(b) >= todayStr);
-        const past = dh.filter(b => ci(b) && ci(b) < todayStr);
-        // 월별 그룹 (예정)
-        const groups: Record<string, Booking[]> = {};
-        upcoming.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (groups[k] = groups[k] || []).push(b); });
-        const months = Object.keys(groups).sort();
-        // 지난 건 — 월별 최신순
-        const pastGroups: Record<string, Booking[]> = {};
-        past.forEach(b => { const k = ci(b).slice(0,7) || "기타"; (pastGroups[k] = pastGroups[k] || []).push(b); });
-        const pastMonths = Object.keys(pastGroups).sort().reverse();
-        pastMonths.forEach(k => pastGroups[k].sort((a,b2) => ci(b2).localeCompare(ci(a))));
-        const stOf = (b: Booking) => checkinStatus[b.id] || { submitted:false, saved:false };
-        const badge = (b: Booking) => {
-          const s = stOf(b);
-          if (s.saved) return <span style={{background:"#dcfce7",color:"#166534",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>✓ 작성완료</span>;
-          if (s.submitted) return <span style={{background:"#dbeafe",color:"#1d4ed8",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>손님 제출됨</span>;
-          return <span style={{background:"#fef2f2",color:"#dc2626",fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:8}}>미작성</span>;
-        };
-        const dday = (b: Booking) => {
-          const d = ci(b); if (!d) return "";
-          const diff = Math.round((new Date(d+"T00:00:00").getTime() - today.getTime())/86400000);
-          if (diff === 0) return "오늘";
-          if (diff > 0) return `D-${diff}`;
-          const out = co(b);
-          if (out && out < todayStr) return "완료";
-          return "체류중";
-        };
-        const GRID = "56px minmax(90px,1fr) 118px 64px 78px 78px 150px 92px";
-        const fD2 = (d?: string|null) => { const v=(d||"").slice(0,10); return v ? v.slice(5).replace("-",".") : "-"; };
-        const flightInTxt = (b: Booking) => {
-          const f=[b.flight_in_airline,b.flight_in_no].filter(Boolean).join(" ") || (b.flight_in||"");
-          const w=[((b.flight_in_date||"").slice(0,10)||"").slice(5).replace("-","."),b.flight_in_time].filter(Boolean).join(" ");
-          return [f,w].filter(Boolean).join(" · ");
-        };
-        const roomTxt = (b: Booking) => {
-          const r=(b.house_no||b.accom_room||"").trim();
-          return r ? r.replace(/^(드림하우스|DH)\s*/i,"").toUpperCase() : "-";
-        };
-        const headerRow = (
-          <div style={{display:"grid",gridTemplateColumns:GRID,gap:8,alignItems:"center",padding:"9px 14px",background:"#f8fafc",borderBottom:"1px solid #e2e8f0",fontSize:11.5,fontWeight:800,color:"#64748b"}}>
-            <span style={{textAlign:"center"}}>D-day</span><span>예약자</span><span>숙소</span><span style={{textAlign:"center"}}>룸</span>
-            <span style={{textAlign:"center"}}>체크인</span><span style={{textAlign:"center"}}>체크아웃</span><span>항공 IN</span><span style={{textAlign:"right"}}>상태</span>
-          </div>
-        );
-        const row = (b: Booking) => {
-          const st=stOf(b); const notDone=!st.saved && !st.submitted;
-          const fin=flightInTxt(b);
-          return (
-          <div key={b.id} onClick={() => selectBooking(b.id)}
-            style={{display:"grid",gridTemplateColumns:GRID,gap:8,alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f1f5f9",cursor:"pointer",
-              background:selId===b.id?"#eff6ff":(notDone?"#fef2f2":"")}}>
-            <span style={{fontSize:12,fontWeight:700,color:dday(b)==="오늘"?"#dc2626":(String(dday(b)).startsWith("D-")&&parseInt(String(dday(b)).slice(2))<=7?"#dc2626":"#64748b"),textAlign:"center"}}>{dday(b)}</span>
-            <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><b style={{fontSize:13.5}}>{b.booker_name}</b></span>
-            <span style={{fontSize:11.5,color:"#94a3b8",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={b.accom_type||""}>{b.accom_type||"-"}</span>
-            <span style={{fontSize:12,fontWeight:700,color:"#334155",textAlign:"center"}}>{roomTxt(b)}</span>
-            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fD2(b.checkin_date)}</span>
-            <span style={{fontSize:12,color:"#475569",textAlign:"center"}}>{fD2(b.checkout_date)}</span>
-            <span style={{fontSize:11.5,color:fin?"#475569":"#cbd5e1",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={fin}>{fin||"미입력"}</span>
-            <span style={{textAlign:"right"}}>{badge(b)}</span>
-          </div>);
-        };
-        const MON = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-        const tabBtn = (v: "upcoming"|"past", label: string) => (
-          <button onClick={()=>setListView(v)} style={{padding:"7px 16px",borderRadius:9,border:"1px solid",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
-            borderColor:listView===v?"#1a6fc4":"#e2e8f0",background:listView===v?"#1a6fc4":"#fff",color:listView===v?"#fff":"#64748b"}}>{label}</button>
-        );
-        return (<div className="sec">
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-            {tabBtn("upcoming", `체크인 예정 (${upcoming.length})`)}
-            {tabBtn("past", `🗂 지난 체크인 (${past.length})`)}
-            <input value={listQ} onChange={e=>setListQ(e.target.value)} placeholder="🔍 이름 검색"
-              style={{marginLeft:"auto",padding:"7px 12px",border:"1px solid #e2e8f0",borderRadius:9,fontSize:12.5,width:150,fontFamily:"inherit"}}/>
-            <span style={{fontSize:12,color:"#94a3b8"}}>이름을 누르면 디테일 {listView==="past"?"확인":"작성"} →</span>
-          </div>
-          {listView === "upcoming" && (upcoming.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>예정된 체크인이 없습니다</div> :
-            months.map(mk => {
-              const [yy,mm] = mk.split("-").map(Number);
-              return (<div key={mk} style={{marginBottom:8}}>
-                <div style={{fontSize:12.5,fontWeight:800,color:"#1a6fc4",padding:"8px 4px"}}>📅 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {groups[mk].length}팀</span></div>
-                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{headerRow}{groups[mk].map(row)}</div>
-              </div>);
-            }))}
-          {listView === "past" && (past.length === 0 ? <div style={{padding:24,textAlign:"center",color:"#94a3b8",fontSize:13}}>지난 체크인이 없습니다</div> :
-            pastMonths.map(mk => {
-              const [yy,mm] = mk.split("-").map(Number);
-              return (<div key={mk} style={{marginBottom:8}}>
-                <div style={{fontSize:12.5,fontWeight:800,color:"#64748b",padding:"8px 4px"}}>🗂 {yy}년 {MON[mm-1]} <span style={{color:"#94a3b8",fontWeight:600}}>· {pastGroups[mk].length}팀</span></div>
-                <div style={{border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden"}}>{headerRow}{pastGroups[mk].map(row)}</div>
-              </div>);
-            }))}
-        </div>);
-      })()}
+      {(!detail || !booking) && <><div className="actions" style={{marginBottom:16}}><button className={preparationTab==='documents'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('documents')}>예약·서류 준비</button><button className={preparationTab==='medicine'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('medicine')}>안내문 전달·약 수령</button></div>{preparationTab==='medicine'?<MedicationReceipts/>:<CheckinPreparationList bookings={bookings} status={checkinStatus} onSelect={selectBooking}/>}</>}
 
       {detail && booking && (<>
         {!editing && (

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { firstAccomRoomLabel, firstAccomName, isCombo, type ComboBooking } from "@/lib/checkinCard";
 
@@ -42,8 +42,9 @@ function CheckinCardInner() {
   useEffect(() => {
     if (!authed || !bookingId) { setLoading(false); return; }
     (async () => {
-      const { data } = await supabase.from("bookings").select("*").eq("id", bookingId).single();
-      setB(data as Booking | null);
+      const response=await fetch("/api/admin/checkin-preparation?bookingId="+encodeURIComponent(bookingId));
+      const data=await response.json();
+      setB(response.ok?data.booking:null);
       setLoading(false);
     })();
   }, [authed, bookingId]);
@@ -86,7 +87,7 @@ function CheckinCardInner() {
         <button onClick={()=>router.back()} style={{padding:"10px 20px",fontSize:14,fontWeight:600,background:"#f1f5f9",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>← 뒤로</button>
         <button onClick={()=>window.print()} style={{padding:"10px 24px",fontSize:14,fontWeight:700,background:"#1a6fc4",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}}>🖨️ 인쇄</button>
       </div>
-      <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#fff",padding:40,textAlign:"center"}}>
+      <div id="pickup-print-sheet" style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#fff",padding:40,textAlign:"center"}}>
         <div style={{fontSize:160,fontWeight:900,color:"#1a1a2e",lineHeight:1.05,marginBottom:28,wordBreak:"keep-all"}}>
           {korName} <span style={{fontWeight:400}}>님</span>
         </div>
