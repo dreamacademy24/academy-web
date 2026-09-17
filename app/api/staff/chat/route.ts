@@ -1,14 +1,18 @@
 import {NextResponse} from 'next/server';
-import {chatAccess,chatError,chatTask,chatReferences,taskAllows,uuid} from '@/lib/staffChat';
+import {chatAccess,chatError,chatTask,chatReferences,chatTaskLookup,uuid} from '@/lib/staffChat';
 import {sendChatPush} from '@/lib/staffChatPush';
 export const dynamic='force-dynamic';
 function failure(e:unknown){return NextResponse.json({error:(e as Error).message||'채팅 요청에 실패했습니다.'},{status:(e as any).status||503});}
 export async function GET(req:Request){try{
  const c=await chatAccess(req),u=new URL(req.url),room=u.searchParams.get('room'),task=u.searchParams.get('task');
  const lookup=u.searchParams.get('lookup');if(lookup){
-  const q=(u.searchParams.get('q')||'').trim().slice(0,100);if(q.length<2)return NextResponse.json({results:[]});
+  const q=(u.searchParams.get('q')||'').trim().slice(0,100);
+  if(lookup==='task'){
+   const cursor=Number(u.searchParams.get('cursor')||0);if(!Number.isSafeInteger(cursor)||cursor<0)chatError('목록 위치를 확인해주세요.');
+   return NextResponse.json(await chatTaskLookup(c,q,u.searchParams.get('employee')||'',cursor));
+  }
+  if(q.length<2)return NextResponse.json({results:[]});
   const pattern='%'+q.replace(/[\\%_]/g,'\\$&')+'%';
-  if(lookup==='task'){const r=await c.db.from('staff_tasks').select('id,title,secret,created_by,assignee,assignees').ilike('title',pattern).order('created_at',{ascending:false}).limit(60);if(r.error)throw r.error;return NextResponse.json({results:(r.data||[]).filter(t=>taskAllows(t,c.actor)).slice(0,20).map(t=>({kind:'task',id:t.id,label:t.title,detail:'담당 '+(t.assignee||'미배정')}))});}
   if(lookup==='booking'){const column=/^DA[-\d]/i.test(q)?'reservation_no':'booker_name';const r=await c.db.from('bookings').select('id,reservation_no,booker_name,checkin_date,checkout_date,assignee').ilike(column,pattern).order('checkin_date',{ascending:false}).limit(20);if(r.error)throw r.error;return NextResponse.json({results:(r.data||[]).map(b=>({kind:'booking',id:b.id,label:b.booker_name,detail:[b.reservation_no,b.checkin_date+' ~ '+b.checkout_date,b.assignee||'미배정'].join(' · ')}))});}
   chatError('검색 대상을 확인해주세요.');
  }

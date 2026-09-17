@@ -3,9 +3,9 @@ const root=path.join(__dirname,'..');
 function load(file,deps){const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>deps[n]||require(n),Buffer,Date,URL,Request,Response,Headers,process,Set,Map});return exports;}
 function fixture(){
  const tables={staff_accounts:['ceo','song','sera'].map(id=>({username:'admin-'+id,name:id,is_active:true,role:'korean_admin'})),staff_chat_groups:[],staff_messages:[],staff_message_reads:[],staff_message_links:[],staff_message_files:[],bookings:[{id:"12345678-1234-4234-8234-123456789012",booker_name:"테스트 가족",reservation_no:"DA-TEST",checkin_date:"2026-09-20",checkout_date:"2026-10-20",assignee:"song"}],staff_tasks:[{id:'public',title:'일반 업무'},{id:'secret',title:'비밀 업무',secret:true,assignee:'sera',assignees:[]}]},push=[];
- const db={from(table){let predicates=[],action='',body,order,ascending=true,limit=Infinity,single=false;const q={
-  select(){return q;},contains(k,vs){predicates.push(r=>vs.every(v=>r[k].includes(v)));return q;},eq(k,v){predicates.push(r=>r[k]===v);return q;},in(k,vs){predicates.push(r=>vs.includes(r[k]));return q;},lt(k,v){predicates.push(r=>r[k]<v);return q;},lte(k,v){predicates.push(r=>r[k]<=v);return q;},ilike(k,v){const term=v.slice(1,-1).replace(/\\/g,'').toLowerCase();predicates.push(r=>String(r[k]).toLowerCase().includes(term));return q;},order(k,opt){order=k;ascending=opt?.ascending!==false;return q;},limit(n){limit=n;return q;},insert(b){action='insert';body=b;return q;},upsert(b){action='upsert';body=b;return q;},maybeSingle(){single=true;return q;},single(){single=true;return q;},then(resolve,reject){return Promise.resolve().then(()=>{const rows=tables[table]||[];if(action){if(action==='insert'||!rows.some(r=>r.message_id===body.message_id&&r.task_id===body.task_id))rows.push({...body});}
-   let result=rows.filter(r=>predicates.every(p=>p(r)));if(order)result.sort((a,b)=>(a[order]>b[order]?1:a[order]<b[order]?-1:0)*(ascending?1:-1));result=result.slice(0,limit);return {data:single?result[0]||null:result,error:null};}).then(resolve,reject);}};return q;},
+ const db={from(table){let predicates=[],action='',body,order,ascending=true,limit=Infinity,offset=0,single=false;const q={
+  select(){return q;},contains(k,vs){predicates.push(r=>vs.every(v=>r[k].includes(v)));return q;},eq(k,v){predicates.push(r=>r[k]===v);return q;},in(k,vs){predicates.push(r=>vs.includes(r[k]));return q;},lt(k,v){predicates.push(r=>r[k]<v);return q;},lte(k,v){predicates.push(r=>r[k]<=v);return q;},ilike(k,v){const term=v.slice(1,-1).replace(/\\/g,'').toLowerCase();predicates.push(r=>String(r[k]).toLowerCase().includes(term));return q;},order(k,opt){order=k;ascending=opt?.ascending!==false;return q;},limit(n){limit=n;return q;},range(a,b){offset=a;limit=b-a+1;return q;},insert(b){action='insert';body=b;return q;},upsert(b){action='upsert';body=b;return q;},maybeSingle(){single=true;return q;},single(){single=true;return q;},then(resolve,reject){return Promise.resolve().then(()=>{const rows=tables[table]||[];if(action){if(action==='insert'||!rows.some(r=>r.message_id===body.message_id&&r.task_id===body.task_id))rows.push({...body});}
+   let result=rows.filter(r=>predicates.every(p=>p(r)));if(order)result.sort((a,b)=>(a[order]>b[order]?1:a[order]<b[order]?-1:0)*(ascending?1:-1));result=result.slice(offset,offset+limit);return {data:single?result[0]||null:result,error:null};}).then(resolve,reject);}};return q;},
   async rpc(name,b){if(name==='staff_chat_group_create'){let g=tables.staff_chat_groups.find(g=>g.id===b.p_id);if(g&&(g.creator!==b.p_creator||g.name!==b.p_name||JSON.stringify(g.members)!==JSON.stringify(b.p_members)))return {error:{message:'group conflict'}};if(!g){g={id:b.p_id,name:b.p_name,creator:b.p_creator,members:b.p_members,created_at:new Date().toISOString()};tables.staff_chat_groups.push(g);}return {data:g};}if(name==='staff_message_send'){let m=tables.staff_messages.find(m=>m.id===b.p_id);if(m)return {data:{message:m,created:false},error:null};if(b.p_reply&&!tables.staff_messages.some(m=>m.id===b.p_reply&&m.room===b.p_room))return {error:{message:'invalid reply'}};m={id:b.p_id,seq:tables.staff_messages.length+1,room:b.p_room,sender:b.p_sender,body:b.p_body,reply_to:b.p_reply,mentions:b.p_mentions,files:b.p_files,refs:b.p_refs||[],created_at:new Date().toISOString()};tables.staff_messages.push(m);return {data:{message:m,created:true}};}
    if(name==='staff_message_read'){let r=tables.staff_message_reads.find(r=>r.room===b.p_room&&r.employee===b.p_employee);if(!r){r={room:b.p_room,employee:b.p_employee,seq:0};tables.staff_message_reads.push(r);}r.seq=Math.max(r.seq,b.p_seq);return {data:null};}
    if(name==='staff_message_counts')return {data:b.p_rooms.map(room=>{const cursor=tables.staff_message_reads.find(r=>r.room===room&&r.employee===b.p_employee)?.seq||0,msgs=tables.staff_messages.filter(m=>m.room===room&&m.seq>cursor&&m.sender!==b.p_employee);return {room,unread:msgs.length,attention:msgs.filter(m=>room.startsWith('dm:')||m.mentions.includes(b.p_employee)).length};})};}}
@@ -42,4 +42,26 @@ test('staff create private named groups, idempotent retry, outsider access block
  assert.equal((await f.routes.POST(f.request('sera',{action:'link',message:message.id,task:'public'}))).status,403);
  await f.routes.POST(f.request('song',{action:'link',message:message.id,task:'public'}));const task=await(await f.routes.GET(f.request('sera',null,'?task=public'))).json();assert.equal(task.messages[0].canOpen,false);
  f.tables.staff_accounts.find(a=>a.username==='admin-ceo').is_active=false;assert.equal((await f.routes.GET(f.request('ceo',null,'?room='+group.room))).status,403);
+});
+
+test('employee task lookup includes primary and secondary assignees without query, retains permissions and title filtering',async()=>{
+ const f=fixture();f.tables.staff_tasks.push(
+ {id:'song-primary',title:'픽업 준비',assignee:'song'},
+ {id:'song-secondary',title:'픽업 공동',assignee:'ceo',assignees:JSON.stringify(['song']),done:true},
+ {id:'song-array',title:'수업 준비',assignee:'ceo',assignees:['song']},
+ {id:'song-hidden',title:'비밀 픽업',secret:true,assignee:'song'},
+ {id:'song-visible',title:'비밀 공동',secret:true,assignee:'song',assignees:'["ceo"]'});
+ const lookup=async query=>{const r=await f.routes.GET(f.request('ceo',null,'?lookup=task&'+query));assert.equal(r.status,200);return r.json();};
+ let d=await lookup('employee=song');assert.deepEqual(d.results.map(r=>r.id).sort(),['song-array','song-primary','song-secondary','song-visible']);assert.match(d.results.find(r=>r.id==='song-secondary').detail,/완료/);
+ d=await lookup('employee=song&q='+encodeURIComponent('픽업'));assert.deepEqual(d.results.map(r=>r.id).sort(),['song-primary','song-secondary']);
+ assert.equal((await lookup('employee=ceo&q='+encodeURIComponent('수업'))).results.length,1);
+ assert.equal((await lookup('')).results.length,0);
+ assert.equal((await f.routes.GET(f.request('ceo',null,'?lookup=task&employee=retired'))).status,400);
+ assert.equal((await f.routes.GET(f.request('ceo',null,'?lookup=task&employee=song&cursor=-1'))).status,400);
+ assert.equal((await f.routes.GET(f.request(null,null,'?lookup=task&employee=song'))).status,401);
+});
+test('employee task pagination scans beyond unrelated tasks without dropping or duplicating matches',async()=>{
+ const f=fixture();f.tables.staff_tasks=Array.from({length:265},(_,i)=>({id:String(i).padStart(4,'0'),title:'업무 '+i,assignee:i<220?'sera':'song'}));
+ let cursor=0,found=[];do{const r=await f.routes.GET(f.request('ceo',null,'?lookup=task&employee=song&cursor='+cursor));assert.equal(r.status,200);const d=await r.json();assert.ok(d.results.length<=20);found.push(...d.results.map(r=>r.id));cursor=d.nextCursor;}while(cursor!==null);
+ assert.equal(found.length,45);assert.equal(new Set(found).size,45);
 });

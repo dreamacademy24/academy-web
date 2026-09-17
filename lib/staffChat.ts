@@ -12,6 +12,33 @@ export function taskAllows(task:any,actor:string){
  if(typeof ids==='string'){try{ids=JSON.parse(ids);}catch{ids=[];}}
  return !task.secret||task.created_by===actor||task.assignee===actor||(Array.isArray(ids)&&ids.includes(actor));
 }
+export function taskAssignedTo(task:any,employee:string){
+ let ids=task.assignees;
+ if(typeof ids==='string'){try{ids=JSON.parse(ids);}catch{ids=[];}}
+ return task.assignee===employee||(Array.isArray(ids)&&ids.includes(employee));
+}
+export async function chatTaskLookup(c:Awaited<ReturnType<typeof chatAccess>>,q:string,employee:string,cursor=0){
+ if(employee&&!c.employees.some(e=>e.id===employee))chatError('직원을 다시 선택해주세요.');
+ if(!employee&&q.length<2)return {results:[],nextCursor:null};
+ const results:any[]=[],pattern='%'+q.replace(/[\\%_]/g,'\\$&')+'%';
+ // Permission and secondary assignees are checked before counting results.
+ for(let page=0;page<10;page++){
+  let query=c.db.from('staff_tasks').select('id,title,secret,created_by,assignee,assignees,done,progress').order('created_at',{ascending:false}).order('id').range(cursor,cursor+199);
+  if(q)query=query.ilike('title',pattern);
+  const r=await query;if(r.error)throw r.error;
+  const rows=r.data||[];
+  for(const task of rows){
+   const rowCursor=cursor++;
+   if(!taskAllows(task,c.actor)||(employee&&!taskAssignedTo(task,employee)))continue;
+   if(results.length===20)return {results,nextCursor:rowCursor};
+   const done=task.done===true||String(task.progress)==='100'||String(task.progress)==='완료';
+   const assigned=c.employees.filter(e=>taskAssignedTo(task,e.id)).map(e=>e.name||e.id).join(', ')||task.assignee||'미배정';
+   results.push({kind:'task',id:task.id,label:task.title,detail:(done?'완료':'진행 중')+' · 담당 '+assigned});
+  }
+  if(rows.length<200)return {results,nextCursor:null};
+ }
+ return {results,nextCursor:cursor};
+}
 export async function chatAccess(req:Request){
  const staff=await getStaffIdentity(req);
  if(!staff)chatError('로그인이 만료되었습니다. 다시 로그인해주세요.',401);

@@ -1,0 +1,25 @@
+// Isolated private fixtures only; never sends chat to real staff.
+const {chromium}=require('C:/Users/desko/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {createClient}=require('@supabase/supabase-js'),{randomUUID}=require('node:crypto'),assert=require('node:assert/strict'),fs=require('node:fs');
+const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}),run=randomUUID().slice(0,8),ids=['a','b','c'].map(x=>'test-pick-'+run+'-'+x),password=randomUUID()+'Ab9!',base=process.argv[2]||'http://localhost:4196',prefix='test-pick-task-'+run,taskIds=Array.from({length:24},(_,i)=>prefix+'-'+i);
+const ok=r=>{if(r.error)throw Error(r.error.message);return r.data;};
+(async()=>{let browser;try{
+ for(const username of ids)ok(await db.rpc('exec_sql',{sql:`insert into staff_accounts(username,password_hash,role,name,is_active) values ('${username}',crypt('${password}',gen_salt('bf')),'korean_admin','${username}',true)`}));
+ ok(await db.from('staff_tasks').insert(taskIds.map((id,i)=>({id,title:'[검증용] '+run+' 업무 '+i,secret:true,created_by:i===23?ids[2]:ids[0],assignee:i===22?ids[0]:ids[1],assignees:JSON.stringify(i===22?[ids[1]]:[])}))));
+ browser=await chromium.launch({channel:'chrome',headless:true});const context=await browser.newContext({viewport:{width:1280,height:900}});
+ assert.equal((await context.request.post(base+'/api/admin/login',{data:{username:ids[0],password}})).status(),200);
+ let cursor=0,found=[];do{const r=await context.request.get(base+'/api/staff/chat?lookup=task&employee='+ids[1]+'&cursor='+cursor);assert.equal(r.status(),200,await r.text());const d=await r.json();found.push(...d.results);cursor=d.nextCursor;}while(cursor!==null);
+ assert.equal(found.length,23);assert.equal(new Set(found.map(r=>r.id)).size,23);assert.ok(found.some(r=>r.id===taskIds[22]));assert.ok(!found.some(r=>r.id===taskIds[23]));
+ const refined=await(await context.request.get(base+'/api/staff/chat?lookup=task&employee='+ids[1]+'&q='+encodeURIComponent('업무 22'))).json();assert.equal(refined.results.length,1);
+ assert.equal((await context.request.get(base+'/api/staff/chat?lookup=task&employee=invalid-employee')).status(),400);
+ console.log('PASS staff-role API: employee only, secondary assignee, private access, title refinement, 23 results across pages');
+ const page=await context.newPage();await page.goto(base+'/admin/view?src='+encodeURIComponent('/staff?page=chat'));const frame=page.frameLocator('iframe').first();await frame.locator('#scSource').waitFor({timeout:90000});
+ await frame.locator('#scText').fill('유지할 초안');await frame.locator('#scSource').click();await frame.locator('#scSourceEmployee').selectOption(ids[1]);await frame.locator('#scSourceResults button').first().waitFor();assert.equal(await frame.locator('#scSourceResults button').count(),20);
+ await frame.locator('#scSourceMore').click();await frame.locator('#scSourceResults button').nth(22).waitFor();assert.equal(await frame.locator('#scSourceResults button').count(),23);
+ await frame.locator('#scSourceResults button').filter({hasText:'업무 22 ·'}).click();assert.equal(await frame.locator('#scText').inputValue(),'유지할 초안');assert.equal(await frame.locator('#scDraftRefs button').count(),1);
+ await frame.locator('#scSource').click();await frame.locator('#scSourceKind').selectOption('booking');assert.equal(await frame.locator('#scEmployeeLabel').isVisible(),false);await frame.locator('#scSourceKind').selectOption('task');await frame.locator('#scSourceEmployee').selectOption(ids[0]);await frame.locator('#scSourceResults button').first().waitFor();assert.equal(await frame.locator('#scSourceResults button').count(),1);
+ await page.setViewportSize({width:390,height:844});await frame.locator('#scRooms [data-room="all"]').click();await frame.locator('#scSource').click();await frame.locator('#scSourceEmployee').selectOption(ids[1]);await frame.locator('#scSourceResults button').first().waitFor();const bounds=await frame.locator('#scSourceEmployee').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390);await frame.locator('#scSourceResults button').first().click();assert.equal(await frame.locator('#scDraftRefs button').count(),2);
+ fs.mkdirSync('tmp',{recursive:true});await page.screenshot({path:'tmp/employee-task-picker-mobile.png'});console.log('PASS desktop/mobile: choose employee, paginate, attach, preserve draft, booking toggle');
+ if(!base.includes('localhost'))for(const file of ['staff-chat.js','staff-chat.css']){const r=await fetch(base+'/'+file);assert.equal((await r.text()).replaceAll('\r\n','\n'),fs.readFileSync('public/'+file,'utf8').replaceAll('\r\n','\n'));}console.log('PASS '+base);
+ }finally{if(browser)await browser.close();ok(await db.from('staff_tasks').delete().in('id',taskIds));ok(await db.from('staff_message_reads').delete().in('employee',ids));ok(await db.from('staff_accounts').delete().in('username',ids));console.log('Removed only this run’s private fixtures.');}
+})().catch(e=>{console.error(e.stack);process.exitCode=1;});
