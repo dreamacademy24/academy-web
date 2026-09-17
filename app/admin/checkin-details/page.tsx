@@ -350,15 +350,15 @@ function CheckinDetailsInner() {
   }
 
   // ── GUEST DETAILS 인쇄 시트 (EN/KR 공용, 인보이스 스타일 컬러) ──
-  function printGuestDetails(lang: "en" | "kr", b: Booking, d: Partial<Detail>, _dash: (v: any) => string) {
-    setPrintHtml(buildGuestDetails(lang,b,d,bedConfig,simCards,localItems,flightImages));
+  function printGuestDetails(b: Booking, d: Partial<Detail>) {
+    setPrintHtml(buildGuestDetails(b,d,bedConfig,simCards,localItems,flightImages));
   }
 
-  function handlePrint(lang: "en" | "kr" = "en") {
+  function handlePrint() {
     if (!booking) { toastErr("예약을 먼저 선택하세요."); return; }
     const d = detail || ({} as Partial<Detail>);
     const dash = (v: any) => (v === null || v === undefined || v === "") ? "-" : String(v);
-    printGuestDetails(lang, booking, d, dash);
+    printGuestDetails(booking, d);
   }
 
   function copyPublicLink() {
@@ -421,13 +421,9 @@ function CheckinDetailsInner() {
             style={{padding:"6px 12px",border:"none",background:"#0f766e",color:"#fff",borderRadius:6,fontSize:12,fontWeight:700,cursor:selId?"pointer":"not-allowed",fontFamily:"inherit",opacity:selId?1:0.5}}>
             💊 상비약 안내서
           </button>
-          <button onClick={()=>handlePrint("kr")} disabled={!booking}
+          <button onClick={()=>handlePrint()} disabled={!booking}
             style={{padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
-            🖨️ 인쇄 (KR)
-          </button>
-          <button onClick={()=>handlePrint("en")} disabled={!booking}
-            style={{padding:"6px 12px",border:"1px solid #cbd5e1",background:"#fff",color:"#475569",borderRadius:6,fontSize:12,fontWeight:600,cursor:booking?"pointer":"not-allowed",fontFamily:"inherit",opacity:booking?1:0.5}}>
-            🖨️ Print (EN)
+            🖨️ 통합 인쇄
           </button>
         </div>
       </div>
@@ -666,8 +662,8 @@ function CheckinDetailsInner() {
           <div className="row"><span className="lbl">기타 요청사항</span><span className="val" style={{textAlign:"right",maxWidth:"62%",whiteSpace:"pre-wrap"}}>{detail.extra_requests||"-"}</span></div>
           {detail.public_token && <div className="token-info">/checkin/{detail.public_token}{detail.submitted_at?` · 손님 제출됨: ${new Date(detail.submitted_at).toLocaleString("ko-KR")}`:" · 손님 미제출"}</div>}
           <div className="actions" style={{marginTop:14}}>
-            <button className="btn btn-blue" onClick={()=>handlePrint("en")}>🖨️ Print (EN)</button>
-            <button className="btn btn-gray" onClick={()=>handlePrint("kr")}>🖨️ 인쇄 (KR)</button>
+            <button className="btn btn-blue" onClick={()=>handlePrint()}>🖨️ 통합 인쇄</button>
+
             {detail.public_token && <button className="btn btn-green" onClick={copyPublicLink}>🔗 손님 폼 링크 복사</button>}
             {msg && <span className={`msg ${msg.includes("실패")?"msg-err":"msg-ok"}`}>{msg}</span>}
           </div>

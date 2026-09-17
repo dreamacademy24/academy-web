@@ -3,13 +3,12 @@ import {useEffect,useRef,useState,Suspense} from 'react';
 import {useSearchParams} from 'next/navigation';
 import {buildGuestDetails} from '@/lib/guestDetailsPrint';
 
-type DocumentKind='kr'|'en'|'checklist'|'medicine'|'pickup';
-const labels:Record<DocumentKind,string>={kr:'체크인디테일 (KR)',en:'체크인디테일 (EN)',checklist:'체크인체크리스트',medicine:'상비약 안내서',pickup:'공항픽업피켓'};
+type DocumentKind='details'|'checklist'|'medicine'|'pickup';
+const labels:Record<DocumentKind,string>={details:'체크인디테일 (영문·한글)',checklist:'체크인체크리스트',medicine:'상비약 안내서',pickup:'공항픽업피켓'};
 export default function Page(){return <Suspense><PrintSet/></Suspense>;}
 function PrintSet(){
   const params=useSearchParams(),ids=(params.get('bookings')||'').split(',').filter(Boolean);
-  const [selected,setSelected]=useState<DocumentKind[]>(['kr','checklist','medicine','pickup']);
-  const [language,setLanguage]=useState<'kr'|'en'|'both'>('kr');
+  const [selected,setSelected]=useState<DocumentKind[]>(['details','checklist','medicine','pickup']);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[ready,setReady]=useState(false),[progress,setProgress]=useState('');
   const output=useRef<HTMLDivElement>(null),frame=useRef<HTMLIFrameElement>(null),run=useRef(0);
   useEffect(()=>()=>{run.current++;},[]);
@@ -38,11 +37,11 @@ function PrintSet(){
         for(const kind of kinds){
           if(token!==run.current)return;setProgress(`${b.booker_name} · ${labels[kind]} 준비 중`);
           let content:Awaited<ReturnType<typeof source>>;
-          if(kind==='kr'||kind==='en'){
+          if(kind==='details'){
             const parse=(v:string,fallback:unknown)=>{try{return JSON.parse(v)||fallback;}catch{return fallback;}};
             const beds=parse(d.bed_setting,{room1:'',room2:'',room3:''}),sims=parse(d.usim_request,[]);
             const snapResponse=await fetch('/api/invoice/snapshot?booking_id='+encodeURIComponent(id));if(!snapResponse.ok&&snapResponse.status!==404)throw Error('정산 정보를 불러오지 못했습니다.');const snap=(await snapResponse.json()).snapshot||{};const saved=typeof snap.saved_data==='string'?parse(snap.saved_data,{}):snap.saved_data;
-            const html=buildGuestDetails(kind,b,d,beds,sims,saved?.billing?.locals||[],b.flight_images||[]);
+            const html=buildGuestDetails(b,d,beds,sims,saved?.billing?.locals||[],b.flight_images||[]);
             const doc=new DOMParser().parseFromString(html,'text/html');doc.querySelectorAll('script').forEach(n=>n.remove());
             content={nodes:Array.from(doc.body.children) as HTMLElement[],styles:Array.from(doc.querySelectorAll('style'))};
           }else content=await source((kind==='checklist'?'/dreamhouse-checklist':kind==='medicine'?'/admin/med-form':'/admin/checkin-card')+'?bookingId='+encodeURIComponent(id),kind==='checklist'?'#dreamhouse-print-sheet[data-booking-ready="true"]':kind==='medicine'?'.page':'#pickup-print-sheet');
@@ -69,7 +68,7 @@ function PrintSet(){
     @page{size:A4 portrait;margin:0}@page checkinPortrait{size:A4 portrait;margin:0}@page checkinLandscape{size:A4 landscape;margin:0}
     @media print{#checkin-set-output{width:100%}.print-controls,.print-source{display:none!important}.print-document{margin:0;padding:0;width:auto!important;box-shadow:none;break-before:page;page:checkinPortrait}.print-document:first-child{break-before:auto}.print-document.landscape{page:checkinLandscape}}
     `}</style><section className="print-controls"><h1>체크인 서류 세트 출력</h1><p>선택한 예약 {ids.length}팀 · 기존 양식을 그대로 불러옵니다. 인쇄는 전달·수령 완료로 기록되지 않습니다.</p>
-      <div><label>디테일 언어 <select aria-label="전체 출력 디테일 언어" value={language} disabled={busy} onChange={e=>setLanguage(e.target.value as typeof language)}><option value="kr">한국어</option><option value="en">영어</option><option value="both">한국어 + 영어</option></select></label><button disabled={busy||!ids.length} style={{background:'#496bbb',color:'white'}} onClick={()=>void prepare([...(language==='both'?['kr','en'] as DocumentKind[]:[language]),'checklist','medicine','pickup'],true)}>전체 출력하기</button></div>
+      <div><button disabled={busy||!ids.length} style={{background:'#496bbb',color:'white'}} onClick={()=>void prepare(['details','checklist','medicine','pickup'],true)}>전체 출력하기</button></div>
       <p>디테일 · 체크리스트 · 상비약 안내서(학생별 1장) · 공항픽업피켓을 한 번에 출력합니다.</p>
       <div aria-label="항목별 출력">{(Object.keys(labels) as DocumentKind[]).map(k=><button key={k} disabled={busy||!ids.length} onClick={()=>void prepare([k],true)}>{labels[k]} 출력</button>)}</div>
       <details style={{marginTop:12}}><summary>서류를 골라 미리보기</summary>{(Object.keys(labels) as DocumentKind[]).map(k=><label key={k}><input type="checkbox" checked={selected.includes(k)} disabled={busy} onChange={e=>{setSelected(e.target.checked?[...selected,k]:selected.filter(x=>x!==k));setReady(false);}}/>{labels[k]}</label>)}<div><button disabled={busy||!selected.length||!ids.length} onClick={()=>void prepare()}>{busy?'준비 중…':'선택한 서류 준비'}</button></div></details><button disabled={!ready||busy} onClick={()=>window.print()}>세트 인쇄 / PDF 저장</button><p role="status">{progress}</p>{error&&<p role="alert" style={{color:'#b42318'}}>{error}</p>}</section><div id="checkin-set-output" ref={output}/><iframe className="print-source" ref={frame} title="기존 서류 불러오기"/></main>;
