@@ -2913,6 +2913,7 @@ function renderGuideMsgs(cat) {
   html += '<div><p class="swo-eyebrow">TEAM RESOURCES</p><h2>' + esc(cat) + '</h2><p class="swo-note">안내 문구를 확인하고 복사해 사용하세요. 총 '+msgs.length+'개</p></div>';
   if (isAdmin) html += '<button onclick="openGuideMsgModal()" style="padding:7px 14px;background:#3b82f6;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">+ 문구 추가</button>';
   html += '</div>';
+  if(/필드|애프터|에프터/.test(cat))html+='<a href="/admin/afterschool-fieldtrip?tab=deploy" target="_blank" rel="noopener" class="tm-btn" style="display:inline-block;margin:12px 0">필드트립·애프터스쿨 템플릿 보관함 ↗</a>';
   if(_guideLoadError)html+='<div class="swo-status" role="alert">자료를 불러오지 못해 이전 문구를 표시하고 있습니다. 최신 내용인지 확인 후 사용하세요. <button class="tm-btn" onclick="loadGuideMsgs()">다시 불러오기</button></div>';
   if(!msgs.length&&!_guideLoadError)html+='<div class="swo-empty">이 카테고리에 저장된 문구가 없습니다.</div>';
   html += '<div class="guide-grid">';

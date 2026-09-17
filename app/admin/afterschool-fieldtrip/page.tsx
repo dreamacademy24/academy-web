@@ -62,6 +62,7 @@ export default function AfterschoolFieldtripAdminPage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [mainTab, setMainTab] = useState<"list" | "deploy">("list");
+  useEffect(() => {if(new URLSearchParams(window.location.search).get("tab")==="deploy")setMainTab("deploy");}, []);
   const [apps, setApps] = useState<FieldtripApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set());
@@ -362,13 +363,13 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
 
       <div style={{display:"flex",gap:6,background:"#fff",padding:4,borderRadius:12,marginBottom:16,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
         <button
-          onClick={() => setMainTab("list")}
+          onClick={() => { if (!(window as unknown as {fieldtripUnsaved?:boolean}).fieldtripUnsaved || confirm("저장하지 않은 내용을 버리고 이동할까요?")) {setMainTab("list"); load();} }}
           style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="list"?"#1a6fc4":"transparent",color:mainTab==="list"?"#fff":"#6b7c93"}}
         >📋 신청목록</button>
         <button
           onClick={() => setMainTab("deploy")}
           style={{flex:1,padding:"10px 14px",border:"none",borderRadius:9,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",background:mainTab==="deploy"?"#1a6fc4":"transparent",color:mainTab==="deploy"?"#fff":"#6b7c93"}}
-        >📅 배포</button>
+        >📅 달력·배포 / 템플릿</button>
       </div>
 
       {mainTab === "list" && (

@@ -116,6 +116,7 @@ export default function ResourcesPage() {
 
   return (
     <div style={{maxWidth:1100,margin:'0 auto',padding:'32px 24px'}}>
+      <a href="/admin/afterschool-fieldtrip?tab=deploy" style={{display:'block',padding:14,marginBottom:16,border:'1px solid #cad9ec',borderRadius:8,color:'#245da8',background:'#eef5ff'}}>필드트립·애프터스쿨 템플릿 보관함 → 기존 안내문 불러오기 · 편집 · 저장</a>
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
         <h1 style={{fontSize:24,fontWeight:700,margin:0}}>📂 자료모음</h1>
       </div>
