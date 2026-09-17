@@ -255,6 +255,7 @@ export default function DreamhouseRooms() {
         <div style={{marginBottom:16}}>
           <button onClick={()=>router.push('/admin')} style={{background:'transparent',border:'1px solid #cbd5e1',color:'#475569',padding:'6px 10px',borderRadius:6,cursor:'pointer',fontSize:12,marginBottom:10}}>← 어드민</button>
           <h1 style={{margin:0,fontSize:17,fontWeight:700,color:'#1e293b'}}>🏠 Dream House 예약현황</h1>
+          <a href="/dreamhouse-checklist" target="_blank" rel="noopener" style={{display:'block',marginTop:12,padding:'10px 12px',background:'#244f54',color:'#fff',borderRadius:7,textDecoration:'none',fontSize:13,fontWeight:700}}>Check-in Checklist · Print</a>
         </div>
 
         {/* 범례 */}

@@ -36,6 +36,7 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "드림하우스", items: [
     { label: "드림하우스 룸", href: "/dreamhouse-rooms", ext: true },
+    { label: "Check-in Checklist", href: "/dreamhouse-checklist", ext: true },
     { label: "하우스 보고", href: "/admin/house-reports" },
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
