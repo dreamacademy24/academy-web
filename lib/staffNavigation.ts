@@ -5,7 +5,7 @@ export function staffDestination(role:string,next:unknown):string{
   const u=new URL(next,'https://staff.invalid');
   if(u.origin!=='https://staff.invalid')return fallback;
   const learning=(role==='korean_admin'||role==='local_teacher')&&['/dream-app','/learn','/learn/tree-house','/learn/tree-house/practice'].includes(u.pathname);
-  const allowed=learning||(role==='korean_admin'?u.pathname.startsWith('/admin/')||u.pathname==='/staff/students'||u.pathname==='/staff/student-review':u.pathname.startsWith('/admineng/')||u.pathname==='/staff/students');
+  const allowed=learning||(role==='korean_admin'?u.pathname.startsWith('/admin/')||u.pathname==='/dreamhouse-checklist'||u.pathname==='/staff/students'||u.pathname==='/staff/student-review':u.pathname.startsWith('/admineng/')||u.pathname==='/staff/students');
   if(!allowed)return fallback;
   if(u.pathname==='/admin/view'){
    const src=u.searchParams.get('src')||'/staff';
