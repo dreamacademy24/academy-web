@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const moduleStub={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(require('node:path').join(__dirname,'../lib/onlineChangeTime.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:moduleStub,exports:moduleStub.exports});
+const {resolveChangeTime:r,changeTimeChoices:c}=moduleStub.exports;
+assert.equal(r('14:00 or 14:30','14:00'),'14:00');
+assert.equal(r('14:00 or 14:30','14:30'),'14:30');
+assert.throws(()=>r('14:00 or 14:30',undefined),/하나 선택/);
+assert.throws(()=>r('14:00 or 14:30','15:00'),/후보/);
+assert.equal(r('9:00',undefined),'09:00');
+assert.equal(r(null,undefined),null);
+for(const bad of ['24:00','14:60','14:00 trailing','14:00;select'])assert.throws(()=>r(bad,undefined));
+assert.equal(c('14:00 또는 14:30').join(','),'14:00,14:30');
+assert.equal(c('14:00 / 14:30').join(','),'14:00,14:30');
+assert.equal(c('14:00-14:30').length,0);
+console.log('PASS time alternatives, explicit choice, candidate restriction, canonical and invalid times, date-only changes');

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { sendTelegramTeachers, escapeHtml } from '@/lib/telegram'
 import { buildOnlineSessionDates } from '@/lib/onlineClassSchedule'
 import { isPortalAdmin } from '@/lib/portalAuth'
+import { resolveChangeTime } from '@/lib/onlineChangeTime'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,11 +108,14 @@ export async function PATCH(req: Request) {
     // ── 1회차만 변경: 해당 세션의 날짜/시간만 이동 (재생성 없음) ──
     if (cr.req_type === 'single') {
       if (!cr.session_id) return NextResponse.json({ error: 'session_id 없음' }, { status: 400 })
-      const { error: sErr } = await supabase.rpc('approve_online_single_change',{p_request:id,p_note:admin_note||null,p_by:processed_by||'관리자'})
+      let confirmedTime: string | null
+      try { confirmedTime = resolveChangeTime(cr.req_time_kr, body.confirmed_time_kr) }
+      catch (error) { return NextResponse.json({error: error instanceof Error ? error.message : '확정 시간을 선택해주세요.'},{status:400}) }
+      const { error: sErr } = await supabase.rpc('approve_online_single_change',{p_request:id,p_note:admin_note||null,p_by:processed_by||'관리자',p_confirmed_time:confirmedTime})
       if (sErr) return NextResponse.json({ error: sErr.message.includes('SESSION_MISSING_OR_PROCESSED') ? '대상 수업이 변경되거나 없어 승인하지 않았습니다. 출석부를 확인해주세요.' : sErr.message.includes('TUTOR_CONFLICT') ? '선생님의 다른 수업과 시간이 겹칩니다.' : '변경 일정 저장에 실패하여 승인하지 않았습니다. 새로고침 후 확인해주세요.' }, { status: 409 })
       try {
         const stuName = enroll.student_name_en || enroll.student_name
-        const msg = `Class moved — ${stuName}: → ${cr.req_date || '(same date)'}${cr.req_time_kr ? ` ${cr.req_time_kr} KST` : ''}`
+        const msg = `Class moved — ${stuName}: → ${cr.req_date || '(same date)'}${confirmedTime ? ` ${confirmedTime} KST` : ''}`
         await supabase.from('online_notifications').insert({ tutor_id: enroll.tutor_id || null, type: 'schedule_change', message: msg })
         await sendTelegramTeachers(`📢 <b>Online Class — single session moved</b>\n${escapeHtml(msg)}`)
       } catch { /* best-effort */ }

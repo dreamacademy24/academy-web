@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import { fetchDeployedHolidays } from "@/lib/holidays";
 import { buildOnlineSessionDates } from "@/lib/onlineClassSchedule";
+import { exactChangeTime, changeTimeChoices, resolveChangeTime } from "@/lib/onlineChangeTime";
 
 interface Tutor { id: string; name_display: string; name_en: string }
 interface Enrollment {
@@ -144,6 +145,7 @@ export default function OnlineClassPage() {
   const [changeReqs, setChangeReqs] = useState<any[]>([]);
   const [reqFilter, setReqFilter] = useState<"pending" | "all">("pending");
   const [reqProcessing, setReqProcessing] = useState<string | null>(null);
+  const [confirmedTimes, setConfirmedTimes] = useState<Record<string, string>>({});
 
   // list tab
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -276,21 +278,27 @@ export default function OnlineClassPage() {
 
   async function processReq(id: string, action: "approve" | "reject") {
     let admin_note: string | null = null;
+    const request = changeReqs.find(r => r.id === id);
+    let confirmed_time_kr: string | null = null;
     if (action === "reject") {
       admin_note = window.prompt("거절 사유 (엄마 포털에 표시됩니다)") || null;
       if (admin_note === null) return;
     } else {
-      if (!window.confirm("최종 승인하면 실제 수업 일정이 변경됩니다 (1회차=해당 수업 이동 / 전체=적용일 이후 재생성). 진행할까요?")) return;
+      if (request?.req_type === "single") {
+        try { confirmed_time_kr = resolveChangeTime(request.req_time_kr, confirmedTimes[id]); }
+        catch (error) { toastErr(error instanceof Error ? error.message : "확정 시간을 선택해주세요."); return; }
+      }
+      if (!window.confirm(`최종 승인하면 실제 수업 일정이 변경됩니다. ${request?.req_date || ""} ${confirmed_time_kr ? `${confirmed_time_kr} (한국시간)` : ""}\n진행할까요?`)) return;
     }
     setReqProcessing(id);
     const res = await fetch("/api/online-class/change-requests", {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, action, admin_note }),
+      body: JSON.stringify({ id, action, admin_note, confirmed_time_kr }),
     });
     const r = await res.json();
     setReqProcessing(null);
     if (!res.ok) { toastErr(r.error || "처리 실패"); return; }
-    toastOk(action === "approve" ? `승인 완료 — 세션 ${r.regenerated}개 재생성, 튜터 알림 전송됨 ✅` : "거절 처리됨");
+    toastOk(action === "approve" ? r.type === "single" ? "승인 완료 — 변경된 날짜·시간을 출석부와 인보이스에 반영했습니다." : `승인 완료 — 세션 ${r.regenerated}개 재생성` : "거절 처리됨");
     loadChangeReqs(); loadEnrollments();
   }
 
@@ -1111,6 +1119,14 @@ export default function OnlineClassPage() {
                   {r.admin_note && <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>관리자: {r.admin_note}</div>}
                   {r.status === "pending" && (
                     <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+                      {r.req_type === "single" && r.req_time_kr && !exactChangeTime(r.req_time_kr) && <label style={{width:"100%",fontSize:13}}>
+                        확정 수업 시간 (한국시간)
+                        {changeTimeChoices(r.req_time_kr).length ? <select aria-label="확정 수업 시간 (한국시간)" value={confirmedTimes[r.id] || ""} onChange={e=>setConfirmedTimes(prev=>({...prev,[r.id]:e.target.value}))} style={{marginLeft:8,padding:8}}>
+                          <option value="">요청한 시간 중 선택</option>
+                          {changeTimeChoices(r.req_time_kr).map(time=><option key={time} value={time}>{time}</option>)}
+                        </select> : <input aria-label="확정 수업 시간 (한국시간)" type="time" value={confirmedTimes[r.id] || ""} onChange={e=>setConfirmedTimes(prev=>({...prev,[r.id]:e.target.value}))} style={{marginLeft:8,padding:8}} />}
+                        <div style={{color:"#64748b",marginTop:4}}>선생님과 확인한 시간 하나를 선택한 뒤 최종 승인해주세요. 원래 요청 내용은 기록에 남습니다.</div>
+                      </label>}
                       {(() => { const canApprove = !en.tutor_id || r.teacher_status === "approved"; return (
                       <button className="btn-sm" disabled={reqProcessing === r.id || !canApprove} title={!canApprove ? "현지 선생님 승인 후 최종 승인 가능" : ""} style={{ background: canApprove ? "#0d9488" : "#cbd5e1", color: "#fff", borderColor: canApprove ? "#0d9488" : "#cbd5e1", padding: "7px 16px", cursor: canApprove ? "pointer" : "not-allowed" }} onClick={() => processReq(r.id, "approve")}>
                         {reqProcessing === r.id ? "처리 중..." : "✓ 최종 승인 (적용)"}
