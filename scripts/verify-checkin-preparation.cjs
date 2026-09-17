@@ -1,6 +1,6 @@
 const {chromium}=require('C:/Users/desko/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const {createClient}=require('@supabase/supabase-js');const {randomUUID}=require('crypto');const assert=require('assert/strict');
-const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY),name='test-checkin-'+randomUUID().slice(0,8),password=randomUUID();const base='http://localhost:4207';
+const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY),name='test-checkin-'+randomUUID().slice(0,8),password=randomUUID();const base=process.argv[2]||'http://localhost:4207';
 (async()=>{let browser;try{
 let r=await db.rpc('exec_sql',{sql:`insert into staff_accounts(username,password_hash,role,name,is_active) values ('${name}',crypt('${password}',gen_salt('bf')),'korean_admin','[TEST] Checkin',true)`});if(r.error)throw r.error;
 const login=await fetch(base+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:name,password})});assert.equal(login.status,200);const cookie=login.headers.get('set-cookie').split(';')[0];
