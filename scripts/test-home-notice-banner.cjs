@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript');
+const code=fs.readFileSync('public/staff-workspace-home.js','utf8')+'\n'+[...fs.readFileSync('public/team_manager3.html','utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m=>m[1]).join('\n');
+const functions={};for(const n of ts.createSourceFile('s.js',code,99,true,1).statements)if(ts.isFunctionDeclaration(n)&&n.name)functions[n.name.text]=n.getText();
+const notices=[{id:'general',title:'<새 공지>',date:'2026-09-18'},{id:'required',requireRead:true,date:'2026-09-17'},{id:'read',date:'2026-09-16'},{id:'closed',done:true}];
+const calls=[];const c=vm.createContext({notices,noticeReads:{read:['may']},CU:{id:'may'},_ntPlain:()=>'',renderAnnouncementsPage:()=>{},markRead:id=>calls.push(id)});
+for(const name of ['_staffSafe','_staffUnreadNotices','_staffNoticeBanner','_ntOpen'])vm.runInContext(functions[name],c);
+assert.deepEqual(Array.from(c._staffUnreadNotices(notices,c.noticeReads,'may'),n=>n.id),['general','required']);
+assert.match(c._staffNoticeBanner('may'),/안 읽은 공지 2건/);assert.match(c._staffNoticeBanner('may'),/&lt;새 공지&gt;/);
+c._ntOpen('general');c._ntOpen('required');c._ntOpen('read');assert.deepEqual(calls,['general']);
+c.noticeReads.general=['may'];assert.deepEqual(Array.from(c._staffUnreadNotices(notices,c.noticeReads,'may'),n=>n.id),['required']);
+console.log('PASS general/required notice visibility, read filtering, safe titles, opening general notices only');

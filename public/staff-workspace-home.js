@@ -17,7 +17,7 @@ function _staffTeamHomeMarkup(){
   var date=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Manila',month:'long',day:'numeric',weekday:'long'}).format(new Date());
   var cards=[['kOps1','확인 필요한 예약','누락 정보와 운영 요청'],['kOps2','오늘 체크리스트','팀이 함께 처리할 일'],['kOps3','오늘 체크인','도착 예정 가족'],['kOps4','오늘 픽드랍','예약된 이동 일정']];
   return '<div class="swh-team-heading"><div><p class="swo-eyebrow">TEAM WORKSPACE · '+_staffSafe(date)+'</p><h1>오늘의 운영</h1><p>예약 현황과 팀 체크리스트를 한곳에서 확인하세요.</p></div><div><button class="tm-btn" onclick="showPage(\'mywork\')">내 업무 보기</button> <button class="tm-btn tm-primary" onclick="openTaskModal()">＋ 업무 작성</button></div></div>'+
-    '<section class="sc-home" data-staff-chat-home></section><section class="hcard" data-class-applications style="padding:16px;margin-bottom:16px"></section>'+
+    '<section class="sc-home" data-staff-chat-home></section>'+_staffNoticeBanner(CU.id)+'<section class="hcard" data-class-applications style="padding:16px;margin-bottom:16px"></section>'+
     '<div class="swh-team-metrics">'+cards.map(function(c){return '<section><span>'+c[1]+'</span><strong id="'+c[0]+'">—</strong><small>'+c[2]+'</small></section>';}).join('')+'</div>'+
     '<section class="hcard swh-team-daily"><div class="swh-team-section-heading"><div><h2>오늘 함께 처리할 일</h2><p>체크 상태는 주간 체크리스트와 연결됩니다.</p></div><button class="tm-btn" onclick="showPage(\'weeklycl\')">주간 체크 보기 →</button></div><div id="dailyCheckSection"></div></section>'+
     '<div class="swh-team-grid"><section class="hcard"><div id="homeIssuesBox"></div></section><section class="hcard"><div id="homeTutorBox"></div></section></div>'+
@@ -25,6 +25,13 @@ function _staffTeamHomeMarkup(){
 }
 var _staffHomeFilter='focus';
 var _staffBookingCache={};
+function _staffUnreadNotices(rows,reads,empId){
+  return (rows||[]).filter(function(n){return !n.done&&((reads||{})[n.id]||[]).map(String).indexOf(String(empId))<0;}).sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''))||String(b.id).localeCompare(String(a.id));});
+}
+function _staffNoticeBanner(empId){
+  var rows=_staffUnreadNotices(notices,noticeReads,empId);
+  return '<section class="swh-panel" style="padding:16px;margin-bottom:16px;border-left:4px solid #6650c8" aria-label="새 공지사항"><div style="display:flex;align-items:center;gap:10px;justify-content:space-between"><strong>공지사항 <span style="color:#d14343">'+(rows.length?'안 읽은 공지 '+rows.length+'건':'새 공지 없음')+'</span></strong><button class="tm-btn" onclick="showPage(\'announcements\')">전체 보기 →</button></div>'+rows.slice(0,3).map(function(n){return '<button class="swh-notice" style="width:100%;text-align:left;margin-top:8px" data-home-notice="'+_staffSafe(n.id)+'" onclick="showPage(\'announcements\');_ntOpen(this.dataset.homeNotice)"><b>'+_staffSafe(n.title||_ntPlain(n).slice(0,70)||'공지')+'</b><small>'+_staffSafe(n.date||'')+' · '+(n.requireRead?'필독 · 읽음 확인 필요':'일반 공지 · 눌러서 보기')+'</small></button>';}).join('')+'</section>';
+}
 function _staffAssigned(t,empId){return t.assignee===empId||(Array.isArray(t.assignees)&&t.assignees.indexOf(empId)>=0);}
 function _staffHomeModel(taskRows,noticeRows,reads,empId,today){
   var active=(taskRows||[]).filter(function(t){return !isDoneTask(t)&&!_isArchivedTask(t.id);});
@@ -71,7 +78,7 @@ function _renderStaffHome(emp){
   var date=new Date(todayStr()+'T12:00:00').toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'});
   host.innerHTML='<div class="swh" id="staffHomeRoot">'+
     '<header class="swh-header"><div><p class="swh-eyebrow">MY WORKSPACE · '+_staffSafe(date)+'</p><h1>'+_staffSafe(emp.name)+'님의 업무 홈</h1><p>오늘의 우선순위를 확인하고, 필요한 업무로 바로 이동하세요.</p></div><button class="swh-primary" data-action="create">＋ 업무 작성</button></header>'+
-    '<section class="sc-home" data-staff-chat-home></section><section class="swh-panel" data-class-applications data-employee="'+_staffSafe(emp.id)+'" style="padding:16px;margin-bottom:16px"></section>'+
+    '<section class="sc-home" data-staff-chat-home></section>'+_staffNoticeBanner(CU.id)+'<section class="swh-panel" data-class-applications data-employee="'+_staffSafe(emp.id)+'" style="padding:16px;margin-bottom:16px"></section>'+
     '<div class="swh-metrics">'+
       '<button data-filter="today"><span>오늘 마감</span><strong>'+model.today.length+'<small>건</small></strong><em>오늘 처리할 업무 →</em></button>'+
       '<button class="swh-overdue" data-filter="overdue"><span>기한 초과</span><strong>'+model.overdue.length+'<small>건</small></strong><em>먼저 확인해주세요 →</em></button>'+

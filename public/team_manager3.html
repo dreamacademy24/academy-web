@@ -1406,7 +1406,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
+<script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260918-notices1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
 <script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
@@ -5302,7 +5302,7 @@ function _ntBodyHtml(n){
   return '<div style="font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:var(--text)">'+esc(b)+'</div>';
 }
 var _ntSelId=null;
-function _ntOpen(id){_ntSelId=String(id);renderAnnouncementsPage();}
+function _ntOpen(id){_ntSelId=String(id);renderAnnouncementsPage();var n=notices.find(function(x){return String(x.id)===String(id);});if(n&&!n.requireRead&&CU&&(noticeReads[n.id]||[]).indexOf(CU.id)<0)void markRead(n.id);}
 function _ntBack(){_ntSelId=null;var ov=document.getElementById('ntViewOv');if(ov)ov.remove();document.body.style.overflow='';renderAnnouncementsPage();}
 function _ntPlain(n){
   var b=n.text||'';var t=document.createElement('div');t.innerHTML=b;return (t.textContent||t.innerText||'').replace(/\s+/g,' ').trim();
