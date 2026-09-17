@@ -1406,7 +1406,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-task-order.js?v=20260915-1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
+<script src="/staff-task-order.js?v=20260917-completed2"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
 <script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
@@ -5639,7 +5639,7 @@ function _boardFiltered(){
   var f;
   if(boardFilter==='unassigned'){
     // 미배정은 권한 무관, 모든 task에서 isUnassigned 체크 (홈/사이드바와 동일)
-    f=tasks.filter(isUnassigned);
+    f=tasks.filter(function(t){return isUnassigned(t)&&!isDoneTask(t);});
   } else {
     // 관리자는 전부, 비관리자는 shared + 본인 업무
     var pool=tasks.slice();
@@ -5650,6 +5650,7 @@ function _boardFiltered(){
     });
     if(boardFilter==='active')f=f.filter(function(t){return !isDoneTask(t)&&t.assignee;});
     else if(boardFilter==='done')f=f.filter(isDoneTask);
+    else f=f.filter(function(t){return !isDoneTask(t);});
   }
   if(_boardSearch){
     f=f.filter(function(t){return (t.title||'').toLowerCase().indexOf(_boardSearch)>=0||(t.note||'').toLowerCase().indexOf(_boardSearch)>=0;});
@@ -5706,7 +5707,7 @@ function _renderBoardTaskList(){
   var f=sortT(_boardFiltered());
   if(!f.length)return '<div style="text-align:center;padding:30px 14px;color:var(--text3);font-size:12px">표시할 업무가 없습니다</div>';
   function section(label,rows,collapsed){return rows.length?'<details '+(collapsed?'':'open')+' style="margin-bottom:10px"><summary style="cursor:pointer;font-size:12px;font-weight:700;padding:6px 0">'+label+' ('+rows.length+')</summary>'+rows.map(function(t){return _renderBoardTaskItem(t);}).join('')+'</details>':'';}
-  return section('확인할 업무 · 새 댓글',f.filter(function(t){return _staffTaskAttention(t).needed;}))+section('확인한 업무 · 처리 중',f.filter(function(t){return !_staffTaskAttention(t).needed&&!isDoneTask(t);}))+section('완료',f.filter(function(t){return !_staffTaskAttention(t).needed&&isDoneTask(t);}),boardFilter!=='done');
+  return section('확인할 업무 · 새 댓글',f.filter(function(t){return !isDoneTask(t)&&_staffTaskAttention(t).needed;}))+section('확인한 업무 · 처리 중',f.filter(function(t){return !isDoneTask(t)&&!_staffTaskAttention(t).needed;}))+section('완료',f.filter(isDoneTask));
 }
 function _renderBoardEmpList(){
   // 모든 직원에게 전체 직원 목록 노출 (읽기 허용, 편집/삭제는 기존 권한 체크 유지)
@@ -5973,17 +5974,15 @@ function _boardTableHtml(){
     if(!flat.length)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
     else body=flat.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
   } else {
-    var needs=pool.filter(function(t){return _staffTaskAttention(t).needed;});
-    var checked=pool.filter(function(t){return !_staffTaskAttention(t).needed;});
-    var done=checked.filter(isDoneTask);
-    var active=checked.filter(function(t){return !isDoneTask(t);});
+    var unfinished=pool.filter(function(t){return !isDoneTask(t);});
+    var needs=unfinished.filter(function(t){return _staffTaskAttention(t).needed;});
+    var active=unfinished.filter(function(t){return !_staffTaskAttention(t).needed;});
     if(needs.length)body+=secRow('확인할 업무 · 새 댓글 ('+needs.length+')')+needs.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
     if(active.length)body+=secRow('확인한 업무 · 처리 중 ('+active.length+')')+active.slice().sort(byDue).map(function(t){return _btRow(t);}).join('');
     if(!body)body='<tr><td colspan="'+cols+'" style="text-align:center;color:var(--text3);padding:30px">표시할 업무가 없습니다</td></tr>';
-    if(done.length)body+=secRow('✅ 완료 ('+done.length+')')+done.slice().sort(function(a,b){return _staffTaskTime(b.createdAt)-_staffTaskTime(a.createdAt);}).map(function(t){return _btRow(t);}).join('');
   }
   h+='<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow-x:auto"><table class="bt-tbl">'+head+body+'</table></div>';
-  h+='<div style="font-size:11px;color:var(--text3);margin-top:8px">내 미확인 업무·새 댓글이 위로, 확인한 업무는 아래로 자동 정렬됩니다. 열람은 업무 완료와 별개입니다. · 직원 카드 클릭 = 그 직원 업무만 보기</div>';
+  h+='<div style="font-size:11px;color:var(--text3);margin-top:8px">내 미확인 업무·새 댓글이 위로, 확인한 업무는 아래로 자동 정렬됩니다. 완료한 업무와 그 새 댓글은 ‘완료’에서 확인하세요. · 직원 카드 클릭 = 그 직원 업무만 보기</div>';
   return h;
 }
 function openBoardTask(taskId){

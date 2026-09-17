@@ -17,10 +17,10 @@ function _staffTaskAttention(task){
   return {needed:unread||incoming.length>0,comments:incoming.length,at:Math.max(unread?created:0,...incoming.map(function(c){return _staffTaskTime(c.ts||c.date);}))};
 }
 function _staffTaskCompare(a,b){
+  var ad=isDoneTask(a),bd=isDoneTask(b);if(ad!==bd)return ad?1:-1;
   var x=_staffTaskAttention(a),y=_staffTaskAttention(b);
   if(x.needed!==y.needed)return x.needed?-1:1;
   if(x.needed&&x.at!==y.at)return y.at-x.at;
-  var ad=isDoneTask(a),bd=isDoneTask(b);if(ad!==bd)return ad?1:-1;
   var ah=a.priority==='high',bh=b.priority==='high';if(ah!==bh)return ah?-1:1;
   return String(a.due||'9999').localeCompare(String(b.due||'9999'))||_staffTaskTime(b.createdAt||b.created_at)-_staffTaskTime(a.createdAt||a.created_at)||String(a.id).localeCompare(String(b.id));
 }
