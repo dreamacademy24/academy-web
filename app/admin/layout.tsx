@@ -130,6 +130,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (framed) return <>{content}</>;
 
   const isView = pathname === "/admin/view";
+  const chatParams = new URLSearchParams(viewSrc.split('?')[1] || '');
+  const chatPopout = isView && viewSrc.startsWith('/staff?') && chatParams.get('page') === 'chat' && chatParams.get('popout') === '1';
   const badgeFor = (it: Item) => it.href === "/admin/bookings" ? roomAlerts : it.href === "/admin/tutor-class" ? tutorAlerts : it.href === "/admin/online-class" ? onlineAlerts : 0;
   const active = (it: Item) => it.ext
     ? (isView && viewSrc === it.href)
@@ -137,11 +139,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const todayOn = !isView && pathname === "/admin/today";
 
   return (
-    <div className={isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) ? "staff-mobile-host" : undefined} style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
+    <div className={isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) ? "staff-mobile-host"+(chatPopout?' staff-chat-popout-host':'') : undefined} style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
       {isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) && <StaffAppManifest />}
       <Suspense fallback={null}><AdminViewSource onChange={setViewSrc} /></Suspense>
       <style>{`@media(max-width:760px){.staff-mobile-host{min-height:0!important}.staff-mobile-host>aside,.staff-mobile-host>.admin-main>button.admin-noprint{display:none!important}.staff-mobile-host>.admin-main{height:var(--staff-viewport,100dvh)!important;overflow:hidden!important}.staff-mobile-host>.admin-main iframe{height:var(--staff-viewport,100dvh)!important}}@media print{.admin-noprint{display:none!important}.admin-main{height:auto!important;overflow:visible!important}}`}</style>
-      {!hidden && (
+      {chatPopout && <style>{`.staff-chat-popout-host>aside,.staff-chat-popout-host>.admin-main>button.admin-noprint{display:none!important}.staff-chat-popout-host>.admin-main{height:100dvh!important;overflow:hidden!important}.staff-chat-popout-host iframe{height:100dvh!important}`}</style>}
+      {!hidden && !chatPopout && (
         <aside className="admin-noprint" style={{ width: 224, flexShrink: 0, background: "#3a47a8", color: "#eef0fc", height: "100vh", position: "sticky", top: 0, overflowY: "auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.16)" }}>
             <Link href="/admin/today" style={{ fontSize: 15, fontWeight: 800, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFD54A" }}>WORKSPACE</span></Link>
@@ -180,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
       )}
       <main className="admin-main" style={{ flex: 1, minWidth: 0, overflow: "auto", height: "100vh", position: "relative" }}>
-        {hidden && (
+        {hidden && !chatPopout && (
           <button className="admin-noprint" onClick={() => setHidden(false)} title="메뉴 열기" style={{ position: "sticky", top: 8, left: 8, zIndex: 50, background: "#3a47a8", color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 14, margin: 8 }}>☰ 메뉴</button>
         )}
         {content}

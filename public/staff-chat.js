@@ -1,6 +1,30 @@
 /* Staff chat: authenticated API, private attachments, explicit task handoff. */
 (function(){
 'use strict';
+var popoutMode=new URLSearchParams(location.search).get('popout')==='1'&&new URLSearchParams(location.search).get('page')==='chat',noticeReady=false;
+document.documentElement.classList.toggle('sc-popout-mode',popoutMode);
+function openPopout(){
+ persist();var params=new URLSearchParams({page:'chat',popout:'1',room:s.room});if(s.target)params.set('message',s.target);
+ var url='/admin/view?src='+encodeURIComponent('/staff?'+params.toString());
+ var popup=window.open(url,'staff-chat-'+s.actor,'popup=yes,width=1040,height=820,resizable=yes,scrollbars=yes');
+ if(popup){popup.opener=null;popup.focus();}else{var el=document.getElementById('scError');el.textContent='팝업이 차단되었습니다. ';var link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener';link.textContent='채팅 새 탭 열기 ↗';el.appendChild(link);}
+}
+function emojiPicker(){
+ var box=document.getElementById('scEmojiPanel'),button=document.getElementById('scEmoji');box.hidden=!box.hidden;button.setAttribute('aria-expanded',String(!box.hidden));if(box.hidden)return;
+ document.getElementById('scSources').hidden=true;
+ var groups=[['자주 쓰는 표현','😊 😀 😄 😂 🙂 😉 😍 🥰 😅 🥲 😎 🤔 😮 😢 😭 😴'],['답변·응원','👍 👎 👏 🙌 👋 🙏 💪 👌 🤝 🫶 ❤️ 💜 💙 💚 🎉 🎊'],['업무·상태','✅ ☑️ ✔️ ❗ ❓ 🔔 📌 📋 📅 ⏰ 📞 💬 📷 📎 🚗 ✈️'],['간단한 감정','😆 🤗 😇 😋 🤩 🥳 😐 😓 😥 😤 💯 ⭐ 🌟 🔥 ☕ 🌷']];
+ box.innerHTML='<div class="sc-emoji-head"><strong>이모티콘</strong><button type="button" data-emoji-close aria-label="이모티콘 닫기">×</button></div>'+groups.map(function(g){return '<div class="sc-emoji-label">'+g[0]+'</div><div class="sc-emoji-grid">'+g[1].split(' ').map(function(e){return '<button type="button" data-emoji="'+e+'" aria-label="'+e+' 넣기">'+e+'</button>';}).join('')+'</div>';}).join('');
+ box.querySelector('[data-emoji-close]').onclick=function(){box.hidden=true;button.setAttribute('aria-expanded','false');};
+ box.querySelectorAll('[data-emoji]').forEach(function(b){b.onclick=function(){var input=document.getElementById('scText');input.setRangeText(b.dataset.emoji,input.selectionStart,input.selectionEnd,'end');s.draft.text=input.value;persist();input.focus();};});
+ box.onkeydown=function(e){if(e.key==='Escape'){box.hidden=true;button.setAttribute('aria-expanded','false');button.focus();}};
+}
+function notifyChat(counts){
+ if(!noticeReady){noticeReady=true;return;}if(document.hidden||!document.hasFocus())return;
+ var changed=counts.find(function(c){return Number(c.attention)>Number(count(c.room).attention)&&!(active()&&s.room===c.room);});if(!changed)return;
+ var old=document.getElementById('scToast');if(old)old.remove();var toast=document.createElement('div');toast.id='scToast';toast.setAttribute('role','status');
+ var open=document.createElement('button');open.textContent=roomName(changed.room)+' · 새 개인 메시지 또는 직접 언급';open.onclick=function(){toast.remove();window._staffChatOpen(changed.room);};
+ var close=document.createElement('button');close.textContent='×';close.setAttribute('aria-label','채팅 알림 닫기');close.onclick=function(){toast.remove();};toast.append(open,close);document.body.appendChild(toast);setTimeout(function(){toast.remove();},10000);
+}
 var s={actor:'',mobileConversation:false,groups:[],employees:[],room:'all',counts:[],messages:[],reads:[],links:[],replies:[],q:'',target:'',more:false,busy:false,loading:false,draft:null,version:0},pendingTask=null;
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function name(id){var p=s.employees.find(function(e){return e.id===id;});return p?p.name:id;}
@@ -9,7 +33,7 @@ function membersOf(room){var g=s.groups.find(function(g){return g.room===room;})
 function dm(id){return 'dm:'+ [s.actor,id].sort().join(':');}
 async function api(query,body){var r=await fetch('/api/staff/chat'+(query||''),{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});var d=await r.json();if(!r.ok)throw Error(d.error||'요청에 실패했습니다.');return d;}
 function host(){return document.getElementById('scRoot');}
-function active(){var p=document.getElementById('page-chat');return p&&!p.classList.contains('hidden')&&!document.hidden;}
+function active(){var p=document.getElementById('page-chat');return p&&!p.classList.contains('hidden')&&!document.hidden&&document.hasFocus();}
 function error(e){var el=document.getElementById('scError');if(el)el.textContent=e.message||e;}
 function key(){return 'staff-chat-draft:'+s.actor+':'+s.room;}
 function empty(){return {id:crypto.randomUUID(),text:'',files:[],reply:null,mentions:[],refs:[]};}
@@ -17,10 +41,10 @@ function persist(){if(!s.draft)return;try{sessionStorage.setItem(key(),JSON.stri
 function readDraft(){try{s.draft=JSON.parse(sessionStorage.getItem(key())||'null')||empty();}catch{s.draft=empty();}}
 function count(room){return s.counts.find(function(c){return c.room===room;})||{unread:0,attention:0};}
 async function overview(){if(typeof CU==='undefined'||!CU)return;try{
- var d=await api('');if(s.actor&&s.actor!==d.actor){s.messages=[];s.draft=null;}s.actor=d.actor;s.employees=d.employees;s.groups=d.groups||[];s.counts=d.counts||[];
+ var d=await api('');if(s.actor&&s.actor!==d.actor){s.messages=[];s.draft=null;}s.actor=d.actor;s.employees=d.employees;s.groups=d.groups||[];notifyChat(d.counts||[]);s.counts=d.counts||[];
  var total=s.counts.reduce(function(n,c){return n+Number(c.unread);},0),attention=s.counts.reduce(function(n,c){return n+Number(c.attention);},0),badge=document.getElementById('scBadge');if(badge){badge.textContent=total||'';badge.style.display=total?'inline-flex':'none';}
  document.querySelectorAll('[data-staff-chat-home]').forEach(function(el){el.innerHTML='<strong>직원 채팅</strong><button data-sc-home>새 메시지 <span class="sc-count">'+total+'</span></button><span class="sc-muted">개인 메시지·직접 언급 '+attention+'건</span>';el.querySelector('button').onclick=function(){window._staffChatOpen(window.matchMedia('(max-width:760px)').matches?null:'all');};});
- if(host())renderRooms();
+ if(host())renderRooms();if(popoutMode){document.title=(total?'('+total+') ':'')+'직원 채팅';try{window.top.document.title=document.title;}catch(e){}}
  }catch(e){if(active())error(e);}}
 function renderRooms(){var box=document.getElementById('scRooms');if(!box)return;
  box.innerHTML='<strong>직원 채팅</strong><button id="scCreateGroup">+ 그룹 채팅 만들기</button>'+['all'].concat(s.employees.filter(function(e){return e.id!==s.actor;}).map(function(e){return dm(e.id);})).concat(s.groups.map(function(g){return g.room;})).map(function(r){var c=count(r);return '<button data-room="'+esc(r)+'" aria-pressed="'+(s.room===r)+'">'+esc(roomName(r))+(c.unread?'<span class="sc-count">'+c.unread+'</span>':'')+'</button>';}).join('')+'<p class="sc-push-help">급한 일은 전화하고, 결정한 내용은 관련 업무에 짧게 기록해주세요.</p>';
@@ -30,7 +54,7 @@ function createGroup(){if(s.busy)return;var dialog=document.createElement('dialo
 function fileHtml(files){return '<div class="sc-files">'+(files||[]).map(function(f){var url='/api/staff/chat/files?id='+encodeURIComponent(f.id);return '<a href="'+url+'" target="_blank" rel="noopener">'+(String(f.mime).startsWith('image/')?'<img loading="lazy" src="'+url+'" alt="'+esc(f.name)+'">':'📎 ')+esc(f.name)+'</a>';}).join('')+'</div>';}
 function taskUrl(id){return '/admin/view?src='+encodeURIComponent('/staff?page=board&task='+encodeURIComponent(id));}
 function refsHtml(refs){return '<div class="sc-ref-cards">'+(refs||[]).map(function(r){if(r.unavailable)return '<div class="sc-ref-card sc-muted">'+esc(r.label)+'</div>';var url=r.kind==='booking'?'/admin/bookings/'+encodeURIComponent(r.id):taskUrl(r.id);return '<a class="sc-ref-card" href="'+url+'" target="_blank" rel="noopener"><strong>'+(r.kind==='booking'?'예약 · ':'업무 · ')+esc(r.label)+'</strong><small>'+esc(r.detail||'')+'</small><span>상세 보기 ↗</span></a>';}).join('')+'</div>';}
-function sourcePicker(){var box=document.getElementById('scSources');box.hidden=!box.hidden;if(box.hidden)return;
+function sourcePicker(preset){var emoji=document.getElementById('scEmojiPanel');if(emoji){emoji.hidden=true;document.getElementById('scEmoji').setAttribute('aria-expanded','false');}var box=document.getElementById('scSources');box.hidden=preset?false:!box.hidden;if(box.hidden)return;
  box.innerHTML='<div class="sc-link-picker"><div class="sc-source-controls"><label>종류<select aria-label="가져올 정보 종류" id="scSourceKind"><option value="task">직원 업무</option><option value="booking">예약</option></select></label><label id="scEmployeeLabel">담당 직원<select aria-label="담당 직원" id="scSourceEmployee"><option value="">전체 직원</option>'+s.employees.map(function(e){return '<option value="'+esc(e.id)+'">'+esc(e.name||e.id)+'</option>';}).join('')+'</select></label><label class="sc-source-query">검색<input id="scSourceQuery" aria-label="가져올 업무 또는 예약 검색" placeholder="업무 제목 (직원 선택 시 생략 가능)"></label><button id="scSourceSearch">검색</button></div><div class="sc-muted" id="scSourceStatus" role="status">직원을 선택하거나 업무 제목을 두 글자 이상 입력해주세요.</div><div class="sc-link-results" id="scSourceResults"></div><button id="scSourceMore" hidden>더 보기</button></div>';
  var kind=box.querySelector('#scSourceKind'),employee=box.querySelector('#scSourceEmployee'),query=box.querySelector('#scSourceQuery'),result=box.querySelector('#scSourceResults'),status=box.querySelector('#scSourceStatus'),more=box.querySelector('#scSourceMore'),version=s.version,request=0,next=null;
  var search=async function(append){
@@ -52,13 +76,13 @@ function sourcePicker(){var box=document.getElementById('scSources');box.hidden=
  };
  box.querySelector('#scSourceSearch').onclick=function(){search(false);};more.onclick=function(){search(true);};employee.onchange=function(){search(false);};
  kind.onchange=function(){box.querySelector('#scEmployeeLabel').hidden=kind.value!=='task';query.value='';query.placeholder=kind.value==='task'?'업무 제목 (직원 선택 시 생략 가능)':'예약자명·예약번호 (두 글자 이상)';search(false);};
- query.onkeydown=function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();search(false);}};
+ query.onkeydown=function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();search(false);}};if(preset){kind.value=preset;kind.onchange();}
 }
 function shell(){var page=document.getElementById('page-chat');if(!page)return;
- page.innerHTML='<div class="sc" id="scRoot"><aside class="sc-side" id="scRooms"></aside><section class="sc-main"><header class="sc-head"><button id="scBack" class="sc-mobile-control" aria-label="채팅방 목록">‹ 목록</button><strong>'+esc(roomName(s.room))+'</strong><button id="scOptions" class="sc-mobile-control" aria-label="대화 검색과 알림 설정" aria-expanded="false">⋯</button><input id="scSearch" aria-label="대화 검색" placeholder="이 대화에서 검색" value="'+esc(s.q)+'"><button id="scSearchBtn">검색</button><button id="scSearchClear">최신 대화</button><button id="scPush">알림 설정</button></header><div class="sc-note">업무의 질문·진행·결과는 해당 업무에서 이어가세요. 후속 처리가 필요하면 메시지를 업무에 연결할 수 있습니다.</div><div class="sc-list" id="scList" aria-label="대화 메시지"></div><button class="sc-new" id="scNew" hidden>새 메시지 보기 ↓</button><div class="sc-compose"><div id="scReply"></div><div id="scDraftRefs"></div><div id="scSources" hidden></div><div class="sc-draft-files" id="scDraftFiles"></div><textarea id="scText" aria-label="메시지" placeholder="메시지 입력 · Enter 전송 / Shift+Enter 줄바꿈"></textarea><div id="scMentions" class="sc-mention-tags"></div><div class="sc-compose-footer"><label><button type="button" id="scAttach">사진·파일</button><input type="file" id="scFiles" hidden multiple accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"></label><button type="button" id="scSource">업무·예약 가져오기</button><select id="scMention" aria-label="직원 언급"><option value="">@ 직원 언급</option></select><span class="sc-muted">최대 10개 · 파일당 3MB</span><button class="sc-send" id="scSend">전송</button></div><div class="sc-error" id="scError" role="status"></div><div class="sc-muted" id="scPushInfo"></div></div></section></div>';
+ page.innerHTML='<div class="sc" id="scRoot"><aside class="sc-side" id="scRooms"></aside><section class="sc-main"><header class="sc-head"><button id="scBack" class="sc-mobile-control" aria-label="채팅방 목록">‹ 목록</button><strong>'+esc(roomName(s.room))+'</strong><button id="scOptions" class="sc-mobile-control" aria-label="대화 검색과 알림 설정" aria-expanded="false">⋯</button><input id="scSearch" aria-label="대화 검색" placeholder="이 대화에서 검색" value="'+esc(s.q)+'"><button id="scSearchBtn">검색</button><button id="scSearchClear">최신 대화</button><button id="scPush">알림 설정</button><button id="scPopout" title="채팅만 별도 창으로 열기">↗ 별도 창</button><a class="sc-work-home" href="/admin/view?src=%2Fstaff%3Fpage%3Dhome" target="_blank" rel="noopener">직원업무 ↗</a></header><div class="sc-note">업무의 질문·진행·결과는 해당 업무에서 이어가세요. 후속 처리가 필요하면 메시지를 업무에 연결할 수 있습니다.</div><div class="sc-list" id="scList" aria-label="대화 메시지"></div><button class="sc-new" id="scNew" hidden>새 메시지 보기 ↓</button><div class="sc-compose"><div id="scReply"></div><div id="scDraftRefs"></div><div id="scSources" hidden></div><div id="scEmojiPanel" hidden></div><div class="sc-draft-files" id="scDraftFiles"></div><textarea id="scText" aria-label="메시지" placeholder="메시지 입력 · Enter 전송 / Shift+Enter 줄바꿈"></textarea><div id="scMentions" class="sc-mention-tags"></div><div class="sc-compose-footer"><button type="button" id="scEmoji" aria-label="이모티콘" title="이모티콘" aria-expanded="false">😊<span> 이모티콘</span></button><button type="button" id="scPhoto" title="사진 첨부">🖼️<span> 사진</span></button><input type="file" id="scPhotos" hidden multiple accept="image/jpeg,image/png,image/webp,image/gif"><label><button type="button" id="scAttach" title="파일 첨부">📎<span> 파일</span></button><input type="file" id="scFiles" hidden multiple accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"></label><button type="button" id="scSource" title="직원별 업무 가져오기">📋<span> 업무</span></button><button type="button" id="scBooking" title="예약 가져오기">📅<span> 예약</span></button><select id="scMention" aria-label="직원 언급"><option value="">@ 직원 언급</option></select><span class="sc-muted">최대 10개 · 파일당 3MB</span><button class="sc-send" id="scSend">전송</button></div><div class="sc-error" id="scError" role="status"></div><div class="sc-muted" id="scPushInfo"></div></div></section></div>';
  host().classList.toggle('sc-conversation',s.mobileConversation);document.getElementById('scBack').onclick=function(){persist();s.mobileConversation=false;host().classList.remove('sc-conversation');};document.getElementById('scOptions').onclick=function(){var open=host().classList.toggle('sc-options-open');this.setAttribute('aria-expanded',String(open));};
  var group=s.groups.find(function(g){return g.room===s.room;});if(group){var people=document.createElement('div');people.className='sc-note';people.textContent='참여 직원 '+membersOf(s.room).length+'명 · '+membersOf(s.room).map(name).join(', ');document.querySelector('.sc-head').after(people);}
- document.getElementById('scSource').onclick=sourcePicker;renderRooms();document.getElementById('scText').value=s.draft.text;draftUI();
+ document.getElementById('scSource').onclick=function(){sourcePicker('task');};document.getElementById('scBooking').onclick=function(){sourcePicker('booking');};document.getElementById('scEmoji').onclick=emojiPicker;document.getElementById('scPopout').onclick=openPopout;document.getElementById('scPhoto').onclick=function(){document.getElementById('scPhotos').click();};document.getElementById('scPhotos').onchange=upload;renderRooms();document.getElementById('scText').value=s.draft.text;draftUI();
  var mention=document.getElementById('scMention');s.employees.filter(function(e){return e.id!==s.actor&&membersOf(s.room).includes(e.id);}).forEach(function(e){var o=document.createElement('option');o.value=e.id;o.textContent=e.name;mention.appendChild(o);});
  mention.onchange=function(){if(mention.value){if(s.draft.mentions.indexOf(mention.value)<0)s.draft.mentions.push(mention.value);var t=document.getElementById('scText');t.value+=(t.value?' ':'')+'@'+name(mention.value)+' ';s.draft.text=t.value;persist();draftUI();mention.value='';t.focus();}};
  document.getElementById('scText').placeholder=window.matchMedia('(max-width:760px)').matches?'메시지 입력 · 전송 버튼으로 보내기':'메시지 입력 · Enter 전송 / Shift+Enter 줄바꿈';
@@ -129,7 +153,8 @@ window._staffChatRefresh=overview;
 window._staffChatOpen=function(room,message){persist();s.mobileConversation=!!room;s.room=room||'all';s.target=message||'';s.q='';s.messages=[];s.version++;showPage('chat');};
 var initial=true;
 window._staffChatRender=async function(){await overview();if(!s.actor)return;if(initial){var p=new URLSearchParams(location.search);if(p.get('page')==='chat'){s.mobileConversation=!!p.get('room');s.room=p.get('room')||s.room;s.target=p.get('message')||s.target;}initial=false;}if(!s.groups.some(function(g){return g.room===s.room;})&&!s.employees.some(function(e){return s.room==='all'||s.room===dm(e.id);}))s.room='all';readDraft();shell();load(true);};
-setInterval(function(){if(active()&&!s.q&&!s.target&&!host()?.querySelector('.sc-link-picker'))load(false);},3000);
+setInterval(function(){if(active()&&!s.q&&!s.target&&!host()?.querySelector('#scSources:not([hidden])'))load(false);},3000);
 setInterval(overview,12000);document.addEventListener('visibilitychange',function(){if(!document.hidden){overview();if(active())load(false);}});
+window.addEventListener('focus',function(){overview();if(active())load(false);});
 window.addEventListener('load',function(){setTimeout(overview,2500);});
 })();
