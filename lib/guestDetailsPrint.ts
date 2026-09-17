@@ -149,6 +149,10 @@ function isPackage(t?: string): boolean {
   *{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
   body{font-family:Arial,Helvetica,'Malgun Gothic',sans-serif;color:#1f2937;margin:0;padding:0;background:#fff;}
   .ko{display:block;font-size:9px;font-weight:400;letter-spacing:0;color:#64748b;margin-top:3px;text-transform:none;line-height:1.4;}
+  .fld .lbl .ko,.settle-hd .ko,.settle-tbl .ko,.pkg-badge .ko{display:inline;margin:0 0 0 4px;white-space:nowrap;}
+  .fld .lbl .ko::before,.settle-hd .ko::before,.settle-tbl .ko::before,.pkg-badge .ko::before{content:'('}
+  .fld .lbl .ko::after,.settle-hd .ko::after,.settle-tbl .ko::after,.pkg-badge .ko::after{content:')'}
+  .fld .val .ko{display:inline;margin-left:4px;}
   #cdwrap{overflow:hidden;}
   #cdsheet{padding:22px 26px;min-height:257mm;display:flex;flex-direction:column;transform-origin:top center;}
 
