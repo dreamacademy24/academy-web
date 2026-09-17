@@ -231,7 +231,7 @@ test('failed guide save or delete preserves the record and the open editor',asyn
 
 test('photo upload retries only failures without uploading successful files twice',async()=>{
   const calls=[],host={appendChild(){}},input={files:[{name:'ok.jpg'},{name:'retry.jpg'}],value:'selected'};let fail=true;
-  const ctx=context(['_staffTaskUpload'],{_staffMediaBusy:false,_staffTaskSaving:false,_staffMediaDraft:1,_staffMediaFailures:[],MAX_FILES:10,mFiles:[],_staffMediaFormHint(){},_validateFile:()=>true,_staffOptimizeUploadFile:async f=>f,renderTMFL(){},toast(){},document:{getElementById:id=>id==='staffMediaStatus'?host:{checked:false},createElement:()=>({})},_taskFilesUpload:async files=>{calls.push(files[0].name);if(fail&&files[0].name==='retry.jpg')throw Error('offline');return [{name:files[0].name,url:'/stored'}];}});
+  const ctx=context(['_staffTaskUpload'],{_staffMediaBusy:false,_staffTaskSaving:false,_staffMediaDraft:1,_staffMediaFailures:[],MAX_FILES:10,mFiles:[],_staffMediaFormHint(){},_validateFile:()=>true,_staffOptimizeUploadFile:async f=>f,renderTMFL(){},toast(){},document:{getElementById:id=>id==='staffMediaStatus'?host:{checked:false},createElement:()=>({})},_staffUploadBatch:async(files,worker)=>Promise.all(files.map(worker)),_staffDirectUpload:async file=>{calls.push(file.name);if(fail&&file.name==='retry.jpg')throw Error('offline');return {name:file.name,url:'/stored'};}});
   await ctx._staffTaskUpload({target:input});assert.equal(ctx.mFiles.length,1);assert.equal(ctx._staffMediaFailures.length,1);assert.equal(ctx._staffMediaBusy,false);
   fail=false;await ctx._staffTaskUpload(null,true);assert.deepEqual(calls,['ok.jpg','retry.jpg','retry.jpg']);assert.equal(ctx.mFiles.length,2);assert.equal(ctx._staffMediaFailures.length,0);
 });

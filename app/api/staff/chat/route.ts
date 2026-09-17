@@ -1,4 +1,4 @@
-import {NextResponse} from 'next/server';
+import {NextResponse,after} from 'next/server';
 import {chatAccess,chatError,chatTask,chatReferences,chatTaskLookup,uuid} from '@/lib/staffChat';
 import {sendChatPush} from '@/lib/staffChatPush';
 export const dynamic='force-dynamic';
@@ -58,12 +58,12 @@ export async function POST(req:Request){try{
   return NextResponse.json({ok:true});
  }
  const members=c.checkRoom(b.room),text=typeof b.text==='string'?b.text.trim():'';
- if(!uuid(b.id)||text.length>20000||(!text&&!b.files?.length&&!b.refs?.length)||!Array.isArray(b.files)||b.files.length>10||b.files.some((id:unknown)=>!uuid(id))||(b.reply&&!uuid(b.reply)))chatError('메시지 또는 첨부를 확인해주세요.');
+ if(!uuid(b.id)||text.length>20000||(!text&&!b.files?.length&&!b.refs?.length)||!Array.isArray(b.files)||b.files.length>30||b.files.some((id:unknown)=>!uuid(id))||(b.reply&&!uuid(b.reply)))chatError('메시지 또는 첨부를 확인해주세요.');
  const refs=(await chatReferences(c.db,b.refs||[],c.actor,true)).map(r=>({kind:r.kind,id:r.id}));
  const mentions=Array.isArray(b.mentions)?[...new Set<string>(b.mentions.filter((id:string)=>members.includes(id)&&id!==c.actor))].sort():[];
  let files:any[]=[];if(b.files.length){const f=await c.db.from('staff_message_files').select('id,name,mime,size').in('id',b.files).eq('room',b.room).eq('owner',c.actor);if(f.error||f.data?.length!==new Set(b.files).size)chatError('첨부 권한을 확인하지 못했습니다.');files=f.data.sort((a,b)=>a.id.localeCompare(b.id));}
  const r=await c.db.rpc('staff_message_send',{p_id:b.id,p_room:b.room,p_sender:c.actor,p_body:text,p_reply:b.reply||null,p_mentions:mentions,p_files:files,p_refs:refs});
  if(r.error)chatError(r.error.message.includes('conflict')?'이미 전송된 메시지와 내용이 다릅니다. 대화를 확인해주세요.':'메시지를 저장하지 못했습니다. 입력은 유지됩니다.',409);
- let push='not_requested';if(r.data.created){const recipients=b.room.startsWith('dm:')?members.filter(id=>id!==c.actor):mentions;push=await sendChatPush(c.db,recipients,b.room,b.id).catch(()=> 'failed');}
+ let push='not_requested';if(r.data.created){const recipients=b.room.startsWith('dm:')?members.filter(id=>id!==c.actor):mentions;if(recipients.length){push='queued';after(async()=>{try{await sendChatPush(c.db,recipients,b.room,b.id);}catch(e){console.error('chat push failed',e);}});}}
  return NextResponse.json({...r.data,push});
  }catch(e){return failure(e);}}

@@ -27,7 +27,8 @@ export async function GET(req:Request){try{
    for(const l of links.data||[]){try{await chatTask(c.db,l.task_id,c.actor);allowed=true;break;}catch{}}
   }if(!allowed)chatError('이 파일에 접근할 수 없습니다.',403);
  }
- const download=await c.db.storage.from('staff-chat-private').download(f.data.path);if(download.error)throw download.error;
  const inline=f.data.mime.startsWith('image/');
- return new Response(await download.data.arrayBuffer(),{headers:{'Content-Type':f.data.mime,'Content-Disposition':(inline?'inline':'attachment')+"; filename*=UTF-8''"+encodeURIComponent(f.data.name),'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+ const download=await c.db.storage.from('staff-chat-private').createSignedUrl(f.data.path,60,{download:inline?false:f.data.name});if(download.error)throw download.error;
+ // Authorized redirect avoids the serverless response-size limit for large files.
+ return new Response(null,{status:302,headers:{Location:download.data.signedUrl,'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer'}});
  }catch(e){return NextResponse.json({error:(e as Error).message},{status:(e as any).status||503});}}

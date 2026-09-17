@@ -14,7 +14,7 @@ export async function commentAccess(req:Request,taskId:string){
  return {db,author};
 }
 export function validateCommentPhotos(value:unknown,author:string,taskId:string):CommentPhoto[]{
- if(!Array.isArray(value)||value.length>10)throw Error('댓글에는 사진을 10장까지 첨부할 수 있습니다.');
+ if(!Array.isArray(value)||value.length>30)throw Error('댓글에는 사진을 30장까지 첨부할 수 있습니다.');
  const prefix=process.env.NEXT_PUBLIC_SUPABASE_URL+'/storage/v1/object/public/staff-files/'+commentPhotoPrefix(author,taskId);
- return value.map(f=>{if(!f||typeof f.name!=='string'||!f.name||f.name.length>250||typeof f.url!=='string'||!f.url.startsWith(prefix)||!/^[a-f\d-]{36}\.(jpg|png|webp|gif)$/.test(f.url.slice(prefix.length))||!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)||!Number.isSafeInteger(f.size)||f.size<1||f.size>3*1024*1024)throw Error('사진 첨부 정보를 확인해주세요. 다시 첨부한 뒤 저장해주세요.');return {name:f.name,url:f.url,type:f.type,size:f.size};});
+ return value.map(f=>{if(!f||typeof f.name!=='string'||!f.name||f.name.length>250||typeof f.url!=='string'||!f.url.startsWith(prefix)||!/^[a-f\d-]{36}\.(jpg|png|webp|gif)$/.test(f.url.slice(prefix.length))||!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)||!Number.isSafeInteger(f.size)||f.size<1||f.size>50*1024*1024)throw Error('사진 첨부 정보를 확인해주세요. 다시 첨부한 뒤 저장해주세요.');return {name:f.name,url:f.url,type:f.type,size:f.size};});
 }

@@ -1408,13 +1408,13 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
 <script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
-<script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
+<script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
-<script src="/staff-workspace-media.js?v=20260911-reauth1"></script>
+<script src="/staff-workspace-media.js?v=20260918-1"></script>
 <link rel="stylesheet" href="/staff-workspace-shell.css?v=20260911-reauth1">
-<link rel="stylesheet" href="/staff-chat.css?v=20260917-chat-tools1"><script src="/staff-chat.js?v=20260917-chat-tools1"></script>
+<link rel="stylesheet" href="/staff-chat.css?v=20260918-upload1"><script src="/staff-chat.js?v=20260918-upload1"></script>
 <link rel="stylesheet" href="/staff-mobile.css?v=20260916-1"><script src="/staff-mobile.js?v=20260916-1" defer></script>
 </head>
 <body>
@@ -8503,22 +8503,22 @@ function _apvOpenForm(empId){
 
 
 
-var MAX_FILES=10;
-var MAX_FILE_SIZE=20*1024*1024;
+var MAX_FILES=30;
+var MAX_FILE_SIZE=50*1024*1024;
 var BLOCKED_EXTENSIONS=/\.(mp4|mov|avi|mkv|webm|wmv|flv|m4v|3gp|ts|mts)$/i;
 var ALLOWED_MIME_PREFIXES=['image/','application/pdf','application/msword','application/vnd.openxmlformats','application/vnd.ms-excel','application/vnd.ms-powerpoint','text/'];
 function _validateFile(f){
   if(BLOCKED_EXTENSIONS.test(f.name)){toast(f.name+': 영상 파일은 구글 드라이브 링크로 공유해주세요','#ef4444');return false;}
   if(f.type&&f.type.startsWith('video/')){toast(f.name+': 영상 파일은 구글 드라이브 링크로 공유해주세요','#ef4444');return false;}
-  if(f.size>MAX_FILE_SIZE){toast(f.name+': 파일이 너무 큽니다 (최대 20MB)','#ef4444');return false;}
+  if(f.size>MAX_FILE_SIZE){toast(f.name+': 파일이 너무 큽니다 (최대 50MB)','#ef4444');return false;}
   return true;
 }
 function readFilesAsBase64(input){
   var files=Array.from(input.files||[]);
   if(!files.length)return Promise.resolve([]);
-  files=files.filter(_validateFile);
+  files=files.filter(function(f){if(f.size>20*1024*1024){toast(f.name+': 이 첨부 화면은 최대 20MB입니다','#ef4444');return false;}return _validateFile(f);});
   if(!files.length)return Promise.resolve([]);
-  if(files.length>MAX_FILES){toast('최대 '+MAX_FILES+'개까지 첨부 가능합니다','#ef4444');files=files.slice(0,MAX_FILES);}
+  if(files.length>10){toast('이 첨부 화면은 최대 10개까지 가능합니다','#ef4444');files=files.slice(0,10);}
   return Promise.all(files.map(function(f){
     return new Promise(function(res){
       var r=new FileReader();
@@ -9744,18 +9744,7 @@ function toggleAssignPicker(){
 }
 // 업무 첨부 = Supabase Storage 업로드 (base64 localStorage 용량 초과 방지)
 async function _taskFilesUpload(files){
-  var out=[];
-  for(var i=0;i<files.length;i++){
-    var f=files[i];
-    try{
-      var ext=(f.name.split('.').pop()||'bin');
-      var path='task-files/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.'+ext;
-      var resp=await fetch(SB_URL+'/storage/v1/object/staff-files/'+path,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':f.type||'application/octet-stream','x-upsert':'true'},body:f});
-      if(!resp.ok)throw new Error('http '+resp.status);
-      out.push({name:f.name,url:SB_URL+'/storage/v1/object/public/staff-files/'+path,type:f.type,size:f.size});
-    }catch(err){console.error('task file upload',err);toast(f.name+': 업로드 실패 — 다시 시도해주세요','#ef4444');}
-  }
-  return out;
+  var out=[];for(var f of files){try{out.push(await _staffDirectUpload(f,'task'));}catch(e){toast(f.name+': '+e.message,'#ef4444');}}return out;
 }
 function handleTMF(event){return _staffTaskUpload(event,false);}
 function renderTMFL(){return _staffRenderTaskUpload();}

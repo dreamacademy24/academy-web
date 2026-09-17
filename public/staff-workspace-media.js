@@ -42,21 +42,18 @@ async function _staffOptimizeUploadFile(file){
 }
 function _staffMediaFormHint(){
   var host=document.getElementById('tmFL');if(!host)return;
-  if(!document.getElementById('staffMediaHint')){var hint=document.createElement('div');hint.id='staffMediaHint';hint.className='swm-hint';hint.innerHTML='<p>여러 사진을 선택하면 순서대로 업로드합니다. 큰 JPG·PNG·WebP는 보기 좋은 크기로 최적화하며, 원본 파일은 내 기기에 남아 있습니다.</p><label><input type="checkbox" id="staffMediaKeepOriginal"> 이번에는 원본 파일 그대로 업로드</label><div id="staffMediaStatus" role="status"></div>';host.before(hint);}
+  if(!document.getElementById('staffMediaHint')){var hint=document.createElement('div');hint.id='staffMediaHint';hint.className='swm-hint';hint.innerHTML='<p>최대 30개 · 파일당 50MB. 여러 사진은 동시에 3개씩 업로드합니다. 큰 JPG·PNG·WebP는 보기 좋은 크기로 최적화하며, 원본 파일은 내 기기에 남아 있습니다.</p><label><input type="checkbox" id="staffMediaKeepOriginal"> 이번에는 원본 파일 그대로 업로드</label><div id="staffMediaStatus" role="status"></div>';host.before(hint);}
 }
 async function _staffTaskUpload(event,retry){
-  if(_staffMediaBusy||_staffTaskSaving)return;
-  _staffMediaFormHint();var files=retry?_staffMediaFailures.slice():Array.from(event.target.files||[]);
-  files=files.filter(_validateFile);var room=Math.max(0,MAX_FILES-mFiles.length);if(files.length>room){toast('한 업무에는 '+MAX_FILES+'개까지 첨부할 수 있습니다.','#ef4444');files=files.slice(0,room);}if(!files.length)return;
-  _staffMediaBusy=true;_staffMediaFailures=[];var draft=_staffMediaDraft,host=document.getElementById('staffMediaStatus'),keep=document.getElementById('staffMediaKeepOriginal').checked,success=0;
-  try{for(var i=0;i<files.length;i++){
-    if(draft!==_staffMediaDraft)break;
-    if(host)host.textContent=(i+1)+' / '+files.length+' 업로드 중 · '+files[i].name;
-    try{var file=keep?files[i]:await _staffOptimizeUploadFile(files[i]),saved=await _taskFilesUpload([file]);if(!saved.length)throw Error();if(draft===_staffMediaDraft){mFiles.push(saved[0]);success++;renderTMFL();}}
-    catch(e){if(draft===_staffMediaDraft)_staffMediaFailures.push(files[i]);}
-  }}finally{_staffMediaBusy=false;if(event&&event.target)event.target.value='';}
-  if(draft!==_staffMediaDraft)return;
-  if(host){host.textContent=success+'개 업로드 완료'+(_staffMediaFailures.length?' · '+_staffMediaFailures.length+'개 실패':'');if(_staffMediaFailures.length){var button=document.createElement('button');button.type='button';button.className='tm-btn';button.textContent='실패한 파일만 다시 시도';button.onclick=function(){_staffTaskUpload(null,true);};host.appendChild(button);}}
+ if(_staffMediaBusy||_staffTaskSaving)return;
+ _staffMediaFormHint();var files=retry?_staffMediaFailures.slice():Array.from(event.target.files||[]);
+ files=files.filter(_validateFile);var room=Math.max(0,MAX_FILES-mFiles.length);if(files.length>room){toast('한 업무에는 '+MAX_FILES+'개까지 첨부할 수 있습니다.','#ef4444');return;}if(!files.length)return;
+ _staffMediaBusy=true;_staffMediaFailures=[];var draft=_staffMediaDraft,host=document.getElementById('staffMediaStatus'),keep=document.getElementById('staffMediaKeepOriginal').checked,base=mFiles.slice(),results=[],failed=[],progress=files.map(function(){return 0;});
+ function status(){if(host&&draft===_staffMediaDraft)host.textContent=results.filter(Boolean).length+' / '+files.length+'개 완료 · '+Math.round(progress.reduce(function(a,b){return a+b;},0)/files.length)+'%';}
+ try{await _staffUploadBatch(files,async function(original,i){if(draft!==_staffMediaDraft)return;try{var file=keep?original:await _staffOptimizeUploadFile(original);results[i]=await _staffDirectUpload(file,'task','',function(p){progress[i]=p;status();});if(draft===_staffMediaDraft){mFiles=base.concat(results.filter(Boolean));renderTMFL();}}catch(e){failed[i]=original;}finally{status();}});}
+ finally{_staffMediaBusy=false;if(event&&event.target)event.target.value='';}
+ if(draft!==_staffMediaDraft)return;_staffMediaFailures=failed.filter(Boolean);
+ if(host){host.textContent=results.filter(Boolean).length+'개 업로드 완료'+(_staffMediaFailures.length?' · '+_staffMediaFailures.length+'개 실패':'');if(_staffMediaFailures.length){var b=document.createElement('button');b.type='button';b.className='tm-btn';b.textContent='실패한 파일만 다시 시도';b.onclick=function(){_staffTaskUpload(null,true);};host.appendChild(b);}}
 }
 function _staffRenderTaskUpload(){
   var host=document.getElementById('tmFL');if(!host)return;

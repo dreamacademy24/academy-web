@@ -44,11 +44,13 @@ export async function chatAccess(req:Request){
  if(!staff)chatError('로그인이 만료되었습니다. 다시 로그인해주세요.',401);
  if(staff.role!=='korean_admin')chatError('직원업무 채팅 권한이 없습니다.',403);
  const db=portalDb(),actor=staff.username.replace(/^admin-/,'');
- const {data,error}=await db.from('staff_accounts').select('username,name').eq('is_active',true).eq('role','korean_admin');
+ const [{data,error},groupResult]=await Promise.all([
+  db.from('staff_accounts').select('username,name').eq('is_active',true).eq('role','korean_admin'),
+  db.from('staff_chat_groups').select('id,name,creator,members,created_at').contains('members',[actor]).order('created_at')
+ ]);
  if(error)chatError('직원 목록을 불러오지 못했습니다.',503);
  const employees=(data||[]).map(e=>({id:e.username.replace(/^admin-/,''),name:e.name})).filter(e=>e.id!=='jun');
  if(!employees.some(e=>e.id===actor))chatError('사용 권한이 없습니다.',403);
- const groupResult=await db.from('staff_chat_groups').select('id,name,creator,members,created_at').contains('members',[actor]).order('created_at');
  if(groupResult.error)chatError('그룹 채팅 목록을 불러오지 못했습니다.',503);
  const ids=employees.map(e=>e.id),groups=(groupResult.data||[]).map(g=>({...g,members:g.members.filter((id:string)=>ids.includes(id)),room:'group:'+g.id}));
  const rooms=['all',...ids.filter(id=>id!==actor).map(id=>dmRoom(actor,id)),...groups.map(g=>g.room)];
