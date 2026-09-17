@@ -4102,7 +4102,7 @@ function doLogin(u){
   if(isAdmin()){document.getElementById('btnNotice').style.display='inline-flex';}
   backToStep1();buildEmpNav();var _initPg='home';try{var _qpPg=new URLSearchParams(window.location.search).get('page');if(_qpPg)_initPg=_qpPg;}catch(e){}showPage(_initPg);
   loadTasksFromSB().then(function(){return loadProjectsFromSB();}).then(function(){return loadTaskCommentsFromSB();}).then(function(){return loadThreadsFromSB();}).then(function(){return loadNoticesFromSB();}).then(function(){return loadNoticeReadsSB();}).then(function(){return loadRecurring();}).then(function(){var mon=mondayOfWeek(todayStr());return loadRecurringDone(mon,addDaysStr(mon,6));}).then(function(){return loadBoardMeta();}).then(function(){refreshAll();startPolling();loadMyNotifs();_staffRelatedTaskDeepLink();});
-  setTimeout(seedDesignVotePost,2500);
+  // Opinion examples are posted explicitly; never recreate deleted samples on login.
   setTimeout(checkDueNotif,1500);
   setTimeout(checkUpdates,1000);setInterval(checkUpdates,5*60*1000);
 }
@@ -8756,7 +8756,7 @@ function _voteRender(op){
       html+='<div style="background:#fff;border:1px solid '+(voted?'#10b981':'#e5e7eb')+';border-radius:8px;padding:10px;margin-bottom:8px;position:relative;overflow:hidden">';
       html+='<div style="position:absolute;inset:0;background:'+fillCol+'15;width:'+pct+'%;transition:width .3s"></div>';
       html+='<div style="position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:#1f2937">'+(voted?'✓ ':'')+esc(o.label||'')+'</div>';
-      if(o.url&&o.url.indexOf('data:image')===0) html+='<div style="width:100%;margin-top:6px"><img src="'+o.url+'" onclick="openLightbox(\''+o.url+'\')" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;cursor:zoom-in"></div>';
+      if(o.url&&(o.url.indexOf('data:image')===0||/^\/staff-home-colors\/[a-z0-9-]+\.png$/i.test(o.url))) html+='<div style="width:100%;margin-top:6px"><img src="'+o.url+'" onclick="openLightbox(\''+o.url+'\')" style="width:100%;max-height:260px;object-fit:contain;border-radius:8px;cursor:zoom-in"></div>';
       else if(o.url) html+='<a href="'+esc(o.url)+'" target="_blank" rel="noopener" style="font-size:11px;color:#1a6fc4;text-decoration:none;background:#eff6ff;padding:3px 9px;border-radius:5px;font-weight:700">미리보기 ↗</a>';
       if(!expired&&!voted) html+='<button onclick="castVote(\''+op.id+'\','+i+')" style="font-size:11px;background:#534AB7;color:#fff;border:none;padding:4px 12px;border-radius:5px;font-weight:700;cursor:pointer;font-family:inherit">투표하기</button>';
       html+='<div style="font-size:11px;font-weight:800;color:'+fillCol+';min-width:60px;text-align:right">'+pct+'% ('+c+'표)</div></div>';
@@ -8936,29 +8936,6 @@ function submitOpinion(){
     sbPost('staff_opinions',payload)
       .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();var _opIds=target==='all'?ALL.map(function(u){return u.id;}):[target];createNotifMultiple(_opIds,'opinion','',CU.name+'님이 의견을 요청했습니다: '+title.slice(0,20));});
   });
-}
-function seedDesignVotePost(){
-  var SEED_TITLE='프로젝트 페이지 디자인 투표';
-  sbGet('staff_opinions','title=eq.'+encodeURIComponent(SEED_TITLE)+'&limit=1').then(function(rows){
-    if(rows&&rows.length>0)return; // 이미 존재
-    var d=new Date();d.setDate(d.getDate()+7);
-    var deadline=localDateStr(d);
-    var voteOpts=[
-      {label:'예시 1 - 리스트+타임라인',url:'/vote/design-1.html'},
-      {label:'예시 2 - 카드+담당자',url:'/vote/design-2.html'},
-      {label:'예시 3 - 갤러리+노션',url:'/vote/design-3.html'},
-      {label:'예시 4 - 숫자강조 대시보드',url:'/vote/design-4.html'},
-      {label:'예시 5 - 수평진행바+피드',url:'/vote/design-5.html'}
-    ];
-    sbPost('staff_opinions',{
-      from_id:'ceo',target:'all',title:SEED_TITLE,
-      body:'직원들의 의견을 반영해서 프로젝트 페이지를 새롭게 만들려고 해요. 각 예시를 확인하고 가장 마음에 드는 디자인에 투표해주세요!',
-      files:[],ts:Date.now(),type:'vote',vote_options:voteOpts,vote_deadline:deadline
-    }).then(function(){
-      console.log('[seed] design vote post created');
-      createNotifMultiple(ALL.map(function(u){return u.id;}),'opinion','','📊 새 투표: '+SEED_TITLE);
-    }).catch(function(e){console.error('[seed] vote post err',e);});
-  }).catch(function(e){console.error('[seed] check err',e);});
 }
 function submitReply(opId){
   var inp=document.getElementById('replyInput');

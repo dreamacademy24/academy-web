@@ -1,0 +1,20 @@
+const {chromium}=require('C:/Users/desko/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {createClient}=require('@supabase/supabase-js'),{randomUUID}=require('node:crypto'),assert=require('node:assert/strict'),fs=require('node:fs');
+const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}),username='test-color-'+randomUUID().slice(0,8),password=randomUUID()+'Ab9!',base=process.argv[2]||'http://localhost:4196',published=process.argv.includes('--published');
+const ok=r=>{if(r.error)throw Error(r.error.message);return r.data;};
+(async()=>{let browser,opId,temporary=false;try{
+ ok(await db.rpc('exec_sql',{sql:`insert into staff_accounts(username,password_hash,role,name,is_active) values ('${username}',crypt('${password}',gen_salt('bf')),'korean_admin','${username}',true)`}));
+ if(published){opId=JSON.parse(fs.readFileSync('tmp/home-color-vote/published.json')).id;}else{const rows=ok(await db.from('staff_opinions').insert({from_id:username,target:'all',title:'[검증용] 색상 투표',body:'임시 검증용',ts:Date.now(),type:'vote',files:[],vote_options:['a-purple-navy','b-teal-mint','c-blue-sky','d-orange-charcoal'].map((f,i)=>({label:'ABCD'[i]+'안',url:'/staff-home-colors/'+f+'.png'}))}).select('id'));opId=rows[0].id;temporary=true;}
+ browser=await chromium.launch({channel:'chrome',headless:true});const ctx=await browser.newContext({viewport:{width:1440,height:1000}});assert.equal((await ctx.request.post(base+'/api/admin/login',{data:{username,password}})).status(),200);
+ const page=await ctx.newPage();await page.goto(base+'/admin/view?src='+encodeURIComponent('/staff?page=opinions'));let frame=page.frameLocator('iframe').first();await frame.locator('#opListItems [onclick]').first().waitFor({timeout:90000});
+ await frame.locator('#opListItems [onclick]').filter({hasText:published?'직원홈 색상 시안':'[검증용] 색상 투표'}).click();let slot=frame.locator('[id="opdVote_'+opId+'"]');await slot.locator('img').nth(3).waitFor();assert.equal(await slot.locator('img').count(),4);
+ for(const img of await slot.locator('img').all())assert.equal(await img.evaluate(async el=>{await el.decode();return el.naturalWidth>1000;}),true);
+ await slot.locator('img').first().click();await frame.locator('#imgLightbox').waitFor({state:'visible'});await frame.locator('#imgLightbox button').click();
+ await slot.getByRole('button',{name:'투표하기'}).nth(1).click();await slot.getByText(/^✓ B안/).waitFor();
+ let votes=ok(await db.from('staff_votes').select('*').eq('opinion_id',opId).eq('voter_id',username));assert.equal(votes.length,1);assert.equal(votes[0].option_idx,1);
+ await page.reload();await frame.locator('#opListItems [onclick]').filter({hasText:published?'직원홈 색상 시안':'[검증용] 색상 투표'}).click();await slot.getByText(/^✓ B안/).waitFor();
+ await page.setViewportSize({width:390,height:844});await slot.locator('img').nth(3).scrollIntoViewIfNeeded();assert.ok((await slot.boundingBox()).width<=390);fs.mkdirSync('tmp/home-color-vote',{recursive:true});await page.screenshot({path:'tmp/home-color-vote/verified-mobile.png'});
+ console.log('PASS '+base+': four images, lightbox, employee vote persisted after reload, mobile view');
+ if(published){const all=ok(await db.from('staff_opinions').select('id,title'));assert.equal(all.length,1);assert.equal(all[0].id,opId);const html=await(await fetch(base+'/team_manager3.html')).text();assert.ok(!html.includes('function seedDesignVotePost'));console.log('PASS only requested sample remains; old seed removed');}
+ }finally{if(browser)await browser.close();if(opId)ok(await db.from('staff_votes').delete().eq('opinion_id',opId).eq('voter_id',username));if(temporary){ok(await db.from('staff_op_replies').delete().eq('opinion_id',opId));ok(await db.from('staff_opinions').delete().eq('id',opId));}ok(await db.from('staff_accounts').delete().eq('username',username));console.log('Removed test vote/account; preserved real votes.');}
+})().catch(e=>{console.error(e.stack);process.exitCode=1;});
