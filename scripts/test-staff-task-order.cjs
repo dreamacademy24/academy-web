@@ -5,6 +5,27 @@ function fixture(){
  vm.runInContext(fs.readFileSync('public/staff-task-order.js','utf8'),context);return context;
 }
 function functions(context,names){const source=ts.createSourceFile('inline.js',inline,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);for(const name of names){const node=source.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name.text===name);assert.ok(node,name);vm.runInContext(node.getText(source),context);}}
+
+test('NEW and NEW 댓글 describe distinct unread reasons and disappear after opening',()=>{
+ const f=fixture();
+ assert.match(f._staffTaskAttentionBadge({id:'new'}),/>NEW</);
+ assert.doesNotMatch(f._staffTaskAttentionBadge({id:'new'}),/NEW 댓글/);
+ assert.match(f._staffTaskAttentionBadge({id:'comment'}),/>NEW 댓글 1</);
+ assert.doesNotMatch(f._staffTaskAttentionBadge({id:'comment'}),/>NEW</);
+ delete f._taskViews.may.comment;
+ const both=f._staffTaskAttentionBadge({id:'comment'});assert.match(both,/>NEW</);assert.match(both,/>NEW 댓글 1</);
+ f._taskViews.may.comment='2026-09-16T00:00:00Z';assert.equal(f._staffTaskAttentionBadge({id:'comment'}),'');
+});
+
+test('navigation counts unread task rows, excludes projects/deleted/completed/private tasks and uses personal scope',()=>{
+ const f=fixture(),elements={};
+ Object.assign(f,{tasks:[{id:'new',assignee:'may'},{id:'comment',assignee:'may'},{id:'shared',shared:true},{id:'done',done:true,assignee:'may'},{id:'archived',assignee:'may'},{id:'private',secret:true,assignee:'song'}],_isArchivedTask:id=>id==='archived',isManagerCU:()=>false,isUnassignedTask:()=>false,myNotifs:[{type:'project'},{type:'task_comment',ref_id:'deleted'},{type:'task_comment',ref_id:'comment'},{type:'task_comment',ref_id:'comment'}],document:{getElementById:id=>/^badge-|^notif-dot-/.test(id)?elements[id]||(elements[id]={style:{}}):null}});
+ functions(f,['taskVisible','_setNavBadge','updateNavBadges']);
+ f.updateNavBadges();assert.equal(elements['badge-board'].textContent,'3');assert.equal(elements['badge-mywork'].textContent,'2');
+ f._taskViews.may.comment='2026-09-16T00:00:00Z';f.updateNavBadges();assert.equal(elements['badge-board'].textContent,'2');assert.equal(elements['badge-mywork'].textContent,'1');
+ f._taskViews.may.new='2026-09-16T00:00:00Z';f.updateNavBadges();assert.equal(elements['badge-mywork'].style.display,'none');
+ f.taskComments.new=[{author:'song',ts:'2026-09-17T00:00:00Z'}];f.updateNavBadges();assert.equal(elements['badge-mywork'].textContent,'1');
+});
 test('personal unread and incoming comments precede checked urgent tasks; deterministic and non-mutating',()=>{
  const f=fixture(),rows=[{id:'read',priority:'high',due:'2026-09-01'},{id:'new',createdAt:'2026-09-15T08:00:00Z'},{id:'comment',createdAt:'2026-08-01'}];
  functions(f,['sortT']);assert.deepEqual(Array.from(f.sortT(rows),t=>t.id),['comment','new','read']);assert.equal(rows[0].id,'read');

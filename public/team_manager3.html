@@ -1406,7 +1406,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-task-order.js?v=20260917-completed2"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
+<script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260916-completed1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
 <script src="/staff-comment-photos.js?v=20260915-photos1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
@@ -3823,11 +3823,15 @@ function _setNavBadge(id,count){
   el.style.display='inline-flex';
 }
 function updateNavBadges(){
-  // 업무 관련 알림 (댓글 + 새 배정): 내 업무 + 전체 업무 뱃지
-  var _taskTypes=['task_comment','unassigned_task','task','task_assigned'];
-  var boardNotif=myNotifs.filter(function(n){return _taskTypes.indexOf(n.type)>=0;}).length;
-  _setNavBadge('badge-board',boardNotif);
-  _setNavBadge('badge-mywork',boardNotif);
+  // Count the same unread task rows that carry NEW / NEW 댓글 labels.
+  var taskUnread=_staffTaskUnreadCounts();
+  _setNavBadge('badge-board',taskUnread.board);
+  _setNavBadge('badge-mywork',taskUnread.mywork);
+  ['board','mywork'].forEach(function(key){
+    var badge=document.getElementById('badge-'+key),dot=document.getElementById('notif-dot-'+key);
+    if(badge)badge.title='NEW 또는 NEW 댓글이 있는 미완료 업무 '+taskUnread[key]+'건';
+    if(dot)dot.style.display=taskUnread[key]>0?'inline-block':'none';
+  });
   // 의견요청: myNotifs 중 type='opinion'
   var opCount=myNotifs.filter(function(n){return n.type==='opinion';}).length;
   _setNavBadge('badge-opinions',opCount);
@@ -3837,9 +3841,7 @@ function updateNavBadges(){
   // 소통 탭 합산 (공지 + 의견 + 채팅)
   var ntCount=myNotifs.filter(function(n){return n.type==='notice';}).length;
   _setNavBadge('badge-comm',ntCount);
-  // 업무 탭: 프로젝트 스레드 알림 합산
-  var thCount=myNotifs.filter(function(n){return n.type==='thread'||n.type==='project';}).length;
-  _setNavBadge('badge-board',boardNotif+thCount);
+  // Project notifications retain their own project indicators.
   // 전체 알림
   _setNavBadge('badge-notif',(myNotifs||[]).length);
   try{if(document.getElementById('empHomeNotif')||document.getElementById('staffHomeRoot'))_renderEmpHomeNotif(curEmpId||(CU&&CU.id));}catch(e){}
@@ -5853,7 +5855,7 @@ function renderBoardTable(){
 function _btSeenCell(t){
   var state=_staffTaskAttention(t),ids=[t.assignee].concat(t.assignees||[]).filter(function(id,i,a){return id&&a.indexOf(id)===i;});
   var others=ids.map(function(id){var p=getP(id);return (p?p.name:id)+': '+((_taskViews[id]||{})[String(t.id)]?'열람함':'미열람');}).join(', ');
-  return '<span style="color:'+(state.needed?'#4338ca':'var(--text3)')+';font-weight:'+(state.needed?'700':'400')+';font-size:12px" title="내 확인 상태 기준 · 담당자 열람: '+esc(others||'미배정')+'">'+(state.comments?'새 댓글 '+state.comments:state.needed?'미확인':'확인함')+'</span>';
+  return '<span style="color:'+(state.needed?'#4338ca':'var(--text3)')+';font-weight:'+(state.needed?'700':'400')+';font-size:12px" title="내 확인 상태 기준 · 담당자 열람: '+esc(others||'미배정')+'">'+(state.needed?_staffTaskAttentionBadge(t):'확인함')+'</span>';
 }
 function _btStrip(tasksAll){
   var eod=new Date(new Date().setHours(23,59,59,999));
@@ -7680,7 +7682,6 @@ function renderEmpDetailEmpty(emp){
     var done=isDoneTask(t);
     var urgentCls=(!done&&_isUrgentEmpTask(t))?' is-urgent':'';
     var cmt=(taskComments[t.id]||[]).length;
-    var cmtNew=_staffTaskAttention(t).comments>0;
     var h='<div class="empb-card'+urgentCls+(done?' is-done':'')+'" onclick="selectEmpTask(\x27'+t.id+'\x27)">';
     if(isOwner||isAdmin()){
       h+='<div class="empb-act">';
@@ -7690,7 +7691,7 @@ function renderEmpDetailEmpty(emp){
       h+='</div>';
     }
     h+='<div style="font-size:12.5px;font-weight:600;margin-bottom:5px;padding-right:46px;'+(done?'text-decoration:line-through;color:var(--text3)':'color:var(--text)')+'">'+esc(t.title||'')+'</div>';
-    var meta=[_taskAgeHtml(t,done),dueBadge(t),clTxt(t),(cmtNew?'<span style="font-size:10.5px;font-weight:800;color:#dc2626;background:#fee2e2;border-radius:6px;padding:1px 6px">💬 '+(cmt||'')+' NEW</span>':(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':''))].filter(function(x){return x;});
+    var meta=[_staffTaskAttentionBadge(t),_taskAgeHtml(t,done),dueBadge(t),clTxt(t),(cmt>0?'<span style="font-size:10.5px;color:var(--text3)">💬 '+cmt+'</span>':'')].filter(function(x){return x;});
     if(meta.length)h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+meta.join('')+'</div>';
     h+='</div>';
     return h;
@@ -10679,6 +10680,7 @@ function showUpdateBanner(updates){
 /* \u2500\u2500 \uC5C5\uB370\uC774\uD2B8 \uC54C\uB9BC \uB05D \u2500\u2500 */
 
 function refreshAll(){
+  updateNavBadges();
   if(!document.getElementById('page-home').classList.contains('hidden'))renderHome();
   if(!document.getElementById('page-announcements').classList.contains('hidden'))renderAnnouncementsPage();
   if(!document.getElementById('page-board').classList.contains('hidden'))renderBoard();
