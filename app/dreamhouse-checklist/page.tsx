@@ -8,6 +8,24 @@ export default function DreamhouseChecklist(){
   const [variant,setVariant]=useState<'standard'|'daon'>('standard'),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   const [message,setMessage]=useState(''),[error,setError]=useState(''),[needsLogin,setNeedsLogin]=useState(false);
   const [fields,setFields]=useState({guest:'',date:'',house:'',beds:'',inspector:'',notes:''});
+  const [bookings,setBookings]=useState<{id:string;name:string;date:string;house:string;reservation:string}[]>([]),[bookingId,setBookingId]=useState('');
+  const [bookingBusy,setBookingBusy]=useState(false),[bookingError,setBookingError]=useState(''),[bookingRetry,setBookingRetry]=useState(0),[bookingQuery,setBookingQuery]=useState('');
+  useEffect(()=>{
+    setBookingId(new URLSearchParams(window.location.search).get('bookingId')||'');
+    const abort=new AbortController();
+    fetch('/api/dreamhouse/checklist/bookings',{cache:'no-store',signal:abort.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setBookings(d.bookings);}).catch(e=>{if(!abort.signal.aborted)setBookingError(e.message);});
+    return()=>abort.abort();
+  },[]);
+  useEffect(()=>{
+    if(!bookingId){setBookingBusy(false);return;}
+    const abort=new AbortController();setBookingBusy(true);setBookingError('');
+    fetch('/api/dreamhouse/checklist/bookings?bookingId='+encodeURIComponent(bookingId),{cache:'no-store',signal:abort.signal}).then(async r=>{
+      const d=await r.json();if(!r.ok)throw Error(d.error);if(abort.signal.aborted)return;
+      setFields(previous=>({...previous,...d.summary}));
+    }).catch(e=>{if(!abort.signal.aborted)setBookingError(e.message);}).finally(()=>{if(!abort.signal.aborted)setBookingBusy(false);});
+    return()=>abort.abort();
+  },[bookingId,bookingRetry]);
+  function chooseBooking(id:string){setFields(previous=>({...previous,guest:'',date:'',house:'',beds:'',notes:''}));setBookingError('');setBookingBusy(!!id);setBookingId(id);}
   async function load(){
     setLoading(true);setError('');setMessage('');
     try{const r=await fetch('/api/dreamhouse/checklist',{cache:'no-store'}),d=await r.json();setNeedsLogin(r.status===401);if(!r.ok)throw Error(d.error);setSaved(d.template);setDraft(d.template);setEditing(false);}
@@ -28,9 +46,20 @@ export default function DreamhouseChecklist(){
   const right=saved?saved.common.slice(2):[];
   return <main className={styles.page} lang="en">
     <div className={`${styles.toolbar} ${styles.noPrint}`}>
-      <a href="/dreamhouse-rooms">← Dream House</a>
+      <a href="/dreamhouse-rooms">← Dream House</a>{' · '}<a href={'/admin/checkin-details'+(bookingId?'?bookingId='+encodeURIComponent(bookingId):'')} target="_blank" rel="noopener">Check-in Details</a>
       <div className={styles.heading}><div><p>DREAM HOUSE · HOUSEKEEPING</p><h1>Check-in checklist</h1><p>Choose a checklist, fill in the details, then print. Check each item on paper.</p></div>
-      <div className={styles.actions}><button disabled={!saved||loading||editing} onClick={()=>window.print()}>Print / Save PDF</button><button disabled={!saved||loading||busy} onClick={()=>{setEditing(!editing);setDraft(saved);setError('');setMessage('');}}>{editing?'Cancel editing':'Edit checklist'}</button></div></div>
+      <div className={styles.actions}><button disabled={!saved||loading||editing||bookingBusy||!!(bookingId&&bookingError)} onClick={()=>window.print()}>Print / Save PDF</button><button disabled={!saved||loading||busy} onClick={()=>{setEditing(!editing);setDraft(saved);setError('');setMessage('');}}>{editing?'Cancel editing':'Edit checklist'}</button></div></div>
+      <section className={styles.bookingPicker}>
+        <label>Find a reservation<input aria-label="Find a reservation" placeholder="Name, house or reservation number" value={bookingQuery} onChange={e=>setBookingQuery(e.target.value)}/></label>
+        <label>Fill from Check-in Details<select aria-label="Fill from Check-in Details" value={bookingId} onChange={e=>chooseBooking(e.target.value)}>
+          <option value="">Blank checklist / Enter manually</option>
+          {bookingId&&!bookings.some(b=>b.id===bookingId)&&<option value={bookingId}>Linked reservation</option>}
+          {bookings.filter(b=>b.id===bookingId||[b.name,b.house,b.reservation,b.date].join(' ').toLowerCase().includes(bookingQuery.toLowerCase())).map(b=><option value={b.id} key={b.id}>{[b.date,b.name,b.house,b.reservation].filter(Boolean).join(' · ')}</option>)}
+        </select></label>
+        <p className={styles.hint}>Guest name, check-in date, house number and saved bed setup fill automatically. Changes on this sheet affect this printout only. Print in black and white.</p>
+        {bookingBusy&&<p role="status">Loading check-in details…</p>}
+        {bookingError&&<p role="alert">{bookingError} {bookingId&&<button onClick={()=>setBookingRetry(n=>n+1)}>Retry</button>}</p>}
+      </section>
       <div role="tablist" aria-label="Checklist type" className={styles.tabs}>
         <button role="tab" aria-selected={variant==='standard'} onClick={()=>setVariant('standard')}>Standard</button>
         <button role="tab" aria-selected={variant==='daon'} onClick={()=>setVariant('daon')}>Daon Mom</button>
@@ -47,7 +76,7 @@ export default function DreamhouseChecklist(){
       </section>))}</div></fieldset>
       <button disabled={busy||!dirty} onClick={()=>void save()}>{busy?'Saving…':'Save template for all staff'}</button>
     </div>}
-    {saved&&!loading&&<article className={styles.sheet} id="dreamhouse-print-sheet">
+    {saved&&!loading&&!bookingBusy&&!(bookingId&&bookingError)&&<article className={styles.sheet} id="dreamhouse-print-sheet">
       <header className={styles.sheetHeader}><div><p>DREAM HOUSE</p><h1>Check-in Preparation Checklist</h1></div><strong>{variant==='daon'?'DAON MOM':'STANDARD'}</strong></header>
       <div className={styles.details}>{field('guest','Guest / Reservation')}{field('date','Check-in date')}{field('house','Block and lot / House')}{field('beds','Bed setup')}{field('inspector','Checked by')}</div>
       <p className={styles.instructions}>Check that each item is clean, complete and working. Tick when ready; write N/A if not applicable. Record any issues below.</p>

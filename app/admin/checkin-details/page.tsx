@@ -585,6 +585,11 @@ ${flightImages.length > 0 ? `<div style="page-break-before:always;padding:24px">
         </div>
       </div>
 
+      <div className="sec" style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap'}}>
+        <a className="btn btn-gray" href={'/dreamhouse-checklist'+(selId?'?bookingId='+encodeURIComponent(selId):'')} target="_blank" rel="noopener">Check-in Checklist · Print</a>
+        <span style={{fontSize:13,color:'#475569'}}>이름·체크인 날짜·하우스 번호·저장된 침대 세팅을 체크리스트에 자동으로 채웁니다. 수정 중인 내용은 먼저 저장해주세요.</span>
+      </div>
+
       {(!detail || !booking) && (() => {
         const today = new Date(); today.setHours(0,0,0,0);
         const ymd = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
