@@ -3,6 +3,7 @@ import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAdminUserId } from "@/lib/adminAuth";
 import StaffSessionBoundary from "@/components/StaffSessionBoundary";
 import StaffAppManifest from "@/components/StaffAppManifest";
 
@@ -70,6 +71,14 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
 ];
 
+// CEO 전용 메뉴 — admin-ceo / admin-may 계정에서만 노출 (메이 요청)
+const CEO_USERS = ["admin-ceo", "admin-may"];
+const CEO_NAV: { title: string; items: Item[] }[] = [
+  { title: "CEO 전용", items: [
+    { label: "손익장부", href: "/admin/may/ledger" },
+  ]},
+];
+
 function AdminViewSource({ onChange }: { onChange: (src: string) => void }) {
   const searchParams = useSearchParams();
   const src = searchParams.get("src") || "";
@@ -86,10 +95,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [tutorAlerts, setTutorAlerts] = useState(0);
   const [onlineAlerts, setOnlineAlerts] = useState(0);
   const [roomAlerts, setRoomAlerts] = useState(0);
+  const [isCeo, setIsCeo] = useState(false);
 
   useEffect(() => {
     try { setFramed(window.self !== window.top); } catch { setFramed(true); }
   }, []);
+
+  useEffect(() => {
+    try { setIsCeo(CEO_USERS.includes(getAdminUserId() || "")); } catch {}
+  }, [pathname]);
+
+  const navGroups = isCeo ? [...NAV, ...CEO_NAV] : NAV;
 
   useEffect(() => {
     (async () => {
@@ -105,10 +121,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const init: Record<string, boolean> = {};
-    NAV.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && viewSrc === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
+    navGroups.forEach(g => { init[g.title] = g.items.some(it => it.ext ? (pathname === "/admin/view" && viewSrc === it.href) : (pathname === it.href || pathname.startsWith(it.href + "/"))); });
     setOpen(init);
     if (typeof window !== "undefined" && window.innerWidth < 900) setHidden(true);
-  }, [pathname, viewSrc]);
+  }, [pathname, viewSrc, isCeo]);
 
   useEffect(() => {
     let live=true,busy=false;
@@ -151,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#c5cbf2", cursor: "pointer", fontSize: 18 }}>‹</button>
           </div>
           <Link href="/admin/today" style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 18px", fontSize: 15, fontWeight: 700, color: todayOn ? "#fff" : "#eef0fc", textDecoration: "none", background: todayOn ? "rgba(255,255,255,0.20)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>📅 오늘 한눈에</Link>
-          {NAV.map(g => (
+          {navGroups.map(g => (
             <div key={g.title}>
               <button type="button" aria-expanded={Boolean(open[g.title])} onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
                 style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", border: 0, textAlign: "left", fontFamily: "inherit", padding: "13px 18px", fontSize: 15, fontWeight: 800, color: "#fff", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.12)", background: open[g.title] ? "rgba(0,0,0,0.14)" : "transparent" }}>
