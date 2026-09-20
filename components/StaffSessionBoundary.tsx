@@ -4,6 +4,7 @@ import {clearStoredStaffIdentity,openStaffSignIn,storeVerifiedStaff} from '@/lib
 export default function StaffSessionBoundary({children,requiredRole}:{children:React.ReactNode;requiredRole?:string}){
  const [state,setState]=useState<'loading'|'ready'|'signin'|'error'|'forbidden'>('loading');
  const [connectionError,setConnectionError]=useState(false);
+ const [retryAttempt,setRetryAttempt]=useState(0);
  const running=useRef(false);
  const check=useCallback(async()=>{
   if(running.current)return;running.current=true;
@@ -15,9 +16,17 @@ export default function StaffSessionBoundary({children,requiredRole}:{children:R
    const {staff}=await response.json();
    storeVerifiedStaff(staff);
    setConnectionError(false);
+   setRetryAttempt(0);
    setState(requiredRole&&staff.role!==requiredRole?'forbidden':'ready');
   }catch{setConnectionError(true);setState(s=>s==='ready'?'ready':'error');}finally{running.current=false;}
  },[requiredRole]);
+ // A transient network/503 error must not strand a newly opened print window.
+ // Never retry invalid credentials or render protected content before verification.
+ useEffect(()=>{
+  if(!connectionError||retryAttempt>=2||!['error','ready'].includes(state))return;
+  const retry=setTimeout(async()=>{await check();setRetryAttempt(n=>n+1);},retryAttempt===0?2000:5000);
+  return()=>clearTimeout(retry);
+ },[connectionError,retryAttempt,check,state]);
  useEffect(()=>{
   void check();
   const visible=()=>{if(document.visibilityState==='visible')void check();};
@@ -41,3 +50,4 @@ export default function StaffSessionBoundary({children,requiredRole}:{children:R
   {state==='forbidden'&&<button onClick={openStaffSignIn}>내 홈으로 / My home</button>}
  </section>;
 }
+
