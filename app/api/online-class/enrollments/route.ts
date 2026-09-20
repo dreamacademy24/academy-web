@@ -241,11 +241,54 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    if (!await isPortalAdmin(req)) return NextResponse.json({ error: '직원 로그인이 필요합니다.' }, { status: 401 })
+    const admin = await isPortalAdmin(req)
     const body = await req.json()
     const { id, regenerate_sessions, ...fields } = body
-    if (regenerate_sessions && !await isPortalAdmin(req)) return NextResponse.json({ error: '출석부 날짜 복구는 직원 로그인 후 이용해주세요.' }, { status: 401 })
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+    // ── 현지 티쳐(관리자 아님) 셀프서비스: 본인 담당 잡기/놓기(tutor_id) + 레벨(level)만 허용 ──
+    if (!admin) {
+      const staff = await getStaffIdentity(req)
+      if (!staff) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 })
+      const TEACHER_FIELDS = new Set(['tutor_id', 'level'])
+      const fieldKeys = Object.keys(fields)
+      if (regenerate_sessions || fieldKeys.length === 0 || fieldKeys.some(k => !TEACHER_FIELDS.has(k)))
+        return NextResponse.json({ error: 'Teachers can only take a student or set their level.' }, { status: 403 })
+      const { data: curRow, error: curErr } = await supabase.from('online_enrollments')
+        .select('tutor_id, days_of_week, class_time_kr, day_times, start_date, end_date').eq('id', id).single()
+      if (curErr || !curRow) return NextResponse.json({ error: 'Student not found. Please refresh.' }, { status: 404 })
+      const teacherUpdates: Record<string, unknown> = {}
+      if ('level' in fields) teacherUpdates.level = (fields.level === '' || fields.level == null) ? null : fields.level
+      let claimTarget: string | null | undefined = undefined
+      if ('tutor_id' in fields) {
+        const { data: myTutor } = await supabase.from('online_tutors').select('id').eq('staff_user_id', staff.username).maybeSingle()
+        if (!myTutor) return NextResponse.json({ error: 'Your account is not linked to a tutor profile yet. Please contact the office.' }, { status: 403 })
+        const target = (fields.tutor_id === '' || fields.tutor_id == null) ? null : fields.tutor_id
+        const curTutor = curRow.tutor_id ?? null
+        const isClaim = target === myTutor.id && curTutor === null
+        const isRelease = target === null && curTutor === myTutor.id
+        if (!isClaim && !isRelease)
+          return NextResponse.json({ error: 'This student was already taken by another teacher. Please refresh.' }, { status: 409 })
+        if (isClaim) {
+          const conflict = await findTutorConflict(myTutor.id, {
+            id,
+            days_of_week: curRow.days_of_week as string[],
+            class_time_kr: curRow.class_time_kr as string | null,
+            day_times: curRow.day_times as Record<string, string> | null,
+            start_date: curRow.start_date as string | null,
+            end_date: curRow.end_date as string | null,
+          })
+          if (conflict) return NextResponse.json({ error: `Time conflict: you already have a class at that time (${conflict}). Choose another.` }, { status: 409 })
+        }
+        teacherUpdates.tutor_id = target
+        claimTarget = target
+      }
+      const { error: upErr } = await supabase.from('online_enrollments').update(teacherUpdates).eq('id', id)
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
+      if (claimTarget !== undefined) await supabase.from('online_sessions').update({ tutor_id: claimTarget }).eq('enrollment_id', id)
+      return NextResponse.json({ ok: true, tutor_id: claimTarget })
+    }
+
     const currentPlan = await supabase.from('online_enrollments').select('package_plan').eq('id',id).single()
     if(currentPlan.error)return NextResponse.json({error:'수강권 정보를 확인하지 못했습니다.'},{status:503})
     if(currentPlan.data.package_plan)return NextResponse.json({error:'연수 전·후 일정이 연결된 수강권입니다. 학생 상세 화면에서 총 회차와 전후 일정을 확인하고 저장해주세요.',detail_url:`/admin/online-class/${id}`},{status:409})
