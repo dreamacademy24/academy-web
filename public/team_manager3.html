@@ -1406,7 +1406,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 </style>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
-<script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260918-notices1"></script>
+<script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260918-notices1"></script><link rel="stylesheet" href="/staff-home-theme.css?v=20260920-1"><script src="/staff-home-theme.js?v=20260920-1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
 <script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
@@ -4096,6 +4096,7 @@ function submitLogin(){
 function doLogin(u){
   if(!u||u.id==='jun'||u.id==='admin-jun'){toast('현재 사용 중인 직원 계정이 아닙니다.','#ef4444');return;}
   CU=u;
+  staffLoadHomeTheme();
   localStorage.setItem('tm_session',JSON.stringify({id:u.id,name:u.name,role:u.role}));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('app').classList.remove('hidden');
@@ -10786,6 +10787,7 @@ function renderSettingsTab5(){
   h+='<textarea id="profSig" rows="5" placeholder="예)\nBest regards,\nCEO/PRESIDENT\nCHOHEE OH / MAY OH\n+63 0929-293-2991" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--surface);color:var(--text);resize:vertical"></textarea>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveMyProfile()">저장</button></div>';
   panel.innerHTML=h;
+  var themeBox=document.createElement('div');themeBox.id='staffHomeThemePicker';panel.insertBefore(themeBox,panel.children[2]);staffRenderHomeThemePicker();
   // 서명 현재값 로드
   fetch('/api/admin/staff-accounts?role=korean_admin').then(function(r){return r.json();}).then(function(d){
     var row=(d.staff||[]).find(function(x){return x.username==='admin-'+CU.id;});
