@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {buildGuestDetails} from "@/lib/guestDetailsPrint";
 import MedicationReceipts from "@/components/MedicationReceipts";
+import CheckinChecklist from "@/components/CheckinChecklist";
 import CheckinPreparationList from "@/components/CheckinPreparationList";
 import { toastErr } from "@/lib/toast";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -435,7 +436,7 @@ function CheckinDetailsInner() {
         <span style={{fontSize:13,color:'#475569'}}>이름·체크인 날짜·하우스 번호·저장된 침대 세팅을 체크리스트에 자동으로 채웁니다. 수정 중인 내용은 먼저 저장해주세요.</span>
       </div>}
 
-      {(!detail || !booking) && <><div className="actions" style={{marginBottom:16}}><button className={preparationTab==='documents'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('documents')}>예약·서류 준비</button><button className={preparationTab==='medicine'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('medicine')}>안내문 전달·약 수령</button></div>{preparationTab==='medicine'?<MedicationReceipts/>:<CheckinPreparationList bookings={bookings} status={checkinStatus} onSelect={selectBooking}/>}</>}
+      {(!detail || !booking) && <><div className="actions" style={{marginBottom:16}}><button className={preparationTab==='documents'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('documents')}>예약·서류 준비</button><button className={preparationTab==='medicine'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('medicine')}>안내문 전달·약 수령</button><button className={preparationTab==='checklist'?'btn btn-blue':'btn btn-gray'} onClick={()=>setPreparationTab('checklist')}>체크인 체크리스트</button></div><div hidden={preparationTab!=='checklist'}><CheckinChecklist shared/></div>{preparationTab==='medicine'?<MedicationReceipts/>:preparationTab==='documents'?<CheckinPreparationList bookings={bookings} status={checkinStatus} onSelect={selectBooking}/>:null}</>}
 
       {detail && booking && (<>
         {!editing && (
