@@ -14,8 +14,17 @@ document.querySelectorAll('select,input').forEach(el=>el.addEventListener('chang
 }
 
 export function openFieldtripPrint(title: string, blocks: Block[]) {
- const popup=window.open('', '_blank');
- if(!popup) throw Error('인쇄 미리보기 창을 열 수 없습니다. 팝업을 허용한 뒤 다시 눌러주세요.');
+ const overlay=document.createElement('div');
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','한 페이지 저장 미리보기');
+ overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:#edf1f6;padding-top:48px';
+ const close=document.createElement('button');close.textContent='저장 미리보기 닫기';
+ close.style.cssText='position:absolute;right:16px;top:8px;padding:6px 14px;background:white;border:1px solid #aaa;border-radius:6px';
+ close.onclick=()=>overlay.remove();
+ const frame=document.createElement('iframe');frame.title='A4 한 페이지 저장';
+ frame.style.cssText='width:100%;height:100%;border:0';
+ overlay.append(close,frame);document.body.append(overlay);
+ const popup=frame.contentWindow;
+ if(!popup){overlay.remove();throw Error('저장 미리보기를 열 수 없습니다. 다시 시도해주세요.');}
  popup.document.open();popup.document.write(fieldtripPrintHtml(title,blocks));popup.document.close();
  popup.document.getElementById('image')!.onclick=async()=>{
   const button=popup.document.getElementById('image') as HTMLButtonElement;
@@ -25,4 +34,5 @@ export function openFieldtripPrint(title: string, blocks: Block[]) {
   finally{button.disabled=false;button.textContent='이미지 저장';}
  };
 }
+
 
