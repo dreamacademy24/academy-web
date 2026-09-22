@@ -713,7 +713,7 @@ export default function EngTutorClassPage() {
         .ilike("admin_memo", `%request_id: ${reqId}%`)
         .limit(1);
       if (existing && existing.length > 0 && existing[0].id) {
-        router.push(`/admin/tutor-class/${existing[0].id}/attendance`);
+        router.push(`/admineng/tutor-class/${existing[0].id}/attendance`);
         return;
       }
       // class_days null/undefined 안전 처리: 빈 값이면 []로 시작
@@ -759,7 +759,7 @@ export default function EngTutorClassPage() {
       // 백그라운드 데이터 새로고침 후 이동
       loadMyLessons();
       loadAllLessons();
-      router.push(`/admin/tutor-class/${data.id}/attendance`);
+      router.push(`/admineng/tutor-class/${data.id}/attendance`);
     } catch (e: any) {
       toastErr("Failed: " + (e?.message || e));
     } finally {
@@ -1292,10 +1292,10 @@ export default function EngTutorClassPage() {
                               createLessonAndOpenAttendance(l);
                               return;
                             }
-                            router.push(`/admin/tutor-class/${l.id}/attendance`);
+                            router.push(`/admineng/tutor-class/${l.id}/attendance`);
                           }}
                         >{creatingLessonForId===l.id ? "Creating..." : "📋 Attendance"}</button>
-                        <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => router.push("/admin/tutor-class?tab=invoice&lesson_id=" + l.id)}>💰 Invoice</button>
+                        <button className="ebtn" style={{padding:"5px 8px",fontSize:11,background:"#16a34a",color:"#fff"}} onClick={() => { setSelectedInvoiceLessonId(String(l.id).startsWith("req:") ? null : l.id); setTab("invoice"); }}>💰 Invoice</button>
                       </td>
                     </tr>
                   );
