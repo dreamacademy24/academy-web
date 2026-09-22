@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),ts=require('typescript');
+const compiled=ts.transpileModule(fs.readFileSync('lib/fieldtripPrint.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const moduleExports={};vm.runInNewContext(compiled,{exports:moduleExports,require});
+const blocks=Array.from({length:8},(_,i)=>({id:String(i),title:'안내 항목 '+i,text:('한 페이지에 모든 안내 내용을 표시합니다.\n').repeat(6),width:i===7?2:1,height:400}));
+const html=moduleExports.fieldtripPrintHtml('긴 안내문 검증 <script>alert(1)</script>',blocks);
+assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
+assert.equal((html.match(/<section /g)||[]).length,8);
+assert.ok(html.includes('size:A4 portrait;margin:0'));
+console.log('Escaping and complete block output passed.');
+if(process.argv.includes('--serve'))require('node:http').createServer((req,res)=>{res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);}).listen(3109,'127.0.0.1',()=>console.log('Print fixture: http://127.0.0.1:3109'));
