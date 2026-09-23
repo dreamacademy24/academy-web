@@ -2,3 +2,5 @@
 .avatar-room{grid-template-columns:minmax(240px,320px) minmax(0,1fr)}#avatarCanvas{width:100%;min-height:180px}#sp5 .avatar-category{display:flex;gap:7px;flex-wrap:wrap;margin:20px 0 12px}#sp5 .avatar-category button,.avatar-turn button{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--surface);color:var(--text);font:inherit}.avatar-turn{display:flex;gap:7px}#settingsModal:has(.avatar-nav) .modal{width:1040px;box-sizing:border-box}#sp5 .avatar-room aside{position:sticky;top:0}#avatar3dStatus{color:#ad3e42;line-height:1.6}@media(max-width:720px){.avatar-room{grid-template-columns:1fr}#sp5 .avatar-room aside{position:static;display:flex}#avatarCanvas{max-width:240px}.avatar-room aside>div img{width:36px;height:36px}}
 #settingsModal:has(.avatar-nav) .modal-box{width:1040px!important;max-width:96vw;box-sizing:border-box}
 
+#sp5 .avatar-nav{display:none}#settingsModal:has([data-top-section]) .modal-box{width:1040px!important;max-width:96vw;box-sizing:border-box}.avatar-controls{min-width:0}
+

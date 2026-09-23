@@ -1,18 +1,353 @@
 {
- "faceShape":{"title":"얼굴형","items":{"round":"동그란 얼굴","oval":"타원형","heart":"하트형","square":"각진 얼굴","soft":"통통한 얼굴"}},
- "eyeSize":{"title":"눈 크기","items":{"small":"작은 눈","medium":"보통","large":"큰 눈","sparkle":"반짝이는 큰 눈"}},
- "expression":{"title":"표정","items":{"smile":"미소","happy":"활짝","wink":"윙크","calm":"차분","surprise":"놀람"}},
- "skin":{"title":"피부색","items":{"porcelain":"밝은 아이보리","peach":"살구","warm":"웜 베이지","tan":"브론즈","deep":"딥 브라운"}},
- "hair":{"title":"머리 스타일","items":{"short":"숏컷","bob":"단발","long":"긴 생머리","curl":"곱슬","bun":"올림머리","ponytail":"포니테일","pigtails":"양갈래","pixie":"픽시컷","bald":"민머리"}},
- "hairColor":{"title":"머리 색","items":{"brown":"초콜릿","black":"검정","gold":"금발","pink":"로즈핑크","silver":"실버","purple":"보라","copper":"구리빛","blue":"블루"}},
- "clothing":{"title":"옷 스타일","items":{"knit":"니트","hoodie":"후드티","shirt":"셔츠","overalls":"멜빵","dress":"원피스","jacket":"재킷","sport":"운동복","uniform":"단정한 조끼"}},
- "outfitColor":{"title":"옷 색","items":{"purple":"보라","mint":"민트","blue":"블루","orange":"오렌지","pink":"핑크","cream":"크림","black":"블랙","red":"레드"}},
- "background":{"title":"배경","items":{"lavender":"라벤더 스튜디오","mint":"민트","sky":"파란 하늘","peach":"복숭아빛","night":"한밤중","forest":"숲","sunset":"노을","snow":"눈빛 화이트"}},
- "backgroundProp":{"title":"배경 소품","items":{"none":"없음","stars":"별 장식","clouds":"구름","flowers":"꽃","balloons":"풍선","plant":"화분","hearts":"하트","books":"책 더미"}},
- "accessory":{"title":"기본 소품","items":{"none":"없음","glasses":"동그란 안경","sunglasses":"선글라스","headphones":"헤드폰","bow":"리본","cap":"야구 모자","beanie":"비니","crown":"왕관"}},
- "seasonHat":{"title":"할로윈 모자 · 머리 장식","season":true,"items":{"none":"없음","witch":"마녀 모자","pumpkin":"호박 모자","cat":"검은 고양이 귀","bat":"박쥐 머리띠","horns":"악마 뿔","ghost":"유령 모자","skull":"해골 머리띠","spider":"거미 모자","top":"마술사 모자","moon":"초승달 머리띠"}},
- "seasonFace":{"title":"할로윈 얼굴 장식","season":true,"items":{"none":"없음","batmask":"박쥐 가면","roundglasses":"마법사 안경","eyepatch":"해적 안대","fangs":"뱀파이어 송곳니","stitches":"봉제 인형 스티치","pumpkinmask":"호박 가면"}},
- "seasonOutfit":{"title":"할로윈 의상","season":true,"items":{"none":"기본 옷 유지","witchrobe":"마녀 망토","vampirecape":"뱀파이어 망토","skeleton":"해골 의상","pumpkin":"호박 의상","ghost":"유령 의상","striped":"마법사 줄무늬"}},
- "seasonHand":{"title":"할로윈 손 소품","season":true,"items":{"none":"없음","pumpkinbucket":"호박 바구니","candy":"포장 사탕","lollipop":"막대 사탕","wand":"마법 지팡이","broom":"마녀 빗자루","cauldron":"미니 가마솥","lantern":"호박 랜턴","spellbook":"마법책","skull":"해골 인형","rose":"검은 장미"}},
- "seasonBackground":{"title":"할로윈 배경 소품","season":true,"items":{"none":"없음","spider":"거미","web":"거미줄","ghost":"떠다니는 유령","bat":"박쥐 무리","pumpkins":"호박밭","tombstone":"묘비","moon":"보름달","hauntedhouse":"유령의 집","cauldron":"마법 가마솥","candles":"촛불","crow":"까마귀","bones":"해골 뼈 장식"}}
+  "faceShape": {
+    "title": "얼굴형",
+    "items": {
+      "round": "동그란 얼굴",
+      "oval": "타원형",
+      "heart": "하트형",
+      "square": "각진 얼굴",
+      "soft": "통통한 얼굴"
+    }
+  },
+  "eyeSize": {
+    "title": "눈 크기",
+    "items": {
+      "small": "작은 눈",
+      "medium": "보통",
+      "large": "큰 눈",
+      "sparkle": "반짝이는 큰 눈"
+    }
+  },
+  "expression": {
+    "title": "표정",
+    "items": {
+      "smile": "미소",
+      "happy": "활짝",
+      "wink": "윙크",
+      "calm": "차분",
+      "surprise": "놀람"
+    }
+  },
+  "skin": {
+    "title": "피부색",
+    "items": {
+      "porcelain": "밝은 아이보리",
+      "peach": "살구",
+      "warm": "웜 베이지",
+      "tan": "브론즈",
+      "deep": "딥 브라운"
+    }
+  },
+  "hair": {
+    "title": "머리 스타일",
+    "items": {
+      "short": "숏컷",
+      "bob": "단발",
+      "long": "긴 생머리",
+      "curl": "곱슬",
+      "bun": "올림머리",
+      "ponytail": "포니테일",
+      "pigtails": "양갈래",
+      "pixie": "픽시컷",
+      "bald": "민머리"
+    }
+  },
+  "hairColor": {
+    "title": "머리 색",
+    "items": {
+      "brown": "초콜릿",
+      "black": "검정",
+      "gold": "금발",
+      "pink": "로즈핑크",
+      "silver": "실버",
+      "purple": "보라",
+      "copper": "구리빛",
+      "blue": "블루"
+    }
+  },
+  "clothing": {
+    "title": "옷 스타일",
+    "items": {
+      "knit": "니트",
+      "hoodie": "후드티",
+      "shirt": "셔츠",
+      "overalls": "멜빵",
+      "dress": "원피스",
+      "jacket": "재킷",
+      "sport": "운동복",
+      "uniform": "단정한 조끼"
+    }
+  },
+  "outfitColor": {
+    "title": "옷 색",
+    "items": {
+      "purple": "보라",
+      "mint": "민트",
+      "blue": "블루",
+      "orange": "오렌지",
+      "pink": "핑크",
+      "cream": "크림",
+      "black": "블랙",
+      "red": "레드"
+    }
+  },
+  "background": {
+    "title": "배경",
+    "items": {
+      "lavender": "라벤더 스튜디오",
+      "mint": "민트",
+      "sky": "파란 하늘",
+      "peach": "복숭아빛",
+      "night": "한밤중",
+      "forest": "숲",
+      "sunset": "노을",
+      "snow": "눈빛 화이트"
+    }
+  },
+  "backgroundProp": {
+    "title": "배경 소품",
+    "items": {
+      "none": "없음",
+      "stars": "별 장식",
+      "clouds": "구름",
+      "flowers": "꽃",
+      "balloons": "풍선",
+      "plant": "화분",
+      "hearts": "하트",
+      "books": "책 더미"
+    }
+  },
+  "accessory": {
+    "title": "기본 소품",
+    "items": {
+      "none": "없음",
+      "glasses": "동그란 안경",
+      "sunglasses": "선글라스",
+      "headphones": "헤드폰",
+      "bow": "리본",
+      "cap": "야구 모자",
+      "beanie": "비니",
+      "crown": "왕관"
+    }
+  },
+  "seasonHat": {
+    "title": "할로윈 모자 · 머리 장식",
+    "season": true,
+    "items": {
+      "none": "없음",
+      "witch": "마녀 모자",
+      "pumpkin": "호박 모자",
+      "cat": "검은 고양이 귀",
+      "bat": "박쥐 머리띠",
+      "horns": "악마 뿔",
+      "ghost": "유령 모자",
+      "skull": "해골 머리띠",
+      "spider": "거미 모자",
+      "top": "마술사 모자",
+      "moon": "초승달 머리띠"
+    }
+  },
+  "seasonFace": {
+    "title": "할로윈 얼굴 장식",
+    "season": true,
+    "items": {
+      "none": "없음",
+      "batmask": "박쥐 가면",
+      "roundglasses": "마법사 안경",
+      "eyepatch": "해적 안대",
+      "fangs": "뱀파이어 송곳니",
+      "stitches": "봉제 인형 스티치",
+      "pumpkinmask": "호박 가면"
+    }
+  },
+  "seasonOutfit": {
+    "title": "할로윈 의상",
+    "season": true,
+    "items": {
+      "none": "기본 옷 유지",
+      "witchrobe": "마녀 망토",
+      "vampirecape": "뱀파이어 망토",
+      "skeleton": "해골 의상",
+      "pumpkin": "호박 의상",
+      "ghost": "유령 의상",
+      "striped": "마법사 줄무늬"
+    }
+  },
+  "seasonHand": {
+    "title": "할로윈 손 소품",
+    "season": true,
+    "items": {
+      "none": "없음",
+      "pumpkinbucket": "호박 바구니",
+      "candy": "포장 사탕",
+      "lollipop": "막대 사탕",
+      "wand": "마법 지팡이",
+      "broom": "마녀 빗자루",
+      "cauldron": "미니 가마솥",
+      "lantern": "호박 랜턴",
+      "spellbook": "마법책",
+      "skull": "해골 인형",
+      "rose": "검은 장미"
+    }
+  },
+  "seasonBackground": {
+    "title": "할로윈 배경 소품",
+    "season": true,
+    "items": {
+      "none": "없음",
+      "spider": "거미",
+      "web": "거미줄",
+      "ghost": "떠다니는 유령",
+      "bat": "박쥐 무리",
+      "pumpkins": "호박밭",
+      "tombstone": "묘비",
+      "moon": "보름달",
+      "hauntedhouse": "유령의 집",
+      "cauldron": "마법 가마솥",
+      "candles": "촛불",
+      "crow": "까마귀",
+      "bones": "해골 뼈 장식"
+    }
+  },
+  "eyeColor": {
+    "title": "눈동자 색",
+    "default": "brown",
+    "items": {
+      "brown": "초콜릿",
+      "black": "블랙",
+      "blue": "사파이어",
+      "green": "에메랄드",
+      "purple": "보라",
+      "amber": "호박빛"
+    }
+  },
+  "eyeSpacing": {
+    "title": "눈 사이 간격",
+    "default": "normal",
+    "items": {
+      "close": "가깝게",
+      "normal": "보통",
+      "wide": "넓게"
+    }
+  },
+  "eyebrows": {
+    "title": "눈썹 모양",
+    "default": "none",
+    "items": {
+      "none": "없음",
+      "straight": "일자",
+      "arched": "아치",
+      "thick": "도톰",
+      "angry": "당당하게",
+      "worried": "걱정스럽게"
+    }
+  },
+  "nose": {
+    "title": "코 모양",
+    "default": "button",
+    "items": {
+      "button": "단추 코",
+      "small": "작은 코",
+      "round": "동그란 코",
+      "pointed": "오뚝한 코"
+    }
+  },
+  "faceDetail": {
+    "title": "볼 · 얼굴 장식",
+    "default": "blush",
+    "items": {
+      "none": "없음",
+      "blush": "분홍 볼",
+      "freckles": "주근깨",
+      "heart": "하트 스티커",
+      "star": "별 스티커",
+      "whiskers": "고양이 수염"
+    }
+  },
+  "bangs": {
+    "title": "앞머리",
+    "default": "classic",
+    "items": {
+      "classic": "볼륨 앞머리",
+      "straight": "일자 앞머리",
+      "side": "옆으로 넘김",
+      "curtain": "가르마",
+      "none": "이마 드러내기"
+    }
+  },
+  "earrings": {
+    "title": "귀걸이",
+    "default": "none",
+    "items": {
+      "none": "없음",
+      "pearl": "진주",
+      "hoop": "골드 링",
+      "gem": "보석",
+      "drop": "드롭",
+      "star": "별 귀걸이"
+    }
+  },
+  "neckwear": {
+    "title": "목 소품",
+    "default": "none",
+    "items": {
+      "none": "없음",
+      "scarf": "목도리",
+      "bowtie": "나비넥타이",
+      "tie": "넥타이",
+      "pendant": "펜던트",
+      "headset": "목에 건 헤드폰"
+    }
+  },
+  "shoes": {
+    "title": "신발",
+    "default": "classic",
+    "items": {
+      "classic": "기본 슈즈",
+      "sneakers": "운동화",
+      "boots": "부츠",
+      "ballet": "발레 슈즈",
+      "sandals": "샌들",
+      "platform": "통굽"
+    }
+  },
+  "shoeColor": {
+    "title": "신발 색",
+    "default": "navy",
+    "items": {
+      "navy": "네이비",
+      "white": "화이트",
+      "pink": "핑크",
+      "brown": "브라운",
+      "red": "레드",
+      "mint": "민트"
+    }
+  },
+  "handProp": {
+    "title": "일상 손 소품",
+    "default": "none",
+    "items": {
+      "none": "없음",
+      "coffee": "커피",
+      "phone": "휴대폰",
+      "book": "책",
+      "flower": "꽃 한 송이",
+      "star": "응원봉",
+      "heart": "하트 쿠션",
+      "bag": "미니 가방"
+    }
+  },
+  "pet": {
+    "title": "반려 친구",
+    "default": "none",
+    "items": {
+      "none": "없음",
+      "cat": "고양이",
+      "dog": "강아지",
+      "rabbit": "토끼",
+      "bear": "곰 인형",
+      "chick": "병아리"
+    }
+  }
 }
+

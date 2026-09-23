@@ -17,22 +17,31 @@ export function mount(host,config){
  const skin=palettes.skin[config.skin],hair=palettes.hairColor[config.hairColor],cloth=palettes.outfitColor[config.outfitColor];
  const headScale={round:[.73,.74,.65],oval:[.64,.83,.64],heart:[.73,.77,.61],square:[.76,.68,.63],soft:[.82,.73,.7]}[config.faceShape]||[.73,.74,.65];
  // A soft toy figure with separate head, limbs and clothing, fully modeled in 3D.
- ball('#ded0ea',0,.02,0,1.02,.12,.78);ball('#353347',-.22,.19,.08,.22,.13,.3);ball('#353347',.22,.19,.08,.22,.13,.3);
+ ball('#ded0ea',0,.02,0,1.02,.12,.78);const shoe={navy:'#353347',white:'#f7f5ec',pink:'#df88b0',brown:'#795440',red:'#bf4154',mint:'#70b6a5'}[config.shoeColor]||'#353347';[-1,1].forEach(sign=>{const x=sign*.22;ball(shoe,x,.19,.08,.22,.13,.3);if(config.shoes==='boots')box(shoe,x,.35,0,.32,.37,.34);if(config.shoes==='platform')box('#e4dfe8',x,.1,.08,.39,.15,.48);if(config.shoes==='sneakers'){box('#f6f3ee',x,.12,.1,.36,.055,.47);for(let y=0;y<3;y++)box('#f6f3ee',x,.30,.14-y*.08,.22,.018,.025);}if(config.shoes==='ballet')[-1,1].forEach(k=>ball('#edd1df',x+k*.055,.31,.2,.065,.025,.04));if(config.shoes==='sandals'){ball(skin,x,.23,.17,.14,.08,.19);box(shoe,x,.28,.22,.3,.055,.055);}});
  box('#59637e',-.22,.43,0,.28,.52,.3);box('#59637e',.22,.43,0,.28,.52,.3);
  let outfit=cloth;if(config.seasonOutfit==='ghost')outfit='#f5f0fa';if(config.seasonOutfit==='pumpkin')outfit='#ef8e28';if(['skeleton','vampirecape','witchrobe'].includes(config.seasonOutfit))outfit='#333045';
  ball(outfit,0,1.08,0,.57,.68,.38);ball(outfit,-.59,1.1,0,.17,.46,.19).rotation.z=-.22;ball(outfit,.59,1.1,0,.17,.46,.19).rotation.z=.22;
  ball(skin,-.67,.74,.06,.16,.18,.15);ball(skin,.67,.74,.06,.16,.18,.15);ball(skin,0,1.68,0,.2,.2,.22);
  const head=new T.Group();head.position.y=2.38;person.add(head);ball(skin,0,0,0,...headScale,head);ball(skin,-headScale[0],-.02,0,.13,.19,.14,head);ball(skin,headScale[0],-.02,0,.13,.19,.14,head);
  const eye={small:.068,medium:.09,large:.125,sparkle:.145}[config.eyeSize]||.09;
- [-1,1].forEach(s=>{if(config.expression==='wink'&&s===1)tube('#302838',[[.18,-.005,.627],[.27,.025,.646],[.35,-.005,.62]],.026,head);else{ball('#292636',s*.26,.04,.60,eye,eye*1.35,.06,head);ball('white',s*.26-.024,.078,.655,eye*.3,eye*.3,.015,head);if(config.eyeSize==='sparkle')ball('white',s*.26+.035,.018,.66,.017,.017,.009,head);}ball('#e89292',s*.42,-.16,.54,.11,.045,.024,head);});
- ball(skin,0,-.08,.66,.065,.075,.065,head);
+ [-1,1].forEach(s=>{if(config.expression==='wink'&&s===1)tube('#302838',[[.18,-.005,.627],[.27,.025,.646],[.35,-.005,.62]],.026,head);else{ball(({brown:'#493024',black:'#292636',blue:'#326ab1',green:'#43835f',purple:'#8155a4',amber:'#bc812e'}[config.eyeColor]||'#292636'),s*({close:.20,normal:.26,wide:.33}[config.eyeSpacing]||.26),.04,.60,eye,eye*1.35,.06,head);ball('white',s*({close:.20,normal:.26,wide:.33}[config.eyeSpacing]||.26)-.024,.078,.655,eye*.3,eye*.3,.015,head);if(config.eyeSize==='sparkle')ball('white',s*({close:.20,normal:.26,wide:.33}[config.eyeSpacing]||.26)+.035,.018,.66,.017,.017,.009,head);}if(!config.faceDetail||config.faceDetail==='blush')ball('#e89292',s*.42,-.16,.54,.11,.045,.024,head);});
+ const nose={button:[.065,.075,.065],small:[.04,.045,.035],round:[.105,.10,.095],pointed:[.055,.11,.13]}[config.nose]||[.065,.075,.065];ball(skin,0,-.08,.66,...nose,head);
+if(config.eyebrows&&config.eyebrows!=='none')[-1,1].forEach(sign=>{let slope=config.eyebrows==='angry'?sign*.08:config.eyebrows==='worried'?-sign*.08:0; tube(hair,[[sign*.26-.12,.27-slope,.58],[sign*.26,config.eyebrows==='arched'?.34:.28,.61],[sign*.26+.12,.27+slope,.58]],config.eyebrows==='thick'?.04:.023,head);});
+if(config.faceDetail==='freckles')[-1,1].forEach(sign=>{for(let i=0;i<3;i++)ball('#a56549',sign*(.3+i*.07),-.14+(i%2)*.045,.56,.015,.016,.013,head);});
+if(config.faceDetail==='whiskers')[-1,1].forEach(sign=>{for(let i=0;i<3;i++)tube('#694e4d',[[sign*.32,-.13,.57],[sign*.57,-.21+i*.08,.46]],.012,head);});
+if(config.faceDetail==='star')mesh(new T.OctahedronGeometry(.085),'#edc94e',.43,-.15,.55,head).scale.z=.25;
+if(config.faceDetail==='heart'){[-.035,.035].forEach(x=>ball('#db6889',.43+x,-.13,.55,.05,.05,.015,head));cone('#db6889',.43,-.18,.55,.066,.09,head).rotation.z=Math.PI;}
+
  if(config.expression==='surprise')ball('#6e3443',0,-.27,.595,.065,.09,.025,head);
  else if(config.expression==='happy'){ball('#803c4e',0,-.25,.61,.15,.11,.035,head);box('white',0,-.2,.642,.21,.035,.015,head);}
  else tube('#8a454c',[[-.12,-.22,.63],[0,config.expression==='calm'?-.23:-.28,.65],[.12,-.22,.63]],.02,head);
  if(config.hair!=='bald'){
   // Upper hemisphere leaves the face visible instead of placing a solid sphere over it.
   const cap=mesh(new T.SphereGeometry(1,32,20,0,Math.PI*2,0,Math.PI*.52),hair,0,.03,-.045,head);cap.scale.set(headScale[0]*1.06,headScale[1]*1.08,headScale[2]*1.06);
-  [-.44,-.2,.08,.34].forEach((x,i)=>ball(hair,x,.51-i*.035,.43,.26,.19,.22,head));
+  if(!config.bangs||config.bangs==='classic')[-.44,-.2,.08,.34].forEach((x,i)=>ball(hair,x,.51-i*.035,.43,.26,.19,.22,head));
+if(config.bangs==='straight')for(let x=-.45;x<.5;x+=.15)ball(hair,x,.43,.47,.12,.24,.18,head);
+if(config.bangs==='side')ball(hair,.05,.48,.47,.59,.21,.22,head).rotation.z=-.35;
+if(config.bangs==='curtain')[-1,1].forEach(sign=>{ball(hair,sign*.37,.43,.45,.24,.34,.21,head).rotation.z=sign*.4;});
   if(['bob','long'].includes(config.hair))[-1,1].forEach(s=>ball(hair,s*.64,config.hair==='long'?-.26:-.03,-.12,.19,config.hair==='long'?.85:.5,.42,head));
   if(config.hair==='curl')for(let i=0;i<10;i++){let a=i/10*Math.PI*2;ball(hair,Math.sin(a)*.6,.47+Math.cos(a)*.2,Math.cos(a)*.38,.23,.22,.23,head);}
   if(config.hair==='bun')ball(hair,0,.95,-.23,.31,.3,.29,head);
@@ -114,8 +123,30 @@ export function mount(host,config){
   motif(config.seasonBackground,scene,1.35,config.seasonBackground==='moon'?3.2:1.8,-.65,.9);
   if(['bat','pumpkins','candles','bones'].includes(config.seasonBackground))motif(config.seasonBackground,scene,-1.3,.55,-.6,.65);
  }
+
+// Independently combinable jewelry, everyday props and companions.
+if(config.earrings&&config.earrings!=='none')[-1,1].forEach(sign=>{let x=sign*(headScale[0]+.035);if(config.earrings==='hoop')ring('#e4bd63',x,2.14,.12,.10);else if(config.earrings==='pearl')ball('#f8ebdf',x,2.17,.14,.075);else if(config.earrings==='gem')mesh(new T.OctahedronGeometry(.095),'#8a8fda',x,2.17,.14);else if(config.earrings==='star')motif('stars',person,x,2.14,.14,.28);else {tube('#ddb661',[[x,2.2,.12],[x,1.99,.12]],.015);ball('#91bfd9',x,1.98,.12,.065,.10,.04);}});
+if(config.neckwear==='scarf'){ring('#d79caa',0,1.64,0,.23).rotation.x=Math.PI/2;box('#d79caa',.19,1.35,.37,.15,.55,.06);}
+if(config.neckwear==='bowtie')[-1,1].forEach(sign=>ball('#604a78',sign*.10,1.52,.35,.12,.07,.035));
+if(config.neckwear==='tie'){box('#514371',0,1.34,.40,.09,.40,.025);cone('#514371',0,1.10,.40,.08,.16).rotation.z=Math.PI;}
+if(config.neckwear==='pendant'){tube('#d8ba67',[[-.19,1.60,.2],[0,1.34,.4],[.19,1.60,.2]],.013);mesh(new T.OctahedronGeometry(.085),'#e9bf66',0,1.3,.43);}
+if(config.neckwear==='headset'){ring('#595678',0,1.54,.04,.28).rotation.x=Math.PI/2;[-.27,.27].forEach(x=>ball('#9c95c9',x,1.45,.22,.10,.16,.10));}
+if(config.handProp&&config.handProp!=='none'){
+ const g=new T.Group();g.position.set(-.87,.88,.3);person.add(g);
+ if(config.handProp==='coffee'){mesh(new T.CylinderGeometry(.13,.10,.28,24),'#eee0c9',0,.05,0,g);ring('#a27757',0,.2,0,.11,g).rotation.x=Math.PI/2;ring('#eee0c9',-.16,.05,0,.08,g);}
+ else if(config.handProp==='phone'){box('#424555',0,.08,0,.22,.37,.055,g);box('#96c7d9',0,.09,.03,.18,.28,.01,g);}
+ else if(config.handProp==='bag'){box('#bd9271',0,0,0,.36,.31,.16,g);ring('#8e6248',0,.23,0,.12,g);}
+ else motif({book:'books',flower:'flowers',star:'wand',heart:'hearts'}[config.handProp],g,0,.1,0,.7);
+}
+if(config.pet&&config.pet!=='none'){
+ const g=new T.Group();g.position.set(1.12,.28,.2);scene.add(g);const col={cat:'#9b8aaf',dog:'#b68d65',rabbit:'#f2e5ee',bear:'#967158',chick:'#ead16e'}[config.pet];
+ ball(col,0,.08,0,.25,.27,.21,g);ball(col,0,.40,0,.26,.24,.23,g);[-1,1].forEach(sign=>{ball('#302b39',sign*.085,.42,.215,.027,.037,.015,g);ball(col,sign*.14,-.12,.10,.10,.07,.13,g);if(config.pet==='rabbit')ball(col,sign*.13,.77,0,.075,.25,.07,g);else if(config.pet==='cat')cone(col,sign*.17,.64,0,.09,.22,g);else if(config.pet!=='chick')ball(col,sign*.24,.52,0,.11,config.pet==='dog'?.2:.11,.09,g);});
+ if(config.pet==='chick')cone('#df9042',0,.31,.25,.065,.13,g).rotation.x=Math.PI/2;else ball('#70515b',0,.32,.235,.035,.025,.02,g);
+}
+
  const ground=mesh(new T.CircleGeometry(8,64),palettes.background[config.background],0,-.09,0,scene);ground.rotation.x=-Math.PI/2;
  function draw(){renderer.render(scene,camera);}draw();
  let down=false,start=0,angle=0;renderer.domElement.onpointerdown=e=>{down=true;start=e.clientX;angle=person.rotation.y;renderer.domElement.setPointerCapture(e.pointerId);};renderer.domElement.onpointermove=e=>{if(down){person.rotation.y=angle+(e.clientX-start)*.012;draw();}};renderer.domElement.onpointerup=()=>{down=false;};renderer.domElement.onpointercancel=()=>{down=false;};
  return {front(){person.rotation.y=0;draw();},rotate(delta){person.rotation.y+=delta;draw();},thumbnail(){const angle=person.rotation.y;person.rotation.y=0;draw();const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');ctx.drawImage(renderer.domElement,0,0,128,128);ctx.fillStyle='#ffffff';ctx.beginPath();ctx.roundRect(4,104,32,20,7);ctx.fill();ctx.fillStyle='#493757';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(config.initial,20,119);person.rotation.y=angle;draw();return c.toDataURL('image/png');},dispose(){scene.traverse(o=>{if(o.geometry)o.geometry.dispose();});materials.forEach(m=>m.dispose());renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}};
 }
+
