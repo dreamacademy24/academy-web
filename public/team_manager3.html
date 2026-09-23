@@ -3869,7 +3869,7 @@ function startPolling(){
 }
 function stopPolling(){if(_pollTimer){clearInterval(_pollTimer);_pollTimer=null;}}
 function pollForUpdates(){
-  if(!CU||_pollInFlight||_pollEditing())return Promise.resolve();
+  if(!CU||document.hidden||navigator.onLine===false||_pollInFlight||_pollEditing())return Promise.resolve();
   var pollUser=CU;
   _pollInFlight=true;
   return Promise.all([
@@ -3921,6 +3921,9 @@ function pollForUpdates(){
     updateNavBadges();
   }).catch(function(e){console.error('[SB] poll err',e);}).finally(function(){_pollInFlight=false;});
 }
+// Inactive tabs must not repeatedly reload full task/project/comment lists.
+document.addEventListener('visibilitychange',function(){if(!document.hidden)void pollForUpdates();});
+window.addEventListener('online',function(){void pollForUpdates();});
 function showSyncBadge(){
   var ex=document.getElementById('syncBadge');if(ex)ex.remove();
   var b=document.createElement('div');b.id='syncBadge';
