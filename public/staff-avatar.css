@@ -6,3 +6,5 @@
 
 .avatar-prop-tray{margin:16px 0;padding:14px;border:1px solid #d5c8f0;border-radius:12px;background:#f7f3ff}.avatar-prop-tray #avatarPropLimit{display:block;color:#a53c46;font-size:13px;margin-top:8px}
 
+.avatar-lookbook{padding:14px;margin:16px 0;border-radius:12px;background:linear-gradient(120deg,#f1eaff,#ffeff4);border:1px solid #e4d5f7}.avatar-lookbook summary{cursor:pointer;font-weight:700}.avatar-lookbook[open] summary{margin-bottom:12px}#sp5 button:disabled{opacity:.45;cursor:default}
+
