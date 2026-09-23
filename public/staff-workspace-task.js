@@ -394,3 +394,6 @@ function _staffInstallIndividualCompletion(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_staffInstallIndividualCompletion);else _staffInstallIndividualCompletion();
 // Load the dressing room after the existing profile/completion hooks are installed.
 (function(){function load(){var s=document.createElement('script');s.src='/staff-avatar.js?v=20260924';document.head.appendChild(s);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();})();
+
+(function(){function loadProject(){var s=document.createElement('script');s.src='/staff-project-workspace.js?v=20260924';document.head.appendChild(s);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadProject);else loadProject();})();
+

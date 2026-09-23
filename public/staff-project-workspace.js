@@ -1,0 +1,37 @@
+(function(){
+'use strict';
+function install(){
+if(typeof ptRenderProject!=='function')return;
+var oldProject=ptRenderProject,oldList=ptRenderList;
+var sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href='/staff-project-workspace.css?v=20260924';document.head.appendChild(sheet);
+function button(text,action,cls){var b=document.createElement('button');b.type='button';b.className=cls||'btn btn-secondary';b.textContent=text;b.onclick=action;return b;}
+function plain(html){return new DOMParser().parseFromString(html||'','text/html').body.textContent||'';}
+function openForm(project,parent,kind){
+if(parent===project)parent=null;
+var actor=CU,isProject=kind==='project',label=isProject?'프로젝트':kind==='task'?'할 일':'폴더',draftId=uid();
+var dialog=document.createElement('dialog');dialog.className='pw-dialog';
+dialog.innerHTML='<form><h2>새 '+label+' 만들기</h2><p class="pw-muted">'+(isProject?'큰 목표 하나를 프로젝트로 만들고, 분야별 폴더와 담당자별 할 일을 추가하세요.':esc((ptFindNode(parent)||ptFindNode(project)||{}).title||'')+' 안에 추가합니다.')+'</p><label>제목 <input name="title" required maxlength="180" placeholder="'+(isProject?'예: 2026 할로윈 파티':kind==='folder'?'예: 공간 연출 및 데코레이션':'예: 포토존 소품 구매')+'"></label><label>설명 <textarea name="body" rows="4" placeholder="목표, 준비 내용, 확인할 사항을 적어주세요."></textarea></label><label>마감일 <input name="due" type="date"></label><fieldset><legend>담당자 · 여러 명 선택 가능</legend><div class="pw-people"></div></fieldset><p class="pw-muted">담당자와 날짜는 나중에도 수정할 수 있습니다.</p><p class="pw-error" role="alert"></p><footer></footer></form>';
+var form=dialog.querySelector('form'),people=dialog.querySelector('.pw-people'),busy=false;
+(typeof ALL!=='undefined'?ALL:[]).forEach(function(p){var l=document.createElement('label'),c=document.createElement('input');c.type='checkbox';c.name='assignee';c.value=p.id;l.append(c,document.createTextNode(p.name));people.append(l);});
+var cancel=button('취소',function(){if(!busy)dialog.close();}),save=button(label+' 만들기',null,'btn btn-primary');save.type='submit';form.querySelector('footer').append(cancel,save);
+dialog.addEventListener('cancel',function(e){if(busy)e.preventDefault();});dialog.addEventListener('close',function(){dialog.remove();});
+form.onsubmit=async function(e){e.preventDefault();if(busy)return;var title=form.elements.title.value.trim();if(!title){form.elements.title.focus();return;}var id=draftId,row={id:id,project_id:isProject?id:project,parent_id:isProject?null:(parent||null),kind:kind,title:title,body:esc(form.elements.body.value).replace(/\n/g,'<br>'),due:form.elements.due.value||null,assignees:Array.from(form.querySelectorAll('[name=assignee]:checked')).map(function(c){return c.value;}),status:'todo',done:false,sort_idx:isProject?0:ptChildren(parent,project).length,created_by:actor.id,created_at:ptNow(),updated_at:ptNow()};
+busy=true;save.disabled=true;cancel.disabled=true;save.textContent='저장 중…';form.querySelector('.pw-error').textContent='';
+try{var rows=await sbUpsert('project_nodes',row);if(!Array.isArray(rows)||!rows.some(function(n){return n.id===id;}))throw Error('저장 결과를 확인하지 못했습니다.');if(CU!==actor){dialog.close();return;}PT.nodes.push(rows.find(function(n){return n.id===id;}));if(parent)PT.openMap[parent]=true;dialog.close();if(isProject){PT.sel=null;ptRenderProject(id);}else{PT.sel=id;oldProject(project);decorate(project);_ptNotify(id,'새 '+label+' 추가');}}
+catch(error){form.querySelector('.pw-error').textContent='저장하지 못했습니다. 입력한 내용은 유지됩니다. '+error.message;}
+finally{busy=false;save.disabled=false;cancel.disabled=false;save.textContent=label+' 만들기';}};
+document.body.append(dialog);dialog.showModal();form.elements.title.focus();
+}
+ptNewProject=function(){openForm(null,null,'project');};
+ptAddNode=function(project,parent,kind){openForm(project,parent,kind||'folder');};
+function decorate(id){var root=document.getElementById('ptRoot'),pr=ptFindNode(id);if(!root||!pr)return;root.classList.add('pw-workspace');var bar=document.createElement('div');bar.className='pw-project-bar';var title=document.createElement('strong');title.textContent=pr.title;bar.append(title,button('전체 현황',function(){overview(id);}),button('+ 폴더',function(){ptAddNode(id,null,'folder');}),button('+ 할 일',function(){ptAddNode(id,null,'task');}));var select=document.createElement('select');select.setAttribute('aria-label','다른 프로젝트로 이동');PT.nodes.filter(function(n){return n.kind==='project';}).forEach(function(n){var o=document.createElement('option');o.value=n.id;o.textContent=n.title;o.selected=n.id===id;select.append(o);});select.onchange=function(){PT.sel=null;ptRenderProject(select.value);};bar.append(select);root.prepend(bar);}
+function overview(id){var pr=ptFindNode(id),el=document.getElementById('ptDetail');if(!pr||!el)return;PT.sel=null;ptRenderTree(id);var tasks=PT.nodes.filter(function(n){return n.project_id===id&&n.kind==='task';}),done=tasks.filter(function(n){return n.done;}).length;el.innerHTML='<div class="pw-overview"><small>PROJECT OVERVIEW</small><h2>'+esc(pr.title)+'</h2><p>'+esc(plain(pr.body)||'분야별 폴더를 만들고, 그 안에 담당자별 할 일을 추가해보세요.')+'</p><div class="pw-stats"><span><b>'+ptProgress(id)+'%</b> 전체 진행률</span><span><b>'+done+'/'+tasks.length+'</b> 완료한 할 일</span><span><b>'+tasks.filter(function(n){return !n.done&&n.due&&new Date(n.due+'T23:59:59')<new Date();}).length+'</b> 기한 지난 할 일</span></div><h3>분야별 폴더와 할 일</h3><div class="pw-folders"></div><div class="pw-next"></div></div>';
+var grid=el.querySelector('.pw-folders');ptChildren(null,id).forEach(function(n){var b=button('',function(){ptSelect(n.id);},'pw-folder');var heading=document.createElement('strong');heading.textContent=(n.kind==='task'?'☑ ':'📁 ')+n.title;var detail=document.createElement('span');detail.textContent=ptChildren(n.id,id).length+'개 하위 항목 · '+(n.done?'완료':({todo:'대기',doing:'진행 중',done:'완료'}[n.status]||'대기'));var who=document.createElement('small');who.textContent=(n.assignees||[]).map(function(a){return (getP(a)||{}).name||a;}).join(' · ')||'담당자 미지정';b.append(heading,detail,who);grid.append(b);});
+var next=el.querySelector('.pw-next');next.append(button('+ 분야별 폴더 추가',function(){ptAddNode(id,null,'folder');},'btn btn-primary'),button('프로젝트 설명·담당·날짜 수정',function(){ptSelect(id);}));
+}
+ptRenderProject=function(id){var selected=PT.sel&&ptFindNode(PT.sel);if(selected&&selected.project_id===id){oldProject(id);decorate(id);return;}var root=document.getElementById('ptRoot');if(!root||!ptFindNode(id)){ptRenderList();return;}PT.cur=id;PT.sel=null;root.innerHTML='<div class="pt-wrap"><div id="ptTree" class="pt-tree"></div><div id="ptDetail" class="pt-detail"></div></div>';decorate(id);overview(id);};
+ptRenderList=function(mode){PT.sel=null;oldList(mode);var root=document.getElementById('ptRoot');if(!root)return;root.classList.add('pw-workspace');var search=document.createElement('input');search.type='search';search.placeholder='프로젝트 이름 검색';search.setAttribute('aria-label','프로젝트 이름 검색');search.className='pw-search';search.oninput=function(){root.querySelectorAll('.proj-card').forEach(function(c){c.hidden=!c.textContent.toLowerCase().includes(search.value.toLowerCase());});};root.prepend(search);root.querySelectorAll('.proj-card').forEach(function(c){c.tabIndex=0;c.setAttribute('role','button');c.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();c.click();}};});};
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+
