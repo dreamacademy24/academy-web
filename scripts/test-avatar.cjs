@@ -6,9 +6,10 @@ const schema=load('lib/staffAvatar.ts'),avatar=load('app/api/staff/avatar/route.
 const config={mode:'character',initial:'M',emoji:'😊'};for(const [k,v] of Object.entries(catalog))config[k]=Object.keys(v.items)[0];
 const req=x=>({json:async()=>x});
 (async()=>{
- assert(schema.validAvatar(config));assert.equal(Object.values(catalog).filter(x=>x.season).reduce((n,x)=>n+Object.keys(x.items).filter(k=>k!=='none').length,0),44);
+ const legacy={...config};for(const [k,v] of Object.entries(catalog))if(v.default)delete legacy[k];assert(schema.validAvatar(legacy)); assert(schema.validAvatar(config));assert.equal(Object.values(catalog).filter(x=>x.season).reduce((n,x)=>n+Object.keys(x.items).filter(k=>k!=='none').length,0),44);
  for(const [k,entry] of Object.entries(catalog))for(const option of Object.keys(entry.items))assert(schema.validAvatar({...config,[k]:option}),k+option);
  for(const bad of [null,[],{...config,initial:'<script>'},{...config,seasonHat:'remote-svg'},{...config,owner:'other'},{...config,thumbnail:'data:image/svg+xml,<svg/>'},{...config,skin:'not-an-option'}])assert.equal(schema.validAvatar(bad),false);
+ const props=Object.entries(catalog).filter(([k,v])=>v.prop);const five={...config};props.slice(0,5).forEach(([k,v])=>five[k]=Object.keys(v.items).find(x=>x!=='none'));assert.equal(schema.avatarPropCount(five),5);assert.equal((await avatar.PUT(req(five))).status,200);const six={...five};six[props[5][0]]=Object.keys(props[5][1].items).find(x=>x!=='none');assert.equal((await avatar.PUT(req(six))).status,400);
  assert.equal((await avatar.PUT(req(config))).status,200);assert.equal(writes[0].value.key,'staff_avatar:own-id');
  staff=null;assert.equal((await avatar.PUT(req(config))).status,403);assert.equal((await profile.PATCH(req({signature:'x'}))).status,403);
  staff={id:'own-id',role:'guest'};assert.equal((await avatar.PUT(req(config))).status,403);
@@ -17,3 +18,4 @@ const req=x=>({json:async()=>x});
  fail=true;assert.equal((await avatar.PUT(req(config))).status,503);assert.equal((await profile.PATCH(req({signature:'keep'}))).status,503);
  console.log('PASS: 44 seasonal items, every catalog choice, malformed inputs, identity scope, partial profile preservation, auth failures and database failures');
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

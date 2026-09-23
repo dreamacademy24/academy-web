@@ -9,3 +9,5 @@ export function validAvatar(value:unknown):value is Record<string,string>{
  (v.thumbnail===undefined||(typeof v.thumbnail==='string'&&v.thumbnail.length<100000&&/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(v.thumbnail)));
 }
 
+export function avatarPropCount(value:Record<string,string>){return Object.entries(catalog).filter(([key,entry])=>'prop' in entry&&entry.prop&&value[key]&&value[key]!=='none').length;}
+

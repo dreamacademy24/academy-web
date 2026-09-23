@@ -115,7 +115,8 @@
       "plant": "화분",
       "hearts": "하트",
       "books": "책 더미"
-    }
+    },
+    "prop": true
   },
   "accessory": {
     "title": "기본 소품",
@@ -128,7 +129,8 @@
       "cap": "야구 모자",
       "beanie": "비니",
       "crown": "왕관"
-    }
+    },
+    "prop": true
   },
   "seasonHat": {
     "title": "할로윈 모자 · 머리 장식",
@@ -145,7 +147,8 @@
       "spider": "거미 모자",
       "top": "마술사 모자",
       "moon": "초승달 머리띠"
-    }
+    },
+    "prop": true
   },
   "seasonFace": {
     "title": "할로윈 얼굴 장식",
@@ -158,7 +161,8 @@
       "fangs": "뱀파이어 송곳니",
       "stitches": "봉제 인형 스티치",
       "pumpkinmask": "호박 가면"
-    }
+    },
+    "prop": true
   },
   "seasonOutfit": {
     "title": "할로윈 의상",
@@ -188,7 +192,8 @@
       "spellbook": "마법책",
       "skull": "해골 인형",
       "rose": "검은 장미"
-    }
+    },
+    "prop": true
   },
   "seasonBackground": {
     "title": "할로윈 배경 소품",
@@ -207,7 +212,8 @@
       "candles": "촛불",
       "crow": "까마귀",
       "bones": "해골 뼈 장식"
-    }
+    },
+    "prop": true
   },
   "eyeColor": {
     "title": "눈동자 색",
@@ -285,7 +291,8 @@
       "gem": "보석",
       "drop": "드롭",
       "star": "별 귀걸이"
-    }
+    },
+    "prop": true
   },
   "neckwear": {
     "title": "목 소품",
@@ -297,7 +304,8 @@
       "tie": "넥타이",
       "pendant": "펜던트",
       "headset": "목에 건 헤드폰"
-    }
+    },
+    "prop": true
   },
   "shoes": {
     "title": "신발",
@@ -335,7 +343,8 @@
       "star": "응원봉",
       "heart": "하트 쿠션",
       "bag": "미니 가방"
-    }
+    },
+    "prop": true
   },
   "pet": {
     "title": "반려 친구",
@@ -347,7 +356,8 @@
       "rabbit": "토끼",
       "bear": "곰 인형",
       "chick": "병아리"
-    }
+    },
+    "prop": true
   }
 }
 
