@@ -1389,8 +1389,8 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 .pt-add-root:hover{background:var(--surface);border-radius:6px}
 .pt-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px;font-size:14px}
 .pt-meta-item{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:7px 12px}
-.pt-chkline{display:flex;align-items:center;gap:6px;padding:2px 0}
-.pt-chkline input[type=checkbox]{width:17px;height:17px;flex-shrink:0}
+.pt-chkline{display:block;min-height:1.8em;padding:2px 0}
+.pt-body input[type=checkbox]{width:17px;height:17px;vertical-align:middle;margin-right:6px}
 .pt-plus{cursor:pointer;color:var(--text3);border:1px dashed var(--border2);border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
 .pt-plus:hover{color:var(--primary);border-color:var(--primary)}
 .pt-toolbar{display:flex;gap:2px;border:1px solid var(--border2);border-bottom:none;border-radius:8px 8px 0 0;padding:6px 8px;background:var(--surface2)}
@@ -11285,7 +11285,21 @@ function ptRenderDetail(id){
   ptRenderComments(id);
   _staffProjectSaveState(id);
 }
-function ptCmd(e,k){e.preventDefault();try{if(k==='red'){document.execCommand('foreColor',false,'#c0392b');}else if(k==='check'){document.execCommand('insertHTML',false,'<div class="pt-chkline"><input type="checkbox">&nbsp;할 일</div>');}else{document.execCommand(k,false,null);}}catch(x){}return false;}
+function ptCmd(e,k){
+  e.preventDefault();
+  var body=document.getElementById('ptBody');if(!body)return false;
+  var selection=window.getSelection();
+  if(!selection||!selection.rangeCount||!body.contains(selection.anchorNode)){
+    body.focus();var range=document.createRange();range.selectNodeContents(body);range.collapse(false);
+    selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+  }
+  try{
+    if(k==='red')document.execCommand('foreColor',false,'#c0392b');
+    else if(k==='check')document.execCommand('insertHTML',false,'<br><input type="checkbox">&nbsp;할 일<br><br>');
+    else document.execCommand(k,false,null);
+  }catch(x){}
+  return false;
+}
 function ptSyncBody(el){try{el.querySelectorAll('input[type=checkbox]').forEach(function(c){if(c.checked)c.setAttribute('checked','checked');else c.removeAttribute('checked');});}catch(e){}return el.innerHTML;}
 function ptSaveField(id,field,val){
   return _staffProjectSaveField(id,field,val);
