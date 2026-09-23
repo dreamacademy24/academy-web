@@ -1,0 +1,9 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync('public/staff-chat.js','utf8');
+const load=source.slice(source.indexOf('var loadFlight=0;'),source.indexOf('var readBusy='));
+async function test(){const pending=[],rendered=[],errors=[],list={scrollHeight:100,scrollTop:0,clientHeight:100};const ctx={s:{loading:false,version:1,room:'all',q:'',target:'',messages:[]},api:()=>new Promise(resolve=>pending.push(resolve)),document:{getElementById:()=>list},renderMessages:()=>rendered.push(ctx.s.messages.map(m=>m.id)),syncLounge(){},markVisible(){},error:e=>errors.push(e),Map};vm.createContext(ctx);vm.runInContext(load,ctx);
+const first=ctx.load(true);ctx.s.room='dm:ceo:song';ctx.s.version++;const second=ctx.load(true);assert.equal(pending.length,2,'switch must start new request immediately');pending[1]({messages:[{id:'new',seq:2}],reads:[],links:[],replies:[],more:false});await second;pending[0]({messages:[{id:'old',seq:1}],reads:[],links:[],replies:[],more:false});await first;assert.equal(ctx.s.messages[0].id,'new','old room response must not replace new room');assert.equal(rendered.length,1);assert.equal(ctx.s.loading,false);assert.equal(errors.length,0);
+const poll=ctx.load(false);await ctx.load(false);assert.equal(pending.length,3,'background poll must not overlap');pending[2]({messages:[],reads:[],links:[],replies:[],more:false});await poll;
+const overview=source.slice(source.indexOf('var overviewFlight=null;'),source.indexOf('async function refreshOverview'));let calls=0,release;const c={refreshOverview:()=>{calls++;return new Promise(r=>release=r);}};vm.createContext(c);vm.runInContext(overview,c);const a=c.overview(),b=c.overview();assert.equal(calls,1);release();await Promise.all([a,b]);console.log('PASS: immediate room switch, stale response isolation, polling and overview deduplication');}
+test().catch(e=>{console.error(e);process.exitCode=1;});
+

@@ -21,7 +21,7 @@
     var canvas=p.querySelector('#avatarCanvas');
     if(draft.mode!=='character'){canvas.innerHTML=img(draft,180);previewPromise=Promise.resolve();return;}
     canvas.textContent='3D 캐릭터를 불러오는 중…';
-    if(!modulePromise)modulePromise=import('/staff-avatar-3d.js?v=20260924-3').catch(function(e){modulePromise=null;throw e;});
+    if(!modulePromise)modulePromise=import('/staff-avatar-3d.js?v=20260924-soft').catch(function(e){modulePromise=null;throw e;});
     previewPromise=modulePromise.then(function(m){if(stamp!==previewId||!canvas.isConnected)return;canvas.textContent='';model=m.mount(canvas,Object.assign({},draft));draft.thumbnail=model.thumbnail();p.querySelector('#avatarMini').innerHTML=img(draft,36);p.querySelectorAll('[data-turn]').forEach(function(button){button.onclick=function(){if(!model)return;if(button.dataset.turn==='front')model.front();else model.rotate(button.dataset.turn==='left'?-.45:.45);};});}).catch(function(){if(stamp===previewId&&canvas.isConnected){canvas.innerHTML=img({mode:'initial',initial:draft.initial},180);p.querySelector('#avatar3dStatus').textContent='이 기기에서 3D를 열지 못했습니다. 이모티콘·이니셜은 사용할 수 있습니다.';throw Error('3D 미리보기를 불러온 뒤 저장해주세요.');}});
     previewPromise.catch(function(){});
   }
@@ -92,7 +92,7 @@
     ['sbAv','ehAv'].forEach(function(id){var el=document.getElementById(id),person=id==='ehAv'&&typeof curEmpId!=='undefined'&&curEmpId?curEmpId:CU.id;if(el&&people[person]){var html=img(people[person],id==='sbAv'?32:44);if(el.innerHTML!==html)el.innerHTML=html;}});
     document.querySelectorAll('.pt-av[title]').forEach(function(el){var name=el.getAttribute('title'),p=typeof ALL!=='undefined'&&ALL.find(function(p){return p.name===name;});if(p&&people[p.id]){var html=img(people[p.id],28);if(el.innerHTML!==html)el.innerHTML=html;}});
   }
-  var css=document.createElement('link');css.rel='stylesheet';css.href='/staff-avatar.css?v=20260924';document.head.append(css);
+  var css=document.createElement('link');css.rel='stylesheet';css.href='/staff-avatar.css?v=20260924-soft';document.head.append(css);
   function setupTabs(){
  var tabs=document.getElementById('settingsTabs');if(!tabs)return;
  tabs.innerHTML=[['avatar','🧸 캐릭터 꾸미기'],['theme','🎨 화면 색상'],['signature','✉️ 이메일 서명'],['password','🔑 비밀번호']].map(function(t){return '<button type="button" class="settings-tab '+(section===t[0]?'active':'')+'" data-top-section="'+t[0]+'">'+t[1]+'</button>';}).join('');

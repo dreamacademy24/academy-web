@@ -22,6 +22,7 @@ export async function GET(req:Request){try{
   const messages=await Promise.all((m.data||[]).map(async m=>({...m,refs:await chatReferences(c.db,m.refs||[],c.actor),canOpen:c.rooms.includes(m.room)})));
   return NextResponse.json({messages,employees:c.employees});
  }
+ if(!room&&u.searchParams.get('bootstrap')==='1')return NextResponse.json({actor:c.actor,employees:c.employees,rooms:c.rooms,groups:c.groups});
  if(!room){const counts=await c.db.rpc('staff_message_counts',{p_employee:c.actor,p_rooms:c.rooms});if(counts.error)throw counts.error;return NextResponse.json({actor:c.actor,employees:c.employees,rooms:c.rooms,groups:c.groups,counts:counts.data});}
  c.checkRoom(room);
  const q=u.searchParams.get('q')?.trim().slice(0,150),before=Number(u.searchParams.get('before')||0),target=u.searchParams.get('message');
@@ -36,7 +37,8 @@ export async function GET(req:Request){try{
   ids.length?c.db.from('staff_message_links').select('message_id,task_id').in('message_id',ids):Promise.resolve({data:[],error:null}),
   messages.some(m=>m.reply_to)?c.db.from('staff_messages').select('id,sender,body').eq('room',room).in('id',messages.map(m=>m.reply_to).filter(Boolean)):Promise.resolve({data:[],error:null})]);
  if(reads.error||links.error||replies.error)throw Error('대화 상태를 불러오지 못했습니다.');
- const visibleLinks=[];for(const l of links.data||[]){try{const t=await chatTask(c.db,l.task_id,c.actor);visibleLinks.push({...l,title:t.title});}catch{ /* A secret task title is not exposed to chat members. */ }}
+ const taskCache=new Map<string,Promise<any>>();const resolveTask=(id:string)=>{if(!taskCache.has(id))taskCache.set(id,chatTask(c.db,id,c.actor).catch(()=>null));return taskCache.get(id)!;};
+ const visibleLinks=[];for(let start=0;start<(links.data||[]).length;start+=8){const batch=await Promise.all((links.data||[]).slice(start,start+8).map(async l=>{const t=await resolveTask(l.task_id);return t?{...l,title:t.title}:null;}));visibleLinks.push(...batch.filter(Boolean));}
  const resolved=await Promise.all(messages.map(async m=>({...m,refs:await chatReferences(c.db,m.refs||[],c.actor)})));
  return NextResponse.json({messages:resolved,reads:reads.data,links:visibleLinks,replies:replies.data,more:messages.length===60});
  }catch(e){return failure(e);}}
@@ -67,3 +69,4 @@ export async function POST(req:Request){try{
  let push='not_requested';if(r.data.created){const recipients=b.room.startsWith('dm:')?members.filter(id=>id!==c.actor):mentions;if(recipients.length){push='queued';after(async()=>{try{await sendChatPush(c.db,recipients,b.room,b.id);}catch(e){console.error('chat push failed',e);}});}}
  return NextResponse.json({...r.data,push});
  }catch(e){return failure(e);}}
+
