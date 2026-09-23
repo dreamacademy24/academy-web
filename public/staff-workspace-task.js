@@ -38,9 +38,9 @@ function _staffTaskCompletionPatch(t,done){
 function _staffTaskItems(t){return Array.isArray(t.checklist)?t.checklist:(t.checklist&&Array.isArray(t.checklist.items)?t.checklist.items:[]);}
 async function _staffToggleTaskCompletion(id){
   var t=tasks.find(function(x){return String(x.id)===String(id);});if(!t||_staffTaskWrites[id])return false;
-  var done=!isDoneTask(t);_staffTaskWrites[id]=true;
+  var multi=_staffCompletionPeople(t).length>1;var done=multi?!_staffOwnCompleted(t):!isDoneTask(t);_staffTaskWrites[id]=true;
   try{
-    await _staffTaskPersistPatch(t,_staffTaskCompletionPatch(t,done));
+    if(multi){await _staffCompleteMine(t,done);done=isDoneTask(t);}else await _staffTaskPersistPatch(t,_staffTaskCompletionPatch(t,done));
     if(done){if(typeof _empSelTaskId!=='undefined'&&String(_empSelTaskId)===String(id))_empSelTaskId=null;if(typeof _boardSelTaskId!=='undefined'&&String(_boardSelTaskId)===String(id))_boardSelTaskId=null;}
     try{if(done&&t.createdBy&&CU&&t.createdBy!==CU.id)createNotif(t.createdBy,'task',t.id,(CU.name||CU.id)+'님이 업무를 완료했습니다: '+t.title);}catch(e){}
     refreshAll();return true;
@@ -197,7 +197,7 @@ function _staffTaskPersistPatch(t,patch){
   var body=Object.assign({},patch);if(Object.prototype.hasOwnProperty.call(body,'checklist'))body.checklist=JSON.stringify(body.checklist);
   return sbPatch('staff_tasks','id=eq.'+encodeURIComponent(t.id),body).then(function(rows){
     if(!Array.isArray(rows)||!rows.some(function(r){return String(r.id)===String(t.id);}))throw new Error('저장 결과를 확인하지 못했습니다.');
-    var current=tasks.find(function(x){return String(x.id)===String(t.id);});if(current)Object.assign(current,patch);
+    var current=tasks.find(function(x){return String(x.id)===String(t.id);});if(current)Object.assign(current,rowToTask(rows.find(function(r){return String(r.id)===String(t.id);})));
     rebuildIdx();svTasks();if(String(t.id).indexOf('class-application:')===0){if(typeof _loadClassApplications==='function')void _loadClassApplications();try{window.top.postMessage({type:'class-applications-changed'},location.origin);}catch(e){}}return current;
   });
 }
@@ -206,7 +206,7 @@ function _staffTaskCheckPatch(t,index){
   if(!items||!items[index])throw new Error('체크 항목을 찾을 수 없습니다.');
   items[index].done=!items[index].done;
   var progress=Math.round(items.filter(function(c){return c.done;}).length/items.length*100);
-  return {checklist:checklist,progress:progress,done:progress===100};
+  return _staffCompletionPeople(t).length>1?{checklist:checklist}:{checklist:checklist,progress:progress,done:progress===100};
 }
 function _staffOwnComment(c){return !!(CU&&c&&c.id!=null&&c.id!==''&&String(c.author)===String(CU.id));}
 function _staffCommentHtml(c,index){
@@ -260,10 +260,10 @@ function _renderStaffTaskDetail(taskId,hostId){
   var comments=(taskComments[t.id]||[]).slice();
   host.innerHTML='<article class="swt-detail"><div class="swt-detail-nav"><button data-act="back">← 목록으로</button><span>업무 상세</span></div><header class="swt-detail-header"><div><span class="swt-badge '+(done?'is-done':'')+'">'+(done?'완료':'진행 중')+'</span>'+(t.priority==='high'?'<span class="swt-badge is-urgent">긴급</span>':'')+'<h1>'+_staffSafe(t.title)+'</h1><p>'+_staffSafe(creator?creator.name:t.createdBy||'작성자 미지정')+' → '+_staffSafe(people)+'</p></div>'+(canEdit?'<button class="swh-primary" data-act="edit">업무 수정</button>':'<span>읽기 전용</span>')+'</header>'+
     '<div class="swt-detail-grid"><main><section class="swt-card"><div class="swt-request-heading"><h2>요청 내용</h2><span class="swt-created-at">작성 · '+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</span></div>'+(t.note?_taskNoteHtml(t):'<p class="swt-help">등록된 요청 내용이 없습니다.</p>')+'</section>'+
-    '<section class="swt-card"><div class="swt-section-head"><h2>'+(t.checklist&&t.checklist._sub?'하위 업무':'완료 조건')+'</h2><span>'+items.filter(function(c){return c.done;}).length+' / '+items.length+'</span></div><p class="swt-help">'+(items.length?'모든 항목을 체크하면 업무가 완료됩니다.':'결과를 아래에 남긴 뒤 완료 처리하세요.')+'</p><div class="swt-checks">'+items.map(function(c,i){return '<label><input type="checkbox" data-check="'+i+'" '+(c.done?'checked ':'')+(!canEdit?'disabled':'')+'><span><b>'+_staffSafe(c.text||c.title||'항목')+'</b>'+(c.note?'<small>'+_staffSafe(c.note)+'</small>':'')+'</span>'+((c.dueDate||c.due)?'<small>'+_staffSafe(c.dueDate||c.due)+'</small>':'')+'</label>';}).join('')+'</div></section>'+
+    '<section class="swt-card"><div class="swt-section-head"><h2>'+(t.checklist&&t.checklist._sub?'하위 업무':'완료 조건')+'</h2><span>'+items.filter(function(c){return c.done;}).length+' / '+items.length+'</span></div><p class="swt-help">'+(_staffCompletionPeople(t).length>1?'각 담당자가 내 업무 완료를 눌러야 합니다. 마지막 담당자가 완료하면 최종 완료됩니다.':(items.length?'모든 항목을 체크하면 업무가 완료됩니다.':'결과를 아래에 남긴 뒤 완료 처리하세요.'))+'</p><div class="swt-checks">'+items.map(function(c,i){return '<label><input type="checkbox" data-check="'+i+'" '+(c.done?'checked ':'')+(!canEdit?'disabled':'')+'><span><b>'+_staffSafe(c.text||c.title||'항목')+'</b>'+(c.note?'<small>'+_staffSafe(c.note)+'</small>':'')+'</span>'+((c.dueDate||c.due)?'<small>'+_staffSafe(c.dueDate||c.due)+'</small>':'')+'</label>';}).join('')+'</div></section>'+
     '<section class="swt-card"><h2>참고 자료 · 첨부 '+(t.files||[]).length+'</h2><div class="swt-files">'+((t.files||[]).length?renderTaskFiles(t):'<p class="swt-help">첨부된 파일이 없습니다.</p>')+'</div>'+(canEdit?'<button class="swt-text-btn" data-act="edit">사진·파일 추가 →</button>':'')+'</section>'+
     '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(_staffCommentHtml).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
-    '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+(canEdit?'<button class="swt-complete" data-act="complete">'+(done?'완료 취소':'업무 완료')+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
+    '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+_staffCompletionStatus(t)+( (_staffCompletionPeople(t).length>1?_staffCompletionPeople(t).includes(CU.id):canEdit)?'<button class="swt-complete" data-act="complete">'+(_staffCompletionPeople(t).length>1?(_staffOwnCompleted(t)?'내 완료 취소':'내 업무 완료'):(done?'완료 취소':'업무 완료'))+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
   _staffRelatedTaskDetail(root);
   if(window._staffChatTaskContext)window._staffChatTaskContext(root.querySelector('.swt-detail-grid>main'),t);
@@ -281,7 +281,7 @@ function _renderStaffTaskDetail(taskId,hostId){
   async function update(patch){
     if(_staffTaskWrites[t.id])return;_staffTaskWrites[t.id]=true;root.setAttribute('aria-busy','true');
     root.querySelectorAll('input,button,textarea').forEach(function(el){el.disabled=true;});
-    try{await _staffTaskPersistPatch(t,patch);if(patch.done&&host.firstElementChild===root)_staffTaskCompletedView(hostId);else rerender();}
+    try{await _staffTaskPersistPatch(t,patch);if(isDoneTask(t)&&host.firstElementChild===root)_staffTaskCompletedView(hostId);else rerender();}
     catch(e){status('저장 실패: '+e.message);root.querySelectorAll('input[data-check]').forEach(function(el){el.checked=!!items[Number(el.dataset.check)].done;});}
     finally{delete _staffTaskWrites[t.id];root.removeAttribute('aria-busy');root.querySelectorAll('input,button,textarea').forEach(function(el){el.disabled=false;});}
   }
@@ -324,6 +324,7 @@ function _renderStaffTaskDetail(taskId,hostId){
     if(act==='back'){if(hostId==='empDetail'){_empSelTaskId=null;setEmpTab('home');}else renderBoardDetailEmpty();return;}
     if(act==='edit'){openTaskEdit(t.id);return;}
     if(act==='complete'){
+      if(_staffCompletionPeople(t).length>1){button.disabled=true;var ok=await _staffToggleTaskCompletion(t.id);if(ok&&isDoneTask(t))_staffTaskCompletedView(hostId);else rerender();return;}
       if(!done&&items.some(function(c){return !c.done;})&&!confirm('남아 있는 완료 조건까지 모두 확인하고 이 업무를 완료할까요?'))return;
       var patch=_staffTaskCompletionPatch(t,!done);
       await update(patch);return;
@@ -339,3 +340,48 @@ function _renderStaffTaskDetail(taskId,hostId){
     }
   });
 }
+
+function _staffCompletionPeople(t){
+  var others=t.assignees||[];if(typeof others==='string'){try{others=JSON.parse(others);}catch(e){others=[];}}
+  return [t.assignee].concat(Array.isArray(others)?others:[]).filter(function(id,i,a){return id&&id!=='all'&&a.indexOf(id)===i;});
+}
+function _staffOwnCompleted(t){return !!(CU&&t.completionBy&&t.completionBy[CU.id]);}
+function _staffCompletionStatus(t){
+  var ids=_staffCompletionPeople(t);if(ids.length<2)return '';
+  function group(done){return ids.filter(function(id){return !!(t.completionBy||{})[id]===done;}).map(function(id){
+    var p=getP(id)||{},color=/^#[0-9a-f]{6}$/i.test(p.color||'')?p.color:'#6366f1';
+    return '<span style="display:inline-flex;align-items:center;gap:4px" title="'+_staffSafe(p.name||id)+'"><span style="display:inline-flex;align-items:center;justify-content:center;border-radius:50%;width:25px;height:25px;background:'+color+';color:white;font-size:12px">'+_staffSafe(p.initial||(p.name||id).slice(0,1).toUpperCase())+'</span><span>'+_staffSafe(p.name||id)+'</span></span>';
+  }).join(' ')||'없음';}
+  return '<span class="staff-completion-status" style="display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0;font-size:12px;font-weight:500"><span style="display:inline-flex;align-items:center;gap:6px;color:#16734a">완: '+group(true)+'</span><span style="display:inline-flex;align-items:center;gap:6px;color:#9a5900">미완: '+group(false)+'</span></span>';
+}
+async function _staffCompleteMine(t,completed){
+  var response=await fetch('/api/staff/task-completion',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:String(t.id),completed:completed})});
+  var data=await response.json();if(!response.ok||!data.task)throw new Error(data.error||'완료 저장 실패');
+  Object.assign(t,rowToTask(data.task));rebuildIdx();svTasks();
+}
+function _staffInstallIndividualCompletion(){
+  var convert=rowToTask;rowToTask=function(r){var t=convert(r);t.completionBy=r.completion_by||{};return t;};
+  var wasDone=isDoneTask;isDoneTask=function(t){var ids=_staffCompletionPeople(t);return ids.length>1&&t.completionBy?ids.every(function(id){return !!t.completionBy[id];}):wasDone(t);};
+  var badge=_staffTaskAttentionBadge;_staffTaskAttentionBadge=function(t){return badge(t)+_staffCompletionStatus(t);};
+  var renderProfile=renderSettingsTab5;
+  renderSettingsTab5=function(){
+    renderProfile();var panel=document.getElementById('sp5');if(!panel)return;
+    var me=getP(CU.id)||{},initial=me.initial||({may:'M',ceo:'M',song:'S',vivace:'V'}[CU.id])||(me.name||CU.id).slice(0,1).toUpperCase();
+    var box=document.createElement('div');box.style.cssText='margin:12px 0;padding:14px;border:1px solid var(--border);border-radius:10px';
+    box.innerHTML='<b>내 직원 아이콘</b><p style="font-size:12px">이니셜(예: M · S · V) 또는 아래 캐릭터를 선택하세요. 업무 담당자와 완료·미완 목록에 표시됩니다.</p><label>이니셜 <input id="profInitial" maxlength="2" aria-label="직원 아이콘 이니셜" style="width:70px;padding:8px"></label><div id="profEmoji" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"></div><span id="profAvatarPreview" style="display:inline-block;margin-top:8px"></span>';
+    panel.prepend(box);var input=box.querySelector('#profInitial');input.value=initial;
+    function preview(){box.querySelector('#profAvatarPreview').textContent='내 아이콘: '+input.value;}
+    input.oninput=function(){input.value=input.value.toUpperCase();preview();};
+    ['😀','😊','😎','🐱','🐶','🐻','🐰','🦊','🐼','🦁','🐯','🐨','🦄','🌸','🌻','⭐','🍀','🌈'].forEach(function(emoji){var b=document.createElement('button');b.type='button';b.textContent=emoji;b.style.cssText='font-size:23px;padding:5px;border:1px solid var(--border);border-radius:8px;background:var(--surface)';b.onclick=function(){input.value=emoji;preview();};box.querySelector('#profEmoji').append(b);});preview();
+  };
+  saveMyProfile=async function(){
+    var input=document.getElementById('profInitial');if(!input)return;
+    var color=document.getElementById('profColor').value,signature=document.getElementById('profSig').value;
+    try{var response=await fetch('/api/staff/profile',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({initial:input.value.trim().toUpperCase(),color:color,signature:signature})});
+      var data=await response.json();if(!response.ok)throw new Error(data.error||'저장 실패');
+      var me=getP(CU.id);if(me){me.initial=data.profile.initial;me.color=data.profile.color;}CU.initial=data.profile.initial;CU.color=data.profile.color;
+      refreshAll();toast('직원 아이콘과 프로필을 저장했습니다.');
+    }catch(e){alert('프로필 저장 실패: '+e.message);}
+  };
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_staffInstallIndividualCompletion);else _staffInstallIndividualCompletion();
