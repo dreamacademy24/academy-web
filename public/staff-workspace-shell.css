@@ -67,3 +67,34 @@
 .swn-heading{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:24px}.swn-heading h1{font-size:28px;letter-spacing:-.7px;color:#23344f;margin:6px 0 10px}.swn-heading p:not(.swo-eyebrow){font-size:14px;color:#7b8799}.swn-actions{display:flex;gap:8px;flex-shrink:0}.swn-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}.swn-toolbar>div{display:flex;gap:8px;margin-right:auto}.swn-toolbar label{display:flex;gap:8px;align-items:center;font-size:13px;color:#6e7b90}.swn-toolbar input{border:1px solid #dfe5ee;border-radius:8px;padding:11px 13px;background:#fff;min-width:220px;font:inherit}.swo-notice-row:focus-visible{outline:3px solid #b7a9f3;outline-offset:-3px}
 .sww-heading-actions{display:flex;gap:8px;flex-shrink:0}
 @media(min-width:1000px){#empDetail{width:100%;max-width:1700px;margin:0 auto}.staff-board-workspace{width:100%;margin:0 auto}#empHomeNotif>div{max-width:none!important}.swt-detail{max-width:1660px}.swh{max-width:1600px!important}.swo-approval{max-width:1600px!important}.staff-board-updates{background:#fff;border:1px solid #e1e6ef;border-radius:10px;margin:0 0 22px;padding:15px 20px}.staff-board-updates summary{font-size:14px;font-weight:650;color:#5a4aae;cursor:pointer}.staff-board-updates[open] summary{margin-bottom:16px}#page-opinions .opinion-layout{max-width:1600px;margin:auto}}
+
+/* Project navigation: readable hierarchy and metadata without squeezing titles. */
+#ptRoot .pt-wrap{grid-template-columns:420px minmax(0,1fr);gap:24px}
+#ptRoot .pt-tree{padding:18px 16px;scrollbar-gutter:stable;overscroll-behavior:contain}
+#ptRoot .pt-back{width:100%;text-align:left;padding:10px 12px;border:1px solid #e0e5ee;border-radius:8px;background:#f8f9fc;font-size:14px;line-height:1.5}
+#ptRoot .pt-proj-head{padding:20px 8px;align-items:flex-start}
+#ptRoot .pt-proj-head>span:nth-child(2){font-size:18px!important;line-height:1.55;word-break:keep-all;overflow-wrap:anywhere}
+#ptRoot .pt-proj-head>span:last-child{font-size:14px!important;padding-top:3px}
+#ptRoot .pt-row{display:grid;grid-template-columns:20px 24px minmax(0,1fr) auto;column-gap:8px;row-gap:5px;min-height:52px;padding-top:12px;padding-bottom:12px;padding-right:10px;margin:5px 0;border:1px solid transparent;align-items:start;color:#36465f}
+#ptRoot .pt-row:hover{background:#f5f4fc;border-color:#e5e0f5}
+#ptRoot .pt-row.sel{background:#ede8fc;border-color:#d6caf5;box-shadow:inset 4px 0 #6b50c7;color:#3d2a85}
+#ptRoot .pt-title{grid-column:3;grid-row:1;font-size:16px;line-height:1.65;font-weight:550;word-break:keep-all;overflow-wrap:anywhere;min-width:0}
+#ptRoot .pt-row.sel .pt-title{font-weight:750}
+#ptRoot .pt-chev{grid-column:1;grid-row:1;width:20px;min-height:26px;font-size:16px;line-height:1.4;padding-top:2px}
+#ptRoot .pt-ck{grid-column:2;grid-row:1;font-size:20px;line-height:1.4;padding-top:1px}
+#ptRoot .pt-row>span[style*="display:flex"]{grid-column:3;grid-row:2;flex-wrap:wrap;gap:5px!important;padding-top:2px}
+#ptRoot .pt-row>.pt-due{grid-column:4;grid-row:2;font-size:12px;line-height:1.5;padding-top:4px;align-self:center}
+#ptRoot .pt-av{width:27px;height:27px;font-size:12px;box-shadow:0 0 0 2px #fff}
+#ptRoot .pt-add-root{font-size:15px;padding:12px;margin-top:14px;border-top:1px solid #e7ebf2}
+#ptRoot .pt-detail{padding:28px 30px}
+#ptRoot .pt-body{font-size:16px;line-height:1.9;padding:20px 22px;color:#34445d}
+#ptRoot .pt-body input[type=checkbox]{width:19px;height:19px;margin-right:8px;accent-color:#6552cb}
+#ptRoot .pt-toolbar{gap:5px;padding:10px}
+#ptRoot .pt-toolbar button{min-width:34px;min-height:34px;font-size:15px}
+#ptRoot .pt-meta{gap:12px}
+#ptRoot .pt-meta-item{padding:9px 13px;font-size:14px}
+@media(min-width:1600px){#ptRoot .pt-wrap{grid-template-columns:440px minmax(0,1fr)}}
+@media(max-width:1200px){#ptRoot .pt-wrap{grid-template-columns:350px minmax(0,1fr);gap:18px}#ptRoot .pt-detail{padding:22px}}
+@media(max-width:1000px) and (min-width:801px){#ptRoot .pt-wrap{grid-template-columns:320px minmax(0,1fr)}#ptRoot .pt-tree{padding:14px 10px}#ptRoot .pt-title{font-size:15px}}
+@media(max-width:800px){#ptRoot .pt-wrap{grid-template-columns:minmax(0,1fr);gap:16px}#ptRoot .pt-tree{position:static;max-height:52vh;max-height:52dvh;padding:14px}#ptRoot .pt-detail{padding:20px 16px}#ptRoot .pt-title{font-size:16px}#ptRoot .pt-body{padding:16px;font-size:16px}}
+@media print{#ptRoot .pt-wrap{display:block}#ptRoot .pt-tree{display:none}#ptRoot .pt-detail{border:0;padding:0}}
