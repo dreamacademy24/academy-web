@@ -121,7 +121,7 @@ export default function PortalDashboard() {
         .catch(() => {});
       supabase
         .from("shuttle_applications")
-        .select("id,tour_name,date,num_people,status,created_at")
+        .select("id,tour_name,date:tour_date,num_people:people_count,status,created_at")
         .eq("booking_id", bookingId)
         .order("created_at", { ascending: false })
         .then(({ data }) => { if (!cancelled) setShuttleApps(data || []); });

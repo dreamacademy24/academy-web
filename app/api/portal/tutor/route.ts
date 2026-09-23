@@ -39,10 +39,14 @@ export async function GET(req: Request) {
   for (const rid of confirmedIds) {
     const { data: lesson } = await supabase
       .from('tutor_lessons')
-      .select('id, tutor_name, total_sessions, total_amount, confirmed_time, class_days, start_date, end_date')
+      .select('id, tutor:tutors!tutor_lessons_tutor_id_fkey(name), total_sessions, total_amount, confirmed_time, class_days, start_date, end_date')
       .ilike('admin_memo', `%request_id: ${rid}%`)
       .maybeSingle()
-    if (lesson) lessonMap[rid] = lesson
+    if (lesson) {
+      const { tutor, ...details } = lesson
+      const assignedTutor = Array.isArray(tutor) ? tutor[0] : tutor
+      lessonMap[rid] = { ...details, tutor_name: assignedTutor?.name || null }
+    }
   }
 
   // confirmed 요청별 lesson session notes 수집 (각 lesson_id로 조회)
