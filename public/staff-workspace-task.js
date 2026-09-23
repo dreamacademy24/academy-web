@@ -363,6 +363,13 @@ function _staffInstallIndividualCompletion(){
   var convert=rowToTask;rowToTask=function(r){var t=convert(r);t.completionBy=r.completion_by||{};return t;};
   var wasDone=isDoneTask;isDoneTask=function(t){var ids=_staffCompletionPeople(t);return ids.length>1&&t.completionBy?ids.every(function(id){return !!t.completionBy[id];}):wasDone(t);};
   var badge=_staffTaskAttentionBadge;_staffTaskAttentionBadge=function(t){return badge(t)+_staffCompletionStatus(t);};
+  var directives=_homeDirectivesHtml;
+  _homeDirectivesHtml=function(){
+    var original=directives(),grouped=_homeVisibleTasks().filter(function(t){return taskVisible(t)&&!isDoneTask(t)&&!_isArchivedTask(t.id)&&_staffCompletionPeople(t).length>1;});
+    if(!grouped.length)return original;
+    return original+'<section style="margin:16px 0"><h3>함께 맡은 업무 · 담당자별 완료 현황</h3>'+grouped.map(function(t){return '<button type="button" data-personal-task="'+_staffSafe(t.id)+'" style="display:block;text-align:left;width:100%;padding:12px;margin:6px 0;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text)"><b>'+_staffSafe(t.title)+'</b>'+_staffCompletionStatus(t)+'</button>';}).join('')+'</section>';
+  };
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-personal-task]');if(b)_homeGotoBoardTask(b.dataset.personalTask);});
   var renderProfile=renderSettingsTab5;
   renderSettingsTab5=function(){
     renderProfile();var panel=document.getElementById('sp5');if(!panel)return;
