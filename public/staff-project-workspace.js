@@ -3,7 +3,7 @@
 function install(){
 if(typeof ptRenderProject!=='function')return;
 var originalDetail=ptRenderDetail,originalTree=ptRenderTree;
-var sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href='/staff-project-workspace.css?v=20260924-split2';document.head.appendChild(sheet);
+var sheet=document.createElement('link');sheet.rel='stylesheet';sheet.href='/staff-project-workspace.css?v=20260924-resize';document.head.appendChild(sheet);
 function button(text,action,cls){var b=document.createElement('button');b.type='button';b.className=cls||'btn btn-secondary';b.textContent=text;b.onclick=action;return b;}
 function plain(html){return new DOMParser().parseFromString(html||'','text/html').body.textContent||'';}
 function openForm(project,parent,kind){
@@ -27,6 +27,19 @@ document.body.append(dialog);dialog.showModal();form.elements.title.focus();
 var originalComments=ptRenderComments;ptRenderComments=function(id){if(PT.sel===id)originalComments(id);};
 var nav={project:null,top:null,scope:null,query:'',person:'',sort:'order',direction:1},listSelected=null;
 function root(){return document.getElementById('ptRoot');}
+function installResize(){
+var grid=root().querySelector('.pw-split-grid');if(!grid)return;
+var key='staff-project-split-width:'+(CU&&CU.id||'staff'),ratio=55,drag=null;
+try{var saved=localStorage.getItem(key);if(saved!==null&&Number.isFinite(Number(saved)))ratio=Number(saved);}catch(e){}
+var handle=document.createElement('div');handle.className='pw-resizer';handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-label','왼쪽 업무 목록 너비 조절');handle.setAttribute('aria-controls','pwRows');handle.setAttribute('aria-valuemin','25');handle.setAttribute('aria-valuemax','70');handle.title='좌우로 드래그 · 방향키로 조절 · 두 번 클릭하면 기본 너비';handle.innerHTML='<span aria-hidden="true">↔</span>';grid.insertBefore(handle,grid.lastElementChild);
+function apply(value,save){ratio=Math.max(25,Math.min(70,value));grid.style.setProperty('--pw-left',ratio+'fr');grid.style.setProperty('--pw-right',(100-ratio)+'fr');handle.setAttribute('aria-valuenow',String(Math.round(ratio)));handle.setAttribute('aria-valuetext','왼쪽 '+Math.round(ratio)+'%, 오른쪽 '+Math.round(100-ratio)+'%');if(save)try{localStorage.setItem(key,String(ratio));}catch(e){}}
+handle.onpointerdown=function(e){if(e.button!==0||matchMedia('(max-width:780px)').matches)return;e.preventDefault();drag={id:e.pointerId,start:ratio,x:e.clientX,width:grid.getBoundingClientRect().width-20};handle.setPointerCapture(e.pointerId);grid.classList.add('pw-resizing');handle.focus();};
+handle.onpointermove=function(e){if(drag&&drag.id===e.pointerId)apply(drag.start+(e.clientX-drag.x)/Math.max(1,drag.width)*100,false);};
+function end(e){if(!drag||drag.id!==e.pointerId)return;drag=null;grid.classList.remove('pw-resizing');apply(ratio,true);if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);}
+handle.onpointerup=end;handle.onpointercancel=end;handle.onlostpointercapture=end;
+handle.onkeydown=function(e){var value=ratio;if(e.key==='ArrowLeft')value-=2;else if(e.key==='ArrowRight')value+=2;else if(e.key==='Home')value=25;else if(e.key==='End')value=70;else if(e.key==='Enter')value=55;else return;e.preventDefault();apply(value,true);};handle.ondblclick=function(){apply(55,true);};apply(ratio,false);
+var hint=document.createElement('p');hint.className='pw-resize-hint';hint.textContent='↔ 가운데 경계선을 드래그하면 좌우 너비를 조절할 수 있습니다. 두 번 클릭하면 기본 너비로 돌아갑니다.';grid.before(hint);
+}
 function people(ids){return '<span class="pw-avatars">'+(ids||[]).map(function(id){var p=getP(id);if(!p)return '';return '<span class="pt-av" title="'+esc(p.name)+'" style="background:'+(/^#[0-9a-f]{3,8}$/i.test(p.color||'')?p.color:'#7763c6')+'">'+esc(p.initial||p.name.slice(0,1))+'</span>';}).join('')+'</span>';}
 function members(pr){return Array.from(new Set([].concat(pr.assignees||[],...PT.nodes.filter(function(n){return n.project_id===pr.id;}).map(function(n){return n.assignees||[];}))));}
 function state(n){return n.done?'done':n.status||'todo';}
@@ -60,6 +73,7 @@ r.querySelector('.pw-create').onclick=ptNewProject;var tabs=r.querySelector('.pw
 function preview(pr){listSelected=pr.id;r.querySelectorAll('tbody tr').forEach(function(tr){tr.classList.toggle('selected',tr.dataset.id===pr.id);});var panel=r.querySelector('.pw-project-preview');var folders=ptChildren(null,pr.id).filter(function(n){return n.kind==='folder';});panel.innerHTML='<span class="pw-project-art">'+(/할로윈/.test(pr.title)?'🎃':/인스타/.test(pr.title)?'📸':'📂')+'</span><h2>'+esc(pr.title)+'</h2><p>'+esc(plain(pr.body)||'분야별 업무와 진행 상황을 함께 확인하세요.')+'</p><h3>프로젝트 구성</h3><div class="pw-preview-folders">'+folders.map(function(n){return '<div>📁 '+esc(cleanTitle(n.title))+'</div>';}).join('')+'</div>';panel.append(button('프로젝트 열기 →',function(){PT.sel=null;ptRenderProject(pr.id);},'btn btn-primary'));}
 function rows(){var query=r.querySelector('input[type=search]').value.toLowerCase(),shown=projects.filter(function(n){return ptIsPast(n.id)===isPast&&n.title.toLowerCase().includes(query);}),host=r.querySelector('tbody'),u=typeof _ptUnreadSet==='function'?_ptUnreadSet():{};host.replaceChildren();shown.forEach(function(pr){var tr=document.createElement('tr'),progress=ptProgress(pr.id),count=PT.nodes.filter(function(n){return n.project_id===pr.id&&u[n.id];}).length;tr.dataset.id=pr.id;tr.innerHTML='<td><button class="pw-row-title">'+esc(pr.title)+'</button><small>'+ptChildren(null,pr.id).map(function(n){return esc(cleanTitle(n.title));}).slice(0,3).join(' · ')+'</small></td><td>'+people(members(pr))+'</td><td><b>'+progress+'%</b><div class="pw-progress"><i style="width:'+progress+'%"></i></div></td><td>'+esc(pr.due||'미정')+'</td><td>'+(count?'<span class="pw-new">● '+count+'</span>':'—')+'</td>';tr.onclick=function(){preview(pr);};tr.querySelector('button').onclick=function(e){e.stopPropagation();PT.sel=null;ptRenderProject(pr.id);};host.append(tr);});if(shown.length)preview(shown.find(function(p){return p.id===listSelected;})||shown[0]);else{host.innerHTML='<tr><td colspan="5" class="pw-empty">프로젝트가 없습니다.</td></tr>';r.querySelector('.pw-project-preview').innerHTML='<p>새 프로젝트를 만들어 시작하세요.</p>';}}
 r.querySelector('input[type=search]').oninput=rows;rows();};
+var renderResizableProject=ptRenderProject;ptRenderProject=function(id){renderResizableProject(id);installResize();};
 ptNewProject=function(){openForm(null,null,'project');};ptAddNode=function(project,parent,kind){openForm(project,parent,kind||'folder');};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
