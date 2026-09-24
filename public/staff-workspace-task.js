@@ -396,4 +396,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (function(){function load(){var s=document.createElement('script');s.src='/staff-avatar.js?v=20260924';document.head.appendChild(s);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();})();
 
 (function(){function loadProject(){var s=document.createElement('script');s.src='/staff-project-workspace.js?v=20260924-resize';document.head.appendChild(s);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadProject);else loadProject();})();
+(function(){function loadOpinion(){var s=document.createElement('script');s.src='/staff-opinion-completion.js?v=20260924';document.head.appendChild(s);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadOpinion);else loadOpinion();})();
 
