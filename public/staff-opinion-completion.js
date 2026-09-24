@@ -64,7 +64,7 @@
   var bar=document.createElement('div');bar.id='opCompletionBar';bar.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 20px;background:'+(op.completed_at?'#ecfdf5':'#f7f5ff')+';border-bottom:1px solid #e5e7eb;flex-wrap:wrap';
   var label=document.createElement('span');label.style.cssText='flex:1;font-weight:700;font-size:13px;color:#334155';
   label.textContent=op.completed_at?'✓ 완료 · 결과와 답변을 보관하고 있습니다.':'진행 중 · 의견을 모두 확인한 후 완료해주세요.';bar.append(label);
-  var me=window.CU;
+  var me=typeof CU==='undefined'?null:CU;
   if(me&&(String(me.id)===String(op.from_id)||['ceo','admin','korean_admin'].includes(me.role))){var b=button(op.completed_at?'다시 진행':'✓ 완료',function(){complete(op);});b.id='opCompleteButton';bar.append(b);}
   det.prepend(bar);
  }
