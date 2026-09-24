@@ -4,6 +4,7 @@ import { BASE_URL } from "@/lib/publicPages";
 // 검색엔진용 사이트맵 — 손님 공개 페이지만 (어드민/포털/API 제외)
 const PUBLIC_ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"] }[] = [
   { path: "/", priority: 1.0, changeFrequency: "weekly" },
+  { path: "/curriculum", priority: 0.9, changeFrequency: "monthly" },
   { path: "/junior", priority: 0.9, changeFrequency: "monthly" },
   { path: "/kinder", priority: 0.9, changeFrequency: "monthly" },
   { path: "/package", priority: 0.9, changeFrequency: "monthly" },
