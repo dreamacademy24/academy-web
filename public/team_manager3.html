@@ -1408,7 +1408,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
 <script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260918-notices1"></script><link rel="stylesheet" href="/staff-home-theme.css?v=20260920-1"><script src="/staff-home-theme.js?v=20260920-1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260915-related1">
-<script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-workspace-task.js?v=20260915-chat1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
+<script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-workspace-task.js?v=20260924-opinion10"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
@@ -3375,7 +3375,7 @@ async function saveGuideMsg() {
     <input id="opTitle" type="text" placeholder="제목" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:8px">
     <textarea id="opBody" placeholder="내용을 입력하세요..." style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box;margin-bottom:8px;line-height:1.6"></textarea>
     <div id="opVoteSection" style="display:none;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa">
-      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px">📊 투표 항목 <span style="color:#9ca3af;font-weight:600">(최대 5개, 라벨 + 선택적 URL)</span></div>
+      <div style="font-size:12px;font-weight:800;color:#374151;margin-bottom:8px">📊 투표 항목 <span style="color:#9ca3af;font-weight:600">(최대 10개, 라벨 + 선택적 URL)</span></div>
       <div id="opVoteOpts"></div>
       <button type="button" id="opVoteAddBtn" onclick="opVoteAddOpt()" style="width:100%;padding:7px;background:#fff;border:1px dashed #cbd5e1;border-radius:6px;font-size:12px;font-weight:700;color:#6b7280;cursor:pointer;font-family:inherit;margin-bottom:8px">+ 항목 추가</button>
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:#374151">마감일:</span><input id="opVoteDeadline" type="date" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-family:inherit;outline:none"></div>
@@ -8872,7 +8872,7 @@ function setOpType(t){
 }
 function opVoteAddOpt(label,url){
   var c=document.getElementById('opVoteOpts');if(!c)return;
-  var rows=c.querySelectorAll('.opv-row');if(rows.length>=5){toast('최대 5개까지 추가 가능합니다','#ef4444');return;}
+  var rows=c.querySelectorAll('.opv-row');if(rows.length>=10){toast('최대 10개까지 추가 가능합니다','#ef4444');return;}
   var idx=rows.length;
   var div=document.createElement('div');
   div.className='opv-row';
