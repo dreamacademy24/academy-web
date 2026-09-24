@@ -71,4 +71,5 @@
  new MutationObserver(decorate).observe(document.body,{childList:true,subtree:true});
  decorate();
 })();
+(function(){var s=document.createElement('script');s.src='/staff-opinion-gallery.js?v=20260924';document.head.appendChild(s);})();
 
