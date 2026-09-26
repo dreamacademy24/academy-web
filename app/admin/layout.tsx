@@ -40,7 +40,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "하우스 보고", href: "/admin/house-reports" },
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
-    { label: "🚗 차량 스케줄(자동취합)", href: "/admin/vehicle-schedule" },
+    { label: "차량 스케줄", href: "/admin/vehicle-schedule" },
     { label: "체크인 준비", href: "/admin/checkin-details" },
     { label: "상비약 관리", href: "/admin/med-forms" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
@@ -167,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/today" style={{ fontSize: 15, fontWeight: 800, color: "#fff", textDecoration: "none" }}>DREAM <span style={{ color: "#FFD54A" }}>WORKSPACE</span></Link>
             <button onClick={() => setHidden(true)} title="사이드바 숨기기" style={{ background: "none", border: "none", color: "#c5cbf2", cursor: "pointer", fontSize: 18 }}>‹</button>
           </div>
-          <Link href="/admin/today" style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 18px", fontSize: 15, fontWeight: 700, color: todayOn ? "#fff" : "#eef0fc", textDecoration: "none", background: todayOn ? "rgba(255,255,255,0.20)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>📅 오늘 한눈에</Link>
+          <Link href="/admin/today" style={{ display: "flex", alignItems: "center", gap: 8, padding: "13px 18px", fontSize: 15, fontWeight: 700, color: todayOn ? "#fff" : "#eef0fc", textDecoration: "none", background: todayOn ? "rgba(255,255,255,0.20)" : "transparent", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>오늘 한눈에</Link>
           {navGroups.map(g => (
             <div key={g.title}>
               <button type="button" aria-expanded={Boolean(open[g.title])} onClick={() => setOpen(o => ({ ...o, [g.title]: !o[g.title] }))}
