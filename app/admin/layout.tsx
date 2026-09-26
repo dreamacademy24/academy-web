@@ -40,6 +40,7 @@ const NAV: { title: string; items: Item[] }[] = [
     { label: "하우스 보고", href: "/admin/house-reports" },
     { label: "투어셔틀 관리", href: "/admin/tour-shuttle" },
     { label: "셔틀·기사 관리", href: "/admin/shuttle-management" },
+    { label: "🚗 차량 스케줄(자동취합)", href: "/admin/vehicle-schedule" },
     { label: "체크인 준비", href: "/admin/checkin-details" },
     { label: "상비약 관리", href: "/admin/med-forms" },
     { label: "시재 관리", href: "/admin/cash-ledger" },
