@@ -211,7 +211,7 @@ function _staffTaskCheckPatch(t,index){
 function _staffOwnComment(c){return !!(CU&&c&&c.id!=null&&c.id!==''&&String(c.author)===String(CU.id));}
 function _staffCommentHtml(c,index){
   var person=getP(c.author);
-  return '<div class="swt-comment" data-comment-index="'+index+'"><div class="swt-comment-head"><div><b>'+_staffSafe(person?person.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small></div>'+(_staffOwnComment(c)?'<div class="swt-comment-actions"><button type="button" data-act="comment-edit">수정</button><button type="button" data-act="comment-delete">삭제</button></div>':'')+'</div><p>'+_staffSafe(c.text||'')+'</p><div class="swt-comment-photos">'+(typeof _staffAttachmentHtml==='function'?_staffAttachmentHtml(c.files||[]):'')+'</div><div class="swt-comment-controls"></div></div>';
+  return '<div class="swt-comment" data-comment-id="'+_staffSafe(String(c.id))+'" data-comment-index="'+index+'"><div class="swt-comment-head"><div><b>'+_staffSafe(person?person.name:c.author||'직원')+'</b><small>'+_staffSafe(c.date||'')+'</small></div>'+(_staffOwnComment(c)?'<div class="swt-comment-actions"><button type="button" data-act="comment-edit">수정</button><button type="button" data-act="comment-delete">삭제</button></div>':'')+'</div><p>'+_staffSafe(c.text||'')+'</p><div class="swt-mention-tags">'+_staffCommentTags(c)+'</div><button type="button" class="swt-reply-button" data-reply-comment="'+_staffSafe(String(c.id))+'">답글</button><div class="swt-comment-photos">'+(typeof _staffAttachmentHtml==='function'?_staffAttachmentHtml(c.files||[]):'')+'</div><div class="swt-comment-controls"></div></div>';
 }
 async function _staffMutateComment(taskId,c,text,deleting,files){
   if(!_staffOwnComment(c))throw new Error('본인이 작성한 댓글만 수정·삭제할 수 있습니다.');
@@ -262,13 +262,14 @@ function _renderStaffTaskDetail(taskId,hostId){
     '<div class="swt-detail-grid"><main><section class="swt-card"><div class="swt-request-heading"><h2>요청 내용</h2><span class="swt-created-at">작성 · '+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</span></div>'+(t.note?_taskNoteHtml(t):'<p class="swt-help">등록된 요청 내용이 없습니다.</p>')+'</section>'+
     '<section class="swt-card"><div class="swt-section-head"><h2>'+(t.checklist&&t.checklist._sub?'하위 업무':'완료 조건')+'</h2><span>'+items.filter(function(c){return c.done;}).length+' / '+items.length+'</span></div><p class="swt-help">'+(_staffCompletionPeople(t).length>1?'각 담당자가 내 업무 완료를 눌러야 합니다. 마지막 담당자가 완료하면 최종 완료됩니다.':(items.length?'모든 항목을 체크하면 업무가 완료됩니다.':'결과를 아래에 남긴 뒤 완료 처리하세요.'))+'</p><div class="swt-checks">'+items.map(function(c,i){return '<label><input type="checkbox" data-check="'+i+'" '+(c.done?'checked ':'')+(!canEdit?'disabled':'')+'><span><b>'+_staffSafe(c.text||c.title||'항목')+'</b>'+(c.note?'<small>'+_staffSafe(c.note)+'</small>':'')+'</span>'+((c.dueDate||c.due)?'<small>'+_staffSafe(c.dueDate||c.due)+'</small>':'')+'</label>';}).join('')+'</div></section>'+
     '<section class="swt-card"><h2>참고 자료 · 첨부 '+(t.files||[]).length+'</h2><div class="swt-files">'+((t.files||[]).length?renderTaskFiles(t):'<p class="swt-help">첨부된 파일이 없습니다.</p>')+'</div>'+(canEdit?'<button class="swt-text-btn" data-act="edit">사진·파일 추가 →</button>':'')+'</section>'+
-    '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+comments.map(_staffCommentHtml).join('')+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
+    '<section class="swt-card"><h2>진행 상황 · 결과 보고 <span data-comment-count>'+comments.length+'</span></h2><div class="swt-comments">'+_staffThreadHtml(comments)+'</div>'+(canComment?'<label class="swt-field-label" for="swtReply">진행한 내용과 확인이 필요한 사항을 남겨주세요.</label><textarea id="swtReply" placeholder="예: 항공편 확인 후 픽업팀에 전달했습니다. 회신 대기 중입니다."></textarea><div class="swt-reply-actions"><span>등록한 내용은 업무 관계자가 확인할 수 있습니다.</span><button class="swh-primary" data-act="comment">보고 등록</button></div>':'')+'</section></main>'+
     '<aside><section class="swt-card"><h2>업무 정보</h2><dl><dt>지시자</dt><dd>'+_staffSafe(creator?creator.name:t.createdBy||'미지정')+'</dd><dt>담당자</dt><dd>'+_staffSafe(people)+'</dd><dt>완료 기한</dt><dd class="'+(t.due&&t.due<todayStr()&&!done?'swt-late':'')+'">'+_staffSafe(t.due||'기한 없음')+'</dd><dt>진행률</dt><dd>'+_staffSafe(t.progress||0)+'%</dd><dt>작성 일시</dt><dd>'+_staffSafe(_staffTaskCreatedLabel(t.createdAt))+'</dd><dt>공개 범위</dt><dd>'+_staffSafe(t.secret?'지시자·담당자':t.shared?'팀 공유':'기존 업무 권한 적용')+'</dd></dl>'+_staffCompletionStatus(t)+( (_staffCompletionPeople(t).length>1?_staffCompletionPeople(t).includes(CU.id):canEdit)?'<button class="swt-complete" data-act="complete">'+(_staffCompletionPeople(t).length>1?(_staffOwnCompleted(t)?'내 완료 취소':'내 업무 완료'):(done?'완료 취소':'업무 완료'))+'</button>':'')+'<p class="swt-help">진행·결과 보고는 댓글로 남고, 완료 여부는 업무에 함께 저장됩니다.</p></section><div class="swt-feedback" role="status" id="swtFeedback"></div></aside></div></article>';
   var root=host.firstElementChild,feedback=root.querySelector('#swtFeedback');
   _staffRelatedTaskDetail(root);
   if(window._staffChatTaskContext)window._staffChatTaskContext(root.querySelector('.swt-detail-grid>main'),t);
   var replyDraft=_staffCommentDraft(t.id),reply=root.querySelector('#swtReply');
   if(reply){reply.value=replyDraft.text||'';reply.addEventListener('input',function(){replyDraft.text=reply.value;});var photoHost=document.createElement('div');photoHost.className='swt-comment-photo-picker';reply.after(photoHost);_staffCommentPhotoPicker(photoHost,t.id,replyDraft);}
+  if(reply)_staffThreadComposer(root,t,replyDraft,reply);_staffFocusTaskComment(root);
   var reservationLinks=root.querySelectorAll('a[href*="/admin/bookings/"]');
   if(reservationLinks.length){
     var reservation=document.createElement('section');reservation.className='swt-reservation-preview';reservation.hidden=true;root.querySelector('.swt-detail-grid>aside').prepend(reservation);
@@ -311,7 +312,7 @@ function _renderStaffTaskDetail(taskId,hostId){
         try{
           var saved=await _staffMutateComment(t.id,c,value,deleting,card._photoDraft?card._photoDraft.files:undefined);
           if(root.isConnected){
-            if(deleting){card.remove();root.querySelector('[data-comment-count]').textContent=(taskComments[t.id]||[]).length;}
+            if(deleting){rerender();}
             else{comments[index]=rowToTc(saved);var wrapper=document.createElement('div');wrapper.innerHTML=_staffCommentHtml(comments[index],index);card.replaceWith(wrapper.firstElementChild);}
             status(deleting?'댓글을 삭제했습니다.':'댓글을 수정했습니다.');
           }
@@ -332,10 +333,9 @@ function _renderStaffTaskDetail(taskId,hostId){
     if(act==='comment'){
       var input=root.querySelector('#swtReply'),text=input.value.trim();if((!text&&!replyDraft.files.length)||button.disabled)return;if(replyDraft.busy){status('사진 업로드가 끝난 뒤 등록해주세요.');return;}
       input.disabled=true;button.disabled=true;root.inert=true;_staffTaskWrites[t.id]=true;var comment={author:CU.id,text:text,ts:Date.now()};
-      try{var response=await fetch('/api/staff/comments',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:replyDraft.id,taskId:String(t.id),text:text,files:replyDraft.files})});var data=await response.json();if(!response.ok){var failure=new Error(data.error||'보고 등록 실패');failure.status=response.status;throw failure;}var rows=[data.comment];if(!rows[0]||rows[0].id==null)throw new Error('등록 결과를 확인하지 못했습니다.');
+      try{var response=await fetch('/api/staff/comments',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:replyDraft.id,taskId:String(t.id),text:text,files:replyDraft.files,parentId:replyDraft.parentId||null,mentionIds:replyDraft.mentionIds||[]})});var data=await response.json();if(!response.ok){var failure=new Error(data.error||'보고 등록 실패');failure.status=response.status;throw failure;}var rows=[data.comment];if(!rows[0]||rows[0].id==null)throw new Error('등록 결과를 확인하지 못했습니다.');
         if(!taskComments[t.id])taskComments[t.id]=[];taskComments[t.id].push(rowToTc(rows[0]));sv('tm_tc',taskComments);
-        try{createNotifMultiple([t.createdBy].concat(ids).filter(function(id,i,a){return id&&id!==CU.id&&a.indexOf(id)===i;}),'task_comment',t.id,'진행·결과 보고: '+t.title.slice(0,40));}catch(err){}
-        replyDraft.files=[];replyDraft.text='';replyDraft.id=crypto.randomUUID();input.value='';rerender();
+        replyDraft.files=[];replyDraft.text='';replyDraft.parentId=null;replyDraft.mentionIds=[];replyDraft.id=crypto.randomUUID();input.value='';rerender();
       }catch(err){status('보고 등록 실패: 입력 내용과 사진은 유지됩니다. '+err.message);if(err.status===401)_staffCommentAuthPrompt(photoHost,t.id);}finally{delete _staffTaskWrites[t.id];root.inert=false;input.disabled=false;button.disabled=false;}
     }
   });

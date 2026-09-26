@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { portalDb, portalStaffIdentity } from '@/lib/portalAuth';
 import {commentAccess,validateCommentPhotos} from '@/lib/staffCommentMedia';
+import {commentThreadContext,notifyTaskComment} from '@/lib/staffCommentThreads';
 import {isDeepStrictEqual} from 'node:util';
 
 async function mutate(req: Request, deleting: boolean) {
@@ -24,7 +25,7 @@ async function mutate(req: Request, deleting: boolean) {
   let photos;try{if(!deleting&&body.files!==undefined)photos=validateCommentPhotos(body.files,author,body.taskId);}catch(e){return NextResponse.json({error:(e as Error).message},{status:400});}
   const query = deleting ? db.from('staff_task_comments').delete() : db.from('staff_task_comments').update({ text: body.text.trim(),...(photos?{files:photos}:{}) });
   if(body.originalFiles!==undefined)query.eq('files',JSON.stringify(body.originalFiles));
-  const { data, error } = await query.eq('id', body.id).eq('task_id', body.taskId).eq('from_id', author).eq('text', body.originalText).select('id,task_id,from_id,text,ts,files');
+  const { data, error } = await query.eq('id', body.id).eq('task_id', body.taskId).eq('from_id', author).eq('text', body.originalText).select('id,task_id,from_id,text,ts,files,parent_id,mention_ids');
   if (error) return NextResponse.json({ error: '댓글 저장에 실패했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 });
   if (!data || data.length !== 1) return NextResponse.json({ error: '댓글이 변경·삭제되었거나 본인 댓글이 아닙니다. 최신 내용을 확인해주세요.' }, { status: 409 });
   return NextResponse.json({ comment: data[0], deleted: deleting });
@@ -37,8 +38,9 @@ export async function POST(req:Request){try{
  const body=await req.json(),{db,author}=await commentAccess(req,String(body.taskId||''));
  const files=validateCommentPhotos(body.files||[],author,body.taskId),text=typeof body.text==='string'?body.text.trim():'';
  if((!text&&!files.length)||text.length>20000||typeof body.id!=='string'||!/^[a-f\d-]{36}$/i.test(body.id))return NextResponse.json({error:'댓글 내용 또는 사진을 입력해주세요.'},{status:400});
- const prior=await db.from('staff_task_comments').select('id,task_id,from_id,text,ts,files').eq('id',body.id).maybeSingle();if(prior.error)throw Error('저장 상태를 확인하지 못했습니다.');
- if(prior.data){if(prior.data.task_id!==body.taskId||prior.data.from_id!==author||prior.data.text!==text||!isDeepStrictEqual(prior.data.files,files))return NextResponse.json({error:'이미 등록된 댓글과 내용이 다릅니다. 목록에서 등록 결과를 확인한 뒤 수정해주세요.'},{status:409});return NextResponse.json({comment:prior.data});}
- const saved=await db.from('staff_task_comments').insert({id:body.id,task_id:body.taskId,from_id:author,text,files,ts:Date.now()}).select('id,task_id,from_id,text,ts,files').single();
- if(saved.error)throw Error('댓글을 저장하지 못했습니다. 입력 내용은 유지됩니다.');return NextResponse.json({comment:saved.data});
+ const ctx=await commentThreadContext(db,body.taskId,body.mentionIds||[],body.parentId||null);
+ const prior=await db.from('staff_task_comments').select('id,task_id,from_id,text,ts,files,parent_id,mention_ids').eq('id',body.id).maybeSingle();if(prior.error)throw Error('저장 상태를 확인하지 못했습니다.');
+ if(prior.data){if(prior.data.task_id!==body.taskId||prior.data.from_id!==author||prior.data.text!==text||!isDeepStrictEqual(prior.data.files,files)||prior.data.parent_id!==(body.parentId||null)||!isDeepStrictEqual(prior.data.mention_ids,ctx.mentions))return NextResponse.json({error:'이미 등록된 댓글과 내용이 다릅니다. 목록에서 등록 결과를 확인한 뒤 수정해주세요.'},{status:409});await notifyTaskComment(db,author,prior.data,ctx);return NextResponse.json({comment:prior.data});}
+ const saved=await db.from('staff_task_comments').insert({id:body.id,task_id:body.taskId,from_id:author,text,files,ts:Date.now(),parent_id:body.parentId||null,mention_ids:ctx.mentions}).select('id,task_id,from_id,text,ts,files,parent_id,mention_ids').single();
+ if(saved.error)throw Error('댓글을 저장하지 못했습니다. 입력 내용은 유지됩니다.');await notifyTaskComment(db,author,saved.data,ctx);return NextResponse.json({comment:saved.data});
  }catch(e){return NextResponse.json({error:(e as Error).message||'댓글 저장에 실패했습니다.'},{status:(e as any).status||400});}}
