@@ -1,0 +1,25 @@
+const $=id=>document.getElementById(id);
+let chinese=false,starOnly=false,query='',group='all',audio=null,playId=0,question=null;
+const flipped=new Set();
+let stars=new Set();
+try{const saved=JSON.parse(localStorage.getItem('little-mandarin-stars-v1')||'[]');if(Array.isArray(saved))stars=new Set(saved.filter(id=>WORDS.some(w=>w.id===id)));}catch{}
+function picture(w){if(DRAWINGS[w.icon])return '<svg viewBox="0 0 100 100" aria-hidden="true">'+DRAWINGS[w.icon]+'</svg>';if(w.icon.startsWith('#'))return '<span class="swatch" style="background:'+w.icon+'"></span>';return '<span class="emoji" aria-hidden="true">'+w.icon+'</span>';}
+function filtered(){return WORDS.filter(w=>(group==='all'||w.g===+group)&&(!starOnly||stars.has(w.id))&&(!query||[w.id,w.zh,w.py,w.en].some(v=>v.toLowerCase().includes(query))));}
+function render(){const list=filtered();$('grid').innerHTML=list.map(w=>{const zh=chinese!==flipped.has(w.id);return '<article class="tile"><button class="card" data-action="speak" data-id="'+w.id+'" aria-label="Hear '+w.en+' in Chinese"><div class="tag">'+w.id+' / '+(w.g<=5?'Book '+w.g:'Extra')+'</div>'+(zh?'<div class="art">'+picture(w)+'</div><div class="zh" lang="zh-CN">'+w.zh+'</div><div class="py">'+w.py+'</div>':'<div class="art">'+picture(w)+'</div><div class="en">'+w.en+'</div>')+'<div class="hint">🔊 Tap to listen</div></button><div class="tilefooter"><button data-action="flip" data-id="'+w.id+'" aria-label="Flip '+w.en+' card">↔ Flip</button><button data-action="star" data-id="'+w.id+'" aria-pressed="'+stars.has(w.id)+'" class="'+(stars.has(w.id)?'saved':'')+'" aria-label="Mark '+w.en+' as practiced">'+(stars.has(w.id)?'★ Practiced':'☆ Practice')+'</button></div></article>';}).join('');$('stars').textContent=(starOnly?'★':'☆')+' My stars · '+stars.size;$('stars').classList.toggle('active',starOnly);$('empty').classList.toggle('hidden',list.length>0);$('side').textContent=chinese?'Show English':'Show Chinese';}
+function stopAudio(){playId++;if(audio){audio.pause();audio.currentTime=0;}if('speechSynthesis'in window)speechSynthesis.cancel();}
+async function speak(w,hide=false){stopAudio();const mine=playId;audio=new Audio('audio/'+w.id+'.mp3');$('status').textContent=hide?'Listen carefully.':w.zh+' · '+w.py+' · '+w.en;try{await audio.play();}catch{if(mine!==playId)return;const voice=('speechSynthesis'in window)?speechSynthesis.getVoices().find(v=>/^zh-(CN|Hans)/i.test(v.lang)):null;if(voice){const utterance=new SpeechSynthesisUtterance(w.zh);utterance.voice=voice;utterance.lang='zh-CN';utterance.rate=.8;utterance.onerror=()=>{$('status').textContent='Audio could not play. Check your connection and tap again.';};speechSynthesis.speak(utterance);}else $('status').textContent='Audio could not play. Check your connection and tap again.';}}
+function star(id){stars.has(id)?stars.delete(id):stars.add(id);try{localStorage.setItem('little-mandarin-stars-v1',JSON.stringify([...stars]));}catch{$('status').textContent='Practice marked for this visit. This browser cannot save progress.';}render();}
+$('grid').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b)return;const w=WORDS.find(w=>w.id===b.dataset.id);if(b.dataset.action==='speak')speak(w);if(b.dataset.action==='flip'){flipped.has(w.id)?flipped.delete(w.id):flipped.add(w.id);render();}if(b.dataset.action==='star')star(w.id);});
+function closeQuiz(){$('quiz').classList.add('hidden');question=null;stopAudio();}
+$('group').onchange=e=>{group=e.target.value;closeQuiz();render();};
+$('search').oninput=e=>{query=e.target.value.trim().toLowerCase();closeQuiz();render();};
+$('side').onclick=()=>{chinese=!chinese;flipped.clear();render();};
+$('stars').onclick=()=>{starOnly=!starOnly;closeQuiz();render();};
+function shuffle(list){return list.map(w=>({w,r:Math.random()})).sort((a,b)=>a.r-b.r).map(x=>x.w);}
+function nextQuiz(){const pool=filtered();if(!pool.length){$('status').textContent='Choose a set with some cards first.';return;}const target=pool[Math.floor(Math.random()*pool.length)];question=target;const choices=shuffle([target,...shuffle(WORDS.filter(w=>w.id!==target.id&&w.icon!==target.icon)).slice(0,2)]);$('quiz').classList.remove('hidden');$('quizFeedback').textContent='Tap the picture you hear.';$('choices').innerHTML=choices.map(w=>'<button data-choice="'+w.id+'" aria-label="'+w.en+'"><div class="art">'+picture(w)+'</div><div>'+w.en+'</div></button>').join('');speak(target,true);}
+$('quizBtn').onclick=()=>{$('quiz').classList.contains('hidden')?nextQuiz():closeQuiz();};
+$('nextQuiz').onclick=nextQuiz;
+$('listen').onclick=()=>{if(question)speak(question,true);};
+$('choices').onclick=e=>{const b=e.target.closest('[data-choice]');if(!b||!question)return;const correct=b.dataset.choice===question.id;$('quizFeedback').textContent=correct?'Yes! '+question.zh+' · '+question.py+' · '+question.en+' 🎉':'Try again. Listen one more time!';if(correct)speak(question);};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAudio();});
+render();

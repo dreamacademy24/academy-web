@@ -1,0 +1,674 @@
+[
+  {
+    "id": "001",
+    "g": 1,
+    "zh": "马",
+    "py": "mǎ",
+    "en": "horse",
+    "icon": "🐎"
+  },
+  {
+    "id": "002",
+    "g": 1,
+    "zh": "蘑菇",
+    "py": "mógu",
+    "en": "mushroom",
+    "icon": "🍄"
+  },
+  {
+    "id": "003",
+    "g": 1,
+    "zh": "核桃",
+    "py": "hétáo",
+    "en": "walnut",
+    "icon": "walnut"
+  },
+  {
+    "id": "004",
+    "g": 1,
+    "zh": "气球",
+    "py": "qìqiú",
+    "en": "balloon",
+    "icon": "🎈"
+  },
+  {
+    "id": "005",
+    "g": 1,
+    "zh": "五",
+    "py": "wǔ",
+    "en": "five",
+    "icon": "5"
+  },
+  {
+    "id": "006",
+    "g": 1,
+    "zh": "驴",
+    "py": "lǘ",
+    "en": "donkey",
+    "icon": "🫏"
+  },
+  {
+    "id": "007",
+    "g": 1,
+    "zh": "鲨鱼",
+    "py": "shāyú",
+    "en": "shark",
+    "icon": "🦈"
+  },
+  {
+    "id": "008",
+    "g": 1,
+    "zh": "菠菜",
+    "py": "bōcài",
+    "en": "spinach",
+    "icon": "spinach"
+  },
+  {
+    "id": "009",
+    "g": 1,
+    "zh": "盒子",
+    "py": "hézi",
+    "en": "box",
+    "icon": "📦"
+  },
+  {
+    "id": "010",
+    "g": 1,
+    "zh": "礼物",
+    "py": "lǐwù",
+    "en": "gift",
+    "icon": "🎁"
+  },
+  {
+    "id": "011",
+    "g": 1,
+    "zh": "竹子",
+    "py": "zhúzi",
+    "en": "bamboo",
+    "icon": "bamboo"
+  },
+  {
+    "id": "012",
+    "g": 1,
+    "zh": "鱼",
+    "py": "yú",
+    "en": "fish",
+    "icon": "🐟"
+  },
+  {
+    "id": "013",
+    "g": 2,
+    "zh": "菠萝",
+    "py": "bōluó",
+    "en": "pineapple",
+    "icon": "🍍"
+  },
+  {
+    "id": "014",
+    "g": 2,
+    "zh": "苹果",
+    "py": "píngguǒ",
+    "en": "apple",
+    "icon": "🍎"
+  },
+  {
+    "id": "015",
+    "g": 2,
+    "zh": "面包",
+    "py": "miànbāo",
+    "en": "bread",
+    "icon": "🍞"
+  },
+  {
+    "id": "016",
+    "g": 2,
+    "zh": "蜂蜜",
+    "py": "fēngmì",
+    "en": "honey",
+    "icon": "🍯"
+  },
+  {
+    "id": "017",
+    "g": 2,
+    "zh": "杯子",
+    "py": "bēizi",
+    "en": "cup",
+    "icon": "☕"
+  },
+  {
+    "id": "018",
+    "g": 2,
+    "zh": "八",
+    "py": "bā",
+    "en": "eight",
+    "icon": "8"
+  },
+  {
+    "id": "019",
+    "g": 2,
+    "zh": "屁股",
+    "py": "pìgu",
+    "en": "bottom",
+    "icon": "bottom"
+  },
+  {
+    "id": "020",
+    "g": 2,
+    "zh": "葡萄",
+    "py": "pútao",
+    "en": "grapes",
+    "icon": "🍇"
+  },
+  {
+    "id": "021",
+    "g": 2,
+    "zh": "帽子",
+    "py": "màozi",
+    "en": "hat",
+    "icon": "🧢"
+  },
+  {
+    "id": "022",
+    "g": 2,
+    "zh": "猫",
+    "py": "māo",
+    "en": "cat",
+    "icon": "🐈"
+  },
+  {
+    "id": "023",
+    "g": 2,
+    "zh": "飞机",
+    "py": "fēijī",
+    "en": "airplane",
+    "icon": "✈️"
+  },
+  {
+    "id": "024",
+    "g": 2,
+    "zh": "粉红色",
+    "py": "fěnhóngsè",
+    "en": "pink",
+    "icon": "#ef83ac"
+  },
+  {
+    "id": "025",
+    "g": 3,
+    "zh": "大象",
+    "py": "dàxiàng",
+    "en": "elephant",
+    "icon": "🐘"
+  },
+  {
+    "id": "026",
+    "g": 3,
+    "zh": "兔子",
+    "py": "tùzi",
+    "en": "rabbit",
+    "icon": "🐇"
+  },
+  {
+    "id": "027",
+    "g": 3,
+    "zh": "鸟",
+    "py": "niǎo",
+    "en": "bird",
+    "icon": "🐦"
+  },
+  {
+    "id": "028",
+    "g": 3,
+    "zh": "老虎",
+    "py": "lǎohǔ",
+    "en": "tiger",
+    "icon": "🐅"
+  },
+  {
+    "id": "029",
+    "g": 3,
+    "zh": "电视",
+    "py": "diànshì",
+    "en": "television",
+    "icon": "📺"
+  },
+  {
+    "id": "030",
+    "g": 3,
+    "zh": "灯泡",
+    "py": "dēngpào",
+    "en": "light bulb",
+    "icon": "💡"
+  },
+  {
+    "id": "031",
+    "g": 3,
+    "zh": "桃子",
+    "py": "táozi",
+    "en": "peach",
+    "icon": "🍑"
+  },
+  {
+    "id": "032",
+    "g": 3,
+    "zh": "糖果",
+    "py": "tángguǒ",
+    "en": "candy",
+    "icon": "🍬"
+  },
+  {
+    "id": "033",
+    "g": 3,
+    "zh": "牛奶",
+    "py": "niúnǎi",
+    "en": "milk",
+    "icon": "🥛"
+  },
+  {
+    "id": "034",
+    "g": 3,
+    "zh": "柠檬",
+    "py": "níngméng",
+    "en": "lemon",
+    "icon": "🍋"
+  },
+  {
+    "id": "035",
+    "g": 3,
+    "zh": "喇叭",
+    "py": "lǎba",
+    "en": "horn",
+    "icon": "📯"
+  },
+  {
+    "id": "036",
+    "g": 3,
+    "zh": "鹿",
+    "py": "lù",
+    "en": "deer",
+    "icon": "🦌"
+  },
+  {
+    "id": "037",
+    "g": 4,
+    "zh": "公园",
+    "py": "gōngyuán",
+    "en": "park",
+    "icon": "park"
+  },
+  {
+    "id": "038",
+    "g": 4,
+    "zh": "裤子",
+    "py": "kùzi",
+    "en": "pants",
+    "icon": "👖"
+  },
+  {
+    "id": "039",
+    "g": 4,
+    "zh": "花店",
+    "py": "huādiàn",
+    "en": "flower shop",
+    "icon": "shop"
+  },
+  {
+    "id": "040",
+    "g": 4,
+    "zh": "狗",
+    "py": "gǒu",
+    "en": "dog",
+    "icon": "🐕"
+  },
+  {
+    "id": "041",
+    "g": 4,
+    "zh": "鸽子",
+    "py": "gēzi",
+    "en": "pigeon",
+    "icon": "🕊️"
+  },
+  {
+    "id": "042",
+    "g": 4,
+    "zh": "卡车",
+    "py": "kǎchē",
+    "en": "truck",
+    "icon": "🚚"
+  },
+  {
+    "id": "043",
+    "g": 4,
+    "zh": "口香糖",
+    "py": "kǒuxiāngtáng",
+    "en": "chewing gum",
+    "icon": "gum"
+  },
+  {
+    "id": "044",
+    "g": 4,
+    "zh": "花",
+    "py": "huā",
+    "en": "flower",
+    "icon": "🌸"
+  },
+  {
+    "id": "045",
+    "g": 4,
+    "zh": "河马",
+    "py": "hémǎ",
+    "en": "hippo",
+    "icon": "🦛"
+  },
+  {
+    "id": "046",
+    "g": 4,
+    "zh": "果汁",
+    "py": "guǒzhī",
+    "en": "juice",
+    "icon": "🧃"
+  },
+  {
+    "id": "047",
+    "g": 4,
+    "zh": "可乐",
+    "py": "kělè",
+    "en": "cola",
+    "icon": "cola"
+  },
+  {
+    "id": "048",
+    "g": 4,
+    "zh": "汉堡包",
+    "py": "hànbǎobāo",
+    "en": "hamburger",
+    "icon": "🍔"
+  },
+  {
+    "id": "049",
+    "g": 5,
+    "zh": "鸡",
+    "py": "jī",
+    "en": "chicken",
+    "icon": "🐓"
+  },
+  {
+    "id": "050",
+    "g": 5,
+    "zh": "青蛙",
+    "py": "qīngwā",
+    "en": "frog",
+    "icon": "🐸"
+  },
+  {
+    "id": "051",
+    "g": 5,
+    "zh": "小鸡",
+    "py": "xiǎojī",
+    "en": "chick",
+    "icon": "🐤"
+  },
+  {
+    "id": "052",
+    "g": 5,
+    "zh": "鸡蛋",
+    "py": "jīdàn",
+    "en": "egg",
+    "icon": "🥚"
+  },
+  {
+    "id": "053",
+    "g": 5,
+    "zh": "家",
+    "py": "jiā",
+    "en": "home",
+    "icon": "🏠"
+  },
+  {
+    "id": "054",
+    "g": 5,
+    "zh": "巧克力",
+    "py": "qiǎokèlì",
+    "en": "chocolate",
+    "icon": "🍫"
+  },
+  {
+    "id": "055",
+    "g": 5,
+    "zh": "球",
+    "py": "qiú",
+    "en": "ball",
+    "icon": "⚽"
+  },
+  {
+    "id": "056",
+    "g": 5,
+    "zh": "星星",
+    "py": "xīngxing",
+    "en": "star",
+    "icon": "⭐"
+  },
+  {
+    "id": "057",
+    "g": 5,
+    "zh": "鞋子",
+    "py": "xiézi",
+    "en": "shoes",
+    "icon": "👟"
+  },
+  {
+    "id": "058",
+    "g": 5,
+    "zh": "脚",
+    "py": "jiǎo",
+    "en": "foot",
+    "icon": "🦶"
+  },
+  {
+    "id": "059",
+    "g": 5,
+    "zh": "七",
+    "py": "qī",
+    "en": "seven",
+    "icon": "7"
+  },
+  {
+    "id": "060",
+    "g": 5,
+    "zh": "溪",
+    "py": "xī",
+    "en": "stream",
+    "icon": "stream"
+  },
+  {
+    "id": "061",
+    "g": 6,
+    "zh": "妈妈",
+    "py": "māma",
+    "en": "mom",
+    "icon": "👩"
+  },
+  {
+    "id": "062",
+    "g": 6,
+    "zh": "爸爸",
+    "py": "bàba",
+    "en": "dad",
+    "icon": "👨"
+  },
+  {
+    "id": "063",
+    "g": 6,
+    "zh": "哥哥",
+    "py": "gēge",
+    "en": "older brother",
+    "icon": "👦"
+  },
+  {
+    "id": "064",
+    "g": 6,
+    "zh": "姐姐",
+    "py": "jiějie",
+    "en": "older sister",
+    "icon": "👧"
+  },
+  {
+    "id": "065",
+    "g": 6,
+    "zh": "弟弟",
+    "py": "dìdi",
+    "en": "younger brother",
+    "icon": "👶"
+  },
+  {
+    "id": "066",
+    "g": 6,
+    "zh": "妹妹",
+    "py": "mèimei",
+    "en": "younger sister",
+    "icon": "👶"
+  },
+  {
+    "id": "067",
+    "g": 7,
+    "zh": "红色",
+    "py": "hóngsè",
+    "en": "red",
+    "icon": "#e44949"
+  },
+  {
+    "id": "068",
+    "g": 7,
+    "zh": "蓝色",
+    "py": "lánsè",
+    "en": "blue",
+    "icon": "#407ed4"
+  },
+  {
+    "id": "069",
+    "g": 7,
+    "zh": "黄色",
+    "py": "huángsè",
+    "en": "yellow",
+    "icon": "#f6d14b"
+  },
+  {
+    "id": "070",
+    "g": 7,
+    "zh": "绿色",
+    "py": "lǜsè",
+    "en": "green",
+    "icon": "#43a565"
+  },
+  {
+    "id": "071",
+    "g": 7,
+    "zh": "白色",
+    "py": "báisè",
+    "en": "white",
+    "icon": "#ffffff"
+  },
+  {
+    "id": "072",
+    "g": 7,
+    "zh": "黑色",
+    "py": "hēisè",
+    "en": "black",
+    "icon": "#252a32"
+  },
+  {
+    "id": "073",
+    "g": 8,
+    "zh": "一",
+    "py": "yī",
+    "en": "one",
+    "icon": "1"
+  },
+  {
+    "id": "074",
+    "g": 8,
+    "zh": "二",
+    "py": "èr",
+    "en": "two",
+    "icon": "2"
+  },
+  {
+    "id": "075",
+    "g": 8,
+    "zh": "三",
+    "py": "sān",
+    "en": "three",
+    "icon": "3"
+  },
+  {
+    "id": "076",
+    "g": 8,
+    "zh": "四",
+    "py": "sì",
+    "en": "four",
+    "icon": "4"
+  },
+  {
+    "id": "077",
+    "g": 8,
+    "zh": "六",
+    "py": "liù",
+    "en": "six",
+    "icon": "6"
+  },
+  {
+    "id": "078",
+    "g": 8,
+    "zh": "九",
+    "py": "jiǔ",
+    "en": "nine",
+    "icon": "9"
+  },
+  {
+    "id": "079",
+    "g": 8,
+    "zh": "十",
+    "py": "shí",
+    "en": "ten",
+    "icon": "10"
+  },
+  {
+    "id": "080",
+    "g": 9,
+    "zh": "水",
+    "py": "shuǐ",
+    "en": "water",
+    "icon": "💧"
+  },
+  {
+    "id": "081",
+    "g": 9,
+    "zh": "香蕉",
+    "py": "xiāngjiāo",
+    "en": "banana",
+    "icon": "🍌"
+  },
+  {
+    "id": "082",
+    "g": 9,
+    "zh": "橙子",
+    "py": "chéngzi",
+    "en": "orange",
+    "icon": "🍊"
+  },
+  {
+    "id": "083",
+    "g": 9,
+    "zh": "书",
+    "py": "shū",
+    "en": "book",
+    "icon": "📖"
+  },
+  {
+    "id": "084",
+    "g": 9,
+    "zh": "铅笔",
+    "py": "qiānbǐ",
+    "en": "pencil",
+    "icon": "✏️"
+  }
+]

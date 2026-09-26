@@ -1,0 +1,84 @@
+1|马|mǎ|horse|🐎
+1|蘑菇|mógu|mushroom|🍄
+1|核桃|hétáo|walnut|walnut
+1|气球|qìqiú|balloon|🎈
+1|五|wǔ|five|5
+1|驴|lǘ|donkey|🫏
+1|鲨鱼|shāyú|shark|🦈
+1|菠菜|bōcài|spinach|spinach
+1|盒子|hézi|box|📦
+1|礼物|lǐwù|gift|🎁
+1|竹子|zhúzi|bamboo|bamboo
+1|鱼|yú|fish|🐟
+2|菠萝|bōluó|pineapple|🍍
+2|苹果|píngguǒ|apple|🍎
+2|面包|miànbāo|bread|🍞
+2|蜂蜜|fēngmì|honey|🍯
+2|杯子|bēizi|cup|☕
+2|八|bā|eight|8
+2|屁股|pìgu|bottom|bottom
+2|葡萄|pútao|grapes|🍇
+2|帽子|màozi|hat|🧢
+2|猫|māo|cat|🐈
+2|飞机|fēijī|airplane|✈️
+2|粉红色|fěnhóngsè|pink|#ef83ac
+3|大象|dàxiàng|elephant|🐘
+3|兔子|tùzi|rabbit|🐇
+3|鸟|niǎo|bird|🐦
+3|老虎|lǎohǔ|tiger|🐅
+3|电视|diànshì|television|📺
+3|灯泡|dēngpào|light bulb|💡
+3|桃子|táozi|peach|🍑
+3|糖果|tángguǒ|candy|🍬
+3|牛奶|niúnǎi|milk|🥛
+3|柠檬|níngméng|lemon|🍋
+3|喇叭|lǎba|horn|📯
+3|鹿|lù|deer|🦌
+4|公园|gōngyuán|park|park
+4|裤子|kùzi|pants|👖
+4|花店|huādiàn|flower shop|shop
+4|狗|gǒu|dog|🐕
+4|鸽子|gēzi|pigeon|🕊️
+4|卡车|kǎchē|truck|🚚
+4|口香糖|kǒuxiāngtáng|chewing gum|gum
+4|花|huā|flower|🌸
+4|河马|hémǎ|hippo|🦛
+4|果汁|guǒzhī|juice|🧃
+4|可乐|kělè|cola|cola
+4|汉堡包|hànbǎobāo|hamburger|🍔
+5|鸡|jī|chicken|🐓
+5|青蛙|qīngwā|frog|🐸
+5|小鸡|xiǎojī|chick|🐤
+5|鸡蛋|jīdàn|egg|🥚
+5|家|jiā|home|🏠
+5|巧克力|qiǎokèlì|chocolate|🍫
+5|球|qiú|ball|⚽
+5|星星|xīngxing|star|⭐
+5|鞋子|xiézi|shoes|👟
+5|脚|jiǎo|foot|🦶
+5|七|qī|seven|7
+5|溪|xī|stream|stream
+6|妈妈|māma|mom|👩
+6|爸爸|bàba|dad|👨
+6|哥哥|gēge|older brother|👦
+6|姐姐|jiějie|older sister|👧
+6|弟弟|dìdi|younger brother|👶
+6|妹妹|mèimei|younger sister|👶
+7|红色|hóngsè|red|#e44949
+7|蓝色|lánsè|blue|#407ed4
+7|黄色|huángsè|yellow|#f6d14b
+7|绿色|lǜsè|green|#43a565
+7|白色|báisè|white|#ffffff
+7|黑色|hēisè|black|#252a32
+8|一|yī|one|1
+8|二|èr|two|2
+8|三|sān|three|3
+8|四|sì|four|4
+8|六|liù|six|6
+8|九|jiǔ|nine|9
+8|十|shí|ten|10
+9|水|shuǐ|water|💧
+9|香蕉|xiāngjiāo|banana|🍌
+9|橙子|chéngzi|orange|🍊
+9|书|shū|book|📖
+9|铅笔|qiānbǐ|pencil|✏️
