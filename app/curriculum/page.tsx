@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { html } from "./redesign-content";
 
-export default function PackagePage() {
+export default function CurriculumPage() {
   useEffect(() => {
     const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>("#stayguide .tab"));
     const handlers: Array<[HTMLButtonElement, () => void]> = [];
