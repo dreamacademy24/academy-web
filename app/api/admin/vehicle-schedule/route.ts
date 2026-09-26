@@ -19,10 +19,13 @@ export async function GET(req: Request) {
   const to = (url.searchParams.get('to') || '').slice(0, 10)
   if (!from || !to) return NextResponse.json({ error: 'from/to required' }, { status: 400 })
 
+  const BK_COLS = 'id, booker_name, status, accom_type, house_no, accom_room, pickup_place, drop_off, checkin_date, checkout_date, adults, children, flight_in, flight_in_date, flight_in_time, flight_in_airline, flight_in_no, flight_out, flight_out_date, flight_out_time, flight_out_airline, flight_out_no, seg1_type, seg1_checkin, seg1_checkout, seg2_type, seg2_checkin, seg2_checkout'
+
   const [pickupsRes, bookingsRes, driversRes, shuttlesRes, fieldtripsRes, scheduleRes, overridesRes] =
     await Promise.all([
       db.from('pickup_requests').select('*').gte('request_date', from).lte('request_date', to),
-      db.from('bookings').select('id, booker_name, house_no, accom_room').limit(3000),
+      // 항공편이 이 기간에 걸치는 예약(도착/출발/환승 파생용) — 체크아웃이 시작일 이후 & 체크인이 종료일 이전(겹침)
+      db.from('bookings').select(BK_COLS).gte('checkout_date', from).lte('checkin_date', to).limit(3000),
       db.from('drivers').select('id, name').eq('is_active', true),
       db.from('shuttle_applications').select('*').gte('tour_date', from).lte('tour_date', to),
       db.from('fieldtrip_applications').select('*'),
@@ -30,7 +33,8 @@ export async function GET(req: Request) {
       db.from('app_settings').select('key,value').like('key', 'veh_sched:%'),
     ])
 
-  const bMap = new Map((bookingsRes.data ?? []).map((b) => [b.id, b]))
+  const bookings = bookingsRes.data ?? []
+  const bMap = new Map(bookings.map((b) => [b.id, b]))
   const pickups = (pickupsRes.data ?? []).map((p) => ({ ...p, bookings: bMap.get(p.booking_id) || null }))
 
   // 예약자 실명 보강 (shuttle: booking_id → booker_name)
@@ -47,6 +51,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     pickups,
+    bookings,
     drivers: driversRes.data ?? [],
     shuttles,
     fieldtrips: fieldtripsRes.data ?? [],

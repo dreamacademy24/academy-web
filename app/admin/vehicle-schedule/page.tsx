@@ -28,20 +28,41 @@ function fDate(d: string) {
   return `${dt.getMonth() + 1}/${dt.getDate()} (${DAYS[dt.getDay()]})`;
 }
 
+// 탭(카테고리) — 담당이 달라서 항목별로 분리
+type Cat = "academy" | "shuttle" | "airport";
+const TABS: { key: "all" | Cat; label: string; sub?: string }[] = [
+  { key: "all", label: "전체", sub: "놓친 차량 확인" },
+  { key: "academy", label: "🎒 아카데미 스케줄", sub: "애프터스쿨·필드트립 (현지직원)" },
+  { key: "shuttle", label: "🚌 투어셔틀" },
+  { key: "airport", label: "🛬 공항 픽드랍" },
+];
+const CAT_OF: Record<string, Cat> = {
+  afterschool: "academy", fieldtrip: "academy", commute: "academy",
+  shuttle: "shuttle",
+  pickup: "airport", dropoff: "airport", transfer: "airport", extra: "airport",
+};
+
 interface Driver { id: string; name: string }
+type Confirmed = boolean | { academy?: boolean; shuttle?: boolean; airport?: boolean };
 type DayState = {
-  confirmed?: boolean;
+  confirmed?: Confirmed;
   overrides?: Record<string, { driver_id?: string | null; time?: string; note?: string }>;
   manual?: VehMovement[];
   updated_by?: string;
   updated_at?: string;
 };
+function isConfirmed(c: Confirmed | undefined, cat: Cat): boolean {
+  if (!c) return false;
+  if (c === true) return true;
+  return typeof c === "object" ? !!c[cat] : false;
+}
 
 export default function VehicleSchedulePage() {
   const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [base, setBase] = useState(new Date());
   const [weeks, setWeeks] = useState(1);          // 기본 1주, 2~3주 미리보기
+  const [tab, setTab] = useState<"all" | Cat>("all");
   const [loading, setLoading] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [result, setResult] = useState<AggregateResult | null>(null);
@@ -83,7 +104,7 @@ export default function VehicleSchedulePage() {
       };
 
       const agg = aggregate(
-        { pickups: j.pickups || [], shuttles: j.shuttles || [], fieldtrips: j.fieldtrips || [], ftResolver: resolver },
+        { pickups: j.pickups || [], bookings: j.bookings || [], shuttles: j.shuttles || [], fieldtrips: j.fieldtrips || [], ftResolver: resolver },
         dates
       );
       setResult(agg);
@@ -107,7 +128,7 @@ export default function VehicleSchedulePage() {
       });
       const manual = (st.manual || []).map((m) => ({ ...m }));
       const all = [...autoMoves, ...manual].sort((a, b) => (a.sortTime || to24h(a.time)).localeCompare(b.sortTime || to24h(b.time)));
-      return { date: d.date, confirmed: !!st.confirmed, movements: all };
+      return { date: d.date, confirmed: st.confirmed as Confirmed | undefined, movements: all };
     });
   }, [result, states]);
 
@@ -141,11 +162,16 @@ export default function VehicleSchedulePage() {
     });
   };
 
-  const saveDay = async (date: string, confirmed?: boolean) => {
+  const saveDay = async (date: string, confirmPatch?: Partial<Record<Cat, boolean>>) => {
     setSaving(date);
     try {
       const st = { ...(states[date] || {}) };
-      if (confirmed !== undefined) st.confirmed = confirmed;
+      if (confirmPatch) {
+        const cur: Record<string, boolean> = st.confirmed === true
+          ? { academy: true, shuttle: true, airport: true }
+          : (typeof st.confirmed === "object" && st.confirmed ? { ...st.confirmed } : {});
+        st.confirmed = { ...cur, ...confirmPatch };
+      }
       const by = getAdminInfo()?.name || "admin";
       const r = await fetch(`/api/admin/vehicle-schedule`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -154,7 +180,7 @@ export default function VehicleSchedulePage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "save failed");
       setStates((prev) => ({ ...prev, [date]: j.state }));
-      setSavedMsg(`${fDate(date)} 저장됨` + (st.confirmed ? " · 전달완료 ✅" : ""));
+      setSavedMsg(`${fDate(date)} 저장됨`);
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
       setSavedMsg("저장 실패: " + (e as Error).message);
@@ -165,6 +191,14 @@ export default function VehicleSchedulePage() {
 
   const highWarns = (result?.warnings || []).filter((w) => w.level === "high");
   const infoWarns = (result?.warnings || []).filter((w) => w.level === "info");
+
+  const CAT_LABEL: Record<Cat, string> = { academy: "아카데미", shuttle: "셔틀", airport: "공항" };
+  const catMatch = (m: VehMovement) => tab === "all" || CAT_OF[m.kind] === tab;
+  const visibleDays = mergedDays
+    .map((d) => ({ ...d, movements: d.movements.filter(catMatch) }))
+    .filter((d) => d.movements.length > 0);
+  const tabCount = (key: "all" | Cat) =>
+    mergedDays.reduce((n, d) => n + d.movements.filter((m) => key === "all" || CAT_OF[m.kind] === key).length, 0);
 
   return (
     <div style={{ background: "#f4f6f8", minHeight: "100vh", fontFamily: '"Malgun Gothic","Apple SD Gothic Neo",sans-serif' }}>
@@ -187,8 +221,25 @@ export default function VehicleSchedulePage() {
         </span>
       </div>
 
+      {/* 탭 (항목별) */}
+      <div style={{ position: "sticky", top: 42, zIndex: 39, background: "#fff", borderBottom: "1px solid #e5e7eb", display: "flex", gap: 4, padding: "0 12px", overflowX: "auto" }}>
+        {TABS.map((t) => {
+          const on = tab === t.key;
+          return (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              border: "none", background: "transparent", cursor: "pointer", padding: "11px 14px 9px",
+              borderBottom: on ? "3px solid #2563eb" : "3px solid transparent",
+              color: on ? "#1d4ed8" : "#64748b", fontWeight: on ? 800 : 600, fontSize: 13.5, whiteSpace: "nowrap",
+            }}>
+              {t.label} <span style={{ fontSize: 11, color: on ? "#3b82f6" : "#94a3b8" }}>{tabCount(t.key)}</span>
+              {t.sub && <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 400 }}>{t.sub}</div>}
+            </button>
+          );
+        })}
+      </div>
+
       <div style={{ maxWidth: 1100, margin: "16px auto", padding: "0 14px" }}>
-        {/* 놓친 차량/경고 */}
+        {/* 놓친 차량/경고 (전체·공항 탭에서 강조) */}
         {(highWarns.length > 0 || infoWarns.length > 0) && (
           <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 16px", marginBottom: 14 }}>
             <b style={{ fontSize: 13, color: "#b91c1c" }}>⚠️ 확인 필요 ({highWarns.length}건)</b>
@@ -202,27 +253,42 @@ export default function VehicleSchedulePage() {
           </div>
         )}
 
-        {/* 하루 단위 카드 */}
-        {mergedDays.map((day) => {
+        {visibleDays.length === 0 && (
+          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "26px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>이 기간 · 해당 항목의 차량 일정이 없어요</div>
+        )}
+
+        {/* 하루 단위 카드 (탭 필터 적용) */}
+        {visibleDays.map((day) => {
           const isHoliday = infoWarns.some((w) => w.date === day.date);
+          const catsInDay = Array.from(new Set(day.movements.map((m) => CAT_OF[m.kind])));
+          const allConfirmed = catsInDay.length > 0 && catsInDay.every((c) => isConfirmed(day.confirmed, c));
           return (
-            <div key={day.date} style={{ background: "#fff", border: `1px solid ${day.confirmed ? "#86efac" : "#e5e7eb"}`, borderRadius: 12, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 10px rgba(20,30,45,.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: day.confirmed ? "#f0fdf4" : "#f8fafc", borderBottom: "1px solid #eef2f6" }}>
+            <div key={day.date} style={{ background: "#fff", border: `1px solid ${allConfirmed ? "#86efac" : "#e5e7eb"}`, borderRadius: 12, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 10px rgba(20,30,45,.05)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: allConfirmed ? "#f0fdf4" : "#f8fafc", borderBottom: "1px solid #eef2f6", flexWrap: "wrap" }}>
                 <b style={{ fontSize: 15 }}>{fDate(day.date)}</b>
                 {isHoliday && <span style={{ fontSize: 11, background: "#fee2e2", color: "#b91c1c", padding: "2px 8px", borderRadius: 20 }}>휴무일</span>}
                 <span style={{ fontSize: 12, color: "#94a3b8" }}>{day.movements.length}건</span>
+                {tab === "all" && catsInDay.map((c) => (
+                  <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: isConfirmed(day.confirmed, c) ? "#dcfce7" : "#f1f5f9", color: isConfirmed(day.confirmed, c) ? "#166534" : "#64748b" }}>
+                    {CAT_LABEL[c]} {isConfirmed(day.confirmed, c) ? "✅" : "○"}
+                  </span>
+                ))}
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   <button onClick={() => addManual(day.date)} style={{ ...miniBtn, background: "#f1f5f9", color: "#334155" }}>+ 수동 추가</button>
                   <button disabled={saving === day.date} onClick={() => saveDay(day.date)} style={{ ...miniBtn, background: "#e0e7ff", color: "#3730a3" }}>💾 저장</button>
-                  <button disabled={saving === day.date} onClick={() => saveDay(day.date, !day.confirmed)} style={{ ...miniBtn, background: day.confirmed ? "#16a34a" : "#fbbf24", color: day.confirmed ? "#fff" : "#78350f" }}>
-                    {day.confirmed ? "✅ 전달완료" : "📤 전달(확정)"}
-                  </button>
+                  {tab === "all" ? (
+                    <button disabled={saving === day.date} onClick={() => saveDay(day.date, Object.fromEntries(catsInDay.map((c) => [c, !allConfirmed])) as Partial<Record<Cat, boolean>>)} style={{ ...miniBtn, background: allConfirmed ? "#16a34a" : "#fbbf24", color: allConfirmed ? "#fff" : "#78350f" }}>
+                      {allConfirmed ? "✅ 전체 전달완료" : "📤 전체 전달"}
+                    </button>
+                  ) : (
+                    <button disabled={saving === day.date} onClick={() => saveDay(day.date, { [tab]: !isConfirmed(day.confirmed, tab) } as Partial<Record<Cat, boolean>>)} style={{ ...miniBtn, background: isConfirmed(day.confirmed, tab) ? "#16a34a" : "#fbbf24", color: isConfirmed(day.confirmed, tab) ? "#fff" : "#78350f" }}>
+                      {isConfirmed(day.confirmed, tab) ? `✅ ${CAT_LABEL[tab]} 전달완료` : `📤 ${CAT_LABEL[tab]} 전달`}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {day.movements.length === 0 ? (
-                <div style={{ padding: "14px", color: "#94a3b8", fontSize: 13 }}>차량 일정 없음</div>
-              ) : (
+              {(
                 <div style={{ padding: "6px 0" }}>
                   {day.movements.map((m) => {
                     const k = KIND[m.kind] || KIND.extra;

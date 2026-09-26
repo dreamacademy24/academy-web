@@ -152,6 +152,88 @@ export interface RawFieldtrip {
   room_number?: string;
   status?: string;
 }
+export interface RawBooking {
+  id: string;
+  booker_name?: string;
+  status?: string;
+  accom_type?: string;
+  house_no?: string;
+  accom_room?: string;
+  pickup_place?: string;
+  drop_off?: string;
+  checkin_date?: string;
+  checkout_date?: string;
+  adults?: number;
+  children?: number;
+  flight_in?: string; flight_in_date?: string; flight_in_time?: string; flight_in_airline?: string; flight_in_no?: string;
+  flight_out?: string; flight_out_date?: string; flight_out_time?: string; flight_out_airline?: string; flight_out_no?: string;
+  seg1_type?: string; seg1_checkin?: string; seg1_checkout?: string;
+  seg2_type?: string; seg2_checkin?: string; seg2_checkout?: string;
+}
+
+const ACC_KR: Record<string, string> = { jaypark: "제이파크", dreamhouse: "드림하우스", cubenine: "큐브나인" };
+function accomLabel(seg?: string, fallback?: string): string {
+  if (seg && ACC_KR[seg]) return ACC_KR[seg];
+  return fallback || "숙소";
+}
+function fmtFlight(airline?: string, no?: string, text?: string): string {
+  const parts = [airline, no].filter(Boolean);
+  if (parts.length) return parts.join(" ");
+  return text || "";
+}
+
+// 예약 항공편(체크인디테일에서 확정 → bookings.flight_*)에서 공항 픽업/드랍/환승 파생.
+// pickup_requests에 이미 있는 건(booking_id+유형) 중복 제외 → "놓친 공항차량" 방지.
+export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]): VehMovement[] {
+  const covered = new Set<string>();
+  for (const p of pickups || []) {
+    const t = PICKUP_KIND[p.request_type];
+    const bid = (p as unknown as { booking_id?: string }).booking_id;
+    if (bid && t) covered.add(`${bid}_${t}`);
+  }
+  const out: VehMovement[] = [];
+  for (const b of bookings || []) {
+    if ((b.status || "").includes("취소") || (b.status || "") === "cancelled") continue;
+    const combo = !!(b.seg1_type && b.seg2_type);
+    const room = b.house_no || b.accom_room || "";
+    const people = (Number(b.adults) || 0) + (Number(b.children) || 0) || 1;
+    const guest = b.booker_name || "-";
+
+    // 도착 (공항 → 숙소)
+    const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
+    if (inDate && !covered.has(`${b.id}_pickup`)) {
+      const dest = combo ? accomLabel(b.seg1_type, room) : (b.pickup_place || room || "숙소");
+      out.push({
+        id: `bk_in_${b.id}`, date: inDate, time: b.flight_in_time || "", sortTime: to24h(b.flight_in_time),
+        kind: "pickup", source: "bookings", guest, location: "공항", destination: dest,
+        num_people: people, flight_info: fmtFlight(b.flight_in_airline, b.flight_in_no, b.flight_in),
+        locked: true, note: "항공편(체크인디테일)",
+      });
+    }
+    // 콤보 환승 (숙소1 → 숙소2)
+    if (combo && b.seg1_checkout && !covered.has(`${b.id}_transfer`)) {
+      const d = String(b.seg1_checkout).slice(0, 10);
+      out.push({
+        id: `bk_tr_${b.id}`, date: d, time: "", sortTime: "99:99",
+        kind: "transfer", source: "bookings", guest,
+        location: accomLabel(b.seg1_type, room), destination: accomLabel(b.seg2_type, ""),
+        num_people: people, locked: true, note: "콤보 환승",
+      });
+    }
+    // 출발 (숙소 → 공항)
+    const outDate = String(b.flight_out_date || b.checkout_date || "").slice(0, 10);
+    if (outDate && !covered.has(`${b.id}_dropoff`)) {
+      const loc = combo ? accomLabel(b.seg2_type, room) : (b.drop_off || room || "숙소");
+      out.push({
+        id: `bk_out_${b.id}`, date: outDate, time: b.flight_out_time || "", sortTime: to24h(b.flight_out_time),
+        kind: "dropoff", source: "bookings", guest, location: loc, destination: "공항",
+        num_people: people, flight_info: fmtFlight(b.flight_out_airline, b.flight_out_no, b.flight_out),
+        locked: true, note: "항공편(체크인디테일)",
+      });
+    }
+  }
+  return out;
+}
 
 // ── 1) 픽드랍 (항시 포함·잠금) ────────────────────────────────
 const AIRPORT = /공항|막탄|airport|cebu|mcia/i;
@@ -293,6 +375,7 @@ export function buildWarnings(
 // ── 5) 전체 취합 ──────────────────────────────────────────────
 export interface AggregateInput {
   pickups?: RawPickup[];
+  bookings?: RawBooking[];   // 항공편 기반 공항 픽업/드랍 파생용
   shuttles?: RawShuttle[];
   fieldtrips?: RawFieldtrip[];
   ftResolver?: FtResolver;
@@ -310,6 +393,7 @@ export interface AggregateResult {
 export function aggregate(input: AggregateInput, dates: string[]): AggregateResult {
   const all: VehMovement[] = [];
   all.push(...pickupMovements(input.pickups || []));
+  all.push(...airportFromBookings(input.bookings || [], input.pickups || []));
   all.push(...shuttleMovements(input.shuttles || []));
   if (input.ftResolver) all.push(...afterschoolMovements(input.fieldtrips || [], input.ftResolver));
   if (input.manual) all.push(...input.manual);
