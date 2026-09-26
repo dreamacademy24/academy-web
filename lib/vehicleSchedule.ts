@@ -38,6 +38,7 @@ export type VehSource =
   | "manual";
 
 export interface VehMovement {
+  commuteDetails?: {driverIndex:number;period:'am'|'pm';teacher?:string;absent?:string[];cards:{addr?:string;count?:string;names?:string}[]};
   driver_name?: string;
   id: string;              // 안정적 키 (source+원본id 기반)
   date: string;            // YYYY-MM-DD
@@ -441,9 +442,10 @@ export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
    // The board's AM column also contains noon return trips. Keep the original text.
    const time=raw;
    const sort=period==='pm'&&hour>=1&&hour<12&&!/[ap]m/i.test(raw)?to24h(raw+' PM'):to24h(raw);
-   out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:sort,kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:group.cards.map(c=>c.addr).filter(Boolean).join(' / '),destination:'',num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`운행·동승 메모: ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
+   out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:sort,kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:group.cards.map(c=>c.addr).filter(Boolean).join(' / '),destination:'',commuteDetails:{driverIndex:di,period,teacher:group.teacher,absent:board.data.absent,cards:group.cards},num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`운행·동승 메모: ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
   }
  }
  return out;
 }
+
 
