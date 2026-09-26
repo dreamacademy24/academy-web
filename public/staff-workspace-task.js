@@ -334,7 +334,7 @@ function _renderStaffTaskDetail(taskId,hostId){
       var input=root.querySelector('#swtReply'),text=input.value.trim();if((!text&&!replyDraft.files.length)||button.disabled)return;if(replyDraft.busy){status('사진 업로드가 끝난 뒤 등록해주세요.');return;}
       input.disabled=true;button.disabled=true;root.inert=true;_staffTaskWrites[t.id]=true;var comment={author:CU.id,text:text,ts:Date.now()};
       try{var response=await fetch('/api/staff/comments',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:replyDraft.id,taskId:String(t.id),text:text,files:replyDraft.files,parentId:replyDraft.parentId||null,mentionIds:replyDraft.mentionIds||[]})});var data=await response.json();if(!response.ok){var failure=new Error(data.error||'보고 등록 실패');failure.status=response.status;throw failure;}var rows=[data.comment];if(!rows[0]||rows[0].id==null)throw new Error('등록 결과를 확인하지 못했습니다.');
-        if(!taskComments[t.id])taskComments[t.id]=[];taskComments[t.id].push(rowToTc(rows[0]));sv('tm_tc',taskComments);
+        if(!taskComments[t.id])taskComments[t.id]=[];var savedIndex=taskComments[t.id].findIndex(function(c){return String(c.id)===String(rows[0].id);});if(savedIndex<0)taskComments[t.id].push(rowToTc(rows[0]));else taskComments[t.id][savedIndex]=rowToTc(rows[0]);sv('tm_tc',taskComments);
         replyDraft.files=[];replyDraft.text='';replyDraft.parentId=null;replyDraft.mentionIds=[];replyDraft.id=crypto.randomUUID();input.value='';rerender();
       }catch(err){status('보고 등록 실패: 입력 내용과 사진은 유지됩니다. '+err.message);if(err.status===401)_staffCommentAuthPrompt(photoHost,t.id);}finally{delete _staffTaskWrites[t.id];root.inert=false;input.disabled=false;button.disabled=false;}
     }

@@ -17,7 +17,7 @@
   if(n.type==='project'){
    window._ptPendingSel=String(n.ref_id);showPage('ptree');
    var wait=setInterval(function(){if(typeof PT!=='undefined'&&String(PT.sel)===String(n.ref_id)){var box=document.getElementById('ptCmtList');if(box&&PT.comments[n.ref_id]!==undefined){clearInterval(wait);box.scrollIntoView({behavior:'smooth',block:'center'});}}},150);setTimeout(function(){clearInterval(wait);},15000);
-  }else if(n.type==='task_comment'){selectEmpTask(String(n.ref_id));}
+  }else if(n.type==='task_comment'){if(String(n.id).startsWith('tc:'))window._staffPendingComment=String(n.id).split(':')[1];selectEmpTask(String(n.ref_id));}
   else{showPage('opinions');if(n.ref_id)setTimeout(function(){openOpinionDetail(n.ref_id);},200);}
  }
  function renderHome(host){
