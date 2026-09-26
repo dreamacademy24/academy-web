@@ -39,6 +39,8 @@ export type VehSource =
   | "manual";
 
 export interface VehMovement {
+  vehicle_name?: string;
+  teacher_name?: string;
   booking_id?: string;
   request_status?: string;
   commuteDetails?: {driverIndex:number;period:'am'|'pm';teacher?:string;absent?:string[];cards:{addr?:string;count?:string;names?:string}[]};

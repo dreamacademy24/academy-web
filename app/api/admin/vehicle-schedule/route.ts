@@ -72,16 +72,17 @@ export async function POST(req:Request){
   // The compact editor saves one row against the current server state, not a stale full-day snapshot.
   if(body.onlyId){
    const id=body.onlyId;
-   if(typeof id!=='string'||!/^(pk|sh|ck|cm|bk|mn)_/.test(id))return reply({error:'일정 정보를 확인해주세요.'},400);
+   if(typeof id!=='string'||!/^(pk|sh|ck|cm|bk|mn|as|ft)_/.test(id))return reply({error:'일정 정보를 확인해주세요.'},400);
    const value=body.state.overrides?.[id];
    if(!value||typeof value.time!=='string'||value.time.length>60||typeof value.note!=='string'||value.note.length>10000)return reply({error:'시간과 메모를 확인해주세요.'},400);
+   if ((value.vehicle_name!==undefined && (typeof value.vehicle_name!=='string'||value.vehicle_name.length>100)) || (value.teacher_name!==undefined && (typeof value.teacher_name!=='string'||value.teacher_name.length>200))) return reply({error:'차량명과 담당 티쳐를 확인해주세요.'},400);
    const time=value.time.trim();
    if(time&&!/^([01]?\d|2[0-3]):[0-5]\d(?:\s*[~–-]\s*(?:([01]?\d|2[0-3]):)?[0-5]\d)?\s*(?:AM|PM)?$/i.test(time))return reply({error:'시간은 14:30 또는 14:30–14:40 형식으로 입력해주세요.'},400);
    const driver=value.driver_id||null;
    if(driver&&(typeof driver!=='string'||! /^[0-9a-f-]{36}$/i.test(driver)))return reply({error:'기사를 확인해주세요.'},400);
    const {data:existing,error:readError}=await db.from('app_settings').select('value').eq('key',keyOf(body.date)).maybeSingle();
    if(readError)throw readError;
-   const state={...(existing?.value||{}),overrides:{...(existing?.value?.overrides||{}),[id]:{driver_id:driver,time,note:value.note}},updated_by:staff.name,updated_at:new Date().toISOString()};
+   const state={...(existing?.value||{}),overrides:{...(existing?.value?.overrides||{}),[id]:{driver_id:driver,time,note:value.note,vehicle_name:value.vehicle_name?.trim()||'',teacher_name:value.teacher_name?.trim()||''}},updated_by:staff.name,updated_at:new Date().toISOString()};
    const table=id.startsWith('pk_')?'pickup_requests':id.startsWith('sh_')?'shuttle_applications':null;
    if(table){
     const fields=table==='pickup_requests'?{driver_id:driver,request_time:time||null,notes:value.note}:{driver_id:driver};
