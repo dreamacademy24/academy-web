@@ -437,8 +437,11 @@ export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
   for(const [gi,group] of (driver[period]||[]).entries()){
    if(!group.cards?.length)continue;
    const raw=group.time||'';
-   const time=raw?`${raw} ${period.toUpperCase()}`:'';
-   out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:to24h(time),kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:period==='am'?group.cards.map(c=>c.addr).filter(Boolean).join(' / '):'아카데미',destination:period==='am'?'아카데미':group.cards.map(c=>c.addr).filter(Boolean).join(' / '),num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`동승 ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
+   const hour=Number(raw.match(/^\s*(\d{1,2})/)?.[1]);
+   // The board's AM column also contains noon return trips. Keep the original text.
+   const time=raw;
+   const sort=period==='pm'&&hour>=1&&hour<12&&!/[ap]m/i.test(raw)?to24h(raw+' PM'):to24h(raw);
+   out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:sort,kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:group.cards.map(c=>c.addr).filter(Boolean).join(' / '),destination:'',num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`운행·동승 메모: ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
   }
  }
  return out;
