@@ -35,3 +35,11 @@ function _staffFocusTaskComment(root){
   var el=Array.from(root.querySelectorAll('[data-comment-id]')).find(function(e){return e.dataset.commentId===id;});
   if(el){window._staffPendingComment=null;el.classList.add('swt-comment-highlight');requestAnimationFrame(function(){el.scrollIntoView({block:'center',behavior:'smooth'});});}
 }
+// A comment alert does not reopen the task or put a completed task back in the to-do list.
+if(typeof _staffActiveTaskNotification==='function'){
+  var _staffPreviousNotificationFilter=_staffActiveTaskNotification;
+  _staffActiveTaskNotification=function(n){
+    if(n.type==='task_comment'&&String(n.id).startsWith('tc:')){var t=tasks.find(function(t){return String(t.id)===String(n.ref_id);});return !!t&&taskVisible(t);}
+    return _staffPreviousNotificationFilter(n);
+  };
+}
