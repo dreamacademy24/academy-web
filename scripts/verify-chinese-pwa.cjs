@@ -19,17 +19,17 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
   await page.goto(base+'/mandarin/index.html');
   assert.equal(await page.locator('.profile-option').count(),2);
   await page.screenshot({path:'tmp/chinese-review/profile-tablet.png'});
-  await page.getByRole('button',{name:'Enter Jia mode'}).click();
+  await page.getByRole('button',{name:'Enter jia mode'}).click();
   assert.equal(await page.locator('.tile').count(),84);
   await page.locator('[data-action=speak][data-id="014"]').click();
   await page.waitForFunction(()=>audio&&!audio.paused&&audio.duration>0);
   await page.locator('#search').fill('014');assert.equal(await page.locator('.tile').count(),1);
   await page.getByRole('button',{name:'Flip apple card'}).click();assert.equal(await page.locator('.card .zh').textContent(),'苹果');
   await page.getByRole('button',{name:'Mark apple as practiced'}).click();
-  await page.locator('#switchProfile').click();await page.getByRole('button',{name:'Enter Jiwoo mode'}).click();
+  await page.locator('#switchProfile').click();await page.getByRole('button',{name:'Enter jiu mode'}).click();
   assert.match(await page.locator('#stars').textContent(),/0/);
   await page.locator('[data-action=star][data-id="001"]').click();
-  await page.reload();await page.getByRole('button',{name:'Enter Jia mode'}).click();
+  await page.reload();await page.getByRole('button',{name:'Enter jia mode'}).click();
   assert.match(await page.locator('#stars').textContent(),/1/);
   assert.equal(await page.locator('[data-action=star][data-id="014"]').getAttribute('aria-pressed'),'true');
   assert.equal(await page.locator('[data-action=star][data-id="001"]').getAttribute('aria-pressed'),'false');
@@ -54,7 +54,7 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
   await page.waitForFunction(()=>document.getElementById('offlineStatus').textContent.includes('Offline ready'),{},{timeout:120000});
   await page.waitForFunction(()=>navigator.serviceWorker.controller&&navigator.serviceWorker.controller.scriptURL.includes('/mandarin/sw.js'));
   await context.setOffline(true);
-  await page.reload();await page.getByRole('button',{name:'Enter Jiwoo mode'}).click();
+  await page.reload();await page.getByRole('button',{name:'Enter jiu mode'}).click();
   assert.equal(await page.locator('.tile').count(),84);
   const offline=await page.evaluate(async()=>{
    const results=[];
@@ -68,6 +68,6 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
   assert.equal(await page.locator('[data-action=star][data-id="001"]').getAttribute('aria-pressed'),'true');
   assert.equal(await page.locator('[data-action=star][data-id="014"]').getAttribute('aria-pressed'),'false');
   assert.deepEqual(errors,[]);
-  console.log('PASS: separate Jia/Jiwoo profiles; 84 cards/audio; flip/search/quiz; tablet/mobile; manifest; install help; offline reload, ALL voices, PDF and byte ranges.');
+  console.log('PASS: separate jia/jiu profiles; 84 cards/audio; flip/search/quiz; tablet/mobile; manifest; install help; offline reload, ALL voices, PDF and byte ranges.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exit(1)});
