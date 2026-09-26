@@ -30,6 +30,7 @@ export type VehKind =
   | "commute";    // 집↔학원 (자동 초안)
 
 export type VehSource =
+  | "checkin_details"
   | "pickup_requests"
   | "shuttle_applications"
   | "fieldtrip_applications"
@@ -38,6 +39,8 @@ export type VehSource =
   | "manual";
 
 export interface VehMovement {
+  booking_id?: string;
+  request_status?: string;
   commuteDetails?: {driverIndex:number;period:'am'|'pm';teacher?:string;absent?:string[];cards:{addr?:string;count?:string;names?:string}[]};
   driver_name?: string;
   id: string;              // 안정적 키 (source+원본id 기반)
@@ -122,6 +125,8 @@ export function inRange(date: string, from: string, to: string): boolean {
 
 // ── 소스별 raw 타입 (느슨하게) ────────────────────────────────
 export interface RawPickup {
+  booking_id?: string;
+  notes?: string;
   id: string | number;
   request_type: string;
   request_date: string;
@@ -262,6 +267,9 @@ export function pickupMovements(rows: RawPickup[]): VehMovement[] {
     const room = p.bookings?.house_no || p.bookings?.accom_room || "";
     return {
       id: `pk_${p.id}`,
+      booking_id: p.booking_id,
+      request_status: p.status,
+      note: p.notes || '',
       date: String(p.request_date || "").slice(0, 10),
       time: p.request_time || "",
       sortTime: to24h(p.request_time),
@@ -275,7 +283,7 @@ export function pickupMovements(rows: RawPickup[]): VehMovement[] {
       driver_id: p.driver_id ?? null,
       locked: true, // 체크인디테일 파생 + 추가 픽드랍 = 항시 포함
     };
-  }).filter((m) => m.date);
+  });
 }
 
 // ── 2) 투어셔틀 (신청분) ──────────────────────────────────────
@@ -441,7 +449,8 @@ export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
    const hour=Number(raw.match(/^\s*(\d{1,2})/)?.[1]);
    // The board's AM column also contains noon return trips. Keep the original text.
    const time=raw;
-   const sort=period==='pm'&&hour>=1&&hour<12&&!/[ap]m/i.test(raw)?to24h(raw+' PM'):to24h(raw);
+   // Pickup/drop-off columns do not determine AM/PM. Ambiguous short hours need confirmation.
+   const sort=hour>=1&&hour<=6&&!/[ap]m/i.test(raw)?'99:99':to24h(raw);
    out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:sort,kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:group.cards.map(c=>c.addr).filter(Boolean).join(' / '),destination:'',commuteDetails:{driverIndex:di,period,teacher:group.teacher,absent:board.data.absent,cards:group.cards},num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`운행·동승 메모: ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
   }
  }
