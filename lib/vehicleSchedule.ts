@@ -38,6 +38,7 @@ export type VehSource =
   | "manual";
 
 export interface VehMovement {
+  driver_name?: string;
   id: string;              // 안정적 키 (source+원본id 기반)
   date: string;            // YYYY-MM-DD
   time: string;            // "10:15" 또는 라벨
@@ -78,7 +79,7 @@ export function afterschoolTime(dateStr: string): { label: string; sort: string 
 // ── 시간 문자열 → 정렬용 24h ──────────────────────────────────
 export function to24h(t?: string): string {
   if (!t) return "99:99";
-  const s = String(t).trim();
+  const s = String(t).trim().replace(/^(\d{1,2}:\d{2})\s*[~–-].*?\s*([ap]m)$/i, '$1$2').replace(/^픽업\s*/, '');
   // "23:30", "8:30" 형태
   let m = s.match(/^(\d{1,2}):(\d{2})/);
   if (m && !/[ap]m/i.test(s)) {
@@ -131,6 +132,7 @@ export interface RawPickup {
   driver_id?: string | null;
   bookings?: { booker_name?: string; house_no?: string; accom_room?: string } | null;
   guest_name?: string;
+  status?: string;
 }
 export interface RawShuttle {
   id: string | number;
@@ -146,6 +148,7 @@ export interface RawShuttle {
   driver_id?: string | null;
 }
 export interface RawFieldtrip {
+  cancelled_dates?: string;
   id: string | number;
   name?: string;
   date?: string; // "5-9-nimobrew, 6-13-shrine" 콤마 토큰
@@ -209,13 +212,13 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
 
     // 도착 (공항 → 숙소). pickup_place/drop_off는 보통 "공항"쪽 값이라 숙소는 house_no에서.
     const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
-    if (inDate && !covered.has(`${b.id}_pickup`)) {
+    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup`)) {
       const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
-        id: `bk_in_${b.id}`, date: inDate, time: b.flight_in_time || "", sortTime: to24h(b.flight_in_time),
+        id: `bk_in_${b.id}`, date: inDate, time: "", sortTime: "99:99",
         kind: "pickup", source: "bookings", guest, location: "공항", destination: dest,
         num_people: people, flight_info: fmtFlight(b.flight_in_airline, b.flight_in_no, b.flight_in),
-        locked: true, note: "항공편(체크인디테일)",
+        locked: true, auto: true, note: `예약 기반 초안 · 항공 도착 ${b.flight_in_time || "미입력"} · 차량 시간 확인 필요`,
       });
     }
     // 콤보 환승 (숙소1 → 숙소2)
@@ -230,13 +233,13 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     }
     // 출발 (숙소 → 공항)
     const outDate = String(b.flight_out_date || b.checkout_date || "").slice(0, 10);
-    if (outDate && !covered.has(`${b.id}_dropoff`)) {
+    if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff`)) {
       const loc = combo ? accomLabel(b.seg2_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
-        id: `bk_out_${b.id}`, date: outDate, time: b.flight_out_time || "", sortTime: to24h(b.flight_out_time),
+        id: `bk_out_${b.id}`, date: outDate, time: "", sortTime: "99:99",
         kind: "dropoff", source: "bookings", guest, location: loc, destination: "공항",
         num_people: people, flight_info: fmtFlight(b.flight_out_airline, b.flight_out_no, b.flight_out),
-        locked: true, note: "항공편(체크인디테일)",
+        locked: true, auto: true, note: `예약 기반 초안 · 항공 출발 ${b.flight_out_time || "미입력"} · 차량 시간 확인 필요`,
       });
     }
   }
@@ -252,7 +255,7 @@ const PICKUP_KIND: Record<string, VehKind> = {
   extra_pickup: "extra", extra_drop: "extra", additional: "extra", extra: "extra",
 };
 export function pickupMovements(rows: RawPickup[]): VehMovement[] {
-  return (rows || []).map((p) => {
+  return (rows || []).filter(p => !["cancelled", "취소"].includes(p.status || "")).map((p) => {
     const kind = PICKUP_KIND[p.request_type] || "extra";
     const guest = p.bookings?.booker_name || p.guest_name || "-";
     const room = p.bookings?.house_no || p.bookings?.accom_room || "";
@@ -306,7 +309,9 @@ export function afterschoolMovements(rows: RawFieldtrip[], resolver: FtResolver)
   for (const r of rows || []) {
     if ((r.status || "") === "취소" || (r.status || "") === "cancelled") continue;
     const tokens = String(r.date || "").split(",").map((t) => t.trim()).filter(Boolean);
+    const cancelled = new Set(String(r.cancelled_dates || "").split(",").map(t => t.trim()));
     for (const tok of tokens) {
+      if (cancelled.has(tok)) continue;
       const info = resolver.resolve(tok);
       if (!info || !info.date) continue;
       const dow = new Date(info.date + "T00:00:00").getDay();
@@ -366,7 +371,7 @@ export function buildWarnings(
       warns.push({ date: d, level: "info", text: SHUTTLE_SPECIAL_MSG[d] || "🚫 셔틀 휴무일" });
     }
     // 미배정 차량 (기사 없음) — locked/실운행만
-    const unassigned = day.filter((m) => !m.driver_id && (m.kind === "pickup" || m.kind === "dropoff" || m.kind === "transfer" || m.kind === "shuttle"));
+    const unassigned = day.filter((m) => !m.driver_id && !m.driver_name && (m.kind === "pickup" || m.kind === "dropoff" || m.kind === "transfer" || m.kind === "shuttle"));
     if (unassigned.length) {
       warns.push({ date: d, level: "high", text: `기사 미배정 ${unassigned.length}건 (${unassigned.map((u) => u.guest).join(", ")})` });
     }
@@ -422,3 +427,20 @@ export function aggregate(input: AggregateInput, dates: string[]): AggregateResu
     total: scoped.length,
   };
 }
+
+export interface CommuteBoard { day:string; data:{drivers?:{name:string;am?:CommuteGroup[];pm?:CommuteGroup[]}[];absent?:string[]} }
+interface CommuteGroup {time?:string;teacher?:string;cards?:{addr?:string;count?:string;names?:string}[]}
+/** Read saved dates only. Never manufacture a day by copying the last board. */
+export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
+ const out:VehMovement[]=[];
+ for(const board of boards||[])for(const [di,driver] of (board.data?.drivers||[]).entries())for(const period of ['am','pm'] as const){
+  for(const [gi,group] of (driver[period]||[]).entries()){
+   if(!group.cards?.length)continue;
+   const raw=group.time||'';
+   const time=raw?`${raw} ${period.toUpperCase()}`:'';
+   out.push({id:`cm_${board.day}_${di}_${period}_${gi}`,date:board.day,time,sortTime:to24h(time),kind:'commute',source:'pickup_schedules',guest:group.cards.map(c=>c.names).filter(Boolean).join(', ')||'탑승자 확인',location:period==='am'?group.cards.map(c=>c.addr).filter(Boolean).join(' / '):'아카데미',destination:period==='am'?'아카데미':group.cards.map(c=>c.addr).filter(Boolean).join(' / '),num_people:group.cards.reduce((n,c)=>n+(Number(c.count)||0),0),driver_name:driver.name,note:[group.teacher?`동승 ${group.teacher}`:'',board.data.absent?.length?`원본 결석/미탑승 메모: ${board.data.absent.join(', ')}`:''].filter(Boolean).join(' · ')});
+  }
+ }
+ return out;
+}
+

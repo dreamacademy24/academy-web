@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import './vehicle.css';
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import {
-  aggregate, weekDates, to24h,
+  aggregate, weekDates, to24h, commuteMovements,
   type VehMovement, type FtResolver, type AggregateResult,
 } from "@/lib/vehicleSchedule";
 import {
@@ -69,6 +70,13 @@ export default function VehicleSchedulePage() {
   const [states, setStates] = useState<Record<string, DayState>>({}); // date → 수동수정/전달 상태
   const [saving, setSaving] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState("");
+  const [query,setQuery]=useState('');
+  const [filter,setFilter]=useState('all');
+  const [selectedDate,setSelectedDate]=useState(()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila'}).format(new Date()));
+  const [dirty,setDirty]=useState<Record<string,boolean>>({});
+  const [sources,setSources]=useState(false);
+  const [error,setError]=useState('');
+  useEffect(()=>{const fn=(e:BeforeUnloadEvent)=>{if(Object.values(dirty).some(Boolean)){e.preventDefault();}};window.addEventListener('beforeunload',fn);return()=>window.removeEventListener('beforeunload',fn);},[dirty]);
 
   useEffect(() => {
     if (!isAdminAuthed()) { router.replace("/login"); return; }
@@ -81,6 +89,7 @@ export default function VehicleSchedulePage() {
   const load = useCallback(async () => {
     if (!authed) return;
     setLoading(true);
+    setError('');
     try {
       const r = await fetch(`/api/admin/vehicle-schedule?from=${from}&to=${to}`, { cache: "no-store" });
       const j = await r.json();
@@ -104,13 +113,13 @@ export default function VehicleSchedulePage() {
       };
 
       const agg = aggregate(
-        { pickups: j.pickups || [], bookings: j.bookings || [], shuttles: j.shuttles || [], fieldtrips: j.fieldtrips || [], ftResolver: resolver },
+        { pickups: j.pickups || [], bookings: j.bookings || [], shuttles: j.shuttles || [], fieldtrips: j.fieldtrips || [], ftResolver: resolver, manual: commuteMovements(j.commutes || []) },
         dates
       );
       setResult(agg);
     } catch (e) {
       setResult(null);
-      setSavedMsg("불러오기 실패: " + (e as Error).message);
+      setError("불러오기 실패: " + (e as Error).message);
     } finally { setLoading(false); }
   }, [authed, from, to, dates]);
 
@@ -124,7 +133,7 @@ export default function VehicleSchedulePage() {
       const ov = st.overrides || {};
       const autoMoves = d.movements.map((m) => {
         const o = ov[m.id];
-        return o ? { ...m, driver_id: "driver_id" in o ? o.driver_id ?? null : m.driver_id, time: o.time || m.time, note: o.note ?? m.note } : m;
+        return o ? { ...m, driver_id: "driver_id" in o ? o.driver_id ?? null : m.driver_id, time: o.time ?? m.time, sortTime: o.time !== undefined ? to24h(o.time) : m.sortTime, note: o.note ?? m.note } : m;
       });
       const manual = (st.manual || []).map((m) => ({ ...m }));
       const all = [...autoMoves, ...manual].sort((a, b) => (a.sortTime || to24h(a.time)).localeCompare(b.sortTime || to24h(b.time)));
@@ -133,6 +142,7 @@ export default function VehicleSchedulePage() {
   }, [result, states]);
 
   const setOverride = (date: string, id: string, patch: { driver_id?: string | null; time?: string; note?: string }) => {
+    setDirty(prev=>({...prev,[date]:true}));
     setStates((prev) => {
       const st = { ...(prev[date] || {}) };
       st.overrides = { ...(st.overrides || {}), [id]: { ...(st.overrides?.[id] || {}), ...patch } };
@@ -140,6 +150,8 @@ export default function VehicleSchedulePage() {
     });
   };
   const addManual = (date: string) => {
+    setTab('all');setFilter('all');setQuery('');
+    setDirty(prev=>({...prev,[date]:true}));
     setStates((prev) => {
       const st = { ...(prev[date] || {}) };
       const m: VehMovement = { id: `mn_${Date.now()}`, date, time: "", sortTime: "99:99", kind: "extra", source: "manual", guest: "", location: "", destination: "", num_people: 1, driver_id: null };
@@ -148,6 +160,8 @@ export default function VehicleSchedulePage() {
     });
   };
   const patchManual = (date: string, id: string, patch: Partial<VehMovement>) => {
+    if(saving)return;
+    setDirty(prev=>({...prev,[date]:true}));
     setStates((prev) => {
       const st = { ...(prev[date] || {}) };
       st.manual = (st.manual || []).map((m) => m.id === id ? { ...m, ...patch, sortTime: patch.time ? to24h(patch.time) : m.sortTime } : m);
@@ -155,6 +169,7 @@ export default function VehicleSchedulePage() {
     });
   };
   const removeManual = (date: string, id: string) => {
+    setDirty(prev=>({...prev,[date]:true}));
     setStates((prev) => {
       const st = { ...(prev[date] || {}) };
       st.manual = (st.manual || []).filter((m) => m.id !== id);
@@ -180,7 +195,8 @@ export default function VehicleSchedulePage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "save failed");
       setStates((prev) => ({ ...prev, [date]: j.state }));
-      setSavedMsg(`${fDate(date)} 저장됨`);
+      setDirty(prev=>({...prev,[date]:false}));
+      setSavedMsg(`${fDate(date)} 저장되었습니다`);
       setTimeout(() => setSavedMsg(""), 2500);
     } catch (e) {
       setSavedMsg("저장 실패: " + (e as Error).message);
@@ -188,165 +204,45 @@ export default function VehicleSchedulePage() {
   };
 
   if (!authed) return null;
-
-  const highWarns = (result?.warnings || []).filter((w) => w.level === "high");
-  const infoWarns = (result?.warnings || []).filter((w) => w.level === "info");
-
-  const CAT_LABEL: Record<Cat, string> = { academy: "아카데미", shuttle: "셔틀", airport: "공항" };
-  const catMatch = (m: VehMovement) => tab === "all" || CAT_OF[m.kind] === tab;
-  const visibleDays = mergedDays
-    .map((d) => ({ ...d, movements: d.movements.filter(catMatch) }))
-    .filter((d) => d.movements.length > 0);
-  const tabCount = (key: "all" | Cat) =>
-    mergedDays.reduce((n, d) => n + d.movements.filter((m) => key === "all" || CAT_OF[m.kind] === key).length, 0);
-
-  return (
-    <div style={{ background: "#f4f6f8", minHeight: "100vh", fontFamily: '"Malgun Gothic","Apple SD Gothic Neo",sans-serif' }}>
-      {/* 툴바 */}
-      <div style={{ position: "sticky", top: 0, zIndex: 40, background: "#1c2530", color: "#fff", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "11px 16px", boxShadow: "0 2px 8px rgba(0,0,0,.18)" }}>
-        <b style={{ fontSize: 15 }}>🚗 차량·기사 스케줄 <span style={{ color: "#9fb0c2", fontWeight: 400, fontSize: 12 }}>(자동 취합)</span></b>
-        <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
-          <button onClick={() => { const d = new Date(base); d.setDate(d.getDate() - 7); setBase(d); }} style={btn}>◀ 이전주</button>
-          <button onClick={() => setBase(new Date())} style={btn}>이번주</button>
-          <button onClick={() => { const d = new Date(base); d.setDate(d.getDate() + 7); setBase(d); }} style={btn}>다음주 ▶</button>
-        </div>
-        <div style={{ display: "flex", gap: 6, marginLeft: 8 }}>
-          {[1, 2, 3].map((w) => (
-            <button key={w} onClick={() => setWeeks(w)} style={{ ...btn, background: weeks === w ? "#2563eb" : "#2f3e50", borderColor: weeks === w ? "#2563eb" : "#44566b" }}>{w}주</button>
-          ))}
-        </div>
-        <button onClick={load} style={{ ...btn, marginLeft: 8 }}>🔄 새로고침</button>
-        <span style={{ marginLeft: "auto", fontSize: 12, color: savedMsg.includes("실패") ? "#fca5a5" : "#5fe08a" }}>
-          {loading ? "불러오는 중…" : savedMsg || `${from} ~ ${to} · 총 ${result?.total ?? 0}건`}
-        </span>
-      </div>
-
-      {/* 탭 (항목별) */}
-      <div style={{ position: "sticky", top: 42, zIndex: 39, background: "#fff", borderBottom: "1px solid #e5e7eb", display: "flex", gap: 4, padding: "0 12px", overflowX: "auto" }}>
-        {TABS.map((t) => {
-          const on = tab === t.key;
-          return (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{
-              border: "none", background: "transparent", cursor: "pointer", padding: "11px 14px 9px",
-              borderBottom: on ? "3px solid #2563eb" : "3px solid transparent",
-              color: on ? "#1d4ed8" : "#64748b", fontWeight: on ? 800 : 600, fontSize: 13.5, whiteSpace: "nowrap",
-            }}>
-              {t.label} <span style={{ fontSize: 11, color: on ? "#3b82f6" : "#94a3b8" }}>{tabCount(t.key)}</span>
-              {t.sub && <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 400 }}>{t.sub}</div>}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ maxWidth: 1100, margin: "16px auto", padding: "0 14px" }}>
-        {/* 놓친 차량/경고 (전체·공항 탭에서 강조) */}
-        {(highWarns.length > 0 || infoWarns.length > 0) && (
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "12px 16px", marginBottom: 14 }}>
-            <b style={{ fontSize: 13, color: "#b91c1c" }}>⚠️ 확인 필요 ({highWarns.length}건)</b>
-            {highWarns.map((w, i) => (
-              <div key={i} style={{ fontSize: 13, marginTop: 6, color: "#7f1d1d" }}>· <b>{fDate(w.date)}</b> {w.text}</div>
-            ))}
-            {infoWarns.map((w, i) => (
-              <div key={"i" + i} style={{ fontSize: 12.5, marginTop: 5, color: "#64748b" }}>· {fDate(w.date)} {w.text}</div>
-            ))}
-            {highWarns.length === 0 && <div style={{ fontSize: 12.5, marginTop: 4, color: "#16a34a" }}>미배정 차량 없음 — 기사 배정 완료 ✅</div>}
-          </div>
-        )}
-
-        {visibleDays.length === 0 && (
-          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "26px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>이 기간 · 해당 항목의 차량 일정이 없어요</div>
-        )}
-
-        {/* 하루 단위 카드 (탭 필터 적용) */}
-        {visibleDays.map((day) => {
-          const isHoliday = infoWarns.some((w) => w.date === day.date);
-          const catsInDay = Array.from(new Set(day.movements.map((m) => CAT_OF[m.kind])));
-          const allConfirmed = catsInDay.length > 0 && catsInDay.every((c) => isConfirmed(day.confirmed, c));
-          return (
-            <div key={day.date} style={{ background: "#fff", border: `1px solid ${allConfirmed ? "#86efac" : "#e5e7eb"}`, borderRadius: 12, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 10px rgba(20,30,45,.05)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: allConfirmed ? "#f0fdf4" : "#f8fafc", borderBottom: "1px solid #eef2f6", flexWrap: "wrap" }}>
-                <b style={{ fontSize: 15 }}>{fDate(day.date)}</b>
-                {isHoliday && <span style={{ fontSize: 11, background: "#fee2e2", color: "#b91c1c", padding: "2px 8px", borderRadius: 20 }}>휴무일</span>}
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>{day.movements.length}건</span>
-                {tab === "all" && catsInDay.map((c) => (
-                  <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: isConfirmed(day.confirmed, c) ? "#dcfce7" : "#f1f5f9", color: isConfirmed(day.confirmed, c) ? "#166534" : "#64748b" }}>
-                    {CAT_LABEL[c]} {isConfirmed(day.confirmed, c) ? "✅" : "○"}
-                  </span>
-                ))}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                  <button onClick={() => addManual(day.date)} style={{ ...miniBtn, background: "#f1f5f9", color: "#334155" }}>+ 수동 추가</button>
-                  <button disabled={saving === day.date} onClick={() => saveDay(day.date)} style={{ ...miniBtn, background: "#e0e7ff", color: "#3730a3" }}>💾 저장</button>
-                  {tab === "all" ? (
-                    <button disabled={saving === day.date} onClick={() => saveDay(day.date, Object.fromEntries(catsInDay.map((c) => [c, !allConfirmed])) as Partial<Record<Cat, boolean>>)} style={{ ...miniBtn, background: allConfirmed ? "#16a34a" : "#fbbf24", color: allConfirmed ? "#fff" : "#78350f" }}>
-                      {allConfirmed ? "✅ 전체 전달완료" : "📤 전체 전달"}
-                    </button>
-                  ) : (
-                    <button disabled={saving === day.date} onClick={() => saveDay(day.date, { [tab]: !isConfirmed(day.confirmed, tab) } as Partial<Record<Cat, boolean>>)} style={{ ...miniBtn, background: isConfirmed(day.confirmed, tab) ? "#16a34a" : "#fbbf24", color: isConfirmed(day.confirmed, tab) ? "#fff" : "#78350f" }}>
-                      {isConfirmed(day.confirmed, tab) ? `✅ ${CAT_LABEL[tab]} 전달완료` : `📤 ${CAT_LABEL[tab]} 전달`}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {(
-                <div style={{ padding: "6px 0" }}>
-                  {day.movements.map((m) => {
-                    const k = KIND[m.kind] || KIND.extra;
-                    const isManual = m.source === "manual";
-                    const drivable = ["pickup", "dropoff", "transfer", "shuttle", "extra", "commute"].includes(m.kind);
-                    return (
-                      <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderTop: "1px solid #f4f6f8", fontSize: 13, flexWrap: "wrap" }}>
-                        <span style={{ minWidth: 58, fontWeight: 700, color: "#0f172a" }}>{m.time || "--:--"}</span>
-                        <span style={{ background: k.bg, color: k.color, padding: "2px 8px", borderRadius: 20, fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>{k.emoji} {k.label}</span>
-                        {isManual ? (
-                          <>
-                            <input value={m.guest} placeholder="이름" onChange={(e) => patchManual(day.date, m.id, { guest: e.target.value })} style={inp(90)} />
-                            <input value={m.time} placeholder="시간" onChange={(e) => patchManual(day.date, m.id, { time: e.target.value })} style={inp(60)} />
-                            <input value={m.location} placeholder="출발" onChange={(e) => patchManual(day.date, m.id, { location: e.target.value })} style={inp(90)} />
-                            <span style={{ color: "#94a3b8" }}>→</span>
-                            <input value={m.destination} placeholder="도착" onChange={(e) => patchManual(day.date, m.id, { destination: e.target.value })} style={inp(90)} />
-                          </>
-                        ) : (
-                          <>
-                            <b style={{ minWidth: 70 }}>{m.guest}</b>
-                            <span style={{ color: "#475569" }}>{m.location} <span style={{ color: "#cbd5e1" }}>→</span> {m.destination}</span>
-                            {m.num_people > 1 && <span style={{ color: "#64748b" }}>· {m.num_people}명</span>}
-                            {m.flight_info && <span style={{ color: "#0369a1", fontSize: 12 }}>✈️ {m.flight_info}</span>}
-                            {m.note && <span style={{ color: "#94a3b8", fontSize: 12 }}>{m.note}</span>}
-                            {m.locked && <span title="체크인디테일/추가픽드랍 — 항시 포함" style={{ fontSize: 11 }}>🔒</span>}
-                          </>
-                        )}
-                        <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-                          {drivable && (
-                            <select
-                              value={m.driver_id || ""}
-                              onChange={(e) => isManual ? patchManual(day.date, m.id, { driver_id: e.target.value || null }) : setOverride(day.date, m.id, { driver_id: e.target.value || null })}
-                              style={{ ...inp(0), padding: "4px 6px", border: m.driver_id ? "1px solid #cbd5e1" : "1px solid #f59e0b", background: m.driver_id ? "#fff" : "#fffbeb" }}
-                            >
-                              <option value="">기사 미배정</option>
-                              {drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                            </select>
-                          )}
-                          {isManual && <button onClick={() => removeManual(day.date, m.id)} style={{ ...miniBtn, background: "#fee2e2", color: "#b91c1c", padding: "3px 7px" }}>✕</button>}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center", padding: "8px 0 40px" }}>
-          자동 1차 취합 → 기사 배정·수동 수정(2차) → 📤 전달(확정) = 하루 기사 스케줄 완성<br />
-          체크인디테일 차량·추가 픽드랍은 🔒 항시 포함 · 집↔학원 수동 보드(<a href="/ashuttle" target="_blank" style={{ color: "#2563eb" }}>기존 셔틀표</a>)는 그대로 유지됩니다.
-        </div>
-      </div>
-    </div>
-  );
+  const CAT_LABEL:Record<Cat,string>={academy:'아카데미',shuttle:'투어셔틀',airport:'공항·추가 픽드랍'};
+  const all=mergedDays.flatMap(d=>d.movements);
+  const needsDriver=(m:VehMovement)=>!m.driver_id&&!m.driver_name;
+  const noTime=(m:VehMovement)=>!m.time||m.sortTime==='99:99';
+  const match=(m:VehMovement)=>(tab==='all'||CAT_OF[m.kind]===tab)&&(filter==='all'||(filter==='driver'?needsDriver(m):filter==='time'?noTime(m):m.auto))&&(!query||[m.guest,m.location,m.destination,m.flight_info,m.driver_name,drivers.find(d=>d.id===m.driver_id)?.name].join(' ').toLowerCase().includes(query.toLowerCase()));
+  const days=mergedDays.filter(d=>!selectedDate||d.date===selectedDate).map(d=>({...d,movements:d.movements.filter(match)}));
+  const changePeriod=(fn:()=>void)=>{if(Object.values(dirty).some(Boolean)&&!window.confirm('저장하지 않은 변경이 있습니다. 변경을 버리고 이동할까요?'))return;setDirty({});setSelectedDate('');fn();};
+  const sourceOf=(m:VehMovement)=>m.source==='pickup_requests'?{name:'픽드랍 요청',url:'/admin/pickups'}:m.source==='bookings'?{name:'예약·체크인 정보',url:'/admin/bookings/'+m.id.replace(/^bk_(in|out|tr)_/,'')}:m.source==='shuttle_applications'?{name:'투어셔틀 신청',url:'/admin/tour-shuttle'}:m.source==='fieldtrip_applications'?{name:'체험활동 신청',url:'/admin/afterschool-fieldtrip'}:m.source==='pickup_schedules'?{name:'집↔학원 셔틀표',url:'/ashuttle'}:{name:'이 화면에서 추가',url:''};
+  return <main className="vehicle-page">
+    <header className="vehicle-heading"><div><span className="vehicle-eyebrow">DREAM ACADEMY · TRANSPORT</span><h1>차량 스케줄</h1><p>오늘의 이동부터 기사 배정까지, 한곳에서 확인하세요.</p></div><div className="vehicle-actions"><button onClick={()=>setSources(!sources)} aria-expanded={sources}>자료 출처 안내</button><button disabled={loading||!!saving} onClick={()=>changePeriod(()=>{void load();})}>↻ 새로고침</button><button onClick={()=>window.print()}>인쇄</button></div></header>
+    {sources&&<section className="vehicle-sources"><h2>어디에서 가져온 일정인가요?</h2><div><p><b>공항·추가 픽드랍</b>등록된 픽드랍 요청을 우선하고, 없는 항목은 예약의 항공·숙박 정보로 초안을 만듭니다. 초안은 차량 시간 확인이 필요합니다.</p><p><b>투어셔틀</b>투어셔틀 신청에서 가져옵니다. 취소 신청은 제외합니다.</p><p><b>애프터스쿨·필드트립</b>신청 날짜와 배포 일정으로 구성합니다. 표시 시간은 프로그램 기준이며 차량 배정은 별도로 확인합니다.</p><p><b>집↔학원</b>기존 셔틀표에 저장된 날짜만 가져옵니다. 기사·탑승자 수정은 원본 셔틀표에서 해주세요. 결석 메모는 원본 확인이 필요합니다.</p></div><p>기사 배정은 픽드랍 요청·투어셔틀 신청에 함께 반영됩니다. 다른 유형의 배정, 차량 시간·메모는 이 통합 화면에 저장됩니다. ‘확인 완료’는 내부 표시이며 기사에게 자동 발송되지 않습니다.</p></section>}
+    <section className="vehicle-stats" aria-label="조회 기간 요약">
+      <button onClick={()=>{setFilter('all');setTab('all');}}><span>전체 일정 항목</span><strong>{all.length}<small>건</small></strong><em>신청·운행 묶음 기준</em></button>
+      <button className="warning" onClick={()=>setFilter('driver')} aria-pressed={filter==='driver'}><span>기사 확인 필요</span><strong>{all.filter(needsDriver).length}<small>건</small></strong><em>미배정 일정 보기 →</em></button>
+      <button className="warning" onClick={()=>setFilter('time')} aria-pressed={filter==='time'}><span>차량 시간 미정</span><strong>{all.filter(noTime).length}<small>건</small></strong><em>시간 입력할 일정 →</em></button>
+      <button onClick={()=>setFilter('draft')} aria-pressed={filter==='draft'}><span>예약 기반 초안</span><strong>{all.filter(m=>m.auto).length}<small>건</small></strong><em>실제 운행 여부 확인 →</em></button>
+    </section>
+    <section className="vehicle-controls"><div className="vehicle-period"><button aria-label="이전 주" disabled={!!saving} onClick={()=>changePeriod(()=>{const d=new Date(base);d.setDate(d.getDate()-7);setBase(d);})}>←</button><b>{from} — {to}</b><button aria-label="다음 주" disabled={!!saving} onClick={()=>changePeriod(()=>{const d=new Date(base);d.setDate(d.getDate()+7);setBase(d);})}>→</button><button disabled={!!saving} onClick={()=>changePeriod(()=>setBase(new Date()))}>이번 주</button><select aria-label="조회 기간" value={weeks} disabled={!!saving} onChange={e=>changePeriod(()=>setWeeks(Number(e.target.value)))}>{[1,2,3].map(w=><option key={w} value={w}>{w}주 보기</option>)}</select></div><input aria-label="일정 검색" placeholder="이름, 숙소, 기사, 항공편 검색" value={query} onChange={e=>setQuery(e.target.value)}/></section>
+    <nav className="vehicle-tabs" aria-label="일정 종류">{TABS.map(t=><button key={t.key} aria-pressed={tab===t.key} className={tab===t.key?'active':''} onClick={()=>setTab(t.key)}>{t.label}<span>{all.filter(m=>t.key==='all'||CAT_OF[m.kind]===t.key).length}</span></button>)}</nav>
+    <div className="vehicle-days"><button className={!selectedDate?'active':''} onClick={()=>setSelectedDate('')}>전체 날짜</button>{dates.map(d=><button key={d} className={selectedDate===d?'active':''} onClick={()=>setSelectedDate(d)}>{fDate(d)}<span>{all.filter(m=>m.date===d&&match(m)).length}건</span></button>)}</div>
+    <div className="vehicle-filter"><label>표시 <select aria-label="상태 필터" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">모든 상태</option><option value="driver">기사 확인 필요</option><option value="time">시간 미정</option><option value="draft">예약 기반 초안</option></select></label><span>시간은 필리핀 현지 기준 · 원본 링크에서 등록 내용을 확인할 수 있습니다.</span></div>
+    {savedMsg&&<div className="vehicle-message" role="status">{savedMsg}</div>}
+    {error?<div className="vehicle-error" role="alert">{error}<button onClick={()=>void load()}>다시 불러오기</button></div>:loading?<div className="vehicle-empty" role="status">원본 일정을 모으고 있습니다…</div>:days.map(day=>{
+      const cats=Array.from(new Set((mergedDays.find(d=>d.date===day.date)?.movements||[]).map(m=>CAT_OF[m.kind])));
+      const done=cats.length>0&&cats.every(c=>isConfirmed(day.confirmed,c));
+      if(!day.movements.length&&!selectedDate)return null;
+      return <section className="vehicle-day" key={day.date}><header><div><h2>{fDate(day.date)}</h2><span>{day.movements.length}건 표시</span>{dirty[day.date]&&<b className="vehicle-unsaved">저장 전</b>}</div><div className="vehicle-actions"><button disabled={!!saving} onClick={()=>addManual(day.date)}>＋ 일정 추가</button><button className="primary" disabled={!!saving} onClick={()=>void saveDay(day.date)}>{saving===day.date?'저장 중…':'변경 저장'}</button><button disabled={!!saving||!cats.length} className={done?'confirmed':''} onClick={()=>void saveDay(day.date,tab==='all'?Object.fromEntries(cats.map(c=>[c,!done])):{[tab]:!isConfirmed(day.confirmed,tab)})}>{tab==='all'?(done?'✓ 전체 확인 완료':'전체 확인 완료 표시'):(isConfirmed(day.confirmed,tab)?'✓ 확인 완료':'확인 완료 표시')}</button></div></header>
+        <div className="vehicle-confirmations">{cats.map(c=><span key={c} className={isConfirmed(day.confirmed,c)?'done':''}>{CAT_LABEL[c]} · {isConfirmed(day.confirmed,c)?'확인 완료':'확인 전'}</span>)}<small>확인 표시는 내부 관리용입니다.</small></div>
+        <div className="vehicle-column-head"><span>차량 시간 / 종류</span><span>탑승자 · 이동 경로</span><span>기사 / 메모</span></div>
+        {!day.movements.length&&<div className="vehicle-empty">해당 조건의 일정이 없습니다. 일정을 추가하거나 필터를 변경하세요.</div>}
+        {day.movements.map(m=>{const k=KIND[m.kind]||KIND.extra,isManual=m.source==='manual',board=m.source==='pickup_schedules',source=sourceOf(m);return <article className="vehicle-row" key={m.id}>
+          <div className="vehicle-time"><span className="vehicle-kind" style={{background:k.bg,color:k.color}}>{k.emoji} {k.label}</span>{board?<strong>{m.time||'시간 미정'}</strong>:<input aria-label={`${m.guest||'새 일정'} 차량 시간`} value={m.time} placeholder="시간 미정" onChange={e=>isManual?patchManual(day.date,m.id,{time:e.target.value}):setOverride(day.date,m.id,{time:e.target.value})} disabled={!!saving}/>}<small>{m.auto?'운행 확인 필요':board?'원본 셔틀표 시간':m.kind==='afterschool'||m.kind==='fieldtrip'?'프로그램 기준 · 배차 확인':'필리핀 현지 시간'}</small></div>
+          <div className="vehicle-route">{isManual?<div className="vehicle-manual"><input aria-label="탑승자" placeholder="탑승자 이름" value={m.guest} onChange={e=>patchManual(day.date,m.id,{guest:e.target.value})}/><select aria-label="일정 종류" value={m.kind} onChange={e=>patchManual(day.date,m.id,{kind:e.target.value as VehMovement['kind']})}>{Object.entries(KIND).map(([v,k])=><option key={v} value={v}>{k.label}</option>)}</select><input aria-label="출발지" placeholder="출발지" value={m.location} onChange={e=>patchManual(day.date,m.id,{location:e.target.value})}/><input aria-label="도착지" placeholder="도착지" value={m.destination} onChange={e=>patchManual(day.date,m.id,{destination:e.target.value})}/><label>인원 <input type="number" min="1" aria-label="탑승 인원" value={m.num_people} onChange={e=>patchManual(day.date,m.id,{num_people:Math.max(1,Number(e.target.value))})}/></label></div>:<><h3>{m.guest} <span>{m.num_people||'?'}명</span></h3><p>{m.location||'출발지 확인'} <span className="vehicle-arrow">→</span> {m.destination||'도착지 확인'}</p>{m.flight_info&&<p className="vehicle-flight">✈ {m.flight_info}</p>}</>}
+          <div className="vehicle-source">{source.url?<a href={source.url} target="_blank" rel="noreferrer">{source.name} ↗</a>:<span>{source.name}</span>}{m.auto&&<span className="vehicle-draft">자동 초안</span>}</div></div>
+          <div className="vehicle-assignment">{board?<><b>{m.driver_name||'기사 확인 필요'}</b><small>배정 변경은 원본 셔틀표에서</small><p>{m.note}</p></>:<><select aria-label={`${m.guest||'새 일정'} 담당 기사`} className={!m.driver_id?'unassigned':''} value={m.driver_id||''} disabled={!!saving} onChange={e=>isManual?patchManual(day.date,m.id,{driver_id:e.target.value||null}):setOverride(day.date,m.id,{driver_id:e.target.value||null})}><option value="">기사 미배정</option>{m.driver_id&&!drivers.some(d=>d.id===m.driver_id)&&<option value={m.driver_id}>기존 배정 기사 (비활성)</option>}{drivers.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select><textarea aria-label={`${m.guest||'새 일정'} 운행 메모`} placeholder="운행 메모" rows={2} value={m.note||''} disabled={!!saving} onChange={e=>isManual?patchManual(day.date,m.id,{note:e.target.value}):setOverride(day.date,m.id,{note:e.target.value})}/></>}{isManual&&<button className="vehicle-remove" disabled={!!saving} onClick={()=>removeManual(day.date,m.id)}>추가한 일정 삭제</button>}</div>
+        </article>;})}
+      </section>;
+    })}
+    {!loading&&!error&&!days.some(d=>d.movements.length)&&!selectedDate&&<div className="vehicle-empty">조건에 맞는 일정이 없습니다.<p>위에서 날짜를 선택하면 빈 날짜에도 일정을 추가할 수 있습니다.</p></div>}
+  </main>;
 }
 
-const btn: React.CSSProperties = { background: "#2f3e50", color: "#fff", border: "1px solid #44566b", padding: "5px 11px", borderRadius: 7, cursor: "pointer", fontSize: 12.5 };
-const miniBtn: React.CSSProperties = { border: "none", padding: "5px 10px", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 700 };
-const inp = (w: number): React.CSSProperties => ({ width: w || undefined, padding: "4px 7px", border: "1px solid #cbd5e1", borderRadius: 6, fontSize: 12.5 });
