@@ -181,6 +181,14 @@ function fmtFlight(airline?: string, no?: string, text?: string): string {
   if (parts.length) return parts.join(" ");
   return text || "";
 }
+// accom_type 문자열 → 숙소명 (house_no 없을 때 폴백)
+function accomFromType(t?: string): string {
+  if (!t) return "";
+  if (t.includes("드림하우스")) return "드림하우스";
+  if (t.includes("제이파크")) return "제이파크";
+  if (t.includes("큐브")) return "큐브나인";
+  return "";
+}
 
 // 예약 항공편(체크인디테일에서 확정 → bookings.flight_*)에서 공항 픽업/드랍/환승 파생.
 // pickup_requests에 이미 있는 건(booking_id+유형) 중복 제외 → "놓친 공항차량" 방지.
@@ -199,10 +207,10 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     const people = (Number(b.adults) || 0) + (Number(b.children) || 0) || 1;
     const guest = b.booker_name || "-";
 
-    // 도착 (공항 → 숙소)
+    // 도착 (공항 → 숙소). pickup_place/drop_off는 보통 "공항"쪽 값이라 숙소는 house_no에서.
     const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
     if (inDate && !covered.has(`${b.id}_pickup`)) {
-      const dest = combo ? accomLabel(b.seg1_type, room) : (b.pickup_place || room || "숙소");
+      const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_in_${b.id}`, date: inDate, time: b.flight_in_time || "", sortTime: to24h(b.flight_in_time),
         kind: "pickup", source: "bookings", guest, location: "공항", destination: dest,
@@ -223,7 +231,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     // 출발 (숙소 → 공항)
     const outDate = String(b.flight_out_date || b.checkout_date || "").slice(0, 10);
     if (outDate && !covered.has(`${b.id}_dropoff`)) {
-      const loc = combo ? accomLabel(b.seg2_type, room) : (b.drop_off || room || "숙소");
+      const loc = combo ? accomLabel(b.seg2_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_out_${b.id}`, date: outDate, time: b.flight_out_time || "", sortTime: to24h(b.flight_out_time),
         kind: "dropoff", source: "bookings", guest, location: loc, destination: "공항",
