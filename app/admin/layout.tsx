@@ -155,6 +155,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     : (!isView && (pathname === it.href || pathname.startsWith(it.href + "/")));
   const todayOn = !isView && pathname === "/admin/today";
 
+  // HR ERP(/admin/HR)는 사이드바 미노출 · 별도 로그인 게이트 (완전 별개 접속)
+  if (pathname === "/admin/HR" || pathname.startsWith("/admin/HR/")) {
+    return <>{children}</>;
+  }
+
   return (
     <div className={isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) ? "staff-mobile-host"+(chatPopout?' staff-chat-popout-host':'') : undefined} style={{ display: "flex", minHeight: "100vh", fontFamily: "'Apple SD Gothic Neo','Noto Sans KR',sans-serif" }}>
       {isView && (viewSrc === "/staff" || viewSrc.startsWith("/staff?")) && <StaffAppManifest />}
