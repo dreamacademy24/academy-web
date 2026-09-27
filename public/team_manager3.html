@@ -3778,7 +3778,13 @@ function createNotifMultiple(toIds,type,refId,message){
 var _notifSeenIds={};var _notifFirstLoad=true;
 function loadMyNotifs(){
   if(!CU)return Promise.resolve();
-  return sbGet('staff_notifications','to_id=eq.'+CU.id+'&is_read=eq.false&order=created_at.desc&limit=200').then(function(rows){
+  var actor=CU;
+  return Promise.all([
+    sbGet('staff_notifications','to_id=eq.'+encodeURIComponent(actor.id)+'&is_read=eq.false&order=created_at.desc&limit=200'),
+    sbGet('staff_notifications','to_id=eq.'+encodeURIComponent(actor.id)+'&type=eq.opinion&is_read=eq.false&order=created_at.desc&limit=1000')
+  ]).then(function(results){
+    if(CU!==actor)return;
+    var rows=Array.from(new Map(results[0].concat(results[1]).map(function(n){return [n.id,n];})).values());
     myNotifs=rows;
     // 새로 도착한 알림 토스트 (첫 로드는 제외 — 로그인 직후 폭탄 방지)
     if(!_notifFirstLoad){
@@ -3836,6 +3842,8 @@ function updateNavBadges(){
   // 의견요청: myNotifs 중 type='opinion'
   var opCount=myNotifs.filter(function(n){return n.type==='opinion';}).length;
   _setNavBadge('badge-opinions',opCount);
+  var opDot=document.getElementById('notif-dot-opinions');
+  if(opDot)opDot.style.display=opCount>0?'inline-block':'none';
   // 채팅: 채널별 _unreadCache 합산
   var chatTotal=0;try{Object.keys(_unreadCache||{}).forEach(function(k){chatTotal+=(_unreadCache[k]||0);});}catch(e){}
   _setNavBadge('badge-chat',chatTotal);
@@ -4265,7 +4273,7 @@ function showPage(p){
   if(p==='weeklycl'){renderWeeklyClPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCC5 \uC8FC\uAC04 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8';document.getElementById('topS').textContent='\uB4F1\uB85D \u00B7 \uC694\uC77C\uBCC4 \uC815\uB9AC \u00B7 \uB2F9\uC77C \uD56D\uBAA9\uC740 \uD648 \uC624\uB298 \uCCB4\uD06C\uB9AC\uC2A4\uD2B8\uB85C \uC790\uB3D9 \uC5F0\uACB0';}
   if(p==='daily'){renderDailyPage();document.getElementById('btnTask').style.display='none';}
   if(p==='chat'){renderChatPage();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDDE8\uFE0F \uCC44\uD305';document.getElementById('topS').textContent='\uD300 \uB300\uD654';}
-  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';markNotifsRead('opinion');_setNavBadge('badge-opinions',0);}
+  if(p==='opinions'){renderOpinionList();document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCAC \uC758\uACAC\uC694\uCCAD';document.getElementById('topS').textContent='\uC544\uC774\uB514\uC5B4 \u00B7 \uC758\uACAC \u00B7 \uD1A0\uB860';renderNotifBadges();}
   if(p==='approval'){renderApprovalStandalone();document.getElementById('btnTask').style.display='none';document.getElementById('topS').textContent='\uACB0\uC7AC \uC0C1\uC2E0 \u00B7 \uC2B9\uC778 \u00B7 \uBC18\uB824';markNotifsRead('approval');}
   if(p==='manual'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uD83D\uDCDA \uC5C5\uBB34\uC790\uB8CC';document.getElementById('topS').textContent='';}
   if(p==='guide'){document.getElementById('btnTask').style.display='none';document.getElementById('topT').textContent='\uC548\uB0B4\uBB38\uAD6C';document.getElementById('topS').textContent='';}
@@ -8661,13 +8669,34 @@ function _renderOpListItems(){
     var borderLeft=isSelected?'3px solid #1a6fc4':'3px solid transparent';
     html+='<div onclick="openOpinionDetail(\''+op.id+'\')" style="padding:12px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;background:'+bg+';border-left:'+borderLeft+';transition:background 0.15s" onmouseover="if(!this.getAttribute(\'data-sel\'))this.style.background=\'#f9fafb\'" onmouseout="if(!this.getAttribute(\'data-sel\'))this.style.background=\'#fff\'"'+(isSelected?' data-sel="1"':'')+'>';
     html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="flex:1;font-size:14px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(op.title)+'</div>';
+    if(_opUnreadRows(op).length)html+='<span style="color:#dc2626;font-size:11px;font-weight:800">NEW</span>';
     if(cnt>0)html+='<span style="background:#1a6fc4;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0">'+cnt+'</span>';
     html+='</div><div style="font-size:11px;color:#94a3b8">'+(author?esc(author.name):'?')+' · '+ds+'</div></div>';
   });
   el.innerHTML=html;
 }
 
+function _opUnreadRows(op){
+  return (myNotifs||[]).filter(function(n){
+    if(n.type!=='opinion'||n.is_read)return false;
+    if(n.ref_id)return String(n.ref_id)===String(op.id);
+    // Older announcements had no ref_id. Only match an unambiguous title.
+    var title=String(op.title||'').replace(/^✓ 완료 · /,'').slice(0,20);
+    var matches=(_opListCache||[]).filter(function(o){return String(o.title||'').slice(0,20)===title;});
+    return title&&matches.length===1&&String(n.message||'').includes('의견을 요청했습니다: '+title);
+  });
+}
+function _opMarkRead(op,rows){
+  if(!CU||!rows.length)return Promise.resolve();
+  var actor=CU,ids=rows.map(function(n){return n.id;});
+  return sbPatch('staff_notifications','to_id=eq.'+encodeURIComponent(actor.id)+'&id=in.('+ids.map(encodeURIComponent).join(',')+')&is_read=eq.false',{is_read:true}).then(function(){
+    if(CU!==actor)return;
+    myNotifs=myNotifs.filter(function(n){return ids.indexOf(n.id)<0;});
+    renderNotifBadges();_renderOpListItems();
+  }).catch(function(){toast('의견요청 읽음 상태를 저장하지 못했습니다. 다시 열어주세요.','#ef4444');});
+}
 function openOpinionDetail(opId){
+  var unreadAtOpen=(myNotifs||[]).slice();
   _opdCurId=opId;
   _renderOpListItems(); // 선택 상태 갱신
   var det=document.getElementById('opDetail');
@@ -8687,6 +8716,7 @@ function openOpinionDetail(opId){
     var op=(results[0]||[])[0];
     var replies=results[1]||[];
     if(!op){det.innerHTML='<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#94a3b8">삭제된 의견입니다</div>';return;}
+    if(String(_opdCurId)!==String(opId))return;
     var author=ALL.find(function(u){return u.id===op.from_id;});
     var date=new Date(op.ts);
     var ds=(date.getMonth()+1)+'/'+date.getDate()+' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
@@ -8725,6 +8755,7 @@ function openOpinionDetail(opId){
     html+='</div>';
 
     det.innerHTML=html;
+    _opMarkRead(op,_opUnreadRows(op).filter(function(n){return unreadAtOpen.some(function(old){return old.id===n.id;});}));
     // 컨테이너에 flex-direction 적용
     det.style.flexDirection='column';
     // 모바일 뒤로가기 버튼 표시
@@ -8940,7 +8971,7 @@ function submitOpinion(){
   readFilesAsBase64(fileInput||{files:[]}).then(function(files){
     payload.files=files;
     sbPost('staff_opinions',payload)
-      .then(function(){closeM('opinionModal');toast('\uc758\uacac \uc694\uccad \ub4f1\ub85d!');renderOpinionList();var _opIds=target==='all'?ALL.map(function(u){return u.id;}):[target];createNotifMultiple(_opIds,'opinion','',CU.name+'님이 의견을 요청했습니다: '+title.slice(0,20));});
+      .then(function(saved){var op=(saved||[])[0];if(!op||!op.id)throw new Error('의견요청 저장 결과를 확인하지 못했습니다.');closeM('opinionModal');toast('의견 요청 등록!');renderOpinionList();var _opIds=target==='all'?ALL.map(function(u){return u.id;}):[target];createNotifMultiple(_opIds,'opinion',String(op.id),CU.name+'님이 의견을 요청했습니다: '+title.slice(0,20));});
   });
 }
 function submitReply(opId){
