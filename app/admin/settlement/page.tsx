@@ -62,10 +62,8 @@ export default function SettlementPage() {
       if (ci && ci > today) return 1;
       return 2;
     };
-    // 통학형(숙박 정산 대상 아님)·취소 예약 제외
+    // 통학형도 수업·교재비 정산 대상이므로 취소 예약만 제외한다.
     const eligible = ((data || []) as Booking[]).filter(b => {
-      const at = String((b as unknown as Record<string, unknown>).accom_type || "");
-      if (at.includes("통학")) return false;
       if (String((b as unknown as Record<string, unknown>).status || "").includes("취소")) return false;
       return true;
     });

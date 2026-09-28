@@ -112,6 +112,8 @@ export async function PATCH(req: Request) {
       try { confirmedTime = resolveChangeTime(cr.req_time_kr, body.confirmed_time_kr) }
       catch (error) { return NextResponse.json({error: error instanceof Error ? error.message : '확정 시간을 선택해주세요.'},{status:400}) }
       const { error: sErr } = await supabase.rpc('approve_online_single_change',{p_request:id,p_note:admin_note||null,p_by:processed_by||'관리자',p_confirmed_time:confirmedTime})
+      if (sErr?.message.includes('PACKAGE_DESTINATION_REQUIRED')) return NextResponse.json({error:'이동할 연수 전·후 일정이 없습니다. 학생 상세에서 해당 기간의 요일·시간을 먼저 설정해주세요.'},{status:409})
+      if (sErr?.message.includes('PACKAGE_STAY_DATE')) return NextResponse.json({error:'연수 체류기간에는 화상영어를 배정할 수 없습니다. 연수 전 또는 후 날짜로 요청해주세요.'},{status:409})
       if (sErr) return NextResponse.json({ error: sErr.message.includes('SESSION_MISSING_OR_PROCESSED') ? '대상 수업이 변경되거나 없어 승인하지 않았습니다. 출석부를 확인해주세요.' : sErr.message.includes('TUTOR_CONFLICT') ? '선생님의 다른 수업과 시간이 겹칩니다.' : '변경 일정 저장에 실패하여 승인하지 않았습니다. 새로고침 후 확인해주세요.' }, { status: 409 })
       try {
         const stuName = enroll.student_name_en || enroll.student_name
