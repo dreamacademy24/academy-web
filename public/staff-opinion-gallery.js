@@ -26,6 +26,19 @@
  `;document.head.append(css);
  function el(tag,text,cls){var n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
  function safeUrl(value){try{var s=String(value||'').trim();if(/^data:image\/(png|jpeg|webp|gif|bmp);base64,/i.test(s))return s;var u=new URL(s,location.href);return s&&/^https?:$/.test(u.protocol)?u.href:'';}catch(e){return '';}}
+ function isVideo(url){try{return /\.(mp4|mov|webm)$/i.test(new URL(url,location.href).pathname);}catch(e){return false;}}
+ var pendingUploads=0,originalSubmit=window.submitOpinion;
+ window.submitOpinion=function(){if(pendingUploads){toast('영상 업로드가 끝난 후 등록해주세요.','#f59e0b');return;}return originalSubmit.apply(this,arguments);};
+ async function uploadChoice(input){
+  var file=input.files[0];if(!file)return;
+  if(!/\.(mp4|mov)$/i.test(file.name)){opVoteImgChange(input);return;}
+  var row=input.closest('.opv-row'),link=row.querySelector('.opv-url');
+  if(file.size>50*1024*1024){toast('영상은 파일당 50MB 이하로 첨부해주세요.','#ef4444');input.value='';return;}
+  pendingUploads++;input.disabled=true;var status=el('span','영상 업로드 중…');status.setAttribute('role','status');row.append(status);
+  try{var media=await _staffDirectUpload(file,'task','',function(p){status.textContent='영상 업로드 '+p+'%';});if(row.isConnected){row.dataset.url=media.url;if(link)link.value=media.url;status.textContent='영상 첨부 완료';}}
+  catch(e){status.textContent='업로드 실패 · 다시 선택해주세요';toast(e.message||'영상 업로드 실패','#ef4444');}
+  finally{pendingUploads--;input.disabled=false;input.value='';}
+ }
  window.opVoteAddOpt=function(label,url){
   var c=document.getElementById('opVoteOpts');if(!c)return;
   if(c.children.length>=10){toast('최대 10개까지 등록할 수 있습니다.','#ef4444');return;}
@@ -36,7 +49,7 @@
    var img=el('img');img.src=safeUrl(url);img.alt='첨부 시안';media.append(img);
    var remove=el('button','사진 제거');remove.type='button';remove.onclick=function(){row.dataset.url='';_rebuildVoteOptsFromDOM();};media.append(remove);
   }else{var link=el('input');link.className='opv-url';link.placeholder='이미지 또는 참고 URL (선택)';link.setAttribute('aria-label','선택지 URL');link.value=url||'';link.oninput=function(){row.dataset.url='';};media.append(link);
-   var upload=el('label','📷');upload.title='선택지 이미지 첨부';var file=el('input');file.type='file';file.accept='image/*';file.style.display='none';file.onchange=function(){opVoteImgChange(file);};upload.append(file);media.append(upload);
+   var upload=el('label','📎');upload.title='선택지 사진·영상 첨부 (영상 50MB)';var file=el('input');file.type='file';file.accept='image/*,video/mp4,video/quicktime,.mp4,.mov';file.style.display='none';file.onchange=function(){uploadChoice(file);};upload.append(file);media.append(upload);
   }
   var del=el('button','×');del.type='button';del.setAttribute('aria-label','선택지 삭제');del.onclick=function(){row.remove();count();};
   row.append(name,media,del);c.append(row);count();
@@ -51,11 +64,12 @@
    votes.forEach(function(v){if(v.option_idx>=0&&v.option_idx<counts.length)counts[v.option_idx]++;if(CU&&v.voter_id===CU.id)my=v.option_idx;});
    var closed=!!op.completed_at||!!(op.vote_deadline&&Date.now()>new Date(op.vote_deadline+'T23:59:59+09:00').getTime());
    slot.replaceChildren();var head=el('div',null,'opg-head');head.append(el('strong','📊 시안 비교 · '+opts.length+'개'),el('span',(closed?'투표 마감':op.vote_deadline?'마감 '+op.vote_deadline:'진행 중')+' · 총 '+votes.length+'표'));slot.append(head);
-   slot.append(el('p','이미지를 누르면 크게 볼 수 있습니다. 원하는 시안 아래의 투표하기를 누르세요.'));
+   slot.append(el('p','영상은 재생 버튼으로, 사진은 눌러서 확인하세요. 원하는 시안 아래의 투표하기를 누르세요.'));
    var grid=el('div',null,'opg-grid');slot.append(grid);
    opts.forEach(function(o,i){
     var card=el('article',null,'opg-card'+(my===i?' chosen':''));card.append(el('h3',(i+1)+'. '+(o.label||'선택지')+(my===i?' · 내 선택':'')));
-    var src=safeUrl(o.url);if(src){var preview=el('button',null,'opg-preview');preview.type='button';preview.setAttribute('aria-label',(o.label||'시안')+' 확대');var image=el('img');image.src=src;image.alt=o.label||'시안';image.loading='lazy';image.onerror=function(){preview.replaceChildren(el('span','참고 링크 열기 ↗'));preview.onclick=function(){if(/^https?:/.test(src))window.open(src,'_blank','noopener');};};preview.append(image);preview.onclick=function(){if(typeof _staffOpenGallery==='function')_staffOpenGallery([{src:src,name:o.label||'시안'}],0);else openLightbox(src);};card.append(preview);}
+    var src=safeUrl(o.url);if(src&&isVideo(src)){var video=el('video',null,'opg-preview');video.controls=true;video.preload='metadata';video.playsInline=true;video.src=src;video.style.objectFit='contain';video.style.padding='0';video.style.cursor='default';video.setAttribute('aria-label',(o.label||'시안')+' 영상');card.append(video);var download=el('a','영상 열기 / 다운로드');download.href=src;download.target='_blank';download.rel='noopener';download.style.padding='8px 16px';card.append(download);}
+    else if(src){var preview=el('button',null,'opg-preview');preview.type='button';preview.setAttribute('aria-label',(o.label||'시안')+' 확대');var image=el('img');image.src=src;image.alt=o.label||'시안';image.loading='lazy';image.onerror=function(){preview.replaceChildren(el('span','참고 링크 열기 ↗'));preview.onclick=function(){if(/^https?:/.test(src))window.open(src,'_blank','noopener');};};preview.append(image);preview.onclick=function(){if(typeof _staffOpenGallery==='function')_staffOpenGallery([{src:src,name:o.label||'시안'}],0);else openLightbox(src);};card.append(preview);}
     var footer=el('footer');if(!closed){var b=el('button',my===i?'✓ 투표한 시안':'투표하기','opg-action');b.type='button';b.disabled=my===i;b.onclick=function(){castVote(op.id,i);};footer.append(b);}
     var pct=votes.length?Math.round(counts[i]/votes.length*100):0;footer.append(el('span',counts[i]+'표 · '+pct+'%','opg-result'));card.append(footer);var track=el('div',null,'opg-track'),fill=el('span');fill.style.width=pct+'%';track.append(fill);card.append(track);grid.append(card);
    });
