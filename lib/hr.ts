@@ -61,6 +61,7 @@ export interface HrEmployee {
   position?: string; division?: string; department?: string; job_level?: string;
   date_hired?: string; eval_3month?: string; eval_6month?: string;
   regularization_date?: string; separation_date?: string;
+  contract_start?: string; contract_end?: string; next_salary_review?: string;
   work_location?: string; shift_schedule?: string; time_in?: string; time_out?: string;
   reporting_to?: string; employment_status?: string;
   salary_type?: string; basic_salary?: number; tax_status?: string;
@@ -98,3 +99,4 @@ export function grossMonthly(e: Partial<HrEmployee>): number {
   return base + (Number(e.allow_position) || 0) + (Number(e.allow_transpo) || 0) +
     (Number(e.allow_tutorial) || 0) + (Number(e.allow_load) || 0);
 }
+
