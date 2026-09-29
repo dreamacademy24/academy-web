@@ -1,7 +1,8 @@
 import { currentHr,hrDb,hrError } from '@/lib/hrServer'
 import { currentEmployee } from '@/lib/hrEmployeeSession'
-import { payrollPeriod,validateDays,cleanAmounts,totals } from '@/lib/hrPayroll'
+import { payrollPeriod,validateDays,totals } from '@/lib/hrPayroll'
 import { displayName } from '@/lib/hr'
+import { defaultRules,DEFAULT_POLICY,calculatePay,ruleAmounts } from '@/lib/hrPayRules'
 export const dynamic='force-dynamic'
 const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}})
 export async function GET(req:Request){try{
@@ -16,8 +17,9 @@ export async function GET(req:Request){try{
  if(admin){const {data,error}=await hrDb.from('hr_employees').select('id,company,employee_id,name_display,first_name,last_name,status,salary_type,basic_salary,allow_position,allow_transpo,allow_tutorial,allow_load').in('company',admin.companies).order('last_name');if(error)throw error;employees=data||[]}
  else employees=[self!.employee]
  // Unfinalized salary figures are not published to employees.
- const safe=(entries||[]).map(e=>self&&e.pay_status!=='finalized'?{...e,amounts:{},payroll_note:''}:e)
- return reply({period,entries:safe,employees,reviewer:!!admin?.full,self:!!self,must_change_pw:!!self?.must_change_pw})
+ const safe=(entries||[]).map(e=>self&&e.pay_status!=='finalized'?{...e,amounts:{},payroll_note:'',rules_snapshot:null,calculation:null}:e)
+ let settings:any[]=[];if(admin){const r=await hrDb.from('hr_payroll_settings').select('*').in('company',admin.companies);if(r.error)throw r.error;settings=r.data||[]}
+ return reply({period,entries:safe,employees,settings,reviewer:!!admin?.full,self:!!self,must_change_pw:!!self?.must_change_pw})
  }catch(e){if(e instanceof Error&&e.message.startsWith('Invalid'))return reply({error:e.message},400);return hrError(e)}}
 export async function POST(req:Request){try{
  const admin=await currentHr(req),self=admin?null:await currentEmployee(req)
@@ -37,6 +39,7 @@ export async function POST(req:Request){try{
   if(emp.status!=='Active')return reply({error:'Only active employees can submit.'},400)
   if(old&&['submitted','approved'].includes(old.time_status))return reply({error:'Ask Abby to return this timecard before editing.'},409)
   patch.days=validateDays(b.days,period.dates,b.action==='submit');patch.time_status=b.action==='submit'?'submitted':'draft';patch.submitted_at=b.action==='submit'?now:null
+  patch.calculation=old?.calculation?{...old.calculation,stale:true}:null;
   patch.reviewed_at=null;patch.reviewed_by=null;patch.review_note=''
  }else if(['approve','return'].includes(b.action)){
   if(!admin?.full)return reply({error:'Abby / central HR review is required.'},403)
@@ -44,12 +47,25 @@ export async function POST(req:Request){try{
   if(typeof b.note!=='string'||b.note.length>2000||(b.action==='return'&&!b.note.trim()))return reply({error:'Enter a review note.'},400)
   if(b.action==='approve')validateDays(old.days,period.dates,true)
   patch.time_status=b.action==='approve'?'approved':'returned';patch.reviewed_at=now;patch.reviewed_by=admin.username;patch.review_note=b.note.trim()
- }else if(['save_pay','finalize'].includes(b.action)){
+ }else if(['calculate','save_pay','finalize'].includes(b.action)){
   if(!admin)return reply({error:'HR access required'},403)
-  patch.amounts=cleanAmounts(b.amounts);if(typeof b.note!=='string'||b.note.length>3000)return reply({error:'Invalid note'},400);patch.payroll_note=b.note.trim()
+  const {data:settings,error}=await hrDb.from('hr_payroll_settings').select('*').eq('company',emp.company).maybeSingle();if(error)throw error
+  const rules=b.action==='calculate'?(settings?.rules||defaultRules()):(old?.rules_snapshot||settings?.rules||defaultRules())
+  if(b.action==='calculate'){
+   if(!settings)return reply({error:'Ask Abby or Bella to save company payroll settings first. / 회사 급여 기준을 먼저 저장해주세요.'},400)
+   if(old?.time_status!=='approved')return reply({error:'Approve the timecard before calculating payroll.'},400)
+   const result=calculatePay(rules,settings.policy||DEFAULT_POLICY,emp,validateDays(old.days,period.dates,true),Number(b.day))
+   patch.amounts=result.amounts;patch.calculation={...result.calculation,settings_version:settings.version,employee_payroll_version:emp.payroll_version,calculated_at:now,calculated_by:admin.username};patch.rules_snapshot=rules
+  }else{
+   if(!old?.rules_snapshot&&(settings?.version||0)!==(b.settings_version||0))return reply({error:'Payroll settings changed. Reload before saving.'},409)
+   patch.amounts=ruleAmounts(b.amounts,rules);patch.rules_snapshot=rules
+   patch.calculation=old?.calculation?{...old.calculation,manually_reviewed_at:now,manually_reviewed_by:admin.username}:null
+  }
+  if(typeof b.note!=='string'||b.note.length>3000)return reply({error:'Invalid note'},400);patch.payroll_note=b.note.trim()
   if(b.action==='finalize'){
    if(!admin.full)return reply({error:'Central HR approval required'},403)
-   if(old?.time_status!=='approved'||b.confirmed!==true||totals(patch.amounts).net<0)return reply({error:'Approve the timecard and confirm amounts before finalizing.'},400)
+   if(old?.calculation?.stale)return reply({error:'Timecard changed. Calculate again before finalizing.'},409)
+   if(old?.time_status!=='approved'||b.confirmed!==true||totals(patch.amounts,rules).net<0)return reply({error:'Approve the timecard and confirm amounts before finalizing.'},400)
    patch.pay_status='finalized';patch.finalized_at=now;patch.finalized_by=admin.username
   }
  }else return reply({error:'Unknown action'},400)
@@ -60,3 +76,4 @@ export async function POST(req:Request){try{
  if(result.error)throw result.error
  return reply({ok:true})
  }catch(e){if(e instanceof SyntaxError)return reply({error:'Invalid request'},400);if(e instanceof Error&&/Invalid|Check|Complete|Clear/.test(e.message))return reply({error:e.message},400);return hrError(e)}}
+

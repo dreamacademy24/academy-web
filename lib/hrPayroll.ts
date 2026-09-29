@@ -28,4 +28,5 @@ export function cleanAmounts(value:unknown):PayAmounts{
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid payroll amounts')
  return Object.fromEntries([...EARNINGS,...DEDUCTIONS].map(k=>{const n=(value as PayAmounts)[k];if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>10000000)throw Error('Check payroll amounts');return [k,Math.round(n*100)/100]}))
 }
-export function totals(a:PayAmounts){const cents=(keys:readonly string[])=>keys.reduce((sum,k)=>sum+Math.round((a[k]||0)*100),0);const gross=cents(EARNINGS),deductions=cents(DEDUCTIONS);return {gross:gross/100,deductions:deductions/100,net:(gross-deductions)/100}}
+export function totals(a:PayAmounts,rules?:{id:string;kind:string}[]|null){const cents=(keys:readonly string[])=>keys.reduce((sum,k)=>sum+Math.round((a[k]||0)*100),0);const gross=cents(rules?rules.filter(r=>r.kind==='earning').map(r=>r.id):EARNINGS),deductions=cents(rules?rules.filter(r=>r.kind==='deduction').map(r=>r.id):DEDUCTIONS);return {gross:gross/100,deductions:deductions/100,net:(gross-deductions)/100}}
+
