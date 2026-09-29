@@ -78,16 +78,7 @@ CREATE POLICY "all" ON hr_accounts FOR ALL USING (true) WITH CHECK (true);
 REVOKE ALL ON hr_accounts FROM anon;          -- 계정/해시는 anon 차단 (service_role만)
 GRANT ALL ON hr_accounts TO authenticated;
 
--- 로그인 검증 (해시 비노출) — staff verify_teacher_login 패턴
-CREATE OR REPLACE FUNCTION verify_hr_login(p_username text, p_password text)
-RETURNS TABLE(id uuid, username text, role text, name text, employee_id text)
-LANGUAGE sql SECURITY DEFINER AS $$
-  SELECT id, username, role, name, employee_id
-  FROM hr_accounts
-  WHERE username = p_username
-    AND is_active = true
-    AND password_hash = crypt(p_password, password_hash);
-$$;
+-- 로그인 검증 함수(verify_hr_login)는 아래 v2 블록에서 DROP 후 재생성
 
 NOTIFY pgrst, 'reload schema';
 `
