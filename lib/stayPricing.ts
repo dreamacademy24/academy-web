@@ -53,7 +53,7 @@ export function comboSegPrice(four: P3, start: string, w: number): { price: numb
 export const VACATION_LINE_PREFIX = "학원 방학 수업료 제외";
 export function computeVacationDeduct(
   holidays: HolidayItem[], checkin: string, weeks: number, kids: number, commute: boolean,
-): { name: string; amount: number } | null {
+): { name: string; amount: number; detail: string } | null {
   const w = Number(weeks) || 0, k = Number(kids) || 0;
   if (!checkin || !w || !k) return null;
   const co = addDaysStr(checkin, commute ? (w - 1) * 7 + 4 : w * 7);
@@ -64,7 +64,9 @@ export function computeVacationDeduct(
   const perOff = Math.round(base[1] / days), perPeak = Math.round(base[2] / days);
   let sum = 0; const parts: string[] = [];
   for (const h of hs) { const pk = isPeakDate(h.date); sum += (pk ? perPeak : perOff) * k; parts.push(h.date.slice(5).replace("-", "/") + (pk ? "·성수기" : "·비수기")); }
-  return { name: `${VACATION_LINE_PREFIX} (${parts.join(", ")} × 아이 ${k}명 · ${w}주 단가 기준)`, amount: sum };
+  // 인보이스·견적 표시는 짧게, 계산 근거는 detail (직원용 "계산 내역"에서 확인)
+  return { name: `${VACATION_LINE_PREFIX} (평일 휴무 ${hs.length}일)`, amount: sum,
+    detail: `${parts.join(", ")} · 1일 수업료 비수기 ${perOff.toLocaleString()}원 / 성수기 ${perPeak.toLocaleString()}원 (통학형 ${w}주 단가 ÷ ${days}일) × 아이 ${k}명` };
 }
 
 /* ④ 제이파크 연말 서차지 — 장기투숙(Long Stay) 계약: 연말 서차지만 적용 (그 외 서차지 면제)
@@ -85,11 +87,16 @@ export function computeJparkSurcharge(checkin: string, checkout: string, adults:
   const gala = nights.some(d => d.slice(5) === "12-31");
   let galaChildren = 0, galaAdults = Math.max(0, Number(adults) || 0), childAgesKnown = false;
   if (gala) {
-    const ages = (childAges || []).filter(a => a != null && !isNaN(Number(a))) as number[];
-    if (ages.length && ages.length >= (Number(kids) || 0)) {
-      childAgesKnown = true;
-      for (const a of ages) { if (a >= 13) galaAdults++; else if (a >= 7) galaChildren++; }
-    } else galaChildren = Math.max(0, Number(kids) || 0);
+    // 아이 나이: 아카데미 학생 인적사항 기준. 모르는 아이는 어린이 요금(7~12세)으로 계산
+    const n = Math.max(0, Number(kids) || 0), ages = childAges || [];
+    let known = 0;
+    for (let i = 0; i < n; i++) {
+      const a = ages[i];
+      if (a == null || isNaN(Number(a))) { galaChildren++; continue; }
+      known++;
+      if (a >= 13) galaAdults++; else if (a >= 7) galaChildren++;
+    }
+    childAgesKnown = n > 0 && known === n;
   }
   const nightTotal = nights.length * JP_YE_NIGHT;
   const galaTotal = gala ? galaAdults * JP_GALA_ADULT + galaChildren * JP_GALA_CHILD : 0;
@@ -104,20 +111,35 @@ export function jparkSurchargeLines(s: JpSurcharge): { name: string; amount: num
   const out = [{ name: `제이파크 연말 서차지 (${fmtNightRange(s.nights)} ${s.nights.length}박 × ₱4,500)`, amount: s.nightTotal }];
   if (s.gala) {
     const parts = [s.galaAdults ? `성인 ${s.galaAdults}명×₱5,500` : "", s.galaChildren ? `어린이(7~12세) ${s.galaChildren}명×₱2,750` : ""].filter(Boolean).join(" + ");
-    out.push({ name: `제이파크 12/31 갈라디너 의무 (${parts || "0~6세 무료"}${s.childAgesKnown ? "" : " · 0~6세 무료"})`, amount: s.galaTotal });
+    out.push({ name: `제이파크 12/31 갈라디너 의무 (${parts || "0~6세 무료"}${s.childAgesKnown ? "" : " · 나이 미확인 아이는 7~12세 기준"})`, amount: s.galaTotal });
   }
   return out;
 }
 export const JP_SURCHARGE_PREFIX = "제이파크 연말 서차지";
-/* 원화 청구 (메이 확정 2026-09-29: 서차지는 원화로 받음) — 환율 1페소 = 25원, 1,000원 단위 올림 */
-export const JP_KRW_PER_PHP = 25;
-export function phpToKrw(php: number): number { return Math.ceil((php * JP_KRW_PER_PHP) / 1000) * 1000; }
-export function jparkSurchargeKrwLines(s: JpSurcharge): { name: string; amount: number }[] {
-  // "(... × ₱4,500)" → "(... × ₱4,500 = ₱22,500 · 1페소 25원 환산)"
-  return jparkSurchargeLines(s).map(l => ({
-    name: l.name.replace(/\)$/, ` = ₱${l.amount.toLocaleString()} · 1페소 ${JP_KRW_PER_PHP}원 환산)`),
-    amount: phpToKrw(l.amount),
-  }));
+/* 원화 청구 (메이 확정 2026-09-29): 환율 = 매매기준율 + 0.6원, 1,000원 단위 올림
+   매매기준율은 /api/fx/php 에서 받아옴 (실패 시 FX_FALLBACK_BASE) */
+export const FX_MARGIN = 0.6;
+export const FX_FALLBACK_BASE = 24.0;
+export function surchargeRate(base?: number | null): number {
+  const b = Number(base) > 0 ? Number(base) : FX_FALLBACK_BASE;
+  return Math.round((b + FX_MARGIN) * 100) / 100;
+}
+export function phpToKrw(php: number, rate: number): number { return Math.ceil((php * rate) / 1000) * 1000; }
+export function jparkSurchargeKrwLines(s: JpSurcharge, rate: number): { name: string; amount: number; detail: string }[] {
+  const out = [{ name: `${JP_SURCHARGE_PREFIX} (${s.nights.length}박)`, amount: phpToKrw(s.nightTotal, rate),
+    detail: `${fmtNightRange(s.nights)} ${s.nights.length}박 × ₱4,500 = ₱${s.nightTotal.toLocaleString()} × ${rate}원(매매기준율+0.6) → 1,000원 올림` }];
+  if (s.gala) {
+    const parts = [s.galaAdults ? `성인 ${s.galaAdults}명×₱5,500` : "", s.galaChildren ? `어린이(7~12세) ${s.galaChildren}명×₱2,750` : ""].filter(Boolean).join(" + ") || "0~6세 무료";
+    out.push({ name: `${JP_GALA_PREFIX} (의무)`, amount: phpToKrw(s.galaTotal, rate),
+      detail: `${parts} = ₱${s.galaTotal.toLocaleString()} × ${rate}원${s.childAgesKnown ? " (나이: 학생 인적사항 기준, 0~6세 무료)" : " (나이 미확인 아이는 7~12세 기준)"}` });
+  }
+  return out;
+}
+/* 매매기준율 조회 (클라이언트용, 페이지당 1회 캐시) */
+let _fxP: Promise<number> | null = null;
+export function fetchPhpBaseRate(): Promise<number> {
+  if (!_fxP) _fxP = fetch("/api/fx/php").then(r => r.json()).then(d => Number(d?.base) > 0 ? Number(d.base) : FX_FALLBACK_BASE).catch(() => FX_FALLBACK_BASE);
+  return _fxP;
 }
 export const JP_GALA_PREFIX = "제이파크 12/31 갈라디너";
 

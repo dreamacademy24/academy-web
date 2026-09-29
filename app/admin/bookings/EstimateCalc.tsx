@@ -12,7 +12,7 @@ import {
 } from "@/lib/packageInfo";
 import { fetchDeployedHolidays, holidaysInRange, fmtHolidayList, type HolidayItem } from "@/lib/holidays";
 import { COMMUTE_PRICE } from "@/lib/commutePricing";
-import { computeVacationDeduct, computeJparkSurcharge, jparkSurchargeKrwLines, holidayNotice, addDaysStr, JP_SURCHARGE_PREFIX, JP_GALA_PREFIX, type StayKind } from "@/lib/stayPricing";
+import { computeVacationDeduct, computeJparkSurcharge, jparkSurchargeKrwLines, holidayNotice, addDaysStr, fetchPhpBaseRate, surchargeRate, JP_SURCHARGE_PREFIX, JP_GALA_PREFIX, type StayKind } from "@/lib/stayPricing";
 
 /* ── 가격 테이블 (invoice 동일, [정가, 비수기, 성수기]) ── */
 type P3=[number,number,number];
@@ -677,6 +677,8 @@ export default function EstimateCalc(){
   const [plans,setPlans]=useState<PlanState[]>([defaultPlan("dreamhouse")]);
   const [holidays,setHolidays]=useState<HolidayItem[]>([]);
   useEffect(()=>{ fetchDeployedHolidays().then(setHolidays).catch(()=>{}); },[]);
+  const [fxRate,setFxRate]=useState<number>(surchargeRate(null)); // 매매기준율 + 0.6
+  useEffect(()=>{ fetchPhpBaseRate().then(b=>setFxRate(surchargeRate(b))); },[]);
   /* 🏫 방학 수업료 자동 차감 — 견적 기간에 평일 휴무가 걸리면 자동으로 '학원 방학 수업료 제외' 반영 (직원 누락 방지, 2026-08-28) */
   useEffect(()=>{
     setPlans(prev=>{
@@ -693,7 +695,7 @@ export default function EstimateCalc(){
         const seg=jpSeg(p);
         const sc=seg?computeJparkSurcharge(seg.ci,seg.co,p.parents,p.kids,null):null;
         const exKept=p.extras.filter(x=>!isSc(x.name));
-        const exDes=[...exKept,...(sc?jparkSurchargeKrwLines(sc).map((l,i)=>({id:Date.now()+i,...l})):[])];
+        const exDes=[...exKept,...(sc?jparkSurchargeKrwLines(sc,fxRate).map((l,i)=>({id:Date.now()+i,...l})):[])];
         if(p.extras.map(x=>x.name+"|"+x.amount).join("~")!==exDes.map(x=>x.name+"|"+x.amount).join("~")){out={...out,extras:exDes};}
         if(out!==p)changed=true;
         return out;
@@ -701,7 +703,7 @@ export default function EstimateCalc(){
       return changed?next:prev;
     });
   // 체크인·주수·아이수·숙소·휴일이 바뀔 때만 재계산 (무한루프 방지: 변경 없으면 prev 반환)
-  },[holidays,plans.map(p=>`${p.checkin}|${p.accom}|${p.weeks}|${p.dhWeeks}|${p.subWeeks}|${p.kids}|${p.parents}`).join(",")]);
+  },[holidays,plans.map(p=>`${p.checkin}|${p.accom}|${p.weeks}|${p.dhWeeks}|${p.subWeeks}|${p.kids}|${p.parents}`).join(","),fxRate]);
 
   function up(idx:number,patch:Partial<PlanState>){
     setPlans(prev=>prev.map((p,i)=>{
@@ -1052,7 +1054,7 @@ export default function EstimateCalc(){
           )}
         </div>
         {plan.extras.some(x=>x.name.startsWith(JP_GALA_PREFIX))&&(
-          <div style={{marginTop:8,fontSize:11,color:"#9a3412"}}>※ 제이파크 12/31 갈라디너: 성인(13세↑) ₱5,500 · 어린이(7~12세) ₱2,750 · 0~6세 무료 — 아이 나이에 따라 금액이 달라질 수 있어요 (1페소=25원 환산)</div>
+          <div style={{marginTop:8,fontSize:11,color:"#9a3412"}}>※ 제이파크 12/31 갈라디너: 성인(13세↑) ₱5,500 · 어린이(7~12세) ₱2,750 · 0~6세 무료 — 아이 나이에 따라 금액이 달라질 수 있어요 (환율: 매매기준율+0.6원 = 1페소 {fxRate}원)</div>
         )}
       </div>
     );
