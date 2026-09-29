@@ -24,6 +24,11 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 })
 
   const access = hrAccess(user.username, user.role, user.companies)
+  if (user.role === 'employee') {
+    const { data: employee } = await supabase.from('hr_employees').select('id,company,status').eq('id', user.employee_id || '00000000-0000-0000-0000-000000000000').maybeSingle()
+    if (!employee || employee.status !== 'Active') return NextResponse.json({error:'Employee access is unavailable.'},{status:403})
+    access.companies = [employee.company]
+  }
   if (!access.companies.length) return NextResponse.json({ error: 'HR access is not assigned to this account. / HR 접근 권한이 없습니다.' }, { status: 403 })
   const token = signHr({
     username: user.username,
