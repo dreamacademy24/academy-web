@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
 import { fetchDeployedHolidays, holidaysInRange, type HolidayItem } from "@/lib/holidays";
-import { blendStayPrice, comboSegPrice, computeVacationDeduct, computeJparkSurcharge, jparkSurchargeLines, holidayNotice, VACATION_LINE_PREFIX, JP_SURCHARGE_PREFIX, JP_GALA_PREFIX, type StayKind } from "@/lib/stayPricing";
+import { blendStayPrice, comboSegPrice, computeVacationDeduct, computeJparkSurcharge, jparkSurchargeKrwLines, holidayNotice, VACATION_LINE_PREFIX, JP_SURCHARGE_PREFIX, JP_GALA_PREFIX, type StayKind } from "@/lib/stayPricing";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
@@ -1357,12 +1357,15 @@ function InvoicePageInner(){
     const ages=students.filter(x=>(x.korName||"").trim()||(x.engName||"").trim()).map(x=>_parseAge(x.age));
     return computeJparkSurcharge(seg[0],seg[1],cP,cK,ages.length>=cK&&ages.every(a=>a!=null)?ages:null);
   })();
-  function withAutoLines<T extends {discounts:Disc[];locals:LC[]}>(b:T):T{
+  function withAutoLines<T extends {discounts:Disc[];additions:Disc[];locals:LC[]}>(b:T):T{
     const disc=b.discounts.filter(d=>!String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&(d.name||d.amount));
     if(vacationLine)disc.push({id:Date.now(),name:vacationLine.name,amount:vacationLine.amount});
-    const locs=b.locals.filter(c=>!String(c.name||"").startsWith(JP_SURCHARGE_PREFIX)&&!String(c.name||"").startsWith(JP_GALA_PREFIX));
-    if(jpSurcharge)jparkSurchargeLines(jpSurcharge).forEach((l,i)=>locs.push({id:Date.now()+i+1,name:l.name,amount:l.amount.toLocaleString()}));
-    return {...b,discounts:disc.length?disc:[{id:1,name:"",amount:0}],locals:locs};
+    const isSc=(n:string)=>n.startsWith(JP_SURCHARGE_PREFIX)||n.startsWith(JP_GALA_PREFIX);
+    // 제이파크 서차지 = 원화 추가 항목 (2026-09-29 메이 확정), 예전 현지지불 줄은 제거
+    const locs=b.locals.filter(c=>!isSc(String(c.name||"")));
+    const adds=b.additions.filter(a=>!isSc(String(a.name||""))&&(a.name||a.amount));
+    if(jpSurcharge)jparkSurchargeKrwLines(jpSurcharge).forEach((l,i)=>adds.push({id:Date.now()+i+1,name:l.name,amount:l.amount}));
+    return {...b,discounts:disc.length?disc:[{id:1,name:"",amount:0}],additions:adds.length?adds:[{id:1,name:"",amount:0}],locals:locs};
   }
   function applyInv(){
     if(!est)return;

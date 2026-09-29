@@ -109,6 +109,16 @@ export function jparkSurchargeLines(s: JpSurcharge): { name: string; amount: num
   return out;
 }
 export const JP_SURCHARGE_PREFIX = "제이파크 연말 서차지";
+/* 원화 청구 (메이 확정 2026-09-29: 서차지는 원화로 받음) — 환율 1페소 = 25원, 1,000원 단위 올림 */
+export const JP_KRW_PER_PHP = 25;
+export function phpToKrw(php: number): number { return Math.ceil((php * JP_KRW_PER_PHP) / 1000) * 1000; }
+export function jparkSurchargeKrwLines(s: JpSurcharge): { name: string; amount: number }[] {
+  // "(... × ₱4,500)" → "(... × ₱4,500 = ₱22,500 · 1페소 25원 환산)"
+  return jparkSurchargeLines(s).map(l => ({
+    name: l.name.replace(/\)$/, ` = ₱${l.amount.toLocaleString()} · 1페소 ${JP_KRW_PER_PHP}원 환산)`),
+    amount: phpToKrw(l.amount),
+  }));
+}
 export const JP_GALA_PREFIX = "제이파크 12/31 갈라디너";
 
 /* ⑤ 휴무일 안내 — 숙소 유형별 제공/미제공 */
