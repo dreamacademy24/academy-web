@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
+import { isAdminAuthed, getAdminInfo, getAdminUserId } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 import MealMenuPublish from "./MealMenuPublish";
@@ -40,6 +40,9 @@ const MEAL_HOLIDAYS = new Set([
   "2026-10-09", "2026-10-30", "2026-10-31", "2026-11-27",
   "2026-12-24", "2026-12-25", "2026-12-26", "2026-12-28", "2026-12-29", "2026-12-30", "2026-12-31",
 ]);
+
+// CEO 전용(손익 반영 버튼) — admin-ceo / admin-may 계정만
+const CEO_USERS = ["admin-ceo", "admin-may"];
 
 type GuardianStay = { name: string; from: string; to: string };
 type Bk = Record<string, any>;
@@ -111,6 +114,8 @@ const STAFF_INSTRUCTIONS: [string, string, string][] = [
 
 export default function MealPlanPage() {
   const [authed, setAuthed] = useState(false);
+  const [isCeo, setIsCeo] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [bookings, setBookings] = useState<Bk[]>([]);
   const [loading, setLoading] = useState(true);
   const [baseDate, setBaseDate] = useState(() => fD(new Date()));
@@ -131,7 +136,7 @@ export default function MealPlanPage() {
   const [exclusions, setExclusions] = useState<Set<string>>(new Set()); // booking_id Set
 
   useEffect(() => {
-    if (isAdminAuthed()) setAuthed(true);
+    if (isAdminAuthed()) { setAuthed(true); try { setIsCeo(CEO_USERS.includes(getAdminUserId() || "")); } catch {} }
     else if (typeof window !== "undefined") window.location.href = "/login";
   }, []);
 
@@ -353,6 +358,55 @@ export default function MealPlanPage() {
     XLSX.writeFile(wb, `아카데미 식단 모리인폼_${fShort(weekDates[0]).replace(" ", "")}-${+weekFri.slice(8, 10)}.xlsx`);
   }
 
+  /* ───── [손익에 반영] 게스트(엄마) 식대 → 모리 발생분(auto_meal) ─────
+     사이트가 계산한 이번 주 인원(guests) 그대로 사용.
+     DH ₱250/끼, JPARK ₱300/끼(아침·점심·저녁), CUBE9 ₱300(저녁만).
+     아침·저녁=성인+아동, 점심=성인(휴무일 점심은 아동 포함). 제공된 날(오늘까지)만. */
+  async function syncMealsToLedger() {
+    const todayStr = fD(new Date());
+    const locsUsed = new Set<string>();
+    let total = 0;
+    const daysHit: string[] = [];
+    weekDates.forEach((d, di) => {
+      if (d > todayStr) return; // 미래일 제외 (발생주의)
+      let hit = false;
+      guests.forEach(g => {
+        const A = g.adultsByDay[di]; if (!A) return;
+        const loc = g.locByDay[di]; if (!loc) return;
+        const K = g.kids;
+        const holi = isHoliday(d);
+        let price: number, heads: number, tag: string;
+        if (loc === "CUBE9") { price = 300; heads = A + K; tag = "CUBE9"; }              // 저녁만
+        else if (loc === "JPARK") { price = 300; heads = holi ? 3 * (A + K) : 3 * A + 2 * K; tag = "JPARK"; }
+        else { price = 250; heads = holi ? 3 * (A + K) : 3 * A + 2 * K; tag = "DH"; }     // 드림하우스
+        total += price * heads;
+        locsUsed.add(tag);
+        hit = true;
+      });
+      if (hit) daysHit.push(d);
+    });
+    if (daysHit.length === 0) { setToast("이번 주 반영할 게스트 식사가 없어요"); return; }
+    const lastServed = daysHit[daysHit.length - 1];
+    const locsLabel = [...locsUsed].join("·");
+    const detail = `게스트 식대 ${fShort(weekMon)}~${fShort(lastServed)} (${locsLabel})`;
+    if (!window.confirm(`이번 주 게스트(엄마) 식대 ₱${total.toLocaleString()} 를 손익(모리 발생분)에 반영할까요?\n\n· 기간: ${weekMon} ~ ${lastServed} (제공된 날만)\n· 숙소: ${locsLabel}\n· 같은 주를 다시 눌러도 덮어써서 중복되지 않아요.`)) return;
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/may-ledger/sync-meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekMon, amount: total, detail, entryDate: lastServed }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { setToast("반영 실패: " + (d.message || d.error || res.status)); return; }
+      setToast(`✅ 손익 반영 완료 · ₱${total.toLocaleString()} (${locsLabel})`);
+    } catch (e) {
+      setToast("반영 오류: " + (e as Error).message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   if (!authed) return null;
 
   return (<>
@@ -475,6 +529,12 @@ export default function MealPlanPage() {
                   ✅ 마감됨 · {closedInfo.at.slice(5, 10).replace("-", "/")} {closedInfo.at.slice(11, 16)} · {closedInfo.by}
                   <button onClick={reopenWeek} style={{ background: "none", border: "1px solid #bbf7d0", borderRadius: 7, padding: "3px 9px", fontSize: 11, color: "#166534", cursor: "pointer", fontFamily: "inherit" }}>마감 해제</button>
                 </span>
+              )}
+              {isCeo && (
+                <button onClick={syncMealsToLedger} disabled={syncing} title="이번 주 게스트(엄마) 식대를 손익(모리 발생분)에 반영"
+                  style={{ background: syncing ? "#94d3cc" : "#0d9488", color: "#fff", border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13.5, cursor: syncing ? "wait" : "pointer", fontFamily: "inherit" }}>
+                  {syncing ? "반영 중..." : "💰 손익에 반영"}
+                </button>
               )}
               <button disabled={!closedInfo} onClick={() => { window.location.href = "/admin/mori"; }} title={closedInfo ? "식단생성으로 이동" : "명단을 먼저 마감해야 진행할 수 있어요"}
                 style={{ background: closedInfo ? "#1a6fc4" : "#e2e8f0", color: closedInfo ? "#fff" : "#94a3b8", border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13.5, cursor: closedInfo ? "pointer" : "not-allowed", fontFamily: "inherit" }}>🍽 식단생성으로 →</button>
