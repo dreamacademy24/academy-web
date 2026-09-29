@@ -11,6 +11,8 @@ import {
   type PkgItem,
 } from "@/lib/packageInfo";
 import { fetchDeployedHolidays, holidaysInRange, fmtHolidayList, type HolidayItem } from "@/lib/holidays";
+import { COMMUTE_PRICE } from "@/lib/commutePricing";
+import { computeVacationDeduct, computeJparkSurcharge, jparkSurchargeLines, holidayNotice, addDaysStr, type StayKind } from "@/lib/stayPricing";
 
 /* ── 가격 테이블 (invoice 동일, [정가, 비수기, 성수기]) ── */
 type P3=[number,number,number];
@@ -488,19 +490,7 @@ const C9:Record<string,P3>={
 };
 
 // 통학형 (학원만, 킨더/주니어 동일) — [정가, 비수기, 성수기]
-const COMMUTE:Record<number,P3>={
-  2:[1000000, 900000, 1000000],
-  3:[1390000, 1251000, 1390000],
-  4:[1690000, 1521000, 1690000],
-  5:[2110000, 1899000, 2110000],
-  6:[2530000, 2277000, 2403500],
-  7:[2950000, 2522250, 2802500],
-  8:[3380000, 2889900, 3211000],
-  9:[3810000, 3257550, 3619500],
-  10:[4240000, 3625200, 4028000],
-  11:[4670000, 3992850, 4436500],
-  12:[5100000, 4360500, 4845000],
-};
+const COMMUTE:Record<number,P3>=COMMUTE_PRICE as Record<number,P3>; // 단일 소스: lib/commutePricing (인보이스와 동일)
 
 /* ── 유틸 ── */
 type Season="list"|"off"|"peak"; // 정가/비수기/성수기
@@ -724,18 +714,7 @@ export default function EstimateCalc(){
   }
   /* 방학(평일 휴무) 수업료 차감 — 순수 계산 (alert 없음, 자동/수동 공용) */
   function computeHolidayLine(p:PlanState):{name:string;amount:number}|null{
-    const w=totalWeeks(p);
-    const kids=Number(p.kids)||0;
-    if(!p.checkin||!w||!kids)return null;
-    const co=(()=>{const t=new Date(p.checkin+"T00:00:00");t.setDate(t.getDate()+(p.accom==="commute"?(w-1)*7+4:w*7));return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`;})();
-    const hs=holidaysInRange(holidays,p.checkin,co).filter(h=>{const d=new Date(h.date+"T00:00:00").getDay();return d>=1&&d<=5;});
-    if(!hs.length)return null;
-    const base=COMMUTE[w]||(w===1?[500000,450000,500000]:COMMUTE[12]);
-    const days=w*5;
-    const perOff=Math.round(base[1]/days), perPeak=Math.round(base[2]/days);
-    let sum=0;const parts:string[]=[];
-    for(const h of hs){const pk=isPeak(h.date);sum+=(pk?perPeak:perOff)*kids;parts.push(h.date.slice(5).replace("-","/")+(pk?"·성수기":"·비수기"));}
-    return {name:`학원 방학 수업료 제외 (${parts.join(", ")} × 아이 ${kids}명 · ${w}주 단가 기준)`,amount:sum};
+    return computeVacationDeduct(holidays,p.checkin,totalWeeks(p),Number(p.kids)||0,p.accom==="commute");
   }
   function applyHolidayDeduct(idx:number){
     const p=plans[idx];
@@ -747,47 +726,18 @@ export default function EstimateCalc(){
     const kept=p.discounts.filter(d=>!d.name.startsWith("학원 방학 수업료 제외"));
     up(idx,{discounts:[...kept,{id:Date.now(),...line}]});
   }
-  function applyClosing(idx:number){
-    const p=plans[idx];
-    const w=totalWeeks(p);
-    const n=(p.parents||0)+(p.kids||0);
-    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
-    const factor=Math.min(w,4)/4;
-    const e=10*factor;const ep=(Number.isInteger(e)?e:e.toFixed(1))+"만";
-    const wk=w<4?` · ${w}주 적용`:"";
-    const line={id:Date.now(),name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${ep}×${n}명${wk})`,amount:Math.round(10*factor*n)*10000};
-    const kept=p.discounts.filter(d=>!d.name.startsWith("다온맘 마감임박"));
-    up(idx,{discounts:[...kept,line]});
+  function planKind(p:PlanState):StayKind{
+    if(p.accom==="commute")return "commute";
+    if(p.accom==="jpark"||p.accom==="jaypark")return "jpark";
+    if(p.accom==="cubenine")return "cubenine";
+    return "package";
   }
-  function applyDaon(idx:number,cash:boolean){
-    const p=plans[idx];
-    const w=totalWeeks(p);
-    const n=(p.parents||0)+(p.kids||0);
-    if(!w||!n){alert("기간과 인원을 먼저 설정해주세요.");return;}
-    const ci=(p.checkin||"").slice(0,10);
-    /* 얼리버드 = 체류 중간점 기준 (2/28 입실 등 경계 케이스 포함) */
-    const _mid=(()=>{if(!ci)return ci;const dt=new Date(ci+"T00:00:00");dt.setDate(dt.getDate()+Math.floor(w*7/2));return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;})();
-    const is27=_mid>="2027-03-01"&&_mid<="2028-02-29";
-    if(!ci){alert("체크인 날짜를 입력하면 입실 시기(얼리버드 대상)가 자동 판정돼요.");}
-    const season=p.season;
-    if(season==="list"){alert("시즌(비수기/성수기)을 먼저 선택해주세요.");return;}
-    const factor=Math.min(w,4)/4;
-    const _ep=(p:number)=>{const e=p*factor;return (Number.isInteger(e)?e:e.toFixed(1))+"만";};
-    const _wk=w<4?` · ${w}주 적용`:"";
-    /* 얼리버드 = 주별 가중 — 비수기 주 20만/4주 · 성수기 주 10만/4주 (혼합 체류는 주별 합산, 4주 초과는 4주분 상한) */
-    let ebOffW=0,ebPeakW=0;
-    if(ci){for(let i=0;i<w;i++){const _d=new Date(ci+"T00:00:00");_d.setDate(_d.getDate()+i*7);const _ds=_d.getFullYear()+"-"+String(_d.getMonth()+1).padStart(2,"0")+"-"+String(_d.getDate()).padStart(2,"0");if(weekAllPeak(_ds))ebPeakW++;else ebOffW++;}}
-    else if(season==="peak")ebPeakW=w;else ebOffW=w;
-    const ebPer=is27?(ebOffW*20+ebPeakW*10)/4*(Math.min(w,4)/w):0;
-    const lines:{name:string;amount:number}[]=[];
-    if(ebPer>0){const _pt=Number.isInteger(ebPer)?String(ebPer):ebPer.toFixed(1);const _seg=(ebOffW>0&&ebPeakW>0)?"비수기 "+ebOffW+"주+성수기 "+ebPeakW+"주 · ":(ebPeakW>0?"성수기 · ":"비수기 · ");lines.push({name:"다온맘 얼리버드 할인 ("+_seg+"1인 "+_pt+"만×"+n+"명)",amount:Math.round(ebPer*n*10000)});}
-    if(cash)lines.push({name:`다온맘 전액입금 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
-    if(cash&&ci>="2026-08-01"&&ci<="2026-08-31")lines.push({name:`다온맘 마감임박 할인 (26년 8월 입실·현금) (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
-    if(String(p.accom).includes("cubenine"))lines.push({name:`다온맘 큐브나인 추가 할인 (1인 ${_ep(10)}×${n}명${_wk})`,amount:Math.round(10*factor*n)*10000});
-    const kept=p.discounts.filter(d=>!d.name.startsWith("다온맘"));
-    const added=lines.map((l,i)=>({id:Date.now()+i,name:l.name,amount:l.amount}));
-    up(idx,{discounts:[...kept,...added]});
-    if(lines.length===0)alert("이 조건(2026 입실·카드)은 다온맘 이벤트 할인이 없어요.\n(1차 시즌가는 이미 견적 가격에 반영돼 있습니다)");
+  /* 제이파크 숙박 구간 (단독=전체 / 드하+제이파크=드하 주수 뒤 구간) */
+  function jpSeg(p:PlanState):{ci:string;co:string}|null{
+    if(!p.checkin)return null;
+    if(p.accom==="jpark"||p.accom==="jaypark")return {ci:p.checkin,co:addDaysStr(p.checkin,p.weeks*7)};
+    if(p.accom==="dreamhouse_jaypark"){const ci=addDaysStr(p.checkin,p.dhWeeks*7);return {ci,co:addDaysStr(ci,p.subWeeks*7)};}
+    return null;
   }
   function addItem(idx:number,field:"extras"|"discounts"){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,[field]:[...p[field],{id:Date.now()+Math.floor(Math.random()*1000),name:"",amount:0}]}:p));
@@ -977,9 +927,6 @@ export default function EstimateCalc(){
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <span style={{fontSize:12,fontWeight:600,color:"#dc2626"}}>할인항목</span>
             <span style={{display:"flex",gap:4}}>
-              <button style={{...addBtnS,background:"#fef9c3",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,true)}>💛 다온맘 현금</button>
-              <button style={{...addBtnS,background:"#fefce8",border:"1px solid #eab308",color:"#854d0e"}} onClick={()=>applyDaon(idx,false)}>💛 다온맘 카드</button>
-              <button style={{...addBtnS,background:"#fee2e2",border:"1px solid #f87171",color:"#991b1b"}} onClick={()=>applyClosing(idx)}>⏰ 마감임박</button>
               <button style={{...addBtnS,background:"#e0f2fe",border:"1px solid #38bdf8",color:"#075985"}} onClick={()=>applyHolidayDeduct(idx)}>🏫 방학 수업료</button>
               <button style={addBtnS} onClick={()=>addItem(idx,"discounts")}>+ 추가</button>
             </span>
@@ -1097,6 +1044,21 @@ export default function EstimateCalc(){
             </div>
           )}
         </div>
+        {(()=>{
+          const seg=jpSeg(plan);
+          const sc=seg?computeJparkSurcharge(seg.ci,seg.co,plan.parents,plan.kids,null):null;
+          if(!sc)return null;
+          return (
+            <div style={{marginTop:12,padding:"10px 12px",background:"#fff7ed",border:"1px solid #fdba74",borderRadius:8,fontSize:12,color:"#9a3412"}}>
+              <div style={{fontWeight:800,marginBottom:4}}>🏝 제이파크 연말 서차지 <span style={{fontWeight:600}}>(리조트 계약 · 현지 지불 PHP)</span></div>
+              {jparkSurchargeLines(sc).map((l,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"2px 0"}}><span>{l.name}</span><b>₱{l.amount.toLocaleString()}</b></div>
+              ))}
+              <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px dashed #fdba74",marginTop:4,paddingTop:4,fontWeight:800}}><span>서차지 합계</span><span>₱{sc.total.toLocaleString()}</span></div>
+              {sc.gala&&<div style={{fontSize:11,marginTop:3,color:"#c2410c"}}>※ 갈라디너: 성인(13세↑) ₱5,500 · 어린이(7~12세) ₱2,750 · 0~6세 무료 — 아이 나이에 따라 달라질 수 있어요</div>}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -1218,21 +1180,23 @@ export default function EstimateCalc(){
           </div>
         </div>
 
-        {(()=>{
-          const hits = plans.flatMap(p=>p.checkin?holidaysInRange(holidays,p.checkin,calcCheckout(p.checkin,totalWeeks(p))):[]);
-          const uniq=[...new Map(hits.map(h=>[h.date,h])).values()].sort((a,b)=>a.date.localeCompare(b.date));
-          if(uniq.length===0) return null;
+        {plans.map((p,pi)=>{
+          if(!p.checkin)return null;
+          const co=calcCheckout(p.checkin,totalWeeks(p),p.accom==="commute");
+          const hs=holidaysInRange(holidays,p.checkin,co);
+          if(hs.length===0)return null;
+          const nt=holidayNotice(planKind(p),p.discounts.some(d=>d.name.startsWith("학원 방학 수업료 제외")&&d.amount));
           return (
-            <div style={{marginBottom:12,padding:"14px 18px",background:"#fffbeb",border:"1.5px solid #fcd34d",borderRadius:10}}>
-              <div style={{fontSize:13,fontWeight:800,color:"#b45309",marginBottom:7}}>🏖 체류 기간 중 휴무일 안내 — {fmtHolidayList(uniq)}</div>
-              <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{fontSize:12,color:"#b91c1c",background:"#fef2f2",borderRadius:6,padding:"6px 10px",fontWeight:600}}>✕ 휴무일에는 수업 · 헬퍼 · 셔틀 · 관리실이 운영되지 않아요</div>
-                <div style={{fontSize:12,color:"#065f46",background:"#ecfdf5",borderRadius:6,padding:"6px 10px",fontWeight:600}}>✓ 식사는 정상 제공됩니다</div>
-                <div style={{fontSize:12,color:"#92400e",background:"#fff7ed",borderRadius:6,padding:"6px 10px",fontWeight:600}}>! 휴무일에 대한 별도 환불 · 보강은 없습니다</div>
+            <div key={pi} style={{marginBottom:10,padding:"12px 16px",background:"#fffbeb",border:"1.5px solid #fcd34d",borderRadius:10}}>
+              <div style={{fontSize:13,fontWeight:800,color:"#b45309",marginBottom:6}}>🏖 {plans.length>1?`${pi+1}안 · `:""}체류 기간 중 휴무일 안내 — {fmtHolidayList(hs)}</div>
+              <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                <div style={{fontSize:12,color:"#b91c1c",background:"#fef2f2",borderRadius:6,padding:"5px 10px",fontWeight:600}}>✕ 휴무일에는 {nt.off}</div>
+                {nt.on&&<div style={{fontSize:12,color:"#065f46",background:"#ecfdf5",borderRadius:6,padding:"5px 10px",fontWeight:600}}>✓ {nt.on}</div>}
+                <div style={{fontSize:12,color:"#92400e",background:"#fff7ed",borderRadius:6,padding:"5px 10px",fontWeight:600}}>! {nt.money}</div>
               </div>
             </div>
           );
-        })()}
+        })}
 
         <div style={{padding:"14px 20px",background:"#f8fafc",borderRadius:10,textAlign:"center",fontSize:12,color:"#6b7c93",lineHeight:1.8}}>
           ※ 할인 금액은 언제든 변경될 수 있습니다.

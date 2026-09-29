@@ -1,7 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
-import { fetchDeployedHolidays, holidaysInRange, HOLIDAY_GUEST_NOTICE, type HolidayItem } from "@/lib/holidays";
+import { fetchDeployedHolidays, holidaysInRange, type HolidayItem } from "@/lib/holidays";
+import { blendStayPrice, comboSegPrice, computeVacationDeduct, computeJparkSurcharge, jparkSurchargeLines, holidayNotice, VACATION_LINE_PREFIX, JP_SURCHARGE_PREFIX, JP_GALA_PREFIX, type StayKind } from "@/lib/stayPricing";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { commuteUnitPrice } from "@/lib/commutePricing";
@@ -1289,11 +1290,13 @@ function InvoicePageInner(){
           w=Math.round((new Date(s.academyEnd).getTime()-new Date(s.academyStart).getTime())/(7*86400000));
         }
         if(!w) w=Number(a1W)||2;
-        const pk=isPeak(s.academyStart||a1CI);
-        const price=commuteUnitPrice(w,pk?"peak":"off");
+        // 견적과 동일: 주 단위 시즌 판정 + 혼합 시즌은 주당가×시즌별 주수
+        const _bl=blendStayPrice([commuteUnitPrice(w,"list"),commuteUnitPrice(w,"off"),commuteUnitPrice(w,"peak")],s.academyStart||a1CI,w);
+        const price=_bl.price;
         total+=price;
         const nm=(s.korName||s.engName||`학생${idx+1}`);
-        items.push({label:`통학형 ${w}주 (${nm})`,price,fullPrice:price,ratio:1,totalW:w,ci:s.academyStart||a1CI,co:"",season:pk?"성수기":"비수기",accom:"commute",roomType:"",weeks:w,parents:0,kids:1});
+        const _sl=_bl.peak===0?"비수기":_bl.off===0?"성수기":`혼합 (비${_bl.off}+성${_bl.peak})`;
+        items.push({label:`통학형 ${w}주 (${nm})`,price,fullPrice:price,ratio:1,totalW:w,ci:s.academyStart||a1CI,co:"",season:_sl,accom:"commute",roomType:"",weeks:w,parents:0,kids:1});
       });
       return{total,extras,items};
     }
@@ -1318,14 +1321,14 @@ function InvoicePageInner(){
       return{total:price+extTotal,extras,items:[{label:al(a1T,a1R)+" "+a1W+"주",price,fullPrice:price,ratio:1,totalW:a1W,ci:a1CI,co:a1CO,season:seasonLb,accom:a1T,roomType:a1R,weeks:a1W,parents:cP,kids:cK}]};
     }
     const tw=a1W+a2W;
-    let e1=lk(a1T,a1R,tw,cP,cK),e2=lk(a2T,a2R,tw,cP,cK);let gN2=0;
-    if((!e1||!e2)&&cP>3){const f1_=lk(a1T,a1R,tw,3,cK),f2_=lk(a2T,a2R,tw,3,cK);if(f1_&&f2_){e1=f1_;e2=f2_;gN2=cP-3;}}
+    // 견적과 동일 규칙: 콤보 숙소별 주당 단가 = 해당 숙소 4주 금액 ÷ 4 (각 주 시작일로 시즌 판정)
+    let e1=lk(a1T,a1R,4,cP,cK),e2=lk(a2T,a2R,4,cP,cK);let gN2=0;
+    if((!e1||!e2)&&cP>3){const f1_=lk(a1T,a1R,4,3,cK),f2_=lk(a2T,a2R,4,3,cK);if(f1_&&f2_){e1=f1_;e2=f2_;gN2=cP-3;}}
     if(!e1||!e2)return null;
     if(gN2>0)extras.push({label:`보호자 추가 ${gN2}명 (${alKo(a1T,a1R)} ${a1W}주 + ${alKo(a2T,a2R)} ${a2W}주)`,price:gN2*(guardRate(a1T)*a1W+guardRate(a2T)*a2W)});
     const mx1=a1CI?seasonMixInv(a1CI,a1W):{off:a1W,peak:0};
     const mx2=a2CI?seasonMixInv(a2CI,a2W):{off:a2W,peak:0};
-    const segPrice=(e:P3,mx:{off:number;peak:number})=>Math.round(e[1]/tw)*mx.off+Math.round(e[2]/tw)*mx.peak;
-    const p1=segPrice(e1,mx1),p2=segPrice(e2,mx2);
+    const p1=comboSegPrice(e1,a1CI,a1W).price,p2=comboSegPrice(e2,a2CI,a2W).price;
     const f1=sp(e1,mx1.peak>mx1.off),f2=sp(e2,mx2.peak>mx2.off);
     const sLb=(mx:{off:number;peak:number})=>mx.peak===0?"비수기":mx.off===0?"성수기":`혼합 (비${mx.off}+성${mx.peak})`;
     if(ex1Cnt>0)extras.push({label:`${al(a1T,a1R)} 추가 ${ex1Cnt}명 × 1주`,price:extraRate(a1T)*ex1Cnt});
@@ -1337,10 +1340,34 @@ function InvoicePageInner(){
     ]};
   },[cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,a2CI,cP,cK,ex1Cnt,ex2Cnt,isCommute,dhOnly,students]);
 
+  /* ── 견적과 동일한 자동 항목: 🏫 방학(평일 휴무) 수업료 차감 + 🏝 제이파크 연말 서차지(현지 지불) ── */
+  const stayKind:StayKind=isCommute?"commute":(dhOnly&&!acadOpt)?"roomonly":(cm==="single"&&a1T==="jpark")?"jpark":(cm==="single"&&a1T==="cubenine")?"cubenine":"package";
+  const _parseAge=(v:string):number|null=>{const t=String(v||"").replace(/[^0-9]/g,"");if(!t)return null;const y=new Date().getFullYear();if(t.length===8)return y-Number(t.slice(0,4));if(t.length===4)return y-Number(t);const n=Number(t);return n>0&&n<25?n:null;};
+  const vacationLine=(()=>{
+    if(dhOnly&&!acadOpt)return null; // 숙소만(비패키지)은 수업료 없음
+    const kidsN=isCommute?Math.max(1,students.filter(x=>(x.korName||"").trim()||(x.engName||"").trim()).length):cK;
+    const ci=isCommute?overallCI:a1CI;
+    const w=cm==="combo"?a1W+a2W:a1W;
+    return computeVacationDeduct(allHolidays,ci,w,kidsN,isCommute);
+  })();
+  const jpSurcharge=(()=>{
+    if(isCommute)return null;
+    const seg=a1T==="jpark"?[a1CI,a1CO]:(cm==="combo"&&a2T==="jpark"?[a2CI,a2CO]:null);
+    if(!seg||!seg[0]||!seg[1])return null;
+    const ages=students.filter(x=>(x.korName||"").trim()||(x.engName||"").trim()).map(x=>_parseAge(x.age));
+    return computeJparkSurcharge(seg[0],seg[1],cP,cK,ages.length>=cK&&ages.every(a=>a!=null)?ages:null);
+  })();
+  function withAutoLines<T extends {discounts:Disc[];locals:LC[]}>(b:T):T{
+    const disc=b.discounts.filter(d=>!String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&(d.name||d.amount));
+    if(vacationLine)disc.push({id:Date.now(),name:vacationLine.name,amount:vacationLine.amount});
+    const locs=b.locals.filter(c=>!String(c.name||"").startsWith(JP_SURCHARGE_PREFIX)&&!String(c.name||"").startsWith(JP_GALA_PREFIX));
+    if(jpSurcharge)jparkSurchargeLines(jpSurcharge).forEach((l,i)=>locs.push({id:Date.now()+i+1,name:l.name,amount:l.amount.toLocaleString()}));
+    return {...b,discounts:disc.length?disc:[{id:1,name:"",amount:0}],locals:locs};
+  }
   function applyInv(){
     if(!est)return;
     const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season,accom:i.accom,roomType:i.roomType,weeks:i.weeks,parents:i.parents,kids:i.kids})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
-    setBilling(b=>({...b,basePrice:est.total,items:billItems}));
+    setBilling(b=>withAutoLines({...b,basePrice:est.total,items:billItems}));
     setApplied(true);
   }
 
@@ -1486,9 +1513,9 @@ function InvoicePageInner(){
     let snapOverride:Record<string,unknown>|undefined;
     if(est&&!applied){
       const billItems=[...est.items.map(i=>({label:i.label,price:i.price,season:i.season,accom:i.accom,roomType:i.roomType,weeks:i.weeks,parents:i.parents,kids:i.kids})),...est.extras.map(x=>({label:x.label,price:x.price,season:""}))];
-      setBilling(b=>({...b,basePrice:est.total,items:billItems}));
+      setBilling(b=>withAutoLines({...b,basePrice:est.total,items:billItems}));
       setApplied(true);
-      snapOverride={billing:{...billing,basePrice:est.total,items:billItems},applied:true};
+      snapOverride={billing:withAutoLines({...billing,basePrice:est.total,items:billItems}),applied:true};
     }
     setPreview(true);setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),100);
     saveSnapshot(snapOverride); // 미리보기 시 현재 폼 데이터를 스냅샷으로 자동 저장 (billing 포함)
@@ -1749,6 +1776,13 @@ function InvoicePageInner(){
 .tb{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;}.tb th{font-size:11px;font-weight:700;color:#475569;padding:10px 12px;text-align:left;background:#f5f5f5;border:1px solid #e5e7eb;}.tb td{font-size:13px;padding:11px 12px;border:1px solid #e5e7eb;color:#334155;line-height:1.6;}.tb tbody tr:nth-child(even) td{background:#fafafa;}.tb .lb{font-weight:600;background:#f5f5f5;width:28%;color:#475569;font-size:12px;}.tb .dc{color:#dc2626;font-weight:700;}.tb .tr td{font-weight:800;font-size:15px;background:#f5f5f5;color:#1e293b;}.tb .fr td{font-weight:900;font-size:20px;background:#5b4fff!important;color:#fff!important;padding:14px 12px;border-top:1px solid #5b4fff;box-shadow:inset 0 0 0 1000px #5b4fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 .ift{margin-top:32px;padding:20px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;font-size:12px;color:#475569;line-height:1.8;word-break:keep-all;}
 .pb{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap;}.pp{padding:12px 32px;background:#1e293b;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{opacity:0.92;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{opacity:0.92;}.psv{padding:12px 32px;background:#dbeafe;color:#1e40af;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.psv:hover{background:#bfdbfe;}.pci{padding:8px 20px;background:#fff;color:#64748b;font-size:12px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}.pci:hover{background:#f5f5f5;color:#1e293b;}.pbk{padding:12px 32px;background:#f5f5f5;color:#475569;font-size:14px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e5e7eb;}
+/* 인보이스 컴팩트 (2026-09-29: 길이·여백 축소) */
+.ivc{padding:24px 26px!important;border-radius:14px;}.ivc .it{margin:-24px -26px 14px!important;padding:12px 22px!important;border-radius:14px 14px 0 0;align-items:center;}.ivc .it img{height:40px!important;}.ivc .itr h1{font-size:22px!important;}.ivc .itr p{margin-top:0;}
+.ivc .is{margin-bottom:12px;}.ivc .ist{margin-bottom:5px!important;padding-bottom:3px!important;}
+.ivc .tb th{padding:5px 9px!important;font-size:10.5px;}.ivc .tb td{padding:5px 9px!important;font-size:12px!important;line-height:1.45;}.ivc .tb .lb{font-size:11px!important;width:18%;}
+.ivc .tb .tr td{font-size:12.5px!important;}.ivc .tb .fr td{font-size:16px!important;padding:8px 10px!important;}
+.ivc .ift{margin-top:10px;padding:8px 12px;font-size:10.5px;line-height:1.55;}
+@media print{.ivc{padding:14px!important;}.ivc .it{margin:-14px -14px 10px!important;}}
 @media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;border-radius:0!important;}.it{border-radius:0!important;margin:-24px -24px 24px!important;}.tb .fr td,.mb.ac,.ba,.bg,.pp,.prc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
   `}</style>
@@ -1823,7 +1857,7 @@ function InvoicePageInner(){
       <div className="no-print" style={{marginBottom:12}}>
         <button style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0",padding:"8px 16px",fontSize:13,fontWeight:600,borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← Back to Bookings</button>
       </div>
-      <div className="iv" id="guest-invoice">
+      <div className="iv ivc" id="guest-invoice">
         <div className="it">
           <div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div>
           <div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div>
@@ -2020,7 +2054,7 @@ function InvoicePageInner(){
     {est?(<div className="er">
       {est.items.map((item,i)=>(<div className="erl" key={i}>
         <strong>{item.label}</strong>{item.ci&&<> / {fmtDate(item.ci)} ~ {fmtDate(item.co)}</>} <span className={`sb ${item.season==="성수기"?"pk":"of"}`}>{item.season}</span>
-        {cm==="combo"&&<><br/><span className="dm">합산 {item.totalW}주 요금({fmt(item.fullPrice)}) × {Math.round(item.ratio*100)}% = </span><strong>{fmt(item.price)}원</strong></>}
+        {cm==="combo"&&<><br/><span className="dm">주당 단가 = 해당 숙소 4주 금액 ÷ 4 (견적과 동일) × {item.weeks}주 = </span><strong>{fmt(item.price)}원</strong></>}
         {cm==="single"&&<><br/><strong>{fmt(item.price)}원</strong></>}
       </div>))}
       {est.extras.length>0&&est.extras.map((x,i)=><div className="erl" key={`ex${i}`}><strong>{x.label}</strong>: <strong style={{color:"#d97706"}}>{fmt(x.price)}원</strong></div>)}
@@ -2095,7 +2129,7 @@ function InvoicePageInner(){
         </div>
       </div>
     )}
-    <div className="iv" id="invoice-content">
+    <div className="iv ivc" id="invoice-content">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
@@ -2148,10 +2182,14 @@ function InvoicePageInner(){
         <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:13,lineHeight:1.8,color:"#78350f"}}>
           <div style={{fontWeight:800,marginBottom:4}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
           <div style={{fontWeight:700}}>{stayHolidays.map(h=>{const d=new Date(h.date+"T00:00:00");const DOW=["일","월","화","수","목","금","토"];return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})${h.name?" "+h.name:""}`;}).join(" · ")}</div>
-          <div style={{fontSize:12,marginTop:6,color:"#92400e"}}>{HOLIDAY_GUEST_NOTICE}</div>
+          {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:12,marginTop:4,display:"flex",flexDirection:"column",gap:2}}>
+            <div style={{color:"#b91c1c",fontWeight:700}}>✕ 휴무일에는 {nt.off}</div>
+            {nt.on&&<div style={{color:"#065f46",fontWeight:700}}>✓ {nt.on}</div>}
+            <div style={{color:"#92400e",fontWeight:700}}>! {nt.money}</div>
+          </div>;})()}
         </div></div>}
 
-      <div className="ift">안내받으신 총합안내 이용금액 및 환불규정을 꼭 확인 해 주세요.<br/>미확인으로 인한 문제는 책임지지 않습니다.<br/>추가 요청사항이 있다면 추후 안내 부탁드립니다.<br/>해당 청구서에 대한 문의사항이 있으시면 드림컴퍼니로 문의주세요.<br/>감사합니다.</div>
+      <div className="ift">안내받으신 총 이용금액 및 환불규정을 꼭 확인해 주세요 (미확인으로 인한 문제는 책임지지 않습니다).<br/>추가 요청사항·청구서 문의는 드림컴퍼니로 연락 주세요. 감사합니다.</div>
     </div>
     <div className="pb no-print"><button className="pbk" style={{background:"#fff",color:"#6b7c93",border:"1px solid #e2e8f0"}} onClick={()=>router.push("/admin/bookings?tab=list")}>← 예약내역으로</button><button className="pp" onClick={()=>window.print()}>PDF 저장 / 인쇄</button><button style={{padding:"12px 32px",background:"#2563eb",color:"#fff",fontSize:"14px",fontWeight:700,border:"none",borderRadius:"8px",cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"}} onClick={()=>saveAsImage()}>📷 이미지 저장</button><button className="prc" onClick={()=>setTab("receipt")}>🧾 영수증 탭으로</button>{bookingId&&<button className="psv" onClick={saveToDb}>저장하기</button>}<button className="pbk" onClick={requestEdit}>수정하기</button></div>
   </div>)}
