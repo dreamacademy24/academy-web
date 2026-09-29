@@ -136,7 +136,7 @@ export default function EngHubPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. admin-angel"
+              placeholder="e.g. angel"
               autoComplete="username"
               style={{ width: "100%", padding: "11px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, fontFamily: "inherit", outline: "none" }}
             />

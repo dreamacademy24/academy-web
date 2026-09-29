@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (!username || !password) return NextResponse.json({ error: '아이디와 비밀번호를 입력하세요.' }, { status: 400 })
 
   const { data, error } = await supabase.rpc('verify_hr_login', {
-    p_username: String(username).trim(),
+    p_username: ((u: string) => (u === 'ceo' ? 'may' : u))(String(username).trim().toLowerCase().replace(/^admin-/, '')), // admin- 붙여도/안 붙여도 OK, ceo=may
     p_password: String(password),
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

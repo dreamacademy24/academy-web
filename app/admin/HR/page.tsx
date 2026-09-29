@@ -52,11 +52,12 @@ export default function HRPage() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<HrEmployee | null>(null); // 열린 카드
   const [msg, setMsg] = useState("");
-  const [co, setCo] = useState<string>("전체"); // 회사 탭
+  const [co, setCo] = useState<string>(""); // 선택한 회사 챕터 ("" = 회사 목록)
   const [pwOpen, setPwOpen] = useState(false);
 
   useEffect(() => { const s0 = loadSess(); setSess(s0); if (s0?.user?.must_change_pw) setPwOpen(true); }, []);
   const myCos = sess?.user?.companies && sess.user.companies.length ? sess.user.companies : HR_COMPANIES;
+  useEffect(() => { if (myCos.length === 1 && !co) setCo(myCos[0]); }, [myCos, co]);
   const isAdmin = sess?.user?.role === "admin";
 
   const authFetch = useCallback(async (url: string, init?: RequestInit) => {
@@ -75,7 +76,7 @@ export default function HRPage() {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    const byCo = co === "전체" ? list : list.filter(e => (e.company || "아카데미") === co);
+    const byCo = !co ? list : list.filter(e => (e.company || "아카데미") === co);
     if (!s) return byCo;
     return byCo.filter(e => [displayName(e), e.employee_id, e.position, e.department, e.contact_number].filter(Boolean).join(" ").toLowerCase().includes(s));
   }, [list, q, co]);
@@ -108,20 +109,33 @@ export default function HRPage() {
 
         {msg && <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{msg}</div>}
 
-        {/* 회사 탭 */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-          {(myCos.length > 1 ? ["전체", ...myCos] : myCos).map(c => {
-            const n = c === "전체" ? list.length : list.filter(e => (e.company || "아카데미") === c).length;
-            const on = co === c || (myCos.length === 1);
-            return <button key={c} onClick={() => setCo(c)} style={{ border: "1px solid " + (on ? "#1e293b" : "#cbd5e1"), background: on ? "#1e293b" : "#fff", color: on ? "#fff" : "#334155", borderRadius: 20, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{c === "전체" ? "🏢 전체" : c} <span style={{ opacity: .7, fontWeight: 500 }}>{n}</span></button>;
-          })}
-        </div>
+        {/* 회사 챕터 — 회사를 먼저 고르고 들어가면 그 회사 직원 목록 */}
+        {!co && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 14 }}>
+            {myCos.map(c => {
+              const all = list.filter(e => (e.company || "아카데미") === c);
+              const act = all.filter(e => (e.status || "Active") === "Active").length;
+              const [bg, fg] = CO_COLOR[c] || ["#f1f5f9", "#475569"];
+              return (
+                <button key={c} onClick={() => { setCo(c); setQ(""); }} style={{ textAlign: "left", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 18px 16px", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+                  <div style={{ display: "inline-block", fontSize: 11, fontWeight: 800, background: bg, color: fg, padding: "3px 9px", borderRadius: 20, marginBottom: 10 }}>회사</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a" }}>{c === "88" ? "88" : c}</div>
+                  <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>재직 <b style={{ color: "#16a34a" }}>{act}</b>명 · 전체 {all.length}명</div>
+                  <div style={{ fontSize: 12.5, color: "#2563eb", fontWeight: 700, marginTop: 12 }}>직원 보기 →</div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {co && (<>
         {/* 리스트 */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #eef2f6", flexWrap: "wrap" }}>
-            <b style={{ fontSize: 15 }}>직원 {filtered.length}명</b>
+            {myCos.length > 1 && <button onClick={() => setCo("")} style={{ background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 11px", cursor: "pointer", fontSize: 12.5, fontWeight: 700 }}>← 회사 목록</button>}
+            <b style={{ fontSize: 16 }}>{co}</b>
+            <b style={{ fontSize: 15, color: "#475569" }}>직원 {filtered.length}명</b>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="이름·사원번호·직급 검색" style={{ ...inp, width: 240, padding: "7px 10px", fontSize: 13 }} />
-            {isAdmin && <button onClick={() => setSel({ id: "", status: "Active", company: co !== "전체" ? co : myCos[0], cost_center: (co === "드림하우스" ? "드림하우스" : "아카데미"), nationality: "Filipino", salary_type: "Monthly" } as HrEmployee)} style={{ marginLeft: "auto", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>+ 신규 직원</button>}
+            {isAdmin && <button onClick={() => setSel({ id: "", status: "Active", company: co || myCos[0], cost_center: (co === "드림하우스" ? "드림하우스" : "아카데미"), nationality: "Filipino", salary_type: "Monthly" } as HrEmployee)} style={{ marginLeft: "auto", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>+ 신규 직원</button>}
           </div>
           {loading ? <div style={{ padding: 24, color: "#94a3b8" }}>불러오는 중…</div> : (
             <div style={{ overflowX: "auto" }}>
@@ -149,6 +163,7 @@ export default function HRPage() {
             </div>
           )}
         </div>
+        </>)}
       </div>
 
       {sel && <EmployeeCard emp={sel} isAdmin={isAdmin} companies={myCos} authFetch={authFetch} onClose={() => setSel(null)} onSaved={() => { setSel(null); load(); }} />}

@@ -98,7 +98,7 @@ NOTIFY pgrst, 'reload schema';
   const admins = [
     { u: 'may', n: 'May (오너)' },
     { u: 'abby', n: 'Abby' },
-    { u: 'vella', n: 'Vella' },
+    { u: 'bella', n: 'Bella' },
     { u: 'manager', n: '매니저' },
     { u: 'office', n: '오피스매니저' },
   ]
@@ -147,8 +147,11 @@ NOTIFY pgrst, 'reload schema';
       WHERE NOT EXISTS (SELECT 1 FROM hr_accounts WHERE username = ${esc(a.u)});
       UPDATE hr_accounts SET companies = ARRAY[${a.c.map(esc).join(',')}]::text[], is_active = true WHERE username = ${esc(a.u)};` })
   }
-  await supabase.rpc('exec_sql', { sql: `UPDATE hr_accounts SET companies = NULL WHERE username IN ('may','abby','vella');
-    UPDATE hr_accounts SET is_active = false WHERE username IN ('manager','office');` })
+  // 벨라 아이디는 기존 직원 아이디(bella)로 통일 — vella → bella (비번 bella2026!, 첫 로그인 변경)
+  await supabase.rpc('exec_sql', { sql: `UPDATE hr_accounts SET username='bella', name='Bella', password_hash=crypt('bella2026!', gen_salt('bf')), must_change_pw=true
+    WHERE username='vella' AND NOT EXISTS (SELECT 1 FROM hr_accounts WHERE username='bella');` })
+  await supabase.rpc('exec_sql', { sql: `UPDATE hr_accounts SET companies = NULL WHERE username IN ('may','abby','bella');
+    UPDATE hr_accounts SET is_active = false WHERE username IN ('manager','office','vella');` })
 
   const { count } = await supabase.from('hr_employees').select('id', { count: 'exact', head: true })
   const { data: accts } = await supabase.from('hr_accounts').select('username,role,name,companies,is_active')

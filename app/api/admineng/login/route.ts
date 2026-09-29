@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { staffCookie } from '@/lib/portalAuth';
+import { verifyStaffLogin } from '@/lib/staffLogin';
 
 // 사전 준비 (Supabase SQL Editor에서 1회 실행):
 // CREATE OR REPLACE FUNCTION verify_teacher_login(p_username text, p_password text)
@@ -27,14 +28,11 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { data, error } = await supabase.rpc('verify_teacher_login', {
-      p_username: username,
-      p_password: password,
-    });
+    const { row, error } = await verifyStaffLogin(supabase, String(username), String(password)); // 'admin-' 없이 이름만 입력해도 OK
     if (error) {
       return NextResponse.json({ success: false, message: 'Could not connect to the sign-in service. Please try again shortly.' }, { status: 503 });
     }
-    const row = Array.isArray(data) ? data[0] : data;
+    
     if (!row) {
       return NextResponse.json(
         { success: false, message: 'Invalid username or password.' },
