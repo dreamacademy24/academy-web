@@ -27,10 +27,11 @@ export async function POST(req: Request) {
     role: user.role === 'employee' ? 'employee' : 'admin',
     name: user.name,
     employee_id: user.employee_id ?? null,
+    companies: user.companies ?? null,
   })
   return NextResponse.json({
     ok: true,
     token,
-    user: { username: user.username, role: user.role, name: user.name, employee_id: user.employee_id ?? null },
+    user: { username: user.username, role: user.role, name: user.name, employee_id: user.employee_id ?? null, companies: user.companies ?? null, must_change_pw: !!user.must_change_pw },
   })
 }

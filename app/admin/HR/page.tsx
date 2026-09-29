@@ -2,11 +2,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   HR_GENDER, HR_CIVIL_STATUS, HR_EMP_STATUS, HR_ACTIVE_STATUS, HR_SALARY_TYPE,
-  HR_JOB_LEVEL, HR_DIVISIONS, HR_DEPARTMENTS, HR_SHIFTS, HR_TAX_STATUS, HR_COST_CENTER,
+  HR_JOB_LEVEL, HR_DIVISIONS, HR_DEPARTMENTS, HR_SHIFTS, HR_TAX_STATUS, HR_COST_CENTER, HR_COMPANIES,
   HR_REQUIREMENTS, displayName, type HrEmployee,
 } from "@/lib/hr";
 
-type Sess = { token: string; user: { username: string; role: string; name?: string; employee_id?: string | null } };
+type Sess = { token: string; user: { username: string; role: string; name?: string; employee_id?: string | null; companies?: string[] | null; must_change_pw?: boolean } };
+const CO_COLOR: Record<string, [string, string]> = { "아카데미": ["#e0f2fe", "#0369a1"], "드림하우스": ["#ede9fe", "#6d28d9"], "모리": ["#dcfce7", "#15803d"], "88": ["#ffedd5", "#c2410c"] };
 
 const SS_KEY = "hrSession";
 function loadSess(): Sess | null {
@@ -51,8 +52,11 @@ export default function HRPage() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<HrEmployee | null>(null); // 열린 카드
   const [msg, setMsg] = useState("");
+  const [co, setCo] = useState<string>("전체"); // 회사 탭
+  const [pwOpen, setPwOpen] = useState(false);
 
-  useEffect(() => { setSess(loadSess()); }, []);
+  useEffect(() => { const s0 = loadSess(); setSess(s0); if (s0?.user?.must_change_pw) setPwOpen(true); }, []);
+  const myCos = sess?.user?.companies && sess.user.companies.length ? sess.user.companies : HR_COMPANIES;
   const isAdmin = sess?.user?.role === "admin";
 
   const authFetch = useCallback(async (url: string, init?: RequestInit) => {
@@ -71,12 +75,13 @@ export default function HRPage() {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return list;
-    return list.filter(e => [displayName(e), e.employee_id, e.position, e.department, e.contact_number].filter(Boolean).join(" ").toLowerCase().includes(s));
-  }, [list, q]);
+    const byCo = co === "전체" ? list : list.filter(e => (e.company || "아카데미") === co);
+    if (!s) return byCo;
+    return byCo.filter(e => [displayName(e), e.employee_id, e.position, e.department, e.contact_number].filter(Boolean).join(" ").toLowerCase().includes(s));
+  }, [list, q, co]);
 
   if (sess === undefined) return <div style={{ padding: 40 }}>불러오는 중…</div>;
-  if (sess === null) return <Login onOk={setSess} />;
+  if (sess === null) return <Login onOk={s1 => { setSess(s1); if (s1.user.must_change_pw) setPwOpen(true); }} />;
 
   const logout = () => { localStorage.removeItem(SS_KEY); setSess(null); };
 
@@ -85,9 +90,10 @@ export default function HRPage() {
       {/* 헤더 */}
       <div style={{ background: "#0f172a", color: "#fff", display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", position: "sticky", top: 0, zIndex: 30 }}>
         <b style={{ fontSize: 16 }}>🔐 Dream HR</b>
-        <span style={{ fontSize: 12, color: "#94a3b8" }}>현지직원 인사·급여</span>
+        <span style={{ fontSize: 12, color: "#94a3b8" }}>인사·급여 · {sess.user.companies && sess.user.companies.length ? sess.user.companies.join("·") : "전 회사"}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center", fontSize: 13 }}>
           <span style={{ color: "#cbd5e1" }}>{sess.user.name || sess.user.username} {isAdmin ? "· 관리자" : "· 직원"}</span>
+          <button onClick={() => setPwOpen(true)} style={{ background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155", borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>🔑 비밀번호 변경</button>
           <button onClick={logout} style={{ background: "#1e293b", color: "#e2e8f0", border: "1px solid #334155", borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>로그아웃</button>
         </div>
       </div>
@@ -102,19 +108,27 @@ export default function HRPage() {
 
         {msg && <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "8px 12px", borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{msg}</div>}
 
+        {/* 회사 탭 */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+          {(myCos.length > 1 ? ["전체", ...myCos] : myCos).map(c => {
+            const n = c === "전체" ? list.length : list.filter(e => (e.company || "아카데미") === c).length;
+            const on = co === c || (myCos.length === 1);
+            return <button key={c} onClick={() => setCo(c)} style={{ border: "1px solid " + (on ? "#1e293b" : "#cbd5e1"), background: on ? "#1e293b" : "#fff", color: on ? "#fff" : "#334155", borderRadius: 20, padding: "6px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{c === "전체" ? "🏢 전체" : c} <span style={{ opacity: .7, fontWeight: 500 }}>{n}</span></button>;
+          })}
+        </div>
         {/* 리스트 */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #eef2f6", flexWrap: "wrap" }}>
             <b style={{ fontSize: 15 }}>직원 {filtered.length}명</b>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="이름·사원번호·직급 검색" style={{ ...inp, width: 240, padding: "7px 10px", fontSize: 13 }} />
-            {isAdmin && <button onClick={() => setSel({ id: "", status: "Active", cost_center: "아카데미", nationality: "Filipino", salary_type: "Monthly" } as HrEmployee)} style={{ marginLeft: "auto", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>+ 신규 직원</button>}
+            {isAdmin && <button onClick={() => setSel({ id: "", status: "Active", company: co !== "전체" ? co : myCos[0], cost_center: (co === "드림하우스" ? "드림하우스" : "아카데미"), nationality: "Filipino", salary_type: "Monthly" } as HrEmployee)} style={{ marginLeft: "auto", background: "#2563eb", color: "#fff", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>+ 신규 직원</button>}
           </div>
           {loading ? <div style={{ padding: 24, color: "#94a3b8" }}>불러오는 중…</div> : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#f8fafc", color: "#475569", textAlign: "left" }}>
-                    {["사원번호", "이름", "직급", "부서", "부문", "고용형태", "상태"].map(h => <th key={h} style={{ padding: "9px 12px", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>)}
+                    {["사원번호", "이름", "직급", "부서", "회사", "고용형태", "상태"].map(h => <th key={h} style={{ padding: "9px 12px", fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -124,7 +138,7 @@ export default function HRPage() {
                       <td style={{ padding: "9px 12px", fontWeight: 600 }}>{displayName(e)}</td>
                       <td style={{ padding: "9px 12px" }}>{e.position || "-"}</td>
                       <td style={{ padding: "9px 12px" }}>{e.department || "-"}</td>
-                      <td style={{ padding: "9px 12px" }}><span style={{ fontSize: 11, background: e.cost_center === "드림하우스" ? "#ede9fe" : "#e0f2fe", color: e.cost_center === "드림하우스" ? "#6d28d9" : "#0369a1", padding: "2px 7px", borderRadius: 20 }}>{e.cost_center || "아카데미"}</span></td>
+                      <td style={{ padding: "9px 12px" }}>{(() => { const c = e.company || "아카데미"; const [bg, fg] = CO_COLOR[c] || ["#f1f5f9", "#475569"]; return <span style={{ fontSize: 11, background: bg, color: fg, padding: "2px 7px", borderRadius: 20, fontWeight: 700 }}>{c}</span>; })()}</td>
                       <td style={{ padding: "9px 12px" }}>{e.employment_status || "-"}</td>
                       <td style={{ padding: "9px 12px" }}><span style={{ fontSize: 11, color: (e.status || "Active") === "Active" ? "#16a34a" : "#94a3b8", fontWeight: 700 }}>{(e.status || "Active") === "Active" ? "● 재직" : "○ " + e.status}</span></td>
                     </tr>
@@ -137,7 +151,8 @@ export default function HRPage() {
         </div>
       </div>
 
-      {sel && <EmployeeCard emp={sel} isAdmin={isAdmin} authFetch={authFetch} onClose={() => setSel(null)} onSaved={() => { setSel(null); load(); }} />}
+      {sel && <EmployeeCard emp={sel} isAdmin={isAdmin} companies={myCos} authFetch={authFetch} onClose={() => setSel(null)} onSaved={() => { setSel(null); load(); }} />}
+      {pwOpen && <PwModal force={!!sess.user.must_change_pw} authFetch={authFetch} onDone={() => { setPwOpen(false); const s2 = { ...sess, user: { ...sess.user, must_change_pw: false } }; localStorage.setItem(SS_KEY, JSON.stringify(s2)); setSess(s2); }} onClose={() => setPwOpen(false)} />}
     </div>
   );
 }
@@ -145,8 +160,8 @@ const mTab = (on: boolean): React.CSSProperties => ({ padding: "8px 14px", borde
 
 // ─────────── 직원 카드 (Profile-style, 탭) ───────────
 const CARD_TABS = ["인적사항", "근무", "급여", "4대보험", "서류"] as const;
-function EmployeeCard({ emp, isAdmin, authFetch, onClose, onSaved }: {
-  emp: HrEmployee; isAdmin: boolean; authFetch: (u: string, i?: RequestInit) => Promise<Response>; onClose: () => void; onSaved: () => void;
+function EmployeeCard({ emp, isAdmin, companies, authFetch, onClose, onSaved }: {
+  emp: HrEmployee; isAdmin: boolean; companies: string[]; authFetch: (u: string, i?: RequestInit) => Promise<Response>; onClose: () => void; onSaved: () => void;
 }) {
   const isNew = !emp.id;
   const [tab, setTab] = useState<typeof CARD_TABS[number]>("인적사항");
@@ -206,6 +221,7 @@ function EmployeeCard({ emp, isAdmin, authFetch, onClose, onSaved }: {
           {tab === "인적사항" && <Grid>
             <F label="사원번호" v={f.employee_id} on={v => set("employee_id", v)} edit={edit} ph="비우면 자동생성" />
             <F label="바이오ID" v={f.biometrics_id} on={v => set("biometrics_id", v)} edit={edit} />
+            <F label="회사" v={f.company || "아카데미"} on={v => set("company", v)} edit={edit} opts={companies} />
             <F label="부문(인건비)" v={f.cost_center} on={v => set("cost_center", v)} edit={edit} opts={HR_COST_CENTER} />
             <F label="재직상태" v={f.status} on={v => set("status", v)} edit={edit} opts={HR_ACTIVE_STATUS} />
             <F label="Last Name" v={f.last_name} on={v => set("last_name", v)} edit={edit} />
@@ -323,6 +339,39 @@ function F({ label, v, on, edit, opts, type, ph, full, money, datalist }: {
           {datalist && opts && <datalist id={dlId}>{opts.map(o => <option key={o} value={o} />)}</datalist>}
         </>
       )}
+    </div>
+  );
+}
+
+// ─────────── 비밀번호 변경 ───────────
+function PwModal({ force, authFetch, onDone, onClose }: { force: boolean; authFetch: (u: string, i?: RequestInit) => Promise<Response>; onDone: () => void; onClose: () => void }) {
+  const [cur, setCur] = useState(""); const [nx, setNx] = useState(""); const [nx2, setNx2] = useState("");
+  const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setErr("");
+    if (nx.length < 6) return setErr("새 비밀번호는 6자 이상");
+    if (nx !== nx2) return setErr("새 비밀번호가 서로 달라요");
+    setBusy(true);
+    try {
+      const r = await authFetch("/api/hr/password", { method: "POST", body: JSON.stringify({ current: cur, next: nx }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || "변경 실패");
+      alert("비밀번호가 변경됐어요."); onDone();
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.6)", zIndex: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "24px 22px", width: 340 }}>
+        <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>🔑 비밀번호 변경</div>
+        {force && <div style={{ fontSize: 12.5, color: "#b45309", marginBottom: 10 }}>처음 로그인하셨어요. 본인만 아는 비밀번호로 바꿔주세요.</div>}
+        <input type="password" value={cur} onChange={e => setCur(e.target.value)} placeholder="현재 비밀번호" style={{ ...inp, marginTop: 8 }} />
+        <input type="password" value={nx} onChange={e => setNx(e.target.value)} placeholder="새 비밀번호 (6자 이상)" style={{ ...inp, marginTop: 8 }} />
+        <input type="password" value={nx2} onChange={e => setNx2(e.target.value)} placeholder="새 비밀번호 확인" style={{ ...inp, marginTop: 8 }} />
+        {err && <div style={{ color: "#dc2626", fontSize: 12.5, marginTop: 8 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          {!force && <button onClick={onClose} style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}>취소</button>}
+          <button disabled={busy} onClick={go} style={{ flex: 2, padding: 10, borderRadius: 8, border: "none", background: "#2563eb", color: "#fff", fontWeight: 700, cursor: "pointer" }}>{busy ? "변경 중…" : "변경"}</button>
+        </div>
+      </div>
     </div>
   );
 }

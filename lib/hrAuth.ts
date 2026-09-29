@@ -12,6 +12,7 @@ export interface HrSession {
   role: 'admin' | 'employee'
   name?: string
   employee_id?: string | null
+  companies?: string[] | null // 볼 수 있는 회사 (null = 전체)
   exp: number // epoch ms
 }
 
@@ -42,4 +43,10 @@ export function hrSessionFromReq(req: Request): HrSession | null {
   const auth = req.headers.get('authorization') || ''
   const m = auth.match(/^Bearer\s+(.+)$/i)
   return verifyHr(m ? m[1] : null)
+}
+
+// 회사 접근 가능 여부 (companies 없으면 전체)
+export function canSeeCompany(s: HrSession, company?: string | null): boolean {
+  if (!s.companies || s.companies.length === 0) return true
+  return s.companies.includes(company || '아카데미')
 }

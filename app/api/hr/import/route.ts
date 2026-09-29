@@ -11,7 +11,7 @@ const db = createClient(
 )
 
 const ALLOW = new Set([
-  'employee_id','biometrics_id','cost_center','last_name','first_name','middle_name','suffix','photo_url',
+  'employee_id','biometrics_id','cost_center','company','last_name','first_name','middle_name','suffix','photo_url',
   'gender','civil_status','date_of_birth','place_of_birth','nationality','religion','contact_number',
   'personal_email','company_email','current_address','permanent_address','emergency_contact_name',
   'emergency_contact_number','emergency_contact_address','emergency_relationship','status','position','division',
@@ -27,7 +27,7 @@ const NUM = new Set(['basic_salary','allow_position','allow_transpo','allow_tuto
 // POST { employees:[...] } → 사원번호(employee_id) 기준 upsert
 export async function POST(req: Request) {
   const s = hrSessionFromReq(req)
-  if (!s || s.role !== 'admin') return NextResponse.json({ error: '관리자만 가능합니다.' }, { status: 403 })
+  if (!s || s.role !== 'admin' || (s.companies && s.companies.length)) return NextResponse.json({ error: '관리자만 가능합니다.' }, { status: 403 })
   const body = await req.json().catch(() => ({}))
   const emps = Array.isArray(body.employees) ? body.employees : []
   if (!emps.length) return NextResponse.json({ error: 'employees 배열이 필요합니다.' }, { status: 400 })
@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       else if (NUM.has(k)) o[k] = (v === '' || v == null) ? 0 : Number(v)
       else o[k] = v
     }
+    if (!o.company) o.company = (o.cost_center as string) || '아카데미'
     o.name_display = displayName(o)
     o.updated_at = new Date().toISOString()
     return o

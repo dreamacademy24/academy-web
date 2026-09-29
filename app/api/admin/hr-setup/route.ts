@@ -110,7 +110,47 @@ NOTIFY pgrst, 'reload schema';
     await supabase.rpc('exec_sql', { sql })
   }
 
+  // ── v2 (2026-09-29): 회사 구분 + 접속자 정리 ─────────────────────────
+  // 회사: 아카데미 / 드림하우스 / 모리 / 88. 계정별 볼 수 있는 회사(companies, null = 전체)
+  const v2 = `
+ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS company text;
+UPDATE hr_employees SET company = COALESCE(NULLIF(cost_center,''), '아카데미') WHERE company IS NULL;
+ALTER TABLE hr_employees ALTER COLUMN company SET DEFAULT '아카데미';
+REVOKE ALL ON hr_employees FROM anon;   -- 급여 등 민감정보: anon 차단 (API는 service_role)
+ALTER TABLE hr_accounts ADD COLUMN IF NOT EXISTS companies text[];
+ALTER TABLE hr_accounts ADD COLUMN IF NOT EXISTS must_change_pw boolean DEFAULT false;
+DROP FUNCTION IF EXISTS verify_hr_login(text, text);
+CREATE FUNCTION verify_hr_login(p_username text, p_password text)
+RETURNS TABLE(id uuid, username text, role text, name text, employee_id text, companies text[], must_change_pw boolean)
+LANGUAGE sql SECURITY DEFINER AS $fn$
+  SELECT id, username, role, name, employee_id, companies, must_change_pw
+  FROM hr_accounts
+  WHERE lower(username) = lower(p_username)
+    AND is_active = true
+    AND password_hash = crypt(p_password, password_hash);
+$fn$;
+NOTIFY pgrst, 'reload schema';
+`
+  const ex2 = await supabase.rpc('exec_sql', { sql: v2 })
+  if (ex2.error) return NextResponse.json({ error: ex2.error.message, step: 'v2' }, { status: 500 })
+
+  // 접속 가능: may·abby·vella(전체) / menchu(모리) / janziel(88) / lziem(드림하우스). manager·office 비활성
+  const esc = (v: string) => "'" + v.replace(/'/g, "''") + "'"
+  const scoped = [
+    { u: 'menchu', n: 'Menchu (모리)', c: ['모리'] },
+    { u: 'janziel', n: 'Janziel (88 매니저)', c: ['88'] },
+    { u: 'lziem', n: 'Lziem (드림하우스)', c: ['드림하우스'] },
+  ]
+  for (const a of scoped) {
+    await supabase.rpc('exec_sql', { sql: `INSERT INTO hr_accounts (username, password_hash, role, name, is_active, companies, must_change_pw)
+      SELECT ${esc(a.u)}, crypt(${esc(a.u + '2026!')}, gen_salt('bf')), 'admin', ${esc(a.n)}, true, ARRAY[${a.c.map(esc).join(',')}]::text[], true
+      WHERE NOT EXISTS (SELECT 1 FROM hr_accounts WHERE username = ${esc(a.u)});
+      UPDATE hr_accounts SET companies = ARRAY[${a.c.map(esc).join(',')}]::text[], is_active = true WHERE username = ${esc(a.u)};` })
+  }
+  await supabase.rpc('exec_sql', { sql: `UPDATE hr_accounts SET companies = NULL WHERE username IN ('may','abby','vella');
+    UPDATE hr_accounts SET is_active = false WHERE username IN ('manager','office');` })
+
   const { count } = await supabase.from('hr_employees').select('id', { count: 'exact', head: true })
-  const { data: accts } = await supabase.from('hr_accounts').select('username,role,name')
+  const { data: accts } = await supabase.from('hr_accounts').select('username,role,name,companies,is_active')
   return NextResponse.json({ ok: true, employees: count ?? 0, accounts: accts ?? [] })
 }

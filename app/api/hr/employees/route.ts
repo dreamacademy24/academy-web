@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { hrSessionFromReq } from '@/lib/hrAuth'
+import { hrSessionFromReq, canSeeCompany } from '@/lib/hrAuth'
 import { displayName, makeEmployeeId } from '@/lib/hr'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ const db = createClient(
 
 // 관리자만 수정 가능한 필드 화이트리스트 (employee는 조회만)
 const EDITABLE = new Set([
-  'employee_id','biometrics_id','cost_center',
+  'employee_id','biometrics_id','cost_center','company',
   'last_name','first_name','middle_name','suffix','name_display','photo_url',
   'gender','civil_status','date_of_birth','place_of_birth','nationality','religion',
   'contact_number','personal_email','company_email','current_address','permanent_address',
@@ -49,6 +49,7 @@ export async function GET(req: Request) {
     if (!s.employee_id) return NextResponse.json({ employees: [] })
     q = q.eq('employee_id', s.employee_id)
   }
+  else if (s.companies && s.companies.length) q = q.in('company', s.companies) // 회사별 매니저는 자기 회사만
   if (id) q = q.eq('id', id)
   const { data, error } = await q.order('status').order('last_name')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -62,6 +63,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const fields = clean(body)
   fields.name_display = displayName(fields)
+  if (!fields.company) fields.company = s.companies?.[0] || '아카데미'
+  if (!canSeeCompany(s, fields.company as string)) return NextResponse.json({ error: '이 회사 직원은 등록할 수 없습니다.' }, { status: 403 })
 
   // 사원번호 자동 생성 (미입력 시): YYYY-MMDD-seq
   if (!fields.employee_id) {
@@ -83,6 +86,11 @@ export async function PATCH(req: Request) {
   const { id } = body
   if (!id) return NextResponse.json({ error: 'id 필요' }, { status: 400 })
   const fields = clean(body)
+  if (s.companies && s.companies.length) {
+    const { data: cur } = await db.from('hr_employees').select('company').eq('id', id).single()
+    if (!cur || !canSeeCompany(s, cur.company) || ('company' in fields && !canSeeCompany(s, fields.company as string)))
+      return NextResponse.json({ error: '이 회사 직원은 수정할 수 없습니다.' }, { status: 403 })
+  }
   if ('first_name' in fields || 'last_name' in fields || 'middle_name' in fields) fields.name_display = displayName(fields)
   fields.updated_at = new Date().toISOString()
   const { data, error } = await db.from('hr_employees').update(fields).eq('id', id).select('*').single()

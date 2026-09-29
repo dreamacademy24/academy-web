@@ -20,6 +20,7 @@ export const HR_SHIFTS = [
 ];
 export const HR_TAX_STATUS = ["S", "S1", "S2", "S3", "S4", "ME", "ME1", "ME2", "ME3", "ME4", "Z"];
 export const HR_COST_CENTER = ["아카데미", "드림하우스"]; // 손익 인건비 부문
+export const HR_COMPANIES = ["아카데미", "드림하우스", "모리", "88"]; // 회사 (HR 접근 권한 단위)
 
 // 입사 서류 체크리스트 (Application / Onboarding & Requirements Tracker)
 export const HR_REQUIREMENTS: { key: string; label: string }[] = [
@@ -46,6 +47,7 @@ export interface HrEmployee {
   employee_id?: string;
   biometrics_id?: string;
   cost_center?: string;
+  company?: string;
   last_name?: string; first_name?: string; middle_name?: string; suffix?: string;
   name_display?: string;
   photo_url?: string;
