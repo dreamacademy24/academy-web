@@ -19,6 +19,7 @@ export interface HrSession {
 const MAX_AGE = 1000 * 60 * 60 * 12 // 12h
 
 export function signHr(payload: Omit<HrSession, 'exp'>): string {
+  if (!secret()) throw new Error('HR signing secret is unavailable')
   const body: HrSession = { ...payload, exp: Date.now() + MAX_AGE }
   const json = Buffer.from(JSON.stringify(body)).toString('base64url')
   const mac = crypto.createHmac('sha256', secret()).update(json).digest('base64url')
@@ -26,6 +27,7 @@ export function signHr(payload: Omit<HrSession, 'exp'>): string {
 }
 
 export function verifyHr(token: string | null | undefined): HrSession | null {
+  if (!secret()) return null
   if (!token || typeof token !== 'string' || !token.includes('.')) return null
   const [json, mac] = token.split('.')
   if (!json || !mac) return null

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { signHr } from '@/lib/hrAuth'
+import { hrAccess } from '@/lib/hrAccess'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,16 +23,18 @@ export async function POST(req: Request) {
   const user = Array.isArray(data) ? data[0] : data
   if (!user) return NextResponse.json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 })
 
+  const access = hrAccess(user.username, user.role, user.companies)
+  if (!access.companies.length) return NextResponse.json({ error: 'HR access is not assigned to this account. / HR 접근 권한이 없습니다.' }, { status: 403 })
   const token = signHr({
     username: user.username,
     role: user.role === 'employee' ? 'employee' : 'admin',
     name: user.name,
     employee_id: user.employee_id ?? null,
-    companies: user.companies ?? null,
+    companies: access.companies,
   })
   return NextResponse.json({
     ok: true,
     token,
-    user: { username: user.username, role: user.role, name: user.name, employee_id: user.employee_id ?? null, companies: user.companies ?? null, must_change_pw: !!user.must_change_pw },
+    user: { username: user.username, role: user.role, name: user.name, employee_id: user.employee_id ?? null, companies: access.companies, must_change_pw: !!user.must_change_pw, language: access.language, full: access.full },
   })
 }

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { hrSessionFromReq } from '@/lib/hrAuth'
+import { currentHr } from '@/lib/hrServer'
 import { displayName } from '@/lib/hr'
 
 export const dynamic = 'force-dynamic'
@@ -26,8 +26,8 @@ const NUM = new Set(['basic_salary','allow_position','allow_transpo','allow_tuto
 
 // POST { employees:[...] } → 사원번호(employee_id) 기준 upsert
 export async function POST(req: Request) {
-  const s = hrSessionFromReq(req)
-  if (!s || s.role !== 'admin' || (s.companies && s.companies.length)) return NextResponse.json({ error: '관리자만 가능합니다.' }, { status: 403 })
+  const s = await currentHr(req)
+  if (!s || !s.full) return NextResponse.json({ error: '관리자만 가능합니다.' }, { status: 403 })
   const body = await req.json().catch(() => ({}))
   const emps = Array.isArray(body.employees) ? body.employees : []
   if (!emps.length) return NextResponse.json({ error: 'employees 배열이 필요합니다.' }, { status: 400 })

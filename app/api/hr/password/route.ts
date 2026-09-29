@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { hrSessionFromReq } from '@/lib/hrAuth'
+import { currentHr } from '@/lib/hrServer'
 
 export const dynamic = 'force-dynamic'
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 // 본인 비밀번호 변경 — POST { current, next }
 export async function POST(req: Request) {
-  const s = hrSessionFromReq(req)
+  const s = await currentHr(req)
   if (!s) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
   const { current, next } = await req.json().catch(() => ({}))
   if (!current || !next || String(next).length < 6) return NextResponse.json({ error: '새 비밀번호는 6자 이상으로 입력하세요.' }, { status: 400 })

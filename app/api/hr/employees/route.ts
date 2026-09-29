@@ -1,16 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { hrSessionFromReq, canSeeCompany } from '@/lib/hrAuth'
-import { displayName, makeEmployeeId } from '@/lib/hr'
-
+import { displayName } from '@/lib/hr'
+import { currentHr, hrDb, hrError } from '@/lib/hrServer'
 export const dynamic = 'force-dynamic'
-
-const db = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-// 관리자만 수정 가능한 필드 화이트리스트 (employee는 조회만)
 const EDITABLE = new Set([
   'employee_id','biometrics_id','cost_center','company',
   'last_name','first_name','middle_name','suffix','name_display','photo_url',
@@ -38,62 +29,66 @@ function clean(fields: Record<string, unknown>): Record<string, unknown> {
   return out
 }
 
-// GET  (admin: 전체 / employee: 본인만)   ?id=<uuid> 단건
+function invalid(fields: Record<string, unknown>) {
+  for (const key of NUM_FIELDS) if (key in fields && (!Number.isFinite(fields[key]) || Number(fields[key]) < 0)) return true
+  for (const key of DATE_FIELDS) if (fields[key] && !/^\d{4}-\d{2}-\d{2}$/.test(String(fields[key]))) return true
+  if ('status' in fields && !['Active', 'Inactive'].includes(String(fields.status))) return true
+  for (const [key, value] of Object.entries(fields)) if (typeof value === 'string' && value.length > (key === 'notes' ? 12000 : 2000)) return true
+  if (fields.photo_url && !/^https:\/\//i.test(String(fields.photo_url))) return true
+  if (fields.requirements && (typeof fields.requirements !== 'object' || Array.isArray(fields.requirements) || Object.values(fields.requirements).some(v => typeof v !== 'boolean'))) return true
+  if ('documents' in fields && (!Array.isArray(fields.documents) || fields.documents.length > 50 || fields.documents.some(d => !d || typeof d.name !== 'string' || !d.name.trim() || typeof d.url !== 'string' || !/^https:\/\//i.test(d.url)))) return true
+  return false
+}
+const LIST_FIELDS = 'id,employee_id,company,first_name,last_name,middle_name,name_display,status,position,department,employment_status,date_hired,eval_3month,eval_6month,regularization_date,requirements,updated_at'
+const headers = { 'Cache-Control': 'no-store' }
 export async function GET(req: Request) {
-  const s = hrSessionFromReq(req)
-  if (!s) return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
-  const id = new URL(req.url).searchParams.get('id')
-
-  let q = db.from('hr_employees').select('*')
-  if (s.role === 'employee') {
-    if (!s.employee_id) return NextResponse.json({ employees: [] })
-    q = q.eq('employee_id', s.employee_id)
-  }
-  else if (s.companies && s.companies.length) q = q.in('company', s.companies) // 회사별 매니저는 자기 회사만
-  if (id) q = q.eq('id', id)
-  const { data, error } = await q.order('status').order('last_name')
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ employees: data ?? [] })
+  try {
+    const s = await currentHr(req)
+    if (!s) return NextResponse.json({ error: 'Sign in required / 로그인이 필요합니다.' }, { status: 401 })
+    const id = new URL(req.url).searchParams.get('id')
+    let q = hrDb.from('hr_employees').select(id ? '*' : LIST_FIELDS).in('company', s.companies)
+    if (id) q = q.eq('id', id)
+    const { data, error } = await q.order('status').order('last_name')
+    if (error) throw error
+    if (id && !data?.length) return NextResponse.json({ error: 'Employee not available / 접근할 수 없는 직원입니다.' }, { status: 404 })
+    return NextResponse.json({ employees: data || [], user: { username: s.username, role: s.role, name: s.name, companies: s.companies, language: s.language, full: s.full, must_change_pw: s.must_change_pw } }, { headers })
+  } catch (e) { return hrError(e) }
 }
-
-// POST 신규 (admin)
 export async function POST(req: Request) {
-  const s = hrSessionFromReq(req)
-  if (!s || s.role !== 'admin') return NextResponse.json({ error: '관리자만 등록할 수 있습니다.' }, { status: 403 })
-  const body = await req.json().catch(() => ({}))
-  const fields = clean(body)
-  fields.name_display = displayName(fields)
-  if (!fields.company) fields.company = s.companies?.[0] || '아카데미'
-  if (!canSeeCompany(s, fields.company as string)) return NextResponse.json({ error: '이 회사 직원은 등록할 수 없습니다.' }, { status: 403 })
-
-  // 사원번호 자동 생성 (미입력 시): YYYY-MMDD-seq
-  if (!fields.employee_id) {
-    const hired = (fields.date_hired as string) || new Date().toISOString().slice(0, 10)
-    const y = hired.slice(0, 4), md = hired.slice(5, 7) + hired.slice(8, 10)
-    const { data: sameDay } = await db.from('hr_employees').select('employee_id').like('employee_id', `${y}-${md}-%`)
-    fields.employee_id = makeEmployeeId(hired, (sameDay ?? []).length)
-  }
-  const { data, error } = await db.from('hr_employees').insert(fields).select('*').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, employee: data })
+  try {
+    const s = await currentHr(req)
+    if (!s) return NextResponse.json({ error: 'Sign in required / 로그인이 필요합니다.' }, { status: 401 })
+    const fields = clean(await req.json())
+    if (!s.companies.includes(String(fields.company))) return NextResponse.json({ error: 'Company access denied / 회사 접근 권한이 없습니다.' }, { status: 403 })
+    if (!String(fields.first_name || '').trim() || !String(fields.last_name || '').trim() || invalid(fields)) return NextResponse.json({ error: 'Check required names, dates and amounts. / 이름·날짜·금액을 확인해주세요.' }, { status: 400 })
+    fields.name_display = displayName(fields)
+    // Random suffix avoids two managers allocating the same sequence concurrently.
+    if (!fields.employee_id) fields.employee_id = 'EMP-' + crypto.randomUUID().slice(0, 8).toUpperCase()
+    const { data, error } = await hrDb.from('hr_employees').insert(fields).select('*').single()
+    if (error?.code === '23505') return NextResponse.json({ error: 'Employee ID already exists. / 이미 사용 중인 사원번호입니다.' }, { status: 409 })
+    if (error) throw error
+    return NextResponse.json({ employee: data }, { headers })
+  } catch (e) { return hrError(e) }
 }
-
-// PATCH 수정 (admin)   { id, ...fields }
 export async function PATCH(req: Request) {
-  const s = hrSessionFromReq(req)
-  if (!s || s.role !== 'admin') return NextResponse.json({ error: '관리자만 수정할 수 있습니다.' }, { status: 403 })
-  const body = await req.json().catch(() => ({}))
-  const { id } = body
-  if (!id) return NextResponse.json({ error: 'id 필요' }, { status: 400 })
-  const fields = clean(body)
-  if (s.companies && s.companies.length) {
-    const { data: cur } = await db.from('hr_employees').select('company').eq('id', id).single()
-    if (!cur || !canSeeCompany(s, cur.company) || ('company' in fields && !canSeeCompany(s, fields.company as string)))
-      return NextResponse.json({ error: '이 회사 직원은 수정할 수 없습니다.' }, { status: 403 })
-  }
-  if ('first_name' in fields || 'last_name' in fields || 'middle_name' in fields) fields.name_display = displayName(fields)
-  fields.updated_at = new Date().toISOString()
-  const { data, error } = await db.from('hr_employees').update(fields).eq('id', id).select('*').single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, employee: data })
+  try {
+    const s = await currentHr(req)
+    if (!s) return NextResponse.json({ error: 'Sign in required / 로그인이 필요합니다.' }, { status: 401 })
+    const body = await req.json(), fields = clean(body)
+    const { data: existing, error: readError } = await hrDb.from('hr_employees').select('*').eq('id', body.id).in('company', s.companies).maybeSingle()
+    if (readError) throw readError
+    if (!existing) return NextResponse.json({ error: 'Employee not available / 접근할 수 없는 직원입니다.' }, { status: 404 })
+    if ('company' in fields && !s.companies.includes(String(fields.company))) return NextResponse.json({ error: 'Company access denied / 회사 접근 권한이 없습니다.' }, { status: 403 })
+    const merged = { ...existing, ...fields }
+    if (!String(merged.first_name || '').trim() || !String(merged.last_name || '').trim() || invalid(fields)) return NextResponse.json({ error: 'Check required names, dates and amounts. / 이름·날짜·금액을 확인해주세요.' }, { status: 400 })
+    if (body.updated_at !== existing.updated_at) return NextResponse.json({ error: 'Someone updated this employee. Reload before saving. Your changes remain here. / 다른 사용자가 수정했습니다. 입력한 내용을 확인한 뒤 다시 불러와주세요.' }, { status: 409 })
+    fields.name_display = displayName(merged); fields.updated_at = new Date().toISOString()
+    let q = hrDb.from('hr_employees').update(fields).eq('id', body.id).in('company', s.companies)
+    q = existing.updated_at ? q.eq('updated_at', existing.updated_at) : q.is('updated_at', null)
+    const { data, error } = await q.select('*').maybeSingle()
+    if (error?.code === '23505') return NextResponse.json({ error: 'Employee ID already exists. / 이미 사용 중인 사원번호입니다.' }, { status: 409 })
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Record changed. Reload before saving. / 다른 변경이 있어 저장하지 않았습니다.' }, { status: 409 })
+    return NextResponse.json({ employee: data }, { headers })
+  } catch (e) { return hrError(e) }
 }
