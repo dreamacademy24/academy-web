@@ -120,6 +120,7 @@ LANGUAGE sql SECURITY DEFINER AS $fn$
     AND is_active = true
     AND password_hash = crypt(p_password, password_hash);
 $fn$;
+ALTER TABLE staff_accounts ADD COLUMN IF NOT EXISTS must_change_pw boolean DEFAULT false;
 NOTIFY pgrst, 'reload schema';
 `
   const ex2 = await supabase.rpc('exec_sql', { sql: v2 })

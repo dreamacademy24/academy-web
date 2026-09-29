@@ -1,4 +1,5 @@
 "use client";
+import StaffPasswordModal from "@/components/StaffPasswordModal";
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +15,8 @@ type Staff = {
 
 export default function EngHubPage() {
   const router = useRouter();
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwForce, setPwForce] = useState(false);
   const [staff, setStaff] = useState<Staff | null>(null);
   const [ready, setReady] = useState(false);
   const [username, setUsername] = useState("");
@@ -95,6 +98,11 @@ export default function EngHubPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!staff) return;
+    fetch("/api/staff/password", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(j => { if (j?.must_change) { setPwForce(true); setPwOpen(true); } }).catch(() => {});
+  }, [staff]);
 
   async function logout() {
     try { const response=await fetch("/api/admin/logout",{method:"POST"}); if(!response.ok)throw new Error(); } catch { setErr("Could not sign out. Please try again."); return; }
@@ -204,9 +212,11 @@ export default function EngHubPage() {
           <div className="nm">Hello, {staff.name}! 👋</div>
           <div className="un">{staff.username}</div>
         </div>
-        <button className="hub-logout" onClick={logout}>Sign Out</button>
+        <button className="hub-logout" style={{ color: "#2563eb" }} onClick={() => setPwOpen(true)}>🔑 Change Password</button>
+        <button className="hub-logout" style={{ marginLeft: 8 }} onClick={logout}>Sign Out</button>
       </div>
 
+      {pwOpen && <StaffPasswordModal force={pwForce} onClose={() => { setPwOpen(false); setPwForce(false); }} />}
       <div className="hub-grid">
         {cards.map((c, i) => (
           <div key={i} className="hub-card" style={{ position: "relative" }} onClick={() => router.push(c.href)}>

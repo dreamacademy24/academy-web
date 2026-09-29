@@ -47,6 +47,8 @@ export async function POST(req: Request) {
       `${sqlStr(name)}, ${sqlStr(color || '#6366f1')}, ${sqlStr(initial || '?')}, true)`
     const { error: iErr } = await supabase.rpc('exec_sql', { sql })
     if (iErr) return NextResponse.json({ error: iErr.message }, { status: 500 })
+    // 새 계정은 첫 로그인 시 비밀번호 변경 안내
+    await supabase.rpc('exec_sql', { sql: `ALTER TABLE staff_accounts ADD COLUMN IF NOT EXISTS must_change_pw boolean DEFAULT false; UPDATE staff_accounts SET must_change_pw = true WHERE username = ${sqlStr(username)}` })
     return NextResponse.json({ ok: true, username })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'unknown' }, { status: 500 })
@@ -66,6 +68,11 @@ export async function PATCH(req: Request) {
         .from('staff_accounts')
         .update({ is_active: action === 'activate' })
         .eq('username', username)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true })
+    }
+    if (action === 'require_pw_change') {
+      const { error } = await supabase.rpc('exec_sql', { sql: `ALTER TABLE staff_accounts ADD COLUMN IF NOT EXISTS must_change_pw boolean DEFAULT false; UPDATE staff_accounts SET must_change_pw = true WHERE username = ${sqlStr(username)}` })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true })
     }
