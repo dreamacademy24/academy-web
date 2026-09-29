@@ -407,6 +407,26 @@ export default function MealPlanPage() {
     }
   }
 
+  // (읽기 전용) 현재 주 게스트 식대의 숙소별 person-meal 인원 — 단가 시나리오 계산용
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__ghd = () => {
+      const todayStr = fD(new Date());
+      let DH = 0, JPARK = 0, CUBE9 = 0;
+      weekDates.forEach((d, di) => {
+        if (d > todayStr) return;
+        const holi = isHoliday(d);
+        guests.forEach(g => {
+          const A = g.adultsByDay[di]; if (!A) return;
+          const loc = g.locByDay[di]; if (!loc) return;
+          const K = g.kids;
+          const heads = loc === "CUBE9" ? (A + K) : (holi ? 3 * (A + K) : 3 * A + 2 * K);
+          if (loc === "CUBE9") CUBE9 += heads; else if (loc === "JPARK") JPARK += heads; else DH += heads;
+        });
+      });
+      return { weekMon, DH, JPARK, CUBE9 };
+    };
+  });
+
   if (!authed) return null;
 
   return (<>
