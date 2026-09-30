@@ -1810,14 +1810,14 @@ function InvoicePageInner(){
 .pb{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap;}.pp{padding:12px 32px;background:#1e293b;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pp:hover{opacity:0.92;}.prc{padding:12px 32px;background:#16a34a;color:#fff;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.prc:hover{opacity:0.92;}.psv{padding:12px 32px;background:#dbeafe;color:#1e40af;font-size:14px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.psv:hover{background:#bfdbfe;}.pci{padding:8px 20px;background:#fff;color:#64748b;font-size:12px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px;}.pci:hover{background:#f5f5f5;color:#1e293b;}.pbk{padding:12px 32px;background:#f5f5f5;color:#475569;font-size:14px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}.pbk:hover{background:#e5e7eb;}
 /* 인보이스 컴팩트 (2026-09-29: 길이·여백 축소) */
 .ivc{padding:24px 26px!important;border-radius:14px;}.ivc .it{margin:-24px -26px 14px!important;padding:12px 22px!important;border-radius:14px 14px 0 0;align-items:center;}.ivc .it img{height:40px!important;}.ivc .itr h1{font-size:22px!important;}.ivc .itr p{margin-top:0;}
-.ivc .is{margin-bottom:12px;}.ivc .ist{margin-bottom:5px!important;padding-bottom:3px!important;}
-.ivc .tb th{padding:5px 9px!important;font-size:10.5px;}.ivc .tb td{padding:5px 9px!important;font-size:12px!important;line-height:1.45;}.ivc .tb .lb{font-size:11px!important;width:18%;}
-.ivc .tb .tr td{font-size:12.5px!important;}.ivc .tb .fr td{font-size:16px!important;padding:8px 10px!important;}
+.ivc .is{margin-bottom:9px;}.ivc .ist{margin-bottom:5px!important;padding-bottom:3px!important;}
+.ivc .tb th{padding:3px 8px!important;font-size:10px;}.ivc .tb td{padding:3px 8px!important;font-size:11.5px!important;line-height:1.35;}.ivc .tb .lb{font-size:10.5px!important;width:18%;}
+.ivc .tb .tr td{font-size:12.5px!important;}.ivc .tb .fr td{font-size:15px!important;padding:6px 10px!important;}
 .ivc .ift{margin-top:10px;padding:8px 12px;font-size:10.5px;line-height:1.55;}
 .pgdiv{text-align:center;color:#94a3b8;font-size:11px;letter-spacing:.1em;margin:18px 0 10px;border-top:1.5px dashed #cbd5e1;padding-top:6px;}
 .p2h{display:flex;justify-content:space-between;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px;}
-.secdiv{display:flex;align-items:center;gap:10px;margin:16px 0 10px;color:#0f766e;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:2px solid #99f6e4;}
-.lpz{background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:10px 12px 4px;}.lpz .ist{color:#0f766e!important;}
+.secdiv{display:flex;align-items:center;gap:10px;margin:10px 0 7px;color:#0f766e;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:2px solid #99f6e4;}
+.lpz{background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:7px 10px 2px;}.lpz .ist{color:#0f766e!important;}
 @media print{.ivc{padding:14px!important;}.ivc .it{margin:-14px -14px 10px!important;}}
 @media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;border-radius:0!important;}.it{border-radius:0!important;margin:-24px -24px 24px!important;}.tb .fr td,.mb.ac,.ba,.bg,.pp,.prc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
@@ -2172,6 +2172,7 @@ function InvoicePageInner(){
 
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Customer Information</div><table className="tb"><tbody>
         <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName}</td></tr>
+        <tr><td className="lb">투숙자 전원</td><td colSpan={3} style={{fontWeight:700}}>{[booker.name,...extraGuardians.map(g=>g.kor),...students.map(s=>s.korName||"")].map(x=>(x||"").trim()).filter(Boolean).join(", ")||"-"} <span style={{color:"#64748b",fontWeight:500}}>(총 {[booker.name,...extraGuardians.map(g=>g.kor||g.eng),...students.map(s=>s.korName||s.engName||"")].filter(x=>(x||"").trim()).length}명)</span></td></tr>
         <tr><td className="lb">투숙자 (영문)</td><td colSpan={3} style={{fontWeight:700}}>{allGuestsEn.join(", ")||"-"}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
         <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
@@ -2228,10 +2229,10 @@ function InvoicePageInner(){
       <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>}
 
       {stayHolidays.length>0&&<div className="is"><div className="ist" style={{color:"#b45309",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Holiday Notice · 휴무일 안내</div>
-        <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:10,padding:"12px 16px",fontSize:13,lineHeight:1.8,color:"#78350f"}}>
-          <div style={{fontWeight:800,marginBottom:4}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
+        <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:8,padding:"7px 11px",fontSize:11,lineHeight:1.55,color:"#78350f"}}>
+          <div style={{fontWeight:800,marginBottom:2}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
           <div style={{fontWeight:700}}>{stayHolidays.map(h=>{const d=new Date(h.date+"T00:00:00");const DOW=["일","월","화","수","목","금","토"];return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})${h.name?" "+h.name:""}`;}).join(" · ")}</div>
-          {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:12,marginTop:4,display:"flex",flexDirection:"column",gap:2}}>
+          {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:10.5,marginTop:3,display:"flex",flexDirection:"column",gap:1}}>
             <div style={{color:"#b91c1c",fontWeight:700}}>✕ 휴무일에는 {nt.off}</div>
             {nt.on&&<div style={{color:"#065f46",fontWeight:700}}>✓ {nt.on}</div>}
             <div style={{color:"#92400e",fontWeight:700}}>! {nt.money}</div>
