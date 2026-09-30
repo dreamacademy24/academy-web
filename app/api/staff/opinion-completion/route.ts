@@ -5,7 +5,7 @@ const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'
 export async function POST(req:Request){
  try {
   const staff=await getStaffIdentity(req);
-  if(!staff||!['korean_admin','local_teacher'].includes(staff.role))return reply({error:'직원 로그인이 필요합니다.'},403);
+  if(!staff||!['korean_admin','korean_staff','local_teacher'].includes(staff.role))return reply({error:'직원 로그인이 필요합니다.'},403);
   const body=await req.json().catch(()=>null);
   if(!body||!/^\d+$/.test(String(body.id))||typeof body.completed!=='boolean')return reply({error:'완료 요청을 확인해주세요.'},400);
   const db=portalDb();
@@ -19,4 +19,3 @@ export async function POST(req:Request){
   return reply({opinion:data});
  }catch{return reply({error:'완료 상태를 저장하지 못했습니다. 다시 시도해주세요.'},503);}
 }
-

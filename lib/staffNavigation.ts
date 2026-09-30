@@ -1,4 +1,5 @@
 export function staffDestination(role:string,next:unknown):string{
+ if(role==='korean_staff')return '/staff';
  const fallback=role==='korean_admin'?'/admin/hub':'/admineng/hub';
  if(typeof next!=='string'||!next.startsWith('/')||next.startsWith('//')||/[\\\u0000-\u001f]/.test(next))return fallback;
  try{

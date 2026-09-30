@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { portalDb, portalStaffIdentity } from '@/lib/portalAuth';
+import { portalDb, workspaceStaffIdentity } from '@/lib/portalAuth';
 import {commentAccess,validateCommentPhotos} from '@/lib/staffCommentMedia';
 import {commentThreadContext,notifyTaskComment} from '@/lib/staffCommentThreads';
 import {isDeepStrictEqual} from 'node:util';
 
 async function mutate(req: Request, deleting: boolean) {
-  const username = await portalStaffIdentity(req);
+  const username = await workspaceStaffIdentity(req);
   if (!username) return NextResponse.json({ error: '로그인이 만료되었습니다. 다시 로그인 후 시도해주세요.' }, { status: 401 });
   const author = username.replace(/^admin-/, '');
   if (!author || author === 'jun') return NextResponse.json({ error: '사용 권한이 없습니다.' }, { status: 403 });

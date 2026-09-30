@@ -1408,7 +1408,7 @@ body{font-family:'Pretendard',sans-serif;background:var(--bg);color:var(--text);
 <link rel="stylesheet" href="/staff-workspace-home.css?v=20260911-reauth1">
 <script src="/staff-task-order.js?v=20260917-unread1"></script><script src="/staff-class-applications.js?v=20260915-1"></script><script src="/staff-workspace-home.js?v=20260918-notices1"></script><link rel="stylesheet" href="/staff-home-theme.css?v=20260920-1"><script src="/staff-home-theme.js?v=20260920-1"></script>
 <link rel="stylesheet" href="/staff-workspace-task.css?v=20260930-links1">
-<script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-comment-threads.js?v=20260926-1"></script><script src="/staff-workspace-task.js?v=20260930-links1"></script><script defer src="/staff-links.js?v=20260930-1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
+<script src="/staff-upload.js?v=20260918-1"></script><script src="/staff-comment-photos.js?v=20260918-1"></script><script src="/staff-comment-threads.js?v=20260926-1"></script><script src="/staff-workspace-task.js?v=20260930-links1"></script><script defer src="/staff-links.js?v=20260930-1"></script><script defer src="/staff-limited-home.js?v=20260930-1"></script><script src="/staff-related-tasks.js?v=20260915-1"></script>
 <link rel="stylesheet" href="/staff-workspace-ui.css?v=20260911-reauth1">
 <script src="/staff-workspace-operations.js?v=20260911-reauth1"></script>
 <link rel="stylesheet" href="/staff-workspace-media.css?v=20260911-reauth1">
@@ -3982,7 +3982,7 @@ function loadTeachers(){
     .then(function(r){return r.ok?r.json():{staff:[]};})
     .then(function(d){
       var arr=(d&&d.staff)||[];
-      TEACHERS=arr.filter(function(x){return x.role!=='korean_admin'&&x.username!=='admin-ceo'&&x.username!=='admin-jun'&&x.username!=='jun';})
+      TEACHERS=arr.filter(function(x){return x.role!=='korean_admin'&&x.role!=='korean_staff'&&x.username!=='admin-ceo'&&x.username!=='admin-jun'&&x.username!=='jun';})
         .map(function(x){return {id:x.username,name:x.name,color:x.color||'#0ea5e9',initial:x.initial||(x.name||'?').slice(0,1).toUpperCase(),isTeacher:true};});
     }).catch(function(e){console.warn('[teachers] load fail',e);TEACHERS=[];});
 }

@@ -5,7 +5,7 @@ export function clearStoredStaffIdentity(){
 }
 export function storeVerifiedStaff(staff:Staff){
  clearStoredStaffIdentity();
- if(staff.role==='korean_admin')setAdminAuthed(staff.username,{role:staff.role,name:staff.name,staffId:staff.username});
+ if(['korean_admin','korean_staff'].includes(staff.role))setAdminAuthed(staff.username,{role:staff.role,name:staff.name,staffId:staff.username});
  else localStorage.setItem('teacherSession',JSON.stringify(staff));
 }
 export function openStaffSignIn(){

@@ -9,7 +9,7 @@ export async function commentThreadContext(db:Db,taskId:string,mentionIds:unknow
  const taskResult=await db.from('staff_tasks').select('id,title,secret,created_by,assignee,assignees').eq('id',taskId).single();
  if(taskResult.error)throw Error('업무 정보를 확인하지 못했습니다.');
  const task=taskResult.data,people=taskCommentPeople(task);
- const accounts=await db.from('staff_accounts').select('username,name').eq('role','korean_admin').eq('is_active',true);
+ const accounts=await db.from('staff_accounts').select('username,name').in('role',['korean_admin','korean_staff']).eq('is_active',true);
  if(accounts.error)throw Error('직원 목록을 확인하지 못했습니다.');
  const active=new Map((accounts.data||[]).map(p=>[p.username.replace(/^admin-/,''),p.name]));active.delete('jun');
  const mentions=[...new Set(mentionIds as string[])];

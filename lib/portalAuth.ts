@@ -14,6 +14,10 @@ export async function getStaffIdentity(req: Request) {
     return data;
   });
 }
+export async function workspaceStaffIdentity(req: Request): Promise<string | null> {
+  const staff=await getStaffIdentity(req);
+  return staff && ['korean_admin','korean_staff'].includes(staff.role)?staff.username:null;
+}
 export async function portalStaffIdentity(req: Request): Promise<string | null> {
   const staff=await getStaffIdentity(req);
   return staff?.role==='korean_admin'?staff.username:null;

@@ -6,7 +6,7 @@ export async function POST(req:Request){
  try{
   const staff=await getStaffIdentity(req);
   if(!staff)return reply({error:'Please sign in. / 로그인이 필요합니다.'},401);
-  if(!['korean_admin','local_teacher'].includes(staff.role))return reply({error:'Access denied.'},403);
+  if(!['korean_admin','korean_staff','local_teacher'].includes(staff.role))return reply({error:'Access denied.'},403);
   const response=reply({staff:{username:staff.username,name:staff.name,role:staff.role}});
   response.cookies.set(staffCookie(staff.username));
   return response;

@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {portalDb,portalStaffIdentity} from '@/lib/portalAuth';
+import {portalDb,workspaceStaffIdentity} from '@/lib/portalAuth';
 import {commentAccess,commentPhotoPrefix} from '@/lib/staffCommentMedia';
 import {chatAccess,chatError} from '@/lib/staffChat';
 import {STAFF_FILE_LIMIT,uploadTicket,readUploadTicket,imageKind,type UploadTicket} from '@/lib/staffUpload';
@@ -7,7 +7,7 @@ export const dynamic='force-dynamic';
 async function access(req:Request,scope:string,context:string){
  if(scope==='chat'){const c=await chatAccess(req);c.checkRoom(context);return {db:c.db,author:c.actor};}
  if(scope==='comment')return commentAccess(req,context);
- const staff=await portalStaffIdentity(req),author=staff?.replace(/^admin-/,'');if(!author)chatError('직원 로그인이 필요합니다.',401);if(author==='jun')chatError('사용 권한이 없습니다.',403);if(scope!=='task')chatError('첨부 위치를 확인해주세요.');return {db:portalDb(),author};
+ const staff=await workspaceStaffIdentity(req),author=staff?.replace(/^admin-/,'');if(!author)chatError('직원 로그인이 필요합니다.',401);if(author==='jun')chatError('사용 권한이 없습니다.',403);if(scope!=='task')chatError('첨부 위치를 확인해주세요.');return {db:portalDb(),author};
 }
 export async function POST(req:Request){try{
  if(Number(req.headers.get('content-length'))>12000)chatError('잘못된 업로드 요청입니다.');

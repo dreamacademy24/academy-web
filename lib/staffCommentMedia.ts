@@ -1,9 +1,9 @@
 import {createHash} from 'node:crypto';
-import {portalDb,portalStaffIdentity} from './portalAuth';
+import {portalDb,workspaceStaffIdentity} from './portalAuth';
 export type CommentPhoto={name:string;url:string;type:string;size:number};
 export const commentPhotoPrefix=(author:string,taskId:string)=>'comment-photos/'+createHash('sha256').update(author+'\0'+taskId).digest('hex').slice(0,32)+'/';
 export async function commentAccess(req:Request,taskId:string){
- const username=await portalStaffIdentity(req),author=username?.replace(/^admin-/,'');
+ const username=await workspaceStaffIdentity(req),author=username?.replace(/^admin-/,'');
  if(!author)throw Object.assign(Error('로그인이 만료되었습니다. 다시 로그인해주세요.'),{status:401});
  if(author==='jun')throw Object.assign(Error('사용 권한이 없습니다.'),{status:403});
  if(!taskId||taskId.length>200)throw Object.assign(Error('업무를 확인해주세요.'),{status:400});

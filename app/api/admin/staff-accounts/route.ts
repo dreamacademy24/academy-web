@@ -1,3 +1,4 @@
+import {getStaffIdentity} from '@/lib/portalAuth'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
   const role = searchParams.get('role')
   const active = searchParams.get('active')
   let q = supabase.from('staff_accounts').select(PUBLIC_COLS).order('role').order('name')
-  if (role) q = q.eq('role', role)
+  if (role==='korean_admin') q=q.in('role',['korean_admin','korean_staff']); else if(role) q=q.eq('role',role)
   if (active === 'true') q = q.eq('is_active', true)
   if (active === 'false') q = q.eq('is_active', false)
   const { data, error } = await q
@@ -30,6 +31,8 @@ export async function GET(req: Request) {
 
 // POST /api/admin/staff-accounts  { username, password, role, name, color, initial }
 export async function POST(req: Request) {
+  const requester=await getStaffIdentity(req);
+  if(requester?.role!=='korean_admin')return NextResponse.json({error:'Administrator access required'},{status:403})
   try {
     const body = await req.json()
     const { username, password, role, name, color, initial } = body
@@ -57,6 +60,8 @@ export async function POST(req: Request) {
 
 // PATCH /api/admin/staff-accounts  { username, action, newPassword? }
 export async function PATCH(req: Request) {
+  const requester=await getStaffIdentity(req);
+  if(requester?.role!=='korean_admin')return NextResponse.json({error:'Administrator access required'},{status:403})
   try {
     const body = await req.json()
     const { username, action, newPassword } = body

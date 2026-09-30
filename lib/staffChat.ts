@@ -42,10 +42,10 @@ export async function chatTaskLookup(c:Awaited<ReturnType<typeof chatAccess>>,q:
 export async function chatAccess(req:Request){
  const staff=await getStaffIdentity(req);
  if(!staff)chatError('로그인이 만료되었습니다. 다시 로그인해주세요.',401);
- if(staff.role!=='korean_admin')chatError('직원업무 채팅 권한이 없습니다.',403);
+ if(!['korean_admin','korean_staff'].includes(staff.role))chatError('직원업무 채팅 권한이 없습니다.',403);
  const db=portalDb(),actor=staff.username.replace(/^admin-/,'');
  const [{data,error},groupResult]=await Promise.all([
-  db.from('staff_accounts').select('username,name').eq('is_active',true).eq('role','korean_admin'),
+  db.from('staff_accounts').select('username,name').eq('is_active',true).in('role',['korean_admin','korean_staff']),
   db.from('staff_chat_groups').select('id,name,creator,members,created_at').contains('members',[actor]).order('created_at')
  ]);
  if(error)chatError('직원 목록을 불러오지 못했습니다.',503);

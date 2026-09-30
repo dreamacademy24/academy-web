@@ -38,11 +38,11 @@ export async function GET(req:Request){
  try{
   const staff=await getStaffIdentity(req);
   if(!staff)return reply({error:'Please sign in. / 로그인이 필요합니다.'},401);
-  if(!['korean_admin','local_teacher'].includes(staff.role))return reply({error:'Access denied.'},403);
+  if(!['korean_admin','korean_staff','local_teacher'].includes(staff.role))return reply({error:'Access denied.'},403);
   const isAdmin=staff.role==='korean_admin',db=portalDb(),notices:unknown[]=[];
   for(let offset=0;offset<10000;offset+=100){
    let query=db.from('staff_notices').select(fields);
-   if(!isAdmin)query=query.eq('teacher_shared',true);
+   if(!isAdmin&&staff.role!=='korean_staff')query=query.eq('teacher_shared',true);
    const {data,error}=await query.order('date',{ascending:false}).order('id',{ascending:false}).range(offset,offset+99);
    if(error||!Array.isArray(data))return unavailable();
    notices.push(...data);

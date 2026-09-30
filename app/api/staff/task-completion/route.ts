@@ -5,7 +5,7 @@ const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'
 export async function POST(req:Request){
   try {
     const staff=await getStaffIdentity(req);
-    if(!staff || !['korean_admin','local_teacher'].includes(staff.role))return reply({error:'직원 로그인이 필요합니다.'},403);
+    if(!staff || !['korean_admin','korean_staff','local_teacher'].includes(staff.role))return reply({error:'직원 로그인이 필요합니다.'},403);
     const body=await req.json().catch(()=>null);
     if(!body || typeof body.taskId!=='string' || !body.taskId || body.taskId.length>250 || typeof body.completed!=='boolean' || Object.keys(body).some(k=>!['taskId','completed'].includes(k)))return reply({error:'완료 요청이 올바르지 않습니다.'},400);
     const actor=staff.username.replace(/^admin-/,'');
@@ -14,4 +14,3 @@ export async function POST(req:Request){
     return reply({task:data});
   }catch{return reply({error:'서버 연결을 확인하고 다시 시도해주세요.'},503);}
 }
-
