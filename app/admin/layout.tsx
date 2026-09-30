@@ -77,6 +77,7 @@ const CEO_USERS = ["admin-ceo", "admin-may"];
 const CEO_NAV: { title: string; items: Item[] }[] = [
   { title: "CEO 전용", items: [
     { label: "손익장부", href: "/admin/may/ledger" },
+    { label: "HR 인사·급여", href: "/admin/HR" },
   ]},
 ];
 
