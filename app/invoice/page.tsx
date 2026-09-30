@@ -1598,20 +1598,6 @@ function InvoicePageInner(){
     if(!el) return;
     const hidden=Array.from(el.querySelectorAll<HTMLElement>(".no-print"));
     hidden.forEach(x=>{x.dataset._d=x.style.display;x.style.display="none";});
-    // 인보이스는 2장(1페이지 금액 / 2페이지 현지지불·체크인·휴무)으로 각각 저장
-    if(elementId==="invoice-content"){
-      const p1=document.getElementById("inv-p1"),p2=document.getElementById("inv-p2");
-      try{
-        for(const [pg,hideEl,suf] of [[p1,p2,"1"],[p2,p1,"2"]] as [HTMLElement|null,HTMLElement|null,string][]){
-          if(!pg)continue;
-          if(hideEl)hideEl.style.display="none";
-          const c=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
-          if(hideEl)hideEl.style.display="";
-          const a=document.createElement("a");a.download=`인보이스_${booker.name||reservationNo||"draft"}_${suf}of2.png`;a.href=c.toDataURL("image/png");a.click();
-        }
-      }finally{ hidden.forEach(x=>{x.style.display=x.dataset._d||"";delete x.dataset._d;}); }
-      return;
-    }
     let canvas;
     try{ canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:"#ffffff"}); }
     finally{ hidden.forEach(x=>{x.style.display=x.dataset._d||"";delete x.dataset._d;}); }
@@ -1830,7 +1816,8 @@ function InvoicePageInner(){
 .ivc .ift{margin-top:10px;padding:8px 12px;font-size:10.5px;line-height:1.55;}
 .pgdiv{text-align:center;color:#94a3b8;font-size:11px;letter-spacing:.1em;margin:18px 0 10px;border-top:1.5px dashed #cbd5e1;padding-top:6px;}
 .p2h{display:flex;justify-content:space-between;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px;}
-@media print{.pg2{break-before:page;page-break-before:always;}}
+.secdiv{display:flex;align-items:center;gap:10px;margin:16px 0 10px;color:#0f766e;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:2px solid #99f6e4;}
+.lpz{background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:10px 12px 4px;}.lpz .ist{color:#0f766e!important;}
 @media print{.ivc{padding:14px!important;}.ivc .it{margin:-14px -14px 10px!important;}}
 @media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;border-radius:0!important;}.it{border-radius:0!important;margin:-24px -24px 24px!important;}.tb .fr td,.mb.ac,.ba,.bg,.pp,.prc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
@@ -2179,7 +2166,7 @@ function InvoicePageInner(){
         </div>
       </div>
     )}
-    <div className="iv" id="invoice-content">
+    <div className="iv ivc" id="invoice-content">
       <div id="inv-p1">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
@@ -2222,9 +2209,8 @@ function InvoicePageInner(){
       </>}</div>
       </div>{/* ── /1페이지 ── */}
 
-      <div className="no-print pgdiv">— 2페이지 (현지 지불 · 체크인 · 휴무 안내) —</div>
-      <div id="inv-p2" className="pg2">
-      <div className="p2h"><span>INVOICE · No. {reservationNo}</span><span>{booker.name} · 2/2</span></div>
+      <div className="secdiv"><span>현지 지불 · 체크인 · 휴무 안내</span></div>
+      <div id="inv-p2" className="lpz">
       {(()=>{const lc=billing.locals.filter(c=>c.name||c.amount);if(!lc.length)return null;
         const amt=(c:LC)=>{const v=String(c.amount||"");const t=/^\d+$/.test(v)?Number(v).toLocaleString():v;return `${t}${v.includes("페소")?"":" 페소"}`;};
         const rows:LC[][]=[];for(let k=0;k<lc.length;k+=2)rows.push(lc.slice(k,k+2));
