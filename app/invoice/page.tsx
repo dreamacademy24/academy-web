@@ -746,7 +746,7 @@ function InvoicePageInner(){
   // billing(=금액·할인·추가·현지지불·basePrice)·applied 등 폼 state 전체. override로 일부 키 덮어쓰기 가능
   function collectFormState(override?:Record<string,unknown>){
     return {cm,a1T,a1R,a1W,a1CI,a2T,a2R,a2W,cP,cK,ex1Cnt,ex2Cnt,dbCheckout,
-      reservationNo,reservationDate,booker,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,lateCheckout,
+      reservationNo,reservationDate,booker,extraGuardians,students,applied,billing,checkin,adminOnly,isCommute,forceFullPayment,lateCheckout,
       receiptPayments,
       ...(override||{})};
   }
@@ -769,6 +769,8 @@ function InvoicePageInner(){
     if(d.reservationNo!==undefined)setReservationNo(d.reservationNo);
     if(d.reservationDate!==undefined)setReservationDate(d.reservationDate);
     if(d.booker!==undefined)setBooker(d.booker);
+    if(Array.isArray(d.extraGuardians))setExtraGuardians(d.extraGuardians);
+    else if(bookingId)supabase.from("bookings").select("extra_guardians").eq("id",bookingId).maybeSingle().then(({data})=>{try{const eg=typeof data?.extra_guardians==="string"?JSON.parse(data.extra_guardians):data?.extra_guardians;if(Array.isArray(eg))setExtraGuardians(eg.filter((g:any)=>g&&(g.eng||g.kor)));}catch{}});
     if(Array.isArray(d.students)){setStudents(d.students);fillStudentInfo(bookingId,d.students).then(f=>{if(f!==d.students)setStudents(f);});}
     if(d.billing!==undefined)setBilling(d.billing);
     // billing(items/금액)이 있으면 applied=true 강제 — 미리보기 "견적 계산 후 적용" 문구 방지
@@ -801,6 +803,9 @@ function InvoicePageInner(){
       // 인보이스 확정 시 예약 상태 변경 + 체크인/체크아웃 자동 동기화 (인보이스에서 조정한 날짜가 예약 원본에 반영)
       // 영수증발행은 실제 지불내역 금액이 있을 때만 — 없으면 인보이스발행까지만 (2026-07-30 메이 지시)
       const upd:Record<string,unknown>={status:receiptPaidTotal>0?"영수증발행":"인보이스발행",updated_at:new Date().toISOString()};
+      // 인원 동기화 — 인보이스에서 보호자/아이 수·추가 보호자를 바꾸면 예약 원본에도 반영 (2026-09-30)
+      if(!isCommute){upd.adults=cP;upd.children=cK;}
+      upd.extra_guardians=extraGuardians.filter(g=>(g.kor||g.eng||"").trim());
       if(!isCommute){
         if(a1CI) upd.checkin_date=a1CI;
         if(overallCO) upd.checkout_date=overallCO;
@@ -2071,8 +2076,9 @@ function InvoicePageInner(){
     <div className="f-row"><div className="f-group"><label className="f-label">예약번호</label><input className="f-input auto" value={reservationNo} readOnly/></div><div className="f-group"><label className="f-label">예약일</label><input className="f-input" type="date" value={reservationDate} onChange={e=>setReservationDate(e.target.value)}/></div></div>
     <div className="f-row"><div className="f-group"><label className="f-label">예약자 한글이름</label><input className="f-input" placeholder="홍길동" value={booker.name} onChange={e=>setBooker({...booker,name:e.target.value})}/></div><div className="f-group"><label className="f-label">예약자 영문이름</label><input className="f-input" placeholder="HONG GILDONG" value={booker.englishName} onChange={e=>setBooker({...booker,englishName:e.target.value.toUpperCase()})}/></div></div>
     {extraGuardians.map((g,i)=>(
-      <div className="f-row" key={i}><div className="f-group"><label className="f-label">추가 보호자 {i+2} 한글</label><input className="f-input" value={g.kor} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,kor:e.target.value}:x))}/></div><div className="f-group"><label className="f-label">추가 보호자 {i+2} 영문</label><input className="f-input" placeholder="HONG GILDONG" value={g.eng} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,eng:e.target.value.toUpperCase()}:x))}/></div></div>
+      <div className="f-row" key={i}><div className="f-group"><label className="f-label">추가 보호자 {i+2} 한글</label><input className="f-input" value={g.kor} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,kor:e.target.value}:x))}/></div><div className="f-group"><label className="f-label">추가 보호자 {i+2} 영문</label><input className="f-input" placeholder="HONG GILDONG" value={g.eng} onChange={e=>setExtraGuardians(prev=>prev.map((x,j)=>j===i?{...x,eng:e.target.value.toUpperCase()}:x))}/></div><button type="button" onClick={()=>setExtraGuardians(prev=>prev.filter((_,j)=>j!==i))} style={{alignSelf:"flex-end",padding:"8px 10px",border:"1px solid #fecaca",background:"#fff",color:"#dc2626",borderRadius:8,cursor:"pointer",fontSize:12}}>삭제</button></div>
     ))}
+    {extraGuardians.length<3&&<button type="button" onClick={()=>setExtraGuardians(prev=>[...prev,{kor:"",eng:""}])} style={{margin:"0 0 12px",padding:"7px 12px",border:"1px dashed #94a3b8",background:"#f8fafc",borderRadius:8,cursor:"pointer",fontSize:12.5}}>+ 추가 보호자 ({1+extraGuardians.length}/4명)</button>}
     <div className="f-row"><div className="f-group"><label className="f-label">잔금 납부 예정일</label><input className="f-input" type="date" value={booker.balanceDate} onChange={e=>setBooker({...booker,balanceDate:e.target.value})}/></div><div className="f-group"><label className="f-label">체크아웃 (수정 가능)</label><div style={{display:"flex",gap:6,alignItems:"center"}}><input className="f-input" type="date" value={overallCO} onChange={e=>setDbCheckout(e.target.value)} style={{flex:1}}/><button type="button" onClick={()=>setDbCheckout("")} style={{padding:"8px 12px",fontSize:12,fontWeight:700,background:"#f1f5f9",color:"#475569",border:"1px solid #cbd5e1",borderRadius:8,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif",whiteSpace:"nowrap"}}>자동</button></div><label style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:12,color:"#475569",marginTop:6,cursor:"pointer"}}><input type="checkbox" checked={lateCheckout} onChange={e=>syncLateCheckout(e.target.checked)}/>Late Check-out (22:30pm)</label></div></div>
   </div>
 
@@ -2173,7 +2179,7 @@ function InvoicePageInner(){
         </div>
       </div>
     )}
-    <div className="iv ivc" id="invoice-content">
+    <div className="iv" id="invoice-content">
       <div id="inv-p1">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
