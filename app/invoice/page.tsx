@@ -1817,8 +1817,8 @@ function InvoicePageInner(){
 .pgdiv{text-align:center;color:#94a3b8;font-size:11px;letter-spacing:.1em;margin:18px 0 10px;border-top:1.5px dashed #cbd5e1;padding-top:6px;}
 .p2h{display:flex;justify-content:space-between;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px;}
 .bsub{display:block;font-size:9.5px;font-weight:500;opacity:.8;margin-top:1px;}
-.secdiv{display:flex;align-items:center;gap:10px;margin:10px 0 7px;color:#0f766e;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:2px solid #99f6e4;}
-.lpz{background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px;padding:7px 10px 2px;}.lpz .ist{color:#0f766e!important;}
+.secdiv{display:flex;align-items:center;gap:10px;margin:10px 0 7px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:1.5px solid #cbd5e1;}
+.lpz{}
 @media print{.ivc{padding:14px!important;}.ivc .it{margin:-14px -14px 10px!important;}}
 @media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;border-radius:0!important;}.it{border-radius:0!important;margin:-24px -24px 24px!important;}.tb .fr td,.mb.ac,.ba,.bg,.pp,.prc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
@@ -2231,17 +2231,19 @@ function InvoicePageInner(){
         </tbody></table></div>;})()}
 
       {!isCommute&&<div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Check-in Details</div><table className="tb"><tbody>
-        <tr><td className="lb">픽업</td><td>{checkin.pickup}</td><td className="lb">드롭</td><td>{checkin.drop}</td></tr>
-        <tr><td className="lb">픽업 장소</td><td>{checkin.pickupPlace||"미정"}</td><td className="lb">하우스 번호</td><td>{checkin.houseNo||"미정"}</td></tr>
-        <tr><td className="lb">항공편 (IN)</td><td>{checkin.flightIn||"미정"}</td><td className="lb">항공편 (OUT)</td><td>{checkin.flightOut||"미정"}</td></tr>
-        {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={3} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
+        <tr><th style={{width:"9%"}}>픽업</th><th style={{width:"9%"}}>드롭</th><th style={{width:"18%"}}>픽업 장소</th><th style={{width:"14%"}}>하우스</th><th style={{width:"25%"}}>항공편 IN</th><th style={{width:"25%"}}>항공편 OUT</th></tr>
+        <tr><td>{checkin.pickup}</td><td>{checkin.drop}</td><td>{checkin.pickupPlace||"미정"}</td><td>{checkin.houseNo||"미정"}</td><td>{checkin.flightIn||"미정"}</td><td>{checkin.flightOut||"미정"}</td></tr>
+        {checkin.specialRequest&&<tr><td className="lb">특별 요청</td><td colSpan={5} style={{whiteSpace:"pre-wrap"}}>{checkin.specialRequest}</td></tr>}
       </tbody></table>
       <div className="no-print" style={{textAlign:"right",marginTop:"8px"}}><button className="pci" onClick={()=>{setPreview(false);setTimeout(()=>document.getElementById("checkin-section")?.scrollIntoView({behavior:"smooth"}),100);}}>체크인 정보 수정</button></div></div>}
 
       {stayHolidays.length>0&&<div className="is"><div className="ist" style={{color:"#b45309",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Holiday Notice · 휴무일 안내</div>
         <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:8,padding:"7px 11px",fontSize:11,lineHeight:1.55,color:"#78350f"}}>
           <div style={{fontWeight:800,marginBottom:2}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
-          <div style={{fontWeight:700}}>{stayHolidays.map(h=>{const d=new Date(h.date+"T00:00:00");const DOW=["일","월","화","수","목","금","토"];return `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})${h.name?" "+h.name:""}`;}).join(" · ")}</div>
+          <div style={{fontWeight:700}}>{(()=>{const g:Record<string,string[]>={};stayHolidays.forEach(h=>{const k=(h.name||"휴무").trim();(g[k]=g[k]||[]).push(h.date);});
+            const md=(x:string)=>{const d=new Date(x+"T00:00:00");return `${d.getMonth()+1}/${d.getDate()}`;};
+            const rng=(ds:string[])=>{const t=[...ds].sort();const out:string[]=[];let st=t[0],pv=t[0];for(let i=1;i<=t.length;i++){const c=t[i];const nx=pv?new Date(new Date(pv+"T00:00:00").getTime()+86400000):null;const cont=c&&nx&&md(c)===md(nx.toISOString().slice(0,10))&&new Date(c+"T00:00:00").getTime()-new Date(pv+"T00:00:00").getTime()===86400000;if(cont){pv=c;continue;}out.push(st===pv?md(st):`${md(st)}~${md(pv).split("/")[1]===md(pv).split("/")[1]&&md(st).split("/")[0]===md(pv).split("/")[0]?md(pv).split("/")[1]:md(pv)}`);st=c;pv=c;}return out.join(", ");};
+            return Object.entries(g).map(([k,ds])=>`${k}: ${rng(ds)}`).join("  /  ");})()}</div>
           {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:10.5,marginTop:3,display:"flex",flexDirection:"column",gap:1}}>
             <div style={{color:"#b91c1c",fontWeight:700}}>✕ 휴무일에는 {nt.off}</div>
             {nt.on&&<div style={{color:"#065f46",fontWeight:700}}>✓ {nt.on}</div>}
