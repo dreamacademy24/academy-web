@@ -566,7 +566,7 @@ export default function BookingPage() {
 
           <div style={{marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 8}}>
             <div style={{fontSize: 13, fontWeight: 600, marginBottom: 10, color: "#374151"}}>
-              추가 보호자 ({1 + extraGuardians.length}/3명)
+              추가 보호자 ({1 + extraGuardians.length}/4명)
               <span style={{fontWeight: 400, fontSize: 12, color: "#6b7280", marginLeft: 8}}>
                 — 예약자 외 동행 보호자가 있으면 입력해주세요
               </span>
@@ -596,7 +596,7 @@ export default function BookingPage() {
                 </button>
               </div>
             ))}
-            {extraGuardians.length < 2 && (
+            {extraGuardians.length < 3 && (
               <button type="button"
                 onClick={() => setExtraGuardians([...extraGuardians, {kor: "", eng: ""}])}
                 style={{padding: "6px 12px", background: "#fff", border: "1px solid #3b82f6", color: "#3b82f6", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600}}>

@@ -347,7 +347,7 @@ export default function BookingNonPackagePage() {
 
           <div style={{marginTop: 16, padding: 12, background: "#f9fafb", borderRadius: 8}}>
             <div style={{fontSize: 13, fontWeight: 600, marginBottom: 10, color: "#374151"}}>
-              추가 투숙자 ({1 + extraGuardians.length}/3명)
+              추가 투숙자 ({1 + extraGuardians.length}/4명)
               <span style={{fontWeight: 400, fontSize: 12, color: "#6b7280", marginLeft: 8}}>— 투숙자 전원 이름을 적어주세요</span>
             </div>
             {extraGuardians.map((g, idx) => (
@@ -363,7 +363,7 @@ export default function BookingNonPackagePage() {
                 <button type="button" onClick={() => setExtraGuardians(extraGuardians.filter((_, i) => i !== idx))} style={{padding:"8px 12px",background:"#fff",border:"1px solid #ef4444",color:"#ef4444",borderRadius:6,cursor:"pointer",fontSize:12,marginBottom:2}}>제거</button>
               </div>
             ))}
-            {extraGuardians.length < 2 && (
+            {extraGuardians.length < 3 && (
               <button type="button" onClick={() => setExtraGuardians([...extraGuardians, {kor:"", eng:""}])} style={{padding:"6px 12px",background:"#fff",border:"1px solid #3b82f6",color:"#3b82f6",borderRadius:6,cursor:"pointer",fontSize:12,fontWeight:600}}>
                 + 투숙자 추가 (현재 {1 + extraGuardians.length}명)
               </button>
