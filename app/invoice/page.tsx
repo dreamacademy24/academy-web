@@ -2167,7 +2167,7 @@ function InvoicePageInner(){
         </div>
       </div>
     )}
-    <div className="iv ivc" id="invoice-content">
+    <div className={"iv"+(((billing.items.length+billing.discounts.filter(d=>d.name).length+billing.additions.filter(x=>x.name).length)>=4||cm==="combo"||stayHolidays.length>0)?" ivc":"")} id="invoice-content">
       <div id="inv-p1">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
@@ -2194,7 +2194,7 @@ function InvoicePageInner(){
         else L.push({main:"패키지 금액",sub:isCommute?"":`${alKo(a1T,a1R)} ${a1W}주`,amt:fmt(billing.basePrice)+"원"});
         billing.discounts.filter(d=>d.name).forEach(d=>{const [m,sb]=sp(d.name);D.push({main:"↓ "+m,sub:sb,amt:"-"+fmt(Number(d.amount))+"원",color:"#dc2626",bold:true});});
         billing.additions.filter(a=>a.name).forEach(a=>{const [m,sb]=sp(a.name);L.push({main:"↑ "+m,sub:sb,amt:"+"+fmt(Number(a.amount))+"원",color:"#16a34a",bold:true});});
-        const two=D.length>0&&L.length+D.length>=4;
+        const two=false; // 2열(세로형) 사용 안 함 — 메이 결정 2026-09-30
         const cell=(b:BL|undefined,k:string)=>b?<Fragment key={k}><td style={{color:b.color,fontWeight:b.bold?700:undefined}}>{b.main}{b.sub&&<span className="bsub">{b.sub}</span>}</td><td style={{textAlign:"right",color:b.color,fontWeight:b.bold?700:undefined,whiteSpace:"nowrap"}}>{b.amt}</td></Fragment>:<Fragment key={k}><td></td><td></td></Fragment>;
         const rows:(BL|undefined)[][]=[];if(two){for(let k=0;k<Math.max(L.length,D.length);k++)rows.push([L[k],D[k]]);}else [...L,...D].forEach(b=>rows.push([b]));
         const tA:BL|undefined=ta>0?{main:"총 추가",sub:"",amt:"+"+fmt(ta)+"원",color:"#16a34a"}:undefined;
@@ -2241,12 +2241,11 @@ function InvoicePageInner(){
 
       {stayHolidays.length>0&&<div className="is"><div className="ist" style={{color:"#b45309",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Holiday Notice · 휴무일 안내</div>
         <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:8,padding:"7px 11px",fontSize:11,lineHeight:1.55,color:"#78350f"}}>
-          <div style={{fontWeight:800,marginBottom:2}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</div>
-          <div style={{fontWeight:700}}>{(()=>{const g:Record<string,string[]>={};stayHolidays.forEach(h=>{const k=(h.name||"휴무").trim();(g[k]=g[k]||[]).push(h.date);});
+          <div style={{fontWeight:700}}><span style={{fontWeight:800,marginRight:8}}>🏖 체류 기간 중 휴무일 {stayHolidays.length}일</span>{(()=>{const g:Record<string,string[]>={};stayHolidays.forEach(h=>{const k=(h.name||"휴무").trim();(g[k]=g[k]||[]).push(h.date);});
             const md=(x:string)=>{const d=new Date(x+"T00:00:00");return `${d.getMonth()+1}/${d.getDate()}`;};
             const rng=(ds:string[])=>{const t=[...ds].sort();const out:string[]=[];let st=t[0],pv=t[0];for(let i=1;i<=t.length;i++){const c=t[i];const nx=pv?new Date(new Date(pv+"T00:00:00").getTime()+86400000):null;const cont=c&&nx&&md(c)===md(nx.toISOString().slice(0,10))&&new Date(c+"T00:00:00").getTime()-new Date(pv+"T00:00:00").getTime()===86400000;if(cont){pv=c;continue;}out.push(st===pv?md(st):`${md(st)}~${md(pv).split("/")[1]===md(pv).split("/")[1]&&md(st).split("/")[0]===md(pv).split("/")[0]?md(pv).split("/")[1]:md(pv)}`);st=c;pv=c;}return out.join(", ");};
             return Object.entries(g).map(([k,ds])=>`${k}: ${rng(ds)}`).join("  /  ");})()}</div>
-          {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:10.5,marginTop:3,display:"flex",flexDirection:"column",gap:1}}>
+          {(()=>{const nt=holidayNotice(stayKind,billing.discounts.some(d=>String(d.name||"").startsWith(VACATION_LINE_PREFIX)&&Number(d.amount)>0));return <div style={{fontSize:10.5,marginTop:3,display:"flex",flexWrap:"wrap",columnGap:14,rowGap:1}}>
             <div style={{color:"#b91c1c",fontWeight:700}}>✕ 휴무일에는 {nt.off}</div>
             {nt.on&&<div style={{color:"#065f46",fontWeight:700}}>✓ {nt.on}</div>}
             <div style={{color:"#92400e",fontWeight:700}}>! {nt.money}</div>
