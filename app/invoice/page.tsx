@@ -2189,18 +2189,20 @@ function InvoicePageInner(){
       <div className="is"><div className="ist" style={{color:"#4f46e5",fontSize:"11px",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Billing Details</div>{!applied&&billing.basePrice===0?<div style={{padding:"16px",fontSize:"13px",color:"#94a3b8",textAlign:"center"}}>견적 계산 후 "인보이스에 적용" 버튼을 눌러주세요</div>:<>{(()=>{
         const sp=(t:string):[string,string]=>{const m=String(t||"").match(/^(.*?)\s*\(([^()]*(?:\([^()]*\)[^()]*)*)\)\s*$/);return m&&m[1].trim()?[m[1].trim(),m[2].trim()]:[String(t||""),""];};
         type BL={main:string;sub:string;amt:string;color?:string;bold?:boolean};
-        const L:BL[]=[];
+        const L:BL[]=[],D:BL[]=[];
         if(billing.items.length>0)billing.items.forEach(it=>{const [m,sb]=sp(it.label);L.push({main:m,sub:[sb,it.season].filter(Boolean).join(" · "),amt:fmt(it.price)+"원"});});
         else L.push({main:"패키지 금액",sub:isCommute?"":`${alKo(a1T,a1R)} ${a1W}주`,amt:fmt(billing.basePrice)+"원"});
-        billing.discounts.filter(d=>d.name).forEach(d=>{const [m,sb]=sp(d.name);L.push({main:"↓ "+m,sub:sb,amt:"-"+fmt(Number(d.amount))+"원",color:"#dc2626",bold:true});});
+        billing.discounts.filter(d=>d.name).forEach(d=>{const [m,sb]=sp(d.name);D.push({main:"↓ "+m,sub:sb,amt:"-"+fmt(Number(d.amount))+"원",color:"#dc2626",bold:true});});
         billing.additions.filter(a=>a.name).forEach(a=>{const [m,sb]=sp(a.name);L.push({main:"↑ "+m,sub:sb,amt:"+"+fmt(Number(a.amount))+"원",color:"#16a34a",bold:true});});
-        const two=L.length>=4;
+        const two=D.length>0&&L.length+D.length>=4;
         const cell=(b:BL|undefined,k:string)=>b?<Fragment key={k}><td style={{color:b.color,fontWeight:b.bold?700:undefined}}>{b.main}{b.sub&&<span className="bsub">{b.sub}</span>}</td><td style={{textAlign:"right",color:b.color,fontWeight:b.bold?700:undefined,whiteSpace:"nowrap"}}>{b.amt}</td></Fragment>:<Fragment key={k}><td></td><td></td></Fragment>;
-        const rows:BL[][]=[];if(two){for(let k=0;k<L.length;k+=2)rows.push(L.slice(k,k+2));}else L.forEach(b=>rows.push([b]));
-        const tot:BL[]=[];if(td>0)tot.push({main:"총 할인",sub:"",amt:"-"+fmt(td)+"원",color:"#dc2626"});if(ta>0)tot.push({main:"총 추가",sub:"",amt:"+"+fmt(ta)+"원",color:"#16a34a"});
-        return <table className="tb"><thead><tr>{two?<><th style={{width:"31%"}}>항목</th><th style={{width:"19%",textAlign:"right"}}>금액</th><th style={{width:"31%"}}>항목</th><th style={{width:"19%",textAlign:"right"}}>금액</th></>:<><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></>}</tr></thead><tbody>
+        const rows:(BL|undefined)[][]=[];if(two){for(let k=0;k<Math.max(L.length,D.length);k++)rows.push([L[k],D[k]]);}else [...L,...D].forEach(b=>rows.push([b]));
+        const tA:BL|undefined=ta>0?{main:"총 추가",sub:"",amt:"+"+fmt(ta)+"원",color:"#16a34a"}:undefined;
+        const tD:BL|undefined=td>0?{main:"총 할인",sub:"",amt:"-"+fmt(td)+"원",color:"#dc2626"}:undefined;
+        const tot:BL[]=[tD,tA].filter(Boolean) as BL[];
+        return <table className="tb"><thead><tr>{two?<><th style={{width:"31%"}}>기본 · 추가</th><th style={{width:"19%",textAlign:"right"}}>금액</th><th style={{width:"31%"}}>할인 · 제외</th><th style={{width:"19%",textAlign:"right"}}>금액</th></>:<><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></>}</tr></thead><tbody>
           {rows.map((r,ri)=><tr key={ri}>{cell(r[0],"a"+ri)}{two&&cell(r[1],"b"+ri)}</tr>)}
-          {two?(tot.length>0&&<tr className="tr">{cell(tot[0],"t0")}{cell(tot[1],"t1")}</tr>):tot.map((t,ti)=><tr key={"t"+ti} className="tr">{cell(t,"t"+ti)}</tr>)}
+          {two?((tA||tD)&&<tr className="tr">{cell(tA,"t0")}{cell(tD,"t1")}</tr>):tot.map((t,ti)=><tr key={"t"+ti} className="tr">{cell(t,"t"+ti)}</tr>)}
         </tbody></table>;})()}<table className="tb" style={{marginTop:-1}}><colgroup><col style={{width:"60%"}}/><col style={{width:"40%"}}/></colgroup><tbody>
         <tr className="fr"><td style={{background:"#5b4fff",color:"white",fontWeight:700}}>전체 금액</td><td style={{background:"#5b4fff",color:"white",fontWeight:700,textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {isCommute&&<tr><td colSpan={2}><CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} /></td></tr>}
