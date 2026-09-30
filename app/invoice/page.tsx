@@ -1813,6 +1813,7 @@ function InvoicePageInner(){
 .ivc .is{margin-bottom:9px;}.ivc .ist{margin-bottom:5px!important;padding-bottom:3px!important;}
 .ivc .tb th{padding:3px 8px!important;font-size:10px;}.ivc .tb td{padding:3px 8px!important;font-size:11.5px!important;line-height:1.35;}.ivc .tb .lb{font-size:10.5px!important;width:18%;}
 .ivc .tb .tr td{font-size:12.5px!important;}.ivc .tb .fr td{font-size:15px!important;padding:6px 10px!important;}
+.ivm .tb th{padding:6px 10px!important;font-size:11px;}.ivm .tb td{padding:7px 10px!important;font-size:12.5px!important;line-height:1.45;}.ivm .is{margin-bottom:14px;}.ivm .tb .fr td{font-size:17px!important;padding:9px 12px!important;}
 .ivc .ift{margin-top:10px;padding:8px 12px;font-size:10.5px;line-height:1.55;}
 .pgdiv{text-align:center;color:#94a3b8;font-size:11px;letter-spacing:.1em;margin:18px 0 10px;border-top:1.5px dashed #cbd5e1;padding-top:6px;}
 .p2h{display:flex;justify-content:space-between;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px;}
@@ -2167,7 +2168,7 @@ function InvoicePageInner(){
         </div>
       </div>
     )}
-    <div className={"iv"+(((billing.items.length+billing.discounts.filter(d=>d.name).length+billing.additions.filter(x=>x.name).length)>=4||cm==="combo"||stayHolidays.length>0)?" ivc":"")} id="invoice-content">
+    <div className={"iv"+(((billing.items.length+billing.discounts.filter(d=>d.name).length+billing.additions.filter(x=>x.name).length)>=4||cm==="combo"||stayHolidays.length>0)?" ivc":" ivc ivm")} id="invoice-content">
       <div id="inv-p1">
       <div className="it"><div><img src="/dream-academy-logo.png" alt="Dream Academy" style={{height:60,width:"auto"}} /></div><div className="itr"><h1>INVOICE</h1><p>No. {reservationNo}</p></div></div>
 
@@ -2202,7 +2203,7 @@ function InvoicePageInner(){
         const tot:BL[]=[tD,tA].filter(Boolean) as BL[];
         return <table className="tb"><thead><tr>{two?<><th style={{width:"31%"}}>기본 · 추가</th><th style={{width:"19%",textAlign:"right"}}>금액</th><th style={{width:"31%"}}>할인 · 제외</th><th style={{width:"19%",textAlign:"right"}}>금액</th></>:<><th style={{width:"60%"}}>항목</th><th style={{width:"40%",textAlign:"right"}}>금액</th></>}</tr></thead><tbody>
           {rows.map((r,ri)=><tr key={ri}>{cell(r[0],"a"+ri)}{two&&cell(r[1],"b"+ri)}</tr>)}
-          {two?((tA||tD)&&<tr className="tr">{cell(tA,"t0")}{cell(tD,"t1")}</tr>):tot.map((t,ti)=><tr key={"t"+ti} className="tr">{cell(t,"t"+ti)}</tr>)}
+          {/* 총 추가·총 할인 줄 제거 (메이 2026-09-30) */}
         </tbody></table>;})()}<table className="tb" style={{marginTop:-1}}><colgroup><col style={{width:"60%"}}/><col style={{width:"40%"}}/></colgroup><tbody>
         <tr className="fr"><td style={{background:"#5b4fff",color:"white",fontWeight:700}}>전체 금액</td><td style={{background:"#5b4fff",color:"white",fontWeight:700,textAlign:"right"}}>{fmt(fp)}원</td></tr>
         {isCommute&&<tr><td colSpan={2}><CommuteDepositNotice total={fp} fullPayment={effectiveFullPayment} /></td></tr>}
