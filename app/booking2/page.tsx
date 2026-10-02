@@ -1,4 +1,5 @@
 "use client";
+import DiscountCodeField from "@/components/DiscountCodeField";
 import { useState, useEffect, useMemo } from "react";
 import { ensureUniqueBookerName } from "@/lib/bookerName";
 import { fetchCopySource, nonPackageTypeFromAccom, copyGuardians } from "@/lib/bookingCopy";
@@ -55,6 +56,7 @@ export default function BookingNonPackagePage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [reservationNo, setReservationNo] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
 
@@ -166,6 +168,7 @@ export default function BookingNonPackagePage() {
     const uniq = await ensureUniqueBookerName(supabase as never, booker.name);
     if (uniq.changed) alert(`같은 이름의 예약이 이미 있어 "${uniq.name}"(으)로 접수됩니다.\n(동명이인 구분용 — 서비스는 동일하게 제공돼요)`);
     const payload: any = {
+      discount_code: discountCode.trim().toLowerCase() || null,
       reservation_no: rno,
       booker_name: uniq.name,
       booker_english: booker.nameEng.trim(),
@@ -500,6 +503,8 @@ export default function BookingNonPackagePage() {
         {/* 기간 내 휴무일 안내 배너 (공용 컴포넌트) */}
         <HolidayBanner hits={holidayHits} variant="roomonly" />
 
+        <DiscountCodeField value={discountCode} onChange={setDiscountCode} />
+
         <div style={{
           marginTop: 16, padding: 14, background: "#fff",
           border: agreed ? "1px solid #10b981" : "1px solid #d1d5db",
@@ -530,3 +535,4 @@ export default function BookingNonPackagePage() {
     <HolidayPopup hits={holidayPopup} onClose={() => setHolidayPopup(null)} variant="roomonly" />
   </>);
 }
+

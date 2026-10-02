@@ -708,6 +708,7 @@ function InvoicePageInner(){
   const [extraGuardians,setExtraGuardians]=useState<{kor:string;eng:string}[]>([]);
   const [students,setStudents]=useState<StudentInfo[]>([{id:1,korName:"",engName:"",age:"",grade:"주니어",academyStart:"",academyEnd:"",academyWeeks:"2",photo:"O"}]);
   const [applied,setApplied]=useState(false);
+  const [bookingDiscount,setBookingDiscount]=useState<{code:string;amount:number}|null>(null);
   const [billing,setBilling]=useState({basePrice:0,items:[] as{label:string;price:number;season:string;accom?:string;roomType?:string;weeks?:number;parents?:number;kids?:number}[],discounts:[{id:1,name:"",amount:0}] as Disc[],additions:[{id:1,name:"",amount:0}] as Disc[],locals:[{id:1,name:"드림하우스 보증금",amount:""}] as LC[]});
   const [checkin,setCheckin]=useState({pickup:"O",drop:"O",pickupPlace:"",flightIn:"",flightOut:"",houseNo:"",specialRequest:""});
   const [adminOnly,setAdminOnly]=useState({agency:"",ssp:"O"});
@@ -930,6 +931,23 @@ function InvoicePageInner(){
       }
     });
   },[bookingId]);
+
+  // Booking code amounts are fixed by the server at booking time.
+  useEffect(()=>{
+    if(!bookingId)return;
+    let cancelled=false;
+    supabase.from("bookings").select("discount_code,discount_code_amount").eq("id",bookingId).maybeSingle().then(({data})=>{
+      if(!cancelled && data?.discount_code && data.discount_code_amount>0)setBookingDiscount({code:data.discount_code,amount:data.discount_code_amount});
+    });
+    return ()=>{cancelled=true;};
+  },[bookingId]);
+  useEffect(()=>{
+    if(!bookingDiscount || !snapshotChecked)return;
+    const name="할인코드 ("+bookingDiscount.code+")";
+    const lines=billing.discounts.filter(d=>String(d.name||"").startsWith("할인코드 ("));
+    if(lines.length===1 && lines[0].name===name && Number(lines[0].amount)===bookingDiscount.amount)return;
+    setBilling(b=>({...b,discounts:[...b.discounts.filter(d=>!String(d.name||"").startsWith("할인코드 (")),{id:-100,name,amount:bookingDiscount.amount}]}));
+  },[bookingDiscount,snapshotChecked,billing.discounts]);
 
   /* ── DB에서 예약 로드 (스냅샷 없을 때만) ── */
   useEffect(()=>{
@@ -2564,3 +2582,4 @@ function InvoicePageInner(){
   </>)}
   </>);
 }
+
