@@ -41,3 +41,6 @@
 
 .hr-pay-date-dialog{width:min(620px,92vw);padding:24px}.hr-pay-date-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hr-pay-date-options>button{padding:12px}.hr-pay-date-options strong{font-size:17px}.hr-pay-date-options small{font-size:11px}@media(max-width:480px){.hr-pay-date-options{grid-template-columns:1fr}}
 
+
+.hr-header{flex-wrap:wrap;justify-content:space-between}.hr-primary-nav{flex:0 0 100%;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-start;padding-top:8px}.hr-primary-nav button{font-size:17px;font-weight:700;min-height:52px;padding:12px 21px;border:1px solid #ccdcd8;border-radius:10px;background:#f1f7f5;color:#285e54}.hr-primary-nav button.active{background:#326f63;color:white;border-color:#326f63}.hr-primary-nav button:hover{box-shadow:0 2px 8px #285e5420}.hr-login-directory{display:grid;gap:28px}.hr-login-person{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;text-align:left;padding:16px;background:white;border:0;border-bottom:1px solid #dce5e8;color:#233743}.hr-login-person small{display:block}.hr-login-person:hover{background:#edf6f2}@media(max-width:600px){.hr-primary-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.hr-primary-nav button{font-size:15px;padding:10px}.hr-login-person{align-items:flex-start;flex-direction:column}}
+
