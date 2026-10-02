@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { toastOk, toastErr } from "@/lib/toast";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -72,6 +72,20 @@ function generateDates(lesson: Lesson): string[] {
   const end = new Date(lesson.end_date + "T00:00:00");
   while (d <= end) { if (wanted.has(d.getDay())) out.push(ymd(d)); d.setDate(d.getDate() + 1); }
   return out;
+}
+
+
+function ReadableMemo({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const field = ref.current;
+    if (!field) return;
+    const resize = () => { field.style.height = 'auto'; field.style.height = Math.max(140, field.scrollHeight + 2) + 'px'; };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, [value]);
+  return <textarea ref={ref} aria-label={label} rows={5} value={value} onChange={e => onChange(e.target.value)} placeholder="Memo for this day..." style={{ display: 'block', width: '100%', minHeight: 140, padding: '14px 16px', border: '1px solid #cbd5e1', borderRadius: 10, background: '#fff', color: '#1e293b', fontFamily: 'inherit', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', resize: 'vertical', overflow: 'hidden' }} />;
 }
 
 export default function AttendancePage() {
@@ -383,9 +397,9 @@ export default function AttendancePage() {
           {dates.filter(d => !cMap[d]).map((d, i) => {
             const dt = new Date(d + "T00:00:00");
             return (
-              <div key={d} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11.5, color: "#6b7280", minWidth: 92, fontWeight: 600 }}>#{dates.indexOf(d) + 1} {MONTHS[dt.getMonth()]} {dt.getDate()} ({WEEKDAYS[dt.getDay()]})</span>
-                <input className="sel-ipt" style={{ fontSize: 12, flex: 1 }} value={notesLog[d] || ""} onChange={e => setNotesLog(p => ({ ...p, [d]: e.target.value }))} placeholder="Memo for this day..." />
+              <div key={d} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 14, color: "#334155", fontWeight: 700 }}>#{dates.indexOf(d) + 1} {MONTHS[dt.getMonth()]} {dt.getDate()} ({WEEKDAYS[dt.getDay()]})</span>
+                <ReadableMemo label={"Memo for " + d} value={notesLog[d] || ""} onChange={value => setNotesLog(p => ({ ...p, [d]: value }))} />
               </div>
             );
           })}
@@ -428,3 +442,4 @@ export default function AttendancePage() {
     </div>
   </>);
 }
+
