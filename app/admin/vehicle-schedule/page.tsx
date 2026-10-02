@@ -4,7 +4,7 @@ import { isAdminAuthed } from '@/lib/adminAuth';
 import { useRouter } from 'next/navigation';
 import { aggregate, commuteMovements, pickupMovements, type VehMovement, type FtResolver } from '@/lib/vehicleSchedule';
 import { buildScheduleByMd, mergeWithFallback, resolveProgram, type DeployedScheduleItem } from '@/lib/fieldtripPrograms';
-import { groupShuttleRuns, type VehicleRow, checkinMovements, mergeMovement, movementTime, needsDispatch, vehicleCategory, type VehicleTab } from '@/lib/vehicleView';
+import { groupShuttleRuns, type VehicleRow, checkinMovements, mergeMovement, movementTime, needsDispatch, vehicleCategory, type VehicleTab, scheduleDates, matchesVehicleTab } from '@/lib/vehicleView';
 import './vehicle.css';
 
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila'}).format(new Date());
@@ -20,6 +20,8 @@ const sourceOf=(m:VehMovement)=>m.source==='pickup_requests'?{name:'픽드랍 �
 export default function VehicleSchedulePage(){
  const router=useRouter();
  const [authed,setAuthed]=useState(false),[date,setDate]=useState(today),[tab,setTab]=useState<VehicleTab>('all');
+ const [view,setView]=useState<'day'|'week'>('day');
+ const dates=useMemo(()=>scheduleDates(date,view),[date,view]);
  const [pending,setPending]=useState(false),[query,setQuery]=useState(''),[expanded,setExpanded]=useState<string|null>(null);
  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [drivers,setDrivers]=useState<Driver[]>([]),[dayMoves,setDayMoves]=useState<VehMovement[]>([]),[requests,setRequests]=useState<VehMovement[]>([]);
@@ -30,26 +32,26 @@ export default function VehicleSchedulePage(){
   if(!authed)return;
   setLoading(true);setError('');
   try{
-   const response=await fetch(`/api/admin/vehicle-schedule?from=${date}&to=${date}`,{cache:'no-store',signal});
+   const response=await fetch(`/api/admin/vehicle-schedule?from=${dates[0]}&to=${dates[dates.length-1]}`,{cache:'no-store',signal});
    const j=await response.json();if(!response.ok)throw new Error(j.error||'일정을 불러오지 못했습니다.');
    const byMd=buildScheduleByMd(mergeWithFallback((j.scheduleItems||[]) as DeployedScheduleItem[]));
-   const resolver:FtResolver={resolve:token=>{const p=resolveProgram(token,byMd);if(!p)return null;return {date:`${date.slice(0,4)}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`,isFieldtrip:p.isFieldtrip,name:p.name};}};
+   const resolver:FtResolver={resolve:token=>{const p=resolveProgram(token,byMd);if(!p)return null;return {date:dates.find(d=>d.slice(5)===`${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`)||`${date.slice(0,4)}-${String(p.month).padStart(2,'0')}-${String(p.day).padStart(2,'0')}`,isFieldtrip:p.isFieldtrip,name:p.name};}};
    const extras=checkinMovements(j.checkinExtras||[]);
-   const agg=aggregate({pickups:j.pickups||[],bookings:j.bookings||[],shuttles:j.shuttles||[],fieldtrips:j.fieldtrips||[],ftResolver:resolver,manual:[...commuteMovements(j.commutes||[]),...extras]},[date]);
+   const agg=aggregate({pickups:j.pickups||[],bookings:j.bookings||[],shuttles:j.shuttles||[],fieldtrips:j.fieldtrips||[],ftResolver:resolver,manual:[...commuteMovements(j.commutes||[]),...extras]},dates);
    if(signal?.aborted)return;
-   setDrivers(j.drivers||[]);setStates(j.overrides||{});setDayMoves(agg.days[0]?.movements||[]);
+   setDrivers(j.drivers||[]);setStates(j.overrides||{});setDayMoves(agg.days.flatMap(d=>d.movements));
    setRequests([...pickupMovements(j.pickups||[]),...extras]);
   }catch(e){if(signal?.aborted)return;setError((e as Error).message);}
   finally{if(!signal?.aborted)setLoading(false);}
- },[authed,date]);
+ },[authed,date,dates]);
  useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort();},[load]);
  const merge=useCallback((m:VehMovement)=>mergeMovement(m,states[m.date]?.overrides?.[m.id]),[states]);
  const pendingRows=useMemo(()=>requests.map(merge).filter(needsDispatch),[requests,merge]);
  const rows=useMemo(()=>{
-  const items=pending?pendingRows:[...dayMoves.map(merge),...(states[date]?.manual||[]).map(merge)];
-  return groupShuttleRuns(items).filter(m=>(tab==='all'||vehicleCategory(m)===tab)&&(!query||[m.guest,m.location,m.destination,m.flight_info,m.driver_name,m.teacher_name,m.vehicle_name,drivers.find(d=>d.id===m.driver_id)?.name].join(' ').toLowerCase().includes(query.toLowerCase())))
-    .sort((a,b)=>(pending?(Number(!!a.date&&a.date<today())-Number(!!b.date&&b.date<today())||(a.date||'0000').localeCompare(b.date||'0000')):0)||a.sortTime.localeCompare(b.sortTime)||a.id.localeCompare(b.id));
- },[pending,pendingRows,dayMoves,merge,states,date,tab,query,drivers]);
+  const items=pending?pendingRows:[...dayMoves.map(merge),...dates.flatMap(d=>(states[d]?.manual||[]).map(merge))];
+  return groupShuttleRuns(items).filter(m=>matchesVehicleTab(m,tab)&&(!query||[m.guest,m.location,m.destination,m.flight_info,m.driver_name,m.teacher_name,m.vehicle_name,drivers.find(d=>d.id===m.driver_id)?.name].join(' ').toLowerCase().includes(query.toLowerCase())))
+    .sort((a,b)=>(pending?(Number(!!a.date&&a.date<today())-Number(!!b.date&&b.date<today())||(a.date||'0000').localeCompare(b.date||'0000')):(a.date||'').localeCompare(b.date||''))||a.sortTime.localeCompare(b.sortTime)||a.id.localeCompare(b.id));
+ },[pending,pendingRows,dayMoves,merge,states,dates,tab,query,drivers]);
  const openEditor=(m:VehicleRow)=>{setMessage('');setEditor({...m,time:m.source==='fieldtrip_applications'&&m.sortTime!=='99:99'?m.sortTime:m.time});};
  const closeEditor=()=>{if(saving)return;if(window.confirm('입력한 변경을 저장하지 않고 닫을까요?'))setEditor(null);};
  useEffect(()=>{if(!editor)return;const guard=(e:BeforeUnloadEvent)=>{e.preventDefault();};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[editor]);
@@ -74,16 +76,18 @@ export default function VehicleSchedulePage(){
  if(!authed)return null;
  return <main className="vehicle-page">
   <header className="vehicle-heading"><div><span className="vehicle-brand">DREAM WORKSPACE</span><h1>차량 스케줄</h1><p>흩어진 운행 일정을 한눈에 확인하세요.</p></div><div className="vehicle-actions"><button onClick={()=>setSources(!sources)} aria-expanded={sources}>원본 일정 안내</button><button disabled={loading} onClick={()=>void load()}>새로고침</button><button onClick={()=>window.print()}>인쇄</button></div></header>
-  {sources&&<aside className="vehicle-source-guide"><b>원본과 연결된 일정입니다.</b><p>공항·추가 픽드랍 신청, 체크인 디테일의 추가 픽드랍, 예약 항공 정보, 셔틀 신청, 현지 직원 통학표, 체험활동 신청을 가져옵니다. 각 행을 펼치면 원본으로 이동할 수 있습니다.</p><p>배차 필요는 전체 날짜의 픽드랍 신청과 체크인 추가 픽드랍 중 날짜·시간·기사가 부족한 건입니다. 과거 기록은 실제 누락을 뜻하지 않으므로 원본과 대조해주세요. 예약 기반 항공 일정은 신청이 아닌 초안으로 구분합니다.</p><p>픽드랍 신청의 시간·기사 변경은 원본 신청에도 저장됩니다. 통학 명단은 현지 직원 원본에서 수정합니다. 배정 저장은 기사에게 메시지를 발송하지 않습니다.</p></aside>}
-  <section className="vehicle-datebar"><button aria-label="이전 날" disabled={loading} onClick={()=>{setDate(shift(date,-1));setPending(false);}}>〈 이전 날</button><div><h2>{dateLabel(date)}</h2><input aria-label="운행 날짜" type="date" value={date} onChange={e=>{if(e.target.value){setDate(e.target.value);setPending(false);}}}/><button onClick={()=>{setDate(today());setPending(false);}}>오늘</button></div><button aria-label="다음 날" disabled={loading} onClick={()=>{setDate(shift(date,1));setPending(false);}}>다음 날 〉</button></section>
+  {sources&&<aside className="vehicle-source-guide"><b>원본과 연결된 일정입니다.</b><p>공항 탭에는 기본 픽업·드랍과 NEW ADD 추가 픽드랍을 함께 표시합니다. NEW ADD는 추가 등록 일정이라는 뜻입니다. 주간은 선택한 날짜부터 7일간입니다. 공항·추가 픽드랍 신청, 체크인 디테일의 추가 픽드랍, 예약 항공 정보, 셔틀 신청, 현지 직원 통학표, 체험활동 신청을 가져옵니다. 각 행을 펼치면 원본으로 이동할 수 있습니다.</p><p>배차 필요는 전체 날짜의 픽드랍 신청과 체크인 추가 픽드랍 중 날짜·시간·기사가 부족한 건입니다. 과거 기록은 실제 누락을 뜻하지 않으므로 원본과 대조해주세요. 예약 기반 항공 일정은 신청이 아닌 초안으로 구분합니다.</p><p>픽드랍 신청의 시간·기사 변경은 원본 신청에도 저장됩니다. 통학 명단은 현지 직원 원본에서 수정합니다. 배정 저장은 기사에게 메시지를 발송하지 않습니다.</p></aside>}
+  <nav className="vehicle-view-switch" aria-label="조회 기간"><button className={view==='day'&&!pending?'active':''} aria-pressed={view==='day'&&!pending} onClick={()=>{setView('day');setDate(today());setPending(false);}}>오늘</button><button className={view==='week'&&!pending?'active':''} aria-pressed={view==='week'&&!pending} onClick={()=>{setView('week');setPending(false);}}>주간 · 7일</button></nav>
+  <section className="vehicle-datebar"><button disabled={loading} onClick={()=>{setDate(shift(date,view==='week'?-7:-1));setPending(false);}}>〈 {view==='week'?'이전 주':'이전 날'}</button><div><h2>{view==='week'?dates[0]+' ~ '+dates[6]:dateLabel(date)}</h2><input aria-label="운행 날짜" type="date" value={date} onChange={e=>{if(e.target.value){setDate(e.target.value);setPending(false);}}}/><button onClick={()=>{setDate(today());setPending(false);}}>오늘 기준</button></div><button disabled={loading} onClick={()=>{setDate(shift(date,view==='week'?7:1));setPending(false);}}>{view==='week'?'다음 주':'다음 날'} 〉</button></section>
+  {!pending&&view==='week'&&<div className="vehicle-week-strip" aria-label="주간 날짜별 일정">{dates.map(d=><button key={d} onClick={()=>{setDate(d);setView('day');}}><strong>{d.slice(5)} {new Intl.DateTimeFormat('ko-KR',{weekday:'short',timeZone:'Asia/Manila'}).format(new Date(d+'T12:00:00Z'))}</strong><span>{loading?'…':rows.filter(m=>m.date===d).length+'건'}</span></button>)}</div>}
   <div className="vehicle-toolbar"><nav aria-label="일정 종류">{tabs.map(t=><button key={t.key} className={tab===t.key?'active':''} aria-pressed={tab===t.key} onClick={()=>setTab(t.key)}>{t.label}</button>)}</nav><button className={`vehicle-pending ${pending?'active':''}`} aria-pressed={pending} disabled={loading||!!error} onClick={()=>{setPending(!pending);setTab('all');setQuery('');}}>배차 필요 <b>{loading||error?'—':pendingRows.length}건</b></button></div>
   <div className="vehicle-listbar"><span>{pending?'전체 날짜 · 배차가 필요한 신청':`${rows.length}건 · 필리핀 현지 시간`}{pending&&<button onClick={()=>setPending(false)}>선택한 날짜로 돌아가기 ×</button>}</span><input aria-label="일정 검색" placeholder="이름 · 숙소 · 기사 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div>
   {pending&&<p className="vehicle-pending-help">날짜와 관계없이 미배정 신청을 확인합니다. 지난 일정은 원본의 처리 상태를 먼저 확인해주세요.</p>}
   {message&&!editor&&<p className="vehicle-message" role="status">{message}</p>}
-  {error?<div className="vehicle-empty" role="alert">{error}<button onClick={()=>void load()}>다시 불러오기</button></div>:loading?<div className="vehicle-empty" role="status">일정을 불러오고 있습니다…</div>:<div className="vehicle-table-wrap"><table className="vehicle-table"><thead><tr><th>구분</th><th>{pending?'운행일 / 시간':'시간'}</th><th>운행 내용</th><th>탑승</th><th>기사</th><th><span className="vehicle-sr">상세 보기</span></th></tr></thead><tbody>
+  {error?<div className="vehicle-empty" role="alert">{error}<button onClick={()=>void load()}>다시 불러오기</button></div>:loading?<div className="vehicle-empty" role="status">일정을 불러오고 있습니다…</div>:<div className="vehicle-table-wrap"><table className="vehicle-table"><thead><tr><th>구분</th><th>{pending||view==='week'?'운행일 / 시간':'시간'}</th><th>운행 내용</th><th>탑승</th><th>기사</th><th><span className="vehicle-sr">상세 보기</span></th></tr></thead><tbody>
    {rows.map(m=>{const source=sourceOf(m),isOpen=expanded===m.id,board=m.commuteDetails,needed=m.applicants?m.applicants.some(needsDispatch):needsDispatch(m),driver=m.mixedDrivers?'배정 확인':m.driver_name||drivers.find(d=>d.id===m.driver_id)?.name||(m.driver_id?'기존 배정 기사':'미배정');return <Fragment key={m.id}><tr className={isOpen?'expanded':''}>
-    <td><span className={`vehicle-badge ${vehicleCategory(m)}`}>{label(m)}</span>{m.auto&&<small className="vehicle-muted">예약 기반 초안</small>}</td>
-    <td>{pending&&<small className="vehicle-date-label">{m.date||'날짜 미정'}</small>}<strong>{movementTime(m)}</strong>{m.sortTime==='99:99'&&m.time&&<small className="vehicle-alert">시간 확인 필요</small>}{pending&&m.date&&m.date<today()&&<small className="vehicle-alert">지난 일정 확인 필요</small>}</td>
+    <td><span className={`vehicle-badge ${vehicleCategory(m)}`}>{label(m)}</span>{m.kind==='extra'&&<small className="vehicle-new-add">NEW ADD</small>}{m.auto&&<small className="vehicle-muted">예약·체크인 항공 정보</small>}</td>
+    <td>{(pending||view==='week')&&<small className="vehicle-date-label">{m.date||'날짜 미정'}</small>}<strong>{movementTime(m)}</strong>{m.sortTime==='99:99'&&m.time&&<small className="vehicle-alert">시간 확인 필요</small>}{pending&&m.date&&m.date<today()&&<small className="vehicle-alert">지난 일정 확인 필요</small>}</td>
     <td><button className="vehicle-route-button" onClick={()=>setExpanded(isOpen?null:m.id)} aria-expanded={isOpen} aria-controls={`details-${m.id}`}>{board?<>{board.teacher||'통학 운행'}<small>{m.location}</small></>:<>{m.location||'출발지 확인'} <span className="vehicle-arrow">→</span> {m.destination||'도착지 확인'}<small>{m.applicants?'신청 '+m.applicants.length+'건 · '+m.guest:m.guest}</small></>}</button>{m.source==='fieldtrip_applications'&&<small className="vehicle-muted">차량: {m.vehicle_name||'미배정'} · 담당 티쳐: {m.teacher_name||'미배정'}</small>}{m.flight_info&&<small className="vehicle-muted">{m.flight_info}</small>}{m.source==='checkin_details'&&<small className="vehicle-muted">체크인 추가 신청 · 원본 대조 필요</small>}</td>
     <td className="vehicle-people">{m.num_people?`${m.num_people}명`:'인원 확인'}</td><td><strong className={!m.driver_id&&!m.driver_name?'vehicle-alert':''}>{driver}</strong>{m.mixedDrivers&&<small className="vehicle-alert">신청별 기사 배정이 다릅니다</small>}{needed&&<small className="vehicle-alert">{m.auto?'운행 확인 필요':'배차 필요'}</small>}</td>
     <td><button className="vehicle-expand" aria-label={`${m.guest} ${label(m)} 상세 보기`} aria-expanded={isOpen} onClick={()=>setExpanded(isOpen?null:m.id)}>{isOpen?'⌃':'⌄'}</button></td>
@@ -91,10 +95,11 @@ export default function VehicleSchedulePage(){
     <div>{m.applicants?<><b>{m.source==='fieldtrip_applications'?'탑승 학생 명단':'신청자 명단'} · 총 {m.num_people}명</b><ul>{m.applicants.map(p=><li key={p.id}><strong>{p.guest}</strong> · {p.num_people}명{p.note&&<p>{p.note}</p>}{m.source==='fieldtrip_applications'&&<button onClick={()=>openEditor({...p})}>이 학생 차량·티쳐 변경</button>}{m.mixedDrivers&&<small>기사: {p.driver_name||drivers.find(d=>d.id===p.driver_id)?.name||'미배정'}</small>}</li>)}</ul><p>{m.source==='fieldtrip_applications'?'같은 일정·차량·기사·티쳐의 학생입니다. 미배정 명단은 실제 배차를 확정한 상태가 아닙니다. 여러 대로 나눌 때는 학생별 차량을 변경해주세요.':'같은 날짜·시간·노선의 신청을 함께 표시합니다.'}</p></>:board?<><b>탑승 명단</b><ul>{board.cards.map((card,i)=><li key={i}><strong>{card.addr}</strong> ({card.count||'0'}) {card.names}</li>)}</ul>{!!board.absent?.length&&<p className="vehicle-alert">결석·미탑승 메모: {board.absent.join(' · ')}</p>}</>:<><b>{m.guest}</b><p>{m.note||'등록된 운행 메모가 없습니다.'}</p></>}{m.auto&&<p>항공 정보로 만든 초안입니다. 실제 차량 시간과 운행 여부를 확인해주세요.</p>}</div>
     <div className="vehicle-detail-actions">{source.url&&<a href={source.url} target="_blank" rel="noreferrer">{source.name} · 원본 보기 ↗</a>}{m.date&&<button className="primary" onClick={()=>openEditor(m)}>{m.applicants?'이 운행 함께 배정':needed?'시간·기사 배정':'배정 수정'}</button>}{!m.date&&<span className="vehicle-alert">원본에서 운행 날짜를 입력해주세요.</span>}</div>
    </div></td></tr>}</Fragment>;})}
-   {!rows.length&&<tr><td colSpan={6} className="vehicle-empty">{pending?'조건에 맞는 배차 필요 신청이 없습니다.':'선택한 날짜에 표시할 일정이 없습니다.'}</td></tr>}
+   {!rows.length&&<tr><td colSpan={6} className="vehicle-empty">{pending?'조건에 맞는 배차 필요 신청이 없습니다.':'선택한 기간에 표시할 일정이 없습니다.'}</td></tr>}
   </tbody></table></div>}
   <p className="vehicle-footnote">학생 픽업·드랍은 현지 직원이 저장한 통학표 기준입니다. 픽업·드랍 구분은 오전·오후를 의미하지 않습니다.</p>
   {editor&&<div className="vehicle-modal-backdrop"><section className="vehicle-modal" role="dialog" aria-modal="true" aria-labelledby="vehicle-edit-title"><h2 id="vehicle-edit-title">시간·기사 배정</h2><p>{editor.date} · {editor.guest}<br/>{editor.location} → {editor.destination||'원본 경유지 확인'}</p><label>차량 출발 시간 <input autoFocus placeholder="예: 14:30 또는 14:30–14:40" value={editor.time} disabled={saving} onChange={e=>setEditor({...editor,time:e.target.value})}/></label><small>24시간제로 입력해주세요. 항공편 시간과 구분합니다.</small>{editor.source==='pickup_schedules'?<p>담당 기사: {editor.driver_name} · 변경은 원본 통학표에서 해주세요.</p>:<label>담당 기사 <select value={editor.driver_id||''} disabled={saving} onChange={e=>setEditor({...editor,driver_id:e.target.value||null})}><option value="">미배정</option>{editor.driver_id&&!drivers.some(d=>d.id===editor.driver_id)&&<option value={editor.driver_id}>기존 배정 기사</option>}{drivers.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}{editor.source==='fieldtrip_applications'&&<><label>차량명 <input maxLength={100} placeholder="예: 1호차 / 흰색 밴" value={editor.vehicle_name||''} disabled={saving} onChange={e=>setEditor({...editor,vehicle_name:e.target.value})}/></label><label>담당 티쳐 <input maxLength={200} placeholder="예: T. Crista, T. Leng" value={editor.teacher_name||''} disabled={saving} onChange={e=>setEditor({...editor,teacher_name:e.target.value})}/></label></>}{editor.applicants?<p>이 운행의 신청 {editor.applicants.length}건에 동일한 시간·기사와 입력한 차량·담당 티쳐를 저장합니다. 신청별 탑승자 메모는 유지됩니다.</p>:<label>운행 메모 <textarea value={editor.note||''} disabled={saving} onChange={e=>setEditor({...editor,note:e.target.value})}/></label>}{message&&<p role="alert">{message}</p>}<footer><button disabled={saving} onClick={closeEditor}>취소</button><button className="primary" disabled={saving} onClick={()=>void save()}>{saving?'저장 중…':'저장'}</button></footer></section></div>}
  </main>;
 }
+
 

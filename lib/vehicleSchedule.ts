@@ -208,7 +208,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
   for (const p of pickups || []) {
     const t = PICKUP_KIND[p.request_type];
     const bid = (p as unknown as { booking_id?: string }).booking_id;
-    if (bid && t) covered.add(`${bid}_${t}`);
+    if (bid && t && !["cancelled", "취소"].includes(p.status || "")) covered.add(`${bid}_${t}_${String(p.request_date||"").slice(0,10)}`);
   }
   const out: VehMovement[] = [];
   for (const b of bookings || []) {
@@ -220,7 +220,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
 
     // 도착 (공항 → 숙소). pickup_place/drop_off는 보통 "공항"쪽 값이라 숙소는 house_no에서.
     const inDate = String(b.flight_in_date || b.checkin_date || "").slice(0, 10);
-    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup`)) {
+    if (inDate && (AIRPORT.test(b.pickup_place || "") || b.flight_in_date || b.flight_in_time || b.flight_in) && !covered.has(`${b.id}_pickup_${inDate}`)) {
       const dest = combo ? accomLabel(b.seg1_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_in_${b.id}`, date: inDate, time: "", sortTime: "99:99",
@@ -230,7 +230,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
       });
     }
     // 콤보 환승 (숙소1 → 숙소2)
-    if (combo && b.seg1_checkout && !covered.has(`${b.id}_transfer`)) {
+    if (combo && b.seg1_checkout && !covered.has(`${b.id}_transfer_${String(b.seg1_checkout).slice(0,10)}`)) {
       const d = String(b.seg1_checkout).slice(0, 10);
       out.push({
         id: `bk_tr_${b.id}`, date: d, time: "", sortTime: "99:99",
@@ -241,7 +241,7 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     }
     // 출발 (숙소 → 공항)
     const outDate = String(b.flight_out_date || b.checkout_date || "").slice(0, 10);
-    if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff`)) {
+    if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff_${outDate}`)) {
       const loc = combo ? accomLabel(b.seg2_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_out_${b.id}`, date: outDate, time: "", sortTime: "99:99",
@@ -458,5 +458,6 @@ export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
  }
  return out;
 }
+
 
 

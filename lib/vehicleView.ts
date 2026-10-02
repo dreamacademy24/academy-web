@@ -52,3 +52,14 @@ export function checkinMovements(rows:Extra[]):VehMovement[]{
  return rows.map(p=>({id:p.id,booking_id:p.booking_id,date:p.date||'',time:'',sortTime:'99:99',kind:'extra',source:'checkin_details',guest:p.bookings?.booker_name||'예약자 확인',location:p.type==='픽업'?'공항':p.bookings?.house_no||p.bookings?.accom_room||'숙소 확인',destination:p.type==='픽업'?p.bookings?.house_no||p.bookings?.accom_room||'숙소 확인':'공항',num_people:0,flight_info:[p.airline,p.flight,p.time?`항공 ${p.time}`:''].filter(Boolean).join(' · '),note:`체크인 디테일 추가 ${p.type||'픽드랍'} · 별도 신청과 같은 운행인지 원본 대조 필요`,locked:true}));
 }
 
+
+/** A rolling seven-day window anchored to the explicitly selected Manila date. */
+export function scheduleDates(date:string,view:'day'|'week'):string[]{
+ const start=new Date(date+'T12:00:00Z');
+ return Array.from({length:view==='week'?7:1},(_,i)=>{const d=new Date(start);d.setUTCDate(d.getUTCDate()+i);return d.toISOString().slice(0,10);});
+}
+export function matchesVehicleTab(m:VehMovement,tab:VehicleTab):boolean{
+ const category=vehicleCategory(m);
+ return tab==='all'||category===tab||(tab==='airport'&&category==='extra');
+}
+
