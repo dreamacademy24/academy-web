@@ -649,8 +649,17 @@ function Css() {
     .dnav{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
     .nb{padding:8px 14px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}
     .dlabel{font-size:15px;font-weight:800;cursor:pointer}
-    .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
-    .tcard{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:16px}
+    .tgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+    .tcard{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:20px;display:grid;grid-template-columns:minmax(220px,1fr) minmax(300px,1.2fr) minmax(260px,1.5fr);grid-template-areas:"info actions note" "name behavior note" "meta behavior note";column-gap:24px;row-gap:6px;align-items:start}
+    .tcard .trow1{grid-area:info;gap:12px;margin:0}
+    .tcard .tname{grid-area:name;overflow-wrap:anywhere}
+    .tcard .tmeta{grid-area:meta;margin:0}
+    .tcard .tbtns{grid-area:actions;margin:0}
+    .tcard .brow{grid-area:behavior;margin:0}
+    .tcard .bnote{flex-basis:100%;overflow-wrap:anywhere}
+    .tcard .nta{grid-area:note;min-width:0;min-height:104px;align-self:stretch;line-height:1.6}
+    @media(max-width:1050px){.tcard{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);grid-template-areas:"info actions" "name behavior" "meta behavior" "note note";gap:10px 20px}}
+    @media(max-width:640px){.tcard{padding:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"info" "name" "meta" "actions" "behavior" "note";gap:8px}}
     .tcard.done{opacity:.82}
     .trow1{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
     .ttime{font-size:20px;font-weight:800;color:#0f172a}
