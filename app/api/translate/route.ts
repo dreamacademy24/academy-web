@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
   const payload = {
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 4096,
     system,
     messages: [{ role: 'user', content: text }],
   }
@@ -50,9 +50,11 @@ export async function POST(req: Request) {
   }
 
   const data = await res.json()
+  if (data?.stop_reason === 'max_tokens') return NextResponse.json({ error: 'Translation is too long. Please translate a shorter section.' }, { status: 422 })
   const translated: string = (data?.content?.[0]?.text ?? '').trim()
   if (!translated) {
     return NextResponse.json({ error: 'empty translation' }, { status: 500 })
   }
   return NextResponse.json({ translated })
 }
+

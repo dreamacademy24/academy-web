@@ -77,6 +77,23 @@ function generateDates(lesson: Lesson): string[] {
 
 function ReadableMemo({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [translation, setTranslation] = useState<{ source: string; text: string } | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState('');
+  const [showTranslation, setShowTranslation] = useState(true);
+  async function translateMemo() {
+    if (translating || !value.trim()) return;
+    if (translation?.source === value) { setShowTranslation(v => !v); return; }
+    const source = value;
+    setTranslating(true); setTranslationError('');
+    try {
+      const response = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: source, dir: 'en2ko' }) });
+      const data = await response.json();
+      if (!response.ok || !data.translated) throw new Error('translation failed');
+      setTranslation({ source, text: data.translated }); setShowTranslation(true);
+    } catch { setTranslationError('번역하지 못했습니다. 잠시 후 다시 눌러주세요.'); }
+    finally { setTranslating(false); }
+  }
   useEffect(() => {
     const field = ref.current;
     if (!field) return;
@@ -85,7 +102,11 @@ function ReadableMemo({ value, onChange, label }: { value: string; onChange: (va
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, [value]);
-  return <textarea ref={ref} aria-label={label} rows={5} value={value} onChange={e => onChange(e.target.value)} placeholder="Memo for this day..." style={{ display: 'block', width: '100%', minHeight: 140, padding: '14px 16px', border: '1px solid #cbd5e1', borderRadius: 10, background: '#fff', color: '#1e293b', fontFamily: 'inherit', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', resize: 'vertical', overflow: 'hidden' }} />;
+  return <div><textarea ref={ref} aria-label={label} rows={5} value={value} onChange={e => onChange(e.target.value)} placeholder="Memo for this day..." style={{ display: 'block', width: '100%', minHeight: 140, padding: '14px 16px', border: '1px solid #cbd5e1', borderRadius: 10, background: '#fff', color: '#1e293b', fontFamily: 'inherit', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', resize: 'vertical', overflow: 'hidden' }} />
+    {value.trim() && <button type="button" className="btn" onClick={translateMemo} disabled={translating} style={{ marginTop: 8, color: '#1a6fc4' }}>{translating ? '번역 중…' : translation?.source === value && showTranslation ? '한국어 번역 숨기기' : '한국어 번역'}</button>}
+    {translationError && <p role="alert" style={{ color: '#b91c1c', marginTop: 8 }}>{translationError}</p>}
+    {translation?.source === value && showTranslation && <div lang="ko" style={{ marginTop: 10, padding: '16px 18px', border: '1px solid #bfdbfe', borderRadius: 10, background: '#eff6ff', color: '#1e3a5f', fontSize: 15, lineHeight: 1.9, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}><strong style={{ display: 'block', marginBottom: 8 }}>한국어 번역</strong>{translation.text}</div>}
+  </div>;
 }
 
 export default function AttendancePage() {
@@ -392,21 +413,6 @@ export default function AttendancePage() {
       )}
 
       <div className="card">
-        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>📝 Memos <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>(separate — not changed by the edit panel)</span></div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {dates.filter(d => !cMap[d]).map((d, i) => {
-            const dt = new Date(d + "T00:00:00");
-            return (
-              <div key={d} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontSize: 14, color: "#334155", fontWeight: 700 }}>#{dates.indexOf(d) + 1} {MONTHS[dt.getMonth()]} {dt.getDate()} ({WEEKDAYS[dt.getDay()]})</span>
-                <ReadableMemo label={"Memo for " + d} value={notesLog[d] || ""} onChange={value => setNotesLog(p => ({ ...p, [d]: value }))} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card">
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>⚙️ Lesson Settings</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16, alignItems: "flex-start" }}>
           <div>
@@ -435,6 +441,21 @@ export default function AttendancePage() {
         </div>
       </div>
 
+      <div className="card">
+        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>📝 Memos <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>(separate — not changed by the edit panel)</span></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {dates.filter(d => !cMap[d]).map((d, i) => {
+            const dt = new Date(d + "T00:00:00");
+            return (
+              <div key={d} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 14, color: "#334155", fontWeight: 700 }}>#{dates.indexOf(d) + 1} {MONTHS[dt.getMonth()]} {dt.getDate()} ({WEEKDAYS[dt.getDay()]})</span>
+                <ReadableMemo label={"Memo for " + d} value={notesLog[d] || ""} onChange={value => setNotesLog(p => ({ ...p, [d]: value }))} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
         <button className="btn" onClick={() => router.back()} disabled={saving}>Back</button>
         <button className="btn pri" onClick={save} disabled={saving}>{saving ? "Saving..." : "💾 Save"}</button>
@@ -442,4 +463,5 @@ export default function AttendancePage() {
     </div>
   </>);
 }
+
 
