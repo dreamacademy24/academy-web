@@ -315,7 +315,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
             const nm = (a.booking_id ? bookingNames[a.booking_id] : "") || a.portal_name || "";
             return { room, nm };
           };
-          const reqNotes = activeList.map(a => a.request || a.message || "").filter(Boolean);
+          const reqNotes = activeList.filter(a => (a.request || a.message || "").trim());
           return (
             <div key={key} style={{background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, padding:"12px 16px", boxShadow:"0 1px 4px rgba(15,23,42,0.04)"}}>
               <div style={{display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
@@ -355,7 +355,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
                 })}
               </div>
               {reqNotes.length > 0 && (
-                <div style={{marginTop:7, fontSize:12, color:"#64748b"}}>📝 {reqNotes.join(" · ")}</div>
+                <div style={{marginTop:10, display:"flex", flexDirection:"column", gap:8}}>
+                  {reqNotes.map(a => {
+                    const { room, nm } = chipInfo(a);
+                    const timestamp = new Date(a.created_at);
+                    const when = Number.isNaN(timestamp.getTime()) ? "" : new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Manila", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(timestamp);
+                    return <div key={a.id} style={{padding:"10px 12px", borderRadius:9, background:"#f8fafc", border:"1px solid #e2e8f0"}}>
+                      <div style={{display:"flex", flexWrap:"wrap", alignItems:"center", gap:7, marginBottom:5, fontSize:12}}>
+                        <strong style={{color:"#334155"}}>📝 {nm || a.name || a.portal_name || "신청자 미기록"} · 신청 요청사항</strong>
+                        {room && <span style={{color:"#64748b"}}>{room}</span>}
+                        {when && <span style={{color:"#64748b"}}>신청 {when} (필리핀)</span>}
+                      </div>
+                      <div style={{fontSize:14, lineHeight:1.7, color:"#334155", whiteSpace:"pre-wrap", overflowWrap:"anywhere"}}>{a.request || a.message}</div>
+                    </div>;
+                  })}
+                </div>
               )}
             </div>
           );
@@ -552,3 +566,4 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f1f5f9;color:#1a1a2e}
     )}
   </>);
 }
+
