@@ -1,3 +1,4 @@
+import { workspaceStaffIdentity } from '@/lib/portalAuth';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { isCommuteBooking } from '@/lib/bookingTypes';
@@ -8,7 +9,11 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  if (!(await workspaceStaffIdentity(req))) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:403});
   const { bookingId, username, password } = await req.json();
+  const {data:current,error:currentError}=await supabaseAdmin.from('bookings').select('portal_user_id').eq('id',bookingId).maybeSingle();
+  if(currentError||!current)return NextResponse.json({error:'예약을 확인하지 못했습니다.'},{status:400});
+  if(current.portal_user_id)return NextResponse.json({error:'이미 연결된 계정이 있습니다. 재방문은 기존 계정을 그대로 사용해주세요.'},{status:409});
   if (!bookingId || !username || !password) {
     return NextResponse.json({ error: '필수값 누락' }, { status: 400 });
   }
@@ -64,7 +69,9 @@ export async function POST(req: NextRequest) {
 
 // 비번 재설정
 export async function PATCH(req: NextRequest) {
+  if (!(await workspaceStaffIdentity(req))) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:403});
   const { bookingId, newPassword } = await req.json();
+  if(typeof newPassword!=='string'||newPassword.length<8)return NextResponse.json({error:'비밀번호는 8자 이상 입력해주세요.'},{status:400});
 
   const { data: booking } = await supabaseAdmin
     .from('bookings')
@@ -85,7 +92,8 @@ export async function PATCH(req: NextRequest) {
   await supabaseAdmin
     .from('bookings')
     .update({ portal_temp_pw: newPassword })
-    .eq('id', bookingId);
+    .eq('portal_user_id', booking.portal_user_id);
 
   return NextResponse.json({ success: true });
 }
+

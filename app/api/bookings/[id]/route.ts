@@ -1,3 +1,4 @@
+import { workspaceStaffIdentity } from '@/lib/portalAuth';
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -92,6 +93,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const body = await req.json()
+  if (['portal_user_id','portal_username','portal_temp_pw'].some(key => Object.prototype.hasOwnProperty.call(body,key))) {
+    if (!(await workspaceStaffIdentity(req))) return NextResponse.json({error:'직원 로그인 후 연결해주세요.'},{status:403});
+    if (!Object.prototype.hasOwnProperty.call(body,'portal_user_id')) return NextResponse.json({error:'계정 연결 또는 비밀번호 재설정 기능을 이용해주세요.'},{status:400});
+    if (body.portal_user_id) {
+      const {data,error}=await supabase.auth.admin.getUserById(body.portal_user_id);
+      if(error||!data.user?.email) return NextResponse.json({error:'유효한 계정을 선택해주세요.'},{status:400});
+      body.portal_username=data.user.email.split('@')[0];
+    } else {body.portal_username=null;}
+    // 연결 대상의 실제 비밀번호를 알 수 없으므로 이전 계정의 임시 비밀번호를 표시하지 않는다.
+    body.portal_temp_pw=null;
+  }
   // 예약유형이 콤보(+)가 아닌 값으로 변경되면 콤보 잔재(seg1/seg2·큐브 필드) 자동 정리
   if (body && typeof body.accom_type === 'string' && !body.accom_type.includes('+')) {
     Object.assign(body, {
@@ -155,3 +167,4 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   return NextResponse.json({ booking: updatedBooking, source })
 }
+

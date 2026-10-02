@@ -205,6 +205,7 @@ export default function BookingDetailPage() {
   }
 
   async function handleResetPassword() {
+    if (!confirm('같은 아이디에 연결된 모든 예약의 로그인 비밀번호가 함께 변경됩니다. 재설정할까요?')) return;
     const newPw = generateTempPassword();
     setPortalLoading(true); setPortalMsg('');
     const res = await fetch('/api/admin/create-portal-user', {
@@ -652,7 +653,7 @@ export default function BookingDetailPage() {
                     <b>포털 아이디:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalUsername}</code>
                   </div>
                   <div style={{fontSize:13}}>
-                    <b>현재 임시 비번:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalTempPw}</code>
+                    <b>현재 임시 비번:</b> <code style={{background:'#f1f5f9', padding:'2px 8px', borderRadius:4}}>{portalTempPw || '기존 비밀번호 그대로 사용'}</code>
                   </div>
                   <button
                     onClick={handleResetPassword}
@@ -702,7 +703,7 @@ export default function BookingDetailPage() {
           <div style={{display:'flex', alignItems:'center', gap:8, flexWrap:'wrap'}}>
             <b style={{fontSize:13}}>🔗 손님 앱 계정</b>
             {portalUserId ? (
-              <span style={{fontSize:13, color:'#166534', background:'#f0fdf4', padding:'2px 8px', borderRadius:6}}>연결됨{linkLabel ? ' · ' + linkLabel : ''}</span>
+              <span style={{fontSize:13, color:'#166534', background:'#f0fdf4', padding:'2px 8px', borderRadius:6}}>연결됨 · {portalUsername}{linkLabel ? ' · ' + linkLabel : ''}</span>
             ) : (
               <span style={{fontSize:13, color:'#94a3b8'}}>미연결</span>
             )}
@@ -1557,3 +1558,4 @@ export default function BookingDetailPage() {
     </div>
   </>);
 }
+

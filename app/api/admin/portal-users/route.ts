@@ -1,3 +1,4 @@
+import { workspaceStaffIdentity } from '@/lib/portalAuth';
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -15,6 +16,7 @@ const supabase = createClient(
 type Acct = { id: string; username: string; name: string; email: string }
 
 export async function GET(req: Request) {
+  if (!(await workspaceStaffIdentity(req))) return NextResponse.json({error:'직원 로그인이 필요합니다.'},{status:403});
   const { searchParams } = new URL(req.url)
   const q = (searchParams.get('q') || '').trim()
   if (q.length < 2) return NextResponse.json({ users: [] })
@@ -64,10 +66,11 @@ export async function GET(req: Request) {
       const u = data?.user
       if (u) {
         a.email = u.email || ''
-        if (!a.username) a.username = (u.email ? u.email.split('@')[0] : '')
+        a.username = (u.email ? u.email.split('@')[0] : '')
       }
     } catch { /* ignore */ }
   }))
 
   return NextResponse.json({ users: accts })
 }
+
