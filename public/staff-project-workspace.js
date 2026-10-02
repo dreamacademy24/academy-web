@@ -119,4 +119,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 
-(function(){var s=document.createElement('script');s.src='/staff-project-comment-alerts.js?v=20260924';document.head.appendChild(s);})();
+(function(){var s=document.createElement('script');s.src='/staff-project-comment-alerts.js?v=20261002-classes';document.head.appendChild(s);})();
+

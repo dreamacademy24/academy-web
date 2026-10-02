@@ -1,7 +1,7 @@
 (function(){
  'use strict';
  var expanded=false,refreshQueued=false;
- function comments(){return (myNotifs||[]).filter(function(n){return !n.is_read&&(n.type==='task_comment'||(n.type==='project'||n.type==='opinion')&&/댓글|답변/.test(n.message||''));});}
+ function comments(){return (myNotifs||[]).filter(function(n){return !n.is_read&&(n.type==='class_comment'||n.type==='task_comment'||(n.type==='project'||n.type==='opinion')&&/댓글|답변/.test(n.message||''));});}
  function forNode(id){return comments().filter(function(n){return n.type==='project'&&String(n.ref_id)===String(id);});}
  function el(tag,text,cls){var n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
  function person(n){return (typeof ALL==='undefined'?[]:ALL).find(function(p){return String(n.message||'').includes('('+p.name+')')||String(n.message||'').startsWith(p.name+'님');});}
@@ -13,7 +13,9 @@
   try{await sbPatch('staff_notifications','to_id=eq.'+encodeURIComponent(actor.id)+'&id=in.('+ids.map(encodeURIComponent).join(',')+')',{is_read:true});if(CU!==actor)return;myNotifs=myNotifs.filter(function(n){return !ids.includes(n.id);});renderNotifBadges();refresh();}
   catch(e){toast('댓글 확인 상태를 저장하지 못했습니다. 다시 눌러주세요.','#ef4444');}
  }
+ function classUrl(n){return /^\/admin\/(?:online-class\/[a-zA-Z0-9-]+|tutor-class\/[a-zA-Z0-9-]+\/attendance)$/.test(n.ref_id||'')?n.ref_id:null;}
  function open(n){
+  if(n.type==='class_comment'){var url=classUrl(n);if(url)window.top.location.href=url;else toast('수업 링크를 확인해주세요.');return;}
   if(n.type==='project'){
    window._ptPendingSel=String(n.ref_id);showPage('ptree');
    var wait=setInterval(function(){if(typeof PT!=='undefined'&&String(PT.sel)===String(n.ref_id)){var box=document.getElementById('ptCmtList');if(box&&PT.comments[n.ref_id]!==undefined){clearInterval(wait);box.scrollIntoView({behavior:'smooth',block:'center'});}}},150);setTimeout(function(){clearInterval(wait);},15000);
@@ -21,11 +23,11 @@
   else{showPage('opinions');if(n.ref_id)setTimeout(function(){openOpinionDetail(n.ref_id);},200);}
  }
  function renderHome(host){
-  var rows=comments(),sig=rows.map(function(n){return n.id;}).join('|')+'|'+expanded;
+  var rows=comments(),sig=rows.map(function(n){return n.id+':'+n.message;}).join('|')+'|'+expanded;
   if(host.dataset.signature===sig)return;host.dataset.signature=sig;host.replaceChildren();
-  host.append(el('h2','💬 확인할 댓글 '+rows.length+'건'),el('p','댓글 확인 → 해당 글로 이동합니다. 프로젝트 댓글은 읽은 뒤 확인 버튼을 눌러주세요.'));
+  host.append(el('h2','💬 확인할 댓글 '+rows.length+'건'),el('p','댓글 확인 → 원래 글이나 학생 수업으로 이동합니다. 수업 코멘트는 내용을 확인한 뒤 ‘확인 완료’를 눌러주세요.'));
   if(!rows.length){host.append(el('p','확인할 새 댓글이 없습니다.'));return;}
-  rows.slice(0,expanded?rows.length:6).forEach(function(n){var b=el('button',null,'pca-row');b.type='button';var text=el('span',n.message||'새 댓글');text.style.flex='1';text.append(el('small',typeof _actWhen==='function'?_actWhen(n.created_at):''));b.append(avatar(person(n)),text,el('strong','댓글 확인 →'));b.onclick=function(){open(n);};host.append(b);});
+  rows.slice(0,expanded?rows.length:6).forEach(function(n){var b=el('button',null,'pca-row');b.type='button';var text=el('span',n.message||'새 댓글');text.style.flex='1';text.append(el('small',typeof _actWhen==='function'?_actWhen(n.created_at):''));b.append(avatar(person(n)),text,el('strong','댓글 확인 →'));b.onclick=function(){open(n);};if(n.type==='class_comment'){var wrap=el('div',null,'pca-class-row');wrap.style.cssText='display:flex;align-items:center;gap:8px';b.style.flex='1';b.style.minWidth='0';text.style.whiteSpace='pre-wrap';var done=el('button','확인 완료','pca-confirm');done.type='button';done.onclick=function(){read([n]);};wrap.append(b,done);host.append(wrap);}else host.append(b);});
   if(rows.length>6){var more=el('button',expanded?'접기':'댓글 '+(rows.length-6)+'건 더 보기','pca-confirm');more.onclick=function(){expanded=!expanded;refresh();};host.append(more);}
  }
  function refresh(){
@@ -37,8 +39,9 @@
  // Opening a project is not an acknowledgement of its comments.
  ptMarkNodeRead=function(id){read((myNotifs||[]).filter(function(n){return n.type==='project'&&String(n.ref_id)===String(id)&&!/댓글|답변/.test(n.message||'');}));};
  var priorDetail=ptRenderDetail;ptRenderDetail=function(id){if(id&&typeof PT!=='undefined')delete PT.comments[id];return priorDetail(id);};
- var priorGo=_empNotifGo;_empNotifGo=function(idx){var n=(window._empNotifList||[])[idx];if(n&&n.type==='project'&&/댓글|답변/.test(n.message||'')){open(n);return;}return priorGo(idx);};
+ var priorGo=_empNotifGo;_empNotifGo=function(idx){var n=(window._empNotifList||[])[idx];if(n&&(n.type==='class_comment'||n.type==='project'&&/댓글|답변/.test(n.message||''))){open(n);return;}return priorGo(idx);};
  new MutationObserver(function(){if(refreshQueued)return;refreshQueued=true;setTimeout(function(){refreshQueued=false;refresh();},50);}).observe(document.body,{childList:true,subtree:true});
  refresh();
 })();
+
 
