@@ -129,6 +129,7 @@ export default function EngHubPage() {
   }
 
   const cards = [
+    { icon: "ME", title: "Personal profile · Pay", desc: "My details · Timecard · Send to HR · Payslips", href: "/admineng/my-profile" },
     ...(staff && hrAccount === staff.username ? [{ icon: "HR", title: "HR · Payroll", desc: "Employee records · Payroll · HR sign-in", href: "/admin/HR" }] : []),
     { icon: "📢", title: "Announcements", desc: "Staff updates · Guides · 공지사항", href: "/admineng/notices" },
     { icon: "🌱", title: "My Students", desc: "Student care · Visit history · Care team", href: "/staff/students" },
@@ -255,3 +256,4 @@ export default function EngHubPage() {
     </div>
   </>);
 }
+

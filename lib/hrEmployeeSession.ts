@@ -1,7 +1,8 @@
+import {currentStaffEmployee} from './hrSelf'
 import { hrSessionFromReq } from './hrAuth'
 import { hrDb } from './hrServer'
 export async function currentEmployee(req:Request){
- const token=hrSessionFromReq(req);if(!token||token.role!=='employee')return null
+ const token=hrSessionFromReq(req);if(!token)return currentStaffEmployee(req);if(token.role!=='employee')return null
  const {data:a,error}=await hrDb.from('hr_accounts').select('username,role,employee_id,is_active,must_change_pw').eq('username',token.username).maybeSingle()
  if(error)throw error
  if(!a?.is_active||a.role!=='employee'||!a.employee_id||!/^[0-9a-f-]{36}$/i.test(a.employee_id))return null
@@ -9,3 +10,4 @@ export async function currentEmployee(req:Request){
  if(ee)throw ee
  return e?.status==='Active'?{...a,employee:e}:null
 }
+
