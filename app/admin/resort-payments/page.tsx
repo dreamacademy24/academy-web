@@ -53,7 +53,7 @@ export default function ResortPaymentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("resort_invoices").select("*").order("period_start", { ascending: false });
+    const { data } = await supabase.from("resort_invoices").select("*").order("period_start", { ascending: true, nullsFirst: false }).order("invoice_no", { ascending: true });
     setRows((data || []) as InvRow[]);
     setLoading(false);
   }, []);
@@ -158,7 +158,7 @@ export default function ResortPaymentsPage() {
 
   if (!authed) return null;
 
-  const months = Array.from(new Set(rows.map(r => (r.period_start || "").slice(0, 7)).filter(Boolean))).sort().reverse();
+  const months = Array.from(new Set(rows.map(r => (r.period_start || "").slice(0, 7)).filter(Boolean))).sort();
 
   return (<>
     <style>{`
