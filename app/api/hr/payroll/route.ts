@@ -35,7 +35,18 @@ export async function POST(req:Request){try{
  if(old?.pay_status==='finalized')return reply({error:'Finalized payroll is locked. / 확정된 급여는 잠겨 있습니다.'},409)
  const patch:any={actor:admin?.username||self!.username,version:(old?.version||0)+1,updated_at:new Date().toISOString()}
  const now=new Date().toISOString()
- if(['save_time','submit'].includes(b.action)){
+ if(b.action==='prepare_payroll'){
+  if(!admin?.full)return reply({error:'Central HR review required'},403)
+  if(emp.status!=='Active')return reply({error:'Active employee required'},400)
+  if(b.confirmed!==true)return reply({error:'Confirm the reviewed timecard first.'},400)
+  const days=validateDays(old&&['submitted','approved'].includes(old.time_status)?old.days:b.days,period.dates,true)
+  const settingsResult=await hrDb.from('hr_payroll_settings').select('*').eq('company',emp.company).maybeSingle();if(settingsResult.error)throw settingsResult.error
+  const settings=settingsResult.data;if(!settings)return reply({error:'Save company Salary settings before sending to payroll. / 회사 급여 설정을 먼저 저장해주세요.'},400)
+  const rules=settings.rules||defaultRules(),calculated=calculatePay(rules,settings.policy||DEFAULT_POLICY,emp,days,Number(b.day))
+  if(typeof b.note!=='string'||b.note.length>2000)return reply({error:'Invalid review note'},400)
+  Object.assign(patch,{days,time_status:'approved',reviewed_at:now,reviewed_by:admin.username,review_note:b.note.trim(),amounts:calculated.amounts,rules_snapshot:rules,calculation:{...calculated.calculation,settings_version:settings.version,employee_payroll_version:emp.payroll_version,calculated_at:now,calculated_by:admin.username},pay_status:'draft'})
+ }else if(['save_time','submit'].includes(b.action)){
+  if(b.action==='submit'&&!self)return reply({error:'HR submission is available from the employee personal page only.'},403)
   if(emp.status!=='Active')return reply({error:'Only active employees can submit.'},400)
   if(old&&['submitted','approved'].includes(old.time_status))return reply({error:'Ask Abby to return this timecard before editing.'},409)
   patch.days=validateDays(b.days,period.dates,b.action==='submit');patch.time_status=b.action==='submit'?'submitted':'draft';patch.submitted_at=b.action==='submit'?now:null
@@ -76,4 +87,5 @@ export async function POST(req:Request){try{
  if(result.error)throw result.error
  return reply({ok:true})
  }catch(e){if(e instanceof SyntaxError)return reply({error:'Invalid request'},400);if(e instanceof Error&&/Invalid|Check|Complete|Clear/.test(e.message))return reply({error:e.message},400);return hrError(e)}}
+
 
