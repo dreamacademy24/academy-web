@@ -1,5 +1,5 @@
 'use client'
-import {useState,useEffect,useCallback} from 'react'
+import {useState,useEffect,useCallback,useRef} from 'react'
 import {EARNINGS,DEDUCTIONS,payrollPeriod,timeSummary,totals,type TimeDay} from '@/lib/hrPayroll'
 import {displayName} from '@/lib/hr'
 import {COMPANY_EN} from '@/lib/hrFields'
@@ -12,9 +12,13 @@ export default function PayrollWorkspace({request,language,onDirty}:Props){
  const t=(ko:string,en:string)=>language==='ko'?ko:en,l=(k:string)=>{const r=rules.find((r:PayRule)=>r.id===k);return r?(language==='ko'?r.name_ko||r.name:r.name):labels[k]?.[language==='ko'?0:1]||k}
  const [month,setMonth]=useState(()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Manila'}).slice(0,7)),[day,setDay]=useState(20),[data,setData]=useState<any>(null),[selected,setSelected]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[dirty,setDirty]=useState(false),[notice,setNotice]=useState(''),[company,setCompany]=useState('all'),[search,setSearch]=useState('')
  const [days,setDays]=useState<TimeDay[]>([]),[amounts,setAmounts]=useState<Record<string,number>>({}),[note,setNote]=useState(''),[review,setReview]=useState(''),[confirmed,setConfirmed]=useState(false),[credentials,setCredentials]=useState<any>(null),[view,setView]=useState('time')
+ const [dateOpen,setDateOpen]=useState(true),[dateChosen,setDateChosen]=useState(false),[pickerMonth,setPickerMonth]=useState(month);const dateDialog=useRef<HTMLDialogElement>(null)
+ useEffect(()=>{if(dateOpen&&!dateDialog.current?.open)dateDialog.current?.showModal();if(!dateOpen&&dateDialog.current?.open)dateDialog.current.close()},[dateOpen])
+ const shiftMonth=(value:string,offset:number)=>{const [y,m]=value.split('-').map(Number);return new Date(Date.UTC(y,m-1+offset,1)).toISOString().slice(0,7)}
+ const dateLabel=(value:string,d:number)=>language==='ko'?Number(value.slice(5))+'월 '+d+'일':new Date(value+'-'+String(d).padStart(2,'0')+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})
  const co=(value:string)=>language==='en'?COMPANY_EN[value]||value:value
  const period=payrollPeriod(month,day)
- const load=useCallback(async()=>{setLoading(true);setError('');try{setData(await request(`/api/hr/payroll?month=${month}&day=${day}`))}catch(e){setError(String((e as Error).message))}finally{setLoading(false)}},[request,month,day])
+ const load=useCallback(async()=>{if(!dateChosen)return;setLoading(true);setError('');try{setData(await request(`/api/hr/payroll?month=${month}&day=${day}`))}catch(e){setError(String((e as Error).message))}finally{setLoading(false)}},[request,month,day,dateChosen])
  useEffect(()=>{void load()},[load]);useEffect(()=>{onDirty(dirty);return()=>onDirty(false)},[dirty,onDirty])
  const employee=data?.employees.find((e:any)=>e.id===selected),entry=data?.entries.find((e:any)=>e.employee_id===selected)
  const setting=data?.settings?.find((s:any)=>s.company===employee?.company)
@@ -28,8 +32,8 @@ export default function PayrollWorkspace({request,language,onDirty}:Props){
  const locked=entry?.pay_status==='finalized',timeLocked=locked||['submitted','approved'].includes(entry?.time_status),sum=timeSummary(days),pay=totals(amounts,rules)
  const rows=(data?.employees||[]).filter((e:any)=>(e.status==='Active'||data.entries.some((r:any)=>r.employee_id===e.id))&&(company==='all'||e.company===company)&&displayName(e).toLowerCase().includes(search.toLowerCase()))
  const total=(data?.entries||[]).reduce((a:number,e:any)=>a+totals(e.amounts,e.rules_snapshot).net,0)
- return <section className="hr-payroll"><div className="hr-no-print"><div className="hr-page-heading"><div><p className="hr-eyebrow">PAYROLL & TIMECARDS</p><h1>{data?.self?t('내 타임카드 · 페이슬립','My timecards & payslips'):t('급여 · 타임카드','Payroll & timecards')}</h1><p>{t('근무 기록부터 확인, 급여 확정까지 한곳에서 관리합니다.','Submit work records, review attendance and prepare payroll in one place.')}</p></div><label>{t('지급 월','Payment month')}<input aria-label="Payment month" type="month" min="2020-01" max="2100-12" value={month} onChange={e=>{if(e.target.value)change(()=>setMonth(e.target.value))}}/></label></div>
- {data?.reviewer&&<p><a className="hr-btn" href="/admin/HR/payroll-settings">{t('급여 항목·계산 기준 설정','Manage payroll items & rules')}</a></p>}<div className="hr-pay-periods">{[5,20].map(d=>{const p=payrollPeriod(month,d);return <button disabled={busy} className={day===d?'selected':''} key={d} onClick={()=>change(()=>setDay(d))}><strong>{month}-{String(d).padStart(2,'0')} {t('지급','payday')}</strong><span>{p.start} — {p.end}</span></button>})}</div>
+ return <section className="hr-payroll"><dialog ref={dateDialog} className="hr-pay-date-dialog" aria-labelledby="payday-title" onCancel={e=>{if(!dateChosen)e.preventDefault();else setDateOpen(false)}}><div className="hr-card-heading"><div><p className="hr-eyebrow">PAYDAY</p><h2 id="payday-title">{t('지급일을 먼저 선택하세요','Choose a payday')}</h2></div>{dateChosen&&<button className="hr-btn" onClick={()=>setDateOpen(false)}>{t('닫기','Close')}</button>}</div><p>{t('지급일을 선택한 다음 직원별 내역을 확인합니다.','Select a payday, then review each employee.')}</p><div className="hr-pay-date-nav"><button className="hr-btn" disabled={pickerMonth<='2020-03'} onClick={()=>setPickerMonth(shiftMonth(pickerMonth,-3))}>← {t('이전','Previous')}</button><strong>{pickerMonth}</strong><button className="hr-btn" disabled={pickerMonth>='2100-10'} onClick={()=>setPickerMonth(shiftMonth(pickerMonth,3))}>{t('다음','Next')} →</button></div><div className="hr-pay-date-options">{[0,1,2].flatMap(offset=>{const m=shiftMonth(pickerMonth,offset);return [5,20].map(d=>{const period=payrollPeriod(m,d);return <button key={period.pay_date} className={dateChosen&&month===m&&day===d?'selected':''} onClick={()=>{if(dirty&&!confirm(t('저장하지 않은 변경을 취소하고 지급일을 바꿀까요?','Discard unsaved changes and switch payday?')))return;setDirty(false);setMonth(m);setDay(d);setSelected('');setNotice('');if(month!==m||day!==d||!dateChosen)setData(null);setDateChosen(true);setDateOpen(false)}}><strong>{dateLabel(m,d)}</strong><span>{m.slice(0,4)}</span><small>{t('근무 기간','Work period')}: {period.start} ~ {period.end}</small></button>})})}</div></dialog><div className="hr-no-print"><div className="hr-page-heading"><div><p className="hr-eyebrow">PAYROLL & TIMECARDS</p><h1>{data?.self?t('내 타임카드 · 페이슬립','My timecards & payslips'):t('급여 · 타임카드','Payroll & timecards')}</h1><p>{t('근무 기록부터 확인, 급여 확정까지 한곳에서 관리합니다.','Submit work records, review attendance and prepare payroll in one place.')}</p></div><button className="hr-btn primary" disabled={busy} onClick={()=>{setPickerMonth(month);setDateOpen(true)}}>{dateChosen?month.slice(0,4)+' · '+dateLabel(month,day):t('지급일 선택','Select payday')} ▾</button></div>
+ {data?.reviewer&&<p><a className="hr-btn" href="/admin/HR/payroll-settings">{t('급여 항목·계산 기준 설정','Manage payroll items & rules')}</a></p>}
  <p className="hr-help">{t('근무 기간','Earnings period')}: {period.start} — {period.end} · {day===20?t('직원 제출: 16~17일','Submit: 16–17 of this month'):t('하반기 제출 마감은 회사 급여 설정 기준입니다.','Second-half submission deadline follows company payroll settings.')}</p>
  {error&&<div role="alert" className="hr-alert">{error}<button className="hr-btn" disabled={busy} onClick={()=>{if(!dirty||confirm(t('입력 내용을 버리고 다시 불러올까요?','Discard edits and reload?')))void load()}}>{t('다시 불러오기','Reload')}</button></div>}{notice&&<div className="hr-success" role="status">{notice}</div>}
  </div>
@@ -51,6 +55,7 @@ export default function PayrollWorkspace({request,language,onDirty}:Props){
  </div></div>
  </section>
 }
+
 
 
 

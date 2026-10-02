@@ -35,3 +35,6 @@
 @media(max-width:480px){.hr-pay-person-layout{grid-template-columns:130px minmax(0,1fr);gap:8px}.hr-pay-person-list{padding:8px}.hr-pay-person-list h2{font-size:14px}.hr-pay-person{font-size:12px;padding:10px 6px}}
 @media print{.hr-pay-person-layout{display:block}}
 
+
+.hr-pay-date-dialog{border:0;border-radius:20px;padding:28px;width:min(560px,92vw);max-height:88vh;overflow:auto;margin:auto;box-shadow:0 24px 90px #132a4040;color:#233743}.hr-pay-date-dialog::backdrop{background:#182a4266;backdrop-filter:blur(3px)}.hr-pay-date-nav{display:flex;align-items:center;justify-content:space-between;margin:20px 0}.hr-pay-date-options{display:flex;flex-direction:column;gap:10px}.hr-pay-date-options>button{display:grid;grid-template-columns:1fr auto;gap:5px;text-align:left;padding:16px 18px;border:1px solid #dce5e9;border-radius:12px;background:white;color:#243847;cursor:pointer}.hr-pay-date-options strong{font-size:20px}.hr-pay-date-options span{color:#76858e}.hr-pay-date-options small{grid-column:1/-1;color:#687b88}.hr-pay-date-options>button:hover,.hr-pay-date-options>button.selected{background:#e8f3ef;border-color:#4f9180}.hr-pay-date-options>button:focus-visible{outline:3px solid #4f9180;outline-offset:2px}
+
