@@ -13,13 +13,15 @@ var dialog=document.createElement('dialog');dialog.className='pw-dialog';
 dialog.innerHTML='<form><h2>새 '+label+' 만들기</h2><p class="pw-muted">'+(isProject?'큰 목표 하나를 프로젝트로 만들고, 분야별 폴더와 담당자별 할 일을 추가하세요.':esc((ptFindNode(parent)||ptFindNode(project)||{}).title||'')+' 안에 추가합니다.')+'</p><label>제목 <input name="title" required maxlength="180" placeholder="'+(isProject?'예: 2026 할로윈 파티':kind==='folder'?'예: 공간 연출 및 데코레이션':'예: 포토존 소품 구매')+'"></label><label>설명 <textarea name="body" rows="4" placeholder="목표, 준비 내용, 확인할 사항을 적어주세요."></textarea></label><label>마감일 <input name="due" type="date"></label><fieldset><legend>담당자 · 여러 명 선택 가능</legend><div class="pw-people"></div></fieldset><p class="pw-muted">담당자와 날짜는 나중에도 수정할 수 있습니다.</p><p class="pw-error" role="alert"></p><footer></footer></form>';
 var form=dialog.querySelector('form'),people=dialog.querySelector('.pw-people'),busy=false;
 var categoryRows=[];
+if(isProject){var shareLabel=document.createElement('label');shareLabel.innerHTML='<input type="checkbox" name="projectShare"> 현지직원 공유 <small>선택하면 이 프로젝트의 하위 분류·글·댓글 전체를 현지직원이 볼 수 있습니다.</small>';form.querySelector('fieldset').before(shareLabel);}
 if(isProject){var section=document.createElement('section');section.className='pw-category-fields';section.innerHTML='<h3>하위 분류 미리 만들기 <small>(선택)</small></h3><p class="pw-muted">부서·장소·업무 분야별로 나누세요. 만든 뒤에도 추가할 수 있습니다.</p><div class="pw-category-rows"></div>';var add=button('+ 분류 추가',function(){var wrap=document.createElement('div'),input=document.createElement('input'),item={id:uid(),input:input};input.placeholder='예: 드림 아카데미';input.setAttribute('aria-label','하위 분류 이름');input.maxLength=180;wrap.className='pw-category-row';wrap.append(input,button('×',function(){categoryRows=categoryRows.filter(function(x){return x!==item;});wrap.remove();}));categoryRows.push(item);section.querySelector('.pw-category-rows').append(wrap);input.focus();});section.append(add);form.querySelector('footer').before(section);}
 (typeof ALL!=='undefined'?ALL:[]).forEach(function(p){var l=document.createElement('label'),c=document.createElement('input');c.type='checkbox';c.name='assignee';c.value=p.id;l.append(c,document.createTextNode(p.name));people.append(l);});
 var cancel=button('취소',function(){if(!busy)dialog.close();}),save=button(label+' 만들기',null,'btn btn-primary');save.type='submit';form.querySelector('footer').append(cancel,save);
 dialog.addEventListener('cancel',function(e){if(busy)e.preventDefault();});dialog.addEventListener('close',function(){dialog.remove();});
 form.onsubmit=async function(e){e.preventDefault();if(busy)return;var title=form.elements.title.value.trim();if(!title){form.elements.title.focus();return;}var id=draftId,row={id:id,project_id:isProject?id:project,parent_id:isProject?null:(parent||null),kind:kind,title:title,body:esc(form.elements.body.value).replace(/\n/g,'<br>'),due:form.elements.due.value||null,assignees:Array.from(form.querySelectorAll('[name=assignee]:checked')).map(function(c){return c.value;}),status:'todo',done:false,sort_idx:isProject?0:ptChildren(parent,project).length,created_by:actor.id,created_at:ptNow(),updated_at:ptNow()};
+if(isProject){row.project_teacher_shared=!!form.elements.projectShare.checked;row.teacher_shared=row.project_teacher_shared;}else{var pr=ptFindNode(project);row.teacher_shared=!!(pr&&pr.project_teacher_shared);}
 busy=true;save.disabled=true;cancel.disabled=true;save.textContent='저장 중…';form.querySelector('.pw-error').textContent='';
-try{var payload=[row];if(isProject)categoryRows.filter(function(x){return x.input.value.trim();}).forEach(function(x,i){payload.push(Object.assign({},row,{id:x.id,project_id:id,parent_id:null,kind:'folder',title:x.input.value.trim(),body:'',due:null,assignees:[],sort_idx:i}));});var rows=await sbUpsert('project_nodes',payload.length===1?row:payload);if(!Array.isArray(rows)||!payload.every(function(p){return rows.some(function(n){return n.id===p.id;});}))throw Error('저장 결과를 확인하지 못했습니다.');if(CU!==actor){dialog.close();return;}rows.forEach(function(n){var index=PT.nodes.findIndex(function(x){return x.id===n.id;});if(index<0)PT.nodes.push(n);else PT.nodes[index]=n;});if(parent)PT.openMap[parent]=true;dialog.close();if(isProject){PT.sel=null;ptRenderProject(id);}else{PT.sel=id;ptRenderProject(project);_ptNotify(id,'새 '+label+' 추가');}}
+try{var payload=[row];if(isProject)categoryRows.filter(function(x){return x.input.value.trim();}).forEach(function(x,i){payload.push(Object.assign({},row,{id:x.id,project_id:id,parent_id:null,kind:'folder',title:x.input.value.trim(),body:'',due:null,assignees:[],sort_idx:i}));});var rows=await sbUpsert('project_nodes',payload.length===1?row:payload);if(!Array.isArray(rows)||!payload.every(function(p){return rows.some(function(n){return n.id===p.id;});}))throw Error('저장 결과를 확인하지 못했습니다.');if(CU!==actor){dialog.close();return;}rows.forEach(function(n){var index=PT.nodes.findIndex(function(x){return x.id===n.id;});if(index<0)PT.nodes.push(n);else PT.nodes[index]=n;});rows.forEach(function(n){if(n.teacher_shared)ptAutoTranslate(n);});if(parent)PT.openMap[parent]=true;dialog.close();if(isProject){PT.sel=null;ptRenderProject(id);}else{PT.sel=id;ptRenderProject(project);_ptNotify(id,'새 '+label+' 추가');}}
 catch(error){form.querySelector('.pw-error').textContent='저장하지 못했습니다. 입력한 내용은 유지됩니다. '+error.message;}
 finally{busy=false;save.disabled=false;cancel.disabled=false;save.textContent=label+' 만들기';}};
 document.body.append(dialog);dialog.showModal();form.elements.title.focus();
@@ -73,6 +75,43 @@ r.querySelector('.pw-create').onclick=ptNewProject;var tabs=r.querySelector('.pw
 function preview(pr){listSelected=pr.id;r.querySelectorAll('tbody tr').forEach(function(tr){tr.classList.toggle('selected',tr.dataset.id===pr.id);});var panel=r.querySelector('.pw-project-preview');var folders=ptChildren(null,pr.id).filter(function(n){return n.kind==='folder';});panel.innerHTML='<span class="pw-project-art">'+(/할로윈/.test(pr.title)?'🎃':/인스타/.test(pr.title)?'📸':'📂')+'</span><h2>'+esc(pr.title)+'</h2><p>'+esc(plain(pr.body)||'분야별 업무와 진행 상황을 함께 확인하세요.')+'</p><h3>프로젝트 구성</h3><div class="pw-preview-folders">'+folders.map(function(n){return '<div>📁 '+esc(cleanTitle(n.title))+'</div>';}).join('')+'</div>';panel.append(button('프로젝트 열기 →',function(){PT.sel=null;ptRenderProject(pr.id);},'btn btn-primary'));}
 function rows(){var query=r.querySelector('input[type=search]').value.toLowerCase(),shown=projects.filter(function(n){return ptIsPast(n.id)===isPast&&n.title.toLowerCase().includes(query);}),host=r.querySelector('tbody'),u=typeof _ptUnreadSet==='function'?_ptUnreadSet():{};host.replaceChildren();shown.forEach(function(pr){var tr=document.createElement('tr'),progress=ptProgress(pr.id),count=PT.nodes.filter(function(n){return n.project_id===pr.id&&u[n.id];}).length;tr.dataset.id=pr.id;tr.innerHTML='<td><button class="pw-row-title">'+esc(pr.title)+'</button><small>'+ptChildren(null,pr.id).map(function(n){return esc(cleanTitle(n.title));}).slice(0,3).join(' · ')+'</small></td><td>'+people(members(pr))+'</td><td><b>'+progress+'%</b><div class="pw-progress"><i style="width:'+progress+'%"></i></div></td><td>'+esc(pr.due||'미정')+'</td><td>'+(count?'<span class="pw-new">● '+count+'</span>':'—')+'</td>';tr.onclick=function(){preview(pr);};tr.querySelector('button').onclick=function(e){e.stopPropagation();PT.sel=null;ptRenderProject(pr.id);};host.append(tr);});if(shown.length)preview(shown.find(function(p){return p.id===listSelected;})||shown[0]);else{host.innerHTML='<tr><td colspan="5" class="pw-empty">프로젝트가 없습니다.</td></tr>';r.querySelector('.pw-project-preview').innerHTML='<p>새 프로젝트를 만들어 시작하세요.</p>';}}
 r.querySelector('input[type=search]').oninput=rows;rows();};
+
+var sharingDetail=ptRenderDetail;
+ptRenderDetail=function(id){
+ sharingDetail(id);
+ var el=document.getElementById('ptDetail'),n=ptFindNode(id);if(!el||!n)return;
+ el.querySelectorAll('input[onchange*="ptToggleShare"]').forEach(function(input){var box=input.parentElement&&input.parentElement.parentElement;if(box)box.remove();});
+ var pr=ptFindNode(n.project_id),box=document.createElement('div');box.className='pw-project-sharing';box.style.cssText='margin:12px 0;padding:14px;border:1px solid #dedbea;border-radius:10px;background:#f8f7fc';
+ if(n.kind==='project'&&n.origin!=='teacher'){
+  var label=document.createElement('label');label.textContent='현지직원 공유 · 프로젝트 전체 ';var select=document.createElement('select');select.setAttribute('aria-label','프로젝트 현지직원 공유');
+  if(n.project_teacher_shared==null){var legacy=document.createElement('option');legacy.value='';legacy.textContent='기존 공개 범위 유지 · 설정을 선택하세요';select.append(legacy);}
+  [['false','비공유'],['true','공유']].forEach(function(v){var op=document.createElement('option');op.value=v[0];op.textContent=v[1];select.append(op);});
+  select.value=n.project_teacher_shared==null?'':String(n.project_teacher_shared);
+  select.onchange=async function(){if(select.value==='')return;select.disabled=true;try{await ptToggleShare(n.id,select.value==='true');}catch(e){select.disabled=false;select.value=n.project_teacher_shared==null?'':String(n.project_teacher_shared);alert('공유 설정을 저장하지 못했습니다. '+e.message);}};
+  label.append(select);box.append(label);
+  var hint=document.createElement('p');hint.textContent='이 설정은 모든 하위 분류·글·댓글에 적용됩니다. 담당자 배정으로 공개 범위가 바뀌지 않습니다.';box.append(hint);
+ }else{
+  box.textContent='현지직원 공유: 프로젝트 설정을 따릅니다. ';
+  if(pr&&pr.origin!=='teacher')box.append(button('프로젝트 공유 설정',function(){ptSelect(pr.id);}));
+ }
+ var title=el.querySelector('#ptTitle');if(title)title.after(box);else el.prepend(box);
+};
+ptToggleShare=async function(id,on){
+ var pr=ptFindNode(id);if(!pr||pr.kind!=='project'||pr.origin==='teacher')return;
+ var rows=await sbPatch('project_nodes','id=eq.'+encodeURIComponent(id),{project_teacher_shared:!!on,updated_at:ptNow()});
+ if(!Array.isArray(rows)||!rows.some(function(n){return n.id===id&&n.project_teacher_shared===!!on;}))throw Error('저장 결과를 확인하지 못했습니다.');
+ await ptLoadAll();ptRenderDetail(id);ptRenderTree(id);
+ if(on){var queue=PT.nodes.filter(function(n){return n.project_id===id&&n.teacher_shared;});var workers=Array.from({length:Math.min(3,queue.length)},async function(){while(queue.length){var n=queue.shift();await new Promise(function(resolve){ptAutoTranslate(n,resolve);});}});Promise.all(workers).then(function(){if(PT.sel===id)ptRenderDetail(id);});}
+};
+ptPickAssignees=function(id){
+ var n=ptFindNode(id);if(!n)return;
+ var ov=document.createElement('div');ov.className='pt-ovl';
+ var card=document.createElement('div');card.className='pt-ovl-card';card.innerHTML='<h3>담당자 선택</h3><p>공유 여부는 프로젝트 설정에서만 변경합니다.</p>';
+ var choices=[].concat(ALL||[],typeof TEACHERS!=='undefined'?TEACHERS:[]);
+ choices.forEach(function(p){var label=document.createElement('label'),c=document.createElement('input');c.type='checkbox';c.value=p.id;c.checked=(n.assignees||[]).indexOf(p.id)>=0;label.style.cssText='display:inline-flex;gap:6px;margin:8px';label.append(c,document.createTextNode(p.name));card.append(label);});
+ card.append(button('취소',function(){ov.remove();}),button('저장',async function(){var ids=Array.from(card.querySelectorAll('input:checked')).map(function(c){return c.value;});try{await sbPatch('project_nodes','id=eq.'+encodeURIComponent(id),{assignees:ids,updated_at:ptNow()});n.assignees=ids;_ptNotify(id,'담당자 변경');ids.forEach(function(x){if(x!==(CU&&CU.id)&&String(x).indexOf('admin-')!==0)createNotif(x,'project',id,'프로젝트 항목 담당 배정: '+String(n.title||'').slice(0,24)+' ('+((CU&&CU.name)||'')+')');});ov.remove();ptRenderTree(PT.cur);ptRenderDetail(id);}catch(e){alert('저장하지 못했습니다. '+e.message);}},'btn btn-primary'));
+ ov.append(card);document.body.append(ov);
+};
 var renderResizableProject=ptRenderProject;ptRenderProject=function(id){renderResizableProject(id);installResize();};
 ptNewProject=function(){openForm(null,null,'project');};ptAddNode=function(project,parent,kind){openForm(project,parent,kind||'folder');};
 }
