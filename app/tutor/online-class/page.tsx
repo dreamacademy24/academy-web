@@ -67,6 +67,22 @@ function Inner() {
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   const [invoiceStudent, setInvoiceStudent] = useState<string | null>(null);
   const [expandStu, setExpandStu] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState("");
+  const [detailComments, setDetailComments] = useState<Array<{id:string;by:string;at:string;text:string}>>([]);
+  const [detailCommentsLoading,setDetailCommentsLoading] = useState(false);
+  const [detailCommentsError,setDetailCommentsError] = useState("");
+  useEffect(() => { setExpandStu(null); }, [tutor?.id]);
+  useEffect(() => {
+    setDetailComments([]); setDetailCommentsError("");
+    if (!expandStu) return;
+    let current=true; setDetailCommentsLoading(true);
+    fetch("/api/online-class/comments?enrollment_id="+encodeURIComponent(expandStu))
+      .then(r=>{if(!r.ok)throw new Error("Unable to load comments. Please reopen this student.");return r.json();})
+      .then(d=>{if(current)setDetailComments(d.comments || []);})
+      .catch(e=>{if(current)setDetailCommentsError(e.message);})
+      .finally(()=>{if(current)setDetailCommentsLoading(false);});
+    return ()=>{current=false;};
+  },[expandStu]);
   const [pickSes, setPickSes] = useState<{ enrId: string; ses: Ses } | null>(null);
   const [allTutors, setAllTutors] = useState<Tutor[]>([]);
   const [homeStats, setHomeStats] = useState<Record<string, { today: number; students: number }>>({});
@@ -210,13 +226,16 @@ function Inner() {
     if (!res.ok) { const r = await res.json(); alert(r.error || "Failed"); return; }
     setTodaySessions(prev => prev.map(x => x.id === s.id ? { ...x, attitude: val === "clear" ? null : val, attitude_note: note } : x));
   }
+  async function loadStudentDetail(enrId: string) {
+    setSessionError("");
+    try {
+      const res=await fetch("/api/online-class/sessions?enrollment_id="+encodeURIComponent(enrId));
+      if(!res.ok)throw new Error("Unable to load attendance.");
+      const d=await res.json(); setStuSessions(prev=>({...prev,[enrId]:d.sessions || []}));
+    } catch { setSessionError("Unable to load attendance."); }
+  }
   async function toggleStuSessions(enrId: string) {
-    if (expandStu === enrId) { setExpandStu(null); return; }
-    setExpandStu(enrId);
-    if (!stuSessions[enrId]) {
-      const res = await fetch(`/api/online-class/sessions?enrollment_id=${enrId}`);
-      if (res.ok) { const d = await res.json(); setStuSessions(prev => ({ ...prev, [enrId]: d.sessions || [] })); }
-    }
+    setExpandStu(enrId); await loadStudentDetail(enrId);
   }
 
   async function markStuSession(enrId: string, s: Ses, status: string) {
@@ -383,73 +402,46 @@ function Inner() {
             </div>
           )}
 
-          {/* ══ MY STUDENTS ══ */}
+          {/* Student list and full-width detail */}
           {tab === "students" && (
-            enrollments.length === 0 ? <div className="empty">No active students</div> : (
-              <div className="sgrid">
-                {enrollments.map(e => {
-                  const total = e.total_sessions || 0, used = e.used_sessions || 0;
-                  const rem = Math.max(0, total - used);
-                  const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-                  const lv = e.level && LV[e.level];
-                  const open = expandStu === e.id;
-                  return (
-                    <div key={e.id} className="scard">
-                      <div className="srow1">
-                        <div className="sname">{e.student_name_en || e.student_name} <span className="tnkr">{e.student_name_en ? e.student_name : ""}</span></div>
-                        {lv && <span className="chip" style={{ background: lv.bg, color: lv.color }}>{lv.label}</span>}
-                      </div>
-                      <div className="smeta">
-                        {(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")} · PH {e.class_time_ph || "-"} <span className="tnkr">(KR {e.class_time_kr || "-"})</span>
-                        {e.day_times && Object.keys(e.day_times).length > 0 && <span className="tnkr"> · per-day times</span>}
-                      </div>
-                      <div className="smeta">{e.start_date} ~ {e.end_date || "?"}</div>
-                      <div className="pbar-wrap">
-                        <div className="pbar-info"><span>Used {used} / {total}</span><b style={{ color: rem <= 3 ? "#dc2626" : "#166534" }}>{rem} left</b></div>
-                        <div className="pbar"><div style={{ width: `${pct}%`, height: "100%", background: rem <= 3 ? "#ef4444" : "#1a6fc4" }} /></div>
-                      </div>
-                      {e.tutor_notes && <div className="snote">📝 {e.tutor_notes}</div>}
-                      <div className="sbtns">
-                        <button className="ab" onClick={() => toggleStuSessions(e.id)}>{open ? "▲ Hide history" : "▼ History"}</button>
-                        <button className="ab" onClick={() => setInvoiceStudent(e.id)}>🧾 Calendar</button>
-                        <button className="ab" onClick={() => releaseStudent(e)} style={{ color: "#dc2626", borderColor: "#fecaca" }}>↩ Release</button>
-                      </div>
-                      {open && (
-                        <div className="hist">
-                          {(stuSessions[e.id] || []).length === 0 ? <div className="tnkr">Loading…</div> : (() => {
-                            const all = [...(stuSessions[e.id] || [])].sort((a, b) => (a.scheduled_date || "").localeCompare(b.scheduled_date || ""));
-                            const byM: Record<string, Ses[]> = {};
-                            all.forEach(s => { const m = (s.scheduled_date || "").slice(0, 7); if (!byM[m]) byM[m] = []; byM[m].push(s); });
-                            return Object.keys(byM).sort().map(m => (
-                              <div key={m} style={{ marginBottom: 8 }}>
-                                <div style={{ fontSize: 11.5, fontWeight: 800, color: "#1a6fc4", marginBottom: 5 }}>{m}</div>
-                                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                                  {byM[m].map(s => {
-                                    const st = ST[s.status] || ST.scheduled;
-                                    const d = s.scheduled_date ? `${Number(s.scheduled_date.split("-")[1])}/${Number(s.scheduled_date.split("-")[2])}` : "";
-                                    const lb = s.status === "attended" ? "O" : (s.status === "no_show" || s.status === "absent") ? "✗" : s.status === "makeup" ? "△" : s.status === "cancelled" ? "X" : "·";
-                                    return (
-                                      <div key={s.id} onClick={() => setPickSes({ enrId: e.id, ses: s })} title={`#${s.session_number} ${s.scheduled_date} · ${s.status} — tap to mark`}
-                                        style={{ width: 52, borderRadius: 8, padding: "6px 2px 5px", textAlign: "center", background: st.bg, color: st.color, border: "1px solid rgba(0,0,0,0.05)", cursor: "pointer", position: "relative" }}>
-                                        <div style={{ fontSize: 10.5, fontWeight: 700 }}>{d}</div>
-                                        <div style={{ fontSize: 13, fontWeight: 800 }}>{lb}</div>
-                                        {s.attitude === "issue" && <span style={{ position: "absolute", top: 1, right: 2, fontSize: 9 }}>⚠️</span>}
-                                        {s.session_note && <span style={{ position: "absolute", bottom: 1, right: 2, fontSize: 9 }}>💬</span>}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                          <div className="tnkr" style={{ fontSize: 10.5 }}>O Attended · ✗ Absent · △ Makeup (no deduction) · X Cancelled — tap a box to mark</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            enrollments.length === 0 ? <div className="empty">No active students</div> :
+            !expandStu ? <div className="student-list">
+              {enrollments.map(e => <button key={e.id} className="student-list-row" onClick={() => toggleStuSessions(e.id)}>
+                <span><strong>{e.student_name_en || e.student_name}</strong><small>{e.student_name_en ? e.student_name : ""}</small></span>
+                <span>{(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")}<small>PH {e.class_time_ph || "-"} · KR {e.class_time_kr || "-"}</small></span>
+                <span>{e.start_date} — {e.end_date || "-"}<small>{e.level || "Level not set"}</small></span>
+                <span><strong>{Math.max(0,(e.total_sessions || 0)-(e.used_sessions || 0))} sessions left</strong><small>Used {e.used_sessions || 0} / {e.total_sessions || 0}</small></span>
+                <span>View details →</span>
+              </button>)}
+            </div> : enrollments.filter(e => e.id === expandStu).map(e => <section className="student-detail" key={e.id}>
+              <button className="ab" onClick={() => setExpandStu(null)}>← Back to student list</button>
+              <div className="detail-heading"><div><h2>{e.student_name_en || e.student_name}</h2><p>{e.student_name_en ? e.student_name : ""} · {e.level || "Level not set"}</p></div>
+                <button className="ab" onClick={() => setInvoiceStudent(e.id)}>Calendar</button>
               </div>
-            )
+              <div className="detail-summary">
+                <div><b>Schedule</b><p>{(e.days_of_week || []).map(d => DAY_EN[d] || d).join("/")} · PH {e.class_time_ph || "-"} / KR {e.class_time_kr || "-"}</p>
+                {e.day_times && Object.entries(e.day_times).map(([day,time]) => <p key={day}>{DAY_EN[day] || day}: {time} (KR)</p>)}</div>
+                <div><b>Class period</b><p>{e.start_date} — {e.end_date || "-"}</p></div>
+                <div><b>Sessions</b><p>Used {e.used_sessions || 0} / {e.total_sessions || 0} · {Math.max(0,(e.total_sessions || 0)-(e.used_sessions || 0))} left</p></div>
+              </div>
+              {e.tutor_notes && <div className="detail-note"><b>Teacher notes</b><p>{e.tutor_notes}</p></div>}
+              <h3>Attendance & class notes</h3>
+              {sessionError ? <p role="alert">{sessionError} <button className="ab" onClick={() => loadStudentDetail(e.id)}>Retry</button></p> :
+               !stuSessions[e.id] ? <p>Loading attendance…</p> :
+               !stuSessions[e.id].length ? <p>No sessions yet.</p> :
+               <div className="detail-table-wrap"><table className="detail-table"><thead><tr><th>Date / Session</th><th>Time</th><th>Attendance</th><th>Behavior</th><th>Class notes</th></tr></thead>
+               <tbody>{[...stuSessions[e.id]].sort((a,b)=>a.scheduled_date.localeCompare(b.scheduled_date)).map(s => <tr key={s.id}>
+                 <td>{s.scheduled_date}<small>Session #{s.session_number}</small></td>
+                 <td>PH {s.scheduled_time_ph || "-"}<small>KR {s.scheduled_time_kr || "-"}</small></td>
+                 <td><button className="ab" onClick={() => setPickSes({enrId:e.id,ses:s})}>{(ST[s.status] || ST.scheduled).label}</button></td>
+                 <td><b>{s.attitude === "issue" ? "Issue" : s.attitude === "good" ? "Good" : "—"}</b><p className="detail-note-text">{s.attitude_note || ""}</p></td>
+                 <td className="detail-note-text">{s.session_note || "—"}</td>
+               </tr>)}</tbody></table></div>}
+              <h3>Comments</h3>
+              {detailCommentsLoading ? <p>Loading comments…</p> : detailCommentsError ? <p role="alert">{detailCommentsError}</p> :
+               detailComments.length === 0 ? <p>No comments yet.</p> : detailComments.map(c => <article className="detail-note" key={c.id}><b>{c.by}</b> <small>{c.at ? new Date(c.at).toLocaleString("en-PH") : ""}</small><p>{c.text}</p></article>)}
+              <div className="detail-footer"><button className="ab" onClick={() => releaseStudent(e)} style={{color:"#dc2626"}}>Release student</button></div>
+            </section>)
           )}
 
           {/* ══ OPEN STUDENTS — 튜터 수신함 스타일 테이블 (레벨 확인 후 선택) ══ */}
@@ -679,6 +671,23 @@ function Css() {
     .bb.issue.on{background:#fef2f2;border-color:#fecaca;color:#dc2626}
     .bnote{font-size:11.5px;color:#dc2626}
     .nta{width:100%;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;resize:none;overflow:hidden}
+    .student-list{display:flex;flex-direction:column;gap:10px}
+    .student-list-row{width:100%;display:grid;grid-template-columns:1.4fr 1.2fr 1.4fr 1fr auto;gap:20px;align-items:center;text-align:left;padding:22px;border:1px solid #e2e8f0;border-radius:12px;background:white;color:#1e293b;font:inherit;cursor:pointer}
+    .student-list-row:hover,.student-list-row:focus-visible{border-color:#4956e3;background:#f8faff}
+    .student-list-row small,.detail-table small{display:block;color:#64748b;margin-top:5px}
+    .student-detail{background:white;border:1px solid #e2e8f0;border-radius:14px;padding:28px}
+    .detail-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:22px 0}
+    .detail-heading h2{font-size:24px;margin:0 0 6px}.detail-heading p{color:#64748b}
+    .detail-summary{display:grid;grid-template-columns:2fr 1fr 1fr;gap:20px;padding:20px;background:#f8fafc;border-radius:10px}
+    .student-detail h3{margin:28px 0 14px;font-size:18px}
+    .detail-summary p{margin:6px 0}.detail-table-wrap{overflow-x:auto}
+    .detail-table{width:100%;border-collapse:collapse;min-width:680px}
+    .detail-table th,.detail-table td{text-align:left;padding:14px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+    .detail-table th{background:#f8fafc;color:#64748b}.detail-table td:last-child{width:35%}
+    .detail-note{padding:18px;margin:12px 0;border:1px solid #e2e8f0;border-radius:10px}
+    .detail-note p,.detail-note-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+    .detail-footer{margin-top:28px;padding-top:20px;border-top:1px solid #e2e8f0}
+    @media(max-width:850px){.student-list-row{grid-template-columns:1fr 1fr}.student-detail{padding:16px}.detail-summary{grid-template-columns:1fr}.detail-heading{flex-wrap:wrap}}
     .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
     .scard{background:#fff;border:1px solid #e8ecf3;border-radius:14px;padding:16px}
     .srow1{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
