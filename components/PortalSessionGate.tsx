@@ -28,7 +28,12 @@ export default function PortalSessionGate({children}:{children:React.ReactNode})
       if(!live)return;
       const bookings=Array.isArray(result.bookings)?result.bookings:[];
       const selected=bookings.find((b:any)=>b.id===old?.booking_id)||bookings[0];
-      if(!selected){localStorage.removeItem('portalSession');setError('로그인은 되었지만 연결된 예약이 없습니다. 아카데미에 기존 아이디와 예약 연결을 요청해주세요.');return;}
+      if(!selected){
+        localStorage.removeItem('portalSession');
+        // 화상영어만 이용하는 회원은 숙소 예약 없이도 본인 수업과 비밀번호 화면을 이용한다.
+        if(path==='/portal/dashboard'||path==='/portal/change-password'||path.startsWith('/portal/online-class')){setReady(path);return;}
+        setError('로그인은 되었지만 연결된 예약이 없습니다. 아카데미에 기존 아이디와 예약 연결을 요청해주세요.');return;
+      }
       localStorage.setItem('portalSession',JSON.stringify({
         booking_id:selected.id,booking_number:selected.reservation_no,guest_name:selected.booker_name,
         check_in_date:selected.checkin_date,status:selected.status,bookings,
