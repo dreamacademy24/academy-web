@@ -1165,6 +1165,15 @@ export default function EstimateCalc(){
             <div style={{fontSize:15,fontWeight:700,marginBottom:14,color:"#991b1b"}}>
               ⚠️ 불포함 사항 <span style={{fontSize:12,fontWeight:500,color:"#7f1d1d"}}>(별도 비용)</span>
             </div>
+            {plans.some(p => p.accom === "dreamhouse" || p.accom === "dreamhouse_jaypark" || p.accom === "dreamhouse_cubenine") && (
+              <div style={{marginBottom:16,padding:14,background:"#fff",border:"1px solid #fecaca",borderRadius:8,fontSize:12.5,lineHeight:"21px"}}>
+                <div style={{fontWeight:700,color:"#991b1b",marginBottom:6}}>드림하우스 전기요금 · 보증금 안내</div>
+                <div style={{color:"#7f1d1d"}}>적용: {plans.map((p,i) => p.accom === "dreamhouse" || p.accom === "dreamhouse_jaypark" || p.accom === "dreamhouse_cubenine" ? (i+1)+"안" : null).filter(Boolean).join(", ")}의 드림하우스 숙박</div>
+                <div style={{color:"#7f1d1d",marginTop:6}}><strong>전기요금 불포함</strong> · 사용한 전기요금은 별도 정산됩니다.</div>
+                <div style={{color:"#7f1d1d"}}><strong>보증금 8,000페소 (PHP)</strong> · 추후 전기요금을 차감하여 정산합니다.</div>
+                <div style={{color:"#6b7280",fontSize:11.5,marginTop:6}}>보증금은 위 원화 견적 금액에 포함되지 않습니다.</div>
+              </div>
+            )}
             {COMMON_EXCLUSIONS.map((it, idx) => (
               <div key={idx} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
                 <span style={{fontSize:17,lineHeight:"22px",flexShrink:0}}>{it.icon}</span>
@@ -1215,3 +1224,4 @@ const sel:React.CSSProperties={width:"100%",padding:"9px 12px",border:"1px solid
 const inp:React.CSSProperties={padding:"7px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:12,fontFamily:"'Noto Sans KR',sans-serif",outline:"none"};
 const addBtnS:React.CSSProperties={padding:"3px 10px",fontSize:11,fontWeight:600,color:"#1a6fc4",background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:6,cursor:"pointer",fontFamily:"'Noto Sans KR',sans-serif"};
 const delBtnS:React.CSSProperties={padding:"3px 8px",fontSize:14,color:"#dc2626",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",lineHeight:1};
+
