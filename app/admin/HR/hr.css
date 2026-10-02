@@ -13,3 +13,15 @@
 
 .hr-operations{margin:24px 0}.hr-operations .hr-stats{margin:16px 0}.hr-operation-list article{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-top:1px solid #e0e7e7}.hr-operation-list article h3{margin:5px 0}.hr-operation-list article p{white-space:pre-wrap;margin:5px 0}.hr-operation-list article.overdue{border-left:3px solid #c27548;padding-left:12px}.hr-operation-alerts{display:grid;gap:8px;margin:16px 0}.hr-operation-alerts a{padding:12px;background:#f0f5f3;border-radius:8px;color:#234b45}.hr-operation-alerts a.overdue{background:#fff1e8;color:#93431f}.hr-task-template{background:#f0f5f3;padding:20px;border-radius:12px;margin:16px 0}.hr-task-template button{margin-right:8px}.hr-task-form{border:1px solid #dbe4e1;padding:20px;border-radius:12px;margin:16px 0}.hr-task-form>label{display:grid;gap:8px;margin:16px 0}.hr-task-form textarea{min-height:90px}.hr-operation-list .hr-btn{flex-shrink:0}@media(max-width:650px){.hr-operation-list article{align-items:stretch;flex-direction:column}}
 
+
+/* Selected-item payroll editor */
+.hr-rule-workspace{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;align-items:start;margin:24px 0}
+.hr-rule-list{background:#f6f8fc;border:1px solid #e0e6ef;border-radius:16px;padding:16px;max-height:760px;overflow:auto}
+.hr-rule-list section+section{border-top:1px solid #dce3ee;margin-top:20px;padding-top:12px}
+.hr-rule-list h3{display:flex;justify-content:space-between;margin:8px 0 12px}.hr-rule-list h3 small{color:#77859a}
+.hr-rule-choice{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;border:1px solid transparent;border-radius:10px;padding:12px;margin-bottom:6px;background:transparent;color:#24344b;cursor:pointer;overflow-wrap:anywhere}
+.hr-rule-choice small{color:#63758d;font-size:12px}.hr-rule-choice.selected{background:#e9f3f1;border-color:#65a69a;box-shadow:inset 3px 0 #348575}.hr-rule-choice:hover{background:#edf1f7}.hr-rule-choice:focus-visible{outline:2px solid #348575;outline-offset:2px}
+.hr-rule-list .hr-btn{width:100%;margin-top:8px}.hr-rule-editor{min-width:0;max-width:740px}.hr-rule-editor h3{font-size:23px;margin:6px 0 12px}
+.hr-pay-settings .hr-rule-row.hr-rule-vertical{display:flex;flex-direction:column;gap:20px;padding:24px;margin-top:20px}.hr-rule-vertical>label{width:100%;display:flex;flex-direction:column;gap:8px}.hr-rule-vertical input:not([type=checkbox]),.hr-rule-vertical select{width:100%;min-width:0}.hr-rule-vertical>label.hr-rule-active{flex-direction:row;align-items:center}.hr-rule-vertical input[type=checkbox]{width:auto}
+@media(max-width:760px){.hr-rule-workspace{grid-template-columns:1fr;gap:16px}.hr-rule-list{max-height:300px}.hr-pay-settings .hr-rule-row.hr-rule-vertical{padding:16px}}
+
