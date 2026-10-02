@@ -23,6 +23,20 @@ export default function EngHubPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hrAccount, setHrAccount] = useState<string | null>(null);
+  useEffect(() => {
+    setHrAccount(null);
+    if (!staff) return;
+    let cancelled = false;
+    fetch("/api/staff/session", { method: "POST", credentials: "same-origin", cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const account = data?.staff;
+        if (!cancelled && account?.role === "local_teacher" && account.username === staff.username && ["admin-abby", "admin-bella"].includes(account.username)) setHrAccount(account.username);
+      }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [staff?.username]);
+
   const [scNew, setScNew] = useState(false); // Student Calendar 업데이트 뱃지
 
   useEffect(() => {
@@ -115,6 +129,7 @@ export default function EngHubPage() {
   }
 
   const cards = [
+    ...(staff && hrAccount === staff.username ? [{ icon: "HR", title: "HR · Payroll", desc: "Employee records · Payroll · HR sign-in", href: "/admin/HR" }] : []),
     { icon: "📢", title: "Announcements", desc: "Staff updates · Guides · 공지사항", href: "/admineng/notices" },
     { icon: "🌱", title: "My Students", desc: "Student care · Visit history · Care team", href: "/staff/students" },
     { icon: "🗓", title: "Class Schedule", desc: "By teacher · By student · Print", href: "/admineng/class-schedule" },
