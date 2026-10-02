@@ -241,7 +241,11 @@ export function airportFromBookings(bookings: RawBooking[], pickups: RawPickup[]
     }
     // 출발 (숙소 → 공항)
     const outDate = String(b.flight_out_date || b.checkout_date || "").slice(0, 10);
-    if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff_${outDate}`)) {
+    // A scheduled evening departure can serve an early flight on the following day.
+    const outClock = to24h(b.flight_out_time || b.flight_out?.match(/\b(\d{1,2}:\d{2})\b/)?.[1]);
+    const priorDate = outDate ? new Date(Date.parse(outDate+'T12:00:00Z')-86400000).toISOString().slice(0,10) : '';
+    const overnightDrop = outClock < '06:00' && (pickups||[]).some(p=>p.booking_id===b.id && PICKUP_KIND[p.request_type]==='dropoff' && !['cancelled','취소'].includes(p.status||'') && String(p.request_date||'').slice(0,10)===priorDate && to24h(p.request_time)>='18:00' && to24h(p.request_time)<'24:00');
+    if (outDate && (AIRPORT.test(b.drop_off || "") || b.flight_out_date || b.flight_out_time || b.flight_out) && !covered.has(`${b.id}_dropoff_${outDate}`) && !overnightDrop) {
       const loc = combo ? accomLabel(b.seg2_type, room) : (room || accomFromType(b.accom_type) || "숙소");
       out.push({
         id: `bk_out_${b.id}`, date: outDate, time: "", sortTime: "99:99",
