@@ -45,7 +45,7 @@ export async function GET(req:Request){
   const bMap=new Map(bookings.map(b=>[b.id,b]));
   const missing=[...new Set([...pickups,...shuttles,...checkinExtras].map(p=>p.booking_id).filter(id=>typeof id==='string'&&!bMap.has(id)))];
   for(let i=0;i<missing.length;i+=100){
-   const {data,error}=await db.from('bookings').select('id,booker_name,house_no,accom_room,status').in('id',missing.slice(i,i+100));
+   const {data,error}=await db.from('bookings').select('id,booker_name,house_no,accom_room,status,seg1_type,seg2_type,seg2_checkin').in('id',missing.slice(i,i+100));
    if(error)throw error;for(const b of data||[])bMap.set(b.id,b);
   }
   const overrides=Object.fromEntries(settings.map(s=>[String(s.key).slice(10),s.value])) as Record<string,{overrides?:Record<string,{driver_id?:unknown;time?:unknown;note?:unknown}>}>;
@@ -58,7 +58,7 @@ export async function GET(req:Request){
   for(const s of shuttles){const ov=overrides[String(s.tour_date)]?.overrides?.[`sh_${s.id}`];if(ov)ov.driver_id=s.driver_id??null;}
   return reply({pickups:pickups.map(p=>({...p,bookings:bMap.get(p.booking_id)||null})),bookings,
    checkinExtras:checkinExtras.filter(p=>!['cancelled','취소'].includes(String(bMap.get(p.booking_id)?.status||''))).map(p=>({...p,bookings:bMap.get(p.booking_id)||null})),
-   drivers:drivers.map(d=>({id:d.id,name:d.name})),shuttles:shuttles.map(s=>({...s,booker_name:bMap.get(s.booking_id)?.booker_name||s.portal_name||''})),
+   drivers:drivers.map(d=>({id:d.id,name:d.name})),shuttles:shuttles.map(s=>({...s,bookings:bMap.get(s.booking_id)||null,booker_name:bMap.get(s.booking_id)?.booker_name||s.portal_name||''})),
    fieldtrips,scheduleItems,commutes,overrides});
  }catch{return reply({error:'일부 원본 자료를 불러오지 못했습니다. 새로고침해주세요. 빈 일정으로 처리하지 않았습니다.'},503);}
 }
@@ -110,4 +110,5 @@ export async function POST(req:Request){
   return reply({ok:true,state});
  }catch{return reply({error:'저장을 완료하지 못했습니다. 입력 내용은 유지됩니다. 다시 저장해주세요.'},503);}
 }
+
 

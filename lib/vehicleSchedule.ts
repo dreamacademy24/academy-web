@@ -39,6 +39,7 @@ export type VehSource =
   | "manual";
 
 export interface VehMovement {
+  house_number?: string;
   vehicle_name?: string;
   teacher_name?: string;
   booking_id?: string;
@@ -143,6 +144,7 @@ export interface RawPickup {
   status?: string;
 }
 export interface RawShuttle {
+  bookings?: Pick<RawBooking, "house_no" | "accom_room" | "seg1_type" | "seg2_type" | "seg2_checkin"> | null;
   id: string | number;
   portal_name?: string;
   booker_name?: string;
@@ -293,6 +295,17 @@ export function pickupMovements(rows: RawPickup[]): VehMovement[] {
 }
 
 // ── 2) 투어셔틀 (신청분) ──────────────────────────────────────
+/** Resolve the stay for the tour date without changing the shared departure point. */
+export function shuttleHouse(s: RawShuttle): string {
+  const b = s.bookings;
+  const room = String(b?.house_no || b?.accom_room || '').trim().replace(/^DH[\s-]*/i, '').toUpperCase();
+  if (b?.seg1_type && b.seg2_type) {
+    const second = !!s.tour_date && !!b.seg2_checkin && s.tour_date.slice(0,10) >= b.seg2_checkin.slice(0,10);
+    const type = second ? b.seg2_type : b.seg1_type;
+    return (type === 'dreamhouse' ? room : ACC_KR[type] || type) || s.room_number || '';
+  }
+  return room || s.room_number || '';
+}
 export function shuttleMovements(rows: RawShuttle[]): VehMovement[] {
   return (rows || [])
     .filter((s) => (s.status || "") !== "취소" && (s.status || "") !== "cancelled")
@@ -304,6 +317,7 @@ export function shuttleMovements(rows: RawShuttle[]): VehMovement[] {
       kind: "shuttle" as VehKind,
       source: "shuttle_applications" as VehSource,
       guest: s.booker_name || s.portal_name || "-",
+      house_number: shuttleHouse(s),
       location: s.room_number || "숙소",
       destination: s.tour_name || "투어",
       num_people: Number(s.people_count) || 1,
@@ -462,6 +476,7 @@ export function commuteMovements(boards:CommuteBoard[]):VehMovement[]{
  }
  return out;
 }
+
 
 
 

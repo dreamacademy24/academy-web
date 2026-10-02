@@ -15,7 +15,7 @@ export function groupShuttleRuns(movements: VehMovement[]): VehicleRow[] {
   else { group.applicants!.push(m); group.num_people += m.num_people; }
  }
  for (const row of groups.values()) {
-  row.guest = row.applicants!.map(m => `${m.guest} (${m.num_people}명)`).join(' · ');
+  row.guest = row.applicants!.map(m => `${m.guest}${m.source === 'shuttle_applications' ? ' [' + (m.house_number || '하우스 미등록') + ']' : ''} (${m.num_people}명)`).join(' · ');
   row.mixedDrivers = new Set(row.applicants!.map(m => m.driver_id || m.driver_name || '')).size > 1;
  }
  return rows;
@@ -62,4 +62,5 @@ export function matchesVehicleTab(m:VehMovement,tab:VehicleTab):boolean{
  const category=vehicleCategory(m);
  return tab==='all'||category===tab||(tab==='airport'&&category==='extra');
 }
+
 
