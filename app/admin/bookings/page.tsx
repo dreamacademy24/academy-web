@@ -1640,7 +1640,7 @@ export default function AdminBookingsPage(){
             <label style={{fontSize:13,minWidth:90}}>드림하우스</label>
             <select value={newForm.dh_weeks} onChange={e=>setNewForm({...newForm,dh_weeks:Number(e.target.value)})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
-              {[1,2,3,4,5,6,7,8,9,10,11,12].map(w=><option key={w} value={w}>{w}주</option>)}
+              {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(w=><option key={w} value={w}>{w}주</option>)}
             </select>
           </div>
         )}
@@ -1717,7 +1717,7 @@ export default function AdminBookingsPage(){
             <label style={{fontSize:13,minWidth:90}}>기간</label>
             <select value={newForm.room_weeks} onChange={e=>setNewForm({...newForm,room_weeks:Number(e.target.value)})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
-              {[1,2,3,4,5,6,7,8,9,10,11,12].map(w=><option key={w} value={w}>{w}주</option>)}
+              {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(w=><option key={w} value={w}>{w}주</option>)}
             </select>
           </div>
         </>)}

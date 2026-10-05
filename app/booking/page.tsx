@@ -39,8 +39,8 @@ function deriveAcademyEnd(checkin: string, weeks: number | string | null | undef
   return addDaysISO(start, (w - 1) * 7 + 4);
 }
 
-const DH_WEEKS = [2, 3, 4, 6, 8, 10];
-const CN_PERIODS = ["1주", "2주", "3주", "4주", "6일"];
+const DH_WEEKS = Array.from({length:15}, (_,i)=>i+2);
+const CN_PERIODS = [...Array.from({length:16}, (_,i)=>`${i+1}주`), "6일"];
 
 // BookingType → 표시할 패키지 박스 accom 키 배열
 function getPackageAccoms(bType: string): AccomType[] {
@@ -490,7 +490,7 @@ export default function BookingPage() {
                 <div className="fg">
                   <label className="fl">제이파크 기간</label>
                   <select className="fsl" value={accom.jp_weeks} onChange={e => setAccom({ ...accom, jp_weeks: parseInt(e.target.value) })}>
-                    {[1, 2, 3, 4].map(w => <option key={w} value={w}>{w}주</option>)}
+                    {Array.from({length:16}, (_,i)=>i+1).map(w => <option key={w} value={w}>{w}주</option>)}
                   </select>
                 </div>
               )}

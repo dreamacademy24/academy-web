@@ -19,13 +19,17 @@ export const COMMUTE_PRICE: Record<number, [number, number, number]> = {
   10: [4240000, 3625200, 4028000],
   11: [4670000, 3992850, 4436500],
   12: [5100000, 4360500, 4845000],
+  13: [5530000, 4728150, 5253500],
+  14: [5960000, 5095800, 5662000],
+  15: [6390000, 5463450, 6070500],
+  16: [6820000, 5831100, 6479000],
 };
 
 const SEASON_IDX: Record<CommuteSeason, number> = { list: 0, off: 1, peak: 2 };
 
 // 통학형 학생 1명 학원비 (주차 + 시즌). 표에 없는 주차는 인접 규칙으로 보정:
 //  - 1주: 2주의 절반 (기존 코드 fallback 규칙 유지)
-//  - 8주 초과: 가장 가까운 상한(8주) 사용 (운영상 8주 초과는 별도 협의)
+//  - 16주 초과: 가장 가까운 상한(16주) 사용
 export function commuteUnitPrice(weeks: number, season: CommuteSeason = "list"): number {
   const idx = SEASON_IDX[season] ?? 0;
   if (COMMUTE_PRICE[weeks]) return COMMUTE_PRICE[weeks][idx];
