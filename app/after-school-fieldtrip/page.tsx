@@ -26,6 +26,7 @@ export default function AfterSchoolFieldtripPage() {
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<{ token: string; label: string; fieldtrip: boolean }[]>([]); // 선택한 일정 라이브 요약
   const formRef = useRef<HTMLFormElement>(null);
+  const submittingRef = useRef(false);
   const router = useRouter();
   const [session, setSession] = useState<{ booking_id: string } | null>(null);
   const [children, setChildren] = useState<string[]>([]);
@@ -82,7 +83,7 @@ export default function AfterSchoolFieldtripPage() {
         const kids = Array.isArray(d.students)
           ? d.students.map((s: { name_kr?: string }) => String(s?.name_kr || "").trim()).filter(Boolean)
           : [];
-        setChildren(kids);
+        setChildren(Array.from(new Set<string>(kids)));
         const ci = String(b.check_in || b.checkin_date || "").slice(0, 10);
         const co = String(b.check_out || b.checkout_date || "").slice(0, 10);
         const defaultAccom = resolveComboAccom(b);
@@ -262,6 +263,7 @@ export default function AfterSchoolFieldtripPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
     const form = formRef.current;
     if (!form || !form.reportValidity()) return;
 
@@ -272,6 +274,7 @@ export default function AfterSchoolFieldtripPage() {
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     const scheduleValues = Array.from(checked).map((cb) => (cb as HTMLInputElement).value).join(", ");
     const childName = (form.querySelector('[name="childName"]') as HTMLInputElement | HTMLSelectElement | null)?.value || "";
@@ -295,7 +298,15 @@ export default function AfterSchoolFieldtripPage() {
         portal_name: bookingMeta?.name || null,
         room_number: roomLabel || null,
       });
-      if (insErr) { console.error(insErr); toastErr("저장에 실패했습니다: " + insErr.message); setSubmitting(false); return; }
+      if (insErr) {
+        if (insErr.message.includes("FIELDTRIP_ALREADY_APPLIED")) {
+          toastErr("이미 신청한 일정이 포함되어 있습니다. 내 신청 내역을 확인하고, 아직 신청하지 않은 날짜만 선택해 주세요.");
+        } else {
+          console.error(insErr);
+          toastErr("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+        return;
+      }
 
       // 직원업무 "확인해야 할 목록" 체크리스트용 활동 로그 (best-effort)
       try {
@@ -319,10 +330,12 @@ export default function AfterSchoolFieldtripPage() {
 
       toastOk("신청이 완료되었습니다! 드림센터를 통해 확인 안내를 드릴 예정입니다.");
       form.reset();
+      setSelected([]);
     } catch (err) {
       console.error(err);
       toastErr("저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
