@@ -137,6 +137,9 @@ export default function MayLedgerPage() {
   const [view, setView] = useState<"pl" | "fs" | "tx" | "apLedger" | "acct">("pl");
   const [period, setPeriod] = useState("all");
   const [txnFilter, setTxnFilter] = useState("all");
+  const [sortMode, setSortMode] = useState("default");
+  const sortLabels: Record<string,string> = {default:"기본순",asc:"날짜 오름차순",desc:"날짜 내림차순",type:"발생·수입 먼저 → 지급·지출"};
+  const sortedRows = (rows: Row[]) => sortMode === "default" ? rows : [...rows].sort((a,b) => { const date = a.entry_date.localeCompare(b.entry_date); if(sortMode === "type") return Number(!(moriKindOf(a) === "accrue" || a.type === "income")) - Number(!(moriKindOf(b) === "accrue" || b.type === "income")) || date; return sortMode === "desc" ? -date : date; });
   const [backTo, setBackTo] = useState<"fs" | "pl">("fs");
   const [acct, setAcct] = useState<{ book: Book; div: string; type: "income" | "expense" }>({ book: "회사", div: "재료비", type: "expense" });
 
@@ -279,7 +282,7 @@ export default function MayLedgerPage() {
     });
     const meta = document.createElement('div');
     meta.className = 'print-meta';
-    meta.textContent = '기간: ' + periodLbl + (view === 'tx' ? ' · 분류: ' + (txFilters.find(([key]) => key === txnFilter)?.[1] || '전체') : '');
+    meta.textContent = '기간: ' + (view === "apLedger" ? "전체 기간" : periodLbl) + ' · 정렬: ' + sortLabels[sortMode] + (view === 'tx' ? ' · 분류: ' + (txFilters.find(([key]) => key === txnFilter)?.[1] || '전체') : '');
     copy.querySelector('.hdr')?.after(meta);
     popup.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>장부 PDF 출력</title></head><body><div class="print-toolbar"><button id="print-now">PDF 저장 / 인쇄</button><span>인쇄 대상에서 “PDF로 저장”을 선택하세요. 선택한 기간의 현재 화면을 출력합니다.</span></div><div id="mayledger" data-ml="light"></div></body></html>');
     popup.document.close();
@@ -425,7 +428,8 @@ export default function MayLedgerPage() {
   // ---- 모리 미지급금 원장 ----
   const moriRows = items.filter(r => r.division === "모리" && moriKindOf(r) != null).slice()
     .sort((a, b) => a.entry_date.localeCompare(b.entry_date) || ((moriKindOf(a) === "accrue" ? 0 : 1) - (moriKindOf(b) === "accrue" ? 0 : 1)));
-  let run = 0;
+  let runningBalance = 0;
+  const balances = new Map(moriRows.map(r => { runningBalance += moriKindOf(r) === "accrue" ? phpOf(r) : -phpOf(r); return [r.id,runningBalance] as const; }));
   const apLedgerView = (
     <>
       <button className="back" onClick={() => setView(backTo)}>‹ {backTo === "fs" ? "재무제표" : "손익계산서"}로</button>
@@ -435,11 +439,11 @@ export default function MayLedgerPage() {
         <div className="kpi hero"><div className="bar" style={{ background: "var(--wa)" }} /><div className="k">현재 잔액</div><div className={"v " + (apBal < 0 ? "neg" : "")}>{won(apBal)}</div><div className="d">{apBal < 0 ? "선지급" : "미지급"}</div></div>
       </div>
       <div className="card">
-        <div className="hd"><div className="ct">모리 미지급금 상세원장</div><div className="cm">발생(+) · 지급(−) · 잔액 · 단위 ₱</div></div>
+        <div className="hd"><div className="ct">모리 미지급금 상세원장</div><div className="cm">발생(+) · 지급(−) · 잔액은 원래 날짜순 기준 · 단위 ₱</div></div>
         <div style={{ overflowX: "auto" }}><table className="txn">
           <thead><tr><th>날짜</th><th>구분</th><th>적요</th><th className="r">발생(+)</th><th className="r">지급(−)</th><th className="r">잔액</th></tr></thead>
           <tbody>
-            {moriRows.map(r => { const acc = moriKindOf(r) === "accrue"; run += acc ? phpOf(r) : -phpOf(r); return (
+            {sortedRows(moriRows).map(r => { const acc = moriKindOf(r) === "accrue"; const run = balances.get(r.id) || 0; return (
               <tr key={r.id}>
                 <td className="num" style={{ color: "var(--fa)", whiteSpace: "nowrap" }}>{r.entry_date}</td>
                 <td>{acc ? <span className="tag acc">발생</span> : <span className="tag set">지급</span>}</td>
@@ -466,7 +470,8 @@ export default function MayLedgerPage() {
   const aList = items.filter(r => r.book === acct.book && r.type === acct.type && (acct.div === "*" || r.division === acct.div) && inP(r) && !(acct.book === "회사" && acct.div === "모리" && moriKindOf(r) === "settle")).slice()
     .sort((a, b) => a.entry_date.localeCompare(b.entry_date));
   const aTot = aList.reduce((s, r) => s + phpOf(r), 0);
-  let arun = 0;
+  let accountBalance = 0;
+  const accountBalances = new Map(aList.map(r => { accountBalance += phpOf(r); return [r.id,accountBalance] as const; }));
   const aLabel = acct.div === "*" ? (acct.type === "income" ? "수입" : "지출") : acct.div;
   const acctView = (
     <>
@@ -482,7 +487,7 @@ export default function MayLedgerPage() {
           <thead><tr><th>날짜</th><th>세부</th><th>메모</th><th className="r">금액</th><th className="r">누계</th></tr></thead>
           <tbody>
             {aList.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: 32, color: "var(--mu)" }}>내역이 없어요.</td></tr>}
-            {aList.map(r => { arun += phpOf(r); return (
+            {sortedRows(aList).map(r => { const arun = accountBalances.get(r.id) || 0; return (
               <tr key={r.id}>
                 <td className="num" style={{ color: "var(--fa)", whiteSpace: "nowrap" }}>{r.entry_date}</td>
                 <td>{r.detail}</td><td style={{ color: "var(--fa)", fontSize: 12 }}>{r.memo}</td>
@@ -531,7 +536,7 @@ export default function MayLedgerPage() {
         <thead><tr><th>날짜</th><th>구분</th><th>부문</th><th>세부</th><th>메모</th><th className="r">금액</th><th></th></tr></thead>
         <tbody>
           {txList.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: 32, color: "var(--mu)" }}>내역이 없어요.</td></tr>}
-          {txList.map(r => {
+          {sortedRows(txList).map(r => {
             const mk = moriKindOf(r);
             const tag = r.type === "income" ? <span className="tag inc">수입</span> : mk === "accrue" ? <span className="tag acc">식대 발생</span> : mk === "settle" ? <span className="tag set">미지급 지급</span> : <span className="tag exp">지출</span>;
             const signed = r.type === "income" ? "+" + wonP(phpOf(r)) : mk === "settle" ? wonP(phpOf(r)) : "−" + wonP(phpOf(r));
@@ -565,6 +570,7 @@ export default function MayLedgerPage() {
           <div><h1 className="t">{title}</h1><div className="sub">{ws === "회사" ? "드림아카데미" : "메이집"} · 페소(₱) 기준 · 원화 자동환산 · 나만 보는 비공개</div></div>
           <div className="ctrl">
             <button className="addbtn" onClick={openPrintPreview}>PDF 출력</button>
+            {(["apLedger","acct","tx"].includes(view)) && <select aria-label="정렬" className="fld" value={sortMode} onChange={e => setSortMode(e.target.value)}>{Object.entries(sortLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
             <div className="wsseg">
               <button className={ws === "회사" ? "on" : ""} onClick={() => { setWs("회사"); setView("pl"); setTxnFilter("all"); }}><span className="dot" />드림아카데미</button>
               <button className={ws === "집" ? "on" : ""} onClick={() => { setWs("집"); setView("pl"); setTxnFilter("all"); }}><span className="dot" style={{ background: "#c98a2a" }} />메이집</button>
