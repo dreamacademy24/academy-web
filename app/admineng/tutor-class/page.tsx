@@ -7,6 +7,7 @@ import { blocksToTimeOverrides, toFocusArr, toDateArr, formatLessonTime, stripTi
 import { countLessonDays } from "@/lib/lessonDates";
 import { cancelMap, hasAnyCancellation } from "@/lib/lessonCancellations";
 import TutorInvoice from "@/app/admin/tutor-class/TutorInvoice";
+import TutorAccountImport from "@/components/TutorAccountImport";
 
 interface Tutor { id: string; name: string; }
 interface TutorReq {
@@ -1048,6 +1049,7 @@ export default function EngTutorClassPage() {
         </select>
       </div>
 
+      <TutorAccountImport english />
       <div className="etabs">
         <button className={`etab${tab==="inbox"?" ac":""}`} onClick={() => setTab("inbox")}>📬 Requests Inbox</button>
         <button className={`etab${tab==="mine"?" ac":""}`} onClick={() => setTab("mine")}>📅 My Schedule</button>

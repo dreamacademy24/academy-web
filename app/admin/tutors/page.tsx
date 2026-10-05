@@ -4,6 +4,7 @@ import { toastErr } from "@/lib/toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
+import TutorAccountImport from "@/components/TutorAccountImport";
 
 interface Tutor { id: string; name: string; phone: string; specialty: string; hourly_rate: number; is_active: boolean }
 interface Lesson { id: string; student_name: string; tutor_name: string; lesson_date: string; lesson_time: string; lesson_type: string; status: string }
@@ -215,6 +216,7 @@ export default function TutorsPage() {
         <span style={{ fontSize: 16, color: "#1a6fc4", fontWeight: 700 }}>→</span>
       </div>
 
+      <TutorAccountImport />
       <div className="tabs">
         <button className={`tab${tab === "list" ? " ac" : ""}`} onClick={() => setTab("list")}>👩‍🏫 튜터 목록</button>
         <button className={`tab${tab === "schedule" ? " ac" : ""}`} onClick={() => setTab("schedule")}>📅 튜터 스케줄</button>

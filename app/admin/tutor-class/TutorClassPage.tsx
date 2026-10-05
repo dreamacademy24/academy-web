@@ -7,6 +7,7 @@ import TutorLessonList from "./TutorLessonList";
 import TutorInvoice from "./TutorInvoice";
 import TutorWeeklySchedule from "./TutorWeeklySchedule";
 import TutorCancelRequests from "./TutorCancelRequests";
+import TutorAccountImport from "@/components/TutorAccountImport";
 
 type Tab = "applications" | "schedule" | "students" | "invoice" | "cancels";
 
@@ -66,6 +67,7 @@ export default function TutorClassPage() {
         </button>
       </div>
 
+      <TutorAccountImport />
       <div className="tc-tabs" role="tablist">
         <button className={`tc-tab${tab === "applications" ? " ac" : ""}`} onClick={() => setTab("applications")} role="tab" aria-selected={tab === "applications"}>
           📬 신청 수신함
