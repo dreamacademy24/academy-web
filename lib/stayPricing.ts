@@ -1,6 +1,6 @@
 // 견적(EstimateCalc) ↔ 인보이스(/invoice) 공용 계산 — "견적 금액 = 인보이스 금액" 단일 소스 (2026-09-29)
 // ① 시즌 판정(주 단위) ② 콤보 구간 금액(해당 숙소 4주 금액 ÷ 4 × 주수, 주별 시즌)
-// ③ 방학(평일 휴무) 수업료 차감 ④ 제이파크 연말 서차지(계약서 기준) ⑤ 휴무일 안내 문구
+// ③ 방학(평일 방학만) 수업료 차감 ④ 제이파크 연말 서차지(계약서 기준) ⑤ 휴무일 안내 문구
 import { COMMUTE_PRICE } from "@/lib/commutePricing";
 import { holidaysInRange, type HolidayItem } from "@/lib/holidays";
 
@@ -49,7 +49,7 @@ export function comboSegPrice(four: P3, start: string, w: number): { price: numb
   return { price, off, peak };
 }
 
-/* ③ 방학(평일 휴무) 수업료 차감 — 통학형 학원비 주당·일당 단가 기준 × 아이 수 */
+/* ③ 방학(평일 방학만) 수업료 차감 — 통학형 학원비 주당·일당 단가 기준 × 아이 수 */
 export const VACATION_LINE_PREFIX = "학원 방학 수업료 제외";
 export function computeVacationDeduct(
   holidays: HolidayItem[], checkin: string, weeks: number, kids: number, commute: boolean,
@@ -57,7 +57,11 @@ export function computeVacationDeduct(
   const w = Number(weeks) || 0, k = Number(kids) || 0;
   if (!checkin || !w || !k) return null;
   const co = addDaysStr(checkin, commute ? (w - 1) * 7 + 4 : w * 7);
-  const hs = holidaysInRange(holidays, checkin, co).filter(h => { const d = new Date(h.date + "T00:00:00").getDay(); return d >= 1 && d <= 5; });
+  // Only explicitly named academy vacations qualify. Public holidays remain notices only.
+  const hs = holidaysInRange(holidays, checkin, co).filter(h => {
+    const day = new Date(h.date + "T00:00:00").getDay();
+    return h.name.replace(/\s/g, "") === "학원방학" && day >= 1 && day <= 5;
+  }).filter((h, i, all) => all.findIndex(other => other.date === h.date) === i);
   if (!hs.length) return null;
   const base: P3 = COMMUTE_PRICE[w] || (w === 1 ? [500000, 450000, 500000] : COMMUTE_PRICE[12]);
   const days = w * 5;
@@ -65,7 +69,7 @@ export function computeVacationDeduct(
   let sum = 0; const parts: string[] = [];
   for (const h of hs) { const pk = isPeakDate(h.date); sum += (pk ? perPeak : perOff) * k; parts.push(h.date.slice(5).replace("-", "/") + (pk ? "·성수기" : "·비수기")); }
   // 인보이스·견적 표시는 짧게, 계산 근거는 detail (직원용 "계산 내역"에서 확인)
-  return { name: `${VACATION_LINE_PREFIX} (평일 휴무 ${hs.length}일)`, amount: sum,
+  return { name: `${VACATION_LINE_PREFIX} (평일 방학 ${hs.length}일)`, amount: sum,
     detail: `${parts.join(", ")} · 1일 수업료 비수기 ${perOff.toLocaleString()}원 / 성수기 ${perPeak.toLocaleString()}원 (통학형 ${w}주 단가 ÷ ${days}일) × 아이 ${k}명` };
 }
 
@@ -154,7 +158,7 @@ export function holidayNotice(kind: StayKind, deducted: boolean): { off: string;
     : kind === "roomonly" ? "숙소는 정상 이용 가능합니다"
     : "숙소 이용 · 식사는 정상 제공됩니다";
   const money = deducted
-    ? "평일 휴무일 수업료는 위 금액에서 이미 차감되었으며, 그 외 별도 환불 · 보강은 없습니다"
+    ? "학원 방학 중 평일 수업료만 위 금액에서 차감되었습니다. 공휴일·기타 휴무일은 차감 대상이 아니며 별도 환불 · 보강은 없습니다"
     : "휴무일에 대한 별도 환불 · 보강은 없습니다";
   return { off, on, money };
 }

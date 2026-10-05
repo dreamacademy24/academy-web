@@ -850,7 +850,7 @@ export default function EstimateCalc(){
   useEffect(()=>{ fetchDeployedHolidays().then(setHolidays).catch(()=>{}); },[]);
   const [fxRate,setFxRate]=useState<number>(surchargeRate(null)); // 매매기준율 + 0.6
   useEffect(()=>{ fetchPhpBaseRate().then(b=>setFxRate(surchargeRate(b))); },[]);
-  /* 🏫 방학 수업료 자동 차감 — 견적 기간에 평일 휴무가 걸리면 자동으로 '학원 방학 수업료 제외' 반영 (직원 누락 방지, 2026-08-28) */
+  /* 🏫 방학 수업료 자동 차감 — 견적 기간에 평일 학원 방학이 걸리면 자동으로 '학원 방학 수업료 제외' 반영 (직원 누락 방지, 2026-08-28) */
   useEffect(()=>{
     setPlans(prev=>{
       let changed=false;
@@ -892,7 +892,7 @@ export default function EstimateCalc(){
   function setCheckinAndSeason(idx:number,date:string){
     setPlans(prev=>prev.map((p,i)=>i===idx?{...p,checkin:date,season:autoSeason(date)}:p));
   }
-  /* 방학(평일 휴무) 수업료 차감 — 순수 계산 (alert 없음, 자동/수동 공용) */
+  /* 방학(평일 방학만) 수업료 차감 — 순수 계산 (alert 없음, 자동/수동 공용) */
   function computeHolidayLine(p:PlanState):{name:string;amount:number}|null{
     return computeVacationDeduct(holidays,p.checkin,totalWeeks(p),Number(p.kids)||0,p.accom==="commute");
   }
@@ -902,7 +902,7 @@ export default function EstimateCalc(){
     if(!totalWeeks(p)){alert("기간을 먼저 설정해주세요.");return;}
     if(!(Number(p.kids)||0)){alert("아이 인원을 먼저 설정해주세요 (수업료는 아이 기준).");return;}
     const line=computeHolidayLine(p);
-    if(!line){alert("체류 기간 내 평일 휴무일이 없어요. (주말 휴무는 수업료 차감 대상 아님)");return;}
+    if(!line){alert("체류 기간 내 평일 학원 방학이 없어요. 공휴일·기타 휴무·주말은 차감하지 않습니다.");return;}
     const kept=p.discounts.filter(d=>!d.name.startsWith("학원 방학 수업료 제외"));
     up(idx,{discounts:[...kept,{id:Date.now(),...line}]});
   }
