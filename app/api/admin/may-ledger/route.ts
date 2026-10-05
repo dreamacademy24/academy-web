@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { getStaffIdentity } from "@/lib/portalAuth";
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,7 +8,15 @@ const sb = createClient(
 );
 
 // 오너 전용 암호. Vercel/.env.local 에 MAY_LEDGER_PASSCODE 설정.
-function checkPass(req: Request): { ok: true } | { ok: false; res: NextResponse } {
+async function checkPass(req: Request): Promise<{ ok: true } | { ok: false; res: NextResponse }> {
+  const origin = req.headers.get('origin');
+  if (origin && origin !== new URL(req.url).origin) return { ok: false, res: NextResponse.json({ error: 'BAD_ORIGIN' }, { status: 403 }) };
+  try {
+    const staff = await getStaffIdentity(req);
+    if (staff?.id === '34ebbb26-9142-4a34-b35f-4fcc4426e27c' && staff.role === 'korean_admin') return { ok: true };
+  } catch {
+    return { ok: false, res: NextResponse.json({ message: '계정 확인에 실패했습니다. 잠시 후 다시 시도해주세요.' }, { status: 503 }) };
+  }
   const expected = process.env.MAY_LEDGER_PASSCODE;
   if (!expected) {
     return { ok: false, res: NextResponse.json(
@@ -29,7 +38,7 @@ async function getConfig() {
 
 // GET — 전체 항목 + 설정
 export async function GET(req: Request) {
-  const c = checkPass(req); if (!c.ok) return c.res;
+  const c = await checkPass(req); if (!c.ok) return c.res;
   const { data, error } = await sb
     .from("may_ledger").select("*")
     .order("entry_date", { ascending: false })
@@ -40,7 +49,7 @@ export async function GET(req: Request) {
 
 // POST — 항목 추가, 또는 {kind:'config'} 로 환율 저장
 export async function POST(req: Request) {
-  const c = checkPass(req); if (!c.ok) return c.res;
+  const c = await checkPass(req); if (!c.ok) return c.res;
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return NextResponse.json({ error: "BAD_JSON" }, { status: 400 }); }
 
@@ -79,7 +88,7 @@ export async function POST(req: Request) {
 
 // PATCH — {id, patch:{...}}
 export async function PATCH(req: Request) {
-  const c = checkPass(req); if (!c.ok) return c.res;
+  const c = await checkPass(req); if (!c.ok) return c.res;
   const b = await req.json().catch(() => null) as { id?: string; patch?: Record<string, unknown> } | null;
   if (!b?.id || !b.patch) return NextResponse.json({ error: "id/patch 필요" }, { status: 400 });
   const allowed: Record<string, unknown> = {};
@@ -93,7 +102,7 @@ export async function PATCH(req: Request) {
 
 // DELETE — ?id=
 export async function DELETE(req: Request) {
-  const c = checkPass(req); if (!c.ok) return c.res;
+  const c = await checkPass(req); if (!c.ok) return c.res;
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id 필요" }, { status: 400 });
   const { error } = await sb.from("may_ledger").delete().eq("id", id);

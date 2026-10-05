@@ -170,7 +170,7 @@ export default function MayLedgerPage() {
 
   const load = useCallback(async (p?: string) => {
     const res = await api("GET", { pass: p });
-    if (res.status === 401) { setUnlocked(false); setGate("암호가 올바르지 않아요."); return false; }
+    if (res.status === 401) { setUnlocked(false); setGate("May 로그인 확인이 필요하거나 장부 암호가 올바르지 않습니다."); return false; }
     if (res.status === 503) { const d = await res.json().catch(() => ({})); setUnlocked(false); setGate(d.message || "서버 암호 미설정"); return false; }
     if (!res.ok) { setGate("불러오기 실패"); return false; }
     const d = await res.json();
@@ -181,7 +181,7 @@ export default function MayLedgerPage() {
   }, [api]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (authed && pass) load(pass); }, [authed, pass, load]);
+  useEffect(() => { if (authed) load(pass); }, [authed, pass, load]);
 
   async function submitPass(e: React.FormEvent) {
     e.preventDefault();
@@ -234,7 +234,7 @@ export default function MayLedgerPage() {
         <div className="gate">
           <form onSubmit={submitPass} className="gatebox">
             <div style={{ fontSize: 19, fontWeight: 800 }}>🔒 드림 재무</div>
-            <div style={{ fontSize: 13, color: "var(--mu)", margin: "6px 0 16px" }}>나만 보는 장부입니다. 암호를 입력하세요.</div>
+            <div style={{ fontSize: 13, color: "var(--mu)", margin: "6px 0 16px" }}>May 계정으로 로그인하면 자동으로 열립니다. 별도 장부 암호로도 열 수 있습니다.</div>
             <input type="password" value={passInput} onChange={e => setPassInput(e.target.value)} autoFocus placeholder="암호"
               style={{ width: "100%", padding: "11px 13px", fontSize: 15, border: "1px solid var(--lns)", borderRadius: 9 }} />
             {gate && <div style={{ color: "var(--neg)", fontSize: 12.5, marginTop: 8 }}>{gate}</div>}
