@@ -1106,13 +1106,13 @@ export default function OnlineClassPage() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 10, alignItems: "center", background: "#f8fafc", borderRadius: 8, padding: "10px 12px", fontSize: 12.5 }}>
                     <div>
-                      <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>현재</div>
-                      {r.req_type === "single" ? "이 수업" : daysToKr(en.days_of_week || [])} {r.req_type === "single" ? "" : (en.class_time_kr || "")}
+                      <div style={{ fontSize: 10.5, color: "#94a3b8", fontWeight: 700, marginBottom: 2 }}>기존 수업 (한국시간)</div>
+                      {r.req_type === "single" ? <b style={{fontSize:15}}>{r.original_date || "기존 날짜 기록 없음"} {r.original_time_kr?.slice(0,5) || ""}</b> : <b>{daysToKr(en.days_of_week || [])} {en.class_time_kr || ""}</b>}
                     </div>
                     <div style={{ fontSize: 16, color: "#1a6fc4" }}>→</div>
                     <div>
-                      <div style={{ fontSize: 10.5, color: "#1a6fc4", fontWeight: 700, marginBottom: 2 }}>{r.req_type === "single" ? "새 날짜/시간" : `요청 (적용일 ${r.effective_from})`}</div>
-                      <b>{r.req_type === "single" ? `${r.req_date || "(날짜 유지)"} ${r.req_time_kr || ""}` : `${r.req_days_of_week?.length ? daysToKr(r.req_days_of_week) : daysToKr(en.days_of_week || [])} ${r.req_time_kr || en.class_time_kr || ""}`}</b>
+                      <div style={{ fontSize: 10.5, color: "#1a6fc4", fontWeight: 700, marginBottom: 2 }}>{r.req_type === "single" ? "변경 요청 (한국시간)" : `요청 (적용일 ${r.effective_from})`}</div>
+                      <b style={{fontSize:15}}>{r.req_type === "single" ? `${r.req_date || r.original_date || "(날짜 유지)"} ${r.req_time_kr || r.original_time_kr?.slice(0,5) || "(시간 유지)"}` : `${r.req_days_of_week?.length ? daysToKr(r.req_days_of_week) : daysToKr(en.days_of_week || [])} ${r.req_time_kr || en.class_time_kr || ""}`}</b>
                     </div>
                   </div>
                   {r.memo && <div style={{ fontSize: 12, color: "#475569", marginTop: 8 }}>💬 {r.memo}</div>}
