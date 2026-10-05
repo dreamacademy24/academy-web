@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { toastOk, toastErr } from "@/lib/toast";
+import { resolveMealDates, shiftMealPeriod } from "@/lib/mealMenuDates";
 
 interface MealDay { date: number; weekday: string; breakfast?: string[]; lunch: string[]; dinner_adult?: string[]; dinner_child?: string[]; snack?: string[]; }
 interface Menu { id: string; kind: string; menu_date: string; image_url: string; published: boolean; meal_data?: MealDay[]; }
@@ -47,7 +48,7 @@ function groupByWeek(days: MealDay[], year: number, month: number): MealDay[][] 
   return weeks;
 }
 
-function MealCardPreview({ days, year, month, isAcademy }: { days: MealDay[]; year: number; month: number; isAcademy: boolean }) {
+function MealCardPreview({ days, year, month, startDate, isAcademy }: { days: MealDay[]; year: number; month: number; startDate: string; isAcademy: boolean }) {
   if (isAcademy) {
     // 아카데미: 주간 그리드 (월~금), 간식=민트
     const weeks = groupByWeek(days, year, month);
@@ -88,11 +89,11 @@ function MealCardPreview({ days, year, month, isAcademy }: { days: MealDay[]; ye
   // 드림하우스: 날짜별 4열 테이블
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {days.map((day, i) => {
+      {resolveMealDates(days, startDate).map((day, i) => {
         const maxLen = Math.max(...DH_COLS.map(c => ((day as any)[c.key] || []).length), 1);
         return (
           <div key={i} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ padding: "9px 14px", fontWeight: 800, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>{month}/{day.date} ({koDow(year, month, day.date)})</div>
+            <div style={{ padding: "9px 14px", fontWeight: 800, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>{day.month}/{day.date} ({day.weekday})</div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 400 }}>
                 <thead><tr>{DH_COLS.map(c => <th key={c.key} style={{ background: c.bg, padding: "6px 7px", fontWeight: 800, fontSize: 11, textAlign: "center", borderBottom: "2px solid #e2e8f0", whiteSpace: "nowrap" }}>{c.label}</th>)}</tr></thead>
@@ -283,9 +284,9 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
     <div style={{ padding: "4px 2px 20px", maxWidth: 600 }}>
       {/* 네비게이션 + 배포 버튼 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0 12px", flexWrap: "wrap" }}>
-        <button onClick={() => setBase(d => { const n = new Date(d); if (monthly) n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })} style={navBtn}>← 이전{monthly ? " 달" : " 주"}</button>
+        <button onClick={() => setBase(d => shiftMealPeriod(d, monthly, -1))} style={navBtn}>← 이전{monthly ? " 달" : " 주"}</button>
         <span style={{ fontWeight: 800, fontSize: 15, minWidth: 150, textAlign: "center" }}>{periodLabel}</span>
-        <button onClick={() => setBase(d => { const n = new Date(d); if (monthly) n.setMonth(n.getMonth() + 1); else n.setDate(n.getDate() + 7); return n; })} style={navBtn}>다음{monthly ? " 달" : " 주"} →</button>
+        <button onClick={() => setBase(d => shiftMealPeriod(d, monthly, 1))} style={navBtn}>다음{monthly ? " 달" : " 주"} →</button>
         <button onClick={() => setBase(new Date())} style={navBtn}>{monthly ? "이번 달" : "이번 주"}</button>
       </div>
       <p style={{ fontSize: 12, color: "#6b7c93", margin: "0 0 12px" }}>
@@ -349,9 +350,9 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
           {editMode ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div style={{ fontSize: 12, color: "#64748b" }}>각 칸은 한 줄에 하나씩 입력하세요 (엔터로 항목 구분). 빈 줄은 저장 시 자동 정리됩니다.</div>
-              {editDays.map((d, di) => (
+              {resolveMealDates(editDays, menu?.menu_date || targetDate).map((d, di) => (
                 <div key={di} style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{menuMonth}/{d.date} ({koDow(menuYear, menuMonth, d.date)})</div>
+                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{d.month}/{d.date} ({d.weekday})</div>
                   <div style={{ display: "grid", gridTemplateColumns: `repeat(${EDIT_FIELDS.length}, 1fr)`, gap: 8 }}>
                     {EDIT_FIELDS.map(([f, label]) => (
                       <div key={String(f)}>
@@ -368,7 +369,7 @@ export default function MealMenuPublish({ kind }: { kind: "dreamhouse" | "academ
               </div>
             </div>
           ) : (
-            <MealCardPreview days={menu!.meal_data!} year={menuYear} month={menuMonth} isAcademy={monthly} />
+            <MealCardPreview days={menu!.meal_data!} year={menuYear} month={menuMonth} startDate={menu?.menu_date || targetDate} isAcademy={monthly} />
           )}
         </div>
       )}

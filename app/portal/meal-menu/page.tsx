@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { resolveMealDates, shiftMealPeriod } from "@/lib/mealMenuDates";
 
 interface MealDay {
   date: number;
@@ -79,9 +80,9 @@ export default function PortalMealMenuPage() {
 
       {/* 기간 네비 */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={() => setBase(d => { const n = new Date(d); if (tab === "academy") n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })} style={navBtn}>← 이전</button>
+        <button onClick={() => setBase(d => shiftMealPeriod(d, tab === "academy", -1))} style={navBtn}>← 이전</button>
         <span style={{ fontWeight: 800, fontSize: 14, flex: 1, textAlign: "center" }}>{tab === "academy" ? `${base.getFullYear()}년 ${base.getMonth() + 1}월` : weekLabel}</span>
-        <button onClick={() => setBase(d => { const n = new Date(d); if (tab === "academy") n.setMonth(n.getMonth() + 1); else n.setDate(n.getDate() + 7); return n; })} style={navBtn}>다음 →</button>
+        <button onClick={() => setBase(d => shiftMealPeriod(d, tab === "academy", 1))} style={navBtn}>다음 →</button>
         <button onClick={() => setBase(new Date())} style={navBtn}>{tab === "academy" ? "이번달" : "이번주"}</button>
       </div>
 
@@ -90,7 +91,7 @@ export default function PortalMealMenuPage() {
           <p style={{ fontSize: 12, color: "#6b7c93", marginBottom: 14 }}>드림하우스 식단 · 🌅 아침 · ☀️ 점심 · 🌙 저녁(어른) · 🧒 저녁(아동)</p>
           {loading ? <Loading /> : !menus[0] ? <Empty text="아직 이번 주 식단이 등록되지 않았습니다." /> : (
             mealData ? (
-              <DreamhouseCards days={mealData} month={menuMonth} />
+              <DreamhouseCards days={mealData} startDate={menus[0].menu_date} />
             ) : (
               <div style={imgCard}>
                 <div style={imgCardHd}>{weekLabel} 드림하우스 식단</div>
@@ -131,15 +132,16 @@ const DH_COLS = [
   { key: "dinner_child", label: "🧒 저녁(아동)", bg: "#fce7f3" },
 ];
 
-function DreamhouseCards({ days, month }: { days: MealDay[]; month: number }) {
+function DreamhouseCards({ days, startDate }: { days: MealDay[]; startDate: string }) {
+  const datedDays = resolveMealDates(days, startDate);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {days.map((day, i) => {
+      {datedDays.map((day, i) => {
         const maxLen = Math.max(...DH_COLS.map(c => ((day as any)[c.key] || []).length), 1);
         return (
           <div key={i} style={{ background: "#fff", borderRadius: 14, overflow: "hidden", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
             <div style={{ padding: "10px 16px", fontWeight: 800, fontSize: 16, borderBottom: "1px solid #f1f5f9" }}>
-              {month}/{day.date} ({day.weekday})
+              {day.month}/{day.date} ({day.weekday})
             </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 480 }}>
