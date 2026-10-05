@@ -814,7 +814,7 @@ export default function BookingDetailPage() {
               </div>
               <div className="item"><div className="lbl">기간(주)</div>
                 {editing
-                  ? <><input className="ed-inp" type="number" min="1" max="12" value={editForm.accom_weeks||""} onChange={e=>setEditForm({...editForm,accom_weeks:e.target.value})}/><div className="ed-note">아카데미 시작/종료는 체크인 + 기간으로 자동 계산</div></>
+                  ? <><input className="ed-inp" type="number" min="1" max="16" value={editForm.accom_weeks||""} onChange={e=>setEditForm({...editForm,accom_weeks:e.target.value})}/><div className="ed-note">아카데미 시작/종료는 체크인 + 기간으로 자동 계산</div></>
                   : <div className="val">{b.accom_weeks ? b.accom_weeks+"주" : "-"}</div>}
               </div>
               <div className="item"><div className="lbl">아카데미 시작</div>
