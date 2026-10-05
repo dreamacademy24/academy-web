@@ -11,7 +11,7 @@ function _staffAttachmentHtml(files){
   if(!Array.isArray(files)||!files.length)return '';
   return '<div class="swm-attachments">'+files.map(function(f){var src=_staffMediaUrl(f.url||f.data),kind=fileKind(f),name=_staffSafe(f.name||'첨부파일'),size=fmtFileSize(f.size);if(!src)return '<div class="swm-file">'+name+'<span>파일 링크를 확인할 수 없습니다.</span></div>';
     if(kind==='image')return '<figure class="swm-photo"><button type="button" data-staff-photo="'+_staffSafe(src)+'" data-name="'+name+'" aria-label="'+name+' 확대"><img src="'+_staffSafe(src)+'" alt="'+name+'" loading="lazy" decoding="async"></button><figcaption><span>'+name+'</span><small>'+_staffSafe(size)+'</small><a href="'+_staffSafe(src)+'" target="_blank" rel="noopener" download="'+name+'">다운로드</a></figcaption></figure>';
-    if(kind==='video')return '<figure class="swm-file"><video controls preload="metadata" src="'+_staffSafe(src)+'"></video><figcaption>'+name+'</figcaption></figure>';
+    if(kind==='video')return '<figure class="swm-file"><video controls playsinline preload="metadata" src="'+_staffSafe(src)+'"></video><figcaption>'+name+'</figcaption></figure>';
     if(/^audio\//.test(f.type||''))return '<figure class="swm-file"><audio controls preload="metadata" src="'+_staffSafe(src)+'"></audio><figcaption>'+name+'</figcaption></figure>';
     return '<a class="swm-file" href="'+_staffSafe(src)+'" target="_blank" rel="noopener" download="'+name+'"><strong>'+name+'</strong><span>'+_staffSafe(size)+(/\.zip$/i.test(f.name||'')?' · ZIP 내려받기':' · 파일 열기')+'</span></a>';
   }).join('')+'</div>';
@@ -40,14 +40,23 @@ async function _staffOptimizeUploadFile(file){
     var name=file.name.replace(/\.[^.]+$/,'')+'.webp';return new File([blob],name,{type:blob.type,lastModified:file.lastModified});
   }catch(e){return file;}finally{if(bitmap)bitmap.close();}
 }
+function _staffValidateTaskFile(file){
+  // Task files use signed Storage uploads, unlike the legacy base64 forms.
+  if(/\.(mp4|mov)$/i.test(file.name)){
+    if(!file.size||file.size>50*1024*1024){toast(file.name+': 영상은 0바이트보다 크고 50MB 이하여야 합니다.','#ef4444');return false;}
+    return true;
+  }
+  if(/^video\//i.test(file.type||'')||/\.(avi|mkv|webm|wmv|flv|m4v|3gp|ts|mts)$/i.test(file.name)){toast(file.name+': 영상은 MP4 또는 MOV 파일로 첨부해주세요.','#ef4444');return false;}
+  return _validateFile(file);
+}
 function _staffMediaFormHint(){
   var host=document.getElementById('tmFL');if(!host)return;
-  if(!document.getElementById('staffMediaHint')){var hint=document.createElement('div');hint.id='staffMediaHint';hint.className='swm-hint';hint.innerHTML='<p>최대 30개 · 파일당 50MB. 여러 사진은 동시에 3개씩 업로드합니다. 큰 JPG·PNG·WebP는 보기 좋은 크기로 최적화하며, 원본 파일은 내 기기에 남아 있습니다.</p><label><input type="checkbox" id="staffMediaKeepOriginal"> 이번에는 원본 파일 그대로 업로드</label><div id="staffMediaStatus" role="status"></div>';host.before(hint);}
+  if(!document.getElementById('staffMediaHint')){var hint=document.createElement('div');hint.id='staffMediaHint';hint.className='swm-hint';hint.innerHTML='<p>최대 30개 · 파일당 50MB. 영상은 MP4·MOV를 첨부할 수 있으며, 업무 상세에서 바로 재생합니다. 재생되지 않는 영상은 MP4(H.264)로 변환해주세요. 업로드 완료 후 저장해주세요. 여러 사진은 동시에 3개씩 업로드합니다. 큰 JPG·PNG·WebP는 보기 좋은 크기로 최적화하며, 원본 파일은 내 기기에 남아 있습니다.</p><label><input type="checkbox" id="staffMediaKeepOriginal"> 이번에는 원본 파일 그대로 업로드</label><div id="staffMediaStatus" role="status"></div>';host.before(hint);}
 }
 async function _staffTaskUpload(event,retry){
  if(_staffMediaBusy||_staffTaskSaving)return;
  _staffMediaFormHint();var files=retry?_staffMediaFailures.slice():Array.from(event.target.files||[]);
- files=files.filter(_validateFile);var room=Math.max(0,MAX_FILES-mFiles.length);if(files.length>room){toast('한 업무에는 '+MAX_FILES+'개까지 첨부할 수 있습니다.','#ef4444');return;}if(!files.length)return;
+ files=files.filter(_staffValidateTaskFile);var room=Math.max(0,MAX_FILES-mFiles.length);if(files.length>room){toast('한 업무에는 '+MAX_FILES+'개까지 첨부할 수 있습니다.','#ef4444');return;}if(!files.length)return;
  _staffMediaBusy=true;_staffMediaFailures=[];var draft=_staffMediaDraft,host=document.getElementById('staffMediaStatus'),keep=document.getElementById('staffMediaKeepOriginal').checked,base=mFiles.slice(),results=[],failed=[],progress=files.map(function(){return 0;});
  function status(){if(host&&draft===_staffMediaDraft)host.textContent=results.filter(Boolean).length+' / '+files.length+'개 완료 · '+Math.round(progress.reduce(function(a,b){return a+b;},0)/files.length)+'%';}
  try{await _staffUploadBatch(files,async function(original,i){if(draft!==_staffMediaDraft)return;try{var file=keep?original:await _staffOptimizeUploadFile(original);results[i]=await _staffDirectUpload(file,'task','',function(p){progress[i]=p;status();});if(draft===_staffMediaDraft){mFiles=base.concat(results.filter(Boolean));renderTMFL();}}catch(e){failed[i]=original;}finally{status();}});}
