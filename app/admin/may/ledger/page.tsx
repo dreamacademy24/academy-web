@@ -264,6 +264,60 @@ export default function MayLedgerPage() {
   const title = view === "pl" ? "손익계산서" : view === "fs" ? "재무제표" : view === "tx" ? "거래내역" : view === "apLedger" ? "모리 미지급금 원장" : "계정 상세";
   const periodLbl = period === "all" ? "전체 기간" : period.replace("-", ". ");
 
+
+  function openPrintPreview() {
+    const source = document.querySelector('#mayledger .wrap');
+    if (!source) return;
+    const popup = window.open('', '_blank');
+    if (!popup) { alert('PDF 출력 화면을 열려면 팝업을 허용해주세요.'); return; }
+    const copy = source.cloneNode(true) as HTMLElement;
+    copy.querySelectorAll('.ctrl,.tabs,.form,.filters,.back,.xbtn').forEach(el => el.remove());
+    copy.querySelectorAll('select').forEach(el => {
+      const label = document.createElement('span');
+      label.textContent = el.selectedOptions[0]?.textContent || '';
+      el.replaceWith(label);
+    });
+    const meta = document.createElement('div');
+    meta.className = 'print-meta';
+    meta.textContent = '기간: ' + periodLbl + (view === 'tx' ? ' · 분류: ' + (txFilters.find(([key]) => key === txnFilter)?.[1] || '전체') : '');
+    copy.querySelector('.hdr')?.after(meta);
+    popup.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>장부 PDF 출력</title></head><body><div class="print-toolbar"><button id="print-now">PDF 저장 / 인쇄</button><span>인쇄 대상에서 “PDF로 저장”을 선택하세요. 선택한 기간의 현재 화면을 출력합니다.</span></div><div id="mayledger" data-ml="light"></div></body></html>');
+    popup.document.close();
+    const style = popup.document.createElement('style');
+    style.textContent = CSS + `
+      @page { size: A4 portrait; margin: 12mm; }
+      body { margin:0; background:#edf0f4; font-family:Arial,sans-serif; }
+      .print-toolbar { padding:16px; display:flex; gap:16px; align-items:center; background:white; border-bottom:1px solid #ddd; }
+      .print-toolbar button { padding:10px 18px; background:#0c6e5c; color:white; border:0; border-radius:7px; cursor:pointer; }
+      .print-toolbar span { font-size:13px; }
+      #mayledger { background:white; min-height:0; padding:0; color:#17212b; }
+      #mayledger .wrap { max-width:186mm; margin:20px auto; padding:20px; background:white; }
+      #mayledger .print-meta { font-size:12px; margin-bottom:18px; color:#44556a; }
+      #mayledger .card { overflow:visible; box-shadow:none; border-radius:0; }
+      #mayledger .card > div { overflow:visible !important; }
+      #mayledger table { width:100%; table-layout:auto; }
+      #mayledger .txn td, #mayledger .txn th { font-size:10px; padding:8px 6px; overflow-wrap:anywhere; }
+      #mayledger .kpis { grid-template-columns:repeat(4,1fr); break-inside:avoid; }
+      #mayledger .kpis.k3 { grid-template-columns:repeat(3,1fr); }
+      #mayledger .kpi { box-shadow:none; padding:12px; }
+      #mayledger .kpi .v { font-size:19px; }
+      #mayledger .num { font-family:Arial,sans-serif; }
+      #mayledger thead { display:table-header-group; }
+      #mayledger tr { break-inside:avoid; page-break-inside:avoid; }
+      #mayledger .hd { break-after:avoid; }
+      #mayledger .drill .lbl::after { content:none; }
+      @media print {
+        .print-toolbar { display:none; }
+        body { background:white; }
+        #mayledger .wrap { margin:0; padding:0; max-width:none; }
+        * { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      }
+    `;
+    popup.document.head.appendChild(style);
+    popup.document.getElementById('mayledger')?.appendChild(copy);
+    popup.document.getElementById('print-now')?.addEventListener('click', () => { popup.focus(); popup.print(); });
+  }
+
   // ---- KPI ----
   const kpis = view === "apLedger" || view === "acct" ? null : ws === "회사" ? (
     <div className="kpis">
@@ -510,6 +564,7 @@ export default function MayLedgerPage() {
         <div className="hdr">
           <div><h1 className="t">{title}</h1><div className="sub">{ws === "회사" ? "드림아카데미" : "메이집"} · 페소(₱) 기준 · 원화 자동환산 · 나만 보는 비공개</div></div>
           <div className="ctrl">
+            <button className="addbtn" onClick={openPrintPreview}>PDF 출력</button>
             <div className="wsseg">
               <button className={ws === "회사" ? "on" : ""} onClick={() => { setWs("회사"); setView("pl"); setTxnFilter("all"); }}><span className="dot" />드림아카데미</button>
               <button className={ws === "집" ? "on" : ""} onClick={() => { setWs("집"); setView("pl"); setTxnFilter("all"); }}><span className="dot" style={{ background: "#c98a2a" }} />메이집</button>
