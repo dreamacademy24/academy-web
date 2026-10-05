@@ -249,7 +249,7 @@ export default function AdminBookingsPage(){
   },[bType]);
   const NB_ACC_KR:Record<string,string>={jaypark:"제이파크",dreamhouse:"드림하우스",cubenine:"큐브나인"};
 
-  const CN_PERIODS=["1주","2주","3주","4주","6일"];
+  const CN_PERIODS=[...Array.from({length:16},(_,i)=>String(i+1)+"주"),"6일"];
   const ROOM_ACCOMS=[{v:"dreamhouse",l:"드림하우스"},{v:"jaypark",l:"제이파크"},{v:"cubenine",l:"큐브나인"}];
   const NP_TYPES=[
     {v:'dh_only' as const, label:'드림하우스', desc:'숙소만 이용'},
@@ -1649,7 +1649,7 @@ export default function AdminBookingsPage(){
             <label style={{fontSize:13,minWidth:90}}>제이파크</label>
             <select value={newForm.jp_weeks} onChange={e=>setNewForm({...newForm,jp_weeks:Number(e.target.value)})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
-              {[1,2,3,4,5,6,7,8].map(w=><option key={w} value={w}>{w}주</option>)}
+              {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(w=><option key={w} value={w}>{w}주</option>)}
             </select>
             <select value={newForm.jp_room_type} onChange={e=>setNewForm({...newForm,jp_room_type:e.target.value})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
@@ -1692,7 +1692,7 @@ export default function AdminBookingsPage(){
             <label style={{fontSize:13,minWidth:90}}>제이파크</label>
             <select value={newForm.jp_weeks} onChange={e=>setNewForm({...newForm,jp_weeks:Number(e.target.value)})}
               style={{padding:"6px 10px",border:"1px solid #e2e8f0",borderRadius:6,fontSize:13,fontFamily:"inherit"}}>
-              {[1,2,3,4,5,6,7,8].map(w=><option key={w} value={w}>{w}주</option>)}
+              {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(w=><option key={w} value={w}>{w}주</option>)}
             </select>
           </div>
         )}
