@@ -32,6 +32,17 @@ const CSS = `
 @media (prefers-color-scheme:dark){#mayledger:not([data-ml="light"]){--gr:#0c1216;--su:#141d23;--su2:#1a242b;--ink:#e6edf1;--mu:#9aa8b1;--fa:#6c7a83;--ln:#25313a;--lns:#33424c;--ac:#2fb39a;--acs:#123029;--pos:#40b378;--neg:#e07056;--ws:#2a2013;--wa:#d69445;--sh:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25)}}
 #mayledger[data-ml="dark"]{--gr:#0c1216;--su:#141d23;--su2:#1a242b;--ink:#e6edf1;--mu:#9aa8b1;--fa:#6c7a83;--ln:#25313a;--lns:#33424c;--ac:#2fb39a;--acs:#123029;--pos:#40b378;--neg:#e07056;--ws:#2a2013;--wa:#d69445;--sh:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25)}
 #mayledger *{box-sizing:border-box}
+#mayledger .mori-summary{padding:12px;background:var(--su);font-weight:700;margin-bottom:14px}
+#mayledger .mori-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#mayledger .mori-columns section{background:var(--su);padding:10px}
+#mayledger .mori-columns h2{font-size:16px;margin:0 0 10px}
+#mayledger .mori-columns small{font-size:11px;color:var(--mu)}
+#mayledger .mori-columns table{width:100%;border-collapse:collapse;font-size:12px}
+#mayledger .mori-columns td,#mayledger .mori-columns th{padding:7px 4px;border-bottom:1px solid var(--ln);text-align:left;vertical-align:top}
+#mayledger .mori-columns td:first-child{white-space:nowrap}
+#mayledger .mori-columns td:last-child,#mayledger .mori-columns th:last-child{text-align:right;white-space:nowrap}
+#mayledger .mori-memo{font-size:10px;color:var(--mu);line-height:1.4;margin-top:3px}
+@media(max-width:650px){#mayledger .mori-columns{grid-template-columns:1fr}}
 #mayledger .num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
 #mayledger .neg{color:var(--neg)} #mayledger .pos{color:var(--pos)}
 #mayledger .wrap{max-width:1060px;margin:0 auto;padding:20px 22px}
@@ -134,7 +145,7 @@ export default function MayLedgerPage() {
   const [theme, setTheme] = useState<"" | "light" | "dark">("");
 
   const [ws, setWs] = useState<Book>("회사");
-  const [view, setView] = useState<"pl" | "fs" | "tx" | "apLedger" | "acct">("pl");
+  const [view, setView] = useState<"pl" | "fs" | "tx" | "apLedger" | "acct" | "moriSheet">("pl");
   const [period, setPeriod] = useState("all");
   const [txnFilter, setTxnFilter] = useState("all");
   const [sortMode, setSortMode] = useState("default");
@@ -264,7 +275,7 @@ export default function MayLedgerPage() {
   const openApLedger = (from: "fs" | "pl") => { setBackTo(from); setView("apLedger"); };
   const openAcct = (book: Book, div: string, type: "income" | "expense") => { if (book === "회사" && div === "모리") { openApLedger("pl"); return; } setAcct({ book, div, type }); setView("acct"); };
 
-  const title = view === "pl" ? "손익계산서" : view === "fs" ? "재무제표" : view === "tx" ? "거래내역" : view === "apLedger" ? "모리 미지급금 원장" : "계정 상세";
+  const title = view === "moriSheet" ? "모리 거래 전체 · 발생 / 지출" : view === "pl" ? "손익계산서" : view === "fs" ? "재무제표" : view === "tx" ? "거래내역" : view === "apLedger" ? "모리 미지급금 원장" : "계정 상세";
   const periodLbl = period === "all" ? "전체 기간" : period.replace("-", ". ");
 
 
@@ -316,13 +327,18 @@ export default function MayLedgerPage() {
         * { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
       }
     `;
+    if (view === "moriSheet") style.textContent += '#mayledger .mori-columns{grid-template-columns:1fr 1fr;gap:10px} #mayledger .mori-columns section{padding:0} #mayledger .mori-columns table{font-size:9px} #mayledger .mori-columns td,#mayledger .mori-columns th{padding:4px 2px} #mayledger .mori-memo{font-size:8px;line-height:1.25;margin-top:1px} #mayledger .mori-summary{font-size:11px}';
     popup.document.head.appendChild(style);
     popup.document.getElementById('mayledger')?.appendChild(copy);
+    if(view === "moriSheet") void popup.document.fonts.ready.then(() => {
+      const height = copy.scrollHeight;
+      if(height > 980) copy.style.zoom = String(980 / height);
+    });
     popup.document.getElementById('print-now')?.addEventListener('click', () => { popup.focus(); popup.print(); });
   }
 
   // ---- KPI ----
-  const kpis = view === "apLedger" || view === "acct" ? null : ws === "회사" ? (
+  const kpis = view === "moriSheet" || view === "apLedger" || view === "acct" ? null : ws === "회사" ? (
     <div className="kpis">
       <div className="kpi hero"><div className="bar" /><div className="k">영업이익</div><div className={"v " + (coRev - coExp < 0 ? "neg" : "")}>{won(coRev - coExp)}</div><div className="d">매출 {wonP(coRev)} − 비용 {wonP(coExp)}</div></div>
       <div className="kpi"><div className="k">매출액</div><div className="v">{wonP(coRev)}</div><div className="d">{periodLbl}</div></div>
@@ -428,6 +444,19 @@ export default function MayLedgerPage() {
   // ---- 모리 미지급금 원장 ----
   const moriRows = items.filter(r => r.division === "모리" && moriKindOf(r) != null).slice()
     .sort((a, b) => a.entry_date.localeCompare(b.entry_date) || ((moriKindOf(a) === "accrue" ? 0 : 1) - (moriKindOf(b) === "accrue" ? 0 : 1)));
+  const moriSelected = moriRows.filter(inP);
+  const moriAcc = moriSelected.filter(r => moriKindOf(r) === "accrue");
+  const moriPaid = moriSelected.filter(r => moriKindOf(r) === "settle");
+  const totalAcc = moriAcc.reduce((n,r) => n + phpOf(r),0);
+  const totalPaid = moriPaid.reduce((n,r) => n + phpOf(r),0);
+  const moriSheetView = <div className="mori-sheet">
+    <div className="mori-summary">{periodLbl} · 발생 {wonP(totalAcc)} · 지출·지급 {wonP(totalPaid)} · 차액 {won(totalAcc-totalPaid)}</div>
+    <div className="mori-columns">{[["발생",moriAcc,totalAcc],["지출·지급",moriPaid,totalPaid]].map(([label,rows,total]) => <section key={String(label)}>
+      <h2>{String(label)} <small>{(rows as Row[]).length}건</small></h2>
+      <table><thead><tr><th>날짜</th><th>내용 · 메모</th><th>금액 ₱</th></tr></thead><tbody>{sortedRows(rows as Row[]).map(r => <tr key={r.id}><td>{r.entry_date.slice(2)}</td><td>{r.detail}{r.memo && <div className="mori-memo">{r.memo}</div>}</td><td>{wonP(phpOf(r))}</td></tr>)}</tbody><tfoot><tr><th colSpan={2}>합계</th><th>{wonP(total as number)}</th></tr></tfoot></table>
+    </section>)}</div>
+    <div className="hint">발생은 식대 채무, 지출·지급은 현금 지급 및 대납입니다. 차액은 선택 기간의 발생 − 지급입니다.</div>
+  </div>;
   let runningBalance = 0;
   const balances = new Map(moriRows.map(r => { runningBalance += moriKindOf(r) === "accrue" ? phpOf(r) : -phpOf(r); return [r.id,runningBalance] as const; }));
   const apLedgerView = (
@@ -569,8 +598,9 @@ export default function MayLedgerPage() {
         <div className="hdr">
           <div><h1 className="t">{title}</h1><div className="sub">{ws === "회사" ? "드림아카데미" : "메이집"} · 페소(₱) 기준 · 원화 자동환산 · 나만 보는 비공개</div></div>
           <div className="ctrl">
+            {ws === "회사" && <button className="back" style={{marginBottom:0}} onClick={() => {setView("moriSheet");setPeriod("all");}}>모리 전체 한 장</button>}
             <button className="addbtn" onClick={openPrintPreview}>PDF 출력</button>
-            {(["apLedger","acct","tx"].includes(view)) && <select aria-label="정렬" className="fld" value={sortMode} onChange={e => setSortMode(e.target.value)}>{Object.entries(sortLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
+            {(["apLedger","acct","tx","moriSheet"].includes(view)) && <select aria-label="정렬" className="fld" value={sortMode} onChange={e => setSortMode(e.target.value)}>{Object.entries(sortLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select>}
             <div className="wsseg">
               <button className={ws === "회사" ? "on" : ""} onClick={() => { setWs("회사"); setView("pl"); setTxnFilter("all"); }}><span className="dot" />드림아카데미</button>
               <button className={ws === "집" ? "on" : ""} onClick={() => { setWs("집"); setView("pl"); setTxnFilter("all"); }}><span className="dot" style={{ background: "#c98a2a" }} />메이집</button>
@@ -583,7 +613,8 @@ export default function MayLedgerPage() {
         {kpis}
         {view === "pl" && (ws === "회사" ? plCo : plHome)}
         {view === "fs" && ws === "회사" && fs}
-        {view === "apLedger" && apLedgerView}
+        {view === "moriSheet" && moriSheetView}
+          {view === "apLedger" && apLedgerView}
         {view === "acct" && acctView}
         {view === "tx" && txView}
       </div>
