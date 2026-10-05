@@ -2000,7 +2000,7 @@ function InvoicePageInner(){
 /* 인보이스 컴팩트 (2026-09-29: 길이·여백 축소) */
 .ivc{padding:24px 26px!important;border-radius:14px;}.ivc .it{margin:-24px -26px 14px!important;padding:12px 22px!important;border-radius:14px 14px 0 0;align-items:center;}.ivc .it img{height:40px!important;}.ivc .itr h1{font-size:22px!important;}.ivc .itr p{margin-top:0;}
 .ivc .is{margin-bottom:9px;}.ivc .ist{margin-bottom:5px!important;padding-bottom:3px!important;}
-.ivc .tb th{padding:3px 8px!important;font-size:10px;}.ivc .tb td{padding:3px 8px!important;font-size:11.5px!important;line-height:1.35;}.ivc .tb .lb{font-size:10.5px!important;width:18%;}
+.ivc .tb th{padding:5px 10px!important;font-size:10.5px;letter-spacing:.02em;}.ivc .tb td{padding:5px 10px!important;font-size:12px!important;line-height:1.6;letter-spacing:.02em;}.ivc .tb .lb{font-size:10.5px!important;width:18%;}
 .ivc .tb .tr td{font-size:12.5px!important;}.ivc .tb .fr td{font-size:15px!important;padding:6px 10px!important;}
 .ivm .tb th{padding:6px 10px!important;font-size:11px;}.ivm .tb td{padding:7px 10px!important;font-size:12.5px!important;line-height:1.45;}.ivm .is{margin-bottom:14px;}.ivm .tb .fr td{font-size:17px!important;padding:9px 12px!important;}
 .ivc .ift{margin-top:10px;padding:8px 12px;font-size:10.5px;line-height:1.55;}
@@ -2008,7 +2008,11 @@ function InvoicePageInner(){
 .p2h{display:flex;justify-content:space-between;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em;border-bottom:1px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px;}
 .bsub{display:block;font-size:9.5px;font-weight:500;opacity:.8;margin-top:1px;}
 .secdiv{display:flex;align-items:center;gap:10px;margin:10px 0 7px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.06em;}.secdiv:before,.secdiv:after{content:"";flex:1;border-top:1.5px solid #cbd5e1;}
-.lpz{}
+  .lpz{}
+.tb td.stay-in{background:#eff6ff!important;color:#1e40af!important;border-color:#bfdbfe;font-weight:700;}
+.tb td.stay-out{background:#fff7ed!important;color:#9a3412!important;border-color:#fed7aa;font-weight:700;}
+.stay-time{display:block;font-size:1.12em;line-height:1.5;margin-top:3px;white-space:nowrap;}
+.stay-in,.stay-out{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 @media print{.ivc{padding:14px!important;}.ivc .it{margin:-14px -14px 10px!important;}}
 @media print{body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}.no-print{display:none!important;}.iw{padding:0!important;}.iv{box-shadow:none!important;padding:24px!important;border-radius:0!important;}.it{border-radius:0!important;margin:-24px -24px 24px!important;}.tb .fr td,.mb.ac,.ba,.bg,.pp,.prc{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 @media(max-width:600px){.fw{padding:20px 12px 40px;}.f-row{flex-direction:column;gap:8px;}.it{flex-direction:column;gap:12px;}.iv{padding:24px 12px;}.dr{flex-direction:column;gap:8px;}.ex-row{flex-direction:column;gap:8px;align-items:stretch;}.ex-row .f-group{flex:1!important;}.pb{flex-direction:column;gap:8px;align-items:stretch;}.pb button{width:100%;}.iw{padding:20px 8px 40px;}.is table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}.ba,.bg,.bs,.pp,.psv,.prc,.pbk,.pci,button{min-height:44px;}.fs,.fs-admin{padding:16px 12px;}}
@@ -2095,7 +2099,7 @@ function InvoicePageInner(){
             <tr><td className="lb">Guest Name</td><td>{booker.name}</td><td className="lb">English Name</td><td>{booker.englishName||"-"}</td></tr>
             <tr><td className="lb">All Guests (EN)</td><td colSpan={3} style={{fontWeight:700}}>{allGuestsEn.join(", ")||"-"}</td></tr>
             <tr><td className="lb">Reservation No.</td><td>{reservationNo}</td><td className="lb">Date</td><td>{reservationDate}</td></tr>
-            <tr><td className="lb">{isCommute?"Class Start":"Check-in"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"Class End":"Check-out"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
+            <tr><td className="lb stay-in">{isCommute?"Class Start":"Check-in"}</td><td className="stay-in">{overallCI||"-"}{!isCommute&&overallCI&&<strong className="stay-time">3:00 PM (15:00)</strong>}</td><td className="lb stay-out">{isCommute?"Class End":"Check-out"}</td><td className="stay-out">{overallCO||"-"}{!isCommute&&overallCO&&<strong className="stay-time">{lateCheckout?"10:30 PM (22:30)":"12:00 Noon"}</strong>}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomEn(a1T)} Check-in</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomEn(a1T)} Check-out</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
             {cm==="combo"&&a2CI&&a2CO&&<tr><td className="lb">{_accomEn(a2T)} Check-in</td><td style={{fontWeight:700}}>{a2CI}</td><td className="lb">{_accomEn(a2T)} Check-out</td><td style={{fontWeight:700}}>{overallCO||a2CO}</td></tr>}
             <tr><td className="lb">Accommodation</td><td>{isCommute?"통학형 (Day-school only)":(cm==="combo"?al(a1T,a1R)+" + "+al(a2T,a2R):al(a1T,a1R))}</td><td className="lb">Room No.</td><td>{isCommute?"-":(checkin.houseNo||"TBA")}</td></tr>
@@ -2366,7 +2370,7 @@ function InvoicePageInner(){
         <tr><td className="lb">투숙자 전원</td><td colSpan={3} style={{fontWeight:700}}>{[booker.name,...extraGuardians.map(g=>g.kor),...students.map(s=>s.korName||"")].map(x=>(x||"").trim()).filter(Boolean).join(", ")||"-"} <span style={{color:"#64748b",fontWeight:500}}>(총 {[booker.name,...extraGuardians.map(g=>g.kor||g.eng),...students.map(s=>s.korName||s.engName||"")].filter(x=>(x||"").trim()).length}명)</span></td></tr>
         <tr><td className="lb">투숙자 (영문)</td><td colSpan={3} style={{fontWeight:700}}>{allGuestsEn.join(", ")||"-"}</td></tr>
         <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-        <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${coTimeText}`):"-"}</td></tr>
+        <tr><td className="lb stay-in">{isCommute?"수업시작":"체크인"}</td><td className="stay-in">{overallCI||"-"}{!isCommute&&overallCI&&<strong className="stay-time">오후 3시 (15:00)</strong>}</td><td className="lb stay-out">{isCommute?"수업종료":"체크아웃"}</td><td className="stay-out">{overallCO||"-"}{!isCommute&&overallCO&&<strong className="stay-time">{lateCheckout?"오후 10시 30분 (22:30)":"정오 12시 (12:00)"}</strong>}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomKo(a1T)} 체크인</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomKo(a1T)} 체크아웃</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
             {cm==="combo"&&a2CI&&a2CO&&<tr><td className="lb">{_accomKo(a2T)} 체크인</td><td style={{fontWeight:700}}>{a2CI}</td><td className="lb">{_accomKo(a2T)} 체크아웃</td><td style={{fontWeight:700}}>{overallCO||a2CO}</td></tr>}
         <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td>{!isCommute&&<><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></>}</tr>
@@ -2582,7 +2586,7 @@ function InvoicePageInner(){
             <table className="tb"><tbody>
               <tr><td className="lb">예약자명</td><td>{booker.name}</td><td className="lb">영문이름</td><td>{booker.englishName||"-"}</td></tr>
               <tr><td className="lb">예약번호</td><td>{reservationNo}</td><td className="lb">예약일</td><td>{reservationDate}</td></tr>
-              <tr><td className="lb">{isCommute?"수업시작":"체크인"}</td><td>{overallCI?(isCommute?overallCI:`${overallCI} 15:00PM`):"-"}</td><td className="lb">{isCommute?"수업종료":"체크아웃"}</td><td>{overallCO?(isCommute?overallCO:`${overallCO} ${lateCheckout?"22:30pm":"12noon"}`):"-"}</td></tr>
+              <tr><td className="lb stay-in">{isCommute?"수업시작":"체크인"}</td><td className="stay-in">{overallCI||"-"}{!isCommute&&overallCI&&<strong className="stay-time">오후 3시 (15:00)</strong>}</td><td className="lb stay-out">{isCommute?"수업종료":"체크아웃"}</td><td className="stay-out">{overallCO||"-"}{!isCommute&&overallCO&&<strong className="stay-time">{lateCheckout?"오후 10시 30분 (22:30)":"정오 12시 (12:00)"}</strong>}</td></tr>
             {cm==="combo"&&a1CI&&a1CO&&<tr><td className="lb">{_accomKo(a1T)} 체크인</td><td style={{fontWeight:700}}>{a1CI}</td><td className="lb">{_accomKo(a1T)} 체크아웃</td><td style={{fontWeight:700}}>{a1CO}</td></tr>}
             {cm==="combo"&&a2CI&&a2CO&&<tr><td className="lb">{_accomKo(a2T)} 체크인</td><td style={{fontWeight:700}}>{a2CI}</td><td className="lb">{_accomKo(a2T)} 체크아웃</td><td style={{fontWeight:700}}>{overallCO||a2CO}</td></tr>}
               <tr><td className="lb">패키지</td><td>{billing.items.map(i=>i.label).join(" + ")||(isCommute?`통학형 ${a1W}주`:`${alKo(a1T,a1R)} ${a1W}주`)}</td>{!isCommute&&<><td className="lb">인원 구성</td><td>보호자 {cP}명 + 아이 {cK}명</td></>}</tr>
