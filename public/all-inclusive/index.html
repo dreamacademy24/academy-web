@@ -3877,6 +3877,7 @@
       // 입력값 수집
       const data = new FormData(applyForm);
       const payload = {
+        source: 'all-inclusive',
         name: (data.get('name') || '').trim(),
         phone: (data.get('phone') || '').trim(),
         children: (data.get('children') || '').trim(),
@@ -3904,7 +3905,10 @@
         }
       } catch (err) {
         console.error('[apply] save failed:', err);
-        alert('⚠️ 신청 정보 저장에 일시적 오류가 있습니다.\n카카오 채널에서 다시 한번 안내드릴게요!');
+        alert('신청이 저장되지 않았습니다. 다시 시도하거나 카카오 채널로 직접 문의해 주세요.');
+        btnApply.disabled = false;
+        btnApply.innerHTML = '💛 카카오 채널로 상담 신청하기';
+        return;
       }
 
       // ② 카카오 채널 새 탭 열기

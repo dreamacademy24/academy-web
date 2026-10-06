@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import MineduListClient from './MineduListClient';
+import Link from 'next/link';
+import MineduListClient from '../../minedu/MineduListClient';
 
 type Application = {
   id: number;
@@ -26,12 +27,12 @@ async function getApplications(): Promise<Application[]> {
   const { data, error } = await supabase
     .from('minedu_applications')
     .select('id, created_at, name, phone, children, ages, depart_date, duration_weeks, period, lodging, assignee, status')
-    .or('source.is.null,source.neq.all-inclusive')
+    .is('source', null)
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error('[admin/minedu] fetch error:', error);
-    return [];
+    throw new Error('신청 내역을 불러오지 못했습니다. 새로고침해 주세요.');
   }
   return (data as Application[]) || [];
 }
@@ -55,7 +56,9 @@ export default async function MineduAdminPage() {
   const confirmedCount = applications.filter((a) => a.status === 'confirmed').length;
 
   return (
-    <MineduListClient
+    <><nav style={{padding:'20px 24px',display:'flex',gap:20,flexWrap:'wrap'}} aria-label="상담 신청 목록"><Link href="/admin/all-inclusive-applications">올인원 상담 신청</Link><Link href="/admin/all-inclusive-applications/history">이전 접수 내역 (출처 미기록)</Link></nav><MineduListClient
+      title="이전 접수 내역"
+      subtitle="출처 기록을 시작하기 전의 통합 신청입니다. 올인원·민에듀 등 신청이 섞여 있으며 이름으로 검색할 수 있습니다."
       applications={applications}
       total={applications.length}
       today={todayCount}
@@ -66,7 +69,7 @@ export default async function MineduAdminPage() {
       contactedCount={contactedCount}
       inProgressCount={inProgressCount}
       confirmedCount={confirmedCount}
-    />
+    /></>
   );
 }
 

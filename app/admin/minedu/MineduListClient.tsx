@@ -33,6 +33,8 @@ const STATUS_BY_VALUE: Record<string, (typeof STATUS_OPTIONS)[number]> = Object.
 );
 
 export default function MineduListClient({
+  title = '민에듀 공구 신청 관리',
+  subtitle = '민에듀 × 세부드림아카데미 공동구매 신청 내역',
   applications,
   total,
   today,
@@ -44,6 +46,8 @@ export default function MineduListClient({
   inProgressCount,
   confirmedCount,
 }: {
+  title?: string;
+  subtitle?: string;
   applications: Application[];
   total: number;
   today: number;
@@ -237,7 +241,7 @@ export default function MineduListClient({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `민에듀_공구신청_${formatDate(new Date().toISOString())}.csv`;
+    a.download = `${title}_${formatDate(new Date().toISOString())}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -246,8 +250,8 @@ export default function MineduListClient({
     <div className="mn-container">
       <div className="mn-header">
         <div>
-          <h1 className="mn-title">📋 민에듀 공구 신청 관리</h1>
-          <p className="mn-subtitle">민에듀 × 세부드림아카데미 공동구매 신청 내역</p>
+          <h1 className="mn-title">📋 {title}</h1>
+          <p className="mn-subtitle">{subtitle}</p>
         </div>
         <div className="mn-actions">
           <button onClick={() => router.refresh()} className="mn-btn-secondary">

@@ -15,6 +15,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { name, phone, children, ages, depart_date, duration_weeks, lodging } = body;
+    const allowedSources = ['all-inclusive', 'minedu', 'daonmam'];
+    let source: string | null = allowedSources.includes(body.source) ? body.source : null;
+    if (!source) {
+      try {
+        const ref = new URL(request.headers.get('referer') || '');
+        const segment = ref.pathname.split('/').filter(Boolean)[0];
+        source = segment === 'all-inclusive' ? 'all-inclusive' : segment === 'mf-2025' ? 'minedu' : segment === 'daonmam' ? 'daonmam' : null;
+      } catch { /* Older clients without a source remain unclassified. */ }
+    }
 
     // 필수 값 검증
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -42,6 +51,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('minedu_applications')
       .insert({
+        source,
         name: String(name).trim().slice(0, 100),
         phone: phone ? String(phone).trim().slice(0, 50) : null,
         children: children ? String(children).trim().slice(0, 50) : null,

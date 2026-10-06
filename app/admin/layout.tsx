@@ -26,6 +26,7 @@ const NAV: { title: string; items: Item[] }[] = [
   ]},
   { title: "예약 · 아카데미", items: [
     { label: "예약 관리", href: "/admin/bookings" },
+    { label: "올인원 상담 신청", href: "/admin/all-inclusive-applications" },
     { label: "할인코드 관리", href: "/admin/discount-codes" },
     { label: "정산 관리", href: "/admin/settlement" },
     { label: "SSP 관리", href: "/admin/ssp" },
