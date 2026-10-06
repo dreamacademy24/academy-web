@@ -1,4 +1,5 @@
 "use client";
+import { StudentViews, StudentTimeline } from "../students/StudentViews";
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { copyBookingUrl } from "@/lib/bookingCopy";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
@@ -273,6 +274,7 @@ export default function AdminBookingsPage(){
 
   /* ── 학생관리 탭 (bookings의 students JSONB에서 추출) ── */
   interface StudentRow{
+    assignee:string; care_assignee:string;
     key:string; // booking_id + index
     sourceIndex:number; sourceId:string;
     booking_id:string; reservation_no:string; status:string; booker_name:string;
@@ -287,6 +289,14 @@ export default function AdminBookingsPage(){
     mismatch:boolean; refStart:string; refEnd:string;
   }
   const [stuSearch,setStuSearch]=useState("");
+  const [studentMode,setStudentMode]=useState<"overview"|"detail">("overview");
+  const [studentStaff,setStudentStaff]=useState("");
+  const [allStudentColumns,setAllStudentColumns]=useState(false);
+  const [timeline,setTimeline]=useState(false);
+  useEffect(()=>{try{const v=localStorage.getItem("dream-student-view");if(v==="overview"||v==="detail")setStudentMode(v);setTimeline(localStorage.getItem("dream-student-calendar")==="timeline");}catch{}},[]);
+  function changeStudentMode(v:"overview"|"detail"){setStudentMode(v);try{localStorage.setItem("dream-student-view",v);}catch{}}
+  function changeTimeline(v:boolean){setTimeline(v);try{localStorage.setItem("dream-student-calendar",v?"timeline":"calendar");}catch{}}
+
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
   // 날짜 불일치 "확인 처리" — 중도입학/중도아웃 등 의도된 날짜는 확인하면 빨간 표시 해제
   // 키에 날짜가 포함돼 있어 날짜가 또 바뀌면 경고가 다시 살아남 (안전 유지)
@@ -385,6 +395,7 @@ export default function AdminBookingsPage(){
       })();
       return{
         key:b.id+"_"+i,
+        assignee:b.assignee||"", care_assignee:b.care_assignee||"",
         sourceIndex:i,
         sourceId:s.id&&s.student_id&&s.id!==s.student_id?"":String(s.id||s.student_id||"").trim(),
         booking_id:b.id,
@@ -424,7 +435,7 @@ export default function AdminBookingsPage(){
       한글이름:s.korName,영어이름:s.engName,나이:s.age,
       숙소:fmtAccom(s as unknown as Record<string,string>),
       체크인:s.checkin_date,체크아웃:s.checkout_date,
-      예약자명:s.booker_name,잔금일:s.balance_date,
+      예약자명:s.booker_name,한국인담당:s.assignee,케어담당:s.care_assignee,잔금일:s.balance_date,
       사진허용:s.photo,특이사항:s.special_request,
     }));
     const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"학생관리");XLSX.writeFile(wb,"학생관리_"+new Date().toISOString().slice(0,10)+".xlsx");
@@ -1297,11 +1308,15 @@ export default function AdminBookingsPage(){
         {key:"checkin_date",label:"체크인",get:s=>s.checkin_date||""},
         {key:"checkout_date",label:"체크아웃",get:s=>s.checkout_date||""},
         {key:"booker_name",label:"예약자명",get:s=>s.booker_name||""},
+        {key:"assignee",label:"한국인 담당",get:s=>s.assignee||"미지정"},
         {key:"photo",label:"사진허용",get:s=>s.photo||""},
         {key:"special_request",label:"특이사항",get:s=>s.special_request||""},
         {key:"_copy",label:"재방문",get:()=>""},
       ];
+      const matchesStudent=(s:StudentRow)=>(!studentStaff||s.assignee===studentStaff)&&(!q||[s.korName,s.engName,s.booker_name,s.reservation_no,s.house_no,s.accom_room].some(v=>v&&v.toLowerCase().includes(q)));
+      const calendarStudents=studentsList.filter(matchesStudent);
       const searched=studentsList.filter(s=>{
+        if(!matchesStudent(s))return false;
         // 년 필터: academyStart의 년도가 일치해야 함 (시작 기준 유지)
         if(stuYear&&(!s.academyStart||!s.academyStart.startsWith(stuYear+"-")))return false;
         // 월 필터(overlap): 수업 기간[start, end]이 선택 월에 조금이라도 걸치면 포함
@@ -1331,6 +1346,7 @@ export default function AdminBookingsPage(){
       const liveWarn=(s:StudentRow)=>s.mismatch&&!stuAck.includes(stuAckKey(s));
       const ackedWarn=(s:StudentRow)=>s.mismatch&&stuAck.includes(stuAckKey(s));
       const mismatchCount=sorted.filter(liveWarn).length;
+      const modernStudents=(rows:StudentRow[])=><StudentViews rows={rows} mode={studentMode} onMode={changeStudentMode} room={s=>fmtAccom(s as unknown as Record<string,string>)} onCare={openStudentCare} onBooking={s=>router.push("/admin/bookings/"+s.booking_id)} onCopy={s=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank","noopener,noreferrer")} onNote={s=>{setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}}/>;
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
@@ -1339,6 +1355,9 @@ export default function AdminBookingsPage(){
             <button className={`sub-tab${stuView==="cal"?" ac":""}`} onClick={()=>setStuView("cal")}>📅 달력</button>
             <button className={`sub-tab${stuView==="now"?" ac":""}`} onClick={()=>setStuView("now")}>🏫 등원중</button>
           </div>}
+          <select aria-label="한국인 담당 필터" value={studentStaff} onChange={e=>setStudentStaff(e.target.value)} style={{padding:10,border:"1px solid #d9e3df",borderRadius:8}}><option value="">한국인 담당 전체</option>{Array.from(new Set(studentsList.map(s=>s.assignee).filter(Boolean))).sort().map(n=><option key={n} value={n}>{n}</option>)}</select>
+          {stuView!=="cal"&&<button className="sub-tab no-print" aria-pressed={allStudentColumns} onClick={()=>setAllStudentColumns(v=>!v)}>{allStudentColumns?"새 디자인 보기":"기존 전체 항목 표"}</button>}
+          {stuView==="cal"&&<div className="sv-toolbar no-print"><button aria-pressed={!timeline} onClick={()=>changeTimeline(false)}>월간 달력</button><button aria-pressed={timeline} onClick={()=>changeTimeline(true)}>기간별 보기</button></div>}
           <span className="cnt">{stuView==="list"?`${sorted.length}명`:""}</span>
           {stuView==="list"&&<button className="sub-tab" style={{marginLeft:"auto",background:"#dcfce7",color:"#166534",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>exportStudentsXlsx(sorted)}>📥 엑셀 내보내기</button>}
           {stuView==="now"&&<button className="sub-tab no-print" style={{marginLeft:"auto",background:"#dbeafe",color:"#1e40af",padding:"6px 14px",fontSize:12,fontWeight:600,border:"none",borderRadius:7,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>window.print()}>🖨️ 인쇄</button>}
@@ -1398,8 +1417,7 @@ export default function AdminBookingsPage(){
             if((s.status||"").includes("취소"))return false;
             if(!s.academyStart||!s.academyEnd)return false;
             if(!(s.academyStart<=rangeE&&s.academyEnd>=rangeS))return false;
-            if(!q)return true;
-            return [s.korName,s.engName,s.booker_name,s.reservation_no].some(v=>v&&v.toLowerCase().includes(q));
+            return matchesStudent(s);
           }).sort((a,b)=>(a.academyEnd||"9999").localeCompare(b.academyEnd||"9999"));
           const kN=att.filter(s=>s.grade==="킨더").length;
           const jN=att.length-kN;
@@ -1424,11 +1442,12 @@ export default function AdminBookingsPage(){
                 <button style={navBtn} onClick={()=>setAttWeekOff(o=>(o==null?0:o)+1)}>다음주 ▶</button>
               </div>
             </div>
-            <div className="ss-w"><table className="ss"><thead><tr>
-              <th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>{stuOnly&&<th className="no-print">학생케어</th>}
+            {!allStudentColumns?modernStudents(att):<div className="ss-w"><table className="ss"><thead><tr>
+              <th>한국인 담당</th><th>킨더/주니어</th><th>한글이름</th><th>영어이름</th><th>나이</th><th>숙소/룸</th><th>수업 시작</th><th>수업 종료</th><th>남은 기간</th><th>예약자명</th><th>사진허용</th>{stuOnly&&<th className="no-print">학생케어</th>}
             </tr></thead><tbody>
               {att.length===0?<tr><td colSpan={stuOnly?11:10} className="empty">선택한 기간에 등원 중인 학생이 없습니다.</td></tr>:
               att.map(s=>(<tr key={s.key}>
+                <td>{s.assignee||"미지정"}</td>
                 <td>{s.grade||"-"}</td>
                 <td style={{fontWeight:700}}>{s.korName||"-"}</td>
                 <td>{s.engName||"-"}</td>
@@ -1441,9 +1460,9 @@ export default function AdminBookingsPage(){
                 <td>{s.photo||""}</td>
                 {stuOnly&&<td className="no-print"><button type="button" className="student-care-button" onClick={()=>openStudentCare(s)} aria-label={`${s.korName||s.engName||"학생"} 학생케어 열기`}>케어 열기</button></td>}
               </tr>))}
-            </tbody></table></div>
+            </tbody></table></div>}
           </div>);
-        })():stuView==="list"?(
+        })():stuView==="list"&&!allStudentColumns?modernStudents(sorted):stuView==="list"?(
         <div className="ss-w"><table className="ss"><thead><tr>
           {stuCols.map(c=><th key={c.key} onClick={()=>toggleStuSort(c.key)}>{c.label}<span className={arrCls(c.key)}>{arr(c.key)}</span></th>)}
         </tr></thead><tbody>
@@ -1469,6 +1488,7 @@ export default function AdminBookingsPage(){
               <td>{s.checkin_date||"-"}</td>
               <td>{s.checkout_date||"-"}</td>
               <td>{s.booker_name||"-"}</td>
+              <td>{s.assignee||"미지정"}</td>
               <td style={{textAlign:"center"}}>{s.photo||""}</td>
               <td className="wrap" onClick={e=>{e.stopPropagation();setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}} style={{cursor:"pointer",color:s.special_request?"#1a6fc4":"#94a3b8",textDecoration:s.special_request?"underline":"none"}}>
                 {s.special_request?(s.special_request.length>30?s.special_request.slice(0,30)+"...":s.special_request):"+ 추가"}
@@ -1479,7 +1499,7 @@ export default function AdminBookingsPage(){
             </tr>);
           })}
         </tbody></table></div>
-        ):(
+        ) : timeline ? <StudentTimeline rows={searched} year={Number(stuYear)||_now.getFullYear()} month={Number(stuMonthNum)||_now.getMonth()+1} onSelect={openStudentCare}/> :(
           (()=>{
             const calYear=Number(stuYear)||_now.getFullYear();
             const calMonth=Number(stuMonthNum)||(_now.getMonth()+1);
@@ -1528,7 +1548,7 @@ export default function AdminBookingsPage(){
                         if(k==="-"&&(e==="-"||!e)) return false; // guardian "-/-" 항목만 숨김
                         return true;
                       };
-                      const active=studentsList.filter(s=>{
+                      const active=calendarStudents.filter(s=>{
                         if(!isRealStudent(s))return false;
                         if(!s.academyStart)return false;
                         const aen=s.academyEnd||s.academyStart;
@@ -1536,8 +1556,8 @@ export default function AdminBookingsPage(){
                       });
                       const kCount=active.filter(s=>s.grade==="킨더").length;
                       const jCount=active.filter(s=>s.grade==="주니어").length;
-                      const newIns=studentsList.filter(s=>isRealStudent(s)&&s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
-                      const outs=studentsList.filter(s=>isRealStudent(s)&&s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
+                      const newIns=calendarStudents.filter(s=>isRealStudent(s)&&s.academyStart&&s.academyStart>=wsStr&&s.academyStart<=weStr);
+                      const outs=calendarStudents.filter(s=>isRealStudent(s)&&s.academyEnd&&s.academyEnd>=wsStr&&s.academyEnd<=weStr);
                       return (
                         <tr key={wi}>
                           <td className="cal-side">
@@ -1550,8 +1570,8 @@ export default function AdminBookingsPage(){
                             const inMonth=day.getMonth()===calMonth-1;
                             const isMon=day.getDay()===1;
                             const isFri=day.getDay()===5;
-                            const startList=studentsList.filter(s=>s.academyStart===dStr);
-                            const endList=studentsList.filter(s=>s.academyEnd===dStr);
+                            const startList=calendarStudents.filter(s=>s.academyStart===dStr);
+                            const endList=calendarStudents.filter(s=>s.academyEnd===dStr);
                             return (
                               <td key={di} className={`cal-cell${inMonth?"":" out-month"}`}>
                                 <div className="cal-d">{day.getMonth()+1}/{day.getDate()}</div>

@@ -1,0 +1,31 @@
+"use client";
+import { useEffect, useState } from "react";
+import "./student-views.css";
+
+export type ViewStudent = {
+  key:string; korName:string; engName:string; grade:string; age:string;
+  academyStart:string; academyEnd:string; academyWeeks:string;
+  checkin_date:string; checkout_date:string; reservation_no:string;
+  booker_name:string; photo:string; special_request:string;
+  assignee:string; care_assignee:string;
+};
+export function StudentViews<T extends ViewStudent>({rows,mode,onMode,room,onCare,onBooking,onCopy,onNote}:{rows:T[];mode:"overview"|"detail";onMode:(v:"overview"|"detail")=>void;room:(s:T)=>string;onCare:(s:T)=>void;onBooking:(s:T)=>void;onCopy:(s:T)=>void;onNote:(s:T)=>void}) {
+  const [key,setKey]=useState("");
+  const [large,setLarge]=useState(false);
+  const selected=rows.find(s=>s.key===key);
+  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==="Escape"){setLarge(false);setKey("");}};window.addEventListener("keydown",close);return()=>window.removeEventListener("keydown",close);},[]);
+  function select(s:T){setKey(s.key);if(mode==="overview")setLarge(true);}
+  const today=new Date();const todayMs=Date.UTC(today.getFullYear(),today.getMonth(),today.getDate());
+  function remaining(s:T){if(!s.academyEnd)return "기간 미정";const n=Math.round((Date.parse(s.academyEnd)-todayMs)/86400000);return n<0?"수료":n===0?"오늘 종료":`${n}일 남음`;}
+  const table=(items:T[])=><div className="sv-scroll"><table className="sv-table"><thead><tr><th>학생 · 과정</th><th>숙소·호실</th><th>수업 기간</th><th>한국인 담당</th><th>상태</th></tr></thead><tbody>{items.map(s=><tr key={s.key} className={selected?.key===s.key?"sv-selected":""}><td><button className="sv-name" onClick={()=>select(s)}>{s.korName||s.engName||"이름 미입력"}<small>{s.engName||"영문명 미입력"}</small></button><span className="sv-grade">{s.grade||"과정 미지정"}</span></td><td>{room(s)||"미정"}</td><td>{s.academyStart||"미정"}<small>~ {s.academyEnd||"미정"}{s.academyWeeks?` · ${s.academyWeeks}주`:""}</small></td><td><span className="sv-staff">{s.assignee||"미지정"}</span></td><td>{remaining(s)}</td></tr>)}</tbody></table>{!items.length&&<p className="sv-empty">조건에 맞는 학생이 없습니다.</p>}</div>;
+  const detail=selected&&<aside className="sv-detail" aria-label="학생 상세"><div className="sv-detail-head"><div><h2>{selected.korName||selected.engName||"학생"}</h2><p>{selected.engName}</p></div><button onClick={()=>{setKey("");setLarge(false);}} aria-label="학생 상세 닫기">✕</button></div><span className="sv-grade">{selected.grade||"과정 미지정"}</span><dl>{[
+    ["예약번호",selected.reservation_no],["한국인 담당",selected.assignee||"미지정"],["케어 담당",selected.care_assignee||"미지정"],["예약자",selected.booker_name],["나이",selected.age],["숙소·호실",room(selected)],["수업 시작",selected.academyStart],["수업 종료",selected.academyEnd],["기간",selected.academyWeeks?selected.academyWeeks+"주":"미입력"],["체크인",selected.checkin_date],["체크아웃",selected.checkout_date],["사진허용",selected.photo||"미입력"]
+  ].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value||"미입력"}</dd></div>)}</dl><h3>특이사항</h3><p className="sv-note">{selected.special_request||"등록된 특이사항이 없습니다."}</p><div className="sv-actions"><button onClick={()=>onNote(selected)}>특이사항 수정</button><button className="sv-primary" onClick={()=>onCare(selected)}>학생케어 · 코멘트 열기</button><button onClick={()=>onBooking(selected)}>예약 상세</button><button onClick={()=>onCopy(selected)}>재방문 예약 복사</button>{!large&&<button onClick={()=>setLarge(true)}>상세 크게 보기</button>}</div></aside>;
+  return <div className="sv-root"><div className="sv-toolbar no-print" role="group" aria-label="학생 보기 방식"><button aria-pressed={mode==="overview"} onClick={()=>{onMode("overview");setLarge(false);}}>한눈에 보기</button><button aria-pressed={mode==="detail"} onClick={()=>{onMode("detail");setLarge(false);}}>상세 업무 보기</button><span>학생 이름을 누르면 상세정보를 확인할 수 있어요.</span></div><div className="sv-counts"><b>전체 {rows.length}명</b><span>킨더 {rows.filter(s=>s.grade==="킨더").length}명</span><span>주니어 {rows.filter(s=>s.grade==="주니어").length}명</span>{rows.some(s=>!["킨더","주니어"].includes(s.grade))&&<span>과정 미지정 {rows.filter(s=>!["킨더","주니어"].includes(s.grade)).length}명</span>}</div>{mode==="overview"?<div className="sv-groups">{["킨더","주니어","과정 미지정"].map(g=>{const items=rows.filter(s=>g==="과정 미지정"?!["킨더","주니어"].includes(s.grade):s.grade===g);if(g==="과정 미지정"&&!items.length)return null;return <section key={g}><h3>{g} <span>{items.length}명</span></h3>{table(items)}</section>;})}</div>:<div className={`sv-workspace ${selected&&!large?"has-detail":""}`}><section>{table(rows)}</section>{!large&&detail}</div>}{large&&selected&&<div className="sv-overlay" role="dialog" aria-modal="true" aria-label="학생 상세 크게 보기" onClick={()=>setLarge(false)}><div className="sv-large" onClick={e=>e.stopPropagation()}>{detail}</div></div>}</div>;
+}
+
+export function StudentTimeline<T extends ViewStudent>({rows,year,month,onSelect}:{rows:T[];year:number;month:number;onSelect:(s:T)=>void}){
+  const days=new Date(year,month,0).getDate();const first=Date.UTC(year,month-1,1);const last=first+(days-1)*86400000;
+  const valid=rows.filter(s=>s.academyStart&&s.academyEnd&&Date.parse(s.academyStart)<=last&&Date.parse(s.academyEnd)>=first);
+  return <div className="sv-root cal-wrap"><h2>{year}년 {month}월 · 학생별 수업 기간</h2><p>학생 이름을 누르면 학생케어와 코멘트를 확인합니다.</p><div className="sv-scroll"><div className="sv-timeline"><div className="sv-time-row"><b>학생 · 한국인 담당</b><div className="sv-days" style={{gridTemplateColumns:`repeat(${days},1fr)`}}>{Array.from({length:days},(_,i)=><span key={i}>{i+1}</span>)}</div></div>{valid.map(s=>{const start=Math.max(0,Math.round((Date.parse(s.academyStart)-first)/86400000));const end=Math.min(days-1,Math.round((Date.parse(s.academyEnd)-first)/86400000));return <div className="sv-time-row" key={s.key}><button className="sv-name" onClick={()=>onSelect(s)}>{s.korName||s.engName||"이름 미입력"}<small>{s.grade||"미지정"} · {s.assignee||"담당 미지정"}</small></button><div className="sv-track"><button title={`${s.academyStart} ~ ${s.academyEnd}`} onClick={()=>onSelect(s)} style={{left:`${start/days*100}%`,width:`${(end-start+1)/days*100}%`,background:s.grade==="킨더"?"#39796a":"#4b6db5"}}>{s.academyStart.slice(5)} ~ {s.academyEnd.slice(5)}</button></div></div>;})}{!valid.length&&<p className="sv-empty">선택 기간에 학생이 없습니다.</p>}</div></div></div>;
+}
