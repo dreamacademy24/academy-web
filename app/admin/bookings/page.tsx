@@ -1,5 +1,5 @@
 "use client";
-import { StudentViews, StudentTimeline } from "../students/StudentViews";
+import { StudentViews, StudentTimeline, StudentMonthCalendar } from "../students/StudentViews";
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { copyBookingUrl } from "@/lib/bookingCopy";
 import { fetchDhAvailRooms } from "@/lib/dhRooms";
@@ -293,8 +293,8 @@ export default function AdminBookingsPage(){
   const [studentStaff,setStudentStaff]=useState("");
   const [allStudentColumns,setAllStudentColumns]=useState(false);
   const [timeline,setTimeline]=useState(false);
-  useEffect(()=>{try{const v=localStorage.getItem("dream-student-view");if(v==="overview"||v==="detail")setStudentMode(v);setTimeline(localStorage.getItem("dream-student-calendar")==="timeline");}catch{}},[]);
-  function changeStudentMode(v:"overview"|"detail"){setStudentMode(v);try{localStorage.setItem("dream-student-view",v);}catch{}}
+  useEffect(()=>{try{const v=localStorage.getItem("dream-student-view");if(v==="overview"||v==="detail")setStudentMode(v);setTimeline(v==="detail");}catch{}},[]);
+  function changeStudentMode(v:"overview"|"detail"){setStudentMode(v);setTimeline(v==="detail");try{localStorage.setItem("dream-student-view",v);}catch{}}
   function changeTimeline(v:boolean){setTimeline(v);try{localStorage.setItem("dream-student-calendar",v?"timeline":"calendar");}catch{}}
 
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
@@ -932,7 +932,7 @@ export default function AdminBookingsPage(){
   `}</style>
 
   <div className={stuOnly?`aw student-shell design-${studentMode==="overview"?"one":"two"}`:"aw"}>
-    {stuOnly&&<div className="student-design-picker no-print" role="group" aria-label="화면 디자인 선택"><span>화면 디자인</span><button aria-pressed={studentMode==="overview"} onClick={()=>{changeStudentMode("overview");setAllStudentColumns(false);}}>디자인 1 <small>한눈에 보기</small></button><button aria-pressed={studentMode==="detail"} onClick={()=>{changeStudentMode("detail");setAllStudentColumns(false);}}>디자인 2 <small>상세 업무</small></button></div>}
+    {stuOnly&&<div className="student-design-picker no-print" role="group" aria-label="화면 디자인 선택"><span>화면 디자인</span><button aria-pressed={studentMode==="overview"} onClick={()=>{changeStudentMode("overview");setAllStudentColumns(false);}}>디자인 A <small>분리 명단 · 월간 달력</small></button><button aria-pressed={studentMode==="detail"} onClick={()=>{changeStudentMode("detail");setAllStudentColumns(false);}}>디자인 B <small>통합 명단 · 오른쪽 상세</small></button></div>}
     <div className="ah">
       <h1>{stuOnly?<><span className="student-brand">DA</span><span>학생 관리<small className="student-subtitle">DREAM ACADEMY · STUDENT WORKSPACE</small></span></>:"예약 관리"}</h1>
       <div className="ah-right">
@@ -944,9 +944,9 @@ export default function AdminBookingsPage(){
 
     {stuOnly?(
     <div className="main-tabs">
-      <button className={`main-tab${stuView==="now"?" ac":""}`} onClick={()=>selectStudentView("now")}>🏫 등원중 · 재학</button>
-      <button className={`main-tab${stuView==="list"?" ac":""}`} onClick={()=>selectStudentView("list")}>📋 학생 리스트</button>
-      <button className={`main-tab${stuView==="cal"?" ac":""}`} onClick={()=>selectStudentView("cal")}>📅 달력</button>
+      <button className={`main-tab${stuView==="now"?" ac":""}`} onClick={()=>selectStudentView("now")}>{studentMode==="detail"?"학생 현황":"🏫 등원중 · 재학"}</button>
+      <button className={`main-tab${stuView==="list"?" ac":""}`} onClick={()=>selectStudentView("list")}>{studentMode==="detail"?"전체 학생":"📋 학생 리스트"}</button>
+      <button className={`main-tab${stuView==="cal"?" ac":""}`} onClick={()=>selectStudentView("cal")}>{studentMode==="detail"?"수업 일정":"📅 달력"}</button>
     </div>
     ):(
     <div className="main-tabs">
@@ -958,6 +958,8 @@ export default function AdminBookingsPage(){
     </div>
     )}
 
+    <div className={stuOnly?"student-content":undefined}>
+    {stuOnly&&studentMode==="detail"&&<><h2 className="student-layout-title">{stuView==="now"?"지금 다니는 학생":stuView==="list"?"전체 학생":"수업 일정"}</h2><p className="student-layout-caption">{stuView==="now"?"명단에서 학생을 선택하면 오른쪽에서 바로 확인합니다.":stuView==="list"?"필요한 항목을 모아 보고 예약과 학생케어로 연결합니다.":"학생별 수업 기간과 주간 재학 인원을 확인합니다."}</p></>}
     {/* ── 탭0: 신규 접수 예약 ── */}
     {mainTab==="newlist"&&(()=>{
       const newBookings=bookings.filter(b=>b.status==="접수"||b.status==="접수중").filter(b=>{if(!newSearch)return true;const q=newSearch.toLowerCase();return [b.booker_name,stuNames(b.students),b.reservation_no,b.accom_type].some(v=>v&&String(v).toLowerCase().includes(q));}).slice().sort((x,y)=>String(x.created_at||"").localeCompare(String(y.created_at||"")));
@@ -1347,7 +1349,7 @@ export default function AdminBookingsPage(){
       const liveWarn=(s:StudentRow)=>s.mismatch&&!stuAck.includes(stuAckKey(s));
       const ackedWarn=(s:StudentRow)=>s.mismatch&&stuAck.includes(stuAckKey(s));
       const mismatchCount=sorted.filter(liveWarn).length;
-      const modernStudents=(rows:StudentRow[])=><StudentViews rows={rows} mode={studentMode} onMode={changeStudentMode} room={s=>fmtAccom(s as unknown as Record<string,string>)} onCare={openStudentCare} onBooking={s=>router.push("/admin/bookings/"+s.booking_id)} onCopy={s=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank","noopener,noreferrer")} onNote={s=>{setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}}/>;
+      const modernStudents=(rows:StudentRow[])=><StudentViews rows={rows} list={stuView==="list"} mode={studentMode} onMode={changeStudentMode} room={s=>fmtAccom(s as unknown as Record<string,string>)} onCare={openStudentCare} onBooking={s=>router.push("/admin/bookings/"+s.booking_id)} onCopy={s=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank","noopener,noreferrer")} onNote={s=>{setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}}/>;
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
@@ -1502,6 +1504,7 @@ export default function AdminBookingsPage(){
           (()=>{
             const calYear=Number(stuYear)||_now.getFullYear();
             const calMonth=Number(stuMonthNum)||(_now.getMonth()+1);
+            if(stuOnly)return <StudentMonthCalendar rows={calendarStudents} year={calYear} month={calMonth} half={calPrintHalf} onMonth={(y,m)=>{setStuYear(String(y));setStuMonthNum(String(m).padStart(2,"0"));}} onSelect={openStudentCare}/>;
             const allWeeks=genCalWeeks(calYear,calMonth);
             // 2주 분할 인쇄: 전반(1~15일 포함 주) / 후반(16~말일 포함 주)
             const weeks=calPrintHalf==="all"?allWeeks:allWeeks.filter(wk=>{
@@ -1597,6 +1600,7 @@ export default function AdminBookingsPage(){
 
     {/* ── 탭5: 견적계산기 ── */}
     {mainTab==="estimate"&&<EstimateCalc/>}
+    </div>
   </div>
 
   {careStudent&&<StudentCareDialog student={careStudent} onClose={()=>setCareStudent(null)}/>}
