@@ -931,9 +931,10 @@ export default function AdminBookingsPage(){
 }
   `}</style>
 
-  <div className="aw">
+  <div className={stuOnly?`aw student-shell design-${studentMode==="overview"?"one":"two"}`:"aw"}>
+    {stuOnly&&<div className="student-design-picker no-print" role="group" aria-label="화면 디자인 선택"><span>화면 디자인</span><button aria-pressed={studentMode==="overview"} onClick={()=>{changeStudentMode("overview");setAllStudentColumns(false);}}>디자인 1 <small>한눈에 보기</small></button><button aria-pressed={studentMode==="detail"} onClick={()=>{changeStudentMode("detail");setAllStudentColumns(false);}}>디자인 2 <small>상세 업무</small></button></div>}
     <div className="ah">
-      <h1>{stuOnly?"📚 학생 관리":"예약 관리"}</h1>
+      <h1>{stuOnly?<><span className="student-brand">DA</span><span>학생 관리<small className="student-subtitle">DREAM ACADEMY · STUDENT WORKSPACE</small></span></>:"예약 관리"}</h1>
       <div className="ah-right">
         {!stuOnly&&<a className="ah-btn" href="/booking" target="_blank" rel="noopener noreferrer" style={{background:"#7c3aed",color:"#fff",border:"none",textDecoration:"none"}}>📋 패키지</a>}
         {!stuOnly&&<a className="ah-btn" href="/booking2" target="_blank" rel="noopener noreferrer" style={{background:"#fff",color:"#475569",border:"1px solid #cbd5e1",textDecoration:"none"}}>📋 비패키지</a>}
@@ -1385,9 +1386,7 @@ export default function AdminBookingsPage(){
           </div>}
         </div>
         {mismatchCount>0&&(
-          <div style={{margin:"6px 0 10px",padding:"10px 14px",background:"#fef2f2",border:"1px solid #fca5a5",borderLeft:"4px solid #dc2626",borderRadius:8,fontSize:13,color:"#991b1b",fontWeight:700}}>
-            ⚠️ 날짜 불일치 {mismatchCount}명 — 예약과 달력 값이 다릅니다 (달력이 틀릴 수 있어요!): {sorted.filter(liveWarn).slice(0,10).map(s=>s.korName||s.engName).join(", ")}{mismatchCount>10?" 외":""} · 🔴❗ 클릭 = 의도된 날짜로 확인 처리 (중도입학/아웃)
-          </div>
+          <details className="student-date-notice"><summary>날짜 확인 필요 <b>{mismatchCount}명</b><span>예약과 달력의 날짜 비교 · 펼쳐보기</span></summary><p>예약과 달력 값이 다릅니다: {sorted.filter(liveWarn).map(s=>s.korName||s.engName).join(", ")}. 달력의 🔴❗를 눌러 실제 날짜를 확인해 주세요. 의도된 중도입학·아웃인 경우에만 확인 처리하세요.</p></details>
         )}
         {stuView!=="now"&&(<>
         <div className="sub-tabs" style={{marginBottom:8}}>
