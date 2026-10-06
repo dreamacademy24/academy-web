@@ -1479,6 +1479,13 @@
   .tab-nav { overflow: visible; }
   .tab-nav-inner { display: flex; flex-wrap: wrap; width: 100%; }
   @media (max-width: 700px) {
+    header.site .nav { height: 66px; box-sizing: border-box; padding: 10px 12px; gap: 8px; }
+    .brand { gap: 6px; min-width: 0; }
+    .brand-mark { width: 52px; height: auto; }
+    .brand-divider { display: none; }
+    .brand-text b { font-size: 11px; white-space: nowrap; }
+    .brand-text span { font-size: 8px; letter-spacing: 0; white-space: nowrap; }
+    .nav-cta { flex-shrink: 0; white-space: nowrap; padding: 9px 11px; font-size: 11px; }
     .tab-nav { padding: 8px 12px; }
     .tab-nav-inner { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .tab-btn { min-width: 0; min-height: 56px; padding: 6px 3px; border-radius: 10px; white-space: normal; font-size: 11px; line-height: 1.35; border-color: var(--line); background: #fff; overflow-wrap: anywhere; }
