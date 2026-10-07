@@ -289,12 +289,12 @@ export default function AdminBookingsPage(){
     mismatch:boolean; refStart:string; refEnd:string;
   }
   const [stuSearch,setStuSearch]=useState("");
-  const [studentMode,setStudentMode]=useState<"overview"|"detail">("overview");
+  const [studentMode]=useState<"overview"|"detail">("overview");
   const [studentStaff,setStudentStaff]=useState("");
   const [allStudentColumns,setAllStudentColumns]=useState(false);
   const [timeline,setTimeline]=useState(false);
-  useEffect(()=>{try{const v=localStorage.getItem("dream-student-view");if(v==="overview"||v==="detail")setStudentMode(v);setTimeline(v==="detail");}catch{}},[]);
-  function changeStudentMode(v:"overview"|"detail"){setStudentMode(v);setTimeline(v==="detail");try{localStorage.setItem("dream-student-view",v);}catch{}}
+  
+  
   function changeTimeline(v:boolean){setTimeline(v);try{localStorage.setItem("dream-student-calendar",v?"timeline":"calendar");}catch{}}
 
   const [stuSort,setStuSort]=useState<{key:string;asc:boolean}>({key:"academyStart",asc:true});
@@ -932,7 +932,6 @@ export default function AdminBookingsPage(){
   `}</style>
 
   <div className={stuOnly?`aw student-shell design-${studentMode==="overview"?"one":"two"}`:"aw"}>
-    {stuOnly&&<div className="student-design-picker no-print" role="group" aria-label="화면 디자인 선택"><span>화면 디자인</span><button aria-pressed={studentMode==="overview"} onClick={()=>{changeStudentMode("overview");setAllStudentColumns(false);}}>디자인 A <small>분리 명단 · 월간 달력</small></button><button aria-pressed={studentMode==="detail"} onClick={()=>{changeStudentMode("detail");setAllStudentColumns(false);}}>디자인 B <small>통합 명단 · 오른쪽 상세</small></button></div>}
     <div className="ah">
       <h1>{stuOnly?<><span className="student-brand">DA</span><span>학생 관리<small className="student-subtitle">DREAM ACADEMY · STUDENT WORKSPACE</small></span></>:"예약 관리"}</h1>
       <div className="ah-right">
@@ -1349,7 +1348,7 @@ export default function AdminBookingsPage(){
       const liveWarn=(s:StudentRow)=>s.mismatch&&!stuAck.includes(stuAckKey(s));
       const ackedWarn=(s:StudentRow)=>s.mismatch&&stuAck.includes(stuAckKey(s));
       const mismatchCount=sorted.filter(liveWarn).length;
-      const modernStudents=(rows:StudentRow[])=><StudentViews rows={rows} list={stuView==="list"} mode={studentMode} onMode={changeStudentMode} room={s=>fmtAccom(s as unknown as Record<string,string>)} onCare={openStudentCare} onBooking={s=>router.push("/admin/bookings/"+s.booking_id)} onCopy={s=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank","noopener,noreferrer")} onNote={s=>{setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}}/>;
+      const modernStudents=(rows:StudentRow[])=><StudentViews rows={rows} list={stuView==="list"}  room={s=>fmtAccom(s as unknown as Record<string,string>)} onCare={openStudentCare} onBooking={s=>router.push("/admin/bookings/"+s.booking_id)} onCopy={s=>window.open(copyBookingUrl({id:s.booking_id,accom_type:s.accom_type}),"_blank","noopener,noreferrer")} onNote={s=>{setStuSpecialPopup({booking_id:s.booking_id,current:s.special_request||""});setStuSpecialEdit(s.special_request||"");}}/>;
       return(<>
         <div className="cf-search">
           <input placeholder="🔍 한글/영어 이름, 예약자명, 예약번호 검색..." value={stuSearch} onChange={e=>setStuSearch(e.target.value)}/>
