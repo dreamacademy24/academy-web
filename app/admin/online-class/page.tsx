@@ -1,4 +1,5 @@
 "use client";
+import { onlineCreditsComplete } from "@/lib/onlineLastDay";
 import { getTutorColor } from "@/lib/tutorColors";
 import Booking3Applications from '@/components/Booking3Applications';
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -155,7 +156,7 @@ export default function OnlineClassPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tutorFilter, setTutorFilter] = useState("all");
-  const [periodFilter, setPeriodFilter] = useState<"all" | "current" | "upcoming" | "past">("current");
+  const [periodFilter, setPeriodFilter] = useState<"all" | "current" | "upcoming" | "past" | "completed">("current");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // 출석부(한눈에) 뷰
   const [listMode, setListMode] = useState<"list" | "sheet">("list");
@@ -249,6 +250,13 @@ export default function OnlineClassPage() {
     if (res.ok) { const d = await res.json(); setEnrollments(d.enrollments || []); }
   }, []);
 
+  useEffect(() => {
+    if (!authed) return;
+    const refresh = () => { if (!document.hidden) void loadEnrollments(); };
+    window.addEventListener('focus', refresh);
+    const timer = window.setInterval(refresh, 60000);
+    return () => { window.removeEventListener('focus', refresh); window.clearInterval(timer); };
+  }, [authed, loadEnrollments]);
   const loadTutors = useCallback(async () => {
     const res = await fetch("/api/online-class/tutors");
     if (res.ok) { const d = await res.json(); setTutors(d.tutors || []); }
@@ -543,9 +551,10 @@ export default function OnlineClassPage() {
     const sd = e.start_date || "";
     const ed = e.end_date || "";
     if (periodFilter === "all") return true;
-    if (periodFilter === "current") return e.status === "active" && sd <= todayStr;
-    if (periodFilter === "upcoming") return e.status === "active" && sd > todayStr;
-    if (periodFilter === "past") return e.status !== "active" || (!!ed && ed < todayStr);
+    if (periodFilter === "completed") return onlineCreditsComplete(e);
+    if (periodFilter === "current") return !onlineCreditsComplete(e) && e.status === "active" && sd <= todayStr;
+    if (periodFilter === "upcoming") return !onlineCreditsComplete(e) && e.status === "active" && sd > todayStr;
+    if (periodFilter === "past") return !onlineCreditsComplete(e) && e.status !== "active";
     return true;
   });
 
@@ -645,14 +654,14 @@ export default function OnlineClassPage() {
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#0d9488", width: 44, flexShrink: 0 }}>기간</span>
-            {([["all", "전체"], ["current", "현재 수업중"], ["upcoming", "예정"], ["past", "종료·기타"]] as const).map(([key, label]) => {
+            {([["all", "전체"], ["current", "현재 수업중"], ["upcoming", "예정"], ["completed", "완료·과거 내역"], ["past", "중지·기타"]] as const).map(([key, label]) => {
               const on = periodFilter === key;
               return <button key={key} onClick={() => setPeriodFilter(key as typeof periodFilter)} style={{ padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: on ? "1px solid #0d9488" : "1px solid #ccfbf1", background: on ? "#0d9488" : "#fff", color: on ? "#fff" : "#0d9488" }}>{label}</button>;
             })}
           </div>
         </div>
         <div style={{ marginBottom: 8 }}>
-          <span className="cnt">{filtered.length}명</span>
+          <span className="cnt">{filtered.length}명</span><span style={{marginLeft:12,fontSize:12,color:"#64748b"}}>실제 사용 회차가 전체 회차에 도달하면 완료·과거 내역으로 자동 분류됩니다. 잔여 1~2회는 수업중에 유지됩니다.</span>
         </div>
 
         <div style={{ display: "flex", gap: 6, margin: "0 0 10px" }}>
@@ -745,9 +754,10 @@ export default function OnlineClassPage() {
               </tr></thead>
               <tbody>
                 {filtered.map(e => {
-                  const stLabel = STATUS_LABEL[e.status] || e.status;
-                  const stBg = STATUS_BG[e.status] || "#f1f5f9";
-                  const stColor = STATUS_COLOR[e.status] || "#64748b";
+                  const displayStatus = onlineCreditsComplete(e) ? "completed" : e.status;
+                  const stLabel = STATUS_LABEL[displayStatus] || displayStatus;
+                  const stBg = STATUS_BG[displayStatus] || "#f1f5f9";
+                  const stColor = STATUS_COLOR[displayStatus] || "#64748b";
                   const total = e.total_sessions || 0;
                   const used = e.used_sessions || 0;
                   const rem = e.remaining_sessions ?? Math.max(0, total - used);
