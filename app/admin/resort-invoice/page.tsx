@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { matchesStayView, compareCheckin, resortToday, type ResortStayView } from "@/lib/resortStayView";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed, getAdminInfo } from "@/lib/adminAuth";
 import { JPARK_ROOMS, JPARK_EXTRA_PERSON, JPARK_TIER_LABEL, jparkTier, CUBENINE_ROOMS, calcNights } from "@/lib/resortRates";
@@ -87,6 +88,8 @@ export default function ResortInvoicePage() {
     if (s && e && ((v.period_start || "").slice(0, 10) !== s || (v.period_end || "").slice(0, 10) !== e)) return `현재 예약 ${s} ~ ${e}`;
     return null;
   };
+  const [stayView, setStayView] = useState<ResortStayView>("active");
+  const stayToday = resortToday();
   const [invoices, setInvoices] = useState<InvRow[]>([]);
   const [selBooking, setSelBooking] = useState("");
   const [guest, setGuest] = useState("");           // Reservation Name (영문)
@@ -189,7 +192,7 @@ export default function ResortInvoicePage() {
   const loadBookings = useCallback(async () => {
     const { data } = await supabase.from("bookings")
       .select("id,reservation_no,booker_name,booker_english,status,paid_amount,final_price,checkin_date,checkout_date,accom_type,jp_room_type,cn_room_type,students,extra_guardians,special_request,seg1_type,seg1_checkin,seg1_checkout,seg2_type,seg2_checkin,seg2_checkout")
-      .order("checkin_date", { ascending: false }).limit(300);
+      .order("checkin_date", { ascending: true, nullsFirst: false });
     const kw = resort === "jaypark" ? ["제이파크", "jaypark"] : ["큐브", "cubenine"];
     const list = ((data || []) as BookingLite[]).filter(b => {
       if ((b.status || "").includes("취소")) return false;
@@ -202,7 +205,7 @@ export default function ResortInvoicePage() {
   }, [resort]);
 
   const loadInvoices = useCallback(async () => {
-    const { data } = await supabase.from("resort_invoices").select("*").order("created_at", { ascending: false }).limit(100);
+    const { data } = await supabase.from("resort_invoices").select("*").order("period_start", { ascending: true, nullsFirst: false }).order("invoice_no", { ascending: true });
     setInvoices((data || []) as InvRow[]);
   }, []);
 
@@ -443,7 +446,7 @@ ${signature}`);
     } finally { setSending(false); }
   }
 
-  const recent = useMemo(() => invoices.filter(v => v.resort === resort && (resort !== "jaypark" || (jpShort ? v.rate_tier === "corporate" : v.rate_tier !== "corporate"))), [invoices, resort, jpShort]);
+  const recent = useMemo(() => invoices.filter(v => v.resort === resort && (resort !== "jaypark" || (jpShort ? v.rate_tier === "corporate" : v.rate_tier !== "corporate")) && matchesStayView(v.period_end, stayView, stayToday)).sort((a, b) => compareCheckin(a.period_start, b.period_start) || a.invoice_no.localeCompare(b.invoice_no)), [invoices, resort, jpShort, stayView, stayToday]);
   if (!authed) return null;
 
 
@@ -476,6 +479,10 @@ ${signature}`);
 }
     `}</style>
     <div className="rw">
+        <div className="fbar no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+          {(["active", "completed", "all"] as const).map(v => <button key={v} className={`rtab${stayView === v ? " ac" : ""}`} onClick={() => setStayView(v)}>{v === "active" ? "진행·예정" : v === "completed" ? "완료" : "전체"}</button>)}
+          <span style={{ fontSize: 12, color: "#64748b" }}>체크인 빠른 순 · 체크아웃이 지난 내역은 완료로 자동 분류 (결제 상태 별도)</span>
+        </div>
       <div className="rh no-print">
         <h1>🏨 리조트 인보이스 생성</h1>
         <div className="rtabs">
@@ -497,9 +504,9 @@ ${signature}`);
         <h2>1. 예약 불러오기 (선택)</h2>
         <select className="fsl" value={selBooking} onChange={e => pickBooking(e.target.value)}>
           <option value="">— 예약 선택 안 함 (직접 입력) —</option>
-          {bookings.filter(b => !invoices.some(v => v.booking_id === b.id && v.email_sent_at && !invChange(v))).map(b => (
+          {bookings.filter(b => matchesStayView(curSeg(b)[1], stayView, stayToday) && !invoices.some(v => v.booking_id === b.id && v.email_sent_at && !invChange(v))).sort((a, b) => compareCheckin(curSeg(a)[0], curSeg(b)[0]) || a.booker_name.localeCompare(b.booker_name)).map(b => (
             <option key={b.id} value={b.id}>
-              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {(b.checkin_date || "").slice(0, 10)} ~ {(b.checkout_date || "").slice(0, 10)} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}{invoices.some(v => v.booking_id === b.id && v.email_sent_at && invChange(v)) ? " · 🔁 변경됨 — 재발송 필요" : ""}
+              {b.booker_name}{b.booker_english ? ` (${b.booker_english})` : ""} · {curSeg(b)[0]} ~ {curSeg(b)[1]} · {b.accom_type || ""} / {(/영수증발행|결제완료|완료/.test(b.status || "") && Number((b as unknown as Record<string, unknown>).final_price) > 0) ? "영수증발행 ✅" : (Number((b as unknown as Record<string, unknown>).paid_amount) > 0 ? "확보(예약금 입금)" : "⚠ 금액 미기록")}{invoices.some(v => v.booking_id === b.id && v.email_sent_at && invChange(v)) ? " · 🔁 변경됨 — 재발송 필요" : ""}
             </option>
           ))}
         </select>
@@ -623,7 +630,7 @@ ${signature}`);
       )}
 
       <div className="card no-print">
-        <h2>최근 생성된 인보이스 — {resort === "jaypark" ? (jpShort ? "제이파크 단기" : "제이파크 (장기)") : RESORT_LABEL[resort]} ({recent.length})</h2>
+        <h2>{stayView === "completed" ? "완료된 숙박 인보이스" : stayView === "active" ? "진행·예정 인보이스" : "전체 인보이스"} — {resort === "jaypark" ? (jpShort ? "제이파크 단기" : "제이파크 (장기)") : RESORT_LABEL[resort]} ({recent.length})</h2>
         {recent.length === 0 ? <div style={{ color: "#9ca3af", fontSize: 13, padding: 14, textAlign: "center" }}>아직 없습니다.</div> : (
           <table className="tbl"><thead><tr>
             <th style={{ width: 30 }}>#</th><th>번호</th><th>손님</th><th>룸</th><th>기간</th><th>박</th><th>금액</th><th>상태</th><th style={{ width: 120 }}></th>

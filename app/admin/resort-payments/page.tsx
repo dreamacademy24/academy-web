@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { matchesStayView, compareCheckin, resortToday, type ResortStayView } from "@/lib/resortStayView";
 import { supabase } from "@/lib/supabase";
 import { isAdminAuthed } from "@/lib/adminAuth";
 import ResortInvoiceDoc, { type ResortInvDocRow } from "../resort-invoice/ResortInvoiceDoc";
@@ -47,6 +48,8 @@ export default function ResortPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [resort, setResort] = useState<Resort>("all");
   const [status, setStatus] = useState<"all" | "unpaid" | "paid">("all");
+  const [stayView, setStayView] = useState<ResortStayView>("active");
+  const stayToday = resortToday();
   const [month, setMonth] = useState(""); // YYYY-MM, ""=전체
   const [viewInv, setViewInv] = useState<InvRow | null>(null);
   const [savingImg, setSavingImg] = useState(false);
@@ -60,13 +63,14 @@ export default function ResortPaymentsPage() {
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   const filtered = useMemo(() => rows.filter(r => {
+    if (!matchesStayView(r.period_end, stayView, stayToday)) return false;
     if (resort === "jaypark" && !(r.resort === "jaypark" && r.rate_tier !== "corporate")) return false;
     if (resort === "jaypark_short" && !(r.resort === "jaypark" && r.rate_tier === "corporate")) return false;
     if (resort === "cubenine" && r.resort !== "cubenine") return false;
     if (status !== "all" && r.status !== status) return false;
     if (month && !(r.period_start || "").startsWith(month)) return false;
     return true;
-  }), [rows, resort, status, month]);
+  }).sort((a, b) => compareCheckin(a.period_start, b.period_start) || a.invoice_no.localeCompare(b.invoice_no)), [rows, resort, status, month, stayView, stayToday]);
 
   const sums = useMemo(() => {
     const acc: Record<string, { unpaid: number; paid: number }> = {};
@@ -193,6 +197,10 @@ export default function ResortPaymentsPage() {
     <div className="rw">
       <div className="rh"><h1>💳 리조트 결제내역</h1></div>
 
+      <div className="fbar no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+          {(["active", "completed", "all"] as const).map(v => <button key={v} className={`chip${stayView === v ? " ac" : ""}`} onClick={() => setStayView(v)}>{v === "active" ? "진행·예정" : v === "completed" ? "완료" : "전체"}</button>)}
+          <span style={{ fontSize: 12, color: "#64748b" }}>체크인 빠른 순 · 체크아웃이 지난 내역은 완료로 자동 분류 (결제 상태 별도)</span>
+        </div>
       <div className="fbar">
         {(["all", "jaypark", "jaypark_short", "cubenine"] as Resort[]).map(r => (
           <button key={r} className={`chip${resort === r ? " ac" : ""}`} onClick={() => setResort(r)}>{r === "all" ? "전체" : r === "jaypark" ? "제이파크 (장기)" : r === "jaypark_short" ? "제이파크 단기" : RESORT_LABEL[r]}</button>
