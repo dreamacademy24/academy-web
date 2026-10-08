@@ -1,5 +1,5 @@
 // 견적(EstimateCalc) ↔ 인보이스(/invoice) 공용 계산 — "견적 금액 = 인보이스 금액" 단일 소스 (2026-09-29)
-// ① 시즌 판정(주 단위) ② 콤보 구간 금액(해당 숙소 4주 금액 ÷ 4 × 주수, 주별 시즌)
+// ① 시즌 판정(주 단위) ② 콤보 구간 금액(해당 숙소 총 체류 주수 금액 ÷ 총 체류 주수 × 주수, 주별 시즌)
 // ③ 방학(평일 방학만) 수업료 차감 ④ 제이파크 연말 서차지(계약서 기준) ⑤ 휴무일 안내 문구
 import { COMMUTE_PRICE } from "@/lib/commutePricing";
 import { holidaysInRange, type HolidayItem } from "@/lib/holidays";
@@ -38,15 +38,14 @@ export function blendStayPrice(e: P3, start: string, w: number): { price: number
   return { price: Math.round(e[1] / w) * mx.off + Math.round(e[2] / w) * mx.peak, ...mx };
 }
 
-/* 콤보 구간: 주당 단가 = 해당 숙소 4주 금액 ÷ 4 (시즌은 각 주 시작일로 판정) */
-export function comboSegPrice(four: P3, start: string, w: number): { price: number; off: number; peak: number } {
-  let price = 0, off = 0, peak = 0;
-  for (let i = 0; i < w; i++) {
-    const pk = !!start && weekIsPeak(addDaysStr(start, i * 7));
-    price += Math.round(four[pk ? 2 : 1] / 4);
-    if (pk) peak++; else off++;
-  }
-  return { price, off, peak };
+/* 콤보 구간: 주당 단가 = 해당 숙소 총 체류 주수 금액 ÷ 총 체류 주수 (시즌은 각 주 시작일로 판정) */
+export function comboSegPrice(totalPrice: P3, start: string, w: number, totalWeeks: number, season?: 0 | 1 | 2): { price: number; off: number; peak: number } {
+  if (!Number.isInteger(totalWeeks) || totalWeeks <= 0 || !Number.isInteger(w) || w < 0 || w > totalWeeks) throw new Error("Invalid mixed-stay duration");
+  const mx = start && season !== 0 ? weekMix(start, w) : { off: w, peak: 0 };
+  const amount = season === 0 || !start && season !== undefined
+    ? totalPrice[season ?? 1] * w
+    : totalPrice[1] * mx.off + totalPrice[2] * mx.peak;
+  return { price: Math.round(amount / totalWeeks), ...mx };
 }
 
 /* ③ 방학(평일 방학만) 수업료 차감 — 통학형 학원비 주당·일당 단가 기준 × 아이 수 */
