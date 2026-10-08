@@ -240,7 +240,7 @@ export default function ResortPaymentsPage() {
                 <td style={{ fontWeight: 800, color: "#92400e" }}>{_ix + 1}</td><td style={{ whiteSpace: "nowrap" }}>
                   <button onClick={() => setViewInv(r)} style={{ background: "none", border: "none", padding: 0, fontWeight: 700, color: "#1a6fc4", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, textDecoration: "underline" }}>{r.invoice_no}</button>
                 </td>
-                <td>{r.resort === "jaypark" ? ((r as unknown as { rate_tier?: string }).rate_tier === "corporate" ? "제이파크 단기" : "제이파크") : (RESORT_LABEL[r.resort] || r.resort)}</td>
+                <td>{r.resort === "jaypark" ? ((r as unknown as { rate_tier?: string }).rate_tier === "corporate" ? "제이파크 단기" : "제이파크") : (RESORT_LABEL[r.resort] || r.resort)}{r.resort === "cubenine" && <div style={{ fontSize: 11, color: "#64748b", marginTop: 4, lineHeight: 1.4 }}>{/pool|풀/i.test(r.room_type || "") ? "풀 액세스" : /deluxe|디럭스/i.test(r.room_type || "") ? "디럭스 오션" : (r.room_type || "객실 미입력")}</div>}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   {(() => { const kr = String((r as unknown as { guests_kr?: string }).guests_kr || "").split(",")[0]?.trim(); return kr ? <div style={{ fontWeight: 800 }}>{kr}</div> : null; })()}
                   <div style={{ fontWeight: 700, fontSize: 11.5, color: "#475569" }}>{r.guest_name}</div>
