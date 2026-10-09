@@ -88,3 +88,6 @@
 @media(max-width:1550px){.student-shell.design-one .sl-split{grid-template-columns:1fr}.student-shell.design-one .sl-master-detail{grid-template-columns:minmax(0,1fr) 290px}}
 @media(max-width:850px){.student-shell.design-one .sl-master-detail{display:flex;flex-direction:column}.student-shell.design-one .sl-master-detail>div{width:100%}.student-shell.design-one .sl-detail{width:100%;position:static;max-height:none;order:-1}.student-shell.design-one{padding:14px!important}.student-shell.design-one .sl-split{grid-template-columns:1fr}}
 @media print{.student-shell.design-one{background:white}.student-shell.design-one .sl-master-detail{display:block}.student-shell.design-one .sl-detail{display:none}}
+
+/* Keep every student visible in monthly calendar, including print. */
+.sl-month-table .sl-day{height:auto;min-height:98px}.sl-event-names{display:block;margin-top:4px}.sl-event-student{display:block;white-space:normal;overflow-wrap:anywhere;line-height:1.5;margin-top:3px;font-size:11px}.sl-event-student strong{font-weight:700}.sl-event-english{display:block;font-size:10px;opacity:.85}.sl-month-table tr{height:auto}
